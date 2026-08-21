@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#020914" />
+    <title>LuCIM Volume Lab · GPU Volumetric Analysis</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 66% 12%, rgb(26 113 135 / 18%), transparent 42%),
+          #020914;
+      }
+
+      canvas {
+        display: block;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+
+      #volume-panel-shell {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 10;
+        box-sizing: border-box;
+        width: min(330px, calc(100vw - 28px));
+        max-height: calc(100vh - 28px);
+        overflow: auto;
+        padding: 12px 14px 14px;
+        border: 1px solid rgb(112 214 231 / 22%);
+        border-radius: 12px;
+        background:
+          radial-gradient(ellipse at 12% 0%, rgb(61 210 228 / 8%), transparent 45%),
+          rgb(5 18 29 / 92%);
+        box-shadow: 0 20px 55px rgb(0 0 0 / 42%);
+        backdrop-filter: blur(16px) saturate(125%);
+      }
+
+      #volume-panel-shell:has(#example-panel-host:not(:empty)) #volume-startup {
+        display: none;
+      }
+
+      #volume-startup {
+        margin: 0;
+        color: #9fc4ce;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      #volume-startup[data-state='error'] {
+        color: #ffb4b4;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <aside id="volume-panel-shell" aria-label="LuCIM Volume Lab controls">
+      <p id="volume-startup">Preparing a synthetic CT-like phantom and WebGPU graph…</p>
+      <div id="example-panel-host" data-example-panel-host></div>
+    </aside>
+    <script type="module">
+      const startup = document.querySelector('#volume-startup');
+      try {
+        if (!navigator.gpu) {
+          throw new Error('LuCIM Volume Lab requires a current WebGPU-capable browser.');
+        }
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] =
+          await Promise.all([
+            import('@luma.gl/core'),
+            import('@luma.gl/engine'),
+            import('@luma.gl/webgpu'),
+            import('./app.ts')
+          ]);
+        const device = await luma.createDevice({
+          id: 'lucim-volume-lab',
+          adapters: [webgpuAdapter],
+          featureLevel: 'best-available',
+          powerPreference: 'high-performance',
+          waitForPageLoad: false,
+          createCanvasContext: true
+        });
+        await makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+      } catch (error) {
+        startup.dataset.state = 'error';
+        startup.textContent = error instanceof Error ? error.message : String(error);
+      }
+    </script>
+  </body>
+</html>

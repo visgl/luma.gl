@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Billion-Point Spatial Atlas</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #020611; }
+      canvas { display: block; width: 100vw !important; height: 100vh !important; }
+      #atlas-panel-shell {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        width: min(350px, calc(100vw - 32px));
+        max-height: min(72vh, 680px);
+        overflow: auto;
+        padding: 14px;
+        border: 1px solid rgba(118, 188, 255, 0.2);
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(5, 14, 32, 0.94), rgba(16, 6, 29, 0.88));
+        box-shadow: 0 18px 70px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(18px);
+        color: #e9f4ff;
+        font: 13px/1.4 system-ui, sans-serif;
+      }
+      #atlas-panel-shell:has(#example-panel-host:empty) { display: none; }
+      #example-panel-host { width: 100%; }
+      #example-panel-host select,
+      #example-panel-host input,
+      #example-panel-host button { max-width: 100%; }
+      [data-error] { max-width: 42rem; margin: 12vh auto; padding: 1.5rem; font: 16px/1.5 system-ui; }
+    </style>
+  </head>
+  <body>
+    <noscript>This WebGPU demonstration requires JavaScript.</noscript>
+    <aside id="atlas-panel-shell" aria-label="Spatial Atlas controls and pipeline inspector">
+      <div id="example-panel-host"></div>
+    </aside>
+    <script type="module">
+      import {luma} from '@luma.gl/core';
+      import {makeAnimationLoop} from '@luma.gl/engine';
+      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import AnimationLoopTemplate from './app.ts';
+
+      const supportsHighDynamicRange =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(dynamic-range: high)').matches;
+      const softwareVisualSmoke =
+        new URLSearchParams(window.location.search).get('visual-smoke') === 'software';
+      // Preserve the full CSS viewport while limiting SwiftShader's render-target workload.
+      const standardCanvasContext = softwareVisualSmoke ? {useDevicePixels: 0.5} : true;
+
+      try {
+        let device;
+        try {
+          device = await luma.createDevice({
+            id: 'billion-point-spatial-atlas',
+            adapters: [webgpuAdapter],
+            createCanvasContext: supportsHighDynamicRange
+              ? {
+                  colorFormat: 'rgba16float',
+                  colorSpace: 'display-p3',
+                  toneMapping: 'extended',
+                  ...(softwareVisualSmoke ? {useDevicePixels: 0.5} : {})
+                }
+              : standardCanvasContext
+          });
+        } catch (error) {
+          if (!supportsHighDynamicRange) throw error;
+          device = await luma.createDevice({
+            id: 'billion-point-spatial-atlas-sdr-fallback',
+            adapters: [webgpuAdapter],
+            createCanvasContext: standardCanvasContext
+          });
+        }
+
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+        const isVisualSmoke = new URLSearchParams(window.location.search).has('visual-smoke');
+        if (isVisualSmoke) {
+          const manualAnimationFrameProvider = {
+            requestAnimationFrame: () => 0,
+            cancelAnimationFrame: () => {}
+          };
+          animationLoop.setProps({animationFrameProvider: manualAnimationFrameProvider});
+          window.addEventListener('spatial-atlas-pause', () => {
+            animationLoop.setProps({animationFrameProvider: manualAnimationFrameProvider});
+          });
+          window.addEventListener('spatial-atlas-redraw', () => animationLoop.redraw());
+          window.spatialAtlasCaptureFrame = () => {
+            const template = animationLoop.getAnimationLoopTemplate();
+            if (!template || typeof template.captureVisualSmokeFrame !== 'function') {
+              throw new Error('Spatial Atlas visual smoke frame is unavailable');
+            }
+            return template.captureVisualSmokeFrame();
+          };
+        }
+        await animationLoop.start();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        document.body.innerHTML = '<main data-error role="alert"><h1>WebGPU unavailable</h1><p></p></main>';
+        document.querySelector('[data-error] p').textContent = message;
+        throw error;
+      }
+    </script>
+  </body>
+</html>

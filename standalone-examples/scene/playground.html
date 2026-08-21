@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090b13" />
+    <title>ANARI · Full-Scene JSON Lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        --background: #090b13;
+        --panel: #0e111d;
+        --border: rgba(191, 203, 247, 0.12);
+        --muted: rgba(207, 216, 249, 0.5);
+        --accent: #a792ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        background: var(--background);
+        color: #f3f4ff;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-rows: 69px 64px minmax(0, 1fr);
+        width: 100%;
+        height: 100%;
+      }
+
+      .header,
+      .preset-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 27px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      .brand-marker {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 15px var(--accent);
+      }
+
+      .brand-divider {
+        color: rgba(217, 223, 255, 0.28);
+      }
+
+      .brand-name {
+        color: var(--muted);
+      }
+
+      .experimental-badge {
+        padding: 5px 8px;
+        border: 1px solid rgba(251, 188, 102, 0.29);
+        border-radius: 4px;
+        color: #f7bb72;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      .header-links,
+      .preset-list,
+      .editor-actions,
+      .preview-statistics {
+        display: flex;
+        align-items: center;
+      }
+
+      .header-links {
+        gap: 18px;
+      }
+
+      .navigation-link {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.09em;
+        text-decoration: none;
+        transition: color 160ms ease;
+      }
+
+      .navigation-link:hover {
+        color: #fff;
+      }
+
+      .preset-bar {
+        gap: 15px;
+        background: #0c0e18;
+      }
+
+      .preset-label,
+      .section-label,
+      .statistic-label {
+        color: rgba(203, 212, 248, 0.48);
+        font-size: 9px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .preset-list {
+        flex: 1;
+        gap: 7px;
+        margin-left: 8px;
+      }
+
+      .usd-scene-selector {
+        min-width: 192px;
+        max-width: 250px;
+        padding: 8px 10px;
+        border: 1px solid rgba(176, 155, 255, 0.26);
+        border-radius: 5px;
+        background: rgba(152, 128, 255, 0.075);
+        color: #ddd5ff;
+        cursor: pointer;
+        font: inherit;
+        font-size: 10px;
+      }
+
+      .usd-scene-selector option {
+        background: #101322;
+        color: #f0edff;
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+      }
+
+      .preset-button,
+      .tool-button {
+        border: 1px solid transparent;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+      }
+
+      .preset-button {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+
+      .preset-button.active {
+        border-color: rgba(176, 155, 255, 0.25);
+        background: rgba(152, 128, 255, 0.1);
+        color: #e8e2ff;
+      }
+
+      .tool-button:hover,
+      .preset-button:hover {
+        color: #fff;
+      }
+
+      .backend-label {
+        color: rgba(203, 212, 248, 0.55);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(370px, 42%) minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .editor-panel,
+      .preview-panel {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .editor-panel {
+        grid-template-rows: 51px minmax(0, 1fr) auto 39px;
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+      }
+
+      .panel-toolbar,
+      .editor-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .editor-actions {
+        gap: 3px;
+      }
+
+      .tool-button {
+        padding: 7px 8px;
+        font-size: 10px;
+      }
+
+      .tool-button.active {
+        color: #bdaeff;
+      }
+
+      .renderer-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: 5px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      .renderer-selector {
+        max-width: 96px;
+        border: 1px solid rgba(191, 203, 247, 0.16);
+        border-radius: 5px;
+        background: rgba(7, 9, 17, 0.82);
+        color: #e5e9ff;
+        font: inherit;
+        font-size: 10px;
+        letter-spacing: 0;
+      }
+
+      .apply-button {
+        margin-left: 5px;
+        padding: 8px 11px;
+        border: 1px solid rgba(172, 151, 255, 0.27);
+        border-radius: 5px;
+        background: rgba(151, 125, 254, 0.12);
+        color: #e3dcff;
+        cursor: pointer;
+        font-size: 10px;
+      }
+
+      .editor-surface {
+        position: relative;
+        overflow: hidden;
+        min-height: 0;
+        background: #0d101a;
+      }
+
+      .monaco-scene-editor {
+        width: 100%;
+        height: 100%;
+      }
+
+      .monaco-scene-editor .monaco-editor,
+      .monaco-scene-editor .monaco-editor-background,
+      .monaco-scene-editor .margin {
+        background: #0d101a !important;
+      }
+
+      .scene-error {
+        display: none;
+        padding: 11px 15px;
+        border-top: 1px solid rgba(255, 100, 125, 0.22);
+        background: rgba(121, 38, 58, 0.18);
+        color: #ff9dac;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .scene-error.visible {
+        display: block;
+      }
+
+      .editor-footer {
+        border-top: 1px solid var(--border);
+        border-bottom: 0;
+      }
+
+      .editor-status {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #94d8b4;
+        font-size: 10px;
+      }
+
+      .editor-status::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      .editor-status.invalid {
+        color: #ff93a3;
+      }
+
+      .line-count {
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 0.07em;
+      }
+
+      .preview-panel {
+        position: relative;
+        grid-template-rows: minmax(0, 1fr);
+        overflow: hidden;
+        background: #090c17;
+      }
+
+      .preview-canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        cursor: grab;
+      }
+
+      .preview-canvas:active {
+        cursor: grabbing;
+      }
+
+      .preview-heading,
+      .preview-footer,
+      .preview-hint {
+        position: absolute;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .preview-heading {
+        top: 24px;
+        left: 26px;
+      }
+
+      .scene-title {
+        margin: 8px 0 5px;
+        color: rgba(248, 247, 255, 0.94);
+        font-size: 19px;
+        font-weight: 480;
+        letter-spacing: 0.015em;
+      }
+
+      .scene-description {
+        max-width: 390px;
+        color: rgba(214, 222, 250, 0.6);
+        font-size: 10px;
+        line-height: 1.7;
+      }
+
+      .animation-controls {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 13px;
+        pointer-events: auto;
+      }
+
+      .animation-controls[hidden] {
+        display: none;
+      }
+
+      .animation-selector,
+      .animation-speed {
+        max-width: 126px;
+        padding: 5px;
+        border: 1px solid rgba(191, 203, 247, 0.18);
+        border-radius: 4px;
+        background: rgba(9, 11, 19, 0.86);
+        color: #e5e9ff;
+        font-size: 10px;
+      }
+
+      .animation-scrub {
+        width: 108px;
+        accent-color: var(--accent);
+      }
+
+      .animation-time {
+        min-width: 35px;
+        color: var(--muted);
+        font-size: 9px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .preview-footer {
+        right: 25px;
+        bottom: 24px;
+      }
+
+      .preview-statistics {
+        gap: 24px;
+        text-align: right;
+      }
+
+      .statistic-value {
+        margin-top: 6px;
+        color: rgba(242, 245, 255, 0.92);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      #scene-ray-tracing-resolution-statistic {
+        flex: 0 0 22ch;
+      }
+
+      #scene-ray-tracing-frame-statistic {
+        flex: 0 0 28ch;
+      }
+
+      .preview-hint {
+        bottom: 26px;
+        left: 26px;
+        color: rgba(208, 217, 249, 0.49);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      @media (max-width: 860px) {
+        .shell {
+          grid-template-rows: 60px 58px minmax(0, 1fr);
+        }
+
+        .header,
+        .preset-bar {
+          padding-right: 14px;
+          padding-left: 14px;
+        }
+
+        .workspace {
+          grid-template-columns: minmax(270px, 44%) minmax(0, 1fr);
+        }
+
+        .preset-label,
+        .backend-label,
+        .experimental-badge,
+        .preview-hint {
+          display: none;
+        }
+
+        .preset-list {
+          overflow-x: auto;
+          margin-left: 0;
+        }
+
+        .usd-scene-selector {
+          min-width: 132px;
+          max-width: 154px;
+          padding: 7px;
+          font-size: 9px;
+        }
+
+        .preset-button {
+          flex: none;
+          padding: 7px;
+          font-size: 10px;
+        }
+
+        .tool-button {
+          padding: 6px 5px;
+          font-size: 9px;
+        }
+
+        .preview-statistics {
+          gap: 13px;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/playground-ZD5mMGbk.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/chunk-BRNzzbbm.js">
+    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-BIP28hBl.js">
+    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-BaBoIcbs.js">
+    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-CLW9X4pL.js">
+    <link rel="modulepreload" crossorigin href="./assets/usd-samples-C3VMXXVA.js">
+    <link rel="modulepreload" crossorigin href="./assets/editor.api-BcxXo12d.js">
+    <link rel="stylesheet" crossorigin href="./assets/editor-CJEeZjoM.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <div class="brand">
+          <span class="brand-marker" aria-hidden="true"></span>
+          <span>LUMA.GL</span>
+          <span class="brand-divider">/</span>
+          <span class="brand-name">ANARI SCENE LAB</span>
+          <span class="experimental-badge">SHOWCASE · EXPERIMENTAL</span>
+        </div>
+        <nav class="header-links" aria-label="Navigation">
+          <a class="navigation-link" href="./index.html">OBSERVATORY ↗</a>
+        </nav>
+      </header>
+
+      <section class="preset-bar" aria-label="Scene presets">
+        <span class="preset-label">START WITH</span>
+        <div id="preset-list" class="preset-list"></div>
+        <select id="usd-scene-selector" class="usd-scene-selector" aria-label="Import USD or glTF scene">
+          <option value="">IMPORT USD / glTF…</option>
+          <option value="local-file">Open local USD/glTF file…</option>
+        </select>
+        <input id="usd-file-input" type="file" accept=".usd,.usda,.usdz,.gltf,.glb" hidden />
+        <div id="backend-label" class="backend-label">CONNECTING DEVICE…</div>
+      </section>
+
+      <section class="workspace">
+        <section class="editor-panel" aria-label="JSON scene editor">
+          <div class="panel-toolbar">
+            <span class="section-label">SCENE.JSON</span>
+            <div class="editor-actions">
+              <button id="live-apply" class="tool-button active" aria-pressed="true">LIVE</button>
+              <button id="format-scene" class="tool-button">FORMAT</button>
+              <button id="reset-scene" class="tool-button">RESET</button>
+              <button id="copy-scene" class="tool-button">COPY</button>
+              <button id="export-gltf" class="tool-button">GLTF ↓</button>
+              <button id="export-glb" class="tool-button">GLB ↓</button>
+              <button id="export-usd" class="tool-button">USD ↓</button>
+              <label class="renderer-control">
+                <span>RENDERER</span>
+                <select id="renderer-selector" class="renderer-selector" aria-label="Renderer">
+                  <option value="default">Default</option>
+                  <option value="deferred">Deferred</option>
+                  <option value="raytrace">Ray tracing</option>
+                  <option value="debugNormals">Normals</option>
+                  <option value="debugDepth">Depth</option>
+                </select>
+              </label>
+              <button
+                id="temporal-aa-toggle"
+                class="tool-button active"
+                aria-pressed="true"
+                title="Stabilize edges and reuse valid samples across frames"
+              >
+                TEMPORAL AA
+              </button>
+              <button id="apply-scene" class="apply-button">APPLY ↵</button>
+            </div>
+          </div>
+          <div class="editor-surface">
+            <div id="scene-monaco-editor" class="monaco-scene-editor"></div>
+            <textarea id="scene-editor" aria-hidden="true" hidden></textarea>
+          </div>
+          <div id="scene-error" class="scene-error" role="alert"></div>
+          <footer class="editor-footer">
+            <div id="editor-status" class="editor-status">
+              <span id="editor-feedback">Initializing scene…</span>
+            </div>
+            <span id="editor-line-count" class="line-count"></span>
+          </footer>
+        </section>
+
+        <section class="preview-panel" aria-label="Rendered ANARI scene">
+          <canvas id="playground-canvas" class="preview-canvas"></canvas>
+          <div class="preview-heading">
+            <div class="section-label">LIVE PREVIEW</div>
+            <h1 id="scene-title" class="scene-title"></h1>
+            <div id="scene-description" class="scene-description"></div>
+            <div id="animation-controls" class="animation-controls" hidden>
+              <select id="animation-clip" class="animation-selector" aria-label="Animation clip"></select>
+              <button id="animation-toggle" class="tool-button" aria-label="Pause animation">PAUSE</button>
+              <input
+                id="animation-scrub"
+                class="animation-scrub"
+                type="range"
+                min="0"
+                max="1"
+                step="0.001"
+                value="0"
+                aria-label="Animation time"
+              />
+              <span id="animation-time" class="animation-time">0.00</span>
+              <select id="animation-speed" class="animation-speed" aria-label="Animation speed">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+          </div>
+          <div class="preview-footer">
+            <div class="preview-statistics">
+              <div>
+                <div class="statistic-label">INSTANCES</div>
+                <div id="scene-instance-count" class="statistic-value">—</div>
+              </div>
+              <div>
+                <div class="statistic-label">DRAWS</div>
+                <div id="scene-draw-count" class="statistic-value">—</div>
+              </div>
+              <div>
+                <div class="statistic-label">TRIANGLES</div>
+                <div id="scene-triangle-count" class="statistic-value">—</div>
+              </div>
+              <div id="scene-ray-tracing-resolution-statistic" hidden>
+                <div class="statistic-label">RAY RESOLUTION</div>
+                <div id="scene-ray-tracing-resolution" class="statistic-value">—</div>
+              </div>
+              <div id="scene-ray-tracing-frame-statistic" hidden>
+                <div class="statistic-label">RAY FRAME</div>
+                <div id="scene-ray-tracing-frame" class="statistic-value">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-hint">DRAG TO ORBIT · SCROLL TO ZOOM · ⌘ ENTER TO APPLY</div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

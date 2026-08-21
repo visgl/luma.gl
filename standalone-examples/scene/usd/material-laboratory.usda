@@ -1,0 +1,130 @@
+#usda 1.0
+(
+    defaultPrim = "MaterialLaboratory"
+    doc = "An OpenUSD material and analytic geometry scene for ANARI import."
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "MaterialLaboratory"
+{
+    def Scope "Materials"
+    {
+        def Material "Sapphire"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.11, 0.48, 1)
+                float inputs:metallic = 0.86
+                float inputs:roughness = 0.11
+            }
+        }
+
+        def Material "Crimson"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.96, 0.085, 0.12)
+                float inputs:metallic = 0.76
+                float inputs:roughness = 0.17
+            }
+        }
+
+        def Material "Gold"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0.73, 0.23)
+                float inputs:metallic = 0.96
+                float inputs:roughness = 0.08
+            }
+        }
+
+        def Material "Emerald"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.11, 0.79, 0.44)
+                float inputs:metallic = 0.64
+                float inputs:roughness = 0.15
+            }
+        }
+
+        def Material "Aurora"
+        {
+            def Shader "Preview"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.7, 0.34, 1)
+                color3f inputs:emissiveColor = (0.34, 0.13, 0.78)
+                float inputs:metallic = 0.72
+                float inputs:roughness = 0.1
+            }
+        }
+    }
+
+    def Sphere "SapphireOrb"
+    {
+        double radius = 0.94
+        rel material:binding = </MaterialLaboratory/Materials/Sapphire>
+        double3 xformOp:translate = (-3, 1.1, -1.6)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "CrimsonOrb"
+    {
+        double radius = 0.94
+        rel material:binding = </MaterialLaboratory/Materials/Crimson>
+        double3 xformOp:translate = (0, 1.1, -1.6)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Sphere "GoldOrb"
+    {
+        double radius = 0.94
+        rel material:binding = </MaterialLaboratory/Materials/Gold>
+        double3 xformOp:translate = (3, 1.1, -1.6)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cylinder "EmeraldTower"
+    {
+        double radius = 0.75
+        double height = 2.1
+        uniform token axis = "Y"
+        rel material:binding = </MaterialLaboratory/Materials/Emerald>
+        double3 xformOp:translate = (-2.3, 1.06, 1.7)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cone "AuroraSpire"
+    {
+        double radius = 0.86
+        double height = 2.35
+        uniform token axis = "Y"
+        rel material:binding = </MaterialLaboratory/Materials/Aurora>
+        double3 xformOp:translate = (0, 1.18, 1.7)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "GoldMonolith"
+    {
+        double size = 1.52
+        rel material:binding = </MaterialLaboratory/Materials/Gold>
+        double3 xformOp:translate = (2.45, 0.78, 1.7)
+        double3 xformOp:rotateXYZ = (0, 23, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+
+    def SphereLight "AuroraEmitter"
+    {
+        color3f inputs:color = (0.63, 0.32, 1)
+        float inputs:intensity = 1200
+        double3 xformOp:translate = (0, 4.5, 1)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

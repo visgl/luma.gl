@@ -1,0 +1,74 @@
+# Depth-Aware Blur
+
+Smooth noisy screen-space results without bleeding across foreground/background boundaries. `depthAwareBlurShaderPassPipeline` combines Gaussian spatial weights with scene-depth similarity in two separable bilateral-filter passes.
+
+### Advanced Effects: Visualization City
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/experimental/advanced-effects)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
+## At a Glance[​](#at-a-glance "Direct link to At a Glance")
+
+| Property             | Value                                                   |
+| -------------------- | ------------------------------------------------------- |
+| Exports              | `depthAwareBlur` and `depthAwareBlurShaderPassPipeline` |
+| Backend              | WebGPU                                                  |
+| Render passes        | Two separable bilateral-filter passes                   |
+| Required binding     | `depthTexture`                                          |
+| Intermediate storage | One renderer-owned scratch texture                      |
+
+## Usage[​](#usage "Direct link to Usage")
+
+```
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+import {depthAwareBlurShaderPassPipeline} from '@luma.gl/effects';
+
+
+
+const renderer = new ShaderPassRenderer(device, {
+
+  shaderPasses: [depthAwareBlurShaderPassPipeline]
+
+});
+
+
+
+renderer.renderToScreen({
+
+  sourceTexture: noisyLightingTexture,
+
+  bindings: {depthTexture: sceneDepthTexture},
+
+  uniforms: {depthAwareBlur: {radius: 4, depthSigma: 0.01, spatialSigma: 3}}
+
+});
+```
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+| Parameter      | Default  | Range               | Description                                                                       |
+| -------------- | -------- | ------------------- | --------------------------------------------------------------------------------- |
+| `radius`       | `4`      | `1` to `8`          | Number of bilateral-filter samples on each side of the center pixel.              |
+| `depthSigma`   | `0.01`   | Minimum `0.0001`    | Accepted depth variation; smaller values preserve stronger depth discontinuities. |
+| `spatialSigma` | `3`      | Minimum `0.1`       | Width of the Gaussian spatial weighting profile.                                  |
+| `direction`    | `[1, 0]` | Set by the pipeline | Horizontal or vertical sample direction for the low-level standalone pass.        |
+
+The pipeline automatically supplies `[1, 0]` and `[0, 1]` for its two blur directions. Near-depth neighbors contribute normally, while samples separated by a depth edge are exponentially reduced.
+
+## Performance and Composition[​](#performance-and-composition "Direct link to Performance and Composition")
+
+Each direction visits at most eight samples on either side of the center pixel. The reusable filter also appears inside several higher-level scene-aware pipelines, where it denoises occlusion, indirect illumination, reflections, or volumetric lighting while retaining silhouettes.
+
+## Related Effects[​](#related-effects "Direct link to Related Effects")
+
+* [Gaussian Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/gaussian-blur.md) deliberately ignores depth boundaries.
+* [SSAO](https://luma.gl/docs/api-reference/shadertools/shader-passes/ssao.md) uses edge-aware filtering to stabilize ambient-occlusion estimates.
+* [Screen-Space Global Illumination](https://luma.gl/docs/api-reference/shadertools/shader-passes/screen-space-global-illumination.md) denoises indirect light with depth- and normal-aware filtering.

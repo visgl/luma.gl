@@ -1,0 +1,63 @@
+<!doctype html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPU Hierarchical Trace Viewer</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #030712; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+    #trace-pick-tooltip {
+      position: fixed;
+      z-index: 2;
+      display: grid;
+      gap: 2px;
+      min-width: 190px;
+      padding: 8px 10px;
+      pointer-events: none;
+      color: #cbd5e1;
+      font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: rgb(3 7 18 / 94%);
+      border: 1px solid rgb(148 163 184 / 42%);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+    }
+    #trace-pick-tooltip[hidden] { display: none; }
+    #trace-pick-tooltip strong { color: #f8fafc; font-size: 12px; }
+    #trace-pick-tooltip span { white-space: nowrap; }
+    #example-panel-host {
+      position: fixed;
+      z-index: 1;
+      top: 12px;
+      right: 12px;
+      width: min(380px, calc(100vw - 24px)) !important;
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      box-sizing: border-box;
+      padding: 12px;
+      color: #e5e7eb;
+      background: rgb(3 7 18 / 88%);
+      border: 1px solid rgb(148 163 184 / 30%);
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const forcePortableScan = new URLSearchParams(location.search).get('scan') === 'portable';
+  const device = luma.createDevice({
+    id: 'gpu-trace-viewer',
+    adapters: [webgpuAdapter],
+    createCanvasContext: true,
+    featureLevel: 'max',
+    debugGPUTime: true,
+    _disabledFeatures: forcePortableScan ? {subgroups: true} : undefined
+  });
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+  animationLoop.start();
+</script>
+<body><div id="example-panel-host" data-example-panel-host></div></body>

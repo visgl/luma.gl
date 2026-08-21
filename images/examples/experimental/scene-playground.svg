@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title description">
+  <title id="title">ANARI Playground</title>
+  <desc id="description">Abstract crystalline scene beside a JSON editor.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#090b18"/>
+      <stop offset="1" stop-color="#1b1242"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#ffd6ff" stop-opacity="1"/>
+      <stop offset=".18" stop-color="#d395ff" stop-opacity=".88"/>
+      <stop offset="1" stop-color="#5f3cc7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="crystal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ebf8ff"/>
+      <stop offset=".45" stop-color="#9ec7ff"/>
+      <stop offset="1" stop-color="#b779ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#background)"/>
+  <rect x="32" y="32" width="352" height="476" rx="18" fill="#0c1020" stroke="#4d5072"/>
+  <g fill="#8c91b8" font-family="monospace" font-size="15">
+    <text x="62" y="78">{</text>
+    <text x="82" y="112">"scene": "ANARI",</text>
+    <text x="82" y="146">"renderer": "HDR",</text>
+    <text x="82" y="180">"materials": {</text>
+    <text x="102" y="214">"crystal": {</text>
+    <text x="122" y="248">"roughness": 0.08,</text>
+    <text x="122" y="282">"emissive": [1, .4, 2]</text>
+    <text x="102" y="316">}</text>
+    <text x="82" y="350">}</text>
+    <text x="62" y="384">}</text>
+  </g>
+  <rect x="62" y="430" width="138" height="38" rx="8" fill="#342166" stroke="#ae8cff"/>
+  <text x="88" y="455" fill="#f1eaff" font-family="sans-serif" font-size="14" font-weight="700">GLTF ↓</text>
+  <rect x="214" y="430" width="138" height="38" rx="8" fill="#342166" stroke="#ae8cff"/>
+  <text x="248" y="455" fill="#f1eaff" font-family="sans-serif" font-size="14" font-weight="700">USD ↓</text>
+  <circle cx="665" cy="266" r="212" fill="url(#glow)"/>
+  <g fill="url(#crystal)" stroke="#e5edff" stroke-opacity=".55" stroke-width="2">
+    <path d="M665 82 754 245 665 458 576 245Z"/>
+    <path d="M665 82 665 458 576 245Z" fill="#8f75ee"/>
+    <path d="M665 82 754 245 665 458Z" fill="#cadfff"/>
+    <path d="M576 245 665 196 754 245 665 302Z" fill="#f4e8ff"/>
+  </g>
+  <g fill="#f9e5ff">
+    <circle cx="520" cy="150" r="8"/>
+    <circle cx="810" cy="184" r="6"/>
+    <circle cx="788" cy="385" r="9"/>
+    <circle cx="530" cy="388" r="5"/>
+  </g>
+  <text x="426" y="492" fill="#f4efff" font-family="sans-serif" font-size="28" font-weight="700" letter-spacing="4">ANARI PLAYGROUND</text>
+</svg>

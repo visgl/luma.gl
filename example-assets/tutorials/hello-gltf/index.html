@@ -1,0 +1,52 @@
+<!doctype html>
+<head>
+  <script type="module">
+    import {makeAnimationLoop} from '@luma.gl/engine';
+    import {webgpuAdapter} from '@luma.gl/webgpu';
+    import {webgl2Adapter} from '@luma.gl/webgl';
+    import AnimationLoopTemplate from './app.ts';
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]});
+    animationLoop.start();
+  </script>
+  <style>
+    body {
+      background: black;
+      margin: 0;
+    }
+
+    canvas {
+      height: 100% !important;
+      width: 100% !important;
+      transition: opacity 1s ease-in-out;
+    }
+
+    #model-options {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      padding: 4px;
+      background-color: gray;
+      user-select: none;
+    }
+
+    #model-options label {
+      color: white;
+    }
+    #error {
+      position: absolute;
+      left: 10px;
+      top: 120px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div id="model-options">
+    <!-- Loaded dynamically from model index -->
+    <select id="model-select"></select>
+    <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
+    <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+    <div><label><input type="checkbox" id="pbr" />PBR</label></div>
+  </div>
+  <div id="error"></div>
+</body>

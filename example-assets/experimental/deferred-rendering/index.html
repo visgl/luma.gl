@@ -1,0 +1,58 @@
+<!doctype html>
+<head>
+  <meta charset="utf-8" />
+  <title>Deferred Illumination Lab</title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #01030b; color-scheme: dark; }
+    canvas { display: block; width: 100vw !important; height: 100vh !important; }
+    .display-status {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1;
+      padding: 13px 16px;
+      color: #e7ecff;
+      background: rgba(5, 8, 20, 0.76);
+      border: 1px solid rgba(175, 195, 255, 0.18);
+      border-radius: 10px;
+      font: 12px/1.5 system-ui, sans-serif;
+      letter-spacing: 0.04em;
+      backdrop-filter: blur(12px);
+    }
+    .display-status strong { display: block; font-size: 14px; }
+    .display-status label { display: block; margin-top: 9px; color: #aeb8dc; }
+    .display-status input { display: block; width: 170px; margin-top: 5px; }
+    #dynamic-range-status { color: #ffd493; }
+    #hdr-highlight-value { color: #ffd493; }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const supportsHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
+  const displayMode = supportsHighDynamicRange ? 'WEBGPU · HDR · DISPLAY P3' : 'WEBGPU · SDR';
+  document.title = `Deferred Illumination Lab · ${supportsHighDynamicRange ? 'HDR' : 'SDR'}`;
+  document.getElementById('dynamic-range-status').textContent = displayMode;
+  const device = luma.createDevice({
+    id: 'deferred-rendering',
+    adapters: [webgpuAdapter],
+    createCanvasContext: supportsHighDynamicRange
+      ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+      : true,
+    featureLevel: 'core'
+  });
+  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+</script>
+<body>
+  <aside class="display-status">
+    <strong>ILLUMINATION LAB</strong>
+    <span id="dynamic-range-status"></span>
+    <label for="hdr-highlight-boost">
+      HDR HIGHLIGHT BOOST <span id="hdr-highlight-value">1.40×</span>
+    </label>
+    <input id="hdr-highlight-boost" type="range" min="0" max="6" step="0.05" value="1.4" />
+  </aside>
+</body>

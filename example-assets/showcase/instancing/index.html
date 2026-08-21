@@ -1,0 +1,31 @@
+<!doctype html>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const requestedDevice = new URLSearchParams(window.location.search).get('device');
+  const adapters =
+    requestedDevice === 'webgl'
+      ? [webgl2Adapter]
+      : requestedDevice === 'webgpu'
+        ? [webgpuAdapter]
+        : [webgpuAdapter, webgl2Adapter];
+  const supportsHighDynamicRange =
+    requestedDevice !== 'webgl' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(dynamic-range: high)').matches;
+  const device = luma.createDevice({
+    id: 'instancing',
+    adapters,
+    createCanvasContext: supportsHighDynamicRange
+      ? {colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+      : true
+  });
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+  animationLoop.start();
+</script>
+<body>
+</body>

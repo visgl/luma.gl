@@ -1,0 +1,43 @@
+#usda 1.0
+(
+    defaultPrim = "VehicleGallery"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "VehicleGallery"
+{
+    def Xform "FormulaRacer" (
+        prepend references = @./mini-vehicles/assets/vehicles/formula/asset/formulaFullAsset.usda@
+    )
+    {
+        double3 xformOp:translate = (-4, 0, 0)
+        double3 xformOp:scale = (0.024, 0.024, 0.024)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Xform "CrimsonSedan" (
+        prepend references = @./mini-vehicles/assets/vehicles/sedan/asset/sedanFullAsset.usda@
+    )
+    {
+        double3 xformOp:translate = (4, 0, 0)
+        double3 xformOp:scale = (0.024, 0.024, 0.024)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def DistantLight "GallerySun"
+    {
+        color3f inputs:color = (1, 0.9, 0.76)
+        float inputs:intensity = 850
+        float3 xformOp:rotateXYZ = (-48, 28, 0)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def SphereLight "BlueRim"
+    {
+        color3f inputs:color = (0.18, 0.48, 1)
+        float inputs:intensity = 1750
+        double3 xformOp:translate = (-7, 6, -5)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

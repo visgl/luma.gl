@@ -1,0 +1,55 @@
+# Shader Logs
+
+Shader compilation and linking logs contain important information about . luma.gl provides a single interface to in the form of a compiler message type and an error log formatting function.
+
+## Usage[​](#usage "Direct link to Usage")
+
+## Types[​](#types "Direct link to Types")
+
+### CompilerMessage[​](#compilermessage "Direct link to CompilerMessage")
+
+Contains information about one compilation message.
+
+```
+export type CompilerMessage = {
+
+  type: 'error' | 'warning' | 'info';
+
+  message: string;
+
+  lineNum: number;
+
+  linePos: number;
+
+}
+```
+
+A shader compiler would typically return an array of `CompilerMessage` objects.
+
+This type is intentionally compatible with the WebGPU `CompilerMessage` type.
+
+## Functions[​](#functions "Direct link to Functions")
+
+## formatCompilerLog[​](#formatcompilerlog "Direct link to formatCompilerLog")
+
+Formats compiler messages, optionally interleaving them with the source code.
+
+```
+export function formatCompilerLog(
+
+  shaderLog: readonly CompilerMessage[],
+
+  source: string,
+
+  options?: {
+
+    showSourceCode?: boolean;
+
+  }
+
+): string;
+```
+
+* `shaderLog` - an array of compiler messages.
+* `source` - the original source code.
+* `options.showSourceCode` - if true, shows 3 lines of source code before each error.

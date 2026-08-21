@@ -1,0 +1,26 @@
+{
+  "name": "luma.gl-examples-gltf-showcase",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
+    "@loaders.gl/core": "~4.4.2",
+    "@loaders.gl/gltf": "~4.4.2",
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/gltf": "9.4.0-alpha.4",
+    "@luma.gl/shadertools": "9.4.0-alpha.4",
+    "@luma.gl/webgl": "9.4.0-alpha.4",
+    "@luma.gl/webgpu": "9.4.0-alpha.4",
+    "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

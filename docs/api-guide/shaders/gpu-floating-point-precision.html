@@ -1,0 +1,298 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-api-guide/shaders/gpu-floating-point-precision" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>GPU Floating-Point Precision Techniques | luma.gl</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="GPU Floating-Point Precision Techniques | luma.gl"/><meta data-rh=true name=description content='"fp64" is often used to mean "more precision than f32," but the available'/><meta data-rh=true property=og:description content='"fp64" is often used to mean "more precision than f32," but the available'/><link data-rh=true rel=icon href=/favicon.png /><link data-rh=true rel=canonical href=https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision /><link data-rh=true rel=alternate href=https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision hreflang=en /><link data-rh=true rel=alternate href=https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision","name":"GPU Floating-Point Precision Techniques","position":1}]}</script><link rel=stylesheet href=/assets/css/styles.e5ad897e.css /><script src=/assets/js/runtime~main.ac152245.js defer></script><script src=/assets/js/main.3edf2edf.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-afd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><div role=region aria-label="Skip to main content"><a class=skipToContent_oPtH href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/><div class=navbar__logo><img src=/visgl-logo-dark.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"/><img src=/visgl-logo-light.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"/></div><b class="navbar__title text--truncate">luma.gl</b></a><a class="navbar__item navbar__link" href=/examples>Examples</a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/docs>Docs</a><a class="navbar__item navbar__link" href=/showcase>Showcase</a><a class="navbar__item navbar__link" href=/docs/tutorials>Tutorials</a><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_bzqh><div class=dsla-search-wrapper><div class=dsla-search-field data-tags=default,docs-default-current,docs-examples-current></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class=docsWrapper__sE8><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type=button></button><div class=docRoot_DfVB><aside class="theme-doc-sidebar-container docSidebarContainer_c7NB"><div class=sidebarViewport_KYo0><div class=sidebar_CUen><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_jmj1"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs><span title="luma.gl documentation" class=linkLabel_CDUV><span class=linkTitle_f4wm>luma.gl documentation</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs/getting-started><span title="Getting Started" class=linkLabel_CDUV><span class=linkTitle_f4wm>Getting Started</span></span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/docs/capabilities><span class=categoryLinkLabel_ufhF>Capabilities</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/docs/tutorials><span class=categoryLinkLabel_ufhF>Fundamentals</span></a></div><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs/faq><span title=FAQ class=linkLabel_CDUV><span class=linkTitle_f4wm>FAQ</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs/glossary><span title="luma.gl glossary" class=linkLabel_CDUV><span class=linkTitle_f4wm>luma.gl glossary</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs/whats-new><span title="What's New" class=linkLabel_CDUV><span class=linkTitle_f4wm>What's New</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class=menu__link href=/docs/upgrade-guide><span title="Upgrade Guide" class=linkLabel_CDUV><span class=linkTitle_f4wm>Upgrade Guide</span></span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/docs/api-guide><span class=categoryLinkLabel_ufhF>API Guide</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/docs/api-guide><span class=categoryLinkLabel_ufhF>API overview</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/docs/api-guide/engine><span class=categoryLinkLabel_ufhF>Graphics Engine Programming</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/docs/api-guide/gpu><span class=categoryLinkLabel_ufhF>Core GPU Programming</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/docs/api-guide/shaders><span class=categoryLinkLabel_ufhF>Shader-Level Programming</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/docs/api-guide/gpu/gpgpu><span class=categoryLinkLabel_ufhF>GPGPU Programming</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/docs/api-guide/gpu/gpgpu><span title="GPGPU programming" class=linkLabel_CDUV><span class=linkTitle_f4wm>GPGPU programming</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/docs/api-guide/gpu/gpu-data-processing><span title="Choosing a GPU Data-Processing API" class=linkLabel_CDUV><span class=linkTitle_f4wm>Choosing a GPU Data-Processing API</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/docs/api-guide/shaders/gpu-floating-point-precision><span title="GPU Floating-Point Precision Techniques" class=linkLabel_CDUV><span class=linkTitle_f4wm>GPU Floating-Point Precision Techniques</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/docs/api-guide/gpu/gpu-tables><span title="GPU Tables" class=linkLabel_CDUV><span class=linkTitle_f4wm>GPU Tables</span></span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/docs/api-guide/gpu/tabular-data-in-wgsl><span title="Tabular Data in WGSL" class=linkLabel_CDUV><span class=linkTitle_f4wm>Tabular Data in WGSL</span></span></a></ul></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/docs/api-reference><span class=categoryLinkLabel_ufhF>API Reference</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/docs/developer-guide><span class=categoryLinkLabel_ufhF>Developer Guide</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_ROYx menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false href=/docs/legacy/porting-guide><span class=categoryLinkLabel_ufhF>Legacy Guides</span></a></div></ul></nav></div></div></aside><main class=docMainContainer_a9sJ><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_Qr34"><div class=docItemContainer_tjFy><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_T5ub" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_sfvy><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>API Guide</span><li class=breadcrumbs__item><span class=breadcrumbs__link>GPGPU Programming</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>GPU Floating-Point Precision Techniques</span></ul></nav><div class="tocCollapsible_wXna theme-doc-toc-mobile tocMobile_Ojys"><button type=button class="clean-btn tocCollapsibleButton_iI2p">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>GPU Floating-Point Precision Techniques</h1></header>
+<nav class=docs-page-tabs aria-label="GPU floating-point precision"><a class="docs-page-tabs__tab docs-page-tabs__tab--active" aria-current=page href=/docs/api-guide/shaders/gpu-floating-point-precision>Precision guide</a><a class=docs-page-tabs__tab href=/docs/api-reference/shadertools/shader-modules/fp64>fp64</a><a class=docs-page-tabs__tab href=/docs/api-reference/shadertools/shader-modules/fp64-arithmetic>fp64 arithmetic</a></nav>
+<nav class=docs-page-tabs aria-label="GPU floating-point precision documentation sections"><a class="docs-page-tabs__tab docs-page-tabs__tab--active" aria-current=page href=/docs/api-guide/shaders/gpu-floating-point-precision>Precision Guide</a><a class=docs-page-tabs__tab href=/docs/api-reference/shadertools/shader-modules/fp32>fp32</a><a class=docs-page-tabs__tab href=/docs/api-reference/shadertools/shader-modules/fp64>fp64</a><a class=docs-page-tabs__tab href=/docs/api-reference/shadertools/shader-modules/fp64-arithmetic>fp64arithmetic</a><a class=docs-page-tabs__tab href=/examples/experimental/fp64>Mandelbrot & Benchmarks</a></nav>
+<p>"fp64" is often used to mean "more precision than <code>f32</code>," but the available
+techniques do not all implement the same number system. A pair of <code>f32</code> values,
+raw IEEE 754 binary64 bits, fixed-point integers, and native 64-bit floating
+point have different precision, range, rounding, and portability guarantees.</p>
+<p>That distinction matters on WebGPU. Classic double-single arithmetic can be
+fast, but its correctness depends on individual <code>f32</code> rounding points that WGSL
+does not require a compiler to preserve. luma.gl therefore uses an
+integer-controlled double-single path automatically on Apple WebGPU adapters,
+while retaining the classic path where it is known to work.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=live-mandelbrot-and-compute-benchmark>Live Mandelbrot And Compute Benchmark<a href=#live-mandelbrot-and-compute-benchmark class=hash-link aria-label="Direct link to Live Mandelbrot And Compute Benchmark" title="Direct link to Live Mandelbrot And Compute Benchmark" translate=no>​</a></h2>
+<p>The two Mandelbrot views follow the same deep zoom. The left view uses native
+<code>f32</code>; the right uses luma.gl's <code>fp64arithmetic</code> double-single representation.
+On WebGPU, use the benchmark below the canvases to compare native <code>f32</code>,
+automatic selection, the classic transforms, and the integer-controlled path
+on the active device.</p>
+<section aria-label="Interactive GPU precision benchmark" style='min-height:280px;display:grid;align-content:center;justify-items:start;gap:12px;padding:28px;margin:1.5rem 0;border:1px solid rgba(148, 163, 184, 0.24);border-radius:12px;background:linear-gradient(90deg, rgba(4, 10, 20, 0.97), rgba(4, 10, 20, 0.68)), url("/images/examples/experimental/fp64.jpg") center / cover;color:#f8fafc'><span style=color:#a5b4fc;font-size:11px;font-weight:750;letter-spacing:0.12em;text-transform:uppercase>Optional interactive GPU benchmark</span><strong style=font-size:22px;line-height:1.2>Explore floating-point precision.</strong><span style=max-width:460px;color:#cbd5e1;font-size:14px;line-height:1.6>Compare Mandelbrot rendering and compute precision when you are ready to use your GPU.</span><button style="border:0;border-radius:999px;background:#e2e8f0;color:#0f172a;cursor:pointer;font-size:13px;font-weight:700;padding:10px 16px" type=button>Launch precision benchmark →</button></section>
+<p>The benchmark is diagnostic rather than a CI performance test. It reports
+numerical error alongside runtime because the fastest implementation is not
+useful if the compiler has optimized away its residual terms.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=start-with-the-required-contract>Start With The Required Contract<a href=#start-with-the-required-contract class=hash-link aria-label="Direct link to Start With The Required Contract" title="Direct link to Start With The Required Contract" translate=no>​</a></h2>
+<div class=docs-markdown-table><table class=docs-markdown-table__table><thead><tr><th>Technique<th>Significant precision<th>Exponent or range<th>IEEE binary64 semantics?<tbody><tr><td>Native <code>f32</code><td>24 binary digits, about 7 decimal digits<td>Binary32<td>No<tr><td>Native binary64<td>53 binary digits, about 15–16 decimal digits<td>Binary64<td>Only as guaranteed by the backend<tr><td>Double-single (<code>hi + lo</code>)<td>Up to about 48 binary digits, about 14 decimal digits in its normal operating range<td>Essentially binary32<td>No<tr><td>Fixed point<td>Chosen explicitly<td>Chosen explicitly<td>No<tr><td>Software binary64<td>53 binary digits<td>Binary64<td>Only to the extent implemented</table></div>
+<p>A double-single value is an <em>expansion</em>: two non-overlapping <code>f32</code> values whose
+real sum is the represented value. It increases significand precision, not
+exponent range. It also does not automatically reproduce binary64 rounding,
+subnormal, infinity, or NaN behavior.</p>
+<p>Before choosing an implementation, answer three questions:</p>
+<ol>
+<li class="">Is the problem loss of <em>relative precision</em>, loss caused by subtracting two
+large nearby values, or insufficient exponent range?</li>
+<li class="">Does every intermediate need more precision, or only one boundary operation
+such as <code>position - origin</code>?</li>
+<li class="">Must the GPU agree bit-for-bit with a CPU binary64 operation sequence, or is
+a numerically accurate result enough?</li>
+</ol>
+<p>The cheapest robust solution is usually the narrowest contract that solves the
+actual problem.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=storage-is-not-arithmetic>Storage Is Not Arithmetic<a href=#storage-is-not-arithmetic class=hash-link aria-label="Direct link to Storage Is Not Arithmetic" title="Direct link to Storage Is Not Arithmetic" translate=no>​</a></h2>
+<p>Two 32-bit words can store every bit of a binary64 value without loss. That
+only defines a transport format. Addition, multiplication, comparisons,
+rounding, and special values still need implementations.</p>
+<p>Likewise, uploading <code>[high, low]</code> as two <code>f32</code> values does not by itself provide
+double-single arithmetic. Every operation must maintain a suitable expansion,
+and the error-free transforms used to do that need specific floating-point
+evaluation rules.</p>
+<p>This gives luma.gl two useful but distinct representations:</p>
+<ul>
+<li class=""><code>fp64f32</code> is a <code>vec2f</code> expansion, normally interpreted as <code>high + low</code>.</li>
+<li class=""><code>fp64u32</code> is the canonical high and low words of an IEEE 754 binary64 value.</li>
+</ul>
+<p>The first is convenient for expansion arithmetic. The second preserves the
+source value exactly and is suitable for integer-assisted operations.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=how-classic-double-single-arithmetic-works>How Classic Double-Single Arithmetic Works<a href=#how-classic-double-single-arithmetic-works class=hash-link aria-label="Direct link to How Classic Double-Single Arithmetic Works" title="Direct link to How Classic Double-Single Arithmetic Works" translate=no>​</a></h2>
+<p>The building blocks are <em>error-free transforms</em>. They return a rounded result
+and a residual whose real sum equals the exact input operation.</p>
+<p>Let <code>fl(x)</code> mean that <code>x</code> is evaluated as a distinct binary32 operation and
+rounded to nearest. The general addition transform was discovered by Møller
+and later proved and presented by Knuth; it is therefore often called the
+Møller–Knuth <code>TwoSum</code> transform:</p>
+<div class="language-text codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-text codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token plain">s = fl(a + b)</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">v = fl(s - a)</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">e = fl(fl(a - fl(s - v)) + fl(b - v))</span><br/></div></code></pre></div></div>
+<p>Under its assumptions, <code>s + e</code> is exactly equal to the real sum <code>a + b</code>.
+Dekker's shorter <code>FastTwoSum</code> uses:</p>
+<div class="language-text codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-text codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token plain">s = fl(a + b)</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">e = fl(b - fl(s - a))</span><br/></div></code></pre></div></div>
+<p>The shorter transform additionally requires the operands to be ordered, most
+commonly expressed as <code>abs(a) >= abs(b)</code> for binary arithmetic.</p>
+<p>For multiplication without a fused multiply-add, Dekker splits each operand
+into shorter components. For binary32, whose precision is 24 bits, a common
+split is:</p>
+<div class="language-text codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-text codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token plain">c = fl(4097 * a)              // 4097 = 2^12 + 1</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">aHigh = fl(c - fl(c - a))</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">aLow = fl(a - aHigh)</span><br/></div></code></pre></div></div>
+<p>Products of the components can then recover the product residual. With a
+<em>genuinely fused</em> multiply-add, the residual has the much simpler form
+<code>fma(a, b, -fl(a * b))</code>.</p>
+<p>These exactness statements are conditional. The usual binary proofs assume
+round-to-nearest evaluation, no reassociation or unintended contraction,
+finite intermediates without overflow, and the required handling of tiny
+values. The <code>4097 * a</code> split is not safe for every finite <code>f32</code>: it can overflow
+even when <code>a</code> does not, so a complete implementation must handle large inputs.
+Subnormals or flush-to-zero behavior require similar care. Parentheses alone do
+not establish any of these conditions.</p>
+<p>Once <code>TwoSum</code>, <code>FastTwoSum</code>, and <code>TwoProd</code> are available, double-single add and
+multiply combine the high components, accumulate their residuals and the low
+components, then renormalize the result. Division and square root normally use
+an <code>f32</code> approximation followed by one or more compensated corrections.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=why-this-is-fragile-in-wgsl-and-metal>Why This Is Fragile In WGSL And Metal<a href=#why-this-is-fragile-in-wgsl-and-metal class=hash-link aria-label="Direct link to Why This Is Fragile In WGSL And Metal" title="Direct link to Why This Is Fragile In WGSL And Metal" translate=no>​</a></h2>
+<p>An error-free transform is an algorithm over <em>rounding events</em>, not an
+algebraic identity. For example, the low term in <code>TwoSum</code> is algebraically zero
+over the real numbers. A compiler that reassociates the expression can
+therefore erase the information the algorithm was designed to recover.</p>
+<p>The <a href=https://www.w3.org/TR/WGSL/#floating-point-evaluation target=_blank rel="noopener noreferrer" class="">WGSL floating-point evaluation
+rules</a> permit
+reassociation and fusion, and do not specify a single rounding direction for
+all floating-point evaluation. WGSL's
+<a href=https://www.w3.org/TR/WGSL/#fma-builtin target=_blank rel="noopener noreferrer" class=""><code>fma</code></a> also does not provide the
+portable, correctly rounded fused-operation contract that Dekker-style
+<code>TwoProd</code> would need.</p>
+<p>As a result, these source-level techniques are not portable precision barriers:</p>
+<ul>
+<li class="">assigning an intermediate to <code>let</code> or <code>var</code>;</li>
+<li class="">adding a runtime zero or multiplying by a runtime one;</li>
+<li class="">moving an expression into a helper function;</li>
+<li class="">adding parentheses or an identity <code>bitcast</code>;</li>
+<li class="">spelling the product residual with WGSL <code>fma</code>.</li>
+</ul>
+<p>They may affect a particular compiler version, but they cannot turn an
+optimization-sensitive transform into a WebGPU guarantee. Native APIs or
+toolchains with a strict floating-point mode can make classic double-single a
+valid backend-specific fast path. WebGPU applications still need a fallback
+when correctness depends on it.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=lumagls-applemetal-path>luma.gl's Apple/Metal Path<a href=#lumagls-applemetal-path class=hash-link aria-label="Direct link to luma.gl's Apple/Metal Path" title="Direct link to luma.gl's Apple/Metal Path" translate=no>​</a></h2>
+<p>On Apple WebGPU adapters, <code>fp64arithmetic</code> replaces the rounding-sensitive
+transforms with integer-controlled operations. Each <code>f32</code> limb is decoded into
+sign, exponent, and significand fields. <code>TwoSum</code>, <code>TwoProd</code>, and the required
+renormalization use <code>u32</code> limbs with explicit round-to-nearest, ties-to-even
+packing back to <code>f32</code>. A 24-by-24-bit product needs only 48 exact bits, so this
+is considerably narrower than full software binary64.</p>
+<p>The public representation and function names remain <code>vec2f</code> double-single, so
+existing <code>fp64arithmetic</code> WGSL callers do not need a second API. The shader
+assembler selects this path automatically when the backend is WebGPU and the
+adapter is Apple. Applications can force it for testing on another adapter, or
+explicitly disable it on Apple:</p>
+<div class="language-ts codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-ts codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token keyword" style="color:rgb(12, 150, 155)">const</span><span class="token plain"> computation </span><span class="token operator" style="color:rgb(12, 150, 155)">=</span><span class="token plain"> </span><span class="token keyword" style="color:rgb(12, 150, 155)">new</span><span class="token plain"> </span><span class="token class-name" style="color:rgb(17, 17, 17)">Computation</span><span class="token punctuation" style="color:rgb(153, 76, 195)">(</span><span class="token plain">device</span><span class="token punctuation" style="color:rgb(153, 76, 195)">,</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(153, 76, 195)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain">  </span><span class="token comment" style="color:rgb(152, 159, 177);font-style:italic">// ...</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain">  modules</span><span class="token operator" style="color:rgb(12, 150, 155)">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(153, 76, 195)">[</span><span class="token plain">fp64arithmetic</span><span class="token punctuation" style="color:rgb(153, 76, 195)">]</span><span class="token punctuation" style="color:rgb(153, 76, 195)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain">  defines</span><span class="token operator" style="color:rgb(12, 150, 155)">:</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(153, 76, 195)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain">    </span><span class="token constant" style="color:rgb(72, 118, 214)">LUMA_FP64_INTEGER_ARITHMETIC</span><span class="token operator" style="color:rgb(12, 150, 155)">:</span><span class="token plain"> </span><span class="token boolean" style="color:rgb(188, 84, 84)">true</span><span class="token plain"> </span><span class="token comment" style="color:rgb(152, 159, 177);font-style:italic">// false overrides the Apple default</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain">  </span><span class="token punctuation" style="color:rgb(153, 76, 195)">}</span><span class="token plain"></span><br/></div><div class=token-line style=color:#403f53><span class="token plain"></span><span class="token punctuation" style="color:rgb(153, 76, 195)">}</span><span class="token punctuation" style="color:rgb(153, 76, 195)">)</span><span class="token punctuation" style="color:rgb(153, 76, 195)">;</span><br/></div></code></pre></div></div>
+<p>This path favors reliable rounding points over throughput. It still represents
+an expansion with essentially the <code>f32</code> exponent range, not binary64. While
+both limbs are normal it provides approximately 48 significand bits. For result
+magnitudes between roughly <code>2^-126</code> and <code>2^-102</code>, the low limb is subnormal, so
+available precision gradually tapers from about 48 bits toward 24 bits as the
+result approaches <code>f32</code> underflow.</p>
+<p>The portable contract covers finite, normalized double-single inputs and
+finite normal results within that representational range. It does not promise
+full binary64 special-value or subnormal semantics. Division and square root
+use native <code>f32</code> estimates followed by integer-controlled double-single
+corrections.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=the-main-alternatives>The Main Alternatives<a href=#the-main-alternatives class=hash-link aria-label="Direct link to The Main Alternatives" title="Direct link to The Main Alternatives" translate=no>​</a></h2>
+<div class=docs-markdown-table><table class=docs-markdown-table__table><thead><tr><th>Approach<th>Typical cost<th>Portability<th>Best fit<tbody><tr><td>Native hardware binary64<td>Lowest when supported, sometimes low throughput<td>Not a portable WGSL feature<td>Native backends with a strict <code>f64</code> contract<tr><td>Classic double-single<td>Lower than integer emulation; operation-dependent<td>Depends on preserved rounding points<td>Controlled compilers and verified fast paths<tr><td>Integer-assisted double-single<td>Higher than classic double-single; implementation-dependent<td>Robust with specified <code>u32</code> operations<td>Portable expansion arithmetic when about 48 bits are enough<tr><td>Exact binary64 delta to <code>f32</code><td>Moderate, fixed integer cost<td>Robust as result bits; direct <code>f32</code> is exact for normal finite results<td>Large-coordinate origin subtraction<tr><td>Full software binary64<td>High; division, square root, and transcendentals are especially costly<td>Robust if complete<td>Binary64 range, special values, or CPU-compatible stepwise semantics<tr><td>Fixed point<td>Very low for add; multiply and divide need wide intermediates<td>Robust<td>Bounded dynamic range and iterative kernels<tr><td>CPU preprocessing and origin rebasing<td>Usually lowest GPU cost<td>Robust<td>Rendering and analytics that only need local values on the GPU</table></div>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=origin-rebasing-and-an-exact-delta>Origin Rebasing And An Exact Delta<a href=#origin-rebasing-and-an-exact-delta class=hash-link aria-label="Direct link to Origin Rebasing And An Exact Delta" title="Direct link to Origin Rebasing And An Exact Delta" translate=no>​</a></h3>
+<p>Large-coordinate rendering often does not need general fp64 arithmetic. It
+needs this operation:</p>
+<div class="language-text codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-text codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token plain">localPosition = round_f32(exact(worldPosition - worldOrigin))</span><br/></div></code></pre></div></div>
+<p>Converting both inputs to <code>f32</code> first loses the low bits before cancellation.
+Subtracting their raw binary64 significands and exponents with integer
+operations, then rounding the exact difference once to <code>f32</code>, retains them.
+After that boundary operation, transforms, interpolation, and rasterization can
+remain ordinary <code>f32</code>.</p>
+<p>This is a targeted operation, not a binary64 arithmetic library. It is ideal
+when the output is known to fit in binary32 and later calculations only need
+binary32 precision. It does not help an iterative algorithm that must retain
+extra bits after every addition or multiplication.</p>
+<p>There is also a subtle semantic choice. Directly rounding the exact difference
+implements <code>round_f32(exact(a - b))</code>. A CPU expression that first performs an
+IEEE binary64 subtraction and then converts to <code>f32</code> implements
+<code>round_f32(round_binary64(a - b))</code>. Those results normally agree, but double
+rounding means they are not universally identical. If bit-for-bit agreement
+with a particular CPU operation sequence is part of the contract, implement
+that sequence rather than assuming the exact-delta contract is the same one.</p>
+<p>The subtraction can instead happen on the CPU when the origin changes
+infrequently. GPU integer subtraction is useful when both values arrive as
+columns of binary64 data, the origin changes frequently, or preprocessing
+would require an unwanted copy.</p>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=integer-assisted-double-single>Integer-Assisted Double-Single<a href=#integer-assisted-double-single class=hash-link aria-label="Direct link to Integer-Assisted Double-Single" title="Direct link to Integer-Assisted Double-Single" translate=no>​</a></h3>
+<p>A middle ground keeps the <code>high + low</code> representation while replacing the
+rounding-sensitive transforms with <code>u32</code> arithmetic. Decode each <code>f32</code> sign,
+exponent, and significand; align or multiply the integer significands; preserve
+guard, round, and sticky information; then emit a normalized high/low pair.</p>
+<p>This is not a bit-at-a-time floating-point emulator. A binary32 significand is
+only 24 bits, so an exact product fits in 48 bits and can be represented by a
+small fixed set of <code>u32</code> limbs. It is substantially narrower than full
+software binary64 and can provide deterministic building blocks for expansion
+addition and multiplication.</p>
+<p>Its scope should remain explicit. It still has essentially binary32 exponent
+range unless separate exponent state is added. NaNs, infinities, signed zero,
+and subnormal behavior require additional design. It also does not make
+arbitrary existing <code>vec2f</code> code safe: every rounding-sensitive transform and
+renormalization step in a supported operation must use the deterministic path.</p>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=full-software-binary64>Full Software Binary64<a href=#full-software-binary64 class=hash-link aria-label="Direct link to Full Software Binary64" title="Direct link to Full Software Binary64" translate=no>​</a></h3>
+<p>A complete implementation stores sign, 11-bit exponent, and 52 fraction bits
+in integer words. Each operation aligns significands, computes with extra
+guard, round, and sticky bits, normalizes, rounds, and handles zeros,
+subnormals, infinities, and NaNs.</p>
+<p>This is the direct choice when binary64 range and behavior are requirements,
+not merely additional local precision. It is also the software route to
+step-by-step CPU agreement, provided the CPU contract is specified precisely:
+rounding mode, NaN policy, operation order, contraction, and transcendental
+functions all matter. Merely storing binary64 bits is insufficient, and an
+incomplete special-value or rounding implementation is not IEEE binary64.</p>
+<p>Software binary64 is expensive, but cost varies by workload. Addition and
+subtraction are much cheaper than division, square root, or correctly rounded
+transcendentals. A small application-specific subset can therefore be
+reasonable even when a general library is not.</p>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=fixed-point>Fixed Point<a href=#fixed-point class=hash-link aria-label="Direct link to Fixed Point" title="Direct link to Fixed Point" translate=no>​</a></h3>
+<p>Fixed point stores an integer <code>n</code> and interprets it as <code>n * 2^-k</code> (or another
+chosen scale). Addition and subtraction are exact until integer overflow.
+Multiplication needs a wide intermediate followed by an explicit rounding
+shift; division needs an explicitly scaled numerator.</p>
+<p>For a bounded domain, fixed point can deliver more useful fractional bits than
+double-single at much lower and more predictable cost. Deep-zoom fractals,
+geometric predicates over a known extent, counters, and reproducible
+accumulations are common fits. The tradeoff is manual range analysis and no
+automatic exponent, NaN, or infinity behavior.</p>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=native-binary64>Native Binary64<a href=#native-binary64 class=hash-link aria-label="Direct link to Native Binary64" title="Direct link to Native Binary64" translate=no>​</a></h3>
+<p>Native <code>f64</code> is the obvious answer on a backend that supports it with the
+required evaluation controls. It is not a portable WGSL/WebGPU shader type,
+and hardware throughput varies widely. Even where native <code>f64</code> exists,
+bit-for-bit CPU agreement still requires matching operation order, rounding,
+and contraction rules.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=choosing-by-workload>Choosing By Workload<a href=#choosing-by-workload class=hash-link aria-label="Direct link to Choosing By Workload" title="Direct link to Choosing By Workload" translate=no>​</a></h2>
+<div class=docs-markdown-table><table class=docs-markdown-table__table><thead><tr><th>Workload<th>Preferred starting point<th>Reason<tbody><tr><td>World, geospatial, or astronomical coordinates<td>CPU origin rebasing or exact <code>fp64u32</code> delta<td>Preserves local detail, then returns to fast <code>f32</code><tr><td>Deep iterative calculation over a bounded interval<td>Fixed point or integer-assisted double-single<td>Deterministic precision and a cost below full binary64<tr><td>General arithmetic needing roughly 14 decimal digits<td>Integer-assisted double-single<td>More precision without implementing binary64's full range<tr><td>Binary64 storage or data interchange without arithmetic<td>Raw <code>fp64u32</code> words<td>Preserves every source bit without paying for software arithmetic<tr><td>Arithmetic requiring binary64 range and special values<td>Full software binary64<td>The arithmetic semantics, not just the representation, are the requirement<tr><td>Controlled native GPU backend<td>Native <code>f64</code>, or verified classic double-single<td>Can use backend guarantees unavailable to portable WGSL<tr><td>A few high-precision constants followed by ordinary math<td>CPU preprocessing<td>Avoids paying an emulation cost per invocation</table></div>
+<p>Do not choose a representation from the label "fp64." Choose it from the
+failure mode. Origin rebasing cannot repair an iteration that loses bits on
+every step; software binary64 is unnecessary if one exact subtraction produces
+the only value that must reach the shader.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=lumagl-precision-paths>luma.gl Precision Paths<a href=#lumagl-precision-paths class=hash-link aria-label="Direct link to luma.gl Precision Paths" title="Direct link to luma.gl Precision Paths" translate=no>​</a></h2>
+<p>The <a class="" href=/docs/api-reference/shadertools/shader-modules/fp64><code>fp64</code></a> module exposes
+the full established <code>fp64f32</code> function library in GLSL only. It has no WGSL
+source, so its exponential, logarithmic, and trigonometric functions are not
+available to WebGPU shaders.</p>
+<p>Its lower-level
+<a class="" href=/docs/api-reference/shadertools/shader-modules/fp64-arithmetic><code>fp64arithmetic</code></a>
+dependency provides the add, subtract, multiply, divide, and square-root
+helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point
+transforms by default. Apple WebGPU uses the integer-controlled implementation
+automatically, and callers can use <code>LUMA_FP64_INTEGER_ARITHMETIC</code> to test or
+override that choice.</p>
+<p>WGSL also provides these targeted helpers for <code>fp64u32</code> values:</p>
+<div class="language-wgsl codeBlockContainer_mQmQ theme-code-block" style=--prism-color:#403f53;--prism-background-color:#FBFBFB><div class=codeBlockContent_t_Hd><pre tabindex=0 class="prism-code language-wgsl codeBlock_RMoD thin-scrollbar" style=color:#403f53;background-color:#FBFBFB><code class=codeBlockLines_AclH><div class=token-line style=color:#403f53><span class="token plain">fn sub_fp64u32_to_f32_bits(aBits: vec2u, bBits: vec2u) -> u32</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">fn sub_fp64u32_to_f32(aBits: vec2u, bBits: vec2u) -> f32</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">fn sub_fp64u32_to_fp64_bits(aBits: vec2u, bBits: vec2u) -> vec2u</span><br/></div><div class=token-line style=color:#403f53><span class="token plain">fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f</span><br/></div></code></pre></div></div>
+<p>The words are in canonical order: <code>.x</code> contains the sign, exponent, and high
+fraction bits, and <code>.y</code> contains the low fraction bits. The <code>to_f32</code> helpers
+implement the exact-delta contract described above, including a single
+round-to-nearest, ties-to-even conversion to a binary32 encoding. The
+<code>to_f32_bits</code> helper returns that encoding as <code>u32</code>, including the module's
+defined handling of zeros, subnormals, infinities, and NaNs. WGSL's relaxed
+rules for those values mean that the direct <code>f32</code> helper has a portable
+exact-value guarantee only for normal finite results. These helpers are
+deliberately narrower than the general <code>fp64f32</code> arithmetic API.</p>
+<p>The <code>to_fp64</code> variants implement the other rounding contract: they round the
+exact subtraction once to binary64 and then split that binary64 result into a
+normalized double-single pair. They preserve useful coordinate deltas that do
+not fit in one <code>f32</code>, but they do not extend the exponent range. The result has
+up to roughly 48 significand bits with an <code>f32</code> exponent range. Finite results
+above that range map to infinity and results below the <code>f32</code> subnormal range
+map to canonical zero. This makes the helpers a practical fit for terrestrial
+GIS coordinates and local metric deltas, not for arbitrary binary64-scale
+scientific values.</p>
+<p><code>normalize_fp64</code>, <code>sign_fp64</code>, and <code>compare_fp64</code> use integer-controlled
+normalization regardless of the selected arithmetic mode. Normalization
+handles stored subnormal limb bits and canonicalizes signed zero. NaN remains
+unordered: <code>sign_fp64</code> and <code>compare_fp64</code> return <code>0</code> for NaN, so callers must
+use <code>is_nan_fp64</code> or <code>is_finite_fp64</code> before interpreting <code>0</code> as finite zero or
+equality.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=validation-is-part-of-the-technique>Validation Is Part Of The Technique<a href=#validation-is-part-of-the-technique class=hash-link aria-label="Direct link to Validation Is Part Of The Technique" title="Direct link to Validation Is Part Of The Technique" translate=no>​</a></h2>
+<p>Precision code should be tested for its numerical contract, not merely for
+successful shader compilation.</p>
+<ul>
+<li class="">Compare result bits with an independent, correctly rounded reference. For
+exact-delta tests, do not use a host expression with a different intermediate
+rounding contract as the only oracle.</li>
+<li class="">Include cancellation, adjacent representable values, half-ULP ties, large
+exponent gaps, signed zero, the normal/subnormal boundary, underflow,
+overflow, infinities, and NaNs where the contract includes them.</li>
+<li class="">Test precision and range separately. A double-single result can carry many
+significant bits and still overflow at the binary32 limit.</li>
+<li class="">Exercise compute, vertex, and fragment paths that matter to the application.
+Optimizers and arithmetic lowering can differ by stage.</li>
+<li class="">Run on real hardware from multiple vendors, especially the Metal path. A
+software adapter or a compile-only test cannot demonstrate that residual
+terms survive execution.</li>
+<li class="">Inspect both the high component and a required nonzero low component. A final
+value can look plausible even after the expansion silently collapses to
+<code>f32</code>.</li>
+<li class="">Benchmark the representative shader. Instruction counts alone do not capture
+register pressure, occupancy, control flow, or driver lowering.</li>
+</ul>
+<p>For CPU agreement, first write down the CPU semantics being matched. JavaScript
+<code>Number</code> storage is binary64, but an oracle such as <code>Math.fround(a - b)</code> includes
+a binary64 arithmetic step before the binary32 conversion. An arbitrary-
+precision integer or rational reference is often clearer for exact-rounding
+tests.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=further-reading>Further Reading<a href=#further-reading class=hash-link aria-label="Direct link to Further Reading" title="Direct link to Further Reading" translate=no>​</a></h2>
+<ul>
+<li class=""><a href=https://standards.ieee.org/ieee/754/6210/ target=_blank rel="noopener noreferrer" class="">IEEE 754-2019</a> defines binary
+floating-point formats and arithmetic.</li>
+<li class="">Ole Møller's <a href=https://doi.org/10.1007/BF01975722 target=_blank rel="noopener noreferrer" class=""><em>Quasi double-precision in floating point
+addition</em></a> introduced the general
+sum-and-roundoff method later associated with Knuth's <code>TwoSum</code> presentation.</li>
+<li class="">T. J. Dekker's <a href=https://eudml.org/doc/132105 target=_blank rel="noopener noreferrer" class=""><em>A Floating-Point Technique for Extending the Available
+Precision</em></a> develops splitting and expansion
+arithmetic.</li>
+<li class="">Jonathan Shewchuk's <a href=https://people.eecs.berkeley.edu/~jrs/papers/robustr.pdf target=_blank rel="noopener noreferrer" class=""><em>Adaptive Precision Floating-Point Arithmetic and Fast
+Robust Geometric Predicates</em></a>
+is a practical treatment of expansions and exact predicates.</li>
+<li class="">Berkeley <a href=https://www.jhauser.us/arithmetic/SoftFloat-3/doc/SoftFloat.html target=_blank rel="noopener noreferrer" class="">SoftFloat</a>
+illustrates the scope of a complete software IEEE floating-point
+implementation.</li>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_QeZL"><a href=https://github.com/visgl/luma.gl/tree/master/docs/../docs/api-guide/shaders/gpu-floating-point-precision.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_bHB7 aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_ydrU"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/docs/api-guide/gpu/gpu-data-processing><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Choosing a GPU Data-Processing API</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/docs/api-guide/gpu/gpu-tables><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>GPU Tables</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_XG6w thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#live-mandelbrot-and-compute-benchmark class="table-of-contents__link toc-highlight">Live Mandelbrot And Compute Benchmark</a><li><a href=#start-with-the-required-contract class="table-of-contents__link toc-highlight">Start With The Required Contract</a><li><a href=#storage-is-not-arithmetic class="table-of-contents__link toc-highlight">Storage Is Not Arithmetic</a><li><a href=#how-classic-double-single-arithmetic-works class="table-of-contents__link toc-highlight">How Classic Double-Single Arithmetic Works</a><li><a href=#why-this-is-fragile-in-wgsl-and-metal class="table-of-contents__link toc-highlight">Why This Is Fragile In WGSL And Metal</a><li><a href=#lumagls-applemetal-path class="table-of-contents__link toc-highlight">luma.gl's Apple/Metal Path</a><li><a href=#the-main-alternatives class="table-of-contents__link toc-highlight">The Main Alternatives</a><ul><li><a href=#origin-rebasing-and-an-exact-delta class="table-of-contents__link toc-highlight">Origin Rebasing And An Exact Delta</a><li><a href=#integer-assisted-double-single class="table-of-contents__link toc-highlight">Integer-Assisted Double-Single</a><li><a href=#full-software-binary64 class="table-of-contents__link toc-highlight">Full Software Binary64</a><li><a href=#fixed-point class="table-of-contents__link toc-highlight">Fixed Point</a><li><a href=#native-binary64 class="table-of-contents__link toc-highlight">Native Binary64</a></ul><li><a href=#choosing-by-workload class="table-of-contents__link toc-highlight">Choosing By Workload</a><li><a href=#lumagl-precision-paths class="table-of-contents__link toc-highlight">luma.gl Precision Paths</a><li><a href=#validation-is-part-of-the-technique class="table-of-contents__link toc-highlight">Validation Is Part Of The Technique</a><li><a href=#further-reading class="table-of-contents__link toc-highlight">Further Reading</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://deck.gl target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://loaders.gl target=_blank rel="noopener noreferrer" class=footer__link-item>loaders.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/react-map-gl target=_blank rel="noopener noreferrer" class=footer__link-item>react-map-gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/deck.gl-community/ target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl-community<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class=footer__link-item>vis.gl blog on Medium<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 OpenJS Foundation</div></div></div></footer></div></body>

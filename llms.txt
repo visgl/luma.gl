@@ -1,0 +1,860 @@
+# luma.gl
+
+> WebGPU and WebGL2 framework documentation for visualization and compute.
+
+
+## docs
+
+Learn high-performance WebGPU and WebGL 2 rendering, compute, shaders, models, and GPU data processing with luma.gl.
+
+- [luma.gl Documentation](https://luma.gl/docs.md): Learn high-performance WebGPU and WebGL 2 rendering, compute, shaders, models, and GPU data processing with luma.gl.
+
+### getting-started
+
+Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
+
+- [Your GPU is the canvas.](https://luma.gl/docs/getting-started.md): Discover real-time rendering, physical simulation, GPU compute, and interactive visualization built with luma.gl.
+
+### capabilities
+
+Detailed feature matrices for GPU-native dataframes, graph and raster analytics, large-scale visualization, WebGPU and WebGL2 rendering, ray tracing, shaders, and assets.
+
+- [Visualization and compute, at GPU scale.](https://luma.gl/docs/capabilities.md): Detailed feature matrices for GPU-native dataframes, graph and raster analytics, large-scale visualization, WebGPU and WebGL2 rendering, ray tracing, shaders, and assets.
+
+#### gpu-data-compute
+
+GPU tables, Arrow, command graphs, dataframe, graph, raster, query, and visualization capabilities in luma.gl.
+
+- [GPU data and compute capabilities](https://luma.gl/docs/capabilities/gpu-data-compute.md): GPU tables, Arrow, command graphs, dataframe, graph, raster, query, and visualization capabilities in luma.gl.
+
+#### rendering-visualization
+
+Portable GPU, engine, shader, effects, glTF, scene, splat, simulation, and immersive rendering capabilities in luma.gl.
+
+- [Rendering and visualization capabilities](https://luma.gl/docs/capabilities/rendering-visualization.md): Portable GPU, engine, shader, effects, glTF, scene, splat, simulation, and immersive rendering capabilities in luma.gl.
+
+### tutorials
+
+Build a luma.gl application incrementally, from the first triangle through shader composition, instancing, lighting, and GPU transforms.
+
+- [Fundamentals](https://luma.gl/docs/tutorials.md): Build a luma.gl application incrementally, from the first triangle through shader composition, instancing, lighting, and GPU transforms.
+
+#### external-webgl-context
+
+This guide shows how to connect luma.gl to a WebGL context that is created and owned by MapLibre GL JS. It uses the webgl2Adapter.attach API to wrap the map's context in a WebGLDevice and keep a WebGLCanvasContext synchronized with MapLibre's canvas.
+
+- [External WebGL Contexts with MapLibre](https://luma.gl/docs/tutorials/external-webgl-context.md): This guide shows how to connect luma.gl to a WebGL context that is created and owned by MapLibre GL JS. It uses the webgl2Adapter.attach API to wrap the map's context in a WebGLDevice and keep a WebGLCanvasContext synchronized with MapLibre's canvas.
+
+#### hello-cube
+
+Goal: expand the triangle model with geometry, a sampled texture, depth testing,
+
+- [Hello Cube](https://luma.gl/docs/tutorials/hello-cube.md): Goal: expand the triangle model with geometry, a sampled texture, depth testing,
+
+#### hello-instancing
+
+Goal: draw multiple copies of one geometry with one model and one draw call.
+
+- [Hello Instancing](https://luma.gl/docs/tutorials/hello-instancing.md): Goal: draw multiple copies of one geometry with one model and one draw call.
+
+#### hello-triangle
+
+Every rendered world starts somewhere. This live example turns one Model into a
+
+- [Hello Triangle](https://luma.gl/docs/tutorials/hello-triangle.md): Every rendered world starts somewhere. This live example turns one Model into a
+
+#### lighting
+
+Add Phong shading to a textured cube using luma.gl's shader module system.
+
+- [Lighting](https://luma.gl/docs/tutorials/lighting.md): Add Phong shading to a textured cube using luma.gl's shader module system.
+
+#### shader-hooks
+
+Shader hooks let shader modules inject code into designated points in a shader. This example defines an OFFSET_POSITION hook that two modules use to shift geometry left or right.
+
+- [Shader Hooks](https://luma.gl/docs/tutorials/shader-hooks.md): Shader hooks let shader modules inject code into designated points in a shader. This example defines an OFFSET_POSITION hook that two modules use to shift geometry left or right.
+
+#### shader-modules
+
+This tutorial shows how to build reusable shader functionality with luma.gl's shader modules. The example below defines a custom color module that converts HSV to RGB and adds moving highlight bands to two different models.
+
+- [Shader Modules](https://luma.gl/docs/tutorials/shader-modules.md): This tutorial shows how to build reusable shader functionality with luma.gl's shader modules. The example below defines a custom color module that converts HSV to RGB and adds moving highlight bands to two different models.
+
+#### shader-plugins
+
+ShaderPlugin packages reusable shader behavior that can be attached to a Model or Computation. This example renders a grid of triangles from one base shader pair. One plugin adds procedural fill patterns, while clipShaderPlugin adds portable whole-instance and per-fragment clipping.
+
+- [Shader Plugins](https://luma.gl/docs/tutorials/shader-plugins.md): ShaderPlugin packages reusable shader behavior that can be attached to a Model or Computation. This example renders a grid of triangles from one base shader pair. One plugin adds procedural fill patterns, while clipShaderPlugin adds portable whole-instance and per-fragment clipping.
+
+#### transform
+
+This tutorial uses BufferTransform to update per-instance data on the GPU and render thousands of wandering triangles. The compute shader runs in a transform feedback pass before each draw.
+
+- [Transform](https://luma.gl/docs/tutorials/transform.md): This tutorial uses BufferTransform to update per-instance data on the GPU and render thousands of wandering triangles. The compute shader runs in a transform feedback pass before each draw.
+
+#### transform-feedback
+
+This tutorial demonstrates animating geometry using transform feedback via the BufferTransform class. A compute shader rotates triangle vertices on the GPU each frame.
+
+- [Transform Feedback](https://luma.gl/docs/tutorials/transform-feedback.md): This tutorial demonstrates animating geometry using transform feedback via the BufferTransform class. A compute shader rotates triangle vertices on the GPU each frame.
+
+#### whats-next
+
+That concludes our luma.gl tutorial series. If you went through the full set
+
+- [What's Next?](https://luma.gl/docs/tutorials/whats-next.md): That concludes our luma.gl tutorial series. If you went through the full set
+
+### api-guide
+
+Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+
+- [Choosing a luma.gl API layer](https://luma.gl/docs/api-guide.md): Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+
+#### background
+
+- [Design Philosophy](https://luma.gl/docs/api-guide/background/api-design.md): This article provides some background on luma.gl's API design philosophy.
+- [Learning Resources](https://luma.gl/docs/api-guide/background/learning-resources.md): WebGPU
+- [WebGPU vs WebGL](https://luma.gl/docs/api-guide/background/webgpu-vs-webgl.md): {`
+
+#### engine
+
+Build rendered applications around Model, then add updates, redraw, interaction, scenegraphs, animation, compute, and passes only where needed.
+
+- [Engine programming](https://luma.gl/docs/api-guide/engine.md): Build rendered applications around Model, then add updates, redraw, interaction, scenegraphs, animation, compute, and passes only where needed.
+- [ANARI renderer architecture](https://luma.gl/docs/api-guide/engine/anari-architecture.md): Understand forward, deferred, and graph-based ray-tracing architecture, caching, and performance.
+- [Build an ANARI scene](https://luma.gl/docs/api-guide/engine/anari-first-scene.md): Create, commit, render, resize, animate, and inspect a retained ANARI scene.
+- [ANARI JSON scenes](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md): Validate, author, generate, animate, and import declarative ANARI scene descriptions.
+- [Declarative rendering with ANARI](https://luma.gl/docs/api-guide/engine/anari-rendering.md): Choose and learn luma.gl's experimental retained ANARI scene workflow and renderers.
+- [Animation and Deformation](https://luma.gl/docs/api-guide/engine/animation.md): The @luma.gl/engine animation system plays reusable keyframe clips, blends overlapping actions, and applies morph-target deformation without depending on a particular asset format or renderer. glTF adapters, retained scenes, and custom applications can all use the same engine primitives.
+- [Engine cookbook](https://luma.gl/docs/api-guide/engine/cookbook.md): Each recipe assumes an existing Device. The snippets emphasize the object or update that changes;
+- [Interaction, picking, and highlighting](https://luma.gl/docs/api-guide/engine/interactivity.md): Route browser input into camera controls or GPU picking, then use the selected identity to drive ordinary render-state highlighting.
+- [Materials](https://luma.gl/docs/api-guide/engine/materials.md): In luma.gl, a Material describes reusable surface state for one shading model
+- [Redraw on demand](https://luma.gl/docs/api-guide/engine/redraw.md): Treat Engine redraw flags as invalidation signals so static views stop rendering while updates and animation remain responsive.
+- [Scenegraphs](https://luma.gl/docs/api-guide/engine/scenegraph.md): The luma.gl engine provides a set of Scenegraph classes to organize Models into a hierarchy.
+- [Shader Inputs](https://luma.gl/docs/api-guide/engine/shader-inputs.md): ShaderInputs is the engine-side bridge between shader-module props and the
+- [Choosing an Engine compute helper](https://luma.gl/docs/api-guide/engine/transforms.md): Choose between WebGPU Computation, WebGL 2 BufferTransform, legacy texture transforms, direct Core passes, and GPU Core.
+
+#### gpu
+
+Follow the GPU lifecycle from device creation and resource ownership through bindings, command encoding, submission, and presentation.
+
+- [Core GPU programming](https://luma.gl/docs/api-guide/gpu.md): Follow the GPU lifecycle from device creation and resource ownership through bindings, command encoding, submission, and presentation.
+- [Core GPU cookbook](https://luma.gl/docs/api-guide/gpu/cookbook.md): These recipes are intentionally small. Follow the linked guide for the mental model and the
+- [GPGPU programming](https://luma.gl/docs/api-guide/gpu/gpgpu.md): Choose and compose luma.gl APIs for portable GPU data processing, GPU tables, and WebGPU command graphs.
+- [Antialiasing and Multisampling](https://luma.gl/docs/api-guide/gpu/gpu-antialiasing.md): Aliasing is not one problem with one switch. A jagged triangle edge, a shimmering checkerboard,
+- [Attributes](https://luma.gl/docs/api-guide/gpu/gpu-attributes.md): Note that while attributes is a structured and performant mechanism to provide columnar data to shaders that works on both WebGPU and WebGL, they are rather rigid and have a number of limitations. In WebGPU a more significantly more flexible approach is to use storage buffers.
+- [Bind Groups and Bindings](https://luma.gl/docs/api-guide/gpu/gpu-bindings.md): luma.gl uses the term binding for GPU resources that shaders read through
+- [Using GPU Buffers](https://luma.gl/docs/api-guide/gpu/gpu-buffers.md): See also Issuing GPU Commands for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
+- [Issuing GPU Commands](https://luma.gl/docs/api-guide/gpu/gpu-commands.md): GPU work happens when your application records commands and submits them to a Device. A command can draw, dispatch compute work, copy data, write a timestamp, or replay previously recorded draws.
+- [Choosing a GPU Data-Processing API](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md): luma.gl offers several ways to transform data on the GPU. The right starting point depends mainly
+- [Initialize a GPU device](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md): Register the backends your application supports, create a device, and select feature-dependent paths from reported capabilities.
+- [Reason about GPU memory](https://luma.gl/docs/api-guide/gpu/gpu-memory.md): Understand allocation, transfer, synchronization, readback, and residency before choosing buffer and texture workflows.
+- [GPU Memory Layouts](https://luma.gl/docs/api-guide/gpu/gpu-memory-layouts.md): GPU buffers are byte ranges. A layout describes how shader-visible rows and columns are mapped onto those bytes.
+- [Using GPU Parameters](https://luma.gl/docs/api-guide/gpu/gpu-parameters.md): luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
+- [How GPU Rendering Works](https://luma.gl/docs/api-guide/gpu/gpu-rendering.md): See also Issuing GPU Commands for how render passes relate to CommandEncoder, CommandBuffer, and device.submit() on WebGL and WebGPU.
+- [Create and own GPU resources](https://luma.gl/docs/api-guide/gpu/gpu-resources.md): Distinguish durable GPU resources from recorded commands, declare their intended use, and make ownership explicit.
+- [Storage Buffers](https://luma.gl/docs/api-guide/gpu/gpu-storage-buffers.md): Storage buffers are the flexible WebGPU path for shader-visible data that should
+- [GPU Tables](https://luma.gl/docs/api-guide/gpu/gpu-tables.md): @luma.gl/gpgpu/gpu-data provides primitive GPU chunks and vectors, while the private experimental
+- [Using GPU Textures](https://luma.gl/docs/api-guide/gpu/gpu-textures.md): See also Issuing GPU Commands for the difference between immediate texture helpers such as writeData() and explicit CommandEncoder copy operations.
+- [Uniforms](https://luma.gl/docs/api-guide/gpu/gpu-uniforms.md): Uniforms are shader variables whose values can be set from JavaScript.
+- [HTML-in-Canvas](https://luma.gl/docs/api-guide/gpu/html-in-canvas.md): HTML-in-Canvas is an emerging browser API for drawing laid out DOM descendants of a
+- [Tabular Data in WGSL](https://luma.gl/docs/api-guide/gpu/tabular-data-in-wgsl.md): Many GPU workloads start with tabular data: each logical row describes one
+- [Working With Video Textures](https://luma.gl/docs/api-guide/gpu/video-textures.md): From v9.4
+
+#### luma-layers
+
+The luma.gl layers solve different parts of one GPU application. They compose, but they are
+
+- [How luma.gl fits together](https://luma.gl/docs/api-guide/luma-layers.md): The luma.gl layers solve different parts of one GPU application. They compose, but they are
+
+#### shaders
+
+luma.gl applications must provide the shader source code that will ultimately
+
+- [Overview](https://luma.gl/docs/api-guide/shaders.md): luma.gl applications must provide the shader source code that will ultimately
+- [Shadertools cookbook](https://luma.gl/docs/api-guide/shaders/cookbook.md): These snippets show the smallest useful descriptor or assembly action. Add both WGSL and GLSL
+- [Glass Effects](https://luma.gl/docs/api-guide/shaders/glass-effects.md): Glass combines transmission, reflection, absorption, surface roughness, and translucent fragment
+- [GPU Floating-Point Precision Techniques](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md): "fp64" is often used to mean "more precision than f32," but the available
+- [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques.md): luma.gl deliberately provides several approaches to similar visual problems. A cheap effect,
+- [Shader Assembly](https://luma.gl/docs/api-guide/shaders/shader-assembly.md): While it is possible for luma.gl applications to provide complete WGSL or GLSL
+- [Shader Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md): A shader pass is a shader module that can run as a fullscreen texture-processing
+- [Transparency](https://luma.gl/docs/api-guide/shaders/transparency.md): Transparency has two independent concerns: how each surface is shaded and how overlapping
+- [Writing Customizable Shaders](https://luma.gl/docs/api-guide/shaders/writing-customizable-shaders.md): Customizable shaders keep one readable base shader while allowing optional
+- [Writing Portable Shaders](https://luma.gl/docs/api-guide/shaders/writing-portable-shaders.md): luma.gl does not transpile an application shader from WGSL to GLSL or from GLSL
+
+### api-reference
+
+Find the curated and generated API references for every stable and experimental luma.gl package.
+
+- [Overview](https://luma.gl/docs/api-reference.md): Find the curated and generated API references for every stable and experimental luma.gl package.
+
+#### arrow
+
+From v10
+
+- [Overview](https://luma.gl/docs/api-reference/arrow.md): From v10
+- [Arrow Table Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md): Arrow Vector Factories
+- [Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md): From v10
+- [Arrow Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md): From v10
+- [deck.gl v10 API Directions](https://luma.gl/docs/api-reference/arrow/deck-target-api.md): From v10
+- [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md): From v10
+
+#### constants
+
+Typed WebGL constants and compatibility types used by luma.gl and low-level integrations.
+
+- [@luma.gl/constants](https://luma.gl/docs/api-reference/constants.md): Typed WebGL constants and compatibility types used by luma.gl and low-level integrations.
+
+#### core
+
+Create portable GPU resources, pipelines, passes, commands, and presentation contexts across WebGPU and WebGL 2.
+
+- [Core GPU API](https://luma.gl/docs/api-reference/core.md): Create portable GPU resources, pipelines, passes, commands, and presentation contexts across WebGPU and WebGL 2.
+- [Adapter](https://luma.gl/docs/api-reference/core/adapter.md): From v9.1
+- [Bindings](https://luma.gl/docs/api-reference/core/bindings.md): Bindings are the GPU resources that shader code accesses through declared
+- [BufferLayout](https://luma.gl/docs/api-reference/core/buffer-layout.md): The bufferLayout type provides information about how the application is planning to
+- [CanvasContext](https://luma.gl/docs/api-reference/core/canvas-context.md): A CanvasContext holds a connection between a GPU Device and canvas, (either an HTML ` element, aka HTMLCanvasELement, or an OffscreenCanvas`).
+- [Device](https://luma.gl/docs/api-reference/core/device.md): The Device class manages the application's connection with the GPU,
+- [DeviceFeatures](https://luma.gl/docs/api-reference/core/device-features.md): The luma.gl Device provides a device "feature" system that allows applications
+- [DeviceInfo](https://luma.gl/docs/api-reference/core/device-info.md): The device.info field holds a small DeviceInfo object that provides information about the device, such as driver, GPU, shading language etc.
+- [DeviceLimits](https://luma.gl/docs/api-reference/core/device-limits.md): The device.limits field contains limits object that indicates what the current platform supports.
+- [luma](https://luma.gl/docs/api-reference/core/luma.md): The luma namespace provides luma.gl applications
+- [GPU Parameters](https://luma.gl/docs/api-reference/core/parameters.md): GPU parameters provide control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
+- [PipelineFactory](https://luma.gl/docs/api-reference/core/pipeline-factory.md): PipelineFactory caches and reuses RenderPipeline and ComputePipeline instances for one device.
+- [PresentationContext](https://luma.gl/docs/api-reference/core/presentation-context.md): From v9.3
+- [Buffer](https://luma.gl/docs/api-reference/core/resources/buffer.md): Holds a block of GPU memory. The length of a buffer cannot be changed after creation.
+- [CommandBuffer](https://luma.gl/docs/api-reference/core/resources/command-buffer.md): CommandBuffer is an immutable recorded unit of GPU work produced by a
+- [CommandEncoder](https://luma.gl/docs/api-reference/core/resources/command-encoder.md): A CommandEncoder records GPU commands that can later be sealed into a CommandBuffer and submitted to a Device.
+- [ComputePass](https://luma.gl/docs/api-reference/core/resources/compute-pass.md): WebGPU supported
+- [ComputePipeline](https://luma.gl/docs/api-reference/core/resources/compute-pipeline.md): WebGPU supported
+- [ExternalTexture](https://luma.gl/docs/api-reference/core/resources/external-texture.md): WebGPU supported
+- [Fence](https://luma.gl/docs/api-reference/core/resources/fence.md): A GPU->CPU synchronization primitive that signals / resolves when any GPU commands submitted prior to the Fence have completed.
+- [Framebuffer](https://luma.gl/docs/api-reference/core/resources/framebuffer.md): A Framebuffer holds textures that will be used as render targets for RenderPipelines
+- [PipelineLayout](https://luma.gl/docs/api-reference/core/resources/pipeline-layout.md): PipelineLayout describes the binding groups available to a render or compute pipeline.
+- [QuerySet](https://luma.gl/docs/api-reference/core/resources/query-set.md): A QuerySet stores asynchronous GPU query results.
+- [RenderBundleEncoder](https://luma.gl/docs/api-reference/core/resources/render-bundle-encoder.md): From v9.4
+- [RenderPass](https://luma.gl/docs/api-reference/core/resources/render-pass.md): Usage
+- [RenderPipeline](https://luma.gl/docs/api-reference/core/resources/render-pipeline.md): A RenderPipeline combines a vertex shader, a fragment shader, a
+- [Resource](https://luma.gl/docs/api-reference/core/resources/resource.md): Resource is the abstract base class for GPU objects created by a Device. It standardizes common fields such as identifiers and backend handles that are shared across buffers, textures, passes, and similar GPU resources.
+- [Sampler](https://luma.gl/docs/api-reference/core/resources/sampler.md): A Sampler is an immutable object that holds a set of sampling parameters for texture access.
+- [Shader](https://luma.gl/docs/api-reference/core/resources/shader.md): The Shader class holds a compiled shader.
+- [Texture](https://luma.gl/docs/api-reference/core/resources/texture.md): A Texture is a GPU resource containing one or more images with a shared pixel format. Shaders may
+- [TextureView](https://luma.gl/docs/api-reference/core/resources/texture-view.md): A TextureView is a view onto some subset of the texture subresources defined by a particular Texture.
+- [TransformFeedback](https://luma.gl/docs/api-reference/core/resources/transform-feedback.md): WebGPU not supported
+- [VertexArray](https://luma.gl/docs/api-reference/core/resources/vertex-array.md): A VertexArray stores a set of vertex attribute bindings, including the index buffer.
+- [ShaderBlockLayout](https://luma.gl/docs/api-reference/core/shader-block-layout.md): ShaderBlockLayout is the portable description of how luma.gl packs uniform-style
+- [ShaderFactory](https://luma.gl/docs/api-reference/core/shader-factory.md): ShaderFactory caches and reuses Shader resources for a device.
+- [ShaderLayout](https://luma.gl/docs/api-reference/core/shader-layout.md): A ShaderLayout describes the static interface of a shader pipeline:
+- [Shader Logs](https://luma.gl/docs/api-reference/core/shader-logs.md): Shader compilation and linking logs contain important information about .
+- [Shader Types](https://luma.gl/docs/api-reference/core/shader-types.md): From v9.3
+- [Texture Formats](https://luma.gl/docs/api-reference/core/texture-formats.md): The term "texture format" here refers to how pixels are stored in memory, which is an important property of a GPU Texture
+- [UniformStore](https://luma.gl/docs/api-reference/core/uniform-store.md): A uniform store holds uniform values for a set of different uniform buffers,
+- [Vertex Formats](https://luma.gl/docs/api-reference/core/vertex-formats.md): The format of a vertex attribute indicates how data in a vertex buffer is laid out,
+
+#### effects
+
+Composable post-processing, screen-space lighting, temporal effects, and shader-pass pipelines.
+
+- [@luma.gl/effects](https://luma.gl/docs/api-reference/effects.md): Composable post-processing, screen-space lighting, temporal effects, and shader-pass pipelines.
+
+#### engine
+
+Render models with geometry and shader inputs, manage redraw and interaction, and compose animation, scenes, compute, and passes.
+
+- [Engine](https://luma.gl/docs/api-reference/engine.md): Render models with geometry and shader inputs, manage redraw and interaction, and compose animation, scenes, compute, and passes.
+- [AnimationLoop](https://luma.gl/docs/api-reference/engine/animation-loop.md): AnimationLoop manages a render loop around a luma.gl Device.
+- [AnimationLoopTemplate](https://luma.gl/docs/api-reference/engine/animation-loop-template.md): AnimationLoopTemplate is a small abstract base class for applications that prefer a class-based render lifecycle on top of AnimationLoop.
+- [AnimationMixer](https://luma.gl/docs/api-reference/engine/animation/animation-mixer.md): The AnimationMixer plays and blends reusable AnimationClip instances. A clip groups AnimationTrack objects, and each track updates an application property through an AnimationBinding. AnimationAction controls playback for an individual clip.
+- [KeyFrames](https://luma.gl/docs/api-reference/engine/animation/key-frames.md): Manages key frame animation data. Associates time points with arbitrary data and provides methods to access key times and data, and an interpolation factor, based on the current time.
+- [Morph-Target Helpers](https://luma.gl/docs/api-reference/engine/animation/morph-targets.md): @luma.gl/engine provides format-independent helpers for weighted vertex deformation. They combine morph-target deltas with immutable base geometry and can update an existing model's GPU vertex buffers in place.
+- [Timeline](https://luma.gl/docs/api-reference/engine/animation/timeline.md): Manages an animation timeline, with multiple channels that can be running at different rates, durations, etc. Many methods (play, pause) assume that the update method is being called once per frame with a "global time". This automatically done for AnimationLoop.timeline object.
+- [BackgroundTextureModel](https://luma.gl/docs/api-reference/engine/background-texture-model.md): BackgroundTextureModel is a specialized ClipSpace that renders one texture across the screen while preserving aspect ratio.
+- [ClipSpace](https://luma.gl/docs/api-reference/engine/clip-space.md): ClipSpace is a convenience subclass of Model that draws a fullscreen quad in clip space.
+- [BufferTransform](https://luma.gl/docs/api-reference/engine/compute/buffer-transform.md): BufferTransform is the engine wrapper for WebGL transform-feedback workflows.
+- [Computation](https://luma.gl/docs/api-reference/engine/compute/computation.md): WebGPU supported
+- [Swap](https://luma.gl/docs/api-reference/engine/compute/swap.md): Swap is a small double-buffering helper for pairs of GPU resources.
+- [TextureTransform](https://luma.gl/docs/api-reference/engine/compute/texture-transform.md): TextureTransform is the engine helper for texture-to-texture transform passes.
+- [DynamicBuffer](https://luma.gl/docs/api-reference/engine/dynamic-buffer.md): From v10
+- [DynamicTexture](https://luma.gl/docs/api-reference/engine/dynamic-texture.md): From v9.3
+- [Geometry](https://luma.gl/docs/api-reference/engine/geometry.md): Geometry is the CPU-side geometry container used by engine classes.
+- [Built-in Geometries](https://luma.gl/docs/api-reference/engine/geometry/geometries.md): @luma.gl/engine exports several ready-made geometry classes. All of them extend Geometry and populate standard glTF mesh attribute semantics such as POSITION, NORMAL, and TEXCOORD_0.
+- [GPUGeometry](https://luma.gl/docs/api-reference/engine/geometry/gpu-geometry.md): GPUGeometry is the GPU-backed counterpart to Geometry.
+- [loadImageBitmap](https://luma.gl/docs/api-reference/engine/load-image-bitmap.md): A simple small utility to load images from URLs. The loaded ImageBitmaps can be used to create textures.
+- [Model](https://luma.gl/docs/api-reference/engine/model.md): Model is the main engine-level rendering class in luma.gl.
+- [OrbitControls](https://luma.gl/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, wheel zoom, optional automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
+- [ShaderPassRenderer](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md): ShaderPassRenderer applies one or more ShaderPass or ShaderPassPipeline definitions to a source texture and either renders the result back to a texture or draws it to the screen.
+- [PickingManager](https://luma.gl/docs/api-reference/engine/picking-manager.md): PickingManager manages an offscreen picking framebuffer and the shader-input updates needed for luma.gl's engine picking modules.
+- [GroupNode](https://luma.gl/docs/api-reference/engine/scenegraph/group-node.md): GroupNode extends ScenegraphNode with child-node management and traversal helpers.
+- [ModelNode](https://luma.gl/docs/api-reference/engine/scenegraph/model-node.md): ModelNode extends ScenegraphNode with a Model and optional bounds / managed resources.
+- [ScenegraphNode](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md): ScenegraphNode is the base class for engine scenegraph objects.
+- [ShaderInputs](https://luma.gl/docs/api-reference/engine/shader-inputs.md): ShaderInputs stores per-module uniform values and binding values for shader modules.
+- [VideoTexture](https://luma.gl/docs/api-reference/engine/video-texture.md): From v9.4
+
+#### experimental
+
+A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebXR helpers.
+
+- [Experimental modules](https://luma.gl/docs/api-reference/experimental.md): A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebXR helpers.
+- [ABufferRenderer](https://luma.gl/docs/api-reference/experimental/a-buffer-renderer.md): ABufferRenderer provides experimental WebGPU-only order-independent transparency for models that append final fragment colors into the aBuffer shader module.
+- [Clustered Lighting](https://luma.gl/docs/api-reference/experimental/clustered-lighting.md): ClusteredLightGrid is an experimental WebGPU-only compute stage for many-light deferred
+- [ComparisonSplitter](https://luma.gl/docs/api-reference/experimental/comparison-splitter.md): ComparisonSplitter provides a reusable, accessible divider for comparing two views of the same
+- [Deferred Lighting](https://luma.gl/docs/api-reference/experimental/deferred-lighting.md): deferredLighting is an experimental WebGPU-only fullscreen shader pass that resolves physically
+- [DeferredSceneRenderer](https://luma.gl/docs/api-reference/experimental/deferred-scene-renderer.md): DeferredSceneRenderer renders compatible physically based scene descriptions through a WebGPU
+- [GBuffer](https://luma.gl/docs/api-reference/experimental/g-buffer.md): GBuffer is an experimental WebGPU-only owner for the multiple render targets (MRTs) used by
+- [WebGPU Geospatial Kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md): The @luma.gl/experimental/geospatial entry point provides small, side-effect-free WebGPU
+- [Glass Material](https://luma.gl/docs/api-reference/experimental/glass-material.md): glassMaterial is an experimental cross-backend shader module for refractive translucent surfaces.
+- [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md): From v10
+- [GPU Core Execution and Composition](https://luma.gl/docs/api-reference/experimental/gpu-core/concepts.md): Overview
+- [DrawCommandBuffer](https://luma.gl/docs/api-reference/experimental/gpu-core/draw-command-buffer.md): Overview
+- [GPUAncestorProjection](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection.md): Overview
+- [GPUBatchHashIndex](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index.md): Overview
+- [GPUBatchHashJoin](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join.md): Overview
+- [GPUBVH](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-bvh.md): Overview
+- [GPUBVHQuery](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-bvh-query.md): Overview
+- [GPUCommandGraph](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md): Overview
+- [GPUCompaction](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-compaction.md): Overview
+- [GPUConvolution](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-convolution.md): Overview
+- [GPUFFT1D](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-fft1d.md): Overview
+- [GPUFFT2D](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-fft2d.md): Overview
+- [GPUGallopingSearch](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md): Overview
+- [GPUGraphTraversal](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md): Overview
+- [GPUGridAggregation](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation.md): Overview
+- [GPUGridBinning](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-binning.md): Overview
+- [GPUGridIndex](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-index.md): Overview
+- [GPUGridIndexQuery](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-index-query.md): Overview
+- [GPUGroupAggregation](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md): Overview
+- [GPUHashIndex](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hash-index.md): Overview
+- [GPUHashJoin](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hash-join.md): Overview
+- [GPUHierarchyLayout](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout.md): Overview
+- [GPUHistogram](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-histogram.md): Overview
+- [GPUIndexPickingTarget](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-index-picking-target.md): Overview
+- [GPUMask](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-mask.md): Overview
+- [GPUPointSpatialFilter](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-point-spatial-filter.md): Overview
+- [GPUReadbackRing](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md): Overview
+- [GPUReduction](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-reduction.md): Overview
+- [GPUScan](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scan.md): Overview
+- [GPUScene](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene.md): Overview
+- [GPUScene adapters](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-adapters.md): Overview
+- [GPUSceneDrawGeneration](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md): Overview
+- [GPUSceneResourceGroups](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md): Overview
+- [GPUSegmentedBVH](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-segmented-bvh.md): Overview
+- [GPUSegmentedSort](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md): Overview
+- [GPUSort](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-sort.md): Overview
+- [GPU spatial query benchmark](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md): Run on your device
+- [GPUTextureHistory](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-texture-history.md): Overview
+- [GPUTranspose](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-transpose.md): Overview
+- [GPUVirtualGeometrySelection](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md): Overview
+- [GPUVisibilityWorkflow](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md): Overview
+- [GPU Core Cookbook](https://luma.gl/docs/api-reference/experimental/gpu-core/recipes.md): Overview
+- [GPU Core Tutorial](https://luma.gl/docs/api-reference/experimental/gpu-core/tutorial.md): Overview
+- [GPU Crossfilter](https://luma.gl/docs/api-reference/experimental/gpu-crossfilter.md): Overview
+- [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md): Overview
+- [GPU Dataframe grouping and aggregation](https://luma.gl/docs/api-reference/experimental/gpu-dataframe-aggregation.md): Group categorical values and compute reductions and histograms on GPU-resident tables.
+- [GPU Dataframe expressions and filtering](https://luma.gl/docs/api-reference/experimental/gpu-dataframe-expressions.md): Plan filters and nullable derived columns, then compile reusable GPU-resident results.
+- [GPU Dataframe indexes and joins](https://luma.gl/docs/api-reference/experimental/gpu-dataframe-indexes-joins.md): Build bounded unique-key lookups and share GPU outputs with filtering and rendering.
+- [GPU Dataframe operations reference](https://luma.gl/docs/api-reference/experimental/gpu-dataframe-operations.md): Index of GPU Dataframe expression, filtering, grouping, aggregation, sorting, top-K, index, and join operations.
+- [GPU Dataframe sorting and top-K](https://luma.gl/docs/api-reference/experimental/gpu-dataframe-sorting.md): Stable per-batch and explicit global ordering with bounded top-K selection.
+- [GPU Graph](https://luma.gl/docs/api-reference/experimental/gpu-graph.md): Overview
+- [GPU Graph connectivity and communities](https://luma.gl/docs/api-reference/experimental/gpu-graph-connectivity.md): Connected components, label propagation, modularity optimization, and community scoring.
+- [GPU Graph layouts](https://luma.gl/docs/api-reference/experimental/gpu-graph-layouts.md): Exact and spatially approximated progressive graph layouts with composable GPU outputs.
+- [GPU Graph metrics and ranking](https://luma.gl/docs/api-reference/experimental/gpu-graph-metrics.md): Core numbers, clustering coefficients, and PageRank for GPU-resident graphs.
+- [GPU Graph operations reference](https://luma.gl/docs/api-reference/experimental/gpu-graph-operations.md): Index of GPU Graph topology, traversal, connectivity, community, metrics, ranking, and layout operations.
+- [GPU Graph topology](https://luma.gl/docs/api-reference/experimental/gpu-graph-topology.md): Describe GPU-resident edges, build reusable adjacency, and count vertex relationships.
+- [GPU Graph traversal and pathfinding](https://luma.gl/docs/api-reference/experimental/gpu-graph-traversal.md): Breadth-first neighborhoods and nonnegative weighted shortest paths on GPU-resident graphs.
+- [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project.md): Overview
+- [GPU Raster](https://luma.gl/docs/api-reference/experimental/gpu-raster.md): Overview
+- [GPURaster Concepts and Execution Model](https://luma.gl/docs/api-reference/experimental/gpu-raster/concepts.md): A satellite image, microscope slide, terrain model, and weather grid can all be represented as
+- [GPURaster operations reference](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations.md): Index of GPURaster storage, overview, statistics, pixel, filtering, morphology, region, and contour operations.
+- [GPURaster filters and morphology](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-filters-morphology.md): Validity-aware neighborhoods, convolution, smoothing, gradients, and binary or grayscale morphology.
+- [GPURaster analytical overviews](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-overviews.md): Nodata-aware continuous and categorical overview pyramids with preserved spatial metadata.
+- [GPURaster pixel operations](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-pixel.md): Calibrated band math, NDVI, contrast, gamma, equalization, and analytical thresholds.
+- [GPURaster regions and contours](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-regions-contours.md): Connected components, dense labels, region measurements, marching squares, and indirect overlays.
+- [GPURaster statistics](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-statistics.md): Replayable tiled statistics, validity-aware histograms, scalar summaries, and bounded quantiles.
+- [GPURaster storage and residency](https://luma.gl/docs/api-reference/experimental/gpu-raster/operations-storage-residency.md): Raster validity, decoded tile sources, bounded residency, cancellation, halos, and owned tile cores.
+- [GPU SQL](https://luma.gl/docs/api-reference/experimental/gpu-sql.md): Overview
+- [GPU Tables](https://luma.gl/docs/api-reference/experimental/gpu-tables.md): Model batch-preserving GPU tables, schemas, bindings, ownership, and lifecycle through the private experimental subpath.
+- [GPUInputSchema](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md): From v9.4
+- [GPURecordBatch](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md): From v9.4
+- [GPUSchema](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-schema.md): From v9.4
+- [GPUTable](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table.md): GPUTable is a typed, batch-preserving collection of logical GPU columns. It owns
+- [GPUTableBufferPlanner](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner.md): From v9.4
+- [GPU Table Lifecycle](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md): From v9.4
+- [GPUTableShaderBindings](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings.md): GPUTableShaderBindings owns backend-specific resources prepared by resolving one
+- [GPU Table Structure](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md): From v9.4
+- [GPU Trace](https://luma.gl/docs/api-reference/experimental/gpu-trace.md): Overview
+- [How gpu-trace scales execution traces](https://luma.gl/docs/api-reference/experimental/gpu-trace-algorithms.md): Overview
+- [GPUTraceAggregation](https://luma.gl/docs/api-reference/experimental/gpu-trace/aggregation.md): Overview
+- [GPUTraceAnomalyScoring](https://luma.gl/docs/api-reference/experimental/gpu-trace/anomaly-scoring.md): Overview
+- [GPUTraceComparison](https://luma.gl/docs/api-reference/experimental/gpu-trace/comparison.md): Overview
+- [GPUTraceCriticalPath](https://luma.gl/docs/api-reference/experimental/gpu-trace/critical-path.md): Overview
+- [GPUTraceInteraction](https://luma.gl/docs/api-reference/experimental/gpu-trace/interaction.md): Overview
+- [GPU Trace Picking](https://luma.gl/docs/api-reference/experimental/gpu-trace/picking.md): Overview
+- [GPUTraceScene](https://luma.gl/docs/api-reference/experimental/gpu-trace/scene.md): Overview
+- [GPUTraceTemporalIndex](https://luma.gl/docs/api-reference/experimental/gpu-trace/temporal-index.md): Overview
+- [LuCIM GPU Volume Algorithms](https://luma.gl/docs/api-reference/experimental/lucim.md): From v10
+- [MLSMPMFluidSimulation](https://luma.gl/docs/api-reference/experimental/mls-mpm-fluid-simulation.md): MLSMPMFluidSimulation is an experimental WebGPU-only, fixed-capacity two-dimensional fluid
+- [Physically Based Environment Lighting](https://luma.gl/docs/api-reference/experimental/pbr-environment.md): PBREnvironmentGenerator converts a caller-provided equirectangular GPU texture into the three
+- [Reflective Material](https://luma.gl/docs/api-reference/experimental/reflective-material.md): reflectiveMaterial is a lightweight cross-backend shader module for glossy surfaces. It combines
+- [SceneRenderer](https://luma.gl/docs/api-reference/experimental/scene-renderer.md): SceneRenderer renders retained, physically based surface descriptions on WebGPU and WebGL. It
+- [ShadowMapRenderer](https://luma.gl/docs/api-reference/experimental/shadow-map-renderer.md): ShadowMapRenderer is an experimental WebGPU-only light-space shadow system. It owns stable
+- [SpectralCausticsRenderer](https://luma.gl/docs/api-reference/experimental/spectral-caustics-renderer.md): SpectralCausticsRenderer is an experimental WebGPU-only photon-caustics renderer. It captures
+- [SpectralOceanSimulation](https://luma.gl/docs/api-reference/experimental/spectral-ocean-simulation.md): Overview
+- [VolumetricFireSimulation](https://luma.gl/docs/api-reference/experimental/volumetric-fire-simulation.md): VolumetricFireSimulation is an experimental WebGPU-only dense-grid fire and smoke simulation.
+- [WBOITRenderer](https://luma.gl/docs/api-reference/experimental/wboit-renderer.md): WBOITRenderer implements weighted blended order-independent transparency on WebGPU and WebGL2.
+- [Experimental WebXR](https://luma.gl/docs/api-reference/experimental/webxr.md): From v10
+- [WebXRCameraTexture](https://luma.gl/docs/api-reference/experimental/webxr/webxr-camera-texture.md): From v10
+- [WebXRManager](https://luma.gl/docs/api-reference/experimental/webxr/webxr-manager.md): From v10
+
+#### generated
+
+- [@luma.gl/core generated API](https://luma.gl/docs/api-reference/generated/core.md): Classes
+- [Abstract Class: Adapter](https://luma.gl/docs/api-reference/generated/core/classes/Adapter.md): Defined in11
+- [Abstract Class: Buffer](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md): Defined in29
+- [Abstract Class: CanvasContext](https://luma.gl/docs/api-reference/generated/core/classes/CanvasContext.md): Defined in12
+- [Abstract Class: CommandBuffer](https://luma.gl/docs/api-reference/generated/core/classes/CommandBuffer.md): Defined in17
+- [Abstract Class: CommandEncoder](https://luma.gl/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
+- [Abstract Class: ComputePass](https://luma.gl/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
+- [Abstract Class: ComputePipeline](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
+- [Abstract Class: Device](https://luma.gl/docs/api-reference/generated/core/classes/Device.md): Defined in500
+- [Class: DeviceFeatures](https://luma.gl/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in248
+- [Abstract Class: DeviceLimits](https://luma.gl/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in96
+- [Abstract Class: ExternalTexture](https://luma.gl/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
+- [Abstract Class: Fence](https://luma.gl/docs/api-reference/generated/core/classes/Fence.md): Defined in11
+- [Abstract Class: Framebuffer](https://luma.gl/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
+- [Class: PipelineFactory](https://luma.gl/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in21
+- [Abstract Class: PipelineLayout](https://luma.gl/docs/api-reference/generated/core/classes/PipelineLayout.md): Defined in14
+- [Abstract Class: PresentationContext](https://luma.gl/docs/api-reference/generated/core/classes/PresentationContext.md): Defined in14
+- [Abstract Class: QuerySet](https://luma.gl/docs/api-reference/generated/core/classes/QuerySet.md): Defined in28
+- [Abstract Class: RenderBundle](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundle.md): Defined in53
+- [Abstract Class: RenderBundleEncoder](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundleEncoder.md): Defined in75
+- [Abstract Class: RenderPass](https://luma.gl/docs/api-reference/generated/core/classes/RenderPass.md): Defined in102
+- [Abstract Class: RenderPipeline](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in74
+- [Abstract Class: Resource<Props>](https://luma.gl/docs/api-reference/generated/core/classes/Resource.md): Defined in97
+- [Abstract Class: Sampler](https://luma.gl/docs/api-reference/generated/core/classes/Sampler.md): Defined in47
+- [Abstract Class: Shader](https://luma.gl/docs/api-reference/generated/core/classes/Shader.md): Defined in34
+- [Class: ShaderBlockWriter](https://luma.gl/docs/api-reference/generated/core/classes/ShaderBlockWriter.md): Defined in22
+- [Class: ShaderFactory](https://luma.gl/docs/api-reference/generated/core/classes/ShaderFactory.md): Defined in13
+- [Abstract Class: SharedRenderPipeline](https://luma.gl/docs/api-reference/generated/core/classes/SharedRenderPipeline.md): Defined in22
+- [Abstract Class: Texture](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md): Defined in203
+- [Abstract Class: TextureView](https://luma.gl/docs/api-reference/generated/core/classes/TextureView.md): Defined in29
+- [Abstract Class: TransformFeedback](https://luma.gl/docs/api-reference/generated/core/classes/TransformFeedback.md): Defined in27
+- [Class: UniformBlock<TUniforms>](https://luma.gl/docs/api-reference/generated/core/classes/UniformBlock.md): Defined in18
+- [Class: UniformStore<TPropGroups>](https://luma.gl/docs/api-reference/generated/core/classes/UniformStore.md): Defined in52
+- [Abstract Class: VertexArray](https://luma.gl/docs/api-reference/generated/core/classes/VertexArray.md): Defined in28
+- [Function: assert()](https://luma.gl/docs/api-reference/generated/core/functions/assert.md): assert(condition, message?): asserts condition
+- [Function: assertDefined()](https://luma.gl/docs/api-reference/generated/core/functions/assertDefined.md): assertDefined\(value, message?): T
+- [Function: flattenBindingsByGroup()](https://luma.gl/docs/api-reference/generated/core/functions/flattenBindingsByGroup.md): flattenBindingsByGroup(bindGroups): Bindings
+- [Function: getAttributeInfosFromLayouts()](https://luma.gl/docs/api-reference/generated/core/functions/getAttributeInfosFromLayouts.md): getAttributeInfosFromLayouts(shaderLayout, bufferLayout): Record\
+- [Function: getAttributeShaderTypeInfo()](https://luma.gl/docs/api-reference/generated/core/functions/getAttributeShaderTypeInfo.md): getAttributeShaderTypeInfo(attributeType): AttributeShaderTypeInfo
+- [Function: getBufferLayoutAttributeNames()](https://luma.gl/docs/api-reference/generated/core/functions/getBufferLayoutAttributeNames.md): getBufferLayoutAttributeNames(bufferLayout): string[]
+- [Function: getBufferLayoutMinAttributeLocation()](https://luma.gl/docs/api-reference/generated/core/functions/getBufferLayoutMinAttributeLocation.md): getBufferLayoutMinAttributeLocation(bufferLayout, shaderLayout): number
+- [Function: getDataTypeByteLength()](https://luma.gl/docs/api-reference/generated/core/functions/getDataTypeByteLength.md): getDataTypeByteLength(dataType): number
+- [Function: getDataTypeFromTypedArray()](https://luma.gl/docs/api-reference/generated/core/functions/getDataTypeFromTypedArray.md): getDataTypeFromTypedArray(arrayOrType): DataType
+- [Function: _getDefaultBindGroupFactory()](https://luma.gl/docs/api-reference/generated/core/functions/getDefaultBindGroupFactory.md): \_getDefaultBindGroupFactory(device): BindGroupFactory
+- [Function: getExternalImageSize()](https://luma.gl/docs/api-reference/generated/core/functions/getExternalImageSize.md): getExternalImageSize(data): object
+- [Function: getFloat16ArrayConstructor()](https://luma.gl/docs/api-reference/generated/core/functions/getFloat16ArrayConstructor.md): getFloat16ArrayConstructor(): TypedArrayConstructor
+- [Function: getLogicalBufferSlots()](https://luma.gl/docs/api-reference/generated/core/functions/getLogicalBufferSlots.md): getLogicalBufferSlots(shaderLayout, bufferLayout): Record\
+- [Function: getMinimumAttributeLocation()](https://luma.gl/docs/api-reference/generated/core/functions/getMinimumAttributeLocation.md): getMinimumAttributeLocation(locations): number
+- [Function: getScratchArray()](https://luma.gl/docs/api-reference/generated/core/functions/getScratchArray.md): getScratchArray(Type, length): TypedArray
+- [Function: getShaderAttributeLocationMap()](https://luma.gl/docs/api-reference/generated/core/functions/getShaderAttributeLocationMap.md): getShaderAttributeLocationMap(shaderLayout): Record\
+- [Function: getShaderLayoutBinding()](https://luma.gl/docs/api-reference/generated/core/functions/getShaderLayoutBinding.md): getShaderLayoutBinding(shaderLayout, bindingName, options?): BindingDeclaration \| null
+- [Function: _getTextureFormatDefinition()](https://luma.gl/docs/api-reference/generated/core/functions/getTextureFormatDefinition.md): \_getTextureFormatDefinition(format): TextureFormatDefinition
+- [Function: _getTextureFormatTable()](https://luma.gl/docs/api-reference/generated/core/functions/getTextureFormatTable.md): \_getTextureFormatTable(): Readonly\\>
+- [Function: getTextureImageView()](https://luma.gl/docs/api-reference/generated/core/functions/getTextureImageView.md): getTextureImageView\(arrayBuffer, memoryLayout, format, image?): Uint8Array\ \| Uint16Array\ \| Uint32Array\ \| Float32Array\
+- [Function: getTypedArrayConstructor()](https://luma.gl/docs/api-reference/generated/core/functions/getTypedArrayConstructor.md): getTypedArrayConstructor(type): TypedArrayConstructor
+- [Function: getTypedArrayFromDataType()](https://luma.gl/docs/api-reference/generated/core/functions/getTypedArrayFromDataType.md): getTypedArrayFromDataType(type): TypedArrayConstructor
+- [Function: getVariableShaderTypeInfo()](https://luma.gl/docs/api-reference/generated/core/functions/getVariableShaderTypeInfo.md): getVariableShaderTypeInfo(format): VariableShaderTypeInfo
+- [Function: isExternalImage()](https://luma.gl/docs/api-reference/generated/core/functions/isExternalImage.md): isExternalImage(data): data is ExternalImage
+- [Function: isFloat16ArrayConstructor()](https://luma.gl/docs/api-reference/generated/core/functions/isFloat16ArrayConstructor.md): isFloat16ArrayConstructor(value): boolean
+- [Function: isHTMLInCanvasSupported()](https://luma.gl/docs/api-reference/generated/core/functions/isHTMLInCanvasSupported.md): isHTMLInCanvasSupported(): boolean
+- [Function: makeShaderBlockLayout()](https://luma.gl/docs/api-reference/generated/core/functions/makeShaderBlockLayout.md): makeShaderBlockLayout(uniformTypes, options?): ShaderBlockLayout
+- [Function: normalizeBindingsByGroup()](https://luma.gl/docs/api-reference/generated/core/functions/normalizeBindingsByGroup.md): normalizeBindingsByGroup(shaderLayout, bindingsOrBindGroups?): BindingsByGroup
+- [Function: readPixel()](https://luma.gl/docs/api-reference/generated/core/functions/readPixel.md): readPixel(pixelData, x, y, bitsPerChannel): \[number, number, number, number\]
+- [Function: resolveLogicalAttributeMappings()](https://luma.gl/docs/api-reference/generated/core/functions/resolveLogicalAttributeMappings.md): resolveLogicalAttributeMappings(shaderLayout, bufferLayout, options?): LogicalAttributeMapping[]
+- [Function: setTextureImageData()](https://luma.gl/docs/api-reference/generated/core/functions/setTextureImageData.md): setTextureImageData\(arrayBuffer, memoryLayout, format, data, image?): void
+- [Function: writePixel()](https://luma.gl/docs/api-reference/generated/core/functions/writePixel.md): writePixel(dataView, bitOffset, bitsPerChannel, pixel): void
+- [Interface: StatsManager](https://luma.gl/docs/api-reference/generated/core/interfaces/StatsManager.md): Defined in32
+- [Interface: TextureFormatDecoder](https://luma.gl/docs/api-reference/generated/core/interfaces/TextureFormatDecoder.md): Defined in43
+- [Type Alias: ArrayShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/ArrayShaderType.md): ArrayShaderType = readonly \[CompositeShaderType, number\]
+- [Type Alias: AttachDeviceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttachDeviceProps.md): AttachDeviceProps = object & DeviceProps
+- [Type Alias: AttributeBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeBinding.md): AttributeBinding = object
+- [Type Alias: AttributeDeclaration](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeDeclaration.md): AttributeDeclaration = object
+- [Type Alias: AttributeInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeInfo.md): AttributeInfo = object
+- [Type Alias: AttributeShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeShaderType.md): AttributeShaderType = "i32" \| "u32" \| "f32" \| "f16" \| ` vec2  \|  vec3  \|  vec4 `
+- [Type Alias: AttributeShaderTypeInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeShaderTypeInfo.md): AttributeShaderTypeInfo = object
+- [Type Alias: AttributeShaderTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeShaderTypeT.md): AttributeShaderTypeT\ = T extends AttributeShaderTypeAlias ? AttributeShaderTypeAliasMap\[T\] : T
+- [Type Alias: BigTypedArray](https://luma.gl/docs/api-reference/generated/core/type-aliases/BigTypedArray.md): BigTypedArray = TypedArray \| BigIntTypedArray
+- [Type Alias: BigTypedArrayConstructor](https://luma.gl/docs/api-reference/generated/core/type-aliases/BigTypedArrayConstructor.md): BigTypedArrayConstructor = TypedArrayConstructor \| BigInt64ArrayConstructor \| BigUint64ArrayConstructor
+- [Type Alias: Binding](https://luma.gl/docs/api-reference/generated/core/type-aliases/Binding.md): Binding = TextureView \| Texture \| ExternalTexture \| Sampler \| Buffer \| \{ buffer number; size?: number; \}
+- [Type Alias: BindingDeclaration](https://luma.gl/docs/api-reference/generated/core/type-aliases/BindingDeclaration.md): BindingDeclaration = UniformBufferBindingLayout \| StorageBufferBindingLayout \| TextureBindingLayout \| ExternalTextureBindingLayout \| SamplerBindingLayout \| StorageTextureBindingLayout
+- [Type Alias: Bindings](https://luma.gl/docs/api-reference/generated/core/type-aliases/Bindings.md): Bindings = Record\
+- [Type Alias: BindingsByGroup](https://luma.gl/docs/api-reference/generated/core/type-aliases/BindingsByGroup.md): BindingsByGroup = Partial\\>
+- [Type Alias: BlendFactor](https://luma.gl/docs/api-reference/generated/core/type-aliases/BlendFactor.md): BlendFactor = "zero" \| "one" \| "src" \| "one-minus-src" \| "src-alpha" \| "one-minus-src-alpha" \| "dst" \| "one-minus-dst" \| "dst-alpha" \| "one-minus-dst-alpha" \| "src-alpha-saturated" \| "constant" \| "one-minus-constant" \| "src1" \| "one-minus-src1" \| "src1-alpha" \| "one-minus-src1-alpha"
+- [Type Alias: BlendOperation](https://luma.gl/docs/api-reference/generated/core/type-aliases/BlendOperation.md): BlendOperation = "add" \| "subtract" \| "reverse-subtract" \| "min" \| "max"
+- [Type Alias: BrowserDeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/BrowserDeviceFeature.md): BrowserDeviceFeature = "html-in-canvas"
+- [Type Alias: BufferAttributeLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferAttributeLayout.md): BufferAttributeLayout = object
+- [Type Alias: BufferLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferLayout.md): BufferLayout = object
+- [Type Alias: BufferMapCallback<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferMapCallback.md): BufferMapCallback\ = (arrayBuffer, lifetime) => T
+- [Type Alias: BufferProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferProps.md): BufferProps = ResourceProps & object
+- [Type Alias: BufferRange](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferRange.md): BufferRange = object
+- [Type Alias: CanvasContextProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/CanvasContextProps.md): CanvasContextProps = object
+- [Type Alias: ColorAttachment](https://luma.gl/docs/api-reference/generated/core/type-aliases/ColorAttachment.md): ColorAttachment = object
+- [Type Alias: ColorParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/ColorParameters.md): ColorParameters = object
+- [Type Alias: CommandEncoderProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/CommandEncoderProps.md): CommandEncoderProps = ResourceProps & object
+- [Type Alias: CompareFunction](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompareFunction.md): CompareFunction = "never" \| "less" \| "equal" \| "less-equal" \| "greater" \| "not-equal" \| "greater-equal" \| "always"
+- [Type Alias: CompilerMessage](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompilerMessage.md): CompilerMessage = object
+- [Type Alias: CompositeShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompositeShaderType.md): CompositeShaderType = VariableShaderType \| StructShaderType \| ArrayShaderType
+- [Type Alias: CompositeUniformValue](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompositeUniformValue.md): CompositeUniformValue = UniformValue \| CompositeUniformValueStruct \| CompositeUniformValueArray
+- [Type Alias: CompositeUniformValueArray](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompositeUniformValueArray.md): CompositeUniformValueArray = ReadonlyArray\
+- [Type Alias: CompositeUniformValueStruct](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompositeUniformValueStruct.md): CompositeUniformValueStruct = object
+- [Type Alias: CompressedTextureFormat](https://luma.gl/docs/api-reference/generated/core/type-aliases/CompressedTextureFormat.md): CompressedTextureFormat = TextureFormatCompressed
+- [Type Alias: ComputePassProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/ComputePassProps.md): ComputePassProps = ResourceProps & object
+- [Type Alias: ComputePipelineProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/ComputePipelineProps.md): ComputePipelineProps = ResourceProps & object
+- [Type Alias: ComputeShaderLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/ComputeShaderLayout.md): ComputeShaderLayout = object
+- [Type Alias: CopyBufferToBufferOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyBufferToBufferOptions.md): CopyBufferToBufferOptions = object
+- [Type Alias: CopyBufferToTextureOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyBufferToTextureOptions.md): CopyBufferToTextureOptions = object
+- [Type Alias: CopyElementImageOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md): CopyElementImageOptions = object
+- [Type Alias: CopyExternalImageOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md): CopyExternalImageOptions = object
+- [Type Alias: CopyImageDataOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md): CopyImageDataOptions = object
+- [Type Alias: CopyTextureToBufferOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyTextureToBufferOptions.md): CopyTextureToBufferOptions = object
+- [Type Alias: CopyTextureToTextureOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/CopyTextureToTextureOptions.md): CopyTextureToTextureOptions = object
+- [Type Alias: CreateDeviceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/CreateDeviceProps.md): CreateDeviceProps = object & DeviceProps
+- [Type Alias: CullMode](https://luma.gl/docs/api-reference/generated/core/type-aliases/CullMode.md): CullMode = "none" \| "front" \| "back"
+- [Type Alias: DataTypeInfo<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/DataTypeInfo.md): DataTypeInfo\ = object
+- [Type Alias: DepthStencilAttachment](https://luma.gl/docs/api-reference/generated/core/type-aliases/DepthStencilAttachment.md): DepthStencilAttachment = object
+- [Type Alias: DepthStencilParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/DepthStencilParameters.md): DepthStencilParameters = object
+- [Type Alias: DeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceFeature.md): DeviceFeature = WebGPUDeviceFeature \| WebGLDeviceFeature \| WebGLCompressedTextureFeatures \| BrowserDeviceFeature
+- [Type Alias: DeviceInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceInfo.md): DeviceInfo = object
+- [Type Alias: DeviceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceProps.md): DeviceProps = object
+- [Type Alias: DeviceTextureFormatCapabilities](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceTextureFormatCapabilities.md): DeviceTextureFormatCapabilities = object
+- [Type Alias: ExternalImage](https://luma.gl/docs/api-reference/generated/core/type-aliases/ExternalImage.md): ExternalImage = ImageBitmap \| ImageData \| HTMLImageElement \| HTMLVideoElement \| VideoFrame \| HTMLCanvasElement \| OffscreenCanvas
+- [Type Alias: ExternalTextureBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/ExternalTextureBindingLayout.md): ExternalTextureBindingLayout = object
+- [Type Alias: ExternalTextureProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/ExternalTextureProps.md): ExternalTextureProps = ResourceProps & object
+- [Type Alias: FenceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/FenceProps.md): FenceProps = ResourceProps
+- [Type Alias: FramebufferProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/FramebufferProps.md): FramebufferProps = ResourceProps & object
+- [Type Alias: FrontFace](https://luma.gl/docs/api-reference/generated/core/type-aliases/FrontFace.md): FrontFace = "ccw" \| "cw"
+- [Type Alias: IndexFormat](https://luma.gl/docs/api-reference/generated/core/type-aliases/IndexFormat.md): IndexFormat = "uint16" \| "uint32"
+- [Type Alias: LogicalAttributeMapping](https://luma.gl/docs/api-reference/generated/core/type-aliases/LogicalAttributeMapping.md): LogicalAttributeMapping = object
+- [Type Alias: MultisampleParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/MultisampleParameters.md): MultisampleParameters = object
+- [Type Alias: NormalizedDataType](https://luma.gl/docs/api-reference/generated/core/type-aliases/NormalizedDataType.md): NormalizedDataType = SignedDataType \| "unorm8" \| "snorm8" \| "unorm16" \| "snorm16"
+- [Type Alias: NormalizedTypedArrayConstructorT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/NormalizedTypedArrayConstructorT.md): NormalizedTypedArrayConstructorT\ = T extends "unorm8" \| "snorm8" \| "unorm16" \| "snorm16" ? Float32ArrayConstructor : TypedArrayConstructorT\
+- [Type Alias: NumberArray](https://luma.gl/docs/api-reference/generated/core/type-aliases/NumberArray.md): NumberArray = number[]
+- [Type Alias: Parameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/Parameters.md): Parameters = _RenderParameters & DepthStencilParameters & ColorParameters & MultisampleParameters
+- [Type Alias: PipelineFactoryProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/PipelineFactoryProps.md): PipelineFactoryProps = RenderPipelineProps
+- [Type Alias: PipelineLayoutProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/PipelineLayoutProps.md): PipelineLayoutProps = ResourceProps & object
+- [Type Alias: PixelData](https://luma.gl/docs/api-reference/generated/core/type-aliases/PixelData.md): PixelData = object
+- [Type Alias: PolygonMode](https://luma.gl/docs/api-reference/generated/core/type-aliases/PolygonMode.md): PolygonMode = "fill" \| "line"
+- [Type Alias: PrimitiveDataType](https://luma.gl/docs/api-reference/generated/core/type-aliases/PrimitiveDataType.md): PrimitiveDataType = "u32" \| "i32" \| "f32" \| "f16"
+- [Type Alias: PrimitiveDataTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/PrimitiveDataTypeT.md): PrimitiveDataTypeT\ = T extends "float32" ? "f32" T extends "unorm8" \| "snorm8" \| "unorm16" \| "snorm16" ? "f32" T extends "sint8" \| "sint16" \| "sint32" ? "i32" : never
+- [Type Alias: PrimitiveTopology](https://luma.gl/docs/api-reference/generated/core/type-aliases/PrimitiveTopology.md): PrimitiveTopology = "point-list" \| "line-list" \| "line-strip" \| "triangle-list" \| "triangle-strip"
+- [Type Alias: ProvokingVertex](https://luma.gl/docs/api-reference/generated/core/type-aliases/ProvokingVertex.md): ProvokingVertex = "first" \| "last"
+- [Type Alias: QuerySetProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/QuerySetProps.md): QuerySetProps = ResourceProps & object
+- [Type Alias: RasterizationParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/RasterizationParameters.md): RasterizationParameters = _RenderParameters & object
+- [Type Alias: RenderBundleEncoderProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderBundleEncoderProps.md): RenderBundleEncoderProps = ResourceProps & object
+- [Type Alias: RenderPassBindingOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassBindingOptions.md): RenderPassBindingOptions = object
+- [Type Alias: RenderPassDrawOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassDrawOptions.md): RenderPassDrawOptions = object
+- [Type Alias: RenderPassParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassParameters.md): RenderPassParameters = object
+- [Type Alias: RenderPassProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassProps.md): RenderPassProps = ResourceProps & object
+- [Type Alias: RenderPipelineParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineParameters.md): RenderPipelineParameters = RasterizationParameters & DepthStencilParameters & ColorParameters & MultisampleParameters
+- [Type Alias: RenderPipelineProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md): RenderPipelineProps = ResourceProps & object
+- [Type Alias: ResourceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md): ResourceProps = object
+- [Type Alias: SamplerBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/SamplerBindingLayout.md): SamplerBindingLayout = object
+- [Type Alias: SamplerParameters](https://luma.gl/docs/api-reference/generated/core/type-aliases/SamplerParameters.md): SamplerParameters = Omit\
+- [Type Alias: SamplerProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/SamplerProps.md): SamplerProps = ResourceProps & object
+- [Type Alias: ShaderBlockLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderBlockLayout.md): ShaderBlockLayout = object
+- [Type Alias: ShaderBlockLayoutEntry](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderBlockLayoutEntry.md): ShaderBlockLayoutEntry = object
+- [Type Alias: ShaderBlockLayoutOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderBlockLayoutOptions.md): ShaderBlockLayoutOptions = object
+- [Type Alias: ShaderLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderLayout.md): ShaderLayout = object
+- [Type Alias: ShaderProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderProps.md): ShaderProps = ResourceProps & object
+- [Type Alias: SharedRenderPipelineProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/SharedRenderPipelineProps.md): SharedRenderPipelineProps = ResourceProps & object
+- [Type Alias: SignedDataType](https://luma.gl/docs/api-reference/generated/core/type-aliases/SignedDataType.md): SignedDataType = DataType
+- [Type Alias: SignedDataTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md): SignedDataTypeT\ = T extends "unorm8" ? "uint8" T extends "unorm16" ? "uint16" T extends NormalizedDataType ? T : never
+- [Type Alias: StencilOperation](https://luma.gl/docs/api-reference/generated/core/type-aliases/StencilOperation.md): StencilOperation = "keep" \| "zero" \| "replace" \| "invert" \| "increment-clamp" \| "decrement-clamp" \| "increment-wrap" \| "decrement-wrap"
+- [Type Alias: StorageBufferBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/StorageBufferBindingLayout.md): StorageBufferBindingLayout = object
+- [Type Alias: StorageTextureBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/StorageTextureBindingLayout.md): StorageTextureBindingLayout = object
+- [Type Alias: StructShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/StructShaderType.md): StructShaderType = object
+- [Type Alias: TextureBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureBindingLayout.md): TextureBindingLayout = object
+- [Type Alias: TextureCompression](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureCompression.md): TextureCompression = "dxt" \| "dxt-srgb" \| "etc1" \| "etc2" \| "pvrtc" \| "atc" \| "astc" \| "rgtc"
+- [Type Alias: TextureFormat](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormat.md): TextureFormat = TextureFormatColor \| TextureFormatDepthStencil
+- [Type Alias: TextureFormatCapabilities](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatCapabilities.md): TextureFormatCapabilities = object
+- [Type Alias: TextureFormatColor](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatColor.md): TextureFormatColor = TextureFormatColorUncompressed \| TextureFormatCompressed
+- [Type Alias: TextureFormatDataTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatDataTypeT.md): TextureFormatDataTypeT\ = T extends TextureFormatUint8 ? "uint8" T extends TextureFormatUnorm8 ? "unorm8" T extends TextureFormatUint16 ? "uint16" T extends TextureFormatUnorm16 ? "unorm16" T extends TextureFormatUint32 ? "uint32" ... extends ... ? ... : ...
+- [Type Alias: TextureFormatDepthStencil](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatDepthStencil.md): TextureFormatDepthStencil = "stencil8" \| "depth16unorm" \| "depth24plus" \| "depth24plus-stencil8" \| "depth32float" \| "depth32float-stencil8"
+- [Type Alias: TextureFormatInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatInfo.md): TextureFormatInfo = object
+- [Type Alias: TextureMemoryLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md): TextureMemoryLayout = object
+- [Type Alias: TextureProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureProps.md): TextureProps = ResourceProps & object
+- [Type Alias: TextureReadOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md): TextureReadOptions = object
+- [Type Alias: TextureViewProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureViewProps.md): TextureViewProps = ResourceProps & object
+- [Type Alias: TextureWriteOptions](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md): TextureWriteOptions = object
+- [Type Alias: TransformFeedbackProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/TransformFeedbackProps.md): TransformFeedbackProps = ResourceProps & object
+- [Type Alias: TypedArray](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArray.md): TypedArray = Int8Array \| Uint8Array \| Uint8ClampedArray \| Int16Array \| Uint16Array \| Int32Array \| Uint32Array \| Float32Array \| Float64Array
+- [Type Alias: TypedArrayConstructor](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArrayConstructor.md): TypedArrayConstructor = Int8ArrayConstructor \| Uint8ArrayConstructor \| Int16ArrayConstructor \| Uint16ArrayConstructor \| Int32ArrayConstructor \| Uint32ArrayConstructor \| Uint8ClampedArrayConstructor \| Float32ArrayConstructor \| Float64ArrayConstructor
+- [Type Alias: TypedArrayConstructorT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArrayConstructorT.md): TypedArrayConstructorT\ = T extends "uint8" ? Uint8ArrayConstructor T extends "unorm8" ? Uint8ArrayConstructor T extends "uint16" ? Uint16ArrayConstructor T extends "unorm16" ? Uint16ArrayConstructor T extends "uint32" ? Uint32ArrayConstructor ... extends ... ? ... : ...
+- [Type Alias: UniformBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBinding.md): UniformBinding = object
+- [Type Alias: UniformBlockBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBlockBinding.md): UniformBlockBinding = object
+- [Type Alias: UniformBufferBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBufferBindingLayout.md): UniformBufferBindingLayout = object
+- [Type Alias: UniformValue](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformValue.md): UniformValue = number \| boolean \| Readonly\
+- [Type Alias: VariableShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/VariableShaderType.md): VariableShaderType = "i32" \| "u32" \| "f32" \| "f16" \| ` vec2  \|  vec3  \|  vec4  \|  mat2x2  \|  mat2x3  \|  mat2x4  \|  mat3x2  \|  mat3x3  \|  mat3x4  \|  mat4x2  \|  mat4x3  \|  mat4x4 `
+- [Type Alias: VariableShaderTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/VariableShaderTypeT.md): VariableShaderTypeT\ = T extends VariableShaderTypeAlias ? VariableShaderTypeAliasMap\[T\] : T
+- [Type Alias: VaryingBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/VaryingBinding.md): VaryingBinding = object
+- [Type Alias: VertexArrayProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md): VertexArrayProps = ResourceProps & object
+- [Type Alias: VertexFormat](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexFormat.md): VertexFormat = "uint8" \| "uint8x2" \| "uint8x3-webgl" \| "uint8x4" \| "sint8" \| "sint8x2" \| "sint8x3-webgl" \| "sint8x4" \| "unorm8" \| "unorm8x2" \| "unorm8x3-webgl" \| "unorm8x4" \| "unorm8x4-bgra" \| "unorm10-10-10-2" \| "snorm8" \| "snorm8x2" \| "snorm8x3-webgl" \| "snorm8x4" \| "uint16" \| "sint16" \| "unorm16" \| "snorm16" \| "uint16x2" \| "uint16x3-webgl" \| "uint16x4" \| "sint16x2" \| "sint16x3-webgl" \| "sint16x4" \| "unorm16x2" \| "unorm16x3-webgl" \| "unorm16x4" \| "snorm16x2" \| "snorm16x3-webgl" \| "snorm16x4" \| "uint32" \| "uint32x2" \| "uint32x3" \| "uint32x4" \| "sint32" \| "sint32x2" \| "sint32x3" \| "sint32x4" \| "float16" \| "float16x2" \| "float16x4" \| "float32" \| "float32x2" \| "float32x3" \| "float32x4"
+- [Type Alias: VertexFormatDataTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexFormatDataTypeT.md): VertexFormatDataTypeT\ = T extends VertexFormatUint8 ? "uint8" T extends VertexFormatUnorm8 ? "unorm8" T extends VertexFormatUint16 ? "uint16" T extends VertexFormatUnorm16 ? "unorm16" T extends VertexFormatUint32 ? "uint32" ... extends ... ? ... : ...
+- [Type Alias: WebGPUDeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
+- [Type Alias: WebGPUDeviceFeatureLevel](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md): WebGPUDeviceFeatureLevel = Exclude\
+- [Type Alias: WebGPUFeatureLevel](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUFeatureLevel.md): WebGPUFeatureLevel = "core" \| "max" \| "compatibility" \| "best-available"
+- [Variable: dataTypeDecoder](https://luma.gl/docs/api-reference/generated/core/variables/dataTypeDecoder.md): const dataTypeDecoder: DataTypeDecoder
+- [Variable: log](https://luma.gl/docs/api-reference/generated/core/variables/log.md): const log: Log
+- [Variable: luma](https://luma.gl/docs/api-reference/generated/core/variables/luma.md): const luma: Luma
+- [Variable: NativeFloat16ArrayConstructor](https://luma.gl/docs/api-reference/generated/core/variables/NativeFloat16ArrayConstructor.md): const NativeFloat16ArrayConstructor: TypedArrayConstructor \| undefined
+- [Variable: shaderTypeDecoder](https://luma.gl/docs/api-reference/generated/core/variables/shaderTypeDecoder.md): const shaderTypeDecoder: ShaderTypeDecoder
+- [Variable: textureFormatDecoder](https://luma.gl/docs/api-reference/generated/core/variables/textureFormatDecoder.md): const textureFormatDecoder: TextureFormatDecoder
+- [Variable: vertexFormatDecoder](https://luma.gl/docs/api-reference/generated/core/variables/vertexFormatDecoder.md): const vertexFormatDecoder: VertexFormatDecoder
+
+#### gltf
+
+Load and render standards-first glTF scenes, materials, extensions, animation, crowds, and lossless interchange.
+
+- [Overview](https://luma.gl/docs/api-reference/gltf.md): Load and render standards-first glTF scenes, materials, extensions, animation, crowds, and lossless interchange.
+- [GPU-animated glTF crowds](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md): GPU skinning, independent playback, batching, levels of detail, and public APIs for large animated glTF crowds.
+- [glTF Animation and Deformation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md): @luma.gl/gltf interprets glTF animation channels and connects them to the format-independent
+- [GPU-animated crowd API](https://luma.gl/docs/api-reference/gltf/gltf-crowd-api.md): Crowd boundaries, ownership, cleanup, diagnostics, and public API contracts.
+- [GPU-animated crowd performance and LOD](https://luma.gl/docs/api-reference/gltf/gltf-crowd-performance.md): Joint-palette costs, screen-space levels of detail, vertex budgets, and decimation.
+- [GPU-animated crowd usage](https://luma.gl/docs/api-reference/gltf/gltf-crowd-usage.md): Create, render, batch, and independently animate large glTF crowds.
+- [glTF Extension Support](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md): This page summarizes the glTF extensions that @luma.gl/gltf handles in its
+- [glTF Asset Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md): @luma.gl/gltf owns format-native scene interchange. exportGLTF() writes standards-conformant
+- [glTF Materials, Textures, and Lighting](https://luma.gl/docs/api-reference/gltf/gltf-materials.md): @luma.gl/gltf translates source glTF material and lighting data into the existing
+- [Native glTF Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md): glTF extensions should describe what an asset actually does, not merely which JSON properties
+
+#### gpgpu
+
+Evaluate portable GPU data operations and compose vectors, custom operations, and precision-aware compute workflows.
+
+- [Overview](https://luma.gl/docs/api-reference/gpgpu.md): Evaluate portable GPU data operations and compose vectors, custom operations, and precision-aware compute workflows.
+- [cleanEvaluate / cleanEvaluateSync](https://luma.gl/docs/api-reference/gpgpu/clean-evaluate.md): cleanEvaluate() evaluates one or more result evaluators while cleaning up intermediate GPUDataEvaluator dependencies that are no longer needed. GPUVectorEvaluator roots are also supported.
+- [Custom Operations](https://luma.gl/docs/api-reference/gpgpu/custom-operation.md): Custom operations let applications add lazy GPUDataEvaluator operations that
+- [GPUConstant](https://luma.gl/docs/api-reference/gpgpu/gpu-constant.md): GPUConstant is one immutable fixed-width value shared by
+- [GPUData](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md): From v9.4
+- [GPU Evaluators](https://luma.gl/docs/api-reference/gpgpu/gpu-data-evaluator.md): @luma.gl/gpgpu has two evaluator layers:
+- [GPUDataView](https://luma.gl/docs/api-reference/gpgpu/gpu-data-view.md): From v9.4
+- [GPUVector](https://luma.gl/docs/api-reference/gpgpu/gpu-vector.md): From v9.4
+- [GPUVectorFormat](https://luma.gl/docs/api-reference/gpgpu/gpu-vector-format.md): From v9.4
+- [Operations](https://luma.gl/docs/api-reference/gpgpu/operations.md): This page is the top-level API reference for the lazy operations exported by @luma.gl/gpgpu.
+
+#### scene
+
+Experimental asset import
+
+- [@luma.gl/scene](https://luma.gl/docs/api-reference/scene.md): Experimental asset import
+- [ANARI Animation and glTF Integration](https://luma.gl/docs/api-reference/scene/anari-animation.md): @luma.gl/scene/gltf is an optional entry point that projects glTF-owned animation data onto
+- [ANARI C API and THREE.js Mapping](https://luma.gl/docs/api-reference/scene/anari-api-mapping.md): Experimental
+- [ANARIDevice and Object Lifecycle](https://luma.gl/docs/api-reference/scene/anari-device.md): Experimental
+- [ANARI Arrays and Geometry](https://luma.gl/docs/api-reference/scene/anari-geometry.md): Experimental
+- [ANARI Materials and Lights](https://luma.gl/docs/api-reference/scene/anari-materials-and-lights.md): Experimental
+- [ANARI Cameras, Renderers, and Frames](https://luma.gl/docs/api-reference/scene/anari-rendering.md): Experimental
+- [ANARI Scene Hierarchy](https://luma.gl/docs/api-reference/scene/anari-scene.md): Experimental
+- [ANARI Scene Schemas](https://luma.gl/docs/api-reference/scene/anari-schemas.md): Experimental
+
+#### shadertools
+
+Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, uniforms, and rendering passes.
+
+- [Shadertools](https://luma.gl/docs/api-reference/shadertools.md): Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, uniforms, and rendering passes.
+- [ShaderAssembler](https://luma.gl/docs/api-reference/shadertools/shader-assembler.md): ShaderAssembler is the abstract base for stateful shader assembly. Its concrete
+- [Shader Module Conventions](https://luma.gl/docs/api-reference/shadertools/shader-conventions.md): These are luma.gl conventions rather than WebGPU or WebGL requirements. Existing built-in modules
+- [Shader Parsing](https://luma.gl/docs/api-reference/shadertools/shader-info.md): It is sometimes useful to be able to inspect shader source code
+- [ShaderModule](https://luma.gl/docs/api-reference/shadertools/shader-module.md): ShaderModule is the reusable shader feature descriptor used by
+- [dggs](https://luma.gl/docs/api-reference/shadertools/shader-modules/dggs.md): The dggs shader module provides WGSL helpers for compact 64-bit DGGS cell IDs
+- [dirlight](https://luma.gl/docs/api-reference/shadertools/shader-modules/dirlight.md): The dirlight shader module is a lightweight alternative to the full
+- [colors, floatColors, and storageColors](https://luma.gl/docs/api-reference/shadertools/shader-modules/float-colors.md): The colors shader module provides shared utilities for semantic colors in shader code.
+- [fp32 (32-bit Floating Point)](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp32.md): Provides "improved" 32-bit math support to GPU shaders on certain platforms,
+- [fp64 (64-bit Floating Point)](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md): Provides basic 64-bit math support in GPU shaders:
+- [fp64arithmetic](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md): The fp64arithmetic shader module provides the low-level double-single
+- [gouraudMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/gouraud-material.md): The gouraudMaterial shader module provides functions to apply Gouraud shading
+- [gpuPicking](https://luma.gl/docs/api-reference/shadertools/shader-modules/gpu-picking.md): From v9.1
+- [lambertMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/lambert-material.md): This lambertMaterial shader module provides a diffuse-only matte material
+- [lighting](https://luma.gl/docs/api-reference/shadertools/shader-modules/lighting.md): The lighting shader module collects scene lighting into a single uniform block
+- [pbrMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/pbr-material.md): Implements Physically Based Shading of a microfacet surface defined by a glTF material.
+- [phongMaterial](https://luma.gl/docs/api-reference/shadertools/shader-modules/phong-material.md): This phongMaterial shader module provides functions to apply Phong shading
+- [picking](https://luma.gl/docs/api-reference/shadertools/shader-modules/picking.md): Deprecated in v9.1
+- [project](https://luma.gl/docs/api-reference/shadertools/shader-modules/project.md): A basic projection module.
+- [random](https://luma.gl/docs/api-reference/shadertools/shader-modules/random.md): The random shader module injects a small random-number helper into shaders.
+- [skin](https://luma.gl/docs/api-reference/shadertools/shader-modules/skin.md): The skin shader module provides GPU skinning helpers for skinned meshes,
+- [ShaderPass](https://luma.gl/docs/api-reference/shadertools/shader-pass.md): ShaderPass is a ShaderModule
+- [Bloom](https://luma.gl/docs/api-reference/shadertools/shader-passes/bloom.md): Spread bright scene highlights into a controllable photographic glow. luma.gl provides a compact
+- [Brightness and Contrast](https://luma.gl/docs/api-reference/shadertools/shader-passes/brightness-contrast.md): Shape overall exposure and tonal separation with a compact, single-pass color adjustment. Use
+- [Bulge and Pinch](https://luma.gl/docs/api-reference/shadertools/shader-passes/bulge-pinch.md): Push image coordinates outward or pull them inward inside a circular region. bulgePinch
+- [Camera-Reprojection Antialiasing](https://luma.gl/docs/api-reference/shadertools/shader-passes/camera-reprojection-antialiasing.md): Reconstruct previous-frame image coordinates from scene depth and camera transforms when a
+- [Clustered Volumetric Lighting](https://luma.gl/docs/api-reference/shadertools/shader-passes/clustered-volumetric-lighting.md): Integrate participating-media illumination from the same directional and clustered point lights
+- [Color Halftone](https://luma.gl/docs/api-reference/shadertools/shader-passes/color-halftone.md): Rebuild an image as rotated, offset print-screen patterns for its individual color channels.
+- [Denoise](https://luma.gl/docs/api-reference/shadertools/shader-passes/denoise.md): Reduce visible image grain while preserving local color boundaries. denoise applies a
+- [Depth-Aware Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/depth-aware-blur.md): Smooth noisy screen-space results without bleeding across foreground/background boundaries.
+- [Depth of Field](https://luma.gl/docs/api-reference/shadertools/shader-passes/depth-of-field.md): Keep a selected camera-space distance sharp while softening nearer and farther geometry.
+- [Dot Screen](https://luma.gl/docs/api-reference/shadertools/shader-passes/dot-screen.md): Convert source-image luminance into a rotated monochrome dot pattern. dotScreen produces a
+- [Edge Work](https://luma.gl/docs/api-reference/shadertools/shader-passes/edge-work.md): Extract image contours by comparing neighborhood frequencies at different blur widths.
+- [FXAA](https://luma.gl/docs/api-reference/shadertools/shader-passes/fxaa.md): Reduce jagged high-contrast image edges with Fast Approximate Anti-Aliasing. fxaa operates on a
+- [Gaussian Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/gaussian-blur.md): Soften an image with a smooth, bell-shaped Gaussian kernel. gaussianBlur applies independent
+- [Ground-Truth Ambient Occlusion](https://luma.gl/docs/api-reference/shadertools/shader-passes/gtao.md): Estimate horizon-based ambient visibility with temporally reprojected history and edge-aware
+- [HDR Auto Exposure](https://luma.gl/docs/api-reference/shadertools/shader-passes/hdr-auto-exposure.md): Continuously meter scene luminance and adapt camera exposure entirely on the GPU.
+- [Hexagonal Pixelate](https://luma.gl/docs/api-reference/shadertools/shader-passes/hexagonal-pixelate.md): Replace fine image detail with a regular mosaic of hexagonal cells. hexagonalPixelate snaps
+- [Hue and Saturation](https://luma.gl/docs/api-reference/shadertools/shader-passes/hue-saturation.md): Rotate the image palette and control overall color intensity without changing the basic image
+- [Shader Pass Catalog](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md): Explore reusable image-processing filters, cinematic lens effects, temporal reconstruction, and
+- [Ink](https://luma.gl/docs/api-reference/shadertools/shader-passes/ink.md): Emphasize local image contrast as dark illustrated contours. ink produces a graphic,
+- [Magnify](https://luma.gl/docs/api-reference/shadertools/shader-passes/magnify.md): Place an adjustable circular magnifying lens over the current image. magnify samples the source
+- [Motion Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/motion-blur.md): Integrate scene color along per-pixel motion vectors while reducing bleed across depth
+- [Noise](https://luma.gl/docs/api-reference/shadertools/shader-passes/noise.md): Add controllable monochrome grain to the current image. noise provides a simple tactile
+- [Screen-Space Outlines](https://luma.gl/docs/api-reference/shadertools/shader-passes/outlines.md): Reveal object silhouettes and hard surface transitions by comparing nearby depth and normal
+- [Persistence](https://luma.gl/docs/api-reference/shadertools/shader-passes/persistence.md): Accumulate the current frame into a fading history texture to create luminous motion trails and
+- [Screen-Space Global Illumination](https://luma.gl/docs/api-reference/shadertools/shader-passes/screen-space-global-illumination.md): Gather colored diffuse light bouncing between surfaces that are visible in the current frame.
+- [Screen-Space Reflections](https://luma.gl/docs/api-reference/shadertools/shader-passes/screen-space-reflections.md): Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals,
+- [Sepia](https://luma.gl/docs/api-reference/shadertools/shader-passes/sepia.md): Blend a warm, reddish-brown photographic treatment into the source image. sepia provides an
+- [Screen-Space Ambient Occlusion](https://luma.gl/docs/api-reference/shadertools/shader-passes/ssao.md): Darken tight creases and nearby surface contacts using the current scene depth buffer.
+- [Swirl](https://luma.gl/docs/api-reference/shadertools/shader-passes/swirl.md): Rotate image samples around a configurable circular focal region. swirl creates a controllable
+- [Temporal Antialiasing](https://luma.gl/docs/api-reference/shadertools/shader-passes/temporal-antialiasing.md): Accumulate jittered samples from successive frames while following scene motion and rejecting
+- [Tilt Shift](https://luma.gl/docs/api-reference/shadertools/shader-passes/tilt-shift.md): Keep a chosen image-space line sharp while progressively blurring the surrounding scene.
+- [Tone Mapping](https://luma.gl/docs/api-reference/shadertools/shader-passes/tone-mapping.md): Convert scene-linear high-dynamic-range lighting into display-ready color with an ACES-style
+- [Triangle Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/triangle-blur.md): Blend neighboring pixels with a linearly weighted pyramid kernel. triangleBlur uses separable
+- [Vibrance](https://luma.gl/docs/api-reference/shadertools/shader-passes/vibrance.md): Adjust subdued colors while protecting hues that are already strongly saturated. vibrance
+- [Vignette](https://luma.gl/docs/api-reference/shadertools/shader-passes/vignette.md): Darken the image perimeter with a smooth radial falloff. vignette concentrates visual attention
+- [Volumetric Fog](https://luma.gl/docs/api-reference/shadertools/shader-passes/volumetric-fog.md): Add depth-aware height fog, directional atmospheric scattering, and temporally stabilized haze.
+- [Zoom Blur](https://luma.gl/docs/api-reference/shadertools/shader-passes/zoom-blur.md): Pull image samples toward a chosen focal point to suggest rapid zoom, radial motion, or a
+- [ShaderPlugin](https://luma.gl/docs/api-reference/shadertools/shader-plugin.md): ShaderPlugin groups reusable shader assembly contributions that can be
+- [WGSL Support](https://luma.gl/docs/api-reference/shadertools/wgsl-support.md): @luma.gl/shadertools supports WGSL shader assembly in addition to GLSL.
+
+#### splats
+
+GPU-native Gaussian splat rendering, streaming, shading, picking, and formats in luma.gl.
+
+- [@luma.gl/splats](https://luma.gl/docs/api-reference/splats.md): GPU-native Gaussian splat rendering, streaming, shading, picking, and formats in luma.gl.
+- [Gaussian splat data and shading](https://luma.gl/docs/api-reference/splats/data-and-shading.md): Source columns, covariance projection, spherical harmonics, semantic filtering, and updates.
+- [Gaussian splat formats and loaders](https://luma.gl/docs/api-reference/splats/formats-and-loaders.md): Khronos glTF splats, 3D Tiles, SPZ, Arrow conversion, loaders, and package boundaries.
+- [Gaussian splat picking and scenes](https://luma.gl/docs/api-reference/splats/picking-and-scenes.md): GPU picking and mixed mesh-and-splat scene integration.
+- [Gaussian splat renderers](https://luma.gl/docs/api-reference/splats/renderers.md): Prepared, command-graph, segmented, and paged Gaussian splat rendering contracts.
+- [Gaussian splat streaming and residency](https://luma.gl/docs/api-reference/splats/streaming-and-residency.md): Bounded residency, hierarchical paging, and foveated level of detail.
+
+#### test-utils
+
+Configure luma.gl tests, browser and device environments, snapshot workflows, and resource-leak checks.
+
+- [Overview](https://luma.gl/docs/api-reference/test-utils.md): Configure luma.gl tests, browser and device environments, snapshot workflows, and resource-leak checks.
+- [SnapshotTestRunner](https://luma.gl/docs/api-reference/test-utils/snapshot-test-runner.md): Client-side utility for browser-based WebGL render tests.
+
+#### text
+
+@luma.gl/text provides an intent-level facade for experimental GPU-only 2D text rendering.
+
+- [@luma.gl/text](https://luma.gl/docs/api-reference/text.md): @luma.gl/text provides an intent-level facade for experimental GPU-only 2D text rendering.
+
+#### webgl
+
+Use the luma.gl Core API through the WebGL 2 backend and its low-level integration helpers.
+
+- [@luma.gl/webgl](https://luma.gl/docs/api-reference/webgl.md): Use the luma.gl Core API through the WebGL 2 backend and its low-level integration helpers.
+- [@luma.gl/webgl/constants](https://luma.gl/docs/api-reference/webgl/constants.md): From v9.3
+
+#### webgpu
+
+Use the luma.gl Core API through the WebGPU backend, including native resource and shader-layout integration.
+
+- [Overview](https://luma.gl/docs/api-reference/webgpu.md): Use the luma.gl Core API through the WebGPU backend, including native resource and shader-layout integration.
+- [Optional WebGPU and WGSL features](https://luma.gl/docs/api-reference/webgpu/optional-features.md): WebGPU exposes optional capabilities through three related but distinct channels. Applications
+
+### developer-guide
+
+Set up, test, debug, profile, document, and ship luma.gl applications and contributions.
+
+- [Developer Guide](https://luma.gl/docs/developer-guide.md): Set up, test, debug, profile, document, and ship luma.gl applications and contributions.
+
+#### bundling
+
+luma.gl is published as tree-shakeable ES modules. Application bundle size depends on which
+
+- [Bundling](https://luma.gl/docs/developer-guide/bundling.md): luma.gl is published as tree-shakeable ES modules. Application bundle size depends on which
+
+#### contributing
+
+luma.gl welcomes contributions from the community. Smaller fixes
+
+- [Contributing](https://luma.gl/docs/developer-guide/contributing.md): luma.gl welcomes contributions from the community. Smaller fixes
+
+#### debugging
+
+Why GPU Debugging can be hard
+
+- [Debugging](https://luma.gl/docs/developer-guide/debugging.md): Why GPU Debugging can be hard
+
+#### documentation
+
+Page contracts, navigation rules, examples, and verification requirements for luma.gl documentation contributors.
+
+- [Writing luma.gl documentation](https://luma.gl/docs/developer-guide/documentation.md): Page contracts, navigation rules, examples, and verification requirements for luma.gl documentation contributors.
+
+#### editing
+
+Shader Syntax Highlighting
+
+- [Editing](https://luma.gl/docs/developer-guide/editing.md): Shader Syntax Highlighting
+
+#### installing
+
+When you are ready to turn an idea into your own application, this guide takes you from
+
+- [Installing](https://luma.gl/docs/developer-guide/installing.md): When you are ready to turn an idea into your own application, this guide takes you from
+
+#### multiple-canvases
+
+This guide covers the recommended way to use luma.gl with more than one canvas.
+
+- [Multiple Canvases](https://luma.gl/docs/developer-guide/multiple-canvases.md): This guide covers the recommended way to use luma.gl with more than one canvas.
+
+#### profiling
+
+GPU programming is all about performance, so having tools to systematically
+
+- [Profiling](https://luma.gl/docs/developer-guide/profiling.md): GPU programming is all about performance, so having tools to systematically
+
+#### testing
+
+The primary test runner is Vitest.
+
+- [Testing](https://luma.gl/docs/developer-guide/testing.md): The primary test runner is Vitest.
+
+#### working-with-ai
+
+AI coding agents can help design, implement, and debug luma.gl applications when they
+
+- [Working with AI Coding Agents](https://luma.gl/docs/developer-guide/working-with-ai.md): AI coding agents can help design, implement, and debug luma.gl applications when they
+
+### developer
+
+
+#### dev-tools
+
+- [Browser debug support](https://luma.gl/docs/developer/dev-tools/browser-debug.md): The repository supports two browser-debug workflows.
+- [LLM-friendly test setup](https://luma.gl/docs/developer/dev-tools/llm-friendly-test-setup.md): This repo uses @vis.gl/dev-tools for shared Vitest wiring and keeps repository-specific Playwright utilities under scripts/playwright/ so agents and contributors can use a small set of stable top-level commands without needing to remember the underlying runner details.
+- [Playwright support](https://luma.gl/docs/developer/dev-tools/playwright.md): Playwright support uses shared configuration from @vis.gl/dev-tools plus a thin repo CLI wrapper under scripts/playwright/.
+
+### faq
+
+How do I draw to the screen in luma.gl?
+
+- [FAQ](https://luma.gl/docs/faq.md): How do I draw to the screen in luma.gl?
+
+### glossary
+
+Plain-language definitions for the GPU, rendering, shader, and command-graph terms used throughout luma.gl.
+
+- [luma.gl glossary](https://luma.gl/docs/glossary.md): Plain-language definitions for the GPU, rendering, shader, and command-graph terms used throughout luma.gl.
+
+### upgrade-guide
+
+The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
+
+- [Upgrade Guide](https://luma.gl/docs/upgrade-guide.md): The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
+
+### whats-new
+
+This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What's New page.
+
+- [What's New](https://luma.gl/docs/whats-new.md): This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What's New page.
