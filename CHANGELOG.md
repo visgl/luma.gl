@@ -2,6 +2,29 @@
 
 ## v9.4
 
+### v9.4.0-beta.1
+
+- Add portable GPU data primitives in `@luma.gl/gpgpu/gpu-data` and batch-preserving tables and
+  rendering models in `@luma.gl/experimental`.
+- Publish the experimental `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and
+  `@luma.gl/experimental` packages for direct use.
+- Move draw state into `RenderPass`, with portable render bundles, direct and indirect draws,
+  feature levels, `DynamicBuffer`, and improved video-texture support.
+- Add GPU-native dataframe, sorting, aggregation, raster, geospatial, filtering, and projection
+  workflows that keep intermediate data resident on the GPU.
+- Add streamed HDR Gaussian splats with batch preservation, stable row identities, GPU sorting,
+  hierarchy traversal, and out-of-core rendering.
+- Expand glTF support with WebGPU rendering, skins, morph targets, animation crossfades, GPU
+  instancing, authored LODs, and broader physical-material coverage.
+- Add reusable forward and deferred scene rendering with bloom, ambient occlusion, reflections,
+  fog, transmission, and adaptive exposure.
+- Add portable WGSL and GLSL shader plugins, lightweight WGSL interface scanning, and opt-in WebGL
+  debugging.
+- Add experimental WebXR rendering, projection-layer, view, camera, and input helpers for WebGPU
+  and WebGL.
+- Remove `@luma.gl/tables`; move its GPU primitives to `@luma.gl/gpgpu/gpu-data`, retain higher-level
+  tables and models in `@luma.gl/experimental`, and keep the Arrow adapter private in 9.4.
+
 ### v9.4.0-alpha.4
 
 - fix(gpgpu): remove circular reference (#2869)
