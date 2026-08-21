@@ -54,9 +54,9 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~4.4.5",
-    "@loaders.gl/gltf": "~4.4.5",
-    "@loaders.gl/polyfills": "~4.4.5",
+    "@loaders.gl/core": "~5.0.0-alpha.1",
+    "@loaders.gl/gltf": "~5.0.0-alpha.1",
+    "@loaders.gl/polyfills": "~5.0.0-alpha.1",
     "@math.gl/dggs-geohash": "^4.1.0",
     "@math.gl/dggs-quadkey": "^4.1.0",
     "@math.gl/dggs-s2": "^4.1.0",
@@ -90,19 +90,9 @@
     "@luma.gl/webgl": "workspace:*"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@~4.4.5": {
-      "peerDependencies": {
-        "@loaders.gl/core": "~4.4.5"
-      }
-    },
     "@loaders.gl/gltf@~5.0.0-alpha.1": {
       "peerDependencies": {
         "@loaders.gl/core": "~5.0.0-alpha.1"
-      }
-    },
-    "@loaders.gl/images@~4.4.5": {
-      "peerDependencies": {
-        "@loaders.gl/core": "~4.4.5"
       }
     },
     "@loaders.gl/images@~5.0.0-alpha.1": {
