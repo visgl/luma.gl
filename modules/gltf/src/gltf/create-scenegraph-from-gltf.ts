@@ -133,7 +133,7 @@ export function createScenegraphsFromGLTF(
   const extensionSupport = getGLTFExtensionSupport(gltf, device);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
-  const skins = new GLTFSkinController({gltf, scenes, gltfNodeIndexToNodeMap});
+  const skins = new GLTFSkinController({device, gltf, scenes, gltfNodeIndexToNodeMap});
   animator.setUpdateHandler(() => skins.update());
 
   let destroyed = false;
@@ -142,6 +142,7 @@ export function createScenegraphsFromGLTF(
       return;
     }
     destroyed = true;
+    skins.destroy();
 
     const groups = new Set<GroupNode>([
       ...scenes,

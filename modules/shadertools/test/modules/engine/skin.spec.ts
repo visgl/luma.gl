@@ -226,6 +226,32 @@ fn vertexMain(@builtin(instance_index) instanceIndex: u32) -> @builtin(position)
   t.end();
 });
 
+test('shadertools#skin selects indexed storage palettes for large WebGPU skins', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: WGSL_PLATFORM_INFO,
+    source: /* wgsl */ `
+@vertex
+fn vertexMain() -> @builtin(position) vec4f {
+  return getSkinMatrix(vec4f(1.0, 0.0, 0.0, 0.0), vec4u(64u)) * vec4f(0.0, 0.0, 0.0, 1.0);
+}`,
+    modules: [skin],
+    defines: {HAS_LARGE_SKIN: true}
+  });
+
+  t.ok(
+    assembledShader.bindingTable.some(
+      binding => binding.name === 'skinJointMatrices' && binding.kind === 'read-only-storage'
+    ),
+    'large WebGPU skins use an indexed storage palette'
+  );
+  t.ok(
+    assembledShader.source.includes('skinJointMatrices[joints.x]'),
+    'large skinning indexes the palette directly without an instance offset'
+  );
+  t.end();
+});
+
 test('shadertools#skin assembles portable float-texture instance palettes for WebGL', async t => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
