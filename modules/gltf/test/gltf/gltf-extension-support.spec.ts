@@ -111,8 +111,8 @@ test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations',
   );
   t.equal(
     support.get('KHR_meshopt_compression')?.supportLevel,
-    'none',
-    'the newer KHR meshopt spelling is not silently reported as implemented'
+    'built-in',
+    'the loaders.gl v5 decoder handles KHR meshopt buffer views'
   );
   t.equal(
     support.get('EXT_mesh_features')?.supportLevel,
@@ -205,8 +205,8 @@ test('gltf#getRegisteredGLTFExtensions exposes generated support and maturity su
     summary,
     {
       total: 35,
-      supported: 25,
-      bySupportLevel: {'built-in': 19, 'parsed-and-wired': 6, 'loader-only': 4, none: 6},
+      supported: 26,
+      bySupportLevel: {'built-in': 20, 'parsed-and-wired': 6, 'loader-only': 4, none: 5},
       byStandardStatus: {
         ratified: 26,
         'release-candidate': 2,

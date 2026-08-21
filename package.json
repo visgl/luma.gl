@@ -90,14 +90,24 @@
     "@luma.gl/webgl": "workspace:*"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@*": {
+    "@loaders.gl/gltf@~4.4.5": {
       "peerDependencies": {
         "@loaders.gl/core": "~4.4.5"
       }
     },
-    "@loaders.gl/images@*": {
+    "@loaders.gl/gltf@~5.0.0-alpha.1": {
+      "peerDependencies": {
+        "@loaders.gl/core": "~5.0.0-alpha.1"
+      }
+    },
+    "@loaders.gl/images@~4.4.5": {
       "peerDependencies": {
         "@loaders.gl/core": "~4.4.5"
+      }
+    },
+    "@loaders.gl/images@~5.0.0-alpha.1": {
+      "peerDependencies": {
+        "@loaders.gl/core": "~5.0.0-alpha.1"
       }
     }
   },

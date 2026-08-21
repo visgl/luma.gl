@@ -156,12 +156,15 @@ license/provenance tests, focused WebGPU/WebGL2 coverage, user documentation, an
 
 **Priority:** P0. **Owners:** upstream `@loaders.gl/gltf`, `@luma.gl/gltf`.
 
-**Status:** In progress. The first post-Animation-Studio slice normalizes WebGL-only `LINE_LOOP`
-and `TRIANGLE_FAN` modes into portable indexed list topologies without modifying source accessor
-data. The next slice validates loaders.gl's selected BasisU/KTX2 GPU format against the active
-device, uses a deterministic fallback for optional unsupported textures, and rejects unsupported
-required BasisU textures in strict mode. Meshopt decoding, WebP/AVIF loader selection, and the
-remaining official fixture matrix are still pending.
+**Status:** In progress. [PR #3106](https://github.com/visgl/luma.gl/pull/3106) normalizes
+WebGL-only `LINE_LOOP` and `TRIANGLE_FAN` modes into portable indexed list topologies without
+modifying source accessor data. [PR #3107](https://github.com/visgl/luma.gl/pull/3107) validates
+loaders.gl's selected BasisU/KTX2 GPU format against the active device, uses a deterministic
+fallback for optional unsupported textures, and rejects unsupported required BasisU textures in
+strict mode. loaders.gl v5 decodes both meshopt extension spellings; this tranche adopts that
+published API on luma.gl `master`. WebP selection is already loader-owned. The final AVIF source
+selection is implemented in [loaders.gl PR #3632](https://github.com/visgl/loaders.gl/pull/3632)
+and becomes available here with its next v5 alpha release.
 
 - Implement actual `KHR_meshopt_compression` release-candidate decoding in the shared asset-loader
   boundary, including geometry/index buffers, animation tracks, morph targets, and instance data.

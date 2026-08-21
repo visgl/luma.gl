@@ -55,6 +55,17 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
     ]
   },
   {
+    extensionName: 'KHR_meshopt_compression',
+    models: [
+      {
+        name: 'MeshoptCubeTest',
+        label: 'Meshopt Cube Test (KHR Meshopt)',
+        variant: 'glTF-Meshopt',
+        fileName: 'MeshoptCubeTest.gltf'
+      }
+    ]
+  },
+  {
     extensionName: 'KHR_mesh_quantization',
     models: [
       {
