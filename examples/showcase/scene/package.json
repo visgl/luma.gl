@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-scene",
-  "version": "9.4.0-alpha.4",
+  "version": "9.4.0-beta.1",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -11,15 +11,15 @@
   "dependencies": {
     "@loaders.gl/core": "~4.4.5",
     "@loaders.gl/gltf": "~4.4.5",
-    "@luma.gl/core": "9.4.0-alpha.4",
-    "@luma.gl/effects": "9.4.0-alpha.4",
-    "@luma.gl/engine": "9.4.0-alpha.4",
-    "@luma.gl/experimental": "9.4.0-alpha.4",
-    "@luma.gl/gltf": "9.4.0-alpha.4",
+    "@luma.gl/core": "9.4.0-beta.1",
+    "@luma.gl/effects": "9.4.0-beta.1",
+    "@luma.gl/engine": "9.4.0-beta.1",
+    "@luma.gl/experimental": "9.4.0-beta.1",
+    "@luma.gl/gltf": "9.4.0-beta.1",
     "@luma.gl/scene": "workspace:*",
-    "@luma.gl/shadertools": "9.4.0-alpha.4",
-    "@luma.gl/webgl": "9.4.0-alpha.4",
-    "@luma.gl/webgpu": "9.4.0-alpha.4",
+    "@luma.gl/shadertools": "9.4.0-beta.1",
+    "@luma.gl/webgl": "9.4.0-beta.1",
+    "@luma.gl/webgpu": "9.4.0-beta.1",
     "@math.gl/core": "^4.1.0",
     "jsonc-parser": "3.2.0",
     "monaco-editor": "^0.53.0"
