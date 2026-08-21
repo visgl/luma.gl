@@ -58,6 +58,10 @@ struct VertexInputs {
   @location(11) instanceModelMatrixCol2: vec4f,
   @location(12) instanceModelMatrixCol3: vec4f,
   @builtin(instance_index) instanceIndex: u32,
+#else
+#ifdef HAS_INSTANCED_MORPH
+  @builtin(instance_index) instanceIndex: u32,
+#endif
 #endif
 #ifdef HAS_GPU_CROWD_ANIMATION
   @location(13) instanceAnimationFrames: vec4f,
@@ -659,12 +663,12 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     managedResources.push(skinJointMatrices);
   }
 
-  const morphTargetCount = crowd ? morphTargets.length : 0;
+  const morphTargetCount = morphTargets.length;
   const morphVertexCount = Math.floor((geometry.attributes['POSITION']?.value.length || 0) / 3);
   let morphTargetData: Buffer | Texture | undefined;
   let morphWeights: Float32Array | undefined;
   let morphWeightData: Buffer | Texture | undefined;
-  if (crowd && morphTargetCount > 0 && morphVertexCount > 0) {
+  if (morphTargetCount > 0 && morphVertexCount > 0) {
     const targetValues = new Float32Array(morphTargetCount * 3 * morphVertexCount * 4);
     for (const [targetIndex, target] of morphTargets.entries()) {
       for (const [attributeIndex, attributeName] of ['POSITION', 'NORMAL', 'TANGENT'].entries()) {
@@ -696,13 +700,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
     if (!hasGPUAnimation) {
       const packedTargetCount = Math.ceil(morphTargetCount / 4);
-      morphWeights = new Float32Array(crowd.capacity * packedTargetCount * 4);
+      const morphInstanceCount = crowd?.capacity || 1;
+      morphWeights = new Float32Array(morphInstanceCount * packedTargetCount * 4);
       morphWeightData = createGPUAnimationResource(
         device,
         `${id || 'gltf'}-crowd-morph-weights`,
         morphWeights,
         packedTargetCount,
-        crowd.capacity
+        morphInstanceCount
       );
       managedResources.push(morphWeightData);
     }
@@ -745,7 +750,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial, skin, ...(crowd ? [gpuAnimation] : [])],
+    modules: [pbrMaterial, skin, ...(crowd || morphTargetData ? [gpuAnimation] : [])],
     ...modelOptions,
 
     ...(instanceMatrices || crowd
@@ -770,7 +775,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       ...(morphTargetData
         ? {HAS_INSTANCED_MORPH: true, CROWD_MORPH_TARGET_COUNT: morphTargetCount}
         : {}),
-      ...(crowd ? {CROWD_ANIMATION_JOINT_COUNT: animationJointCount} : {})
+      ...(crowd || morphTargetData ? {CROWD_ANIMATION_JOINT_COUNT: animationJointCount} : {})
     },
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
@@ -816,6 +821,13 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     instanceMatrices
   });
   modelNode.userData['gltfLargeSkinPalette'] = hasLargeSkinPalette;
+  if (morphWeights && morphWeightData && !crowd) {
+    modelNode.userData['gltfMorphWeights'] = {
+      values: morphWeights,
+      data: morphWeightData,
+      packedTargetCount: Math.ceil(morphTargetCount / 4)
+    };
+  }
   if (crowd) {
     modelNode.userData['gltfAnimatedCrowd'] = {
       transformBuffers,

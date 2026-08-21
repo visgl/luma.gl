@@ -98,7 +98,7 @@ describe('reviewed glTF deformation edge cases', () => {
     }
   });
 
-  test('decodes quantized AnimatedMorphCube bases before creating animated GPU geometry', async () => {
+  test('keeps AnimatedMorphCube vertices immutable while animation updates GPU morph weights', async () => {
     const source = await loadFixture('AnimatedMorphCube.glb');
     const primitive = source.meshes[0].primitives[0];
     const positionAccessor = primitive.attributes['POSITION'];
@@ -141,6 +141,15 @@ describe('reviewed glTF deformation edge cases', () => {
 
       const vertexBuffer = modelNode!.model._gpuGeometry!.attributes['geometry'];
       const previousBytes = new Uint8Array(await vertexBuffer.readAsync());
+      const morphWeights = modelNode!.userData['gltfMorphWeights'] as {
+        values: Float32Array;
+        data: unknown;
+        packedTargetCount: number;
+      };
+      expect(morphWeights).toBeDefined();
+      expect(morphWeights.data).toBeDefined();
+      expect(morphWeights.packedTargetCount).toBeGreaterThan(0);
+      const previousWeights = Array.from(morphWeights.values);
       const weightChannel = scenegraphs.animations[0].channels.find(
         channel => channel.type === 'node' && channel.path === 'weights'
       );
@@ -152,7 +161,9 @@ describe('reviewed glTF deformation edge cases', () => {
         );
         scenegraphs.animator.setTime(weightChannel.sampler.input[changedKeyframe] * 1000);
       }
-      expect(Array.from(await vertexBuffer.readAsync())).not.toEqual(Array.from(previousBytes));
+      expect(Array.from(await vertexBuffer.readAsync())).toEqual(Array.from(previousBytes));
+      expect(Array.from(morphWeights.values)).not.toEqual(previousWeights);
+      expect(modelNode!.model.shaderInputs.getUniformValues()['gpuAnimation']).toBeDefined();
       expect(positionAccessor.value).toBe(sourcePositions);
       expect(normalAccessor.value).toBe(sourceNormals);
       expect(tangentAccessor.value).toBe(sourceTangents);
