@@ -313,6 +313,36 @@ export type {
   GPUConvolutionBenchmarkStrategy
 } from './gpu-convolution-benchmark';
 
+export {
+  getGPUFiniteDifference2DSupport,
+  GPUFiniteDifference2D,
+  GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE,
+  makeGPUFiniteDifference2DStats
+} from './gpu-finite-difference-2d';
+export type {
+  GPUFiniteDifference2DBoundary,
+  GPUFiniteDifference2DOperator,
+  GPUFiniteDifference2DPlanProps,
+  GPUFiniteDifference2DProps,
+  GPUFiniteDifference2DStats,
+  GPUFiniteDifference2DSupport
+} from './gpu-finite-difference-2d';
+
+export {
+  getGPUFiniteDifference3DSupport,
+  GPUFiniteDifference3D,
+  GPU_FINITE_DIFFERENCE_3D_WORKGROUP_SIZE,
+  makeGPUFiniteDifference3DStats
+} from './gpu-finite-difference-3d';
+export type {
+  GPUFiniteDifference3DBoundary,
+  GPUFiniteDifference3DOperator,
+  GPUFiniteDifference3DPlanProps,
+  GPUFiniteDifference3DProps,
+  GPUFiniteDifference3DStats,
+  GPUFiniteDifference3DSupport
+} from './gpu-finite-difference-3d';
+
 export {GPUHistogram} from './gpu-histogram';
 export type {
   GPUHistogramDomain,

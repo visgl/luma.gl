@@ -103,6 +103,7 @@ export {
 
 // math libraries
 export {random} from './modules/math/random/random';
+export {volumeRaymarch} from './modules/volume/volume-raymarch';
 
 export {fp32} from './modules/math/fp32/fp32';
 export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';

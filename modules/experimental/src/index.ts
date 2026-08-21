@@ -222,6 +222,25 @@ export {
   SpectralCausticsRenderer
 } from './rendering/spectral-caustics-renderer';
 export type {
+  StructuredVolumeBounds,
+  StructuredVolumeBufferBinding,
+  StructuredVolumeDimensions,
+  StructuredVolumeGlyphStyle,
+  StructuredVolumeRendererPrepareOptions,
+  StructuredVolumeRendererProps,
+  StructuredVolumeScalarSource,
+  StructuredVolumeScalarStyle,
+  StructuredVolumeSources,
+  StructuredVolumeSupport,
+  StructuredVolumeVectorSource,
+  StructuredVolumeVectorStyle
+} from './rendering/structured-volume-renderer';
+export {
+  getStructuredVolumeSupport,
+  makeStructuredVolumeUniformData,
+  StructuredVolumeRenderer
+} from './rendering/structured-volume-renderer';
+export type {
   MLSMPMFluidFixedPointBounds,
   MLSMPMFluidForce,
   MLSMPMFluidSimulationProps,

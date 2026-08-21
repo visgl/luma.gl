@@ -87,6 +87,7 @@ import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import LLMNetworkApp from '../../examples/showcase/llm-network/app';
+import VectorFieldLabApp from '../../examples/showcase/vector-field-lab/app';
 import QuantumStateStudioApp from '../../examples/showcase/quantum-state-studio/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
 import RenderBundlesApp from '../../examples/api/render-bundles/app';
@@ -891,6 +892,19 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     template={LightstormMegacityApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="vector-field-lab"
+    title="Vector Field Lab"
+    subtitle="Orbit linked 3D gradient, divergence, curl, and Laplacian volumes"
+    directory="showcase"
+    devices={['webgpu']}
+    template={VectorFieldLabApp}
+    config={exampleConfig}
     {...props}
   />
 );

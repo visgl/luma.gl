@@ -45,6 +45,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/llm-network',
   'showcase/million-row-crossfilter',
   'showcase/tempest-ocean',
+  'showcase/vector-field-lab',
   'showcase/packet-spraying',
   'showcase/persistence',
   'showcase/raster-lab',

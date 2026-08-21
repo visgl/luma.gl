@@ -60,6 +60,7 @@ const config = {
         'multi-canvas': '/examples/api/multi-canvas',
         persistence: '/examples/showcase/persistence',
         postprocessing: '/examples/showcase/postprocessing',
+        'vector-field-lab': '/examples/showcase/vector-field-lab',
         'quantum-state-studio': '/examples/showcase/quantum-state-studio',
         'react-strict-mode': '/examples/integrations/react-strict-mode',
         'shader-hooks': '/examples/tutorials/shader-hooks',
