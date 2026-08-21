@@ -141,16 +141,5 @@ const positions = new GPUVector({
 Path, text, polygon, and geometry adapters must either expand them into
 renderable fixed vectors or bind them through an explicit storage/offset path.
 
-## Arrow Mapping
-
-`@luma.gl/arrow` maps supported Arrow types into these formats:
-
-| Arrow type | GPUVector format |
-| --- | --- |
-| `FixedSizeList<Float32, 3>` | `float32x3` |
-| `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` |
-| `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` |
-| `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` |
-
-Arrow data types remain adapter/readback metadata. Table core uses
-`GPUVectorFormat`.
+Source-specific types remain adapter and readback metadata. Table core uses
+`GPUVectorFormat` as its canonical memory description.

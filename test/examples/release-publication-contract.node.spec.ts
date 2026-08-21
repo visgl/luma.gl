@@ -17,9 +17,16 @@ type PackageManifest = {
   optionalDependencies?: Record<string, string>;
 };
 
-const PUBLIC_EXPERIMENTAL_PACKAGES = ['arrow', 'text', 'splats', 'experimental', 'scene'] as const;
+const PUBLIC_EXPERIMENTAL_PACKAGES = ['text', 'splats', 'experimental', 'scene'] as const;
 
 describe('9.4 publication contract', () => {
+  test('keeps the Arrow adapter package private', () => {
+    const manifest = readManifest('arrow');
+
+    expect(manifest.private).toBe(true);
+    expect(manifest.publishConfig?.access).not.toBe('public');
+  });
+
   test.each(
     PUBLIC_EXPERIMENTAL_PACKAGES
   )('publishes @luma.gl/%s with complete entry points', packageDirectory => {
@@ -64,10 +71,12 @@ describe('9.4 publication contract', () => {
       'examples/v10',
       'examples/arrow/arrow-geoarrow',
       'examples/arrow/arrow-polygons',
+      'docs/api-reference/arrow',
       'docs/api-reference/experimental/gpu-core',
       'docs/api-reference/experimental/gpu-graph.md',
       'website/content/examples/deck',
       'website/content/examples/v10',
+      'website/content/examples/arrow',
       'website/content/examples/experimental/gpu-graph-explorer.mdx'
     ]) {
       expect(existsSync(path.join(process.cwd(), removedPath)), removedPath).toBe(false);
@@ -87,9 +96,10 @@ describe('9.4 publication contract', () => {
     );
 
     expect(documentationNavigation).not.toMatch(/experimental\/gpu-(?:core|graph)/);
+    expect(documentationNavigation).not.toMatch(/api-reference\/arrow/);
     expect(exampleNavigation).not.toMatch(/(?:deck|v10)\//);
-    expect(exampleNavigation).not.toMatch(/arrow-(?:geoarrow|polygons)/);
-    expect(exampleRegistry).not.toMatch(/(?:Deck|GeoArrow|ArrowPolygon|GPUGraphExplorer)Example/);
+    expect(exampleNavigation).not.toMatch(/arrow/);
+    expect(exampleRegistry).not.toMatch(/(?:Deck|Arrow|GeoArrow|GPUGraphExplorer)Example/);
   });
 });
 

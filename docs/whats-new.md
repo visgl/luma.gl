@@ -11,26 +11,26 @@ data, analysis, text, splats, and scenes.
 
 **Highlights**
 
-- **Data that goes straight to pixels** - Typed, chunked columns can move from Arrow into analysis,
+- **Data that goes straight to pixels** - Typed, chunked GPU columns can move through analysis,
   text, paths, and rendering without a CPU-side object layer.
 - **Analysis that stays on the GPU** -
   [Dataframes](/docs/api-reference/experimental/gpu-dataframe), sorting, aggregation, raster,
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Five new experimental modules** - `@luma.gl/arrow`, `@luma.gl/text`, `@luma.gl/splats`,
-  `@luma.gl/scene`, and `@luma.gl/experimental` are now published for direct use. These APIs may
+- **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/scene`, and
+  `@luma.gl/experimental` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
 
 - **Primitive GPU data has a dedicated home** - `GPUData`, `GPUVector`, views, formats, and layout
-  helpers live in `@luma.gl/gpgpu/gpu-data`, independent of Arrow and rendering models.
+  helpers live in `@luma.gl/gpgpu/gpu-data`, independent of source adapters and rendering models.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/experimental/gpu-tables`; path and polygon models live in
   `@luma.gl/experimental/models`.
-- **Adapters preserve what matters** - `@luma.gl/arrow` keeps source batches and type metadata.
-  `@luma.gl/text` supports streamed text and shared font resources.
+- **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
+  resources. `@luma.gl/splats` retains source batches and stable row identities.
 
 **More room to build**
 

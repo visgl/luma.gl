@@ -1,6 +1,6 @@
 ---
 title: Gaussian splat formats and loaders
-description: Khronos glTF splats, 3D Tiles, SPZ, Arrow conversion, loaders, and package boundaries.
+description: Khronos glTF splats, 3D Tiles, SPZ, loaders, and package boundaries.
 ---
 
 import {SplatsDocsTabs} from '@site/src/components/docs/splats-docs-tabs';
@@ -49,36 +49,6 @@ currently exposes one global model-view-projection transform and no per-page mod
 remaining renderer-side integration must therefore apply loader-computed transforms per tile/page.
 The tileset traversal and layer already exist; follow
 [tracking issue #1245](https://github.com/visgl/loaders.gl/issues/1245) for the missing integration.
-
-## Apache Arrow conversion
-
-```ts
-import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
-import {SplatRenderer} from '@luma.gl/splats';
-
-const batches = makeGPUSplatDataFromArrow(device, arrowTable);
-const renderer = new SplatRenderer(device, {data: batches});
-
-for await (const batch of makeGPUSplatDataFromArrowStream(device, arrowBatchStream)) {
-  renderer.appendData(batch);
-}
-```
-
-Arrow conversion recognizes GraphDECO-style `POSITION`, `scale_0` through `scale_2`, `rot_0`
-through `rot_3`, `opacity`, optional `f_dc_0` through `f_dc_2` columns, higher-order `f_rest_*`
-coefficients, and common semantic-class columns. Set `maxSphericalHarmonicsDegree` to cap decoded
-bands or `semanticColumn` to select an explicit semantic field. Native RAD/SPZ basis-major RGB and
-KSPLAT band-major, channel-major layouts are normalized into renderer-ready RGB basis triplets, and
-valid degree-four SPZ sources are safely capped at supported degree three. Field metadata selects
-linear versus logarithmic scales and linear versus logit opacity. SH DC colors remain unclamped
-linear `float32x4` radiance rather than being prematurely quantized into bytes. Each Arrow record
-batch becomes one independently owned `GPUSplatData` object with stable source batch and row
-identities. Paged source wrappers can supply `loaderData.base` and `loaderData.chunkIndex` to
-preserve authored global row and chunk identities even when pages arrive out of source order.
-Streamed tables prepare and yield one record batch at a time, keeping transient GPU
-allocations compatible with residency budgets and releasing no caller-owned yielded buffers.
-Arrow sources are recognized structurally, so loaders.gl 5 alpha can use a different installed
-Apache Arrow version from luma.gl without breaking record-batch detection or source identity.
 
 ## Local loaders.gl 5 alpha showcase
 
@@ -132,7 +102,6 @@ during streaming, and idle redraw suppression keep large scenes easier to inspec
 - `@loaders.gl/tiles` and `@loaders.gl/3d-tiles` own tileset traversal, content transport,
   transforms, request scheduling, and caching.
 - `@loaders.gl/gltf` owns glTF parsing, extension decoding, and feature metadata.
-- `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
 - `@luma.gl/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 - Applications or deck.gl layers own viewport integration, file selection, and interactive UI.
 

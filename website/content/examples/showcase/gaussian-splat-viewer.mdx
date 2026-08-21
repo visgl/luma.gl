@@ -23,9 +23,9 @@ actual splat counts remain visible while each capture streams.
 A separate, dynamically imported loaders.gl 5 alpha browser bundle handles `.ply`, `.splat`,
 `.ksplat`, `.spz`, and independently range-fetched `.rad` pages without replacing the website's
 existing loaders.gl
-installation. [`@luma.gl/arrow`](/docs/api-reference/arrow) adapts each Apache Arrow record batch
-directly to [`@luma.gl/splats`](/docs/api-reference/splats), preserving batch ownership,
-floating-point HDR radiance, camera-aware transparency, and the WebGL2 fallback.
+installation. The showcase adapts each decoded record batch directly to
+[`@luma.gl/splats`](/docs/api-reference/splats), preserving batch ownership, floating-point HDR
+radiance, camera-aware transparency, and the WebGL2 fallback.
 
 On WebGPU, every streamed batch renders through a compiled **GPU pipeline** as soon as it
 arrives. Projection, visibility, depth ordering, and rendering remain GPU work from the first

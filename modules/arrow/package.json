@@ -1,12 +1,10 @@
 {
   "name": "@luma.gl/arrow",
   "description": "luma.gl Apache Arrow bindings",
+  "private": true,
   "version": "9.4.0-alpha.4",
   "license": "MIT",
   "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"

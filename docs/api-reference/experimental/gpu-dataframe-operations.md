@@ -43,20 +43,18 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 
 | Capability | Supported behavior |
 | --- | --- |
-| GPU scalar storage | Packed `float32`, `sint32`, and `uint32` columns; Arrow `Int32` maps to `sint32`. |
+| GPU scalar storage | Packed `float32`, `sint32`, and `uint32` columns. |
 | Categories | Explicit adapter-owned UTF-8 dictionary labels with GPU-resident 32-bit indices. Dense grouping and joins require `uint32` indices. |
 | Nullable values | Separate source-row-aligned `GPUVector<'uint32'>` validity masks. Nullable columns with unknown validity cannot be evaluated. |
 | Source topology | Every original `GPURecordBatch`, including empty batches, remains independently identifiable. |
 | Row identity | Stable original source-row identifiers, including caller-provided batch offsets. |
 | Execution | One browser WebGPU device and caller-owned command encoding, submission, and optional readback. |
 
-Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
-`@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
-tables come from `@luma.gl/experimental/gpu-tables`. Neither GPU package requires Apache Arrow as a
-runtime dependency.
+Import the dataframe facade only from its optional subpath. Generic GPU storage remains in
+`@luma.gl/gpgpu/gpu-data`, while record batches and tables come from
+`@luma.gl/experimental/gpu-tables`.
 
 ```ts
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUDataFrame,
@@ -71,41 +69,7 @@ import {
 The root `@luma.gl/experimental` entry point does not export `GPUDataFrame`; applications that do
 not import `/gpu-dataframe` do not take on the dataframe facade.
 
-## Upload Arrow data or borrow an existing table
-
-`makeGPUAnalyticsTableFromArrowTable` uploads numeric values and dictionary indices into the
-existing `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` storage model. It does not require
-a renderer `ShaderLayout` and preserves sliced Arrow offsets, record-batch boundaries, null counts,
-and ordered dictionary metadata.
-
-```ts
-import * as arrow from 'apache-arrow';
-
-const arrowTable = arrow.tableFromArrays({
-  fare: new Float32Array([12, 24, 36]),
-  customerId: new Uint32Array([3, 7, 9])
-});
-
-const uploaded = makeGPUAnalyticsTableFromArrowTable(device, arrowTable, {
-  columns: ['fare', 'customerId']
-});
-
-const dataframe = new GPUDataFrame({...uploaded, ownership: 'owned'});
-
-dataframe.schema;
-dataframe.columnNames;
-dataframe.numRows;
-dataframe.batches;
-dataframe.sourceInfo;
-dataframe.column('fare');
-dataframe.validity.fare;
-dataframe.dictionaries;
-uploaded.nullCounts;
-```
-
-Each selected nullable Arrow field receives its own batch-aligned `uint32` validity vector, where
-`0` means null and `1` means valid. The helper accounts for sliced bitmap offsets; dictionary labels
-remain explicit CPU metadata rather than pretending arbitrary strings are GPU-native scalars.
+## Borrow an existing table
 
 Applications with an existing generic GPU table can provide their own masks and dictionaries:
 
@@ -138,7 +102,7 @@ intact.
 The opt-in [GPU Data Analysis benchmark](/examples/experimental/gpu-data-analysis) reports separate
 durations for:
 
-1. Uploading Arrow columns, explicit validity masks, and dictionaries.
+1. Uploading source columns, explicit validity masks, and dictionaries.
 2. Compiling caller-owned GPU Dataframe command graphs.
 3. Building a standalone right-side hash index equivalent to the join's index.
 4. Encoding and executing GPU filtering, grouping, sorting, and joining.
@@ -146,7 +110,7 @@ durations for:
 6. Computing the corresponding CPU reference results.
 
 Choose a source size between **1,024 and 1,048,576 rows** and one, three, or five measured samples.
-Fixtures use packed typed arrays and genuine sliced nullable Arrow dictionary batches rather than
+Fixtures use packed typed arrays and genuine sliced nullable dictionary batches rather than
 allocating one JavaScript object per row. Every workload performs an excluded warmup before the
 measured samples; the reported filter, grouping, stable top-K, and join comparisons use median
 CPU and completion-fenced GPU durations, observed GPU rows per second, and measured speedup.

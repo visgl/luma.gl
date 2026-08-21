@@ -556,17 +556,6 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/arrow",
-        "items": [
-          "api-reference/arrow/README",
-          "api-reference/arrow/arrow-representations",
-          "api-reference/arrow/arrow-conversion",
-          "api-reference/arrow/supported-arrow-types",
-          "api-reference/arrow/arrow-utils"
-        ]
-      },
-      {
-        "type": "category",
         "label": "@luma.gl/text",
         "items": [
           "api-reference/text/README"

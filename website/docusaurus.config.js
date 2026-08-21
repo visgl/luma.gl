@@ -53,14 +53,6 @@ const config = getDocusaurusConfig({
             to: '/examples/showcase/million-row-crossfilter'
           },
           {
-            from: ['/examples/arrow/arrow-path-model'],
-            to: '/examples/arrow/arrow-lines'
-          },
-          {
-            from: ['/examples/arrow/arrow-instancing'],
-            to: '/examples/showcase/instancing'
-          },
-          {
             from: ['/examples/experimental/video-texture'],
             to: '/examples/api/video-texture'
           },
@@ -128,13 +120,8 @@ const config = getDocusaurusConfig({
             to: '/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner'
           },
           {
-            from: [
-              '/docs/api-guide/gpu/arrow-table-columns',
-              '/docs/api-reference/arrow/arrow-table-columns',
-              '/docs/api-reference/arrow/arrow-type-mapping',
-              '/docs/api-reference/tables/gpu-tables'
-            ],
-            to: '/docs/api-reference/arrow/supported-arrow-types'
+            from: ['/docs/api-reference/tables/gpu-tables'],
+            to: '/docs/api-reference/experimental/gpu-tables'
           }
         ],
         createRedirects(existingPath) {

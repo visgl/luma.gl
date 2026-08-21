@@ -12,67 +12,21 @@ Experimental 2D text utilities for luma.gl. The package contains:
 ## Usage
 
 ```ts
-import * as arrow from 'apache-arrow';
-import {
-  makeGPUTextDataFromArrow,
-  convertArrowTextToAttribute,
-  makeArrowFixedSizeListVector
-} from '@luma.gl/arrow';
-import {
-  buildSdfFontAtlas,
-  GPUTextResources,
-  TextRenderer
-} from '@luma.gl/text';
+import {TextRenderer, type GPUTextData} from '@luma.gl/text';
 
-const sourceVectors = {
-  positions: makeArrowFixedSizeListVector(
-    new arrow.Float32(),
-    2,
-    new Float32Array([0, 0, 0.5, 0.25])
-  ),
-  texts: arrow.vectorFromArray(['hello', 'luma.gl'], new arrow.Utf8())
-};
-
-const convertedText = convertArrowTextToAttribute(device, {
-  sourceVectors
-});
-const fontAtlas = buildSdfFontAtlas({characterSet: 'helo,lum.ag'});
-const resources = new GPUTextResources(device, {fontAtlas});
-
-const data = makeGPUTextDataFromArrow(device, {
-  ...convertedText,
-  resources,
-  destroy: convertedText.destroy
-});
+// GPUTextData is caller-owned and prepared by an application adapter.
+const data: GPUTextData = getPreparedTextData();
 const renderer = new TextRenderer(device, {data});
 
-// Later, replace data without invalidating the old buffers while they are still bound.
-const nextSourceVectors = {
-  ...sourceVectors,
-  texts: arrow.vectorFromArray(['updated', 'labels'], new arrow.Utf8())
-};
-const nextConvertedText = convertArrowTextToAttribute(device, {sourceVectors: nextSourceVectors});
-const nextData = makeGPUTextDataFromArrow(device, {
-  ...nextConvertedText,
-  resources,
-  destroy: nextConvertedText.destroy
-});
-renderer.setProps({data: nextData});
-for (const batch of data) {
-  batch.destroy();
-}
+renderer.draw(renderPass);
 
 // Destroy borrowing models before caller-owned data.
 renderer.destroy();
-for (const batch of nextData) {
-  batch.destroy();
-}
-resources.destroy();
+data.destroy();
 ```
 
-`@luma.gl/arrow` owns Arrow column mapping and conversion. Each returned `GPUTextData` owns one
-batch's uploaded and generated GPU resources while borrowing the shared `GPUTextResources` atlas.
-`TextRenderer` and its internal render/picking models borrow both.
+Each `GPUTextData` owns one batch's uploaded and generated GPU resources while borrowing shared
+`GPUTextResources`. `TextRenderer` and its internal render and picking models borrow both.
 
 Automatic strategy selection uses attributes for WebGL, per-character colors, and fallback;
 dictionary storage for supported WebGPU dictionary input; and storage for other supported WebGPU

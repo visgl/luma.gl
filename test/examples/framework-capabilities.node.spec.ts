@@ -24,7 +24,6 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/gltf',
   '@luma.gl/splats',
   '@luma.gl/gpgpu',
-  '@luma.gl/arrow',
   '@luma.gl/experimental'
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
@@ -72,7 +71,6 @@ describe('framework capabilities documentation', () => {
     expect(capabilitiesSource).toMatch(/shader\s+module/i);
     expect(capabilitiesSource).toMatch(/\bANARI\b/i);
     expect(capabilitiesSource).toMatch(/Gaussian\s+splat/i);
-    expect(capabilitiesSource).toMatch(/Apache\s+Arrow/i);
     expect(capabilitiesSource).toMatch(/\bglTF\b/);
   });
 
@@ -149,7 +147,6 @@ describe('framework capabilities documentation', () => {
       /GPUData/,
       /GPUVector/,
       /GPURecordBatch|GPUTable/,
-      /Apache\s+Arrow|\bArrow\b/i,
       /stream|batch/i,
       /ownership|borrowed/i,
       /sort/i,
@@ -239,42 +236,6 @@ describe('framework capabilities documentation', () => {
           `${packageName} must document its implemented ${capability} capability`
         ).toMatch(capability);
       }
-    }
-  });
-
-  test('documents renderer-independent Arrow analytics ingestion and its GPU data contracts', () => {
-    const arrowRows = readDetailedCapabilityRows(readCapabilitiesSource()).filter(
-      row =>
-        /Apache Arrow, geometry, and text/i.test(row.heading) &&
-        row.packageName.includes('@luma.gl/arrow')
-    );
-    const analyticsRows = arrowRows.filter(row =>
-      /analytics|renderer[\s-]+independent/i.test(`${row.feature} ${row.details}`)
-    );
-    const analyticsCapabilities = analyticsRows
-      .map(row => `${row.feature} ${row.details}`)
-      .join('\n');
-
-    expect(
-      analyticsRows.length,
-      'Renderer-independent Arrow analytics uploads need dedicated feature coverage'
-    ).toBeGreaterThan(0);
-
-    for (const row of analyticsRows) {
-      expect(row.status, `${row.feature} lives in a private adapter`).toBe('Experimental');
-      expect(row.backend, `${row.feature} requires storage-capable GPU resources`).toBe('WebGPU');
-    }
-
-    for (const capability of [
-      /renderer[\s-]+independent/i,
-      /batch|chunk/i,
-      /validity|null/i,
-      /categorical|dictionary/i
-    ]) {
-      expect(
-        analyticsCapabilities,
-        `Arrow analytics ingestion must preserve ${capability}`
-      ).toMatch(capability);
     }
   });
 
@@ -459,7 +420,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    for (const experimentalPackage of ['scene', 'experimental', 'splats', 'text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -521,7 +482,7 @@ describe('framework capabilities documentation', () => {
       expect(moduleRow![2]).not.toContain(`${otherBackend} API`);
     }
 
-    for (const packageName of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    for (const packageName of ['scene', 'experimental', 'splats', 'text']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
@@ -599,8 +560,7 @@ describe('framework capabilities documentation', () => {
       /iridescen(?:ce|t)/i,
       /anisotrop(?:y|ic)/i,
       /transmission[^\n]*captured\s+scene\s+color/i,
-      /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i,
-      /@luma\.gl\/arrow[\s\S]{0,80}experimental/i
+      /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i
     ]) {
       expect(capabilitiesSource, `The shared asset overview must explain ${capability}`).toMatch(
         capability

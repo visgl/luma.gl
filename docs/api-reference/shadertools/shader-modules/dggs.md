@@ -21,8 +21,8 @@ let cellKey = dggs_u64_from_little_endian_words(cellKeys[cellIndex]);
 ```
 
 The module exposes Uint64 word helpers plus encoding-specific boundary and
-coordinate helpers used by `@luma.gl/arrow` DGGS preparation. Application code
-usually reaches it through `prepareDggsCellKeyGPUVector()` and
+coordinate helpers used by source-data adapters. Application code usually reaches it through
+`prepareDggsCellKeyGPUVector()` and
 `prepareDggsCellPathGPUVector()` rather than calling every WGSL helper directly.
 
 Boundary helpers also expose `*_fp64_split` wrappers that return
@@ -35,7 +35,5 @@ true higher-precision DGGS decode math is added.
 
 - `dggs` is WGSL-only.
 - Canonical DGGS helper word order is `vec2<u32>(high, low)`.
-- Arrow Uint64 storage reads should pass through
+- Little-endian Uint64 storage reads should pass through
   `dggs_u64_from_little_endian_words()` before DGGS comparisons or decoders.
-- The [Global Grids example](/examples/arrow/arrow-dggs-polygons) shows UTF-8
-  DGGS IDs parsed into Uint64 GPU keys and expanded into Float32 cell boundaries.
