@@ -9,7 +9,8 @@ export type {
   GPUDataEvaluatorFromGPUDataOptions,
   GPUDataEvaluatorFromGPUDataViewOptions,
   GPUDataEvaluatorInput,
-  GPUDataEvaluatorProps
+  GPUDataEvaluatorProps,
+  GPUDataEvaluatorTargetBuffer
 } from './operation/gpu-data-evaluator';
 export {getGPUVectorEvaluator, GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
 export type {
