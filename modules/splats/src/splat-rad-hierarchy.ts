@@ -1,8 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-// Spark-compatible RAD hierarchy and foveation behavior is adapted from Spark:
-// https://github.com/sparkjsdev/spark (MIT, Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.)
+// Spark-compatible RAD opacity and support behavior is adapted from Spark's MIT-licensed shaders:
+// https://github.com/sparkjsdev/spark/blob/main/src/shaders/splatVertex.glsl
+// Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
 
 import type {GPUSplatData} from './splat-data';
 import {
@@ -218,8 +219,8 @@ export class SplatRADHierarchyManager {
   private readonly foveation?: SplatHierarchyFoveation;
   private readonly lodOpacity: boolean;
   private readonly lodSplatScale: number;
-  private readonly coneDot0: number;
-  private readonly coneDot: number;
+  private readonly fullDetailHalfAngleRadians: number;
+  private readonly peripheralHalfAngleRadians: number;
   private readonly coneFoveate: number;
   private readonly behindFoveate: number;
   private readonly refinementHysteresis: number;
@@ -260,8 +261,8 @@ export class SplatRADHierarchyManager {
       Math.max(props.coneFov ?? DEFAULT_RAD_CONE_FOV_DEGREES, innerConeDegrees),
       180
     );
-    this.coneDot0 = Math.cos((innerConeDegrees * Math.PI) / 360);
-    this.coneDot = Math.cos((outerConeDegrees * Math.PI) / 360);
+    this.fullDetailHalfAngleRadians = (innerConeDegrees * Math.PI) / 360;
+    this.peripheralHalfAngleRadians = (outerConeDegrees * Math.PI) / 360;
     this.coneFoveate = Math.min(Math.max(props.coneFoveate ?? DEFAULT_RAD_CONE_FOVEATION, 0), 1);
     this.behindFoveate = Math.min(
       Math.max(props.behindFoveate ?? DEFAULT_RAD_BEHIND_FOVEATION, 0),
@@ -675,7 +676,7 @@ export class SplatRADHierarchyManager {
         view.foveation ?? this.foveation,
         screenSpaceError
       ) *
-      this.getSparkFoveation(node, view) *
+      this.getAngularFoveation(node, view) *
       this.lodSplatScale;
     return {
       registeredPage,
@@ -941,7 +942,11 @@ export class SplatRADHierarchyManager {
     };
   }
 
-  private getSparkFoveation(node: SplatHierarchyNode, view: SplatHierarchyView): number {
+  /**
+   * Maps angular distance from the view axis to the documented full, peripheral, and rear detail
+   * levels. Angle-space easing avoids coupling the hierarchy policy to a renderer implementation.
+   */
+  private getAngularFoveation(node: SplatHierarchyNode, view: SplatHierarchyView): number {
     const matrix = view.modelViewProjectionMatrix;
     if (!matrix) {
       return 1;
@@ -959,28 +964,28 @@ export class SplatRADHierarchyManager {
       return 1;
     }
 
-    const forwardDot =
+    const directionCosine =
       (directionX * matrix[3] + directionY * matrix[7] + directionZ * matrix[11]) /
       (distance * forwardLength);
-    if (forwardDot <= 0) {
-      return this.behindFoveate;
-    }
-    if (forwardDot >= this.coneDot0) {
+    const angularDistance = Math.acos(Math.min(Math.max(directionCosine, -1), 1));
+    if (angularDistance <= this.fullDetailHalfAngleRadians) {
       return 1;
     }
-    if (forwardDot >= this.coneDot) {
-      const coneWidth = this.coneDot0 - this.coneDot;
-      if (coneWidth <= Number.EPSILON) {
-        return this.coneFoveate;
-      }
-      const interpolation = (forwardDot - this.coneDot) / coneWidth;
-      return this.coneFoveate + (1 - this.coneFoveate) * interpolation;
+    if (angularDistance <= this.peripheralHalfAngleRadians) {
+      return interpolateAngularDetail(
+        angularDistance,
+        this.fullDetailHalfAngleRadians,
+        this.peripheralHalfAngleRadians,
+        1,
+        this.coneFoveate
+      );
     }
-    if (this.coneDot <= Number.EPSILON) {
-      return this.behindFoveate;
-    }
-    return (
-      this.behindFoveate + (this.coneFoveate - this.behindFoveate) * (forwardDot / this.coneDot)
+    return interpolateAngularDetail(
+      angularDistance,
+      this.peripheralHalfAngleRadians,
+      Math.PI,
+      this.coneFoveate,
+      this.behindFoveate
     );
   }
 
@@ -1156,6 +1161,23 @@ function compareSplatRADCandidates(
   second: SplatRADFrontierCandidate
 ): number {
   return first.priority - second.priority || second.globalRowIndex - first.globalRowIndex;
+}
+
+/** Smoothly blends two detail levels over an angular interval without renderer-specific math. */
+function interpolateAngularDetail(
+  angularDistance: number,
+  startAngle: number,
+  endAngle: number,
+  startDetail: number,
+  endDetail: number
+): number {
+  const angleRange = endAngle - startAngle;
+  if (angleRange <= Number.EPSILON) {
+    return endDetail;
+  }
+  const linearProgress = Math.min(Math.max((angularDistance - startAngle) / angleRange, 0), 1);
+  const smoothProgress = linearProgress * linearProgress * (3 - 2 * linearProgress);
+  return startDetail + (endDetail - startDetail) * smoothProgress;
 }
 
 /** Validates one per-call row-evaluation slice before mutating traversal state. */
