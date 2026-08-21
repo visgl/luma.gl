@@ -15,4 +15,4 @@ their view buffers to the established UTF-8 text preparation paths.
 module while validating final prepared vectors against a tables-owned
 `GPUInputSchema`.
 
-See [luma.gl](https://luma.gl/docs/api-reference/arrow) for documentation.
+This is a private workspace package used by internal examples and integration tests.

@@ -19,10 +19,10 @@ Use GPU Dataframe directly when an application needs behavior outside the suppor
 
 ## Execution boundary
 
-The execution boundary is explicit: Arrow input → GPU dataframe execution → Arrow output. Use
-`makeGPUAnalyticsTableFromArrowTable()` to upload input, construct a `GPUDataFrame`, register it
-with `LuSQLContext`, compile the query into a caller-owned `GPUCommandGraph`, encode and submit
-the graph, then call `makeArrowTableFromGPUAnalyticsTable()` for explicit result readback.
+The execution boundary is explicit: caller-owned GPU table input → GPU dataframe execution →
+caller-owned output. Construct a `GPUDataFrame`, register it with `LuSQLContext`, compile the query
+into a caller-owned `GPUCommandGraph`, encode and submit the graph, then explicitly read back only
+the results the application needs.
 
 ## Supported grammar
 
@@ -42,4 +42,3 @@ Applications still own command submission, synchronization, result readback, and
 
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe)
 - GPU scheduling
-- [Arrow](/docs/api-reference/arrow)

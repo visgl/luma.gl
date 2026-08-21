@@ -111,7 +111,4 @@ For exact hook, injection, and plugin fields, see
 [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) and
 [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin). For runnable
 examples, see [Shader Hooks](/docs/tutorials/shader-hooks) and
-[Shader Plugins](/docs/tutorials/shader-plugins). The
-[Arrow ShaderPlugin Filtering example](/examples/arrow/arrow-filtering) shows a
-plugin-declared scalar attribute backed by a caller-owned `GPUTable` on WebGL 2
-and WebGPU.
+[Shader Plugins](/docs/tutorials/shader-plugins).

@@ -17,13 +17,6 @@ import type {AnimationProps} from '@luma.gl/engine';
 import AnimationApp from '../../examples/api/animation/app';
 import BlendingApp from '../../examples/api/blending/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
-import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
-import ArrowMeshGeometryApp from '../../examples/arrow/arrow-mesh-geometry/app';
-import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
-import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precision/app';
-import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
-import ArrowFilteringApp from '../../examples/arrow/arrow-filtering/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
 import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-culling/app';
@@ -46,7 +39,6 @@ import {
 import GPT2App from '../../examples/experimental/gpt-2/app';
 import VideoTextureApp from '../../examples/api/video-texture/app';
 import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
-import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureSamplingApp from '../../examples/api/texture-sampling/app';
@@ -73,9 +65,6 @@ import ABufferApp from '../../examples/experimental/a-buffer/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import GaussianSplatsApp from '../../examples/showcase/gaussian-splats/app';
 import type {GaussianSplatSourceCatalogEntry} from '../../examples/showcase/gaussian-splats/local-loaders';
-import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
-import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
-import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
 import LLMNetworkApp from '../../examples/showcase/llm-network/app';
@@ -475,116 +464,6 @@ export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
     template={TempestOceanApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
-
-export const ArrowText2DExample: React.FC = props => (
-  <LumaExample
-    id="arrow-text-2d"
-    title="Text"
-    directory="arrow"
-    template={ArrowText2DApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowTimeColumnsExample: React.FC = props => (
-  <LumaExample
-    id="arrow-time-columns"
-    title="Time"
-    directory="arrow"
-    template={ArrowTimeColumnsApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowTemporalStarfieldExample: React.FC = props => (
-  <LumaExample
-    id="arrow-temporal-starfield"
-    title="Durations"
-    directory="arrow"
-    template={ArrowTemporalStarfieldApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowLinesExample: React.FC = props => (
-  <LumaExample
-    id="arrow-lines"
-    title="Lines"
-    directory="arrow"
-    template={ArrowLinesApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowFloat64PrecisionExample: React.FC = props => (
-  <LumaExample
-    id="arrow-float64-precision"
-    title="Float64 Origin Rebasing"
-    directory="arrow"
-    template={ArrowFloat64PrecisionApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowPointRendererExample: React.FC = props => (
-  <LumaExample
-    id="arrow-points"
-    title="Points"
-    directory="arrow"
-    template={ArrowPointRendererApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowFilteringExample: React.FC = props => (
-  <LumaExample
-    id="arrow-filtering"
-    title="ShaderPlugin Filtering"
-    directory="arrow"
-    template={ArrowFilteringApp}
-    config={exampleConfig}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowColumnRendererExample: React.FC = props => (
-  <LumaExample
-    id="arrow-columns"
-    title="DGGS + time"
-    directory="arrow"
-    template={ArrowColumnRendererApp}
-    config={exampleConfig}
-    devices={['webgpu']}
-    showStats
-    {...props}
-  />
-);
-
-export const ArrowDggsPolygonsExample: React.FC = props => (
-  <LumaExample
-    id="arrow-dggs-polygons"
-    title="Global Grids"
-    directory="arrow"
-    template={ArrowDggsPolygonsApp}
-    config={exampleConfig}
-    devices={['webgpu']}
-    showStats
     {...props}
   />
 );
@@ -1226,28 +1105,6 @@ export const GPUFrustumCullingExample: React.FC = props => (
     directory="experimental"
     devices={['webgpu']}
     template={GPUFrustumCullingApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
-
-export const ArrowMeshGeometryExample: React.FC = props => (
-  <LumaExample
-    id="arrow-mesh-geometry"
-    title="Matrices"
-    directory="arrow"
-    template={ArrowMeshGeometryApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
-
-export const ArrowParticlesExample: React.FC = props => (
-  <LumaExample
-    id="arrow-particles"
-    title="Particles"
-    directory="arrow"
-    template={ArrowParticlesApp}
     config={exampleConfig}
     {...props}
   />

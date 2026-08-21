@@ -239,8 +239,8 @@ Read the [ANARI ray-tracing renderer](/docs/api-reference/scene/anari-rendering)
 | Hierarchical splat refinement | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Select frustum-culled, foveated source-page frontiers with parent fallback and bounded asynchronous loading. |
 | Row-accurate RAD hierarchy | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Prioritize authored child rows with best-first angular refinement, coarse-node coverage, parent fallback, and sparse source-row identity. |
 | Khronos glTF splat attributes | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Render decoded `KHR_gaussian_splatting` attributes, feature IDs, and externally decoded SPZ v2 content. |
-| Camera-driven RAD page sources | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` and `@luma.gl/splats` | Demand, prioritize, cancel, and evict independently range-fetched source pages while preserving authored global row identities. |
-| Background RAD page decoding | Experimental | WebGPU | Gaussian Splat Viewer | Decode transferable RAD ranges in bounded module workers; preserve Arrow ownership and automatically fall back when worker startup, CSP, or dynamic imports fail. |
+| Camera-driven RAD page sources | Experimental | WebGPU + WebGL2 | `@luma.gl/splats` | Demand, prioritize, cancel, and evict independently range-fetched source pages while preserving authored global row identities. |
+| Background RAD page decoding | Experimental | WebGPU | Gaussian Splat Viewer | Decode transferable RAD ranges in bounded module workers; preserve source ownership and automatically fall back when worker startup, CSP, or dynamic imports fail. |
 
 Higher-order harmonics, semantic filtering, dedicated picking, and mixed-scene composition are
 available through the portable `SplatRenderer` and the WebGPU-only `GPUSplatGraphRenderer`. The

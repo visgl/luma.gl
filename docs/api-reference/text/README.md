@@ -14,49 +14,20 @@ and rendering code do not branch on the source font format.
 
 Both builders cache identical inputs and incrementally add newly requested characters.
 
-`@luma.gl/arrow` owns Arrow source data, source mapping, upload, and Arrow UTF-8/dictionary preparation. It converts Arrow vectors into `GPUVector` objects or prepared GPU state, then constructs renderer models that only know about GPU-resident resources.
-
-`ArrowTextRenderer` accepts `Utf8`, `Utf8View`, `Dictionary<Utf8>`, and
-`Dictionary<Utf8View>` label vectors. `Utf8View` is detected at runtime and normalized before GPU
-upload, so applications can use Apache Arrow 21.2 view columns while the package remains compatible
-with Apache Arrow 17 runtimes. Binary and `BinaryView` columns are not text inputs.
-
 ## Public Architecture
 
 | Responsibility | Public APIs |
 | --- | --- |
-| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
 | Stable rendering in `@luma.gl/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
-| Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
+| Adapter and benchmark internals | `@luma.gl/text/experimental` preparation contracts, specialized models, and forced strategies |
 
 `FontAtlas` contains CPU-side pages and metrics. `GPUTextResources` owns their device-specific
 texture upload and can be shared by any number of prepared batches and renderers. Each
 `GPUTextData` owns one source batch's generated buffers while borrowing the shared resources.
 
-```ts
-const resources = new GPUTextResources(device, {fontAtlas});
-const data = makeGPUTextDataFromArrow(device, {...textProps, resources});
-const renderer = new TextRenderer(device, {data});
-
-renderer.draw(renderPass);
-
-const nextData = makeGPUTextDataFromArrow(device, {...nextTextProps, resources});
-for (const batch of nextData) renderer.appendData(batch);
-
-renderer.destroy();
-for (const batch of data) batch.destroy();
-for (const batch of nextData) batch.destroy();
-resources.destroy();
-```
-
 `appendData()` adds a prepared source batch without reconstructing the model or touching existing
 batches. `setProps()` remains available for complete replacement. Neither method destroys
 caller-owned data, and `destroy()` releases only the renderer's render and picking models.
-
-`makeGPUTextDataFromArrowStream()` yields one `GPUTextData` per source chunk and preserves global
-row and glyph bases. The caller appends each yielded object and retains it until the renderer is
-destroyed. `ArrowTextRenderer.create()` is the convenience path for raw Arrow streams: it creates
-and owns shared resources internally and incrementally uploads and appends each arriving batch.
 
 ## Automatic Strategy Selection
 
@@ -91,17 +62,10 @@ Supported WebGPU inputs automatically use storage-backed text.
 
 ## Clip Rectangles
 
-Arrow text clipping is optional. When `clipRects` is absent, renderers bind a constant disabled
-rectangle and do not maintain one rectangle per text row. When supplied, the column is a
-`FixedSizeList<Float32, 4>` (or a `GPUVector<'float32x4'>`) containing `[x, y, width, height]`.
+Text clipping is optional. When `clipRects` is absent, renderers bind a constant disabled rectangle
+and do not maintain one rectangle per text row. When supplied, use a `GPUVector<'float32x4'>`
+containing `[x, y, width, height]`.
 Negative width disables horizontal clipping and negative height disables vertical clipping.
-
-In `ArrowTextLayer`, rectangle values are world-space offsets from the text anchor. The layer
-projects the rectangle through the active deck viewport, including independent X/Y scale and
-`flipY`. `contentAlignHorizontal` and `contentAlignVertical` can keep text aligned to the visible
-part of a partially off-screen rectangle; `contentCutoffPixels` hides content when the visible
-rectangle becomes smaller than the requested screen-pixel threshold. Glyph atlas coordinates are
-independent of this feature—the rectangle clips positioned text, not atlas sampling.
 
 ## Dictionary Path
 

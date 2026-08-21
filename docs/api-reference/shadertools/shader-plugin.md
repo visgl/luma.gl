@@ -286,5 +286,4 @@ const tintPlugin: ShaderPlugin = {
 };
 ```
 
-For runnable examples, see [Shader Plugins](/docs/tutorials/shader-plugins) and
-[Arrow ShaderPlugin Filtering](/examples/arrow/arrow-filtering).
+For a runnable example, see [Shader Plugins](/docs/tutorials/shader-plugins).

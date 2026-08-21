@@ -33,7 +33,7 @@ source URLs.
 | [Data and shading](/docs/api-reference/splats/data-and-shading) | Source columns, covariance, spherical harmonics, semantics, and updates. |
 | [Picking and scenes](/docs/api-reference/splats/picking-and-scenes) | GPU picking and mixed mesh-and-splat scenes. |
 | [Streaming and residency](/docs/api-reference/splats/streaming-and-residency) | Bounded residency, hierarchy traversal, and foveated LOD. |
-| [Formats and loaders](/docs/api-reference/splats/formats-and-loaders) | Khronos glTF splats, 3D Tiles, SPZ, Arrow, and loaders. |
+| [Formats and loaders](/docs/api-reference/splats/formats-and-loaders) | Khronos glTF splats, 3D Tiles, SPZ, and loaders. |
 
 ## Limits and compatibility
 
@@ -44,5 +44,4 @@ is required. The package is published with an experimental API.
 ## Related modules
 
 - [glTF](/docs/api-reference/gltf)
-- [Arrow](/docs/api-reference/arrow)
 - Experimental GPU primitives

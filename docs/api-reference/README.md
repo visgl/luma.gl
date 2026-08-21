@@ -23,7 +23,6 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
 | [`@luma.gl/effects`][effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation plus the experimental `gpu-data` subpath. |
-| [`@luma.gl/arrow`][arrow] | Experimental | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
 | [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/experimental`][experimental] | Experimental | Incubating APIs, including `gpu-tables`, rendering `models`, WebXR, and GPU analytics. |
@@ -41,7 +40,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and its experimental `gpu-data` subpath.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
-- [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
+- [`@luma.gl/text`][text] for `TextRenderer` and caller-owned GPU text data.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [`@luma.gl/experimental`][experimental] for incubating APIs, including experimental WebXR frame, view, and raw camera helpers.
 - [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
@@ -57,7 +56,6 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 [gpgpu]: /docs/api-reference/gpgpu
 [gpu-data]: /docs/api-reference/gpgpu/gpu-data
 [gpu-tables]: /docs/api-reference/experimental/gpu-tables
-[arrow]: /docs/api-reference/arrow
 [text]: /docs/api-reference/text
 [splats]: /docs/api-reference/splats
 [experimental]: /docs/api-reference/experimental

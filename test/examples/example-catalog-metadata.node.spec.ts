@@ -95,7 +95,7 @@ describe('live example catalog metadata', () => {
     expect(legacySidebar.examplesSidebar).toEqual(tableOfContents);
   });
 
-  test('keeps the instancing showcase without a duplicate Arrow instancing example', () => {
+  test('keeps the instancing showcase without Arrow example routes', () => {
     const exampleIdentifiers = new Set(LIVE_EXAMPLES.map(({id}) => id));
     const websiteExamples = readFileSync(
       path.join(process.cwd(), 'website/src/examples.tsx'),
@@ -111,9 +111,7 @@ describe('live example catalog metadata', () => {
     expect(existsSync(path.join(EXAMPLES_DIRECTORY, 'arrow/arrow-instancing.mdx'))).toBe(false);
     expect(websiteExamples).not.toContain('ArrowInstancingExample');
     expect(websiteExamples).not.toContain("from '../../examples/arrow/arrow-instancing/app'");
-    expect(websiteConfiguration).toMatch(
-      /from:\s*\[['"]\/examples\/arrow\/arrow-instancing['"]\],\s*to:\s*['"]\/examples\/showcase\/instancing['"]/
-    );
+    expect(websiteConfiguration).not.toContain('/examples/arrow');
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
