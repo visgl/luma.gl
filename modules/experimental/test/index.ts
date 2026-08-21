@@ -50,3 +50,4 @@ import './luraster';
 import './luxfilter';
 import './luproj/luproj.spec';
 import './luproj/projection-benchmark.spec';
+import './graph-vector-similarity/gpu-similarity-search.spec';

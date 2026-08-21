@@ -72,6 +72,11 @@
       "require": "./dist/luproj/index.cjs",
       "types": "./dist/luproj/index.d.ts"
     },
+    "./graph-vector-similarity": {
+      "import": "./dist/graph-vector-similarity/index.js",
+      "require": "./dist/graph-vector-similarity/index.cjs",
+      "types": "./dist/graph-vector-similarity/index.d.ts"
+    },
     "./luproj/benchmarks": {
       "import": "./dist/luproj/benchmarks.js",
       "require": "./dist/luproj/benchmarks.cjs",

@@ -230,6 +230,17 @@ brushes to linked histograms, grouped aggregates, stable visible-row identifiers
 masks through one reusable WebGPU command graph. Source rows stay on the GPU; applications control
 chart rendering, command submission, and any compact summary readback.
 
+## GPU Vector Similarity Search
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
+</p>
+
+[`@luma.gl/experimental/graph-vector-similarity`](/docs/api-reference/experimental/graph-vector-similarity) adds exact nearest-neighbor
+search to existing WebGPU command graphs. Embeddings remain ordinary fixed-size-list GPU table
+columns; the module borrows preserved source batches, stable row identifiers, optional validity,
+and linked-selection masks instead of introducing another storage owner or renderer.
+
 ## WebGPU Geospatial Kernels
 
 <p class="badges">

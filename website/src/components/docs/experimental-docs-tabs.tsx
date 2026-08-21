@@ -15,6 +15,7 @@ export type ExperimentalDocsTabId =
   | 'ludf'
   | 'luxfilter'
   | 'lutrace'
+  | 'graph-vector-similarity'
   | 'g-buffer'
   | 'deferred-lighting'
   | 'clustered-lighting'
@@ -50,6 +51,11 @@ const EXPERIMENTAL_DOCS_TABS: ExperimentalDocsTab[] = [
   {id: 'ludf', label: 'luDF', href: '/docs/api-reference/experimental/ludf'},
   {id: 'luxfilter', label: 'LuxFilter', href: '/docs/api-reference/experimental/luxfilter'},
   {id: 'lutrace', label: 'GPU Traces', href: '/docs/api-reference/experimental/lutrace'},
+  {
+    id: 'graph-vector-similarity',
+    label: 'Graph Vector Similarity',
+    href: '/docs/api-reference/experimental/graph-vector-similarity'
+  },
   {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},
   {
     id: 'deferred-lighting',
