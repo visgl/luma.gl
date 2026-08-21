@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-quantum-state-studio",
-  "version": "9.4.0-beta.1",
+  "version": "9.4.0-beta.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,11 +9,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-beta.1",
-    "@luma.gl/engine": "9.4.0-beta.1",
-    "@luma.gl/gpgpu": "9.4.0-beta.1",
-    "@luma.gl/shadertools": "9.4.0-beta.1",
-    "@luma.gl/webgpu": "9.4.0-beta.1"
+    "@luma.gl/core": "9.4.0-beta.2",
+    "@luma.gl/engine": "9.4.0-beta.2",
+    "@luma.gl/gpgpu": "9.4.0-beta.2",
+    "@luma.gl/shadertools": "9.4.0-beta.2",
+    "@luma.gl/webgpu": "9.4.0-beta.2"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "9.4.0-beta.1",
+  "version": "9.4.0-beta.2",
   "description": "General-purpose GPU data and computation for luma.gl",
   "type": "module",
   "license": "MIT",

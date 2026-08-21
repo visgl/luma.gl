@@ -2,6 +2,10 @@
 
 ## v9.4
 
+### v9.4.0-beta.2
+
+- feat(gpgpu): Reassign GPUDataEvaluator external buffer post construction (#3117)
+
 ### v9.4.0-beta.1
 
 - Add portable GPU data primitives in `@luma.gl/gpgpu/gpu-data` and batch-preserving tables and
