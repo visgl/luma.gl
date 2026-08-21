@@ -207,7 +207,7 @@ import {
 ```
 
 The `./gpu-raster` subpath is an explicit opt-in. Its runtime symbols are not exported from
-`@luma.gl/experimental`, and the existing experimental package remains private.
+`@luma.gl/experimental`, and the package remains experimental.
 
 ## Quick start: analyze valid observations on the GPU
 

@@ -218,37 +218,6 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
     expect(GRAPH_EXPLORER_NODE_SHADER).toMatch(/7u|\[7\]/);
   });
 
-  test('documents actual million-vertex analytics, sampled forces, and edge-only detail limits', () => {
-    const guide = readFileSync(
-      new URL(
-        '../../../../docs/api-reference/experimental/gpu-graph-operations.md',
-        import.meta.url
-      ),
-      'utf8'
-    );
-    const examplePage = readFileSync(
-      new URL(
-        '../../../../website/content/examples/experimental/gpu-graph-explorer.mdx',
-        import.meta.url
-      ),
-      'utf8'
-    );
-
-    for (const document of [guide, examplePage]) {
-      expect(document).toContain('1,024');
-      expect(document).toContain('1,048,576');
-      expect(document).toContain('2,097,343');
-      expect(document).toContain('16,384');
-      expect(document).toContain('65,536');
-      expect(document).toContain('512 vertices');
-      expect(document).toMatch(/label.propagation/i);
-      expect(document).toMatch(/flat.grid/i);
-      expect(document).toContain('O(E + 4V)');
-    }
-    expect(guide).toContain('CPU encoding is never mislabeled');
-    expect(examplePage).toContain('fabricated GPU timing');
-  });
-
   test('exposes accessible graph controls backed by actual resident analytics', () => {
     const source = readFileSync(
       new URL('../../../../examples/experimental/gpu-graph-explorer/app.ts', import.meta.url),
@@ -344,53 +313,5 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
     expect(explorerSource).toContain('[data-info-box-appearance]');
     expect(explorerSource).toContain('GPUGraphLabelPropagation');
     expect(explorerSource).toContain('GPUGraphSpatialForceLayout');
-  });
-
-  test('registers the API guide in the canonical documentation navigation tree', () => {
-    const documentationContents = readFileSync(
-      new URL('../../../../docs/table-of-contents.json', import.meta.url),
-      'utf8'
-    );
-    expect(
-      documentationContents.match(/"api-reference\/experimental\/gpu-graph"[,\]]/g)
-    ).toHaveLength(1);
-    const experimentalTabs = readFileSync(
-      new URL(
-        '../../../../website/src/components/docs/experimental-docs-catalog.ts',
-        import.meta.url
-      ),
-      'utf8'
-    );
-    expect(experimentalTabs).toContain("id: 'gpu-graph'");
-  });
-
-  test('registers the WebGPU explorer route, component, and discoverable sidebar entry', () => {
-    const exampleContents = readFileSync(
-      new URL('../../../../website/content/examples/table-of-contents.json', import.meta.url),
-      'utf8'
-    );
-    const examplePage = readFileSync(
-      new URL(
-        '../../../../website/content/examples/experimental/gpu-graph-explorer.mdx',
-        import.meta.url
-      ),
-      'utf8'
-    );
-    const examplesRegistry = readFileSync(
-      new URL('../../../../website/src/examples.tsx', import.meta.url),
-      'utf8'
-    );
-    const exampleThumbnails = readFileSync(
-      new URL('../../../../website/src/example-thumbnails.ts', import.meta.url),
-      'utf8'
-    );
-
-    expect(exampleContents).toContain('experimental/gpu-graph-explorer');
-    expect(examplePage).toContain('<GPUGraphExplorerExample />');
-    expect(examplesRegistry).toContain('template={GPUGraphExplorerApp}');
-    expect(examplesRegistry).toContain("devices={['webgpu']}");
-    expect(exampleThumbnails).toContain(
-      "'experimental/gpu-graph-explorer': 'showcase/packet-spraying'"
-    );
   });
 });

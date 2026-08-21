@@ -171,18 +171,6 @@ describe('SPDX source headers', () => {
     }
   });
 
-  test('retains valid MIT and ISC licensing and both owners for the Mapbox earcut derivative', () => {
-    const sourceFile = 'modules/math-geoarrow/src/optimized-earcut.ts';
-    const sourceHeader = readSourceHeader(sourceFile);
-
-    expect(sourceHeader).toContain('// SPDX-License-Identifier: MIT AND ISC');
-    expect(sourceHeader).toContain('// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors');
-    expect(sourceHeader).toContain('// SPDX-FileCopyrightText: Copyright (c) 2016, Mapbox');
-    expect(readFileSync(path.join(REPOSITORY_ROOT, sourceFile), 'utf8')).toContain(
-      '  ISC License\n\n  Copyright (c) 2016, Mapbox'
-    );
-  });
-
   test.each(
     PBR_SHADER_SOURCE_FILES
   )('preserves both copyright owners and MIT licensing for %s', sourceFile => {

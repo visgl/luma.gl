@@ -2680,7 +2680,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deck.gl-community/arrow-layers@workspace:*, @deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers":
+"@deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers":
   version: 0.0.0-use.local
   resolution: "@deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers"
   dependencies:
@@ -2695,7 +2695,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@deck.gl-community/gpu-layers@workspace:*, @deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers":
+"@deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers":
   version: 0.0.0-use.local
   resolution: "@deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers"
   dependencies:
@@ -4705,9 +4705,8 @@ __metadata:
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
     "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/splats": "workspace:*"
+    "@luma.gl/splats": "npm:9.4.0-alpha.4"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
-    "@math.gl/geoarrow": "workspace:*"
     "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
@@ -4841,7 +4840,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/splats@workspace:*, @luma.gl/splats@workspace:modules/splats":
+"@luma.gl/splats@npm:9.4.0-alpha.4, @luma.gl/splats@workspace:*, @luma.gl/splats@workspace:modules/splats":
   version: 0.0.0-use.local
   resolution: "@luma.gl/splats@workspace:modules/splats"
   dependencies:
@@ -5058,14 +5057,6 @@ __metadata:
   checksum: 10c0/ae5bb6592239b4e7f397ff335e7d120c6c1aebadb9cfc74ad7bfeb5eae775af41b34baae6cf848f9e80f6329d3b94ee578b2890e21aadcd6cfea77f3c95b7e22
   languageName: node
   linkType: hard
-
-"@math.gl/geoarrow@workspace:*, @math.gl/geoarrow@workspace:modules/math-geoarrow":
-  version: 0.0.0-use.local
-  resolution: "@math.gl/geoarrow@workspace:modules/math-geoarrow"
-  dependencies:
-    apache-arrow: "npm:^17.0.0"
-  languageName: unknown
-  linkType: soft
 
 "@math.gl/polygon@npm:^4.1.0":
   version: 4.1.0
@@ -7114,13 +7105,6 @@ __metadata:
   dependencies:
     defer-to-connect: "npm:^2.0.1"
   checksum: 10c0/4629d2fbb2ea67c2e9dc03af235c0991c79ebdddcbc19aed5d5732fb29ce01c13331e9b1a491584b9069bd6ecde6581dcbf871f11b7eefdebbab34de6cf2197e
-  languageName: node
-  linkType: hard
-
-"@tanstack/virtual-core@npm:^3.16.0":
-  version: 3.16.0
-  resolution: "@tanstack/virtual-core@npm:3.16.0"
-  checksum: 10c0/03016cf464108ce8354d44d89393442e2457e0539933ee5af56691e76c0a351e268faf4f619395c5fabd3f2e4c23e5fc963b7f359d22805f2164be2403d2803e
   languageName: node
   linkType: hard
 
@@ -14759,24 +14743,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-geoarrow@workspace:examples/arrow/arrow-geoarrow":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-geoarrow@workspace:examples/arrow/arrow-geoarrow"
-  dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-instancing@workspace:examples/arrow/arrow-instancing"
@@ -14871,24 +14837,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-arrow-polygons@workspace:examples/arrow/arrow-polygons"
-  dependencies:
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/arrow/arrow-temporal-starfield"
@@ -14973,96 +14921,6 @@ __metadata:
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-arrow-path-layer@workspace:examples/deck/arrow-path-layer":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-arrow-path-layer@workspace:examples/deck/arrow-path-layer"
-  dependencies:
-    "@deck.gl-community/arrow-layers": "workspace:*"
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
-    "@deck.gl/core": "npm:9.3.4"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-arrow-polygon-layer@workspace:examples/deck/arrow-polygon-layer":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-arrow-polygon-layer@workspace:examples/deck/arrow-polygon-layer"
-  dependencies:
-    "@deck.gl-community/arrow-layers": "workspace:*"
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
-    "@deck.gl/core": "npm:9.3.4"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-arrow-text-layer@workspace:examples/deck/arrow-text-layer":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-arrow-text-layer@workspace:examples/deck/arrow-text-layer"
-  dependencies:
-    "@deck.gl-community/arrow-layers": "workspace:*"
-    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
-    "@deck.gl/core": "npm:9.3.4"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/text": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-gpu-culled-trace@workspace:examples/deck/gpu-culled-trace":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-gpu-culled-trace@workspace:examples/deck/gpu-culled-trace"
-  dependencies:
-    "@deck.gl-community/arrow-layers": "workspace:*"
-    "@deck.gl/core": "npm:9.3.4"
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/text": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    apache-arrow: "npm:^17.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi"
-  dependencies:
-    "@deck.gl-community/gpu-layers": "workspace:*"
-    "@deck.gl/core": "npm:9.3.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    maplibre-gl: "npm:^5.20.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -15909,25 +15767,6 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/webgl": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-v10-gpgpu@workspace:examples/v10/gpgpu":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-v10-gpgpu@workspace:examples/v10/gpgpu"
-  dependencies:
-    "@luma.gl/arrow": "npm:9.4.0-alpha.4"
-    "@luma.gl/core": "npm:9.4.0-alpha.4"
-    "@luma.gl/engine": "npm:9.4.0-alpha.4"
-    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
-    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgl": "npm:9.4.0-alpha.4"
-    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
-    "@tanstack/virtual-core": "npm:^3.16.0"
-    acorn: "npm:^8.16.0"
-    apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

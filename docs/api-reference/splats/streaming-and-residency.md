@@ -147,4 +147,4 @@ window must prevent both unnecessary requests and transient GPU overcommit.
 
 - [Gaussian splats overview](/docs/api-reference/splats)
 - [Gaussian splat showcase](/examples/showcase/gaussian-splats)
-- [GPU Core](/docs/api-reference/experimental/gpu-core)
+- GPU scheduling

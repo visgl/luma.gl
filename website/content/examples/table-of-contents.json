@@ -83,40 +83,38 @@
   },
   {
     "type": "category",
-    "label": "GPGPU",
+    "label": "Compute and analytics",
     "items": [
       {
         "type": "category",
-        "label": "GPGPU Graph",
+        "label": "Rendering and inspection",
         "items": [
-          "v10/gpgpu",
           "experimental/gpu-frustum-culling",
           "experimental/gpu-trace-viewer",
-          "experimental/gpu-graph-explorer",
           "experimental/gpu-trace-scene",
-          "experimental/gpu-scene-graph",
-          {
-            "type": "doc",
-            "id": "showcase/quantum-state-studio",
-            "label": "GPUCommandGraph: Quantum State Studio"
-          },
-          "experimental/gpu-sort",
-          "experimental/gpu-data-analysis"
+          "experimental/gpu-scene-graph"
         ]
       },
       {
         "type": "category",
-        "label": "GPGPU Graph Modules",
+        "label": "Simulation and data",
         "items": [
           {
             "type": "doc",
+            "id": "showcase/quantum-state-studio",
+            "label": "Quantum State Studio"
+          },
+          "experimental/gpu-sort",
+          "experimental/gpu-data-analysis",
+          {
+            "type": "doc",
             "id": "showcase/million-row-crossfilter",
-            "label": "GPUCrossfilter: Million-Row Crossfilter Explorer"
+            "label": "Million-Row Crossfilter Explorer"
           },
           {
             "type": "doc",
             "id": "showcase/raster-lab",
-            "label": "GPURaster: Satellite Raster Lab"
+            "label": "Satellite Raster Lab"
           },
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
@@ -206,13 +204,11 @@
   },
   {
     "type": "category",
-    "label": "Apache Arrow - luma.gl v10",
+    "label": "Apache Arrow (Experimental)",
     "items": [
       "arrow/arrow-points",
       "arrow/arrow-filtering",
       "arrow/arrow-lines",
-      "arrow/arrow-polygons",
-      "arrow/arrow-geoarrow",
       "arrow/arrow-float64-precision",
       "arrow/arrow-text-2d",
       "arrow/arrow-temporal-starfield",
@@ -221,32 +217,6 @@
       "arrow/arrow-particles",
       "arrow/arrow-dggs-polygons",
       "arrow/arrow-columns"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Arrow Layers - deck.gl v10",
-    "items": [
-      "deck/arrow-path-layer",
-      "deck/arrow-polygon-layer",
-      "deck/arrow-text-layer"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "GPU Graph Layers - deck.gl v10",
-    "items": [
-      {
-        "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
-      },
-      {
-        "type": "doc",
-        "id": "deck/gpu-graph-explorer",
-        "label": "GPU Graph + deck.gl: Network Explorer"
-      },
-      "deck/gpu-culled-trace"
     ]
   }
 ]

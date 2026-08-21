@@ -48,4 +48,4 @@ redefining the same concept differently in every module.
 - [How luma.gl fits together](/docs/api-guide/luma-layers)
 - [Core GPU programming](/docs/api-guide/gpu)
 - [Shader assembly](/docs/api-guide/shaders/shader-assembly)
-- [GPU Core concepts](/docs/api-reference/experimental/gpu-core/concepts)
+- GPU scheduling concepts

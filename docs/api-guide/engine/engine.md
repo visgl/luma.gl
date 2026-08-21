@@ -81,7 +81,7 @@ See [redraw detection](/docs/api-guide/engine/redraw).
   traversal are genuinely useful.
 - Add [animation](/docs/api-guide/engine/animation) for clips, tracks, blending, and morphs.
 - Add [compute helpers](/docs/api-guide/engine/transforms) for a bounded compute or transform
-  workflow; use GPU Core for a multi-stage scheduled dataflow.
+  workflow; use GPU scheduling for a multi-stage scheduled dataflow.
 
 ## A minimal rendering shape
 
@@ -132,7 +132,7 @@ durable model, update it, draw it into a pass, and destroy it when its owner is 
   streaming. Otherwise schedule a frame when invalidated.
 - **Engine helper or Core?** Drop to Core when exact pass, resource, or synchronization control
   is the point of the work.
-- **Engine helper or GPU Core?** A helper suits one bounded operation. A graph suits several
+- **Engine helper or GPU scheduling?** A helper suits one bounded operation. A graph suits several
   operations with shared resources, dependencies, indirect counts, or multi-frame budgets.
 
 ## Common mistakes
@@ -149,5 +149,5 @@ durable model, update it, draw it into a pass, and destroy it when its owner is 
 - Start from the [Engine cookbook](/docs/api-guide/engine/cookbook).
 - Use the [Engine API overview](/docs/api-reference/engine) to find exact contracts.
 - Drop to the [Core programming guide](/docs/api-guide/gpu) for resource and command control.
-- Move to [GPU Core](/docs/api-reference/experimental/gpu-core) when the workload becomes
+- Move to GPU scheduling when the workload becomes
   a scheduled GPU pipeline rather than a collection of draws.

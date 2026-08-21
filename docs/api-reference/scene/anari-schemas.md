@@ -4,8 +4,8 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Published package</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
 </DocumentationBadges>
 
 `@luma.gl/scene/schemas` exposes optional Zod schemas for the experimental retained-scene JSON

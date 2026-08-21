@@ -96,4 +96,4 @@ or directional colors as needed.
 
 - [Gaussian splats overview](/docs/api-reference/splats)
 - [Gaussian splat showcase](/examples/showcase/gaussian-splats)
-- [GPU Core](/docs/api-reference/experimental/gpu-core)
+- GPU scheduling

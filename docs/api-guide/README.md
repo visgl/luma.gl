@@ -1,6 +1,6 @@
 ---
 title: Choosing a luma.gl API layer
-description: Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+description: Choose between Shadertools, Engine, Core, and GPU scheduling based on the amount of GPU control and orchestration your application needs.
 ---
 
 import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
@@ -17,7 +17,7 @@ layer that expresses the work clearly, then move down only when the application 
 | Render geometry, manage redraws, animate, or pick objects | **Engine** |
 | Create and control buffers, textures, passes, pipelines, and submission | **Core** |
 | Compose reusable WGSL/GLSL behavior | **Shadertools** |
-| Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core** |
+| Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU scheduling** |
 
 Start with [How luma.gl fits together](/docs/api-guide/luma-layers) for one small rendered
 application viewed through each layer and concrete guidance on when to move up or down.
@@ -39,7 +39,7 @@ from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
 [Declarative Scene Rendering](/docs/api-guide/engine/anari-rendering). It introduces
-the experimental, private `@luma.gl/scene` workspace, scene objects, committed parameters,
+the experimental `@luma.gl/scene` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 

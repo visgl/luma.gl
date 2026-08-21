@@ -308,7 +308,7 @@ generate their candidate dispatch dimensions on the GPU.
 
 ## See also
 
-- [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
-- [GPUGridIndex](/docs/api-reference/experimental/gpu-core/gpu-grid-index)
+- GPUCommandGraph
+- GPUGridIndex
 - [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision)
 - [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)

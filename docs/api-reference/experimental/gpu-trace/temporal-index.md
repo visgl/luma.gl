@@ -11,7 +11,7 @@ import {GPUTraceViewerExample} from '@site/src/examples';
 `GPUTraceTemporalIndex` converts immutable per-batch trace summaries into stable, source-ordered
 candidate lists for the current viewport and semantic zoom level. It is exported from
 `@luma.gl/experimental/gpu-trace` because time intervals, span duration, and trace renderer groups
-are domain concepts; its scan and stable compaction stages reuse generic GPU Core primitives.
+are domain concepts; its scan and stable compaction stages reuse generic GPU scheduling primitives.
 
 <GPUTraceViewerExample embedded />
 

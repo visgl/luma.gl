@@ -92,4 +92,4 @@ from the teaching path; use them after choosing the relevant descriptor family.
 
 - Use [Engine](/docs/api-reference/engine) to bind module props and draw a `Model`.
 - Use [Core](/docs/api-reference/core) for the resources and pipelines that compile assembled source.
-- Shader modules can also be consumed by GPU Core render and compute nodes.
+- Shader modules can also be consumed by GPU scheduling render and compute nodes.

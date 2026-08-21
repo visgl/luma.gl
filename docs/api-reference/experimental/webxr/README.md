@@ -3,7 +3,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 # Experimental WebXR
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -15,5 +15,5 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 - [`WebXRManager`](/docs/api-reference/experimental/webxr/webxr-manager) prepares WebGPU projection layers or an `XRWebGLLayer`, then resolves per-view framebuffer, viewport, projection, and view matrix state.
 - [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture) binds WebXR Raw Camera Access as a borrowed read-only WebGL texture sampled through GLSL `sampler2D`.
 
-The v10 API does not provide WebGPU raw camera textures, input sources, hit testing, anchors,
+The experimental 9.4 API does not provide WebGPU raw camera textures, input sources, hit testing, anchors,
 depth sensing, or non-projection layers.

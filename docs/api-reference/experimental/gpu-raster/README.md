@@ -82,7 +82,7 @@ The [operations reference](/docs/api-reference/experimental/gpu-raster/operation
 
 ## Related modules
 
-- [GPU Core](/docs/api-reference/experimental/gpu-core) provides scheduling and generic
+- GPU scheduling provides scheduling and generic
   aggregation/indexing primitives.
 - [GPU Project](/docs/api-reference/experimental/gpu-project) handles coordinate projection and adaptive patches.
 - [GPU Raster concepts](/docs/api-reference/experimental/gpu-raster/concepts) explains the execution model independently of individual classes.

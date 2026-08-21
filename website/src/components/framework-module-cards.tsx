@@ -80,7 +80,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
     label: 'GPU compute + rendering',
     description:
       'Connect reusable compute modules and rendering in a single GPU-native pipeline, without moving data back to the CPU.',
-    capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
+    capabilities: ['GPU workflows', 'Compute modules', 'Zero readback'],
     documentationPath: 'docs/api-reference/gpgpu'
   }
 ];

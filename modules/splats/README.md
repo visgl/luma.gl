@@ -24,7 +24,7 @@ streamed batches by GPU bytes, rows, or chunks. Structural glTF adapters accept 
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.
 
-This private package is not published to npm. Reference it from another luma.gl workspace with
-`"@luma.gl/splats": "workspace:*"`.
+Install the experimental package with `yarn add @luma.gl/splats`. Its APIs may evolve without a
+9.4 semver compatibility promise.
 
 See [luma.gl](https://luma.gl/docs/api-reference/splats) for documentation.

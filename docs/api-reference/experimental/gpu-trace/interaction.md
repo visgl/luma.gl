@@ -40,18 +40,18 @@ ownership and cross-process dependency edges.
 
 The workflow composes existing independent primitives in a fixed order:
 
-1. [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout)
+1. `GPUHierarchyLayout`
    converts process/thread expansion states into effective thread heights and scanned offsets.
-2. [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-core/gpu-graph-traversal)
+2. `GPUGraphTraversal`
    expands selected canonical span rows over bounded incoming, outgoing, or combined dependency
    edges.
 3. A fixed-contract trace policy evaluates time, duration, classification, hierarchy, and optional
    linked-span focus into one source-aligned visibility mask.
-4. [`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow)
+4. `GPUVisibilityWorkflow`
    compacts stable canonical row IDs and publishes an exact visible count.
-5. [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection)
+5. `GPUAncestorProjection`
    maps each hidden span to its nearest still-visible canonical parent.
-6. [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation)
+6. `GPUSceneDrawGeneration`
    updates explicit renderer-authored indirect draw slots.
 
 The application owns graph compilation, encoding, submission, and any deliberate readback. None

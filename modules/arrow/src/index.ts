@@ -301,49 +301,6 @@ export {
   type ConvertArrowPathRendererGPUVectorsOptions
 } from './arrow/renderers/path/renderers/arrow-path-renderer';
 export {
-  ArrowPolygonRenderer,
-  convertArrowPolygonColumnsToGPUVectors,
-  prepareArrowPolygonInput,
-  type ArrowPolygonRendererDataBatchUpdate,
-  type ArrowPolygonRendererInput,
-  type ArrowPolygonRendererMetrics,
-  type ArrowPolygonRendererModel,
-  type ArrowPolygonRendererModelProps,
-  type ArrowPolygonRendererPickingInfo,
-  type ArrowPolygonRendererProps,
-  type ConvertArrowPolygonColumnsToGPUVectorsOptions
-} from './arrow/renderers/polygon/renderers/arrow-polygon-renderer';
-export {
-  resolveArrowPolygonSourceVectors,
-  type ArrowPolygonColumnSelector,
-  type ArrowPolygonSourceData,
-  type ArrowPolygonSourceVectorSelectors,
-  type OptionalArrowPolygonColumnSelector,
-  type ResolveArrowPolygonSourceVectorsProps
-} from './arrow/renderers/polygon/source/arrow-polygon-source-mapping';
-export {
-  convertArrowPolygonToGPUVectorsAsync,
-  convertArrowPolygonToGPUVectors,
-  tesselateAsync,
-  tessellateArrowPolygons,
-  type ArrowMultiPolygonType,
-  type ArrowMultiPolygonVertexColorType,
-  type ArrowGeoArrowGeometryType,
-  type ArrowPolygonColorType,
-  type ArrowPolygonCoordinateType,
-  type ArrowPolygonInputType,
-  type ArrowPolygonRowColorType,
-  type ArrowPolygonSourceVectors,
-  type ArrowPolygonTessellationOptions,
-  type ArrowPolygonTessellationResult,
-  type ArrowPolygonType,
-  type ArrowPolygonVertexColorType,
-  type ArrowTessellatedPolygonType,
-  type ArrowTessellatedPolygonVertexColorType,
-  type PreparedArrowPolygonGPUVectors,
-  type ConvertArrowPolygonToGPUVectorsOptions
-} from './arrow/renderers/polygon/conversion/arrow-polygon-gpu-vectors';
-export {
   getArrowRecordBatchAsyncIterator,
   getOptionalArrowColumn,
   getRequiredArrowColumn,

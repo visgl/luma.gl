@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/gpgpu",
   "version": "9.4.0-alpha.4",
-  "description": "General-purpose GPU data, computation, and graph algorithms for luma.gl",
+  "description": "General-purpose GPU data and computation for luma.gl",
   "type": "module",
   "license": "MIT",
   "repository": {

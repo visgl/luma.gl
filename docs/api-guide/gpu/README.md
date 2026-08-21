@@ -109,7 +109,6 @@ the device. Borrowed resources remain the responsibility of their owner.
 | Sample or render images | [GPU textures](/docs/api-guide/gpu/gpu-textures) | Format, usage, layout, and sampling must agree. |
 | Expose data to shaders | [GPU bindings](/docs/api-guide/gpu/gpu-bindings) | A stable ownership convention keeps interfaces composable. |
 | Render into a canvas or texture | [GPU rendering](/docs/api-guide/gpu/gpu-rendering) | Reuse resources and pipelines; encode only the work for this frame. |
-| Run compute or data analysis | [GPU data processing](/docs/api-guide/gpu/gpu-data-processing) | Pick the highest-level abstraction that preserves the control you need. |
 | Start from a small task | [Core GPU cookbook](/docs/api-guide/gpu/cookbook) | Copy one complete lifecycle, then expand it. |
 
 ## Decisions and tradeoffs
@@ -137,5 +136,5 @@ the device. Borrowed resources remain the responsibility of their owner.
 - Use the [Core GPU cookbook](/docs/api-guide/gpu/cookbook) for short, copyable workflows.
 - Use the [Core API overview](/docs/api-reference/core) to map concepts to exact classes.
 - Move up to [Engine](/docs/api-guide/engine) when a managed `Model` is a better unit of work.
-- Add [GPU Core](/docs/api-reference/experimental/gpu-core) when several GPU operations
+- Add GPU scheduling when several GPU operations
   need dependency scheduling, transient reuse, indirect work, or bounded multi-frame execution.

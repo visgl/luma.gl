@@ -246,7 +246,7 @@ morphology contours classify the foreground mask at a fixed level of `0.5`;
 grayscale contours retain their adjustable analytical level.
 The histogram consumes that same mask and GPU-resident extent, so excluded
 pixels disappear from both the map selection and distribution. Every dependent
-compute pass is encoded into one explicitly submitted `GPUCommandGraph`.
+compute pass is encoded into one explicitly submitted GPU pipeline.
 
 ## The exact GPU-to-CPU readback boundary
 
@@ -706,7 +706,7 @@ region** between the available one-based component IDs. The graph computes
 bounded arrays for every published region, but the application copies only the
 selected row's eight scalar fields into its existing compact summary. Changing
 the selected identifier changes buffer-copy offsets; it does not rebuild or
-recompile the GPU graph.
+recompile the analysis pipeline.
 
 **Region pixels** counts every valid labeled foreground observation. The
 intensity sum, minimum, maximum, and mean separately include only valid finite

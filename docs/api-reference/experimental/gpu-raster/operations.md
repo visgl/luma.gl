@@ -62,4 +62,4 @@ page states ownership, capacity, failure, and performance behavior alongside its
 
 - [GPURaster overview](/docs/api-reference/experimental/gpu-raster)
 - [Satellite Raster Lab](/examples/showcase/raster-lab)
-- [GPU Core](/docs/api-reference/experimental/gpu-core)
+- GPU scheduling

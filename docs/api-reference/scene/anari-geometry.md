@@ -4,8 +4,8 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Published package</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
 </DocumentationBadges>
 
 `ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](/docs/api-reference/scene/anari-scene).

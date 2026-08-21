@@ -1,10 +1,12 @@
 {
   "name": "@luma.gl/splats",
   "version": "9.4.0-alpha.4",
-  "private": true,
   "description": "Gaussian splat rendering utilities for luma.gl",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"

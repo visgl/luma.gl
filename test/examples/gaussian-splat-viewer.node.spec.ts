@@ -224,7 +224,7 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerSource).toContain('this.localLoadersConfiguration?.expectedSplatCount');
     expect(viewerSource).not.toContain('this.activateGraphRenderer()');
     expect(viewerSource).not.toContain('CPU preview → GPU graph');
-    expect(viewerDocumentation).toContain('GPU command');
+    expect(viewerDocumentation).toContain('GPU pipeline');
     expect(viewerDocumentation).toContain('first');
     expect(viewerDocumentation).toContain('?renderer=cpu');
     expect(viewerDocumentation).toContain('WebGL2');

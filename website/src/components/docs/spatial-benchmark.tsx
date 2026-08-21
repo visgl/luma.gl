@@ -69,7 +69,7 @@ export function SpatialBenchmark(): ReactNode {
 
       <LiveBenchmarkPanel
         title="Live luSpatial: CPU vs. WebGPU"
-        description="Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution."
+        description="Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU scan, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution."
         onRun={async () => {
           const device =
             selectedDevice?.type === 'webgpu' ? selectedDevice : await createDevice('webgpu-core');

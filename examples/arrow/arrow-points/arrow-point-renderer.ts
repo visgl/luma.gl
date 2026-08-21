@@ -43,7 +43,7 @@ import {
 } from './point-model';
 
 /** Arrow point coordinate input accepted by {@link ArrowPointRenderer}. */
-export type ArrowPointCoordinateType = arrow.FixedSizeList<arrow.Float32> | arrow.DenseUnion;
+export type ArrowPointCoordinateType = arrow.FixedSizeList<arrow.Float32>;
 
 /**
  * Time source accepted by {@link ArrowPointRenderer}.
@@ -580,12 +580,7 @@ function makeRetainedPointTable(preparedBatches: readonly PreparedPointBatch[]):
 function normalizePointPositions(
   positions: arrow.Vector<ArrowPointCoordinateType>
 ): NormalizedPointPositions {
-  if (arrow.DataType.isDenseUnion(positions.type)) {
-    return normalizeDenseUnionPointPositions(positions as arrow.Vector<arrow.DenseUnion>);
-  }
-  return normalizeFixedSizeListPointPositions(
-    positions as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
-  );
+  return normalizeFixedSizeListPointPositions(positions);
 }
 
 function normalizeFixedSizeListPointPositions(
@@ -603,51 +598,6 @@ function normalizeFixedSizeListPointPositions(
     normalizedValues[rowIndex * 2] = sourceValues[sourceOffset];
     normalizedValues[rowIndex * 2 + 1] = sourceValues[sourceOffset + 1];
     measureTimes[rowIndex] = sourceDimension >= 3 ? sourceValues[sourceOffset + measureIndex] : 0;
-  }
-
-  return {
-    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, normalizedValues),
-    measureTimes: makeFloat32Vector(measureTimes),
-    sourceDimension
-  };
-}
-
-function normalizeDenseUnionPointPositions(
-  positions: arrow.Vector<arrow.DenseUnion>
-): NormalizedPointPositions {
-  const normalizedValues = new Float32Array(positions.length * 2);
-  const measureTimes = new Float32Array(positions.length);
-  let targetRowIndex = 0;
-  let sourceDimension = 0;
-
-  for (const data of positions.data) {
-    const typeIds = data.typeIds as ArrayLike<number>;
-    const valueOffsets = data.valueOffsets as ArrayLike<number>;
-    const type = data.type as arrow.DenseUnion & {
-      typeIdToChildIndex: Record<number, number | undefined>;
-    };
-
-    for (let localRowIndex = 0; localRowIndex < data.length; localRowIndex++) {
-      const dataRowIndex = (data.offset ?? 0) + localRowIndex;
-      const typeId = typeIds[dataRowIndex];
-      const childIndex = type.typeIdToChildIndex[typeId];
-      if (childIndex === undefined) {
-        throw new Error(`ArrowPointRenderer DenseUnion has unsupported type id ${typeId}`);
-      }
-      const childData = data.children[childIndex] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
-      const childRowIndex = valueOffsets[dataRowIndex];
-      const childDimension = getFixedSizeListPointDimensionFromData(childData);
-      const childValues = getFixedSizeListDataValues(childData);
-      const sourceOffset = ((childData.offset ?? 0) + childRowIndex) * childDimension;
-      const measureIndex = childDimension === 4 ? 3 : 2;
-
-      normalizedValues[targetRowIndex * 2] = childValues[sourceOffset];
-      normalizedValues[targetRowIndex * 2 + 1] = childValues[sourceOffset + 1];
-      measureTimes[targetRowIndex] =
-        childDimension >= 3 ? childValues[sourceOffset + measureIndex] : 0;
-      sourceDimension = Math.max(sourceDimension, childDimension);
-      targetRowIndex++;
-    }
   }
 
   return {
@@ -790,7 +740,7 @@ function getFixedSizeListPointDimension(
   positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>
 ): 2 | 3 | 4 {
   if (!arrow.DataType.isFixedSizeList(positions.type)) {
-    throw new Error('ArrowPointRenderer positions must be FixedSizeList or DenseUnion');
+    throw new Error('ArrowPointRenderer positions must be FixedSizeList');
   }
   const sourceDimension = positions.type.listSize;
   if (
@@ -800,35 +750,6 @@ function getFixedSizeListPointDimension(
     throw new Error('ArrowPointRenderer positions must be FixedSizeList<Float32, 2 | 3 | 4>');
   }
   return sourceDimension;
-}
-
-function getFixedSizeListPointDimensionFromData(
-  data: arrow.Data<arrow.FixedSizeList<arrow.Float32>>
-): 2 | 3 | 4 {
-  if (!arrow.DataType.isFixedSizeList(data.type)) {
-    throw new Error('ArrowPointRenderer DenseUnion point children must be FixedSizeList');
-  }
-  const sourceDimension = data.type.listSize;
-  if (
-    (sourceDimension !== 2 && sourceDimension !== 3 && sourceDimension !== 4) ||
-    !(data.type.children[0].type instanceof arrow.Float32)
-  ) {
-    throw new Error(
-      'ArrowPointRenderer DenseUnion point children must be FixedSizeList<Float32, 2 | 3 | 4>'
-    );
-  }
-  return sourceDimension;
-}
-
-function getFixedSizeListDataValues(
-  data: arrow.Data<arrow.FixedSizeList<arrow.Float32>>
-): Float32Array {
-  const childData = data.children[0] as arrow.Data<arrow.Float32> | undefined;
-  const values = childData?.values;
-  if (!(values instanceof Float32Array)) {
-    throw new Error('ArrowPointRenderer FixedSizeList child values must be Float32Array');
-  }
-  return values;
 }
 
 function makeFloat32VectorFromNumeric(vector: arrow.Vector): arrow.Vector<arrow.Float32> {

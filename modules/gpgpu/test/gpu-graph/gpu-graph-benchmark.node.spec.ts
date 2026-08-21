@@ -437,36 +437,3 @@ describe('GPU Graph benchmark independent CPU oracles', () => {
     }
   });
 });
-
-describe('GPU Graph live documentation benchmark isolation', () => {
-  test('uses explicit-start SSR-safe UI and independently reports index and approximation costs', () => {
-    const component = readFileSync(
-      new URL('../../../../website/src/components/docs/gpu-graph-benchmark.tsx', import.meta.url),
-      'utf8'
-    );
-    const documentation = readFileSync(
-      new URL(
-        '../../../../docs/api-reference/experimental/gpu-graph-operations.md',
-        import.meta.url
-      ),
-      'utf8'
-    );
-
-    expect(component).toContain("from '@luma.gl/gpgpu/gpu-graph/benchmarks'");
-    expect(component).toContain('<LiveBenchmarkPanel');
-    expect(component).toContain('onRun={async () =>');
-    expect(component).toContain("typeof navigator === 'undefined'");
-    expect(component).toContain('spatialIndexBuildTimeMilliseconds');
-    expect(component).toContain('approximationMaxAbsoluteError');
-    expect(component).toContain('Weighted shortest paths');
-    expect(component).toContain('Label-propagation communities');
-    expect(component).toContain('Local clustering coefficient');
-    expect(component).toContain('https://ldbcouncil.org/');
-    expect(component).toContain('https://ldbcouncil.org/benchmarks/graphalytics/');
-    expect(component).toContain('Graph Data Council');
-    expect(component).toContain('not an official benchmark submission');
-    expect(component.match(/await runGPUGraphBenchmark\(/g)).toHaveLength(1);
-    expect(documentation).toContain('<GPUGraphBenchmark />');
-    expect(documentation).toContain('explicit completion fence');
-  });
-});

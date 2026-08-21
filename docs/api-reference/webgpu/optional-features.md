@@ -157,17 +157,17 @@ unavailable, the same public operation records its portable shader.
 
 | Primitive or consumer | Subgroup work | Optimized scope |
 | --- | --- | --- |
-| [`GPUScan`](/docs/api-reference/experimental/gpu-core/gpu-scan) | Native prefix collectives reduce workgroup barriers | Unsegmented scans |
-| [`GPUReduction`](/docs/api-reference/experimental/gpu-core/gpu-reduction) | Native reductions merge each subgroup before shared-memory totals | Every reduction level; also PageRank and automatic histogram domains |
+| `GPUScan` | Native prefix collectives reduce workgroup barriers | Unsegmented scans |
+| `GPUReduction` | Native reductions merge each subgroup before shared-memory totals | Every reduction level; also PageRank and automatic histogram domains |
 | Indexed range compaction | Native prefix collectives compute local range offsets | `GPUIndexedRangeCompaction` and `GPUPartitionedIndexedRangeCompaction` |
-| [`GPUSort`](/docs/api-reference/experimental/gpu-core/gpu-sort) | Register shuffles handle subgroup-local bitonic stages | Local bitonic networks through 256 rows, including `GPUBatchSort` chunks |
-| [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-core/gpu-segmented-sort) | The same shuffle network runs for every packed segment | Segments through 256 rows |
-| [`GPUHistogram`](/docs/api-reference/experimental/gpu-core/gpu-histogram) | Equal-bin lanes coalesce into one local atomic update | Histograms with at most 16 bins |
-| [`GPUGridBinning`](/docs/api-reference/experimental/gpu-core/gpu-grid-binning) | Equal-cell lanes coalesce into one local atomic update | Grids with at most 16 cells |
-| [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation) | Equal-cell lanes combine weights before statistic atomics | Aggregations with at most 16 cells |
-| [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) | Equal-key lanes coalesce count or statistic atomics | Aggregations with at most 16 groups |
-| [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-core/gpu-index-picking-target) | Valid region hits reserve one output block per subgroup | Region-result publication |
-| [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation) | Eligible and published rows coalesce diagnostic counter atomics | Required and published counts plus collision reporting |
+| `GPUSort` | Register shuffles handle subgroup-local bitonic stages | Local bitonic networks through 256 rows, including `GPUBatchSort` chunks |
+| `GPUSegmentedSort` | The same shuffle network runs for every packed segment | Segments through 256 rows |
+| `GPUHistogram` | Equal-bin lanes coalesce into one local atomic update | Histograms with at most 16 bins |
+| `GPUGridBinning` | Equal-cell lanes coalesce into one local atomic update | Grids with at most 16 cells |
+| `GPUGridAggregation` | Equal-cell lanes combine weights before statistic atomics | Aggregations with at most 16 cells |
+| `GPUGroupAggregation` | Equal-key lanes coalesce count or statistic atomics | Aggregations with at most 16 groups |
+| `GPUIndexPickingTarget` | Valid region hits reserve one output block per subgroup | Region-result publication |
+| `GPUSceneDrawGeneration` | Eligible and published rows coalesce diagnostic counter atomics | Required and published counts plus collision reporting |
 | `GPUChunkedIndexedScatter` | Equal-destination routes reserve contiguous output blocks | Scatters with at most 16 chunks |
 
 The narrow keyed-atomic thresholds are deliberate: the coalescing shader has bounded work

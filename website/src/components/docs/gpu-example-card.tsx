@@ -14,7 +14,7 @@ export type GPUExampleCardProps = {
   presets?: readonly {label: string; href: string}[];
 };
 
-/** Shared context and actions for GPU Core-backed documentation examples. */
+/** Shared context and actions for GPU-backed documentation examples. */
 export function GPUExampleCard(props: GPUExampleCardProps): ReactNode {
   return (
     <DocumentationExampleCard

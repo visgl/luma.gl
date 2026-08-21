@@ -41,7 +41,7 @@ const RAPIDS_MODULE_ATTRIBUTIONS: RapidsModuleAttribution[] = [
   {
     directory: 'gpu-graph',
     sourceDirectory: 'modules/gpgpu/src/gpu-graph',
-    documentation: ['modules/gpgpu/src/gpu-graph/README.md'],
+    documentation: [],
     project: 'cuGraph',
     repository: 'https://github.com/rapidsai/cugraph'
   }

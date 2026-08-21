@@ -7,7 +7,7 @@ import {Texture} from '@luma.gl/core';
 import type {TextureBindingLayout, TextureBindingSource} from '@luma.gl/engine';
 import type {WebXRRawCameraBinding} from './webxr-types';
 
-/** Experimental v10 properties for a raw WebXR camera texture source. */
+/** Experimental 9.4 properties for a raw WebXR camera texture source. */
 export type WebXRCameraTextureProps = Omit<
   TextureProps,
   | 'data'
@@ -25,9 +25,9 @@ export type WebXRCameraTextureProps = Omit<
 type ResolvedWebXRCameraTextureProps = Required<WebXRCameraTextureProps>;
 
 /**
- * Experimental v10 binding source for the WebXR Raw Camera Access texture.
+ * Experimental 9.4 binding source for the WebXR Raw Camera Access texture.
  *
- * WebXRCameraTexture is WebGL-only in v10 work in progress and resolves only
+ * WebXRCameraTexture is WebGL-only in 9.4 and resolves only
  * ordinary texture bindings such as GLSL sampler2D.
  */
 export class WebXRCameraTexture implements TextureBindingSource {
@@ -84,7 +84,7 @@ export class WebXRCameraTexture implements TextureBindingSource {
     props: WebXRCameraTextureProps = {}
   ) {
     if (device.type !== 'webgl') {
-      throw new Error('WebXRCameraTexture is only available on WebGL in v10 work in progress');
+      throw new Error('WebXRCameraTexture is only available on WebGL');
     }
 
     this.device = device;

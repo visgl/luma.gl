@@ -10,9 +10,8 @@ import {GPUTraceViewerExample} from '@site/src/examples';
 
 `GPUTraceAggregation` computes dense counts and duration statistics over canonical trace columns.
 `GPUTraceTimeBuckets` computes interval occupancy and clipped active duration over trace time. Both
-are exported from `@luma.gl/experimental/gpu-trace`; the underlying generic aggregations remain
-[`GPUGroupAggregation`](../gpu-core/gpu-group-aggregation) and
-[`GPUHistogram`](../gpu-core/gpu-histogram).
+are exported from `@luma.gl/experimental/gpu-trace`; their implementation reuses the generic
+`GPUGroupAggregation` and `GPUHistogram` operations.
 
 <GPUTraceViewerExample embedded />
 

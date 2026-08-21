@@ -6,7 +6,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 <EngineDocsTabs group="dynamic-resources" active="dynamic-buffer" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
 </DocumentationBadges>
 
 `DynamicBuffer` is the engine-level wrapper for applications that need a stable buffer object whose underlying GPU [`Buffer`](/docs/api-reference/core/resources/buffer) can grow or be replaced.

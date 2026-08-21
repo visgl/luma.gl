@@ -77,7 +77,7 @@ See the [operations reference](./gpu-dataframe-operations) for detailed executio
 
 ## Related modules
 
-- [GPU Core](/docs/api-reference/experimental/gpu-core) supplies scheduling and primitives.
+- GPU scheduling supplies scheduling and primitives.
 - [GPU Crossfilter](./gpu-crossfilter) composes linked interactive selections.
 - [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines primitive GPU storage,
   while [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) defines

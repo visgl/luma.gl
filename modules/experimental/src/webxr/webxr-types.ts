@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /**
- * Keep luma.gl's v10 work-in-progress WebXR declarations local to experimental.
+ * Keep luma.gl's work-in-progress WebXR declarations local to experimental.
  *
  * @types/webxr does not yet cover raw camera access and also adds ambient draft
  * WebGL extension overloads to every TypeScript program that installs luma.gl.
@@ -188,5 +188,5 @@ declare global {
   }
 }
 
-/** Experimental v10 raw-camera subset required by WebXRCameraTexture. */
+/** Experimental 9.4 raw-camera subset required by WebXRCameraTexture. */
 export type WebXRRawCameraBinding = Pick<XRWebGLBinding, 'getCameraImage'>;

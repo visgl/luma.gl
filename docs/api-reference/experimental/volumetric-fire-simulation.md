@@ -218,7 +218,7 @@ sparse grids in later revisions.
 
 ## Related pages
 
-- [GPU Command Graph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
+- GPU Command Graph
   documents graph ownership, hazard inference, and encoding.
 - [GBuffer](/docs/api-reference/experimental/g-buffer) provides depth, normal, and velocity
   attachments for depth-aware volume composition.

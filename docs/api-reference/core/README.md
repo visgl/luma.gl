@@ -28,7 +28,7 @@ TypeScript contract.
 Use Core when you need direct control over GPU memory, formats, bindings, passes, or command
 submission. Start one layer higher with [Engine](/docs/api-reference/engine) when a `Model`
 can manage those details. Move one layer higher still to
-[GPU Core](/docs/api-reference/experimental/gpu-core) when several operations need
+GPU scheduling when several operations need
 dependency scheduling, transient storage, indirect work, or multi-frame execution.
 
 ## Live example
@@ -96,4 +96,4 @@ upload, render, compute, readback, resize, and recovery from validation or devic
 
 - Move up to [Engine](/docs/api-reference/engine) for managed models and redraw state.
 - Move down to [Shadertools](/docs/api-reference/shadertools) to author reusable shader behavior.
-- Add [GPU Core](/docs/api-reference/experimental/gpu-core) for multi-operation scheduling.
+- Add GPU scheduling for multi-operation scheduling.

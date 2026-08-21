@@ -185,7 +185,7 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 ## Experimental Frame Provider
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 

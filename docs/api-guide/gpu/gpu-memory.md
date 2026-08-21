@@ -94,7 +94,7 @@ that limitation in mind.
 | Must transfer order match compute or rendering? | Encode operations into one explicit command sequence. |
 | Is the source much larger than the visible or analytical result? | Filter or aggregate on the GPU, then read back the bounded result. |
 | Can a large upload monopolize startup? | Stream chunks and publish progress across bounded steps. |
-| Is the resource temporary between graph stages? | Let GPU Core plan compatible transient reuse. |
+| Is the resource temporary between graph stages? | Let GPU scheduling plan compatible transient reuse. |
 
 ## Common mistakes
 

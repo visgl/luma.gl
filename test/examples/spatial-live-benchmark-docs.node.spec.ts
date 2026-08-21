@@ -13,22 +13,12 @@ const geospatialDocumentation = readFileSync(
   new URL('../../docs/api-reference/experimental/geospatial.md', import.meta.url),
   'utf8'
 );
-const benchmarkDocumentation = readFileSync(
-  new URL(
-    '../../docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md',
-    import.meta.url
-  ),
-  'utf8'
-);
-
 describe('live spatial benchmark documentation', () => {
-  test('embeds the same interactive benchmark in both spatial documentation pages', () => {
-    for (const documentation of [geospatialDocumentation, benchmarkDocumentation]) {
-      expect(documentation).toContain(
-        "import {SpatialBenchmark} from '@site/src/components/docs/spatial-benchmark';"
-      );
-      expect(documentation).toContain('<SpatialBenchmark />');
-    }
+  test('embeds the interactive benchmark in the geospatial documentation', () => {
+    expect(geospatialDocumentation).toContain(
+      "import {SpatialBenchmark} from '@site/src/components/docs/spatial-benchmark';"
+    );
+    expect(geospatialDocumentation).toContain('<SpatialBenchmark />');
   });
 
   test('compares a genuine CPU predicate against unindexed and indexed WebGPU queries', () => {
@@ -50,7 +40,6 @@ describe('live spatial benchmark documentation', () => {
     expect(componentSource).toContain('indexBuildMilliseconds');
     expect(componentSource).toMatch(/Query timings exclude this\s+build/);
     expect(geospatialDocumentation).toContain('construction cost separately');
-    expect(benchmarkDocumentation).toContain('Grid construction is reported separately');
   });
 
   test('keeps browser work opt-in and provides explicit device and dataset controls', () => {
@@ -59,6 +48,5 @@ describe('live spatial benchmark documentation', () => {
     expect(componentSource).toContain('Run live CPU and WebGPU spatial benchmark');
     expect(componentSource).toContain("await createDevice('webgpu-core')");
     expect(componentSource).toContain('POINT_COUNTS.map(count =>');
-    expect(benchmarkDocumentation).toContain('opt-in benchmark');
   });
 });

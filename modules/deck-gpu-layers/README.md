@@ -9,7 +9,7 @@ query results, indirect commands, and source positions remain owned by the appli
 The command buffer must use the non-indexed `draw` layout. Its selected record keeps
 `vertexCount: 6` and `firstVertex: 0`; GPU queries normally update only `instanceCount`.
 
-The root layer entry point deliberately does not import Arrow, GeoArrow, or the luSpatial query
+The root layer entry point deliberately does not import Arrow-specific or luSpatial query
 algorithms. Applications can produce the fixed-width buffers with any ingestion and query pipeline;
 the optional query entry point described below supplies one reusable geographic workflow.
 

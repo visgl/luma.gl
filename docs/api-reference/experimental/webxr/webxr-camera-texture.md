@@ -3,7 +3,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 # WebXRCameraTexture
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
@@ -36,7 +36,7 @@ vec4 color = texture(uTexture, uv);
 
 ## Behavior
 
-- WebGL-only in the current v10 API.
+- WebGL-only in the experimental 9.4 API.
 - Resolves only ordinary texture bindings such as GLSL `sampler2D`.
 - `setView(view)` selects `view.camera` and advances the source generation for the next draw.
 - `resolveTextureBinding()` calls `XRWebGLBinding.getCameraImage(camera)` at most once per source generation.

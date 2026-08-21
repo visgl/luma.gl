@@ -4,11 +4,6 @@
 
 export {OrthographicView, type PickingInfo} from '@deck.gl/core';
 export {
-  ArrowPolygonLayer,
-  type ArrowPolygonColorInput,
-  type ArrowPolygonLayerProps
-} from './layers/arrow-polygon-layer';
-export {
   ArrowPathLayer,
   type ArrowPathColorInput,
   type ArrowPathLayerProps,

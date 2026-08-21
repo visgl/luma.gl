@@ -4,8 +4,8 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="neutral">Published package</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
 </DocumentationBadges>
 
 `ANARIDevice` adapts an existing luma.gl `Device` into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.

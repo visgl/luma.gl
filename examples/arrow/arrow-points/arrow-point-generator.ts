@@ -6,7 +6,7 @@ import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 export type ArrowPointRowCountKind = '10k-stream' | '100k-stream';
-export type ArrowPointSourceKind = 'xy' | 'xym' | 'xyzm' | 'dense-union';
+export type ArrowPointSourceKind = 'xy' | 'xym' | 'xyzm';
 export type ArrowPointTimeKind = 'none' | 'm' | 'timestamp';
 export type ArrowPointColorKind = 'constant' | 'row-colors';
 export type ArrowPointRadiusKind = 'constant' | 'row-radii';
@@ -28,9 +28,6 @@ export type ArrowPointExampleData = {
 const COLOR_COMPONENTS = 4;
 const STREAMING_BATCH_DELAY_MS = 620;
 const POINT_AREA_RADIUS = 0.93;
-const GEOARROW_POINT_XY_TYPE_ID = 1;
-const GEOARROW_POINT_XYM_TYPE_ID = 11;
-const GEOARROW_POINT_XYZM_TYPE_ID = 13;
 
 export const POINT_SWEEP_MILLISECONDS = 64_000;
 export const POINT_TRAIL_LENGTH_MILLISECONDS = 13_500;
@@ -179,8 +176,6 @@ function makePositionDataChunk(
       return makeFixedSizeListPointDataChunk(rowIndices, totalRowCount, 3);
     case 'xyzm':
       return makeFixedSizeListPointDataChunk(rowIndices, totalRowCount, 4);
-    case 'dense-union':
-      return makeDenseUnionPointDataChunk(rowIndices, totalRowCount);
   }
 }
 
@@ -200,56 +195,6 @@ function makeFixedSizeListPointDataChunk(
     );
   }
   return makeArrowFixedSizeListVector(new arrow.Float32(), dimension, values).data[0];
-}
-
-function makeDenseUnionPointDataChunk(
-  rowIndices: number[],
-  totalRowCount: number
-): arrow.Data<arrow.DenseUnion> {
-  const typeIds = new Int8Array(rowIndices.length);
-  const valueOffsets = new Int32Array(rowIndices.length);
-  const pointXYRowIndices: number[] = [];
-  const pointXYMRowIndices: number[] = [];
-  const pointXYZMRowIndices: number[] = [];
-
-  for (let localRowIndex = 0; localRowIndex < rowIndices.length; localRowIndex++) {
-    const rowIndex = rowIndices[localRowIndex];
-    const childKind = rowIndex % 3;
-    if (childKind === 0) {
-      typeIds[localRowIndex] = GEOARROW_POINT_XY_TYPE_ID;
-      valueOffsets[localRowIndex] = pointXYRowIndices.length;
-      pointXYRowIndices.push(rowIndex);
-    } else if (childKind === 1) {
-      typeIds[localRowIndex] = GEOARROW_POINT_XYM_TYPE_ID;
-      valueOffsets[localRowIndex] = pointXYMRowIndices.length;
-      pointXYMRowIndices.push(rowIndex);
-    } else {
-      typeIds[localRowIndex] = GEOARROW_POINT_XYZM_TYPE_ID;
-      valueOffsets[localRowIndex] = pointXYZMRowIndices.length;
-      pointXYZMRowIndices.push(rowIndex);
-    }
-  }
-
-  const pointXYData = makeFixedSizeListPointDataChunk(pointXYRowIndices, totalRowCount, 2);
-  const pointXYMData = makeFixedSizeListPointDataChunk(pointXYMRowIndices, totalRowCount, 3);
-  const pointXYZMData = makeFixedSizeListPointDataChunk(pointXYZMRowIndices, totalRowCount, 4);
-  const unionType = new arrow.DenseUnion(
-    [GEOARROW_POINT_XY_TYPE_ID, GEOARROW_POINT_XYM_TYPE_ID, GEOARROW_POINT_XYZM_TYPE_ID],
-    [
-      new arrow.Field('PointXY', pointXYData.type, true),
-      new arrow.Field('PointXYM', pointXYMData.type, true),
-      new arrow.Field('PointXYZM', pointXYZMData.type, true)
-    ]
-  );
-
-  return arrow.makeData({
-    type: unionType,
-    length: rowIndices.length,
-    nullCount: 0,
-    typeIds,
-    valueOffsets,
-    children: [pointXYData, pointXYMData, pointXYZMData]
-  }) as arrow.Data<arrow.DenseUnion>;
 }
 
 function makePointSizeDataChunk(rowIndices: number[]): arrow.Data<arrow.Float32> {
@@ -348,8 +293,6 @@ function getSourceLabel(sourceKind: ArrowPointSourceKind): string {
       return 'FixedSizeList<Float32, 3> (XYM)';
     case 'xyzm':
       return 'FixedSizeList<Float32, 4> (XYZM)';
-    case 'dense-union':
-      return 'DenseUnion Point XY/XYM/XYZM';
   }
 }
 

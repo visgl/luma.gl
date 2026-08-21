@@ -1,28 +1,29 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
-import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/examples';
+import {ArrowLinesExample, ArrowPointRendererExample, ArrowText2DExample} from '@site/src/examples';
 
 # Overview
 
 <ArrowDocsTabs active="overview" />
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
 Apache Arrow utilities for luma.gl.
 
-<ArrowGeoArrowExample embedded showStats={false} />
+<ArrowPointRendererExample embedded showStats={false} />
 
 ## Arrow Rendering
 
-These live examples exercise luma.gl's Arrow path, polygon, and text conversion and rendering
-stack through temporary deck.gl integration layers. They demonstrate progressive `RecordBatch`
-streaming, direct columnar inputs, constant and column styling, attribute rendering, and WebGPU
-storage rendering.
+These live examples exercise luma.gl's Arrow point, path, and text conversion and rendering stack.
+They demonstrate progressive `RecordBatch` streaming, direct columnar inputs, attribute rendering,
+and WebGPU storage rendering.
 
-<ArrowRenderingDocsExample />
+<ArrowLinesExample embedded showStats={false} />
+
+<ArrowText2DExample embedded showStats={false} />
 
 ## API Reference
 
@@ -30,7 +31,6 @@ storage rendering.
 - [Arrow Representations](/docs/api-reference/arrow/arrow-representations)
 - [Arrow Table Conversion](/docs/api-reference/arrow/arrow-conversion)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
-- [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
 
 ## Apache Arrow Preliminaries
 

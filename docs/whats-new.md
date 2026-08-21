@@ -2,114 +2,47 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-whats-new) page._
 
-## Version 10.0
-
-Target Release Date: Q4, 2026
-
-Version 10 turns luma.gl's GPU building blocks into one programmable system. Rendering, compute,
-and data can share resources and execution plans without giving up control of command submission.
-
-At the center is `GPUCommandGraph`. Selected 9.4 features already use this machinery internally;
-v10 makes it a first-class API that applications can compose, inspect, and tune.
-
-**What you can build**
-
-- **Next-generation 3D scenes** - Combine physical materials, deferred lighting, ray tracing,
-  shadows, reflections, fog, and temporal effects. Explore the stack in
-  [Visualization City](/examples/experimental/advanced-effects).
-- **Large GPU-driven worlds** - Move culling, selection, sorting, and indirect drawing off the CPU.
-  [Virtual Geometry Canyon](/examples/experimental/virtual-geometry-canyon) renders a potential
-  41 million triangles with GPU-selected detail.
-- **Interactive scientific simulations** - Build oceans, fluids, fire, rasters, and volume tools on
-  reusable GPU algorithms. See [Tempest Ocean](/examples/showcase/tempest-ocean),
-  [Volumetric Fire Forge](/examples/experimental/volumetric-fire-forge), and the
-  [Satellite Raster Lab](/examples/showcase/raster-lab).
-- **GPU-native analytical applications** - Connect dataframes, graph traversal, geospatial
-  operations, trace analysis, and rendering as one GPU workflow. The
-  [GPU Trace Viewer](/examples/experimental/gpu-trace-viewer) demonstrates the approach at millions
-  of spans.
-
-**The v10 foundation**
-
-- **Programmable command graphs** - Compose compute and rendering work as an explicit graph while
-  retaining application-owned encoding and submission.
-- **Visible execution plans** - Compile resource hazards, pass fusion, and transient reuse. Inspect
-  timing and allocation decisions, then tune them for the active device.
-- **An engine-independent compute runtime** - Move generic scheduling below engine. Rendering and
-  model adapters then build on the same GPGPU foundation as analytical workloads.
-- **Portable performance** - Accelerate with WebGPU subgroups when available while retaining
-  portable fallbacks and the WebGPU CORE profile as the default target.
-- **A shared physical scene model** - Forward, deferred, and ray-traced renderers use the same
-  materials, lights, animation, morph targets, and image-based environments.
-
 ## Version 9.4
 
 Target Release Date: August 2026
 
-Version 9.4 keeps the stable core familiar while sharing a substantial preview of luma.gl v10. It
-adds focused GPU data, compute, and visualization APIs without requiring applications to adopt the
-v10 execution model.
+Version 9.4 keeps the stable core familiar while opening a powerful experimental stack for GPU
+data, analysis, text, splats, and scenes.
 
 **Highlights**
 
-- **Data that goes straight to pixels** - `GPUData` and `GPUVector` bring typed, chunked columnar
-  data to the GPU. Arrow, paths, polygons, temporal data, and streamed text can reach rendering
-  without a CPU-side object layer.
-- **GPU-native analysis through focused APIs** - Sorting, aggregation,
-  [dataframes](/docs/api-reference/experimental/gpu-dataframe), joins, graph traversal, geospatial
-  operations, and trace analysis keep intermediate data on the GPU.
-- **Gaussian splats become a module** - `@luma.gl/splats` can stream, filter, pick, and mix splats
-  with meshes. Spherical harmonics, bounded residency, and hierarchical paging keep large scenes
-  interactive.
-- **Animated worlds at crowd scale** - Shared geometry and materials support independently animated
-  characters. GPU sampling, culling, and automatic LOD keep crowds practical on WebGPU and WebGL 2.
-- **Faster, more precise GPU workloads** - Ray tracing reuses retained GPU data, and WGSL can
-  compute precise deltas from packed binary64 coordinates.
-- **A modern development workflow** - TypeScript 6.0, the `lumagl` agent skill,
-  [`llms.txt`](https://luma.gl/llms.txt), and browser-backed verification help developers and coding
-  agents work against current APIs.
+- **Data that goes straight to pixels** - Typed, chunked columns can move from Arrow into analysis,
+  text, paths, and rendering without a CPU-side object layer.
+- **Analysis that stays on the GPU** -
+  [Dataframes](/docs/api-reference/experimental/gpu-dataframe), sorting, aggregation, raster,
+  geospatial, and trace APIs keep intermediate results resident and reusable.
+- **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
+  and animate crowds with shared geometry, GPU sampling, culling, and LOD.
+- **Five new experimental modules** - `@luma.gl/arrow`, `@luma.gl/text`, `@luma.gl/splats`,
+  `@luma.gl/scene`, and `@luma.gl/experimental` are now published for direct use. These APIs may
+  evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
 
-- **GPU data has a dedicated home** - Primitive GPU storage types and layout helpers live in
-  `@luma.gl/gpgpu/gpu-data`. They are independent of Apache Arrow and rendering models.
-- **Tables and models stay focused** - Higher-level table workflows live in
-  `@luma.gl/experimental/gpu-tables`. Specialized path and polygon renderers live in
+- **Primitive GPU data has a dedicated home** - `GPUData`, `GPUVector`, views, formats, and layout
+  helpers live in `@luma.gl/gpgpu/gpu-data`, independent of Arrow and rendering models.
+- **Tables and models stay focused** - Batch-preserving tables live in
+  `@luma.gl/experimental/gpu-tables`; path and polygon models live in
   `@luma.gl/experimental/models`.
-- **Arrow and text stay close to their data** - `@luma.gl/arrow` preserves source batches and type
-  metadata. `@luma.gl/text` supports streamed GPU text and shared font resources.
-- **A glimpse of v10 is already running underneath** - Some focused APIs use `GPUCommandGraph`
-  internally. Graph authoring, inspection, and tuning remain a v10 preview; 9.4 applications use
-  the feature APIs directly.
-- **The architecture can keep evolving** - GPU data, table, and model subpaths are experimental and
-  are not re-exported from package roots.
+- **Adapters preserve what matters** - `@luma.gl/arrow` keeps source batches and type metadata.
+  `@luma.gl/text` supports streamed text and shared font resources.
 
-**A more capable rendering loop**
+**More room to build**
 
-- **Record work once, replay it cheaply** - `RenderPass` now owns draw state and supports
-  [WebGPU render bundles](/examples/api/render-bundles), direct draws, and indirect draws.
-- **Choose portability or maximum capability** - WebGPU feature levels make device creation
-  explicit. Stage-specific limits help applications select safe rendering paths.
-- **Grow and stream GPU resources** - [`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)
-  handles resizable model data. [`VideoTexture`](/docs/api-reference/engine/video-texture) handles
-  live video on WebGPU and WebGL.
-- **Build richer physical scenes** - Shared forward and deferred rendering works with reusable
-  pipelines for bloom, ambient occlusion, global illumination, reflections, temporal effects, fog,
-  and adaptive exposure.
-- **Upload geometry with less ceremony** - Geometry exposes consistent buffer layouts and defaults
-  to interleaved uploads. Integer picking removes application-managed picking colors.
-- **Animate richer glTF assets** - Shared animation controllers support skins, morph targets,
-  materials, texture transforms, and crowds. Custom frame providers enable integrations such as
-  WebXR.
-
-**Shaders and backends**
-
-- **Compose shaders instead of copying them** - Plugins, hooks, named injections, and simple
-  conditionals make WGSL and GLSL modules easier to reuse.
-- **Ship a smaller WebGPU path** - Lightweight WGSL scanning handles common buffers, textures,
-  samplers, storage resources, and external video textures.
-- **Keep debugging optional** - WebGL developer tools move to `@luma.gl/webgl/debug`, outside normal
-  application bundles.
+- **A faster rendering loop** - `RenderPass` owns draw state and supports
+  [render bundles](/examples/api/render-bundles), direct draws, and indirect draws. Feature levels,
+  stage-specific limits, `DynamicBuffer`, and `VideoTexture` make resource choices explicit.
+- **Richer physical scenes** - Forward and deferred pipelines add bloom, ambient occlusion,
+  reflections, fog, and adaptive exposure. glTF animation covers skins, morph targets, materials,
+  texture transforms, and crowds.
+- **A cleaner shader and development workflow** - Reusable WGSL/GLSL plugins, lightweight WGSL
+  scanning, TypeScript 6.0, [`llms.txt`](https://luma.gl/llms.txt), and opt-in WebGL debugging make
+  projects easier to ship and maintain.
 
 ## Version 9.3
 

@@ -1,6 +1,6 @@
 ---
 title: Choosing an Engine compute helper
-description: Choose between WebGPU Computation, WebGL 2 BufferTransform, legacy texture transforms, direct Core passes, and GPU Core.
+description: Choose between WebGPU Computation, WebGL 2 BufferTransform, legacy texture transforms, direct Core passes, and GPU scheduling.
 ---
 
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
@@ -20,10 +20,10 @@ shape, and number of stagesâ€”not merely because all of them are described as â€
 | Buffer-to-buffer vertex transform feedback | [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) | WebGL 2 |
 | Existing texture-to-texture transform code | [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) | Compatibility helper; deprecated |
 | Exact pass, pipeline, or synchronization control | [Core compute commands](/docs/api-guide/gpu/gpu-commands) | Backend-dependent |
-| Several dependent operations with shared resources | [GPU Core](/docs/api-reference/experimental/gpu-core) | WebGPU |
+| Several dependent operations with shared resources | GPU scheduling | WebGPU |
 
 The conclusion is intentionally narrow: use an Engine helper for one reusable operation. Move
-down to Core for exact control or up to GPU Core when the operation becomes a pipeline.
+down to Core for exact control or up to GPU scheduling when the operation becomes a pipeline.
 
 ## Mental model
 
@@ -104,7 +104,7 @@ This avoids designing a new workflow around a compatibility abstraction with a n
 
 ## When the operation becomes a graph
 
-One computation followed by one draw does not require GPU Core. A graph becomes useful when the
+One computation followed by one draw does not require GPU scheduling. A graph becomes useful when the
 workflow has several of these properties:
 
 - multiple dependent compute, copy, and render stages;
@@ -142,5 +142,4 @@ several Engine helpers.
 - [`Computation`](/docs/api-reference/engine/compute/computation)
 - [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform)
 - [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform)
-- [Core GPU data processing](/docs/api-guide/gpu/gpu-data-processing)
-- [GPU Core tutorial](/docs/api-reference/experimental/gpu-core/tutorial)
+- GPU scheduling tutorial

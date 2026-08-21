@@ -16,16 +16,14 @@ export type ArrowDocsTabId =
   | 'arrow-representations'
   | 'conversion'
   | 'supported-types'
-  | 'utilities'
-  | 'deck-api';
+  | 'utilities';
 
 const ARROW_DOCS_TABS: ArrowDocsTab[] = [
   {id: 'overview', label: 'Overview', href: '/docs/api-reference/arrow'},
   {id: 'arrow-representations', label: 'Arrow Representations', href: '/docs/api-reference/arrow/arrow-representations'},
   {id: 'conversion', label: 'Conversion', href: '/docs/api-reference/arrow/arrow-conversion'},
   {id: 'supported-types', label: 'Supported Types', href: '/docs/api-reference/arrow/supported-arrow-types'},
-  {id: 'utilities', label: 'Utilities', href: '/docs/api-reference/arrow/arrow-utils'},
-  {id: 'deck-api', label: 'deck.gl API', href: '/docs/api-reference/arrow/deck-target-api'}
+  {id: 'utilities', label: 'Utilities', href: '/docs/api-reference/arrow/arrow-utils'}
 ];
 
 /**

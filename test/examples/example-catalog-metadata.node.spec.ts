@@ -31,8 +31,7 @@ const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
   'api/render-bundles',
   'arrow/arrow-columns',
-  'arrow/arrow-dggs-polygons',
-  'deck/gpu-culled-trace'
+  'arrow/arrow-dggs-polygons'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
   'integrations/external-context',
@@ -138,8 +137,7 @@ describe('live example catalog metadata', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
         ? ['webgl2']
-        : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
-            categories[0].startsWith('GPU Graph Layers') ||
+        : ['WebGPU', 'Compute and analytics'].includes(categories[0]) ||
             WEBGPU_ONLY_EXAMPLES.has(id)
           ? ['webgpu']
           : ['webgpu', 'webgl2'];
@@ -148,17 +146,15 @@ describe('live example catalog metadata', () => {
     }
   });
 
-  test('labels tutorials and prerelease GPU-data tracks consistently', () => {
+  test('labels tutorials and experimental compute tracks consistently', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       if (categories[0] === 'Tutorials') {
         expect(metadata?.difficulty, `${id} must use the tutorial difficulty`).toBe('tutorial');
       }
 
-      if (
-        categories.some(category => category.includes('v10') || category.startsWith('GPGPU Graph'))
-      ) {
+      if (categories[0] === 'Compute and analytics') {
         expect(metadata?.difficulty, `${id} is an advanced GPU-data example`).toBe('advanced');
-        expect(metadata?.maturity, `${id} demonstrates prerelease v10 APIs`).toBe('experimental');
+        expect(metadata?.maturity, `${id} demonstrates experimental APIs`).toBe('experimental');
       }
     }
   });

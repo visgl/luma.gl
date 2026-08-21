@@ -178,13 +178,4 @@ describe('@deck.gl-community/gpu-layers/query package boundary', () => {
       'LuSpatialGeographicPointQueryEffect'
     );
   });
-
-  test('uses the public query graph ID in the Taxi inspector', () => {
-    const appSource = readFileSync(
-      new URL('../../../examples/deck/luspatial-taxi/app.ts', import.meta.url),
-      'utf8'
-    );
-    expect(appSource).toContain('LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query');
-    expect(appSource).not.toContain("'luspatial-taxi-query-graph'");
-  });
 });

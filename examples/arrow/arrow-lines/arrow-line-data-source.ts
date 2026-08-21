@@ -41,9 +41,9 @@ import {
   type ArrowExampleLoadedTableStream
 } from '../arrow-example-panels';
 
-export const title = 'Lines: DenseUnion outlines';
+export const title = 'Arrow path rendering';
 export const description =
-  'Variable-length Arrow XYZM line rows and DenseUnion line or polygon-outline rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for Trips-style temporal filtering.';
+  'Variable-length Arrow XYZM line rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for temporal filtering.';
 
 type LineRendererUpdateOptions = {
   syncControls?: boolean;
@@ -274,7 +274,6 @@ export class ArrowLineDataSourceController extends AnimationLoopTemplate {
       return;
     }
     const nextSelection = getEffectiveLineSelection(
-      nextMode,
       this.activeCoordinateKind,
       this.activeColorKind,
       this.activeTimeKind,
@@ -363,7 +362,6 @@ export class ArrowLineDataSourceController extends AnimationLoopTemplate {
     nextPathModelKind = this.activePathModelKind
   ): Promise<void> {
     const effectiveSelection = getEffectiveLineSelection(
-      nextMode,
       nextCoordinateKind,
       nextColorKind,
       nextTimeKind,
@@ -522,7 +520,6 @@ function getStreamingPathDatasetKind(rowCountKind: ArrowLineRowCountKind): '240'
 }
 
 function getEffectiveLineSelection(
-  mode: ArrowLineMode,
   coordinateKind: ArrowLineCoordinateKind,
   colorKind: ArrowLineColorKind,
   timeKind: ArrowLineTimeKind,
@@ -533,14 +530,6 @@ function getEffectiveLineSelection(
   timeKind: ArrowLineTimeKind;
   modelKind: ArrowLineRendererModel;
 } {
-  if (mode === 'polygons') {
-    return {
-      coordinateKind: 'dense-union',
-      colorKind: colorKind === 'none' ? 'none' : 'row-colors',
-      timeKind: 'none',
-      modelKind: getValidPathModelKindForTimeKind(modelKind, 'none')
-    };
-  }
   return {
     coordinateKind,
     colorKind,

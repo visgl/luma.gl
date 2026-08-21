@@ -24,7 +24,7 @@ The example is built on the optional `@luma.gl/experimental/gpu-crossfilter` ent
 point. Each dimension evaluates its current range or rectangular bounds into a
 source-aligned GPU mask. `GPUCrossfilter` combines those masks, updates linked
 histograms and grouped summaries, and publishes compacted, stable source-row
-identifiers for downstream consumers on one reusable `GPUCommandGraph`. The map
+identifiers for downstream consumers in one reusable GPU pipeline. The map
 and scatterplot renderer draws source rows directly using the shared,
 source-aligned selection mask, preserving dimmed context around matching rows.
 

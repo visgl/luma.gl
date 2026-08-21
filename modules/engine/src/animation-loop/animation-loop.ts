@@ -14,10 +14,10 @@ import {Stats, Stat} from '@probe.gl/stats';
 let statIdCounter = 0;
 const ANIMATION_LOOP_STATS = 'Animation Loop';
 
-/** Experimental v10 callback shape for browser or custom animation frames. */
+/** Experimental 9.4 callback shape for browser or custom animation frames. */
 export type AnimationFrameCallback = (time: DOMHighResTimeStamp, animationFrame?: unknown) => void;
 
-/** Experimental v10 work-in-progress animation frame source. */
+/** Experimental 9.4 work-in-progress animation frame source. */
 export interface AnimationFrameProvider {
   requestAnimationFrame(callback: AnimationFrameCallback): number;
   cancelAnimationFrame(animationFrameId: number): void;
@@ -43,14 +43,14 @@ export type AnimationLoopProps = {
 
   // view parameters - TODO move to CanvasContext?
   autoResizeViewport?: boolean;
-  /** Experimental v10 work-in-progress frame source. */
+  /** Experimental 9.4 work-in-progress frame source. */
   animationFrameProvider?: AnimationFrameProvider;
 };
 
 export type MutableAnimationLoopProps = {
   // view parameters
   autoResizeViewport?: boolean;
-  /** Experimental v10 work-in-progress frame source. */
+  /** Experimental 9.4 work-in-progress frame source. */
   animationFrameProvider?: AnimationFrameProvider;
 };
 

@@ -8,7 +8,6 @@ import {
   convertArrowPathsToAttribute,
   convertArrowTripsToStorage,
   getArrowVectorByteLength,
-  makeArrowFixedSizeListVector,
   convertArrowTemporalToGPUVector,
   loadArrowRecordBatches,
   type ArrowRecordBatchLoadUpdate,
@@ -44,29 +43,16 @@ export type ArrowLineRendererModel = 'attribute' | 'storage' | 'trips' | 'auto';
 export type ArrowLineRendererResolvedModel = Exclude<ArrowLineRendererModel, 'auto'>;
 /** Source time column mode used by the Arrow path example. */
 export type ArrowLineRendererTimeColumn = 'none' | 'xyzm' | 'timestamps';
-/** DenseUnion geometry extraction mode used by the example renderer. */
-export type ArrowLineRendererMode = 'lines' | 'polygons';
+/** Geometry mode used by the example renderer. */
+export type ArrowLineRendererMode = 'lines';
 /** GPU-ready Float32 variable-length path coordinate type. */
 export type ArrowLineCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 /** CPU Float64 source path coordinate type converted before rendering. */
 export type ArrowLineFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
-/**
- * DenseUnion source path coordinate type normalized by the example renderer.
- *
- * Top-level DenseUnion rows are converted one-for-one into prepared list rows so generated
- * segment row indices continue to refer to the full source table row.
- */
-export type ArrowLineDenseUnionCoordinateType = arrow.DenseUnion;
-/**
- * CPU source path coordinate type accepted by conversion helpers.
- *
- * DenseUnion inputs are accepted at the example renderer boundary and normalized into
- * `List<FixedSizeList<Float32, 4>>` before the core path models prepare GPU vectors.
- */
+/** CPU source path coordinate type accepted by conversion helpers. */
 export type ArrowLineSourceCoordinateType =
   | ArrowLineCoordinateType
-  | ArrowLineFloat64CoordinateType
-  | ArrowLineDenseUnionCoordinateType;
+  | ArrowLineFloat64CoordinateType;
 /** GPU-ready per-vertex relative timestamp type. */
 export type ArrowLineTimestampType = arrow.List<arrow.Float32>;
 /** CPU source per-vertex absolute timestamp type. */
@@ -85,7 +71,7 @@ export type ArrowLineRendererActiveModel =
 
 /** CPU Arrow vectors accepted by Arrow path conversion helpers. */
 export type ArrowLineRendererSourceVectors = {
-  /** Variable-length path coordinate rows, or DenseUnion rows normalized by this example layer. */
+  /** Variable-length path coordinate rows. */
   paths: arrow.Vector<ArrowLineSourceCoordinateType>;
   /** Optional row or per-vertex packed path colors. */
   colors?: arrow.Vector<ArrowLineColorType>;
@@ -98,21 +84,6 @@ export type ArrowLineRendererSourceVectors = {
 type ArrowLineRendererNormalizedSourceVectors = Omit<ArrowLineRendererSourceVectors, 'paths'> & {
   paths: arrow.Vector<ArrowLineCoordinateType | ArrowLineFloat64CoordinateType>;
 };
-
-type DenseUnionNormalizedLines = {
-  paths: arrow.Vector<ArrowLineCoordinateType>;
-  sourceRowIndexChunks: Int32Array[];
-  sourceRowCount: number;
-};
-
-type DenseUnionGeometryKind =
-  | 'Point'
-  | 'LineString'
-  | 'Polygon'
-  | 'MultiPoint'
-  | 'MultiLineString'
-  | 'MultiPolygon'
-  | 'GeometryCollection';
 
 /** Prepared GPUVector data consumed by the attribute path model. */
 export type ArrowLineAttributeRendererData = {
@@ -199,7 +170,7 @@ export type ArrowLineRendererPrepareDataProps = {
   model?: ArrowLineRendererModel;
   /** Source time column mode. Defaults to `xyzm`. */
   timeColumn?: ArrowLineRendererTimeColumn;
-  /** DenseUnion extraction mode. Defaults to `lines`. */
+  /** Geometry mode. Defaults to `lines`. */
   mode?: ArrowLineRendererMode;
   /** Optional resource id prefix. */
   id?: string;
@@ -213,7 +184,7 @@ export type ArrowLineRendererConversionOptions = {
   model?: ArrowLineRendererModel;
   /** Source time column mode. Defaults to `xyzm`. */
   timeColumn?: ArrowLineRendererTimeColumn;
-  /** DenseUnion extraction mode. Defaults to `lines`. */
+  /** Geometry mode. Defaults to `lines`. */
   mode?: ArrowLineRendererMode;
   /** Optional resource id prefix. */
   id?: string;
@@ -249,7 +220,7 @@ export type ArrowLineRendererProps = {
   model?: ArrowLineRendererModel;
   /** Source time column mode. */
   timeColumn?: ArrowLineRendererTimeColumn;
-  /** DenseUnion extraction mode. Defaults to `lines`. */
+  /** Geometry mode. Defaults to `lines`. */
   mode?: ArrowLineRendererMode;
   /** Current Trips timestamp in relative milliseconds. */
   currentTime?: number;
@@ -316,8 +287,6 @@ export class ArrowLineRenderer extends GPURenderable<
   /**
    * Converts Arrow source vectors for path rendering.
    *
-   * DenseUnion path coordinates are normalized to one prepared path row per top-level DenseUnion
-   * row. Row-aligned style and timestamp columns remain unchanged.
    */
   static async prepareData(
     device: Device,
@@ -567,7 +536,7 @@ export async function convertArrowLineColumnsToGPUVectors(
   columns: ArrowLineRendererSourceVectors,
   options: ArrowLineRendererConversionOptions = {}
 ): Promise<ArrowLineRendererData> {
-  const sourceVectors = normalizeArrowLineSourceVectors(columns, options.mode ?? 'lines');
+  const sourceVectors = normalizeArrowLineSourceVectors(columns);
   const id = options.id ?? 'arrow-line-renderer';
   const resolvedModel = resolveArrowLineRendererModel(
     device,
@@ -690,7 +659,7 @@ export async function prepareArrowLineInput(
  * Builds a source table from record batches, then prepares it for path rendering.
  *
  * This preserves full-table row identity because each input record-batch row remains one logical
- * path row after DenseUnion normalization.
+ * path row.
  */
 export async function prepareArrowLineInputFromRecordBatches(
   device: Device,
@@ -1075,476 +1044,9 @@ function getPathStorageBufferCount(timeColumn: ArrowLineRendererTimeColumn): num
 }
 
 function normalizeArrowLineSourceVectors(
-  sourceVectors: ArrowLineRendererSourceVectors,
-  mode: ArrowLineRendererMode
+  sourceVectors: ArrowLineRendererSourceVectors
 ): ArrowLineRendererNormalizedSourceVectors {
-  if (!arrow.DataType.isDenseUnion(sourceVectors.paths.type)) {
-    return sourceVectors as ArrowLineRendererNormalizedSourceVectors;
-  }
-  const normalized = normalizeDenseUnionLineVector(
-    sourceVectors.paths as arrow.Vector<ArrowLineDenseUnionCoordinateType>,
-    mode
-  );
-  return {
-    ...sourceVectors,
-    paths: normalized.paths,
-    ...(sourceVectors.colors
-      ? {colors: normalizeDenseUnionLineColors(sourceVectors.colors, normalized)}
-      : {}),
-    ...(sourceVectors.widths
-      ? {widths: repeatFloat32Rows(sourceVectors.widths, normalized.sourceRowIndexChunks)}
-      : {}),
-    ...(sourceVectors.timestamps
-      ? {timestamps: normalizeDenseUnionLineTimestamps(sourceVectors.timestamps, normalized)}
-      : {})
-  };
-}
-
-function normalizeDenseUnionLineVector(
-  paths: arrow.Vector<ArrowLineDenseUnionCoordinateType>,
-  mode: ArrowLineRendererMode
-): DenseUnionNormalizedLines {
-  const sourceRowIndexChunks: Int32Array[] = [];
-  let sourceRowIndexBase = 0;
-  const dataChunks = paths.data.map(data => {
-    const normalizedData = normalizeDenseUnionLineData(data, mode, sourceRowIndexBase);
-    sourceRowIndexBase += data.length;
-    sourceRowIndexChunks.push(normalizedData.sourceRowIndices);
-    return normalizedData.paths;
-  });
-  return {paths: new arrow.Vector(dataChunks), sourceRowIndexChunks, sourceRowCount: paths.length};
-}
-
-function normalizeDenseUnionLineData(
-  data: arrow.Data<ArrowLineDenseUnionCoordinateType>,
-  mode: ArrowLineRendererMode,
-  sourceRowIndexBase: number
-): {paths: arrow.Data<ArrowLineCoordinateType>; sourceRowIndices: Int32Array} {
-  const valueOffsets: number[] = [0];
-  const values: number[] = [];
-  const sourceRowIndices: number[] = [];
-
-  for (let localRowIndex = 0; localRowIndex < data.length; localRowIndex++) {
-    appendDenseUnionLineRows({
-      data,
-      localRowIndex,
-      sourceRowIndex: sourceRowIndexBase + localRowIndex,
-      mode,
-      valueOffsets,
-      values,
-      sourceRowIndices
-    });
-  }
-
-  return {
-    paths: makePathListData(Int32Array.from(valueOffsets), Float32Array.from(values)),
-    sourceRowIndices: Int32Array.from(sourceRowIndices)
-  };
-}
-
-function appendDenseUnionLineRows(props: {
-  data: arrow.Data<ArrowLineDenseUnionCoordinateType>;
-  localRowIndex: number;
-  sourceRowIndex: number;
-  mode: ArrowLineRendererMode;
-  valueOffsets: number[];
-  values: number[];
-  sourceRowIndices: number[];
-}): void {
-  const {data, localRowIndex, sourceRowIndex, mode, valueOffsets, values, sourceRowIndices} = props;
-  const typeIds = data.typeIds as ArrayLike<number>;
-  const denseUnionValueOffsets = data.valueOffsets as ArrayLike<number>;
-  const denseUnionType = data.type as arrow.DenseUnion & {
-    typeIdToChildIndex: Record<number, number | undefined>;
-  };
-  const dataRowIndex = (data.offset ?? 0) + localRowIndex;
-  const typeId = typeIds[dataRowIndex];
-  const childIndex = denseUnionType.typeIdToChildIndex[typeId];
-  if (childIndex === undefined) {
-    throw new Error(`ArrowLineRenderer DenseUnion has unsupported type id ${typeId}`);
-  }
-
-  const geometryKind = getDenseUnionGeometryKind(denseUnionType, typeId, childIndex);
-  if (!isGeometryKindEnabled(geometryKind, mode)) {
-    return;
-  }
-
-  const childData = data.children[childIndex];
-  const childRowIndex = denseUnionValueOffsets[dataRowIndex];
-  if (!childData.getValid(childRowIndex)) {
-    return;
-  }
-  const childValueOffset = (childData.offset ?? 0) + childRowIndex;
-
-  if (geometryKind === 'LineString') {
-    appendLineStringRow(childData as arrow.Data<ArrowLineCoordinateType>, childValueOffset, {
-      sourceRowIndex,
-      closeLine: false,
-      valueOffsets,
-      values,
-      sourceRowIndices
-    });
-    return;
-  }
-
-  if (geometryKind === 'MultiLineString' || geometryKind === 'Polygon') {
-    appendNestedLineRows(
-      childData as arrow.Data<arrow.List<ArrowLineCoordinateType>>,
-      childValueOffset,
-      {
-        sourceRowIndex,
-        closeLine: geometryKind === 'Polygon',
-        valueOffsets,
-        values,
-        sourceRowIndices
-      }
-    );
-    return;
-  }
-
-  if (geometryKind === 'MultiPolygon') {
-    appendMultiPolygonLineRows(
-      childData as arrow.Data<arrow.List<arrow.List<ArrowLineCoordinateType>>>,
-      childValueOffset,
-      {sourceRowIndex, valueOffsets, values, sourceRowIndices}
-    );
-  }
-}
-
-function appendNestedLineRows(
-  data: arrow.Data<arrow.List<ArrowLineCoordinateType>>,
-  localRowIndex: number,
-  props: {
-    sourceRowIndex: number;
-    closeLine: boolean;
-    valueOffsets: number[];
-    values: number[];
-    sourceRowIndices: number[];
-  }
-): void {
-  assertDenseUnionChildListData(data, 'nested line rows');
-  const lineData = data.children[0] as arrow.Data<ArrowLineCoordinateType>;
-  const lineStart = data.valueOffsets[localRowIndex] ?? 0;
-  const lineEnd = data.valueOffsets[localRowIndex + 1] ?? lineStart;
-  for (let lineIndex = lineStart; lineIndex < lineEnd; lineIndex++) {
-    appendLineStringRow(lineData, (lineData.offset ?? 0) + lineIndex, props);
-  }
-}
-
-function appendMultiPolygonLineRows(
-  data: arrow.Data<arrow.List<arrow.List<ArrowLineCoordinateType>>>,
-  localRowIndex: number,
-  props: {
-    sourceRowIndex: number;
-    valueOffsets: number[];
-    values: number[];
-    sourceRowIndices: number[];
-  }
-): void {
-  assertDenseUnionChildListData(data, 'MultiPolygon rows');
-  const polygonData = data.children[0] as arrow.Data<arrow.List<ArrowLineCoordinateType>>;
-  const polygonStart = data.valueOffsets[localRowIndex] ?? 0;
-  const polygonEnd = data.valueOffsets[localRowIndex + 1] ?? polygonStart;
-  for (let polygonIndex = polygonStart; polygonIndex < polygonEnd; polygonIndex++) {
-    appendNestedLineRows(polygonData, (polygonData.offset ?? 0) + polygonIndex, {
-      ...props,
-      closeLine: true
-    });
-  }
-}
-
-function appendLineStringRow(
-  data: arrow.Data<ArrowLineCoordinateType>,
-  localRowIndex: number,
-  props: {
-    sourceRowIndex: number;
-    closeLine: boolean;
-    valueOffsets: number[];
-    values: number[];
-    sourceRowIndices: number[];
-  }
-): void {
-  const {coordinateData, coordinateValues, coordinateComponentCount} =
-    getDenseUnionChildCoordinateData(data);
-  const pointStart = data.valueOffsets[localRowIndex] ?? 0;
-  const pointEnd = data.valueOffsets[localRowIndex + 1] ?? pointStart;
-  if (pointEnd <= pointStart) {
-    return;
-  }
-
-  const lineStartValueCount = props.values.length / 4;
-  for (let pointIndex = pointStart; pointIndex < pointEnd; pointIndex++) {
-    appendDenseUnionCoordinate(
-      props.values,
-      coordinateData,
-      coordinateValues,
-      coordinateComponentCount,
-      pointIndex
-    );
-  }
-  if (
-    props.closeLine &&
-    pointEnd - pointStart >= 2 &&
-    !areOutputCoordinatesEqual(props.values, lineStartValueCount, props.values.length / 4 - 1)
-  ) {
-    props.values.push(
-      props.values[lineStartValueCount * 4] ?? 0,
-      props.values[lineStartValueCount * 4 + 1] ?? 0,
-      props.values[lineStartValueCount * 4 + 2] ?? 0,
-      props.values[lineStartValueCount * 4 + 3] ?? 0
-    );
-  }
-  props.valueOffsets.push(props.values.length / 4);
-  props.sourceRowIndices.push(props.sourceRowIndex);
-}
-
-function appendDenseUnionCoordinate(
-  values: number[],
-  coordinateData: arrow.Data<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>,
-  coordinateValues: Float32Array | Float64Array,
-  coordinateComponentCount: 2 | 3 | 4,
-  pointIndex: number
-): void {
-  const sourceOffset = ((coordinateData.offset ?? 0) + pointIndex) * coordinateComponentCount;
-  const x = Number(coordinateValues[sourceOffset] ?? 0);
-  const y = Number(coordinateValues[sourceOffset + 1] ?? 0);
-  if (coordinateComponentCount === 3) {
-    values.push(x, y, 0, Number(coordinateValues[sourceOffset + 2] ?? 0));
-    return;
-  }
-  values.push(
-    x,
-    y,
-    coordinateComponentCount >= 4 ? Number(coordinateValues[sourceOffset + 2] ?? 0) : 0,
-    coordinateComponentCount >= 4 ? Number(coordinateValues[sourceOffset + 3] ?? 0) : 0
-  );
-}
-
-function getDenseUnionChildCoordinateData(
-  childPathData: arrow.Data<arrow.List<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>>
-): {
-  coordinateData: arrow.Data<arrow.FixedSizeList<arrow.Float32 | arrow.Float64>>;
-  coordinateValues: Float32Array | Float64Array;
-  coordinateComponentCount: 2 | 3 | 4;
-} {
-  if (!arrow.DataType.isList(childPathData.type)) {
-    throw new Error('ArrowLineRenderer DenseUnion children must be List path rows');
-  }
-  const coordinateType = childPathData.type.children[0]?.type;
-  if (!arrow.DataType.isFixedSizeList(coordinateType)) {
-    throw new Error('ArrowLineRenderer DenseUnion path children must contain FixedSizeList rows');
-  }
-  const coordinateComponentCount = coordinateType.listSize;
-  const coordinateValueType = coordinateType.children[0]?.type;
-  if (
-    (coordinateComponentCount !== 2 &&
-      coordinateComponentCount !== 3 &&
-      coordinateComponentCount !== 4) ||
-    (!(coordinateValueType instanceof arrow.Float32) &&
-      !(coordinateValueType instanceof arrow.Float64))
-  ) {
-    throw new Error(
-      'ArrowLineRenderer DenseUnion path children must be List<FixedSizeList<Float32|Float64, 2 | 3 | 4>>'
-    );
-  }
-
-  const coordinateData = childPathData.children[0] as arrow.Data<
-    arrow.FixedSizeList<arrow.Float32 | arrow.Float64>
-  >;
-  const coordinateValueData = coordinateData.children[0] as
-    | arrow.Data<arrow.Float32>
-    | arrow.Data<arrow.Float64>;
-  const coordinateValues = coordinateValueData.values;
-  if (!(coordinateValues instanceof Float32Array) && !(coordinateValues instanceof Float64Array)) {
-    throw new Error('ArrowLineRenderer DenseUnion path child values must be Float32 or Float64');
-  }
-  return {coordinateData, coordinateValues, coordinateComponentCount};
-}
-
-function normalizeDenseUnionLineColors(
-  colors: arrow.Vector<ArrowLineColorType>,
-  normalized: DenseUnionNormalizedLines
-): arrow.Vector<ArrowLineColorType> {
-  if (arrow.DataType.isFixedSizeList(colors.type)) {
-    return repeatRowColorRows(
-      colors as arrow.Vector<ArrowLineRowColorType>,
-      normalized.sourceRowIndexChunks
-    );
-  }
-  if (isDenseUnionLineRowMappingIdentity(normalized)) {
-    return colors;
-  }
-  throw new Error(
-    'ArrowLineRenderer DenseUnion split rows require row colors; vertex colors are only supported when each geometry row produces one line row'
-  );
-}
-
-function normalizeDenseUnionLineTimestamps(
-  timestamps: arrow.Vector<ArrowLineSourceTimestampType>,
-  normalized: DenseUnionNormalizedLines
-): arrow.Vector<ArrowLineSourceTimestampType> {
-  if (isDenseUnionLineRowMappingIdentity(normalized)) {
-    return timestamps;
-  }
-  throw new Error(
-    'ArrowLineRenderer DenseUnion split rows do not support separate timestamp lists'
-  );
-}
-
-function repeatFloat32Rows(
-  source: arrow.Vector<arrow.Float32>,
-  sourceRowIndexChunks: readonly Int32Array[]
-): arrow.Vector<arrow.Float32> {
-  const dataChunks = sourceRowIndexChunks.map(sourceRowIndices => {
-    const values = new Float32Array(sourceRowIndices.length);
-    for (let rowIndex = 0; rowIndex < sourceRowIndices.length; rowIndex++) {
-      values[rowIndex] = Number(source.get(sourceRowIndices[rowIndex] ?? 0) ?? 0);
-    }
-    return arrow.makeData({
-      type: new arrow.Float32(),
-      length: values.length,
-      data: values
-    }) as arrow.Data<arrow.Float32>;
-  });
-  return new arrow.Vector(dataChunks);
-}
-
-function repeatRowColorRows(
-  source: arrow.Vector<ArrowLineRowColorType>,
-  sourceRowIndexChunks: readonly Int32Array[]
-): arrow.Vector<ArrowLineRowColorType> {
-  const dataChunks = sourceRowIndexChunks.map(sourceRowIndices => {
-    const values = new Uint8Array(sourceRowIndices.length * 4);
-    for (let rowIndex = 0; rowIndex < sourceRowIndices.length; rowIndex++) {
-      const color = source.get(sourceRowIndices[rowIndex] ?? 0);
-      if (!isVectorLike(color) || color.length !== 4) {
-        throw new Error('ArrowLineRenderer row colors must be FixedSizeList<Uint8, 4>');
-      }
-      const valueOffset = rowIndex * 4;
-      values[valueOffset] = Number(color.get(0) ?? 0);
-      values[valueOffset + 1] = Number(color.get(1) ?? 0);
-      values[valueOffset + 2] = Number(color.get(2) ?? 0);
-      values[valueOffset + 3] = Number(color.get(3) ?? 0);
-    }
-    return makeArrowFixedSizeListVector(new arrow.Uint8(), 4, values)
-      .data[0] as arrow.Data<ArrowLineRowColorType>;
-  });
-  return new arrow.Vector(dataChunks);
-}
-
-function isDenseUnionLineRowMappingIdentity(normalized: DenseUnionNormalizedLines): boolean {
-  let outputRowIndex = 0;
-  for (const sourceRowIndices of normalized.sourceRowIndexChunks) {
-    for (const sourceRowIndex of sourceRowIndices) {
-      if (sourceRowIndex !== outputRowIndex) {
-        return false;
-      }
-      outputRowIndex++;
-    }
-  }
-  return outputRowIndex === normalized.sourceRowCount;
-}
-
-function getDenseUnionGeometryKind(
-  denseUnionType: arrow.DenseUnion,
-  typeId: number,
-  childIndex: number
-): DenseUnionGeometryKind {
-  const childName = denseUnionType.children[childIndex]?.name.toLowerCase().replace(/[^a-z]/g, '');
-  if (childName?.includes('multilinestring')) {
-    return 'MultiLineString';
-  }
-  if (childName?.includes('linestring')) {
-    return 'LineString';
-  }
-  if (childName?.includes('multipolygon')) {
-    return 'MultiPolygon';
-  }
-  if (childName?.includes('polygon')) {
-    return 'Polygon';
-  }
-  return getGeoArrowGeometryKindFromTypeId(typeId);
-}
-
-function getGeoArrowGeometryKindFromTypeId(typeId: number): DenseUnionGeometryKind {
-  switch (typeId % 10) {
-    case 1:
-      return 'Point';
-    case 2:
-      return 'LineString';
-    case 3:
-      return 'Polygon';
-    case 4:
-      return 'MultiPoint';
-    case 5:
-      return 'MultiLineString';
-    case 6:
-      return 'MultiPolygon';
-    case 7:
-      return 'GeometryCollection';
-    default:
-      throw new Error(`ArrowLineRenderer DenseUnion has unsupported GeoArrow type id ${typeId}`);
-  }
-}
-
-function isGeometryKindEnabled(
-  geometryKind: DenseUnionGeometryKind,
-  mode: ArrowLineRendererMode
-): boolean {
-  return mode === 'polygons'
-    ? geometryKind === 'Polygon' || geometryKind === 'MultiPolygon'
-    : geometryKind === 'LineString' || geometryKind === 'MultiLineString';
-}
-
-function assertDenseUnionChildListData(data: arrow.Data, label: string): void {
-  if (!arrow.DataType.isList(data.type)) {
-    throw new Error(`ArrowLineRenderer DenseUnion ${label} must use List nesting`);
-  }
-}
-
-function areOutputCoordinatesEqual(
-  values: number[],
-  firstPointIndex: number,
-  secondPointIndex: number
-): boolean {
-  const firstOffset = firstPointIndex * 4;
-  const secondOffset = secondPointIndex * 4;
-  return (
-    values[firstOffset] === values[secondOffset] &&
-    values[firstOffset + 1] === values[secondOffset + 1] &&
-    values[firstOffset + 2] === values[secondOffset + 2] &&
-    values[firstOffset + 3] === values[secondOffset + 3]
-  );
-}
-
-function isVectorLike(value: unknown): value is {
-  length: number;
-  get: (index: number) => unknown;
-} {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'length' in value &&
-    'get' in value &&
-    typeof (value as {get?: unknown}).get === 'function'
-  );
-}
-
-function makePathListData(
-  valueOffsets: Int32Array,
-  values: Float32Array
-): arrow.Data<ArrowLineCoordinateType> {
-  const coordinateData = makeArrowFixedSizeListVector(new arrow.Float32(), 4, values)
-    .data[0] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
-  const pathType = new arrow.List(new arrow.Field('coordinates', coordinateData.type, false));
-  return new arrow.Data(
-    pathType,
-    0,
-    valueOffsets.length - 1,
-    0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
-    [coordinateData]
-  ) as arrow.Data<ArrowLineCoordinateType>;
+  return sourceVectors as ArrowLineRendererNormalizedSourceVectors;
 }
 
 function getRequiredArrowVector<T extends arrow.DataType>(

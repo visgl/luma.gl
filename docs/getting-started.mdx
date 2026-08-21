@@ -113,17 +113,17 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         to="/examples/experimental/gpu-trace-viewer"
       >
         <OnboardingPoster
-          alt="A dense interactive trace processed entirely through a GPU command graph"
+          alt="A dense interactive trace analyzed and rendered on the GPU"
           className="luma-onboarding__feature-image"
           image="experimental/gpu-trace-viewer.jpg"
         />
         <div className="luma-onboarding__feature-content">
-          <span className="luma-onboarding__feature-package">GPU Command Graph</span>
-          <h3 className="luma-onboarding__feature-title">GPU Graph</h3>
+          <span className="luma-onboarding__feature-package">@luma.gl/experimental</span>
+          <h3 className="luma-onboarding__feature-title">GPU-native analytics</h3>
           <p className="luma-onboarding__feature-description">
             {'Compose culling, sorting, compute, and rendering without moving your data off the GPU.'}
           </p>
-          <span className="luma-onboarding__feature-link">See the graph in action →</span>
+          <span className="luma-onboarding__feature-link">Explore the trace →</span>
         </div>
       </Link>
     </div>
@@ -349,7 +349,7 @@ export function OnboardingPoster({image, alt, className, loading = 'lazy'}) {
         </p>
         <span className="luma-onboarding__path-meta">Engine API guide →</span>
       </Link>
-      <Link className="luma-onboarding__path" to="/docs/api-guide/gpu/gpu-data-processing">
+      <Link className="luma-onboarding__path" to="/docs/capabilities/gpu-data-compute">
         <span className="luma-onboarding__path-kicker">Move faster</span>
         <h3 className="luma-onboarding__path-title">Think in GPU compute.</h3>
         <p className="luma-onboarding__path-description">

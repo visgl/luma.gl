@@ -3,8 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const EXAMPLE_THUMBNAIL_ALIASES: Readonly<Record<string, string>> = {
-  'v10/gpgpu': 'gpu-tables/gpu-vector-storage-particles',
-  'deck/gpu-graph-explorer': 'showcase/packet-spraying',
   'experimental/gpu-graph-explorer': 'showcase/packet-spraying',
   'experimental/gpu-trace-scene': 'experimental/gpu-trace-viewer',
   'experimental/gpu-scene-graph': 'experimental/gpu-frustum-culling'

@@ -55,7 +55,7 @@ export type ArrowLineControlPanelProps = {
 
 export type ArrowLineControlPanelRowCountKind = keyof ArrowLineControlPanelRowLabels;
 export type ArrowLineControlPanelMode = ArrowLineRendererMode;
-export type ArrowLineControlPanelCoordinateKind = 'float32' | 'float64' | 'dense-union';
+export type ArrowLineControlPanelCoordinateKind = 'float32' | 'float64';
 export type ArrowLineControlPanelColorKind = 'none' | 'row-colors' | 'vertex-colors';
 export type ArrowLineControlPanelTimeKind = ArrowLineRendererTimeColumn;
 export type ArrowLineControlPanelCapKind = 'square' | 'round';
@@ -305,7 +305,6 @@ export function makeArrowLineSettingsSchema(
     device,
     TRIPS_PATH_VERTEX_STORAGE_BUFFER_COUNT
   );
-  const isPolygonMode = state.mode === 'polygons';
   return {
     title: 'Settings',
     sections: [
@@ -329,26 +328,17 @@ export function makeArrowLineSettingsSchema(
             label: 'Mode',
             type: 'select',
             persist: 'none',
-            options: [
-              {label: 'Lines', value: 'lines'},
-              {label: 'Polygon outlines', value: 'polygons'}
-            ]
+            options: [{label: 'Lines', value: 'lines'}]
           },
           {
             name: 'coordinateKind',
             label: 'Lines',
             type: 'select',
             persist: 'none',
-            options: isPolygonMode
-              ? [{label: 'DenseUnion - Polygon/MultiPolygon outlines', value: 'dense-union'}]
-              : [
-                  {label: 'Float32 - List<FixedSizeList<Float32, 4>>', value: 'float32'},
-                  {label: 'Float64 - List<FixedSizeList<Float64, 4>>', value: 'float64'},
-                  {
-                    label: 'DenseUnion - LineString/MultiLineString',
-                    value: 'dense-union'
-                  }
-                ]
+            options: [
+              {label: 'Float32 - List<FixedSizeList<Float32, 4>>', value: 'float32'},
+              {label: 'Float64 - List<FixedSizeList<Float64, 4>>', value: 'float64'}
+            ]
           },
           {
             name: 'colorKind',
@@ -358,9 +348,7 @@ export function makeArrowLineSettingsSchema(
             options: [
               {label: 'None', value: 'none'},
               {label: 'Row - FixedSizeList<Uint8, 4>', value: 'row-colors'},
-              ...(isPolygonMode
-                ? []
-                : [{label: 'Vertex - List<FixedSizeList<Uint8, 4>>', value: 'vertex-colors'}])
+              {label: 'Vertex - List<FixedSizeList<Uint8, 4>>', value: 'vertex-colors'}
             ]
           },
           {
@@ -370,8 +358,8 @@ export function makeArrowLineSettingsSchema(
             persist: 'none',
             options: [
               {label: 'None', value: 'none'},
-              ...(isPolygonMode ? [] : [{label: 'M coordinate - XYZM', value: 'xyzm'}]),
-              ...(isPolygonMode || !supportsTripsPath
+              {label: 'M coordinate - XYZM', value: 'xyzm'},
+              ...(!supportsTripsPath
                 ? []
                 : [{label: 'timestamp - List<TimestampMillisecond>', value: 'timestamps'}])
             ]
@@ -437,7 +425,7 @@ export function makeArrowLineSettingsSchema(
               ...(supportsStoragePath && state.timeKind !== 'timestamps'
                 ? [{label: 'Storage', value: 'storage'}]
                 : []),
-              ...(supportsTripsPath && state.timeKind === 'timestamps' && !isPolygonMode
+              ...(supportsTripsPath && state.timeKind === 'timestamps'
                 ? [{label: 'Trips', value: 'trips'}]
                 : []),
               {label: `Auto (${getAutoPathModelLabel(device, state.timeKind)})`, value: 'auto'}
@@ -453,7 +441,7 @@ export function makeArrowLineControlPanelHtml({
   deckPathAttributeBytesPerSegment
 }: ArrowLineControlPanelProps): string {
   return `\
-  <p>Renders Arrow line rows through <code>ArrowLineRenderer</code>, including DenseUnion line strings and polygon outlines.</p>
+  <p>Renders variable-length Arrow line rows through <code>ArrowLineRenderer</code>.</p>
   ${makeStatusRow('Batches', makeProgressBar())}
   ${makeMetricRow('Arrow line rows', PATH_COUNT_ID)}
   ${makeMetricRow('Generated segment rows', SEGMENT_COUNT_ID)}
@@ -539,13 +527,13 @@ function isArrowLineControlPanelRowCountKind(
 }
 
 function isArrowLineControlPanelMode(value: unknown): value is ArrowLineControlPanelMode {
-  return value === 'lines' || value === 'polygons';
+  return value === 'lines';
 }
 
 function isArrowLineControlPanelCoordinateKind(
   value: unknown
 ): value is ArrowLineControlPanelCoordinateKind {
-  return value === 'float32' || value === 'float64' || value === 'dense-union';
+  return value === 'float32' || value === 'float64';
 }
 
 function isArrowLineControlPanelColorKind(value: unknown): value is ArrowLineControlPanelColorKind {

@@ -5,7 +5,7 @@
 import type {NumberArray3} from '@math.gl/core';
 import type {WebXRInputState} from './webxr-manager';
 
-/** Experimental v10 world-space target ray derived from one WebXR input source. */
+/** Experimental 9.4 world-space target ray derived from one WebXR input source. */
 export type WebXRInputRay = {
   inputState: WebXRInputState;
   origin: NumberArray3;
@@ -20,7 +20,7 @@ export type WebXRInputRayPlaneIntersectionProps = {
   maxDistance?: number;
 };
 
-/** Experimental v10 world-space hit derived from one input ray and plane. */
+/** Experimental 9.4 world-space hit derived from one input ray and plane. */
 export type WebXRInputRayPlaneIntersection = {
   ray: WebXRInputRay;
   point: NumberArray3;

@@ -182,6 +182,6 @@ The projects solve related interaction problems in different environments. GPUCr
 provide cuXfilter feature parity, a migration layer, built-in chart integrations, or distributed
 GPU execution.
 
-See [GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-core) for the
+See GPU Primitives and Command Graphs for the
 underlying compute infrastructure and [GPU Coordinate Projection](/docs/api-reference/experimental/gpu-project)
 for another browser-native GPU data workflow.

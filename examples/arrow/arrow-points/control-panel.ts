@@ -310,8 +310,7 @@ export function makeArrowPointSettingsSchema(
             options: [
               {label: 'FixedSizeList<Float32, 2> (XY)', value: 'xy'},
               {label: 'FixedSizeList<Float32, 3> (XYM)', value: 'xym'},
-              {label: 'FixedSizeList<Float32, 4> (XYZM)', value: 'xyzm'},
-              {label: 'DenseUnion Point XY/XYM/XYZM', value: 'dense-union'}
+              {label: 'FixedSizeList<Float32, 4> (XYZM)', value: 'xyzm'}
             ]
           },
           {
@@ -478,7 +477,7 @@ function isRowCountKind(value: unknown): value is ArrowPointRowCountKind {
 }
 
 function isSourceKind(value: unknown): value is ArrowPointSourceKind {
-  return value === 'xy' || value === 'xym' || value === 'xyzm' || value === 'dense-union';
+  return value === 'xy' || value === 'xym' || value === 'xyzm';
 }
 
 function isTimeKind(value: unknown): value is ArrowPointTimeKind {

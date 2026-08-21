@@ -80,12 +80,12 @@ hold Ctrl or ⌘ while scrolling over the example to zoom its timeline.
 | Critical paths | Finds exact cycle-safe parent critical paths today and exposes the masks and diagnostics needed by focus/render workflows | `GPUTraceCriticalPath` |
 | Comparison and anomalies | Aligns operation dictionaries, compares current and baseline groups, scores regressions, and renders lazy chunked GPU masks without CPU row materialization | `GPUTraceComparison`, `GPUTraceAnomalyScoring` |
 | Progressive analysis | Spreads expensive index, full-trace, critical-path, and comparison work across frame-budgeted graph steps | Resumable plans with coherent generation publication |
-| Visible validation | Surfaces overflow, invalid topology, binding limits, preflight estimates, and graph failures in the side panel | Validation buffers, preflight cards, and GPU Core inspector |
+| Visible validation | Surfaces overflow, invalid topology, binding limits, preflight estimates, and graph failures in the side panel | Validation buffers, preflight cards, and GPU scheduling inspector |
 | Idle rendering | Renders only for view/data changes, picking, readback publication, or intentional animation | Invalidation-driven trace viewer loop |
 | 25M span capacity posture | Preflights large span/dependency selections, chunks storage, bounds per-frame work, and reports memory before committing | Dataset preflight and Desktop MAX device contract |
 
 `gpu-trace` owns the trace semantics in this table. Scheduling, budgeting, conditions, aliasing,
-instrumentation, and kernel selection remain generic GPU Core capabilities and can be reused by
+instrumentation, and kernel selection remain generic GPU scheduling capabilities and can be reused by
 non-trace workloads.
 
 ## Concepts
@@ -96,7 +96,7 @@ boundary between package algorithms and example-specific rendering policy, see
 
 ### A trace is an application domain, not a command-graph feature
 
-The generic [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
+The generic `GPUCommandGraph`
 knows about buffers, textures, compute passes, render passes, hazards, and encoding. It does not
 need processes, threads, spans, or dependency edges to schedule a particle simulation, culling
 renderer, image filter, or GPU analytics pipeline.
@@ -135,7 +135,7 @@ uneven source partitions remain visible; a compacted display position never repl
 canonical row or application object ID.
 
 Each trace span also projects into a normal
-[`GPUScene`](/docs/api-reference/experimental/gpu-core/gpu-scene) record. Generic visibility,
+`GPUScene` record. Generic visibility,
 renderer-owned resource groups, and indirect draw commands can therefore render a trace without
 adding trace-specific fields to the scene database.
 
@@ -237,7 +237,7 @@ Trace-specific classes, constants, helpers, and types are exported only from
 
 ## Related modules
 
-- [GPU Core](/docs/api-reference/experimental/gpu-core) owns generic scheduling, conditions,
+- GPU scheduling owns generic scheduling, conditions,
   budgeting, validation, and instrumentation.
-- [GPU Graph](./gpu-graph) provides general graph analytics without trace-specific semantics.
+- GPU analytics provides general graph analytics without trace-specific semantics.
 - [GPU Dataframe](./gpu-dataframe) provides columnar aggregation and comparison building blocks.

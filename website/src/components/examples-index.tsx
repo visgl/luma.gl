@@ -321,11 +321,9 @@ function getDefaultBackends(category: string): ExampleBackend[] {
 }
 
 function isGeneralPurposeGPUCategory(category: string): boolean {
-  return category === 'GPGPU' || category.startsWith('GPGPU Graph');
-}
-
-function isGPUGraphLayerCategory(category: string): boolean {
-  return category.startsWith('GPU Graph Layers');
+  return category === 'Compute and analytics' ||
+    category === 'Rendering and inspection' ||
+    category === 'Simulation and data';
 }
 
 function getDefaultDifficulty(category: string): ExampleDifficulty {
@@ -334,7 +332,6 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
     category === 'Experimental' ||
     category === 'WebGPU' ||
     isGeneralPurposeGPUCategory(category) ||
-    isGPUGraphLayerCategory(category) ||
     category.includes('Arrow')
   ) {
     return 'advanced';
@@ -345,8 +342,7 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
 function getDefaultMaturity(category: string): ExampleMaturity {
   return category === 'Experimental' ||
     category === 'WebGPU' ||
-    isGeneralPurposeGPUCategory(category) ||
-    isGPUGraphLayerCategory(category)
+    isGeneralPurposeGPUCategory(category)
     ? 'experimental'
     : 'stable';
 }
@@ -354,7 +350,6 @@ function getDefaultMaturity(category: string): ExampleMaturity {
 function getDefaultTopic(category: string): string {
   if (category === 'Tutorials') return 'fundamentals';
   if (category === 'Integrations') return 'integration';
-  if (isGPUGraphLayerCategory(category)) return 'integration';
   if (isGeneralPurposeGPUCategory(category)) return 'compute';
   if (category.includes('GPU Data') || category.includes('Arrow')) return 'data';
   if (category === 'API') return 'api';
@@ -373,17 +368,14 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
 
 function getCategoryEyebrow(category: string): string {
   if (category === 'WebGPU') return 'Next-generation graphics';
-  if (category === 'GPGPU Graph') return 'GPU data and compute pipelines';
-  if (category === 'GPGPU' || category === 'GPGPU Graph Modules') {
+  if (isGeneralPurposeGPUCategory(category)) {
     return 'Compute, projections, and GPU-native data';
   }
-  if (isGPUGraphLayerCategory(category)) return 'GPU-driven deck.gl integrations';
   if (category === 'Showcase') return 'Featured examples';
   if (category === 'Tutorials') return 'Learn by building';
   if (category === 'Experimental') return 'Emerging techniques';
   if (category === 'Integrations') return 'Works with your stack';
   if (category.includes('Arrow') || category.includes('Data')) return 'GPU-native data';
-  if (category.includes('Command Graph')) return 'Compute pipelines';
   return 'Core capabilities';
 }
 

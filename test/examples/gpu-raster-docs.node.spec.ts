@@ -62,7 +62,7 @@ describe('GPURaster raster concepts and execution documentation', () => {
     expect(rasterReference).toContain('<ExperimentalDocsTabs active="gpu-raster" />');
     expect(experimentalTabs).toContain("| 'gpu-raster'");
     expect(experimentalTabs).toContain("href: '/docs/api-reference/experimental/gpu-raster'");
-    expect(experimentalOverview).toContain('### GPU Core and GPU analytics');
+    expect(experimentalOverview).toContain('### GPU data and analytics');
     expect(experimentalOverview).toContain(
       '| [GPU Raster](/docs/api-reference/experimental/gpu-raster) |'
     );

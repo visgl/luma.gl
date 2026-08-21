@@ -51,8 +51,7 @@ const nodeOnlyTestPatterns = [
   'modules/webgl/test/adapter/webgl-adapter.spec.{ts,js}',
   'modules/webgl/test/context/state-tracker/deep-array-equal.spec.{ts,js}',
   'modules/webgl/test/utils/**/*.spec.{ts,js}',
-  'modules/arrow/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,arrow-polygon-renderer,arrow-polygon,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
-  'modules/geoarrow/test/geoarrow/geoarrow-interleaving.spec.{ts,js}',
+  'modules/arrow/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
   'modules/gltf/test/gltf/{lights,gltf-extension-support,gltf-animator}.spec.{ts,js}',
   'modules/gltf/test/parsers/{parse-gltf-animations,parse-pbr-material,parse-pbr-compressed-texture}.spec.{ts,js}',
   'modules/gltf/test/webgl-to-webgpu/**/*.spec.{ts,js}',
@@ -83,7 +82,7 @@ const nodeIncludePatterns = [
 // These plain specs are imported by an existing .node.spec wrapper or register the same shared
 // suite as one. Exclude the plain entry point so the shared module graph registers each suite once.
 const nodeWrapperSourcePatterns = [
-  'modules/arrow/test/arrow/{arrow-polygon,arrow-polygon-renderer,arrow-splats}.spec.{ts,js}',
+  'modules/arrow/test/arrow/arrow-splats.spec.{ts,js}',
   'modules/core/test/adapter/helpers/parse-shader-compiler-log.spec.{ts,js}',
   'modules/core/test/adapter-utils/format-compiler-log.spec.{ts,js}',
   'modules/core/test/shadertypes/data-type-utils.spec.{ts,js}',
@@ -112,7 +111,6 @@ const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/gltf/test/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/scene/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
-  'modules/math-geoarrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/gpgpu/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',

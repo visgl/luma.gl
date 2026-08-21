@@ -4,7 +4,7 @@
 
 import type {AnimationFrameCallback, AnimationFrameProvider} from '@luma.gl/engine';
 
-/** Experimental v10 XRSession-backed animation frame source. */
+/** Experimental 9.4 XRSession-backed animation frame source. */
 export class WebXRAnimationFrameProvider implements AnimationFrameProvider {
   readonly session: XRSession;
 

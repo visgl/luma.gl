@@ -151,8 +151,8 @@ describe('getting-started onboarding', () => {
       },
       {
         modifier: 'graph',
-        packageName: 'GPU Command Graph',
-        title: 'GPU Graph',
+        packageName: '@luma.gl/experimental',
+        title: 'GPU-native analytics',
         image: 'experimental/gpu-trace-viewer.jpg',
         route: '/examples/experimental/gpu-trace-viewer'
       }
@@ -190,7 +190,7 @@ describe('getting-started onboarding', () => {
     for (const learningPath of [
       '/docs/tutorials/hello-triangle',
       '/docs/api-guide/engine',
-      '/docs/api-guide/gpu/gpu-data-processing',
+      '/docs/capabilities/gpu-data-compute',
       '/docs/api-guide/shaders/shader-passes'
     ]) {
       expect(onboardingSource, `${learningPath} must remain an available learning path`).toContain(

@@ -19,14 +19,14 @@
 
 <p className="badges">
   <img src="https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square" alt="Experimental" />
-  <img src="https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square" alt="Private workspace" />
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
+  <img src="https://img.shields.io/badge/Availability-Public-green.svg?style=flat-square" alt="Published package" />
+  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From v9.4" />
 </p>
 
 ![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)
-![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)
+![Published package](https://img.shields.io/badge/Availability-Public-green.svg?style=flat-square)
 
-A private, experimental, independently developed retained rendering interface implemented in the
+A published, experimental, independently developed retained rendering interface implemented in the
 spirit of ANARI on top of luma.gl.
 
 > **Independent ANARI-inspired project:** This is not an official ANARI implementation. It is not
@@ -41,12 +41,10 @@ passes, optional bloom, WebGPU software ray tracing, and HDR presentation when t
 configured for extended dynamic range. The ANARI facade adapts retained objects into shared renderer
 descriptors; it does not define a second BRDF, renderer, or asset loader.
 
-## Private workspace
+## Installation
 
-`@luma.gl/scene` is a private luma.gl workspace and is not published to npm.
-
-From a luma.gl checkout, install repository dependencies with `yarn install`. Other repository
-workspaces can declare a dependency on the package with `"@luma.gl/scene": "workspace:*"`.
+Install `@luma.gl/scene` from npm with `yarn add @luma.gl/scene`. Its APIs may evolve without a 9.4
+semver compatibility promise.
 
 ## Quick start
 
@@ -206,7 +204,7 @@ fallback instead of automatically selecting WebGPU. HDR-capable displays automat
 ### JSON scene playground
 
 Open `/playground.html` on the same development-server URL, or select **JSON LAB** from the
-showcase. The private, experimental playground provides a deck.gl-style JSON editor with
+showcase. The experimental playground provides a JSON editor with
 `@@type` subtype declarations, named geometries and materials, retained surface references,
 transform instances, animated lights, renderer-independent scene data, frame renderer controls, and
 live HDR-capable rendering.

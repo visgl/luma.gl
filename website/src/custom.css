@@ -220,7 +220,7 @@ main .container {
   }
 }
 
-/* GPU Core documentation uses one visual grammar: compute is blue, render is purple,
+/* GPU documentation uses one visual grammar: compute is blue, render is purple,
  * resources are neutral, indirect work is amber, and selected state uses the site accent. */
 .markdown .gpu-example-card,
 .markdown .gpu-core-anatomy,

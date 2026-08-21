@@ -189,7 +189,7 @@ display an unsupported-device state. GPU Dataframe does not transparently switch
 
 Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, full SQL
 semantics, and complete cuDF compatibility are outside the supported scope. See
-[GPU Primitives and Command Graphs](/docs/api-reference/experimental/gpu-core) for
+GPU Primitives and Command Graphs for
 the underlying WebGPU execution infrastructure.
 
 ## Related pages

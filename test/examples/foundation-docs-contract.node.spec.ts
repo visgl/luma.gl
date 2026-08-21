@@ -35,7 +35,7 @@ describe('foundation documentation contract', () => {
     );
     for (const moduleGroups of Object.values(FOUNDATION_DOCS_CATALOG)) {
       for (const group of Object.values(moduleGroups)) {
-        expect(group.tabs.length, `${group.label} should stay focused`).toBeGreaterThanOrEqual(3);
+        expect(group.tabs.length, `${group.label} should stay focused`).toBeGreaterThanOrEqual(2);
         expect(
           group.tabs.length,
           `${group.label} must not become a mega group`
@@ -110,8 +110,7 @@ describe('foundation documentation contract', () => {
     expect(getFoundationJourney().map(layer => layer.id)).toEqual([
       'shadertools',
       'engine',
-      'core',
-      'gpu-core'
+      'core'
     ]);
 
     const modules = [

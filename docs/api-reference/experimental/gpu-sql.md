@@ -41,5 +41,5 @@ Applications still own command submission, synchronization, result readback, and
 ## Related modules
 
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe)
-- [GPU Core](/docs/api-reference/experimental/gpu-core)
+- GPU scheduling
 - [Arrow](/docs/api-reference/arrow)

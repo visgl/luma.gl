@@ -10,7 +10,7 @@ without unnecessary CPU round trips. luma.gl is a modular, TypeScript-first fram
 data-intensive visualization, portable GPU programming, and high-quality interactive rendering.
 
 Choose the level you need: typed columnar data, GPU-resident dataframes, graph and raster
-analytics, reusable compute operations, GPU command graphs, rendering primitives, composable
+analytics, reusable compute operations, rendering primitives, composable
 visual effects, or retained three-dimensional scenes.
 
 **Massive data. GPU-native compute. Interactive visualization. WebGPU and WebGL2.**
@@ -18,19 +18,19 @@ visual effects, or retained three-dimensional scenes.
 ## The framework, module by module
 
 <div className="docs-api-card-grid">
-  <a className="docs-api-card" href="/docs/api-guide/gpu/gpu-data-processing">
+  <a className="docs-api-card" href="/docs/capabilities/gpu-data-compute">
     <span className="docs-api-card__kind">GPU-native computation</span>
     <strong>Compute, tables, and Arrow</strong>
-    <span>Connect GPU-resident columns, reusable operations, command graphs, filtering, aggregation, and large-scale visualization.</span>
+    <span>Connect GPU-resident columns, reusable operations, filtering, aggregation, and large-scale visualization.</span>
     <span className="docs-api-card__meta">@luma.gl/gpgpu · @luma.gl/experimental</span>
-    <span className="docs-api-card__meta">@luma.gl/arrow · experimental / private</span>
+    <span className="docs-api-card__meta">@luma.gl/arrow · experimental package</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/experimental">
     <span className="docs-api-card__kind">Experimental GPU analytics</span>
     <strong>Dataframes, graphs, and rasters</strong>
     <span>Query GPU-resident tables, discover graph communities, and analyze cached scientific or geospatial raster tiles without unnecessary readback.</span>
-    <span className="docs-api-card__meta">GPU Dataframe · GPU Graph · GPURaster</span>
-    <span className="docs-api-card__meta">@luma.gl/experimental · private</span>
+    <span className="docs-api-card__meta">GPU Dataframe · GPU analytics · GPURaster</span>
+    <span className="docs-api-card__meta">@luma.gl/experimental · experimental package</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/core">
     <span className="docs-api-card__logos" role="group" aria-label="Supported graphics backends">
@@ -108,7 +108,7 @@ visual effects, or retained three-dimensional scenes.
     <span className="docs-api-card__kind">Experimental retained scenes</span>
     <strong>ANARI / Scene API</strong>
     <span>Describe cameras, geometry, lights, and renderers; explore glTF and experimental OpenUSD import in the ANARI Playground.</span>
-    <span className="docs-api-card__meta">@luma.gl/scene · experimental / private</span>
+    <span className="docs-api-card__meta">@luma.gl/scene · experimental package</span>
     <span className="docs-api-card__disclaimer">ANARI-inspired; not an ANARI-conformant implementation.</span>
   </a>
   <a className="docs-api-card" href="/docs/api-reference/gltf">
@@ -147,7 +147,7 @@ visual effects, or retained three-dimensional scenes.
     <span className="docs-api-card__kind">Experimental neural rendering</span>
     <strong>Streaming Gaussian splats</strong>
     <span>Render progressively streamed captured scenes with view-dependent harmonics, semantic picking and filtering, and bounded tile residency.</span>
-    <span className="docs-api-card__meta">@luma.gl/splats · experimental / private</span>
+    <span className="docs-api-card__meta">@luma.gl/splats · experimental package</span>
   </a>
 </div>
 
@@ -162,8 +162,8 @@ visual effects, or retained three-dimensional scenes.
 | Status | Meaning |
 | --- | --- |
 | **Available** | Implemented in a published framework module, subject to documented device and browser requirements. |
-| **Evolving** | Implemented in a published module, but integration, feature coverage, or the v10 API remains incomplete. |
-| **Experimental** | Implemented in an incubating or private module whose public contract may still change. |
+| **Evolving** | Implemented in a published module, but integration or feature coverage remains incomplete. |
+| **Experimental** | Implemented in a published incubating module whose public contract may still change. |
 | **Opportunity** | A useful extension or known limitation; do not interpret it as existing functionality. |
 
 `WebGPU + WebGL2` means an application-facing path exists for both backends; exact shader,
@@ -176,7 +176,7 @@ require compute shaders, storage resources, or another WebGPU-specific implement
   <a className="docs-api-card" href="/docs/capabilities/gpu-data-compute">
     <span className="docs-api-card__kind">Data and compute</span>
     <strong>GPU-resident analytics</strong>
-    <span>Tables, Arrow, command graphs, dataframe operations, graph analytics, raster processing, queries, and GPU-driven visualization.</span>
+    <span>Tables, Arrow, dataframe operations, raster processing, queries, and GPU-driven visualization.</span>
     <span className="docs-api-card__meta">WebGPU-first analytical capabilities</span>
   </a>
   <a className="docs-api-card" href="/docs/capabilities/rendering-visualization">

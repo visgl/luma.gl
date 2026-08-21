@@ -24,14 +24,14 @@ type WebXRWebGPUViewResources = {
   referenceCount: number;
 };
 
-/** Experimental v10 WebXR session setup options. */
+/** Experimental 9.4 WebXR session setup options. */
 export type WebXRManagerProps = {
   referenceSpaceType?: XRReferenceSpaceType;
   layerInit?: XRWebGLLayerInit;
   projectionLayerInit?: XRProjectionLayerInit;
 };
 
-/** Experimental v10 per-view render state for one active XR frame. */
+/** Experimental 9.4 per-view render state for one active XR frame. */
 export type WebXRViewState = {
   xrView: XRView;
   eye: XREye;
@@ -43,7 +43,7 @@ export type WebXRViewState = {
   camera: XRCamera | null;
 };
 
-/** Experimental v10 render state resolved from one active XR frame. */
+/** Experimental 9.4 render state resolved from one active XR frame. */
 export type WebXRFrameState = {
   xrFrame: XRFrame;
   /** The shared WebGL framebuffer or first WebGPU view framebuffer. */
@@ -51,7 +51,7 @@ export type WebXRFrameState = {
   views: readonly WebXRViewState[];
 };
 
-/** Experimental v10 input state for one active XR frame. */
+/** Experimental 9.4 input state for one active XR frame. */
 export type WebXRInputState = {
   inputSource: XRInputSource;
   index: number;
@@ -68,7 +68,7 @@ export type WebXRInputState = {
 };
 
 /**
- * Experimental v10 WebXR session and per-view render-state helper.
+ * Experimental 9.4 WebXR session and per-view render-state helper.
  *
  * WebGL sessions use a shared XRWebGLLayer framebuffer. WebGPU sessions use
  * XRGPUBinding projection layers and borrow compositor-owned per-view textures.

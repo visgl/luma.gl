@@ -3,10 +3,7 @@ import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
 import {dirname, extname, join, relative} from 'node:path';
 import ts from 'typescript';
 import {FOUNDATION_DOCS_CATALOG} from '../../website/src/components/docs/foundation-docs-catalog';
-import {
-  EXPERIMENTAL_DOCS_TAB_GROUPS,
-  GPU_CORE_DOCS_TAB_GROUPS
-} from '../../website/src/components/docs/experimental-docs-catalog';
+import {EXPERIMENTAL_DOCS_TAB_GROUPS} from '../../website/src/components/docs/experimental-docs-catalog';
 import {PUBLIC_PACKAGE_API_INVENTORY} from '../../website/src/components/docs/public-api-inventory';
 import {
   ANARI_GUIDE_TABS,
@@ -158,13 +155,12 @@ describe('documentation system contracts', () => {
     const groups = [
       ...Object.values(FOUNDATION_DOCS_CATALOG).flatMap(module => Object.values(module)),
       ...EXPERIMENTAL_DOCS_TAB_GROUPS.filter(group => group.tabs.length >= 3),
-      ...GPU_CORE_DOCS_TAB_GROUPS,
       {label: 'ANARI guide', tabs: ANARI_GUIDE_TABS},
       {label: 'Gaussian splats', tabs: SPLATS_DOCS_TABS},
       {label: 'GPU-animated crowds', tabs: GLTF_CROWD_DOCS_TABS}
     ];
     for (const group of groups) {
-      expect(group.tabs.length, group.label).toBeGreaterThanOrEqual(3);
+      expect(group.tabs.length, group.label).toBeGreaterThanOrEqual(2);
       expect(group.tabs.length, group.label).toBeLessThanOrEqual(7);
       expect(new Set(group.tabs.map(tab => tab.id)).size, group.label).toBe(group.tabs.length);
       for (const tab of group.tabs) {

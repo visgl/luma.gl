@@ -80,7 +80,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
     title: 'GPGPU',
     packageName: '@luma.gl/gpgpu',
     documentationPath: 'docs/api-reference/gpgpu',
-    capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
+    capabilities: ['GPU workflows', 'Compute modules', 'Zero readback'],
     descriptions: [/compute modules and rendering/i, /GPU-native pipeline/i]
   }
 ] as const;

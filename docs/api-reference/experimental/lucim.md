@@ -3,13 +3,13 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 # LuCIM GPU Volume Algorithms
 
 <DocumentationBadges>
-  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
   <DocumentationBadge tone="webgpu">WebGPU required</DocumentationBadge>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
 </DocumentationBadges>
 
 `@luma.gl/experimental/lucim` contributes three-dimensional image-processing algorithms to a
-caller-owned [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph).
+caller-owned `GPUCommandGraph`.
 LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated
 n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility
 layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while LuCIM targets

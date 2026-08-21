@@ -1,13 +1,13 @@
 ---
 title: Gaussian Splats
-description: Render progressive Gaussian splats through a WebGPU command graph or WebGL2 fallback.
+description: Render progressive Gaussian splats through a WebGPU pipeline or WebGL2 fallback.
 sidebar_custom_props:
-  description: Render progressive Gaussian splats through a WebGPU graph or WebGL2 fallback.
+  description: Render progressive Gaussian splats through a WebGPU pipeline or WebGL2 fallback.
   backends: [webgpu, webgl2]
   display: hdr-capable
   difficulty: intermediate
   maturity: experimental
-  topics: [rendering, transparency, streaming, gpu-graph, hdr]
+  topics: [rendering, transparency, streaming, compute, hdr]
 ---
 
 import {GaussianSplatsExample} from '@site/src/examples';
@@ -19,8 +19,8 @@ The Gaussian Splats showcase renders a deterministic, colorful scene with the ex
 owned, so additional splats can appear progressively without concatenating or reuploading the
 previously prepared GPU data.
 
-WebGPU uses a compiled GPU command graph for camera-aware Gaussian projection, visibility,
-transparency ordering, and rendering. Expand **GPU graph inspector** for per-node encoding
+WebGPU uses a compiled GPU pipeline for camera-aware Gaussian projection, visibility,
+transparency ordering, and rendering. Expand the **pipeline inspector** for per-stage encoding
 diagnostics, or select **CPU depth ordering** to compare against the original renderer. WebGL2
 provides its existing attribute-backed fallback. The example keeps file
 format parsing separate: loaders.gl owns `.ply`, `.splat`, `.ksplat`, and related loaders, while

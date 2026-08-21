@@ -143,8 +143,6 @@ describe('experimental GPU module naming', () => {
   test('publishes only canonical documentation routes', () => {
     const experimentalDocumentation = path.join(process.cwd(), 'docs/api-reference/experimental');
     for (const moduleName of [
-      'gpu-core',
-      'gpu-graph',
       'gpu-raster',
       'gpu-project',
       'gpu-dataframe',
@@ -157,6 +155,8 @@ describe('experimental GPU module naming', () => {
         moduleName
       ).toBe(true);
     }
+    expect(existsSync(path.join(experimentalDocumentation, 'gpu-core'))).toBe(false);
+    expect(existsSync(path.join(experimentalDocumentation, 'gpu-graph.md'))).toBe(false);
     for (const moduleName of UNPUBLISHED_WORKING_NAMES) {
       expect(existsSync(path.join(experimentalDocumentation, `${moduleName}.md`))).toBe(false);
       expect(existsSync(path.join(experimentalDocumentation, moduleName))).toBe(false);

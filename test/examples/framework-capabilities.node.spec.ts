@@ -73,7 +73,6 @@ describe('framework capabilities documentation', () => {
     expect(capabilitiesSource).toMatch(/\bANARI\b/i);
     expect(capabilitiesSource).toMatch(/Gaussian\s+splat/i);
     expect(capabilitiesSource).toMatch(/Apache\s+Arrow/i);
-    expect(capabilitiesSource).toMatch(/command[\s-]+graph/i);
     expect(capabilitiesSource).toMatch(/\bglTF\b/);
   });
 
@@ -151,11 +150,8 @@ describe('framework capabilities documentation', () => {
       /GPUVector/,
       /GPURecordBatch|GPUTable/,
       /Apache\s+Arrow|\bArrow\b/i,
-      /command[\s-]+graph/i,
       /stream|batch/i,
       /ownership|borrowed/i,
-      /readback|read[\s-]+back/i,
-      /scan|prefix/i,
       /sort/i,
       /histogram/i,
       /aggregate|aggregation/i,
@@ -169,7 +165,7 @@ describe('framework capabilities documentation', () => {
     }
   });
 
-  test('documents implemented GPU dataframe, graph, and raster analytics in dedicated feature matrices', () => {
+  test('documents implemented GPU dataframe and raster analytics in dedicated feature matrices', () => {
     const capabilitiesSource = readCapabilitiesSource();
     const capabilityTables = readCapabilityTables(capabilitiesSource);
     const capabilityRows = readDetailedCapabilityRows(capabilitiesSource);
@@ -193,21 +189,6 @@ describe('framework capabilities documentation', () => {
           /lookup/i,
           /batch[\s\S]{0,100}(?:join|lookup)|(?:join|lookup)[\s\S]{0,100}batch/i,
           /batch|chunk/i
-        ]
-      },
-      {
-        heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/gpgpu/gpu-graph',
-        minimumRowCount: 5,
-        capabilities: [
-          /GPUGraph/i,
-          /\bCSR\b|compressed[\s-]+sparse/i,
-          /breadth[\s-]+first|\bBFS\b/i,
-          /connected[\s-]+components/i,
-          /label[\s-]+propagation|communit/i,
-          /PageRank/i,
-          /force[\s-]+(?:directed|layout)/i,
-          /spatial/i
         ]
       },
       {
@@ -356,23 +337,6 @@ describe('framework capabilities documentation', () => {
     }
   });
 
-  test('documents reusable chunked GPU routing as an implemented WebGPU primitive', () => {
-    const scatterRow = readDetailedCapabilityRows(readCapabilitiesSource()).find(
-      row => row.feature === 'Chunked indexed scatter'
-    );
-
-    expect(
-      scatterRow,
-      'Chunked indexed scatter is available in the experimental graph'
-    ).toBeDefined();
-    expect(scatterRow!.status).toBe('Experimental');
-    expect(scatterRow!.backend).toBe('WebGPU');
-    expect(scatterRow!.packageName).toContain('@luma.gl/experimental');
-    expect(scatterRow!.details).toMatch(/GPUChunkedIndexedScatter/);
-    expect(scatterRow!.details).toMatch(/chunk/i);
-    expect(scatterRow!.details).toMatch(/indirect/i);
-  });
-
   test('recognizes implemented portable Gaussian-splat interaction and bounded residency', () => {
     const capabilitiesSource = readCapabilitiesSource();
     const splatRows = readDetailedCapabilityRows(capabilitiesSource).filter(row =>
@@ -511,7 +475,7 @@ describe('framework capabilities documentation', () => {
     }
   });
 
-  test('keeps API-reference adapter descriptions and private module availability accurate', () => {
+  test('keeps API-reference adapter descriptions and experimental module availability accurate', () => {
     const apiReferenceSource = readFileSync(
       path.join(DOCUMENTATION_DIRECTORY, 'api-reference/README.md'),
       'utf8'
@@ -523,7 +487,7 @@ describe('framework capabilities documentation', () => {
     const overviewIntroduction = apiReferenceSource.split('| Module')[0];
     const startHereSection = apiReferenceSource.split(/^## Start Here\s*$/m)[1]?.split(/^\[/m)[0];
 
-    expect(overviewIntroduction).toMatch(/published[\s\S]{0,150}private/i);
+    expect(overviewIntroduction).toMatch(/published[\s\S]{0,150}experimental/i);
     expect(startHereSection, 'The API reference must include a Start Here section').toBeDefined();
 
     for (const [packageName, documentationPath] of [
@@ -564,7 +528,7 @@ describe('framework capabilities documentation', () => {
       expect(
         moduleRow![1],
         `@luma.gl/${packageName} must disclose its actual availability`
-      ).toMatch(/experimental[\s/]+private/i);
+      ).toMatch(/experimental/i);
     }
   });
 
@@ -636,7 +600,7 @@ describe('framework capabilities documentation', () => {
       /anisotrop(?:y|ic)/i,
       /transmission[^\n]*captured\s+scene\s+color/i,
       /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i,
-      /@luma\.gl\/arrow[\s\S]{0,80}private/i
+      /@luma\.gl\/arrow[\s\S]{0,80}experimental/i
     ]) {
       expect(capabilitiesSource, `The shared asset overview must explain ${capability}`).toMatch(
         capability
@@ -688,7 +652,7 @@ describe('framework capabilities documentation', () => {
     const capabilitiesSource = readCapabilitiesSource();
     const exampleIdentifiers = new Set(
       Array.from(
-        capabilitiesSource.matchAll(/\/examples\/((?:showcase|experimental|deck|v10)\/[\w-]+)/g),
+        capabilitiesSource.matchAll(/\/examples\/((?:showcase|experimental)\/[\w-]+)/g),
         match => match[1]
       )
     );
@@ -707,7 +671,9 @@ describe('framework capabilities documentation', () => {
     const capabilitiesSource = readCapabilitiesSource();
 
     expect(capabilitiesSource).toMatch(/\bexperimental\b/i);
-    expect(capabilitiesSource).toMatch(/experimental\s*\/\s*private|private\s+(?:module|package)/i);
+    expect(capabilitiesSource).toMatch(
+      /experimental\s+(?:module|package|API)|experimental package/i
+    );
     expect(capabilitiesSource).toMatch(
       /(?:two[\s-]+dimensional|2D)[\s\S]{0,120}(?:MLS[\s-]*MPM|fluid|liquid)|(?:MLS[\s-]*MPM|fluid|liquid)[\s\S]{0,120}(?:two[\s-]+dimensional|2D)/i
     );

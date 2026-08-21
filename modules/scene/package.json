@@ -1,10 +1,12 @@
 {
   "name": "@luma.gl/scene",
   "version": "9.4.0-alpha.4",
-  "private": true,
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -16,7 +18,8 @@
     },
     "./schemas": {
       "types": "./dist/schemas.d.ts",
-      "import": "./dist/schemas.js"
+      "import": "./dist/schemas.js",
+      "require": "./dist/schemas.cjs"
     },
     "./gltf": {
       "types": "./dist/gltf.d.ts",

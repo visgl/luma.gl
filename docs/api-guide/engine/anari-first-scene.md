@@ -27,23 +27,12 @@ The renderer chooses model creation, shader selection, instance batching, light 
 
 This is particularly useful when an application should expose a stable scene contract to multiple visualization tools, scene importers, or potential rendering backends.
 
-## Use the private workspace
+## Install the package
 
-`@luma.gl/scene` is a private luma.gl workspace and is not published to npm. Install repository
-dependencies from a luma.gl checkout:
+`@luma.gl/scene` is published as an experimental package:
 
 ```bash
-yarn install
-```
-
-Other in-repository workspaces can depend on the private package through:
-
-```json
-{
-  "dependencies": {
-    "@luma.gl/scene": "workspace:*"
-  }
-}
+yarn add @luma.gl/scene
 ```
 
 At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.

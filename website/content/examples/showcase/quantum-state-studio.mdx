@@ -24,7 +24,7 @@ amplitudes back into JavaScript. One generic kernel applies a 2x2 complex matrix
 optionally conditioned on one control bit; common and controlled gates are small descriptors over
 that primitive.
 
-The simulation `GPUCommandGraph` orders gate applications, derives probability and phase, and
+The simulation pipeline orders gate applications, derives probability and phase, and
 reduces probability normalization for every snapshot. A second graph derives the selected qubit's
 reduced Bloch vector and connected Z-correlation matrix. The luma.gl renderer binds those buffers
 directly to one cinematic linked-view model.

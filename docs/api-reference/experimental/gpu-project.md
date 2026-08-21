@@ -50,7 +50,6 @@ WebGPU execution over both `float32x2` and raw binary64 `uint32x4` source coordi
   execution="Explicit benchmark runs; no background animation"
   compatibility="WebGPU with a CPU reference fallback"
   sourceHref="https://github.com/visgl/luma.gl/tree/master/website/src/components/docs/projection-benchmark.tsx"
-  inspectorHref="/docs/api-reference/experimental/gpu-core/concepts#instrumentation-and-autotuning"
 />
 
 <ProjectionBenchmark />
@@ -212,6 +211,6 @@ const gpuReport = await runGPUProjectionBenchmark(device, options);
 ```
 
 See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
-[GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),
+GPU spatial query benchmarks,
 and [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision) for related
 GPU execution and precision techniques.

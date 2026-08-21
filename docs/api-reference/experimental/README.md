@@ -44,15 +44,13 @@ stable Engine models and Shadertools passes.
 
 ## Module catalog
 
-### GPU Core and GPU analytics
+### GPU data and analytics
 
 | Module | Use it for |
 | --- | --- |
 | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
-| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
-| `@luma.gl/experimental/models` | Private path and polygon rendering models, GPU input helpers, and model-specific planners. |
-| [`@luma.gl/gpgpu/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
-| [`@luma.gl/gpgpu/gpu-graph`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
+| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Record batches, tables, schemas, bindings, computations, and generic table planners. |
+| `@luma.gl/experimental/models` | Path and polygon rendering models, GPU input helpers, and model-specific planners. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
 | [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
@@ -97,7 +95,7 @@ stable Engine models and Shadertools passes.
 ## Core concepts
 
 Experimental modules follow the same ownership model as the rest of luma.gl: callers own the frame
-loop and command submission unless a reference explicitly says otherwise. GPU Core contributors
+loop and command submission unless a reference explicitly says otherwise. GPU scheduling contributors
 declare work but do not submit it. Renderer and simulation references state which resources they
 own, borrow, cache, or expose.
 
@@ -107,7 +105,7 @@ submission, data hazard, indirect work, and GPU residency terminology.
 ## Limits and compatibility
 
 Experimental APIs may change or be removed without the compatibility guarantees of stable
-packages. Many GPU Core and simulation modules require WebGPU; individual references state backend,
+packages. Many GPU scheduling and simulation modules require WebGPU; individual references state backend,
 feature, capacity, and memory requirements. Treat benchmark results as workload- and adapter-
 specific rather than universal performance claims.
 

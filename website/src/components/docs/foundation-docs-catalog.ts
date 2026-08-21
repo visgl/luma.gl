@@ -4,7 +4,7 @@ export type {DocumentationTab} from './docs-page-tabs';
 
 /**
  * Canonical, intentionally small navigation groups for the foundational luma.gl modules.
- * Keep groups between three and seven entries: pages should show immediate peers, not a
+ * Keep groups between two and seven entries: pages should show immediate peers, not a
  * second table of contents.
  */
 export const FOUNDATION_DOCS_CATALOG = {
@@ -22,7 +22,6 @@ export const FOUNDATION_DOCS_CATALOG = {
       tabs: [
         {id: 'initialization', label: 'Initialization', href: '/docs/api-guide/gpu/gpu-initialization'},
         {id: 'resources', label: 'Resources', href: '/docs/api-guide/gpu/gpu-resources'},
-        {id: 'data-processing', label: 'Data processing', href: '/docs/api-guide/gpu/gpu-data-processing'}
       ]
     },
     'guide-rendering': {
@@ -276,6 +275,5 @@ export type ShadertoolsDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.shadertools)[
 export const FOUNDATION_ADJACENCIES = [
   {id: 'shadertools', label: 'Shadertools', href: '/docs/api-reference/shadertools'},
   {id: 'engine', label: 'Engine', href: '/docs/api-reference/engine'},
-  {id: 'core', label: 'Core', href: '/docs/api-reference/core'},
-  {id: 'gpu-core', label: 'GPU Core', href: '/docs/api-reference/experimental/gpu-core'}
+  {id: 'core', label: 'Core', href: '/docs/api-reference/core'}
 ] as const;

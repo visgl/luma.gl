@@ -16,8 +16,6 @@ const EXAMPLE_IMAGES_DIRECTORY = path.join(process.cwd(), 'website/static/images
 const RECOVERED_FLAGSHIP_EXAMPLES = [
   'showcase/globe',
   'showcase/billion-point-spatial-atlas',
-  'deck/luspatial-taxi',
-  'deck/gpu-culled-trace',
   'showcase/postprocessing',
   'experimental/scene-playground'
 ] as const;
@@ -30,7 +28,7 @@ describe('live example catalog thumbnails', () => {
     const exampleIdentifiers = readLiveExampleIdentifiers();
 
     expect(exampleIdentifiers.length).toBeGreaterThan(0);
-    expect(exampleIdentifiers).toContain('v10/gpgpu');
+    expect(exampleIdentifiers).not.toContain('v10/gpgpu');
     expect(exampleIdentifiers).toContain('experimental/scene-playground');
 
     for (const exampleIdentifier of exampleIdentifiers) {
@@ -48,9 +46,6 @@ describe('live example catalog thumbnails', () => {
       ).toBeGreaterThan(0);
     }
 
-    expect(resolveExampleThumbnailPath('v10/gpgpu')).toBe(
-      path.join(EXAMPLE_IMAGES_DIRECTORY, 'gpu-tables/gpu-vector-storage-particles.jpg')
-    );
     expect(resolveExampleThumbnailPath('experimental/scene-playground')).toBe(
       path.join(EXAMPLE_IMAGES_DIRECTORY, 'experimental/scene-playground.jpg')
     );

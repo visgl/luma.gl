@@ -9,7 +9,7 @@ import {GPUTraceSceneExample} from '@site/src/examples';
 ## Overview
 
 `GPUTraceScene` uploads a canonical execution trace once and projects its spans into the existing
-generic [`GPUScene`](/docs/api-reference/experimental/gpu-core/gpu-scene) draw database.
+generic `GPUScene` draw database.
 Timing, lanes, processes, threads, parent relationships, dependency links, and bidirectional
 adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside
 the shared scene abstraction.
@@ -67,8 +67,8 @@ Every span projects into one ordinary 128-byte `GPUScene` record:
 - Parent references, process/thread membership, classification, and graph edges remain in the
   trace model's separate canonical buffers.
 
-This means [`GPUSceneDrawGeneration`](/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation)
-and [`GPUSceneResourceGroups`](/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups)
+This means `GPUSceneDrawGeneration`
+and `GPUSceneResourceGroups`
 consume trace scenes without a trace-specific renderer or additional fields in `GPUScene`.
 
 The projection is created explicitly during ingestion. Its memory cost is observable through

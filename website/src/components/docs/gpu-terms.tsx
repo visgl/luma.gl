@@ -26,7 +26,7 @@ export const GPU_DOCUMENTATION_TERMS = {
 
 export type GPUTermName = keyof typeof GPU_DOCUMENTATION_TERMS;
 
-/** Keyboard-accessible inline terminology shared by Core, Engine, Shadertools, and GPU Core docs. */
+/** Keyboard-accessible inline terminology shared by Core, Engine, Shadertools, and GPU docs. */
 export function GPUTerm({children, term}: {children?: ReactNode; term: GPUTermName}): ReactNode {
   const tooltipIdentifier = useId();
   return (

@@ -1,10 +1,12 @@
 {
   "name": "@luma.gl/text",
   "version": "9.4.0-alpha.4",
-  "private": true,
   "description": "2D and 3D text utilities for luma.gl",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"

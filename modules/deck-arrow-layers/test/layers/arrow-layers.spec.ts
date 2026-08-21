@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
-import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
+import {ArrowPathLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import test from 'test/utils/vitest-tape';
 import type {Device} from '@luma.gl/core';
@@ -17,7 +17,6 @@ import {
   makeArrowLineRecordBatches,
   makeArrowLineSourceData
 } from '../../../../examples/arrow/arrow-lines/arrow-line-data';
-import {makeArrowPolygonExampleData} from '../../../../examples/arrow/arrow-polygons/arrow-polygon-data';
 import {makeArrowTextSource} from '../../../../examples/arrow/arrow-text-2d/arrow-text-data';
 
 const TEST_VIEWPORT_WIDTH = 640;
@@ -91,47 +90,6 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
     model: 'attribute',
     onDataError: error => {
       missingPathStyleDataError = error;
-    }
-  });
-  const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
-  const polygonBatch = polygonSource.recordBatches[0]!;
-  const polygonColors = polygonBatch.getChild('colors')!;
-  const nullablePolygonColors = vectorFromArray(
-    Array.from({length: polygonColors.length}, (_, rowIndex) =>
-      rowIndex % 2 === 0 ? polygonColors.get(rowIndex) : null
-    ),
-    polygonColors.type
-  );
-  const polygonLayer = new ArrowPolygonLayer({
-    id: 'arrow-polygons-picking-test',
-    pickable: true,
-    data: new Table({
-      polygons: polygonBatch.getChild('polygons')!,
-      colors: nullablePolygonColors
-    }),
-    polygons: 'polygons',
-    color: {source: 'colors', nullValue: [0, 96, 255, 255]},
-    tessellated: polygonSource.tessellated
-  });
-  const constantPolygonLayer = new ArrowPolygonLayer({
-    id: 'arrow-polygons-constant-picking-test',
-    pickable: true,
-    polygons: polygonBatch.getChild('polygons')!,
-    color: [0, 96, 255, 255],
-    tessellated: polygonSource.tessellated,
-    model: 'attribute'
-  });
-  let missingPolygonColorDataError: unknown;
-  const missingPolygonColorLayer = new ArrowPolygonLayer({
-    id: 'arrow-polygons-missing-color-test',
-    pickable: true,
-    data: new Table({polygons: polygonBatch.getChild('polygons')!}),
-    polygons: 'polygons',
-    color: {source: 'missingColors', nullValue: [255, 80, 40, 255]},
-    tessellated: polygonSource.tessellated,
-    model: 'attribute',
-    onDataError: error => {
-      missingPolygonColorDataError = error;
     }
   });
   const textSource = makeArrowTextSource(
@@ -245,38 +203,6 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
           }
         }
       }
-    },
-    {
-      layer: polygonLayer,
-      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9}
-    },
-    {
-      layer: constantPolygonLayer,
-      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9},
-      inspectModel: model => {
-        if (model.device.type === 'webgl') {
-          const colorAttribute = model.pipeline.shaderLayout.attributes.find(
-            attribute => attribute.name === 'colors'
-          );
-          t.ok(
-            colorAttribute &&
-              ArrayBuffer.isView(model.vertexArray.attributes[colorAttribute.location]),
-            'WebGL polygon color uses a native constant attribute'
-          );
-        } else {
-          t.ok(
-            model.bufferLayout.some(
-              layout => layout.name === 'gpu-table-constant-vertex' && layout.byteStride === 0
-            ),
-            'WebGPU polygon constant uses a zero-stride attribute layout'
-          );
-        }
-      }
-    },
-    {
-      layer: missingPolygonColorLayer,
-      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9},
-      getError: () => missingPolygonColorDataError
     },
     {
       layer: textLayer,
@@ -399,7 +325,7 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
   t.end();
 });
 
-test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
+test('Arrow text layers render storage-backed WebGPU models', async t => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
     t.comment('WebGPU is not available');
@@ -411,36 +337,6 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     t.end();
     return;
   }
-  const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
-  const polygonBatch = polygonSource.recordBatches[0]!;
-  const polygonColorVector = makeGPUVectorFromArrow(device, polygonBatch.getChild('colors')!, {
-    name: 'caller-polygon-colors',
-    format: 'unorm8x4'
-  });
-  let polygonDataError: unknown;
-  const polygonLayer = new ArrowPolygonLayer({
-    id: 'arrow-polygons-storage-test',
-    pickable: true,
-    polygons: polygonBatch.getChild('polygons')!,
-    color: polygonColorVector,
-    tessellated: polygonSource.tessellated,
-    model: 'storage',
-    onDataError: error => {
-      polygonDataError = error;
-    }
-  });
-  let constantPolygonDataError: unknown;
-  const constantPolygonLayer = new ArrowPolygonLayer({
-    id: 'arrow-polygons-constant-storage-test',
-    pickable: true,
-    polygons: polygonBatch.getChild('polygons')!,
-    color: [0, 96, 255, 255],
-    tessellated: polygonSource.tessellated,
-    model: 'storage',
-    onDataError: error => {
-      constantPolygonDataError = error;
-    }
-  });
   const textSource = makeArrowTextSource(
     {labelCount: 400, label: 'storage test texts', textType: 'utf8'},
     'string-colors',
@@ -496,16 +392,6 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
 
   const cases = [
     {
-      layer: polygonLayer,
-      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9},
-      getError: () => polygonDataError
-    },
-    {
-      layer: constantPolygonLayer,
-      initialViewState: {target: polygonSource.viewState.startCenter, zoom: 9},
-      getError: () => constantPolygonDataError
-    },
-    {
       layer: textLayer,
       initialViewState: {target: [0, 0] as [number, number], zoom: 0},
       getError: () => textDataError
@@ -534,7 +420,7 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     }
   } finally {
     deck.setProps({layers: []});
-    for (const vector of [polygonColorVector, textColorVector]) {
+    for (const vector of [textColorVector]) {
       for (const data of vector.data) {
         t.notOk(
           data.buffer.destroyed,

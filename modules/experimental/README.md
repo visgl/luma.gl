@@ -6,11 +6,11 @@ Experimental features for luma.gl.
 These are experimental features that may change or be removed at any time. Use at your own risk.
 :::
 
-The package currently includes experimental GPU command graphs and data-parallel primitives such
-as scan, compaction, stable key/value sort, two-dimensional FFT, and spectral ocean simulation,
+The published package includes experimental data-parallel primitives such as scan, compaction,
+stable key/value sort, two-dimensional FFT, and spectral ocean simulation,
 energy-conserving FFT aperture diffraction and photographic bloom,
 order-independent transparency renderers, composable cross-backend glass and reflective-material
-shader modules, packed pixel-format helpers, and v10 work-in-progress WebGPU/WebGL WebXR session
+shader modules, packed pixel-format helpers, and WebGPU/WebGL WebXR session
 and frame helpers, with WebGL-only raw camera textures. See the
 [luma.gl API reference](https://luma.gl/docs/api-reference/experimental) for documentation.
 

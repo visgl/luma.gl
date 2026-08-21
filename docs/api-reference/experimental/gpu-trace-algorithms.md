@@ -9,7 +9,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 `@luma.gl/experimental/gpu-trace` keeps trace identity, selection, analysis, and most intermediate
 results on the GPU. It does not prescribe one renderer or take ownership of command submission.
 Instead, it contributes trace-aware operations to a caller-owned
-[`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and exposes
+`GPUCommandGraph`, and exposes
 ordinary graph views that rendering and additional analysis can consume.
 
 This page describes the algorithms implemented today. The advanced GPU trace viewer also contains
@@ -295,7 +295,7 @@ regression to one graph operation.
 
 ## Opt-in 25M reference validation
 
-The GPU Core tab exposes a deliberately manual **Run validation** action only after an exact
+The GPU scheduling tab exposes a deliberately manual **Run validation** action only after an exact
 25M-span and 25M-dependency dataset is ready. It never changes dataset capacity, starts generation,
 or runs during ordinary page load. The 21-second script gives each stable benchmark scenario three
 seconds and continuously pans a bounded trace window:
