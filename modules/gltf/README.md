@@ -38,10 +38,10 @@ material/texture animation pointers, skin attributes, and animated morph targets
 animation clips, variants, GPU instancing, cameras, lights, and source-faithful accessors.
 
 `@loaders.gl/gltf` owns `.gltf` / `.glb` parsing, linked buffers and images, Draco and
-`EXT_meshopt_compression` decoding, Basis/KTX2 and supported WebP texture selection, typed
-accessor postprocessing, feature/structural metadata decoding, and GLB container encoding.
-`KHR_meshopt_compression` and automatic `EXT_texture_avif` source selection are not implemented
-by the installed loader. Generic animation, scenegraph, and morph primitives remain in
+`EXT_meshopt_compression` and `KHR_meshopt_compression` decoding, Basis/KTX2 and supported WebP
+texture selection, typed accessor postprocessing, feature/structural metadata decoding, and GLB
+container encoding. Automatic `EXT_texture_avif` source selection will arrive with the next
+loaders.gl v5 alpha release. Generic animation, scenegraph, and morph primitives remain in
 `@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in `@luma.gl/shadertools`.
 
 - [glTF API overview](https://luma.gl/docs/api-reference/gltf)

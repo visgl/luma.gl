@@ -63,10 +63,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'EXT meshopt-compressed buffer views are decoded by loaders.gl before rendering.'
   },
   KHR_meshopt_compression: {
-    supportLevel: 'none',
+    supportLevel: 'built-in',
     standardStatus: 'release-candidate',
-    comment:
-      'The installed loaders.gl GLTFLoader supports EXT_meshopt_compression, not the KHR release candidate.'
+    comment: 'Decoded by loaders.gl v5 before luma.gl builds the scenegraph.'
   },
   KHR_mesh_quantization: {
     supportLevel: 'built-in',

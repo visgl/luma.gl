@@ -14,7 +14,6 @@
     "EXT_lights_image_based",
     "EXT_texture_avif",
     "EXT_texture_video",
-    "KHR_meshopt_compression",
     "KHR_xmp",
     "KHR_xmp_json_ld"
   ],
@@ -22,7 +21,6 @@
     "EXT_lights_image_based",
     "EXT_texture_avif",
     "EXT_texture_video",
-    "KHR_meshopt_compression",
     "KHR_xmp",
     "KHR_xmp_json_ld"
   ]

@@ -119,7 +119,7 @@ Status meanings:
 - `❌`: no built-in handling today.
 
 `GLTFLoader` already owns container parsing, linked resources, typed/deinterleaved accessor
-postprocessing, Draco and `EXT_meshopt_compression` decoding, Basis/KTX2 texture selection,
+postprocessing, Draco, `EXT_meshopt_compression`, and `KHR_meshopt_compression` decoding, Basis/KTX2 texture selection,
 conditional WebP selection, and supported 3D Tiles feature/structural metadata. The rendering
 package consumes those results; it does not need independent mesh codecs, accessor decoders, or
 GLB container serialization. `postProcessGLTF()` must still be called explicitly in loaders.gl v4.
@@ -141,9 +141,9 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
       <code>@loaders.gl/gltf</code> already decodes EXT meshopt-compressed buffer views
       during load; luma.gl consumes the resulting accessor values.
     </SupportRow>
-    <SupportRow name="KHR_meshopt_compression" support="❌">
-      The newer Khronos release-candidate spelling is not implemented by the installed
-      <code>@loaders.gl/gltf</code> decoder. Supporting it belongs in loaders.gl first.
+    <SupportRow name="KHR_meshopt_compression" support="✅ *️⃣">
+      <code>@loaders.gl/gltf</code> decodes Khronos meshopt-compressed buffer views
+      during load; luma.gl consumes the resulting accessor values.
     </SupportRow>
     <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
       loaders.gl materializes typed quantized accessor values and normalization metadata;

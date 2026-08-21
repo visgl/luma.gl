@@ -77,6 +77,7 @@ describe('glTF module and showcase identity', () => {
       'GLBWriter',
       'KHR_draco_mesh_compression',
       'EXT_meshopt_compression',
+      'KHR_meshopt_compression',
       'KHR_texture_basisu',
       'EXT_texture_webp',
       'EXT_mesh_features',
@@ -85,12 +86,14 @@ describe('glTF module and showcase identity', () => {
       expect(overview).toContain(capability);
     }
 
-    expect(overview).toMatch(/EXT_meshopt_compression[\s\S]*not[\s\S]*KHR_meshopt_compression/);
-    expect(extensionSupport).toMatch(/<SupportRow name="KHR_meshopt_compression" support="❌">/);
+    expect(overview).toMatch(/EXT_meshopt_compression[\s\S]*KHR_meshopt_compression/);
+    expect(extensionSupport).toMatch(/<SupportRow name="KHR_meshopt_compression" support="✅ \*️⃣">/);
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_texture_avif" support="❌">/);
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_mesh_features" support="\*️⃣">/);
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_structural_metadata" support="\*️⃣">/);
-    expect(capabilities).toMatch(/Meshopt compression[^\n]*@loaders\.gl\/gltf[^\n]*EXT_meshopt/);
+    expect(capabilities).toMatch(
+      /Meshopt compression[^\n]*@loaders\.gl\/gltf[^\n]*EXT_meshopt_compression[^\n]*KHR_meshopt_compression/
+    );
 
     for (const documentation of [overview, extensionSupport, packageOverview]) {
       expect(documentation).not.toMatch(/(?:all|across)\s+17\s+(?:supported|canonical|map)/i);
