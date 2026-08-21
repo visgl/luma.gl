@@ -32,13 +32,24 @@ fn getInstancedSkinMatrix(
        + (weights.z * skinJointMatrices[firstJoint + joints.z])
        + (weights.w * skinJointMatrices[firstJoint + joints.w]);
 }
+#else
+#ifdef HAS_LARGE_SKIN
+@group(0) @binding(auto) var<storage, read> skinJointMatrices: array<mat4x4<f32>>;
+#endif
 #endif
 
 fn getSkinMatrix(weights: vec4f, joints: vec4u) -> mat4x4<f32> {
+#ifdef HAS_LARGE_SKIN
+  return (weights.x * skinJointMatrices[joints.x])
+       + (weights.y * skinJointMatrices[joints.y])
+       + (weights.z * skinJointMatrices[joints.z])
+       + (weights.w * skinJointMatrices[joints.w]);
+#else
   return (weights.x * skin.jointMatrix[joints.x])
        + (weights.y * skin.jointMatrix[joints.y])
        + (weights.z * skin.jointMatrix[joints.z])
        + (weights.w * skin.jointMatrix[joints.w]);
+#endif
 }
 `;
 
@@ -73,13 +84,34 @@ mat4 getInstancedSkinMatrix(
        + (weights.z * getInstancedJointMatrix(joints.z, instanceIndex))
        + (weights.w * getInstancedJointMatrix(joints.w, instanceIndex));
 }
+#else
+#ifdef HAS_LARGE_SKIN
+uniform highp sampler2D skinJointMatrices;
+
+mat4 getSkinJointMatrix(uint jointIndex) {
+  int firstColumn = int(jointIndex * 4u);
+  return mat4(
+    texelFetch(skinJointMatrices, ivec2(firstColumn, 0), 0),
+    texelFetch(skinJointMatrices, ivec2(firstColumn + 1, 0), 0),
+    texelFetch(skinJointMatrices, ivec2(firstColumn + 2, 0), 0),
+    texelFetch(skinJointMatrices, ivec2(firstColumn + 3, 0), 0)
+  );
+}
+#endif
 #endif
 
 mat4 getSkinMatrix(vec4 weights, uvec4 joints) {
+#ifdef HAS_LARGE_SKIN
+  return (weights.x * getSkinJointMatrix(joints.x))
+       + (weights.y * getSkinJointMatrix(joints.y))
+       + (weights.z * getSkinJointMatrix(joints.z))
+       + (weights.w * getSkinJointMatrix(joints.w));
+#else
   return (weights.x * skin.jointMatrix[joints.x])
        + (weights.y * skin.jointMatrix[joints.y])
        + (weights.z * skin.jointMatrix[joints.z])
        + (weights.w * skin.jointMatrix[joints.w]);
+#endif
 }
 
 `;

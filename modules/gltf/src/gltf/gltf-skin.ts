@@ -3,7 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {GroupNode, ModelNode, updateSkinJointMatrices} from '@luma.gl/engine';
+import {SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 /** One glTF mesh node and the existing models driven by its source skin. */
@@ -20,12 +22,15 @@ export type GLTFSkinBinding = {
   inverseBindMatrices?: Float32Array;
   /** Reused, mesh-local joint palette supplied to the existing skin shader. */
   jointMatrices: Float32Array;
+  /** WebGPU storage buffer or WebGL float texture for a palette that exceeds uniform limits. */
+  skinJointMatrices?: Buffer | Texture;
   /** Existing primitive models that share this skin binding. */
   models: readonly ModelNode[];
 };
 
 /** Inputs already produced by the canonical glTF scenegraph parser. */
 export type GLTFSkinControllerProps = {
+  device: Device;
   gltf: GLTFPostprocessed;
   scenes: readonly GroupNode[];
   gltfNodeIndexToNodeMap: ReadonlyMap<number, GroupNode>;
@@ -66,8 +71,22 @@ export class GLTFSkinController {
         inverseBindMatrices: binding.inverseBindMatrices,
         target: binding.jointMatrices
       });
+      if (binding.skinJointMatrices) {
+        if (binding.skinJointMatrices instanceof Buffer) {
+          binding.skinJointMatrices.write(binding.jointMatrices);
+        } else {
+          binding.skinJointMatrices.writeData(binding.jointMatrices, {
+            width: binding.joints.length * 4,
+            height: 1
+          });
+        }
+      }
       for (const modelNode of binding.models) {
-        modelNode.model.shaderInputs.setProps({skin: {jointMatrices: binding.jointMatrices}});
+        modelNode.model.shaderInputs.setProps({
+          skin: binding.skinJointMatrices
+            ? {jointMatrices: [], skinJointMatrices: binding.skinJointMatrices}
+            : {jointMatrices: binding.jointMatrices}
+        });
       }
     }
   }
@@ -77,6 +96,13 @@ export class GLTFSkinController {
     return this.bindings.find(binding =>
       typeof node === 'number' ? binding.nodeIndex === node : binding.node === node
     );
+  }
+
+  /** Releases GPU palette transports owned by this controller. */
+  destroy(): void {
+    for (const binding of this.bindings) {
+      binding.skinJointMatrices?.destroy();
+    }
   }
 }
 
@@ -128,18 +154,54 @@ function makeSkinBindings(props: GLTFSkinControllerProps): GLTFSkinBinding[] {
 
     const models = meshNode.children.flatMap(child => (child instanceof ModelNode ? [child] : []));
     const inverseBindMatrices = sourceSkin.inverseBindMatrices?.value;
+    const jointMatrices = new Float32Array(joints.length * 16);
+    const usesLargeSkinPalette =
+      joints.length > SKIN_MAX_JOINTS &&
+      models.some(modelNode => modelNode.userData['gltfLargeSkinPalette'] === true);
+    let skinJointMatrices: Buffer | Texture | undefined;
+    if (usesLargeSkinPalette) {
+      skinJointMatrices = createSkinJointPaletteResource(props.device, node.id, jointMatrices);
+    }
     bindings.push({
       nodeIndex,
       skinIndex,
       node,
       joints,
       ...(inverseBindMatrices instanceof Float32Array ? {inverseBindMatrices} : {}),
-      jointMatrices: new Float32Array(joints.length * 16),
+      jointMatrices,
+      ...(skinJointMatrices ? {skinJointMatrices} : {}),
       models
     });
   }
 
   return bindings;
+}
+
+function createSkinJointPaletteResource(
+  device: Device,
+  id: string,
+  jointMatrices: Float32Array
+): Buffer | Texture {
+  if (device.type === 'webgpu') {
+    return device.createBuffer({
+      id: `${id}-skin-joint-matrices`,
+      byteLength: jointMatrices.byteLength,
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    });
+  }
+
+  const width = jointMatrices.length / 4;
+  if (width > device.limits.maxTextureDimension2D) {
+    throw new Error('glTF skin palette exceeds the device texture width limit');
+  }
+  return device.createTexture({
+    id: `${id}-skin-joint-matrices`,
+    format: 'rgba32float',
+    width,
+    height: 1,
+    usage: Texture.SAMPLE | Texture.COPY_DST,
+    sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
+  });
 }
 
 /** Resolves both numeric and loaders.gl-postprocessed source skin references. */

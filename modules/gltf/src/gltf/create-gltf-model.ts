@@ -429,6 +429,8 @@ export type CreateGLTFModelOptions = {
   bounds?: ScenegraphBounds;
   /** Source-authored local transforms for `EXT_mesh_gpu_instancing`. */
   instanceMatrices?: readonly NumericArray[];
+  /** Primitive joint indices exceed the portable uniform skin palette size. */
+  usesLargeSkinPalette?: boolean;
   /** Immutable source POSITION/NORMAL/TANGENT deltas for GPU crowd morph deformation. */
   morphTargets?: readonly MorphTargetAttributes[];
 };
@@ -500,6 +502,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     vertexCount,
     modelOptions = {},
     instanceMatrices,
+    usesLargeSkinPalette = false,
     morphTargets = []
   } = options;
   const crowd = modelOptions.userData?.['gltfAnimatedCrowd'] as
@@ -580,6 +583,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   }
 
   const hasSkin = Boolean(parsedPPBRMaterial.defines['HAS_SKIN']);
+  const hasLargeSkinPalette = Boolean(usesLargeSkinPalette && hasSkin && !crowd);
   const hasInstancedSkin = Boolean(crowd && hasSkin && !hasGPUAnimation);
   let skinJointMatrices: Buffer | Texture | undefined;
   let jointMatrices: Float32Array | undefined;
@@ -707,6 +711,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
       ...(hasInstancedSkin
         ? {HAS_INSTANCED_SKIN: true, CROWD_JOINTS_PER_INSTANCE: crowd!.jointsPerInstance}
         : {}),
+      ...(hasLargeSkinPalette ? {HAS_LARGE_SKIN: true} : {}),
       ...(hasGPUAnimation
         ? {HAS_GPU_CROWD_ANIMATION: true, CROWD_ANIMATION_FRAME_STRIDE: animationFrameStride}
         : {}),
@@ -758,6 +763,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     bounds: options.bounds,
     instanceMatrices
   });
+  modelNode.userData['gltfLargeSkinPalette'] = hasLargeSkinPalette;
   if (crowd) {
     modelNode.userData['gltfAnimatedCrowd'] = {
       transformBuffers,

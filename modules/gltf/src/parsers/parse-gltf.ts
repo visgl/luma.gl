@@ -20,7 +20,7 @@ import {
   type ModelProps,
   type MorphTargetAttributes
 } from '@luma.gl/engine';
-import {pbrMaterial} from '@luma.gl/shadertools';
+import {pbrMaterial, SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instancing';
 import type {GLTFPrimitiveMaterialVariants} from '../gltf/gltf-material-variants';
@@ -345,6 +345,7 @@ function createNodeForGLTFPrimitive({
     vertexCount,
     bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
     instanceMatrices: instancing?.matrices,
+    usesLargeSkinPalette: usesLargeSkinPalette(gltfPrimitive.attributes.JOINTS_0),
     morphTargets: morphTargetState?.targets
   });
 
@@ -399,6 +400,24 @@ function createNodeForGLTFPrimitive({
   // modelNode.material =  gltfPrimitive.material;
 
   return modelNode;
+}
+
+/** Selects a GPU palette only when this primitive can index past the uniform palette. */
+function usesLargeSkinPalette(
+  joints: {max?: readonly number[]; value?: ArrayLike<number>} | undefined
+): boolean {
+  if (!joints) {
+    return false;
+  }
+  if (joints.max?.some(jointIndex => jointIndex >= SKIN_MAX_JOINTS)) {
+    return true;
+  }
+  for (let jointIndex = 0; jointIndex < (joints.value?.length || 0); jointIndex++) {
+    if (joints.value![jointIndex] >= SKIN_MAX_JOINTS) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function createGLTFMorphTargetState(

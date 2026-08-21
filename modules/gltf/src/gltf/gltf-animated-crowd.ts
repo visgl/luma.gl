@@ -188,6 +188,7 @@ export class GLTFCrowdActor {
     this.isPlaying = options.playing ?? true;
 
     this.skins = new GLTFSkinController({
+      device: crowd.device,
       gltf: crowd.gltf,
       scenes: hierarchy.scenes,
       gltfNodeIndexToNodeMap: this.nodesByIndex
@@ -374,6 +375,7 @@ export class GLTFCrowdActor {
     }
     this.isDestroyed = true;
     this.isPlaying = false;
+    this.skins.destroy();
     this.crowd.removeActor(this.id);
     this.root.destroy();
   }
