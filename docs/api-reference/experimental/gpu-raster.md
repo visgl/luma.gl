@@ -96,6 +96,6 @@ The [operations reference](https://luma.gl/docs/api-reference/experimental/gpu-r
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) provides scheduling and generic aggregation/indexing primitives.
+* GPU scheduling provides scheduling and generic aggregation/indexing primitives.
 * [GPU Project](https://luma.gl/docs/api-reference/experimental/gpu-project.md) handles coordinate projection and adaptive patches.
 * [GPU Raster concepts](https://luma.gl/docs/api-reference/experimental/gpu-raster/concepts.md) explains the execution model independently of individual classes.

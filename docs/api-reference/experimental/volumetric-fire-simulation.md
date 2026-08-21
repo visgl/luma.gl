@@ -220,6 +220,6 @@ These boundaries keep memory and work explicit while leaving room for higher-ord
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
-* [GPU Command Graph](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md) documents graph ownership, hazard inference, and encoding.
+* GPU Command Graph documents graph ownership, hazard inference, and encoding.
 * [GBuffer](https://luma.gl/docs/api-reference/experimental/g-buffer.md) provides depth, normal, and velocity attachments for depth-aware volume composition.
 * [Shader Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md) describes composable HDR and temporal rendering pipelines that can consume the simulation textures.

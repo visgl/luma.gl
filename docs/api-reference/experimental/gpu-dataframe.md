@@ -91,6 +91,6 @@ See the [operations reference](https://luma.gl/docs/api-reference/experimental/g
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) supplies scheduling and primitives.
+* GPU scheduling supplies scheduling and primitives.
 * [GPU Crossfilter](https://luma.gl/docs/api-reference/experimental/gpu-crossfilter.md) composes linked interactive selections.
 * [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md) defines primitive GPU storage, while [`@luma.gl/experimental/gpu-tables`](https://luma.gl/docs/api-reference/experimental/gpu-tables.md) defines record batches and tables.

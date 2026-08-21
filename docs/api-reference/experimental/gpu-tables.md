@@ -4,7 +4,7 @@
 
 From v9.4Experimental API
 
-`@luma.gl/experimental/gpu-tables` provides private batch-preserving table helpers for rendering, transforms, and compute. It builds on the primitive objects in [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md).
+`@luma.gl/experimental/gpu-tables` provides experimental batch-preserving table helpers for rendering, transforms, and compute. It builds on the primitive objects in [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md).
 
 ## Start Here[​](#start-here "Direct link to Start Here")
 

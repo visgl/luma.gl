@@ -46,7 +46,7 @@ This benchmark runs locally in your browser when you click the button. Every imp
 
   WebGPU with a CPU reference fallback
 
-[View source](https://github.com/visgl/luma.gl/tree/master/website/src/components/docs/projection-benchmark.tsx)[Inspect graph](https://luma.gl/docs/api-reference/experimental/gpu-core/concepts.md#instrumentation-and-autotuning)
+[View source](https://github.com/visgl/luma.gl/tree/master/website/src/components/docs/projection-benchmark.tsx)
 
 Coordinates per run16,384 (16384)
 
@@ -249,4 +249,4 @@ const cpuReport = runProjectionBenchmark(options);
 const gpuReport = await runGPUProjectionBenchmark(device, options);
 ```
 
-See [WebGPU Geospatial Kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md), [GPU spatial query benchmarks](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md), and [GPU floating-point precision](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md) for related GPU execution and precision techniques.
+See [WebGPU Geospatial Kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md), GPU spatial query benchmarks, and [GPU floating-point precision](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md) for related GPU execution and precision techniques.

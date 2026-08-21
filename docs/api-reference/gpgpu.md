@@ -163,7 +163,6 @@ The CPU backend can be imported from `@luma.gl/gpgpu/cpu` when explicitly regist
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 
-* [`Choosing a GPU Data-Processing API`](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md) compares portable GPGPU evaluators with `GPUCommandGraph` and lower-level compute helpers.
 * [`Operations`](https://luma.gl/docs/api-reference/gpgpu/operations.md) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 * [`Custom Operations`](https://luma.gl/docs/api-reference/gpgpu/custom-operation.md) shows how to define lazy operations and register backend handlers.
 * [`GPU Evaluators`](https://luma.gl/docs/api-reference/gpgpu/gpu-data-evaluator.md) documents `GPUDataEvaluator` for one fixed-width `GPUData` or borrowed strided `GPUDataView`, and `GPUVectorEvaluator` for chunk-preserving `GPUVector.data[]` transforms.

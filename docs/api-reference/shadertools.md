@@ -136,8 +136,8 @@ Keep the [shader module catalog](https://luma.gl/docs/api-reference/shadertools/
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)[GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)
 
 * Use [Engine](https://luma.gl/docs/api-reference/engine.md) to bind module props and draw a `Model`.
 * Use [Core](https://luma.gl/docs/api-reference/core.md) for the resources and pipelines that compile assembled source.
-* Shader modules can also be consumed by GPU Core render and compute nodes.
+* Shader modules can also be consumed by GPU scheduling render and compute nodes.

@@ -97,4 +97,4 @@ This separation keeps the renderer reusable from standalone luma.gl applications
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
 * [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+* GPU scheduling

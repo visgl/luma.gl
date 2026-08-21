@@ -10,7 +10,7 @@ The curated pages explain workflows and portability. The [generated API index](h
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use Core when you need direct control over GPU memory, formats, bindings, passes, or command submission. Start one layer higher with [Engine](https://luma.gl/docs/api-reference/engine.md) when a `Model` can manage those details. Move one layer higher still to [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) when several operations need dependency scheduling, transient storage, indirect work, or multi-frame execution.
+Use Core when you need direct control over GPU memory, formats, bindings, passes, or command submission. Start one layer higher with [Engine](https://luma.gl/docs/api-reference/engine.md) when a `Model` can manage those details. Move one layer higher still to GPU scheduling when several operations need dependency scheduling, transient storage, indirect work, or multi-frame execution.
 
 ## Live example[​](#live-example "Direct link to Live example")
 
@@ -124,8 +124,8 @@ The [generated <!-- -->Core<!-- --> API index](https://luma.gl/docs/api-referenc
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)[GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)
 
 * Move up to [Engine](https://luma.gl/docs/api-reference/engine.md) for managed models and redraw state.
 * Move down to [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) to author reusable shader behavior.
-* Add [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for multi-operation scheduling.
+* Add GPU scheduling for multi-operation scheduling.

@@ -179,7 +179,7 @@ retained.destroy();
 
 Always call `destroy()` on compiled queries and owned frames when they are no longer needed; calls are idempotent. Applications without an available WebGPU adapter must offer their own CPU path or display an unsupported-device state. GPU Dataframe does not transparently switch execution backends.
 
-Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, full SQL semantics, and complete cuDF compatibility are outside the supported scope. See [GPU Primitives and Command Graphs](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for the underlying WebGPU execution infrastructure.
+Native GPU `float64` and `int64`, arbitrary GPU strings, distributed or multi-GPU execution, full SQL semantics, and complete cuDF compatibility are outside the supported scope. See GPU Primitives and Command Graphs for the underlying WebGPU execution infrastructure.
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 

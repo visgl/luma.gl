@@ -1,6 +1,6 @@
 # ANARI Scene Schemas
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
 `@luma.gl/scene/schemas` exposes optional Zod schemas for the experimental retained-scene JSON format and generates a JSON Schema suitable for Monaco, VS Code, and other schema-aware editors. It is separate from the ordinary `@luma.gl/scene` entry point, so applications that only render scenes do not load Zod.
 

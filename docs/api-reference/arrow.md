@@ -1,14 +1,14 @@
 # Overview
 
-[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/docs/api-reference/arrow/deck-target-api.md)
+[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)
 
-From v10Experimental API
+From v9.4Experimental API
 
 Apache Arrow utilities for luma.gl.
 
-### GeoArrow
+### Points
 
-[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/arrow/arrow-geoarrow)Info
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/arrow/arrow-points)Info
 
 InfoSource
 
@@ -20,13 +20,11 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Arrow Rendering[​](#arrow-rendering "Direct link to Arrow Rendering")
 
-These live examples exercise luma.gl's Arrow path, polygon, and text conversion and rendering stack through temporary deck.gl integration layers. They demonstrate progressive `RecordBatch` streaming, direct columnar inputs, constant and column styling, attribute rendering, and WebGPU storage rendering.
+These live examples exercise luma.gl's Arrow point, path, and text conversion and rendering stack. They demonstrate progressive `RecordBatch` streaming, direct columnar inputs, attribute rendering, and WebGPU storage rendering.
 
-PathsPolygonsText
+### Lines
 
-### Arrow Path Layer
-
-[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/deck/arrow-path-layer/app.ts)Info
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/arrow/arrow-lines)Info
 
 InfoSource
 
@@ -34,13 +32,26 @@ InfoSource
 // Loading source…
 ```
 
+Scroll page · Ctrl/⌘ + scroll to interact
+
+### Text
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/arrow/arrow-text-2d)Info
+
+InfoSource
+
+```
+// Loading source…
+```
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
 ## API Reference[​](#api-reference "Direct link to API Reference")
 
 * [Arrow Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)
 * [Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)
 * [Arrow Table Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)
 * [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)
-* [deck.gl v10 API Directions](https://luma.gl/docs/api-reference/arrow/deck-target-api.md)
 
 ## Apache Arrow Preliminaries[​](#apache-arrow-preliminaries "Direct link to Apache Arrow Preliminaries")
 

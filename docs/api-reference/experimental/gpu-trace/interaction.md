@@ -47,12 +47,12 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 The workflow composes existing independent primitives in a fixed order:
 
-1. [`GPUHierarchyLayout`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout.md) converts process/thread expansion states into effective thread heights and scanned offsets.
-2. [`GPUGraphTraversal`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md) expands selected canonical span rows over bounded incoming, outgoing, or combined dependency edges.
+1. `GPUHierarchyLayout` converts process/thread expansion states into effective thread heights and scanned offsets.
+2. `GPUGraphTraversal` expands selected canonical span rows over bounded incoming, outgoing, or combined dependency edges.
 3. A fixed-contract trace policy evaluates time, duration, classification, hierarchy, and optional linked-span focus into one source-aligned visibility mask.
-4. [`GPUVisibilityWorkflow`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md) compacts stable canonical row IDs and publishes an exact visible count.
-5. [`GPUAncestorProjection`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection.md) maps each hidden span to its nearest still-visible canonical parent.
-6. [`GPUSceneDrawGeneration`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md) updates explicit renderer-authored indirect draw slots.
+4. `GPUVisibilityWorkflow` compacts stable canonical row IDs and publishes an exact visible count.
+5. `GPUAncestorProjection` maps each hidden span to its nearest still-visible canonical parent.
+6. `GPUSceneDrawGeneration` updates explicit renderer-authored indirect draw slots.
 
 The application owns graph compilation, encoding, submission, and any deliberate readback. None of the interaction stages uploads source spans again or chooses draw commands on the CPU.
 

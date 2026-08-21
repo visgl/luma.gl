@@ -1,6 +1,6 @@
 # Arrow Table Conversion
 
-[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/docs/api-reference/arrow/deck-target-api.md)
+[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)
 
 ## Arrow Vector Factories[​](#arrow-vector-factories "Direct link to Arrow Vector Factories")
 

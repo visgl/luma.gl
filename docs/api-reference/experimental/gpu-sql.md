@@ -29,5 +29,5 @@ Unsupported statements, unknown columns, unregistered tables, unsupported string
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
 * [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md)
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+* GPU scheduling
 * [Arrow](https://luma.gl/docs/api-reference/arrow.md)

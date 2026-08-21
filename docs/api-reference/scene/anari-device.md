@@ -1,6 +1,6 @@
 # ANARIDevice and Object Lifecycle
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
 `ANARIDevice` adapts an existing luma.gl `Device` into a retained, ANARI-inspired scene API. It creates scene objects, advertises supported subtypes and extensions, renders frames, and owns the renderer's cached GPU resources.
 

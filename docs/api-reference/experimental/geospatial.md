@@ -209,7 +209,7 @@ Dataset size
 
 ### Live luSpatial: CPU vs. WebGPU
 
-Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
+Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU scan, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
 
 Run live CPU and WebGPU spatial benchmark
 
@@ -223,7 +223,7 @@ Fixed-output kernels linearize bounded multidimensional WebGPU workgroup dispatc
 
 ## See also[​](#see-also "Direct link to See also")
 
-* [GPUCommandGraph](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)
-* [GPUGridIndex](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-index.md)
+* GPUCommandGraph
+* GPUGridIndex
 * [GPU floating-point precision](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)
 * [`fp64arithmetic`](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)

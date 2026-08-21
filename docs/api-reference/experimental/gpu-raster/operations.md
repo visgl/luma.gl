@@ -29,4 +29,4 @@ Start with [GPURaster concepts](https://luma.gl/docs/api-reference/experimental/
 
 * [GPURaster overview](https://luma.gl/docs/api-reference/experimental/gpu-raster.md)
 * [Satellite Raster Lab](https://luma.gl/examples/showcase/raster-lab)
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+* GPU scheduling

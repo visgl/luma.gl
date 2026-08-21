@@ -65,16 +65,15 @@ Stop producers first, then destroy application-owned models, pipelines, buffers,
 
 ## Choose the next page[​](#choose-the-next-page "Direct link to Choose the next page")
 
-| If you need to…                         | Continue with…                                                                   | Conclusion you should reach                                             |
-| --------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Open a portable backend                 | [GPU initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md)   | Select by required capabilities, not by browser name.                   |
-| Understand allocation and transfer cost | [GPU memory](https://luma.gl/docs/api-guide/gpu/gpu-memory.md)                   | Keep intermediate data GPU-resident when possible.                      |
-| Upload or copy linear data              | [GPU buffers](https://luma.gl/docs/api-guide/gpu/gpu-buffers.md)                 | Choose an operation from access pattern and synchronization cost.       |
-| Sample or render images                 | [GPU textures](https://luma.gl/docs/api-guide/gpu/gpu-textures.md)               | Format, usage, layout, and sampling must agree.                         |
-| Expose data to shaders                  | [GPU bindings](https://luma.gl/docs/api-guide/gpu/gpu-bindings.md)               | A stable ownership convention keeps interfaces composable.              |
-| Render into a canvas or texture         | [GPU rendering](https://luma.gl/docs/api-guide/gpu/gpu-rendering.md)             | Reuse resources and pipelines; encode only the work for this frame.     |
-| Run compute or data analysis            | [GPU data processing](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md) | Pick the highest-level abstraction that preserves the control you need. |
-| Start from a small task                 | [Core GPU cookbook](https://luma.gl/docs/api-guide/gpu/cookbook.md)              | Copy one complete lifecycle, then expand it.                            |
+| If you need to…                         | Continue with…                                                                 | Conclusion you should reach                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Open a portable backend                 | [GPU initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md) | Select by required capabilities, not by browser name.               |
+| Understand allocation and transfer cost | [GPU memory](https://luma.gl/docs/api-guide/gpu/gpu-memory.md)                 | Keep intermediate data GPU-resident when possible.                  |
+| Upload or copy linear data              | [GPU buffers](https://luma.gl/docs/api-guide/gpu/gpu-buffers.md)               | Choose an operation from access pattern and synchronization cost.   |
+| Sample or render images                 | [GPU textures](https://luma.gl/docs/api-guide/gpu/gpu-textures.md)             | Format, usage, layout, and sampling must agree.                     |
+| Expose data to shaders                  | [GPU bindings](https://luma.gl/docs/api-guide/gpu/gpu-bindings.md)             | A stable ownership convention keeps interfaces composable.          |
+| Render into a canvas or texture         | [GPU rendering](https://luma.gl/docs/api-guide/gpu/gpu-rendering.md)           | Reuse resources and pipelines; encode only the work for this frame. |
+| Start from a small task                 | [Core GPU cookbook](https://luma.gl/docs/api-guide/gpu/cookbook.md)            | Copy one complete lifecycle, then expand it.                        |
 
 ## Decisions and tradeoffs[​](#decisions-and-tradeoffs "Direct link to Decisions and tradeoffs")
 
@@ -97,4 +96,4 @@ Stop producers first, then destroy application-owned models, pipelines, buffers,
 * Use the [Core GPU cookbook](https://luma.gl/docs/api-guide/gpu/cookbook.md) for short, copyable workflows.
 * Use the [Core API overview](https://luma.gl/docs/api-reference/core.md) to map concepts to exact classes.
 * Move up to [Engine](https://luma.gl/docs/api-guide/engine.md) when a managed `Model` is a better unit of work.
-* Add [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) when several GPU operations need dependency scheduling, transient reuse, indirect work, or bounded multi-frame execution.
+* Add GPU scheduling when several GPU operations need dependency scheduling, transient reuse, indirect work, or bounded multi-frame execution.

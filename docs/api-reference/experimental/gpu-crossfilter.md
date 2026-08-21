@@ -201,4 +201,4 @@ The comparison below reflects the official cuXfilter [26.06 documentation](https
 
 The projects solve related interaction problems in different environments. GPUCrossfilter does not provide cuXfilter feature parity, a migration layer, built-in chart integrations, or distributed GPU execution.
 
-See [GPU Primitives and Command Graphs](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.
+See GPU Primitives and Command Graphs for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.

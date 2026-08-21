@@ -8,7 +8,7 @@
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use Engine for most rendered applications. Drop to [Core](https://luma.gl/docs/api-reference/core.md) when you need exact resource or command control. Use [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) to make shader behavior reusable. Add GPU Core only when work becomes a scheduled GPU dataflow; a single `Model` does not need a graph.
+Use Engine for most rendered applications. Drop to [Core](https://luma.gl/docs/api-reference/core.md) when you need exact resource or command control. Use [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) to make shader behavior reusable. Add GPU scheduling only when work becomes a scheduled GPU dataflow; a single `Model` does not need a graph.
 
 ## Live example[​](#live-example "Direct link to Live example")
 
@@ -114,8 +114,8 @@ The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/docs/api-refere
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)[GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)
 
 * Use [Core](https://luma.gl/docs/api-reference/core.md) for direct resource and command control.
 * Use [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) for modules, hooks, and plugins.
-* Use [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for scheduled multi-stage GPU work.
+* Use GPU scheduling for scheduled multi-stage GPU work.

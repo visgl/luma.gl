@@ -1,8 +1,8 @@
 # Arrow Utilities
 
-[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/docs/api-reference/arrow/deck-target-api.md)
+[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)
 
-From v10Experimental API
+From v9.4Experimental API
 
 This page documents the general-purpose Arrow inspection helpers exported by `@luma.gl/arrow`.
 

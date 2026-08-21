@@ -36,15 +36,15 @@ Focused packages turn captured scenes, declarative worlds, and GPU-resident work
 
 [Build a scene →](https://luma.gl/examples/experimental/scene-playground)
 
-[![A dense interactive trace processed entirely through a GPU command graph](/images/examples/experimental/gpu-trace-viewer.jpg)](https://luma.gl/examples/experimental/gpu-trace-viewer)
+[![A dense interactive trace analyzed and rendered on the GPU](/images/examples/experimental/gpu-trace-viewer.jpg)](https://luma.gl/examples/experimental/gpu-trace-viewer)
 
-[GPU Command Graph](https://luma.gl/examples/experimental/gpu-trace-viewer)
+[@luma.gl/experimental](https://luma.gl/examples/experimental/gpu-trace-viewer)
 
-### [GPU Graph](https://luma.gl/examples/experimental/gpu-trace-viewer)
+### [GPU-native analytics](https://luma.gl/examples/experimental/gpu-trace-viewer)
 
 [Compose culling, sorting, compute, and rendering without moving your data off the GPU.](https://luma.gl/examples/experimental/gpu-trace-viewer)
 
-[See the graph in action →](https://luma.gl/examples/experimental/gpu-trace-viewer)
+[Explore the trace →](https://luma.gl/examples/experimental/gpu-trace-viewer)
 
 02 · See it in motion
 
@@ -198,7 +198,7 @@ Seven focused modules span portable GPU access, rendering, shaders, effects, dec
 
 [Connect reusable compute modules and rendering in a single GPU-native pipeline, without moving data back to the CPU.](https://luma.gl/docs/api-reference/gpgpu.md)
 
-[* GPU graphs* Compute modules* Zero readback](https://luma.gl/docs/api-reference/gpgpu.md)
+[* GPU workflows* Compute modules* Zero readback](https://luma.gl/docs/api-reference/gpgpu.md)
 
 [Docs](https://luma.gl/docs/api-reference/gpgpu.md)
 
@@ -240,13 +240,13 @@ Begin with an interactive lesson, or go straight to the part of the GPU stack yo
 
 [Explore models, animation loops, geometry, materials, and reusable shader modules.](https://luma.gl/docs/api-guide/engine.md)
 
-[Engine API guide →](https://luma.gl/docs/api-guide/engine.md)[Move faster](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
+[Engine API guide →](https://luma.gl/docs/api-guide/engine.md)[Move faster](https://luma.gl/docs/capabilities/gpu-data-compute.md)
 
-### [Think in GPU compute.](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
+### [Think in GPU compute.](https://luma.gl/docs/capabilities/gpu-data-compute.md)
 
-[Compare portable data operations with WebGPU-native compute for simulation, filtering, and spatial processing.](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
+[Compare portable data operations with WebGPU-native compute for simulation, filtering, and spatial processing.](https://luma.gl/docs/capabilities/gpu-data-compute.md)
 
-[Choose a GPU data workflow →](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)[Create effects](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
+[Choose a GPU data workflow →](https://luma.gl/docs/capabilities/gpu-data-compute.md)[Create effects](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
 
 ### [Shape every pixel.](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
 

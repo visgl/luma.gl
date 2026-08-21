@@ -247,4 +247,4 @@ On a device with a 128 MiB storage-binding limit, the previous single-record gra
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
 * [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
+* GPU scheduling

@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUTraceScene` uploads a canonical execution trace once and projects its spans into the existing generic [`GPUScene`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene.md) draw database. Timing, lanes, processes, threads, parent relationships, dependency links, and bidirectional adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside the shared scene abstraction.
+`GPUTraceScene` uploads a canonical execution trace once and projects its spans into the existing generic `GPUScene` draw database. Timing, lanes, processes, threads, parent relationships, dependency links, and bidirectional adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside the shared scene abstraction.
 
 This domain-specific model is exported from [`@luma.gl/experimental/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md), not from the generic `@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without importing trace schemas.
 
@@ -69,7 +69,7 @@ Every span projects into one ordinary 128-byte `GPUScene` record:
 * Source `groupId`, an optional renderer geometry ID, and the global row's command slot preserve ordinary scene rendering contracts.
 * Parent references, process/thread membership, classification, and graph edges remain in the trace model's separate canonical buffers.
 
-This means [`GPUSceneDrawGeneration`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md) and [`GPUSceneResourceGroups`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md) consume trace scenes without a trace-specific renderer or additional fields in `GPUScene`.
+This means `GPUSceneDrawGeneration` and `GPUSceneResourceGroups` consume trace scenes without a trace-specific renderer or additional fields in `GPUScene`.
 
 The projection is created explicitly during ingestion. Its memory cost is observable through `stats.sceneByteLength`; a trace viewer should therefore choose a bounded scene capacity instead of assuming that canonical 32-byte spans and projected 128-byte records cost the same.
 

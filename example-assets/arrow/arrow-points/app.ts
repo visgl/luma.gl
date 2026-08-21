@@ -16,7 +16,7 @@ import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';
 
 export const title = 'Points: XY/XYM/XYZM';
 export const description =
-  'Arrow FixedSizeList<Float32, 2 | 3 | 4> and DenseUnion point rows rendered as ScatterplotLayer-style circle impostors with temporal M or timestamp animation and picking.';
+  'Arrow FixedSizeList<Float32, 2 | 3 | 4> point rows rendered as ScatterplotLayer-style circle impostors with temporal M or timestamp animation and picking.';
 
 export default class ArrowPointAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeArrowExamplePanelHostHtml();

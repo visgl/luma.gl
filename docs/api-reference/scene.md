@@ -6,9 +6,9 @@ Experimental asset import
 
 [![glTF](/img/standards/gltf.svg)](https://www.khronos.org/gltf/)[![OpenUSD](/img/standards/openusd.png)](https://openusd.org/)
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
-`@luma.gl/scene` provides a private, experimental, independently developed retained rendering API built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
+`@luma.gl/scene` provides a published experimental, independently developed retained rendering API built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras, worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that description into portable WebGPU or WebGL rendering.
 
 Independent, non-conformant proof of concept
 
@@ -27,15 +27,15 @@ This package is inspired by the ANARI object model, but it is not an official AN
 * [ANARI developer guide](https://luma.gl/docs/api-guide/engine/anari-rendering.md): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
 * [JSON scene playground](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
 
-## Private workspace availability[​](#private-workspace-availability "Direct link to Private workspace availability")
+## Published package availability[​](#published-package-availability "Direct link to Published package availability")
 
-`@luma.gl/scene` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl checkout:
+`@luma.gl/scene` is published as an experimental package:
 
 ```
-yarn install
+yarn add @luma.gl/scene
 ```
 
-Another workspace inside the same checkout can depend on it through `"@luma.gl/scene": "workspace:*"`. It cannot currently be installed from npm. Add `@luma.gl/webgl` to the consuming workspace if a WebGL 2 fallback is required.
+Its APIs may evolve without a 9.4 semver compatibility promise. Add `@luma.gl/webgl` if a WebGL 2 fallback is required.
 
 ## Object model[​](#object-model "Direct link to Object model")
 
@@ -159,6 +159,6 @@ See [HDR and backend selection](https://luma.gl/docs/api-guide/engine/anari-firs
 
 ## Experimental JSON playground[​](#experimental-json-playground "Direct link to Experimental JSON playground")
 
-The private package includes a JSON scene playground at `examples/showcase/scene/playground.html`. Start it with `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the reported development-server URL. The playground translates deck.gl-inspired `@@type` declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism meshes, starfield distributions, composable transform animations, lights following named instances, cameras, and optional renderer presets into the API documented on these pages. The active renderer subtype is selected as frame state outside the renderer-independent scene. The complete Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable JSON presets.
+The package includes a JSON scene playground at `examples/showcase/scene/playground.html`. Start it with `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the reported development-server URL. The playground translates deck.gl-inspired `@@type` declarations, named ANARI object references, shared retained surfaces, generated torus/crystal/prism meshes, starfield distributions, composable transform animations, lights following named instances, cameras, and optional renderer presets into the API documented on these pages. The active renderer subtype is selected as frame state outside the renderer-independent scene. The complete Chromatic Atlas, Crystal Cathedral, and Celestial Engine showcase scenes are available as editable JSON presets.
 
 The optional `@luma.gl/scene/gltf` entry point binds source node hierarchies, material and texture tracks, animated morph targets, and imported glTF skeletons to existing retained objects. The showcase preserves joint attributes, authored joint nodes, and inverse bind matrices; it creates reusable mesh-local palettes automatically and commits each animated retained surface at most once per frame. Applications can also provide explicit `skin: {jointMatrices}` surface descriptors. The separate `@luma.gl/scene/schemas` entry point exports experimental Zod schemas and generated JSON Schema for editor integration. The scene format is not an official ANARI serialization format. See the [schema API reference](https://luma.gl/docs/api-reference/scene/anari-schemas.md) and the [JSON scene playground developer guide](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md#explore-the-json-scene-playground) for the full schema, animation vocabulary, and editing controls.

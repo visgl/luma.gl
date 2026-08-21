@@ -1,8 +1,8 @@
 # Arrow Representations
 
-[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/docs/api-reference/arrow/deck-target-api.md)
+[Overview](https://luma.gl/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/docs/api-reference/arrow/arrow-utils.md)
 
-From v10Experimental API
+From v9.4Experimental API
 
 This page starts from semantic data types and describes the preferred Apache Arrow column encodings for luma.gl GPU table pipelines. For the inverse view, see [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md), which starts from Arrow physical types and describes GPU support.
 

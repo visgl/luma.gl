@@ -74,29 +74,29 @@ Loading interactive example…
 
 ## gpu-trace feature card[​](#gpu-trace-feature-card "Direct link to gpu-trace feature card")
 
-| Capability                | What it enables                                                                                                                                             | Concrete surface                                            |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| GPU-resident trace model  | Keeps span, application-object, compacted-display, parent, and dependency identities distinct at millions of rows                                           | `GPUTraceScene` and canonical record layouts                |
-| Batched storage           | Retains source partitions and keeps every storage binding within adapter limits                                                                             | Chunked span, dependency, and adjacency vectors             |
-| Lane hierarchy            | Expands and collapses ownership lanes with stable layout, ancestor projection, and explicit visual gaps                                                     | `GPUTraceInteraction` and GPU-scanned lane offsets          |
-| Temporal candidates       | Queries a persistent multi-resolution time/lane hierarchy shared by rendering, labels, dependencies, analytics, and picking                                 | `GPUTraceTemporalIndex`                                     |
-| Semantic LOD              | Switches among exact spans, representative one-pixel spans, density bins, and wide-span exceptions without changing canonical identity                      | Exact, representative, density, and wide-span graph views   |
-| Galloping search          | Finds ordered time boundaries without linearly inspecting every canonical span for each pixel cell                                                          | `GPUGallopingSearch`-backed representative selection        |
-| Stable aggregation        | Builds density summaries in trace coordinates so panning does not re-bin against a moving screen-space origin                                               | Persistent temporal levels and time buckets                 |
-| Dependency routing        | Traverses bounded incoming/outgoing CSR, projects hidden endpoints, tests line/view intersection, and bundles dense corridors                               | Forward/reverse adjacency and dependency graph passes       |
-| Edge admission            | Brings relationships in gradually under stable zoom-scaled budgets instead of blotting out the trace                                                        | Candidate batches, stable hashing, and display budgets      |
-| Span and edge picking     | Resolves both mark types into one target, preserves source IDs, and highlights the hovered object in shaders                                                | Raster and analytical picking modes                         |
-| Clipped dictionary labels | Shares repeated text, admits labels only when glyphs fit, and avoids expanding off-screen strings                                                           | Dictionary text rendering and GPU label compaction          |
-| Interval analytics        | Analyzes the viewport, a measured rectangle/time interval, or an explicitly confirmed full trace                                                            | `GPUTraceAggregation`, `GPUTraceTimeBuckets`, histograms    |
-| Cross-filtered summaries  | Produces counts, duration statistics, error rates, duration distributions, and time profiles from the same GPU selection                                    | GPU-resident result buffers plus compact chart readback     |
-| Critical paths            | Finds exact cycle-safe parent critical paths today and exposes the masks and diagnostics needed by focus/render workflows                                   | `GPUTraceCriticalPath`                                      |
-| Comparison and anomalies  | Aligns operation dictionaries, compares current and baseline groups, scores regressions, and renders lazy chunked GPU masks without CPU row materialization | `GPUTraceComparison`, `GPUTraceAnomalyScoring`              |
-| Progressive analysis      | Spreads expensive index, full-trace, critical-path, and comparison work across frame-budgeted graph steps                                                   | Resumable plans with coherent generation publication        |
-| Visible validation        | Surfaces overflow, invalid topology, binding limits, preflight estimates, and graph failures in the side panel                                              | Validation buffers, preflight cards, and GPU Core inspector |
-| Idle rendering            | Renders only for view/data changes, picking, readback publication, or intentional animation                                                                 | Invalidation-driven trace viewer loop                       |
-| 25M span capacity posture | Preflights large span/dependency selections, chunks storage, bounds per-frame work, and reports memory before committing                                    | Dataset preflight and Desktop MAX device contract           |
+| Capability                | What it enables                                                                                                                                             | Concrete surface                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| GPU-resident trace model  | Keeps span, application-object, compacted-display, parent, and dependency identities distinct at millions of rows                                           | `GPUTraceScene` and canonical record layouts                      |
+| Batched storage           | Retains source partitions and keeps every storage binding within adapter limits                                                                             | Chunked span, dependency, and adjacency vectors                   |
+| Lane hierarchy            | Expands and collapses ownership lanes with stable layout, ancestor projection, and explicit visual gaps                                                     | `GPUTraceInteraction` and GPU-scanned lane offsets                |
+| Temporal candidates       | Queries a persistent multi-resolution time/lane hierarchy shared by rendering, labels, dependencies, analytics, and picking                                 | `GPUTraceTemporalIndex`                                           |
+| Semantic LOD              | Switches among exact spans, representative one-pixel spans, density bins, and wide-span exceptions without changing canonical identity                      | Exact, representative, density, and wide-span graph views         |
+| Galloping search          | Finds ordered time boundaries without linearly inspecting every canonical span for each pixel cell                                                          | `GPUGallopingSearch`-backed representative selection              |
+| Stable aggregation        | Builds density summaries in trace coordinates so panning does not re-bin against a moving screen-space origin                                               | Persistent temporal levels and time buckets                       |
+| Dependency routing        | Traverses bounded incoming/outgoing CSR, projects hidden endpoints, tests line/view intersection, and bundles dense corridors                               | Forward/reverse adjacency and dependency graph passes             |
+| Edge admission            | Brings relationships in gradually under stable zoom-scaled budgets instead of blotting out the trace                                                        | Candidate batches, stable hashing, and display budgets            |
+| Span and edge picking     | Resolves both mark types into one target, preserves source IDs, and highlights the hovered object in shaders                                                | Raster and analytical picking modes                               |
+| Clipped dictionary labels | Shares repeated text, admits labels only when glyphs fit, and avoids expanding off-screen strings                                                           | Dictionary text rendering and GPU label compaction                |
+| Interval analytics        | Analyzes the viewport, a measured rectangle/time interval, or an explicitly confirmed full trace                                                            | `GPUTraceAggregation`, `GPUTraceTimeBuckets`, histograms          |
+| Cross-filtered summaries  | Produces counts, duration statistics, error rates, duration distributions, and time profiles from the same GPU selection                                    | GPU-resident result buffers plus compact chart readback           |
+| Critical paths            | Finds exact cycle-safe parent critical paths today and exposes the masks and diagnostics needed by focus/render workflows                                   | `GPUTraceCriticalPath`                                            |
+| Comparison and anomalies  | Aligns operation dictionaries, compares current and baseline groups, scores regressions, and renders lazy chunked GPU masks without CPU row materialization | `GPUTraceComparison`, `GPUTraceAnomalyScoring`                    |
+| Progressive analysis      | Spreads expensive index, full-trace, critical-path, and comparison work across frame-budgeted graph steps                                                   | Resumable plans with coherent generation publication              |
+| Visible validation        | Surfaces overflow, invalid topology, binding limits, preflight estimates, and graph failures in the side panel                                              | Validation buffers, preflight cards, and GPU scheduling inspector |
+| Idle rendering            | Renders only for view/data changes, picking, readback publication, or intentional animation                                                                 | Invalidation-driven trace viewer loop                             |
+| 25M span capacity posture | Preflights large span/dependency selections, chunks storage, bounds per-frame work, and reports memory before committing                                    | Dataset preflight and Desktop MAX device contract                 |
 
-`gpu-trace` owns the trace semantics in this table. Scheduling, budgeting, conditions, aliasing, instrumentation, and kernel selection remain generic GPU Core capabilities and can be reused by non-trace workloads.
+`gpu-trace` owns the trace semantics in this table. Scheduling, budgeting, conditions, aliasing, instrumentation, and kernel selection remain generic GPU scheduling capabilities and can be reused by non-trace workloads.
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 
@@ -104,7 +104,7 @@ For an end-to-end explanation of the data structures, execution stages, cost mod
 
 ### A trace is an application domain, not a command-graph feature[​](#a-trace-is-an-application-domain-not-a-command-graph-feature "Direct link to A trace is an application domain, not a command-graph feature")
 
-The generic [`GPUCommandGraph`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md) knows about buffers, textures, compute passes, render passes, hazards, and encoding. It does not need processes, threads, spans, or dependency edges to schedule a particle simulation, culling renderer, image filter, or GPU analytics pipeline.
+The generic `GPUCommandGraph` knows about buffers, textures, compute passes, render passes, hazards, and encoding. It does not need processes, threads, spans, or dependency edges to schedule a particle simulation, culling renderer, image filter, or GPU analytics pipeline.
 
 `gpu-trace` depends on those reusable scheduling and rendering primitives, but the generic primitives do not depend on `gpu-trace`. Applications that never display execution timelines therefore do not import trace-domain schemas or interaction policies.
 
@@ -140,7 +140,7 @@ import {
 
 The module exports `GPU_TRACE_SPAN_RECORD_WORD_LENGTH` and `GPU_TRACE_LINK_RECORD_WORD_LENGTH` so producers, demonstration datasets, and consumers agree on one canonical memory layout. Empty and uneven source partitions remain visible; a compacted display position never replaces the stable canonical row or application object ID.
 
-Each trace span also projects into a normal [`GPUScene`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene.md) record. Generic visibility, renderer-owned resource groups, and indirect draw commands can therefore render a trace without adding trace-specific fields to the scene database.
+Each trace span also projects into a normal `GPUScene` record. Generic visibility, renderer-owned resource groups, and indirect draw commands can therefore render a trace without adding trace-specific fields to the scene database.
 
 For example, a distributed request can retain canonical row `417`, application object ID `9021`, and compacted visible position `12` simultaneously. Dependencies and picking resolve row `417`; application inspection resolves object `9021`; a compacted label pass consumes position `12`. Treating these identities as interchangeable would attach selections or dependency endpoints to the wrong operation whenever filtering changes.
 
@@ -218,6 +218,6 @@ Trace-specific classes, constants, helpers, and types are exported only from `@l
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) owns generic scheduling, conditions, budgeting, validation, and instrumentation.
-* [GPU Graph](https://luma.gl/docs/api-reference/experimental/gpu-graph.md) provides general graph analytics without trace-specific semantics.
+* GPU scheduling owns generic scheduling, conditions, budgeting, validation, and instrumentation.
+* GPU analytics provides general graph analytics without trace-specific semantics.
 * [GPU Dataframe](https://luma.gl/docs/api-reference/experimental/gpu-dataframe.md) provides columnar aggregation and comparison building blocks.

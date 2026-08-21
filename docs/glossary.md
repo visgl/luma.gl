@@ -42,4 +42,4 @@ This glossary gives luma.gl terms one canonical definition. Reference pages link
 * [How luma.gl fits together](https://luma.gl/docs/api-guide/luma-layers.md)
 * [Core GPU programming](https://luma.gl/docs/api-guide/gpu.md)
 * [Shader assembly](https://luma.gl/docs/api-guide/shaders/shader-assembly.md)
-* [GPU Core concepts](https://luma.gl/docs/api-reference/experimental/gpu-core/concepts.md)
+* GPU scheduling concepts
