@@ -750,7 +750,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial, skin, ...(morphTargetData ? [gpuAnimation] : [])],
+    modules: [pbrMaterial, skin, ...(crowd || morphTargetData ? [gpuAnimation] : [])],
     ...modelOptions,
 
     ...(instanceMatrices || crowd
