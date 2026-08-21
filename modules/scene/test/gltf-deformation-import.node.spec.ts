@@ -21,7 +21,7 @@ async function loadAnimatedMorphCube() {
   return postProcessGLTF(await parse(assetData, GLTFLoader, {gltf: {loadImages: false}}));
 }
 
-test('glTF AnimatedMorphCube changes existing packed geometry through the existing animator', async testContext => {
+test('glTF AnimatedMorphCube updates GPU weights through the existing animator', async testContext => {
   const source = await loadAnimatedMorphCube();
   const device = new NullDevice({});
   const scenegraphs = createScenegraphsFromGLTF(device, source);
@@ -47,6 +47,12 @@ test('glTF AnimatedMorphCube changes existing packed geometry through the existi
     const model = modelNode.model;
     const vertexBuffer = model._gpuGeometry!.attributes['geometry'];
     const initialBytes = new Uint8Array(await vertexBuffer.readAsync());
+    const morphWeights = modelNode.userData['gltfMorphWeights'] as {
+      values: Float32Array;
+      data: unknown;
+      packedTargetCount: number;
+    };
+    const initialGPUWeights = Array.from(morphWeights.values);
     const initialWeights = weightChannel.sampler.output[0];
     const changedKeyframe = weightChannel.sampler.output.findIndex(weights =>
       weights.some((weight, index) => weight !== initialWeights[index])
@@ -56,10 +62,20 @@ test('glTF AnimatedMorphCube changes existing packed geometry through the existi
     scenegraphs.animator.setTime(weightChannel.sampler.input[changedKeyframe] * 1000);
     const morphedBytes = await vertexBuffer.readAsync();
 
-    testContext.notDeepEqual(
+    testContext.deepEqual(
       Array.from(morphedBytes),
       Array.from(initialBytes),
-      'existing interleaved GPU vertices change without recreating the model'
+      'immutable source vertices are not rewritten for every animation frame'
+    );
+    testContext.notDeepEqual(
+      Array.from(morphWeights.values),
+      initialGPUWeights,
+      'the packed GPU morph weights carry the animated deformation state'
+    );
+    testContext.ok(morphWeights.data, 'the morph weight resource is retained by the model');
+    testContext.ok(
+      morphWeights.packedTargetCount > 0,
+      'morph weights remain packed in vec4 groups'
     );
     testContext.equal(modelNode.model, model, 'the authored model and vertex layout remain stable');
   }
