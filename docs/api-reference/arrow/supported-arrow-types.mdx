@@ -57,6 +57,7 @@ migration.
 | `Float32` | `float32` | yes |
 | `FixedSizeList<Float32, 3>` | `float32x3` | yes |
 | `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` | yes |
+| `FixedSizeList<Float32, 768>` embedding | `fixed-size-list<float32,768>` | no |
 | `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` | no |
 | `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` | no |
 
@@ -64,6 +65,14 @@ migration.
 metadata owned by the producing adapter. They are not automatically exposed as
 ordinary vertex attributes; path, text, polygon, and geometry adapters must
 expand them or bind their flattened values explicitly.
+
+Numeric `FixedSizeList` columns wider than four elements become first-class
+`fixed-size-list<format,size>` storage columns. Their `GPUVector.length` is the
+logical table-row count, while `valueLength` counts flattened list elements.
+Short fixed-size lists retain their existing vertex-compatible formats unless
+the table adapter explicitly selects them with `fixedSizeListColumns`.
+`validityColumns` can materialize a caller-named Uint32 table column combining
+parent-row and child-coordinate validity.
 
 Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
 The `nullable` column refers to columns with actual null rows, not just nullable
@@ -73,7 +82,7 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ❌ | Scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
+| `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ✅ | Scalar `GPUVector` or selected `GPUTable` columns preserve normalized null bitmaps and nullable Arrow readback. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility; consumers must explicitly honor validity. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths; stable source-ID consumers reject actual null identifiers. |
 | `Float64` | 🟡 | ❌ | Raw values can be copied into a `GPUVector`, but generic render paths should repack them to `Float32`, origin-relative `Float32`, or `u32` word pairs at conversion boundaries. | No generic `f64` vertex attribute or WGSL scalar path; use prepared Float32 values or custom word-pair helpers. | Matrix columns truncate to Float32; Float64 paths become per-row Float32 deltas plus retained origins. |
 | `Uint64` carrying DGGS cell keys | 🟡 | ❌ | DGGS WebGPU helpers retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `convertDggsCellKeysToGPUPaths()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
 | `Bool` | ❌ | ❌ | Arrow Bool values are bit-packed, so they are not a directly uploadable scalar buffer. Repack to `Uint8` or `Uint32` when shaders need flags. | Use as integer 0/1 flags after repacking; otherwise keep on CPU as row metadata. | `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU input; a future adapter could publish repacked flag columns. |
@@ -82,7 +91,8 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ✅ | Fixed-width GPU rows preserve parent and child validity for Arrow readback; optional `validityColumns` publishes explicit GPU row masks.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; consuming models must explicitly honor validity, and 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`5 \| 384 \| 768 \| 1536 \| ...>` | ✅ | ✅ | Row-aligned `fixed-size-list<format,size>` GPU table storage; optional `validityColumns` publishes explicit parent/child row masks. | WebGPU storage and compute; never synthesized into a generic vertex attribute. | High-dimensional embeddings, fixed-width feature vectors, and caller-owned table-based compute. |
 | `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`PathAttributeModel` expands to segment attributes; `PathStorageModel` keeps values in storage. | `ArrowPathRenderer.convertToGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `PathAttributeModel` and `PathStorageModel`. |
 | `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path conversion emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths convert deltas on CPU; WebGPU storage paths convert them on GPU before rendering. | `ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` convert attribute paths.<br/>`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` converts storage paths. |
 | `List<numeric \|`<br/>`FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
