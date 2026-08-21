@@ -22,6 +22,7 @@ This package is inspired by the ANARI object model, but it is not an official AN
 * [Animation and glTF integration](https://luma.gl/docs/api-reference/scene/anari-animation.md): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 * [Scene hierarchy](https://luma.gl/docs/api-reference/scene/anari-scene.md): surfaces, groups, transform instances, worlds, and instancing behavior.
 * [Cameras, renderers, and frames](https://luma.gl/docs/api-reference/scene/anari-rendering.md): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
+* [Structured volume ray marching](https://luma.gl/docs/api-reference/scene/raymarch.md): scalar/vector buffer and 3D-texture volumes, transfer functions, compositing, and solid vector glyphs.
 * [Scene schemas and JSON validation](https://luma.gl/docs/api-reference/scene/anari-schemas.md): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 * [ANARI C API and THREE.js mapping](https://luma.gl/docs/api-reference/scene/anari-api-mapping.md): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 * [ANARI developer guide](https://luma.gl/docs/api-guide/engine/anari-rendering.md): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.

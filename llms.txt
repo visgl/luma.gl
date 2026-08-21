@@ -602,6 +602,7 @@ Experimental asset import
 - [ANARI Cameras, Renderers, and Frames](https://luma.gl/docs/api-reference/scene/anari-rendering.md): Experimental
 - [ANARI Scene Hierarchy](https://luma.gl/docs/api-reference/scene/anari-scene.md): Experimental
 - [ANARI Scene Schemas](https://luma.gl/docs/api-reference/scene/anari-schemas.md): Experimental
+- [Structured volume ray marching](https://luma.gl/docs/api-reference/scene/raymarch.md): Render scalar and vector fields from buffers or 3D textures with reusable WebGPU volume ray marching.
 
 #### shadertools
 
