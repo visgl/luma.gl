@@ -80,6 +80,26 @@ describe('glTF reference ledger', () => {
       pitch: -0.15,
       distanceMultiplier: 0.05
     });
+    expect(
+      getGLTFReferenceCaptureOptions(
+        '?gltf-reference=1&model=RobotExpressive&variant=glTF-Binary&file=RobotExpressive.glb&studio=1&actors=3&actor=9&clip=Walking&animation-time=0.65&speed=1.25&loop=once&morph=Angry&morph-weight=0.6&camera=-1'
+      )
+    ).toEqual(
+      expect.objectContaining({
+        studio: {
+          actorCount: 3,
+          selectedActorIndex: 2,
+          clipName: 'Walking',
+          time: 0.65,
+          speed: 1.25,
+          loop: 'once',
+          morphTarget: 'Angry',
+          morphWeight: 0.6,
+          variant: '',
+          cameraIndex: null
+        }
+      })
+    );
   });
 
   test('counts indexed and non-indexed submitted geometry across instances', () => {

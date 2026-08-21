@@ -4,12 +4,22 @@
 
 import test from 'test/utils/vitest-tape';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {TextureFormat} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/test-utils';
 
 import {
+  assertSupportedGLTFExtensions,
+  createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
   getGLTFExtensionSupportSummary,
   getRegisteredGLTFExtensions
 } from '@luma.gl/gltf';
+
+class CompressedTextureNullDevice extends NullDevice {
+  override isTextureFormatSupported(_format: TextureFormat): boolean {
+    return true;
+  }
+}
 
 type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   extensionsRemoved?: string[];
@@ -125,6 +135,60 @@ test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations',
     'generic AVIF image decoding does not imply glTF extension source selection'
   );
 
+  t.end();
+});
+
+test('gltf#getGLTFExtensionSupport applies BasisU device format capabilities', t => {
+  const gltf = {
+    extensionsUsed: ['KHR_texture_basisu'],
+    extensionsRequired: ['KHR_texture_basisu'],
+    nodes: [],
+    materials: [],
+    textures: [
+      {
+        source: {
+          image: {
+            compressed: true,
+            data: [
+              {
+                data: new Uint8Array(16),
+                width: 4,
+                height: 4,
+                textureFormat: 'bc7-rgba-unorm'
+              }
+            ]
+          }
+        }
+      }
+    ]
+  } as unknown as GLTFPostprocessed;
+  const unsupportedDevice = new NullDevice({});
+  const supportedDevice = new CompressedTextureNullDevice({});
+
+  const unsupported = getGLTFExtensionSupport(gltf, unsupportedDevice).get('KHR_texture_basisu');
+  const supported = getGLTFExtensionSupport(gltf, supportedDevice).get('KHR_texture_basisu');
+
+  t.equal(unsupported?.supported, false, 'unsupported transcode format is reported truthfully');
+  t.equal(unsupported?.supportLevel, 'none', 'device gap fails strict extension support');
+  t.match(unsupported?.comment || '', /does not support.*bc7-rgba-unorm/);
+  t.equal(supported?.supported, true, 'supported transcode format retains built-in support');
+  t.throws(
+    () => assertSupportedGLTFExtensions(gltf, unsupportedDevice),
+    /KHR_texture_basisu/,
+    'required BasisU rejects an unsupported selected GPU format'
+  );
+  t.throws(
+    () => createScenegraphsFromGLTF(unsupportedDevice, gltf, {strictExtensions: true}),
+    /KHR_texture_basisu/,
+    'strict scenegraph creation checks the active device before allocating resources'
+  );
+  t.doesNotThrow(
+    () => assertSupportedGLTFExtensions(gltf, supportedDevice),
+    'required BasisU accepts a selected GPU format supported by the device'
+  );
+
+  unsupportedDevice.destroy();
+  supportedDevice.destroy();
   t.end();
 });
 

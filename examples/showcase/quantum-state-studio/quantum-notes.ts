@@ -64,26 +64,26 @@ export function getQuantumImplementationMarkup(): string {
       It does not claim quantum acceleration and intentionally keeps quantum-domain APIs out of core.</p>
     </div>
     <div class="implementation-metrics" aria-label="Current circuit GPU statistics">
-      <div><strong data-note-qubits>–</strong><span>qubits</span></div>
-      <div><strong data-note-states>–</strong><span>basis states</span></div>
-      <div><strong data-note-snapshots>–</strong><span>resident snapshots</span></div>
-      <div><strong data-note-nodes>–</strong><span>simulation graph nodes</span></div>
-      <div><strong data-note-memory>–</strong><span>resident GPU memory</span></div>
+      <div data-explain="metric-qubits" tabindex="0"><strong data-note-qubits>–</strong><span>qubits</span></div>
+      <div data-explain="metric-states" tabindex="0"><strong data-note-states>–</strong><span>basis states</span></div>
+      <div data-explain="metric-snapshots" tabindex="0"><strong data-note-snapshots>–</strong><span>resident snapshots</span></div>
+      <div data-explain="metric-nodes" tabindex="0"><strong data-note-nodes>–</strong><span>simulation graph nodes</span></div>
+      <div data-explain="metric-memory" tabindex="0"><strong data-note-memory>–</strong><span>resident GPU memory</span></div>
     </div>
     <section class="graph-notes">
       <div class="graph-title"><p class="eyebrow">Compiled GPUCommandGraph</p><h3>Circuit evolution graph</h3></div>
       <div class="graph-flow" role="img" aria-label="Initial state flows through gate nodes, probability and phase derivation, normalization reduction, and direct rendering">
-        <div class="graph-node source"><small>upload once</small><strong>|0…0⟩</strong><span>slice 0</span></div>
+        <div class="graph-node source" data-explain="graph-initial" tabindex="0"><small>upload once</small><strong>|0…0⟩</strong><span>slice 0</span></div>
         <b>→</b>
-        <div class="graph-node repeated"><small>compute × gate count</small><strong>Gate nodes</strong><span>slice n → n+1</span></div>
+        <div class="graph-node repeated" data-explain="graph-gates" tabindex="0"><small>compute × gate count</small><strong>Gate nodes</strong><span>slice n → n+1</span></div>
         <b>→</b>
-        <div class="graph-node"><small>compute</small><strong>Probability + phase</strong><span>all snapshots</span></div>
+        <div class="graph-node" data-explain="graph-probability" tabindex="0"><small>compute</small><strong>Probability + phase</strong><span>all snapshots</span></div>
         <b>→</b>
-        <div class="graph-node publication"><small>reduction + publication</small><strong>Normalization</strong><span>complete history</span></div>
+        <div class="graph-node publication" data-explain="graph-normalization" tabindex="0"><small>reduction + publication</small><strong>Normalization</strong><span>complete history</span></div>
         <b>→</b>
-        <div class="graph-node render"><small>luma.gl Model</small><strong>Linked views</strong><span>zero amplitude readback</span></div>
+        <div class="graph-node render" data-explain="graph-render" tabindex="0"><small>luma.gl Model</small><strong>Linked views</strong><span>zero amplitude readback</span></div>
       </div>
-      <div class="analysis-branch"><span>On scrub / observed-qubit change</span><b>Selected history slice</b><i>→</i><b>Bloch reduction</b><i>+</i><b>Connected Z correlations</b></div>
+      <div class="analysis-branch" data-explain="graph-analysis" tabindex="0"><span>On scrub / observed-qubit change</span><b>Selected history slice</b><i>→</i><b>Bloch reduction</b><i>+</i><b>Connected Z correlations</b></div>
     </section>
     <div class="implementation-grid">
       <article><p class="eyebrow">Storage layout</p><h3>Complex f32 pairs</h3>

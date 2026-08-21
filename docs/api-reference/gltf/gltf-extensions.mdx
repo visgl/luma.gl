@@ -241,7 +241,9 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
     </SupportRow>
     <SupportRow name="KHR_texture_basisu" support="✅ *️⃣">
       BasisU / KTX2 textures are passed through as compressed textures when supported
-      by the device.
+      by the device. The runtime checks the transcoded GPU format before upload; optional
+      unsupported formats use a 1×1 fallback, and required BasisU assets fail
+      <code>strictExtensions</code> instead of issuing an invalid backend texture operation.
     </SupportRow>
     <SupportRow name="EXT_texture_webp" support="✅ *️⃣">
       <code>@loaders.gl/gltf</code> resolves the texture source; runtime support still

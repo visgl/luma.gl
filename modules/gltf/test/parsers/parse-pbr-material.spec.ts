@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {log} from '@luma.gl/core';
+import {log, type TextureFormat} from '@luma.gl/core';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {NullDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 
-const device = new NullDevice({});
+class CompressedTextureNullDevice extends NullDevice {
+  override isTextureFormatSupported(_format: TextureFormat): boolean {
+    return true;
+  }
+}
+
+const device = new CompressedTextureNullDevice({});
 
 function makeCompressedTextureInfo(id: string) {
   return {

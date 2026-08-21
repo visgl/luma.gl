@@ -156,6 +156,13 @@ license/provenance tests, focused WebGPU/WebGL2 coverage, user documentation, an
 
 **Priority:** P0. **Owners:** upstream `@loaders.gl/gltf`, `@luma.gl/gltf`.
 
+**Status:** In progress. The first post-Animation-Studio slice normalizes WebGL-only `LINE_LOOP`
+and `TRIANGLE_FAN` modes into portable indexed list topologies without modifying source accessor
+data. The next slice validates loaders.gl's selected BasisU/KTX2 GPU format against the active
+device, uses a deterministic fallback for optional unsupported textures, and rejects unsupported
+required BasisU textures in strict mode. Meshopt decoding, WebP/AVIF loader selection, and the
+remaining official fixture matrix are still pending.
+
 - Implement actual `KHR_meshopt_compression` release-candidate decoding in the shared asset-loader
   boundary, including geometry/index buffers, animation tracks, morph targets, and instance data.
 - Keep the existing ratified `EXT_meshopt_compression` behavior; validate that the two extensions

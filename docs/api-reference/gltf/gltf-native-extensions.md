@@ -354,9 +354,11 @@ if (unsupportedRequired.length > 0) {
 }
 ```
 
-`createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` performs the same assertion
-**before** parsing GPU resources. The returned `scenegraphs.extensionSupport` is the same
-document-specific capability model.
+`createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` performs a device-aware version
+of the same assertion **before** parsing GPU resources. In particular, required
+`KHR_texture_basisu` fails when loaders.gl selected a compressed GPU format that the active device
+cannot create. The returned `scenegraphs.extensionSupport` uses the same device-specific capability
+model.
 
 | Support level | Meaning | Accepted when required? |
 | --- | --- | --- |

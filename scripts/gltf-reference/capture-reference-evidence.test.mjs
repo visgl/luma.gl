@@ -10,9 +10,24 @@ import {PNG} from 'pngjs';
 import {
   assertCleanCaptureDiagnostics,
   comparePNGScreenshots,
+  GLTF_REFERENCE_CAPTURE_SCENARIOS,
   isKnownDocusaurusHydrationDiagnostic,
   parseCLIArguments
 } from './capture-reference-evidence.mjs';
+
+test('capture matrix includes material and fixed Animation Studio evidence', () => {
+  assert.deepEqual(
+    GLTF_REFERENCE_CAPTURE_SCENARIOS.map(scenario => scenario.id),
+    ['material-extension', 'animation-studio']
+  );
+  const studioScenario = GLTF_REFERENCE_CAPTURE_SCENARIOS[1];
+  assert.equal(studioScenario.model, 'RobotExpressive');
+  assert.equal(studioScenario.studio.actorCount, 3);
+  assert.equal(studioScenario.studio.clipName, 'Walking');
+  assert.equal(studioScenario.studio.morphTarget, 'Angry');
+  assert.match(studioScenario.route, /studio=1/);
+  assert.match(studioScenario.source.revision, /^[0-9a-f]{40}$/);
+});
 
 test('comparePNGScreenshots applies channel and differing-pixel tolerances', () => {
   const left = makePNG([

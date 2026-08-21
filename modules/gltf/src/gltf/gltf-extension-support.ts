@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {Device, TextureFormat} from '@luma.gl/core';
 
 export type GLTFExtensionSupportLevel = 'built-in' | 'parsed-and-wired' | 'loader-only' | 'none';
 
@@ -285,7 +286,8 @@ export function getGLTFExtensionSupportSummary(): GLTFExtensionSupportSummary {
 }
 
 export function getGLTFExtensionSupport(
-  gltf: GLTFPostprocessed
+  gltf: GLTFPostprocessed,
+  device?: Device
 ): Map<string, GLTFExtensionSupport> {
   const extensionNames = Array.from(collectGLTFExtensionNames(gltf)).sort();
   const requiredExtensionNames = new Set(gltf.extensionsRequired || []);
@@ -293,16 +295,22 @@ export function getGLTFExtensionSupport(
     extensionName => {
       const extensionSupportDefinition =
         GLTF_EXTENSION_SUPPORT_REGISTRY[extensionName] || UNKNOWN_EXTENSION_SUPPORT;
+      const deviceSupport = getDeviceExtensionSupport(
+        extensionName,
+        extensionSupportDefinition,
+        gltf,
+        device
+      );
 
       return [
         extensionName,
         {
           extensionName,
           required: requiredExtensionNames.has(extensionName),
-          supported: isRuntimeSupported(extensionSupportDefinition.supportLevel),
-          supportLevel: extensionSupportDefinition.supportLevel,
+          supported: isRuntimeSupported(deviceSupport.supportLevel),
+          supportLevel: deviceSupport.supportLevel,
           standardStatus: extensionSupportDefinition.standardStatus,
-          comment: extensionSupportDefinition.comment
+          comment: deviceSupport.comment
         }
       ];
     }
@@ -313,16 +321,17 @@ export function getGLTFExtensionSupport(
 
 /** Returns required extensions that have no complete runtime implementation. */
 export function getUnsupportedRequiredGLTFExtensions(
-  gltf: GLTFPostprocessed
+  gltf: GLTFPostprocessed,
+  device?: Device
 ): GLTFExtensionSupport[] {
-  return Array.from(getGLTFExtensionSupport(gltf).values()).filter(
+  return Array.from(getGLTFExtensionSupport(gltf, device).values()).filter(
     extension => extension.required && !extension.supported
   );
 }
 
 /** Rejects documents whose required extensions cannot be honored by the runtime. */
-export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed): void {
-  const unsupportedExtensions = getUnsupportedRequiredGLTFExtensions(gltf);
+export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed, device?: Device): void {
+  const unsupportedExtensions = getUnsupportedRequiredGLTFExtensions(gltf, device);
   if (unsupportedExtensions.length) {
     throw new Error(
       `Unsupported required glTF extensions: ${unsupportedExtensions
@@ -330,6 +339,50 @@ export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed): void {
         .join(', ')}`
     );
   }
+}
+
+function getDeviceExtensionSupport(
+  extensionName: string,
+  definition: GLTFExtensionSupportDefinition,
+  gltf: GLTFPostprocessed,
+  device?: Device
+): Pick<GLTFExtensionSupportDefinition, 'supportLevel' | 'comment'> {
+  if (extensionName !== 'KHR_texture_basisu' || !device) {
+    return definition;
+  }
+
+  const compressedFormats = collectCompressedTextureFormats(gltf);
+  const unsupportedFormat = compressedFormats.find(
+    format => format === null || !device.isTextureFormatSupported(format)
+  );
+  if (unsupportedFormat === undefined) {
+    return definition;
+  }
+
+  return {
+    supportLevel: 'none',
+    comment:
+      unsupportedFormat === null
+        ? `The ${device.type} device cannot use a BasisU texture whose transcoded GPU format is missing.`
+        : `The ${device.type} device does not support the transcoded BasisU texture format '${unsupportedFormat}'.`
+  };
+}
+
+function collectCompressedTextureFormats(gltf: GLTFPostprocessed): Array<TextureFormat | null> {
+  const formats: Array<TextureFormat | null> = [];
+  for (const texture of gltf.textures || []) {
+    const image = (texture as any)?.source?.image;
+    if (!image?.compressed) {
+      continue;
+    }
+    const firstLevel = Array.isArray(image.data)
+      ? image.data[0]
+      : Array.isArray(image.mipmaps)
+        ? image.mipmaps[0]
+        : undefined;
+    formats.push((firstLevel?.textureFormat as TextureFormat | undefined) ?? null);
+  }
+  return formats;
 }
 
 export function getRegisteredGLTFExtensionSupport(

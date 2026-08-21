@@ -86,6 +86,7 @@ import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
+import LLMNetworkApp from '../../examples/showcase/llm-network/app';
 import VectorFieldLabApp from '../../examples/showcase/vector-field-lab/app';
 import QuantumStateStudioApp from '../../examples/showcase/quantum-state-studio/app';
 import TempestOceanApp from '../../examples/showcase/tempest-ocean/app';
@@ -903,6 +904,19 @@ export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
     directory="showcase"
     devices={['webgpu']}
     template={VectorFieldLabApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const LLMNetworkExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="llm-network"
+    title="Inside a Transformer"
+    subtitle="Follow tokens through attention, hidden layers, and next-token prediction"
+    directory="showcase"
+    devices={['webgpu']}
+    template={LLMNetworkApp}
     config={exampleConfig}
     {...props}
   />

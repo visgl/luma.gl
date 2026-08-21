@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
+import type {TextureFormat} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   createCompressedTexture,
@@ -10,7 +11,13 @@ import {
   type CompressedImageMipmapArray
 } from '@luma.gl/gltf/parsers/parse-pbr-material';
 
-const device = new NullDevice({});
+class CompressedTextureNullDevice extends NullDevice {
+  override isTextureFormatSupported(_format: TextureFormat): boolean {
+    return true;
+  }
+}
+
+const device = new CompressedTextureNullDevice({});
 
 const BASE_OPTIONS = {
   id: 'test-texture',
@@ -267,6 +274,31 @@ test('gltf#createCompressedTexture - missing textureFormat returns fallback', t 
   t.equals(texture.format, 'rgba8unorm', 'fallback format');
 
   texture.destroy();
+  t.end();
+});
+
+test('gltf#createCompressedTexture - unsupported device format returns fallback', t => {
+  const unsupportedDevice = new NullDevice({});
+  const image: CompressedImageDataArray = {
+    compressed: true,
+    mipmaps: true,
+    data: [
+      {
+        data: new Uint8Array(64),
+        width: 256,
+        height: 256,
+        textureFormat: 'bc7-rgba-unorm'
+      }
+    ]
+  };
+
+  const texture = createCompressedTexture(unsupportedDevice, image, BASE_OPTIONS);
+
+  t.equals(texture.format, 'rgba8unorm', 'unsupported compressed format uses fallback');
+  t.equals(texture.width, 1, 'fallback has deterministic dimensions');
+
+  texture.destroy();
+  unsupportedDevice.destroy();
   t.end();
 });
 

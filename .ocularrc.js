@@ -34,6 +34,7 @@ const config = {
       // Repo-owned shorthand aliases for website examples.
       examples: {
         animation: '/examples/api/animation',
+        'algebraic-varieties': '/examples/showcase/algebraic-varieties',
         scenes: '/examples/showcase/scene',
         'arrow-points': '/examples/arrow/arrow-points',
         'arrow-filtering': '/examples/arrow/arrow-filtering',
@@ -55,6 +56,7 @@ const config = {
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',
         lighting: '/examples/tutorials/lighting',
+        'llm-network': '/examples/showcase/llm-network',
         'multi-canvas': '/examples/api/multi-canvas',
         persistence: '/examples/showcase/persistence',
         postprocessing: '/examples/showcase/postprocessing',

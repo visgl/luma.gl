@@ -12,3 +12,39 @@ sidebar_custom_props:
 import {GLTFExample} from '@site/src/examples';
 
 <GLTFExample />
+
+## Animation Studio
+
+The default **Expressive Robot** is a pinned, CC0-licensed production asset containing 14 named
+animation clips, two 43-joint skins, and three facial morph targets. The studio can select and
+crossfade clips, change playback speed and loop mode, scrub in seconds, adjust expressions, choose
+authored material variants and cameras, and pause playback without replacing the imported scene.
+
+Increasing **Independent Characters** moves playback onto the existing `GLTFAnimatedCrowd` path.
+Each actor has independent clip, time, speed, loop, and skin-palette state while compatible source
+primitives remain shared in GPU-instanced draws. Select an actor in the panel to edit its playback
+without changing its neighbors. The existing authored/generated LOD controls remain available for
+the same crowd.
+
+Facial-expression controls use the public morph API directly:
+
+```ts
+import {createScenegraphsFromGLTF, setGLTFMorphWeights} from '@luma.gl/gltf';
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf);
+const faceNode = scenegraphs.gltfNodeIndexToNodeMap.get(13);
+if (faceNode) {
+  setGLTFMorphWeights(faceNode, [0.8, 0, 0]);
+}
+```
+
+## Ledger-backed gallery and provenance
+
+The **Animation Studio** gallery is generated from the executable glTF reference ledger rather than
+a second support manifest. Feature labels therefore report the runtime registry's exact extension
+name, standards maturity, and support level. The only extra offline hero asset is
+`RobotExpressive.glb`, pinned to its three.js source revision with its upstream CC0 attribution.
+
+The companion [Scene Playground](/examples/experimental/scene-playground) exposes the same expressive
+robot, compact skeletal fixture, and animated morph fixture through the retained-scene adapter. Its
+editor exports either textual `.gltf` or binary `.glb` using the source-faithful exporter.

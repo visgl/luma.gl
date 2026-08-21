@@ -14621,6 +14621,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"luma.gl-example-algebraic-varieties@workspace:examples/showcase/algebraic-varieties":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-example-algebraic-varieties@workspace:examples/showcase/algebraic-varieties"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-animation@workspace:examples/api/animation":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-animation@workspace:examples/api/animation"
@@ -15694,6 +15709,19 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-llm-network@workspace:examples/showcase/llm-network":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-llm-network@workspace:examples/showcase/llm-network"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

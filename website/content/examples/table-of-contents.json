@@ -41,6 +41,7 @@
     "label": "WebGPU",
     "items": [
       "showcase/lightstorm-megacity",
+      "showcase/llm-network",
       "experimental/lucim-volume-lab",
       "experimental/volumetric-fire-forge",
       {

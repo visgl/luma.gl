@@ -16,6 +16,10 @@ import {
   getQuantumBackgroundMarkup,
   getQuantumImplementationMarkup
 } from '../../examples/showcase/quantum-state-studio/quantum-notes';
+import {
+  getQuantumExplanation,
+  getQuantumGateExplanation
+} from '../../examples/showcase/quantum-state-studio/quantum-explanations';
 
 describe('Quantum State Studio state-vector indexing', () => {
   test('treats q0 as the least-significant computational-basis bit', () => {
@@ -99,5 +103,15 @@ describe('Quantum State Studio explanatory tabs', () => {
     expect(implementation).toContain('GPUCommandGraph');
     expect(implementation).toContain('complete-state-history');
     expect(implementation).toContain('selected-observables');
+  });
+
+  test('provides contextual explanations for GPU views, graph nodes, and concrete gates', () => {
+    expect(getQuantumExplanation('probability-landscape')?.body).toContain('complex phase');
+    expect(getQuantumExplanation('graph-normalization')?.body).toContain('Σ|αₓ|²');
+    expect(getQuantumGateExplanation(makeCommonGate('H', 2), 4)).toMatchObject({
+      eyebrow: 'Gate 4 · state slice 4',
+      title: 'H on q2'
+    });
+    expect(getQuantumImplementationMarkup()).toContain('data-explain="graph-analysis"');
   });
 });
