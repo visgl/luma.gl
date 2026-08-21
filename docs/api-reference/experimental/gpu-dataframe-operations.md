@@ -138,7 +138,11 @@ provided validity sidecars are released only after every borrowed projection and
 has released its shared source lease:
 
 ```ts
-const owner = new GPUDataFrame({...uploaded, ownership: 'owned'});
+const owner = new GPUDataFrame({
+  table: sourceTable,
+  validity: {fare: fareValidity},
+  ownership: 'owned'
+});
 const retained = owner.filter(column('fare').isValid()).compile(
   new GPUCommandGraph<GPUDataFrameQueryParameters>(device)
 );
