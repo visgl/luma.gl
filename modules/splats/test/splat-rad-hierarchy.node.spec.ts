@@ -739,7 +739,7 @@ test('SplatRADHierarchyManager reproduces Spark authored anisotropic and high-op
   t.end();
 });
 
-test('SplatRADHierarchyManager applies Spark angular center, peripheral, and behind foveation', t => {
+test('SplatRADHierarchyManager applies documented angular detail zones', t => {
   const device = new NullDevice({});
   const parents = makeRADPage(device, {
     id: 'parents',
