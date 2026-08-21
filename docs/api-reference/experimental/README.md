@@ -236,7 +236,7 @@ chart rendering, command submission, and any compact summary readback.
   <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
 </p>
 
-[`@luma.gl/experimental/luvs`](/docs/api-reference/experimental/luvs) adds exact nearest-neighbor
+[`@luma.gl/experimental/graph-vector-similarity`](/docs/api-reference/experimental/graph-vector-similarity) adds exact nearest-neighbor
 search to existing WebGPU command graphs. Embeddings remain ordinary fixed-size-list GPU table
 columns; the module borrows preserved source batches, stable row identifiers, optional validity,
 and linked-selection masks instead of introducing another storage owner or renderer.

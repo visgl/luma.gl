@@ -12,9 +12,15 @@ import * as arrow from 'apache-arrow';
 import test, {type Test} from 'test/utils/vitest-tape';
 import {getViewBinding, getViewElementOffset} from '../../src/gpu-primitives/graph-data-view-utils';
 import {GPUHashIndex} from '../../src/gpu-primitives/gpu-hash-index';
-import {importGPUEmbeddingTable, importGPUEmbeddingVector} from '../../src/luvs/embedding-matrix';
-import {GPUSimilaritySearch} from '../../src/luvs/gpu-similarity-search';
-import type {GPUEmbeddingMetric, GraphEmbeddingMatrix} from '../../src/luvs/types';
+import {
+  importGPUEmbeddingTable,
+  importGPUEmbeddingVector
+} from '../../src/graph-vector-similarity/embedding-matrix';
+import {GPUSimilaritySearch} from '../../src/graph-vector-similarity/gpu-similarity-search';
+import type {
+  GPUEmbeddingMetric,
+  GraphEmbeddingMatrix
+} from '../../src/graph-vector-similarity/types';
 
 const INVALID_SOURCE_ROW_ID = 0xffff_ffff;
 

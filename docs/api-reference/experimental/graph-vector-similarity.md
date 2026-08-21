@@ -1,16 +1,16 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 
-# luVS: GPU Vector Similarity Search
+# Graph Vector Similarity
 
-<ExperimentalDocsTabs active="luvs" />
+<ExperimentalDocsTabs active="graph-vector-similarity" />
 
 ## Overview
 
-`@luma.gl/experimental/luvs` is a headless WebGPU computation backend for high-dimensional vector
+`@luma.gl/experimental/graph-vector-similarity` is a headless WebGPU computation backend for high-dimensional vector
 similarity. Applications use its GPU-resident nearest neighbors, scores, and selection counts for
 semantic selection, similar-item highlighting, color encoding, and other visualization workflows.
 
-luVS does not provide a graph visualization, graph-based approximate index, embedding explorer,
+Graph Vector Similarity does not provide a graph visualization, graph-based approximate index, embedding explorer,
 vector database, hosted inference, or renderer. Applications retain their existing visualization
 stack and own command submission, output buffers, optional readback, and rendering.
 
@@ -24,7 +24,7 @@ images, products, or events. A selected record can therefore drive a linked sele
 nearest neighbors or provide a reusable similarity-based highlighting and color channel.
 
 Transferring every embedding to the CPU for each interaction makes that relationship expensive and
-breaks composition with GPU-resident filters. luVS contributes bounded compute passes to the same
+breaks composition with GPU-resident filters. Graph Vector Similarity contributes bounded compute passes to the same
 `GPUCommandGraph` as the existing selection and rendering workflow. The result is ordinary GPU
 data that later passes can consume; applications still decide what to draw and when to submit.
 
@@ -107,10 +107,10 @@ new outputs before accepting another query.
 
 ## Attribution
 
-luVS is inspired by [NVIDIA RAPIDS cuVS](https://github.com/NVIDIA/cuvs), which is distributed under
+Graph Vector Similarity is inspired by [NVIDIA RAPIDS cuVS](https://github.com/NVIDIA/cuvs), which is distributed under
 the [Apache License 2.0](https://github.com/NVIDIA/cuvs/blob/main/LICENSE).
 
-luVS is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuVS source code, CUDA
+Graph Vector Similarity is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuVS source code, CUDA
 kernels, or FAISS implementations are copied into this module. It is not affiliated with or endorsed
 by NVIDIA or the RAPIDS project, and it neither implements a compatible cuVS API nor claims feature
 parity.
@@ -146,14 +146,14 @@ The embedding width is encoded in the format and remains available when a column
 its table. `GPUData.byteStride` may exceed `rowByteLength` for padded rows; `byteOffset` identifies
 the first logical row in its allocation. `GPUTable` and `GPURecordBatch` preserve batch boundaries,
 source-row provenance, and ownership. Stable source IDs and optional GPU validity are separate,
-ordinary row-aligned Uint32 columns. luVS borrows those table resources; it does not introduce a
+ordinary row-aligned Uint32 columns. Graph Vector Similarity borrows those table resources; it does not introduce a
 second owning matrix abstraction or silently concatenate, repack, or copy source batches.
 Its graph bindings align packed buffer offsets internally; ordinary generic WebGPU table bindings
 still require storage offsets aligned to the active device limit.
 
 Storage bindings are bounded by the active WebGPU device. At a 128 MiB binding limit, one packed
 binding holds about 87,381 rows at 384 dimensions, 43,690 rows at 768 dimensions, or 21,845 rows
-at 1,536 dimensions. luVS processes original chunks in bounded tiles and merges their candidates
+at 1,536 dimensions. Graph Vector Similarity processes original chunks in bounded tiles and merges their candidates
 into one deterministic global top-K without materializing a complete query-by-dataset score matrix.
 
 ## Ingest Apache Arrow embedding columns
@@ -190,7 +190,7 @@ discard preceding chunks and their original provenance; explicit source-ID colum
 identity across those boundaries.
 
 If an embedding column contains null parent rows or null child coordinates, select its explicit
-GPU validity sibling when importing it into luVS. Nullable embedding data without a selected
+GPU validity sibling when importing it into Graph Vector Similarity. Nullable embedding data without a selected
 validity column is rejected instead of admitting zero-filled null rows as candidate vectors.
 
 ```ts
@@ -215,7 +215,7 @@ import {GPUCommandGraph} from '@luma.gl/experimental';
 import {
   GPUSimilaritySearch,
   importGPUEmbeddingTable
-} from '@luma.gl/experimental/luvs';
+} from '@luma.gl/experimental/graph-vector-similarity';
 
 const graph = new GPUCommandGraph(device, {id: 'semantic-selection'});
 const dataset = importGPUEmbeddingTable(graph, datasetTable, {
@@ -288,7 +288,7 @@ search. Zero rejects the row; nonzero accepts it. Existing LuxFilter masks alrea
 
 ```ts
 import {LuxFilterSelection} from '@luma.gl/experimental/luxfilter';
-import {GPUSimilaritySearch} from '@luma.gl/experimental/luvs';
+import {GPUSimilaritySearch} from '@luma.gl/experimental/graph-vector-similarity';
 
 const selection = new LuxFilterSelection(graph, {
   id: 'visible-category',
@@ -327,7 +327,7 @@ needs concrete CPU values.
 
 WebGPU buffers cannot be handed directly to a renderer that owns an unrelated WebGL context.
 Interoperation with WebGL-based applications such as a WebGL cosmos.gl renderer requires an
-explicit supported transfer or readback boundary; luVS does not claim WebGPU-to-WebGL zero-copy.
+explicit supported transfer or readback boundary; Graph Vector Similarity does not claim WebGPU-to-WebGL zero-copy.
 
 See [LuxFilter](/docs/api-reference/experimental/luxfilter),
 [GPU command graphs](/docs/api-reference/experimental/gpu-primitives/gpu-command-graph), and
