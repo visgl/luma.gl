@@ -63,8 +63,31 @@ const packedOutput = await translatedPositions.evaluate(device);
 ```
 
 Input views retain their offset and stride, so multiple attributes may borrow
-the same interleaved buffer. Operation results remain newly materialized packed
-outputs; evaluating into an interleaved destination is not implicit.
+the same interleaved buffer. Operation results use newly materialized packed
+outputs by default. Call `setTargetBuffer()` before evaluation to direct an
+operation result into an existing buffer range.
+
+### Evaluate into an existing buffer
+
+```ts
+import {cleanEvaluate, fround, GPUDataEvaluator} from '@luma.gl/gpgpu';
+
+const source = GPUDataEvaluator.fromArray(new Float64Array(values), {size: 3});
+const splitPositions = fround(source);
+
+splitPositions.setTargetBuffer({
+  buffer: attributeBuffer,
+  byteOffset: destinationByteOffset
+});
+
+await cleanEvaluate(device, splitPositions);
+```
+
+The target is borrowed. Evaluation writes directly into `attributeBuffer` and
+does not allocate or copy through a separate output buffer. `cleanEvaluate()`
+recycles unreferenced owned dependency buffers, but preserves the borrowed root
+target. Calling `splitPositions.destroy()` is not required to release the target
+and never destroys `attributeBuffer`.
 
 ## `GPUDataEvaluator`
 
@@ -122,6 +145,27 @@ the stored scalar component width.
 
 ### Methods
 
+#### `setTargetBuffer(target: GPUDataEvaluatorTargetBuffer): void`
+
+Assigns borrowed storage for the next evaluation of a deferred operation
+output. This method is only valid before evaluation and on an evaluator whose
+source is an `Operation`.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `buffer` | `Buffer` | Borrowed buffer that receives the operation output. |
+| `byteOffset?` | `number` | Byte offset of the first output row. Defaults to `0`. |
+| `byteStride?` | `number` | Byte distance between adjacent output rows. Defaults to the operation output's current packed stride. Backend layout restrictions still apply. |
+
+`setTargetBuffer()` records the target without changing the evaluator's logical
+layout. When evaluation begins, the target replaces the normal pooled output
+allocation and `offset`, `stride`, and `byteLength` are updated to describe the
+physical target layout. The target buffer must belong to the evaluation device
+and be large enough for the resulting range.
+
+The evaluator borrows the assigned buffer. Evaluating or destroying the
+evaluator never transfers ownership of or destroys that buffer.
+
 #### `evaluate(device: Device, options?): Promise<GPUVector>`
 
 Materializes one single-chunk `GPUVector` on the provided device. Lazy
@@ -146,7 +190,8 @@ inspection and may be slower than staying on the GPU.
 #### `destroy(): void`
 
 Releases cached GPU storage owned by this evaluator and prevents future
-evaluation.
+evaluation. Borrowed buffers supplied through the constructor,
+`fromGPUData()`, `fromGPUDataView()`, or `setTargetBuffer()` are not destroyed.
 
 ## `GPUVectorEvaluator`
 
@@ -193,9 +238,12 @@ Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
 - Leaf operations accept `GPUDataEvaluator`, `GPUData`, or `GPUDataView`, not `GPUVector`.
 - Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` for vector-wide
   transforms that should preserve streaming chunks.
-- `GPUDataEvaluator` operation outputs own their materialized single-chunk
-  `GPUVector` backing resource.
+- `GPUDataEvaluator` operation outputs own their automatically allocated
+  backing resource. Outputs configured with `setTargetBuffer()` borrow their
+  backing resource instead.
 - Borrowed `GPUData` chunks are not destroyed by `GPUDataEvaluator.destroy()`.
 - Borrowed `GPUDataView` buffers are not destroyed by `GPUDataEvaluator.destroy()`.
+- Target buffers assigned with `GPUDataEvaluator.setTargetBuffer()` are not
+  destroyed or recycled by the evaluator.
 - Synchronous evaluation is intended for already-prepared graphs where backend
   registration and any required CPU values are available up front.

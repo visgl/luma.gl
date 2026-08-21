@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {test, expect, describe, beforeEach} from 'vitest';
-import type {Device} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
 import {cleanEvaluate, fround, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {getTestDevice, verifyTableValue} from './fixtures';
 
@@ -28,6 +28,44 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
 
     beforeEach(async () => {
       device = await getTestDevice(deviceType);
+    });
+
+    test('writes into an assigned target buffer range', async t => {
+      if (!device) {
+        t.skip(`${deviceType} not available`);
+        return;
+      }
+
+      const values = [Math.PI, -Math.E, 0.1, -1 / 3];
+      const output = fround(GPUDataEvaluator.fromArray(new Float64Array(values), {size: 2}));
+      const byteOffset = 16;
+      const targetBuffer = device.createBuffer({
+        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        data: new Float32Array(16).fill(-1)
+      });
+
+      output.setTargetBuffer({buffer: targetBuffer, byteOffset});
+      expect(output.offset).toBe(0);
+
+      await cleanEvaluate(device, output);
+
+      expect(output.buffer).toBe(targetBuffer);
+      expect(output.offset).toBe(byteOffset);
+      expect(output.stride).toBe(16);
+      expect(await verifyTableValue(output, {value: splitFloatsCPU(values, 2), size: 4})).toBe(
+        null
+      );
+
+      const targetBytes = await targetBuffer.readAsync();
+      const targetValues = new Float32Array(
+        targetBytes.buffer,
+        targetBytes.byteOffset,
+        targetBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+      );
+      expect(Array.from(targetValues.subarray(0, byteOffset / 4))).toEqual([-1, -1, -1, -1]);
+
+      // The evaluated output borrows this buffer, so no output.destroy() is required.
+      targetBuffer.destroy();
     });
 
     const TEST_CASES: {

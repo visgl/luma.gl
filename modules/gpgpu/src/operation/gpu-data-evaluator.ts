@@ -26,6 +26,16 @@ import type {Operation} from './operation';
 
 type GPUDataEvaluatorBufferOwnership = 'owned' | 'borrowed';
 
+/** Borrowed GPU buffer and row layout assigned to one deferred operation output. */
+export type GPUDataEvaluatorTargetBuffer = {
+  /** Buffer that receives the evaluated output. */
+  buffer: Buffer;
+  /** Number of bytes to skip before writing the first output row. */
+  byteOffset?: number;
+  /** Number of bytes between the starts of adjacent output rows. */
+  byteStride?: number;
+};
+
 /** Options for materializing one {@link GPUDataEvaluator}. */
 export type GPUDataEvaluatorEvaluateOptions = {
   /** Name assigned to the materialized single-chunk `GPUVector`. */
@@ -88,7 +98,7 @@ export type GPUDataEvaluatorProps = {
 };
 
 /**
- * Device-agnostic, immutable 2D numeric evaluator used by lazy GPGPU operations.
+ * Device-agnostic 2D numeric evaluator used by lazy GPGPU operations.
  *
  * @remarks
  * A `GPUDataEvaluator` describes exactly one logical `GPUData` chunk, a CPU value source, or a
@@ -102,9 +112,13 @@ export class GPUDataEvaluator {
   /** Number of scalar elements in each logical row. */
   readonly size: number;
   /** Number of bytes to skip before reading the first element. */
-  readonly offset: number;
+  get offset(): number {
+    return this._offset;
+  }
   /** Number of bytes between the starts of adjacent rows. */
-  readonly stride: number;
+  get stride(): number {
+    return this._stride;
+  }
   /** Whether integer values should be normalized when read as float vertex attributes. */
   readonly normalized: boolean;
   /** Whether all rows share the same value. */
@@ -112,7 +126,9 @@ export class GPUDataEvaluator {
   /** Number of logical rows. */
   readonly length: number;
   /** Total bytes needed for the table storage. */
-  readonly byteLength: number;
+  get byteLength(): number {
+    return this._byteLength;
+  }
   /** TypedArray constructor for CPU representation, derived from {@link GPUDataEvaluator.type}. */
   readonly ValueType: TypedArrayConstructor;
   /** Operation or evaluator whose output initializes this evaluator. */
@@ -127,10 +143,18 @@ export class GPUDataEvaluator {
 
   /** CPU buffer, either provided by the user or read back from the GPU. */
   protected _value?: TypedArray;
+  /** Physical byte offset of the first row in the current buffer. */
+  private _offset: number;
+  /** Physical byte stride between rows in the current buffer. */
+  private _stride: number;
+  /** Number of bytes occupied by the current row layout, excluding its initial offset. */
+  private _byteLength: number;
   /** Materialized GPU resource backing this evaluator. */
   private _gpuVector?: GPUVector;
   /** Whether this evaluator owns its backing GPU buffer or only borrows another resource's buffer. */
   private _bufferOwnership: GPUDataEvaluatorBufferOwnership = 'owned';
+  /** Borrowed output storage applied when a deferred operation is next evaluated. */
+  private _targetBuffer?: Required<GPUDataEvaluatorTargetBuffer>;
 
   /**
    * Constructs one evaluator from a CPU array.
@@ -165,7 +189,7 @@ export class GPUDataEvaluator {
       size *= 2;
       offset *= 2;
       stride *= 2;
-      typedValue = new Uint32Array(value.buffer);
+      typedValue = new Uint32Array(value.buffer, value.byteOffset, value.byteLength / 4);
     } else {
       resolvedType = resolvedType || getDataTypeFromTypedArray(value);
       typedValue = value;
@@ -288,8 +312,8 @@ export class GPUDataEvaluator {
     this.type = type;
     this.size = size;
     this.ValueType = getTypedArrayFromDataType(this.type);
-    this.offset = offset;
-    this.stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
+    this._offset = offset;
+    this._stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
     this.normalized = normalized;
     this.source = source;
     this.format = format;
@@ -306,7 +330,7 @@ export class GPUDataEvaluator {
     this.isConstant = isConstant;
     this.length = length;
     const rowByteLength = this.ValueType.BYTES_PER_ELEMENT * this.size;
-    this.byteLength = length === 0 ? 0 : (length - 1) * this.stride + rowByteLength;
+    this._byteLength = length === 0 ? 0 : (length - 1) * this.stride + rowByteLength;
     this._value = value;
     this._bufferOwnership =
       source instanceof GPUDataEvaluator || buffer || gpuData ? 'borrowed' : 'owned';
@@ -358,6 +382,29 @@ export class GPUDataEvaluator {
   }
 
   /**
+   * Assigns borrowed output storage for the next evaluation of a deferred operation.
+   *
+   * The evaluator keeps its logical output layout until evaluation starts. Evaluation then updates
+   * `offset`, `stride`, and `byteLength` to describe the target buffer location.
+   */
+  setTargetBuffer({
+    buffer,
+    byteOffset = 0,
+    byteStride = this.stride
+  }: GPUDataEvaluatorTargetBuffer): void {
+    if (this._destroyed) {
+      throw new Error(`GPUDataEvaluator ${this} already destroyed`);
+    }
+    if (this._gpuVector) {
+      throw new Error(`GPUDataEvaluator ${this} already evaluated`);
+    }
+    if (!this.source || this.source instanceof GPUDataEvaluator) {
+      throw new Error('GPUDataEvaluator target buffers require a deferred operation source');
+    }
+    this._targetBuffer = {buffer, byteOffset, byteStride};
+  }
+
+  /**
    * Materializes this evaluator on a device and returns the requested output format.
    *
    * If the evaluator is operation-backed, dependencies are evaluated first and then the backend
@@ -388,7 +435,7 @@ export class GPUDataEvaluator {
       return this._gpuVector;
     }
 
-    buffer = bufferPool.createOrReuse(device, this.byteLength);
+    buffer = this._getEvaluationBuffer(device);
     if (this._value) {
       buffer.write(this._value);
     } else {
@@ -423,7 +470,7 @@ export class GPUDataEvaluator {
       return this._gpuVector;
     }
 
-    buffer = bufferPool.createOrReuse(device, this.byteLength);
+    buffer = this._getEvaluationBuffer(device);
     if (this._value) {
       buffer.write(this._value);
     } else {
@@ -477,6 +524,32 @@ export class GPUDataEvaluator {
       rowByteLength: this.ValueType.BYTES_PER_ELEMENT * this.size,
       ownsBuffer: false
     });
+  }
+
+  /** Selects assigned output storage or allocates owned storage for one evaluation. */
+  private _getEvaluationBuffer(device: Device): Buffer {
+    const target = this._targetBuffer;
+    if (!target) {
+      return bufferPool.createOrReuse(device, this.byteLength);
+    }
+
+    if (target.buffer.device !== device) {
+      throw new Error('GPUDataEvaluator target buffer belongs to a different device');
+    }
+
+    const rowByteLength = this.ValueType.BYTES_PER_ELEMENT * this.size;
+    const targetByteLength =
+      this.length === 0 ? 0 : (this.length - 1) * target.byteStride + rowByteLength;
+    if (target.byteOffset + targetByteLength > target.buffer.byteLength) {
+      throw new Error('GPUDataEvaluator target buffer is too small for the output layout');
+    }
+
+    this._offset = target.byteOffset;
+    this._stride = target.byteStride;
+    this._byteLength = targetByteLength;
+    this._bufferOwnership = 'borrowed';
+    this._targetBuffer = undefined;
+    return target.buffer;
   }
 
   /**
@@ -571,6 +644,7 @@ export class GPUDataEvaluator {
       }
       this._gpuVector = undefined;
     }
+    this._targetBuffer = undefined;
     this._destroyed = true;
   }
 }

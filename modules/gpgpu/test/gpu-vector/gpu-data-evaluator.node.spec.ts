@@ -8,6 +8,20 @@ import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 
+test('GPUDataEvaluator.fromArray preserves Float64Array view bounds', () => {
+  const source = new Float64Array([10, 20, 30, 40]);
+  const evaluator = GPUDataEvaluator.fromArray(source.subarray(1, 3), {size: 1});
+  const value = evaluator.value!;
+  const float64Value = new Float64Array(
+    value.buffer,
+    value.byteOffset,
+    value.byteLength / Float64Array.BYTES_PER_ELEMENT
+  );
+
+  expect(evaluator.length).toBe(2);
+  expect(Array.from(float64Value)).toEqual([20, 30]);
+});
+
 test('GPUDataEvaluator buffer pool allocates exact sizes and validates device limits', async () => {
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 16});

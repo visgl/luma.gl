@@ -57,10 +57,29 @@ export function runCPUTransform({
       );
     }
   }
-  outputBuffer.write(target);
+
+  const elementByteLength = output.ValueType.BYTES_PER_ELEMENT;
+  const outputOffset = output.offset / elementByteLength;
+  const outputStride = output.stride / elementByteLength;
+  const packedStride = outputSize;
+  let outputValue: TypedArray = target;
+  if (outputOffset !== 0 || outputStride !== packedStride) {
+    outputValue = new output.ValueType(
+      outputOffset + output.byteLength / elementByteLength
+    ) as TypedArray;
+    for (let rowIndex = 0; rowIndex < vertexCount; rowIndex++) {
+      const sourceOffset = rowIndex * packedStride;
+      const destinationOffset = outputOffset + rowIndex * outputStride;
+      const row = target.subarray(sourceOffset, sourceOffset + outputSize);
+      outputValue.set(row, destinationOffset);
+      outputBuffer.write(row, destinationOffset * elementByteLength);
+    }
+  } else {
+    outputBuffer.write(target);
+  }
   return {
     success: true,
-    value: target
+    value: outputValue
   };
 }
 

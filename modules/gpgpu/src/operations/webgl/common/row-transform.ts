@@ -117,7 +117,12 @@ set_result(result);
   device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
   transform.run({
     inputBuffers: inputBuffers,
-    outputBuffers: {[outputModule.varyings[0]]: outputBuffer}
+    outputBuffers: {
+      [outputModule.varyings[0]]:
+        output.offset === 0
+          ? outputBuffer
+          : {buffer: outputBuffer, byteOffset: output.offset, byteLength: output.byteLength}
+    }
   });
   if (placeholderBuffer) {
     bufferPool.recycle(placeholderBuffer);
