@@ -347,8 +347,8 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
   let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
   let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
   let focusStrength = smoothstep(0.9, 1.05, inputs.color.b) * (1.0 - failureTint);
-  let focusColor = vec3<f32>(0.16, 0.48, 1.05) *
-    focusStrength * (0.08 + focusRim * 0.95);
+  let focusColor = vec3<f32>(0.12, 0.34, 0.72) *
+    focusStrength * (0.05 + focusRim * 0.55);
   let color = vec4<f32>(
     glassColor.rgb + inputs.color.rgb * failureTint * 0.46 + focusColor,
     glassColor.a
@@ -493,7 +493,7 @@ void main(void) {
   float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
   float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
   float focusStrength = smoothstep(0.9, 1.05, vColor.b) * (1.0 - failureTint);
-  vec3 focusColor = vec3(0.16, 0.48, 1.05) * focusStrength * (0.08 + focusRim * 0.95);
+  vec3 focusColor = vec3(0.12, 0.34, 0.72) * focusStrength * (0.05 + focusRim * 0.55);
   vec4 color = vec4(
     glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
     glassColor.a
@@ -1148,14 +1148,22 @@ class NetworkStoryControls {
       color: '#bcc9dc'
     });
 
+    const chapterHeading = document.createElement('div');
+    chapterHeading.textContent = 'STORY SCENARIOS';
+    Object.assign(chapterHeading.style, {
+      margin: '0 0 3px',
+      color: '#91a6c3',
+      fontSize: '9px'
+    });
+
     const chapterTimeline = document.createElement('div');
     chapterTimeline.setAttribute('role', 'group');
-    chapterTimeline.setAttribute('aria-label', 'Guided network story chapters');
+    chapterTimeline.setAttribute('aria-label', 'Choose a guided network story scenario');
     Object.assign(chapterTimeline.style, {
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: `repeat(${NETWORK_STORY_CHAPTERS.length}, minmax(0, 1fr))`,
       gap: '4px',
-      height: '10px',
-      margin: '0 0 5px'
+      margin: '0 0 6px'
     });
     this.chapterSegments = NETWORK_STORY_CHAPTERS.map((chapter, chapterIndex) => {
       const segmentButton = document.createElement('button');
@@ -1168,18 +1176,36 @@ class NetworkStoryControls {
       );
       Object.assign(segmentButton.style, {
         position: 'relative',
-        flex: String(chapter.duration),
-        height: '10px',
-        padding: '3px 0',
-        border: '0',
-        background: 'transparent',
-        cursor: 'pointer'
+        minWidth: '0',
+        height: '27px',
+        padding: '4px 3px 6px',
+        border: '1px solid rgba(126, 157, 205, 0.2)',
+        borderRadius: '4px',
+        background: 'rgba(35, 48, 70, 0.36)',
+        color: '#aebed4',
+        cursor: 'pointer',
+        font: '8px/1 system-ui, sans-serif',
+        overflow: 'hidden',
+        transition:
+          'background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease'
+      });
+
+      const label = document.createElement('span');
+      label.textContent = chapter.navigationLabel;
+      Object.assign(label.style, {
+        display: 'block',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
       });
 
       const track = document.createElement('div');
       Object.assign(track.style, {
-        position: 'relative',
-        height: '4px',
+        position: 'absolute',
+        left: '3px',
+        right: '3px',
+        bottom: '3px',
+        height: '2px',
         overflow: 'hidden',
         borderRadius: '2px',
         background: 'rgba(113, 136, 171, 0.3)'
@@ -1202,8 +1228,8 @@ class NetworkStoryControls {
           position: 'absolute',
           top: '0',
           left: `calc(${beat.position * 100}% - ${beat.position === 0 ? 0 : 1}px)`,
-          width: '3px',
-          height: '4px',
+          width: '2px',
+          height: '2px',
           borderRadius: '2px',
           background: beat.color,
           opacity: '0.64',
@@ -1212,7 +1238,7 @@ class NetworkStoryControls {
         track.appendChild(marker);
         return {beat, element: marker};
       });
-      segmentButton.appendChild(track);
+      segmentButton.append(label, track);
       segmentButton.addEventListener('click', () => onSelectChapter(chapterIndex));
       chapterTimeline.appendChild(segmentButton);
       return {button: segmentButton, fill, markers};
@@ -1504,6 +1530,7 @@ class NetworkStoryControls {
       headingElement,
       this.titleElement,
       this.descriptionElement,
+      chapterHeading,
       chapterTimeline,
       telemetryElement,
       visualIntensityElement,
@@ -1524,7 +1551,18 @@ class NetworkStoryControls {
     this.rootElement.dataset.networkStoryChapter = chapter.id;
     this.rootElement.dataset.networkStoryPlaying = String(isPlaying);
     for (const [segmentIndex, segment] of this.chapterSegments.entries()) {
-      segment.button.setAttribute('aria-current', segmentIndex === chapterIndex ? 'step' : 'false');
+      const isCurrentChapter = segmentIndex === chapterIndex;
+      segment.button.setAttribute('aria-current', isCurrentChapter ? 'step' : 'false');
+      segment.button.style.background = isCurrentChapter
+        ? 'rgba(83, 122, 180, 0.34)'
+        : 'rgba(35, 48, 70, 0.36)';
+      segment.button.style.borderColor = isCurrentChapter
+        ? 'rgba(155, 194, 255, 0.76)'
+        : 'rgba(126, 157, 205, 0.2)';
+      segment.button.style.color = isCurrentChapter ? '#eff5ff' : '#aebed4';
+      segment.button.style.boxShadow = isCurrentChapter
+        ? 'inset 0 0 10px rgba(115, 169, 255, 0.14)'
+        : 'none';
     }
   }
 
@@ -2730,7 +2768,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           threshold:
             this.sceneColorFormat === 'rgba16float'
               ? this.bloomThreshold * this.dynamicRangeProfile.bloomThresholdScale
-              : Math.min(this.bloomThreshold, 0.38)
+              : Math.max(this.bloomThreshold, 0.58)
         },
         bloomBlur: {radius: 4},
         bloomComposite: {

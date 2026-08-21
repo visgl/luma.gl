@@ -37,6 +37,7 @@ export type NetworkStoryChapter = {
   description: string;
   duration: number;
   id: string;
+  navigationLabel: string;
   networkState: NetworkStoryState;
   title: string;
 };
@@ -90,6 +91,7 @@ const RECOVERY_CHAPTER_DURATION = 7;
 export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   {
     id: 'conversations',
+    navigationLabel: 'Traffic',
     title: 'Two conversations',
     description: 'Red and green packets leave separate servers and meet at a shared access switch.',
     duration: 7,
@@ -127,6 +129,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   },
   {
     id: 'packet-spraying',
+    navigationLabel: 'Spraying',
     title: 'Spraying across four paths',
     description:
       'Alternating packets cross two switch planes through four independent paths before reuniting.',
@@ -174,6 +177,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   },
   {
     id: 'congestion',
+    navigationLabel: 'Congestion',
     title: 'Congestion and packet trimming',
     description:
       'Packets shift toward healthy backbone paths while an overloaded switch trims payloads into headers.',
@@ -221,6 +225,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   },
   {
     id: 'failure',
+    navigationLabel: 'Failure',
     title: 'Failure and instant rerouting',
     description:
       'A failed switch drops in-flight packets, then traffic moves onto the surviving backbone paths.',
@@ -268,6 +273,7 @@ export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   },
   {
     id: 'recovery',
+    navigationLabel: 'Recovery',
     title: 'Probe, confirm, restore',
     description:
       'A blue probe reaches the repaired switch, then a cyan acknowledgment restores its path.',
@@ -420,15 +426,18 @@ export function makeNetworkSwitchHighlightColor(
 
   const boundedPlaneStrength = Math.max(0, Math.min(planeStrength, 1));
   const boundedPathStrength = Math.max(0, Math.min(pathStrength, 1));
-  const highlightStrength = Math.min(boundedPlaneStrength * 0.42 + boundedPathStrength * 0.34, 0.6);
+  const highlightStrength = Math.min(
+    boundedPlaneStrength * 0.48 + boundedPathStrength * 0.38,
+    0.72
+  );
   if (highlightStrength < 0.001) {
     return color;
   }
 
   const targetColor: Color =
     boundedPathStrength > boundedPlaneStrength
-      ? [0.42, 1.02, 1.55, color[3]]
-      : [0.6, 0.82, 1.46, color[3]];
+      ? [0.36, 0.72, 0.98, color[3]]
+      : [0.44, 0.66, 0.98, color[3]];
   return [
     color[0] + (targetColor[0] - color[0]) * highlightStrength,
     color[1] + (targetColor[1] - color[1]) * highlightStrength,
