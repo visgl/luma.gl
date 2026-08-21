@@ -42,6 +42,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
   'showcase/lightstorm-megacity',
+  'showcase/llm-network',
   'showcase/million-row-crossfilter',
   'showcase/tempest-ocean',
   'showcase/packet-spraying',

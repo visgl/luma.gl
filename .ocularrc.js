@@ -56,6 +56,7 @@ const config = {
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',
         lighting: '/examples/tutorials/lighting',
+        'llm-network': '/examples/showcase/llm-network',
         'multi-canvas': '/examples/api/multi-canvas',
         persistence: '/examples/showcase/persistence',
         postprocessing: '/examples/showcase/postprocessing',
