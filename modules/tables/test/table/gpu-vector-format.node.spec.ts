@@ -13,6 +13,7 @@ import {
   getGPUVectorFormatInfo,
   getGPUVectorData,
   getRequiredGPUVector,
+  isFixedSizeListGPUVectorFormat,
   isGPUVectorFormatCompatibleWithShaderType,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
@@ -23,10 +24,14 @@ test('GPUVector format helpers parse fixed and variable-length formats', t => {
   const fixedInfo = getGPUVectorFormatInfo('float32x3');
   const vertexListInfo = getGPUVectorFormatInfo('vertex-list<unorm8x4>');
   const valueListInfo = getGPUVectorFormatInfo('value-list<uint8>');
+  const fixedSizeListInfo = getGPUVectorFormatInfo('fixed-size-list<float32,768>');
+  const fixedSizeVectorListInfo = getGPUVectorFormatInfo('fixed-size-list<float32x3,2>');
 
   t.equal(fixedInfo.elementFormat, 'float32x3', 'fixed vector element format is unchanged');
   t.equal(fixedInfo.vertexList, false, 'fixed vector is not a vertex list');
   t.equal(fixedInfo.valueList, false, 'fixed vector is not a value list');
+  t.equal(fixedInfo.fixedSizeList, false, 'fixed vector is not a fixed-size list');
+  t.equal(fixedInfo.elementByteLength, 12, 'fixed vector element byte length is decoded');
   t.equal(fixedInfo.byteLength, 12, 'fixed vector byte length is decoded');
   t.equal(vertexListInfo.elementFormat, 'unorm8x4', 'vertex-list exposes its element format');
   t.equal(vertexListInfo.vertexList, true, 'vertex-list marker is decoded');
@@ -35,15 +40,76 @@ test('GPUVector format helpers parse fixed and variable-length formats', t => {
   t.equal(valueListInfo.elementFormat, 'uint8', 'value-list exposes its element format');
   t.equal(valueListInfo.vertexList, false, 'value-list is not a vertex-list');
   t.equal(valueListInfo.valueList, true, 'value-list marker is decoded');
+  t.equal(fixedSizeListInfo.elementFormat, 'float32', 'fixed-size list exposes its element format');
+  t.equal(fixedSizeListInfo.fixedSizeList, true, 'fixed-size-list marker is decoded');
+  t.equal(fixedSizeListInfo.vertexList, false, 'fixed-size list is not a vertex list');
+  t.equal(
+    fixedSizeListInfo.valueList,
+    false,
+    'fixed-size list is not a variable-length value list'
+  );
+  t.equal(fixedSizeListInfo.listSize, 768, 'fixed-size list exposes its logical row cardinality');
+  t.equal(fixedSizeListInfo.components, 1, 'fixed-size list preserves scalar element components');
+  t.equal(fixedSizeListInfo.elementByteLength, 4, 'fixed-size list exposes element byte length');
+  t.equal(fixedSizeListInfo.byteLength, 3072, 'fixed-size list byte length describes one full row');
+  t.equal(fixedSizeVectorListInfo.components, 3, 'vector-valued fixed lists retain element shape');
+  t.equal(fixedSizeVectorListInfo.elementByteLength, 12, 'vector-valued lists expose element size');
+  t.equal(fixedSizeVectorListInfo.byteLength, 24, 'vector-valued lists expose complete row size');
   t.equal(getGPUVectorElementFormat('vertex-list<unorm8x4>'), 'unorm8x4');
   t.equal(getGPUVectorElementFormat('value-list<uint8>'), 'uint8');
+  t.equal(getGPUVectorElementFormat('fixed-size-list<float32,768>'), 'float32');
   t.ok(isVertexListGPUVectorFormat('vertex-list<unorm8x4>'), 'recognizes vertex-list syntax');
   t.ok(isValueListGPUVectorFormat('value-list<uint8>'), 'recognizes value-list syntax');
+  t.ok(
+    isFixedSizeListGPUVectorFormat('fixed-size-list<float32,768>'),
+    'recognizes canonical fixed-size-list syntax'
+  );
   t.notOk(isVertexListGPUVectorFormat('list<unorm8x4>'), 'generic list syntax is not accepted');
   t.throws(
     () => getGPUVectorFormatInfo('list<unorm8x4>' as never),
     /Unsupported GPUVector format/,
     'generic list syntax is reserved'
+  );
+
+  t.end();
+});
+
+test('GPUVector fixed-size-list formats require canonical positive safe cardinalities', t => {
+  const invalidFormats = [
+    'fixed-size-list<float32,0>',
+    'fixed-size-list<float32,-1>',
+    'fixed-size-list<float32,+1>',
+    'fixed-size-list<float32,01>',
+    'fixed-size-list<float32,1.0>',
+    'fixed-size-list<float32, 1>',
+    'fixed-size-list<float32,1 >',
+    'fixed-size-list<float32,9007199254740992>',
+    'fixed-size-list<float32,9007199254740991>',
+    'fixed-size-list<bogus,3>',
+    'fixed-size-list<float32>',
+    'fixed-list<float32,1>'
+  ];
+
+  for (const invalidFormat of invalidFormats) {
+    t.notOk(
+      isFixedSizeListGPUVectorFormat(invalidFormat),
+      `rejects noncanonical fixed-size-list syntax ${invalidFormat}`
+    );
+    t.throws(
+      () => getGPUVectorFormatInfo(invalidFormat as never),
+      /Unsupported GPUVector format/,
+      `cannot decode invalid fixed-size-list format ${invalidFormat}`
+    );
+  }
+  t.throws(
+    () => getGPUVectorFormatInfo('fixed-size-list<float32,9007199254740991>'),
+    /Unsupported GPUVector format/,
+    'rejects fixed-size-list rows whose physical byte length exceeds a safe integer'
+  );
+  t.throws(
+    () => getGPUVectorFormatInfo('fixed-size-list<float64,3>' as never),
+    /Unsupported GPUVector format/,
+    'rejects an unsupported fixed-size-list element format'
   );
 
   t.end();
@@ -66,7 +132,215 @@ test('GPUVector format helpers validate shader compatibility', t => {
     isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec4<f32>'),
     'component mismatch is rejected'
   );
+  t.notOk(
+    isGPUVectorFormatCompatibleWithShaderType('fixed-size-list<float32,1>', 'f32'),
+    'fixed-size-list storage columns never masquerade as vertex shader attributes'
+  );
 
+  t.end();
+});
+
+test('GPUData derives complete fixed-size-list row and flattened-value metadata', t => {
+  const device = new NullDevice({});
+  const packedData = new GPUData({
+    buffer: device.createBuffer({byteLength: 2 * 768 * Float32Array.BYTES_PER_ELEMENT}),
+    format: 'fixed-size-list<float32,768>',
+    length: 2,
+    ownsBuffer: true
+  });
+  const paddedData = new GPUData({
+    buffer: device.createBuffer({byteLength: 6176}),
+    format: 'fixed-size-list<float32,768>',
+    length: 2,
+    byteStride: 3104,
+    ownsBuffer: true
+  });
+  const vectorElementData = new GPUData({
+    buffer: device.createBuffer({byteLength: 24}),
+    format: 'fixed-size-list<float32x3,2>',
+    length: 1,
+    ownsBuffer: true
+  });
+  const emptyData = new GPUData({
+    buffer: device.createBuffer({byteLength: 0}),
+    format: 'fixed-size-list<float32,384>',
+    length: 0,
+    ownsBuffer: true
+  });
+
+  t.equal(packedData.length, 2, 'length remains the logical row count');
+  t.equal(packedData.valueLength, 1536, 'valueLength counts flattened fixed-list elements');
+  t.equal(packedData.stride, 768, 'stride counts scalar components in one logical row');
+  t.equal(packedData.rowByteLength, 3072, 'row payload spans all fixed-list elements');
+  t.equal(packedData.byteStride, 3072, 'packed row stride defaults to the complete row payload');
+  t.equal(paddedData.rowByteLength, 3072, 'padding does not change the logical row payload');
+  t.equal(paddedData.byteStride, 3104, 'explicit padded row stride is preserved');
+  t.equal(vectorElementData.valueLength, 2, 'vector-valued lists count flattened vector elements');
+  t.equal(vectorElementData.stride, 6, 'vector-valued rows count every scalar component');
+  t.equal(vectorElementData.rowByteLength, 24, 'vector-valued rows span their complete payload');
+  t.equal(emptyData.valueLength, 0, 'empty fixed-size lists expose no flattened values');
+  t.equal(emptyData.rowByteLength, 1536, 'empty fixed-size lists retain their complete row format');
+
+  packedData.destroy();
+  paddedData.destroy();
+  vectorElementData.destroy();
+  emptyData.destroy();
+  t.end();
+});
+
+test('GPUData rejects malformed fixed-size-list row layouts and out-of-range views', t => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 28});
+  const format = 'fixed-size-list<float32,3>' as const;
+
+  t.throws(
+    () => new GPUData({buffer, format, length: 2, valueLength: 5}),
+    /valueLength must equal its flattened row elements/,
+    'rejects flattened counts that do not match fixed row cardinality'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 1, stride: 2}),
+    /stride cannot truncate its row components/,
+    'rejects scalar strides smaller than the fixed row cardinality'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 1, rowByteLength: 8}),
+    /rowByteLength cannot truncate its row payload/,
+    'rejects row payloads that omit fixed-list elements'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 2, byteStride: 8}),
+    /byteStride cannot overlap its row payload/,
+    'rejects row strides that overlap adjacent fixed-list rows'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 2, byteOffset: 5}),
+    /exceeds its backing buffer byte length/,
+    'rejects fixed-list ranges that run beyond the physical allocation'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 1, byteOffset: -1}),
+    /safe non-negative integers/,
+    'rejects negative row byte offsets'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: 2, byteStride: Number.MAX_SAFE_INTEGER}),
+    /byte range must use safe integers/,
+    'rejects final-row spans that overflow safe integer arithmetic'
+  );
+  t.throws(
+    () => new GPUData({buffer, format, length: Number.MAX_SAFE_INTEGER}),
+    /safe non-negative integers/,
+    'rejects flattened element counts that overflow safe integer arithmetic'
+  );
+
+  const paddedData = new GPUData({buffer, format, length: 2, byteStride: 16});
+  t.equal(paddedData.rowByteLength, 12, 'accepts padded rows without requiring final-row padding');
+
+  paddedData.destroy();
+  buffer.destroy();
+  t.end();
+});
+
+test('GPUVector preserves fixed-size-list rows, padded layouts, and source chunks', t => {
+  const device = new NullDevice({});
+  const packedVector = new GPUVector({
+    type: 'buffer',
+    name: 'embeddings',
+    buffer: device.createBuffer({byteLength: 3 * 384 * Float32Array.BYTES_PER_ELEMENT}),
+    format: 'fixed-size-list<float32,384>',
+    length: 3,
+    ownsBuffer: true
+  });
+  const paddedVector = new GPUVector({
+    type: 'buffer',
+    name: 'paddedEmbeddings',
+    buffer: device.createBuffer({byteLength: 3104 + 3072}),
+    format: 'fixed-size-list<float32,768>',
+    length: 2,
+    byteStride: 3104,
+    ownsBuffer: true
+  });
+  const firstChunk = new GPUData({
+    buffer: device.createBuffer({byteLength: 1536}),
+    format: 'fixed-size-list<float32,384>',
+    length: 1,
+    ownsBuffer: true
+  });
+  const secondChunk = new GPUData({
+    buffer: device.createBuffer({byteLength: 3072}),
+    format: 'fixed-size-list<float32,384>',
+    length: 2,
+    ownsBuffer: true
+  });
+  const chunkedVector = new GPUVector({
+    type: 'data',
+    name: 'chunkedEmbeddings',
+    data: [firstChunk, secondChunk],
+    ownsData: false
+  });
+
+  t.equal(packedVector.length, 3, 'buffer-backed vectors retain logical rows');
+  t.equal(packedVector.valueLength, 1152, 'buffer-backed vectors count flattened elements');
+  t.equal(packedVector.stride, 384, 'buffer-backed vectors derive scalar row stride');
+  t.equal(packedVector.byteStride, 1536, 'buffer-backed vectors derive complete row bytes');
+  t.equal(paddedVector.rowByteLength, 3072, 'padded vectors retain the actual row payload');
+  t.equal(paddedVector.byteStride, 3104, 'padded vectors retain explicit physical row stride');
+  t.equal(chunkedVector.length, 3, 'chunk-backed vectors aggregate logical rows');
+  t.equal(chunkedVector.valueLength, 1152, 'chunk-backed vectors aggregate flattened elements');
+  t.equal(chunkedVector.data.length, 2, 'chunk-backed vectors preserve source chunk boundaries');
+  t.equal(
+    chunkedVector.data[0],
+    firstChunk,
+    'chunk-backed vectors borrow the original first chunk'
+  );
+  t.equal(
+    chunkedVector.data[1],
+    secondChunk,
+    'chunk-backed vectors borrow the original second chunk'
+  );
+
+  chunkedVector.destroy();
+  t.notOk(firstChunk.buffer.destroyed, 'borrowed chunk ownership remains with the original owner');
+  packedVector.destroy();
+  paddedVector.destroy();
+  firstChunk.destroy();
+  secondChunk.destroy();
+  t.end();
+});
+
+test('Appendable GPUVector preserves fixed-size-list rows without implicit packing', t => {
+  const device = new NullDevice({});
+  const embeddings = new GPUVector({
+    type: 'appendable',
+    name: 'embeddings',
+    device,
+    format: 'fixed-size-list<float32,384>'
+  });
+  const firstChunk = new GPUData({
+    buffer: device.createBuffer({byteLength: 1536}),
+    format: 'fixed-size-list<float32,384>',
+    length: 1,
+    ownsBuffer: true
+  });
+  const secondChunk = new GPUData({
+    buffer: device.createBuffer({byteLength: 3072}),
+    format: 'fixed-size-list<float32,384>',
+    length: 2,
+    ownsBuffer: true
+  });
+
+  embeddings.appendDataChunk(firstChunk);
+  embeddings.appendDataChunk(secondChunk);
+
+  t.equal(embeddings.length, 3, 'appendable fixed-size lists count logical rows');
+  t.equal(embeddings.valueLength, 1152, 'appendable fixed-size lists count flattened elements');
+  t.equal(embeddings.byteStride, 1536, 'appendable fixed-size lists retain full-row byte stride');
+  t.equal(embeddings.data.length, 2, 'appending preserves separately owned source chunks');
+
+  embeddings.destroy();
+  t.ok(firstChunk.buffer.destroyed, 'appendable vector destroys the first owned chunk');
+  t.ok(secondChunk.buffer.destroyed, 'appendable vector destroys the second owned chunk');
   t.end();
 });
 
@@ -87,6 +361,348 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
   t.notOk('type' in colors, 'drops the deprecated type alias');
   t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
+
+  table.destroy();
+  t.end();
+});
+
+test('GPU tables preserve explicit fixed-size-list attribute expansion', t => {
+  const device = new NullDevice({});
+  const embeddings = new GPUVector({
+    type: 'interleaved',
+    name: 'embeddings',
+    buffer: device.createBuffer({byteLength: 32}),
+    format: 'fixed-size-list<float32,4>',
+    length: 2,
+    byteStride: 16,
+    attributes: [
+      {attribute: 'embeddingPart0', format: 'float32x2', byteOffset: 0},
+      {attribute: 'embeddingPart1', format: 'float32x2', byteOffset: 8}
+    ],
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {embeddings}});
+
+  t.equal(embeddings.valueLength, 8, 'explicitly expanded columns retain flattened element counts');
+  t.equal(embeddings.stride, 4, 'explicitly expanded columns retain scalar row cardinality');
+  t.equal(table.bufferLayout.length, 1, 'retains the caller-owned explicit attribute layout');
+  t.deepEqual(
+    table.bufferLayout[0].attributes?.map(attribute => attribute.attribute),
+    ['embeddingPart0', 'embeddingPart1'],
+    'does not replace an adapter-provided attribute expansion'
+  );
+
+  table.destroy();
+  t.end();
+});
+
+test('GPU tables retain fixed-size-list storage columns without synthetic vertex attributes', t => {
+  const device = new NullDevice({});
+  const embeddings = new GPUVector({
+    type: 'buffer',
+    name: 'embeddings',
+    buffer: device.createBuffer({byteLength: 2 * 1536 * Float32Array.BYTES_PER_ELEMENT}),
+    format: 'fixed-size-list<float32,1536>',
+    length: 2,
+    ownsBuffer: true
+  });
+  const identifiers = new GPUVector({
+    type: 'buffer',
+    name: 'identifiers',
+    buffer: device.createBuffer({byteLength: 2 * Uint32Array.BYTES_PER_ELEMENT}),
+    format: 'uint32',
+    length: 2,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({vectors: {embeddings, identifiers}});
+
+  t.equal(table.numRows, 2, 'fixed-size-list vector lengths remain table row counts');
+  t.equal(table.gpuVectors.embeddings.valueLength, 3072, 'table retains flattened element counts');
+  t.equal(
+    table.schema.fields.find(field => field.name === 'embeddings')?.format,
+    'fixed-size-list<float32,1536>',
+    'schema retains the complete fixed-size-list memory format'
+  );
+  t.deepEqual(
+    table.bufferLayout.map(layout => layout.name),
+    ['identifiers'],
+    'only vertex-compatible columns receive synthesized buffer layouts'
+  );
+  t.equal(
+    table.batches[0].gpuData.embeddings.format,
+    'fixed-size-list<float32,1536>',
+    'record batches retain row-aligned storage columns'
+  );
+
+  table.destroy();
+  t.end();
+});
+
+test('GPU tables preserve fixed-size-list batches until explicitly packed', t => {
+  const device = new NullDevice({});
+  const firstBatch = new GPURecordBatch({
+    gpuData: {
+      embeddings: new GPUData({
+        buffer: device.createBuffer({byteLength: 1536}),
+        format: 'fixed-size-list<float32,384>',
+        length: 1,
+        ownsBuffer: true
+      })
+    }
+  });
+  const secondBatch = new GPURecordBatch({
+    gpuData: {
+      embeddings: new GPUData({
+        buffer: device.createBuffer({byteLength: 3072}),
+        format: 'fixed-size-list<float32,384>',
+        length: 2,
+        ownsBuffer: true
+      })
+    }
+  });
+  const table = new GPUTable({batches: [firstBatch, secondBatch]});
+
+  t.equal(table.batches.length, 2, 'table construction preserves source batch boundaries');
+  t.equal(table.numRows, 3, 'preserved batches contribute logical rows');
+  t.equal(
+    table.gpuVectors.embeddings.valueLength,
+    1152,
+    'aggregate vector tracks flattened values'
+  );
+  t.equal(table.gpuVectors.embeddings.data.length, 2, 'aggregate vector borrows both batch chunks');
+
+  table.packBatches();
+
+  t.equal(
+    table.batches.length,
+    1,
+    'only explicit packing combines adjacent fixed-size-list batches'
+  );
+  t.equal(table.numRows, 3, 'explicit packing preserves logical rows');
+  t.equal(
+    table.gpuVectors.embeddings.valueLength,
+    1152,
+    'explicit packing preserves list elements'
+  );
+  t.equal(table.gpuVectors.embeddings.data.length, 1, 'explicit packing creates one owned chunk');
+  t.equal(
+    table.batches[0].gpuData.embeddings.byteStride,
+    1536,
+    'explicit packing preserves complete fixed-size-list row stride'
+  );
+
+  table.destroy();
+  t.end();
+});
+
+test('GPU tables reject packing incompatible fixed-size-list physical row layouts', t => {
+  const device = new NullDevice({});
+  const incompatibleLayouts = [
+    [
+      {byteStride: 16, rowByteLength: 12},
+      {byteStride: 20, rowByteLength: 12}
+    ],
+    [
+      {byteStride: 20, rowByteLength: 12},
+      {byteStride: 20, rowByteLength: 16}
+    ]
+  ];
+
+  for (const layouts of incompatibleLayouts) {
+    const batches = layouts.map(
+      ({byteStride, rowByteLength}) =>
+        new GPURecordBatch({
+          gpuData: {
+            embeddings: new GPUData({
+              buffer: device.createBuffer({byteLength: byteStride + rowByteLength}),
+              format: 'fixed-size-list<float32,3>',
+              length: 2,
+              byteStride,
+              rowByteLength,
+              ownsBuffer: true
+            })
+          }
+        })
+    );
+    const table = new GPUTable({batches});
+
+    t.deepEqual(table.bufferLayout, [], 'storage-only list layouts remain intentionally empty');
+    t.throws(
+      () => table.packBatches(),
+      /matching fixed-size-list row layouts.*embeddings/,
+      'rejects incompatible physical row layouts before copying source buffers'
+    );
+    t.equal(table.batches.length, 2, 'rejected packing preserves every original batch');
+    t.notOk(
+      batches.some(batch => batch.gpuData.embeddings.buffer.destroyed),
+      'failed packing leaves caller-owned source buffers intact'
+    );
+
+    table.destroy();
+  }
+
+  t.end();
+});
+
+test('GPU tables preserve variable-length packing errors before validating adapter metadata', t => {
+  const device = new NullDevice({});
+  const batches = [0, 1].map(
+    () =>
+      new GPURecordBatch({
+        gpuData: {
+          texts: new GPUData({
+            buffer: device.createBuffer({byteLength: 5}),
+            format: 'value-list<uint8>',
+            length: 1,
+            valueLength: 5,
+            byteStride: 1,
+            rowByteLength: 1,
+            readbackMetadata: {adapter: 'utf8'},
+            ownsBuffer: true
+          })
+        },
+        bufferLayout: []
+      })
+  );
+  const table = new GPUTable({batches});
+
+  t.throws(
+    () => table.packBatches(),
+    /does not support variable-length GPUData "texts"/,
+    'retains the existing variable-length rejection before inspecting adapter metadata'
+  );
+  t.equal(table.batches.length, 2, 'failed packing leaves both source batches unchanged');
+
+  table.destroy();
+  t.end();
+});
+
+test('GPU tables reject packing nullable fixed-size-list rows and scalar source identifiers', t => {
+  const device = new NullDevice({});
+  const firstEmbeddings = new GPUData({
+    buffer: device.createBuffer({byteLength: 12}),
+    format: 'fixed-size-list<float32,3>',
+    length: 1,
+    nullBitmap: new Uint8Array([0]),
+    ownsBuffer: true
+  });
+  const secondEmbeddings = new GPUData({
+    buffer: device.createBuffer({byteLength: 12}),
+    format: 'fixed-size-list<float32,3>',
+    length: 1,
+    ownsBuffer: true
+  });
+  const nullableEmbeddings = new GPUTable({
+    batches: [
+      new GPURecordBatch({gpuData: {embeddings: firstEmbeddings}}),
+      new GPURecordBatch({gpuData: {embeddings: secondEmbeddings}})
+    ]
+  });
+
+  t.throws(
+    () => nullableEmbeddings.packBatches(),
+    /cannot preserve null or readback metadata.*embeddings/,
+    'does not silently erase nullable fixed-size-list row eligibility'
+  );
+  t.equal(nullableEmbeddings.batches.length, 2, 'failed packing preserves every source batch');
+  t.deepEqual(
+    Array.from(nullableEmbeddings.batches[0].gpuData.embeddings.nullBitmap ?? []),
+    [0],
+    'failed packing retains normalized fixed-size-list validity metadata'
+  );
+
+  const firstSourceIdentifiers = new GPUData({
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'uint32',
+    length: 1,
+    nullBitmap: new Uint8Array([0]),
+    readbackMetadata: {adapter: 'numeric-validity'},
+    ownsBuffer: true
+  });
+  const secondSourceIdentifiers = new GPUData({
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'uint32',
+    length: 1,
+    ownsBuffer: true
+  });
+  const nullableIdentifiers = new GPUTable({
+    batches: [
+      new GPURecordBatch({gpuData: {sourceIdentifiers: firstSourceIdentifiers}}),
+      new GPURecordBatch({gpuData: {sourceIdentifiers: secondSourceIdentifiers}})
+    ]
+  });
+
+  t.throws(
+    () => nullableIdentifiers.packBatches(),
+    /cannot preserve null or readback metadata.*sourceIdentifiers/,
+    'does not turn null stable source identifiers into valid physical zero values'
+  );
+  t.equal(
+    nullableIdentifiers.batches.length,
+    2,
+    'failed identifier packing preserves both batches'
+  );
+  t.equal(
+    nullableIdentifiers.batches[0].gpuData.sourceIdentifiers.readbackMetadata?.adapter,
+    'numeric-validity',
+    'failed packing retains adapter-owned numeric readback metadata'
+  );
+
+  nullableEmbeddings.destroy();
+  nullableIdentifiers.destroy();
+  t.end();
+});
+
+test('GPU tables reject packing adapter readback metadata even without a row bitmap', t => {
+  const device = new NullDevice({});
+  const firstData = new GPUData({
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'uint32',
+    length: 1,
+    readbackMetadata: {adapter: 'custom-source-metadata'},
+    ownsBuffer: true
+  });
+  const secondData = new GPUData({
+    buffer: device.createBuffer({byteLength: 4}),
+    format: 'uint32',
+    length: 1,
+    ownsBuffer: true
+  });
+  const table = new GPUTable({
+    batches: [
+      new GPURecordBatch({gpuData: {values: firstData}}),
+      new GPURecordBatch({gpuData: {values: secondData}})
+    ]
+  });
+
+  t.throws(
+    () => table.packBatches(),
+    /cannot preserve null or readback metadata.*values/,
+    'generic tables never silently discard adapter-owned reconstruction metadata'
+  );
+  t.equal(table.batches.length, 2, 'metadata rejection occurs before any batch is replaced');
+
+  table.destroy();
+  t.end();
+});
+
+test('GPURecordBatch synthesizes fixed-size-list schemas without vertex layouts', t => {
+  const device = new NullDevice({});
+  const embeddings = new GPUData({
+    buffer: device.createBuffer({byteLength: 2 * 768 * Float32Array.BYTES_PER_ELEMENT}),
+    format: 'fixed-size-list<float32,768>',
+    length: 2,
+    ownsBuffer: true
+  });
+  const batch = new GPURecordBatch({gpuData: {embeddings}});
+  const table = new GPUTable({batches: [batch]});
+
+  t.equal(batch.numRows, 2, 'record batches infer logical fixed-size-list rows');
+  t.equal(batch.gpuData.embeddings.valueLength, 1536, 'record batches retain flattened values');
+  t.equal(batch.schema.fields[0].format, 'fixed-size-list<float32,768>', 'schema keeps row shape');
+  t.deepEqual(batch.bufferLayout, [], 'storage-only batches have no synthetic vertex layouts');
+  t.deepEqual(table.bufferLayout, [], 'storage-only tables have no synthetic vertex layouts');
+  t.equal(table.gpuVectors.embeddings.length, 2, 'aggregate vectors retain logical rows');
 
   table.destroy();
   t.end();

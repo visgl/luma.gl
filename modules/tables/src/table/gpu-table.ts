@@ -13,6 +13,7 @@ import {GPU_TABLE_INDEX_COLUMN_NAME, isGPUTableIndexColumnName} from './gpu-sche
 import {
   getGPUVectorElementFormat,
   type GPUVectorFormat,
+  isFixedSizeListGPUVectorFormat,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from './gpu-vector-format';
@@ -218,6 +219,39 @@ export class GPUTable<T extends GPUTypeMap = GPUTypeMap> {
     }
 
     const batchGroups = createGPUPackGroups(this.batches, options.minBatchSize);
+    for (const batchGroup of batchGroups) {
+      if (batchGroup.length <= 1) {
+        continue;
+      }
+      for (const batch of batchGroup) {
+        for (const [columnName, data] of Object.entries(batch.gpuData)) {
+          if (
+            data.format &&
+            (isValueListGPUVectorFormat(data.format) || isVertexListGPUVectorFormat(data.format))
+          ) {
+            throw new Error(
+              `GPUTable.packBatches() does not support variable-length GPUData "${columnName}"`
+            );
+          }
+          const firstData = batchGroup[0].gpuData[columnName];
+          if (
+            data.format &&
+            isFixedSizeListGPUVectorFormat(data.format) &&
+            (data.byteStride !== firstData.byteStride ||
+              data.rowByteLength !== firstData.rowByteLength)
+          ) {
+            throw new Error(
+              `GPUTable.packBatches() requires matching fixed-size-list row layouts for GPUData "${columnName}"`
+            );
+          }
+          if (data.nullBitmap?.length || data.readbackMetadata !== undefined) {
+            throw new Error(
+              `GPUTable.packBatches() cannot preserve null or readback metadata for GPUData "${columnName}"`
+            );
+          }
+        }
+      }
+    }
     const nextBatches: GPURecordBatch[] = [];
     const supersededBatches: GPURecordBatch[] = [];
 
@@ -845,6 +879,9 @@ function synthesizeGPUVectorBufferLayout(
     throw new Error(
       'GPUTable cannot synthesize a buffer layout for vector "' + vector.name + '" without a format'
     );
+  }
+  if (isFixedSizeListGPUVectorFormat(vector.format)) {
+    return [];
   }
   if (isVertexListGPUVectorFormat(vector.format)) {
     if (allowVariableLengthWithoutLayout) {

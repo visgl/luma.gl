@@ -24,6 +24,15 @@ test('GPUConstant validates and owns one fixed-width payload', t => {
     /requires exactly 8 bytes/,
     'rejects incomplete rows'
   );
+  t.throws(
+    () =>
+      new GPUConstant({
+        format: 'fixed-size-list<float32,3>' as never,
+        value: new Float32Array([1, 2, 3])
+      }),
+    /cannot represent fixed-size-list storage columns/,
+    'rejects unchecked fixed-size-list formats rather than treating storage rows as constants'
+  );
   t.end();
 });
 
