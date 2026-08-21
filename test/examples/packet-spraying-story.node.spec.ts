@@ -36,6 +36,11 @@ test('packet-spraying guided tour tells the complete MRC recovery story', testCa
     ['healthy', 'healthy', 'congested', 'failed', 'recovering'],
     'each chapter requests the corresponding switch state'
   );
+  testCase.deepEqual(
+    NETWORK_STORY_CHAPTERS.map(chapter => chapter.navigationLabel),
+    ['Traffic', 'Spraying', 'Congestion', 'Failure', 'Recovery'],
+    'every network scenario exposes a recognizable compact navigation label'
+  );
   testCase.ok(
     NETWORK_STORY_CHAPTERS.every(chapter => chapter.duration >= 7),
     'each chapter leaves enough time to observe the network behavior'
@@ -207,8 +212,13 @@ test('packet-spraying hover highlights glass without washing out transparency or
     'hovered plane switches ease toward a visible cool glass highlight'
   );
   testCase.ok(
-    planeHighlight[2] >= 1.05 && pathHighlight[2] >= 1.05,
-    'fully focused switches cross the actual Fresnel-rim activation threshold'
+    planeHighlight.every(channel => channel <= 1) && pathHighlight.every(channel => channel <= 1),
+    'switch focus remains representable without clipping on standard-range WebGL displays'
+  );
+  testCase.ok(
+    planeHighlight[1] - planeHighlight[2] * 0.6 > 0.008 &&
+      pathHighlight[1] - pathHighlight[2] * 0.6 > 0.008,
+    'fully focused switches activate the chromatic Fresnel rim without exceeding display range'
   );
   testCase.ok(
     makeNetworkSwitchHighlightColor(clearSwitch, 0.5, 0)[2] < planeHighlight[2],

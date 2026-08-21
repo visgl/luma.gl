@@ -16,7 +16,7 @@ export type GlassMaterialProps = {
   indexOfRefraction?: number;
   /** Surface roughness in the inclusive zero-to-one range. */
   roughness?: number;
-  /** Separation of red, green, and blue refraction samples. */
+  /** Wavelength-dependent IOR spread using glTF's 20 / Abbe-number convention. */
   dispersion?: number;
   /** Optical distance used for refraction offset and absorption. */
   thickness?: number;
@@ -145,8 +145,26 @@ fn glassMaterial_getColor(
   let surfaceCurvature = sqrt(max(1.0 - viewAlignment * viewAlignment, 0.0));
   let refractionOffset = screenDeflection * glassMaterial.thickness *
     glassMaterial.refractionStrength * mix(0.085, 0.22, surfaceCurvature);
-  let dispersionOffset = screenNormal * glassMaterial.dispersion *
-    mix(0.12, 0.48, surfaceCurvature);
+  let dispersionHalfSpread = (indexOfRefraction - 1.0) * 0.025 *
+    max(glassMaterial.dispersion, 0.0);
+  let redIndexOfRefraction = max(indexOfRefraction - dispersionHalfSpread, 1.001);
+  let blueIndexOfRefraction = indexOfRefraction + dispersionHalfSpread;
+  let redRefractionDirection = refract(
+    -viewDirection,
+    normalFacingCamera,
+    1.0 / redIndexOfRefraction
+  );
+  let blueRefractionDirection = refract(
+    -viewDirection,
+    normalFacingCamera,
+    1.0 / blueIndexOfRefraction
+  );
+  let spectralDeflection = (redRefractionDirection - blueRefractionDirection) * 0.5;
+  let dispersionOffset = vec2<f32>(
+    dot(spectralDeflection, cameraRight) / viewportAspect,
+    -dot(spectralDeflection, cameraUp)
+  ) * glassMaterial.thickness * glassMaterial.refractionStrength *
+    mix(0.085, 0.22, surfaceCurvature);
   let blurOffset = vec2<f32>(-screenNormal.y, screenNormal.x) *
     glassMaterial.roughness * glassMaterial.thickness * 0.018;
   let centralTransmission = glassMaterial_sampleTransmission(
@@ -173,8 +191,9 @@ fn glassMaterial_getColor(
   }
   let absorption = exp(-(vec3<f32>(0.075, 0.045, 0.022) +
     (1.0 - baseColor.rgb) * 0.24) * thickness);
+  let transmissionFactor = clamp(glassMaterial.transmissionStrength, 0.0, 1.0);
   let transmittedColor = mix(centralTransmission, softenedTransmission, roughnessBlend) *
-    absorption * glassMaterial.transmissionStrength;
+    absorption * transmissionFactor;
   let reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   let environmentColor = opticalLighting_sampleEnvironment(
     reflectionDirection,
@@ -182,24 +201,31 @@ fn glassMaterial_getColor(
     vec3<f32>(0.38, 0.57, 0.82),
     0.28
   );
+  let filteredRoughness = opticalLighting_getFilteredRoughness(
+    normalFacingCamera,
+    glassMaterial.roughness
+  );
   let keySpecular = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     opticalLighting_getKeyLight(),
-    glassMaterial.roughness
+    filteredRoughness
   );
   let fillSpecular = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     opticalLighting_getFillLight(),
-    min(glassMaterial.roughness + 0.14, 1.0)
+    min(filteredRoughness + 0.14, 1.0)
   );
   let clearcoat = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     normalize(vec3<f32>(-0.24, 0.92, 0.31)),
-    0.075
+    opticalLighting_getFilteredRoughness(normalFacingCamera, 0.075)
   ) * glassMaterial.clearcoatStrength;
+  let clearcoatFresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0) *
+    clamp(glassMaterial.clearcoatStrength, 0.0, 1.0);
+  let baseLayerEnergy = 1.0 - clearcoatFresnel;
   let rim = pow(1.0 - viewAlignment, 2.25);
   let innerRim = pow(1.0 - viewAlignment, 2.8) * pow(viewAlignment, 0.35);
   let internalDirection = reflect(refractionDirection, -normalFacingCamera);
@@ -217,27 +243,29 @@ fn glassMaterial_getColor(
     max(dot(reflectionDirection, normalize(vec3<f32>(-0.3, 0.86, 0.42))), 0.0),
     mix(52.0, 16.0, glassMaterial.roughness)
   );
-  let glassBody = baseColor.rgb * (0.045 + viewAlignment * 0.105) +
-    environmentColor * viewAlignment * 0.11;
+  let glassBody = baseColor.rgb * (0.022 + viewAlignment * 0.065) +
+    environmentColor * viewAlignment * 0.055;
   let reflection = (
     environmentColor * (fresnel + rim * 0.65) + baseColor.rgb * rim * 0.32 +
     vec3<f32>(1.0, 0.96, 0.88) * min(keySpecular, 3.0) * 0.34 +
     vec3<f32>(0.34, 0.66, 1.0) * min(fillSpecular, 2.0) * 0.24 +
-    vec3<f32>(1.0, 0.97, 0.9) * min(clearcoat, 3.0) * 0.3 +
     vec3<f32>(0.82, 0.9, 1.0) * studioRibbon * 0.32 +
     internalReflection + iridescence + glassBody
-  ) * glassMaterial.reflectionStrength;
-  let color = transmittedColor * (1.0 - fresnel) + reflection;
+  ) * glassMaterial.reflectionStrength * baseLayerEnergy;
+  let clearcoatReflection = vec3<f32>(1.0, 0.97, 0.9) * min(clearcoat, 3.0) *
+    glassMaterial.reflectionStrength * 0.26;
+  let color = transmittedColor * (1.0 - fresnel) * baseLayerEnergy +
+    reflection + clearcoatReflection;
   let transmissionCoverage = mix(
-    0.38,
-    0.74,
+    0.32,
+    0.66,
     smoothstep(0.12, 0.95, glassMaterial.refractionStrength)
   );
   let opacity = clamp(
     transmissionCoverage + fresnel * 0.28 + rim * 0.19 +
       min(keySpecular + fillSpecular + clearcoat, 2.0) * 0.07,
-    0.2,
-    0.98
+    0.16,
+    0.94
   );
   return vec4<f32>(color, opacity);
 }
@@ -347,8 +375,26 @@ vec4 glassMaterial_getColor(
   float surfaceCurvature = sqrt(max(1.0 - viewAlignment * viewAlignment, 0.0));
   vec2 refractionOffset = screenDeflection * glassMaterial.thickness *
     glassMaterial.refractionStrength * mix(0.085, 0.22, surfaceCurvature);
-  vec2 dispersionOffset = screenNormal * glassMaterial.dispersion *
-    mix(0.12, 0.48, surfaceCurvature);
+  float dispersionHalfSpread = (indexOfRefraction - 1.0) * 0.025 *
+    max(glassMaterial.dispersion, 0.0);
+  float redIndexOfRefraction = max(indexOfRefraction - dispersionHalfSpread, 1.001);
+  float blueIndexOfRefraction = indexOfRefraction + dispersionHalfSpread;
+  vec3 redRefractionDirection = refract(
+    -viewDirection,
+    normalFacingCamera,
+    1.0 / redIndexOfRefraction
+  );
+  vec3 blueRefractionDirection = refract(
+    -viewDirection,
+    normalFacingCamera,
+    1.0 / blueIndexOfRefraction
+  );
+  vec3 spectralDeflection = (redRefractionDirection - blueRefractionDirection) * 0.5;
+  vec2 dispersionOffset = vec2(
+    dot(spectralDeflection, cameraRight) / viewportAspect,
+    dot(spectralDeflection, cameraUp)
+  ) * glassMaterial.thickness * glassMaterial.refractionStrength *
+    mix(0.085, 0.22, surfaceCurvature);
   vec2 blurOffset = vec2(-screenNormal.y, screenNormal.x) *
     glassMaterial.roughness * glassMaterial.thickness * 0.018;
   vec3 centralTransmission = glassMaterial_sampleTransmission(
@@ -371,8 +417,9 @@ vec4 glassMaterial_getColor(
   }
   vec3 absorption = exp(-(vec3(0.075, 0.045, 0.022) +
     (1.0 - baseColor.rgb) * 0.24) * thickness);
+  float transmissionFactor = clamp(glassMaterial.transmissionStrength, 0.0, 1.0);
   vec3 transmittedColor = mix(centralTransmission, softenedTransmission, roughnessBlend) *
-    absorption * glassMaterial.transmissionStrength;
+    absorption * transmissionFactor;
   vec3 reflectionDirection = reflect(-viewDirection, normalFacingCamera);
   vec3 environmentColor = opticalLighting_sampleEnvironment(
     reflectionDirection,
@@ -380,24 +427,31 @@ vec4 glassMaterial_getColor(
     vec3(0.38, 0.57, 0.82),
     0.28
   );
+  float filteredRoughness = opticalLighting_getFilteredRoughness(
+    normalFacingCamera,
+    glassMaterial.roughness
+  );
   float keySpecular = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     opticalLighting_getKeyLight(),
-    glassMaterial.roughness
+    filteredRoughness
   );
   float fillSpecular = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     opticalLighting_getFillLight(),
-    min(glassMaterial.roughness + 0.14, 1.0)
+    min(filteredRoughness + 0.14, 1.0)
   );
   float clearcoat = opticalLighting_getMicrofacetSpecular(
     normalFacingCamera,
     viewDirection,
     normalize(vec3(-0.24, 0.92, 0.31)),
-    0.075
+    opticalLighting_getFilteredRoughness(normalFacingCamera, 0.075)
   ) * glassMaterial.clearcoatStrength;
+  float clearcoatFresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0) *
+    clamp(glassMaterial.clearcoatStrength, 0.0, 1.0);
+  float baseLayerEnergy = 1.0 - clearcoatFresnel;
   float rim = pow(1.0 - viewAlignment, 2.25);
   float innerRim = pow(1.0 - viewAlignment, 2.8) * pow(viewAlignment, 0.35);
   vec3 internalDirection = reflect(refractionDirection, -normalFacingCamera);
@@ -415,27 +469,29 @@ vec4 glassMaterial_getColor(
     max(dot(reflectionDirection, normalize(vec3(-0.3, 0.86, 0.42))), 0.0),
     mix(52.0, 16.0, glassMaterial.roughness)
   );
-  vec3 glassBody = baseColor.rgb * (0.045 + viewAlignment * 0.105) +
-    environmentColor * viewAlignment * 0.11;
+  vec3 glassBody = baseColor.rgb * (0.022 + viewAlignment * 0.065) +
+    environmentColor * viewAlignment * 0.055;
   vec3 reflection = (
     environmentColor * (fresnel + rim * 0.65) + baseColor.rgb * rim * 0.32 +
     vec3(1.0, 0.96, 0.88) * min(keySpecular, 3.0) * 0.34 +
     vec3(0.34, 0.66, 1.0) * min(fillSpecular, 2.0) * 0.24 +
-    vec3(1.0, 0.97, 0.9) * min(clearcoat, 3.0) * 0.3 +
     vec3(0.82, 0.9, 1.0) * studioRibbon * 0.32 +
     internalReflection + iridescence + glassBody
-  ) * glassMaterial.reflectionStrength;
-  vec3 color = transmittedColor * (1.0 - fresnel) + reflection;
+  ) * glassMaterial.reflectionStrength * baseLayerEnergy;
+  vec3 clearcoatReflection = vec3(1.0, 0.97, 0.9) * min(clearcoat, 3.0) *
+    glassMaterial.reflectionStrength * 0.26;
+  vec3 color = transmittedColor * (1.0 - fresnel) * baseLayerEnergy +
+    reflection + clearcoatReflection;
   float transmissionCoverage = mix(
-    0.38,
-    0.74,
+    0.32,
+    0.66,
     smoothstep(0.12, 0.95, glassMaterial.refractionStrength)
   );
   float opacity = clamp(
     transmissionCoverage + fresnel * 0.28 + rim * 0.19 +
       min(keySpecular + fillSpecular + clearcoat, 2.0) * 0.07,
-    0.2,
-    0.98
+    0.16,
+    0.94
   );
   return vec4(color, opacity);
 }
@@ -485,7 +541,7 @@ function getGlassMaterialUniforms(
     viewportSize: props.viewportSize ?? previousUniforms?.viewportSize ?? [1, 1],
     indexOfRefraction: props.indexOfRefraction ?? previousUniforms?.indexOfRefraction ?? 1.48,
     roughness: props.roughness ?? previousUniforms?.roughness ?? 0.14,
-    dispersion: props.dispersion ?? previousUniforms?.dispersion ?? 0.022,
+    dispersion: props.dispersion ?? previousUniforms?.dispersion ?? 0.33,
     thickness: props.thickness ?? previousUniforms?.thickness ?? 1.05,
     refractionStrength: props.refractionStrength ?? previousUniforms?.refractionStrength ?? 1,
     reflectionStrength: props.reflectionStrength ?? previousUniforms?.reflectionStrength ?? 1,
@@ -527,7 +583,7 @@ export const glassMaterial = {
     viewportSize: [1, 1],
     indexOfRefraction: 1.48,
     roughness: 0.14,
-    dispersion: 0.022,
+    dispersion: 0.33,
     thickness: 1.05,
     refractionStrength: 1,
     reflectionStrength: 1,

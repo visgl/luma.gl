@@ -346,7 +346,8 @@ fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
   let viewDirection = normalize(app.cameraPosition - inputs.worldPosition);
   let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
   let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
-  let focusStrength = smoothstep(0.9, 1.05, inputs.color.b) * (1.0 - failureTint);
+  let focusSignal = max(inputs.color.g - inputs.color.b * 0.6, 0.0);
+  let focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
   let focusColor = vec3<f32>(0.12, 0.34, 0.72) *
     focusStrength * (0.05 + focusRim * 0.55);
   let color = vec4<f32>(
@@ -492,7 +493,8 @@ void main(void) {
   vec3 viewDirection = normalize(app.cameraPosition - vWorldPosition);
   float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
   float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
-  float focusStrength = smoothstep(0.9, 1.05, vColor.b) * (1.0 - failureTint);
+  float focusSignal = max(vColor.g - vColor.b * 0.6, 0.0);
+  float focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
   vec3 focusColor = vec3(0.12, 0.34, 0.72) * focusStrength * (0.05 + focusRim * 0.55);
   vec4 color = vec4(
     glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
@@ -1109,7 +1111,7 @@ class NetworkStoryControls {
     this.rootElement = document.createElement('div');
     this.rootElement.dataset.networkStoryControls = '';
     this.rootElement.setAttribute('role', 'region');
-    this.rootElement.setAttribute('aria-label', 'Network packet spraying guided tour');
+    this.rootElement.setAttribute('aria-label', 'MRC network packet spraying guided tour');
     Object.assign(this.rootElement.style, {
       position: 'absolute',
       left: '12px',
@@ -1127,7 +1129,7 @@ class NetworkStoryControls {
     });
 
     const headingElement = document.createElement('div');
-    headingElement.textContent = 'GUIDED NETWORK TOUR';
+    headingElement.textContent = 'MRC GUIDED NETWORK TOUR';
     Object.assign(headingElement.style, {
       color: '#88a9d6',
       fontSize: '9px',
@@ -2019,7 +2021,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   orbit = 0.08;
   glassIndexOfRefraction = 1.48;
   glassRoughness = 0.045;
-  glassDispersion = 0.026;
+  glassDispersion = 0.33;
   glassThickness = 1.16;
   glassRefractionStrength = 1.32;
   glassFresnelStrength = 1.08;
@@ -2085,11 +2087,19 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     });
     const supportsABuffer = getABufferSupport(device).supported;
     const supportsWeightedBlending = getWBOITSupport(device).supported;
-    this.transparencyMode = supportsABuffer
+    const preferredTransparencyMode = supportsABuffer
       ? 'a-buffer'
       : supportsWeightedBlending
         ? 'weighted-blended'
         : 'sorted-alpha';
+    const requestedTransparencyMode = searchParams.get('transparency');
+    this.transparencyMode =
+      isTransparencyMode(requestedTransparencyMode) &&
+      (requestedTransparencyMode === 'sorted-alpha' ||
+        (requestedTransparencyMode === 'a-buffer' && supportsABuffer) ||
+        (requestedTransparencyMode === 'weighted-blended' && supportsWeightedBlending))
+        ? requestedTransparencyMode
+        : preferredTransparencyMode;
     this.aBufferRenderer = supportsABuffer
       ? new ABufferRenderer(device, {
           averageFragmentsPerPixel: 4,
@@ -2420,6 +2430,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingAdapterVendor = device.info.vendor;
       canvas.dataset.packetSprayingFallback = String(Boolean(device.info.fallback));
       canvas.dataset.packetSprayingDynamicRange = this.dynamicRangeProfile.displayMode;
+      canvas.dataset.packetSprayingTransparencyMode = this.transparencyMode;
       canvas.dataset.packetSprayingLab = this.reflectionLab ? 'reflection' : '';
       canvas.dataset.packetSprayingSceneColorFormat = this.sceneColorFormat;
       canvas.dataset.packetSprayingEnvironmentMipLevels = String(this.environmentTexture.mipLevels);
@@ -4767,6 +4778,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     const transparencyMode = getChangedSetting(changedSettings, 'transparencyMode')?.nextValue;
     if (isTransparencyMode(transparencyMode)) {
       this.transparencyMode = transparencyMode;
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingTransparencyMode = transparencyMode;
+      }
     }
 
     const visualIntensity = getChangedSetting(changedSettings, 'visualIntensity')?.nextValue;
@@ -5684,8 +5698,8 @@ function makeSettingsSchema(
             type: 'number',
             persist: 'none',
             min: 0,
-            max: 0.08,
-            step: 0.002
+            max: 1,
+            step: 0.02
           },
           {
             name: 'glassThickness',

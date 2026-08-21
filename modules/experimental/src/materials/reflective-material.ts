@@ -45,7 +45,11 @@ fn reflectiveMaterial_getColor(
   let keyHalfVector = normalize(keyLight + viewDirection);
   let fillHalfVector = normalize(fillLight + viewDirection);
   let diffuse = 0.36 + 0.64 * max(dot(normalFacingCamera, keyLight), 0.0);
-  let specularExponent = mix(96.0, 12.0, clamp(reflectiveMaterial.roughness, 0.0, 1.0));
+  let filteredRoughness = opticalLighting_getFilteredRoughness(
+    normalFacingCamera,
+    reflectiveMaterial.roughness
+  );
+  let specularExponent = mix(96.0, 12.0, filteredRoughness);
   let keySpecular = pow(max(dot(normalFacingCamera, keyHalfVector), 0.0), specularExponent);
   let fillSpecular = pow(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
@@ -116,7 +120,11 @@ vec4 reflectiveMaterial_getColor(
   vec3 keyHalfVector = normalize(keyLight + viewDirection);
   vec3 fillHalfVector = normalize(fillLight + viewDirection);
   float diffuse = 0.36 + 0.64 * max(dot(normalFacingCamera, keyLight), 0.0);
-  float specularExponent = mix(96.0, 12.0, clamp(reflectiveMaterial.roughness, 0.0, 1.0));
+  float filteredRoughness = opticalLighting_getFilteredRoughness(
+    normalFacingCamera,
+    reflectiveMaterial.roughness
+  );
+  float specularExponent = mix(96.0, 12.0, filteredRoughness);
   float keySpecular = pow(max(dot(normalFacingCamera, keyHalfVector), 0.0), specularExponent);
   float fillSpecular = pow(
     max(dot(normalFacingCamera, fillHalfVector), 0.0),
