@@ -56,6 +56,7 @@ API and supported feature set can change.
 - [Animation and glTF integration](/docs/api-reference/scene/anari-animation): retained node hierarchies, optional glTF adaptation, automatic skeletal and morph playback, mixer controls, and batched object commits.
 - [Scene hierarchy](/docs/api-reference/scene/anari-scene): surfaces, groups, transform instances, worlds, and instancing behavior.
 - [Cameras, renderers, and frames](/docs/api-reference/scene/anari-rendering): camera projections, forward/deferred/ray-tracing renderer controls, bloom, fog, frame rendering, and statistics.
+- [Structured volume ray marching](/docs/api-reference/scene/raymarch): scalar/vector buffer and 3D-texture volumes, transfer functions, compositing, and solid vector glyphs.
 - [Scene schemas and JSON validation](/docs/api-reference/scene/anari-schemas): optional Zod object schemas, retained-reference validation, generated JSON Schema, and editor integration.
 - [ANARI C API and THREE.js mapping](/docs/api-reference/scene/anari-api-mapping): official ANARI 1.1 functions, implementation coverage, behavioral differences, and THREE.js equivalents.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.

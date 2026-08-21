@@ -39,6 +39,7 @@ describe('9.4 compute example catalog navigation', () => {
         'showcase/million-row-crossfilter',
         'showcase/raster-lab',
         'showcase/billion-point-spatial-atlas',
+        'showcase/vector-field-lab',
         'experimental/gpu-sort',
         'experimental/gpu-data-analysis'
       ])

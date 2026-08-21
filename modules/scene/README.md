@@ -41,6 +41,16 @@ passes, optional bloom, WebGPU software ray tracing, and HDR presentation when t
 configured for extended dynamic range. The ANARI facade adapts retained objects into shared renderer
 descriptors; it does not define a second BRDF, renderer, or asset loader.
 
+Renderer implementations are also available through focused facade entry points:
+
+- `@luma.gl/scene/forward`
+- `@luma.gl/scene/deferred`
+- `@luma.gl/scene/raytrace`
+- `@luma.gl/scene/raymarch`
+
+These paths keep application imports stable while the scene package delegates shader and
+model implementation to shared rendering packages.
+
 ## Installation
 
 Install `@luma.gl/scene` from npm with `yarn add @luma.gl/scene`. Its APIs may evolve without a 9.4

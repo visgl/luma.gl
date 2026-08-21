@@ -16,6 +16,26 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./forward": {
+      "types": "./dist/forward.d.ts",
+      "import": "./dist/forward.js",
+      "require": "./dist/forward.cjs"
+    },
+    "./deferred": {
+      "types": "./dist/deferred.d.ts",
+      "import": "./dist/deferred.js",
+      "require": "./dist/deferred.cjs"
+    },
+    "./raytrace": {
+      "types": "./dist/raytrace.d.ts",
+      "import": "./dist/raytrace.js",
+      "require": "./dist/raytrace.cjs"
+    },
+    "./raymarch": {
+      "types": "./dist/raymarch.d.ts",
+      "import": "./dist/raymarch.js",
+      "require": "./dist/raymarch.cjs"
+    },
     "./schemas": {
       "types": "./dist/schemas.d.ts",
       "import": "./dist/schemas.js",

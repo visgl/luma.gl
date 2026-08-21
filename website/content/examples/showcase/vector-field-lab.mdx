@@ -1,0 +1,46 @@
+---
+title: 'Vector Field Lab'
+description: Orbit a sampled 3D field beside GPU-computed gradient, divergence, curl, and Laplacian volumes.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation, vector-fields]
+---
+
+import {VectorFieldLabExample} from '@site/src/examples';
+
+<VectorFieldLabExample />
+
+Vector Field Lab makes differential operators visible as local changes inside one shared volume.
+Its four linked ray-marched views bind the same GPU-resident samples, derived buffers, and orbit
+camera, so dragging or zooming preserves the same perspective everywhere.
+
+Small solid 3D arrow glyphs make vector, gradient, and curl directions readable inside the volume.
+Because their shafts and tapered heads are evaluated by the ray marcher, they retain correct
+orientation, occlusion, and perspective as the camera moves.
+
+Scalar presets show nested potential clouds, gradient magnitude and direction, signed Laplacian,
+and combined curvature topology. Vector presets show velocity direction beside signed divergence,
+vector curl/vorticity, and combined flow topology. The radial source, vortex column, volumetric
+saddle, Taylor–Green lattice, Gaussian cloud, and animated multi-well presets give each operator an
+immediately recognizable mathematical signature.
+
+Reusable GPU finite-difference primitives each contribute one gradient, divergence, curl, or
+Laplacian stage. The showcase precedes four 3D derivative stages with an example-local analytic
+sampling stage, keeping the entire volume pipeline explicit and GPU resident.
+
+Interior samples use second-order centered differences. The default one-sided boundary policy uses
+second-order forward or backward stencils on all six boundary faces; periodic wrapping is also
+available. The showcase uses a `40 × 40 × 40` grid over `[-1, 1]³`, making
+`dx = dy = dz = 2 / 39`. All calculations use `f32`, and derivative units follow the input units
+divided by distance—or distance squared for the Laplacian.
+
+Each animated refresh executes one sampling node followed by four `O(N³)` differential nodes. No
+complete volume is read back to JavaScript: the fullscreen renderer trilinearly samples the
+resulting storage buffers during ray marching. Analytic center-probe values make known derivatives
+visible alongside their finite-difference renderings.
+
+Natural extensions include higher-order stencils, Jacobian and Hessian tensors, GPU particle
+advection, vortex tubes, spectral derivatives through 3D FFTs, Helmholtz decomposition, Poisson
+solvers, and coupled fluid or PDE visualization.

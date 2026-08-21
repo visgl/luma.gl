@@ -4810,7 +4810,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/scene@workspace:*, @luma.gl/scene@workspace:modules/scene":
+"@luma.gl/scene@npm:9.4.0-alpha.4, @luma.gl/scene@workspace:*, @luma.gl/scene@workspace:modules/scene":
   version: 0.0.0-use.local
   resolution: "@luma.gl/scene@workspace:modules/scene"
   dependencies:
@@ -15665,6 +15665,23 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-showcase-vector-field-lab@workspace:examples/showcase/vector-field-lab":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-vector-field-lab@workspace:examples/showcase/vector-field-lab"
+  dependencies:
+    "@luma.gl/core": "npm:9.4.0-alpha.4"
+    "@luma.gl/effects": "npm:9.4.0-alpha.4"
+    "@luma.gl/engine": "npm:9.4.0-alpha.4"
+    "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
+    "@luma.gl/scene": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown

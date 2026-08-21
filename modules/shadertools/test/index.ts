@@ -34,6 +34,7 @@ import './modules/math/fp64-arithmetic-compute.spec';
 import './modules/math/fp64-arithmetic-transform.spec';
 import './modules/math/fp64-utils.spec';
 import './modules/geospatial/dggs.spec';
+import './modules/volume/volume-raymarch.spec';
 
 // General modules tests
 import './modules/modules.spec';

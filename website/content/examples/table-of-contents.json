@@ -101,6 +101,11 @@
         "items": [
           {
             "type": "doc",
+            "id": "showcase/vector-field-lab",
+            "label": "Vector Field Lab"
+          },
+          {
+            "type": "doc",
             "id": "showcase/quantum-state-studio",
             "label": "Quantum State Studio"
           },
