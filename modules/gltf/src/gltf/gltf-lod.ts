@@ -242,7 +242,15 @@ function simplifyGLTFMesh(
     }
 
     const attributes: MeshSimplificationAttribute[] = [];
-    for (const semantic of ['NORMAL', 'TEXCOORD_0', 'TEXCOORD_1', 'JOINTS_0', 'WEIGHTS_0']) {
+    for (const semantic of [
+      'NORMAL',
+      'TEXCOORD_0',
+      'TEXCOORD_1',
+      'JOINTS_0',
+      'WEIGHTS_0',
+      'JOINTS_1',
+      'WEIGHTS_1'
+    ]) {
       const attribute = primitive.attributes[semantic];
       if (attribute) {
         attributes.push({values: attribute.value, size: attribute.components});

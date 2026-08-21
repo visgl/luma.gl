@@ -163,6 +163,24 @@ test('gltf#parsePBRMaterial accepts normalized geometry attribute names', t => {
   t.end();
 });
 
+test('gltf#parsePBRMaterial enables the optional second skin influence set', t => {
+  const parsedMaterial = parsePBRMaterial(
+    device,
+    {},
+    {JOINTS_0: {}, WEIGHTS_0: {}, JOINTS_1: {}, WEIGHTS_1: {}},
+    {}
+  );
+
+  t.equal(parsedMaterial.defines['HAS_SKIN'], true, 'first joint influence set enables skinning');
+  t.equal(
+    parsedMaterial.defines['HAS_SKIN_1'],
+    true,
+    'second joint influence set enables eight-influence skinning'
+  );
+  destroyParsedTextures(parsedMaterial);
+  t.end();
+});
+
 test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   const parsedMaterial = parsePBRMaterial(
     device,

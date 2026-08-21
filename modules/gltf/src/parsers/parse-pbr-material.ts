@@ -193,6 +193,8 @@ type GLTFAttributeName =
   | 'TEXCOORD_1'
   | 'JOINTS_0'
   | 'WEIGHTS_0'
+  | 'JOINTS_1'
+  | 'WEIGHTS_1'
   | 'COLOR_0';
 
 const GLTF_ATTRIBUTE_ALIASES: Record<GLTFAttributeName, string[]> = {
@@ -202,6 +204,8 @@ const GLTF_ATTRIBUTE_ALIASES: Record<GLTFAttributeName, string[]> = {
   TEXCOORD_1: ['TEXCOORD_1', 'texCoords1'],
   JOINTS_0: ['JOINTS_0'],
   WEIGHTS_0: ['WEIGHTS_0'],
+  JOINTS_1: ['JOINTS_1'],
+  WEIGHTS_1: ['WEIGHTS_1'],
   COLOR_0: ['COLOR_0', 'colors']
 };
 
@@ -275,6 +279,13 @@ export function parsePBRMaterial(
   if (hasGLTFAttribute(attributes, 'TEXCOORD_1')) parsedMaterial.defines['HAS_UV_1'] = true;
   if (hasGLTFAttribute(attributes, 'JOINTS_0') && hasGLTFAttribute(attributes, 'WEIGHTS_0')) {
     parsedMaterial.defines['HAS_SKIN'] = true;
+  }
+  if (
+    parsedMaterial.defines['HAS_SKIN'] &&
+    hasGLTFAttribute(attributes, 'JOINTS_1') &&
+    hasGLTFAttribute(attributes, 'WEIGHTS_1')
+  ) {
+    parsedMaterial.defines['HAS_SKIN_1'] = true;
   }
   if (hasGLTFAttribute(attributes, 'COLOR_0')) parsedMaterial.defines['HAS_COLORS'] = true;
 

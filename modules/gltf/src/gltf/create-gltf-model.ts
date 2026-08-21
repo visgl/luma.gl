@@ -48,16 +48,20 @@ struct VertexInputs {
   @location(5) JOINTS_0: vec4u,
   @location(6) WEIGHTS_0: vec4f,
 #endif
+#ifdef HAS_SKIN_1
+  @location(7) JOINTS_1: vec4u,
+  @location(8) WEIGHTS_1: vec4f,
+#endif
 #ifdef HAS_GLTF_INSTANCING
-  @location(8) instanceModelMatrixCol0: vec4f,
-  @location(9) instanceModelMatrixCol1: vec4f,
-  @location(10) instanceModelMatrixCol2: vec4f,
-  @location(11) instanceModelMatrixCol3: vec4f,
+  @location(9) instanceModelMatrixCol0: vec4f,
+  @location(10) instanceModelMatrixCol1: vec4f,
+  @location(11) instanceModelMatrixCol2: vec4f,
+  @location(12) instanceModelMatrixCol3: vec4f,
   @builtin(instance_index) instanceIndex: u32,
 #endif
 #ifdef HAS_GPU_CROWD_ANIMATION
-  @location(12) instanceAnimationFrames: vec4f,
-  @location(13) instanceAnimationBlend: vec4f,
+  @location(13) instanceAnimationFrames: vec4f,
+  @location(14) instanceAnimationBlend: vec4f,
 #endif
 #ifdef HAS_INSTANCED_MORPH
   @builtin(vertex_index) vertexIndex: u32,
@@ -160,7 +164,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 #ifdef HAS_SKIN
 #ifdef HAS_GPU_CROWD_ANIMATION
-  let skinMatrix = getGPUAnimatedSkinMatrix(
+  var skinMatrix = getGPUAnimatedSkinMatrix(
     inputs.WEIGHTS_0,
     inputs.JOINTS_0,
     inputs.instanceAnimationFrames,
@@ -169,14 +173,36 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   );
 #else
 #ifdef HAS_INSTANCED_SKIN
-  let skinMatrix = getInstancedSkinMatrix(
+  var skinMatrix = getInstancedSkinMatrix(
     inputs.WEIGHTS_0,
     inputs.JOINTS_0,
     inputs.instanceIndex,
     u32(CROWD_JOINTS_PER_INSTANCE)
   );
 #else
-  let skinMatrix = getSkinMatrix(inputs.WEIGHTS_0, inputs.JOINTS_0);
+  var skinMatrix = getSkinMatrix(inputs.WEIGHTS_0, inputs.JOINTS_0);
+#endif
+#endif
+#ifdef HAS_SKIN_1
+#ifdef HAS_GPU_CROWD_ANIMATION
+  skinMatrix += getGPUAnimatedSkinMatrix(
+    inputs.WEIGHTS_1,
+    inputs.JOINTS_1,
+    inputs.instanceAnimationFrames,
+    inputs.instanceAnimationBlend,
+    u32(CROWD_ANIMATION_FRAME_STRIDE)
+  );
+#else
+#ifdef HAS_INSTANCED_SKIN
+  skinMatrix += getInstancedSkinMatrix(
+    inputs.WEIGHTS_1,
+    inputs.JOINTS_1,
+    inputs.instanceIndex,
+    u32(CROWD_JOINTS_PER_INSTANCE)
+  );
+#else
+  skinMatrix += getSkinMatrix(inputs.WEIGHTS_1, inputs.JOINTS_1);
+#endif
 #endif
 #endif
   position = skinMatrix * position;
@@ -276,6 +302,11 @@ const vs = /* glsl */ `\
     in vec4 WEIGHTS_0;
   #endif
 
+  #ifdef HAS_SKIN_1
+    in uvec4 JOINTS_1;
+    in vec4 WEIGHTS_1;
+  #endif
+
   #ifdef HAS_GLTF_INSTANCING
     in vec4 instanceModelMatrixCol0;
     in vec4 instanceModelMatrixCol1;
@@ -371,6 +402,27 @@ const vs = /* glsl */ `\
       #else
       mat4 skinMat = getSkinMatrix(WEIGHTS_0, JOINTS_0);
       #endif
+      #endif
+      #ifdef HAS_SKIN_1
+        #ifdef HAS_GPU_CROWD_ANIMATION
+          skinMat += getGPUAnimatedSkinMatrix(
+            WEIGHTS_1,
+            JOINTS_1,
+            instanceAnimationFrames,
+            instanceAnimationBlend
+          );
+        #else
+        #ifdef HAS_INSTANCED_SKIN
+          skinMat += getInstancedSkinMatrix(
+            WEIGHTS_1,
+            JOINTS_1,
+            uint(gl_InstanceID),
+            uint(CROWD_JOINTS_PER_INSTANCE)
+          );
+        #else
+          skinMat += getSkinMatrix(WEIGHTS_1, JOINTS_1);
+        #endif
+        #endif
       #endif
       pos = skinMat * pos;
       _NORMAL = skinMat * _NORMAL;
