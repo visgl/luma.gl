@@ -39,6 +39,11 @@ export type {
   AnimationLoopProps
 } from './animation-loop/animation-loop';
 export {AnimationLoop} from './animation-loop/animation-loop';
+export type {
+  CanvasErrorDisplayProps,
+  CanvasErrorDisplayTarget
+} from './animation-loop/canvas-error-display';
+export {CanvasErrorDisplay} from './animation-loop/canvas-error-display';
 
 export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
 export type {TemplateAnimationLoop} from './animation-loop/make-animation-loop';

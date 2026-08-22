@@ -40,6 +40,7 @@ import type {ExternalImage} from '../shadertypes/image-types/image-types';
 import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
 import {getTextureFormatTable} from '../shadertypes/texture-types/texture-format-table';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
+import type {DeviceCreationInfo} from './device-creation-error';
 
 export {_getDefaultDebugValue} from './device-defaults';
 
@@ -91,6 +92,12 @@ export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-availa
 
 /** Effective WebGPU feature level reported by a created WebGPU device. */
 export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
+
+/** Information supplied when a device is lost. */
+export type DeviceLostInfo = {
+  reason: 'destroyed' | 'unknown';
+  message: string;
+};
 
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
@@ -307,6 +314,8 @@ export type WebGPUDeviceFeature =
   | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
   | 'float32-filterable' // Is the float32 format filterable?
   | 'float32-blendable' // Is the float32 format blendable?
+  | 'texture-formats-tier1'
+  | 'texture-formats-tier2'
   | 'clip-distances'
   | 'dual-source-blending'
   | 'subgroups';
@@ -371,7 +380,7 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
-  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
+  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to `'default'`; WebGPU omits the adapter hint unless explicitly set. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
@@ -452,6 +461,10 @@ export type DeviceProps = {
    * Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
    */
   _destroyPipelines?: boolean;
+  /** Internal: request a software-backed WebGPU adapter. */
+  _forceFallbackAdapter?: boolean;
+  /** Internal: the HTML canvas may be replaced if a failed backend locked its context type. */
+  _canvasContextOwned?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -535,6 +548,12 @@ export abstract class Device {
   _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
   private _moduleData: Record<string, Record<string, unknown>> = {};
+  /** Device selection and fallback attempts used to create this device. */
+  creationInfo: DeviceCreationInfo = {
+    requestedType: 'unknown',
+    selected: null,
+    attempts: []
+  };
 
   // Capabilities
 
@@ -660,7 +679,7 @@ export abstract class Device {
   abstract get isLost(): boolean;
 
   /** Promise that resolves when device is lost */
-  abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  abstract readonly lost: Promise<DeviceLostInfo>;
 
   /**
    * Trigger device loss.

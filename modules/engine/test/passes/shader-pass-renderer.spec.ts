@@ -6,7 +6,8 @@ import test from 'test/utils/vitest-tape';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {Buffer, CommandEncoder, Texture} from '@luma.gl/core';
+import {Buffer, CommandEncoder, Texture, type Device} from '@luma.gl/core';
+import {supportsComputeOptimization} from '../../src/passes/shader-pass-renderer';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -188,6 +189,58 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
     }
   ]
 };
+
+test('ShaderPassRenderer compute optimization requires storage-capable output formats', t => {
+  const pipeline: ShaderPassPipeline<'output'> = {
+    name: 'storage-capability-gate',
+    renderTargets: {output: {format: 'bgra8unorm', storage: true}},
+    steps: [],
+    compute: {
+      name: 'storage-capability-compute',
+      source: '',
+      uniformModule: 'storageCapability',
+      uniformBinding: 'storageCapabilityUniforms',
+      uniformNames: [],
+      uniforms: {},
+      input: 'original',
+      outputs: {outputTexture: 'output'},
+      replacedPasses: [],
+      workgroupSize: [8, 8]
+    }
+  };
+  let supportsStorage = false;
+  const device = {
+    type: 'webgpu',
+    preferredColorFormat: 'bgra8unorm',
+    limits: {
+      maxStorageTexturesPerShaderStage: 4,
+      maxComputeWorkgroupSizeX: 256,
+      maxComputeWorkgroupSizeY: 256,
+      maxComputeInvocationsPerWorkgroup: 256
+    },
+    getTextureFormatCapabilities: (format: 'bgra8unorm') => ({
+      format,
+      create: true,
+      render: true,
+      filter: true,
+      blend: true,
+      store: supportsStorage
+    })
+  } as unknown as Device;
+
+  t.equal(
+    supportsComputeOptimization(device, pipeline),
+    false,
+    'unsupported storage format selects the render-pass fallback'
+  );
+  supportsStorage = true;
+  t.equal(
+    supportsComputeOptimization(device, pipeline),
+    true,
+    'storage-capable format enables the compute optimization'
+  );
+  t.end();
+});
 
 const tintPipeline: ShaderPassPipeline<'scratch'> = {
   name: 'tintPipeline',

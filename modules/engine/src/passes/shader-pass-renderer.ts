@@ -764,7 +764,8 @@ function isShaderPassPipeline(shaderPass: ShaderPassLike): shaderPass is ShaderP
   return 'steps' in shaderPass;
 }
 
-function supportsComputeOptimization(device: Device, pipeline: ShaderPassPipeline): boolean {
+/** @internal Returns whether a pipeline's optional compute path is valid for this device. */
+export function supportsComputeOptimization(device: Device, pipeline: ShaderPassPipeline): boolean {
   const optimization = pipeline.compute;
   if (!optimization || device.type !== 'webgpu') {
     return false;
