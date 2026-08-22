@@ -14,8 +14,6 @@ The example starts with a generated video source. Camera access remains optional
 
 InfoSource
 
-Wraps a live `VideoTexture` around a rotating `CylinderGeometry`. WebGL samples the copied `sampler2D` path; WebGPU samples the native `texture_external` path when the browser supports it.
-
 Use camera
 
 ```

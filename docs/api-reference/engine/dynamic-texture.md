@@ -14,8 +14,6 @@ This cubemap loads six faces asynchronously, generates mipmaps, and samples the 
 
 InfoSource
 
-Uses a luma.gl `TextureCube` to simulate a reflective surface
-
 ```
 // Loading source…
 ```

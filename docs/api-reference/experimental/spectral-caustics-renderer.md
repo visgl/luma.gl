@@ -12,12 +12,6 @@ The result is a reusable receiver-lighting contribution, not a replacement scene
 
 InfoSource
 
-A rotating convex crystal is captured from the light, then **six CIE/D65 wavelength bands** refract through its real front and back surfaces into an HDR XYZ caustic map.
-
-**Drag** to orbit · **Wheel** to zoom · **Space** for cinematic orbit · **R** to reset
-
-WebGPU computeGeometry tracedHDR bloom
-
 ```
 // Loading source…
 ```

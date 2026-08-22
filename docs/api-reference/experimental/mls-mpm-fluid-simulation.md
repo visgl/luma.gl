@@ -14,10 +14,6 @@ GPU-resident MLS-MPM fluid
 
 InfoSource
 
-**12,288 particles** exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Watch the pressure-charged recirculation spouts, click repeatedly to build a surge, drag to steer, or press **R** to reset.
-
-WebGPU computeCyclic spoutsHDR liquid metal
-
 ```
 // Loading source…
 ```

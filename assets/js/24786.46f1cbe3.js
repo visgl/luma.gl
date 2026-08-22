@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkwebsite_docusaurus=self.webpackChunkwebsite_docusaurus||[]).push([["24786"],{44361(e,s,a){a.r(s),a.d(s,{default:()=>c});var n=a(62540);a(63696);var t=a(31463),u=a(2370);function c(){return(0,n.jsx)(u.fo,{id:"instancing",directory:"showcase",template:t.A,config:{},canvasContextProfile:"high-dynamic-range",panel:!1})}}}]);

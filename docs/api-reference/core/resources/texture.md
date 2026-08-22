@@ -200,10 +200,6 @@ The example below uploads procedural volume data to a `3d` texture and samples t
 
 InfoSource
 
-Volumetric 3D noise visualized using a **3D texture**.
-
-Uses the luma.gl `Texture3D` class.
-
 ```
 // Loading source…
 ```

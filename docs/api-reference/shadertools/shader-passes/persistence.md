@@ -8,10 +8,6 @@ Accumulate the current frame into a fading history texture to create luminous mo
 
 InfoSource
 
-Electron trails renderings persist across multiple frames.
-
-Uses multiple luma.gl `Framebuffer`s to hold previously rendered data between frames.
-
 ```
 // Loading source…
 ```
