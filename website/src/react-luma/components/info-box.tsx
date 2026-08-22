@@ -9,6 +9,7 @@ import {
   type ExamplePanelAppearance
 } from '../../../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../../../examples/example-theme';
+import {isMobileExampleViewport} from '../utils/mobile-example-pixel-ratio';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 const INFO_BOX_DEFAULT_WIDTH = 420;
@@ -202,7 +203,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
   );
   const sourcePathsKey = sourcePaths.join('|');
   const title = getExampleTitle(props.id, props.title);
-  const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
+  const [isCollapsed, setIsCollapsed] = useState(
+    () =>
+      isInfoBoxCollapsedByDefault ||
+      (typeof window !== 'undefined' && isMobileExampleViewport(window))
+  );
   const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
   const [activeSourcePath, setActiveSourcePath] = useState('');
   const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
@@ -417,6 +422,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
     <div
       ref={setInfoBoxElement}
       data-info-box-appearance={appearance}
+      data-luma-info-box-collapsed={isCollapsed ? 'true' : 'false'}
       style={{
         ...INFO_BOX_BASE_STYLE,
         ...INFO_BOX_APPEARANCE_STYLES[appearance],
@@ -432,6 +438,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
     >
       <style>{INFO_BOX_CHROME_STYLE}</style>
       <div
+        data-luma-example-info-header=""
         style={{
           display: 'flex',
           alignItems: 'flex-start',
@@ -470,6 +477,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 }}
               />
               <h3
+                data-luma-example-title=""
                 style={{
                   color: 'inherit',
                   fontSize: 17,
@@ -486,6 +494,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
           ) : null}
           {props.subtitle ? (
             <div
+              data-luma-example-subtitle=""
               style={{
                 color: `var(--luma-example-text-muted, ${theme.textMuted})`,
                 fontSize: 12,
@@ -498,10 +507,14 @@ function InfoBoxView(props: InfoBoxViewProps) {
             </div>
           ) : null}
         </button>
-        <div style={{display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0}}>
+        <div
+          data-luma-example-chrome-actions=""
+          style={{display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0}}
+        >
           {sourceUrl ? (
             <a
               data-luma-example-chrome-action=""
+              data-luma-example-source-link=""
               href={sourceUrl}
               target="_blank"
               rel="noreferrer"
@@ -526,11 +539,12 @@ function InfoBoxView(props: InfoBoxViewProps) {
                   fill="currentColor"
                 />
               </svg>
-              GitHub
+              <span data-luma-example-source-label="">GitHub</span>
             </a>
           ) : null}
           <button
             data-luma-example-chrome-action=""
+            data-luma-example-info-toggle=""
             type="button"
             aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
             aria-expanded={!isCollapsed}

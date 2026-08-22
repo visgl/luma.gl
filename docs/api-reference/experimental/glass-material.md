@@ -29,7 +29,7 @@ import {
 | `sceneColorTexture` | `Texture` | Required for rendering. | Opaque scene color captured before translucent geometry. |
 | `indexOfRefraction` | `number` | `1.48` | Optical refraction index; ordinary glass is approximately `1.5`. |
 | `roughness` | `number` | `0.14` | Surface roughness between zero and one. |
-| `dispersion` | `number` | `0.022` | Separation of red, green, and blue transmission samples. |
+| `dispersion` | `number` | `0.33` | Wavelength-dependent refraction using the glTF `20 / Abbe number` convention; `0.33` approximates crown glass. |
 | `thickness` | `number` | `1.05` | Approximate optical distance used for transmission and absorption. |
 | `refractionStrength` | `number` | `1` | Camera-aligned background lens displacement. |
 | `reflectionStrength` | `number` | `1` | Multiplier for environment reflection and highlights. |
@@ -37,7 +37,14 @@ import {
 | `clearcoatStrength` | `number` | `0.7` | Secondary polished surface highlight. |
 | `iridescenceStrength` | `number` | `0.1` | Thin-film spectral edge variation. |
 | `internalReflectionStrength` | `number` | `0.42` | Internal environment-bounce multiplier. |
-| `transmissionStrength` | `number` | `1` | Amount of transmitted scene color. |
+| `transmissionStrength` | `number` | `1` | Fraction of non-reflected scene light transmitted through the material; shading clamps this value between zero and one. |
+
+Transmission and reflection share an energy budget derived from `indexOfRefraction`, matching
+the dielectric Fresnel model used by the canonical PBR material. A clearcoat consumes part of
+that budget before the underlying surface is shaded. Red and blue refraction rays use their own
+indices of refraction from `KHR_materials_dispersion`; the green channel retains the material's
+authored index. Screen-space normal derivatives widen subpixel GGX highlights to avoid unstable
+white glints on both WebGL and WebGPU.
 
 ## Shader Helper
 
@@ -100,6 +107,10 @@ absorption uses the backface-measured optical path; thin-film interference evalu
 red, green, and blue wavelengths from the coating thickness; volume scattering couples nearby
 optical point lights into the glass interior; and optional contact shadows use the opaque depth
 already captured for foreground rejection. No mode requires per-pixel ray tracing.
+
+The volume extension refracts the red and blue wavelengths separately at both the front and rear
+glass boundaries, preserves total internal reflection, and derives its reflected/transmitted
+energy split from the same authored index as the base material.
 
 `opticalCausticsPlugin` separately adds a bounded array of focused glass lenses for nearby
 reflective receiver surfaces. Call `opticalCaustics_getColor(normal, worldPosition,

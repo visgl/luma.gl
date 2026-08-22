@@ -5,15 +5,18 @@
 import test from 'test/utils/vitest-tape';
 import {
   SWITCH_CONFIRMATION_DURATION,
-  SWITCH_POSITIONS,
   SWITCH_PROBE_DURATION
-} from '../../examples/showcase/packet-spraying/network';
+} from '../../examples/showcase/packet-spraying/animation';
+import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
+import {makeNetworkRenderProfile} from '../../examples/showcase/packet-spraying/render-profile';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryBeat,
   getNetworkStoryChapter,
   getNetworkStoryProgress,
+  getNetworkVerticalFieldOfView,
+  getNetworkVerticalViewportOffset,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
@@ -22,8 +25,58 @@ import {
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
-  NETWORK_STORY_CHAPTERS
+  NETWORK_AUTOROTATION_SCENARIO_DURATION,
+  NETWORK_STORY_CHAPTERS,
+  shouldAdvanceNetworkAutorotationScenario
 } from '../../examples/showcase/packet-spraying/story';
+
+test('packet-spraying handheld rendering preserves glass with a bounded mobile GPU budget', testCase => {
+  const handheld = makeNetworkRenderProfile({
+    coarsePointer: true,
+    maxTouchPoints: 5,
+    viewportHeight: 844,
+    viewportWidth: 390
+  });
+
+  testCase.equal(handheld.handheld, true, 'touchscreen phone viewports use the mobile profile');
+  testCase.equal(handheld.bloomQuality, 'low', 'phone bloom uses a smaller two-level pyramid');
+  testCase.equal(handheld.bloomResolutionScale, 0.75, 'phone bloom targets are downsampled');
+  testCase.equal(
+    handheld.orderIndependentTransparency,
+    false,
+    'phone glass uses the existing depth-sorted transparency path'
+  );
+  testCase.equal(
+    handheld.preferFloatingPointColor,
+    false,
+    'phone scene and refraction textures use portable 8-bit formats'
+  );
+  testCase.end();
+});
+
+test('packet-spraying retains complete desktop optics in narrow non-touch viewports', testCase => {
+  const desktop = makeNetworkRenderProfile({
+    coarsePointer: false,
+    maxTouchPoints: 0,
+    viewportHeight: 844,
+    viewportWidth: 390
+  });
+  const tablet = makeNetworkRenderProfile({
+    coarsePointer: true,
+    maxTouchPoints: 5,
+    viewportHeight: 1024,
+    viewportWidth: 768
+  });
+
+  for (const profile of [desktop, tablet]) {
+    testCase.equal(profile.handheld, false);
+    testCase.equal(profile.bloomQuality, 'high');
+    testCase.equal(profile.bloomResolutionScale, 1);
+    testCase.equal(profile.orderIndependentTransparency, true);
+    testCase.equal(profile.preferFloatingPointColor, true);
+  }
+  testCase.end();
+});
 
 test('packet-spraying guided tour tells the complete MRC recovery story', testCase => {
   testCase.deepEqual(
@@ -35,6 +88,11 @@ test('packet-spraying guided tour tells the complete MRC recovery story', testCa
     NETWORK_STORY_CHAPTERS.map(chapter => chapter.networkState),
     ['healthy', 'healthy', 'congested', 'failed', 'recovering'],
     'each chapter requests the corresponding switch state'
+  );
+  testCase.deepEqual(
+    NETWORK_STORY_CHAPTERS.map(chapter => chapter.navigationLabel),
+    ['Traffic', 'Spraying', 'Congestion', 'Failure', 'Recovery'],
+    'every network scenario exposes a recognizable compact navigation label'
   );
   testCase.ok(
     NETWORK_STORY_CHAPTERS.every(chapter => chapter.duration >= 7),
@@ -52,6 +110,47 @@ test('packet-spraying guided tour wraps forward and backward between chapters', 
   testCase.equal(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), 0);
   testCase.equal(getNetworkStoryChapter(-1).id, 'recovery');
   testCase.equal(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, 'conversations');
+  testCase.end();
+});
+
+test('packet-spraying autorotation advances scenarios every twenty unpaused seconds', testCase => {
+  const idleAutorotation = {
+    animationPaused: false,
+    autoRotate: true,
+    guidedStoryPlaying: false
+  };
+
+  testCase.equal(NETWORK_AUTOROTATION_SCENARIO_DURATION, 20);
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(19.999, idleAutorotation),
+    false,
+    'the current scenario remains visible for twenty complete seconds'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, idleAutorotation),
+    true,
+    'an autorotating idle camera advances at the twenty-second boundary'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, autoRotate: false}),
+    false,
+    'a stationary camera never changes the selected scenario'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, animationPaused: true}),
+    false,
+    'paused packet animations remain available for inspection'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, guidedStoryPlaying: true}),
+    false,
+    'authored guided playback retains its own chapter timing'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(Number.NaN, idleAutorotation),
+    false,
+    'invalid animation timestamps cannot skip scenarios'
+  );
   testCase.end();
 });
 
@@ -150,6 +249,40 @@ test('packet-spraying beat cameras inherit chapter framing without sharing targe
   testCase.end();
 });
 
+test('packet-spraying portrait cameras preserve enough horizontal framing for the network', testCase => {
+  const phoneAspect = 390 / 844;
+  const phoneVerticalFieldOfView = getNetworkVerticalFieldOfView(phoneAspect);
+  const phoneHorizontalFieldOfView =
+    (2 * Math.atan(Math.tan((phoneVerticalFieldOfView * Math.PI) / 360) * phoneAspect) * 180) /
+    Math.PI;
+
+  testCase.equal(getNetworkVerticalFieldOfView(16 / 9), 50, 'desktop framing remains unchanged');
+  testCase.equal(getNetworkVerticalFieldOfView(1), 50, 'square framing remains unchanged');
+  testCase.equal(getNetworkVerticalFieldOfView(0.9), 60, 'wide portraits retain familiar framing');
+  testCase.ok(phoneVerticalFieldOfView > 80, 'phone portraits receive a wider vertical field');
+  testCase.ok(
+    Math.abs(phoneHorizontalFieldOfView - 48) < 0.001,
+    'phone portraits retain the minimum horizontal network field of view'
+  );
+  testCase.equal(getNetworkVerticalFieldOfView(0.1), 105, 'extreme portrait fields remain bounded');
+  testCase.equal(getNetworkVerticalFieldOfView(Number.NaN), 50, 'invalid aspect ratios stay safe');
+  testCase.equal(getNetworkVerticalViewportOffset(16 / 9), 0, 'desktop cameras remain centered');
+  testCase.ok(
+    getNetworkVerticalViewportOffset(phoneAspect) > 0.2,
+    'phone portraits move the network above the guided-story panel'
+  );
+  testCase.ok(
+    getNetworkVerticalViewportOffset(0.1) <= 0.28,
+    'portrait composition shifts remain bounded'
+  );
+  testCase.equal(
+    getNetworkVerticalViewportOffset(Number.NaN),
+    0,
+    'invalid aspect ratios cannot displace the scene'
+  );
+  testCase.end();
+});
+
 test('packet-spraying visual style introduces optical effects in readable cinematic stages', testCase => {
   const diagram = makeNetworkOpticsProfile(0);
   const clearGlass = makeNetworkOpticsProfile(3);
@@ -207,8 +340,13 @@ test('packet-spraying hover highlights glass without washing out transparency or
     'hovered plane switches ease toward a visible cool glass highlight'
   );
   testCase.ok(
-    planeHighlight[2] >= 1.05 && pathHighlight[2] >= 1.05,
-    'fully focused switches cross the actual Fresnel-rim activation threshold'
+    planeHighlight.every(channel => channel <= 1) && pathHighlight.every(channel => channel <= 1),
+    'switch focus remains representable without clipping on standard-range WebGL displays'
+  );
+  testCase.ok(
+    planeHighlight[1] - planeHighlight[2] * 0.6 > 0.008 &&
+      pathHighlight[1] - pathHighlight[2] * 0.6 > 0.008,
+    'fully focused switches activate the chromatic Fresnel rim without exceeding display range'
   );
   testCase.ok(
     makeNetworkSwitchHighlightColor(clearSwitch, 0.5, 0)[2] < planeHighlight[2],

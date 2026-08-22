@@ -49,13 +49,30 @@ const HIDDEN_EXAMPLES = new Set([
   'showcase/raster-lab',
   'showcase/billion-point-spatial-atlas',
   'experimental/lucim-volume-lab',
-  'experimental/gpu-trace-scene',
-  'showcase/packet-spraying'
+  'experimental/gpu-trace-scene'
 ]);
 const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
+  test('features MRC packet spraying in the visible showcase gallery', () => {
+    expect(LIVE_EXAMPLES.find(({id}) => id === 'showcase/packet-spraying')).toMatchObject({
+      id: 'showcase/packet-spraying',
+      categories: ['Showcase'],
+      metadata: {
+        backends: ['webgpu', 'webgl2'],
+        display: 'hdr-capable',
+        difficulty: 'intermediate',
+        maturity: 'stable'
+      }
+    });
+    expect(
+      existsSync(
+        path.join(process.cwd(), 'website/static/images/examples/showcase/packet-spraying.jpg')
+      )
+    ).toBe(true);
+  });
+
   test('discovers Triangle Geometry immediately after Hello Triangle with a real thumbnail', () => {
     const tutorialExamples = LIVE_EXAMPLES.filter(({categories}) => categories[0] === 'Tutorials');
     const helloTriangleIndex = tutorialExamples.findIndex(

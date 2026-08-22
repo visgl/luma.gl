@@ -50,7 +50,7 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
 };
 
 /**
- * Pointer orbit, wheel zoom, and optional automatic rotation controls for an HTML canvas.
+ * Pointer orbit, wheel and pinch zoom, and optional automatic rotation controls for a canvas.
  *
  * Call {@link update} once per frame with an animation-loop timestamp in milliseconds before
  * reading {@link getEyePosition}. Manual dragging temporarily pauses automatic rotation and
@@ -64,8 +64,9 @@ export class OrbitControls {
   distance: number;
 
   private dragging = false;
-  private pointerId: number | null = null;
+  private readonly activePointers = new Map<number, [number, number]>();
   private lastPointer: [number, number] = [0, 0];
+  private previousPinchDistance: number | null = null;
   private previousTimeMilliseconds: number | null = null;
   private readonly previousCursor: string;
   private readonly previousTouchAction: string;
@@ -169,39 +170,65 @@ export class OrbitControls {
     this.canvas.removeEventListener('pointerup', this.handlePointerUp);
     this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
     this.canvas.removeEventListener('wheel', this.handleWheel);
-    if (this.pointerId !== null && this.canvas.hasPointerCapture(this.pointerId)) {
-      this.canvas.releasePointerCapture(this.pointerId);
-    }
+    this.endPointerInteraction();
     this.canvas.style.cursor = this.previousCursor;
     this.canvas.style.touchAction = this.previousTouchAction;
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.props.enabled || event.button !== 0) {
+    if (
+      !this.props.enabled ||
+      event.button !== 0 ||
+      this.activePointers.has(event.pointerId) ||
+      this.activePointers.size >= 2 ||
+      (this.activePointers.size > 0 && event.pointerType !== 'touch')
+    ) {
       return;
     }
-    this.props.onInteractionStart?.();
+    if (this.activePointers.size === 0) {
+      this.props.onInteractionStart?.();
+    }
     this.dragging = true;
-    this.pointerId = event.pointerId;
-    this.lastPointer = [event.clientX, event.clientY];
+    this.activePointers.set(event.pointerId, [event.clientX, event.clientY]);
+    if (this.activePointers.size === 1) {
+      this.lastPointer = [event.clientX, event.clientY];
+    } else {
+      const {center, distance} = this.getMultiPointerState();
+      this.lastPointer = center;
+      this.previousPinchDistance = distance;
+    }
     this.canvas.setPointerCapture(event.pointerId);
     this.canvas.style.cursor = 'grabbing';
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.props.enabled || !this.dragging || event.pointerId !== this.pointerId) {
+    if (!this.props.enabled || !this.dragging || !this.activePointers.has(event.pointerId)) {
       return;
     }
+
+    this.activePointers.set(event.pointerId, [event.clientX, event.clientY]);
+    if (this.activePointers.size > 1) {
+      const {center, distance} = this.getMultiPointerState();
+      if (this.props.enablePan) {
+        this.panTarget(center[0] - this.lastPointer[0], center[1] - this.lastPointer[1]);
+      }
+      if (this.props.enableZoom && this.previousPinchDistance && distance > 0) {
+        this.distance = clampNumber(
+          (this.distance * this.previousPinchDistance) / distance,
+          this.props.minDistance,
+          this.props.maxDistance
+        );
+      }
+      this.lastPointer = center;
+      this.previousPinchDistance = distance;
+      return;
+    }
+
     const deltaX = event.clientX - this.lastPointer[0];
     const deltaY = event.clientY - this.lastPointer[1];
     this.lastPointer = [event.clientX, event.clientY];
     if (this.props.enablePan && event.shiftKey) {
-      const panScale = this.distance * this.props.panSpeed;
-      this.props.target = [
-        this.props.target[0] - Math.cos(this.yaw) * deltaX * panScale,
-        this.props.target[1] + deltaY * panScale,
-        this.props.target[2] + Math.sin(this.yaw) * deltaX * panScale
-      ];
+      this.panTarget(deltaX, deltaY);
     } else {
       this.yaw -= deltaX * this.props.rotateSpeed;
       this.pitch = clampNumber(
@@ -213,7 +240,19 @@ export class OrbitControls {
   };
 
   private readonly handlePointerUp = (event: PointerEvent): void => {
-    if (event.pointerId !== this.pointerId) {
+    if (!this.activePointers.has(event.pointerId)) {
+      return;
+    }
+
+    if (this.canvas.hasPointerCapture(event.pointerId)) {
+      this.canvas.releasePointerCapture(event.pointerId);
+    }
+    this.activePointers.delete(event.pointerId);
+    this.previousPinchDistance = null;
+
+    const remainingPointer = this.activePointers.entries().next().value;
+    if (remainingPointer) {
+      this.lastPointer = remainingPointer[1];
       return;
     }
     this.endPointerInteraction();
@@ -221,11 +260,33 @@ export class OrbitControls {
 
   private endPointerInteraction(): void {
     this.dragging = false;
-    if (this.pointerId !== null && this.canvas.hasPointerCapture(this.pointerId)) {
-      this.canvas.releasePointerCapture(this.pointerId);
+    for (const pointerId of this.activePointers.keys()) {
+      if (this.canvas.hasPointerCapture(pointerId)) {
+        this.canvas.releasePointerCapture(pointerId);
+      }
     }
-    this.pointerId = null;
+    this.activePointers.clear();
+    this.previousPinchDistance = null;
     this.canvas.style.cursor = 'grab';
+  }
+
+  private getMultiPointerState(): {center: [number, number]; distance: number} {
+    const [firstPointer, secondPointer] = this.activePointers.values();
+    const deltaX = secondPointer[0] - firstPointer[0];
+    const deltaY = secondPointer[1] - firstPointer[1];
+    return {
+      center: [(firstPointer[0] + secondPointer[0]) / 2, (firstPointer[1] + secondPointer[1]) / 2],
+      distance: Math.hypot(deltaX, deltaY)
+    };
+  }
+
+  private panTarget(deltaX: number, deltaY: number): void {
+    const panScale = this.distance * this.props.panSpeed;
+    this.props.target = [
+      this.props.target[0] - Math.cos(this.yaw) * deltaX * panScale,
+      this.props.target[1] + deltaY * panScale,
+      this.props.target[2] + Math.sin(this.yaw) * deltaX * panScale
+    ];
   }
 
   private readonly handleWheel = (event: WheelEvent): void => {

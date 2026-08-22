@@ -1,8 +1,15 @@
 import React, {type CSSProperties, type FC, useEffect, useRef} from 'react';
 import {Device, luma} from '@luma.gl/core';
-import type {Stat, Stats} from '@probe.gl/stats';
+import {Stats, type Stat} from '@probe.gl/stats';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import {applyExampleTheme, type ExampleThemeAppearance} from '../../../../examples/example-theme';
+import {
+  measureBrowserMemory,
+  readBrowserHeapMemory,
+  supportsPageMemoryMeasurement,
+  type BrowserMemoryMeasurement,
+  type BrowserMemoryPerformance
+} from '../utils/browser-memory';
 
 const STAT_STYLES = {
   position: 'relative',
@@ -53,6 +60,8 @@ const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
 } as const;
 
 const FRAME_RATE_SAMPLE_COUNT = 60;
+const HEAP_MEMORY_SAMPLE_INTERVAL = 1_000;
+const PAGE_MEMORY_SAMPLE_INTERVAL = 30_000;
 const statsWidgetCollapsedStateByTitle: Record<string, boolean> = {};
 
 type StatFormatter = (stat: Stat) => string;
@@ -61,6 +70,14 @@ type FrameRateController = {
   start: () => void;
   stop: () => void;
   update: () => void;
+};
+
+type StatsWidgetDescriptor = {
+  headerElement: HTMLElement;
+  title: string;
+  type: 'memory' | 'cpu-memory' | 'frame-rate';
+  widget: StatsWidget;
+  widgetElement: HTMLElement;
 };
 
 type ExampleStatsProps = {
@@ -83,10 +100,53 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
     applyExampleTheme(statsPanelElement, props.appearance ?? 'cinematic');
     const resourceCounts = luma.stats.get('GPU Resource Counts');
     const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
+    const cpuMemoryStats = new Stats({id: 'CPU Memory'});
+    const usedCpuMemoryStat = cpuMemoryStats.get('Used Memory');
+    const allocatedHeapMemoryStat = cpuMemoryStats.get('Allocated Heap');
+    const heapMemoryLimitStat = cpuMemoryStats.get('Heap Limit');
+    cpuMemoryStats.get('Measurement');
     const frameRateController = createFrameRateController(gpuTimeAndMemoryStats);
     const swapChainTextureStat = gpuTimeAndMemoryStats.get('Swap Chain Texture');
     const gpuMemoryStat = gpuTimeAndMemoryStats.get('GPU Memory');
+    const browserPerformance = window.performance as BrowserMemoryPerformance;
+    const supportsPageMemory = supportsPageMemoryMeasurement(
+      browserPerformance,
+      window.crossOriginIsolated === true
+    );
+    let cpuMemoryMeasurement: BrowserMemoryMeasurement | null =
+      readBrowserHeapMemory(browserPerformance);
+    let cpuMemoryMeasurementInFlight = false;
+    let isMounted = true;
     let previousSwapChainTextureMemory = 0;
+
+    const updateCpuMemoryStats = (measurement: BrowserMemoryMeasurement | null) => {
+      cpuMemoryMeasurement = measurement;
+      usedCpuMemoryStat.count = measurement?.usedBytes ?? 0;
+      allocatedHeapMemoryStat.count = measurement?.allocatedHeapBytes ?? 0;
+      heapMemoryLimitStat.count = measurement?.heapLimitBytes ?? 0;
+    };
+
+    const updateCpuMemoryMeasurement = () => {
+      if (!isMounted || cpuMemoryMeasurementInFlight) {
+        return;
+      }
+
+      if (!supportsPageMemory) {
+        updateCpuMemoryStats(readBrowserHeapMemory(browserPerformance));
+        return;
+      }
+
+      cpuMemoryMeasurementInFlight = true;
+      void measureBrowserMemory(browserPerformance, true)
+        .then(measurement => {
+          if (isMounted) {
+            updateCpuMemoryStats(measurement);
+          }
+        })
+        .finally(() => {
+          cpuMemoryMeasurementInFlight = false;
+        });
+    };
 
     const updateSwapChainTextureMemory = () => {
       if (!props.trackSwapChainTextureMemory || !props.device) {
@@ -108,6 +168,7 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
     statsPanelElement.replaceChildren();
     frameRateController.start();
     updateSwapChainTextureMemory();
+    updateCpuMemoryMeasurement();
 
     const statsWidgets = [
       new StatsWidget(gpuTimeAndMemoryStats, {
@@ -119,6 +180,21 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
           frameRateController.formatFrameRate
         )
       }),
+      new StatsWidget(cpuMemoryStats, {
+        title: getStatsTitle(cpuMemoryStats),
+        container: statsPanelElement,
+        css: STAT_STYLES,
+        formatters: {
+          'Used Memory': () =>
+            `Used Memory: ${formatOptionalCompactMemory(cpuMemoryMeasurement?.usedBytes)}`,
+          'Allocated Heap': () =>
+            `Allocated Heap: ${formatOptionalCompactMemory(cpuMemoryMeasurement?.allocatedHeapBytes)}`,
+          'Heap Limit': () =>
+            `Heap Limit: ${formatOptionalCompactMemory(cpuMemoryMeasurement?.heapLimitBytes)}`,
+          Measurement: () =>
+            `Measurement: ${getCpuMemoryMeasurementLabel(cpuMemoryMeasurement)}`
+        }
+      }),
       new StatsWidget(resourceCounts, {
         title: getStatsTitle(resourceCounts),
         container: statsPanelElement,
@@ -126,31 +202,96 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
       })
     ];
 
-    for (const statsWidget of statsWidgets) {
-      statsWidget.setCollapsed(getStatsWidgetCollapsedState(statsWidget));
-    }
+    const statsWidgetDescriptors = statsWidgets.map((widget, index): StatsWidgetDescriptor => {
+      const widgetElement = statsPanelElement.children[index] as HTMLElement;
+      const headerElement = widgetElement.firstElementChild as HTMLElement;
+      const title = widget.title || widget.stats.id;
+      const type = index === 0 ? 'memory' : index === 1 ? 'cpu-memory' : 'frame-rate';
+      widgetElement.dataset.lumaExampleStatsWidget = type;
+      headerElement.setAttribute('role', 'button');
+      headerElement.tabIndex = 0;
+      widget.setCollapsed(getStatsWidgetCollapsedState(title));
+      return {headerElement, title, type, widget, widgetElement};
+    });
 
     const updateStatsWidgets = () => {
       updateSwapChainTextureMemory();
       frameRateController.update();
-      for (const statsWidget of statsWidgets) {
-        statsWidget.update();
+      for (const {headerElement, title, type, widget, widgetElement} of statsWidgetDescriptors) {
+        widget.update();
+        const compactTitle =
+          type === 'memory'
+            ? `GPU ${formatCompactMemory(gpuMemoryStat.count)}`
+            : type === 'cpu-memory'
+              ? `CPU ${formatOptionalCompactMemory(cpuMemoryMeasurement?.usedBytes)}`
+              : `${formatCompactFrameRate(gpuTimeAndMemoryStats.get('Frame Rate').count)} FPS`;
+        const nextTitle = widget.collapsed ? compactTitle : title;
+        if (widget.title !== nextTitle) {
+          widget.title = nextTitle;
+          widget.setCollapsed(widget.collapsed);
+        }
+        if (widget.collapsed) {
+          headerElement.textContent = compactTitle;
+        }
+        widgetElement.dataset.lumaExampleStatsCollapsed = String(widget.collapsed);
+        headerElement.setAttribute('aria-expanded', String(!widget.collapsed));
+        headerElement.setAttribute(
+          'aria-label',
+          widget.collapsed ? `${compactTitle}. Expand ${title}` : `Collapse ${title}`
+        );
       }
     };
 
+    const handleStatsHeaderClick = () => updateStatsWidgets();
+    const handleStatsWidgetClick = (event: MouseEvent) => {
+      const descriptor = statsWidgetDescriptors.find(
+        ({widgetElement}) => widgetElement === event.currentTarget
+      );
+      if (
+        !descriptor ||
+        descriptor.widget.collapsed ||
+        descriptor.headerElement.contains(event.target as Node)
+      ) {
+        return;
+      }
+
+      descriptor.widget.setCollapsed(true);
+      updateStatsWidgets();
+    };
+    const handleStatsHeaderKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        (event.currentTarget as HTMLElement).click();
+      }
+    };
+    for (const {headerElement, widgetElement} of statsWidgetDescriptors) {
+      headerElement.addEventListener('click', handleStatsHeaderClick);
+      headerElement.addEventListener('keydown', handleStatsHeaderKeyDown);
+      widgetElement.addEventListener('click', handleStatsWidgetClick);
+    }
+
     updateStatsWidgets();
     const statsIntervalId = window.setInterval(updateStatsWidgets, 250);
+    const cpuMemoryIntervalId = window.setInterval(
+      updateCpuMemoryMeasurement,
+      supportsPageMemory ? PAGE_MEMORY_SAMPLE_INTERVAL : HEAP_MEMORY_SAMPLE_INTERVAL
+    );
 
     return () => {
+      isMounted = false;
       window.clearInterval(statsIntervalId);
+      window.clearInterval(cpuMemoryIntervalId);
       frameRateController.stop();
       if (previousSwapChainTextureMemory > 0) {
         swapChainTextureStat.subtractCount(previousSwapChainTextureMemory);
         gpuMemoryStat.subtractCount(previousSwapChainTextureMemory);
       }
-      for (const statsWidget of statsWidgets) {
-        storeStatsWidgetCollapsedState(statsWidget);
-        statsWidget.remove();
+      for (const {headerElement, title, widget, widgetElement} of statsWidgetDescriptors) {
+        headerElement.removeEventListener('click', handleStatsHeaderClick);
+        headerElement.removeEventListener('keydown', handleStatsHeaderKeyDown);
+        widgetElement.removeEventListener('click', handleStatsWidgetClick);
+        storeStatsWidgetCollapsedState(title, widget.collapsed);
+        widget.remove();
       }
       statsPanelElement.replaceChildren();
     };
@@ -160,7 +301,7 @@ export const ExampleStats: FC<ExampleStatsProps> = (props: ExampleStatsProps) =>
     <div
       ref={statsPanelRef}
       role="group"
-      aria-label="GPU performance statistics"
+      aria-label="GPU, CPU memory, and frame-rate statistics"
       data-luma-example-stats=""
       style={{...STATS_CONTAINER_STYLE, ...props.style}}
     />
@@ -171,14 +312,32 @@ function getStatsTitle(stats: Stats): string {
   return stats.id === 'GPU Time and Memory' ? 'GPU Time & Memory' : stats.id;
 }
 
-function getStatsWidgetCollapsedState(statsWidget: StatsWidget): boolean {
-  return statsWidget.title ? (statsWidgetCollapsedStateByTitle[statsWidget.title] ?? true) : true;
+function getStatsWidgetCollapsedState(title: string): boolean {
+  return statsWidgetCollapsedStateByTitle[title] ?? true;
 }
 
-function storeStatsWidgetCollapsedState(statsWidget: StatsWidget): void {
-  if (statsWidget.title) {
-    statsWidgetCollapsedStateByTitle[statsWidget.title] = statsWidget.collapsed;
+function storeStatsWidgetCollapsedState(title: string, collapsed: boolean): void {
+  statsWidgetCollapsedStateByTitle[title] = collapsed;
+}
+
+function formatCompactMemory(bytes: number): string {
+  const gigabytes = Math.max(bytes, 0) / 1024 ** 3;
+  return `${gigabytes.toFixed(gigabytes < 10 ? 2 : 1)} GB`;
+}
+
+function formatOptionalCompactMemory(bytes: number | null | undefined): string {
+  return bytes === null || bytes === undefined ? 'N/A' : formatCompactMemory(bytes);
+}
+
+function formatCompactFrameRate(framesPerSecond: number): string {
+  return framesPerSecond > 0 ? String(Math.round(framesPerSecond)) : '--';
+}
+
+function getCpuMemoryMeasurementLabel(measurement: BrowserMemoryMeasurement | null): string {
+  if (!measurement) {
+    return 'Unavailable in this browser';
   }
+  return measurement.source === 'page-memory' ? 'Browser page memory' : 'JavaScript heap';
 }
 
 function getGpuTimeAndMemoryStatFormatters(

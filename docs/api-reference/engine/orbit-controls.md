@@ -4,7 +4,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 <EngineDocsTabs group="interaction" active="orbit-controls" />
 
-`OrbitControls` adds pointer-driven orbiting, wheel zoom, optional automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
+`OrbitControls` adds pointer-driven orbiting, wheel and pinch zoom, optional panning, automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
 
 ## Usage
 
@@ -67,6 +67,10 @@ type OrbitControlsProps = {
   rotateSpeed?: number;
   pitchSpeed?: number;
   zoomSpeed?: number;
+  enabled?: boolean;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  panSpeed?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
   onInteractionStart?: () => void;
@@ -86,9 +90,13 @@ type OrbitControlsProps = {
 | `rotateSpeed` | `0.006` | Horizontal rotation applied per CSS pixel of pointer movement, in radians. |
 | `pitchSpeed` | `rotateSpeed` | Optional vertical rotation applied per CSS pixel. Negative values invert the vertical drag direction. |
 | `zoomSpeed` | `0.001` | Exponential wheel-zoom sensitivity. |
+| `enabled` | `true` | Whether pointer, touch, wheel, and automatic camera interactions are active. |
+| `enableZoom` | `true` | Whether mouse-wheel and two-finger pinch gestures can change the camera distance. |
+| `enablePan` | `false` | Whether Shift-dragging and two-finger touch movement can pan the orbit target. |
+| `panSpeed` | `0.0018` | Target movement per CSS pixel, scaled by the current camera distance. |
 | `autoRotate` | `false` | Whether `update()` automatically advances the horizontal angle. |
 | `autoRotateSpeed` | `0.1` | Automatic horizontal rotation speed in radians per second. |
-| `onInteractionStart` | `undefined` | Optional callback invoked when a primary-button drag or wheel interaction begins. |
+| `onInteractionStart` | `undefined` | Optional callback invoked when a pointer, touch, or wheel interaction begins. Adding a second finger does not start a separate interaction. |
 
 ## Properties
 
@@ -110,7 +118,7 @@ Current vertical orbit angle in radians. Pointer interaction and `setProps()` cl
 
 ### `distance: number`
 
-Current world-space distance from the target. Wheel interaction and `setProps()` clamp this value between `minDistance` and `maxDistance`.
+Current world-space distance from the target. Wheel gestures, pinch gestures, and `setProps()` clamp this value between `minDistance` and `maxDistance`.
 
 ## Methods
 
@@ -125,7 +133,7 @@ Creates controls for `canvas`, attaches pointer and wheel listeners, clamps the 
 Advances automatic rotation using an absolute animation-frame timestamp in **milliseconds**. Call once per frame before reading `getEyePosition()`.
 
 - The first call records the initial timestamp without changing the angle.
-- Automatic rotation is paused while the primary pointer is dragging.
+- Automatic rotation is paused while one or more pointers are interacting with the canvas.
 - Rotation resumes from the manually adjusted angle after the pointer is released.
 - Elapsed time is clamped to 100 milliseconds to avoid large camera jumps after an inactive tab or stalled frame.
 - Backward timestamps do not reverse the orbit.
@@ -180,9 +188,11 @@ Removes all pointer and wheel listeners, releases active pointer capture, and re
 
 ## Interaction behavior
 
-- Drag with the primary mouse button or an equivalent touch/pen pointer to orbit the target.
+- Drag with the primary mouse button, one touch pointer, or a pen pointer to orbit the target.
 - Scroll the wheel to zoom. Wheel deltas are bounded before applying exponential zoom so large trackpad or mouse events cannot produce an excessive distance jump.
-- Pointer capture keeps a drag associated with its original pointer even when the pointer moves outside the canvas.
-- `pointercancel` ends an active drag and releases pointer capture.
+- Pinch two touch points apart to zoom in or together to zoom out. Pinch distance respects the same configured bounds as wheel zoom.
+- Set `enablePan: true` to pan with Shift-dragging or by moving the midpoint of a two-finger touch gesture.
+- Pointer capture keeps every active touch or pointer associated with the canvas, even outside its bounds.
+- Releasing one finger resumes one-pointer orbiting without a positional jump; `pointercancel`, disabling controls, and `destroy()` release the relevant captures.
 - The controls compute camera coordinates only; rendering, camera projection, matrix updates, and redraw scheduling remain the application's responsibility.
 - `@luma.gl/experimental` continues to re-export `OrbitControls` for compatibility, but new applications should import the class and its types from `@luma.gl/engine`.

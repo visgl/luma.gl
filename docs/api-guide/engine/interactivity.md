@@ -24,7 +24,7 @@ backend-specific event handler.
 
 Engine provides focused helpers, not an application-wide event system:
 
-- `OrbitControls` converts canvas pointer and wheel input into camera state.
+- `OrbitControls` converts canvas pointer, pinch, two-finger pan, and wheel input into camera state.
 - `PickingManager` renders object identity into an offscreen target and reads the identity at a
   requested pixel.
 - Highlighting remains a normal render concern. Store the hovered or selected identity, pass it
@@ -36,8 +36,10 @@ portable touch and pointer gestures.
 
 ## Camera interaction
 
-`OrbitControls` attaches orbit and wheel behavior to one HTML canvas. Update it before deriving
-the view matrix, then invalidate the view only when its state changes.
+`OrbitControls` attaches mouse, wheel, and touch orbit behavior to one HTML canvas. A single
+finger rotates the camera, two fingers pinch to zoom, and enabling panning lets two fingers move
+the orbit target. Update the controls before deriving the view matrix, then invalidate the view
+only when its state changes.
 
 ```ts
 import {OrbitControls} from '@luma.gl/engine';
@@ -46,7 +48,8 @@ const controls = new OrbitControls(canvas, {
   target: [0, 0, 0],
   distance: 12,
   minDistance: 3,
-  maxDistance: 30
+  maxDistance: 30,
+  enablePan: true
 });
 
 function updateCamera(timeMilliseconds: number): void {
