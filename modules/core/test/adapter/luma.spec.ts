@@ -90,6 +90,25 @@ test('luma#createDevice best-available retries actual creation before WebGL', as
   t.end();
 });
 
+test('luma#createDevice best-available retains the null adapter as a final fallback', async t => {
+  const webgpuAdapter = new RecordingAdapter('webgpu', createNullDevice);
+  const webglAdapter = new RecordingAdapter('webgl', createNullDevice);
+  webgpuAdapter.supported = false;
+  webglAdapter.supported = false;
+
+  const device = await luma.createDevice({
+    type: 'best-available',
+    adapters: [webgpuAdapter, webglAdapter, nullAdapter],
+    waitForPageLoad: false
+  });
+
+  t.equal(device.type, 'null', 'null device is selected after unavailable GPU backends');
+  t.equal(device.creationInfo.selected?.backend, 'null', 'null selection is recorded');
+  t.equal(device.creationInfo.attempts.length, 3, 'failed WebGPU profiles and WebGL are retained');
+  device.destroy();
+  t.end();
+});
+
 test('luma#createDevice uses compatibility WebGPU after a core creation failure', async t => {
   const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
     if (props.featureLevel === 'core') {
@@ -266,6 +285,70 @@ test('luma#createDevice does not select an incidental software adapter as hardwa
   t.equal(device.creationInfo.attempts.length, 2, 'software detections are diagnostic attempts');
   device.destroy();
   container.remove();
+  t.end();
+});
+
+test('luma#createDevice rejects software WebGPU before reusing a caller-owned canvas', async t => {
+  const canvas = document.createElement('canvas');
+  const requestedCanvases: HTMLCanvasElement[] = [];
+  const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
+    if (props.failIfMajorPerformanceCaveat) {
+      throw new DeviceCreationError('Software adapter rejected before canvas initialization', [
+        {
+          backend: 'webgpu',
+          featureLevel: props.featureLevel,
+          software: true,
+          phase: 'adapter-selection',
+          error: new Error('Software WebGPU adapter rejected')
+        }
+      ]);
+    }
+    return await createNullDevice(props);
+  });
+  const webglAdapter = new RecordingAdapter('webgl', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
+    return await createNullDevice(props);
+  });
+
+  const device = await luma.createDevice({
+    type: 'best-available',
+    adapters: [webgpuAdapter, webglAdapter],
+    createCanvasContext: {canvas},
+    waitForPageLoad: false
+  });
+
+  t.deepEqual(
+    webgpuAdapter.calls.map(call => call.failIfMajorPerformanceCaveat),
+    [true, true],
+    'hardware WebGPU candidates reject software before canvas initialization'
+  );
+  t.ok(
+    requestedCanvases.every(requestedCanvas => requestedCanvas === canvas),
+    'all candidates retain the untouched caller-owned canvas'
+  );
+  t.equal(device.creationInfo.selected?.backend, 'webgl', 'WebGL fallback succeeds');
+  device.destroy();
+  t.end();
+});
+
+test('luma#createDevice classifies CPU WebGPU devices as software', async t => {
+  const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
+    const device = await createNullDevice(props);
+    device.info.gpuType = 'cpu';
+    return device;
+  });
+  const webglAdapter = new RecordingAdapter('webgl', createNullDevice);
+
+  const device = await luma.createDevice({
+    type: 'best-available',
+    adapters: [webgpuAdapter, webglAdapter],
+    waitForPageLoad: false
+  });
+
+  t.equal(webgpuAdapter.calls.length, 2, 'CPU devices are rejected for both hardware profiles');
+  t.equal(device.creationInfo.selected?.backend, 'webgl', 'CPU WebGPU degrades to WebGL');
+  device.destroy();
   t.end();
 });
 

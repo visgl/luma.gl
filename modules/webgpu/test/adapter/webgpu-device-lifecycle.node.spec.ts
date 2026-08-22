@@ -89,6 +89,25 @@ describe('WebGPU device creation lifecycle', () => {
     device.destroy();
   });
 
+  test('rejects software adapters before requesting a device or initializing a canvas', async () => {
+    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device, {
+      type: 'CPU',
+      vendor: 'Software Adapter'
+    } as GPUAdapterInfo);
+    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+
+    await expect(
+      adapter.create({
+        failIfMajorPerformanceCaveat: true,
+        createCanvasContext: {canvas: {} as HTMLCanvasElement}
+      } as DeviceProps)
+    ).rejects.toMatchObject<DeviceCreationError>({phase: 'adapter-selection'});
+
+    expect(nativeAdapter.requestDevice).not.toHaveBeenCalled();
+  });
+
   test('retries one immediately lost device with a fresh adapter', async () => {
     const firstDevice = makeNativeDevice(
       Promise.resolve({reason: 'unknown', message: 'Transient driver loss'} as GPUDeviceLostInfo)

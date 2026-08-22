@@ -21,8 +21,7 @@ declare global {
 
 const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
 
-const ERROR_MESSAGE =
-  'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
+const ERROR_MESSAGE = 'No matching device found. Import `@luma.gl/webgl` and/or `@luma.gl/webgpu`.';
 
 type DeviceCreationCandidate = {
   adapter?: Adapter;
@@ -106,6 +105,7 @@ export class Luma {
     const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
     const candidates = this._getDeviceCreationCandidates(props);
     const attempts: DeviceCreationAttempt[] = [];
+    const isBestAvailablePolicy = props.type.startsWith('best');
 
     for (const candidate of candidates) {
       const attempt = {
@@ -137,12 +137,18 @@ export class Luma {
         const device = await candidate.adapter.create({
           ...props,
           featureLevel: candidate.featureLevel,
-          _forceFallbackAdapter: Boolean(candidate.software)
+          _forceFallbackAdapter: Boolean(candidate.software),
+          failIfMajorPerformanceCaveat:
+            props.failIfMajorPerformanceCaveat ||
+            (isBestAvailablePolicy && candidate.backend === 'webgpu' && !candidate.software)
         });
         const selectedSoftware =
-          candidate.software || device.info.gpu === 'software' || Boolean(device.info.fallback);
+          candidate.software ||
+          device.info.gpu === 'software' ||
+          device.info.gpuType === 'cpu' ||
+          Boolean(device.info.fallback);
         if (
-          (props.type === 'best-available' || props.type === 'best-available-webgpu') &&
+          isBestAvailablePolicy &&
           candidate.backend === 'webgpu' &&
           !candidate.software &&
           selectedSoftware
@@ -151,7 +157,7 @@ export class Luma {
           attempts.push({
             ...attempt,
             phase: 'adapter-selection',
-            error: new Error('Software WebGPU rejected')
+            error: new Error('Software rejected')
           });
           replaceOwnedCanvasAfterFailedInitialization(props);
           continue;
@@ -280,7 +286,7 @@ export class Luma {
     props: Required<CreateDeviceProps>
   ): DeviceCreationCandidate[] {
     const adapterMap = this._getAdapterMap(props.adapters);
-    if (props.type !== 'best-available' && props.type !== 'best-available-webgpu') {
+    if (!props.type.startsWith('best')) {
       const adapter = adapterMap.get(props.type);
       return [
         {
@@ -309,6 +315,10 @@ export class Luma {
       candidates.push({
         adapter: adapterMap.get('webgl'),
         backend: 'webgl'
+      });
+      candidates.push({
+        adapter: adapterMap.get('null'),
+        backend: 'null'
       });
     } else if (!props.failIfMajorPerformanceCaveat) {
       candidates.push({

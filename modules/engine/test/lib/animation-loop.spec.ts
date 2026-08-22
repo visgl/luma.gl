@@ -239,6 +239,7 @@ test('engine#AnimationLoop does not attach device handlers after stopping during
 test('engine#makeAnimationLoop stops after template initialization failure', async t => {
   const device = await getWebGLTestDevice();
   let renderCalled = 0;
+  let finalizeCalled = 0;
 
   class FailingAnimationLoopTemplate extends AnimationLoopTemplate {
     override async onInitialize(): Promise<unknown> {
@@ -249,7 +250,9 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
       renderCalled++;
     }
 
-    override onFinalize(): void {}
+    override onFinalize(): void {
+      finalizeCalled++;
+    }
   }
 
   const reportedErrors: Error[] = [];
@@ -267,6 +270,7 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
   t.equal(startError?.message, 'Expected initialization failure', 'start preserves the error');
   t.equal(reportedErrors.length, 1, 'initialization failure is reported once');
   t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
+  t.is(finalizeCalled, 0, 'incomplete initialization is not finalized');
   if (typeof document !== 'undefined') {
     const errorDisplay = document.querySelector('[data-luma-error-display="true"]');
     t.ok(errorDisplay, 'fatal error is visible over the canvas');
@@ -283,6 +287,39 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
     );
   }
 
+  t.end();
+});
+
+test('engine#AnimationLoop finalizes after a fatal render error', async t => {
+  const device = new NullDevice({createCanvasContext: true});
+  const expectedError = new Error('Expected render failure');
+  const reportedErrors: Error[] = [];
+  let finalizeCalled = 0;
+  const animationLoop = new AnimationLoop({
+    device,
+    animationFrameProvider: {
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {}
+    },
+    onRender: () => {
+      throw expectedError;
+    },
+    onFinalize: () => {
+      finalizeCalled++;
+    },
+    onError: error => reportedErrors.push(error)
+  });
+
+  await animationLoop.start();
+  t.throws(() => animationLoop.redraw(), 'fatal render failure is preserved');
+
+  t.deepEqual(reportedErrors, [expectedError], 'fatal render failure is reported once');
+  t.is(finalizeCalled, 1, 'initialized loop is finalized after the fatal error');
+  t.equal(animationLoop._running, false, 'fatal render failure stops the loop');
+
+  animationLoop.destroy();
+  t.is(finalizeCalled, 1, 'destroy does not finalize the stopped loop twice');
+  device.destroy();
   t.end();
 });
 
@@ -571,6 +608,7 @@ test('engine#makeAnimationLoop preserves default automatic canvas dimensions', a
   const animationLoop = makeAnimationLoop(DefaultCanvasAnimationLoopTemplate, {
     adapters: [nullAdapter],
     deviceProps: {
+      id: 'custom-animation-loop-device',
       type: 'null',
       waitForPageLoad: false,
       createCanvasContext: {container}
@@ -585,6 +623,7 @@ test('engine#makeAnimationLoop preserves default automatic canvas dimensions', a
   t.is(canvas?.style.height, '600px', 'default CSS height is preserved');
 
   await animationLoop.start();
+  t.is(animationLoop.device?.id, 'custom-animation-loop-device', 'caller device id is preserved');
   animationLoop.destroy();
   container.remove();
   t.end();
