@@ -9,6 +9,7 @@ import {
   type ExamplePanelAppearance
 } from '../../../../examples/example-panels';
 import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../../../examples/example-theme';
+import {isMobileExampleViewport} from '../utils/mobile-example-pixel-ratio';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 const INFO_BOX_DEFAULT_WIDTH = 420;
@@ -202,7 +203,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
   );
   const sourcePathsKey = sourcePaths.join('|');
   const title = getExampleTitle(props.id, props.title);
-  const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
+  const [isCollapsed, setIsCollapsed] = useState(
+    () =>
+      isInfoBoxCollapsedByDefault ||
+      (typeof window !== 'undefined' && isMobileExampleViewport(window))
+  );
   const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
   const [activeSourcePath, setActiveSourcePath] = useState('');
   const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
