@@ -47,6 +47,12 @@ export type NetworkStoryProgress = {
   overallProgress: number;
 };
 
+export type NetworkStoryAutorotationState = {
+  animationPaused: boolean;
+  autoRotate: boolean;
+  guidedStoryPlaying: boolean;
+};
+
 export type NetworkOpticsProfile = {
   bloom: number;
   caustics: number;
@@ -85,6 +91,7 @@ export const MAX_NETWORK_OPTICS_LEVEL = 11;
 export const DEFAULT_NETWORK_OPTICS_LEVEL = 7;
 export const MAX_NETWORK_HDR_HIGHLIGHT_BOOST = 0.8;
 export const DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST = 0.28;
+export const NETWORK_AUTOROTATION_SCENARIO_DURATION = 20;
 export const GUIDED_STORY_SWITCH_INDEX = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
 const RECOVERY_CHAPTER_DURATION = 7;
 
@@ -321,6 +328,20 @@ export function getWrappedStoryChapterIndex(chapterIndex: number): number {
 
 export function getNetworkStoryChapter(chapterIndex: number): NetworkStoryChapter {
   return NETWORK_STORY_CHAPTERS[getWrappedStoryChapterIndex(chapterIndex)];
+}
+
+/** Advances idle showcase scenarios without interrupting paused or authored guided playback. */
+export function shouldAdvanceNetworkAutorotationScenario(
+  elapsedTime: number,
+  {animationPaused, autoRotate, guidedStoryPlaying}: NetworkStoryAutorotationState
+): boolean {
+  return (
+    autoRotate &&
+    !animationPaused &&
+    !guidedStoryPlaying &&
+    Number.isFinite(elapsedTime) &&
+    elapsedTime >= NETWORK_AUTOROTATION_SCENARIO_DURATION
+  );
 }
 
 /** Returns the most recent named event reached within the current story chapter. */

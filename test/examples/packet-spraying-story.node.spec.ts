@@ -22,7 +22,9 @@ import {
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
-  NETWORK_STORY_CHAPTERS
+  NETWORK_AUTOROTATION_SCENARIO_DURATION,
+  NETWORK_STORY_CHAPTERS,
+  shouldAdvanceNetworkAutorotationScenario
 } from '../../examples/showcase/packet-spraying/story';
 
 test('packet-spraying guided tour tells the complete MRC recovery story', testCase => {
@@ -57,6 +59,47 @@ test('packet-spraying guided tour wraps forward and backward between chapters', 
   testCase.equal(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), 0);
   testCase.equal(getNetworkStoryChapter(-1).id, 'recovery');
   testCase.equal(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, 'conversations');
+  testCase.end();
+});
+
+test('packet-spraying autorotation advances scenarios every twenty unpaused seconds', testCase => {
+  const idleAutorotation = {
+    animationPaused: false,
+    autoRotate: true,
+    guidedStoryPlaying: false
+  };
+
+  testCase.equal(NETWORK_AUTOROTATION_SCENARIO_DURATION, 20);
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(19.999, idleAutorotation),
+    false,
+    'the current scenario remains visible for twenty complete seconds'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, idleAutorotation),
+    true,
+    'an autorotating idle camera advances at the twenty-second boundary'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, autoRotate: false}),
+    false,
+    'a stationary camera never changes the selected scenario'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, animationPaused: true}),
+    false,
+    'paused packet animations remain available for inspection'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, guidedStoryPlaying: true}),
+    false,
+    'authored guided playback retains its own chapter timing'
+  );
+  testCase.equal(
+    shouldAdvanceNetworkAutorotationScenario(Number.NaN, idleAutorotation),
+    false,
+    'invalid animation timestamps cannot skip scenarios'
+  );
   testCase.end();
 });
 

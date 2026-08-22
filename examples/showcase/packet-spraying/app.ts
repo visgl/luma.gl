@@ -157,7 +157,9 @@ import {
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
   MAX_NETWORK_OPTICS_LEVEL,
+  NETWORK_AUTOROTATION_SCENARIO_DURATION,
   NETWORK_STORY_CHAPTERS,
+  shouldAdvanceNetworkAutorotationScenario,
   type NetworkDynamicRangeOptions,
   type NetworkDynamicRangeProfile,
   type NetworkOpticsProfile,
@@ -953,17 +955,32 @@ class NetworkNodePopup {
   }
 }
 
-class NetworkOpticsPanel {
+class NetworkInfoPanel {
   private readonly rootElement: HTMLDivElement;
   private readonly closeButton: HTMLButtonElement;
 
-  constructor(canvas: HTMLCanvasElement, onClose: () => void) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    {
+      accessibleLabel,
+      content,
+      id,
+      onClose,
+      title
+    }: {
+      accessibleLabel: string;
+      content: string;
+      id: 'mrc' | 'optics';
+      onClose: () => void;
+      title: string;
+    }
+  ) {
     this.rootElement = document.createElement('div');
-    this.rootElement.id = 'packet-spraying-optics-panel';
-    this.rootElement.dataset.networkOpticsPanel = '';
+    this.rootElement.id = `packet-spraying-${id}-panel`;
+    this.rootElement.dataset[id === 'mrc' ? 'networkMrcPanel' : 'networkOpticsPanel'] = '';
     this.rootElement.hidden = true;
     this.rootElement.setAttribute('role', 'region');
-    this.rootElement.setAttribute('aria-label', 'GPU optics rendering techniques');
+    this.rootElement.setAttribute('aria-label', accessibleLabel);
     Object.assign(this.rootElement.style, {
       position: 'absolute',
       top: '18px',
@@ -990,13 +1007,13 @@ class NetworkOpticsPanel {
       marginBottom: '10px'
     });
     const titleElement = document.createElement('div');
-    titleElement.textContent = 'GPU OPTICS';
+    titleElement.textContent = title;
     Object.assign(titleElement.style, {color: '#a7c4f1', fontSize: '11px', fontWeight: '700'});
 
     this.closeButton = document.createElement('button');
     this.closeButton.type = 'button';
     this.closeButton.textContent = 'Close';
-    this.closeButton.setAttribute('aria-label', 'Close GPU optics information');
+    this.closeButton.setAttribute('aria-label', `Close ${accessibleLabel}`);
     Object.assign(this.closeButton.style, {
       padding: '3px 8px',
       border: '1px solid rgba(140, 169, 211, 0.28)',
@@ -1010,7 +1027,7 @@ class NetworkOpticsPanel {
     headerElement.append(titleElement, this.closeButton);
 
     const contentElement = document.createElement('div');
-    contentElement.innerHTML = PACKET_SPRAYING_OPTICS_HTML;
+    contentElement.innerHTML = content;
     for (const paragraph of contentElement.querySelectorAll('p')) {
       Object.assign(paragraph.style, {margin: '0 0 10px', color: '#c2cede'});
     }
@@ -1021,6 +1038,9 @@ class NetworkOpticsPanel {
         fontSize: '12px',
         fontWeight: '650'
       });
+    }
+    for (const link of contentElement.querySelectorAll('a')) {
+      Object.assign(link.style, {color: '#91baff', textDecoration: 'underline'});
     }
 
     this.rootElement.append(headerElement, contentElement);
@@ -1068,6 +1088,7 @@ class NetworkStoryControls {
     markers: {beat: NetworkStoryBeat; element: HTMLSpanElement}[];
   }[];
   private readonly chapterPositionElement: HTMLSpanElement;
+  private readonly mrcButton: HTMLButtonElement;
   private readonly opticsButton: HTMLButtonElement;
   private readonly playbackButton: HTMLButtonElement;
   private readonly hdrHighlightInput: HTMLInputElement;
@@ -1089,6 +1110,7 @@ class NetworkStoryControls {
       onTogglePlayback,
       onHighlightPlane,
       onHighlightPath,
+      onToggleMrc,
       onToggleOptics,
       onHdrHighlightBoostChange,
       onVisualIntensityChange,
@@ -1101,6 +1123,7 @@ class NetworkStoryControls {
       onTogglePlayback: () => void;
       onHighlightPlane: (planeIndex: number | null) => void;
       onHighlightPath: (pathIndex: number | null) => void;
+      onToggleMrc: () => void;
       onToggleOptics: () => void;
       onHdrHighlightBoostChange: (highlightBoost: number) => void;
       onVisualIntensityChange: (level: number) => void;
@@ -1510,6 +1533,10 @@ class NetworkStoryControls {
     this.playbackButton.dataset.networkStoryPlayback = '';
     const nextButton = this.makeButton('Next', 'Next story chapter', onNext);
     nextButton.dataset.networkStoryNext = '';
+    this.mrcButton = this.makeButton('MRC', 'Show MRC networking information', onToggleMrc);
+    this.mrcButton.dataset.networkStoryMrc = '';
+    this.mrcButton.setAttribute('aria-controls', 'packet-spraying-mrc-panel');
+    this.mrcButton.setAttribute('aria-expanded', 'false');
     this.opticsButton = this.makeButton('Optics', 'Show GPU optics information', onToggleOptics);
     this.opticsButton.dataset.networkStoryOptics = '';
     this.opticsButton.setAttribute('aria-controls', 'packet-spraying-optics-panel');
@@ -1525,6 +1552,7 @@ class NetworkStoryControls {
       previousButton,
       this.playbackButton,
       nextButton,
+      this.mrcButton,
       this.opticsButton,
       this.chapterPositionElement
     );
@@ -1734,6 +1762,18 @@ class NetworkStoryControls {
       indicator.row.style.borderColor = highlighted ? 'rgba(112, 211, 230, 0.36)' : 'transparent';
       indicator.row.setAttribute('aria-pressed', String(highlighted));
     }
+  }
+
+  setMrcExpanded(isExpanded: boolean): void {
+    this.mrcButton.setAttribute('aria-expanded', String(isExpanded));
+    this.mrcButton.setAttribute(
+      'aria-label',
+      isExpanded ? 'Hide MRC networking information' : 'Show MRC networking information'
+    );
+  }
+
+  focusMrcButton(): void {
+    this.mrcButton.focus();
   }
 
   setOpticsExpanded(isExpanded: boolean): void {
@@ -1964,7 +2004,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private queuedPacketDefinitions: NetworkQueuedPacket[] = [];
   orbitControls: OrbitControls | null = null;
   nodePopup: NetworkNodePopup | null = null;
-  opticsPanel: NetworkOpticsPanel | null = null;
+  mrcPanel: NetworkInfoPanel | null = null;
+  opticsPanel: NetworkInfoPanel | null = null;
   storyControls: NetworkStoryControls | null = null;
 
   private canvas: HTMLCanvasElement | null = null;
@@ -1986,6 +2027,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private pointerSequence = 0;
   private previousLinkTrafficTime: number | null = null;
   private previousCausticTime: number | null = null;
+  private autorotationScenarioStartedAt: number | null = null;
   private guidedStoryChapterIndex = 0;
   private guidedStoryChapterStartedAt = 0;
   private guidedStoryElapsedAtPause = 0;
@@ -2456,7 +2498,20 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.addEventListener('pointerdown', this.handlePointerDown);
       canvas.addEventListener('pointerleave', this.handlePointerLeave);
       canvas.addEventListener('click', this.handleSwitchClick);
-      this.opticsPanel = new NetworkOpticsPanel(canvas, () => this.setOpticsPanelVisible(false));
+      this.mrcPanel = new NetworkInfoPanel(canvas, {
+        accessibleLabel: 'MRC network protocol information',
+        content: PACKET_SPRAYING_BACKGROUND_HTML,
+        id: 'mrc',
+        onClose: () => this.setMrcPanelVisible(false),
+        title: 'MULTIPATH RELIABLE CONNECTION'
+      });
+      this.opticsPanel = new NetworkInfoPanel(canvas, {
+        accessibleLabel: 'GPU optics rendering techniques',
+        content: PACKET_SPRAYING_OPTICS_HTML,
+        id: 'optics',
+        onClose: () => this.setOpticsPanelVisible(false),
+        title: 'GPU OPTICS'
+      });
       this.storyControls = new NetworkStoryControls(canvas, {
         onNext: () => this.moveGuidedStoryChapter(1),
         onPrevious: () => this.moveGuidedStoryChapter(-1),
@@ -2464,6 +2519,8 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying),
         onHighlightPlane: planeIndex => this.setHighlightedPlane(planeIndex),
         onHighlightPath: pathIndex => this.setHighlightedPath(pathIndex),
+        onToggleMrc: () =>
+          this.setMrcPanelVisible(this.canvas?.dataset.packetSprayingMrcExpanded !== 'true'),
         onToggleOptics: () =>
           this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'),
         onHdrHighlightBoostChange: highlightBoost => this.setHdrHighlightBoost(highlightBoost),
@@ -2481,7 +2538,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingHighlightedPathLinks = '0';
       canvas.dataset.packetSprayingQueuedPackets = '0';
       canvas.dataset.packetSprayingStoryBeat = '';
+      canvas.dataset.packetSprayingMrcExpanded = 'false';
       canvas.dataset.packetSprayingOpticsExpanded = 'false';
+      canvas.dataset.packetSprayingAutomaticScenarios = 'false';
+      canvas.dataset.packetSprayingScenarioProgress = '0.000';
       canvas.dataset.packetSprayingVisualIntensity = this.visualIntensity.toFixed(2);
       canvas.dataset.packetSprayingVisualTarget = this.visualIntensity.toFixed(2);
       canvas.dataset.packetSprayingVisualStyle = this.opticsProfile.label;
@@ -2504,6 +2564,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.resizeSceneFramebuffer(width, height);
     this.updateVisualIntensity(time / 1000);
     this.updateAnimationClock((time / 1000) * this.speed);
+    this.updateAutorotationScenario(time / 1000);
     this.updateGuidedStory(this.animationTime);
     this.updateSwitchStoryState(this.animationTime);
     this.updateSwitchPressure(this.animationTime);
@@ -2804,6 +2865,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.canvas?.removeEventListener('pointerleave', this.handlePointerLeave);
     this.canvas?.removeEventListener('click', this.handleSwitchClick);
     this.nodePopup?.destroy();
+    this.mrcPanel?.destroy();
     this.opticsPanel?.destroy();
     this.storyControls?.destroy();
     this.settingsPanel.finalize();
@@ -3006,6 +3068,43 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.rawAnimationPausedAt = null;
   }
 
+  private updateAutorotationScenario(renderTime: number): void {
+    const autoRotate = Boolean(this.orbitControls?.props.autoRotate) && !this.reflectionLab;
+    const animationPaused = this.animationPausedAt !== null;
+    const automaticScenarios = autoRotate && !animationPaused && !this.guidedStoryPlaying;
+
+    if (!automaticScenarios) {
+      this.autorotationScenarioStartedAt = null;
+      if (this.canvas) {
+        this.canvas.dataset.packetSprayingAutomaticScenarios = 'false';
+        this.canvas.dataset.packetSprayingScenarioProgress = '0.000';
+      }
+      return;
+    }
+
+    this.autorotationScenarioStartedAt ??= renderTime;
+    const elapsedTime = renderTime - this.autorotationScenarioStartedAt;
+    if (
+      shouldAdvanceNetworkAutorotationScenario(elapsedTime, {
+        animationPaused,
+        autoRotate,
+        guidedStoryPlaying: this.guidedStoryPlaying
+      })
+    ) {
+      this.guidedStoryStarted = true;
+      this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + 1);
+      this.autorotationScenarioStartedAt = renderTime;
+    }
+
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingAutomaticScenarios = 'true';
+      this.canvas.dataset.packetSprayingScenarioProgress = Math.min(
+        (renderTime - this.autorotationScenarioStartedAt) / NETWORK_AUTOROTATION_SCENARIO_DURATION,
+        1
+      ).toFixed(3);
+    }
+  }
+
   private setGuidedStoryPlaying(isPlaying: boolean): void {
     if (isPlaying === this.guidedStoryPlaying) {
       return;
@@ -3043,6 +3142,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 
   private enterGuidedStoryChapter(chapterIndex: number): void {
     this.guidedStoryChapterIndex = getWrappedStoryChapterIndex(chapterIndex);
+    this.autorotationScenarioStartedAt = null;
     this.guidedStoryChapterStartedAt = this.animationTime;
     this.guidedStoryElapsedAtPause = 0;
     this.guidedStoryCamera = getNetworkStoryChapter(this.guidedStoryChapterIndex).camera;
@@ -3343,7 +3443,27 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  private setMrcPanelVisible(isVisible: boolean): void {
+    if (isVisible) {
+      this.setOpticsPanelVisible(false);
+    }
+
+    const wasVisible = this.canvas?.dataset.packetSprayingMrcExpanded === 'true';
+    this.mrcPanel?.setVisible(isVisible);
+    this.storyControls?.setMrcExpanded(isVisible);
+    if (!isVisible && wasVisible) {
+      this.storyControls?.focusMrcButton();
+    }
+    if (this.canvas) {
+      this.canvas.dataset.packetSprayingMrcExpanded = String(isVisible);
+    }
+  }
+
   private setOpticsPanelVisible(isVisible: boolean): void {
+    if (isVisible) {
+      this.setMrcPanelVisible(false);
+    }
+
     const wasVisible = this.canvas?.dataset.packetSprayingOpticsExpanded === 'true';
     this.opticsPanel?.setVisible(isVisible);
     this.storyControls?.setOpticsExpanded(isVisible);
@@ -4758,14 +4878,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         }),
         this.settingsPanel.makePanel(),
         makeHtmlCustomPanel({
-          id: 'packet-spraying-optics',
-          title: 'GPU Optics',
-          html: PACKET_SPRAYING_OPTICS_HTML
-        }),
-        makeHtmlCustomPanel({
           id: 'packet-spraying-mrc',
           title: 'MRC Explained',
           html: PACKET_SPRAYING_BACKGROUND_HTML
+        }),
+        makeHtmlCustomPanel({
+          id: 'packet-spraying-optics',
+          title: 'GPU Optics',
+          html: PACKET_SPRAYING_OPTICS_HTML
         })
       ]
     });
@@ -5095,11 +5215,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
 }
 
 const PACKET_SPRAYING_ARTICLE_URL = 'https://openai.com/index/mrc-supercomputer-networking/';
+const PACKET_SPRAYING_VIDEO_URL = `${PACKET_SPRAYING_ARTICLE_URL}#mrcs-shift-spraying-packets-across-hundreds-of-paths`;
+const PACKET_SPRAYING_PAPER_URL =
+  'https://cdn.openai.com/pdf/resilient-ai-supercomputer-networking-using-mrc-and-srv6.pdf';
 
 const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><strong>Network Packet Spraying</strong></p>
 <p><strong>Two conversations, many routes.</strong> The two servers on the right send independent red and green transfers to two destination servers on the left.</p>
-<p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. Colored timeline markers automatically choreograph each route, queue, loss, and control-packet event; select any chapter directly.</p>
+<p>The guided network tour steps through packet spraying, congestion, switch failure, retransmission, and probe-confirmed recovery. While the camera autorotates, scenarios advance every 20 seconds; select any chapter directly or start the authored cinematic tour. The MRC button explains the protocol and links to OpenAI's original packet-spraying animation.</p>
 <p>The visual-style slider moves smoothly from a packet-first diagram through clear and cinematic glass to spectral lighting, focused caustics, and full optical fireworks. Individual material controls remain available in Settings.</p>
 <p>The visualization has two physical switch planes, each containing four Tier 0 access switches and four Tier 1 aggregation switches. Four larger spine switches connect those planes and provide four independent backbone paths for alternating red and green packets.</p>
 <p>The live fabric monitor shows red and green allocation across both physical planes and each of the four backbone paths. Hover or focus a plane to illuminate all eight switches across its two tiers, or inspect an individual path to trace both complete server-to-server routes through its five switches and eight links. Under pressure, adaptive routing moves most packets away from a congested path without retiring it; an offline or recovering path carries none until its control handshake succeeds.</p>
@@ -5109,28 +5232,39 @@ const PACKET_SPRAYING_OVERVIEW_HTML = `\
 <p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Read OpenAI's supercomputer networking and MRC article</a></p>`;
 
 const PACKET_SPRAYING_OPTICS_HTML = `\
-<p>Every switch is a transparent GPU-rendered glass volume; the image is generated live on hardware WebGPU or WebGL without per-pixel ray tracing.</p>
-<p>The guided tour's 0–11 visual-style control introduces these techniques in stages, preserving clear packet movement at the low end and progressively revealing the complete optical pipeline.</p>
-<h3>Glass surfaces</h3>
-<p>Grazing-angle Fresnel reflection, GGX microfacets, a polished clearcoat, angular thin-film interference, and roughness-selected prefiltered studio reflections define each curved outer surface.</p>
-<h3>Inside the glass</h3>
-<p>A dedicated backface pass measures optical thickness. Entry and exit refraction bend captured scene color, chromatic dispersion separates wavelengths, spectral Beer-Lambert absorption tints longer paths, controlled multisampling creates frosted transmission, and opaque-depth contact shadows anchor nearby hardware to each glass shell.</p>
-<h3>Light from moving packets</h3>
-<p>Red and green packets emit local light into nearby glass. Colored volume scattering, moving scene reflections, secondary internal bounces, and focused raster caustics transfer that energy onto switches, reflective tubes, and metallic servers.</p>
-<h3>Compositing and display</h3>
-<p>Hardware capability selects exact A-buffer transparency, weighted-blended order-independent transparency, or depth-sorted glass. A floating-point framebuffer preserves saturated packet cores and polished glass reflections before selective multiscale bloom and filmic tone mapping. Compatible extended-range WebGPU presentation can preserve additional display highlights when available; ordinary WebGL and SDR displays remain balanced and clearly labeled.</p>
-<p><strong>Everything is composable:</strong> reusable WGSL and GLSL shader modules expose bounded controls for optics, point lights, caustics, transparency, bloom, and exposure.</p>`;
+<p>Every switch is a physically motivated, GPU-rendered glass volume. Hardware WebGPU and WebGL construct the image live using portable raster techniques, without per-pixel ray tracing.</p>
+<p>The 0-11 visual-style slider introduces these layers progressively: diagram, clear glass, cinematic lighting, and the complete optical treatment.</p>
+<h3>Physically based glass surfaces</h3>
+<p>The glass index of refraction determines dielectric Fresnel reflection and the energy left for transmission. GGX microfacets, geometric specular antialiasing, view-dependent studio reflections, and an energy-conserving clearcoat reproduce polished outer surfaces without washing out the network.</p>
+<h3>Transmission, thickness, and dispersion</h3>
+<p>A dedicated backface pass measures optical thickness. Refraction bends light at both glass interfaces; glTF-aligned, Abbe-number dispersion gives red and blue wavelengths different refractive indices. Spectral Beer-Lambert absorption tints longer paths, while roughness-aware transmission and opaque-depth contacts preserve believable volume.</p>
+<h3>Reflections and interference</h3>
+<p>Prefiltered environment maps follow the reflected view direction, screen-space scene reflections pick up nearby geometry, and secondary internal bounces keep curved silhouettes luminous. Restrained thin-film interference adds angle-dependent spectral accents without replacing the underlying dielectric response.</p>
+<h3>Packets as moving light sources</h3>
+<p>Emissive red and green packets produce bounded local lighting, surface reflections, colored in-volume scattering, short directional trails, and arrival flashes. Reflective link tubes brighten only when active, and rasterized caustics project concentrated packet light onto nearby metallic hardware.</p>
+<h3>Order-independent transparency</h3>
+<p>Supported WebGPU devices use exact per-pixel A-buffer compositing. WebGL uses weighted-blended order-independent transparency, with depth-sorted alpha as a portable fallback. Shared WGSL and GLSL material modules preserve the same optical model across both backends.</p>
+<h3>HDR, selective bloom, and display</h3>
+<p>Floating-point scene color retains bright packet cores and glass highlights above standard display range. Selective multiscale bloom and filmic tone mapping preserve saturated red and green; compatible WebGPU displays can present extended-range highlights while ordinary WebGL and SDR displays remain controlled.</p>
+<p><strong>Composable by design:</strong> the glass, transmission, point-light, caustic, transparency, bloom, and tone-mapping modules can also compose with canonical physically based materials.</p>`;
 
 const PACKET_SPRAYING_BACKGROUND_HTML = `\
-<p><strong>Multipath Reliable Connection (MRC)</strong> extends RDMA over Converged Ethernet so a single transfer is no longer pinned to one network path.</p>
-<p><strong>How the two conversations mix:</strong> the red source talks to one destination, and the green source talks to another. Their packets can share the same switch-to-switch link, interleaving one red packet with one green packet before being separated near their destinations.</p>
-<p><strong>Planes and packet spraying:</strong> a high-bandwidth network interface can be split across multiple independent physical planes. In the article's example, an 800 Gb/s interface becomes eight 100 Gb/s connections. This visualization contains two physical two-tier switch planes connected by four representative backbone paths; each conversation sprays successive packets across all four paths instead of waiting behind one busy link.</p>
-<p><strong>Throughput:</strong> using many paths at once balances traffic, avoids persistent hot spots, and reduces worst-case transfer latency. When a path becomes congested, MRC reduces its share and spreads subsequent packets across healthier planes while still testing the pressured route. That matters for synchronous AI training because an entire GPU group can wait for its slowest communication.</p>
-<p><strong>Congestion and packet trimming:</strong> if a switch cannot forward an entire packet, it can discard the payload while delivering a small header. The destination uses that header to request a retransmission without confusing congestion for a permanent network failure.</p>
-<p><strong>Resilience:</strong> if a link, plane, or switch fails, only packets already committed to that path are lost. The sender retires the affected route, retransmits through surviving planes, and occasionally probes the failed path for recovery. A repaired path does not carry ordinary traffic again until an outbound control probe reaches the switch and its acknowledgment successfully returns. Losing one of eight interface links reduces peak physical bandwidth by one eighth instead of crashing the training job.</p>
-<p><strong>Source routing:</strong> MRC uses IPv6 Segment Routing (SRv6) to encode a packet's chosen switch sequence. This allows static switch configuration, rapid rerouting, and a simpler control plane without waiting for dynamic routing convergence.</p>
-<p><strong>Rendering:</strong> reusable glass materials combine grazing-angle Fresnel reflection, GGX microfacet highlights, clearcoat, two internal shell bounces, moving scene reflections, wavelength-dependent volume absorption, thickness-aware frosted transmission, and angular thin-film interference. Emissive packet cores, directional trails, and switch flashes illuminate nearby glass through bounded point lights, colored in-volume scattering, and focused raster caustics. Fault-tinted switches add subtle animated lens distortion. Floating-point scene color preserves those highlights through exact A-buffer OIT, weighted-blended OIT, or depth-sorted alpha blending before multiscale bloom and filmic tone mapping.</p>
-<p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">Supercomputer networking to accelerate large scale AI training</a></p>`;
+<p><strong>Multipath Reliable Connection (MRC)</strong> is the supercomputer networking protocol developed by OpenAI with industry partners to keep large AI training jobs moving through congestion, component failures, and maintenance.</p>
+<p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer"><strong>Read OpenAI's MRC release post</strong></a><br><a href="${PACKET_SPRAYING_VIDEO_URL}" target="_blank" rel="noopener noreferrer">See the packet-spraying animation that inspired this demo</a></p>
+<h3>Two conversations, many routes</h3>
+<p>Two servers on the right send separate red and green transfers to two servers on the left. At their shared access switch, packets interleave one red and one green; the destination-side switches separate them again for delivery.</p>
+<h3>Physical planes and packet spraying</h3>
+<p>A high-bandwidth network interface can split across independent physical planes. OpenAI's article describes one 800 Gb/s interface becoming eight 100 Gb/s links; this compact model shows two complete two-tier switch planes and four representative backbone paths. Each transfer sprays successive packets across its available routes instead of waiting behind one busy link.</p>
+<h3>Congestion and packet trimming</h3>
+<p>When a switch becomes congested, MRC moves most traffic toward healthier routes. If the switch cannot forward a complete packet, it trims the payload but forwards its header, allowing the destination to request retransmission without falsely treating temporary congestion as a permanent failure.</p>
+<h3>Failure, recovery, and resilience</h3>
+<p>A failed path briefly loses only the packets already committed to it. The sender retires that path, retransmits through surviving routes, and sends occasional recovery probes. Repaired switches remain offline until a blue probe reaches the switch and a cyan acknowledgment confirms the return path; only then does ordinary red and green traffic resume.</p>
+<h3>Why training throughput improves</h3>
+<p>Spreading each transfer across multiple routes reduces persistent hot spots and worst-case latency. Synchronous training progresses when every GPU receives its data, so avoiding a single slow transfer can protect the throughput of the entire job. Losing one of eight interface links reduces peak physical bandwidth by one eighth rather than crashing the training run.</p>
+<h3>Simple source-routed switching</h3>
+<p>MRC uses IPv6 Segment Routing (SRv6) to encode the intended switch sequence in each packet. Switches can therefore use static forwarding tables while senders quickly choose healthy alternatives without waiting for dynamic routing convergence.</p>
+<p><a href="${PACKET_SPRAYING_ARTICLE_URL}" target="_blank" rel="noopener noreferrer">OpenAI: Supercomputer networking to accelerate large scale AI training</a></p>
+<p><a href="${PACKET_SPRAYING_PAPER_URL}" target="_blank" rel="noopener noreferrer">Technical paper: Resilient AI Supercomputer Networking using MRC and SRv6</a></p>`;
 
 function makeGlassInstances(): GlassInstance[] {
   const makeInstance = (position: Vector3, radius: number, color: Color): GlassInstance => ({

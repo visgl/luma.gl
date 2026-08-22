@@ -619,6 +619,16 @@ test('glass materials compose portable clearcoat, spectral rims, and soft transm
     );
     testCase.match(
       shaderSource,
+      /clearcoatEnvironment = environmentColor \* clearcoatFresnel/,
+      `${language} restores clearcoat Fresnel energy as environment reflection`
+    );
+    testCase.match(
+      shaderSource,
+      /clearcoatReflection = \(clearcoatEnvironment \+ clearcoatSpecular\)/,
+      `${language} combines clearcoat environment and direct-light reflections`
+    );
+    testCase.match(
+      shaderSource,
       /clamp\(glassMaterial\.transmissionStrength, 0\.0, 1\.0\)/,
       `${language} prevents transmission from amplifying the captured background`
     );

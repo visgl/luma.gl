@@ -252,8 +252,10 @@ fn glassMaterial_getColor(
     vec3<f32>(0.82, 0.9, 1.0) * studioRibbon * 0.32 +
     internalReflection + iridescence + glassBody
   ) * glassMaterial.reflectionStrength * baseLayerEnergy;
-  let clearcoatReflection = vec3<f32>(1.0, 0.97, 0.9) * min(clearcoat, 3.0) *
-    glassMaterial.reflectionStrength * 0.26;
+  let clearcoatEnvironment = environmentColor * clearcoatFresnel;
+  let clearcoatSpecular = vec3<f32>(1.0, 0.97, 0.9) * min(clearcoat, 3.0) * 0.26;
+  let clearcoatReflection = (clearcoatEnvironment + clearcoatSpecular) *
+    glassMaterial.reflectionStrength;
   let color = transmittedColor * (1.0 - fresnel) * baseLayerEnergy +
     reflection + clearcoatReflection;
   let transmissionCoverage = mix(
@@ -478,8 +480,10 @@ vec4 glassMaterial_getColor(
     vec3(0.82, 0.9, 1.0) * studioRibbon * 0.32 +
     internalReflection + iridescence + glassBody
   ) * glassMaterial.reflectionStrength * baseLayerEnergy;
-  vec3 clearcoatReflection = vec3(1.0, 0.97, 0.9) * min(clearcoat, 3.0) *
-    glassMaterial.reflectionStrength * 0.26;
+  vec3 clearcoatEnvironment = environmentColor * clearcoatFresnel;
+  vec3 clearcoatSpecular = vec3(1.0, 0.97, 0.9) * min(clearcoat, 3.0) * 0.26;
+  vec3 clearcoatReflection = (clearcoatEnvironment + clearcoatSpecular) *
+    glassMaterial.reflectionStrength;
   vec3 color = transmittedColor * (1.0 - fresnel) * baseLayerEnergy +
     reflection + clearcoatReflection;
   float transmissionCoverage = mix(
