@@ -214,6 +214,9 @@ export class AnimationLoop {
       if (!this._initialized) {
         // Create the WebGL context
         await this._initDevice();
+        if (!this._running) {
+          return null;
+        }
         this._initialize();
         if (!this._running) {
           return null;
@@ -526,6 +529,9 @@ export class AnimationLoop {
       this.canvas instanceof OffscreenCanvas
     ) {
       this.errorDisplay?.disable();
+    }
+    if (!this._running) {
+      return;
     }
     this._attachDeviceErrorHandler();
     if (this._observedLostDevice !== this.device) {

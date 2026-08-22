@@ -148,15 +148,13 @@ function prepareAutomaticDeviceProps(
   }
 
   const canvas = document.createElement('canvas');
+  const width = requestedCanvasProps.width ?? 800;
+  const height = requestedCanvasProps.height ?? 600;
   canvas.id = requestedCanvasProps.id || `luma-animation-loop-canvas-${automaticCanvasCounter++}`;
-  canvas.width = requestedCanvasProps.width || 800;
-  canvas.height = requestedCanvasProps.height || 600;
-  canvas.style.width = Number.isFinite(requestedCanvasProps.width)
-    ? `${requestedCanvasProps.width}px`
-    : '100%';
-  canvas.style.height = Number.isFinite(requestedCanvasProps.height)
-    ? `${requestedCanvasProps.height}px`
-    : '100%';
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';
+  canvas.style.height = Number.isFinite(height) ? `${height}px` : '100%';
   if (requestedCanvasProps.visible === false) {
     canvas.style.visibility = 'hidden';
   }
