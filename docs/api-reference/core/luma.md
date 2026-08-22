@@ -99,8 +99,8 @@ Properties for creating a new device. See [`DeviceProps`](./device.md#deviceprop
 
 ```ts
 type CreateDeviceProps = {
-  /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
-  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+  /** Selects an exact backend or an ordered device creation policy. */
+  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available' | 'best-available-webgpu';
   /** List of device types. Will also search any pre-registered device backends */
   adapters?: Adapter[];
   /** Whether to wait for page to be loaded, which ensures that canvas contexts can refer to existing canvases by id (defaults to true) */
@@ -131,12 +131,18 @@ luma.createDevice({type, adapters, ...deviceProps}: CreateDeviceProps);
 
 To create a Device instance, the application calls `luma.createDevice()`.
 
-- `type`: `'webgl' \| 'webgpu' \| 'best-available'`
+- `type`: `'webgl' \| 'webgpu' \| 'best-available' \| 'best-available-webgpu'`
 - `adapters`: list of `Adapter` instances providing support for different GPU backends. Can be omitted if `luma.registerAdapters()` has been called.
 - `...deviceProps`: See [`DeviceProps`](./device.md#deviceprops) for device specific options.
 
-Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
-luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
+Unless a device `type` is specified, luma.gl uses the outcome-based `'best-available'` policy:
+WebGPU core, WebGPU compatibility, then WebGL 2. `'best-available-webgpu'` tries core and
+compatibility hardware adapters, then a software WebGPU compatibility adapter; it never returns
+WebGL. Exact `'webgpu'` and `'webgl'` requests do not change backends after failure.
+
+Failed attempts are retained in `device.creationInfo` after successful fallback. If every attempt
+fails, `createDevice()` rejects with `DeviceCreationError`, whose `attempts` identify the backend,
+feature level, software status, failure phase, and native cause.
 
 Note: A specific device type is available and supported if both of the following are true:
 1. The backend module has been registered

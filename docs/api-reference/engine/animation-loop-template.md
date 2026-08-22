@@ -42,15 +42,15 @@ await animationLoop.start();
 ### `MakeAnimationLoopProps`
 
 ```ts
-export type MakeAnimationLoopProps = Omit<
-  AnimationLoopProps,
-  'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
-> & {
-  adapters?: Adapter[];
-};
+`MakeAnimationLoopProps` accepts either a supplied `device`, or `adapters` plus `deviceProps` for
+automatic creation. The two forms are mutually exclusive. `deviceProps` forwards backend policy,
+feature level, power preference, optional features, canvas configuration, and callbacks to
+`luma.createDevice()`.
 ```
 
-If `device` is omitted, `makeAnimationLoop()` creates one with `luma.createDevice({adapters, createCanvasContext: true})`.
+If `device` is omitted, `makeAnimationLoop()` creates or resolves the HTML canvas before starting
+device creation. This lets the default `errorDisplay` report adapter, device, or canvas failures in
+the intended canvas area even on mobile devices without developer tools.
 
 ## Methods
 

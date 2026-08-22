@@ -78,9 +78,11 @@ const device = await luma.createDevice({
 console.log(device.type); // 'webgpu' or 'webgl'
 ```
 
-`best-available` prefers WebGPU when it is usable and otherwise selects WebGL 2. Registering a
-fallback does not make WGSL, compute, storage buffers, or other WebGPU-only code portable; the
-application must still provide a supported path for the selected device.
+`best-available` attempts WebGPU core, WebGPU compatibility, and then WebGL 2. Use
+`best-available-webgpu` when the application has no WebGL implementation: it attempts WebGPU core,
+WebGPU compatibility, and finally software WebGPU compatibility. Registering a fallback does not
+make WGSL, compute, storage buffers, or other WebGPU-only code portable; the application must still
+provide a supported path for the selected device.
 
 ## Select a capability-dependent path
 
