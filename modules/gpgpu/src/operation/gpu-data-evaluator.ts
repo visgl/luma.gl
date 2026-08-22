@@ -107,6 +107,20 @@ export type GPUDataEvaluatorProps = {
  * be applied independently across every `GPUData` chunk in a `GPUVector`.
  */
 export class GPUDataEvaluator {
+  /** Maximum number of inactive evaluator buffers cached per device. */
+  static get bufferPoolSize(): number {
+    return bufferPool.poolSize;
+  }
+
+  static set bufferPoolSize(poolSize: number) {
+    if (!Number.isSafeInteger(poolSize) || poolSize < 0) {
+      throw new Error('GPUDataEvaluator.bufferPoolSize must be a non-negative safe integer');
+    }
+    bufferPool.poolSize = poolSize;
+    // Lowering the limit must release buffers that are already cached.
+    bufferPool.purge();
+  }
+
   /** Scalar element type for each stored value. */
   readonly type: SignedDataType;
   /** Number of scalar elements in each logical row. */
