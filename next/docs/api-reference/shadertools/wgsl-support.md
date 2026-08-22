@@ -1,6 +1,6 @@
 # WGSL Support
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)
 
 `@luma.gl/shadertools` supports WGSL shader assembly in addition to GLSL. For cross-backend authoring guidance, see [Writing Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md).
 

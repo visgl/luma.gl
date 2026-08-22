@@ -16,7 +16,7 @@ No installation. No account. Just your browser.
 
 Focused packages turn captured scenes, declarative worlds, and GPU-resident workflows into interactive experiences.
 
-[![A luminous field of three-dimensional Gaussian splats](/next/images/examples/showcase/gaussian-splats.jpg)](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
+[![A luminous field of three-dimensional Gaussian splats](/next/images/examples/showcase/gaussian-splat-viewer.jpg)](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
 [@luma.gl/splats](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
@@ -26,15 +26,15 @@ Focused packages turn captured scenes, declarative worlds, and GPU-resident work
 
 [Explore captured scenes →](https://luma.gl/next/examples/showcase/gaussian-splat-viewer)
 
-[![A physically lit declarative ANARI scene with materials and geometric primitives](/next/images/examples/experimental/anari-playground.jpg)](https://luma.gl/next/examples/experimental/anari-playground)
+[![A physically lit declarative ANARI scene with materials and geometric primitives](/next/images/examples/experimental/scene-playground.jpg)](https://luma.gl/next/examples/experimental/scene-playground)
 
-[@luma.gl/anari](https://luma.gl/next/examples/experimental/anari-playground)
+[@luma.gl/scene](https://luma.gl/next/examples/experimental/scene-playground)
 
-### [Declarative 3D Scenes](https://luma.gl/next/examples/experimental/anari-playground)
+### [Declarative 3D Scenes](https://luma.gl/next/examples/experimental/scene-playground)
 
-[Describe materials, lighting, geometry, and cameras with an expressive retained-scene API.](https://luma.gl/next/examples/experimental/anari-playground)
+[Describe materials, lighting, geometry, and cameras with an expressive retained-scene API.](https://luma.gl/next/examples/experimental/scene-playground)
 
-[Build a scene →](https://luma.gl/next/examples/experimental/anari-playground)
+[Build a scene →](https://luma.gl/next/examples/experimental/scene-playground)
 
 [![A dense interactive trace processed entirely through a GPU command graph](/next/images/examples/experimental/gpu-trace-viewer.jpg)](https://luma.gl/next/examples/experimental/gpu-trace-viewer)
 
@@ -114,9 +114,93 @@ Every card opens a live, interactive scene. Advanced scenes require WebGPU; Effe
 
 03 · Built for ambitious ideas
 
-## The whole GPU. Your way.
+## The luma.gl framework.
 
-Behind every scene are composable building blocks for rendering, GPU-resident data, and programmable effects.
+Seven focused modules span portable GPU access, rendering, shaders, effects, declarative scenes, Gaussian splats, and compute.
+
+[@luma.gl/core + adapters01](https://luma.gl/next/docs/api-reference/core.md)
+
+[GPU portability](https://luma.gl/next/docs/api-reference/core.md)
+
+### [Core / WebGPU / WebGL](https://luma.gl/next/docs/api-reference/core.md)
+
+[One low-level GPU portability layer for buffers, pipelines, textures, and rendering across WebGPU and WebGL2.](https://luma.gl/next/docs/api-reference/core.md)
+
+[* WebGPU* WebGL2* GPU resources](https://luma.gl/next/docs/api-reference/core.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/core.md)
+
+[@luma.gl/engine02](https://luma.gl/next/docs/api-reference/engine.md)
+
+[Rendering toolkit](https://luma.gl/next/docs/api-reference/engine.md)
+
+### [Engine](https://luma.gl/next/docs/api-reference/engine.md)
+
+[The classic luma.gl API for models, animation loops, geometry, picking, and composable rendering.](https://luma.gl/next/docs/api-reference/engine.md)
+
+[* Models* Animation* Geometry](https://luma.gl/next/docs/api-reference/engine.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/engine.md)
+
+[@luma.gl/shadertools03](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+[Shader programming](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+### [Shader Tools](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+[Write, assemble, and share portable shaders with a reusable module library for both WGSL and GLSL.](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+[* WGSL* GLSL* Shader modules](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/shadertools.md)
+
+[@luma.gl/effects04](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+[Composable effects](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+### [Effects](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+[Compose reusable shader effects into complete post-processing, lighting, and image-processing pipelines.](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+[* Bloom* Tone mapping* Shader passes](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md)
+
+[@luma.gl/scene05](https://luma.gl/next/docs/api-reference/scene.md)
+
+[Declarative 3D](https://luma.gl/next/docs/api-reference/scene.md)
+
+### [ANARI](https://luma.gl/next/docs/api-reference/scene.md)
+
+[Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.](https://luma.gl/next/docs/api-reference/scene.md)
+
+[* glTF* OpenUSD* Renderers](https://luma.gl/next/docs/api-reference/scene.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/scene.md)
+
+[@luma.gl/splats06](https://luma.gl/next/docs/api-reference/splats.md)
+
+[Captured scenes](https://luma.gl/next/docs/api-reference/splats.md)
+
+### [Splats](https://luma.gl/next/docs/api-reference/splats.md)
+
+[Stream and render Gaussian splats with depth ordering, high-dynamic-range color, and reusable GPU data.](https://luma.gl/next/docs/api-reference/splats.md)
+
+[* Streaming* Gaussian splats* HDR](https://luma.gl/next/docs/api-reference/splats.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/splats.md)
+
+[@luma.gl/gpgpu07](https://luma.gl/next/docs/api-reference/gpgpu.md)
+
+[GPU compute + rendering](https://luma.gl/next/docs/api-reference/gpgpu.md)
+
+### [GPGPU](https://luma.gl/next/docs/api-reference/gpgpu.md)
+
+[Connect reusable compute modules and rendering in a single GPU-native pipeline, without moving data back to the CPU.](https://luma.gl/next/docs/api-reference/gpgpu.md)
+
+[* GPU graphs* Compute modules* Zero readback](https://luma.gl/next/docs/api-reference/gpgpu.md)
+
+[Docs](https://luma.gl/next/docs/api-reference/gpgpu.md)
 
 01
 

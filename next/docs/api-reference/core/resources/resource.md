@@ -1,5 +1,7 @@
 # Resource
 
+[Resource](https://luma.gl/next/docs/api-reference/core/resources/resource.md)[Buffer](https://luma.gl/next/docs/api-reference/core/resources/buffer.md)[CommandBuffer](https://luma.gl/next/docs/api-reference/core/resources/command-buffer.md)[QuerySet](https://luma.gl/next/docs/api-reference/core/resources/query-set.md)[Fence](https://luma.gl/next/docs/api-reference/core/resources/fence.md)[PipelineLayout](https://luma.gl/next/docs/api-reference/core/resources/pipeline-layout.md)
+
 `Resource` is the abstract base class for GPU objects created by a `Device`. It standardizes common fields such as identifiers and backend handles that are shared across buffers, textures, passes, and similar GPU resources.
 
 ## Types[​](#types "Direct link to Types")

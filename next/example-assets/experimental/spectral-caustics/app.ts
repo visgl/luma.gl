@@ -420,7 +420,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   orbitControls: OrbitControls | null = null;
   sceneTarget: SceneTarget;
 
-  private canvas: HTMLCanvasElement | null = null;
   private cinematicCamera = true;
   private cinematicYawPhase = Math.asin(
     (0.11 - CAMERA_CINEMATIC_YAW_CENTER) / CAMERA_CINEMATIC_YAW_AMPLITUDE
@@ -535,7 +534,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
       this.orbitControls = new OrbitControls(canvas, {
         target: CAMERA_TARGET,
         distance: 15.8,
@@ -547,15 +545,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         maxPitch: CAMERA_MAXIMUM_PITCH,
         rotateSpeed: 0.005,
         zoomSpeed: 0.0012,
-        autoRotate: false
+        autoRotate: false,
+        onInteractionStart: this.handleManualNavigation
       });
-      canvas.addEventListener('pointerdown', this.handleManualNavigation);
       globalThis.addEventListener('keydown', this.handleCameraKeyDown);
     }
   }
 
   onFinalize(): void {
-    this.canvas?.removeEventListener('pointerdown', this.handleManualNavigation);
     globalThis.removeEventListener('keydown', this.handleCameraKeyDown);
     this.orbitControls?.destroy();
     this.spectralRenderer.destroy();

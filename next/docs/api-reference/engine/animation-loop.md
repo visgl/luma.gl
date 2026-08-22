@@ -1,10 +1,38 @@
 # AnimationLoop
 
-[Guide](https://luma.gl/next/docs/api-guide/engine/animation.md)[Mixer](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md)[Morph Targets](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md)[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
+[Workflow](https://luma.gl/next/docs/api-guide/engine/animation.md)[Mixer](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md)[Morph targets](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md)[AnimationLoop](https://luma.gl/next/docs/api-reference/engine/animation-loop.md)[Template](https://luma.gl/next/docs/api-reference/engine/animation-loop-template.md)[KeyFrames](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md)[Timeline](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md)
 
 `AnimationLoop` manages a render loop around a luma.gl [`Device`](https://luma.gl/next/docs/api-reference/core/device.md). It resolves the device, tracks frame timing, builds [`AnimationProps`](#animationprops), and invokes application callbacks for initialization, per-frame rendering, and teardown.
 
 Unlike older luma.gl APIs, the current `AnimationLoop` does not take a raw WebGL context. It operates on a `Device` or `Promise<Device>`.
+
+**AnimationLoop**
+
+* Role
+
+  Resolve the device and coordinate initialization, frames, timing, resize, and finalization
+
+* Construction
+
+  Device or device promise plus lifecycle callbacks
+
+* Updates
+
+  Start, stop, or request work through the application redraw policy
+
+* Ownership
+
+  Finalizes loop state; application callbacks destroy the resources they create
+
+* Portability
+
+  Runs over Core devices rather than raw backend contexts
+
+* Performance
+
+  Prefer invalidation-driven frames when nothing is animated
+
+:::warning Common mistake An animation loop does not require continuous drawing. If the scene is static, submit a new frame only for interaction, animation, resize, asynchronous results, or another visible state change. :::
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -200,7 +228,7 @@ Triggers a redraw and returns the current HTML canvas as a data URL.
 
 ## Experimental Frame Provider[​](#experimental-frame-provider "Direct link to Experimental Frame Provider")
 
-![From-v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+From v10Experimental API
 
 `AnimationLoop` accepts an experimental `animationFrameProvider` for schedulers that carry a per-frame payload. During those frames, `AnimationProps.animationFrame` contains the provider payload; it is `null` for ordinary browser frames.
 

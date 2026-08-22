@@ -6,7 +6,10 @@ import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
 import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {GPUCommandGraphInspector, type GPUCommandGraphInspectorGraph} from '@luma.gl/experimental';
+import {
+  GPUCommandGraphInspector,
+  type GPUCommandGraphInspectorGraph
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,
@@ -57,8 +60,7 @@ const SPARK_RAD_GAUSSIAN_SUPPORT_RADIUS = Math.sqrt(8);
 const SPARK_RAD_KERNEL_SIZE = Math.sqrt(0.3);
 const SPARK_RAD_LEVEL_OF_DETAIL_SCALE = 1.5;
 const MAXIMUM_RAD_DECODE_WORKERS = 2;
-const INTERACTIVE_RAD_TRAVERSAL_ROWS = 8191;
-const SETTLED_RAD_TRAVERSAL_ROWS = 131_071;
+const RAD_TRAVERSAL_SLICE_ROWS = 8191;
 const RAD_CAMERA_SETTLE_DELAY_MILLISECONDS = 220;
 const MAXIMUM_CAMERA_BOUND_SAMPLES = 8192;
 const SPLAT_SORT_OPTIONS: readonly PanelSelectOption[] = [
@@ -73,6 +75,9 @@ const SPLAT_EXECUTION_OPTIONS: readonly PanelSelectOption[] = [
 
 /** Execution path resolved from the current backend and optional comparison override. */
 export type GaussianSplatExecutionMode = 'graph' | 'cpu';
+
+/** User-visible quality state while RAD refinement advances in bounded CPU slices. */
+type GaussianSplatRADQualityMode = 'interactive' | 'settling' | 'settled';
 
 type GaussianSplatCameraState = {
   yaw: number;
@@ -129,6 +134,7 @@ export function makeGaussianSplatInfoHtml(): string {
     </div>
     <span data-gaussian-splats-progress-detail style="opacity:.75"></span>
   </div>
+  <div data-gaussian-splats-rad-diagnostics hidden aria-live="polite" style="font-size:11px;line-height:1.45;opacity:.75"></div>
   <div data-gaussian-splats-load-error hidden role="alert" style="font-size:12px;line-height:1.45;color:#ff9ba5"></div>
   <label style="display:grid;gap:5px;font-size:12px">
     <span>Transparency ordering</span>
@@ -203,6 +209,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private radWorkerDecoder: GaussianSplatRADWorkerDecoder | undefined;
   private radCameraSettleTimeout: ReturnType<typeof setTimeout> | undefined;
   private isRADCameraInteracting = false;
+  private radQualityMode: GaussianSplatRADQualityMode = 'settled';
   private hierarchyView: SplatHierarchyView | undefined;
   private loadingProgress: LocalGaussianSplatLoadProgress | undefined;
   private loadingError: string | undefined;
@@ -391,6 +398,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.previousCameraState = {...cameraState, target: [...cameraState.target]};
       this.requestRedraw();
     }
+    this.advanceSettledRADTraversal();
 
     const hasUpdatedBatches = this.batches.some(
       (batch, batchIndex) => batch.revision !== this.renderedBatchRevisions[batchIndex]
@@ -605,7 +613,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       lodRenderScale: SPARK_RAD_LEVEL_OF_DETAIL_SCALE,
       coneFov0: 70,
       refinementHysteresis: 0.15,
-      maxTraversalRows: SETTLED_RAD_TRAVERSAL_ROWS,
+      maxTraversalRows: RAD_TRAVERSAL_SLICE_ROWS,
       onFrontierChange: (frontier, stats) => {
         if (this.isFinalized || !(this.renderer instanceof GPUPagedSplatRenderer)) {
           return;
@@ -742,15 +750,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
 
-    if (!this.isRADCameraInteracting) {
-      this.isRADCameraInteracting = true;
-      sceneController.setTraversalBudget(INTERACTIVE_RAD_TRAVERSAL_ROWS);
-    }
+    this.isRADCameraInteracting = true;
+    this.radQualityMode = 'interactive';
     sceneController.update(view);
     this.scheduleRADCameraSettlement(sceneController);
   }
 
-  /** Defers expensive detailed traversal until both camera movement and page decoding settle. */
+  /** Starts bounded settled refinement only after camera input has stopped changing. */
   private scheduleRADCameraSettlement(sceneController: GaussianSplatRADSceneController): void {
     if (this.radCameraSettleTimeout !== undefined) {
       clearTimeout(this.radCameraSettleTimeout);
@@ -760,15 +766,32 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       if (this.isFinalized || this.radSceneController !== sceneController) {
         return;
       }
-      if (sceneController.pendingPageCount > 0) {
-        this.scheduleRADCameraSettlement(sceneController);
-        return;
-      }
       this.isRADCameraInteracting = false;
-      sceneController.setTraversalBudget(SETTLED_RAD_TRAVERSAL_ROWS);
+      this.radQualityMode = 'settling';
       this.requestRedraw();
       this.updatePanel();
     }, RAD_CAMERA_SETTLE_DELAY_MILLISECONDS);
+  }
+
+  /** Spends at most one honest RAD traversal slice per settled render tick. */
+  private advanceSettledRADTraversal(): void {
+    const sceneController = this.radSceneController;
+    if (
+      !sceneController ||
+      this.isFinalized ||
+      this.isRADCameraInteracting ||
+      this.radQualityMode !== 'settling'
+    ) {
+      return;
+    }
+    if (sceneController.hasPendingTraversal) {
+      sceneController.continueTraversal(RAD_TRAVERSAL_SLICE_ROWS);
+      this.requestRedraw();
+    }
+    if (!sceneController.hasPendingTraversal && sceneController.pendingPageCount === 0) {
+      this.radQualityMode = 'settled';
+      this.updatePanel();
+    }
   }
 
   private fitCameraToBatches(): void {
@@ -1208,6 +1231,37 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       if (completionElement) {
         completionElement.hidden = this.isLoading || Boolean(this.loadingError);
       }
+    }
+
+    const radDiagnostics = this.radSceneController?.diagnostics;
+    for (const diagnosticsElement of document.querySelectorAll<HTMLElement>(
+      '[data-gaussian-splats-rad-diagnostics]'
+    )) {
+      diagnosticsElement.hidden = !radDiagnostics;
+      if (!radDiagnostics) {
+        diagnosticsElement.textContent = '';
+        continue;
+      }
+      const qualityLabel =
+        this.radQualityMode === 'interactive'
+          ? 'Interactive preview'
+          : this.radQualityMode === 'settling'
+            ? 'Refining detail'
+            : 'Settled detail';
+      const traversedRowCount = radDiagnostics.visibleRowCount + radDiagnostics.culledRowCount;
+      const pendingPageCount = Math.max(
+        radDiagnostics.requestedPageCount,
+        radDiagnostics.pendingPageCount
+      );
+      diagnosticsElement.textContent = [
+        qualityLabel,
+        `${radDiagnostics.activeRowCount.toLocaleString()} active / ${radDiagnostics.maximumActiveRows.toLocaleString()} row budget`,
+        `${traversedRowCount.toLocaleString()} rows visited`,
+        `${radDiagnostics.residentSplatCount.toLocaleString()} resident rows in ${radDiagnostics.residentPageCount.toLocaleString()} pages`,
+        pendingPageCount > 0 ? `${pendingPageCount.toLocaleString()} pages pending` : 'pages ready',
+        `${radDiagnostics.fallbackRowCount.toLocaleString()} fallback rows`,
+        `${radDiagnostics.lastTraversalDurationMilliseconds.toFixed(1)} ms last slice`
+      ].join(' · ');
     }
 
     for (const errorElement of document.querySelectorAll<HTMLElement>(

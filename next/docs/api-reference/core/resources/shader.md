@@ -8,6 +8,34 @@ The `Shader` class holds a compiled shader.
 * Shaders are used as inputs when creating `RenderPipeline` and `ComputePipeline` objects.
 * A `Shader` is immutable and the same compiled shader can safely be referenced by many pipelines.
 
+**Shader**
+
+* Creation
+
+  Device.createShader() with source, language, stage information, and debug policy
+
+* Ownership
+
+  Application- or factory-owned immutable resource; share it across pipelines
+
+* Languages
+
+  WGSL on WebGPU; GLSL on WebGL 2; portable applications provide both paths
+
+* Validation
+
+  Compilation diagnostics depend on backend, stage, entry point, and enabled features
+
+* Lifecycle
+
+  Compile once, reuse across compatible pipelines, then destroy with its owner
+
+* Cost
+
+  Compilation can be expensive and unpredictable; never rebuild unchanged shaders per frame
+
+:::warning Common mistake Shadertools assembles source, but the active Core adapter still compiles it. Supplying only WGSL does not create a WebGL fallback, and supplying only GLSL does not create a WebGPU path. :::
+
 ## Usage[​](#usage "Direct link to Usage")
 
 Create a pair of shaders

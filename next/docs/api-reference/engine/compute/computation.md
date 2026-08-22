@@ -1,8 +1,8 @@
 # Computation
 
-[GPU Computations](https://luma.gl/next/docs/api-guide/engine/transforms.md)[Computation](https://luma.gl/next/docs/api-reference/engine/compute/computation.md)[BufferTransform](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md)[TextureTransform](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md)[Swap](https://luma.gl/next/docs/api-reference/engine/compute/swap.md)
+[Workflow](https://luma.gl/next/docs/api-guide/engine/transforms.md)[Computation](https://luma.gl/next/docs/api-reference/engine/compute/computation.md)[BufferTransform](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md)[TextureTransform](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md)[Swap](https://luma.gl/next/docs/api-reference/engine/compute/swap.md)
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 `Computation` is the engine-level wrapper around WebGPU compute shaders. It plays the same role for compute work that [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) plays for rendering: it assembles shaders, manages shader inputs and bindings, reuses cached pipelines, and dispatches work through a [`ComputePass`](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md).
 

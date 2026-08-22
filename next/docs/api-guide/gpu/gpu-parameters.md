@@ -1,6 +1,6 @@
 # Using GPU Parameters
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Initialization](https://luma.gl/next/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/next/docs/api-guide/gpu/gpu-resources.md)[Data Processing](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)
+[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
 
 luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 

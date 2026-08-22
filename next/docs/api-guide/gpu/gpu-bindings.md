@@ -1,6 +1,6 @@
 # Bind Groups and Bindings
 
-[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video Textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular Data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
+[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 
 luma.gl uses the term **binding** for GPU resources that shaders read through named binding declarations: uniform buffers, storage buffers, textures, and samplers.
 

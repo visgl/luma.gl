@@ -20,6 +20,8 @@ InfoSource
 // Loading source…
 ```
 
+Scroll page · Ctrl/⌘ + scroll to interact
+
 ## Installation[​](#installation "Direct link to Installation")
 
 ```
@@ -88,6 +90,7 @@ requestAnimationFrame(renderFrame);
 | Postprocessed accessors                           | Resolve scene references and materialize typed accessor values, including interleaved buffer views and authored normalization metadata.                      |
 | `KHR_draco_mesh_compression`                      | Decompress supported Draco mesh primitives before luma.gl builds GPU geometry.                                                                               |
 | `EXT_meshopt_compression`                         | Decode meshopt-compressed buffer views before their accessor values reach the renderer.                                                                      |
+| `KHR_meshopt_compression`                         | Decode Khronos meshopt-compressed buffer views before their accessor values reach the renderer.                                                              |
 | `KHR_texture_basisu`                              | Select Basis Universal/KTX2 texture sources and invoke the available image/texture decoding path. Final GPU format support remains device-dependent.         |
 | `EXT_texture_webp`                                | Select the WebP texture source when the current browser can decode it; otherwise preserve the authored fallback or reject an unsupported required extension. |
 | `EXT_mesh_features` and `EXT_structural_metadata` | Decode supported feature identifiers and structural metadata. Application-specific visualization, picking, and queries are not created automatically.        |
@@ -97,7 +100,7 @@ requestAnimationFrame(renderFrame);
 
 Call `postProcessGLTF()` explicitly: loaders.gl v4 does not apply it automatically. Runtime animation and geometry consume the resulting accessor `value` and `components`; luma.gl does not need a second buffer-view decoder. `exportGLTF()` still owns scene-to-glTF descriptor mapping, while `GLBWriter` owns the binary container envelope.
 
-The installed loader supports `EXT_meshopt_compression`, **not** the newer `KHR_meshopt_compression` release candidate. Generic browser AVIF decoding also does not imply `EXT_texture_avif` source selection: the installed glTF loader does not implement that extension. Both belong in the shared asset loader before the renderer can advertise them.
+The installed loader supports both `EXT_meshopt_compression` and the newer `KHR_meshopt_compression` release candidate. Generic browser AVIF decoding still does not imply `EXT_texture_avif` source selection: that support will arrive with the next loaders.gl v5 alpha release.
 
 loaders.gl also has a legacy CPU `KHR_texture_transform` preprocessing path. luma.gl retains shader-side per-material transforms because animated pointers and independent texture slots are render-time concerns; an authored transform must not be applied twice across those layers.
 
@@ -210,4 +213,4 @@ See [glTF asset interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-i
 * `@luma.gl/gltf` interprets glTF-specific scene, material, sampler, light, and animation data.
 * `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
 * `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
-* `@luma.gl/anari/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI objects without making the core ANARI entry point a glTF loader.
+* `@luma.gl/scene/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI objects without making the core ANARI entry point a glTF loader.

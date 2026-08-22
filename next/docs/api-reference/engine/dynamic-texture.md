@@ -2,7 +2,7 @@
 
 [DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 `DynamicTexture` is the engine-level convenience wrapper around core [`Texture`](https://luma.gl/next/docs/api-reference/core/resources/texture.md) resources. It adds async initialization, resizing, mipmap generation, and helpers for more complex texture layouts while still producing a normal `Texture`, `Sampler`, and `TextureView` once ready.
 
@@ -14,11 +14,11 @@ This cubemap loads six faces asynchronously, generates mipmaps, and samples the 
 
 InfoSource
 
-Uses a luma.gl `TextureCube` to simulate a reflective surface
-
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Usage[​](#usage "Direct link to Usage")
 

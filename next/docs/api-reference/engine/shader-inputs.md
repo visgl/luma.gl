@@ -1,8 +1,34 @@
 # ShaderInputs
 
-[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Shader Inputs](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
+[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Inputs workflow](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
 
 `ShaderInputs` stores per-module uniform values and binding values for shader modules. It is the glue between engine classes like [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md) and the uniform layouts defined by `@luma.gl/shadertools` modules.
+
+**ShaderInputs**
+
+* Role
+
+  Bridge shader-module props to uniform and binding values
+
+* Construction
+
+  A module map plus optional warning policy
+
+* Updates
+
+  setProps() merges values by declared module schema
+
+* Ownership
+
+  Does not take ownership of externally supplied GPU resources
+
+* Portability
+
+  Uses shared module descriptors across WGSL and GLSL
+
+* Performance
+
+  Update changed props; reuse the manager across draws
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -70,7 +96,7 @@ Currently a no-op placeholder for symmetry with other engine resource managers.
 
 Updates one or more modules by calling each module's `getUniforms()` function and splitting the result into uniforms and bindings.
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 If a module declares composite `uniformTypes`, `setProps()` preserves nested struct and array shapes at the module boundary and merges partial updates by the declared schema.
 

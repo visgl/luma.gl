@@ -9,7 +9,9 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   <!-- -->
 
   * `yarn test-node`
+  * `yarn test-node-coverage`
   * `yarn test-browser`
+  * `yarn test-browser-benchmarks`
   * `yarn test-headless`
   * `yarn test-coverage`
   * `yarn website-debug`
@@ -43,6 +45,16 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   * `headless`
 
 * Browser execution uses Playwright through `@vis.gl/dev-tools`.
+
+* Node test files run in worker threads and reuse the worker's module graph. Tests that replace globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
+
+* `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
+
+* Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU work are not safe to share between files.
+
+* Browser coverage uses weighted sharding so known slow GPU specs are spread across the existing three CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding instrumented browser pages to every pull request.
+
+* CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage anchors with Istanbul coverage from the three browser shards. The complete Node suite still runs separately without instrumentation so coverage remapping does not slow the build job.
 
 * The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
 

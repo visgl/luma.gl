@@ -1,6 +1,6 @@
 # @luma.gl/webgl
 
-[Overview](https://luma.gl/next/docs/api-reference/webgl.md)[Constants](https://luma.gl/next/docs/api-reference/webgl/constants.md)
+[Overview](https://luma.gl/next/docs/api-reference/webgl.md)[Constants](https://luma.gl/next/docs/api-reference/webgl/constants.md)[WebGPU adapter](https://luma.gl/next/docs/api-reference/webgpu.md)
 
 ## WebGL Device Adapter[​](#webgl-device-adapter "Direct link to WebGL Device Adapter")
 

@@ -223,7 +223,7 @@ scenegraphs.skins.update();
 
 The shared [experimental SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md) consumes the format-independent palette through its surface skin descriptor.
 
-The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
+The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
 
 ## Morph targets[​](#morph-targets "Direct link to Morph targets")
 
@@ -231,4 +231,4 @@ Core glTF morph targets preserve authored `POSITION`, `NORMAL`, and `TANGENT` di
 
 Animating a node's `weights` updates the existing vertex buffer rather than replacing the model or rebuilding geometry every frame. Tangent displacement affects XYZ while preserving the base tangent's handedness component. Shared interpolation and buffer updates are implemented by the [engine morph-target utilities](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md).
 
-For retained JSON morph playback, see [ANARI animation and glTF integration](https://luma.gl/next/docs/api-reference/anari/anari-animation.md).
+For retained JSON morph playback, see [ANARI animation and glTF integration](https://luma.gl/next/docs/api-reference/scene/anari-animation.md).

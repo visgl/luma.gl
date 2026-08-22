@@ -1,8 +1,8 @@
 # ComputePass
 
-[Issuing Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[RenderBundleEncoder](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
+[Workflow](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[Render bundles](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 A pass on which to run computations with compute pipelines.
 

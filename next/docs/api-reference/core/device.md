@@ -295,7 +295,7 @@ Interaction between `Device.destroy()`, `Device.lost` and `Device.isLost` is imp
 
 ### createCanvasContext()[​](#createcanvascontext "Direct link to createCanvasContext()")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 ```
 createCanvasContext(props?: CanvasContextProps): CanvasContext
@@ -305,7 +305,7 @@ Creates a new [`CanvasContext`](https://luma.gl/next/docs/api-reference/core/can
 
 ### createPresentationContext()[​](#createpresentationcontext "Direct link to createPresentationContext()")
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)![Experimental](https://img.shields.io/badge/Experimental-orange.svg?style=flat-square)
+From v9.3Experimental
 
 ```
 createPresentationContext(props?: PresentationContextProps): PresentationContext
@@ -402,7 +402,7 @@ Creates a [`RenderPipeline`](https://luma.gl/next/docs/api-reference/core/resour
 
 ### createComputePipeline[​](#createcomputepipeline "Direct link to createComputePipeline")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 ```
 createComputePipeline(props: ComputePipelineProps): ComputePipeline
@@ -412,7 +412,7 @@ Creates a [`ComputePipeline`](https://luma.gl/next/docs/api-reference/core/resou
 
 ### createRenderBundleEncoder[​](#createrenderbundleencoder "Direct link to createRenderBundleEncoder")
 
-![From-v9.4](https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square)![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+From v9.4WebGPU supportedWebGL 2 not supported
 
 ```
 createRenderBundleEncoder(props?: RenderBundleEncoderProps): RenderBundleEncoder
@@ -441,7 +441,7 @@ Creates a [`RenderPass`](https://luma.gl/next/docs/api-reference/core/resources/
 
 ### beginComputePass[​](#begincomputepass "Direct link to beginComputePass")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 ```
 beginComputePass(props?: ComputePassProps): ComputePass

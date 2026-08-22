@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#071016" />
-    <title>LuRaster Satellite Raster Lab · GPU Earth Observation</title>
+    <title>GPURaster Satellite Raster Lab · GPU Earth Observation</title>
     <style>
       :root {
         color-scheme: dark;
@@ -102,7 +102,7 @@
 
         status.textContent = 'Acquiring a WebGPU device for resident raster analysis…';
         const device = await luma.createDevice({
-          id: 'luraster-satellite-raster-lab',
+          id: 'gpu-raster-satellite-raster-lab',
           adapters: [webgpuAdapter],
           featureLevel: 'best-available',
           powerPreference: 'high-performance',

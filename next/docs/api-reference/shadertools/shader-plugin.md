@@ -1,10 +1,36 @@
 # ShaderPlugin
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
 
 `ShaderPlugin` groups reusable shader assembly contributions that can be attached to [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md). Prefer plugins as the application-facing optional composition layer when a behavior needs modules, defines, shader-facing vertex inputs, named injections, portable cross-stage varyings, or backend-specific shader source.
 
 For the authoring model, see [Writing Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md).
+
+**ShaderPlugin**
+
+* Languages
+
+  Shared contributions plus optional WGSL and GLSL variants
+
+* Dependencies
+
+  Composes ShaderModules selected by the plugin
+
+* Hooks and injections
+
+  Targets named vertex and fragment extension points
+
+* Props and bindings
+
+  Declares vertex inputs, varyings, modules, and defines
+
+* Assembly output
+
+  Resolved modules, defines, injections, inputs, and varyings
+
+* Cost
+
+  Resolve when configuration changes, not for every draw
 
 ## Usage[​](#usage "Direct link to Usage")
 

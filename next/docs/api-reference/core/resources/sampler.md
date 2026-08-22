@@ -86,6 +86,8 @@ InfoSource
 // Loading source…
 ```
 
+Scroll page · Ctrl/⌘ + scroll to interact
+
 #### Texture Wrapping[​](#texture-wrapping "Direct link to Texture Wrapping")
 
 Controls how texture coordinates outside of the \[0, 1] range are sampled.

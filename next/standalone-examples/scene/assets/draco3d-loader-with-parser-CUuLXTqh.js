@@ -1,0 +1,1 @@
+import{r as e,t}from"./parse-draco-AHrFCNWf.js";import{t as n}from"./draco-loader-bOfhmxYV.js";var{preload:r,...i}=n,a={...i,parse:async(n,r)=>await t(n,r,async()=>await e(o(r)))};function o(e){let t=e?.modules?.draco3d;if(!t)throw Error(`DracoLoader: backend "draco3d" requires options.modules.draco3d`);return t}export{a as Draco3DLoaderWithParser};

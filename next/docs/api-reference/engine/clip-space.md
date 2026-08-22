@@ -1,6 +1,6 @@
 # ClipSpace
 
-[ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md)[BackgroundTextureModel](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md)[ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)
+[ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md)[Background texture](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md)[Pass renderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)
 
 `ClipSpace` is a convenience subclass of [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) that draws a fullscreen quad in clip space.
 

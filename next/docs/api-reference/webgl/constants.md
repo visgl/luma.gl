@@ -1,8 +1,8 @@
 # `@luma.gl/webgl/constants`
 
-[Overview](https://luma.gl/next/docs/api-reference/webgl.md)[Constants](https://luma.gl/next/docs/api-reference/webgl/constants.md)
+[Overview](https://luma.gl/next/docs/api-reference/webgl.md)[Constants](https://luma.gl/next/docs/api-reference/webgl/constants.md)[WebGPU adapter](https://luma.gl/next/docs/api-reference/webgpu.md)
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 info
 

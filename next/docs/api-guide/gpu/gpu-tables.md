@@ -1,6 +1,6 @@
 # GPU Tables
 
-`@luma.gl/tables` represents row-aligned application data as typed GPU columns. A `GPUTable` is useful when the same data must feed rendering, transforms, or compute without first converting every row into JavaScript objects or one model-specific buffer structure.
+`@luma.gl/gpgpu/gpu-data` provides primitive GPU chunks and vectors, while the private experimental `@luma.gl/experimental/gpu-tables` subpath represents row-aligned application data as typed GPU columns. A `GPUTable` is useful when the same data must feed rendering, transforms, or compute without first converting every row into JavaScript objects or one model-specific buffer structure.
 
 Use a GPU table when:
 
@@ -29,7 +29,9 @@ The central distinction is logical versus physical state. `table.gpuColumns` con
 ## Constructing A Table[​](#constructing-a-table "Direct link to Constructing A Table")
 
 ```
-import {GPUConstant, GPUTable} from '@luma.gl/tables';
+import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
+
+import {GPUTable} from '@luma.gl/experimental/gpu-tables';
 
 
 
@@ -249,4 +251,4 @@ A constant column has the logical length of the table but one payload row. Memor
 * **Stale layout:** call `updateBindings()` or `GPUTableModel.setProps({table})` after replacing a table.
 * **Growing memory:** destroy superseded binding objects and tables; neither relies on garbage collection for GPU resources.
 
-See the [`GPUTable`](https://luma.gl/next/docs/api-reference/tables/gpu-table.md), [`GPUConstant`](https://luma.gl/next/docs/api-reference/tables/gpu-constant.md), and [`GPUTableShaderBindings`](https://luma.gl/next/docs/api-reference/tables/gpu-table-shader-bindings.md) references for exact contracts.
+See the [`GPUTable`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md), [`GPUConstant`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-constant.md), and [`GPUTableShaderBindings`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings.md) references for exact contracts.

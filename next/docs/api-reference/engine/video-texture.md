@@ -2,7 +2,7 @@
 
 [DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
 
-![From-v9.4](https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square)
+From v9.4
 
 `VideoTexture` is the engine-level live video binding source. It accepts a caller-owned `HTMLVideoElement` or `VideoFrame` and resolves the concrete core binding that matches the shader slot used by the current draw.
 

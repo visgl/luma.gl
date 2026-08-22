@@ -1,6 +1,6 @@
 # Writing Portable Shaders
 
-[Overview](https://luma.gl/next/docs/api-guide/shaders.md)[Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[GPU Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)[Rendering Techniques](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md)[Transparency](https://luma.gl/next/docs/api-guide/shaders/transparency.md)[Glass Effects](https://luma.gl/next/docs/api-guide/shaders/glass-effects.md)
+[Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 luma.gl does not transpile an application shader from WGSL to GLSL or from GLSL to WGSL. A rendering feature that must run on WebGPU and WebGL 2 normally keeps matching shader implementations for both languages and gives them the same application-facing inputs.
 

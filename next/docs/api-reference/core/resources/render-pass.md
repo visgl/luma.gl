@@ -1,6 +1,6 @@
 # RenderPass
 
-[Issuing Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[RenderBundleEncoder](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
+[Workflow](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[Render bundles](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -133,7 +133,7 @@ renderPass.draw({vertexCount: 3});
 
 ### `drawIndirect(indirectBuffer: Buffer, indirectByteOffset?: number): void`[​](#drawindirectindirectbuffer-buffer-indirectbyteoffset-number-void "Direct link to drawindirectindirectbuffer-buffer-indirectbyteoffset-number-void")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 Draws using four packed `uint32` arguments beginning at `indirectByteOffset`: `vertexCount`, `instanceCount`, `firstVertex`, and `firstInstance`. The buffer requires `Buffer.INDIRECT` usage.
 
@@ -143,7 +143,7 @@ Draws indexed geometry using five packed 32-bit arguments: `indexCount`, `instan
 
 ### `executeBundles(bundles: Iterable<RenderBundle>): void`[​](#executebundlesbundles-iterablerenderbundle-void "Direct link to executebundlesbundles-iterablerenderbundle-void")
 
-![From-v9.4](https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square)![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+From v9.4WebGPU supportedWebGL 2 not supported
 
 Replays previously recorded `RenderBundle` objects from a [`RenderBundleEncoder`](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md) in this render pass.
 

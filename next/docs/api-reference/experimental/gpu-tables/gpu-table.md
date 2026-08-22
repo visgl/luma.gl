@@ -1,0 +1,140 @@
+# GPUTable
+
+[GPUTable](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md)[GPURecordBatch](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md)
+
+`GPUTable` is a typed, batch-preserving collection of logical GPU columns. It owns retained `GPURecordBatch` objects, exposes aggregate varying `GPUVector` views, and retains table-wide `GPUConstant` values without materializing repeated rows.
+
+For an end-to-end introduction, see the [GPU Tables guide](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md).
+
+## Purpose And Non-Goals[​](#purpose-and-non-goals "Direct link to Purpose And Non-Goals")
+
+Use `GPUTable` to preserve row alignment, source batch boundaries, GPU formats, and resource ownership across model-independent tabular data. It is not a CPU row API, query engine, or implicit buffer optimizer. Packing and shader binding are explicit.
+
+## Logical Columns[​](#logical-columns "Direct link to Logical Columns")
+
+```
+const table = new GPUTable({
+
+  columns: {
+
+    positions,
+
+    colors: new GPUConstant({
+
+      format: 'unorm8x4',
+
+      value: new Uint8Array([60, 150, 255, 220])
+
+    })
+
+  }
+
+});
+```
+
+`positions.length` supplies `numRows`. Constants acquire that logical length while retaining one physical payload.
+
+```
+type GPUColumn<T extends GPUVectorFormat> =
+
+  | GPUVector<T>
+
+  | (T extends VertexFormat ? GPUConstant<T> : never);
+```
+
+Variable-length list formats cannot be constants.
+
+## Constructor Modes[​](#constructor-modes "Direct link to Constructor Modes")
+
+| Mode                      | Use                                                   |
+| ------------------------- | ----------------------------------------------------- |
+| `{columns, numRows?}`     | Canonical mixed varying and constant logical columns. |
+| `{vectors}`               | Compatibility construction for varying columns only.  |
+| `{batches, constants?}`   | Preserve already-created physical record batches.     |
+| `{schema, bufferLayout?}` | Create an empty typed table before adding batches.    |
+
+### All-Constant Tables[​](#all-constant-tables "Direct link to All-Constant Tables")
+
+```
+const table = new GPUTable({
+
+  columns: {radius: constantRadius, color: constantColor},
+
+  numRows: 10_000
+
+});
+```
+
+`numRows` is required because no varying vector can supply row count. The table creates one data-less logical batch so batch-driven rendering still submits one draw.
+
+### Batch Construction[​](#batch-construction "Direct link to Batch Construction")
+
+```
+const table = new GPUTable({
+
+  batches: [firstBatch, secondBatch],
+
+  constants: {color: constantColor}
+
+});
+```
+
+Constants are table-wide. Batch schemas and `gpuData` remain physical-only.
+
+## Properties[​](#properties "Direct link to Properties")
+
+| Property       | Meaning                                    |
+| -------------- | ------------------------------------------ |
+| `schema`       | Logical fields, including constants.       |
+| `numRows`      | Logical rows across preserved batches.     |
+| `numCols`      | Logical varying and constant column count. |
+| `bufferLayout` | Physical varying attribute layouts only.   |
+| `gpuColumns`   | Canonical \`GPUVector                      |
+| `gpuVectors`   | Varying aggregate columns only.            |
+| `gpuConstants` | Table-wide constants only.                 |
+| `batches`      | Preserved physical `GPURecordBatch[]`.     |
+
+This means `table.schema.fields` may contain names absent from `table.batches[n].schema.fields`: those names are constants, not missing batch data.
+
+## Methods[​](#methods "Direct link to Methods")
+
+### `packBatches(options?): this`[​](#packbatchesoptions-this "Direct link to packbatchesoptions-this")
+
+Explicitly merges adjacent physical batches. Constants survive unchanged and do not participate in copies. Indexed and variable-length restrictions still apply to the varying data being packed.
+
+### `addBatch(batch): this`[​](#addbatchbatch-this "Direct link to addbatchbatch-this")
+
+Adds one compatible physical batch. Compatibility compares varying fields and layouts; table-wide constants are not expected in the batch.
+
+### `refreshFromBatches(): this`[​](#refreshfrombatches-this "Direct link to refreshfrombatches-this")
+
+Recomputes row counts and aggregate vector chunks while preserving constants.
+
+### `select(...columnNames): this`[​](#selectcolumnnames-this "Direct link to selectcolumnnames-this")
+
+Destructively retains selected logical columns. Dropped varying `GPUData` is destroyed; dropped constants release only their CPU payload references.
+
+### `detachVector(columnName): GPUVector`[​](#detachvectorcolumnname-gpuvector "Direct link to detachvectorcolumnname-gpuvector")
+
+Detaches a varying column and transfers ownership of its batch data. Calling this for a constant throws because there is no vector storage to detach.
+
+### `detachBatches(options?): GPURecordBatch[]`[​](#detachbatchesoptions-gpurecordbatch "Direct link to detachbatchesoptions-gpurecordbatch")
+
+Transfers a half-open range of physical batches out of the table. Constants remain on the original table.
+
+### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
+
+Destroys retained physical batches according to `GPUData.ownsBuffer`. Constants do not own GPU resources. Destroy a separate `GPUTableShaderBindings` object independently.
+
+## Reserved Index Column[​](#reserved-index-column "Direct link to Reserved Index Column")
+
+`indices` remains a physical `GPUVector<'vertex-list<uint32>'>`. It cannot be a `GPUConstant`, does not become an attribute, and remains batch-local for indexed draws.
+
+## Remarks[​](#remarks "Direct link to Remarks")
+
+* Varying vectors must have matching chunk counts and row counts at each chunk index.
+* Construction never rechunks or implicitly packs source data.
+* `bufferLayout` intentionally excludes constants because their backend layout is not known until shader binding preparation.
+* Table constants cannot differ between record batches. Use separate tables or a varying vector for batch-specific values.
+* `GPUTable` owns retained batches but not resources created by shader binding preparation.
+* Arrow-specific conversion and readback remain in `@luma.gl/arrow`.

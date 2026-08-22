@@ -1,6 +1,6 @@
 # Issuing GPU Commands
 
-[Issuing Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[RenderBundleEncoder](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
+[Workflow](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[Render bundles](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
 
 GPU work happens when your application records commands and submits them to a `Device`. A command can draw, dispatch compute work, copy data, write a timestamp, or replay previously recorded draws.
 
@@ -98,7 +98,7 @@ device.submit();
 
 ### ComputePass[​](#computepass "Direct link to ComputePass")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 Use a `ComputePass` when you are dispatching a compute pipeline.
 
@@ -164,7 +164,7 @@ Render and compute passes contribute commands to a `CommandEncoder`. Render bund
 
 ## Reusable Draw Commands[​](#reusable-draw-commands "Direct link to Reusable Draw Commands")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 Use a `RenderBundleEncoder` when the same WebGPU draw commands run repeatedly and only already-bound buffer or texture contents change. It records draw commands without starting a render pass. `finish()` returns an immutable `RenderBundle`, and a normal `RenderPass` replays that bundle.
 

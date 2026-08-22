@@ -2,7 +2,7 @@
 
 [DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
 
-![From-v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)
+From v10
 
 `DynamicBuffer` is the engine-level wrapper for applications that need a stable buffer object whose underlying GPU [`Buffer`](https://luma.gl/next/docs/api-reference/core/resources/buffer.md) can grow or be replaced. It is useful for streaming geometry, dynamic index data, uniform data, and any workflow where the required byte length is not known up front.
 

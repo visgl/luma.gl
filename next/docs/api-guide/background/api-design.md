@@ -1,6 +1,6 @@
 # Design Philosophy
 
-[A Tale of Three APIs](https://luma.gl/next/docs/api-guide.md)[Design Philosophy](https://luma.gl/next/docs/api-guide/background/api-design.md)[Learning Resources](https://luma.gl/next/docs/api-guide/background/learning-resources.md)[WebGPU vs WebGL](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md)
+[Choose a layer](https://luma.gl/next/docs/api-guide.md)[How layers fit](https://luma.gl/next/docs/api-guide/luma-layers.md)[Design philosophy](https://luma.gl/next/docs/api-guide/background/api-design.md)[Learning resources](https://luma.gl/next/docs/api-guide/background/learning-resources.md)[WebGPU vs WebGL](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md)
 
 This article provides some background on luma.gl's API design philosophy.
 

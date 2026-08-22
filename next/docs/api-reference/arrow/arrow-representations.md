@@ -2,7 +2,7 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/next/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/next/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/next/docs/api-reference/arrow/deck-target-api.md)
 
-![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+From v10Experimental API
 
 This page starts from semantic data types and describes the preferred Apache Arrow column encodings for luma.gl GPU table pipelines. For the inverse view, see [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md), which starts from Arrow physical types and describes GPU support.
 
@@ -161,8 +161,8 @@ Implementation notes:
 
 | Semantic data             | Supported | Recommended Arrow column                              |
 | ------------------------- | --------- | ----------------------------------------------------- |
-| Text labels               | ✅        | `Utf8`                                                |
-| Repeated text labels      | ✅        | `Dictionary<Utf8>`                                    |
+| Text labels               | ✅        | `Utf8` or `Utf8View`                                  |
+| Repeated text labels      | ✅        | `Dictionary<Utf8>` or `Dictionary<Utf8View>`          |
 | Text row colors           | ✅        | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>`       |
 | Text row RGB colors       | ❌        | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>`       |
 | Text character colors     | ✅        | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
@@ -171,6 +171,7 @@ Implementation notes:
 Semantic notes:
 
 * `Utf8` stores one independent string per row.
+* `Utf8View` stores short strings inline and references variadic buffers for longer strings; `ArrowTextRenderer` normalizes either layout before text preparation.
 * `Dictionary<Utf8>` is preferred when many rows reuse the same labels, categories, or symbols.
 * Text row colors are one color per string. Text character colors are aligned with text expansion.
 

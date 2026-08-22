@@ -2,7 +2,7 @@
 
 [CanvasContext](https://luma.gl/next/docs/api-reference/core/canvas-context.md)[PresentationContext](https://luma.gl/next/docs/api-reference/core/presentation-context.md)[Framebuffer](https://luma.gl/next/docs/api-reference/core/resources/framebuffer.md)
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)![Experimental](https://img.shields.io/badge/Experimental-orange.svg?style=flat-square)
+From v9.3Experimental
 
 `PresentationContext` is intended for multi-canvas presentation workflows that are portable across both WebGPU and WebGL.
 

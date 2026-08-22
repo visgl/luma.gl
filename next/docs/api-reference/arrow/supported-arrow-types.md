@@ -2,9 +2,9 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/next/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/next/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/next/docs/api-reference/arrow/deck-target-api.md)
 
-![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+From v10Experimental API
 
-This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex attributes, WebGPU storage bindings, and model-specific conversion helpers. For the generic GPU table ownership model, see [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md).
+This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex attributes, WebGPU storage bindings, and model-specific conversion helpers. For the generic GPU table ownership model, see [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md).
 
 ## Apache Arrow Preliminaries[​](#apache-arrow-preliminaries "Direct link to Apache Arrow Preliminaries")
 
@@ -18,7 +18,7 @@ Arrow also supports variable-length `List` columns. These are useful for data su
 
 Support depends on how the column is consumed. A column can be uploadable as a `GPUVector` without also being usable as a generic vertex attribute.
 
-Arrow adapters publish `GPUVector.format` strings from [`@luma.gl/tables`](https://luma.gl/next/docs/api-reference/tables/gpu-vector-format.md). Arrow `DataType` values are retained only as adapter/readback metadata during migration.
+Arrow adapters publish `GPUVector.format` strings from [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md). Arrow `DataType` values are retained only as adapter/readback metadata during migration.
 
 | Arrow column pattern                               | GPUVector format         | Generic `BufferLayout` |
 | -------------------------------------------------- | ------------------------ | ---------------------- |
@@ -75,16 +75,19 @@ The [Points example](https://luma.gl/next/examples/arrow/arrow-points) demonstra
 
 ### Text-valued Columns[​](#text-valued-columns "Direct link to Text-valued Columns")
 
-| Arrow data type                                                                | GPU<br />upload | nullable | Upload notes                                                                                                    | Shader-facing<br />use                                                                                                                                                                  | Higher-level<br />model support                                        |
-| ------------------------------------------------------------------------------ | --------------- | -------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `Utf8`                                                                         | 🟡              | 🟡       | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use.       | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `convertDggsCellIdsToGPUKeys()` when the encoding is supplied. | Arrow text conversion helpers, pure text models, and DGGS key parsing. |
-| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br />`Uint8 \| Uint16 \| Uint32>` | 🟡              | ❌       | Dictionary index rows.<br />Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion.                                                                                                        | Arrow text conversion helpers and dictionary text models.              |
+| Arrow data type                                                                    | GPU<br />upload | nullable | Upload notes                                                                                                                                         | Shader-facing<br />use                                                                                                                                                                  | Higher-level<br />model support                                        |
+| ---------------------------------------------------------------------------------- | --------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `Utf8`                                                                             | 🟡              | 🟡       | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use.                                            | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `convertDggsCellIdsToGPUKeys()` when the encoding is supplied. | Arrow text conversion helpers, pure text models, and DGGS key parsing. |
+| `Utf8View`                                                                         | 🟡              | 🟡       | `ArrowTextRenderer` dynamically detects Arrow 21.2 view records and normalizes inline and variadic bytes to `Utf8` before existing upload paths run. | Not a generic vertex attribute; consume through text-specific glyph expansion.                                                                                                          | Arrow text conversion helpers and pure text models.                    |
+| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br />`Uint8 \| Uint16 \| Uint32>`     | 🟡              | ❌       | Dictionary index rows.<br />Callers keep CPU source vectors for dictionary values when glyph layout needs them.                                      | Not a generic vertex attribute; consume through dictionary-aware text expansion.                                                                                                        | Arrow text conversion helpers and dictionary text models.              |
+| `Dictionary<Utf8View, Int8 \| Int16 \| Int32 \|`<br />`Uint8 \| Uint16 \| Uint32>` | 🟡              | ❌       | Dictionary indices remain encoded while view-backed dictionary values normalize to `Utf8`.                                                           | Not a generic vertex attribute; consume through dictionary-aware text expansion.                                                                                                        | Arrow text conversion helpers and dictionary text models.              |
 
 ### Other Columns[​](#other-columns "Direct link to Other Columns")
 
 | Arrow data type         | GPU<br />upload | nullable | Upload notes                                                                                                                                                                      | Shader-facing<br />use                                                                                                       | Higher-level<br />model support                                                                    |
 | ----------------------- | --------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `Binary`                | ❌              | ❌       | Variable-width byte rows need both offsets and value bytes. Support would mirror UTF-8 with explicit offset and byte-buffer bindings.                                             | Compute shaders could consume offsets and bytes; not a generic vertex attribute.                                             | Adapter-specific payloads such as WKB geometry, compressed attributes, or binary IDs.              |
+| `BinaryView`            | ❌              | ❌       | View records and variadic buffers are included in Arrow memory accounting, but luma.gl has no generic semantic or rendering adapter for opaque binary rows.                       | Application-specific compute could decode views; there is no generic shader-facing binding.                                  | Deferred until a concrete binary payload renderer or compute adapter needs it.                     |
 | `FixedSizeBinary`       | 🟡              | ❌       | Partially supported for interleaved data columns where each row is a fixed-width byte record.                                                                                     | Not a generic scalar/vector attribute; consume through an explicit interleaved buffer layout or storage decoding path.       | Interleaved GPU buffers and packed application-defined row records.                                |
 | `Struct`                | 🟡              | ❌       | Supported indirectly when the application selects supported child columns by field path.                                                                                          | Child fields can become separate shader columns after selection or flattening.                                               | Nested style/object columns; GeoArrow separated coordinates can adapt into `FixedSizeList` values. |
 | `Map`                   | ❌              | ❌       | Map is variable-length key/value Struct data. A future adapter could support maps by reading a specific key from each row.                                                        | Not a generic shader column; use application-specific key selection or compute lookup after an adapter lowers the map shape. | Per-row properties or sparse attributes after application-specific lowering.                       |
@@ -117,12 +120,12 @@ Then different Arrow table schemas can use different buffer layouts. For the `ve
 
 | Arrow column type           | Buffer layout format | Notes                                           |
 | --------------------------- | -------------------- | ----------------------------------------------- |
-| `FixedSizeList<Float32, 4>` | `float32x4`          |                                                 |
+| `FixedSizeList<Float32, 4>` | `float32x4`          | —                                               |
 | `FixedSizeList<Float16, 4>` | `float16x4`          | Shader sees f32; compact scene-linear/HDR color |
 | `FixedSizeList<Int16, 4>`   | `snorm16x4`          | Shader sees f32, normalized to \[-1.0, 1.0]     |
-| `FixedSizeList<Uint16, 4>`  | `unorm16x4`          |                                                 |
-| `FixedSizeList<Int8, 4>`    | `snorm8x4`           |                                                 |
-| `FixedSizeList<Uint8, 4>`   | `unorm8x4`           |                                                 |
+| `FixedSizeList<Uint16, 4>`  | `unorm16x4`          | —                                               |
+| `FixedSizeList<Int8, 4>`    | `snorm8x4`           | —                                               |
+| `FixedSizeList<Uint8, 4>`   | `unorm8x4`           | —                                               |
 
 Semantic RGB color columns use three source components, but most luma.gl color shader interfaces consume RGBA. Current semantic color adapters treat RGB source forms as unsupported until expansion is implemented. The intended expansion is `FixedSizeList<Uint8, 3>` to RGBA with alpha `255`, and `FixedSizeList<Float16 | Float32, 3>` to RGBA with alpha `1.0`, before buffer layout generation. Alpha values above `1.0` have no portable meaning unless a layer explicitly defines application-specific semantics.
 
@@ -663,10 +666,10 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad 
 
 ## Related References[​](#related-references "Direct link to Related References")
 
-* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)
+* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)
 * [Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)
 * [Storage Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-storage-buffers.md)
-* [GPUInputSchema](https://luma.gl/next/docs/api-reference/tables/gpu-input-schema.md)
+* [GPUInputSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md)
 * [ShaderLayout](https://luma.gl/next/docs/api-reference/core/shader-layout.md)
 * [BufferLayout](https://luma.gl/next/docs/api-reference/core/buffer-layout.md)
 * [Vertex Formats](https://luma.gl/next/docs/api-reference/core/vertex-formats.md)

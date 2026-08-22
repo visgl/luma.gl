@@ -1,0 +1,221 @@
+# GPUSort
+
+[Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-sort.md)[Segmented Sort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md)[Transpose](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-transpose.md)[FFT 1D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft1d.md)[FFT 2D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft2d.md)[Convolution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-convolution.md)
+
+## Overview[​](#overview "Direct link to Overview")
+
+`GPUSort` adds one stable, out-of-place key/value ordering to a `GPUCommandGraph`. `GPUBatchSort` applies the same ordering independently to aligned GPU vector chunks, preserving streaming and record-batch boundaries without implicitly packing them. [`GPUSegmentedSort`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md) batches many small, independent domains that already share packed parent buffers into at most eight graph dispatches. None of these APIs submits commands or reads results back to the CPU.
+
+## At a glance
+
+| Question                 | Answer                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Problem**              | Produce stable out-of-place key/value ordering for packed or explicitly batched data.                         |
+| **Reads / writes**       | Reads source keys and values; writes ordered destination views through transient sorting scratch.             |
+| **Ownership**            | Public inputs and outputs are caller-owned; scratch storage is graph-owned transient memory.                  |
+| **Output contract**      | Exact stable order within the requested packed or per-batch domain.                                           |
+| **Expected work**        | Bounded multi-pass sorting determined by capacity and key representation.                                     |
+| **Chunks**               | GPUBatchSort preserves aligned chunks; use explicit packing for one global order.                             |
+| **Conditions / budgets** | May be conditioned with its dependent branch; encoding, submission, and publication remain application-owned. |
+| **Neighborhood**         | keys + values → GPUSort/GPUBatchSort → top-K, grouping, index, or renderer.                                   |
+
+**Cost**Capacity and pass count; global sorting requires reading and writing the full domain.
+
+**Common mistake**Do not claim global order from independently sorted chunks.
+
+## Concepts[​](#concepts "Direct link to Concepts")
+
+### Paired stable sorting preserves identity[​](#paired-stable-sorting-preserves-identity "Direct link to Paired stable sorting preserves identity")
+
+Paired sorting moves each value with its key, so values commonly hold stable source-row IDs. A stable sort preserves the original order of equal keys, and out-of-place output leaves the source buffers unchanged. This is useful for transparent draw ordering, label priority, event ordering, and table permutation because a later consumer can still recover the canonical source row.
+
+### Global order and batch order answer different questions[​](#global-order-and-batch-order-answer-different-questions "Direct link to Global order and batch order answer different questions")
+
+`GPUSort` treats one packed view as one global comparison domain. Use it when every row must be ranked against every other row—for example, one back-to-front draw list or one global event timeline.
+
+`GPUBatchSort` treats every `GraphVectorView` chunk as an independent comparison domain. It keeps the number, order, and length of chunks unchanged. This is the right contract when boundaries are meaningful: streaming record batches may have separate lifetimes, map tiles may render independently, and incremental ingestion may need newly arrived data sorted without rewriting older batches. A row never crosses a boundary, even when its key would place it in another batch under a global sort.
+
+The distinction is deliberate. Silently concatenating chunks would allocate packed storage, discard useful partition metadata, and turn an incremental operation into whole-dataset work. Callers that need a global order across chunks must explicitly choose and provision a packed representation.
+
+When independent domains are already packed into four shared parent buffers, [`GPUSegmentedSort`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md) keeps the boundaries and inter-segment padding intact while sorting equal-width domains together. It does not combine separately allocated streaming chunks; it only exploits storage that the application explicitly packed in advance.
+
+### Algorithm selection follows the work unit[​](#algorithm-selection-follows-the-work-unit "Direct link to Algorithm selection follows the work unit")
+
+Bitonic sort favors smaller fixed networks; radix sort scales larger inputs by partitioning key bits while preserving stability. `GPUSort` selects once for its packed view. `GPUBatchSort` selects independently for every chunk, so one graph can use bitonic for small batches and radix for a large batch. `resolvedAlgorithms` reports those choices in source-chunk order.
+
+Scratch remains graph-owned and batch-local. Empty chunks add no nodes, single-row chunks use the copy fast path, and later chunk sorts can reuse transient allocations from earlier chunks.
+
+The live example switches between one packed Arrow column and preserved Arrow chunks. Its streaming case preserves batch boundaries and reports the algorithm selected independently for each chunk:
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
+```
+import {GPUCommandGraph, GPUSort} from '@luma.gl/gpgpu/gpu-core';
+
+
+
+const graph = new GPUCommandGraph(device, {id: 'sort-records'});
+
+const keyChunks = graph.importGPUVector('keys', keyVector);
+
+const valueChunks = graph.importGPUVector('values', rowIdVector);
+
+const keys = keyChunks.data[0]!;
+
+const values = valueChunks.data[0]!;
+
+const outputKeyHandle = graph.importBuffer(
+
+  {id: 'output-keys', byteLength, usage: outputKeyBuffer.usage},
+
+  outputKeyBuffer
+
+);
+
+const outputValueHandle = graph.importBuffer(
+
+  {id: 'output-values', byteLength, usage: outputValueBuffer.usage},
+
+  outputValueBuffer
+
+);
+
+
+
+const sort = new GPUSort({
+
+  keys,
+
+  values,
+
+  outputKeys: graph.createDataView(outputKeyHandle, {format: 'uint32', length}),
+
+  outputValues: graph.createDataView(outputValueHandle, {format: 'uint32', length}),
+
+  algorithm: 'auto',
+
+  direction: 'ascending'
+
+});
+
+sort.addToGraph(graph);
+
+
+
+const compiled = graph.compile();
+
+const commandEncoder = device.createCommandEncoder({id: 'sort-records'});
+
+compiled.encode(commandEncoder, {parameters: undefined});
+
+device.submit(commandEncoder.finish());
+```
+
+For independent batch order, import aligned input and output vectors directly:
+
+```
+import {GPUBatchSort, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+
+
+
+const graph = new GPUCommandGraph(device, {id: 'sort-stream'});
+
+const sort = new GPUBatchSort({
+
+  keys: graph.importGPUVector('keys', keyVector),
+
+  values: graph.importGPUVector('row-ids', rowIdVector),
+
+  outputKeys: graph.importGPUVector('sorted-keys', outputKeyVector),
+
+  outputValues: graph.importGPUVector('sorted-row-ids', outputRowIdVector),
+
+  algorithm: 'auto',
+
+  direction: 'ascending'
+
+});
+
+sort.addToGraph(graph);
+```
+
+## Constructor[​](#constructor "Direct link to Constructor")
+
+### `new GPUSort(props)`[​](#new-gpusortprops "Direct link to new-gpusortprops")
+
+```
+type GPUSortProps = {
+
+  id?: string;
+
+  keys: GraphDataView<'uint32'>;
+
+  values: GraphDataView<'uint32'>;
+
+  outputKeys: GraphDataView<'uint32'>;
+
+  outputValues: GraphDataView<'uint32'>;
+
+  algorithm?: 'auto' | 'bitonic' | 'radix';
+
+  direction?: 'ascending' | 'descending';
+
+  keyBits?: number;
+
+};
+```
+
+* Every view must have the same logical length and packed, aligned `uint32` storage.
+* Output keys and values use separate buffers from the inputs and from each other.
+* Equal keys retain their input order in both directions.
+* Inputs are not modified. The caller owns all four views and their imported buffers.
+
+`algorithm` defaults to `auto`. Inputs containing at most 256 rows use a complete, stable bitonic sorting network, requiring only one graph node and one dispatch. CORE devices exchange every stage through workgroup memory. A subgroup-capable device keeps subgroup-local stages in registers with shuffle operations and synchronizes shared memory only for cross-subgroup stages. Each source key is still loaded once, and both paths produce the same stable order.
+
+Larger inputs use a stable four-bit least-significant-digit radix sort: each digit contributes a workgroup-local histogram, a reusable `GPUScan`, and an order-preserving scatter. The radix implementation supports both sort directions, partial final digits, and the eight-storage-buffer CORE WebGPU limit. Its internal unsegmented scans can still select their subgroup path. Explicit algorithm selection remains available for measurement and testing; `resolvedAlgorithm` reports the concrete selection.
+
+`keyBits` defaults to `32` and controls how many least-significant bits the radix implementation processes. A 32-bit sort therefore needs eight radix digits instead of 32 binary partitions. Radix destinations alternate between graph-owned scratch and caller-owned outputs so the final digit always writes directly into the requested destination.
+
+### `new GPUBatchSort(props)`[​](#new-gpubatchsortprops "Direct link to new-gpubatchsortprops")
+
+```
+type GPUBatchSortProps = {
+
+  id?: string;
+
+  keys: GraphVectorView<'uint32'>;
+
+  values: GraphVectorView<'uint32'>;
+
+  outputKeys: GraphVectorView<'uint32'>;
+
+  outputValues: GraphVectorView<'uint32'>;
+
+  algorithm?: 'auto' | 'bitonic' | 'radix';
+
+  direction?: 'ascending' | 'descending';
+
+};
+```
+
+* All four vectors must have identical ordered chunk lengths and packed `uint32` chunks.
+* Output chunks cannot alias any input chunk or the other output vector.
+* Sorting is stable within each chunk. Stability and ordering do not extend across boundaries.
+* `resolvedAlgorithms` contains one concrete choice per chunk in source order.
+* Inputs and outputs remain caller-owned; no vector is concatenated or repacked.
+
+## `addToGraph(graph)`[​](#addtographgraph "Direct link to addtographgraph")
+
+Adds all compute passes and transient scratch declarations to the supplied graph. The graph must own every input and output view. Scratch buffers are graph-owned, participate in transient lifetime reuse, and are released by `CompiledGPUCommandGraph.destroy()`.
+
+The method does not compile the graph, create an encoder, submit work, or map output buffers.
+
+## Edge cases[​](#edge-cases "Direct link to Edge cases")
+
+* Empty inputs and empty batches add no graph nodes.
+* A single pair or single-row batch adds one copy node.
+* Bitonic sort internally pads irregular lengths without exposing sentinels in the output; inputs up to 256 rows complete entirely within one workgroup.
+* Four-bit radix sorting preserves the relative input order of equal significant key bits in both ascending and descending order.
+* At most `0x80000000` rows are accepted; practical limits are normally lower device buffer and dispatch limits.
+
+See the runnable [GPU sort example](https://luma.gl/next/examples/experimental/gpu-sort) for packed and preserved-batch Arrow upload, per-batch algorithm selection, graph compilation statistics, explicit submission, and CPU-oracle validation.

@@ -1,6 +1,6 @@
 # Using GPU Textures
 
-[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video Textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular Data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
+[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 
 See also [Issuing GPU Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md) for the difference between immediate texture helpers such as `writeData()` and explicit `CommandEncoder` copy operations.
 
@@ -109,12 +109,12 @@ Mipmap usage is controlled via `SamplerProps.mipmapFilter`:
 
 | `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
 | -------------- | ----------- | ----------------------------------------------- | --------------------- | ------- |
-| `none`         | `nearest`   | No filtering, no mipmaps                        | none                  |         |
+| `none`         | `nearest`   | No filtering, no mipmaps                        | none                  | —       |
 | `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest |
-| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  |         |
-| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                |         |
+| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  | —       |
+| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                | —       |
 | `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest |
-| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             |         |
+| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             | —       |
 
 In addition, the `anisotropy` sampler property controls how many miplevels are used during sampling.
 

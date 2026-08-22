@@ -1,8 +1,8 @@
 # RenderBundleEncoder
 
-[Issuing Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[RenderBundleEncoder](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
+[Workflow](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)[CommandEncoder](https://luma.gl/next/docs/api-reference/core/resources/command-encoder.md)[RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md)[Render bundles](https://luma.gl/next/docs/api-reference/core/resources/render-bundle-encoder.md)[ComputePass](https://luma.gl/next/docs/api-reference/core/resources/compute-pass.md)
 
-![From-v9.4](https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square)![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+From v9.4WebGPU supportedWebGL 2 not supported
 
 ### Render Bundles
 
@@ -13,6 +13,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 Render bundles allow expensive CPU-side command recording and validation to be performed once and reused, improving performance when many identical draw calls are repeated frame after frame. A `RenderBundleEncoder` records these reusable commands without beginning a render pass. Calling `finish()` creates an immutable `RenderBundle`, and a normal `RenderPass` replays it with `executeBundles()`.
 

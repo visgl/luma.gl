@@ -1,6 +1,6 @@
 # Scenegraphs
 
-[Scenegraphs](https://luma.gl/next/docs/api-guide/engine/scenegraph.md)[ScenegraphNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/model-node.md)
+[Workflow](https://luma.gl/next/docs/api-guide/engine/scenegraph.md)[ScenegraphNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/model-node.md)
 
 The luma.gl engine provides a set of Scenegraph classes to organize `Model`s into a hierarchy.
 

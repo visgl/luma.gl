@@ -2,7 +2,7 @@
 
 [luma](https://luma.gl/next/docs/api-reference/core/luma.md)[Adapter](https://luma.gl/next/docs/api-reference/core/adapter.md)[Device](https://luma.gl/next/docs/api-reference/core/device.md)[DeviceInfo](https://luma.gl/next/docs/api-reference/core/device-info.md)[DeviceLimits](https://luma.gl/next/docs/api-reference/core/device-limits.md)[DeviceFeatures](https://luma.gl/next/docs/api-reference/core/device-features.md)
 
-![From-v9.1](https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square)
+From v9.1
 
 An `Adapter` is a factory that creates [`Device`](https://luma.gl/next/docs/api-reference/core/device.md) instances for a specific backend (e.g. WebGPU or WebGL). Each GPU backend exports a singleton adapter instance that is used to create devices for that GPU backend.
 

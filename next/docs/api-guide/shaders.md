@@ -1,6 +1,6 @@
 # Overview
 
-[Overview](https://luma.gl/next/docs/api-guide/shaders.md)[Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[GPU Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)[Rendering Techniques](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md)[Transparency](https://luma.gl/next/docs/api-guide/shaders/transparency.md)[Glass Effects](https://luma.gl/next/docs/api-guide/shaders/glass-effects.md)
+[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[Programming guide](https://luma.gl/next/docs/api-guide/shaders.md)[Cookbook](https://luma.gl/next/docs/api-guide/shaders/cookbook.md)
 
 luma.gl applications must provide the shader source code that will ultimately run on the GPU. Such code must be provided as WGSL and/or GLSL depending on which backend(s) are targeted. luma.gl helps assemble that source, bind its inputs, and run it through the engine APIs.
 

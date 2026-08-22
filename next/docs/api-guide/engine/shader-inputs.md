@@ -1,6 +1,6 @@
 # Shader Inputs
 
-[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Shader Inputs](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
+[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Inputs workflow](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
 
 `ShaderInputs` is the engine-side bridge between shader-module props and the uniform buffers or bindings consumed by a [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) or [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md).
 

@@ -1,8 +1,8 @@
 # Working With Video Textures
 
-[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video Textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular Data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
+[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 
-![From-v9.4](https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square)
+From v9.4
 
 Video can enter a shader through more than one texture path. Start with the portable copied path unless the shader can accept WebGPU's more restricted native external-video sampling.
 
@@ -14,13 +14,13 @@ The example starts with a generated video source. Camera access remains optional
 
 InfoSource
 
-Wraps a live `VideoTexture` around a rotating `CylinderGeometry`. WebGL samples the copied `sampler2D` path; WebGPU samples the native `texture_external` path when the browser supports it.
-
 Use camera
 
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Choose The Binding Path[​](#choose-the-binding-path "Direct link to Choose The Binding Path")
 

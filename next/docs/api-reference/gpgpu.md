@@ -1,6 +1,6 @@
 # Overview
 
-[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU Evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom Operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)[Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+[Overview](https://luma.gl/next/docs/api-reference/gpgpu.md)[GPU evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)[Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)[Custom operations](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)[cleanEvaluate](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)
 
 The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
@@ -9,7 +9,24 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 * [`Operations`](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)
 * [`Custom Operations`](https://luma.gl/next/docs/api-reference/gpgpu/custom-operation.md)
 * [`GPU Evaluators`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)
+* [`GPU Data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)
 * [`cleanEvaluate`](https://luma.gl/next/docs/api-reference/gpgpu/clean-evaluate.md)
+
+## GPU Data Primitives[​](#gpu-data-primitives "Direct link to GPU Data Primitives")
+
+The experimental `@luma.gl/gpgpu/gpu-data` subpath provides Arrow-independent GPU storage primitives for compute and rendering. It is not re-exported from the `@luma.gl/gpgpu` root in v9.4.
+
+* [`GPUData`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) owns or borrows one GPU buffer and its typed row metadata.
+* [`GPUDataView`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-view.md) describes a non-owning slice or child view.
+* [`GPUVector`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md) preserves an ordered list of `GPUData` chunks.
+* [`GPUConstant`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-constant.md) represents one fixed-width value shared across logical rows.
+* [`GPUVectorFormat`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md) describes stored bytes independently from shader-facing value types.
+
+Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a separate raw buffer; it preserves its ordered `GPUData` chunks and their source batch boundaries. Packing and repacking are explicit higher-level operations, never side effects of append or streaming.
+
+Runtime format strings describe GPU memory, including fixed-width formats such as `float32x3`, normalized formats such as `unorm8x4`, and variable-length formats such as `vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
+
+[`@luma.gl/experimental/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) adds record batches, schemas, table bindings, computations, and planners above these primitives. [`@luma.gl/arrow`](https://luma.gl/next/docs/api-reference/arrow.md) converts Apache Arrow inputs to the shared GPU data objects; the GPU data types do not depend on Apache Arrow.
 
 ## Installing[​](#installing "Direct link to Installing")
 

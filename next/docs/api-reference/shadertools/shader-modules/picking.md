@@ -1,6 +1,6 @@
 # picking
 
-![Deprecated in v9.1](https://img.shields.io/badge/Deprecated-from-v9.1-red.svg?style=flat-square)
+Deprecated in v9.1
 
 caution
 

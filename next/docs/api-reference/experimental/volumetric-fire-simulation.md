@@ -1,5 +1,7 @@
 # VolumetricFireSimulation
 
+[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[Volumetric Fire](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md)
+
 `VolumetricFireSimulation` is an experimental WebGPU-only dense-grid fire and smoke simulation. It records a fixed-capacity sequence of 3D compute passes through `GPUCommandGraph`: velocity and combustion advection, external forces, divergence, Jacobi pressure projection, dissipation, reaction, and emitter injection. The class owns the simulation fields but leaves command submission, fixed-step scheduling, rendering, and scene-to-volume transforms to the application.
 
 This is a real-time visual-effects solver rather than a general computational-fluid-dynamics API. Its public textures can be sampled by a volume renderer, a lighting pass, or diagnostic views without copying simulation state through the CPU.
@@ -218,6 +220,6 @@ These boundaries keep memory and work explicit while leaving room for higher-ord
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
-* [GPU Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md) documents graph ownership, hazard inference, and encoding.
+* [GPU Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md) documents graph ownership, hazard inference, and encoding.
 * [GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md) provides depth, normal, and velocity attachments for depth-aware volume composition.
 * [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) describes composable HDR and temporal rendering pipelines that can consume the simulation textures.

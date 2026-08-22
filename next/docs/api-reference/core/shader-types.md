@@ -2,7 +2,7 @@
 
 [Shader Types](https://luma.gl/next/docs/api-reference/core/shader-types.md)[Vertex Formats](https://luma.gl/next/docs/api-reference/core/vertex-formats.md)[Texture Formats](https://luma.gl/next/docs/api-reference/core/texture-formats.md)
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 The `@luma.gl/core` module defines the portable shader type descriptors used by luma.gl to describe uniform buffers, vertex attributes, and texture formats across WebGL2 and WebGPU.
 

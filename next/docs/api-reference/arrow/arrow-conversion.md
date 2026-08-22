@@ -44,7 +44,7 @@ DGGS helpers keep compact global grid keys on the GPU. `convertDggsCellIdsToGPUK
 
 `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` can convert loaders.gl-compatible Mesh Arrow tables through the local structural `ArrowMeshTable` type. Mesh Arrow attributes are uploaded as table-backed GPU geometry, defaulting to one interleaved vertex buffer plus a separate optional index buffer.
 
-For lower-level table pipelines, import `GPUTableBufferPlanner` from `@luma.gl/tables` to produce deterministic GPU allocation plans from column descriptors while respecting device vertex and storage buffer limits.
+For lower-level table pipelines, import `GPUTableBufferPlanner` from `@luma.gl/experimental/gpu-tables` to produce deterministic GPU allocation plans from column descriptors while respecting device vertex and storage buffer limits.
 
 ## GPU Input Programming Guidelines[​](#gpu-input-programming-guidelines "Direct link to GPU Input Programming Guidelines")
 
@@ -68,15 +68,15 @@ ArrowInputSchema
   -> validates the result against GPUInputSchema
 ```
 
-`GPUInputSchema` belongs to `@luma.gl/tables`. It declares required and optional prepared vector names, accepted `GPUVector.format` values, semantic kinds, and which inputs are internal. It deliberately does not mention Arrow `DataType` objects, source column paths, temporal origins, tessellation, text dictionaries, or fallback-vector generation.
+`GPUInputSchema` belongs to `@luma.gl/experimental/gpu-tables`. It declares required and optional prepared vector names, accepted `GPUVector.format` values, semantic kinds, and which inputs are internal. It deliberately does not mention Arrow `DataType` objects, source column paths, temporal origins, tessellation, text dictionaries, or fallback-vector generation.
 
 `ArrowInputSchema` belongs to `@luma.gl/arrow`. It combines an Arrow-free `gpuInputSchema` with adapter-owned `resolveSourceVectors`, `convertToGPUVectors`, and `getGPUInputVectors` functions. The `prepareArrowInput()` helper runs that pipeline and calls `validateGPUInputVectors()` before returning the prepared result.
 
-Use a simple Arrow input schema for direct one-column uploads. Keep model-family adapters for cross-column conversions such as path normalization, polygon tessellation, temporal conversion, and text glyph preparation. Do not make `@luma.gl/tables` depend on Apache Arrow to describe those policies.
+Use a simple Arrow input schema for direct one-column uploads. Keep model-family adapters for cross-column conversions such as path normalization, polygon tessellation, temporal conversion, and text glyph preparation. Do not make `@luma.gl/gpgpu` or `@luma.gl/experimental` depend on Apache Arrow to describe those policies.
 
 ## BufferLayouts[​](#bufferlayouts "Direct link to BufferLayouts")
 
-The module can derive GPU `BufferLayout` entries from Arrow schemas and create `@luma.gl/tables` objects from compatible Arrow columns through `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and `makeGPUTableFromArrowTable()`. The generic GPU table object model is documented in [`@luma.gl/tables`](https://luma.gl/next/docs/api-reference/tables.md), with an object model overview in [GPU Table Structure](https://luma.gl/next/docs/api-reference/tables/gpu-table-structure.md).
+The module can derive GPU `BufferLayout` entries from Arrow schemas and create primitive GPU data and experimental table objects from compatible Arrow columns through `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and `makeGPUTableFromArrowTable()`. Primitive storage is documented in the [GPGPU data reference](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md), while the higher-level object model is documented in [Experimental GPU Tables](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) and [GPU Table Structure](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md).
 
 Arrow upload helpers now produce format-first GPU objects:
 

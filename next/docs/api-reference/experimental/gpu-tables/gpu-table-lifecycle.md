@@ -1,0 +1,271 @@
+# GPU Table Lifecycle
+
+[Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md)[Structure](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md)[Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)
+
+From v9.4Experimental API
+
+This page documents the lifecycle of generic GPU table objects in `@luma.gl/experimental/gpu-tables`: ownership, batching, packing, table-backed rendering, transform, compute, and buffer planning. For Apache Arrow column compatibility and preparation helpers, see [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md).
+
+## Overview[​](#overview "Direct link to Overview")
+
+`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema` are GPU-side representations for typed table columns and batches. Arrow vectors, record batches, and tables are common construction inputs through `@luma.gl/arrow`; the generic GPU objects do not retain references to those sources after extracting the buffer data and metadata they need.
+
+The object model is batch-preserving by default:
+
+* `GPUTable.batches[]` contains real GPU record batches with one batch-local `GPUData` chunk per selected column.
+* Table-level `gpuVectors` aggregate those batch-local chunks through `GPUVector.data[]`.
+* Table-level `gpuConstants` retain one immutable CPU payload and never appear in batch `gpuData` or the physical `bufferLayout`.
+* `GPUData` is the chunk primitive. It owns or borrows one `Buffer` or `DynamicBuffer`.
+* `GPUTableModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one compatible layout/pipeline and deriving each batch's attribute buffers and reserved `indices` index buffer from its `gpuData`.
+
+This means a multi-batch Arrow table stays multi-batch after GPU upload. If the application prefers fewer draw units, it packs explicitly:
+
+```
+const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
+
+
+
+// Replace preserved batches with one packed batch.
+
+gpuTable.packBatches();
+
+
+
+// Or greedily merge adjacent batches until each emitted batch reaches the threshold.
+
+gpuTable.packBatches({minBatchSize: 50_000});
+```
+
+Packing mutates the table in place. It rebuilds `batches[]` and table-level `gpuVectors`, then destroys only superseded GPU buffers that were owned by the removed batches. Borrowed external buffers are not destroyed. Indexed tables are rejected because packed index buffers would need their batch-local vertex indices rebased.
+
+### Ownership Rules[​](#ownership-rules "Direct link to Ownership Rules")
+
+* GPU objects created from Arrow data own the GPU storage they allocate.
+* GPU objects wrapping caller-supplied buffers are non-owning by default unless `ownsBuffer` is requested.
+* `GPUData` is the storage-owning layer. A chunk may own its buffer or borrow an existing one, but `GPUVector` never owns raw buffers directly.
+* `GPUVector` owns or borrows ordered `GPUData[]` chunks. Code that needs one directly bindable buffer should require exactly one chunk and bind `vector.data[0].buffer`.
+* Detach operations transfer live objects out of the table instead of destroying them.
+* `destroy()` always follows the current ownership graph. It never destroys borrowed buffers.
+
+## GPUSchema and Formats[​](#gpuschema-and-formats "Direct link to GPUSchema and Formats")
+
+`GPUSchema` is plain selected-column metadata:
+
+```
+type GPUSchema<T extends GPUTypeMap = GPUTypeMap> = {
+
+  fields: Array<GPUField<keyof T & string>>;
+
+  metadata: Map<string, string>;
+
+};
+```
+
+`GPUField.format` is a `GPUVectorFormat`, not a shader type. Fixed vectors use core `VertexFormat` strings such as `float32x3` and `unorm8x4`. Variable-length vertex-aligned rows use `VertexList`, for example `vertex-list<float32x3>`.
+
+Shader-facing values remain in `ShaderLayout`:
+
+```
+const shaderLayout = {
+
+  attributes: [{name: 'colors', location: 0, type: 'vec4<f32>'}],
+
+  bindings: []
+
+};
+```
+
+Compatibility checks decide whether a memory format can feed a shader value. For example, `unorm8x4` can feed `vec4<f32>`, while `uint32x4` cannot feed `vec4<f32>`.
+
+See [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md) and [GPUVectorFormat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md) for the type reference. A model's accepted prepared vector inputs are declared separately with [`GPUInputSchema`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md).
+
+## Object Responsibilities[​](#object-responsibilities "Direct link to Object Responsibilities")
+
+This page stays at the relationship level. Constructor modes, properties, and method signatures live on the individual reference pages:
+
+| Object           | Responsibility                                                                                                | Detailed reference                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `GPUData`        | One GPU buffer plus row/stride metadata and buffer ownership.                                                 | [GPUData](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)                                  |
+| `GPUVector`      | One logical column over ordered `GPUData[]` chunks.                                                           | [GPUVector](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md)                              |
+| `GPUConstant`    | One table-wide fixed-width logical column value.                                                              | [GPUConstant](https://luma.gl/next/docs/api-reference/gpgpu/gpu-constant.md)                          |
+| `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata.                               | [GPURecordBatch](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md) |
+| `GPUTable`       | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md)              |
+| `GPUSchema`      | Selected-column metadata with `GPUVectorFormat` fields.                                                       | [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md)            |
+| `GPUInputSchema` | Runtime declaration of required and optional `GPUVector` model inputs.                                        | [GPUInputSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md) |
+
+The important invariant is that varying buffers are reached through `GPUData`, not directly through `GPUVector`. Code that needs one directly bindable buffer should require `vector.data.length === 1` and bind `vector.data[0].buffer`. Batch-aware render and compute paths should iterate `GPUTable.batches[]` or the corresponding `GPUVector.data[]` chunks.
+
+## Batching and Packing[​](#batching-and-packing "Direct link to Batching and Packing")
+
+Low-level incremental assembly stays ownership-explicit with `gpuTable.addBatch(gpuRecordBatch)` and `gpuVector.addData(gpuData)`. These operations aggregate existing GPU objects instead of allocating replacement tables.
+
+When streaming Arrow data, create one immutable GPU batch per Arrow record batch and add it to the table:
+
+```
+const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
+
+  shaderLayout
+
+});
+
+
+
+for await (const recordBatch of remainingRecordBatches) {
+
+  gpuTable.addBatch(makeGPURecordBatchFromArrowRecordBatch(device, recordBatch, {shaderLayout}));
+
+}
+```
+
+Each converted batch uploads source chunks into new `GPUData` buffers and preserves previous batches. To reduce draw or dispatch units, call `packBatches()` on the table explicitly.
+
+## Table-Backed Render, Transform, and Compute Helpers[​](#table-backed-render-transform-and-compute-helpers "Direct link to Table-Backed Render, Transform, and Compute Helpers")
+
+The table APIs are meant to feed more than one execution style.
+
+### `GPUTableModel`[​](#gputablemodel "Direct link to gputablemodel")
+
+Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering. If the source data starts as an Arrow table, convert it first with `makeGPUTableFromArrowTable()` in layer/data-preparation code:
+
+```
+const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
+
+
+
+const model = new GPUTableModel(device, {
+
+  source,
+
+  shaderLayout,
+
+  table,
+
+  tableCount: 'instance'
+
+});
+```
+
+`tableCount` chooses whether table row counts become `instanceCount`, `vertexCount`, or neither. The converted `GPUTable` stays caller-owned.
+
+When `table.gpuVectors.indices` exists, `GPUTableModel` treats it as the reserved indexed-draw column rather than an attribute. The vector must use `vertex-list<uint32>`, contain exactly one directly bindable `GPUData` chunk per batch, and use a buffer created with `Buffer.INDEX`. `GPUTableModel` binds that buffer with `Model.setIndexBuffer()` and sets the indexed draw count from `indices.valueLength`.
+
+For preserved indexed batches, call `drawBatches(renderPass)`. Each batch keeps its own local index payload, so `drawBatches()` rebinds the batch-local index buffer and count before drawing, then restores the table-level state afterward. All batches in an indexed table must include `indices`; `packBatches()` rejects indexed tables until packing can rebase those local indices correctly.
+
+### `TableTransform`[​](#tabletransform "Direct link to tabletransform")
+
+`TableTransform` is the WebGL transform-feedback counterpart. It consumes a generic `GPUTable`, merges the table attribute layouts into the underlying `BufferTransform`, accepts already-created `GPUVector` inputs, and can run one preserved GPU batch at a time. Use `makeGPUTableFromArrowTable()` before construction when the source data starts as an Arrow table:
+
+```
+const transform = new TableTransform(device, {
+
+  vs,
+
+  varyings,
+
+  shaderLayout,
+
+  table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
+
+  tableCount: 'vertex'
+
+});
+
+
+
+transform.dispatchBatches({
+
+  outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
+
+});
+```
+
+For a compute-like update path, pass `inputVectors` plus `copyOutputToInputVectors`. `outputs` is inferred from the copy map when it is omitted:
+
+```
+const transform = new TableTransform(device, {
+
+  vs,
+
+  shaderLayout,
+
+  inputVectors: {
+
+    particlePositions,
+
+    particleVelocities
+
+  },
+
+  copyOutputToInputVectors: {
+
+    nextParticlePositions: 'particlePositions',
+
+    nextParticleVelocities: 'particleVelocities'
+
+  }
+
+});
+```
+
+Transform feedback writes a dense output stream, so automatic copy-back targets tightly packed, directly bindable GPUVectors. It can not scatter-copy into padded or interleaved rows.
+
+Use `TableTransform` only for attribute-backed WebGL transform feedback. It is not a storage-buffer compute abstraction.
+
+Relevant public types:
+
+| Type                         | Meaning                                                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `TableTransformProps`        | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
+| `TableTransformBatchOptions` | `dispatchBatches()` options, including fixed or per-batch `outputBuffers`.                           |
+
+### `GPUTableComputation`[​](#gputablecomputation "Direct link to gputablecomputation")
+
+`GPUTableComputation` is the WebGPU compute helper for table vectors exposed as storage bindings. Supply `GPUVector` objects by binding name:
+
+```
+const computation = new GPUTableComputation(device, {
+
+  source: computeShader,
+
+  shaderLayout: computeShaderLayout,
+
+  inputVectors: {
+
+    particlePositions,
+
+    particleVelocities
+
+  }
+
+});
+```
+
+Direct single-buffer vectors bind once. Multi-batch aggregate vectors use `dispatchBatches(computePass, batch => workgroupCount)` so each batch is rebound with the correct storage-buffer range before dispatch.
+
+Relevant public types:
+
+| Type                       | Meaning                                                                |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `GPUTableComputationProps` | Construction props, including ordinary `bindings` plus `inputVectors`. |
+| `GPUTableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback.           |
+
+## Planning Table Buffer Groups[​](#planning-table-buffer-groups "Direct link to Planning Table Buffer Groups")
+
+`GPUTableBufferPlanner` is a lower-level helper for applications that already have column descriptors and need to decide how those columns should consume GPU buffer bindings. It does not upload buffers, interleave data, or bind storage buffers. It only returns a plan that describes allocation groups, column mappings, and which columns should be represented by planner-owned packed or storage buffers.
+
+Use it when a table has more columns than the target device can expose as separate vertex buffers, or when row-geometry data may later be read from WebGPU storage buffers instead of expanded into per-vertex attributes.
+
+The object-model point is that planning is metadata-only. The planner does not create `GPUData`, `GPUVector`, or `GPUTable` instances. See [`GPUTableBufferPlanner`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner.md) for modes, options, and output shapes.
+
+## Related References[​](#related-references "Direct link to Related References")
+
+* [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)
+* [GPU Table Structure](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md)
+* [GPUTable](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md)
+* [GPURecordBatch](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md)
+* [GPUVector](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md)
+* [GPUData](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)
+* [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md)
+* [GPUInputSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md)
+* [GPUVectorFormat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md)
+* [GPUTableBufferPlanner](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner.md)

@@ -13,12 +13,12 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPUTraceInteraction,
   GPUTraceScene,
   getGPUTracePickingShader
-} from '@luma.gl/experimental/lutrace';
+} from '@luma.gl/experimental/gpu-trace';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

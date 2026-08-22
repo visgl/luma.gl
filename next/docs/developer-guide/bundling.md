@@ -1,6 +1,6 @@
 # Bundling
 
-[Overview](https://luma.gl/next/docs/developer-guide.md)[Installing](https://luma.gl/next/docs/developer-guide/installing.md)[AI Agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)[Editing](https://luma.gl/next/docs/developer-guide/editing.md)[Testing](https://luma.gl/next/docs/developer-guide/testing.md)[Debugging](https://luma.gl/next/docs/developer-guide/debugging.md)[Profiling](https://luma.gl/next/docs/developer-guide/profiling.md)[Bundling](https://luma.gl/next/docs/developer-guide/bundling.md)
+[Testing](https://luma.gl/next/docs/developer-guide/testing.md)[Debugging](https://luma.gl/next/docs/developer-guide/debugging.md)[Profiling](https://luma.gl/next/docs/developer-guide/profiling.md)[Bundling](https://luma.gl/next/docs/developer-guide/bundling.md)[AI agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md)
 
 luma.gl is published as tree-shakeable ES modules. Application bundle size depends on which modules and adapters are imported, how much of their APIs are used, and how the application is bundled and compressed.
 
@@ -75,7 +75,7 @@ Applications commonly add two first-class libraries above the portability layer:
 * [`@luma.gl/shadertools`](https://luma.gl/next/docs/api-reference/shadertools.md) assembles reusable WGSL and GLSL shader modules, plugins, and passes. It does not compile shaders or call WebGPU or WebGL itself, so it can be used with either the core API or the engine. See the [Shader API guide](https://luma.gl/next/docs/api-guide/shaders.md).
 * [`@luma.gl/engine`](https://luma.gl/next/docs/api-reference/engine.md) builds on `@luma.gl/core` and `@luma.gl/shadertools` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and shader-pass rendering.
 
-Focused packages such as `@luma.gl/effects`, `@luma.gl/gltf`, `@luma.gl/gpgpu`, and `@luma.gl/tables` build on one or more of these layers. They are not automatically included by the engine. See the [API overview](https://luma.gl/next/docs/api-guide.md) and [module catalog](https://luma.gl/next/docs/api-reference.md) for the complete package map.
+Focused packages such as `@luma.gl/effects`, `@luma.gl/gltf`, and `@luma.gl/gpgpu` build on one or more of these layers. Experimental GPU tables and models live under `@luma.gl/experimental`. These packages are not automatically included by the engine. See the [API overview](https://luma.gl/next/docs/api-guide.md) and [module catalog](https://luma.gl/next/docs/api-reference.md) for the complete package map.
 
 ### Shader Source Bundling[​](#shader-source-bundling "Direct link to Shader Source Bundling")
 

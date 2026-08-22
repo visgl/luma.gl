@@ -1,10 +1,36 @@
 # ShaderPass
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)
 
 `ShaderPass` is a [`ShaderModule`](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md) that can be executed as a standalone fullscreen texture-processing stage. `ShaderPass` and `ShaderPassPipeline` are descriptors from `@luma.gl/shadertools`; [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md) is the engine class that executes them.
 
 For the authoring model, see [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md).
+
+**ShaderPass**
+
+* Languages
+
+  ShaderModule source for each supported backend
+
+* Dependencies
+
+  Module dependencies plus ordered subpasses
+
+* Inputs and outputs
+
+  Original, previous, named targets, and final texture
+
+* Execution
+
+  Executed by Engine ShaderPassRenderer
+
+* Compatibility
+
+  Determined by source language, formats, and pass features
+
+* Cost
+
+  Each subpass is a draw and may require transient or history textures
 
 ## Usage[​](#usage "Direct link to Usage")
 

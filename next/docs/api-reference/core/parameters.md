@@ -8,33 +8,33 @@ All parameters listed in a single table
 
 | Function                    | How to set                     | Description                                                          | Values                            | WebGL counterpart          |
 | --------------------------- | ------------------------------ | -------------------------------------------------------------------- | --------------------------------- | -------------------------- |
-| **Rasterization**           |                                |                                                                      |                                   |                            |
+| **Rasterization**           | —                              | —                                                                    | —                                 | —                          |
 | `cullMode`                  | `RenderPipeline`               | Which face to cull                                                   | **`'none'`**, `'front'`, `'back'` | `gl.cullFace()`            |
 | `frontFace`                 | `RenderPipeline`               | Which triangle winding order is front                                | **`ccw`**, `cw`                   | `gl.frontFace()`           |
-| `viewport`                  | `RenderPass.setParameters()`   | Specifying viewport size                                             |                                   | `gl.viewpot()`             |
-| `scissor`                   | `RenderPass.setParameters()`   | Specifying scissor rect size                                         |                                   | `gl.scissor()`             |
-| `clearColor`                | `RenderPass(colorAttachments)` |                                                                      |                                   | `gl.clearColor()`          |
-| **Blending**                |                                |                                                                      |                                   |                            |
+| `viewport`                  | `RenderPass.setParameters()`   | Specifying viewport size                                             | —                                 | `gl.viewpot()`             |
+| `scissor`                   | `RenderPass.setParameters()`   | Specifying scissor rect size                                         | —                                 | `gl.scissor()`             |
+| `clearColor`                | `RenderPass(colorAttachments)` | —                                                                    | —                                 | `gl.clearColor()`          |
+| **Blending**                | —                              | —                                                                    | —                                 | —                          |
 | `blend`                     | `RenderPipeline(targets)`      | Enabled blending                                                     | `true`, `false`, `undefined`      | `gl.enable(GL.BLEND)`      |
-| `blendConstant`             |                                | Color used by blend factors `constant`, `one-minus-constant`         |                                   |                            |
-| `blendColor`                | `RenderPass.setParameters()`   |                                                                      |                                   |                            |
-| `blendEquation`             | `RenderPipeline(targets})`     |                                                                      |                                   |                            |
-| `blendOperation`            | `RenderPipeline(targets).`     |                                                                      |                                   |                            |
-| `blendSrcFactor`            | `RenderPipeline(targets).`     |                                                                      |                                   |                            |
-| `blendDstFactor`            | `RenderPipeline(targets).`     |                                                                      |                                   |                            |
-| **Depth Buffer**            |                                |                                                                      |                                   |                            |
+| `blendConstant`             | —                              | Color used by blend factors `constant`, `one-minus-constant`         | —                                 | —                          |
+| `blendColor`                | `RenderPass.setParameters()`   | —                                                                    | —                                 | —                          |
+| `blendEquation`             | `RenderPipeline(targets})`     | —                                                                    | —                                 | —                          |
+| `blendOperation`            | `RenderPipeline(targets).`     | —                                                                    | —                                 | —                          |
+| `blendSrcFactor`            | `RenderPipeline(targets).`     | —                                                                    | —                                 | —                          |
+| `blendDstFactor`            | `RenderPipeline(targets).`     | —                                                                    | —                                 | —                          |
+| **Depth Buffer**            | —                              | —                                                                    | —                                 | —                          |
 | `depthBias`                 | `RenderPipeline`               | Small depth offset for polygons                                      | `float`                           | `gl.polygonOffset`         |
 | `depthBiasSlopeScale`       | `RenderPipeline`               | Small depth factor for polygons                                      | `float`                           | `gl.polygonOffset`         |
 | `depthBiasClamp`            | `RenderPipeline`               | Max depth offset for polygons                                        | `float`                           | N/A                        |
-| **Stencil Buffer**          |                                |                                                                      |                                   |                            |
-| `stencilReference`          | `RenderPass.setParameters()`   |                                                                      |                                   |                            |
-| `stencilReadMask`           | `RenderPipeline`               | Binary mask for reading stencil values                               | `number` (**`0xffffffff`**)       |                            |
+| **Stencil Buffer**          | —                              | —                                                                    | —                                 | —                          |
+| `stencilReference`          | `RenderPass.setParameters()`   | —                                                                    | —                                 | —                          |
+| `stencilReadMask`           | `RenderPipeline`               | Binary mask for reading stencil values                               | `number` (**`0xffffffff`**)       | —                          |
 | `stencilWriteMask`          | `RenderPipeline`               | Binary mask for writing stencil values                               | `number` (**`0xffffffff`**)       | `gl.frontFace`             |
 | `stencilCompare`            | `RenderPipeline`               | How the mask is compared                                             | **`always`**, `not-equal`, ...    | `gl.stencilFunc`           |
 | `stencilPassOperation`      | `RenderPipeline`               | Operation on stencil buffer when test passes                         | **`'keep'`**                      | `gl.stencilOp`             |
 | `stencilDepthFailOperation` | `RenderPipeline`               | Operation on stencil buffer when depth test fails                    | **`'keep'`**                      | `gl.stencilOp`             |
 | `stencilFailOperation`      | `RenderPipeline`               | Operation on stencil buffer when test fails                          | **`'keep'`**                      | `gl.stencilOp`             |
-| **Extensions**              |                                |                                                                      |                                   |                            |
+| **Extensions**              | —                              | —                                                                    | —                                 | —                          |
 | `unclippedDepth`            | `RenderPipeline`               | `depth-clip-control`: Disable depth value clipping.                  | `boolean`                         | `WEBGL_depth_clamp`        |
 | `provokingVertex`           | `RenderPipeline`               | `provoking-vertex-webgl`: Vertex used for flat shading               | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
 | `polygonMode`               | `RenderPipeline`               | `polygon-mode-webgl`: Enable wire frame rendering.                   | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
@@ -59,7 +59,7 @@ The only parameters that can be changed freely at any time (i.e. between each dr
 | `viewport`         | Specifying viewport size                                      | `number` (**`0xffffffff`**)      |
 | `scissor`          | Specifying scissor region                                     | `number` (**`0xffffffff`**)      |
 | `blendConstant`    | Sets color referenced by pipeline targets using blend factors | `constant`, `one-minus-constant` |
-| `stencilReference` |                                                               |                                  |
+| `stencilReference` | —                                                             | —                                |
 
 These parameters can be set on the current `RenderPass`, and these parameters can be changed at any time.
 
@@ -249,9 +249,9 @@ After the GPU completes stencil tests, depth tests and writes are performed. The
 
 | Function                 | Values           | Description |
 | ------------------------ | ---------------- | ----------- |
-| `sampleCount`            | **`1`**          |             |
-| `sampleMask`             | **`0xFFFFFFFF`** |             |
-| `alphaToCoverageEnabled` | **`false`**      |             |
+| `sampleCount`            | **`1`**          | —           |
+| `sampleMask`             | **`0xFFFFFFFF`** | —           |
+| `alphaToCoverageEnabled` | **`false`**      | —           |
 
 ### Stencil Test[​](#stencil-test "Direct link to Stencil Test")
 
@@ -262,9 +262,9 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 | `stencilReadMask`           | `number`           | (**`0xffffffff`**) | Binary mask for reading stencil values |
 | `stencilWriteMask`          | `number`           | (**`0xffffffff`**) | Binary mask for writing stencil values |
 | `stencilCompare`            | `StencilCompare`   | **`always`**       | How the mask is compared               |
-| `stencilPassOperation`      | `StencilOperation` | **`'keep'`**       |                                        |
-| `stencilDepthFailOperation` | `StencilOperation` | **`'keep'`**       |                                        |
-| `stencilFailOperation`      | `StencilOperation` | **`'keep'`**       |                                        |
+| `stencilPassOperation`      | `StencilOperation` | **`'keep'`**       | —                                      |
+| `stencilDepthFailOperation` | `StencilOperation` | **`'keep'`**       | —                                      |
+| `stencilFailOperation`      | `StencilOperation` | **`'keep'`**       | —                                      |
 
 | `StencilCompare` | Description                              |
 | ---------------- | ---------------------------------------- |
@@ -305,14 +305,14 @@ A `RenderPipeline` requires information about each color attachments:
 
 | Target setting         | Type            | Default   | Description                                                |
 | ---------------------- | --------------- | --------- | ---------------------------------------------------------- |
-| `format`               | `TextureFormat` | N/A       |                                                            |
+| `format`               | `TextureFormat` | N/A       | —                                                          |
 | `writeMask?`           | `number`        | ALL = 0xF | RED = 0x1, GREEN = 0x2, BLUE = 0x4, ALPHA = 0x8, ALL = 0xF |
-| `colorBlendOperation?` | BlendOperation  | `'add'`   |                                                            |
-| `colorBlendSrcFactor?` | BlendEquation   | `'one'`   |                                                            |
-| `colorBlendDstFactor?` | BlendEquation   | `'zero'`  |                                                            |
-| `alphaBlendOperation?` | BlendOperation  | `'add'`   |                                                            |
-| `alphaBlendSrcFactor?` | BlendEquation   | `'one'`   |                                                            |
-| `alphaBlendDstFactor?` | BlendEquation   | `'zero'`  |                                                            |
+| `colorBlendOperation?` | BlendOperation  | `'add'`   | —                                                          |
+| `colorBlendSrcFactor?` | BlendEquation   | `'one'`   | —                                                          |
+| `colorBlendDstFactor?` | BlendEquation   | `'zero'`  | —                                                          |
+| `alphaBlendOperation?` | BlendOperation  | `'add'`   | —                                                          |
+| `alphaBlendSrcFactor?` | BlendEquation   | `'one'`   | —                                                          |
+| `alphaBlendDstFactor?` | BlendEquation   | `'zero'`  | —                                                          |
 
 ### Blending[​](#blending "Direct link to Blending")
 
@@ -329,6 +329,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 * The two colors are first multiplied with chosen factors (controlled by "blend function" parameters).
 * The two colors are then either added, subtracted, or the min or max color is used per the "blend operation" parameter.
@@ -353,16 +355,16 @@ The following link provides more information on [color blending](https://csaweso
 
 | BlendFunction           | All colors multiplied with                              | Comment                                  |
 | ----------------------- | ------------------------------------------------------- | ---------------------------------------- |
-| `'zero'`                | `[0,0,0,0]`                                             |                                          |
-| `'one'`                 | `[1,1,1,1]`                                             |                                          |
-| `'src'`                 | RBGAsrc                                                 |                                          |
-| `'one-minus-src'`       | 1 - RGBAsrc                                             |                                          |
-| `'src-alpha'`           | AAAAsrc                                                 |                                          |
-| `'one-minus-src-alpha'` | 1 - AAAAsrc                                             |                                          |
-| `'dst'`                 | RBGAdst                                                 |                                          |
-| `'one-minus-dst'`       | 1 - RBGAdst                                             |                                          |
-| `'dst-alpha'`           | AAAAdest                                                |                                          |
-| `'one-minus-dst-alpha'` | 1 - AAAAdst                                             |                                          |
-| `'src-alpha-saturated'` | \[min(AS, 1 - AD), min(AS, 1 - AD), min(AS, 1 - AD), 1] |                                          |
+| `'zero'`                | `[0,0,0,0]`                                             | —                                        |
+| `'one'`                 | `[1,1,1,1]`                                             | —                                        |
+| `'src'`                 | RBGAsrc                                                 | —                                        |
+| `'one-minus-src'`       | 1 - RGBAsrc                                             | —                                        |
+| `'src-alpha'`           | AAAAsrc                                                 | —                                        |
+| `'one-minus-src-alpha'` | 1 - AAAAsrc                                             | —                                        |
+| `'dst'`                 | RBGAdst                                                 | —                                        |
+| `'one-minus-dst'`       | 1 - RBGAdst                                             | —                                        |
+| `'dst-alpha'`           | AAAAdest                                                | —                                        |
+| `'one-minus-dst-alpha'` | 1 - AAAAdst                                             | —                                        |
+| `'src-alpha-saturated'` | \[min(AS, 1 - AD), min(AS, 1 - AD), min(AS, 1 - AD), 1] | —                                        |
 | `'constant'`            | RGBAconstant                                            | constant set with `blendColor` parameter |
 | `'one-minus-constant'`  | 1- RGBAconstant                                         | constant set with `blendColor` parameter |

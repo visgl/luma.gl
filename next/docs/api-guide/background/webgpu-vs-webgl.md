@@ -1,6 +1,6 @@
 # WebGPU vs WebGL
 
-[A Tale of Three APIs](https://luma.gl/next/docs/api-guide.md)[Design Philosophy](https://luma.gl/next/docs/api-guide/background/api-design.md)[Learning Resources](https://luma.gl/next/docs/api-guide/background/learning-resources.md)[WebGPU vs WebGL](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md)
+[Choose a layer](https://luma.gl/next/docs/api-guide.md)[How layers fit](https://luma.gl/next/docs/api-guide/luma-layers.md)[Design philosophy](https://luma.gl/next/docs/api-guide/background/api-design.md)[Learning resources](https://luma.gl/next/docs/api-guide/background/learning-resources.md)[WebGPU vs WebGL](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md)
 
 Browsers expose two GPU APIs that matter to luma.gl applications: **WebGPU** and **WebGL 2**. WebGPU is the modern API and the direction browser GPU programming is moving. WebGL 2 is the older, widely deployed compatibility path. luma.gl supports both through the same `Device` API so applications can adopt WebGPU without giving up WebGL reach where it still matters.
 

@@ -5,7 +5,7 @@
 import type {Bindings, BindingsByGroup, RenderBundle, RenderPass} from '@luma.gl/core';
 import {Buffer, Device, normalizeBindingsByGroup} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Model, OrbitControls} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   ColumnPanel,
@@ -26,6 +26,9 @@ const DRAW_COUNT_OPTIONS = [1000, DEFAULT_DRAW_COUNT, 10000];
 const DRAW_COUNT_OPTION_SET = new Set(DRAW_COUNT_OPTIONS);
 const FRAME_UNIFORM_FLOAT_COUNT = 32;
 const OBJECT_UNIFORM_FLOAT_COUNT = 20;
+const CAMERA_DISTANCE = Math.hypot(38, 12);
+const CAMERA_PITCH = Math.atan2(12, 38);
+const CAMERA_YAW = Math.PI / 2;
 
 const WGSL_SHADER = /* wgsl */ `\
 struct FrameUniforms {
@@ -96,6 +99,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private cpuTimeElement: HTMLElement | null = null;
   private drawCountElement: HTMLElement | null = null;
   private modeElement: HTMLElement | null = null;
+  private orbitControls: OrbitControls | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -136,8 +140,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.panels.mount();
   }
 
-  onRender({animationLoop, aspect, device, tick}: AnimationProps): void {
-    this.updateFrameUniforms(aspect, tick);
+  override async onInitialize({canvas}: AnimationProps): Promise<void> {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.orbitControls = new OrbitControls(canvas, {
+        yaw: CAMERA_YAW,
+        pitch: CAMERA_PITCH,
+        distance: CAMERA_DISTANCE,
+        minDistance: 12,
+        maxDistance: 100,
+        minPitch: -1.2,
+        maxPitch: 1.2,
+        autoRotate: true,
+        autoRotateSpeed: -0.18
+      });
+    }
+  }
+
+  onRender({animationLoop, aspect, device, time}: AnimationProps): void {
+    this.orbitControls?.update(time);
+    this.updateFrameUniforms(aspect, time);
 
     const renderPass = device.beginRenderPass({
       clearColor: [0.01, 0.01, 0.015, 1],
@@ -154,6 +175,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(): void {
+    this.orbitControls?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.renderBundle?.destroy();
@@ -227,13 +249,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  private updateFrameUniforms(aspect: number, tick: number): void {
-    const orbitAngle = tick * 0.003;
-    const eye: [number, number, number] = [
+  private updateFrameUniforms(aspect: number, timeMilliseconds: number): void {
+    const orbitAngle = timeMilliseconds * 0.00018;
+    const eye = this.orbitControls?.getEyePosition() ?? [
       Math.cos(orbitAngle) * 38,
-      12 + Math.sin(orbitAngle * 0.7) * 4,
+      12,
       Math.sin(orbitAngle) * 38
     ];
+    eye[1] += Math.sin(orbitAngle * 0.7) * 4;
     const viewMatrix = new Matrix4().lookAt({eye, center: [0, 0, 0], up: [0, 1, 0]});
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(52),

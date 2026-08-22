@@ -1,6 +1,6 @@
 # Materials
 
-[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Shader Inputs](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
+[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Inputs workflow](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
 
 In luma.gl, a `Material` describes reusable surface state for one shading model or material schema. A `MaterialFactory` defines that schema and creates compatible `Material` instances that can be attached to `Model`s or shared across many `ModelNode`s in a scenegraph.
 

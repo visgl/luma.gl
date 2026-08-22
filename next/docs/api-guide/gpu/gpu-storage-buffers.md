@@ -112,7 +112,7 @@ That supports patterns such as:
 * particle positions and velocities updated in place by compute;
 * batch-preserving compute dispatch through `GPUTableComputation`.
 
-See [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md) for the full columnar workflow.
+See [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md) and [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md) for the full columnar workflow.
 
 ## Compute Pattern[​](#compute-pattern "Direct link to Compute Pattern")
 
@@ -164,4 +164,4 @@ Single-buffer vectors bind directly. Aggregate multi-batch vectors are rebound b
 * [Tabular Data in WGSL](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 * [GPU Tables](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md)
 * [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)
-* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)
+* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)

@@ -1,10 +1,10 @@
 # Shader Module Conventions
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
 
 caution
 
-This describes informal conventions that luma.gl applies to its shaders. It is still a work in progress.
+These are luma.gl conventions rather than WebGPU or WebGL requirements. Existing built-in modules follow them, but applications must still declare and bind every group required by their shaders.
 
 ## Uniform Blocks[​](#uniform-blocks "Direct link to Uniform Blocks")
 

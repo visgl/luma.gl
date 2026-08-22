@@ -1,8 +1,38 @@
 # Buffer
 
+[Resource](https://luma.gl/next/docs/api-reference/core/resources/resource.md)[Buffer](https://luma.gl/next/docs/api-reference/core/resources/buffer.md)[CommandBuffer](https://luma.gl/next/docs/api-reference/core/resources/command-buffer.md)[QuerySet](https://luma.gl/next/docs/api-reference/core/resources/query-set.md)[Fence](https://luma.gl/next/docs/api-reference/core/resources/fence.md)[PipelineLayout](https://luma.gl/next/docs/api-reference/core/resources/pipeline-layout.md)
+
 Holds a block of GPU memory. The length of a buffer cannot be changed after creation.
 
 See also [Using GPU Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-buffers.md) and [GPU Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md) for when buffer operations should use direct resource methods versus explicit command encoding.
+
+**Buffer**
+
+* Creation
+
+  Device.createBuffer() with size or initial data and every required usage flag
+
+* Ownership
+
+  Application-owned; call destroy() when the allocation is no longer needed
+
+* Lifecycle
+
+  Create at fixed length, write or copy, bind, submit, reuse, then destroy
+
+* Backend support
+
+  Portable; mapping and valid usage combinations follow backend limits
+
+* Validation
+
+  Size, alignment, bounds, and usage must match each command and binding
+
+* Cost
+
+  Uploads and especially readbacks synchronize data movement; keep repeated work on the GPU
+
+:::warning Common mistake Declare the buffer for every way it will be used. A storage buffer that later becomes an indirect argument or copy source needs those usage flags when it is created. :::
 
 ## Types[​](#types "Direct link to Types")
 
@@ -28,8 +58,8 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 | `Buffer.VERTEX`        | 0x0020 | A vertex buffer (a binary column)                            |
 | `Buffer.UNIFORM`       | 0x0040 | A uniform buffer                                             |
 | `Buffer.STORAGE`       | 0x0080 | A storage buffer                                             |
-| `Buffer.INDIRECT`      | 0x0100 |                                                              |
-| `Buffer.QUERY_RESOLVE` | 0x0200 |                                                              |
+| `Buffer.INDIRECT`      | 0x0100 | —                                                            |
+| `Buffer.QUERY_RESOLVE` | 0x0200 | —                                                            |
 | `Buffer.MAP_READ`      | 0x01   | Whether the buffer can be mapped for read                    |
 | `Buffer.MAP_WRITE`     | 0x02   | Whether the buffer can be mapped for write                   |
 | `Buffer.COPY_SRC`      | 0x0004 | Supports `commandEncoder.copyBufferTo...`                    |

@@ -2,18 +2,56 @@
 
 [Texture](https://luma.gl/next/docs/api-reference/core/resources/texture.md)[TextureView](https://luma.gl/next/docs/api-reference/core/resources/texture-view.md)[Sampler](https://luma.gl/next/docs/api-reference/core/resources/sampler.md)[ExternalTexture](https://luma.gl/next/docs/api-reference/core/resources/external-texture.md)
 
-A `Texture` are GPU objects that contain one or more images that all have the same image format, that can be accessed from shaders.
+A `Texture` is a GPU resource containing one or more images with a shared pixel format. Shaders may sample it, read or write it as storage, or render into it when its declared usage allows that work.
 
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md) to make sure you have a full picture.
 
 For upload and readback strategy, also see [GPU Commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md).
+
+**Texture**
+
+* Creation
+
+  Device.createTexture() with dimensions, format, usage, mip levels, and samples
+
+* Ownership
+
+  Application-owned texture; views and samplers have their own lifecycles
+
+* Lifecycle
+
+  Create, upload or render, create views, bind, reuse, then destroy
+
+* Backend support
+
+  Formats, storage access, multisampling, and dimensions are capability-dependent
+
+* Validation
+
+  Format, usage, dimensions, row alignment, and view ranges must match the operation
+
+* Cost
+
+  Allocation, copies, mip generation, and render-target changes can be expensive
+
+:::warning Common mistake Do not recreate a texture every frame when only its contents changed. Reuse it and upload or render new content; recreate only when dimensions, format, usage, mip count, or sample count changes. :::
 
 ## Usage[​](#usage "Direct link to Usage")
 
 Creating a texture
 
 ```
-const texture = device.createTexture({sampler: {addressModeU: 'clamp-to-edge'});
+const texture = device.createTexture({
+
+  width: 256,
+
+  height: 256,
+
+  format: 'rgba8unorm',
+
+  sampler: {addressModeU: 'clamp-to-edge'}
+
+});
 ```
 
 Setting texture data from an image
@@ -34,21 +72,23 @@ const imageData = new ImageData(data, width, height);
 texture.copyFromExternalImage({source: imageData});
 ```
 
-Setting texture data for non-8-bit-per-channel bit depths, texture arrays etc.
-
-caution
-
-This is still WIP
+For typed arrays, non-8-bit channel formats, array layers, and subregions, use `writeData()` with an explicit destination and source layout:
 
 ```
-const commandEncoder = device.createCommandEncoder();
+texture.writeData({
 
-const buffer = device.createBuffer({usage: , byteLength});
+  data: floatPixels,
 
-const texture = device.createTexture({ })
+  width,
 
-commandEncoder.end();
+  height,
+
+  bytesPerRow: width * 16
+
+});
 ```
+
+The source layout must match the texture format and selected extent. See [`writeData()`](#writedata) for WebGPU row-layout rules and WebGL emulation behavior.
 
 Reading from Textures In Shaders
 
@@ -160,13 +200,11 @@ The example below uploads procedural volume data to a `3d` texture and samples t
 
 InfoSource
 
-Volumetric 3D noise visualized using a **3D texture**.
-
-Uses the luma.gl `Texture3D` class.
-
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## ExternalImage[​](#externalimage "Direct link to ExternalImage")
 

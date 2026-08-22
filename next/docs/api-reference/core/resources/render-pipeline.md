@@ -4,6 +4,32 @@
 
 A `RenderPipeline` combines a vertex shader, a fragment shader, a [`ShaderLayout`](https://luma.gl/next/docs/api-reference/core/shader-layout.md), and fixed render state into a reusable, immutable pipeline descriptor. Select it on a [`RenderPass`](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md) before drawing.
 
+**RenderPipeline**
+
+* Creation
+
+  Device.createRenderPipeline() or PipelineFactory
+
+* Ownership
+
+  Application-owned; factories may cache shared instances
+
+* Usage
+
+  Select on RenderPass, bind resources, then draw
+
+* Lifecycle
+
+  Immutable pipeline state; reuse across frames
+
+* Backend support
+
+  Portable with backend-compatible shaders and features
+
+* Cost
+
+  Pipeline creation can be expensive; never recreate it per frame
+
 ## Deprecated pipeline-owned bindings[​](#deprecated-pipeline-owned-bindings "Direct link to Deprecated pipeline-owned bindings")
 
 `RenderPipelineProps.bindings`, `RenderPipelineProps.bindGroups`, `pipeline.setBindings()`, and `pipeline.draw()` remain available for compatibility, but are deprecated and will be removed in the next major release. New code sets bindings and issues draws on `RenderPass`.

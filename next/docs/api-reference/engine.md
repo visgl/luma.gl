@@ -1,29 +1,121 @@
-# Overview
+# Engine
 
-The `@luma.gl/engine` module contains higher-level rendering and application framework classes built on top of `@luma.gl/core`.
+[Overview](https://luma.gl/next/docs/api-reference/engine.md)[Programming guide](https://luma.gl/next/docs/api-guide/engine.md)[Cookbook](https://luma.gl/next/docs/api-guide/engine/cookbook.md)
 
-Use the engine module when you want luma.gl to manage the common rendering workflow for you: creating pipelines from shaders, binding buffers and textures, handling redraw state, and issuing draw calls through a small set of reusable classes.
+## Overview[​](#overview "Direct link to Overview")
 
-## Start Here[​](#start-here "Direct link to Start Here")
+`@luma.gl/engine` turns common rendering patterns into reusable classes. `Geometry` describes CPU-side attributes, `ShaderInputs` manages shader-module values, and `Model` connects them to Core resources, pipelines, bindings, and draw calls while tracking redraw needs. The generated Engine API index at `/docs/api-reference/generated/engine` contains every public value and TypeScript type with source links.
 
-* [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) is the central rendering class and the page most users are looking for when they want the main luma.gl drawing API.
-* [`Materials`](https://luma.gl/next/docs/api-guide/engine/materials.md) explains what `Material` and `MaterialFactory` represent in the engine layer.
-* [`DynamicBuffer`](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md), [`DynamicTexture`](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md), and [`VideoTexture`](https://luma.gl/next/docs/api-reference/engine/video-texture.md) provide stable engine-level wrappers for GPU resources and live texture sources that can be replaced or initialized over time. Experimental v10 [`@luma.gl/experimental`](https://luma.gl/next/docs/api-reference/experimental.md) WebXR helpers use the same binding-source path for WebXR Raw Camera Access without making WebXR part of the engine module.
-* [`ClipSpace`](https://luma.gl/next/docs/api-reference/engine/clip-space.md) and [`BackgroundTextureModel`](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md) provide ready-made fullscreen rendering helpers.
-* [`AnimationLoop`](https://luma.gl/next/docs/api-reference/engine/animation-loop.md) manages per-frame rendering and animation state.
-* [`OrbitControls`](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md) adds pointer-driven camera orbit, wheel zoom, configurable pitch and distance limits, and optional automatic rotation to an HTML canvas.
-* [`AnimationMixer`, `AnimationClip`, and `AnimationTrack`](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md) provide reusable keyframe playback, looping, interpolation, blending, and crossfades. The [animation programming guide](https://luma.gl/next/docs/api-guide/engine/animation.md) covers complete playback examples.
-* [`Geometry`](https://luma.gl/next/docs/api-reference/engine/geometry.md) and [`Geometries`](https://luma.gl/next/docs/api-reference/engine/geometry/geometries.md) provide reusable mesh and attribute helpers.
-* [`Morph-target helpers`](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md) apply weighted vertex deformation and update existing model buffers without rebuilding rendering pipelines.
-* [`GPUGeometry`](https://luma.gl/next/docs/api-reference/engine/geometry/gpu-geometry.md) describes already-uploaded geometry buffers.
-* [`Scenegraph`](https://luma.gl/next/docs/api-guide/engine/scenegraph.md), [`GroupNode`](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md), and [`ModelNode`](https://luma.gl/next/docs/api-reference/engine/scenegraph/model-node.md) cover scenegraph organization.
-* [`PickingManager`](https://luma.gl/next/docs/api-reference/engine/picking-manager.md) handles object picking and highlight state for models that use the engine picking shader modules.
-* [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md), [`BufferTransform`](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md), and [`TextureTransform`](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md) cover engine-level compute workflows.
-* [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md) applies shader passes to textures for postprocessing pipelines.
+## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-## Remarks[​](#remarks "Direct link to Remarks")
+Use Engine for most rendered applications. Drop to [Core](https://luma.gl/next/docs/api-reference/core.md) when you need exact resource or command control. Use [Shadertools](https://luma.gl/next/docs/api-reference/shadertools.md) to make shader behavior reusable. Add GPU Core only when work becomes a scheduled GPU dataflow; a single `Model` does not need a graph.
 
-* The engine classes are built on top of the abstract API in `@luma.gl/core` and are portable between WebGPU and WebGL backends.
-* If you are coming from older luma.gl docs and are looking for `Program`, the current v9 API usually maps that workflow to [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) for higher-level rendering or [`RenderPipeline`](https://luma.gl/next/docs/api-reference/core/resources/render-pipeline.md) for lower-level pipeline control.
-* If you specifically need legacy `Program` documentation, use the [porting guide](https://luma.gl/next/docs/legacy/porting-guide) and other legacy docs rather than treating it as the primary v9 API surface.
-* If you are coming from older docs looking for `Transform`, the current v9 engine APIs are [`BufferTransform`](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md), [`TextureTransform`](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md), and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md), depending on whether you are targeting WebGL transform feedback, texture-based transforms, or WebGPU compute passes.
+## Live example[​](#live-example "Direct link to Live example")
+
+This portable example maps the Engine objects to the Core work they manage.
+
+* Engine
+
+  Geometry data + ShaderInputs-compatible shaders + Model + redraw lifecycle
+
+* Core equivalents
+
+  Buffer + layouts/bindings + RenderPipeline + RenderPass
+
+* Backend
+
+  best-available with WGSL and GLSL shader paths
+
+* Lifecycle
+
+  Create once, draw on demand, destroy on finalize
+
+[Open full page](https://luma.gl/next/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry)
+
+Loading interactive example…
+
+## Core concepts[​](#core-concepts "Direct link to Core concepts")
+
+* resourceA GPU object or logical value that work reads or writes, such as a buffer, texture, pipeline, or graph allocation.
+
+  A GPU object or logical value that work reads or writes, such as a buffer, texture, pipeline, or graph allocation.
+
+* bindingThe connection that makes a buffer, texture, sampler, or uniform block available to shader code.
+
+  The connection that makes a buffer, texture, sampler, or uniform block available to shader code.
+
+* pipelineCompiled shader stages plus fixed GPU state used for rendering or compute work.
+
+  Compiled shader stages plus fixed GPU state used for rendering or compute work.
+
+* passA related sequence of render or compute commands recorded against a defined set of outputs.
+
+  A related sequence of render or compute commands recorded against a defined set of outputs.
+
+* redrawA request to render another frame because visible state changed; it is not necessarily a continuous loop.
+
+  A request to render another frame because visible state changed; it is not necessarily a continuous loop.
+
+* ownershipThe responsibility for destroying a GPU resource and deciding how long it remains valid.
+
+  The responsibility for destroying a GPU resource and deciding how long it remains valid.
+
+The learning spine is: geometry, shader inputs, models, redraw/frame lifecycle, dynamic resources, interaction and picking, scenegraphs, animation, compute helpers, and postprocessing. Engine objects wrap Core resources but do not make ownership disappear.
+
+| Engine concept   | Core work it manages                    |
+| ---------------- | --------------------------------------- |
+| Geometry         | Buffer data + BufferLayout              |
+| ShaderInputs     | Bindings + uniform/storage buffers      |
+| Model            | Shaders + RenderPipeline + VertexArray  |
+| model.draw(pass) | Pass bindings + draw command            |
+| needsRedraw()    | Whether another submission is necessary |
+
+## Feature card[​](#feature-card "Direct link to Feature card")
+
+**Geometry**Keep CPU attributes and shader-facing GPU layouts connected without hiding either side.
+
+**Model**Own the shaders, pipeline, bindings, geometry, and draw contract for one rendered object.
+
+**Shader inputs**Update module props and bindings through one structured interface.
+
+**Demand-driven redraw**Render when visible state changes instead of continuously burning GPU time.
+
+**Interaction and scenes**Compose picking, controls, hierarchy, and reusable scenegraph nodes.
+
+**Animation, compute, and passes**Add time-varying state, GPU transforms, and postprocessing with focused helpers.
+
+## Workflows[​](#workflows "Direct link to Workflows")
+
+1. [Learn the workflow](https://luma.gl/next/docs/api-guide/engine.md)Build the mental model before choosing classes.
+2. [Copy a focused recipe](https://luma.gl/next/docs/api-guide/engine/cookbook.md)Start from a complete, small task.
+3. [Check the complete API](https://luma.gl/next/docs/api-reference/generated/engine)Confirm exact types, defaults, and ownership.
+
+The [Engine cookbook](https://luma.gl/next/docs/api-guide/engine/cookbook.md) covers rendering, updates, on-demand animation, picking and highlighting, scenes, and shader passes.
+
+## API index[​](#api-index "Direct link to API index")
+
+Reusable geometry, shader inputs, models, redraw state, interaction, animation, compute, and postprocessing.
+
+* Geometry
+* Shader inputs
+* Model
+* Redraw lifecycle
+* Picking and scenes
+* Animation, compute, and passes
+
+The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/next/docs/api-reference/generated/engine) is the exhaustive, source-linked inventory of every public value and TypeScript export. The curated pages explain how the related families fit together.
+
+## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
+
+* Engine is portable where its underlying Core resources and shaders are portable.
+* Provide WGSL and GLSL when the same application must run on WebGPU and WebGL.
+* A redraw flag avoids unnecessary rendering only when the application honors it.
+* Experimental helpers are labeled in their individual references and may have narrower backend support.
+
+## Related modules[​](#related-modules "Direct link to Related modules")
+
+[Shadertools](https://luma.gl/next/docs/api-reference/shadertools.md)[Engine](https://luma.gl/next/docs/api-reference/engine.md)[Core](https://luma.gl/next/docs/api-reference/core.md)[GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
+
+* Use [Core](https://luma.gl/next/docs/api-reference/core.md) for direct resource and command control.
+* Use [Shadertools](https://luma.gl/next/docs/api-reference/shadertools.md) for modules, hooks, and plugins.
+* Use [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md) for scheduled multi-stage GPU work.

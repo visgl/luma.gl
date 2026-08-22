@@ -2,7 +2,7 @@
 
 [Texture](https://luma.gl/next/docs/api-reference/core/resources/texture.md)[TextureView](https://luma.gl/next/docs/api-reference/core/resources/texture-view.md)[Sampler](https://luma.gl/next/docs/api-reference/core/resources/sampler.md)[ExternalTexture](https://luma.gl/next/docs/api-reference/core/resources/external-texture.md)
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 `ExternalTexture` is the low-level concrete WebGPU `GPUExternalTexture` binding for browser-owned texture data. It is a one-shot resource, not the engine-level live video helper. Use [`VideoTexture`](https://luma.gl/next/docs/api-reference/engine/video-texture.md) when a model or material should follow a playing video across frames.
 

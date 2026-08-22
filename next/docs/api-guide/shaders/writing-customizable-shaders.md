@@ -1,6 +1,6 @@
 # Writing Customizable Shaders
 
-[Overview](https://luma.gl/next/docs/api-guide/shaders.md)[Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[GPU Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)[Rendering Techniques](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md)[Transparency](https://luma.gl/next/docs/api-guide/shaders/transparency.md)[Glass Effects](https://luma.gl/next/docs/api-guide/shaders/glass-effects.md)
+[Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 Customizable shaders keep one readable base shader while allowing optional features to add behavior. The base shader should own the pipeline interface and main flow. Attached code should use a small, named extension surface rather than copying or searching arbitrary shader text.
 

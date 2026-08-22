@@ -1,6 +1,6 @@
 # SnapshotTestRunner
 
-[Overview](https://luma.gl/next/docs/api-reference/test-utils.md)[SnapshotTestRunner](https://luma.gl/next/docs/api-reference/test-utils/snapshot-test-runner.md)
+[Overview](https://luma.gl/next/docs/api-reference/test-utils.md)[SnapshotTestRunner](https://luma.gl/next/docs/api-reference/test-utils/snapshot-test-runner.md)[Testing guide](https://luma.gl/next/docs/developer-guide/testing.md)
 
 Client-side utility for browser-based WebGL render tests.
 

@@ -1,0 +1,1 @@
+import{n as e}from"./globals-DcOAZo2r.js";function t(t,n){return e(t>=0),e(n>0),t+(n-1)&~(n-1)}function n(e,n,r){let i;if(e instanceof ArrayBuffer)i=new Uint8Array(e);else{let t=e.byteOffset,n=e.byteLength;i=new Uint8Array(e.buffer||e.arrayBuffer,t,n)}return n.set(i,r),r+t(i.byteLength,4)}export{t as n,n as t};

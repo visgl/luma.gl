@@ -131,9 +131,11 @@ A single device can present into multiple canvases. On WebGPU each canvas is bac
 
 Initializing device...
 
+Scroll page · Ctrl/⌘ + scroll to interact
+
 ### Additional canvas contexts[​](#additional-canvas-contexts "Direct link to Additional canvas contexts")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 Render into an additional canvas context:
 

@@ -1,6 +1,6 @@
 # gpuPicking
 
-![From v9.1](https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square)
+From v9.1
 
 Provides support for GPU-based picking.
 

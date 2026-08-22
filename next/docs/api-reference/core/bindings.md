@@ -1,6 +1,6 @@
 # Bindings
 
-[ShaderLayout](https://luma.gl/next/docs/api-reference/core/shader-layout.md)[Bindings](https://luma.gl/next/docs/api-reference/core/bindings.md)[ShaderBlockLayout](https://luma.gl/next/docs/api-reference/core/shader-block-layout.md)[BufferLayout](https://luma.gl/next/docs/api-reference/core/buffer-layout.md)[UniformStore](https://luma.gl/next/docs/api-reference/core/uniform-store.md)
+[ShaderLayout](https://luma.gl/next/docs/api-reference/core/shader-layout.md)[Bindings](https://luma.gl/next/docs/api-reference/core/bindings.md)[Block layout](https://luma.gl/next/docs/api-reference/core/shader-block-layout.md)[BufferLayout](https://luma.gl/next/docs/api-reference/core/buffer-layout.md)[UniformStore](https://luma.gl/next/docs/api-reference/core/uniform-store.md)
 
 Bindings are the GPU resources that shader code accesses through declared binding points:
 

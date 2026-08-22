@@ -9,7 +9,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@deck.gl-community/luspatial": "workspace:*",
+    "@deck.gl-community/gpu-layers": "workspace:*",
     "@deck.gl/core": "9.3.4",
     "@luma.gl/core": "9.4.0-alpha.4",
     "@luma.gl/engine": "9.4.0-alpha.4",

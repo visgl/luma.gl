@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, Framebuffer, NumberArray, Texture, VariableShaderType} from '@luma.gl/core';
+import type {
+  Buffer,
+  Device,
+  Framebuffer,
+  NumberArray,
+  Texture,
+  VariableShaderType
+} from '@luma.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Geometry, Model, OrbitControls} from '@luma.gl/engine';
@@ -10,7 +17,11 @@ import {
   WebXRAnimationFrameProvider,
   WebXRCameraTexture,
   WebXRManager,
-  type WebXRFrameState
+  getWebXRInputRay,
+  getWebXRInputRayPlaneIntersection,
+  type WebXRFrameState,
+  type WebXRInputState,
+  type WebXRManagerProps
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 
@@ -32,6 +43,16 @@ type AppUniforms = {
   modelViewProjectionMatrix: NumberArray;
   time: number;
   cameraMix: number;
+};
+
+type ControllerTargetUniforms = {
+  uniformStore: UniformStore<{app: AppUniforms}>;
+  uniformBuffer: Buffer;
+};
+
+type PreparedControllerTarget = {
+  rayUniformBuffer: Buffer;
+  reticleUniformBuffer: Buffer | null;
 };
 
 const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
@@ -240,6 +261,83 @@ void main(void) {
 }
 `;
 
+const CONTROLLER_RAY_WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  time: f32,
+  cameraMix: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) rayDepth: f32,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
+  outputs.rayDepth = clamp(-inputs.positions.z / 3.2, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let idleColor = vec3<f32>(0.05, 0.92, 1.0);
+  let activeColor = vec3<f32>(1.0, 0.36, 0.18);
+  let color = mix(idleColor, activeColor, app.cameraMix);
+  let alpha = mix(0.86, 0.28, inputs.rayDepth);
+  return vec4<f32>(color * (1.15 - inputs.rayDepth * 0.38), alpha);
+}
+`;
+
+const CONTROLLER_RAY_VS_GLSL = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+out float vRayDepth;
+
+void main(void) {
+  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  vRayDepth = clamp(-positions.z / 3.2, 0.0, 1.0);
+}
+`;
+
+const CONTROLLER_RAY_FS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+in float vRayDepth;
+out vec4 fragColor;
+
+void main(void) {
+  vec3 idleColor = vec3(0.05, 0.92, 1.0);
+  vec3 activeColor = vec3(1.0, 0.36, 0.18);
+  vec3 color = mix(idleColor, activeColor, app.cameraMix);
+  float alpha = mix(0.86, 0.28, vRayDepth);
+  fragColor = vec4(color * (1.15 - vRayDepth * 0.38), alpha);
+}
+`;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
   private static readonly currentListeners = new Set<() => void>();
@@ -263,6 +361,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   Fly through a stereoscopic field of animated prism shards. WebGPU renders directly into
   native WebXR projection layers when supported. WebGL2 remains available on older XR
   browsers and can fold raw AR camera imagery into the portal when access is granted.
+  Desktop testing works with the
+  <a href="https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1" target="_blank" rel="noreferrer">Immersive Web Emulator Chrome extension</a>.
   </p>
   `;
 
@@ -271,9 +371,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly uniformStore: UniformStore<{app: AppUniforms}>;
   readonly fallbackTexture: Texture;
   readonly model: Model;
+  readonly controllerRayModel: Model;
+  readonly controllerReticleModel: Model;
   readonly webXRManager: WebXRManager;
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
+  readonly controllerRayMatrix = new Matrix4();
+  readonly controllerReticleMatrix = new Matrix4();
+  readonly xrSceneOffset: [number, number, number] = [0, 0, 0];
   readonly viewMatrix = new Matrix4().lookAt({
     eye: [0.32, 0.24, 4.4],
     center: CAMERA_TARGET
@@ -285,8 +390,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   xrSession: XRSession | null = null;
   xrSessionMode: ImmersiveXRSessionMode | null = null;
   private _isFinalized = false;
+  private _floorHitByInputSource = new Map<XRInputSource, [number, number, number]>();
+  private _controllerRayUniforms: ControllerTargetUniforms[] = [];
+  private _controllerReticleUniforms: ControllerTargetUniforms[] = [];
   private _xrSessionEndListener = () => this._clearXRSession();
-  private _xrSelectEndListener = () => void this.exitXR();
+  private _xrSelectEndListener = (event: Event) =>
+    this.teleportToInputSource((event as XRInputSourceEvent).inputSource);
+  private _xrSqueezeEndListener = () => void this.exitXR();
   private _keyDownListener = (event: KeyboardEvent) => {
     if (!this.xrSession) {
       return;
@@ -330,6 +440,48 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     });
+    this.controllerRayModel = new Model(device, {
+      id: 'immersive-prism-controller-rays',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeControllerRayGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
+    this.controllerReticleModel = new Model(device, {
+      id: 'immersive-prism-controller-reticles',
+      source: CONTROLLER_RAY_WGSL_SHADER,
+      vs: CONTROLLER_RAY_VS_GLSL,
+      fs: CONTROLLER_RAY_FS_GLSL,
+      geometry: makeControllerReticleGeometry(),
+      bindings: {
+        app: this.uniformStore.getManagedUniformBuffer('app')
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
     this.initializePreviewControls();
 
     if (typeof window !== 'undefined') {
@@ -348,6 +500,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       window.removeEventListener('keydown', this._keyDownListener);
     }
     this.orbitControls?.destroy();
+    this.controllerReticleModel.destroy();
+    this.controllerRayModel.destroy();
+    this.destroyControllerUniforms(this._controllerReticleUniforms);
+    this.destroyControllerUniforms(this._controllerRayUniforms);
     this.model.destroy();
     this.fallbackTexture.destroy();
     this.uniformStore.destroy();
@@ -358,9 +514,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const time = elapsedTimeMilliseconds * 0.001;
     const xrFrame = animationFrame as XRFrame | null;
     const frameState = xrFrame && this.xrSession ? this.webXRManager.getFrameState(xrFrame) : null;
+    const inputState = xrFrame && this.xrSession ? this.webXRManager.getInputState(xrFrame) : null;
 
     if (frameState) {
-      this.renderXRFrame(time, frameState);
+      this.renderXRFrame(time, frameState, inputState || []);
       return;
     }
 
@@ -403,20 +560,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     );
 
     try {
-      await this.webXRManager.setSession(session, {
-        referenceSpaceType: 'local',
-        ...(this.device.type === 'webgl'
-          ? {layerInit: {alpha: sessionMode === 'immersive-ar'}}
-          : {})
-      });
+      await this.setXRSession(session, sessionMode);
       this.cameraTexture =
         sessionMode === 'immersive-ar' && this.device.type === 'webgl'
           ? this.createCameraTexture(session)
           : null;
       this.xrSession = session;
       this.xrSessionMode = sessionMode;
+      this.orbitControls?.setProps({enabled: false});
       session.addEventListener('end', this._xrSessionEndListener);
       session.addEventListener('selectend', this._xrSelectEndListener);
+      session.addEventListener('squeezeend', this._xrSqueezeEndListener);
       this.animationLoop.setProps({
         animationFrameProvider: new WebXRAnimationFrameProvider(session)
       });
@@ -445,14 +599,24 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       .multiplyRight(this.viewMatrix)
       .multiplyRight(this.modelMatrix);
     this.preparePortal({cameraMix: 0, texture: this.fallbackTexture, time});
-    this.drawPortal(device.beginRenderPass({clearColor: [0.006, 0.008, 0.028, 1], clearDepth: 1}));
+    const renderPass = device.beginRenderPass({
+      clearColor: [0.006, 0.008, 0.028, 1],
+      clearDepth: 1
+    });
+    this.drawPortal(renderPass);
+    renderPass.end();
   }
 
-  private renderXRFrame(time: number, frameState: WebXRFrameState): void {
+  private renderXRFrame(
+    time: number,
+    frameState: WebXRFrameState,
+    inputState: readonly WebXRInputState[]
+  ): void {
     this.updateModelMatrix(time, true);
     const clearColor: [number, number, number, number] =
       this.xrSessionMode === 'immersive-ar' ? [0, 0, 0, 0] : [0.006, 0.008, 0.028, 1];
     const renderedFramebuffers = new Set<Framebuffer>();
+    this._floorHitByInputSource.clear();
 
     for (const view of frameState.views) {
       this.modelViewProjectionMatrix
@@ -469,6 +633,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         texture: cameraTexture || this.fallbackTexture,
         time
       });
+      const controllerTargets = this.prepareControllerTargets(view, inputState, time);
       const renderPass = this.device.beginRenderPass({
         framebuffer,
         clearColor: clearView ? clearColor : false,
@@ -477,6 +642,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       renderPass.setParameters({viewport: view.viewport});
       this.drawPortal(renderPass);
+      this.drawControllerTargets(renderPass, controllerTargets);
+      renderPass.end();
     }
   }
 
@@ -501,13 +668,95 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private drawPortal(renderPass: ReturnType<Device['beginRenderPass']>): void {
     this.model.draw(renderPass);
-    renderPass.end();
+  }
+
+  private prepareControllerTargets(
+    view: WebXRFrameState['views'][number],
+    inputState: readonly WebXRInputState[],
+    time: number
+  ): PreparedControllerTarget[] {
+    const preparedControllerTargets: PreparedControllerTarget[] = [];
+
+    for (const input of inputState) {
+      const inputRay = getWebXRInputRay(input);
+      if (input.targetRayMode !== 'tracked-pointer' || !inputRay) {
+        continue;
+      }
+
+      const targetIndex = preparedControllerTargets.length;
+      const rayUniforms = this.getControllerUniforms(this._controllerRayUniforms, targetIndex);
+      this.modelViewProjectionMatrix
+        .copy(view.projectionMatrix)
+        .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+        .multiplyRight(this.controllerRayMatrix.copy(inputRay.matrix));
+      rayUniforms.uniformStore.setUniforms(
+        {
+          app: {
+            modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+            time,
+            cameraMix: input.selectActive ? 1 : 0
+          }
+        },
+        this.device.commandEncoder
+      );
+
+      const floorHit = getWebXRInputRayPlaneIntersection(inputRay, {maxDistance: 8});
+      let reticleUniformBuffer: Buffer | null = null;
+      if (floorHit) {
+        this._floorHitByInputSource.set(input.inputSource, floorHit.point);
+        this.controllerReticleMatrix.identity().translate(floorHit.point);
+        this.modelViewProjectionMatrix
+          .copy(view.projectionMatrix)
+          .multiplyRight(this.xrViewMatrix.copy(view.viewMatrix))
+          .multiplyRight(this.controllerReticleMatrix);
+        const reticleUniforms = this.getControllerUniforms(
+          this._controllerReticleUniforms,
+          targetIndex
+        );
+        reticleUniforms.uniformStore.setUniforms(
+          {
+            app: {
+              modelViewProjectionMatrix: this.modelViewProjectionMatrix,
+              time,
+              cameraMix: input.selectActive ? 1 : 0
+            }
+          },
+          this.device.commandEncoder
+        );
+        reticleUniformBuffer = reticleUniforms.uniformBuffer;
+      }
+
+      preparedControllerTargets.push({
+        rayUniformBuffer: rayUniforms.uniformBuffer,
+        reticleUniformBuffer
+      });
+    }
+
+    this.controllerRayModel.predraw(this.device.commandEncoder);
+    this.controllerReticleModel.predraw(this.device.commandEncoder);
+    return preparedControllerTargets;
+  }
+
+  private drawControllerTargets(
+    renderPass: ReturnType<Device['beginRenderPass']>,
+    controllerTargets: readonly PreparedControllerTarget[]
+  ): void {
+    for (const controllerTarget of controllerTargets) {
+      this.controllerRayModel.setBindings({app: controllerTarget.rayUniformBuffer});
+      this.controllerRayModel.draw(renderPass);
+
+      if (controllerTarget.reticleUniformBuffer) {
+        this.controllerReticleModel.setBindings({app: controllerTarget.reticleUniformBuffer});
+        this.controllerReticleModel.draw(renderPass);
+      }
+    }
   }
 
   private updateModelMatrix(time: number, isXR: boolean): void {
     this.modelMatrix.identity();
     if (isXR) {
       this.modelMatrix
+        .translate(this.xrSceneOffset)
         .translate([0, 0.12, -2.15])
         .scale([0.88, 0.88, 0.88])
         .rotateZ(Math.sin(time * 0.2) * 0.055)
@@ -518,6 +767,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .rotateX(Math.sin(time * 0.31) * 0.055)
         .rotateY(Math.cos(time * 0.26) * 0.075);
     }
+  }
+
+  private teleportToInputSource(inputSource: XRInputSource | undefined): void {
+    const floorHit = inputSource && this._floorHitByInputSource.get(inputSource);
+    if (!floorHit) {
+      return;
+    }
+
+    this.xrSceneOffset[0] -= floorHit[0];
+    this.xrSceneOffset[2] -= floorHit[2];
+    this._floorHitByInputSource.clear();
   }
 
   private createCameraTexture(session: XRSession): WebXRCameraTexture | null {
@@ -536,6 +796,57 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     } catch {
       return null;
     }
+  }
+
+  private async setXRSession(
+    session: XRSession,
+    sessionMode: ImmersiveXRSessionMode
+  ): Promise<void> {
+    try {
+      await this.webXRManager.setSession(
+        session,
+        this.getWebXRManagerProps(sessionMode, 'local-floor')
+      );
+    } catch (error) {
+      if (!isXRReferenceSpaceUnavailable(error)) {
+        throw error;
+      }
+      await this.webXRManager.setSession(session, this.getWebXRManagerProps(sessionMode, 'local'));
+    }
+  }
+
+  private getWebXRManagerProps(
+    sessionMode: ImmersiveXRSessionMode,
+    referenceSpaceType: XRReferenceSpaceType
+  ): WebXRManagerProps {
+    return {
+      referenceSpaceType,
+      ...(this.device.type === 'webgl' ? {layerInit: {alpha: sessionMode === 'immersive-ar'}} : {})
+    };
+  }
+
+  private getControllerUniforms(
+    controllerUniforms: ControllerTargetUniforms[],
+    index: number
+  ): ControllerTargetUniforms {
+    let targetUniforms = controllerUniforms[index];
+    if (!targetUniforms) {
+      const uniformStore = new UniformStore(this.device, {app});
+      targetUniforms = {
+        uniformStore,
+        uniformBuffer: uniformStore.getManagedUniformBuffer('app')
+      };
+      controllerUniforms[index] = targetUniforms;
+    }
+
+    return targetUniforms;
+  }
+
+  private destroyControllerUniforms(controllerUniforms: ControllerTargetUniforms[]): void {
+    for (const targetUniforms of controllerUniforms) {
+      targetUniforms.uniformStore.destroy();
+    }
+    controllerUniforms.length = 0;
   }
 
   private initializePreviewControls(): void {
@@ -561,15 +872,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const session = this.xrSession;
     session?.removeEventListener('end', this._xrSessionEndListener);
     session?.removeEventListener('selectend', this._xrSelectEndListener);
+    session?.removeEventListener('squeezeend', this._xrSqueezeEndListener);
     this.xrSession = null;
     this.xrSessionMode = null;
+    this.xrSceneOffset[0] = 0;
+    this.xrSceneOffset[1] = 0;
+    this.xrSceneOffset[2] = 0;
+    this._floorHitByInputSource.clear();
     this.cameraTexture?.destroy();
     this.cameraTexture = null;
     this.webXRManager.clearSession();
     if (!this._isFinalized) {
+      this.orbitControls?.setProps({enabled: true});
       this.animationLoop.setProps({animationFrameProvider: undefined});
     }
   }
+}
+
+function isXRReferenceSpaceUnavailable(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'NotSupportedError'
+  );
 }
 
 function getXRSessionInit(sessionMode: ImmersiveXRSessionMode, deviceType: string): XRSessionInit {
@@ -597,6 +923,47 @@ function makeSpatialPortalGeometry(): Geometry {
       positions: {size: 3, value: new Float32Array(positions)},
       texCoords: {size: 2, value: new Float32Array(texCoords)},
       shardData: {size: 4, value: new Float32Array(shardAttributes)}
+    }
+  });
+}
+
+function makeControllerRayGeometry(): Geometry {
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array([0, 0, 0, 0, 0, -3.2])
+      }
+    }
+  });
+}
+
+function makeControllerReticleGeometry(): Geometry {
+  const positions: number[] = [];
+  const segmentCount = 32;
+  const radius = 0.12;
+
+  for (let segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
+    const startAngle = (segmentIndex / segmentCount) * Math.PI * 2;
+    const endAngle = ((segmentIndex + 1) / segmentCount) * Math.PI * 2;
+    positions.push(
+      Math.cos(startAngle) * radius,
+      0,
+      Math.sin(startAngle) * radius,
+      Math.cos(endAngle) * radius,
+      0,
+      Math.sin(endAngle) * radius
+    );
+  }
+
+  return new Geometry({
+    topology: 'line-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array(positions)
+      }
     }
   });
 }

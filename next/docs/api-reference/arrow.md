@@ -2,7 +2,7 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/next/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/next/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/next/docs/api-reference/arrow/deck-target-api.md)
 
-![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+From v10Experimental API
 
 Apache Arrow utilities for luma.gl.
 
@@ -15,6 +15,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Arrow Rendering[​](#arrow-rendering "Direct link to Arrow Rendering")
 
@@ -50,16 +52,18 @@ Arrow also supports variable-length `List` columns. These are useful for data su
 
 ## GPU Table Interop[​](#gpu-table-interop "Direct link to GPU Table Interop")
 
-`@luma.gl/arrow` is the adapter layer from Apache Arrow objects into the generic types in [`@luma.gl/tables`](https://luma.gl/next/docs/api-reference/tables.md):
+`@luma.gl/arrow` adapts Apache Arrow objects into primitive [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) objects and higher-level [`@luma.gl/experimental/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) objects:
 
 * `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
 * `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
 * `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 * `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record batch boundaries.
+* `makeGPUAnalyticsTableFromArrowTable()` uploads renderer-independent numeric and dictionary columns into existing GPU tables while preserving source batches, validity masks, and category metadata for GPU dataframe execution.
+* `makeArrowTableFromGPUAnalyticsTable()` explicitly reads a GPU analytical result back into Arrow, reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or explicitly requested global ordering. Combined with [`LuSQLContext`](https://luma.gl/next/docs/api-reference/experimental/gpu-sql.md) from the separate `@luma.gl/experimental/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution → Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 * `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for [`@luma.gl/splats`](https://luma.gl/next/docs/api-reference/splats.md), decoding GraphDECO encodings without clamping or quantizing spherical-harmonic DC radiance.
 * `makeGPUSplatDataFromArrowStream()` progressively prepares Gaussian splat batches without concatenating Arrow tables or rebuilding previously uploaded GPU buffers. Both Gaussian conversion helpers accept structurally compatible Arrow objects from other installed Arrow versions, including those produced by loaders.gl 5 alpha.
 * `ArrowInputSchema` combines source resolution and conversion with final `GPUInputSchema` validation for model-specific prepared inputs.
 
-The resulting table schema is `GPUSchema`, and each vector has a `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or `vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by adapter/readback paths, but `@luma.gl/tables` itself does not depend on `apache-arrow`.
+The resulting table schema is `GPUSchema`, and each vector has a `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or `vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by adapter/readback paths, but neither `@luma.gl/gpgpu` nor `@luma.gl/experimental` depends on `apache-arrow`.
 
 See [luma.gl](http://luma.gl) for documentation.

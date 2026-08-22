@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {_resolveLoadFileUrl, AnimationLoopTemplate} from '@luma.gl/engine';
+import {_resolveLoadFileUrl, AnimationLoopTemplate, OrbitControls} from '@luma.gl/engine';
 import {
   buildBitmapFontAtlas,
   buildSdfFontAtlas,
@@ -43,6 +43,8 @@ const font = parseFont(helvetiker);
 const CRAWL_CHARACTER_SET = [...new Set(CRAWL_TEXT_ROWS.join(''))].join('');
 const DEFAULT_RENDERING_KIND = getTextSpaceCrawlRenderingKind();
 const DEFAULT_BROWSER_FONT_KIND = getTextSpaceCrawlBrowserFontKind();
+const CRAWL_CAMERA_TARGET: [number, number, number] = [0, -520, -520];
+const CRAWL_CAMERA_EYE: [number, number, number] = [0, 40, 980];
 const GENERATED_FONT_SETTINGS = {
   characterSet: CRAWL_CHARACTER_SET,
   fontWeight: '600',
@@ -65,8 +67,9 @@ export default class TextSpaceCrawl extends AnimationLoopTemplate {
   readonly device: Device;
   readonly modelMatrix = new Matrix4();
   readonly normalMatrix = new Matrix4();
-  readonly viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]});
+  readonly viewMatrix = new Matrix4().lookAt({eye: CRAWL_CAMERA_EYE, center: CRAWL_CAMERA_TARGET});
   readonly projectionMatrix = new Matrix4();
+  orbitControls: OrbitControls | null = null;
   renderer: TextSpaceCrawlRenderer | null = null;
   renderingKind = DEFAULT_RENDERING_KIND;
   browserFontKind = DEFAULT_BROWSER_FONT_KIND;
@@ -86,18 +89,34 @@ export default class TextSpaceCrawl extends AnimationLoopTemplate {
     this.device = device;
   }
 
-  override async onInitialize(): Promise<void> {
+  override async onInitialize({canvas}: AnimationProps): Promise<void> {
     await this.setRenderingKind(this.renderingKind);
     if (this.isFinalized || !this.renderer) {
       return;
+    }
+    if (canvas instanceof HTMLCanvasElement) {
+      this.orbitControls = new OrbitControls(canvas, {
+        target: CRAWL_CAMERA_TARGET,
+        distance: Math.hypot(560, 1500),
+        pitch: Math.atan2(560, 1500),
+        minDistance: 500,
+        maxDistance: 2500
+      });
     }
     this.panels.mount();
     this.controlPanel.initialize();
   }
 
-  override onRender({device, tick, aspect}: AnimationProps): void {
+  override onRender({device, tick, aspect, time}: AnimationProps): void {
     if (!this.renderer) {
       return;
+    }
+    if (this.orbitControls) {
+      this.orbitControls.update(time);
+      this.viewMatrix.lookAt({
+        eye: this.orbitControls.getEyePosition(),
+        center: CRAWL_CAMERA_TARGET
+      });
     }
     const elapsedSeconds = tick * 0.016;
     const totalTravel = this.leadInHeight + this.textHeight + this.leadOutHeight;
@@ -138,6 +157,7 @@ export default class TextSpaceCrawl extends AnimationLoopTemplate {
     this.rendererLoadVersion++;
     this.controlPanel.destroy();
     this.panels.finalize();
+    this.orbitControls?.destroy();
     this.renderer?.destroy();
   }
 

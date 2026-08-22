@@ -1,0 +1,1 @@
+import{t as e}from"./probe-log-B1Xc-tfO.js";var t=`v5.0.0-alpha.1`;function n(){let n=new e({id:`loaders.gl`});return globalThis.loaders||={},globalThis.loaders.log=n,globalThis.loaders.version=t,globalThis.probe||={},globalThis.probe.loaders=n,n}var r=n();export{r as t};

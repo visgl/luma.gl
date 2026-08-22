@@ -13,12 +13,12 @@ import {
   GPUSceneResourceGroups,
   GPUVisibilityWorkflow,
   GPU_SCENE_INVALID_REFERENCE,
-  makeGPUSceneFromCPUScene,
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GPUScene,
   type GraphDataView
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
+import {makeGPUSceneFromCPUScene} from '@luma.gl/experimental/gpu-tables';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,

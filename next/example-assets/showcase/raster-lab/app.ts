@@ -12,7 +12,7 @@ import {
   type GPURasterTileGraphLease,
   type GPURasterTileLease,
   type GPURasterTileRequest
-} from '@luma.gl/experimental/luraster';
+} from '@luma.gl/experimental/gpu-raster';
 import type {RasterLabDataset} from './raster-data';
 import {
   RasterLabEngine,
@@ -36,6 +36,7 @@ import {
 import type {
   RasterLabComponentConnectivity,
   RasterLabComponentLabelMode,
+  RasterLabComponentScope,
   RasterLabDisplayMode,
   RasterLabDisplaySettings,
   RasterLabEdgeDirection,
@@ -53,9 +54,9 @@ import {
   RasterLabTileSource
 } from './raster-tile-source';
 
-export const title = 'LuRaster: Satellite Raster Lab';
+export const title = 'GPURaster: Satellite Raster Lab';
 export const description =
-  'GPU region measurements, dense connected components, global reductions, overviews, and halos.';
+  'GPU cross-tile regions, dense measurements, global reductions, overviews, and seamless halos.';
 
 type RasterLabDebugController = {
   readonly ready: boolean;
@@ -109,6 +110,8 @@ type RasterLabDebugController = {
   readonly componentsEnabled: boolean;
   readonly componentConnectivity: RasterLabComponentConnectivity;
   readonly componentLabelMode: RasterLabComponentLabelMode;
+  readonly componentScope: RasterLabComponentScope;
+  readonly stitchedTileCount: number;
   readonly componentCapacity: number;
   readonly componentCount: number;
   readonly componentPublishedCount: number;
@@ -170,6 +173,7 @@ type RasterLabDebugController = {
   setComponentsEnabled: (enabled: boolean) => void;
   setComponentConnectivity: (connectivity: RasterLabComponentConnectivity) => void;
   setComponentLabelMode: (mode: RasterLabComponentLabelMode) => void;
+  setComponentScope: (scope: RasterLabComponentScope) => void;
   setComponentCapacity: (capacity: number) => void;
   setComponentMaximumIterations: (iterations: number) => void;
   setRegionMetricsEnabled: (enabled: boolean) => void;
@@ -218,6 +222,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     componentsEnabled: false,
     componentConnectivity: 4,
     componentLabelMode: 'sparse',
+    componentScope: 'local',
     componentCapacity: 1024,
     componentMaximumIterations: 24,
     regionMetricsEnabled: false,
@@ -264,7 +269,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   constructor(animationProps: AnimationProps) {
     super(animationProps);
     if (animationProps.device.type !== 'webgpu') {
-      throw new Error('LuRaster Satellite Raster Lab requires WebGPU');
+      throw new Error('GPURaster Satellite Raster Lab requires WebGPU');
     }
     this.device = animationProps.device;
     this.rasterSize = getInitialRasterSize();
@@ -308,6 +313,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       onComponentsEnabled: enabled => this.setComponentsEnabled(enabled),
       onComponentConnectivity: connectivity => this.setComponentConnectivity(connectivity),
       onComponentLabelMode: mode => this.setComponentLabelMode(mode),
+      onComponentScope: scope => this.setComponentScope(scope),
       onComponentCapacity: capacity => this.setComponentCapacity(capacity),
       onComponentMaximumIterations: iterations => this.setComponentMaximumIterations(iterations),
       onRegionMetricsEnabled: enabled => this.setRegionMetricsEnabled(enabled),
@@ -400,7 +406,10 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setSourceTile(tile: RasterLabSourceTile): void {
     if (tile === this.sourceTile) return;
-    if (tile === 'full') this.resetGlobalAnalysis();
+    if (tile === 'full') {
+      this.resetGlobalAnalysis();
+      this.resetStitchedComponents();
+    }
     this.sourceTile = tile;
     this.interface?.setSourceTile(tile);
     this.requestSourceTile();
@@ -419,7 +428,10 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setOverviewPolicy(policy: RasterLabOverviewPolicy): void {
     if (policy === this.overviewPolicy) return;
-    if (policy === 'mean') this.resetGlobalAnalysis();
+    if (policy === 'mean') {
+      this.resetGlobalAnalysis();
+      this.resetStitchedComponents();
+    }
     if (policy === 'mean' && this.haloMode === 'seamless') {
       this.haloMode = 'off';
       this.publishHalo();
@@ -444,7 +456,10 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setHaloMode(mode: RasterLabHaloMode): void {
     if (mode === this.haloMode) return;
-    if (mode === 'seamless') this.resetGlobalAnalysis();
+    if (mode === 'seamless') {
+      this.resetGlobalAnalysis();
+      this.resetStitchedComponents();
+    }
     if (mode === 'seamless' && this.overviewPolicy === 'mean') {
       this.overviewPolicy = 'source';
       this.publishOverview();
@@ -501,7 +516,9 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     if (order === this.replayOrder) return;
     this.replayOrder = order;
     this.publishGlobal();
-    if (this.analysisScope === 'global') this.requestSourceTile();
+    if (this.analysisScope === 'global' || this.display.componentScope === 'stitched') {
+      this.requestSourceTile();
+    }
   }
 
   /** Spatial/generated modes remain fully available by transparently restoring tile scope. */
@@ -509,6 +526,14 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     if (this.analysisScope !== 'global') return false;
     this.analysisScope = 'tile';
     this.publishGlobal();
+    return true;
+  }
+
+  /** Unsupported operations retain their full local behavior and release stitched neighbors. */
+  private resetStitchedComponents(): boolean {
+    if (this.display.componentScope !== 'stitched') return false;
+    this.display.componentScope = 'local';
+    this.publishComponents();
     return true;
   }
 
@@ -522,6 +547,11 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     }
     if (this.analysisScope === 'global' && requestedCapacity < 2) {
       this.interface?.setStatus('Global raster replay requires two resident source tiles');
+      this.publishResidency();
+      return;
+    }
+    if (this.display.componentScope === 'stitched' && requestedCapacity < 2) {
+      this.interface?.setStatus('Cross-tile segmentation requires two resident source tiles');
       this.publishResidency();
       return;
     }
@@ -561,17 +591,21 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     const generation = ++this.sourceRequestGeneration;
     const tile = this.sourceTile;
     const level = this.overviewLevel;
-    const global = this.analysisScope === 'global';
+    const statistics = this.analysisScope === 'global';
+    const stitched = this.display.componentsEnabled && this.display.componentScope === 'stitched';
+    const pairedTiles = statistics || stitched;
     const generatesOverview = this.overviewPolicy === 'mean' && level === 1;
     const sourceLevel = generatesOverview ? 0 : level;
     this.sourceAbortController = controller;
     this.sourceLoading = true;
     this.interface?.setStatus(
-      global
+      statistics
         ? `Replaying bounded L${level} WEST and EAST source tiles on the GPU`
-        : generatesOverview
-          ? `Generating L1 ${tile.toUpperCase()} overview from resident L0 samples`
-          : `Loading L${level} ${tile.toUpperCase()} decoded source tile`
+        : stitched
+          ? `Stitching bounded L${level} WEST and EAST GPU component identities`
+          : generatesOverview
+            ? `Generating L1 ${tile.toUpperCase()} overview from resident L0 samples`
+            : `Loading L${level} ${tile.toUpperCase()} decoded source tile`
     );
     const request: GPURasterTileRequest = {
       level: sourceLevel,
@@ -595,7 +629,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         column: tile === 'west' ? 1 : 0,
         row: 0
       };
-      const requestedTiles = global
+      const requestedTiles = pairedTiles
         ? [
             this.tileReader.normalizeTileRequest(request),
             this.tileReader.normalizeTileRequest(secondaryRequest)
@@ -637,7 +671,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         controller.signal.throwIfAborted();
       }
 
-      if (global) {
+      if (pairedTiles) {
         replacementTileLease = await this.tileCache.acquire(request, controller.signal);
         replacementGlobalLeases = [replacementTileLease];
         replacementGlobalLeases.push(
@@ -678,11 +712,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         : undefined;
       const globalSources: RasterLabGlobalSources | undefined = replacementGlobalLeases
         ? {
+            kind: statistics ? 'statistics' : 'components',
+            selectedTile: tile === 'east' ? 'east' : 'west',
             tiles: replacementGlobalLeases
               .map(lease => ({
                 name: (lease.decoded.column === 0 ? 'west' : 'east') as 'west' | 'east',
                 width: lease.decoded.metadata.width,
                 height: lease.decoded.metadata.height,
+                metadata: lease.decoded.metadata,
+                pixelBounds: lease.decoded.pixelBounds,
                 sources: getResidentSources(lease)
               }))
               .sort(
@@ -693,7 +731,15 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
               (pixelCount, lease) =>
                 pixelCount + lease.decoded.metadata.width * lease.decoded.metadata.height,
               0
-            )
+            ),
+            metadata: {
+              ...replacementGlobalLeases.find(lease => lease.decoded.column === 0)!.decoded
+                .metadata,
+              width: replacementGlobalLeases.reduce(
+                (width, lease) => width + lease.decoded.metadata.width,
+                0
+              )
+            }
           }
         : undefined;
       const requestedEpsilon = this.requestedEpsilon ?? this.epsilon;
@@ -853,7 +899,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setSmoothingMode(mode: RasterLabSmoothingMode): void {
     if (mode === this.display.smoothingMode) return;
-    const reloadSources = mode !== 'none' && this.resetGlobalAnalysis();
+    const reloadSources =
+      mode !== 'none' && (this.resetGlobalAnalysis() || this.resetStitchedComponents());
     this.display.smoothingMode = mode;
     this.interface?.setSmoothingMode(mode);
     if (reloadSources) this.requestSourceTile();
@@ -876,7 +923,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setEdgeMode(mode: RasterLabEdgeMode): void {
     if (mode === this.display.edgeMode) return;
-    const reloadSources = mode !== 'none' && this.resetGlobalAnalysis();
+    const reloadSources =
+      mode !== 'none' && (this.resetGlobalAnalysis() || this.resetStitchedComponents());
     this.display.edgeMode = mode;
     this.interface?.setEdgeMode(mode);
     if (reloadSources) this.requestSourceTile();
@@ -894,7 +942,8 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setMorphologyOperation(operation: RasterLabMorphologyOperation): void {
     if (operation === this.display.morphologyOperation) return;
-    const reloadSources = operation !== 'none' && this.resetGlobalAnalysis();
+    const reloadSources =
+      operation !== 'none' && (this.resetGlobalAnalysis() || this.resetStitchedComponents());
     this.display.morphologyOperation = operation;
     this.interface?.setMorphologyOperation(operation);
     this.syncBinaryMorphology();
@@ -952,7 +1001,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
 
   private setComponentsEnabled(enabled: boolean): void {
     if (enabled === this.display.componentsEnabled) return;
-    const reloadSources = enabled && this.resetGlobalAnalysis();
+    const reloadSources = enabled ? this.resetGlobalAnalysis() : this.resetStitchedComponents();
     if (enabled) {
       this.previousComponentContours = this.display.contoursEnabled;
       this.display.componentsEnabled = true;
@@ -971,6 +1020,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private disableComponents(): void {
     if (!this.display.componentsEnabled) return;
     this.display.componentsEnabled = false;
+    this.display.componentScope = 'local';
     this.display.regionMetricsEnabled = false;
     this.display.contoursEnabled = this.previousComponentContours;
     this.interface?.setContours(this.display.contoursEnabled, this.display.contourLevel);
@@ -987,9 +1037,56 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
   private setComponentLabelMode(mode: RasterLabComponentLabelMode): void {
     if (mode === this.display.componentLabelMode) return;
     this.display.componentLabelMode = mode;
+    const reloadSources = mode === 'sparse' && this.resetStitchedComponents();
     if (mode === 'sparse') this.display.regionMetricsEnabled = false;
     this.publishComponents();
-    if (this.display.componentsEnabled) this.requestUpdate();
+    if (reloadSources) this.requestSourceTile();
+    else if (this.display.componentsEnabled) this.requestUpdate();
+  }
+
+  /** Reconcile canonical resident cores while keeping unsupported pipelines honestly local. */
+  private setComponentScope(scope: RasterLabComponentScope): void {
+    if (scope === this.display.componentScope || !this.display.componentsEnabled) return;
+    if (scope === 'stitched') {
+      if (this.cacheCapacity < 2) {
+        this.setCacheCapacity(2);
+        if (this.cacheCapacity < 2) return;
+      }
+      this.resetGlobalAnalysis();
+      if (this.overviewPolicy === 'mean') {
+        this.overviewPolicy = 'source';
+        this.publishOverview();
+      }
+      if (this.haloMode === 'seamless') {
+        this.haloMode = 'off';
+        this.publishHalo();
+      }
+      if (this.display.smoothingMode !== 'none') {
+        this.display.smoothingMode = 'none';
+        this.interface?.setSmoothingMode('none');
+      }
+      if (this.display.edgeMode !== 'none') {
+        this.display.edgeMode = 'none';
+        this.interface?.setEdgeMode('none');
+      }
+      if (this.display.morphologyOperation !== 'none') {
+        this.display.morphologyOperation = 'none';
+        this.interface?.setMorphologyOperation('none');
+        this.syncBinaryMorphology();
+      }
+      if (this.display.automaticThreshold) {
+        this.display.automaticThreshold = false;
+        this.interface?.setAutomaticThreshold(false);
+      }
+      this.display.componentLabelMode = 'dense';
+      if (this.sourceTile === 'full') {
+        this.sourceTile = 'west';
+        this.interface?.setSourceTile('west');
+      }
+    }
+    this.display.componentScope = scope;
+    this.publishComponents();
+    this.requestSourceTile();
   }
 
   private setComponentCapacity(capacity: number): void {
@@ -1085,19 +1182,23 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     this.display.thresholdEnabled = true;
     this.interface?.setAutomaticThreshold(enabled);
     this.interface?.setThreshold(this.display.threshold, true);
-    this.requestUpdate();
+    if (enabled && this.resetStitchedComponents()) this.requestSourceTile();
+    else this.requestUpdate();
   }
 
   private setContours(enabled = true): void {
+    const stitchedComponents = enabled && this.display.componentScope === 'stitched';
     const disabledComponents = enabled && this.display.componentsEnabled;
     if (disabledComponents) this.disableComponents();
     if (enabled === this.display.contoursEnabled) {
-      if (disabledComponents) this.requestUpdate();
+      if (stitchedComponents) this.requestSourceTile();
+      else if (disabledComponents) this.requestUpdate();
       return;
     }
     this.display.contoursEnabled = enabled;
     this.interface?.setContours(enabled, this.display.contourLevel);
-    this.requestUpdate();
+    if (stitchedComponents) this.requestSourceTile();
+    else this.requestUpdate();
   }
 
   private setContourLevel(level: number): void {
@@ -1301,12 +1402,13 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
     if (!this.interface || this.finalized) return;
     const levelWidth = Math.ceil(this.rasterSize[0] / 2 ** this.overviewLevel);
     const levelHeight = Math.ceil(this.rasterSize[1] / 2 ** this.overviewLevel);
+    const statistics = this.activeGlobal?.kind === 'statistics' ? this.activeGlobal : null;
     this.interface.setGlobalAnalysis({
       scope: this.analysisScope,
       order: this.replayOrder,
-      tileCount: this.activeGlobalLeases.length,
-      replayPassCount: this.activeGlobal ? (this.display.automaticThreshold ? 6 : 3) : 0,
-      pixelCount: this.activeGlobal?.pixelCount ?? levelWidth * levelHeight,
+      tileCount: statistics ? this.activeGlobalLeases.length : 0,
+      replayPassCount: statistics ? (this.display.automaticThreshold ? 6 : 3) : 0,
+      pixelCount: statistics?.pixelCount ?? levelWidth * levelHeight,
       domain: this.latestSummary?.domain ?? [0, 0],
       validPixelCount: this.latestSummary?.validPixelCount ?? 0,
       threshold: this.latestSummary?.threshold ?? this.display.threshold,
@@ -1322,6 +1424,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       enabled: this.display.componentsEnabled,
       connectivity: this.display.componentConnectivity,
       labelMode: this.display.componentLabelMode,
+      scope: this.display.componentScope,
       capacity: this.display.componentCapacity,
       componentCount: summary?.componentsEnabled ? summary.componentCount : 0,
       publishedCount: summary?.componentsEnabled ? summary.componentPublishedCount : 0,
@@ -1444,7 +1547,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       get overviewCoverage() {
         return (
           (viewer.latestSummary?.validPixelCount ?? 0) /
-          Math.max(viewer.activeGlobal?.pixelCount ?? viewer.activeDataset?.pixelCount ?? 1, 1)
+          Math.max(
+            (viewer.activeGlobal?.kind === 'statistics' ? viewer.activeGlobal.pixelCount : null) ??
+              viewer.activeDataset?.pixelCount ??
+              1,
+            1
+          )
         );
       },
       get tileOrigin() {
@@ -1545,13 +1653,17 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
         return viewer.replayOrder;
       },
       get globalTileCount() {
-        return viewer.activeGlobalLeases.length;
+        return viewer.activeGlobal?.kind === 'statistics' ? viewer.activeGlobalLeases.length : 0;
       },
       get globalReplayPassCount() {
-        return viewer.activeGlobal ? (viewer.display.automaticThreshold ? 6 : 3) : 0;
+        return viewer.activeGlobal?.kind === 'statistics'
+          ? viewer.display.automaticThreshold
+            ? 6
+            : 3
+          : 0;
       },
       get globalPixelCount() {
-        return viewer.activeGlobal?.pixelCount ?? 0;
+        return viewer.activeGlobal?.kind === 'statistics' ? viewer.activeGlobal.pixelCount : 0;
       },
       get globalMedian() {
         return viewer.latestSummary?.globalMedian ?? null;
@@ -1564,6 +1676,12 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       },
       get componentLabelMode() {
         return viewer.display.componentLabelMode;
+      },
+      get componentScope() {
+        return viewer.display.componentScope;
+      },
+      get stitchedTileCount() {
+        return viewer.activeGlobal?.kind === 'components' ? viewer.activeGlobalLeases.length : 0;
       },
       get componentCapacity() {
         return viewer.display.componentCapacity;
@@ -1700,6 +1818,7 @@ export default class RasterLabAnimationLoopTemplate extends AnimationLoopTemplat
       setComponentsEnabled: enabled => viewer.setComponentsEnabled(enabled),
       setComponentConnectivity: connectivity => viewer.setComponentConnectivity(connectivity),
       setComponentLabelMode: mode => viewer.setComponentLabelMode(mode),
+      setComponentScope: scope => viewer.setComponentScope(scope),
       setComponentCapacity: capacity => viewer.setComponentCapacity(capacity),
       setComponentMaximumIterations: iterations => viewer.setComponentMaximumIterations(iterations),
       setRegionMetricsEnabled: enabled => viewer.setRegionMetricsEnabled(enabled),
@@ -1780,7 +1899,9 @@ function makeRasterPipelineKey(
     ...(global
       ? {
           global: {
+            kind: global.kind,
             order: global.order,
+            ...(global.kind === 'components' ? {selectedTile: global.selectedTile} : {}),
             tiles: global.tiles.map(tile => ({
               name: tile.name,
               width: tile.width,

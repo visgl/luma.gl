@@ -1,6 +1,6 @@
 # Installing
 
-[Overview](https://luma.gl/next/docs/developer-guide.md)[Installing](https://luma.gl/next/docs/developer-guide/installing.md)[AI Agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)[Editing](https://luma.gl/next/docs/developer-guide/editing.md)[Testing](https://luma.gl/next/docs/developer-guide/testing.md)[Debugging](https://luma.gl/next/docs/developer-guide/debugging.md)[Profiling](https://luma.gl/next/docs/developer-guide/profiling.md)[Bundling](https://luma.gl/next/docs/developer-guide/bundling.md)
+[Overview](https://luma.gl/next/docs/developer-guide.md)[Installing](https://luma.gl/next/docs/developer-guide/installing.md)[Editing](https://luma.gl/next/docs/developer-guide/editing.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)[Documentation](https://luma.gl/next/docs/developer-guide/documentation.md)
 
 When you are ready to turn an idea into your own application, this guide takes you from a new project to your first GPU-rendered frame. luma.gl is published as a family of npm packages, so you can choose the rendering tools and GPU backends your project needs.
 

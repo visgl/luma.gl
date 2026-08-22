@@ -684,7 +684,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onRender({device, width, height, aspect, tick}: AnimationProps): void {
+  onRender({
+    device,
+    width,
+    height,
+    aspect,
+    tick,
+    time: elapsedTimeMilliseconds
+  }: AnimationProps): void {
     this.synchronizeHighlightBoost();
 
     if (this.framebufferSize[0] !== width || this.framebufferSize[1] !== height) {
@@ -701,7 +708,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.frameIndex === 0
         ? 1 / 60
         : Math.min(Math.max((tick - this.previousFrameTick) / 1000, 1 / 240), 0.12);
-    this.orbitControls?.update(tick);
+    this.orbitControls?.update(elapsedTimeMilliseconds);
     const eye: NumberArray3 = this.orbitControls?.getEyePosition() || [0, 9.5, 18];
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(47),

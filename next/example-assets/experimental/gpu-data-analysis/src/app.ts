@@ -13,19 +13,23 @@ import {
   GPUReduction,
   GPUScan,
   type CompiledGPUCommandGraph
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
   column,
-  LuDataFrame,
+  GPUDataFrame,
   parameter,
-  type CompiledLuDataFrameQuery,
-  type LuDataFrameQueryParameters
-} from '@luma.gl/experimental/ludf';
-import {GPURecordBatch, GPUTable, type GPUVector} from '@luma.gl/tables';
+  type CompiledGPUDataFrameQuery,
+  type GPUDataFrameQueryParameters
+} from '@luma.gl/experimental/gpu-dataframe';
+import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 import {GPU_DATA_ANALYSIS_STYLES, GPU_DATA_ANALYSIS_TEMPLATE} from './app-shell';
-import {runLuDataFrameBenchmark, type LuDataFrameBenchmarkResult} from './ludf-benchmark';
+import {
+  runGPUDataFrameBenchmark,
+  type GPUDataFrameBenchmarkResult
+} from './gpu-dataframe-benchmark';
 
 const APP_ID = 'gpu-data-analysis-app';
 const STYLE_ID = 'gpu-data-analysis-style';
@@ -52,21 +56,21 @@ type ExampleElements = {
   groups: HTMLElement;
   heatmap: HTMLElement;
   histogram: HTMLElement;
-  luDataFrameAdjustment: HTMLInputElement;
-  luDataFrameExecution: HTMLElement;
-  luDataFrameExpression: HTMLElement;
-  luDataFrameMultiplier: HTMLSelectElement;
-  luDataFramePreview: HTMLElement;
-  luDataFrameRate: HTMLElement;
-  luDataFrameResult: HTMLElement;
-  luDataFrameRun: HTMLButtonElement;
-  luDataFrameSelected: HTMLElement;
-  luDataFrameThreshold: HTMLInputElement;
-  ludfBenchmark: HTMLButtonElement;
-  ludfBenchmarkIterations: HTMLSelectElement;
-  ludfBenchmarkResults: HTMLElement;
-  ludfBenchmarkRows: HTMLSelectElement;
-  ludfBenchmarkStatus: HTMLElement;
+  gpuDataFrameAdjustment: HTMLInputElement;
+  gpuDataFrameExecution: HTMLElement;
+  gpuDataFrameExpression: HTMLElement;
+  gpuDataFrameMultiplier: HTMLSelectElement;
+  gpuDataFramePreview: HTMLElement;
+  gpuDataFrameRate: HTMLElement;
+  gpuDataFrameResult: HTMLElement;
+  gpuDataFrameRun: HTMLButtonElement;
+  gpuDataFrameSelected: HTMLElement;
+  gpuDataFrameThreshold: HTMLInputElement;
+  gpuDataFrameBenchmark: HTMLButtonElement;
+  gpuDataFrameBenchmarkIterations: HTMLSelectElement;
+  gpuDataFrameBenchmarkResults: HTMLElement;
+  gpuDataFrameBenchmarkRows: HTMLSelectElement;
+  gpuDataFrameBenchmarkStatus: HTMLElement;
   nodes: HTMLElement;
   reuse: HTMLElement;
   run: HTMLButtonElement;
@@ -93,18 +97,18 @@ class GPUDataAnalysisExample {
   private device: Device | null = null;
   private resources: ExampleResources | null = null;
   private benchmarkController: AbortController | null = null;
-  private readonly benchmarkHistory: LuDataFrameBenchmarkResult[] = [];
+  private readonly benchmarkHistory: GPUDataFrameBenchmarkResult[] = [];
   private destroyed = false;
-  private hasRunLuDataFrameDemo = false;
+  private hasRunGPUDataFrameDemo = false;
   private runVersion = 0;
 
   private readonly handleRun = (): void => void this.run();
-  private readonly handleLuDataFrameRun = (): void => void this.runLuDataFrameDemo();
-  private readonly handleLuDataFrameInput = (): void => this.updateLuDataFrameExpression();
-  private readonly handleLuDataFrameChange = (): void => {
-    if (this.hasRunLuDataFrameDemo) void this.runLuDataFrameDemo();
+  private readonly handleGPUDataFrameRun = (): void => void this.runGPUDataFrameDemo();
+  private readonly handleGPUDataFrameInput = (): void => this.updateGPUDataFrameExpression();
+  private readonly handleGPUDataFrameChange = (): void => {
+    if (this.hasRunGPUDataFrameDemo) void this.runGPUDataFrameDemo();
   };
-  private readonly handleLuDataFrameBenchmark = (): void => void this.runBenchmark();
+  private readonly handleGPUDataFrameBenchmark = (): void => void this.runBenchmark();
 
   constructor(root: HTMLElement) {
     this.elements = getElements(root);
@@ -118,13 +122,13 @@ class GPUDataAnalysisExample {
       element.addEventListener('change', this.handleRun);
     }
     this.elements.run.addEventListener('click', this.handleRun);
-    this.elements.luDataFrameRun.addEventListener('click', this.handleLuDataFrameRun);
-    for (const control of this.getLuDataFrameControls()) {
-      control.addEventListener('input', this.handleLuDataFrameInput);
-      control.addEventListener('change', this.handleLuDataFrameChange);
+    this.elements.gpuDataFrameRun.addEventListener('click', this.handleGPUDataFrameRun);
+    for (const control of this.getGPUDataFrameControls()) {
+      control.addEventListener('input', this.handleGPUDataFrameInput);
+      control.addEventListener('change', this.handleGPUDataFrameChange);
     }
-    this.updateLuDataFrameExpression();
-    this.elements.ludfBenchmark.addEventListener('click', this.handleLuDataFrameBenchmark);
+    this.updateGPUDataFrameExpression();
+    this.elements.gpuDataFrameBenchmark.addEventListener('click', this.handleGPUDataFrameBenchmark);
   }
 
   async initialize(): Promise<void> {
@@ -142,11 +146,12 @@ class GPUDataAnalysisExample {
       this.device = device;
       await this.run();
       if (!this.destroyed) {
-        this.elements.ludfBenchmark.disabled = false;
+        this.elements.gpuDataFrameBenchmark.disabled = false;
       }
     } catch (error) {
       this.setStatus(getErrorMessage(error), true);
-      this.elements.ludfBenchmarkStatus.textContent = 'WebGPU is unavailable on this device.';
+      this.elements.gpuDataFrameBenchmarkStatus.textContent =
+        'WebGPU is unavailable on this device.';
     }
   }
 
@@ -155,12 +160,15 @@ class GPUDataAnalysisExample {
     this.destroyed = true;
     this.benchmarkController?.abort();
     this.elements.run.removeEventListener('click', this.handleRun);
-    this.elements.luDataFrameRun.removeEventListener('click', this.handleLuDataFrameRun);
-    for (const control of this.getLuDataFrameControls()) {
-      control.removeEventListener('input', this.handleLuDataFrameInput);
-      control.removeEventListener('change', this.handleLuDataFrameChange);
+    this.elements.gpuDataFrameRun.removeEventListener('click', this.handleGPUDataFrameRun);
+    for (const control of this.getGPUDataFrameControls()) {
+      control.removeEventListener('input', this.handleGPUDataFrameInput);
+      control.removeEventListener('change', this.handleGPUDataFrameChange);
     }
-    this.elements.ludfBenchmark.removeEventListener('click', this.handleLuDataFrameBenchmark);
+    this.elements.gpuDataFrameBenchmark.removeEventListener(
+      'click',
+      this.handleGPUDataFrameBenchmark
+    );
     for (const element of [
       this.elements.dataset,
       this.elements.bins,
@@ -612,30 +620,30 @@ class GPUDataAnalysisExample {
   }
 
   /** Runs an opt-in dataframe derivation directly over the existing Arrow-uploaded GPU columns. */
-  private async runLuDataFrameDemo(): Promise<void> {
+  private async runGPUDataFrameDemo(): Promise<void> {
     const device = this.device;
     const resources = this.resources;
     if (!device || !resources || this.destroyed) {
-      this.elements.luDataFrameResult.textContent = 'Run the analysis graph first.';
+      this.elements.gpuDataFrameResult.textContent = 'Run the analysis graph first.';
       return;
     }
 
-    const adjustment = Number(this.elements.luDataFrameAdjustment.value);
-    const multiplier = Number(this.elements.luDataFrameMultiplier.value);
-    const threshold = Number(this.elements.luDataFrameThreshold.value);
+    const adjustment = Number(this.elements.gpuDataFrameAdjustment.value);
+    const multiplier = Number(this.elements.gpuDataFrameMultiplier.value);
+    const threshold = Number(this.elements.gpuDataFrameThreshold.value);
     if (![adjustment, multiplier, threshold].every(Number.isFinite)) {
-      this.elements.luDataFrameResult.textContent = 'Every expression parameter must be finite.';
+      this.elements.gpuDataFrameResult.textContent = 'Every expression parameter must be finite.';
       return;
     }
 
-    this.hasRunLuDataFrameDemo = true;
-    this.elements.luDataFrameRun.disabled = true;
-    this.elements.luDataFrameResult.textContent = 'Compiling GPU-resident derived columns...';
-    this.elements.luDataFrameResult.dataset.state = 'running';
+    this.hasRunGPUDataFrameDemo = true;
+    this.elements.gpuDataFrameRun.disabled = true;
+    this.elements.gpuDataFrameResult.textContent = 'Compiling GPU-resident derived columns...';
+    this.elements.gpuDataFrameResult.dataset.state = 'running';
     const executionStarted = performance.now();
-    let frame: LuDataFrame<{value: 'float32'; category: 'uint32'}> | undefined;
+    let frame: GPUDataFrame<{value: 'float32'; category: 'uint32'}> | undefined;
     let compiled:
-      | CompiledLuDataFrameQuery<{category: 'uint32'; adjustedValue: 'float32'}>
+      | CompiledGPUDataFrameQuery<{category: 'uint32'; adjustedValue: 'float32'}>
       | undefined;
 
     try {
@@ -645,7 +653,7 @@ class GPUDataAnalysisExample {
             gpuData: {value: valueData, category: resources.groupKeys.data[batchIndex]}
           })
       );
-      frame = new LuDataFrame({table: new GPUTable({batches})});
+      frame = new GPUDataFrame({table: new GPUTable({batches})});
       const query = frame
         .withColumn(
           'adjustedValue',
@@ -655,12 +663,12 @@ class GPUDataAnalysisExample {
         )
         .filter(column('adjustedValue').greaterThan(parameter('threshold', threshold)))
         .select(['category', 'adjustedValue']);
-      const graph = new GPUCommandGraph<LuDataFrameQueryParameters>(device, {
-        id: 'gpu-data-analysis-ludf-derived-demo'
+      const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
+        id: 'gpu-data-analysis-gpu-dataframe-derived-demo'
       });
       compiled = query.compile(graph);
 
-      const commandEncoder = device.createCommandEncoder({id: 'ludf-derived-demo'});
+      const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-derived-demo'});
       compiled.encode(commandEncoder, {adjustment, multiplier, threshold});
       device.submit(commandEncoder.finish());
 
@@ -691,43 +699,43 @@ class GPUDataAnalysisExample {
       if (!this.destroyed && this.resources === resources) {
         const validation = selectedCount === expectedCount ? 'CPU verified' : 'GPU/CPU mismatch';
         const selectedPercentage = (selectedCount / resources.sourceValues.length) * 100;
-        this.elements.luDataFrameSelected.textContent = selectedCount.toLocaleString();
-        this.elements.luDataFrameRate.textContent = `${selectedPercentage.toFixed(1)}%`;
-        this.elements.luDataFrameExecution.textContent = `${(
+        this.elements.gpuDataFrameSelected.textContent = selectedCount.toLocaleString();
+        this.elements.gpuDataFrameRate.textContent = `${selectedPercentage.toFixed(1)}%`;
+        this.elements.gpuDataFrameExecution.textContent = `${(
           performance.now() - executionStarted
         ).toFixed(1)} ms`;
-        this.elements.luDataFramePreview.textContent = sample.join('   ');
-        this.elements.luDataFrameResult.dataset.state =
+        this.elements.gpuDataFramePreview.textContent = sample.join('   ');
+        this.elements.gpuDataFrameResult.dataset.state =
           selectedCount === expectedCount ? 'verified' : 'error';
-        this.elements.luDataFrameResult.textContent =
+        this.elements.gpuDataFrameResult.textContent =
           `${selectedCount.toLocaleString()} selected rows · adjusted = value × ${multiplier} + ${adjustment} · ` +
           `first GPU values [${sample.join(', ')}] · ${validation}`;
       }
     } catch (error) {
       if (!this.destroyed) {
-        this.elements.luDataFrameResult.textContent = getErrorMessage(error);
-        this.elements.luDataFrameResult.dataset.state = 'error';
+        this.elements.gpuDataFrameResult.textContent = getErrorMessage(error);
+        this.elements.gpuDataFrameResult.dataset.state = 'error';
       }
     } finally {
       compiled?.destroy();
       frame?.destroy();
-      if (!this.destroyed) this.elements.luDataFrameRun.disabled = false;
+      if (!this.destroyed) this.elements.gpuDataFrameRun.disabled = false;
     }
   }
 
   /** Keeps the visible expression synchronized without allocating or dispatching GPU work. */
-  private updateLuDataFrameExpression(): void {
-    this.elements.luDataFrameExpression.textContent =
-      `value × ${this.elements.luDataFrameMultiplier.value} + ` +
-      `${this.elements.luDataFrameAdjustment.value} > ${this.elements.luDataFrameThreshold.value}`;
+  private updateGPUDataFrameExpression(): void {
+    this.elements.gpuDataFrameExpression.textContent =
+      `value × ${this.elements.gpuDataFrameMultiplier.value} + ` +
+      `${this.elements.gpuDataFrameAdjustment.value} > ${this.elements.gpuDataFrameThreshold.value}`;
   }
 
   /** Returns the three lightweight controls that parameterize the reusable dataframe plan. */
-  private getLuDataFrameControls(): (HTMLInputElement | HTMLSelectElement)[] {
+  private getGPUDataFrameControls(): (HTMLInputElement | HTMLSelectElement)[] {
     return [
-      this.elements.luDataFrameMultiplier,
-      this.elements.luDataFrameAdjustment,
-      this.elements.luDataFrameThreshold
+      this.elements.gpuDataFrameMultiplier,
+      this.elements.gpuDataFrameAdjustment,
+      this.elements.gpuDataFrameThreshold
     ];
   }
 
@@ -741,15 +749,15 @@ class GPUDataAnalysisExample {
     if (!this.device || this.destroyed || this.benchmarkController) return;
     const controller = new AbortController();
     this.benchmarkController = controller;
-    this.elements.ludfBenchmark.disabled = true;
-    this.elements.ludfBenchmarkResults.dataset.state = 'running';
-    this.elements.ludfBenchmarkResults.dataset.validated = 'false';
-    const rowCount = Number(this.elements.ludfBenchmarkRows.value);
-    const iterations = Number(this.elements.ludfBenchmarkIterations.value);
-    this.elements.ludfBenchmarkStatus.textContent = `Preparing ${rowCount.toLocaleString()} nullable Arrow rows and ${iterations} measured samples...`;
+    this.elements.gpuDataFrameBenchmark.disabled = true;
+    this.elements.gpuDataFrameBenchmarkResults.dataset.state = 'running';
+    this.elements.gpuDataFrameBenchmarkResults.dataset.validated = 'false';
+    const rowCount = Number(this.elements.gpuDataFrameBenchmarkRows.value);
+    const iterations = Number(this.elements.gpuDataFrameBenchmarkIterations.value);
+    this.elements.gpuDataFrameBenchmarkStatus.textContent = `Preparing ${rowCount.toLocaleString()} nullable Arrow rows and ${iterations} measured samples...`;
 
     try {
-      const result = await runLuDataFrameBenchmark(this.device, {
+      const result = await runGPUDataFrameBenchmark(this.device, {
         rowCount,
         iterations,
         warmupIterations: 1,
@@ -757,17 +765,17 @@ class GPUDataAnalysisExample {
       });
       if (this.destroyed || controller.signal.aborted) return;
       this.benchmarkHistory.push(result);
-      renderLuDataFrameBenchmark(this.elements, result, this.benchmarkHistory);
+      renderGPUDataFrameBenchmark(this.elements, result, this.benchmarkHistory);
     } catch (error) {
       if (this.destroyed || controller.signal.aborted) return;
-      this.elements.ludfBenchmarkResults.dataset.state = 'error';
-      this.elements.ludfBenchmarkStatus.textContent = getErrorMessage(error);
+      this.elements.gpuDataFrameBenchmarkResults.dataset.state = 'error';
+      this.elements.gpuDataFrameBenchmarkStatus.textContent = getErrorMessage(error);
     } finally {
       if (this.benchmarkController === controller) {
         this.benchmarkController = null;
       }
       if (!this.destroyed) {
-        this.elements.ludfBenchmark.disabled = false;
+        this.elements.gpuDataFrameBenchmark.disabled = false;
       }
     }
   }
@@ -1044,21 +1052,21 @@ function getElements(root: HTMLElement): ExampleElements {
     groups: get('[data-groups]'),
     heatmap: get('[data-heatmap]'),
     histogram: get('[data-histogram]'),
-    luDataFrameAdjustment: get('[data-ludf-adjustment]'),
-    luDataFrameExecution: get('[data-ludf-execution]'),
-    luDataFrameExpression: get('[data-ludf-expression]'),
-    luDataFrameMultiplier: get('[data-ludf-multiplier]'),
-    luDataFramePreview: get('[data-ludf-preview]'),
-    luDataFrameRate: get('[data-ludf-rate]'),
-    luDataFrameResult: get('[data-ludf-result]'),
-    luDataFrameRun: get('[data-ludf-run]'),
-    luDataFrameSelected: get('[data-ludf-selected]'),
-    luDataFrameThreshold: get('[data-ludf-threshold]'),
-    ludfBenchmark: get('[data-ludf-benchmark]'),
-    ludfBenchmarkIterations: get('[data-ludf-benchmark-iterations]'),
-    ludfBenchmarkResults: get('[data-ludf-benchmark-phases]'),
-    ludfBenchmarkRows: get('[data-ludf-benchmark-rows]'),
-    ludfBenchmarkStatus: get('[data-ludf-benchmark-status]'),
+    gpuDataFrameAdjustment: get('[data-gpu-dataframe-adjustment]'),
+    gpuDataFrameExecution: get('[data-gpu-dataframe-execution]'),
+    gpuDataFrameExpression: get('[data-gpu-dataframe-expression]'),
+    gpuDataFrameMultiplier: get('[data-gpu-dataframe-multiplier]'),
+    gpuDataFramePreview: get('[data-gpu-dataframe-preview]'),
+    gpuDataFrameRate: get('[data-gpu-dataframe-rate]'),
+    gpuDataFrameResult: get('[data-gpu-dataframe-result]'),
+    gpuDataFrameRun: get('[data-gpu-dataframe-run]'),
+    gpuDataFrameSelected: get('[data-gpu-dataframe-selected]'),
+    gpuDataFrameThreshold: get('[data-gpu-dataframe-threshold]'),
+    gpuDataFrameBenchmark: get('[data-gpu-dataframe-benchmark]'),
+    gpuDataFrameBenchmarkIterations: get('[data-gpu-dataframe-benchmark-iterations]'),
+    gpuDataFrameBenchmarkResults: get('[data-gpu-dataframe-benchmark-phases]'),
+    gpuDataFrameBenchmarkRows: get('[data-gpu-dataframe-benchmark-rows]'),
+    gpuDataFrameBenchmarkStatus: get('[data-gpu-dataframe-benchmark-status]'),
     nodes: get('[data-nodes]'),
     reuse: get('[data-reuse]'),
     run: get('[data-run]'),
@@ -1076,10 +1084,10 @@ function ensureStyles(): void {
 }
 
 /** Renders only bounded, independently fenced phase timings and explicit CPU-oracle validation. */
-function renderLuDataFrameBenchmark(
+function renderGPUDataFrameBenchmark(
   elements: ExampleElements,
-  result: LuDataFrameBenchmarkResult,
-  history: readonly LuDataFrameBenchmarkResult[]
+  result: GPUDataFrameBenchmarkResult,
+  history: readonly GPUDataFrameBenchmarkResult[]
 ): void {
   const timingRows = [
     ['upload', 'Arrow upload', result.timings.uploadMilliseconds],
@@ -1092,13 +1100,13 @@ function renderLuDataFrameBenchmark(
   const phaseTable = `<table><thead><tr><th scope="col">Phase</th><th scope="col">Milliseconds</th></tr></thead><tbody>${timingRows
     .map(
       ([phase, label, milliseconds]) =>
-        `<tr data-ludf-phase="${phase}"><th scope="row">${label}</th><td>${milliseconds.toFixed(2)}</td></tr>`
+        `<tr data-gpu-dataframe-phase="${phase}"><th scope="row">${label}</th><td>${milliseconds.toFixed(2)}</td></tr>`
     )
     .join('')}</tbody></table>`;
   const workloadRows = Object.entries(result.workloads)
     .map(
       ([name, workload]) =>
-        `<tr data-ludf-workload="${name}"><th scope="row">${name}</th><td>${workload.cpuMilliseconds.toFixed(2)}</td><td>${workload.gpuMilliseconds.toFixed(2)}</td><td>${formatBenchmarkThroughput(workload.gpuRowsPerSecond)}</td><td>${workload.speedup.toFixed(2)}×</td></tr>`
+        `<tr data-gpu-dataframe-workload="${name}"><th scope="row">${name}</th><td>${workload.cpuMilliseconds.toFixed(2)}</td><td>${workload.gpuMilliseconds.toFixed(2)}</td><td>${formatBenchmarkThroughput(workload.gpuRowsPerSecond)}</td><td>${workload.speedup.toFixed(2)}×</td></tr>`
     )
     .join('');
   const crossover = [...history]
@@ -1109,15 +1117,15 @@ function renderLuDataFrameBenchmark(
   const crossoverMessage = crossover
     ? `Measured end-to-end GPU crossover: ${crossover.rowCount.toLocaleString()} rows.`
     : 'No GPU crossover observed yet; compare larger datasets on this device.';
-  elements.ludfBenchmarkResults.innerHTML = `${phaseTable}
+  elements.gpuDataFrameBenchmarkResults.innerHTML = `${phaseTable}
     <p class="workload-title">MEDIAN OPERATION COMPARISONS</p>
     <p class="workload-metadata">${result.measurement.warmupIterations} warmup · ${result.measurement.iterations} measured sample${result.measurement.iterations === 1 ? '' : 's'} · GPU durations include completion fences</p>
     <table class="workload-table"><thead><tr><th scope="col">Operation</th><th scope="col">CPU ms</th><th scope="col">GPU ms</th><th scope="col">GPU rows/s</th><th scope="col">GPU speedup</th></tr></thead><tbody>${workloadRows}</tbody></table>
-    <p class="benchmark-crossover" data-ludf-crossover>${crossoverMessage}</p>`;
+    <p class="benchmark-crossover" data-gpu-dataframe-crossover>${crossoverMessage}</p>`;
   const validated = Object.values(result.validation).every(Boolean);
-  elements.ludfBenchmarkResults.dataset.state = validated ? 'ok' : 'error';
-  elements.ludfBenchmarkResults.dataset.validated = String(validated);
-  elements.ludfBenchmarkStatus.textContent = validated
+  elements.gpuDataFrameBenchmarkResults.dataset.state = validated ? 'ok' : 'error';
+  elements.gpuDataFrameBenchmarkResults.dataset.validated = String(validated);
+  elements.gpuDataFrameBenchmarkStatus.textContent = validated
     ? `${result.rowCount.toLocaleString()} Arrow rows · batches ${result.batchRowCounts.join(' / ')} · filter, grouping, sorting, and joins match the CPU reference · ${result.readbackBytes.toLocaleString()} summary bytes read`
     : 'GPU dataframe results did not match their equivalent CPU reference.';
 }

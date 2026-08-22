@@ -268,6 +268,6 @@ Image bytes become data URIs in JSON exports and embedded buffer views in GLB ex
 
 ## Resource ownership[​](#resource-ownership "Direct link to Resource ownership")
 
-All descriptors and typed arrays remain owned by the caller. Export never destroys GPU resources, mutates source arrays, changes material objects, or depends on `@luma.gl/anari`.
+All descriptors and typed arrays remain owned by the caller. Export never destroys GPU resources, mutates source arrays, changes material objects, or depends on `@luma.gl/scene`.
 
 Applications using the optional ANARI playground adapt their retained descriptions into these format-owned descriptors. That adapter preserves animated hierarchy, morph targets, joint attributes, compatible skin descriptions, material pointers, authored samplers, and all supported physical material slots.

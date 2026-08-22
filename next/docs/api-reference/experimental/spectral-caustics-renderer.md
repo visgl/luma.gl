@@ -1,6 +1,6 @@
 # SpectralCausticsRenderer
 
-[Overview](https://luma.gl/next/docs/api-reference/experimental.md)[SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md)[Deferred Scenes](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md)[PBR Environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md)[GPU Projection](https://luma.gl/next/docs/api-reference/experimental/luproj.md)[GPU Rasters](https://luma.gl/next/docs/api-reference/experimental/luraster.md)[GPU Graphs](https://luma.gl/next/docs/api-reference/experimental/lugraph.md)[luDF](https://luma.gl/next/docs/api-reference/experimental/ludf.md)[LuxFilter](https://luma.gl/next/docs/api-reference/experimental/luxfilter.md)[GPU Traces](https://luma.gl/next/docs/api-reference/experimental/lutrace.md)[GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)[Deferred Lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)[Clustered Lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)[MLS-MPM Fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)[Spectral Ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)[ShadowMapRenderer](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective Material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[ABufferRenderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOITRenderer](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
+[Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[A-Buffer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOIT](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
 
 `SpectralCausticsRenderer` is an experimental WebGPU-only photon-caustics renderer. It captures the front and back surfaces of one closed convex refractor from a light view, traces six wavelength bands through those surfaces, and additively splats the resulting energy into an HDR D65 XYZ texture. The companion `spectralCaustics` shader module samples that map on one planar receiver and converts XYZ to linear sRGB at the receiver shading boundary.
 
@@ -12,15 +12,11 @@ The result is a reusable receiver-lighting contribution, not a replacement scene
 
 InfoSource
 
-A rotating convex crystal is captured from the light, then **six CIE/D65 wavelength bands** refract through its real front and back surfaces into an HDR XYZ caustic map.
-
-**Drag** to orbit · **Wheel** to zoom · **Space** for cinematic orbit · **R** to reset
-
-WebGPU computeGeometry tracedHDR bloom
-
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Usage[​](#usage "Direct link to Usage")
 

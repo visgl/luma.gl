@@ -2,7 +2,7 @@
 
 Reconstruct previous-frame image coordinates from scene depth and camera transforms when a per-pixel velocity buffer is unavailable. `createCameraReprojectionTAAShaderPassPipeline` powers the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
 
-[ANARI Scene Lab](/next/standalone-examples/anari/playground.html)
+[ANARI Scene Lab](/next/standalone-examples/scene/playground.html)
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 

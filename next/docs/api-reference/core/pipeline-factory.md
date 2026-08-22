@@ -50,7 +50,7 @@ Returns a render pipeline. If caching is enabled and an equivalent cached wrappe
 
 ### `createComputePipeline(props: ComputePipelineProps): ComputePipeline`[​](#createcomputepipelineprops-computepipelineprops-computepipeline "Direct link to createcomputepipelineprops-computepipelineprops-computepipeline")
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 Equivalent cache-aware constructor for compute pipelines.
 

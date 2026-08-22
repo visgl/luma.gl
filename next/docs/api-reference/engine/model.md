@@ -1,8 +1,34 @@
 # Model
 
-[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Shader Inputs](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
+[Model](https://luma.gl/next/docs/api-reference/engine/model.md)[Inputs workflow](https://luma.gl/next/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/next/docs/api-guide/engine/materials.md)
 
 `Model` is the main engine-level rendering class in luma.gl. It assembles shaders, manages geometry and bindings, reuses immutable cached pipelines, and applies its dynamic draw state to a [`RenderPass`](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md).
+
+**Model**
+
+* Role
+
+  Connect shaders, inputs, geometry, pipelines, and draw state
+
+* Construction
+
+  Device plus ModelProps
+
+* Updates
+
+  Update inputs, bindings, attributes, counts, or pipeline-defining props
+
+* Ownership
+
+  Owns internal pipelines; caller retains explicitly supplied resources
+
+* Portability
+
+  Provide WGSL and GLSL for WebGPU and WebGL portability
+
+* Performance
+
+  Reuse models and honor redraw state instead of rebuilding per frame
 
 ## Usage[​](#usage "Direct link to Usage")
 

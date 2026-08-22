@@ -1,6 +1,6 @@
 # ShaderPassRenderer
 
-[ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md)[BackgroundTextureModel](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md)[ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)
+[ClipSpace](https://luma.gl/next/docs/api-reference/engine/clip-space.md)[Background texture](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md)[Pass renderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)
 
 `ShaderPassRenderer` applies one or more `ShaderPass` or `ShaderPassPipeline` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 
@@ -17,6 +17,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Usage[​](#usage "Direct link to Usage")
 

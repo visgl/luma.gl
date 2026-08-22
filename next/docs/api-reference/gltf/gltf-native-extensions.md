@@ -477,7 +477,7 @@ if (unsupportedRequired.length > 0) {
 }
 ```
 
-`createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` performs the same assertion **before** parsing GPU resources. The returned `scenegraphs.extensionSupport` is the same document-specific capability model.
+`createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})` performs a device-aware version of the same assertion **before** parsing GPU resources. In particular, required `KHR_texture_basisu` fails when loaders.gl selected a compressed GPU format that the active device cannot create. The returned `scenegraphs.extensionSupport` uses the same device-specific capability model.
 
 | Support level      | Meaning                                                                 | Accepted when required? |
 | ------------------ | ----------------------------------------------------------------------- | ----------------------- |
@@ -545,7 +545,7 @@ The fixture attribution and pinned source revision are recorded in `modules/gltf
 | `@luma.gl/engine`       | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.                                      |
 | `@luma.gl/shadertools`  | Canonical PBR material uniforms, physical shading, and reusable skinning.                                                                      |
 | `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission.                                                          |
-| `@luma.gl/anari`        | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.                                        |
+| `@luma.gl/scene`        | Optional thin retained-object orchestration through `@luma.gl/scene/gltf`; no loader or BRDF ownership.                                        |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback currently belongs to the canonical glTF scenegraph; the thin ANARI animation adapter safely ignores unsupported target families instead of creating an independent extension runtime.
 

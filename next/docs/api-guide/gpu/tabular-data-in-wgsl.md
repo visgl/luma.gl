@@ -1,6 +1,6 @@
 # Tabular Data in WGSL
 
-[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video Textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular Data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
+[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)[Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)[Uniforms](https://luma.gl/next/docs/api-guide/gpu/gpu-uniforms.md)[Textures](https://luma.gl/next/docs/api-guide/gpu/gpu-textures.md)[Video textures](https://luma.gl/next/docs/api-guide/gpu/video-textures.md)[Tabular data](https://luma.gl/next/docs/api-guide/gpu/tabular-data-in-wgsl.md)
 
 Many GPU workloads start with tabular data: each logical row describes one vertex, instance, particle, glyph, path, or record, and each column supplies one value used by the shader.
 
@@ -339,4 +339,4 @@ Design shared layouts from the storage rules first, then describe compatible att
 * [Attributes](https://luma.gl/next/docs/api-guide/gpu/gpu-attributes.md)
 * [Storage Buffers](https://luma.gl/next/docs/api-guide/gpu/gpu-storage-buffers.md)
 * [GPU Tables](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md)
-* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/tables/gpu-table-lifecycle.md)
+* [GPU Table Lifecycle](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle.md)

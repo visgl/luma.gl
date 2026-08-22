@@ -23,14 +23,6 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 **@luma.gl/arrow**
 
-* Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
-
-  <!-- -->
-
-  * `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
-  * `TableTransform`, `GPUTableComputation`
-  * `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
-
 * Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
 
   <!-- -->
@@ -44,9 +36,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 * `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
 * Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
-* The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
+* The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/gpgpu/gpu-core` with explicit key/value output views and command submission.
 
 ## Upgrading to v9.4[​](#upgrading-to-v94 "Direct link to Upgrading to v9.4")
+
+**GPU compute and table imports**
+
+* `@luma.gl/tables` has been removed without compatibility re-exports. Import primitive GPU data APIs (`GPUData`, `GPUDataView`, `GPUVector`, `GPUVectorFormat`, `GPUConstant`, formats, and basic helpers) from `@luma.gl/gpgpu/gpu-data`.
+* Import `GPURecordBatch`, `GPUTable`, schemas, table bindings, table computations, and generic table planners from `@luma.gl/experimental/gpu-tables`.
+* Import path and polygon models, their GPU input helpers, and model-specific planners from `@luma.gl/experimental/models`.
+* `@luma.gl/experimental/gpu-core` and `@luma.gl/experimental/gpu-graph` have been removed without compatibility re-exports. Import them from `@luma.gl/gpgpu/gpu-core` and `@luma.gl/gpgpu/gpu-graph`; graph benchmarks move to `@luma.gl/gpgpu/gpu-graph/benchmarks`.
 
 **@luma.gl/core**
 
@@ -142,9 +141,9 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`](https://luma.gl/next/docs/api-reference/core/luma.md#lumaregisteradapters).                      | Adapters provide a cleaner way to work with GPU backends.                                  |
 | `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`](https://luma.gl/next/docs/api-reference/core/canvas-context.md#canvascontextprops).      | Move canvas related props to `props.createCanvasContext: {}`.                              |
 | `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes). | Move canvas related props to `props.webgl: {}`.                                            |
-| `DeviceProps.break`           | Removed    |                                                                                                                                   | Use an alternative [debugger](https://luma.gl/next/docs/developer-guide/debugging.md) |
+| `DeviceProps.break`           | Removed    | —                                                                                                                                 | Use an alternative [debugger](https://luma.gl/next/docs/developer-guide/debugging.md) |
 | `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                                                                                                              | `Texture` no longer accept promises. Use `AsyncTexture`                                    |
-| `Parameters.blend`            | New        |                                                                                                                                   | Explicit activation of color blending                                                      |
+| `Parameters.blend`            | New        | —                                                                                                                                 | Explicit activation of color blending                                                      |
 | `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                                                                                                                 | Reorganize your geometries                                                                 |
 | `line-loop-webgl` topology    | Removed    | `line-list`.                                                                                                                      | Reorganize your geometries                                                                 |
 | `glsl` shader template string | Removed    | `/* glsl */` comment                                                                                                              | Enable syntax highlighting in vscode using before shader string                            |
@@ -157,7 +156,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | Updated API                          | Status  | Replacement                             | Comment                                            |
 | ------------------------------------ | ------- | --------------------------------------- | -------------------------------------------------- |
 | `ShaderModuleInstance`               | Removed | Use `ShaderModule` instead.             | Type has been removed.                             |
-| `initializeShaderModule()`           | Changed |                                         | Initializes the original shader module object      |
+| `initializeShaderModule()`           | Changed | —                                       | Initializes the original shader module object      |
 | `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module           |
 | `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
 | `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |

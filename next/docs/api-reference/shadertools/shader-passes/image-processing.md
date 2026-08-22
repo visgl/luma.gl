@@ -12,6 +12,8 @@ InfoSource
 // Loading source…
 ```
 
+Scroll page · Ctrl/⌘ + scroll to interact
+
 ## Choosing an Effect[​](#choosing-an-effect "Direct link to Choosing an Effect")
 
 | Category                  | Effects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Typical placement                                                               |

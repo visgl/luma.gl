@@ -4,6 +4,32 @@
 
 `Geometry` is the CPU-side geometry container used by engine classes. It stores typed-array attributes, optional indices, and a `bufferLayout`. When a layout is not supplied, `Geometry` creates a one-buffer-per-attribute layout automatically. Use `makeInterleavedGeometry()` to pack multiple CPU attributes into one vertex buffer while still representing the result as a normal `Geometry`.
 
+**Geometry**
+
+* Role
+
+  CPU-side attributes, indices, topology, and buffer layout
+
+* Construction
+
+  GeometryProps with typed arrays or explicit attributes
+
+* Updates
+
+  Create a new Geometry or update uploaded Model buffers
+
+* Ownership
+
+  Owns CPU arrays; the consuming Model owns uploaded internal buffers
+
+* Portability
+
+  Preserves source semantics and maps them at the rendering boundary
+
+* Performance
+
+  Interleave explicitly when fewer GPU buffers improve the workload
+
 ## Usage[​](#usage "Direct link to Usage")
 
 ```

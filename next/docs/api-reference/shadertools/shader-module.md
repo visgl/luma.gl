@@ -1,12 +1,38 @@
 # ShaderModule
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
 
 `ShaderModule` is the reusable shader feature descriptor used by `@luma.gl/shadertools`. A module may contribute WGSL and/or GLSL source, shader-facing uniform descriptors, resource bindings, dependencies, defines, and ordered injections.
 
 `ShaderModule`s are used by [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md) and engine classes such as [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md). The assembler resolves dependencies, prepends module source, applies injections, and returns assembled source plus a combined uniform getter.
 
 For the composition model, see [Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md).
+
+**ShaderModule**
+
+* Languages
+
+  WGSL source, GLSL vertex/fragment source, or both
+
+* Dependencies
+
+  Resolved transitively and de-duplicated in deterministic order
+
+* Hooks and injections
+
+  Named extension contracts and ordered source contributions
+
+* Props and bindings
+
+  Typed descriptors mapped through getUniforms()
+
+* Assembly output
+
+  Combined source, uniforms, bindings, and dependency metadata
+
+* Cost
+
+  Assemble before pipeline creation and reuse the result
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -100,7 +126,7 @@ Use `source` for WGSL, `vs` and `fs` for GLSL stage source, or all three when th
 
 The `uniformTypes` map describes the shader-facing uniform layout for the module. Primitive uniform leaves use string shader types such as `'f32'`, `'vec3<f32>'`, and `'mat4x4<f32>'`.
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 luma.gl also supports composite uniform descriptors:
 

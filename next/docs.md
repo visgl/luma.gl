@@ -4,7 +4,7 @@ luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute o
 
 Start with a live scene, follow the ideas behind a single rendered frame, and choose how much of the GPU you want to control. You can explore the examples and tutorials right here in your browser.
 
-[![npm package version](https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square\&label=npm)](https://www.npmjs.com/package/@luma.gl/core) [![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://github.com/visgl/luma.gl/blob/master/LICENSE) [![TypeScript strict mode](https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/)
+[npm package](https://www.npmjs.com/package/@luma.gl/core)[MIT license](https://github.com/visgl/luma.gl/blob/master/LICENSE)[TypeScript strict mode](https://www.typescriptlang.org/)
 
 ## Choose your starting point[​](#choose-your-starting-point "Direct link to Choose your starting point")
 
@@ -53,7 +53,7 @@ Server-side rendering and compute are also possible when the host supplies a com
 
 ## Project and releases[​](#project-and-releases "Direct link to Project and releases")
 
-This documentation describes luma.gl **v9.3**. See [What's New](https://luma.gl/next/docs/whats-new.md) for current features and the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md) for breaking changes.
+This documentation follows the current luma.gl development branch. See [What's New](https://luma.gl/next/docs/whats-new.md) for release-specific features and the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md) for breaking changes.
 
 luma.gl is an MIT-licensed OpenJS Foundation project governed by the vis.gl community. Use [GitHub Discussions](https://github.com/visgl/luma.gl/discussions) for design and usage questions, and [GitHub Issues](https://github.com/visgl/luma.gl/issues) for confirmed bugs.
 

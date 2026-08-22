@@ -31,7 +31,7 @@ Phase 1 keeps `useByteColors` enabled by default for backward compatibility.
 
 ### `lights?: Light[]`[​](#lights-light "Direct link to lights-light")
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 Preferred API for supplying lights. The array can contain:
 
@@ -87,7 +87,7 @@ type PointLight = {
 
 ### `SpotLight`[​](#spotlight "Direct link to spotlight")
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 ```
 type SpotLight = {
@@ -238,7 +238,7 @@ Returns the packed point light at `index`.
 
 ### `lighting_getSpotLight(index)`[​](#lighting_getspotlightindex "Direct link to lighting_getspotlightindex")
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 Returns the packed spot light at `index`.
 
@@ -252,7 +252,7 @@ Returns the attenuation factor for a point light.
 
 ### `getSpotLightAttenuation(spotLight, positionWorldspace)`[​](#getspotlightattenuationspotlight-positionworldspace "Direct link to getspotlightattenuationspotlight-positionworldspace")
 
-![From-v9.3](https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square)
+From v9.3
 
 Returns the attenuation factor for a spot light, including cone falloff.
 

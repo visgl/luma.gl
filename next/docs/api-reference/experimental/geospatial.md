@@ -1,5 +1,7 @@
 # WebGPU Geospatial Kernels
 
+<!-- -->
+
 The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output projection and distance kernels plus a flat grid index and point-query workflow:
 
 * `GPUSinusoidalProjection`
@@ -14,7 +16,7 @@ The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-f
 These classes structurally implement `GPUCommandGraphContributor`. Calling `addToGraph()` declares work, but does not compile the graph, submit commands, allocate caller-visible outputs, or read results back. Projection and simple pairwise distance kernels accept caller-allocated `GraphDataView` objects or matching `GraphVectorView` objects. The nested-offset point-in-polygon and nearest-linestring APIs, grid index, and point query consume fixed-width flat `GraphDataView` objects in V1.
 
 ```
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 
 import {GPUHaversineDistance} from '@luma.gl/experimental/geospatial';
 
@@ -221,7 +223,7 @@ Fixed-output kernels linearize bounded multidimensional WebGPU workgroup dispatc
 
 ## See also[​](#see-also "Direct link to See also")
 
-* [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)
-* [GPUGridIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-grid-index.md)
+* [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)
+* [GPUGridIndex](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-grid-index.md)
 * [GPU floating-point precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)
 * [`fp64arithmetic`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)

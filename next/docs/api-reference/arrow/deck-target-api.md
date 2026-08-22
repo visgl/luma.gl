@@ -2,7 +2,7 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/arrow.md)[Arrow Representations](https://luma.gl/next/docs/api-reference/arrow/arrow-representations.md)[Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md)[Supported Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md)[Utilities](https://luma.gl/next/docs/api-reference/arrow/arrow-utils.md)[deck.gl API](https://luma.gl/next/docs/api-reference/arrow/deck-target-api.md)
 
-![From: v10](https://img.shields.io/badge/From-v10-blue.svg?style=flat-square)![Status: Work-In-Progress](https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square)
+From v10Experimental API
 
 info
 
@@ -232,7 +232,7 @@ new AnyLayer({
 
   onClick: info => {
 
-    // Directional shape only. Exact PickingInfo field names are TBD.
+    // Illustrative shape: each layer documents the exact PickingInfo fields it exposes.
 
     const sourceRowIndex = info.arrow?.sourceRowIndex;
 

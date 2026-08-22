@@ -4,7 +4,13 @@
 
 import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Computation, CubeGeometry, Model} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Computation,
+  CubeGeometry,
+  Model,
+  OrbitControls
+} from '@luma.gl/engine';
 import {
   decodeGPUIndexPickInfo,
   DrawCommandBuffer,
@@ -15,7 +21,7 @@ import {
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket
-} from '@luma.gl/experimental';
+} from '@luma.gl/gpgpu/gpu-core';
 import {Matrix4} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {
@@ -42,6 +48,9 @@ const FIELD_CENTER: [number, number, number] = [0, 5, 0];
 const FIELD_FAR_PLANE = 800;
 const FIELD_NEAR_PLANE = 0.1;
 const FIELD_FOV = Math.PI / 3;
+const DEFAULT_CAMERA_YAW = 0.72;
+const DEFAULT_CAMERA_PITCH = 0.34;
+const DEFAULT_CAMERA_DISTANCE = 118;
 
 type CullingGraphResources = {
   compiled: CompiledGPUCommandGraph<CullingGraphParameters>;
@@ -84,14 +93,9 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
   private resources: CullingGraphResources | null = null;
   private capacity = DEFAULT_CAPACITY;
-  private yaw = 0.72;
-  private pitch = 0.34;
-  private distance = 118;
   private autoOrbit = true;
   private cullingEnabled = true;
   private comparisonView = true;
-  private dragging = false;
-  private lastPointer: [number, number] = [0, 0];
   private sampledVisibleCount = 0;
   private countReadPending = false;
   private pickedObjectIndex: number | null = null;
@@ -101,7 +105,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   private framesPerSecond = 0;
   private cpuFrameTimeMilliseconds = 0;
   private gpuFrameTimeMilliseconds = 0;
-  private canvas: HTMLCanvasElement | null = null;
+  private orbitControls: OrbitControls | null = null;
 
   private capacityElement: HTMLElement | null = null;
   private statsElement: HTMLElement | null = null;
@@ -184,13 +188,23 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
-      canvas.style.cursor = 'grab';
-      canvas.addEventListener('pointerdown', this.handlePointerDown);
-      canvas.addEventListener('pointermove', this.handlePointerMove);
-      canvas.addEventListener('pointerup', this.handlePointerUp);
-      canvas.addEventListener('pointercancel', this.handlePointerUp);
-      canvas.addEventListener('wheel', this.handleWheel, {passive: false});
+      this.orbitControls = new OrbitControls(canvas, {
+        target: FIELD_CENTER,
+        yaw: DEFAULT_CAMERA_YAW,
+        pitch: DEFAULT_CAMERA_PITCH,
+        distance: DEFAULT_CAMERA_DISTANCE,
+        minDistance: 18,
+        maxDistance: 420,
+        minPitch: -1.2,
+        maxPitch: 1.2,
+        pitchSpeed: -0.006,
+        autoRotate: this.autoOrbit,
+        autoRotateSpeed: 0.08,
+        onInteractionStart: () => {
+          this.autoOrbit = false;
+          this.orbitControls?.setAutoRotate(false);
+        }
+      });
     }
   }
 
@@ -214,9 +228,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         return;
       }
     }
-    if (this.autoOrbit) {
-      this.yaw = 0.72 + time * 0.00008;
-    }
+    this.orbitControls?.update(time);
     const viewports = getViewports(width, height, this.comparisonView);
     this.writeUniforms(viewports);
     const encodeStart = performance.now();
@@ -262,13 +274,7 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
   }
 
   override onFinalize(): void {
-    if (this.canvas) {
-      this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-      this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-      this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-      this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
-      this.canvas.removeEventListener('wheel', this.handleWheel);
-    }
+    this.orbitControls?.destroy();
     this.panels.finalize();
     this.destroyResources();
     this.pickingReadbackRing.destroy();
@@ -616,12 +622,9 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
 
   private writeUniforms(parameters: CullingGraphParameters): void {
     const perspectiveAspect = getViewportAspect(parameters.perspectiveViewport);
-    const cosinePitch = Math.cos(this.pitch);
-    const eye: [number, number, number] = [
-      FIELD_CENTER[0] + Math.sin(this.yaw) * cosinePitch * this.distance,
-      FIELD_CENTER[1] + Math.sin(this.pitch) * this.distance,
-      FIELD_CENTER[2] + Math.cos(this.yaw) * cosinePitch * this.distance
-    ];
+    const eye =
+      this.orbitControls?.getEyePosition() ??
+      makeCameraEyePosition(DEFAULT_CAMERA_YAW, DEFAULT_CAMERA_PITCH, DEFAULT_CAMERA_DISTANCE);
     const viewMatrix = new Matrix4().lookAt({eye, center: FIELD_CENTER, up: [0, 1, 0]});
     const projectionMatrix = new Matrix4().perspective({
       fovy: FIELD_FOV,
@@ -810,12 +813,12 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
     };
     const onAutoOrbit = (): void => {
       this.autoOrbit = autoOrbit.checked;
+      this.orbitControls?.setAutoRotate(this.autoOrbit);
     };
     const onReset = (): void => {
-      this.yaw = 0.72;
-      this.pitch = 0.34;
-      this.distance = 118;
+      this.orbitControls?.reset();
       this.autoOrbit = true;
+      this.orbitControls?.setAutoRotate(true);
       autoOrbit.checked = true;
     };
     capacitySelect.addEventListener('change', onCapacity);
@@ -866,41 +869,19 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
         .join('');
     }
   }
+}
 
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.dragging = true;
-    this.autoOrbit = false;
-    this.lastPointer = [event.clientX, event.clientY];
-    this.canvas?.setPointerCapture(event.pointerId);
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grabbing';
-    }
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    if (!this.dragging) {
-      return;
-    }
-    const deltaX = event.clientX - this.lastPointer[0];
-    const deltaY = event.clientY - this.lastPointer[1];
-    this.lastPointer = [event.clientX, event.clientY];
-    this.yaw -= deltaX * 0.006;
-    this.pitch = Math.max(-1.2, Math.min(1.2, this.pitch + deltaY * 0.006));
-  };
-
-  private readonly handlePointerUp = (event: PointerEvent): void => {
-    this.dragging = false;
-    this.canvas?.releasePointerCapture(event.pointerId);
-    if (this.canvas) {
-      this.canvas.style.cursor = 'grab';
-    }
-  };
-
-  private readonly handleWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-    this.autoOrbit = false;
-    this.distance = Math.max(18, Math.min(420, this.distance * Math.exp(event.deltaY * 0.001)));
-  };
+function makeCameraEyePosition(
+  yaw: number,
+  pitch: number,
+  distance: number
+): [number, number, number] {
+  const cosinePitch = Math.cos(pitch);
+  return [
+    FIELD_CENTER[0] + Math.sin(yaw) * cosinePitch * distance,
+    FIELD_CENTER[1] + Math.sin(pitch) * distance,
+    FIELD_CENTER[2] + Math.cos(yaw) * cosinePitch * distance
+  ];
 }
 
 function formatCount(value: number): string {

@@ -2,7 +2,7 @@
 
 [Shader](https://luma.gl/next/docs/api-reference/core/resources/shader.md)[RenderPipeline](https://luma.gl/next/docs/api-reference/core/resources/render-pipeline.md)[ComputePipeline](https://luma.gl/next/docs/api-reference/core/resources/compute-pipeline.md)[VertexArray](https://luma.gl/next/docs/api-reference/core/resources/vertex-array.md)[TransformFeedback](https://luma.gl/next/docs/api-reference/core/resources/transform-feedback.md)
 
-![WebGPU supported](https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square)![WebGL2 not supported](https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square)
+WebGPU supportedWebGL 2 not supported
 
 A `ComputePipeline` holds a compiled compute shader plus the [`ComputeShaderLayout`](https://luma.gl/next/docs/api-reference/core/shader-layout.md) that describes its bindings.
 

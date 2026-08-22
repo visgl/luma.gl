@@ -1,17 +1,17 @@
 # Choosing a GPU Data-Processing API
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Initialization](https://luma.gl/next/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/next/docs/api-guide/gpu/gpu-resources.md)[Data Processing](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)
+[Initialization](https://luma.gl/next/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/next/docs/api-guide/gpu/gpu-resources.md)[Data processing](https://luma.gl/next/docs/api-guide/gpu/gpu-data-processing.md)
 
 luma.gl offers several ways to transform data on the GPU. The right starting point depends mainly on whether your application must run on WebGL, how much control it needs over command submission, and whether the computation is a single transformation or a reusable multi-pass workflow.
 
 ## Which API Should I Use?[​](#which-api-should-i-use "Direct link to Which API Should I Use?")
 
-| Start with                                                                                                         | Use it when                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@luma.gl/gpgpu`](https://luma.gl/next/docs/api-reference/gpgpu.md)                                          | You want portable, composable data operations that run on CPU, WebGL, or WebGPU.                                                      |
-| [`GPUCommandGraph`](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
-| [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md)                        | You want to write and dispatch one custom WebGPU compute shader directly.                                                             |
-| [`BufferTransform`](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md)               | You want to write a custom WebGL transform-feedback operation directly.                                                               |
+| Start with                                                                                                   | Use it when                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@luma.gl/gpgpu`](https://luma.gl/next/docs/api-reference/gpgpu.md)                                    | You want portable, composable data operations that run on CPU, WebGL, or WebGPU.                                                      |
+| [`GPUCommandGraph`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
+| [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md)                  | You want to write and dispatch one custom WebGPU compute shader directly.                                                             |
+| [`BufferTransform`](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md)         | You want to write a custom WebGL transform-feedback operation directly.                                                               |
 
 For most portable buffer transformations, begin with GPGPU evaluators. Move to a command graph when the workflow itself—not just an individual operation—needs WebGPU scheduling and resource management.
 
@@ -70,7 +70,7 @@ Neither API is intended to replace the other. GPGPU provides a convenient portab
 The two APIs exchange caller-owned table resources without repacking them. A materialized GPGPU result is a `GPUVector`, which can be imported into a command graph:
 
 ```
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 
 
 
@@ -112,6 +112,6 @@ This describes an architectural direction, not a currently available API. Applic
 * [GPGPU overview](https://luma.gl/next/docs/api-reference/gpgpu.md)
 * [GPGPU operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md)
 * [GPU evaluators](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-evaluator.md)
-* [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-primitives/gpu-command-graph.md)
+* [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)
 * [GPU tables](https://luma.gl/next/docs/api-guide/gpu/gpu-tables.md)
 * [Issuing GPU commands](https://luma.gl/next/docs/api-guide/gpu/gpu-commands.md)

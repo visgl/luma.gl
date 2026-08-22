@@ -1,8 +1,38 @@
 # PickingManager
 
+[Workflow](https://luma.gl/next/docs/api-guide/engine/interactivity.md)[OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md)[PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md)
+
 `PickingManager` manages an offscreen picking framebuffer and the shader-input updates needed for luma.gl's engine picking modules.
 
 It is useful when rendering models that use the engine `picking`, `colorPicking`, or `indexPicking` shader modules and reading back the selected object and batch ids.
+
+**PickingManager**
+
+* Role
+
+  Coordinate the picking framebuffer, shader state, readback, callbacks, and tooltip
+
+* Construction
+
+  Device, ShaderInputs, picking mode, and optional callbacks
+
+* Updates
+
+  Render only when shouldPick() reports a new cursor position or force is requested
+
+* Ownership
+
+  Owns its lazily created framebuffer and tooltip; caller owns models and ShaderInputs
+
+* Portability
+
+  Color picking is portable; integer index picking requires backend support
+
+* Performance
+
+  Readback is asynchronous but still a synchronization point; avoid unchanged picks
+
+:::warning Common mistake Do not render and read the picking target on every animation frame when the cursor has not moved. Use `shouldPick()` and keep the last stable object index in the visible shader for immediate highlighting. :::
 
 ## Usage[​](#usage "Direct link to Usage")
 

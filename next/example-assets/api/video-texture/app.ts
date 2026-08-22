@@ -6,7 +6,7 @@ import type {ExternalTexture, NumberArray, VariableShaderType} from '@luma.gl/co
 import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@luma.gl/engine';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {Matrix4} from '@math.gl/core';
 import {Input, ALL_FORMATS, BlobSource, VideoSampleSink} from 'mediabunny';
 

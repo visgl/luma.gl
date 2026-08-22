@@ -1,6 +1,6 @@
 # ShaderAssembler
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[ShaderPass](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)[ShaderAssembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Shader Parsing](https://luma.gl/next/docs/api-reference/shadertools/shader-info.md)[WGSL](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
+[ShaderModule](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md)[Assembler](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md)[Conventions](https://luma.gl/next/docs/api-reference/shadertools/shader-conventions.md)
 
 `ShaderAssembler` is the abstract base for stateful shader assembly. Its concrete subclasses combine application shader source with shadertools modules, hook functions, and injections before luma.gl creates shader resources:
 
@@ -10,6 +10,34 @@
 Each shader language has its own default assembler, keeping language-specific hooks, default modules, and other assembly state isolated.
 
 For the assembly model, see [Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md). For extension design, see [Writing Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md). For WGSL binding relocation and conditionals, see [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md).
+
+**ShaderAssembler**
+
+* Languages
+
+  Separate stateful GLSL and WGSL assembler implementations
+
+* Dependencies
+
+  Initializes, resolves, de-duplicates, and orders module dependencies
+
+* Hooks and injections
+
+  Combines registered hook contracts with ordered module and application injections
+
+* Inputs
+
+  Application source, platform information, modules, defines, and injection maps
+
+* Output
+
+  Assembled source, resolved modules, layout metadata, and combined uniform mapping
+
+* Cost
+
+  Assemble when source configuration changes, before pipeline creation—not per draw
+
+:::warning Common mistake The default assembler is shared state for one shader language. Register global hooks or default modules deliberately; use an isolated assembler when one application must not affect another. :::
 
 ## Usage[​](#usage "Direct link to Usage")
 

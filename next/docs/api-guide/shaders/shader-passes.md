@@ -1,6 +1,6 @@
 # Shader Passes
 
-[Overview](https://luma.gl/next/docs/api-guide/shaders.md)[Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[GPU Precision](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)[Rendering Techniques](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md)[Transparency](https://luma.gl/next/docs/api-guide/shaders/transparency.md)[Glass Effects](https://luma.gl/next/docs/api-guide/shaders/glass-effects.md)
+[Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shadertools`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
 
@@ -15,6 +15,8 @@ InfoSource
 ```
 // Loading source…
 ```
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Components[​](#components "Direct link to Components")
 

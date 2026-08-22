@@ -95,6 +95,17 @@
 
     #example-panel-host {
       padding-top: 9px;
+      width: 100%;
+    }
+
+    #example-panel-container:has(#example-panel-host:empty) {
+      display: none;
+    }
+
+    #example-panel-host select,
+    #example-panel-host input,
+    #example-panel-host button {
+      max-width: 100%;
     }
 
     [id^='settings-panel-input-'][role='listbox'] {
