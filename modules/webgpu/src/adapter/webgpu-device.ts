@@ -32,6 +32,7 @@ import type {
   QuerySet,
   QuerySetProps,
   DeviceProps,
+  DeviceLostInfo,
   CommandEncoderProps,
   CommandEncoder,
   PipelineLayoutProps,
@@ -58,6 +59,7 @@ import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
+import {getWebGPUTextureFormatCapabilities} from './helpers/webgpu-texture-capabilities';
 
 import {
   getShaderLayoutFromWGSL,
@@ -83,7 +85,7 @@ export class WebGPUDevice extends Device {
   /** type of this device */
   readonly type = 'webgpu';
 
-  readonly preferredColorFormat: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
+  preferredColorFormat: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
   readonly preferredDepthFormat = 'depth24plus';
 
   readonly features: DeviceFeatures;
@@ -91,7 +93,7 @@ export class WebGPUDevice extends Device {
   readonly info: DeviceInfo;
   readonly limits: DeviceLimits;
 
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  readonly lost: Promise<DeviceLostInfo>;
 
   override canvasContext: WebGPUCanvasContext | null = null;
 
@@ -141,16 +143,25 @@ export class WebGPUDevice extends Device {
     // "Context" loss handling
     this.lost = this.handle.lost.then(lostInfo => {
       this._isLost = true;
-      return {reason: 'destroyed', message: lostInfo.message};
+      const loss: DeviceLostInfo = {
+        reason: lostInfo.reason === 'destroyed' ? 'destroyed' : 'unknown',
+        message: lostInfo.message
+      };
+      return loss;
     });
 
-    // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    if (canvasContextProps) {
-      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
-      this.preferredColorFormat = this.canvasContext.colorFormat || this.preferredColorFormat;
-    }
-
     this.commandEncoder = this.createCommandEncoder({});
+  }
+
+  /** @internal Returns normalized canvas props before a device wrapper exists. */
+  static getCanvasContextProps(props: DeviceProps): CanvasContextProps | undefined {
+    return Device._getCanvasContextProps(props);
+  }
+
+  /** @internal Initializes the default canvas as a separately diagnosable creation stage. */
+  initializeCanvasContext(props: CanvasContextProps): void {
+    this.canvasContext = new WebGPUCanvasContext(this, this.adapter, props);
+    this.preferredColorFormat = this.canvasContext.colorFormat || this.preferredColorFormat;
   }
 
   // TODO
@@ -592,11 +603,11 @@ export class WebGPUDevice extends Device {
   override _getDeviceSpecificTextureFormatCapabilities(
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
-    const {format} = capabilities;
-    if (format.includes('webgl')) {
-      return {format, create: false, render: false, filter: false, blend: false, store: false};
-    }
-    return capabilities;
+    return getWebGPUTextureFormatCapabilities(
+      capabilities.format,
+      this.features,
+      getWebGPUDeviceFeatureLevel(this.props.featureLevel)
+    );
   }
 }
 

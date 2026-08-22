@@ -8,7 +8,7 @@ import type {DeviceProps} from './device';
 /** Shared defaults for device creation without importing the Device class. */
 export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   id: null!,
-  powerPreference: 'high-performance',
+  powerPreference: 'default',
   failIfMajorPerformanceCaveat: false,
   featureLevel: undefined!,
   optionalFeatures: [],
@@ -49,6 +49,8 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   _cachePipelines: true,
   _sharePipelines: true,
   _destroyPipelines: false,
+  _forceFallbackAdapter: false,
+  _canvasContextOwned: false,
   // TODO - Change these after confirming things work as expected
   _initializeFeatures: true,
   _disabledFeatures: {

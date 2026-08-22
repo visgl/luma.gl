@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getWebGLTestDevice,
+  getWebGPUTestDevice,
+  nullAdapter,
+  NullDevice
+} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
@@ -202,9 +207,39 @@ test('engine#AnimationLoop start followed immediately by stop() should stop', as
   t.end();
 });
 
+test('engine#AnimationLoop does not attach device handlers after stopping during creation', async t => {
+  let resolveDevice!: (device: NullDevice) => void;
+  const devicePromise = new Promise<NullDevice>(resolve => {
+    resolveDevice = resolve;
+  });
+  const device = new NullDevice({});
+  const originalOnError = device.props.onError;
+  let initializeCalled = 0;
+  const animationLoop = new AnimationLoop({
+    device: devicePromise,
+    onInitialize: () => {
+      initializeCalled++;
+    }
+  });
+
+  const startPromise = animationLoop.start();
+  animationLoop.stop();
+  resolveDevice(device);
+  const startResult = await startPromise;
+
+  t.is(startResult, null, 'late device resolution leaves the loop stopped');
+  t.is(initializeCalled, 0, 'late device resolution does not initialize the loop');
+  t.is(device.props.onError, originalOnError, 'late device resolution does not retain the loop');
+
+  animationLoop.destroy();
+  device.destroy();
+  t.end();
+});
+
 test('engine#makeAnimationLoop stops after template initialization failure', async t => {
   const device = await getWebGLTestDevice();
   let renderCalled = 0;
+  let finalizeCalled = 0;
 
   class FailingAnimationLoopTemplate extends AnimationLoopTemplate {
     override async onInitialize(): Promise<unknown> {
@@ -215,29 +250,277 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
       renderCalled++;
     }
 
-    override onFinalize(): void {}
-  }
-
-  // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
-  const originalConsoleError = console.error;
-  // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
-  console.error = () => {};
-  try {
-    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {
-      device
-    });
-    const startResult = await animationLoop.start();
-    t.is(startResult, null, 'Animation loop stops after template initialization failure');
-    t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
-    animationLoop.destroy();
-  } finally {
-    // biome-ignore lint/suspicious/noConsole: test restores console state after suppressing expected logging.
-    console.error = originalConsoleError;
-    if (typeof document !== 'undefined') {
-      document.getElementById('animation-loop-error')?.remove();
+    override onFinalize(): void {
+      finalizeCalled++;
     }
   }
 
+  const reportedErrors: Error[] = [];
+  const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {
+    device,
+    onError: error => reportedErrors.push(error)
+  });
+  let startError: Error | null = null;
+  try {
+    await animationLoop.start();
+  } catch (error) {
+    startError = error as Error;
+  }
+
+  t.equal(startError?.message, 'Expected initialization failure', 'start preserves the error');
+  t.equal(reportedErrors.length, 1, 'initialization failure is reported once');
+  t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
+  t.is(finalizeCalled, 0, 'incomplete initialization is not finalized');
+  if (typeof document !== 'undefined') {
+    const errorDisplay = document.querySelector('[data-luma-error-display="true"]');
+    t.ok(errorDisplay, 'fatal error is visible over the canvas');
+    t.ok(
+      errorDisplay?.textContent?.includes('Expected initialization failure'),
+      'error display includes the failure message'
+    );
+  }
+  animationLoop.destroy();
+  if (typeof document !== 'undefined') {
+    t.notOk(
+      document.querySelector('[data-luma-error-display="true"]'),
+      'destroy removes the error display'
+    );
+  }
+
+  t.end();
+});
+
+test('engine#AnimationLoop finalizes after a fatal render error', async t => {
+  const device = new NullDevice({createCanvasContext: true});
+  const expectedError = new Error('Expected render failure');
+  const reportedErrors: Error[] = [];
+  let finalizeCalled = 0;
+  const animationLoop = new AnimationLoop({
+    device,
+    animationFrameProvider: {
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {}
+    },
+    onRender: () => {
+      throw expectedError;
+    },
+    onFinalize: () => {
+      finalizeCalled++;
+    },
+    onError: error => reportedErrors.push(error)
+  });
+
+  await animationLoop.start();
+  t.throws(() => animationLoop.redraw(), 'fatal render failure is preserved');
+
+  t.deepEqual(reportedErrors, [expectedError], 'fatal render failure is reported once');
+  t.is(finalizeCalled, 1, 'initialized loop is finalized after the fatal error');
+  t.equal(animationLoop._running, false, 'fatal render failure stops the loop');
+
+  animationLoop.destroy();
+  t.is(finalizeCalled, 1, 'destroy does not finalize the stopped loop twice');
+  device.destroy();
+  t.end();
+});
+
+test('engine#AnimationLoop reports device promise rejection to an explicit target', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const expectedError = new Error('<device creation failed>');
+  const animationLoop = new AnimationLoop({
+    device: Promise.reject(expectedError),
+    errorDisplay: {target: container},
+    onError: () => {}
+  });
+
+  try {
+    await animationLoop.start();
+  } catch {
+    // Expected failure.
+  }
+
+  const errorDisplay = container.querySelector('[data-luma-error-display="true"]');
+  t.ok(errorDisplay, 'device creation failure is visible without a resolved device');
+  t.ok(
+    errorDisplay?.textContent?.includes('<device creation failed>'),
+    'error is inserted as text rather than HTML'
+  );
+  t.notOk(errorDisplay?.querySelector('device'), 'error text did not create markup');
+
+  animationLoop.destroy();
+  container.remove();
+  t.end();
+});
+
+test('engine#AnimationLoop preserves an explicit target after an HTML device resolves', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const canvasContainer = document.createElement('div');
+  const errorContainer = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  canvasContainer.appendChild(canvas);
+  document.body.append(canvasContainer, errorContainer);
+  const device = new NullDevice({createCanvasContext: {canvas}});
+  const animationLoop = new AnimationLoop({
+    device,
+    errorDisplay: {target: errorContainer},
+    onError: () => {}
+  });
+  await animationLoop.start();
+
+  animationLoop.reportError(new Error('Explicit target failure'));
+
+  t.ok(
+    errorContainer.querySelector('[data-luma-error-display="true"]'),
+    'fatal error remains in the explicit target'
+  );
+  t.notOk(
+    canvasContainer.querySelector('[data-luma-error-display="true"]'),
+    'resolved canvas does not replace the explicit target'
+  );
+
+  animationLoop.destroy();
+  canvasContainer.remove();
+  errorContainer.remove();
+  device.destroy();
+  t.end();
+});
+
+test('engine#makeAnimationLoop preserves an explicit target for an offscreen device', async t => {
+  if (typeof document === 'undefined' || typeof OffscreenCanvas === 'undefined') {
+    t.comment('Offscreen DOM execution is unavailable');
+    t.end();
+    return;
+  }
+
+  class FailingOffscreenAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onInitialize(): never {
+      throw new Error('Offscreen initialization failure');
+    }
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const errorContainer = document.createElement('div');
+  document.body.appendChild(errorContainer);
+  const animationLoop = makeAnimationLoop(FailingOffscreenAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {canvas: new OffscreenCanvas(16, 16)}
+    },
+    errorDisplay: {target: errorContainer},
+    onError: () => {}
+  });
+
+  try {
+    await animationLoop.start();
+  } catch {
+    // Expected initialization failure.
+  }
+
+  t.ok(
+    errorContainer.querySelector('[data-luma-error-display="true"]'),
+    'offscreen fatal error is shown in the explicit DOM target'
+  );
+
+  animationLoop.destroy();
+  errorContainer.remove();
+  t.end();
+});
+
+test('engine#AnimationLoop briefly displays asynchronous device errors without stopping', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const container = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  document.body.appendChild(container);
+  const device = new NullDevice({createCanvasContext: {canvas}});
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+
+  device.reportError(new Error('<expected asynchronous GPU error>'), device)();
+
+  const errorMessage = container.querySelector('[data-luma-error-message="true"]');
+  t.equal(animationLoop._running, true, 'runtime device error does not stop the animation loop');
+  t.ok(errorMessage, 'runtime device error is briefly visible over the canvas');
+  t.equal(errorMessage?.getAttribute('role'), 'status', 'message has an accessible status role');
+  t.equal(
+    errorMessage?.textContent,
+    '<expected asynchronous GPU error>',
+    'message is inserted as text rather than HTML'
+  );
+  t.equal(errorMessage?.querySelector('expected'), null, 'message text did not create markup');
+  t.ok(
+    (errorMessage as HTMLElement | null)?.style.transition.includes('opacity'),
+    'message is configured to fade out'
+  );
+  t.notOk(
+    container.querySelector('[data-luma-error-display="true"]'),
+    'nonfatal error does not create the fatal overlay'
+  );
+
+  animationLoop.destroy();
+  t.notOk(
+    container.querySelector('[data-luma-error-message="true"]'),
+    'destroy removes the transient message'
+  );
+  container.remove();
+  device.destroy();
+  t.end();
+});
+
+test('engine#AnimationLoop defers runtime device errors to DeviceProps.onError', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const container = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  document.body.appendChild(container);
+  const reportedErrors: Error[] = [];
+  const device = new NullDevice({
+    createCanvasContext: {canvas},
+    onError: error => {
+      reportedErrors.push(error);
+      return true;
+    }
+  });
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+
+  const expectedError = new Error('Application-owned device error');
+  device.reportError(expectedError, device)();
+
+  t.deepEqual(reportedErrors, [expectedError], 'application device error handler is called');
+  t.equal(animationLoop._running, true, 'handled device error keeps rendering');
+  t.notOk(
+    container.querySelector('[data-luma-error-message="true"]'),
+    'application device error handler suppresses the default canvas message'
+  );
+
+  animationLoop.destroy();
+  container.remove();
+  device.destroy();
   t.end();
 });
 
@@ -260,6 +543,89 @@ test('engine#makeAnimationLoop exposes the active template instance', async t =>
   );
   animationLoop.destroy();
   t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
+  t.end();
+});
+
+test('engine#makeAnimationLoop inserts its automatic canvas after the DOM is ready', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const readyStateDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+  Object.defineProperty(document, 'readyState', {configurable: true, value: 'loading'});
+  const containerId = 'late-animation-loop-container';
+
+  class DeferredCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const animationLoop = makeAnimationLoop(DeferredCanvasAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {container: containerId}
+    }
+  });
+
+  const container = document.createElement('div');
+  container.id = containerId;
+  document.body.appendChild(container);
+  document.dispatchEvent(new Event('DOMContentLoaded'));
+
+  try {
+    await animationLoop.start();
+    t.ok(container.querySelector('canvas'), 'automatic canvas is inserted into the late container');
+  } finally {
+    animationLoop.destroy();
+    container.remove();
+    if (readyStateDescriptor) {
+      Object.defineProperty(document, 'readyState', readyStateDescriptor);
+    } else {
+      delete (document as Document & {readyState?: string}).readyState;
+    }
+  }
+  t.end();
+});
+
+test('engine#makeAnimationLoop preserves default automatic canvas dimensions', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  class DefaultCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const animationLoop = makeAnimationLoop(DefaultCanvasAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      id: 'custom-animation-loop-device',
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {container}
+    }
+  });
+  const canvas = container.querySelector('canvas');
+
+  t.ok(canvas, 'automatic canvas is created synchronously for an available container');
+  t.is(canvas?.width, 800, 'default drawing-buffer width is preserved');
+  t.is(canvas?.height, 600, 'default drawing-buffer height is preserved');
+  t.is(canvas?.style.width, '800px', 'default CSS width is preserved');
+  t.is(canvas?.style.height, '600px', 'default CSS height is preserved');
+
+  await animationLoop.start();
+  t.is(animationLoop.device?.id, 'custom-animation-loop-device', 'caller device id is preserved');
+  animationLoop.destroy();
+  container.remove();
   t.end();
 });
 

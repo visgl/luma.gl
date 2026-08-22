@@ -10,6 +10,7 @@ import {
 import {Timeline} from '../animation/timeline';
 import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
+import {CanvasErrorDisplay, type CanvasErrorDisplayProps} from './canvas-error-display';
 
 let statIdCounter = 0;
 const ANIMATION_LOOP_STATS = 'Animation Loop';
@@ -38,6 +39,8 @@ export type AnimationLoopProps = {
   onRender?: (animationProps: AnimationProps) => unknown;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
+  /** Browser canvas error overlay. Enabled by default; set to false to disable. */
+  errorDisplay?: false | CanvasErrorDisplayProps;
 
   stats?: Stats;
 
@@ -67,6 +70,7 @@ export class AnimationLoop {
       // biome-ignore lint/suspicious/noConsole: default fallback error reporting for app loops.
       console.error(error);
     },
+    errorDisplay: {},
 
     stats: undefined!,
 
@@ -88,6 +92,7 @@ export class AnimationLoop {
   frameRate: Stat;
 
   display: any;
+  readonly errorDisplay: CanvasErrorDisplay | null;
 
   private _needsRedraw: string | false = 'initialized';
 
@@ -99,17 +104,24 @@ export class AnimationLoop {
   _cpuStartTime: number = 0;
   _error: Error | null = null;
   _lastFrameTime: number = 0;
+  private _restoreDeviceErrorHandler: (() => void) | null = null;
+  private _observedLostDevice: Device | null = null;
+  private readonly _hasExplicitErrorDisplayTarget: boolean;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor(props: AnimationLoopProps) {
+    this._hasExplicitErrorDisplayTarget = Boolean(props.errorDisplay && props.errorDisplay.target);
     this.props = {...AnimationLoop.defaultAnimationLoopProps, ...props};
     props = this.props;
 
     if (!props.device) {
       throw new Error('No device provided');
     }
+
+    this.errorDisplay =
+      props.errorDisplay === false ? null : new CanvasErrorDisplay(props.errorDisplay);
 
     // state
     this.stats = props.stats || new Stats({id: `animation-loop-${statIdCounter++}`});
@@ -134,6 +146,7 @@ export class AnimationLoop {
 
   destroy(): void {
     this.stop();
+    this.errorDisplay?.destroy();
     this._setDisplay(null);
     this.device?._disableDebugGPUTime();
   }
@@ -144,8 +157,13 @@ export class AnimationLoop {
   }
 
   reportError(error: Error): void {
-    this.props.onError(error);
     this._error = error;
+    this.errorDisplay?.show(error);
+    try {
+      this.props.onError(error);
+    } finally {
+      this.stop();
+    }
   }
 
   /** Flags this animation loop as needing redraw */
@@ -187,13 +205,18 @@ export class AnimationLoop {
       return this;
     }
     this._running = true;
+    this._error = null;
+    this.errorDisplay?.clear();
+    this._attachDeviceErrorHandler();
 
     try {
       let appContext;
       if (!this._initialized) {
-        this._initialized = true;
         // Create the WebGL context
         await this._initDevice();
+        if (!this._running) {
+          return null;
+        }
         this._initialize();
         if (!this._running) {
           return null;
@@ -201,6 +224,7 @@ export class AnimationLoop {
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
         await this.props.onInitialize(this._getAnimationProps());
+        this._initialized = true;
       }
 
       // check that we haven't been stopped
@@ -218,8 +242,9 @@ export class AnimationLoop {
       return this;
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unknown error');
-      this.props.onError(error);
-      // this._running = false; // TODO
+      if (this._error !== error) {
+        this.reportError(error);
+      }
       throw error;
     }
   }
@@ -230,7 +255,7 @@ export class AnimationLoop {
     if (this._running) {
       // call callback
       // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps && !this._error) {
+      if (this.animationProps && this._initialized) {
         this.props.onFinalize(this.animationProps);
       }
 
@@ -240,6 +265,8 @@ export class AnimationLoop {
       this._running = false;
       this._lastFrameTime = 0;
     }
+    this._restoreDeviceErrorHandler?.();
+    this._restoreDeviceErrorHandler = null;
     return this;
   }
 
@@ -249,28 +276,33 @@ export class AnimationLoop {
       return this;
     }
 
-    this._beginFrameTimers(time);
+    try {
+      this._beginFrameTimers(time);
 
-    this._setupFrame();
-    if (this.animationProps) {
-      this.animationProps.animationFrame = animationFrame;
+      this._setupFrame();
+      if (this.animationProps) {
+        this.animationProps.animationFrame = animationFrame;
+      }
+      this._updateAnimationProps();
+
+      this._renderFrame(this._getAnimationProps());
+
+      // clear needsRedraw flag
+      this._clearNeedsRedraw();
+
+      if (this._resolveNextFrame) {
+        this._resolveNextFrame(this);
+        this._nextFramePromise = null;
+        this._resolveNextFrame = null;
+      }
+
+      this._endFrameTimers();
+      return this;
+    } catch (error) {
+      const renderError = error instanceof Error ? error : new Error(String(error));
+      this.reportError(renderError);
+      throw renderError;
     }
-    this._updateAnimationProps();
-
-    this._renderFrame(this._getAnimationProps());
-
-    // clear needsRedraw flag
-    this._clearNeedsRedraw();
-
-    if (this._resolveNextFrame) {
-      this._resolveNextFrame(this);
-      this._nextFramePromise = null;
-      this._resolveNextFrame = null;
-    }
-
-    this._endFrameTimers();
-
-    return this;
   }
 
   /** Add a timeline, it will be automatically updated by the animation loop. */
@@ -358,7 +390,11 @@ export class AnimationLoop {
     if (!this._running) {
       return;
     }
-    this.redraw(time, animationFrame ?? null);
+    try {
+      this.redraw(time, animationFrame ?? null);
+    } catch {
+      return;
+    }
     this._requestAnimationFrame();
   }
 
@@ -481,7 +517,61 @@ export class AnimationLoop {
       throw new Error('No device provided');
     }
     this.canvas = this.device.getDefaultCanvasContext().canvas || null;
+    if (
+      !this._hasExplicitErrorDisplayTarget &&
+      typeof HTMLCanvasElement !== 'undefined' &&
+      this.canvas instanceof HTMLCanvasElement
+    ) {
+      this.errorDisplay?.setTarget(this.canvas);
+    } else if (
+      !this._hasExplicitErrorDisplayTarget &&
+      typeof OffscreenCanvas !== 'undefined' &&
+      this.canvas instanceof OffscreenCanvas
+    ) {
+      this.errorDisplay?.disable();
+    }
+    if (!this._running) {
+      return;
+    }
+    this._attachDeviceErrorHandler();
+    if (this._observedLostDevice !== this.device) {
+      this._observedLostDevice = this.device;
+      void this.device.lost.then(loss => {
+        if (loss.reason !== 'destroyed' && this._running && !this._error) {
+          const error = new Error(loss.message || 'GPU device was lost') as Error & {
+            deviceLossInfo?: typeof loss;
+          };
+          error.deviceLossInfo = loss;
+          this.reportError(error);
+        }
+      });
+    }
     // this._createInfoDiv();
+  }
+
+  private _attachDeviceErrorHandler(): void {
+    if (
+      !this.device ||
+      this._restoreDeviceErrorHandler ||
+      this.device.props.onError !== Device.defaultProps.onError
+    ) {
+      return;
+    }
+
+    const device = this.device;
+    const originalOnError = device.props.onError;
+    const displayOnError = (error: Error, context?: unknown): unknown => {
+      if (this._running && !this._error) {
+        this.errorDisplay?.showMessage(error);
+      }
+      return originalOnError(error, context);
+    };
+    device.props.onError = displayOnError;
+    this._restoreDeviceErrorHandler = () => {
+      if (device.props.onError === displayOnError) {
+        device.props.onError = originalOnError;
+      }
+    };
   }
 
   _createInfoDiv(): void {
