@@ -463,7 +463,7 @@ export type DeviceProps = {
   _destroyPipelines?: boolean;
   /** Internal: request a software-backed WebGPU adapter. */
   _forceFallbackAdapter?: boolean;
-  /** Internal: the HTML canvas may be replaced if a failed backend locked its context type. */
+  /** Internal: the engine created this HTML canvas and may insert it into the document. */
   _canvasContextOwned?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */

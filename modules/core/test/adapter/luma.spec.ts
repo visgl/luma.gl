@@ -332,6 +332,62 @@ test('luma#createDevice rejects software WebGPU before reusing a caller-owned ca
   t.end();
 });
 
+test('luma#createDevice replaces a caller-owned canvas after canvas initialization fails', async t => {
+  const container = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  canvas.id = 'caller-canvas';
+  canvas.width = 640;
+  canvas.height = 480;
+  canvas.style.width = '320px';
+  container.appendChild(canvas);
+  document.body.appendChild(container);
+
+  const requestedCanvases: HTMLCanvasElement[] = [];
+  const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
+    const nativeError = new Error('Canvas context configuration failed');
+    throw new DeviceCreationError(
+      'WebGPU canvas initialization failed',
+      [
+        {
+          backend: 'webgpu',
+          featureLevel: props.featureLevel,
+          software: false,
+          phase: 'canvas-initialization',
+          error: nativeError
+        }
+      ],
+      nativeError
+    );
+  });
+  const webglAdapter = new RecordingAdapter('webgl', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
+    return await createNullDevice(props);
+  });
+
+  const device = await luma.createDevice({
+    type: 'best-available',
+    adapters: [webgpuAdapter, webglAdapter],
+    createCanvasContext: {canvas},
+    waitForPageLoad: false
+  });
+
+  const [coreCanvas, compatibilityCanvas, webglCanvas] = requestedCanvases;
+  t.equal(coreCanvas, canvas, 'core WebGPU receives the caller canvas');
+  t.notEqual(compatibilityCanvas, coreCanvas, 'compatibility receives an unbound replacement');
+  t.notEqual(webglCanvas, compatibilityCanvas, 'WebGL receives a second unbound replacement');
+  t.equal(webglCanvas.parentElement, container, 'the final replacement remains visible');
+  t.equal(webglCanvas.id, canvas.id, 'the replacement preserves the canvas id');
+  t.equal(webglCanvas.width, canvas.width, 'the replacement preserves drawing-buffer width');
+  t.equal(webglCanvas.height, canvas.height, 'the replacement preserves drawing-buffer height');
+  t.equal(webglCanvas.style.width, canvas.style.width, 'the replacement preserves CSS dimensions');
+  t.equal(device.creationInfo.selected?.backend, 'webgl', 'WebGL fallback succeeds');
+
+  device.destroy();
+  container.remove();
+  t.end();
+});
+
 test('luma#createDevice classifies CPU WebGPU devices as software', async t => {
   const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
     const device = await createNullDevice(props);
