@@ -12,18 +12,18 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 
 | Effect | Implementation | Visible result |
 | --- | --- | --- |
-| Fresnel reflection | Adjustable Schlick-style grazing-angle response. | Sculpted, luminous reflections around silhouettes. |
+| Fresnel reflection | IOR-derived, energy-conserving Schlick response shared by reflected and transmitted light. | Sculpted grazing reflections without whitening the glass interior. |
 | Refraction | Projects Snell's refracted ray into camera-aligned screen space and samples an independently captured scene-color texture. | Background links and packets visibly bend and magnify behind polished or frosted glass. |
 | Backface thickness | Rasterizes sphere backfaces into a normal-and-depth texture and linearizes the front-to-back depth difference. | Glass centers and silhouettes acquire different optical path lengths. |
 | Two-surface transmission | Applies analytic entry and exit refraction while checking opaque scene depth. | Background bends convincingly without distorting geometry in front of the glass. |
 | Studio environment | Samples a generated equirectangular environment along the reflected viewing direction. | Polished surfaces receive camera-responsive studio reflections. |
 | Prefiltered environment | Selects initialized reflection-probe mip levels from surface roughness, including broader internal-bounce lobes. | Polished clearcoat remains sharp while rough and internal reflections become naturally softer. |
-| Chromatic dispersion | Offsets red, green, and blue scene-color samples. | Subtle colored separation around refracted features. |
+| Chromatic dispersion | Refracts red and blue rays separately using glTF's `20 / Abbe number` IOR model. | Physically ordered, thickness-dependent spectral separation around refracted features. |
 | Beer-Lambert absorption | Attenuates transmitted light with material color and thickness. | Longer optical paths produce darker, more tinted transmission. |
 | Spectral volume absorption | Applies independent red, green, and blue extinction over measured shell thickness. | Deep glass acquires wavelength-dependent tint without recoloring thin silhouettes. |
 | Rough transmission | Filters refracted scene samples over a thickness- and roughness-dependent footprint. | Frosted glass softly blurs background packets while polished switches remain clear. |
-| GGX microfacets | Shared distribution and visibility helpers shade key and fill lights. | Roughness-dependent, camera-responsive polished highlights. |
-| Clearcoat | Adds a second narrow microfacet lobe above the base surface. | Crisp, bright reflections that make the outer shell readable. |
+| GGX microfacets | Shared distribution and visibility helpers filter roughness using screen-space normal derivatives. | Stable, camera-responsive highlights without subpixel white sparkle. |
+| Clearcoat | Layers a narrow dielectric microfacet lobe while attenuating the underlying optical response. | Crisp outer-shell reflections that preserve the material's energy budget. |
 | Internal reflection | Approximates a colored secondary environment bounce inside the shell. | A softer inner Fresnel band and greater visible depth. |
 | Multiple internal bounces | Reflects the refracted ray against both measured shell surfaces before sampling the studio environment again. | A second curved highlight suggests the depth of polished solid glass. |
 | Thin-film interference | Evaluates nanometer-scale coating thickness across representative red, green, and blue wavelengths. | Angle-dependent spectral bands follow grazing highlights without coloring the whole object. |
@@ -68,7 +68,7 @@ shaderInputs.setProps({
     sceneColorTexture,
     indexOfRefraction: 1.5,
     roughness: 0.14,
-    dispersion: 0.022,
+    dispersion: 0.33,
     thickness: 1.05,
     refractionStrength: 1,
     reflectionStrength: 1,
@@ -108,6 +108,46 @@ refracted ray is projected into the current camera basis, so links and other bac
 remain correctly distorted as the camera orbits. Transmission coverage is kept high enough that
 the displaced scene remains visible instead of being overwhelmed by the original background during
 translucent compositing.
+
+The `dispersion` value follows `KHR_materials_dispersion`: it represents `20 / Abbe number`, not
+an arbitrary pixel offset. Crown glass is approximately `0.33`; larger values increase the
+wavelength-dependent index spread. The red channel receives the lowest index of refraction, the
+green channel retains the authored material index, and the blue channel receives the highest.
+The volume extension refracts each channel at both the entry and exit surfaces.
+
+## Relationship to Physically Based Materials
+
+The canonical PBR material additionally covers glTF anisotropy, specular controls, sheen,
+clearcoat, iridescence, specular transmission, volume absorption, dispersion, diffuse
+transmission, and experimental directional volume scattering. Use that material when rendering
+authored glTF assets or evaluating extension-specific textures and parameters.
+
+The optical shader modules are a specialized raster-glass pipeline rather than a second glTF
+material loader. They intentionally share the canonical PBR model's IOR-derived Fresnel response,
+reflection/transmission energy partition, clearcoat attenuation, Abbe-number dispersion, and
+geometric specular antialiasing while adding backface-derived optical thickness, layered
+screen-space refraction, localized packet reflections, optical wakes, and focused caustics. Dense
+diffuse transmission is intentionally excluded from clear glass because it would turn the switch
+interiors cloudy and obscure network traffic.
+
+### Building a Glass Showcase on Canonical PBR
+
+`createPBRMaterial`, `createPBRModel`, and `SceneRenderer` can provide the physically based
+foundation for the packet-spraying showcase. The existing PBR fragment shader can be composed
+with `glassTransmission`, `opticalPointLights`, and an A-buffer or weighted-blended capture
+helper in the same WGSL or GLSL shader.
+
+| Showcase component | Canonical PBR behavior | Application-specific extension |
+| --- | --- | --- |
+| Glass switches | Dielectric IOR, transmission, thickness, attenuation, dispersion, clearcoat, and thin-film iridescence. | Captured backface normals/depth, two-surface refraction, fault distortion, and transparency capture. |
+| Network links and servers | Metallic/roughness shading, normal response, specular color, and image-based lighting. | Packet-driven illumination, focused caustics, and active-link emphasis. |
+| Packets and control probes | Emissive color and HDR emissive strength. | Conversation-specific per-instance colors, velocity trails, and bounded local lights. |
+| Environment | Prefiltered diffuse/specular probes, BRDF integration, exposure, and tone mapping. | Showcase-authored studio lighting and selective packet bloom. |
+
+A full migration should first extend the retained scene renderer with per-instance color
+attributes, optional glass-backface capture, and pluggable A-buffer/weighted-blended translucent
+passes. Until those orchestration features exist, replacing the showcase's renderer outright would
+lose visible behavior despite the canonical material shaders already being compatible.
 
 ## Add Rasterized Volume Transmission
 
@@ -252,6 +292,54 @@ system. In particular, the current implementation does not provide:
 Those capabilities require additional depth, normal, backface, environment, or ray-tracing data
 and should be introduced as explicitly composable modules or render passes rather than hidden in
 an individual showcase.
+
+## Research Directions
+
+The most relevant next-generation techniques have different requirements and should not be
+treated as interchangeable:
+
+- [Newton-refined screen-space refraction and caustics](https://jcgt.org/published/0015/01/03/)
+  intersect refracted view or light rays with captured depth using a small bounded number of
+  tangent-plane refinements. This is the strongest near-term extension for browser-friendly
+  glass because it builds on existing depth, backface, and scene-color captures.
+- [Adaptive voxel-based order-independent transparency](https://advances.realtimerendering.com/s2025/)
+  improves deep transparent layering beyond ordinary weighted blending. A WebGPU implementation
+  would require explicit visibility storage, memory budgets, and a documented WebGL fallback.
+- [OpenPBR material layering](https://academysoftwarefoundation.github.io/OpenPBR/) formalizes
+  energy-preserving coat, dielectric, conductor, thin-film, and participating-volume interfaces.
+  Additional work should align reusable optical modules with these compositional rules instead
+  of stacking unrestricted additive highlights.
+- [Bidirectional ReSTIR caustics](https://research.nvidia.com/labs/rtr/publication/hedstrom2025restir/)
+  generate physically based multi-bounce focused light using ray-traced light paths and
+  spatiotemporal reservoirs. Their current hardware and runtime costs place them beyond the
+  cross-backend raster showcase.
+- [Spatiotemporal neural transparency](https://arxiv.org/abs/2606.16747) combines adaptive
+  transparent-layer rendering, temporal reprojection, and neural tail reconstruction. It is an
+  interesting research direction, but neural inference and persistent history are substantially
+  more complex than the current exact and weighted OIT modes.
+
+### Licensing and Patent Review
+
+Research references identify possible directions; they do not authorize copying article text,
+figures, shader code, or implementations, and they do not establish patent clearance. Before
+adopting a technique:
+
+- Prefer independently implemented conventional optics and established, ratified glTF material
+  behavior already supported by luma.gl.
+- Verify the exact license of every source file, asset, reference implementation, and dependency.
+  Preserve required copyright, license, modification, and attribution notices.
+- Prefer well-scoped permissive implementations with explicit contributor patent terms, such as
+  [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), while recognizing that those
+  terms do not cover unrelated third-party patents.
+- Treat research papers, accompanying source archives, and presentation slides as separately
+  licensed. In particular, the Newton-refraction paper is distributed under CC BY-ND 4.0, so its
+  publication is not permission to incorporate its text, figures, or source code into luma.gl.
+- Do not assume that a published specification grants rights to every possible implementation.
+  Review the
+  [Khronos File Format Adopter Program](https://www.khronos.org/conformance/adopters/file-format-adopter-program)
+  and applicable reciprocal patent terms separately when adopting ratified glTF behavior.
+- Keep novel techniques with unclear provenance or possible patent exposure experimental until
+  project maintainers and, when appropriate, qualified legal counsel complete review.
 
 For a complete application, see
 [Effects: Glass - Network Packet Spraying](/examples/showcase/packet-spraying), which combines glass switches,

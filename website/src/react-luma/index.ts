@@ -26,7 +26,10 @@ export type {
   ExampleDisplayProps,
   ExamplePageProps,
   ExampleStageProps,
-  LumaExampleProps
+  LumaExampleProps,
+  LumaExampleTemplate,
+  LumaExampleTemplateLoader,
+  LumaExampleTemplateModule
 } from './components/luma-example';
 export {ExampleStats} from './components/example-stats';
 export {InfoBox} from './components/info-box';

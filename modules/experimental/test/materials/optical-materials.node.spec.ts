@@ -212,6 +212,16 @@ test('optical material modules expose portable shared shader helpers', testCase 
   testCase.match(opticalLighting.fs, /float opticalLighting_getFresnel/, 'GLSL helpers exist');
   testCase.match(
     opticalLighting.source,
+    /fn opticalLighting_getFilteredRoughness[\s\S]*?dpdx\(normal\)[\s\S]*?dpdy\(normal\)/,
+    'WGSL widens subpixel highlights using screen-space normal derivatives'
+  );
+  testCase.match(
+    opticalLighting.fs,
+    /float opticalLighting_getFilteredRoughness[\s\S]*?dFdx\(normal\)[\s\S]*?dFdy\(normal\)/,
+    'GLSL uses matching geometric specular antialiasing'
+  );
+  testCase.match(
+    opticalLighting.source,
     /fn opticalLighting_getMicrofacetSpecular/,
     'WGSL exposes GGX microfacet highlights'
   );
@@ -273,7 +283,7 @@ test('optical materials retain defaults while applying partial updates', testCas
       viewportSize: [1, 1],
       indexOfRefraction: 1.48,
       roughness: 0.14,
-      dispersion: 0.022,
+      dispersion: 0.33,
       thickness: 1.05,
       refractionStrength: 1,
       reflectionStrength: 1,
@@ -568,6 +578,21 @@ test('glass materials compose portable clearcoat, spectral rims, and soft transm
     );
     testCase.match(
       shaderSource,
+      /dispersionHalfSpread = \(indexOfRefraction - 1\.0\) \* 0\.025/,
+      `${language} follows glTF's Abbe-number wavelength-dependent index-of-refraction model`
+    );
+    testCase.match(
+      shaderSource,
+      /redRefractionDirection = refract/,
+      `${language} traces the lower-index red transmission ray`
+    );
+    testCase.match(
+      shaderSource,
+      /blueRefractionDirection = refract/,
+      `${language} traces the higher-index blue transmission ray`
+    );
+    testCase.match(
+      shaderSource,
       /transmissionCoverage/,
       `${language} preserves displaced background instead of blending it away`
     );
@@ -576,7 +601,37 @@ test('glass materials compose portable clearcoat, spectral rims, and soft transm
       /opticalLighting_getMicrofacetSpecular/,
       `${language} shades glass with GGX microfacet highlights`
     );
+    testCase.match(
+      shaderSource,
+      /opticalLighting_getFilteredRoughness/,
+      `${language} prevents subpixel GGX highlights from sparkling or clipping`
+    );
     testCase.match(shaderSource, /clearcoatStrength/, `${language} supports a clearcoat lobe`);
+    testCase.match(
+      shaderSource,
+      /clearcoatFresnel/,
+      `${language} computes the clearcoat's angular dielectric reflectance`
+    );
+    testCase.match(
+      shaderSource,
+      /baseLayerEnergy/,
+      `${language} attenuates the underlying layer when clearcoat reflects incoming light`
+    );
+    testCase.match(
+      shaderSource,
+      /clearcoatEnvironment = environmentColor \* clearcoatFresnel/,
+      `${language} restores clearcoat Fresnel energy as environment reflection`
+    );
+    testCase.match(
+      shaderSource,
+      /clearcoatReflection = \(clearcoatEnvironment \+ clearcoatSpecular\)/,
+      `${language} combines clearcoat environment and direct-light reflections`
+    );
+    testCase.match(
+      shaderSource,
+      /clamp\(glassMaterial\.transmissionStrength, 0\.0, 1\.0\)/,
+      `${language} prevents transmission from amplifying the captured background`
+    );
     testCase.match(
       shaderSource,
       /internalReflectionStrength/,
@@ -621,6 +676,31 @@ test('rasterized glass transmission composes thickness, depth, and environment m
     );
     testCase.match(shaderSource, /entryDirection = refract/, `${language} refracts at entry`);
     testCase.match(shaderSource, /exitDirection = refract/, `${language} refracts at exit`);
+    testCase.match(
+      shaderSource,
+      /redEntryDirection = refract[\s\S]*?blueEntryDirection = refract/,
+      `${language} traces wavelength-dependent rays through the front glass surface`
+    );
+    testCase.match(
+      shaderSource,
+      /redExitDirection = refract[\s\S]*?blueExitDirection = refract/,
+      `${language} refracts every wavelength again at the rear glass boundary`
+    );
+    testCase.match(
+      shaderSource,
+      /baseReflectance = pow\(\(indexOfRefraction - 1\.0\) \/ \(indexOfRefraction \+ 1\.0\), 2\.0\)/,
+      `${language} derives dielectric Fresnel reflectance from the configured index of refraction`
+    );
+    testCase.match(
+      shaderSource,
+      /transmissionWeight = \(1\.0 - fresnel\)/,
+      `${language} reserves reflected energy before transmitting the background`
+    );
+    testCase.match(
+      shaderSource,
+      /reflectionWeight = fresnel \* glassMaterial\.reflectionStrength/,
+      `${language} weights environment reflections by the same angular Fresnel response`
+    );
     testCase.match(
       shaderSource,
       /foregroundOcclusion/,

@@ -344,7 +344,8 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(this)');
     expect(applicationSource).toContain('AppAnimationLoopTemplate.setCurrent(null)');
     expect(exampleSource).toContain('useSyncExternalStore(');
-    expect(exampleSource).toContain('WebXRKaleidoscopeApp.subscribeToCurrent');
+    expect(exampleSource).toContain('useDeferredExampleModule(loadWebXRKaleidoscopeApp)');
+    expect(exampleSource).toContain('webXRApplication?.subscribeToCurrent');
     expect(exampleSource).toContain('const effectiveDevice = activeApplication?.device');
     expect(exampleSource).toContain('selectedDevice?.type === effectiveDevice?.type');
     expect(exampleSource).toContain('effectiveDevice?.props.xrCompatible === true');

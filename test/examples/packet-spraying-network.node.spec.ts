@@ -4,48 +4,50 @@
 
 import test from 'test/utils/vitest-tape';
 import {
-  AGGREGATION_POSITIONS,
-  AGGREGATION_SWITCH_RADIUS,
   FAILURE_DETECTION_DELAY,
-  CONVERSATIONS,
   ENDPOINT_SIGNAL_DURATION,
-  HOST_POSITIONS,
-  LEAF_SWITCH_RADIUS,
-  LEAF_POSITIONS,
-  NETWORK_SWITCH_PLANE_COUNT,
   PACKET_TRAVEL_SPEED,
-  SPINE_POSITIONS,
-  SPINE_SWITCH_RADIUS,
   SWITCH_CONFIRMATION_DURATION,
   SWITCH_PROBE_DURATION,
-  SWITCH_POSITIONS,
   SWITCH_TRANSITION_WAVE_DURATION,
-  getActivePlaneCount,
-  getDistance,
   getHealthyConversationRoutes,
-  getNetworkPlaneSwitchIndices,
-  isFailedSwitchPosition,
   isSwitchProbeRouteAvailable,
-  makeConversationRoutes,
   makeEndpointSignals,
-  makeLinks,
   makeLinkPulses,
   makeLinkTraffic,
   makePackets,
   makeNetworkFabricTelemetry,
   makeNetworkPlaneTelemetry,
-  makeNetworkPathFocus,
   makeNetworkSwitchPlaneTelemetry,
-  makePickableNetworkNodes,
   makeSwitchPacketEvents,
   makeSwitchProbeConfirmationEvent,
   makeSwitchProbeEvent,
   makeSwitchQueuePackets,
-  makeSwitchGroups,
   makeSwitchArrivals,
   makeSwitchTransitionWave,
-  makeLinkKey,
   reroutePackets
+} from '../../examples/showcase/packet-spraying/animation';
+import {
+  AGGREGATION_POSITIONS,
+  AGGREGATION_SWITCH_RADIUS,
+  CONVERSATIONS,
+  HOST_POSITIONS,
+  LEAF_SWITCH_RADIUS,
+  LEAF_POSITIONS,
+  NETWORK_SWITCH_PLANE_COUNT,
+  SPINE_POSITIONS,
+  SPINE_SWITCH_RADIUS,
+  SWITCH_POSITIONS,
+  getActivePlaneCount,
+  getDistance,
+  getNetworkPlaneSwitchIndices,
+  isFailedSwitchPosition,
+  makeConversationRoutes,
+  makeLinks,
+  makeNetworkPathFocus,
+  makePickableNetworkNodes,
+  makeSwitchGroups,
+  makeLinkKey
 } from '../../examples/showcase/packet-spraying/network';
 
 test('packet-spraying network defines two switch planes and four independent spine paths', testCase => {
@@ -269,6 +271,89 @@ test('packet-spraying link traffic follows visible red and green packets', testC
     'an empty link has no traffic illumination'
   );
 
+  testCase.end();
+});
+
+test('packet-spraying retransmissions and trimmed headers illuminate their physical links', testCase => {
+  const routes = makeConversationRoutes();
+  const packets = makePackets(routes);
+  const switchIndex = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length;
+  const failureEvents = makeSwitchPacketEvents({
+    packets,
+    conversationRoutes: routes,
+    scenario: 'failure',
+    startedAt: 12,
+    switchIndex
+  });
+  const retransmission = failureEvents.find(event => event.kind === 'retransmission')!;
+  const retransmissionLink = makeLinkKey(
+    retransmission.route.points[0],
+    retransmission.route.points[1]
+  );
+  const retransmissionTraffic = makeLinkTraffic([], retransmission.startedAt + 0.08, [
+    retransmission
+  ]);
+
+  testCase.ok(
+    (retransmissionTraffic.get(retransmissionLink)?.red ?? 0) > 0,
+    'a replacement payload lights the source link it is currently crossing'
+  );
+
+  const congestionEvents = makeSwitchPacketEvents({
+    packets,
+    conversationRoutes: routes,
+    scenario: 'congestion',
+    startedAt: 20,
+    switchIndex
+  });
+  const trimmedHeader = congestionEvents.find(event => event.kind === 'trimmed-header')!;
+  const switchPointIndex = trimmedHeader.route.points.indexOf(SWITCH_POSITIONS[switchIndex]);
+  const downstreamLink = makeLinkKey(
+    trimmedHeader.route.points[switchPointIndex],
+    trimmedHeader.route.points[switchPointIndex + 1]
+  );
+  const trimmedHeaderTraffic = makeLinkTraffic([], trimmedHeader.startedAt + 0.08, [trimmedHeader]);
+
+  testCase.ok(
+    (trimmedHeaderTraffic.get(downstreamLink)?.red ?? 0) > 0,
+    'a forwarded trimmed header lights the downstream link rather than its discarded payload'
+  );
+  testCase.equal(
+    makeLinkTraffic([], trimmedHeader.startedAt + trimmedHeader.duration + 0.01, [trimmedHeader])
+      .size,
+    0,
+    'completed recovery packets stop illuminating links'
+  );
+  testCase.end();
+});
+
+test('packet-spraying control probes illuminate otherwise unused physical links', testCase => {
+  const routes = makeConversationRoutes();
+  const switchIndex = 0;
+  const probe = makeSwitchProbeEvent(routes, switchIndex, 9)!;
+  const confirmation = makeSwitchProbeConfirmationEvent(probe);
+  const physicalLinkKey = makeLinkKey(HOST_POSITIONS[switchIndex], LEAF_POSITIONS[switchIndex]);
+  const probeTraffic = makeLinkTraffic([], probe.startedAt + probe.duration / 2, [probe]);
+  const confirmationTraffic = makeLinkTraffic(
+    [],
+    confirmation.startedAt + confirmation.duration / 2,
+    [confirmation]
+  );
+
+  testCase.ok(
+    (probeTraffic.get(physicalLinkKey)?.blue ?? 0) > 0,
+    'outbound blue probes light a physical link without application traffic'
+  );
+  testCase.ok(
+    (confirmationTraffic.get(physicalLinkKey)?.blue ?? 0) > 0 &&
+      (confirmationTraffic.get(physicalLinkKey)?.green ?? 0) > 0,
+    'returning confirmation packets give the same physical link a cyan highlight'
+  );
+  testCase.equal(
+    makeLinkTraffic([], probe.startedAt - 0.01, [probe]).size,
+    0,
+    'a control path remains dark until its probe actually departs'
+  );
   testCase.end();
 });
 

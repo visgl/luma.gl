@@ -343,12 +343,13 @@ fn glassTransmission_getColor(
     hasBackface
   ) * glassTransmission.thicknessStrength;
   let backNormal = select(-frontNormal, normalize(backface.rgb * 2.0 - 1.0), hasBackface);
+  let indexOfRefraction = max(glassMaterial.indexOfRefraction, 1.001);
   let entryDirection = refract(
     -viewDirection,
     frontNormal,
-    1.0 / max(glassMaterial.indexOfRefraction, 1.001)
+    1.0 / indexOfRefraction
   );
-  let exitDirection = refract(entryDirection, -backNormal, glassMaterial.indexOfRefraction);
+  let exitDirection = refract(entryDirection, -backNormal, indexOfRefraction);
   let hasExitRay = dot(exitDirection, exitDirection) > 0.0001;
   let transmittedDirection = select(reflect(entryDirection, -backNormal), exitDirection, hasExitRay);
   let cameraUpAxis = select(
@@ -389,8 +390,30 @@ fn glassTransmission_getColor(
   let sampledDepth = glassTransmission_sampleDepth(proposedCoordinate);
   let foregroundOcclusion = sampledDepth + glassTransmission.depthBias < fragmentPosition.z;
   let safeOffset = select(proposedOffset, vec2<f32>(0.0), foregroundOcclusion);
-  let dispersionOffset = projectedNormal * glassMaterial.dispersion *
-    measuredThickness * 0.3;
+  let dispersionHalfSpread = (indexOfRefraction - 1.0) * 0.025 *
+    max(glassMaterial.dispersion, 0.0);
+  let redIndexOfRefraction = max(indexOfRefraction - dispersionHalfSpread, 1.001);
+  let blueIndexOfRefraction = indexOfRefraction + dispersionHalfSpread;
+  let redEntryDirection = refract(-viewDirection, frontNormal, 1.0 / redIndexOfRefraction);
+  let blueEntryDirection = refract(-viewDirection, frontNormal, 1.0 / blueIndexOfRefraction);
+  let redExitDirection = refract(redEntryDirection, -backNormal, redIndexOfRefraction);
+  let blueExitDirection = refract(blueEntryDirection, -backNormal, blueIndexOfRefraction);
+  let redTransmittedDirection = select(
+    reflect(redEntryDirection, -backNormal),
+    redExitDirection,
+    dot(redExitDirection, redExitDirection) > 0.0001
+  );
+  let blueTransmittedDirection = select(
+    reflect(blueEntryDirection, -backNormal),
+    blueExitDirection,
+    dot(blueExitDirection, blueExitDirection) > 0.0001
+  );
+  let spectralDeflection = (redEntryDirection - blueEntryDirection) * 0.34 +
+    (redTransmittedDirection - blueTransmittedDirection) * 0.16;
+  let dispersionOffset = vec2<f32>(
+    dot(spectralDeflection, cameraRight) / viewportAspect,
+    -dot(spectralDeflection, cameraUp)
+  ) * measuredThickness * glassMaterial.refractionStrength * 0.18;
   let transmittedColor = glassTransmission_sampleRoughTransmission(
     screenCoordinate,
     safeOffset,
@@ -401,7 +424,16 @@ fn glassTransmission_getColor(
   let reflectionDirection = reflect(-viewDirection, frontNormal);
   let environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   let viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
-  let fresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0);
+  let baseReflectance = pow((indexOfRefraction - 1.0) / (indexOfRefraction + 1.0), 2.0);
+  let fresnel = clamp(
+    opticalLighting_getFresnel(viewAlignment, baseReflectance, 5.0) *
+      glassMaterial.fresnelStrength,
+    0.0,
+    0.96
+  );
+  let transmissionWeight = (1.0 - fresnel) *
+    clamp(glassMaterial.transmissionStrength, 0.0, 1.0);
+  let reflectionWeight = fresnel * glassMaterial.reflectionStrength;
   let internalReflection = glassTransmission_sampleEnvironmentAtRoughness(
     reflect(entryDirection, -backNormal),
     glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.13
@@ -444,9 +476,8 @@ fn glassTransmission_getColor(
     backDepth,
     hasBackface
   );
-  let opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength *
-      contactShadow +
-    environmentReflection * (0.09 + fresnel * 0.65) +
+  let opticalColor = transmittedColor * absorption * transmissionWeight * contactShadow +
+    environmentReflection * reflectionWeight +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
     thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
   return vec4<f32>(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
@@ -727,12 +758,13 @@ vec4 glassTransmission_getColor(
       : glassMaterial.thickness * 0.4
   ) * glassTransmission.thicknessStrength;
   vec3 backNormal = hasBackface ? normalize(backface.rgb * 2.0 - 1.0) : -frontNormal;
+  float indexOfRefraction = max(glassMaterial.indexOfRefraction, 1.001);
   vec3 entryDirection = refract(
     -viewDirection,
     frontNormal,
-    1.0 / max(glassMaterial.indexOfRefraction, 1.001)
+    1.0 / indexOfRefraction
   );
-  vec3 exitDirection = refract(entryDirection, -backNormal, glassMaterial.indexOfRefraction);
+  vec3 exitDirection = refract(entryDirection, -backNormal, indexOfRefraction);
   bool hasExitRay = dot(exitDirection, exitDirection) > 0.0001;
   vec3 transmittedDirection = hasExitRay
     ? exitDirection
@@ -773,8 +805,26 @@ vec4 glassTransmission_getColor(
   float sampledDepth = glassTransmission_sampleDepth(proposedCoordinate);
   bool foregroundOcclusion = sampledDepth + glassTransmission.depthBias < fragmentPosition.z;
   vec2 safeOffset = foregroundOcclusion ? vec2(0.0) : proposedOffset;
-  vec2 dispersionOffset = projectedNormal * glassMaterial.dispersion *
-    measuredThickness * 0.3;
+  float dispersionHalfSpread = (indexOfRefraction - 1.0) * 0.025 *
+    max(glassMaterial.dispersion, 0.0);
+  float redIndexOfRefraction = max(indexOfRefraction - dispersionHalfSpread, 1.001);
+  float blueIndexOfRefraction = indexOfRefraction + dispersionHalfSpread;
+  vec3 redEntryDirection = refract(-viewDirection, frontNormal, 1.0 / redIndexOfRefraction);
+  vec3 blueEntryDirection = refract(-viewDirection, frontNormal, 1.0 / blueIndexOfRefraction);
+  vec3 redExitDirection = refract(redEntryDirection, -backNormal, redIndexOfRefraction);
+  vec3 blueExitDirection = refract(blueEntryDirection, -backNormal, blueIndexOfRefraction);
+  vec3 redTransmittedDirection = dot(redExitDirection, redExitDirection) > 0.0001
+    ? redExitDirection
+    : reflect(redEntryDirection, -backNormal);
+  vec3 blueTransmittedDirection = dot(blueExitDirection, blueExitDirection) > 0.0001
+    ? blueExitDirection
+    : reflect(blueEntryDirection, -backNormal);
+  vec3 spectralDeflection = (redEntryDirection - blueEntryDirection) * 0.34 +
+    (redTransmittedDirection - blueTransmittedDirection) * 0.16;
+  vec2 dispersionOffset = vec2(
+    dot(spectralDeflection, cameraRight) / viewportAspect,
+    dot(spectralDeflection, cameraUp)
+  ) * measuredThickness * glassMaterial.refractionStrength * 0.18;
   vec3 transmittedColor = glassTransmission_sampleRoughTransmission(
     screenCoordinate,
     safeOffset,
@@ -785,7 +835,16 @@ vec4 glassTransmission_getColor(
   vec3 reflectionDirection = reflect(-viewDirection, frontNormal);
   vec3 environmentReflection = glassTransmission_sampleEnvironment(reflectionDirection);
   float viewAlignment = clamp(dot(frontNormal, viewDirection), 0.0, 1.0);
-  float fresnel = opticalLighting_getFresnel(viewAlignment, 0.04, 5.0);
+  float baseReflectance = pow((indexOfRefraction - 1.0) / (indexOfRefraction + 1.0), 2.0);
+  float fresnel = clamp(
+    opticalLighting_getFresnel(viewAlignment, baseReflectance, 5.0) *
+      glassMaterial.fresnelStrength,
+    0.0,
+    0.96
+  );
+  float transmissionWeight = (1.0 - fresnel) *
+    clamp(glassMaterial.transmissionStrength, 0.0, 1.0);
+  float reflectionWeight = fresnel * glassMaterial.reflectionStrength;
   vec3 internalReflection = glassTransmission_sampleEnvironmentAtRoughness(
     reflect(entryDirection, -backNormal),
     glassMaterial.roughness + glassTransmission.environmentPrefilterStrength * 0.13
@@ -823,9 +882,8 @@ vec4 glassTransmission_getColor(
     backDepth,
     hasBackface
   );
-  vec3 opticalColor = transmittedColor * absorption * glassMaterial.transmissionStrength *
-      contactShadow +
-    environmentReflection * (0.09 + fresnel * 0.65) +
+  vec3 opticalColor = transmittedColor * absorption * transmissionWeight * contactShadow +
+    environmentReflection * reflectionWeight +
     internalReflection * pow(1.0 - viewAlignment, 2.0) + secondaryReflection +
     thinFilmReflection + volumeScattering + dynamicReflection + faultFilament;
   return vec4(mix(surfaceColor.rgb, opticalColor, 0.64), surfaceColor.a);
