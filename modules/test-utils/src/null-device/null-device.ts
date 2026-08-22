@@ -63,6 +63,7 @@ export class NullDevice extends Device {
   override commandEncoder: NullCommandEncoder;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  private _isLost: boolean = false;
 
   constructor(props: DeviceProps) {
     super({...props, id: props.id || 'null-device'});
@@ -75,14 +76,15 @@ export class NullDevice extends Device {
 
   /**
    * Destroys the context
-   * @note Has no effect for null contexts
+   * @note Marks this test device as unusable even though there is no native context to lose.
    */
   destroy(): void {
+    this._isLost = true;
     this.commandEncoder?.destroy();
   }
 
   get isLost(): boolean {
-    return false;
+    return this._isLost;
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE

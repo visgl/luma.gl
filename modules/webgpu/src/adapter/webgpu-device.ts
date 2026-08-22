@@ -159,6 +159,7 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    this._isLost = true;
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
