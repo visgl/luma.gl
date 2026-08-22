@@ -233,23 +233,39 @@ test('luma#createDevice honors max and compatibility policy starting points', as
 });
 
 test('luma#createDevice does not select an incidental software adapter as hardware', async t => {
+  const container = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  document.body.appendChild(container);
+  const requestedCanvases: HTMLCanvasElement[] = [];
   const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
     const device = await createNullDevice(props);
     (device.info as {fallback?: boolean}).fallback = true;
     return device;
   });
-  const webglAdapter = new RecordingAdapter('webgl', createNullDevice);
+  const webglAdapter = new RecordingAdapter('webgl', async props => {
+    requestedCanvases.push((props.createCanvasContext as {canvas: HTMLCanvasElement}).canvas);
+    return await createNullDevice(props);
+  });
 
   const device = await luma.createDevice({
     type: 'best-available',
     adapters: [webgpuAdapter, webglAdapter],
+    createCanvasContext: {canvas},
+    _canvasContextOwned: true,
     waitForPageLoad: false
   });
 
   t.equal(webgpuAdapter.calls.length, 2, 'both hardware profiles reject software devices');
+  const [firstCanvas, secondCanvas, webglCanvas] = requestedCanvases;
+  t.notEqual(firstCanvas, secondCanvas, 'core rejection replaces the owned canvas');
+  t.notEqual(secondCanvas, webglCanvas, 'compatibility rejection replaces the owned canvas');
+  t.equal(webglCanvas.parentElement, container, 'WebGL receives the visible replacement canvas');
   t.equal(device.creationInfo.selected?.backend, 'webgl', 'broad fallback prefers WebGL');
   t.equal(device.creationInfo.attempts.length, 2, 'software detections are diagnostic attempts');
   device.destroy();
+  container.remove();
   t.end();
 });
 

@@ -71,13 +71,7 @@ export function makeAnimationLoop(
             (preparedDeviceProps ? getDeviceErrorTarget(preparedDeviceProps) : undefined)
         };
 
-  const device =
-    props.device ||
-    luma.createDevice({
-      ...preparedDeviceProps,
-      id: 'animation-loop',
-      adapters: props.adapters
-    });
+  const device = props.device || createAutomaticDevice(preparedDeviceProps!, props.adapters);
 
   const onAfterRender = props.onAfterRender;
 
@@ -126,6 +120,14 @@ export function makeAnimationLoop(
   };
 
   return templateAnimationLoop;
+}
+
+async function createAutomaticDevice(
+  deviceProps: Omit<CreateDeviceProps, 'adapters'>,
+  adapters?: Adapter[]
+): Promise<Device> {
+  await insertAutomaticCanvas(deviceProps);
+  return await luma.createDevice({...deviceProps, id: 'animation-loop', adapters});
 }
 
 function prepareAutomaticDeviceProps(
@@ -181,6 +183,39 @@ function getDeviceErrorTarget(
     return typeof canvas === 'string' || !canvas.id ? canvas : canvas.id;
   }
   return resolveContainer(canvasProps?.container) || undefined;
+}
+
+async function insertAutomaticCanvas(
+  deviceProps: Omit<CreateDeviceProps, 'adapters'>
+): Promise<void> {
+  const canvasProps = deviceProps.createCanvasContext;
+  if (
+    !deviceProps._canvasContextOwned ||
+    typeof document === 'undefined' ||
+    canvasProps === true ||
+    !(canvasProps?.canvas instanceof HTMLCanvasElement) ||
+    canvasProps.canvas.isConnected
+  ) {
+    return;
+  }
+  const canvas = canvasProps.canvas;
+
+  let container = resolveContainer(canvasProps?.container);
+  if (!container && document.readyState !== 'complete') {
+    await new Promise<void>(resolve => {
+      const target = document.readyState === 'loading' ? document : window;
+      target.addEventListener(
+        document.readyState === 'loading' ? 'DOMContentLoaded' : 'load',
+        () => resolve(),
+        {
+          once: true
+        }
+      );
+    });
+    container = resolveContainer(canvasProps?.container);
+  }
+  container ||= document.body || document.documentElement;
+  container.insertBefore(canvas, container.firstChild);
 }
 
 function resolveContainer(container?: HTMLElement | string | null): HTMLElement | null {

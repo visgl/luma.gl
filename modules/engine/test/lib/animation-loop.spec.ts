@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {getWebGLTestDevice, getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
+import {
+  getWebGLTestDevice,
+  getWebGPUTestDevice,
+  nullAdapter,
+  NullDevice
+} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
@@ -390,6 +395,51 @@ test('engine#makeAnimationLoop exposes the active template instance', async t =>
   );
   animationLoop.destroy();
   t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
+  t.end();
+});
+
+test('engine#makeAnimationLoop inserts its automatic canvas after the DOM is ready', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const readyStateDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+  Object.defineProperty(document, 'readyState', {configurable: true, value: 'loading'});
+  const containerId = 'late-animation-loop-container';
+
+  class DeferredCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const animationLoop = makeAnimationLoop(DeferredCanvasAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {container: containerId}
+    }
+  });
+
+  const container = document.createElement('div');
+  container.id = containerId;
+  document.body.appendChild(container);
+  document.dispatchEvent(new Event('DOMContentLoaded'));
+
+  try {
+    await animationLoop.start();
+    t.ok(container.querySelector('canvas'), 'automatic canvas is inserted into the late container');
+  } finally {
+    animationLoop.destroy();
+    container.remove();
+    if (readyStateDescriptor) {
+      Object.defineProperty(document, 'readyState', readyStateDescriptor);
+    } else {
+      delete (document as Document & {readyState?: string}).readyState;
+    }
+  }
   t.end();
 });
 

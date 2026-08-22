@@ -153,6 +153,7 @@ export class Luma {
             phase: 'adapter-selection',
             error: new Error('Software WebGPU rejected')
           });
+          replaceOwnedCanvasAfterFailedInitialization(props);
           continue;
         }
         device.creationInfo = {
