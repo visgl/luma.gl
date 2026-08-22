@@ -127,7 +127,7 @@ async function createAutomaticDevice(
   adapters?: Adapter[]
 ): Promise<Device> {
   await insertAutomaticCanvas(deviceProps);
-  return await luma.createDevice({...deviceProps, id: 'animation-loop', adapters});
+  return await luma.createDevice({id: 'animation-loop', ...deviceProps, adapters});
 }
 
 function prepareAutomaticDeviceProps(

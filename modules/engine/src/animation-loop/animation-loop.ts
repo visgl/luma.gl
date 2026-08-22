@@ -255,7 +255,7 @@ export class AnimationLoop {
     if (this._running) {
       // call callback
       // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps && !this._error) {
+      if (this.animationProps && this._initialized) {
         this.props.onFinalize(this.animationProps);
       }
 

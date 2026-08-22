@@ -230,6 +230,14 @@ export class WebGPUAdapter extends Adapter {
     }
 
     const adapterInfo = await getWebGPUAdapterInfo(adapter);
+    if (props.failIfMajorPerformanceCaveat && isSoftwareWebGPUAdapter(adapter, adapterInfo)) {
+      throw makeWebGPUCreationError(
+        new Error('Software WebGPU adapter rejected'),
+        requestedFeatureLevel,
+        true,
+        'adapter-selection'
+      );
+    }
     // log.probe(2, 'Adapter available', adapterInfo)();
 
     const deviceDescriptor: GPUDeviceDescriptor = {};
@@ -340,6 +348,26 @@ export async function getWebGPUAdapterInfo(adapter: GPUAdapter): Promise<GPUAdap
     log.warn('WebGPU adapter metadata is unavailable', error)();
     return {} as GPUAdapterInfo;
   }
+}
+
+/** Identifies software adapters before native device or canvas creation. */
+export function isSoftwareWebGPUAdapter(adapter: GPUAdapter, adapterInfo: GPUAdapterInfo): boolean {
+  const fallback = Boolean(
+    (adapterInfo as GPUAdapterInfo & {isFallbackAdapter?: boolean}).isFallbackAdapter ??
+      (adapter as GPUAdapter & {isFallbackAdapter?: boolean}).isFallbackAdapter
+  );
+  const extendedAdapterInfo = adapterInfo as GPUAdapterInfo & {
+    driver?: string;
+    gpuType?: string;
+    type?: string;
+  };
+  const adapterType = String(extendedAdapterInfo.type || extendedAdapterInfo.gpuType || '')
+    .split(' ')[0]
+    .toLowerCase();
+  const description = `${adapterInfo.vendor || ''} ${extendedAdapterInfo.driver || ''} ${
+    adapterInfo.architecture || ''
+  }`;
+  return fallback || adapterType === 'cpu' || /SwiftShader|llvmpipe|lavapipe/i.test(description);
 }
 
 function makeWebGPUCreationError(
