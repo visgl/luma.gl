@@ -14,6 +14,15 @@ test('NullAdapter imports from the ESM package entry without circular init error
   expect(testUtilsModule.NullDevice.name).toBe('NullDevice');
 }, 15000);
 
+test('NullDevice#destroy marks the device lost', async () => {
+  const {NullDevice} = await import('../../src/index');
+  const device = new NullDevice({});
+
+  expect(device.isLost).toBe(false);
+  device.destroy();
+  expect(device.isLost).toBe(true);
+});
+
 test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
   let cachedDevicePromise: Promise<{isLost: boolean; id: string}> | null = Promise.resolve({
     isLost: true,
