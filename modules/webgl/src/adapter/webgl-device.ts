@@ -106,6 +106,7 @@ export class WebGLDevice extends Device {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
+  private _isLost: boolean = false;
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
@@ -284,13 +285,14 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
-    this.commandEncoder?.destroy();
     // Note that deck.gl (especially in React strict mode) depends on being able
     // to asynchronously create a Device against the same canvas (i.e. WebGL context)
     // multiple times and getting the same device back. Since deck.gl is not aware
     // of this sharing, it might call destroy() multiple times on the same device.
     // Therefore we must do nothing in destroy() if props._reuseDevices is true
     if (!this.props._reuseDevices && !this._reused) {
+      this._isLost = true;
+      this.commandEncoder?.destroy();
       // Delete the reference to the device that we store on the WebGL context
       const contextData = getWebGLContextData(this.handle);
       contextData.device = null;
@@ -298,7 +300,7 @@ export class WebGLDevice extends Device {
   }
 
   get isLost(): boolean {
-    return this.gl.isContextLost();
+    return this._isLost || this.gl.isContextLost();
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
