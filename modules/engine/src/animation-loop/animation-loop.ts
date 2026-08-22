@@ -106,11 +106,13 @@ export class AnimationLoop {
   _lastFrameTime: number = 0;
   private _restoreDeviceErrorHandler: (() => void) | null = null;
   private _observedLostDevice: Device | null = null;
+  private readonly _hasExplicitErrorDisplayTarget: boolean;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor(props: AnimationLoopProps) {
+    this._hasExplicitErrorDisplayTarget = Boolean(props.errorDisplay && props.errorDisplay.target);
     this.props = {...AnimationLoop.defaultAnimationLoopProps, ...props};
     props = this.props;
 
@@ -512,9 +514,17 @@ export class AnimationLoop {
       throw new Error('No device provided');
     }
     this.canvas = this.device.getDefaultCanvasContext().canvas || null;
-    if (typeof HTMLCanvasElement !== 'undefined' && this.canvas instanceof HTMLCanvasElement) {
+    if (
+      !this._hasExplicitErrorDisplayTarget &&
+      typeof HTMLCanvasElement !== 'undefined' &&
+      this.canvas instanceof HTMLCanvasElement
+    ) {
       this.errorDisplay?.setTarget(this.canvas);
-    } else if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
+    } else if (
+      !this._hasExplicitErrorDisplayTarget &&
+      typeof OffscreenCanvas !== 'undefined' &&
+      this.canvas instanceof OffscreenCanvas
+    ) {
       this.errorDisplay?.disable();
     }
     this._attachDeviceErrorHandler();
