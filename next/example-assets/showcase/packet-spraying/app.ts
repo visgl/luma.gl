@@ -10,7 +10,11 @@ import type {
   RenderPipelineParameters,
   TextureFormatColor
 } from '@luma.gl/core';
-import {bloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {
+  bloomShaderPassPipeline,
+  createBloomShaderPassPipeline,
+  toneMapping
+} from '@luma.gl/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -139,6 +143,7 @@ import {
   type Vector3
 } from './network';
 import {makeStudioEnvironmentMipLevels} from './optics';
+import {makeNetworkRenderProfile, type NetworkRenderProfile} from './render-profile';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
@@ -923,6 +928,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   }>({app: appShaderModule, picking: colorPicking});
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
+  readonly renderProfile: NetworkRenderProfile;
   readonly sceneColorFormat: TextureFormatColor;
   readonly sceneFramebuffer: Framebuffer;
   readonly glassBackfaceFramebuffer: Framebuffer;
@@ -1146,7 +1152,14 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.orbit = Math.max(0, Math.min(Number(requestedOrbit), 0.5));
     }
 
-    this.sceneColorFormat = getSceneColorFormat(device);
+    this.renderProfile = makeNetworkRenderProfile({
+      coarsePointer:
+        typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth
+    });
+    this.sceneColorFormat = getSceneColorFormat(device, this.renderProfile);
     this.dynamicRangeOptions = {
       deviceType: device.type,
       displaySupportsHighDynamicRange:
@@ -1160,8 +1173,10 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       highlightBoost: this.hdrHighlightBoost,
       visualIntensity: this.currentVisualIntensity
     });
-    const supportsABuffer = getABufferSupport(device).supported;
-    const supportsWeightedBlending = getWBOITSupport(device).supported;
+    const supportsABuffer =
+      this.renderProfile.orderIndependentTransparency && getABufferSupport(device).supported;
+    const supportsWeightedBlending =
+      this.renderProfile.orderIndependentTransparency && getWBOITSupport(device).supported;
     const preferredTransparencyMode = supportsABuffer
       ? 'a-buffer'
       : supportsWeightedBlending
@@ -1205,7 +1220,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     });
     this.environmentTexture = makeStudioEnvironmentTexture(device);
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [makeBloomPipeline(this.sceneColorFormat), toneMapping],
+      shaderPasses: [makeBloomPipeline(this.sceneColorFormat, this.renderProfile), toneMapping],
       colorFormat: this.sceneColorFormat
     });
 
@@ -1508,6 +1523,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingDynamicRange = this.dynamicRangeProfile.displayMode;
       canvas.dataset.packetSprayingTransparencyMode = this.transparencyMode;
       canvas.dataset.packetSprayingLab = this.reflectionLab ? 'reflection' : '';
+      canvas.dataset.packetSprayingRenderProfile = this.renderProfile.handheld
+        ? 'handheld'
+        : 'desktop';
       canvas.dataset.packetSprayingSceneColorFormat = this.sceneColorFormat;
       canvas.dataset.packetSprayingEnvironmentMipLevels = String(this.environmentTexture.mipLevels);
       canvas.dataset.packetSprayingHighlightBoost =
@@ -4374,11 +4392,23 @@ function makeBalancedEmissionColor(color: Color, alpha: number): Color {
   ];
 }
 
-function makeBloomPipeline(colorFormat: TextureFormatColor): ShaderPassPipeline {
+function makeBloomPipeline(
+  colorFormat: TextureFormatColor,
+  renderProfile: NetworkRenderProfile
+): ShaderPassPipeline {
+  const bloomPipeline = renderProfile.handheld
+    ? createBloomShaderPassPipeline({
+        blurAlgorithm: 'dual-kawase',
+        colorFormat,
+        quality: renderProfile.bloomQuality,
+        resolutionScale: renderProfile.bloomResolutionScale
+      })
+    : bloomShaderPassPipeline;
+
   return {
-    ...bloomShaderPassPipeline,
+    ...bloomPipeline,
     renderTargets: Object.fromEntries(
-      Object.entries(bloomShaderPassPipeline.renderTargets).map(([targetName, renderTarget]) => [
+      Object.entries(bloomPipeline.renderTargets ?? {}).map(([targetName, renderTarget]) => [
         targetName,
         {...renderTarget, format: colorFormat}
       ])
@@ -4386,7 +4416,14 @@ function makeBloomPipeline(colorFormat: TextureFormatColor): ShaderPassPipeline 
   };
 }
 
-function getSceneColorFormat(device: Device): TextureFormatColor {
+function getSceneColorFormat(
+  device: Device,
+  renderProfile: NetworkRenderProfile
+): TextureFormatColor {
+  if (!renderProfile.preferFloatingPointColor) {
+    return 'rgba8unorm';
+  }
+
   const floatingPointCapabilities = device.getTextureFormatCapabilities('rgba16float');
   if (floatingPointCapabilities.render && floatingPointCapabilities.filter) {
     return 'rgba16float';
