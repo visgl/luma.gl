@@ -184,6 +184,115 @@ test('OrbitControls optionally pans its target while shift-dragging', t => {
   t.end();
 });
 
+test('OrbitControls pinch zooms with two touch pointers inside configured bounds', t => {
+  const canvas = makeTestCanvas();
+  let interactionCount = 0;
+  const controls = new OrbitControls(canvas, {
+    distance: 10,
+    minDistance: 5,
+    maxDistance: 15,
+    onInteractionStart: () => interactionCount++
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 1,
+    pointerType: 'touch',
+    clientX: 0,
+    clientY: 20
+  });
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: 100,
+    clientY: 20
+  });
+
+  t.equal(interactionCount, 1, 'a second finger continues the existing camera interaction');
+  t.equal(canvas.hasPointerCapture(1), true, 'captures the first touch pointer');
+  t.equal(canvas.hasPointerCapture(2), true, 'captures the second touch pointer');
+
+  canvas.dispatchTestEvent('pointermove', {pointerId: 2, clientX: 250, clientY: 20});
+  t.equal(controls.distance, 5, 'spreading touch points zooms in to the minimum distance');
+
+  canvas.dispatchTestEvent('pointermove', {pointerId: 2, clientX: 50, clientY: 20});
+  t.equal(controls.distance, 15, 'bringing touch points together respects the maximum distance');
+
+  controls.destroy();
+  t.equal(canvas.hasPointerCapture(1), false, 'disposal releases the first touch pointer');
+  t.equal(canvas.hasPointerCapture(2), false, 'disposal releases the second touch pointer');
+  t.end();
+});
+
+test('OrbitControls pans with the center of a two-finger touch gesture', t => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    target: [0, 0, 0],
+    yaw: 0,
+    pitch: 0,
+    distance: 10,
+    enablePan: true,
+    enableZoom: false,
+    panSpeed: 0.01
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 3,
+    pointerType: 'touch',
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 4,
+    pointerType: 'touch',
+    clientX: 100,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {pointerId: 3, clientX: 10, clientY: 20});
+  canvas.dispatchTestEvent('pointermove', {pointerId: 4, clientX: 110, clientY: 20});
+
+  t.deepEqual(controls.props.target, [-1, 2, 0], 'moves the target with the touch midpoint');
+  t.equal(controls.distance, 10, 'respects independently disabled touch zoom');
+  t.equal(controls.yaw, 0, 'does not rotate while two touch pointers are active');
+
+  canvas.dispatchTestEvent('pointerup', {pointerId: 4});
+  t.equal(canvas.hasPointerCapture(4), false, 'releases the lifted touch pointer');
+  t.equal(canvas.hasPointerCapture(3), true, 'keeps the remaining touch pointer active');
+
+  canvas.dispatchTestEvent('pointermove', {pointerId: 3, clientX: 20, clientY: 20});
+  t.ok(controls.yaw < 0, 'continues one-finger orbiting without a pointer-position jump');
+
+  controls.destroy();
+  t.end();
+});
+
+test('OrbitControls releases every touch pointer when interactions are disabled', t => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas);
+
+  for (const pointerId of [5, 6]) {
+    canvas.dispatchTestEvent('pointerdown', {
+      button: 0,
+      pointerId,
+      pointerType: 'touch',
+      clientX: pointerId * 10,
+      clientY: 0
+    });
+  }
+
+  controls.setProps({enabled: false});
+
+  t.equal(canvas.hasPointerCapture(5), false, 'releases the first active touch pointer');
+  t.equal(canvas.hasPointerCapture(6), false, 'releases the second active touch pointer');
+  t.equal(canvas.style.cursor, 'grab', 'restores the idle cursor after cancelling the gesture');
+
+  controls.destroy();
+  t.end();
+});
+
 test('OrbitControls disables camera interactions and wheel zoom independently', t => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;

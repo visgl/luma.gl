@@ -2,14 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  AGGREGATION_POSITIONS,
-  LEAF_POSITIONS,
-  SWITCH_CONFIRMATION_DURATION,
-  SWITCH_PROBE_DURATION,
-  type Color,
-  type Vector3
-} from './network';
+import {AGGREGATION_POSITIONS, LEAF_POSITIONS, type Color, type Vector3} from './network';
+import {SWITCH_CONFIRMATION_DURATION, SWITCH_PROBE_DURATION} from './animation';
 
 export type NetworkStoryState = 'healthy' | 'congested' | 'failed' | 'recovering';
 
@@ -94,6 +88,27 @@ export const DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST = 0.28;
 export const NETWORK_AUTOROTATION_SCENARIO_DURATION = 20;
 export const GUIDED_STORY_SWITCH_INDEX = LEAF_POSITIONS.length + AGGREGATION_POSITIONS.length + 1;
 const RECOVERY_CHAPTER_DURATION = 7;
+
+/** Preserves the complete network width when the showcase is viewed in portrait orientation. */
+export function getNetworkVerticalFieldOfView(aspect: number): number {
+  if (!Number.isFinite(aspect) || aspect <= 0 || aspect >= 1) {
+    return 50;
+  }
+
+  const minimumHorizontalFieldOfView = (48 * Math.PI) / 180;
+  const portraitFieldOfView =
+    (2 * Math.atan(Math.tan(minimumHorizontalFieldOfView / 2) / aspect) * 180) / Math.PI;
+  return Math.min(Math.max(portraitFieldOfView, 60), 105);
+}
+
+/** Keeps portrait network geometry above the bottom-aligned guided-story controls. */
+export function getNetworkVerticalViewportOffset(aspect: number): number {
+  if (!Number.isFinite(aspect) || aspect <= 0) {
+    return 0;
+  }
+
+  return Math.min(Math.max((0.78 - aspect) * 0.8, 0), 0.28);
+}
 
 export const NETWORK_STORY_CHAPTERS: readonly NetworkStoryChapter[] = [
   {

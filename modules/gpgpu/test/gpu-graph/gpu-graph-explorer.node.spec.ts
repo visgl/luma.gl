@@ -387,7 +387,10 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
 
     expect(exampleContents).toContain('experimental/gpu-graph-explorer');
     expect(examplePage).toContain('<GPUGraphExplorerExample />');
-    expect(examplesRegistry).toContain('template={GPUGraphExplorerApp}');
+    expect(examplesRegistry).toContain('loadTemplate={loadGPUGraphExplorerApp}');
+    expect(examplesRegistry).toContain(
+      "import('../../examples/experimental/gpu-graph-explorer/app')"
+    );
     expect(examplesRegistry).toContain("devices={['webgpu']}");
     expect(exampleThumbnails).toContain(
       "'experimental/gpu-graph-explorer': 'showcase/packet-spraying'"

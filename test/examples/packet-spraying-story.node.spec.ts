@@ -5,15 +5,17 @@
 import test from 'test/utils/vitest-tape';
 import {
   SWITCH_CONFIRMATION_DURATION,
-  SWITCH_POSITIONS,
   SWITCH_PROBE_DURATION
-} from '../../examples/showcase/packet-spraying/network';
+} from '../../examples/showcase/packet-spraying/animation';
+import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
   getNetworkStoryBeat,
   getNetworkStoryChapter,
   getNetworkStoryProgress,
+  getNetworkVerticalFieldOfView,
+  getNetworkVerticalViewportOffset,
   getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
@@ -194,6 +196,40 @@ test('packet-spraying beat cameras inherit chapter framing without sharing targe
     beatCamera.target,
     beat.camera?.target,
     'resolved camera targets are safe to animate in place'
+  );
+  testCase.end();
+});
+
+test('packet-spraying portrait cameras preserve enough horizontal framing for the network', testCase => {
+  const phoneAspect = 390 / 844;
+  const phoneVerticalFieldOfView = getNetworkVerticalFieldOfView(phoneAspect);
+  const phoneHorizontalFieldOfView =
+    (2 * Math.atan(Math.tan((phoneVerticalFieldOfView * Math.PI) / 360) * phoneAspect) * 180) /
+    Math.PI;
+
+  testCase.equal(getNetworkVerticalFieldOfView(16 / 9), 50, 'desktop framing remains unchanged');
+  testCase.equal(getNetworkVerticalFieldOfView(1), 50, 'square framing remains unchanged');
+  testCase.equal(getNetworkVerticalFieldOfView(0.9), 60, 'wide portraits retain familiar framing');
+  testCase.ok(phoneVerticalFieldOfView > 80, 'phone portraits receive a wider vertical field');
+  testCase.ok(
+    Math.abs(phoneHorizontalFieldOfView - 48) < 0.001,
+    'phone portraits retain the minimum horizontal network field of view'
+  );
+  testCase.equal(getNetworkVerticalFieldOfView(0.1), 105, 'extreme portrait fields remain bounded');
+  testCase.equal(getNetworkVerticalFieldOfView(Number.NaN), 50, 'invalid aspect ratios stay safe');
+  testCase.equal(getNetworkVerticalViewportOffset(16 / 9), 0, 'desktop cameras remain centered');
+  testCase.ok(
+    getNetworkVerticalViewportOffset(phoneAspect) > 0.2,
+    'phone portraits move the network above the guided-story panel'
+  );
+  testCase.ok(
+    getNetworkVerticalViewportOffset(0.1) <= 0.28,
+    'portrait composition shifts remain bounded'
+  );
+  testCase.equal(
+    getNetworkVerticalViewportOffset(Number.NaN),
+    0,
+    'invalid aspect ratios cannot displace the scene'
   );
   testCase.end();
 });
