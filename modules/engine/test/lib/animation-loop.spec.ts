@@ -207,6 +207,35 @@ test('engine#AnimationLoop start followed immediately by stop() should stop', as
   t.end();
 });
 
+test('engine#AnimationLoop does not attach device handlers after stopping during creation', async t => {
+  let resolveDevice!: (device: NullDevice) => void;
+  const devicePromise = new Promise<NullDevice>(resolve => {
+    resolveDevice = resolve;
+  });
+  const device = new NullDevice({});
+  const originalOnError = device.props.onError;
+  let initializeCalled = 0;
+  const animationLoop = new AnimationLoop({
+    device: devicePromise,
+    onInitialize: () => {
+      initializeCalled++;
+    }
+  });
+
+  const startPromise = animationLoop.start();
+  animationLoop.stop();
+  resolveDevice(device);
+  const startResult = await startPromise;
+
+  t.is(startResult, null, 'late device resolution leaves the loop stopped');
+  t.is(initializeCalled, 0, 'late device resolution does not initialize the loop');
+  t.is(device.props.onError, originalOnError, 'late device resolution does not retain the loop');
+
+  animationLoop.destroy();
+  device.destroy();
+  t.end();
+});
+
 test('engine#makeAnimationLoop stops after template initialization failure', async t => {
   const device = await getWebGLTestDevice();
   let renderCalled = 0;
@@ -522,6 +551,42 @@ test('engine#makeAnimationLoop inserts its automatic canvas after the DOM is rea
       delete (document as Document & {readyState?: string}).readyState;
     }
   }
+  t.end();
+});
+
+test('engine#makeAnimationLoop preserves default automatic canvas dimensions', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  class DefaultCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const animationLoop = makeAnimationLoop(DefaultCanvasAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {container}
+    }
+  });
+  const canvas = container.querySelector('canvas');
+
+  t.ok(canvas, 'automatic canvas is created synchronously for an available container');
+  t.is(canvas?.width, 800, 'default drawing-buffer width is preserved');
+  t.is(canvas?.height, 600, 'default drawing-buffer height is preserved');
+  t.is(canvas?.style.width, '800px', 'default CSS width is preserved');
+  t.is(canvas?.style.height, '600px', 'default CSS height is preserved');
+
+  await animationLoop.start();
+  animationLoop.destroy();
+  container.remove();
   t.end();
 });
 
