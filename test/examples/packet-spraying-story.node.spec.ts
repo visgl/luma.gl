@@ -8,6 +8,7 @@ import {
   SWITCH_PROBE_DURATION
 } from '../../examples/showcase/packet-spraying/animation';
 import {SWITCH_POSITIONS} from '../../examples/showcase/packet-spraying/network';
+import {makeNetworkRenderProfile} from '../../examples/showcase/packet-spraying/render-profile';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
@@ -28,6 +29,54 @@ import {
   NETWORK_STORY_CHAPTERS,
   shouldAdvanceNetworkAutorotationScenario
 } from '../../examples/showcase/packet-spraying/story';
+
+test('packet-spraying handheld rendering preserves glass with a bounded mobile GPU budget', testCase => {
+  const handheld = makeNetworkRenderProfile({
+    coarsePointer: true,
+    maxTouchPoints: 5,
+    viewportHeight: 844,
+    viewportWidth: 390
+  });
+
+  testCase.equal(handheld.handheld, true, 'touchscreen phone viewports use the mobile profile');
+  testCase.equal(handheld.bloomQuality, 'low', 'phone bloom uses a smaller two-level pyramid');
+  testCase.equal(handheld.bloomResolutionScale, 0.75, 'phone bloom targets are downsampled');
+  testCase.equal(
+    handheld.orderIndependentTransparency,
+    false,
+    'phone glass uses the existing depth-sorted transparency path'
+  );
+  testCase.equal(
+    handheld.preferFloatingPointColor,
+    false,
+    'phone scene and refraction textures use portable 8-bit formats'
+  );
+  testCase.end();
+});
+
+test('packet-spraying retains complete desktop optics in narrow non-touch viewports', testCase => {
+  const desktop = makeNetworkRenderProfile({
+    coarsePointer: false,
+    maxTouchPoints: 0,
+    viewportHeight: 844,
+    viewportWidth: 390
+  });
+  const tablet = makeNetworkRenderProfile({
+    coarsePointer: true,
+    maxTouchPoints: 5,
+    viewportHeight: 1024,
+    viewportWidth: 768
+  });
+
+  for (const profile of [desktop, tablet]) {
+    testCase.equal(profile.handheld, false);
+    testCase.equal(profile.bloomQuality, 'high');
+    testCase.equal(profile.bloomResolutionScale, 1);
+    testCase.equal(profile.orderIndependentTransparency, true);
+    testCase.equal(profile.preferFloatingPointColor, true);
+  }
+  testCase.end();
+});
 
 test('packet-spraying guided tour tells the complete MRC recovery story', testCase => {
   testCase.deepEqual(

@@ -4,6 +4,8 @@
 
 const MAX_HIGH_DENSITY_MOBILE_PIXEL_RATIO = 2;
 const MAX_HIGH_DENSITY_MOBILE_PIXEL_COUNT = 1_500_000;
+const MOBILE_EXAMPLE_MEDIA_QUERY =
+  '(max-width: 700px), (max-height: 500px) and (pointer: coarse)';
 
 type MobileExamplePixelRatioOptions = {
   devicePixelRatio: number;
@@ -11,6 +13,13 @@ type MobileExamplePixelRatioOptions = {
   mobile: boolean;
   width: number;
 };
+
+/** Uses the same responsive breakpoint for example controls and drawing-buffer selection. */
+export function isMobileExampleViewport(viewport: Pick<Window, 'matchMedia'>): boolean {
+  return (
+    typeof viewport.matchMedia === 'function' && viewport.matchMedia(MOBILE_EXAMPLE_MEDIA_QUERY).matches
+  );
+}
 
 /** Limits only oversized 3x mobile canvases; ordinary devices keep exact native resolution. */
 export function getMobileExamplePixelRatio({

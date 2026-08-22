@@ -8,7 +8,10 @@ import {buildSync} from 'esbuild';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe, expect, test} from 'vitest';
-import {getMobileExamplePixelRatio} from '../../website/src/react-luma/utils/mobile-example-pixel-ratio';
+import {
+  getMobileExamplePixelRatio,
+  isMobileExampleViewport
+} from '../../website/src/react-luma/utils/mobile-example-pixel-ratio';
 
 describe('example graphics backend tab semantics', () => {
   test('renders native, labeled tabs with backend capability badges', () => {
@@ -66,6 +69,24 @@ describe('compact example graphics backend selection', () => {
 });
 
 describe('high-density mobile example rendering', () => {
+  test('recognizes responsive mobile examples consistently across their shared controls', () => {
+    const matchedQueries: string[] = [];
+    const viewport = {
+      matchMedia: (query: string) => {
+        matchedQueries.push(query);
+        return {matches: true} as MediaQueryList;
+      }
+    };
+
+    expect(isMobileExampleViewport(viewport)).toBe(true);
+    expect(matchedQueries).toEqual([
+      '(max-width: 700px), (max-height: 500px) and (pointer: coarse)'
+    ]);
+    expect(isMobileExampleViewport({matchMedia: () => ({matches: false}) as MediaQueryList})).toBe(
+      false
+    );
+  });
+
   test('keeps desktop and ordinary-density phones at exact native resolution', () => {
     expect(
       getMobileExamplePixelRatio({
