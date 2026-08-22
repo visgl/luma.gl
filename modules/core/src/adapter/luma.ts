@@ -159,7 +159,7 @@ export class Luma {
             phase: 'adapter-selection',
             error: new Error('Software rejected')
           });
-          replaceOwnedCanvasAfterFailedInitialization(props);
+          replaceCanvasAfterFailedInitialization(props);
           continue;
         }
         device.creationInfo = {
@@ -183,7 +183,7 @@ export class Luma {
         );
         attempts.push(...structuredError.attempts);
         if (structuredError.phase === 'canvas-initialization') {
-          replaceOwnedCanvasAfterFailedInitialization(props);
+          replaceCanvasAfterFailedInitialization(props);
         }
       }
     }
@@ -368,10 +368,9 @@ export class Luma {
   }
 }
 
-function replaceOwnedCanvasAfterFailedInitialization(props: Required<CreateDeviceProps>): void {
+function replaceCanvasAfterFailedInitialization(props: Required<CreateDeviceProps>): void {
   const contextProps = props.createCanvasContext;
   if (
-    props._canvasContextOwned &&
     typeof HTMLCanvasElement !== 'undefined' &&
     contextProps !== true &&
     contextProps.canvas instanceof HTMLCanvasElement
