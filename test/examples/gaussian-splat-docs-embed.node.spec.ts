@@ -53,12 +53,13 @@ describe('Gaussian splat documentation showcase', () => {
     expect(viewerStart).toBeGreaterThan(0);
     expect(viewerEnd).toBeGreaterThan(viewerStart);
     expect(viewer).toContain("defaultScene?: GaussianSplatSourceCatalogEntry['id']");
-    expect(viewer).toContain('const animationTemplate = useMemo(() => {');
+    expect(viewer).toContain('const loadAnimationTemplate = useMemo(');
+    expect(viewer).toContain('await loadGaussianSplatsApp()');
     expect(viewer).toContain('if (!defaultScene)');
     expect(viewer).toContain('return GaussianSplatsApp;');
     expect(viewer).toContain('extends GaussianSplatsApp');
     expect(viewer).toContain('super({...animationProps, defaultScene});');
-    expect(viewer).toContain('template={animationTemplate}');
+    expect(viewer).toContain('loadTemplate={loadAnimationTemplate}');
     expect(viewer).not.toContain('__lumaGaussianSplatsDefaultScene');
     expect(viewerDocumentation).toContain('<GaussianSplatViewerExample />');
     expect(viewerDocumentation).toContain('741,883-splat Train');

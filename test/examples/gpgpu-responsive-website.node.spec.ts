@@ -30,6 +30,30 @@ const GPU_SORT_PATH = path.join(process.cwd(), 'examples/experimental/gpu-sort/s
 const LEGACY_GPGPU_SHOWCASE_PATH = path.join(process.cwd(), 'examples/v10/gpgpu/src/app.ts');
 
 describe('responsive GPGPU website examples', () => {
+  test('loads every animation-loop example separately without eager application imports', () => {
+    const examplesSource = readFileSync(WEBSITE_EXAMPLES_PATH, 'utf8');
+    const lifecycleSource = readFileSync(LUMA_EXAMPLE_PATH, 'utf8');
+
+    for (const modulePath of [
+      '../../examples/showcase/packet-spraying/app',
+      '../../examples/showcase/globe/app',
+      '../../examples/showcase/gltf/app',
+      '../../examples/experimental/advanced-effects/app',
+      '../../examples/tutorials/hello-triangle/app'
+    ]) {
+      expect(examplesSource, `${modulePath} must load only for its own example`).toContain(
+        `import('${modulePath}')`
+      );
+    }
+
+    expect(examplesSource).not.toMatch(/^import\s+\w+App\s+from\s+['"]\.\.\/\.\.\/examples\//m);
+    expect(examplesSource).not.toContain("from '../../examples/arrow/arrow-example-panels'");
+    expect(examplesSource).toContain("import('../../examples/arrow/arrow-example-panels')");
+    expect(examplesSource).toContain('loadTemplate={loadPacketSprayingApp}');
+    expect(lifecycleSource).toContain('deferredTemplate?.loader === props.loadTemplate');
+    expect(lifecycleSource).toContain('return sharedDevice');
+  });
+
   test('loads heavyweight compute and precision applications only when their route requests them', () => {
     const examplesSource = readFileSync(WEBSITE_EXAMPLES_PATH, 'utf8');
 

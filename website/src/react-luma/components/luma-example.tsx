@@ -5,6 +5,7 @@ import {
   AnimationLoopTemplate,
   makeAnimationLoop,
   setPathPrefix,
+  type AnimationProps,
   type TemplateAnimationLoop
 } from '@luma.gl/engine';
 import {DeviceTabs, type DeviceTabSelection} from './device-tabs';
@@ -19,6 +20,7 @@ import {
   HDRCanvasCaptureController,
   type HDRScreenshotCapture
 } from '../utils/hdr-screenshot-capture';
+import {getMobileExamplePixelRatio} from '../utils/mobile-example-pixel-ratio';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
   createDevice,
@@ -65,12 +67,19 @@ export type ExampleDisplayProps = {
   style?: CSSProperties;
 };
 
+export type LumaExampleTemplate = new (animationProps: AnimationProps) => AnimationLoopTemplate;
+export type LumaExampleTemplateModule = {default: LumaExampleTemplate};
+export type LumaExampleTemplateLoader = () => Promise<LumaExampleTemplateModule>;
+
 export type LumaExampleProps = React.PropsWithChildren<
   ExampleDisplayProps & {
     id?: string;
     title?: string;
     subtitle?: string;
-    template: Function;
+    /** Preloaded templates remain supported by existing embedded examples. */
+    template?: LumaExampleTemplate;
+    /** Lazily imports the example without changing shared-device ownership. */
+    loadTemplate?: LumaExampleTemplateLoader;
     config: unknown;
     directory?: string;
     sourceDirectory?: string;
@@ -173,6 +182,7 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
 );
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
+  const [isImmersive, setIsImmersive] = useState(true);
   const embeddedHeight = props.embeddedHeight ?? 560;
   const embeddedStyle: CSSProperties | undefined = props.embedded
     ? {
@@ -185,6 +195,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     <div
       data-luma-example-page=""
       data-luma-embedded-example={props.embedded ? '' : undefined}
+      data-luma-example-immersive={props.embedded ? undefined : String(isImmersive)}
       className={
         props.className || (props.embedded ? 'docs-embedded-example' : 'luma-example-page')
       }
@@ -200,6 +211,36 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
       style={{...EXAMPLE_CONTAINER_STYLE, ...embeddedStyle, ...props.style}}
     >
       {props.children}
+      {!props.embedded ? (
+        <button
+          data-luma-example-fullscreen-toggle=""
+          type="button"
+          aria-label={isImmersive ? 'Exit fullscreen example' : 'Enter fullscreen example'}
+          aria-pressed={isImmersive}
+          title={isImmersive ? 'Exit fullscreen' : 'Enter fullscreen'}
+          onClick={() => setIsImmersive(previousValue => !previousValue)}
+        >
+          <svg
+            aria-hidden="true"
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.75"
+          >
+            <path
+              d={
+                isImmersive
+                  ? 'M8 3v5H3m13-5v5h5M8 21v-5H3m13 5v-5h5'
+                  : 'M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5'
+              }
+            />
+          </svg>
+        </button>
+      ) : null}
       {props.embedded ? (
         <div className="docs-embedded-example-interaction-hint" aria-hidden="true">
           Scroll page · Ctrl/⌘ + scroll to interact
@@ -211,7 +252,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
 
 export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps) => {
   return (
-    <div style={{...EXAMPLE_HEADER_STYLE, ...props.style}}>
+    <div data-luma-example-header="" style={{...EXAMPLE_HEADER_STYLE, ...props.style}}>
       <InfoBox
         id={props.id}
         title={props.title}
@@ -273,7 +314,42 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const [effectiveDeviceType, setEffectiveDeviceType] = useState<DeviceType | undefined>();
   const [effectiveDevice, setEffectiveDevice] = useState<Device | undefined>();
   const [startupErrorMessage, setStartupErrorMessage] = useState<string | null>(null);
+  const [templateLoadErrorMessage, setTemplateLoadErrorMessage] = useState<string | null>(null);
+  const [deferredTemplate, setDeferredTemplate] = useState<{
+    loader: LumaExampleTemplateLoader;
+    template: LumaExampleTemplate;
+  } | null>(null);
+  const animationTemplate =
+    props.template ||
+    (deferredTemplate?.loader === props.loadTemplate ? deferredTemplate.template : undefined);
   const requestedDeviceTypesKey = getRequestedDeviceTypes(props.devices)?.join('|') || '';
+
+  useEffect(() => {
+    const loadTemplate = props.loadTemplate;
+    if (props.template || !loadTemplate) {
+      setTemplateLoadErrorMessage(null);
+      return;
+    }
+
+    let isCancelled = false;
+    setTemplateLoadErrorMessage(null);
+    void loadTemplate()
+      .then(module => {
+        if (!isCancelled) {
+          setDeferredTemplate({loader: loadTemplate, template: module.default});
+        }
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          setTemplateLoadErrorMessage(getErrorMessage(error));
+          logError(`Failed to load ${props.id || 'GPU'} example`, error);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [props.id, props.loadTemplate, props.template]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -372,7 +448,12 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   ]);
 
   useEffect(() => {
-    if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {
+    if (
+      !canvasContainerRef.current ||
+      !effectiveDeviceType ||
+      !effectiveDevice ||
+      !animationTemplate
+    ) {
       return;
     }
 
@@ -382,12 +463,29 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     let browserCaptureFunction: Window['lumaCaptureHDRScreenshot'];
     const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
     const deviceCanvas = defaultCanvasContext.canvas;
+    const previousUseDevicePixels = defaultCanvasContext.props.useDevicePixels;
     const exampleId = [props.directory, props.id].filter(Boolean).join('/');
     const captureController =
       props.canvasContextProfile === 'high-dynamic-range'
         ? new HDRCanvasCaptureController(exampleId, effectiveDevice, defaultCanvasContext)
         : null;
     setStartupErrorMessage(null);
+
+    const updateMobileDrawingBufferResolution = () => {
+      const mobilePixelRatio = getMobileExamplePixelRatio({
+        devicePixelRatio: window.devicePixelRatio || 1,
+        height: canvasContainer.clientHeight || window.innerHeight,
+        mobile: window.matchMedia(
+          '(max-width: 700px), (max-height: 500px) and (pointer: coarse)'
+        ).matches,
+        width: canvasContainer.clientWidth || window.innerWidth
+      });
+      defaultCanvasContext.setProps({useDevicePixels: mobilePixelRatio});
+      if (deviceCanvas instanceof HTMLCanvasElement) {
+        deviceCanvas.dataset.lumaExamplePixelRatio =
+          typeof mobilePixelRatio === 'number' ? mobilePixelRatio.toFixed(2) : 'native';
+      }
+    };
 
     const removeBrowserCaptureFunction = () => {
       if (window.lumaCaptureHDRScreenshot === browserCaptureFunction) {
@@ -414,17 +512,22 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
       canvasContainer.replaceChildren(deviceCanvas);
+      window.addEventListener('resize', updateMobileDrawingBufferResolution);
+      updateMobileDrawingBufferResolution();
       setActiveCpuHotspotProfilerDevice(effectiveDevice);
 
-      animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
-        stats: luma.stats.get('GPU Time and Memory'),
-        device: effectiveDevice,
-        autoResizeViewport: true,
-        autoResizeDrawingBuffer: true,
-        onAfterRender: captureController
-          ? animationProps => captureController.onAfterRender(animationProps)
-          : undefined
-      });
+      animationLoop = makeAnimationLoop(
+        animationTemplate as unknown as typeof AnimationLoopTemplate,
+        {
+          stats: luma.stats.get('GPU Time and Memory'),
+          device: effectiveDevice,
+          autoResizeViewport: true,
+          autoResizeDrawingBuffer: true,
+          onAfterRender: captureController
+            ? animationProps => captureController.onAfterRender(animationProps)
+            : undefined
+        }
+      );
       animationLoop.frameRate.setSampleSize(1);
 
       if (animationLoop) {
@@ -467,6 +570,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       isCancelled = true;
       captureController?.finalize();
       removeBrowserCaptureFunction();
+      window.removeEventListener('resize', updateMobileDrawingBufferResolution);
       // Route transitions must stop displaying the outgoing example immediately, even when its
       // asynchronous initialization is still ahead of cleanup in the serialized task queue.
       canvasContainer.replaceChildren();
@@ -484,6 +588,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }
 
           clearActiveCpuHotspotProfilerDevice(effectiveDevice);
+          defaultCanvasContext.setProps({useDevicePixels: previousUseDevicePixels});
+          if (deviceCanvas instanceof HTMLCanvasElement) {
+            delete deviceCanvas.dataset.lumaExamplePixelRatio;
+          }
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
@@ -493,7 +601,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   }, [
     effectiveDeviceType,
     effectiveDevice,
-    props.template,
+    animationTemplate,
     props.directory,
     props.id,
     props.canvasContextProfile,
@@ -502,7 +610,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   ]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
-  const info = props.template?.info;
+  const info = animationTemplate?.info;
+  const exampleErrorMessage = startupErrorMessage || templateLoadErrorMessage;
 
   return (
     <ExamplePage
@@ -562,13 +671,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }}
         />
       </div>
-      {startupErrorMessage ? (
+      {exampleErrorMessage ? (
         <div role="alert" style={EXAMPLE_STARTUP_ERROR_STYLE}>
           <div style={{maxWidth: 620}}>
             <strong style={{display: 'block', fontSize: 18, marginBottom: 8}}>
               This example is unavailable on the selected GPU.
             </strong>
-            <span>{startupErrorMessage}</span>
+            <span>{exampleErrorMessage}</span>
           </div>
         </div>
       ) : null}

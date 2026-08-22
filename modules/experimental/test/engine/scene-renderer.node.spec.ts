@@ -6,11 +6,14 @@ import {readFileSync} from 'node:fs';
 import type {RenderPass, Texture, TextureFormatColor} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {
+  aBuffer,
   createPBRMaterial,
   createPBRMaterialFactory,
   getPBRGeometryDefines,
   getPBRTextureDefines,
   getSceneAlphaMode,
+  glassTransmission,
+  opticalPointLights,
   PBREnvironmentGenerator,
   PreparedPBREnvironment,
   type PreparedScene,
@@ -18,9 +21,16 @@ import {
   type SceneMaterial,
   SceneRenderer,
   type SceneRenderOptions,
-  type SceneSurface
+  type SceneSurface,
+  wboit
 } from '@luma.gl/experimental';
-import {PBR_TONE_MAP_MODE, pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {
+  GLSLShaderAssembler,
+  PBR_TONE_MAP_MODE,
+  pbrMaterial,
+  pbrScene,
+  WGSLShaderAssembler
+} from '@luma.gl/shadertools';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
@@ -30,6 +40,14 @@ import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';
 const WEBGPU_PLATFORM = {
   type: 'webgpu' as const,
   shaderLanguage: 'wgsl' as const,
+  shaderLanguageVersion: 300 as const,
+  gpu: 'test',
+  features: new Set<string>()
+};
+
+const WEBGL_PLATFORM = {
+  type: 'webgl' as const,
+  shaderLanguage: 'glsl' as const,
   shaderLanguageVersion: 300 as const,
   gpu: 'test',
   features: new Set<string>()
@@ -266,6 +284,99 @@ describe('shared PBR material factories', () => {
     expect(shader.source).toContain('pbrScene.outputEncoding');
     expect(shader.source).toContain('pbr_transmissionFramebufferSampler');
     expect(shader.source).toContain('let alpha = clamp(baseColor.a, 0.0, 1.0)');
+  });
+
+  test('composes canonical instanced PBR with illuminated glass and exact WebGPU transparency', () => {
+    const source = PBR_MODEL_WGSL_SHADER.replace(
+      '  return pbr_filterColor(inputs.pbrColor);',
+      `  let physicallyBasedColor = pbr_filterColor(inputs.pbrColor);
+  let opticalColor = glassTransmission_getIlluminatedColor(
+    inputs.pbrNormal,
+    inputs.pbrPosition,
+    physicallyBasedColor,
+    pbrProjection.camera,
+    inputs.position
+  );
+  return aBuffer_captureStraightColor(opticalColor, inputs.position);`
+    );
+    const shader = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source,
+      modules: [pbrMaterial, pbrScene, glassTransmission, opticalPointLights, aBuffer],
+      defines: {
+        HAS_NORMALS: true,
+        HAS_INSTANCING: true,
+        USE_MATERIAL_EXTENSIONS: true,
+        USE_TRANSMISSION_FRAMEBUFFER: true
+      }
+    });
+    const reflection = new WgslReflect(shader.source);
+
+    expect(reflection.entry.vertex.map(entry => entry.name)).toEqual(['vertexMain']);
+    expect(reflection.entry.fragment.map(entry => entry.name)).toEqual(['fragmentMain']);
+    expect(shader.source).toContain('let physicallyBasedColor = pbr_filterColor(inputs.pbrColor)');
+    expect(shader.source).toContain('glassTransmission_getIlluminatedColor(');
+    expect(shader.source).toContain('opticalPointLights_getSpecularColor(');
+    expect(shader.source).toContain('aBuffer_captureStraightColor(opticalColor, inputs.position)');
+    expect(reflection.textures.map(texture => texture.name)).toEqual(
+      expect.arrayContaining([
+        'pbr_transmissionFramebufferSampler',
+        'glassSceneColorTexture',
+        'glassSceneDepthTexture',
+        'glassBackfaceTexture',
+        'glassEnvironmentTexture'
+      ])
+    );
+  });
+
+  test('composes canonical PBR with illuminated glass and weighted WebGL transparency', () => {
+    const shader = new GLSLShaderAssembler().assembleGLSLShaderPair({
+      platformInfo: WEBGL_PLATFORM,
+      vs: `#version 300 es
+in vec3 positions;
+in vec3 normals;
+
+void main(void) {
+  pbr_setPositionNormalTangentUV(
+    vec4(positions, 1.0),
+    vec4(normals, 0.0),
+    vec4(1.0, 0.0, 0.0, 1.0),
+    vec2(0.0),
+    vec2(0.0)
+  );
+  gl_Position = pbrProjection.modelViewProjectionMatrix * vec4(positions, 1.0);
+}
+`,
+      fs: `#version 300 es
+precision highp float;
+out vec4 fragmentColor;
+
+void main(void) {
+  vec4 physicallyBasedColor = pbr_filterColor(vec4(0.4, 0.6, 0.9, 0.5));
+  vec4 opticalColor = glassTransmission_getIlluminatedColor(
+    pbr_vNormal,
+    pbr_vPosition,
+    physicallyBasedColor,
+    pbrProjection.camera,
+    gl_FragCoord
+  );
+  fragmentColor = wboit_captureStraightColor(opticalColor, gl_FragCoord);
+}
+`,
+      modules: [pbrMaterial, pbrScene, glassTransmission, opticalPointLights, wboit],
+      defines: {
+        HAS_NORMALS: true,
+        USE_MATERIAL_EXTENSIONS: true,
+        USE_TRANSMISSION_FRAMEBUFFER: true
+      }
+    });
+
+    expect(shader.fs).toContain('pbr_filterColor(vec4(0.4, 0.6, 0.9, 0.5))');
+    expect(shader.fs).toContain('glassTransmission_getIlluminatedColor(');
+    expect(shader.fs).toContain('opticalPointLights_getSpecularColor(');
+    expect(shader.fs).toContain('wboit_captureStraightColor(opticalColor, gl_FragCoord)');
+    expect(shader.fs).toContain('pbr_transmissionFramebufferSampler');
+    expect(shader.fs).toContain('glassBackfaceTexture');
   });
 
   test('retains legacy glTF IBL without requiring scene-only uniforms', () => {
