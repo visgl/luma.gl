@@ -20,7 +20,10 @@ import {
   HDRCanvasCaptureController,
   type HDRScreenshotCapture
 } from '../utils/hdr-screenshot-capture';
-import {getMobileExamplePixelRatio} from '../utils/mobile-example-pixel-ratio';
+import {
+  getMobileExamplePixelRatio,
+  isMobileExampleViewport
+} from '../utils/mobile-example-pixel-ratio';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
   createDevice,
@@ -475,9 +478,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       const mobilePixelRatio = getMobileExamplePixelRatio({
         devicePixelRatio: window.devicePixelRatio || 1,
         height: canvasContainer.clientHeight || window.innerHeight,
-        mobile: window.matchMedia(
-          '(max-width: 700px), (max-height: 500px) and (pointer: coarse)'
-        ).matches,
+        mobile: isMobileExampleViewport(window),
         width: canvasContainer.clientWidth || window.innerWidth
       });
       defaultCanvasContext.setProps({useDevicePixels: mobilePixelRatio});
