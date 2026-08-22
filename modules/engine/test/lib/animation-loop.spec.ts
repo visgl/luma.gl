@@ -311,9 +311,15 @@ test('engine#AnimationLoop finalizes after a fatal render error', async t => {
   });
 
   await animationLoop.start();
+  let renderWaitError: Error | null = null;
+  const renderWaitPromise = animationLoop.waitForRender().catch(error => {
+    renderWaitError = error as Error;
+  });
   t.throws(() => animationLoop.redraw(), 'fatal render failure is preserved');
+  await renderWaitPromise;
 
   t.deepEqual(reportedErrors, [expectedError], 'fatal render failure is reported once');
+  t.equal(renderWaitError, expectedError, 'pending render wait rejects with the fatal error');
   t.is(finalizeCalled, 1, 'initialized loop is finalized after the fatal error');
   t.equal(animationLoop._running, false, 'fatal render failure stops the loop');
 

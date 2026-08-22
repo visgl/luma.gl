@@ -101,6 +101,7 @@ export class AnimationLoop {
   _animationFrameId: any = null;
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
+  _rejectNextFrame: ((error: Error) => void) | null = null;
   _cpuStartTime: number = 0;
   _error: Error | null = null;
   _lastFrameTime: number = 0;
@@ -158,6 +159,10 @@ export class AnimationLoop {
 
   reportError(error: Error): void {
     this._error = error;
+    this._rejectNextFrame?.(error);
+    this._nextFramePromise = null;
+    this._resolveNextFrame = null;
+    this._rejectNextFrame = null;
     this.errorDisplay?.show(error);
     try {
       this.props.onError(error);
@@ -262,6 +267,7 @@ export class AnimationLoop {
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
+      this._rejectNextFrame = null;
       this._running = false;
       this._lastFrameTime = 0;
     }
@@ -294,6 +300,7 @@ export class AnimationLoop {
         this._resolveNextFrame(this);
         this._nextFramePromise = null;
         this._resolveNextFrame = null;
+        this._rejectNextFrame = null;
       }
 
       this._endFrameTimers();
@@ -321,8 +328,9 @@ export class AnimationLoop {
     this.setNeedsRedraw('waitForRender');
 
     if (!this._nextFramePromise) {
-      this._nextFramePromise = new Promise(resolve => {
+      this._nextFramePromise = new Promise((resolve, reject) => {
         this._resolveNextFrame = resolve;
+        this._rejectNextFrame = reject;
       });
     }
     return this._nextFramePromise;
