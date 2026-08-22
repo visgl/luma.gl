@@ -69,6 +69,7 @@ export type AnimationLoopProps = {
   onRender?: (animationProps: AnimationProps) => unknown;
   onFinalize?: (animationProps: AnimationProps) => void;
   onError?: (reason: Error) => void;
+  errorDisplay?: false | CanvasErrorDisplayProps;
   stats?: Stats;
   autoResizeViewport?: boolean;
   animationFrameProvider?: AnimationFrameProvider;
@@ -77,6 +78,17 @@ export type AnimationLoopProps = {
 
 - `device` is required and may be supplied lazily as a promise.
 - `autoResizeViewport` resizes the default canvas context drawing buffer before rendering.
+- `errorDisplay` defaults to an accessible overlay on the resolved HTML canvas. Set it to `false`
+  to keep errors callback/console-only, or provide a `target` canvas, container, or DOM id so device
+  promise failures are visible before a device exists.
+
+Device creation, initialization, rendering, and unexpected device loss flow through
+`reportError()`. Fatal errors stop frame scheduling, call the animation loop's `onError`, and remain
+visible on the canvas. Runtime errors reported by `device.reportError()` (including validation,
+resource, and uncaptured GPU errors) keep the loop running and briefly appear as red fading text.
+Supplying `DeviceProps.onError` gives the application control of those runtime errors and suppresses
+the transient canvas message. Intentional destruction and failed attempts followed by successful
+fallback do not show either display.
 
 ### `AnimationProps`
 

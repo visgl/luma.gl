@@ -33,7 +33,8 @@ import type {
   TransformFeedbackProps,
   QuerySetProps,
   Resource,
-  VertexFormat
+  VertexFormat,
+  DeviceLostInfo
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/webgl/constants';
@@ -103,9 +104,10 @@ export class WebGLDevice extends Device {
 
   commandEncoder!: WEBGLCommandEncoder;
 
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  readonly lost: Promise<DeviceLostInfo>;
 
-  private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
+  private _resolveContextLost?: (value: DeviceLostInfo) => void;
+  private _lossWasRequested = false;
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
@@ -165,7 +167,7 @@ export class WebGLDevice extends Device {
     // Create and instrument context
     this.canvasContext = new WebGLCanvasContext(this, canvasContextProps);
 
-    this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
+    this.lost = new Promise<DeviceLostInfo>(resolve => {
       this._resolveContextLost = resolve;
     });
 
@@ -189,11 +191,15 @@ export class WebGLDevice extends Device {
       createBrowserContext(
         this.canvasContext.canvas,
         {
-          onContextLost: (event: Event) =>
-            this._resolveContextLost?.({
-              reason: 'destroyed',
-              message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-            }),
+          onContextLost: (_event: Event) => {
+            const loss: DeviceLostInfo = {
+              reason: this._lossWasRequested ? 'destroyed' : 'unknown',
+              message: this._lossWasRequested
+                ? 'Application triggered context loss'
+                : 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+            };
+            this._resolveContextLost?.(loss);
+          },
           onContextRestored: (_event: Event) => {
             // biome-ignore lint/suspicious/noConsole: debug-only context restore notification.
             console.log('WebGL context restored');
@@ -502,6 +508,7 @@ export class WebGLDevice extends Device {
    * @note primarily intended for testing how application reacts to device loss
    */
   override loseDevice(): boolean {
+    this._lossWasRequested = true;
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
     const ext = extensions.WEBGL_lose_context;
