@@ -62,7 +62,7 @@ export function makeAnimationLoop(
     typeof OffscreenCanvas !== 'undefined' &&
     preparedDeviceProps.createCanvasContext?.canvas instanceof OffscreenCanvas;
   const errorDisplay =
-    props.errorDisplay === false || usesOffscreenCanvas
+    props.errorDisplay === false || (usesOffscreenCanvas && !props.errorDisplay?.target)
       ? false
       : {
           ...props.errorDisplay,

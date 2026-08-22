@@ -292,6 +292,88 @@ test('engine#AnimationLoop reports device promise rejection to an explicit targe
   t.end();
 });
 
+test('engine#AnimationLoop preserves an explicit target after an HTML device resolves', async t => {
+  if (typeof document === 'undefined') {
+    t.comment('DOM is unavailable');
+    t.end();
+    return;
+  }
+
+  const canvasContainer = document.createElement('div');
+  const errorContainer = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  canvasContainer.appendChild(canvas);
+  document.body.append(canvasContainer, errorContainer);
+  const device = new NullDevice({createCanvasContext: {canvas}});
+  const animationLoop = new AnimationLoop({
+    device,
+    errorDisplay: {target: errorContainer},
+    onError: () => {}
+  });
+  await animationLoop.start();
+
+  animationLoop.reportError(new Error('Explicit target failure'));
+
+  t.ok(
+    errorContainer.querySelector('[data-luma-error-display="true"]'),
+    'fatal error remains in the explicit target'
+  );
+  t.notOk(
+    canvasContainer.querySelector('[data-luma-error-display="true"]'),
+    'resolved canvas does not replace the explicit target'
+  );
+
+  animationLoop.destroy();
+  canvasContainer.remove();
+  errorContainer.remove();
+  device.destroy();
+  t.end();
+});
+
+test('engine#makeAnimationLoop preserves an explicit target for an offscreen device', async t => {
+  if (typeof document === 'undefined' || typeof OffscreenCanvas === 'undefined') {
+    t.comment('Offscreen DOM execution is unavailable');
+    t.end();
+    return;
+  }
+
+  class FailingOffscreenAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onInitialize(): never {
+      throw new Error('Offscreen initialization failure');
+    }
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const errorContainer = document.createElement('div');
+  document.body.appendChild(errorContainer);
+  const animationLoop = makeAnimationLoop(FailingOffscreenAnimationLoopTemplate, {
+    adapters: [nullAdapter],
+    deviceProps: {
+      type: 'null',
+      waitForPageLoad: false,
+      createCanvasContext: {canvas: new OffscreenCanvas(16, 16)}
+    },
+    errorDisplay: {target: errorContainer},
+    onError: () => {}
+  });
+
+  try {
+    await animationLoop.start();
+  } catch {
+    // Expected initialization failure.
+  }
+
+  t.ok(
+    errorContainer.querySelector('[data-luma-error-display="true"]'),
+    'offscreen fatal error is shown in the explicit DOM target'
+  );
+
+  animationLoop.destroy();
+  errorContainer.remove();
+  t.end();
+});
+
 test('engine#AnimationLoop briefly displays asynchronous device errors without stopping', async t => {
   if (typeof document === 'undefined') {
     t.comment('DOM is unavailable');
