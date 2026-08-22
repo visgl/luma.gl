@@ -58,6 +58,7 @@
         try {
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas',
+            type: softwareVisualSmoke ? 'webgpu' : 'best-available',
             adapters: [webgpuAdapter],
             createCanvasContext: supportsHighDynamicRange
               ? {
@@ -72,6 +73,7 @@
           if (!supportsHighDynamicRange) throw error;
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas-sdr-fallback',
+            type: softwareVisualSmoke ? 'webgpu' : 'best-available',
             adapters: [webgpuAdapter],
             createCanvasContext: standardCanvasContext
           });
