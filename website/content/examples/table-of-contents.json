@@ -15,7 +15,8 @@
         "id": "experimental/scene-playground",
         "label": "Scene Playground"
       },
-      "showcase/globe"
+      "showcase/globe",
+      "showcase/packet-spraying"
     ]
   },
   {
