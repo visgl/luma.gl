@@ -57,6 +57,61 @@ test('GPUDataEvaluator buffer pool allocates exact sizes and validates device li
   device.destroy();
 });
 
+test('GPUDataEvaluator.bufferPoolSize purges cached buffers', async () => {
+  const originalPoolSize = GPUDataEvaluator.bufferPoolSize;
+  const device = new NullDevice({});
+  const evaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {type: 'uint8', size: 1});
+
+  try {
+    GPUDataEvaluator.bufferPoolSize = 1;
+    await evaluator.evaluate(device);
+    const buffer = evaluator.buffer;
+    const destroy = vi.spyOn(buffer, 'destroy');
+
+    evaluator.destroy();
+    expect(destroy).not.toHaveBeenCalled();
+
+    GPUDataEvaluator.bufferPoolSize = 0;
+    expect(destroy).toHaveBeenCalledOnce();
+  } finally {
+    GPUDataEvaluator.bufferPoolSize = originalPoolSize;
+    device.destroy();
+  }
+});
+
+test('GPUDataEvaluator buffer pool purges lost devices during recycle', async () => {
+  const originalPoolSize = GPUDataEvaluator.bufferPoolSize;
+  const device = new NullDevice({});
+  const activeDevice = new NullDevice({id: 'active-null-device'});
+  let isLost = false;
+  Object.defineProperty(device, 'isLost', {get: () => isLost});
+  const evaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {type: 'uint8', size: 1});
+  const activeEvaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {
+    type: 'uint8',
+    size: 1
+  });
+
+  try {
+    GPUDataEvaluator.bufferPoolSize = 1;
+    await evaluator.evaluate(device);
+    const buffer = evaluator.buffer;
+    const destroy = vi.spyOn(buffer, 'destroy');
+
+    evaluator.destroy();
+    expect(destroy).not.toHaveBeenCalled();
+
+    isLost = true;
+    await activeEvaluator.evaluate(activeDevice);
+    activeEvaluator.destroy();
+    expect(destroy).toHaveBeenCalledOnce();
+  } finally {
+    GPUDataEvaluator.bufferPoolSize = 0;
+    GPUDataEvaluator.bufferPoolSize = originalPoolSize;
+    device.destroy();
+    activeDevice.destroy();
+  }
+});
+
 test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {
   const device = new NullDevice({});
   const vector2 = makeUint16Vector(device, 'colors16x2', [0x3c00, 0x3800], 2, {

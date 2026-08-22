@@ -5,7 +5,7 @@
 import {Device, Buffer} from '@luma.gl/core';
 
 class BufferPool {
-  poolSize: number = 100;
+  poolSize: number = 20;
 
   private bufferPools: Map<Device, Buffer[]>;
 
@@ -45,9 +45,20 @@ class BufferPool {
     } else {
       pool.splice(i, 0, buffer);
     }
-    while (this.poolSize && pool.length > this.poolSize) {
-      // Drop the smallest one
-      pool.shift()!.destroy();
+    // Bound every pool and discard entries for devices that became unusable since the last recycle.
+    this.purge();
+  }
+
+  /** Destroys the smallest cached buffers until every device pool satisfies `poolSize`. */
+  purge(): void {
+    for (const [device, pool] of this.bufferPools) {
+      const targetSize = device.isLost ? 0 : this.poolSize;
+      while (pool.length > targetSize) {
+        pool.shift()!.destroy();
+      }
+      if (pool.length === 0) {
+        this.bufferPools.delete(device);
+      }
     }
   }
 }
