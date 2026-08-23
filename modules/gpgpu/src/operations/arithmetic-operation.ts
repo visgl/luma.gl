@@ -20,7 +20,7 @@ import {
 export {ARITHMETIC_OPERATIONS} from './arithmetic-expression';
 export type {ArithmeticOp, ArithmeticOperationInputs} from './arithmetic-expression';
 
-export type ArithmeticArgument = GPUDataEvaluatorInput | number | number[];
+export type ArithmeticArgument = GPUDataEvaluatorInput;
 type NormalizedArithmeticArgument = GPUDataEvaluator | number | number[];
 
 const FLOAT_OUTPUT_OPS = new Set<ArithmeticOp>(['pow', 'sqrt', 'sin', 'cos', 'tan', 'exp', 'log']);
