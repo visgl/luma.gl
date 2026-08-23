@@ -8,7 +8,7 @@ import {GPUDataEvaluator} from '../operation/gpu-data-evaluator';
 import {GPUVectorEvaluator} from '../operation/gpu-vector-evaluator';
 
 type Evaluator = GPUDataEvaluator | GPUVectorEvaluator;
-type EvaluatorResult = Evaluator | Evaluator[] | Record<string, unknown>;
+type EvaluatorResult = Evaluator | unknown[] | Record<string, unknown>;
 
 /**
  * Materializes result evaluators and destroys unreferenced intermediate GPUData dependencies.
@@ -18,7 +18,7 @@ type EvaluatorResult = Evaluator | Evaluator[] | Record<string, unknown>;
  * @returns The original result value after its root evaluators have been materialized.
  *
  * @remarks
- * `cleanEvaluate()` only inspects evaluators directly contained in `result`. `GPUVectorEvaluator`
+ * `cleanEvaluate()` recursively inspects arrays and plain objects in `result`. `GPUVectorEvaluator`
  * roots are preserved as vectors, while their intermediate `GPUDataEvaluator` dependencies are
  * cleaned up when their buffers are not shared with a root output.
  */
@@ -59,7 +59,7 @@ function cleanupEvaluators(rootEvaluators: Evaluator[]): void {
 
   for (const evaluator of dependencyEvaluators) {
     // Multiple evaluators could share the same underlying buffer
-    if (!preservedBuffers.has(evaluator.buffer)) {
+    if (evaluator.evaluated && !preservedBuffers.has(evaluator.buffer)) {
       evaluator.destroy();
     }
   }
@@ -67,21 +67,45 @@ function cleanupEvaluators(rootEvaluators: Evaluator[]): void {
 
 function collectReferencedEvaluators(value: EvaluatorResult): Evaluator[] {
   const evaluators = new Set<Evaluator>();
-  if (isEvaluator(value)) {
-    return [value];
-  }
-  let valuesArray: unknown[];
-  if (Array.isArray(value)) {
-    valuesArray = value;
-  } else {
-    valuesArray = Object.values(value);
-  }
-  for (const item of valuesArray) {
-    if (isEvaluator(item)) {
-      evaluators.add(item);
-    }
-  }
+  const visitedObjects = new Set<object>();
+  collectReferencedEvaluatorsRecursive(value, evaluators, visitedObjects);
   return Array.from(evaluators);
+}
+
+function collectReferencedEvaluatorsRecursive(
+  value: unknown,
+  evaluators: Set<Evaluator>,
+  visitedObjects: Set<object>
+): void {
+  if (isEvaluator(value)) {
+    evaluators.add(value);
+    return;
+  }
+
+  if (!value || typeof value !== 'object' || visitedObjects.has(value)) {
+    return;
+  }
+  visitedObjects.add(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectReferencedEvaluatorsRecursive(item, evaluators, visitedObjects);
+    }
+    return;
+  }
+
+  if (!isPlainObject(value)) {
+    return;
+  }
+
+  for (const item of Object.values(value)) {
+    collectReferencedEvaluatorsRecursive(item, evaluators, visitedObjects);
+  }
+}
+
+function isPlainObject(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function collectDependencies(
