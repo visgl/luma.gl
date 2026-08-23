@@ -2,6 +2,12 @@
 
 ## v9.4
 
+### v9.4.0-beta.3
+
+- feat(gpgpu): buffer pool improvements (#3126)
+- fix(webgl,webgpu): Report device.isLost on destroy() (#3125)
+- fix(9.4): restore and optimize the MRC glass showcase (#3127)
+
 ### v9.4.0-beta.2
 
 - feat(gpgpu): Reassign GPUDataEvaluator external buffer post construction (#3117)

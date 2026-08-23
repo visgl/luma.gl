@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/scene",
-  "version": "9.4.0-beta.2",
+  "version": "9.4.0-beta.3",
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-vector-field-lab",
-  "version": "9.4.0-beta.2",
+  "version": "9.4.0-beta.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,14 +9,14 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-beta.2",
-    "@luma.gl/effects": "9.4.0-beta.2",
-    "@luma.gl/engine": "9.4.0-beta.2",
-    "@luma.gl/experimental": "9.4.0-beta.2",
-    "@luma.gl/gpgpu": "9.4.0-beta.2",
-    "@luma.gl/scene": "9.4.0-beta.2",
-    "@luma.gl/shadertools": "9.4.0-beta.2",
-    "@luma.gl/webgpu": "9.4.0-beta.2"
+    "@luma.gl/core": "9.4.0-beta.3",
+    "@luma.gl/effects": "9.4.0-beta.3",
+    "@luma.gl/engine": "9.4.0-beta.3",
+    "@luma.gl/experimental": "9.4.0-beta.3",
+    "@luma.gl/gpgpu": "9.4.0-beta.3",
+    "@luma.gl/scene": "9.4.0-beta.3",
+    "@luma.gl/shadertools": "9.4.0-beta.3",
+    "@luma.gl/webgpu": "9.4.0-beta.3"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
