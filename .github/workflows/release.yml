@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   check_branch:
+    name: Check release branch
     runs-on: ubuntu-22.04
     outputs:
       should_build: ${{ steps.permitted.outputs.result }}
@@ -32,22 +33,20 @@ jobs:
           fi
           echo "result=${result}" >> "$GITHUB_OUTPUT"
 
-  release:
+  node_tests:
+    name: Node tests
     runs-on: ubuntu-22.04
     needs: check_branch
-    permissions:
-      contents: write
+    timeout-minutes: 10
 
-    if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build }}
-
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+    if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build == 'true' }}
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
 
@@ -57,16 +56,72 @@ jobs:
           corepack prepare yarn@4.13.0 --activate
           yarn -v
 
-      - name: Cache Yarn Berry artifacts
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Restore Yarn Berry artifacts
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.yarn/berry/cache
             .yarn/install-state.gz
           key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
 
       - name: Install dependencies
         run: yarn install --immutable
+
+      - name: Run Node tests
+        run: yarn test-node
+
+  browser_tests:
+    name: Headless tests (${{ matrix.shard }}/3)
+    runs-on: ubuntu-22.04
+    needs: check_branch
+    timeout-minutes: 15
+
+    if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build == 'true' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Restore Yarn Berry artifacts
+        id: yarn-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Save Yarn Berry artifacts before reclaiming disk space
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
 
       - name: Cache Playwright Chromium
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -74,17 +129,65 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
-      - name: Build packages
-        run: npm run build
-      
       - name: Install Playwright Chromium
         run: yarn playwright:install
 
-      - name: Run release test suite
-        run: yarn test
+      - name: Reclaim install cache and report disk usage
+        run: |
+          rm -rf "${HOME}/.yarn/berry/cache"
+          df -h .
+          du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+
+      - name: Run headless tests
+        run: yarn test-headless --shard=${{ matrix.shard }}/3
+
+  release:
+    name: Post GitHub release and publish to NPM
+    runs-on: ubuntu-22.04
+    needs: [check_branch, node_tests, browser_tests]
+    permissions:
+      contents: write
+
+    if: ${{ success() && github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build == 'true' }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
+
+      - name: Restore Yarn Berry artifacts
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn4-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build packages
+        run: yarn build
 
       - name: Login to NPM
         run: npm config set "//registry.npmjs.org/:_authToken=${NPM_ACCESS_TOKEN}"
 
-      - name: Publish to NPM
+      # ocular-publish creates the GitHub Release before publishing the tagged packages to npm.
+      - name: Post GitHub release and publish to NPM
         run: npx ocular-publish from-git
