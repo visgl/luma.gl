@@ -687,18 +687,21 @@ function getRowsFromValue(
   return result;
 }
 
-/** Input accepted by leaf operations that normalize one fixed-width value view into an evaluator. */
-export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView;
+/** Input accepted by operations that normalize one fixed-width value or constant into an evaluator. */
+export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView | number | number[];
 
 /**
- * Returns one evaluator, adapting `GPUData` inputs when needed.
+ * Returns one evaluator, adapting GPU data and constant inputs when needed.
  *
- * @param input - Existing evaluator, fixed-width `GPUData`, or borrowed `GPUDataView`.
- * @returns One `GPUDataEvaluator` for leaf GPGPU operations.
+ * @param input - Existing evaluator, fixed-width GPU data, or a scalar or row constant.
+ * @returns One `GPUDataEvaluator` for GPGPU operations.
  */
 export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvaluator {
   if (input instanceof GPUDataEvaluator) {
     return input;
+  }
+  if (typeof input === 'number' || Array.isArray(input)) {
+    return GPUDataEvaluator.fromConstant(input);
   }
   if (input instanceof GPUData) {
     return GPUDataEvaluator.fromGPUData(input);
@@ -706,7 +709,9 @@ export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvalua
   if (input instanceof GPUDataView) {
     return GPUDataEvaluator.fromGPUDataView(input);
   }
-  throw new Error('getGPUDataEvaluator() requires GPUDataEvaluator, GPUData, or GPUDataView');
+  throw new Error(
+    'getGPUDataEvaluator() requires GPUDataEvaluator, GPUData, GPUDataView, number, or number[]'
+  );
 }
 
 /**
