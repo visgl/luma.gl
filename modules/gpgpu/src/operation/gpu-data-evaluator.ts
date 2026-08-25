@@ -89,6 +89,8 @@ export type GPUDataEvaluatorProps = {
   gpuData?: GPUData;
   /** Optional memory format preserved for GPUVector interop. */
   format?: GPUVectorFormat;
+  /** Start indices when this evaluator represents flattened variable-length values. */
+  startIndices?: GPUDataEvaluator;
   /** Lazy operation or evaluator whose output initializes this evaluator. */
   source?: Operation | GPUDataEvaluator | null;
   /** Whether every row should read the same value. */
@@ -149,6 +151,8 @@ export class GPUDataEvaluator {
   readonly source: Operation | GPUDataEvaluator | null = null;
   /** Optional memory format preserved for GPUVector interop. */
   readonly format?: GPUVectorFormat;
+  /** Start indices when this evaluator represents flattened variable-length values. */
+  readonly startIndices?: GPUDataEvaluator;
 
   /** User-assigned id for easy debugging. */
   protected _id?: string;
@@ -259,6 +263,9 @@ export class GPUDataEvaluator {
     data: GPUData,
     options: GPUDataEvaluatorFromGPUDataOptions = {}
   ): GPUDataEvaluator {
+    if (data.format && isVertexListGPUVectorFormat(data.format)) {
+      return makeGPUDataEvaluatorFromSegmentedGPUData(data, options);
+    }
     validateFixedWidthGPUData(data);
     const view = new GPUDataView({
       buffer: data.buffer,
@@ -300,7 +307,16 @@ export class GPUDataEvaluator {
    * @param props - Row layout and one value, buffer, GPUData, or deferred source.
    */
   constructor(props: GPUDataEvaluatorProps) {
-    const {id, value, buffer, gpuData, format, source = null, isConstant = false} = props;
+    const {
+      id,
+      value,
+      buffer,
+      gpuData,
+      format,
+      startIndices,
+      source = null,
+      isConstant = false
+    } = props;
     if (!source && !value && !buffer && !gpuData) {
       throw new Error('GPUDataEvaluator must have a value source');
     }
@@ -331,6 +347,7 @@ export class GPUDataEvaluator {
     this.normalized = normalized;
     this.source = source;
     this.format = format;
+    this.startIndices = startIndices;
     if (length === undefined) {
       if (isConstant) {
         length = 1;
@@ -652,6 +669,7 @@ export class GPUDataEvaluator {
 
   /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
   destroy(): void {
+    this.startIndices?.destroy();
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
@@ -688,7 +706,7 @@ function getRowsFromValue(
 }
 
 /** Input accepted by leaf operations that normalize one fixed-width value view into an evaluator. */
-export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView;
+export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView | number | number[];
 
 /**
  * Returns one evaluator, adapting `GPUData` inputs when needed.
@@ -700,13 +718,18 @@ export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvalua
   if (input instanceof GPUDataEvaluator) {
     return input;
   }
+  if (typeof input === 'number' || Array.isArray(input)) {
+    return GPUDataEvaluator.fromConstant(input);
+  }
   if (input instanceof GPUData) {
     return GPUDataEvaluator.fromGPUData(input);
   }
   if (input instanceof GPUDataView) {
     return GPUDataEvaluator.fromGPUDataView(input);
   }
-  throw new Error('getGPUDataEvaluator() requires GPUDataEvaluator, GPUData, or GPUDataView');
+  throw new Error(
+    'getGPUDataEvaluator() requires GPUDataEvaluator, GPUData, GPUDataView, number, or number[]'
+  );
 }
 
 /**
@@ -742,6 +765,50 @@ function validateFixedWidthGPUData(data: GPUData): void {
       `GPUDataEvaluator.fromGPUData() requires rowByteLength ${expectedRowByteLength} for GPUData`
     );
   }
+}
+
+function makeGPUDataEvaluatorFromSegmentedGPUData(
+  data: GPUData,
+  options: GPUDataEvaluatorFromGPUDataOptions
+): GPUDataEvaluator {
+  const format = data.format;
+  if (!format || !isVertexListGPUVectorFormat(format)) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires vertex-list format metadata');
+  }
+
+  const formatInfo = getGPUVectorFormatInfo(format);
+  if (data.rowByteLength !== formatInfo.byteLength) {
+    throw new Error(
+      `GPUDataEvaluator.fromGPUData() requires rowByteLength ${formatInfo.byteLength} for GPUData`
+    );
+  }
+  if (data.byteStride !== data.rowByteLength) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires packed variable-length input');
+  }
+
+  const metadata = data.readbackMetadata as {kind?: string; valueOffsets?: Int32Array} | undefined;
+  if (metadata?.kind !== 'variable-length-attribute' || !metadata.valueOffsets) {
+    throw new Error('GPUDataEvaluator.fromGPUData() requires variable-length value offsets');
+  }
+
+  const id = options.id ?? 'data';
+  const startIndices = new GPUDataEvaluator({
+    id: `${id}.startIndices`,
+    type: 'sint32',
+    size: 1,
+    value: metadata.valueOffsets
+  });
+  return new GPUDataEvaluator({
+    id,
+    type: formatInfo.signedDataType,
+    size: formatInfo.components,
+    offset: data.byteOffset,
+    stride: data.byteStride,
+    length: data.valueLength,
+    buffer: data.buffer,
+    format: formatInfo.elementFormat,
+    startIndices
+  });
 }
 
 function getGPUDataEvaluatorPropsFromGPUDataView(

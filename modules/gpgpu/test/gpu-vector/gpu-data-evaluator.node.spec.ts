@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core';
-import {GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataEvaluator, GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
 
@@ -161,6 +161,66 @@ test('GPUDataEvaluator.fromGPUData validates fixed-width chunks and preserves st
   mismatchedRowByteLength.destroy();
   unpacked.destroy();
   device.destroy();
+});
+
+test('GPUDataEvaluator.fromGPUData accepts segmented data', async () => {
+  const device = new NullDevice({});
+  const values = new Float32Array([99, 99, 0, 0, 1, 1, 2, 2]);
+  const buffer = device.createBuffer({
+    usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+    data: values
+  });
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'paths',
+    format: 'vertex-list<float32x2>',
+    data: [
+      new GPUData({
+        buffer,
+        format: 'vertex-list<float32x2>',
+        length: 2,
+        valueLength: 4,
+        stride: 2,
+        byteStride: 8,
+        rowByteLength: 8,
+        ownsBuffer: true,
+        readbackMetadata: {
+          kind: 'variable-length-attribute',
+          valueOffsets: new Int32Array([1, 3, 4]),
+          nullCount: 0,
+          valueByteLength: values.byteLength
+        }
+      })
+    ],
+    ownsData: true
+  });
+
+  const evaluator = GPUDataEvaluator.fromGPUData(vector.data[0], {id: vector.name});
+
+  expect(evaluator.type).toBe('float32');
+  expect(evaluator.size).toBe(2);
+  expect(evaluator.length).toBe(4);
+  expect(evaluator.format).toBe('float32x2');
+  expect(evaluator.gpuVector.format).toBe('float32x2');
+  expect(evaluator.startIndices?.length).toBe(3);
+  expect(Array.from(evaluator.startIndices!.value!)).toEqual([1, 3, 4]);
+  expect(Array.from(await evaluator.readValue())).toEqual(Array.from(values));
+
+  evaluator.destroy();
+  vector.destroy();
+  device.destroy();
+});
+
+test('getGPUDataEvaluator converts numeric inputs to constants', () => {
+  const scalar = getGPUDataEvaluator(2);
+  expect(scalar.isConstant).toBe(true);
+  expect(scalar.size).toBe(1);
+  expect(Array.from(scalar.value!)).toEqual([2]);
+
+  const vector = getGPUDataEvaluator([1, 2]);
+  expect(vector.isConstant).toBe(true);
+  expect(vector.size).toBe(2);
+  expect(Array.from(vector.value!)).toEqual([1, 2]);
 });
 
 test('GPUDataEvaluator.readValue only reads requested rows from GPU buffers', async () => {
