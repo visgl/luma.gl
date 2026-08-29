@@ -30,3 +30,30 @@ export {
   getGPUParquetRleBitPackedShaderSource,
   type GPUParquetRleBitPackedDecoderProps
 } from './parquet/gpu-parquet-rle-bit-packed-decoder';
+export {
+  GPUParquetDictionaryDecoder,
+  GPU_PARQUET_DICTIONARY_WORKGROUP_SIZE,
+  getGPUParquetDictionaryShaderSource,
+  makeGPUParquetDictionaryDecoderStats,
+  type GPUParquetDictionaryDecoderProps,
+  type GPUParquetDictionaryDecoderStats
+} from './parquet/gpu-parquet-dictionary-decoder';
+export {
+  GPUParquetRleDictionaryDecoder,
+  type GPUParquetRleDictionaryDecoderProps
+} from './parquet/gpu-parquet-rle-dictionary-decoder';
+export {
+  PARQUET_DELTA_BINARY_PACKED_DESCRIPTOR_WORDS,
+  parseParquetDeltaBinaryPackedPlan,
+  type ParquetDeltaBinaryPackedPlan
+} from './parquet/parquet-delta-binary-packed';
+export {
+  GPUParquetDeltaBinaryPackedUnpacker,
+  GPU_PARQUET_DELTA_BINARY_PACKED_WORKGROUP_SIZE,
+  getGPUParquetDeltaBinaryPackedShaderSource,
+  type GPUParquetDeltaBinaryPackedUnpackerProps
+} from './parquet/gpu-parquet-delta-binary-packed-unpacker';
+export {
+  GPUParquetDeltaBinaryPackedDecoder,
+  type GPUParquetDeltaBinaryPackedDecoderProps
+} from './parquet/gpu-parquet-delta-binary-packed-decoder';
