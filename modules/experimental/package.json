@@ -101,8 +101,8 @@
     "@luma.gl/shadertools": "~9.4.0-alpha.1"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.3",
-    "@loaders.gl/sql": "~5.0.0-alpha.3",
+    "@loaders.gl/core": "~5.0.0-alpha.5",
+    "@loaders.gl/sql": "~5.0.0-alpha.5",
     "@luma.gl/gpgpu": "9.4.0-alpha.4",
     "@math.gl/core": "^4.1.0",
     "@math.gl/types": "^4.1.0"
