@@ -12,6 +12,8 @@ import {
 
 const DEFAULT_WARMUP_ITERATIONS = 2;
 const DEFAULT_MEASURED_ITERATIONS = 7;
+const DEFAULT_LNGLAT_TOLERANCE = 0.03;
+const DEFAULT_UNIT_VECTOR_TOLERANCE = 0.002;
 
 /** Distribution of measured DGGS projection durations in milliseconds. */
 export type GPUDGGSCellProjectionBenchmarkDistribution = {
@@ -27,7 +29,11 @@ export type GPUDGGSCellProjectionBenchmarkProps = {
   family: DGGSCellFamily;
   /** Low-word/high-word packed cells. Every cell must be valid for the selected family. */
   cells: Uint32Array;
+  /** Row-major CPU or precomputed reference centers matching `cells` and `projection`. */
+  referenceValues: Float32Array;
   projection?: DGGSCellProjectionKind;
+  /** Maximum absolute component error. Longitude differences wrap across the antimeridian. */
+  referenceTolerance?: number;
   warmupIterations?: number;
   measuredIterations?: number;
 };
@@ -46,6 +52,7 @@ export type GPUDGGSCellProjectionBenchmarkReport = {
   gpuTimeMilliseconds?: GPUDGGSCellProjectionBenchmarkDistribution;
   gpuCellsPerSecond?: number;
   validationReadbackTimeMilliseconds: number;
+  referenceTolerance: number;
 };
 
 type BenchmarkExecution = {
@@ -68,68 +75,85 @@ export async function runGPUDGGSCellProjectionBenchmark(
   const projection = props.projection ?? 'unit-vector';
   const warmupIterations = props.warmupIterations ?? DEFAULT_WARMUP_ITERATIONS;
   const measuredIterations = props.measuredIterations ?? DEFAULT_MEASURED_ITERATIONS;
-  validateBenchmarkProps(props.cells, warmupIterations, measuredIterations);
-
   const cellCount = props.cells.length / 2;
   const componentCount = projection === 'lnglat' ? 2 : 3;
-  const inputBuffer = device.createBuffer({
-    id: `${id}-cells`,
-    data: props.cells,
-    usage: Buffer.STORAGE | Buffer.COPY_DST
-  });
-  const outputBuffer = device.createBuffer({
-    id: `${id}-output`,
-    byteLength: cellCount * componentCount * Float32Array.BYTES_PER_ELEMENT,
-    usage: Buffer.STORAGE | Buffer.COPY_SRC
-  });
-  const validityBuffer = device.createBuffer({
-    id: `${id}-validity`,
-    byteLength: cellCount * Uint32Array.BYTES_PER_ELEMENT,
-    usage: Buffer.STORAGE | Buffer.COPY_SRC
-  });
-  const graph = new GPUCommandGraph(device, {id});
-  const input = graph.createDataView(
-    graph.importBuffer(
-      {id: `${id}-cells`, byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
-      inputBuffer
-    ),
-    {format: 'uint32x2', length: cellCount}
+  const referenceTolerance =
+    props.referenceTolerance ??
+    (projection === 'lnglat' ? DEFAULT_LNGLAT_TOLERANCE : DEFAULT_UNIT_VECTOR_TOLERANCE);
+  validateBenchmarkProps(
+    props.cells,
+    props.referenceValues,
+    componentCount,
+    referenceTolerance,
+    warmupIterations,
+    measuredIterations
   );
-  const output = graph.createDataView(
-    graph.importBuffer(
-      {id: `${id}-output`, byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
-      outputBuffer
-    ),
-    {format: projection === 'lnglat' ? 'float32x2' : 'float32x3', length: cellCount}
-  );
-  const validity = graph.createDataView(
-    graph.importBuffer(
-      {
-        id: `${id}-validity`,
-        byteLength: validityBuffer.byteLength,
-        usage: validityBuffer.usage
-      },
-      validityBuffer
-    ),
-    {format: 'uint32', length: cellCount}
-  );
-  new GPUDGGSCellProjection({
-    id,
-    family: props.family,
-    cells: input,
-    output,
-    validity,
-    projection
-  }).addToGraph(graph);
-  const compiled = graph.compile();
+
+  let inputBuffer: Buffer | undefined;
+  let outputBuffer: Buffer | undefined;
+  let validityBuffer: Buffer | undefined;
+  let compiled: CompiledGPUCommandGraph<void> | undefined;
 
   try {
+    inputBuffer = device.createBuffer({
+      id: `${id}-cells`,
+      data: props.cells,
+      usage: Buffer.STORAGE | Buffer.COPY_DST
+    });
+    outputBuffer = device.createBuffer({
+      id: `${id}-output`,
+      byteLength: cellCount * componentCount * Float32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    validityBuffer = device.createBuffer({
+      id: `${id}-validity`,
+      byteLength: cellCount * Uint32Array.BYTES_PER_ELEMENT,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const graph = new GPUCommandGraph(device, {id});
+    const input = graph.createDataView(
+      graph.importBuffer(
+        {id: `${id}-cells`, byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
+        inputBuffer
+      ),
+      {format: 'uint32x2', length: cellCount}
+    );
+    const output = graph.createDataView(
+      graph.importBuffer(
+        {id: `${id}-output`, byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
+        outputBuffer
+      ),
+      {format: projection === 'lnglat' ? 'float32x2' : 'float32x3', length: cellCount}
+    );
+    const validity = graph.createDataView(
+      graph.importBuffer(
+        {
+          id: `${id}-validity`,
+          byteLength: validityBuffer.byteLength,
+          usage: validityBuffer.usage
+        },
+        validityBuffer
+      ),
+      {format: 'uint32', length: cellCount}
+    );
+    new GPUDGGSCellProjection({
+      id,
+      family: props.family,
+      cells: input,
+      output,
+      validity,
+      projection
+    }).addToGraph(graph);
+    compiled = graph.compile();
+
     await executeBenchmark(device, compiled, `${id}-validation`);
     let validationReadbackTimeMilliseconds = await validateBenchmarkOutput(
       outputBuffer,
       validityBuffer,
       cellCount,
-      projection
+      projection,
+      props.referenceValues,
+      referenceTolerance
     );
     for (let iteration = 0; iteration < warmupIterations; iteration++) {
       await executeBenchmark(device, compiled, `${id}-warmup-${iteration}`);
@@ -150,7 +174,14 @@ export async function runGPUDGGSCellProjectionBenchmark(
     }
     validationReadbackTimeMilliseconds = Math.max(
       validationReadbackTimeMilliseconds,
-      await validateBenchmarkOutput(outputBuffer, validityBuffer, cellCount, projection)
+      await validateBenchmarkOutput(
+        outputBuffer,
+        validityBuffer,
+        cellCount,
+        projection,
+        props.referenceValues,
+        referenceTolerance
+      )
     );
 
     const synchronizedTimeMilliseconds = summarizeBenchmarkSamples(
@@ -181,13 +212,14 @@ export async function runGPUDGGSCellProjectionBenchmark(
             gpuCellsPerSecond: getThroughput(cellCount, gpuTimeMilliseconds.median)
           }
         : {}),
-      validationReadbackTimeMilliseconds
+      validationReadbackTimeMilliseconds,
+      referenceTolerance
     };
   } finally {
-    compiled.destroy();
-    validityBuffer.destroy();
-    outputBuffer.destroy();
-    inputBuffer.destroy();
+    compiled?.destroy();
+    validityBuffer?.destroy();
+    outputBuffer?.destroy();
+    inputBuffer?.destroy();
   }
 }
 
@@ -232,7 +264,9 @@ async function validateBenchmarkOutput(
   outputBuffer: Buffer,
   validityBuffer: Buffer,
   cellCount: number,
-  projection: DGGSCellProjectionKind
+  projection: DGGSCellProjectionKind,
+  referenceValues: Float32Array,
+  referenceTolerance: number
 ): Promise<number> {
   const startTime = getTime();
   const [outputBytes, validityBytes] = await Promise.all([
@@ -274,17 +308,37 @@ async function validateBenchmarkOutput(
         throw new Error('DGGS projection benchmark produced a non-normalized unit vector');
       }
     }
+    for (let componentIndex = 0; componentIndex < componentCount; componentIndex++) {
+      const value = values[valueOffset + componentIndex];
+      const referenceValue = referenceValues[valueOffset + componentIndex];
+      const difference =
+        projection === 'lnglat' && componentIndex === 0
+          ? getLongitudeDifference(value, referenceValue)
+          : Math.abs(value - referenceValue);
+      if (!Number.isFinite(referenceValue) || difference > referenceTolerance) {
+        throw new Error('DGGS projection benchmark output does not match reference values');
+      }
+    }
   }
   return getTime() - startTime;
 }
 
 function validateBenchmarkProps(
   cells: Uint32Array,
+  referenceValues: Float32Array,
+  componentCount: number,
+  referenceTolerance: number,
   warmupIterations: number,
   measuredIterations: number
 ): void {
   if (cells.length === 0 || cells.length % 2 !== 0) {
     throw new Error('DGGS projection benchmark cells must contain complete uint32x2 rows');
+  }
+  if (referenceValues.length !== (cells.length / 2) * componentCount) {
+    throw new Error('DGGS projection benchmark reference values must match every output component');
+  }
+  if (!Number.isFinite(referenceTolerance) || referenceTolerance < 0) {
+    throw new Error('DGGS projection benchmark reference tolerance is invalid');
   }
   for (const [name, count] of [
     ['warmupIterations', warmupIterations],
@@ -294,6 +348,11 @@ function validateBenchmarkProps(
       throw new Error(`DGGS projection benchmark ${name} is invalid`);
     }
   }
+}
+
+function getLongitudeDifference(left: number, right: number): number {
+  const difference = Math.abs(left - right) % 360;
+  return Math.min(difference, 360 - difference);
 }
 
 function summarizeBenchmarkSamples(

@@ -25,6 +25,23 @@ const A5_CELLS = [
   0x2628000000000000n,
   0x35bd75e8fee1100dn
 ];
+// Precomputed with h3-js 4.4 and a5-js 0.8. Keeping the oracle out of the measured path also keeps
+// those CPU implementations out of this live benchmark's browser bundle.
+const H3_REFERENCE_LNGLATS: ReadonlyArray<readonly [number, number]> = [
+  [-122.4182710369247, 37.773515097238146],
+  [-0.0010418183700719888, 0.0005857701415174007],
+  [-0.12145034273233364, 51.50008600604053],
+  [151.19803529715963, -33.860401280822074],
+  [19.985975059398097, 85.00014538237319],
+  [-59.99596159336479, -79.99961280701646]
+];
+const A5_REFERENCE_LNGLATS: ReadonlyArray<readonly [number, number]> = [
+  [-93, 90],
+  [123, 69.09240188013534],
+  [-120.36040534450211, 38.61273252471863],
+  [-70.23755667780222, 43.618118491958555],
+  [-122.41999998343744, 37.77999999438284]
+];
 
 /** Measures H3 and A5 cell-center projection on the reader's actual WebGPU adapter. */
 export function DGGSCellProjectionBenchmark(): ReactNode {
@@ -98,10 +115,12 @@ export function DGGSCellProjectionBenchmark(): ReactNode {
       onRun={async () => {
         const device =
           selectedDevice?.type === 'webgpu' ? selectedDevice : await createDevice('webgpu-core');
+        const cells = makeRepeatedCellWords(family, cellCount);
         const report = await runGPUDGGSCellProjectionBenchmark(device, {
           family,
           projection,
-          cells: makeRepeatedCellWords(family, cellCount),
+          cells,
+          referenceValues: makeRepeatedReferenceValues(family, projection, cellCount),
           warmupIterations: 2,
           measuredIterations: 7
         });
@@ -194,7 +213,8 @@ function DGGSBenchmarkResults({
         </table>
       </div>
       <p style={{fontSize: 12, margin: '10px 0 0'}}>
-        Every input row is validated. Geographic output is range-checked; unit vectors must be
+        Every output component is checked against precomputed CPU reference centers within{' '}
+        {report.referenceTolerance}. Geographic output is also range-checked; unit vectors must be
         normalized. The validation readback took{' '}
         {formatMilliseconds(report.validationReadbackTimeMilliseconds)} and is not included above.
       </p>
@@ -217,6 +237,37 @@ function makeRepeatedCellWords(family: DGGSCellFamily, cellCount: number): Uint3
     words[cellIndex * 2 + 1] = Number(cell >> 32n);
   }
   return words;
+}
+
+function makeRepeatedReferenceValues(
+  family: DGGSCellFamily,
+  projection: DGGSCellProjectionKind,
+  cellCount: number
+): Float32Array {
+  const sourceLongitudeLatitudes =
+    family === 'h3' ? H3_REFERENCE_LNGLATS : A5_REFERENCE_LNGLATS;
+  const componentCount = projection === 'lnglat' ? 2 : 3;
+  const values = new Float32Array(cellCount * componentCount);
+  for (let cellIndex = 0; cellIndex < cellCount; cellIndex++) {
+    const longitudeLatitude =
+      sourceLongitudeLatitudes[cellIndex % sourceLongitudeLatitudes.length];
+    if (projection === 'lnglat') {
+      values.set(longitudeLatitude, cellIndex * componentCount);
+    } else {
+      const longitude = longitudeLatitude[0] * (Math.PI / 180);
+      const latitude = longitudeLatitude[1] * (Math.PI / 180);
+      const cosLatitude = Math.cos(latitude);
+      values.set(
+        [
+          cosLatitude * Math.cos(longitude),
+          cosLatitude * Math.sin(longitude),
+          Math.sin(latitude)
+        ],
+        cellIndex * componentCount
+      );
+    }
+  }
+  return values;
 }
 
 function formatMilliseconds(milliseconds: number): string {

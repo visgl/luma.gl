@@ -617,6 +617,10 @@ fn dggs_a5_get_base_pentagon_vertex(vertexIndex : u32) -> vec2f {
   return vertices[min(vertexIndex, 4u)];
 }
 
+fn dggs_a5_get_base_pentagon_center() -> vec2f {
+  return vec2f(0.4106967627362, 0.1648883597942);
+}
+
 fn dggs_a5_get_base_triangle_vertex(vertexIndex : u32) -> vec2f {
   let vertices = array<vec2f, 3>(
     vec2f(0.0, 0.0),
@@ -667,6 +671,36 @@ fn dggs_a5_get_pentagon_vertex(
   return dggs_a5_rotate_face_point(point, anchor.quintant);
 }
 
+// Transforming the center directly preserves sub-cell precision when individual vertices collapse
+// to the same f32 coordinate at the highest resolutions.
+fn dggs_a5_get_pentagon_center(anchor : DggsA5Anchor, hilbertResolution : u32) -> vec2f {
+  let flipSum = anchor.flips.x + anchor.flips.y;
+  let reflectsY = ((flipSum == -2 || flipSum == 2) && anchor.q > 1u) ||
+    (flipSum == 0 && (anchor.q == 0u || anchor.q == 3u));
+  var point = dggs_a5_get_base_pentagon_center();
+
+  if (anchor.flips.x == 1 && anchor.flips.y == -1) {
+    point = -point;
+  }
+  if (reflectsY) {
+    point.y = -point.y;
+  }
+  if (anchor.flips.x == -1 && anchor.flips.y == -1) {
+    point = -point;
+  } else if (anchor.flips.x == -1) {
+    point += vec2f(-0.618033988750, 0.449027976580);
+  } else if (anchor.flips.y == -1) {
+    point += vec2f(0.618033988750, -0.449027976580);
+  }
+
+  let translation = vec2f(
+    f32(anchor.offset.x) * 0.618033988750 + f32(anchor.offset.y) * 0.618033988750,
+    f32(anchor.offset.x) * 0.449027976580 + f32(anchor.offset.y) * -0.449027976580
+  );
+  point = (point + translation) / f32(1u << hilbertResolution);
+  return dggs_a5_rotate_face_point(point, anchor.quintant);
+}
+
 fn dggs_a5_get_shape_vertex_count(cell : DggsA5Cell) -> u32 {
   return select(5u, 3u, cell.resolution == 1u);
 }
@@ -691,6 +725,12 @@ fn dggs_a5_get_cell_shape_face_point(index : vec2u, cell : DggsA5Cell, shapeInde
 }
 
 fn dggs_a5_get_cell_center_face_point(index : vec2u, cell : DggsA5Cell) -> vec2f {
+  if (cell.resolution >= 2u) {
+    return dggs_a5_get_pentagon_center(
+      dggs_a5_make_anchor(index, cell, dggs_a5_segment_to_anchor_info(cell)),
+      cell.hilbertResolution
+    );
+  }
   let shapeVertexCount = dggs_a5_get_shape_vertex_count(cell);
   var center = vec2f(0.0);
   var vertexIndex = 0u;
@@ -705,7 +745,11 @@ fn dggs_a5_get_cell_center_face_point(index : vec2u, cell : DggsA5Cell) -> vec2f
 }
 
 fn dggs_a5_to_polar(point : vec2f) -> vec2f {
-  return vec2f(length(point), atan2(point.y, point.x));
+  var angle = 0.0;
+  if (dot(point, point) > 1.0e-12) {
+    angle = atan2(point.y, point.x);
+  }
+  return vec2f(length(point), angle);
 }
 
 fn dggs_a5_to_cartesian(thetaPhi : vec2f) -> vec3f {

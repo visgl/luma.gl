@@ -120,10 +120,13 @@ import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/gpgpu/gpu-dggs/benchma
 const report = await runGPUDGGSCellProjectionBenchmark(device, {
   family: 'h3',
   cells: packedCellWords,
+  referenceValues: precomputedUnitVectorCenters,
   projection: 'unit-vector'
 });
 ```
 
-The runner accepts low-word/high-word `Uint32Array` input, rejects invalid cells, range-checks
-geographic centers, verifies vector normalization, and returns distributions rather than a single
-best-case sample.
+The runner accepts low-word/high-word `Uint32Array` input plus row-matched CPU or precomputed
+reference centers. It rejects invalid cells, compares every output component with that oracle,
+range-checks geographic centers, verifies vector normalization, and returns distributions rather
+than a single best-case sample. Use `referenceTolerance` to override the default `0.03°` geographic
+or `0.002` unit-vector component tolerance.
