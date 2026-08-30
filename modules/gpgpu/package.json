@@ -48,6 +48,11 @@
       "import": "./dist/gpu-core/index.js",
       "require": "./dist/gpu-core/index.cjs"
     },
+    "./gpu-parse": {
+      "types": "./dist/gpu-parse/index.d.ts",
+      "import": "./dist/gpu-parse/index.js",
+      "require": "./dist/gpu-parse/index.cjs"
+    },
     "./gpu-graph": {
       "types": "./dist/gpu-graph/index.d.ts",
       "import": "./dist/gpu-graph/index.js",
