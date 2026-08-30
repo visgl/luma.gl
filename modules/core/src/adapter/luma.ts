@@ -32,7 +32,7 @@ type DeviceCreationCandidate = [
 /** Properties for creating a new device */
 export type CreateDeviceProps = {
   /** Selects an exact backend or an ordered device creation policy. */
-  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available' | 'best-available-webgpu';
+  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available' | 'best-webgpu';
   /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
   /**
@@ -239,7 +239,7 @@ export class Luma {
     let selectedType: string | null = type;
     if (type === 'best-available') {
       selectedType = this.getBestAvailableAdapterType(adapters);
-    } else if (type === 'best-available-webgpu') {
+    } else if (type === 'best-webgpu') {
       selectedType = 'webgpu';
     }
 
@@ -332,7 +332,7 @@ function getDeviceCreationCandidates(
       ? ['max', 'core', 'compatibility']
       : props.featureLevel === 'compatibility'
         ? ['compatibility']
-        : ['core', 'compatibility'];
+        : ['max', 'core', 'compatibility'];
   const candidates: DeviceCreationCandidate[] = featureLevels.map(featureLevel => [
     'webgpu',
     featureLevel

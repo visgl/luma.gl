@@ -80,11 +80,11 @@ test('luma#createDevice best-available retries actual creation before WebGL', as
 
   t.deepEqual(
     webgpuAdapter.calls.map(call => call.featureLevel),
-    ['core', 'compatibility'],
-    'core and compatibility are attempted in order'
+    ['max', 'core', 'compatibility'],
+    'max, core, and compatibility are attempted in order'
   );
   t.equal(webglAdapter.calls.length, 1, 'WebGL is attempted after hardware WebGPU');
-  t.equal(device.creationInfo.attempts.length, 2, 'failed attempts are retained on success');
+  t.equal(device.creationInfo.attempts.length, 3, 'failed attempts are retained on success');
   t.equal(device.creationInfo.selected?.backend, 'webgl', 'selected backend is recorded');
   device.destroy();
   t.end();
@@ -104,14 +104,14 @@ test('luma#createDevice best-available retains the null adapter as a final fallb
 
   t.equal(device.type, 'null', 'null device is selected after unavailable GPU backends');
   t.equal(device.creationInfo.selected?.backend, 'null', 'null selection is recorded');
-  t.equal(device.creationInfo.attempts.length, 3, 'failed WebGPU profiles and WebGL are retained');
+  t.equal(device.creationInfo.attempts.length, 4, 'failed WebGPU profiles and WebGL are retained');
   device.destroy();
   t.end();
 });
 
-test('luma#createDevice uses compatibility WebGPU after a core creation failure', async t => {
+test('luma#createDevice uses compatibility WebGPU after max and core failures', async t => {
   const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
-    if (props.featureLevel === 'core') {
+    if (props.featureLevel !== 'compatibility') {
       throw new Error('Core device request failed');
     }
     return await createNullDevice(props);
@@ -126,16 +126,16 @@ test('luma#createDevice uses compatibility WebGPU after a core creation failure'
 
   t.deepEqual(
     webgpuAdapter.calls.map(call => call.featureLevel),
-    ['core', 'compatibility'],
-    'compatibility follows core'
+    ['max', 'core', 'compatibility'],
+    'compatibility follows max and core'
   );
   t.equal(webglAdapter.calls.length, 0, 'successful compatibility does not attempt WebGL');
-  t.equal(device.creationInfo.attempts.length, 1, 'the recovered core failure is retained');
+  t.equal(device.creationInfo.attempts.length, 2, 'the recovered failures are retained');
   device.destroy();
   t.end();
 });
 
-test('luma#createDevice best-available-webgpu uses software last and never WebGL', async t => {
+test('luma#createDevice best-webgpu uses software last and never WebGL', async t => {
   const webgpuAdapter = new RecordingAdapter('webgpu', async props => {
     if (!props._forceFallbackAdapter) {
       throw new Error(`Rejected ${props.featureLevel}`);
@@ -145,7 +145,7 @@ test('luma#createDevice best-available-webgpu uses software last and never WebGL
   const webglAdapter = new RecordingAdapter('webgl', createNullDevice);
 
   const device = await luma.createDevice({
-    type: 'best-available-webgpu',
+    type: 'best-webgpu',
     adapters: [webgpuAdapter, webglAdapter],
     waitForPageLoad: false
   });
@@ -153,6 +153,7 @@ test('luma#createDevice best-available-webgpu uses software last and never WebGL
   t.deepEqual(
     webgpuAdapter.calls.map(call => [call.featureLevel, call._forceFallbackAdapter]),
     [
+      ['max', false],
       ['core', false],
       ['compatibility', false],
       ['compatibility', true]
@@ -196,7 +197,7 @@ test('luma#createDevice major performance caveat suppresses software WebGPU', as
   let error: DeviceCreationError | null = null;
   try {
     await luma.createDevice({
-      type: 'best-available-webgpu',
+      type: 'best-webgpu',
       adapters: [webgpuAdapter],
       failIfMajorPerformanceCaveat: true,
       waitForPageLoad: false
@@ -208,10 +209,10 @@ test('luma#createDevice major performance caveat suppresses software WebGPU', as
   t.ok(error instanceof DeviceCreationError, 'final failure is structured');
   t.deepEqual(
     webgpuAdapter.calls.map(call => call._forceFallbackAdapter),
-    [false, false],
+    [false, false, false],
     'software request is suppressed'
   );
-  t.equal(error?.attempts.length, 2, 'both hardware failures are retained');
+  t.equal(error?.attempts.length, 3, 'all hardware failures are retained');
   t.end();
 });
 
@@ -223,7 +224,7 @@ test('luma#createDevice honors max and compatibility policy starting points', as
     return await createNullDevice(props);
   });
   const maxDevice = await luma.createDevice({
-    type: 'best-available-webgpu',
+    type: 'best-webgpu',
     featureLevel: 'max',
     adapters: [maxAdapter],
     waitForPageLoad: false
@@ -237,7 +238,7 @@ test('luma#createDevice honors max and compatibility policy starting points', as
 
   const compatibilityAdapter = new RecordingAdapter('webgpu', createNullDevice);
   const compatibilityDevice = await luma.createDevice({
-    type: 'best-available-webgpu',
+    type: 'best-webgpu',
     featureLevel: 'compatibility',
     adapters: [compatibilityAdapter],
     waitForPageLoad: false
@@ -276,13 +277,14 @@ test('luma#createDevice does not select an incidental software adapter as hardwa
     waitForPageLoad: false
   });
 
-  t.equal(webgpuAdapter.calls.length, 2, 'both hardware profiles reject software devices');
-  const [firstCanvas, secondCanvas, webglCanvas] = requestedCanvases;
+  t.equal(webgpuAdapter.calls.length, 3, 'all hardware profiles reject software devices');
+  const [firstCanvas, secondCanvas, thirdCanvas, webglCanvas] = requestedCanvases;
   t.notEqual(firstCanvas, secondCanvas, 'core rejection replaces the owned canvas');
-  t.notEqual(secondCanvas, webglCanvas, 'compatibility rejection replaces the owned canvas');
+  t.notEqual(secondCanvas, thirdCanvas, 'compatibility rejection replaces the owned canvas');
+  t.notEqual(thirdCanvas, webglCanvas, 'WebGL receives a fresh replacement canvas');
   t.equal(webglCanvas.parentElement, container, 'WebGL receives the visible replacement canvas');
   t.equal(device.creationInfo.selected?.backend, 'webgl', 'broad fallback prefers WebGL');
-  t.equal(device.creationInfo.attempts.length, 2, 'software detections are diagnostic attempts');
+  t.equal(device.creationInfo.attempts.length, 3, 'software detections are diagnostic attempts');
   device.destroy();
   container.remove();
   t.end();
@@ -320,7 +322,7 @@ test('luma#createDevice rejects software WebGPU before reusing a caller-owned ca
 
   t.deepEqual(
     webgpuAdapter.calls.map(call => call.failIfMajorPerformanceCaveat),
-    [true, true],
+    [true, true, true],
     'hardware WebGPU candidates reject software before canvas initialization'
   );
   t.ok(
@@ -372,10 +374,11 @@ test('luma#createDevice replaces a caller-owned canvas after canvas initializati
     waitForPageLoad: false
   });
 
-  const [coreCanvas, compatibilityCanvas, webglCanvas] = requestedCanvases;
-  t.equal(coreCanvas, canvas, 'core WebGPU receives the caller canvas');
-  t.notEqual(compatibilityCanvas, coreCanvas, 'compatibility receives an unbound replacement');
-  t.notEqual(webglCanvas, compatibilityCanvas, 'WebGL receives a second unbound replacement');
+  const [maxCanvas, coreCanvas, compatibilityCanvas, webglCanvas] = requestedCanvases;
+  t.equal(maxCanvas, canvas, 'max WebGPU receives the caller canvas');
+  t.notEqual(coreCanvas, maxCanvas, 'core receives an unbound replacement');
+  t.notEqual(compatibilityCanvas, coreCanvas, 'compatibility receives a second replacement');
+  t.notEqual(webglCanvas, compatibilityCanvas, 'WebGL receives a third unbound replacement');
   t.equal(webglCanvas.parentElement, container, 'the final replacement remains visible');
   t.equal(webglCanvas.id, canvas.id, 'the replacement preserves the canvas id');
   t.equal(webglCanvas.width, canvas.width, 'the replacement preserves drawing-buffer width');
@@ -402,11 +405,11 @@ test('luma#createDevice classifies CPU WebGPU devices as software', async t => {
     waitForPageLoad: false
   });
 
-  t.equal(webgpuAdapter.calls.length, 2, 'CPU devices are rejected for both hardware profiles');
+  t.equal(webgpuAdapter.calls.length, 3, 'CPU devices are rejected for all hardware profiles');
   t.equal(device.creationInfo.selected?.backend, 'webgl', 'CPU WebGPU degrades to WebGL');
   t.equal(
     device.creationInfo.attempts.length,
-    2,
+    3,
     'only genuine software rejections are retained as failed attempts'
   );
   device.destroy();
