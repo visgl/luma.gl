@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ShaderModule, generateShaderForModule, ShaderGenerationOptions} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 const module: ShaderModule = {
   name: 'test',
@@ -59,14 +59,14 @@ var<uniform> test : Test;`
   }
 ];
 
-export function registerGenerateShaderTests(test: TapeTestFunction): void {
-  test('shadertools#generateGLSLForModule', t => {
+export function registerGenerateShaderTests(): void {
+  it('shadertools#generateGLSLForModule', () => {
     for (const testCase of TEST_CASES) {
       const generatedShader = generateShaderForModule(testCase.module, testCase.options);
-      t.equal(generatedShader, testCase.result, JSON.stringify(testCase.options));
+      expect(generatedShader, JSON.stringify(testCase.options)).toBe(testCase.result);
     }
 
-    t.throws(
+    expect(
       () =>
         generateShaderForModule(
           {
@@ -77,10 +77,7 @@ export function registerGenerateShaderTests(test: TapeTestFunction): void {
           } as ShaderModule,
           {shaderLanguage: 'wgsl'}
         ),
-      /Composite uniform types/,
       'WGSL generation rejects composite uniform types'
-    );
-
-    t.end();
+    ).toThrow(/Composite uniform types/);
   });
 }
