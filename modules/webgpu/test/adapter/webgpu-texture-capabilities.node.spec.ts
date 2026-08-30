@@ -136,11 +136,11 @@ test('WebGPU texture capabilities gate compressed, tier, and compatibility forma
       format: 'r16unorm',
       create: true,
       render: true,
-      filter: false,
+      filter: true,
       blend: true,
       store: true
     },
-    'tier-one normalized formats expose only their specified capabilities'
+    'tier-one normalized formats expose their render, filter, blend, and storage capabilities'
   );
   t.equal(
     getWebGPUTextureFormatCapabilities('bgra8unorm-srgb', baselineFeatures, 'compatibility').create,
