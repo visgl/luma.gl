@@ -468,6 +468,77 @@ test('luma#createDevice records unavailable adapters without calling create', as
   t.end();
 });
 
+test('luma#createDevice displays final debug failures beside a page canvas', async t => {
+  const container = document.createElement('div');
+  const canvas = document.createElement('canvas');
+  container.appendChild(canvas);
+  document.body.prepend(container);
+  const webgpuAdapter = new RecordingAdapter('webgpu', async () => {
+    throw new Error('WebGPU unavailable');
+  });
+
+  try {
+    await luma.createDevice({
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      createCanvasContext: {canvas},
+      debug: true,
+      waitForPageLoad: false
+    });
+  } catch {
+    // Expected device creation failure.
+  }
+
+  const errorElement = document.getElementById('luma-device-error');
+  t.equal(errorElement?.previousElementSibling, canvas, 'the error is displayed beside the canvas');
+  t.equal(errorElement?.getAttribute('role'), 'alert', 'the error is announced accessibly');
+  t.ok(errorElement?.textContent?.includes('WebGPU unavailable'), 'the native error is shown');
+  container.remove();
+  t.end();
+});
+
+test('luma#createDevice only changes the page when debug is enabled', async t => {
+  const canvas = document.createElement('canvas');
+  document.body.prepend(canvas);
+  const webgpuAdapter = new RecordingAdapter('webgpu', async () => {
+    throw new Error('WebGPU unavailable');
+  });
+
+  try {
+    await luma.createDevice({
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      debug: false,
+      waitForPageLoad: false
+    });
+  } catch {
+    // Expected device creation failure.
+  }
+  t.notOk(
+    document.getElementById('luma-device-error'),
+    'production failures do not modify the DOM'
+  );
+
+  try {
+    await luma.createDevice({
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      debug: true,
+      waitForPageLoad: false
+    });
+  } catch {
+    // Expected device creation failure.
+  }
+  t.equal(
+    document.getElementById('luma-device-error')?.parentElement,
+    document.body,
+    'core displays the error without engine integration'
+  );
+  document.getElementById('luma-device-error')?.remove();
+  canvas.remove();
+  t.end();
+});
+
 test('luma#registerAdapters', async t => {
   luma.registerAdapters([nullAdapter]);
   const device = await luma.createDevice({type: 'null'});

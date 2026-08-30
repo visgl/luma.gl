@@ -185,7 +185,11 @@ export class Luma {
     }
 
     const lastError = attempts[attempts.length - 1]?.error;
-    throw new DeviceCreationError(lastError?.message || ERROR_MESSAGE, attempts, lastError);
+    const error = new DeviceCreationError(lastError?.message || ERROR_MESSAGE, attempts, lastError);
+    if (props.debug) {
+      displayDeviceCreationError(error);
+    }
+    throw error;
   }
 
   /**
@@ -360,6 +364,19 @@ function replaceCanvasAfterFailedInitialization(props: Required<CreateDeviceProp
     canvas.replaceWith(replacement);
     contextProps.canvas = replacement;
   }
+}
+
+/** Display fatal device creation errors beside an available HTML canvas in debug builds. */
+function displayDeviceCreationError(error: DeviceCreationError): void {
+  const canvas = typeof document === 'undefined' ? null : document.querySelector('canvas');
+  if (!canvas) return;
+
+  const errorElement =
+    document.getElementById('luma-device-error') || document.createElement('div');
+  errorElement.id = 'luma-device-error';
+  errorElement.setAttribute('role', 'alert');
+  errorElement.textContent = error.message;
+  canvas.after(errorElement);
 }
 
 /**

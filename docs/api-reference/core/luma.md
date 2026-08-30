@@ -144,6 +144,10 @@ Failed attempts are retained in `device.creationInfo` after successful fallback.
 fails, `createDevice()` rejects with `DeviceCreationError`, whose `attempts` identify the backend,
 feature level, software status, failure phase, and native cause.
 
+When `debug` is enabled in a browser, a final creation failure is also displayed beside the first
+HTML canvas found in the document. The alert can be styled or faded with CSS using
+`#luma-device-error`.
+
 Note: A specific device type is available and supported if both of the following are true:
 1. The backend module has been registered
 2. The browser supports that GPU API
