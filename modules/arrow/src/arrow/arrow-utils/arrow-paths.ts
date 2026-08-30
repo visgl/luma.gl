@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Data, DataType, Field, RecordBatch, Schema, Table, Vector, makeVector} from 'apache-arrow';
 

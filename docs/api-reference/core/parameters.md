@@ -10,38 +10,38 @@ All parameters listed in a single table
 
 | Function                    | How to set                     | Description                                                          | Values                            | WebGL counterpart          |
 | --------------------------- | ------------------------------ | -------------------------------------------------------------------- | --------------------------------- | -------------------------- |
-| **Rasterization**           |
-| `cullMode`                  | `RenderPipeline`               | Which face to cull                                                   | **`'none'`**, `'front'`, `'back'` | `gl.cullFace()`            |
-| `frontFace`                 | `RenderPipeline`               | Which triangle winding order is front                                | **`ccw`**, `cw`                   | `gl.frontFace()`           |
-| `viewport`                  | `RenderPass.setParameters()`   | Specifying viewport size                                             |                                   | `gl.viewpot()`             |
-| `scissor`                   | `RenderPass.setParameters()`   | Specifying scissor rect size                                         |                                   | `gl.scissor()`             |
-| `clearColor`                | `RenderPass(colorAttachments)` |                                                                      |                                   | `gl.clearColor()`          |
-| **Blending**                |
-| `blend`                     | `RenderPipeline(targets)`      | Enabled blending                                                     | `true`, `false`, `undefined`      | `gl.enable(GL.BLEND)`      |
-| `blendConstant`             |                                | Color used by blend factors `constant`, `one-minus-constant`         |
-| `blendColor`                | `RenderPass.setParameters()`   |
-| `blendEquation`             | `RenderPipeline(targets})`     |
-| `blendOperation`            | `RenderPipeline(targets).`     |
-| `blendSrcFactor`            | `RenderPipeline(targets).`     |
-| `blendDstFactor`            | `RenderPipeline(targets).`     |
-| **Depth Buffer**            |
-| `depthBias`                 | `RenderPipeline`               | Small depth offset for polygons                                      | `float`                           | `gl.polygonOffset`         |
-| `depthBiasSlopeScale`       | `RenderPipeline`               | Small depth factor for polygons                                      | `float`                           | `gl.polygonOffset`         |
-| `depthBiasClamp`            | `RenderPipeline`               | Max depth offset for polygons                                        | `float`                           | N/A                        |
-| **Stencil Buffer**          |
-| `stencilReference`          | `RenderPass.setParameters()`   |
-| `stencilReadMask`           | `RenderPipeline`               | Binary mask for reading stencil values                               | `number` (**`0xffffffff`**)       |
-| `stencilWriteMask`          | `RenderPipeline`               | Binary mask for writing stencil values                               | `number` (**`0xffffffff`**)       | `gl.frontFace`             |
-| `stencilCompare`            | `RenderPipeline`               | How the mask is compared                                             | **`always`**, `not-equal`, ...    | `gl.stencilFunc`           |
-| `stencilPassOperation`      | `RenderPipeline`               | Operation on stencil buffer when test passes                         | **`'keep'`**                      | `gl.stencilOp`             |
-| `stencilDepthFailOperation` | `RenderPipeline`               | Operation on stencil buffer when depth test fails                    | **`'keep'`**                      | `gl.stencilOp`             |
-| `stencilFailOperation`      | `RenderPipeline`               | Operation on stencil buffer when test fails                          | **`'keep'`**                      | `gl.stencilOp`             |
-| **Extensions**              |
-| `unclippedDepth`            | `RenderPipeline`               | `depth-clip-control`:  Disable depth value clipping.                 | `boolean`                         | `WEBGL_depth_clamp`        |
-| `provokingVertex`           | `RenderPipeline`               | `provoking-vertex-webgl`: Vertex used for flat shading               | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
-| `polygonMode`               | `RenderPipeline`               | `polygon-mode-webgl`: Enable wire frame rendering.                   | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
-| `polygonOffsetLine`         | `RenderPipeline`               | `polygon-mode-webgl`: Vertex used for flat shading. Requires         | `boolean`                         | `WEBGL_polygon_mode`       |
-| `clipDistance0` (`0-7`)     | `RenderPipeline`               | `shader-clip-cull-distance-webgl`: `gl_ClipDistance/gl_CullDistance` | `boolean`                         | `WEBGL_clip_cull_distance` |
+| **Rasterization** | — | — | — | — |
+| `cullMode` | `RenderPipeline` | Which face to cull | **`'none'`**, `'front'`, `'back'` | `gl.cullFace()` |
+| `frontFace` | `RenderPipeline` | Which triangle winding order is front | **`ccw`**, `cw` | `gl.frontFace()` |
+| `viewport` | `RenderPass.setParameters()` | Specifying viewport size | — | `gl.viewpot()` |
+| `scissor` | `RenderPass.setParameters()` | Specifying scissor rect size | — | `gl.scissor()` |
+| `clearColor` | `RenderPass(colorAttachments)` | — | — | `gl.clearColor()` |
+| **Blending** | — | — | — | — |
+| `blend` | `RenderPipeline(targets)` | Enabled blending | `true`, `false`, `undefined` | `gl.enable(GL.BLEND)` |
+| `blendConstant` | — | Color used by blend factors `constant`, `one-minus-constant` | — | — |
+| `blendColor` | `RenderPass.setParameters()` | — | — | — |
+| `blendEquation` | `RenderPipeline(targets})` | — | — | — |
+| `blendOperation` | `RenderPipeline(targets).` | — | — | — |
+| `blendSrcFactor` | `RenderPipeline(targets).` | — | — | — |
+| `blendDstFactor` | `RenderPipeline(targets).` | — | — | — |
+| **Depth Buffer** | — | — | — | — |
+| `depthBias` | `RenderPipeline` | Small depth offset for polygons | `float` | `gl.polygonOffset` |
+| `depthBiasSlopeScale` | `RenderPipeline` | Small depth factor for polygons | `float` | `gl.polygonOffset` |
+| `depthBiasClamp` | `RenderPipeline` | Max depth offset for polygons | `float` | N/A |
+| **Stencil Buffer** | — | — | — | — |
+| `stencilReference` | `RenderPass.setParameters()` | — | — | — |
+| `stencilReadMask` | `RenderPipeline` | Binary mask for reading stencil values | `number` (**`0xffffffff`**) | — |
+| `stencilWriteMask` | `RenderPipeline` | Binary mask for writing stencil values | `number` (**`0xffffffff`**) | `gl.frontFace` |
+| `stencilCompare` | `RenderPipeline` | How the mask is compared | **`always`**, `not-equal`, ... | `gl.stencilFunc` |
+| `stencilPassOperation` | `RenderPipeline` | Operation on stencil buffer when test passes | **`'keep'`** | `gl.stencilOp` |
+| `stencilDepthFailOperation` | `RenderPipeline` | Operation on stencil buffer when depth test fails | **`'keep'`** | `gl.stencilOp` |
+| `stencilFailOperation` | `RenderPipeline` | Operation on stencil buffer when test fails | **`'keep'`** | `gl.stencilOp` |
+| **Extensions** | — | — | — | — |
+| `unclippedDepth` | `RenderPipeline` | `depth-clip-control`:  Disable depth value clipping. | `boolean` | `WEBGL_depth_clamp` |
+| `provokingVertex` | `RenderPipeline` | `provoking-vertex-webgl`: Vertex used for flat shading | **`'last'`**, `'first'` | `WEBGL_provoking_vertex` |
+| `polygonMode` | `RenderPipeline` | `polygon-mode-webgl`: Enable wire frame rendering. | **`'fill'`**, `'line'` | `WEBGL_polygon_mode` |
+| `polygonOffsetLine` | `RenderPipeline` | `polygon-mode-webgl`: Vertex used for flat shading. Requires | `boolean` | `WEBGL_polygon_mode` |
+| `clipDistance0` (`0-7`) | `RenderPipeline` | `shader-clip-cull-distance-webgl`: `gl_ClipDistance/gl_CullDistance` | `boolean` | `WEBGL_clip_cull_distance` |
 
 F## Other types of parameters
 
@@ -49,8 +49,8 @@ Note that there are certain types of parameters affecting GPU operation that are
 
 | Parameters    | Comments                                                                  |
 | ------------- | ------------------------------------------------------------------------- |
-| `Sampler`     | Describes how to sample from textures is controlled by `Sampler` objects. |
-| `Framebuffer` | luma.gl uses Framebuffer objects specify collections of render targets.   |
+| `Sampler` | Describes how to sample from textures is controlled by `Sampler` objects. |
+| `Framebuffer` | luma.gl uses Framebuffer objects specify collections of render targets. |
 
 
 [color_blending]: https://csawesome.runestone.academy/runestone/books/published/learnwebgl2/12_advanced_rendering/05_color_blending.html
@@ -62,10 +62,10 @@ The only parameters that can be changed freely at any time (i.e. between each dr
 
 | Parameter          | Description                                                   | Values                           |
 | ------------------ | ------------------------------------------------------------- | -------------------------------- |
-| `viewport`         | Specifying viewport size                                      | `number` (**`0xffffffff`**)      |
-| `scissor`          | Specifying scissor region                                     | `number` (**`0xffffffff`**)      |
-| `blendConstant`    | Sets color referenced by pipeline targets using blend factors | `constant`, `one-minus-constant` |
-| `stencilReference` |                                                               |                                  |
+| `viewport` | Specifying viewport size | `number` (**`0xffffffff`**) |
+| `scissor` | Specifying scissor region | `number` (**`0xffffffff`**) |
+| `blendConstant` | Sets color referenced by pipeline targets using blend factors | `constant`, `one-minus-constant` |
+| `stencilReference` | — | — |
 
 These parameters can be set on the current `RenderPass`, and these parameters can be changed at any time.
 
@@ -155,9 +155,9 @@ Most luma.gl parameters are stored on `RenderPipeline` or `RenderPass` objects, 
 
 | Parameter Mutability              | Examples                                          | Constraint                                                                                             |
 | --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Dynamic `RenderPass` parameters   | `viewport`, `scissor`, `blendConstant`            | Can be freely changed between draw calls.                                                              |
-| Fixed `RenderPass` parameters     | `clearColors`, `discard`, `depthClearValue`...    | Can not be changed between draw calls after `RenderPass` creation. A new `RenderPass` must be created. |
-| Fixed `RenderPipeline` parameters | `cullMode`, `frontFace`, `depthWriteEnabled`, ... | Can not be changed between draw calls or render passes. A new `RenderPipeline` must be created.        |
+| Dynamic `RenderPass` parameters | `viewport`, `scissor`, `blendConstant` | Can be freely changed between draw calls. |
+| Fixed `RenderPass` parameters | `clearColors`, `discard`, `depthClearValue`... | Can not be changed between draw calls after `RenderPass` creation. A new `RenderPass` must be created. |
+| Fixed `RenderPipeline` parameters | `cullMode`, `frontFace`, `depthWriteEnabled`, ... | Can not be changed between draw calls or render passes. A new `RenderPipeline` must be created. |
 
 Workarounds
 
@@ -170,8 +170,8 @@ The only parameters that can be changed at any time (using `renderPass.setParame
 
 | Parameter       | Type        | Description                                                                           |
 | --------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `viewport`      | `number[6]` | Specifying viewport size                                                              |
-| `scissor`       | `number[4]` | Specifying scissor rect                                                               |
+| `viewport` | `number[6]` | Specifying viewport size |
+| `scissor` | `number[4]` | Specifying scissor rect |
 | `blendConstant` | `number[4]` | Sets color for pipeline targets with blend factors `constant` or `one-minus-constant` |
 
 ## Fixed RenderPass Parameters
@@ -189,14 +189,14 @@ Note that there is no separate `clear` function in luma.gl. Instead attachments 
 
 | `Framebuffer` Parameter | Type          | Description                                                                                        |
 | ----------------------- | ------------- | -------------------------------------------------------------------------------------------------- |
-| `clearColors?`          | `number[4][]` | If not supplied, loads the value from the attached texture (less performant)                       |
-| `discard?`              | `boolean[]`   | If `true`, does not store the result in the attached texture                                       |
-| `depthClearValue?`      | `number`      | Typically set to `0`. If not supplied, loads the value from the attached texture (less performant) |
-| `depthDiscard?`         | `boolean`     | If `true`, does not store the result in the attached texture                                       |
-| `depthReadonly?`        | `boolean`     | If `true`, indicated depth component is readonly                                                   |
-| `stencilClearValue?`    | `number`      | Typically set to `0`. If not supplied, loads the value from the attached texture (less performant) |
-| `stencilDiscard?`       | `boolean`     | If `true`, does not store the result in the attached texture                                       |
-| `stencilReadonly?`      | `boolean`     | If `true`, indicated stencil component is readonly                                                 |
+| `clearColors?` | `number[4][]` | If not supplied, loads the value from the attached texture (less performant) |
+| `discard?` | `boolean[]` | If `true`, does not store the result in the attached texture |
+| `depthClearValue?` | `number` | Typically set to `0`. If not supplied, loads the value from the attached texture (less performant) |
+| `depthDiscard?` | `boolean` | If `true`, does not store the result in the attached texture |
+| `depthReadonly?` | `boolean` | If `true`, indicated depth component is readonly |
+| `stencilClearValue?` | `number` | Typically set to `0`. If not supplied, loads the value from the attached texture (less performant) |
+| `stencilDiscard?` | `boolean` | If `true`, does not store the result in the attached texture |
+| `stencilReadonly?` | `boolean` | If `true`, indicated stencil component is readonly |
 
 ## RenderPipeline Parameters
 
@@ -206,8 +206,8 @@ These parameters control the primitive assembly stage (which happens before frag
 
 | Function    | Type / Values                     | Description                           |
 | ----------- | --------------------------------- | ------------------------------------- |
-| `cullMode`  | **`'none'`**, `'front'`, `'back'` | Which face to cull                    |
-| `frontFace` | **`'ccw'`**, `'cw'`               | Which triangle winding order is front |
+| `cullMode` | **`'none'`**, `'front'`, `'back'` | Which face to cull |
+| `frontFace` | **`'ccw'`**, `'cw'` | Which triangle winding order is front |
 
 In addition, the following `RenderPipeline` properties are not typically considered GPU parameters but do impact the assembly stage:
 - `topology` must be specified on a `RenderPipeline` to describe the layout of vertex buffers.
@@ -219,12 +219,12 @@ After the GPU completes stencil tests, depth tests and writes are performed. The
 
 | Function              | Description                            | Values               | WebGL counterpart                   |
 | --------------------- | -------------------------------------- | -------------------- | ----------------------------------- |
-| `depthWriteEnabled`   | Whether depth buffer is updated        | `boolean` **`true`** | `gl.depthMask`                      |
-| `depthCompare`        | If and how depth testing is done       | **`always`**, ...    | `gl.depthFunc`                      |
-| `depthBias`           | Small depth offset for polygons        | `float`              | `gl.polygonOffset`                  |
-| `depthBiasSlopeScale` | Small depth factor for polygons        | `float`              | `gl.polygonOffset`                  |
-| `depthBiasClamp`      | Max depth offset for polygons          | `float`              | N/A                                 |
-| `unclippedDepth`      | Disable depth value clipping to [0, 1] | **false** boolean    | N/A - Requires `depth-clip-control` |
+| `depthWriteEnabled` | Whether depth buffer is updated | `boolean` **`true`** | `gl.depthMask` |
+| `depthCompare` | If and how depth testing is done | **`always`**, ... | `gl.depthFunc` |
+| `depthBias` | Small depth offset for polygons | `float` | `gl.polygonOffset` |
+| `depthBiasSlopeScale` | Small depth factor for polygons | `float` | `gl.polygonOffset` |
+| `depthBiasClamp` | Max depth offset for polygons | `float` | N/A |
+| `unclippedDepth` | Disable depth value clipping to [0, 1] | **false** boolean | N/A - Requires `depth-clip-control` |
 
 - **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
 
@@ -233,9 +233,9 @@ After the GPU completes stencil tests, depth tests and writes are performed. The
 
 | Function                 | Values           | Description |
 | ------------------------ | ---------------- | ----------- |
-| `sampleCount`            | **`1`**          |             |
-| `sampleMask`             | **`0xFFFFFFFF`** |             |
-| `alphaToCoverageEnabled` | **`false`**      |             |
+| `sampleCount` | **`1`** | — |
+| `sampleMask` | **`0xFFFFFFFF`** | — |
+| `alphaToCoverageEnabled` | **`false`** | — |
 
 ### Stencil Test
 
@@ -243,24 +243,24 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 
 | Function                    | Type               | Default            | Description                            |
 | --------------------------- | ------------------ | ------------------ | -------------------------------------- |
-| `stencilReadMask`           | `number`           | (**`0xffffffff`**) | Binary mask for reading stencil values |
-| `stencilWriteMask`          | `number`           | (**`0xffffffff`**) | Binary mask for writing stencil values |
-| `stencilCompare`            | `StencilCompare`   | **`always`**       | How the mask is compared               |
-| `stencilPassOperation`      | `StencilOperation` | **`'keep'`**       |                                        |
-| `stencilDepthFailOperation` | `StencilOperation` | **`'keep'`**       |                                        |
-| `stencilFailOperation`      | `StencilOperation` | **`'keep'`**       |                                        |
+| `stencilReadMask` | `number` | (**`0xffffffff`**) | Binary mask for reading stencil values |
+| `stencilWriteMask` | `number` | (**`0xffffffff`**) | Binary mask for writing stencil values |
+| `stencilCompare` | `StencilCompare` | **`always`** | How the mask is compared |
+| `stencilPassOperation` | `StencilOperation` | **`'keep'`** | — |
+| `stencilDepthFailOperation` | `StencilOperation` | **`'keep'`** | — |
+| `stencilFailOperation` | `StencilOperation` | **`'keep'`** | — |
 
 
 | `StencilCompare` | Description                                |
 | ---------------- | ------------------------------------------ |
-| `'always'`       | Always pass                                |
-| `'never'`        | Never pass                                 |
-| `'less'`         | Pass if (ref & mask) < (stencil & mask)    |
-| `'equal'`        | Pass if (ref & mask) = (stencil & mask)    |
-| `'lequal'`       | Pass if (ref & mask) \<\= (stencil & mask) |
-| `'greater'`      | Pass if (ref & mask) > (stencil & mask)    |
-| `'notequal'`     | Pass if (ref & mask) != (stencil & mask)   |
-| `'gequal'`       | Pass if (ref & mask) \>\= (stencil & mask) |
+| `'always'` | Always pass |
+| `'never'` | Never pass |
+| `'less'` | Pass if (ref & mask) < (stencil & mask) |
+| `'equal'` | Pass if (ref & mask) = (stencil & mask) |
+| `'lequal'` | Pass if (ref & mask) \<\= (stencil & mask) |
+| `'greater'` | Pass if (ref & mask) > (stencil & mask) |
+| `'notequal'` | Pass if (ref & mask) != (stencil & mask) |
+| `'gequal'` | Pass if (ref & mask) \>\= (stencil & mask) |
 
 `StencilOperation` values describe action when the stencil test fails
 
@@ -271,14 +271,14 @@ After the fragment shader runs, optional stencil tests are performed, with resul
 
 | `StencilOperation`  | Description                                                    |
 | ------------------- | -------------------------------------------------------------- |
-| `'keep'`            | Keeps current value                                            |
-| `'zero'`            | Sets stencil buffer value to 0                                 |
-| `'replace'`         | Sets stencil buffer value to reference value per `stencilFunc` |
-| `'invert'`          | Inverts stencil buffer value bitwise                           |
-| `'increment-clamp'` | Increments stencil buffer value. Clamps to max value           |
-| `'increment-wrap'`  | Increments stencil buffer value. Wraps to zero                 |
-| `'decrement-clamp'` | Decrements stencil buffer value. Clamps to 0                   |
-| `'decrement-wrap'`  | Decrements stencil buffer value, wraps to max unsigned value   |
+| `'keep'` | Keeps current value |
+| `'zero'` | Sets stencil buffer value to 0 |
+| `'replace'` | Sets stencil buffer value to reference value per `stencilFunc` |
+| `'invert'` | Inverts stencil buffer value bitwise |
+| `'increment-clamp'` | Increments stencil buffer value. Clamps to max value |
+| `'increment-wrap'` | Increments stencil buffer value. Wraps to zero |
+| `'decrement-clamp'` | Decrements stencil buffer value. Clamps to 0 |
+| `'decrement-wrap'` | Decrements stencil buffer value, wraps to max unsigned value |
 
 
 Remarks:
@@ -292,14 +292,14 @@ A `RenderPipeline` requires information about each color attachments:
 
 | Target setting         | Type            | Default   | Description                                                |
 | ---------------------- | --------------- | --------- | ---------------------------------------------------------- |
-| `format`               | `TextureFormat` | N/A       |                                                            |
-| `writeMask?`           | `number`        | ALL = 0xF | RED = 0x1, GREEN = 0x2, BLUE = 0x4, ALPHA = 0x8, ALL = 0xF |
-| `colorBlendOperation?` | BlendOperation  | `'add'`   |                                                            |
-| `colorBlendSrcFactor?` | BlendEquation   | `'one'`   |                                                            |
-| `colorBlendDstFactor?` | BlendEquation   | `'zero'`  |                                                            |
-| `alphaBlendOperation?` | BlendOperation  | `'add'`   |                                                            |
-| `alphaBlendSrcFactor?` | BlendEquation   | `'one'`   |                                                            |
-| `alphaBlendDstFactor?` | BlendEquation   | `'zero'`  |                                                            |
+| `format` | `TextureFormat` | N/A | — |
+| `writeMask?` | `number` | ALL = 0xF | RED = 0x1, GREEN = 0x2, BLUE = 0x4, ALPHA = 0x8, ALL = 0xF |
+| `colorBlendOperation?` | BlendOperation | `'add'` | — |
+| `colorBlendSrcFactor?` | BlendEquation | `'one'` | — |
+| `colorBlendDstFactor?` | BlendEquation | `'zero'` | — |
+| `alphaBlendOperation?` | BlendOperation | `'add'` | — |
+| `alphaBlendSrcFactor?` | BlendEquation | `'one'` | — |
+| `alphaBlendDstFactor?` | BlendEquation | `'zero'` | — |
 
 ### Blending
 
@@ -327,24 +327,24 @@ The following link provides more information on [color blending][color_blending]
 
 | BlendOperation       | Output color                    | Visual effect                                                           |
 | -------------------- | ------------------------------- | ----------------------------------------------------------------------- |
-| `'add'`              | source + destination            | Incrementally brighten as multiple elements render on top of each other |
-| `'subtract'`         | source - destination            | -                                                                       |
-| `'reverse-subtract'` | destination - source            | -                                                                       |
-| `'min'`              | minimum of source + destination | -                                                                       |
-| `'max'`              | maximum of source + destination | Ensure brightest color is preserved                                     |
+| `'add'` | source + destination | Incrementally brighten as multiple elements render on top of each other |
+| `'subtract'` | source - destination | - |
+| `'reverse-subtract'` | destination - source | - |
+| `'min'` | minimum of source + destination | - |
+| `'max'` | maximum of source + destination | Ensure brightest color is preserved |
 
 | BlendFunction           | All colors multiplied with                             | Comment                                  |
 | ----------------------- | ------------------------------------------------------ | ---------------------------------------- |
-| `'zero'`                | `[0,0,0,0]`                                            |
-| `'one'`                 | `[1,1,1,1]`                                            |
-| `'src'`                 | RBGAsrc                                                |
-| `'one-minus-src'`       | 1 - RGBAsrc                                            |
-| `'src-alpha'`           | AAAAsrc                                                |
-| `'one-minus-src-alpha'` | 1 - AAAAsrc                                            |
-| `'dst'`                 | RBGAdst                                                |
-| `'one-minus-dst'`       | 1 - RBGAdst                                            |
-| `'dst-alpha'`           | AAAAdest                                               |
-| `'one-minus-dst-alpha'` | 1 - AAAAdst                                            |
-| `'src-alpha-saturated'` | [min(AS, 1 - AD), min(AS, 1 - AD), min(AS, 1 - AD), 1] |
-| `'constant'`            | RGBAconstant                                           | constant set with `blendColor` parameter |
-| `'one-minus-constant'`  | 1- RGBAconstant                                        | constant set with `blendColor` parameter |
+| `'zero'` | `[0,0,0,0]` | — |
+| `'one'` | `[1,1,1,1]` | — |
+| `'src'` | RBGAsrc | — |
+| `'one-minus-src'` | 1 - RGBAsrc | — |
+| `'src-alpha'` | AAAAsrc | — |
+| `'one-minus-src-alpha'` | 1 - AAAAsrc | — |
+| `'dst'` | RBGAdst | — |
+| `'one-minus-dst'` | 1 - RBGAdst | — |
+| `'dst-alpha'` | AAAAdest | — |
+| `'one-minus-dst-alpha'` | 1 - AAAAdst | — |
+| `'src-alpha-saturated'` | [min(AS, 1 - AD), min(AS, 1 - AD), min(AS, 1 - AD), 1] | — |
+| `'constant'` | RGBAconstant | constant set with `blendColor` parameter |
+| `'one-minus-constant'` | 1- RGBAconstant | constant set with `blendColor` parameter |

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GLTFModelReference} from './gltf-catalog-app';
 
@@ -49,6 +49,17 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
       {
         name: 'MeshoptCubeTest',
         label: 'Meshopt Cube Test',
+        variant: 'glTF-Meshopt',
+        fileName: 'MeshoptCubeTest.gltf'
+      }
+    ]
+  },
+  {
+    extensionName: 'KHR_meshopt_compression',
+    models: [
+      {
+        name: 'MeshoptCubeTest',
+        label: 'Meshopt Cube Test (KHR Meshopt)',
         variant: 'glTF-Meshopt',
         fileName: 'MeshoptCubeTest.gltf'
       }
@@ -242,6 +253,10 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
     models: [{name: 'SimpleInstancing', label: 'Simple Instancing'}]
   },
   {
+    extensionName: 'MSFT_lod',
+    models: [{name: 'SimpleSkinLOD', label: 'Simple Skin (Animated LOD)'}]
+  },
+  {
     extensionName: 'KHR_materials_diffuse_transmission',
     models: [
       {name: 'DiffuseTransmissionPlant', label: 'Diffuse Transmission Plant'},
@@ -266,5 +281,9 @@ export const GLTF_EXTENSION_DEMOS: GLTFExtensionDemo[] = [
       {name: 'LightVisibility', label: 'Light Visibility'},
       {name: 'CubeVisibility', label: 'Cube Visibility'}
     ]
+  },
+  {
+    extensionName: 'EXT_materials_bump',
+    models: [{name: 'BumpMaterial', label: 'Bump Material'}]
   }
 ];

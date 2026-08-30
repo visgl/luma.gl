@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Rows displayed by the text rendering comparison. */
 export const CRAWL_TEXT_ROWS = [

@@ -1,14 +1,19 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {NullDevice} from '@luma.gl/test-utils';
-import {log} from '@luma.gl/core';
-
+import {log, type TextureFormat} from '@luma.gl/core';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
+import {NullDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
 
-const device = new NullDevice({});
+class CompressedTextureNullDevice extends NullDevice {
+  override isTextureFormatSupported(_format: TextureFormat): boolean {
+    return true;
+  }
+}
+
+const device = new CompressedTextureNullDevice({});
 
 function makeCompressedTextureInfo(id: string) {
   return {
@@ -158,6 +163,24 @@ test('gltf#parsePBRMaterial accepts normalized geometry attribute names', t => {
   t.end();
 });
 
+test('gltf#parsePBRMaterial enables the optional second skin influence set', t => {
+  const parsedMaterial = parsePBRMaterial(
+    device,
+    {},
+    {JOINTS_0: {}, WEIGHTS_0: {}, JOINTS_1: {}, WEIGHTS_1: {}},
+    {}
+  );
+
+  t.equal(parsedMaterial.defines['HAS_SKIN'], true, 'first joint influence set enables skinning');
+  t.equal(
+    parsedMaterial.defines['HAS_SKIN_1'],
+    true,
+    'second joint influence set enables eight-influence skinning'
+  );
+  destroyParsedTextures(parsedMaterial);
+  t.end();
+});
+
 test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   const parsedMaterial = parsePBRMaterial(
     device,
@@ -181,6 +204,9 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
           thicknessTexture: makeCompressedTextureInfo('thickness'),
           attenuationDistance: 12,
           attenuationColor: [0.7, 0.8, 0.9]
+        },
+        KHR_materials_dispersion: {
+          dispersion: 0.65
         },
         KHR_materials_clearcoat: {
           clearcoatFactor: 0.8,
@@ -231,6 +257,7 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   );
   t.equal(parsedMaterial.uniforms.ior, 1.7, 'ior parsed');
   t.equal(parsedMaterial.uniforms.transmissionFactor, 0.6, 'transmission factor parsed');
+  t.equal(parsedMaterial.uniforms.dispersion, 0.65, 'ratified chromatic dispersion parsed');
   t.equal(parsedMaterial.uniforms.transmissionMapEnabled, true, 'transmission map enabled');
   t.equal(parsedMaterial.uniforms.thicknessFactor, 0.4, 'volume thickness parsed');
   t.ok(parsedMaterial.bindings.pbr_thicknessSampler, 'thickness binding created');

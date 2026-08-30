@@ -1,14 +1,14 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer, Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for clustered participating-media integration. */
-export type ClusteredVolumetricLightingShaderPassPipelineOptions = {
+export type ClusteredVolumetricLightingCompositeShaderPassOptions = {
   /** Fractional integration, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
@@ -697,9 +697,9 @@ fn clusteredVolumetricComposite_sampleColor(
 >;
 
 /** Creates clustered participating-media integration, temporal stabilization, and composition. */
-export function createClusteredVolumetricLightingShaderPassPipeline(
-  options: ClusteredVolumetricLightingShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createClusteredVolumetricLightingCompositeShaderPass(
+  options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
+): CompositeShaderPass<
   | 'clusteredVolumeRaw'
   | 'clusteredVolumeHistory'
   | 'clusteredVolumeDepthHistory'
@@ -708,7 +708,7 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
 > {
   const scale = options.resolutionScale ?? 1;
   return {
-    name: 'clusteredVolumetricLightingShaderPassPipeline',
+    name: 'clusteredVolumetricLightingCompositeShaderPass',
     renderTargets: {
       clusteredVolumeRaw: {scale: [scale, scale], format: 'rgba16float'},
       clusteredVolumeHistory: {
@@ -719,7 +719,10 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
       },
       clusteredVolumeDepthHistory: {
         scale: [scale, scale],
-        format: 'r32float',
+        // Keep the same four-byte footprint as r32float while remaining filterable on core WebGPU.
+        // The temporal shader uses textureLoad(), but the inferred texture_2d<f32> binding still
+        // requires a filterable sample type when the surrounding pass layout is assembled.
+        format: 'rg16float',
         lifetime: 'history',
         initialize: {clearColor: [0, 0, 0, 1]}
       },

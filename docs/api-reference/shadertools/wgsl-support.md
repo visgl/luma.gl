@@ -2,7 +2,7 @@ import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-ta
 
 # WGSL Support
 
-<ShadertoolsDocsTabs active="wgsl-support" />
+<ShadertoolsDocsTabs group="execution" active="wgsl-support" />
 
 `@luma.gl/shadertools` supports WGSL shader assembly in addition to GLSL.
 For cross-backend authoring guidance, see

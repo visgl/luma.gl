@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer} from '@luma.gl/core';
 import {
   TextAttributeModel,
@@ -14,7 +14,7 @@ import {
   TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
   TEXT_STORAGE_GPU_INPUT_SCHEMA
 } from '@luma.gl/text/experimental';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 
 test('2D text models declare flat source-mappable GPU inputs', t => {
@@ -59,7 +59,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       columnName: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4']
+      formats: ['float32x4']
     }
   ]);
   t.deepEqual(TEXT_STORAGE_GPU_INPUT_SCHEMA, [
@@ -115,7 +115,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       columnName: 'clipRects',
       kind: 'positions',
       required: false,
-      formats: ['sint16x4']
+      formats: ['float32x4']
     }
   ]);
   t.deepEqual(TEXT_DICTIONARY_GPU_INPUT_SCHEMA, [

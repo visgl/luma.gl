@@ -1,133 +1,121 @@
+---
+title: Experimental modules
+description: A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebXR helpers.
+---
+
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {OITExample} from '@site/src/examples';
 
-# Overview
+# Experimental modules
 
 <ExperimentalDocsTabs active="overview" />
 
-`@luma.gl/experimental` publishes incubating luma.gl APIs that are usable by applications but may
-change or be removed without the compatibility guarantees applied to stable modules.
+## Overview
 
-Install the package alongside matching luma.gl core, engine, and shadertools versions:
+`@luma.gl/experimental` publishes usable APIs that are still evolving. These modules let the
+project validate new GPU architecture, analytics, rendering, and simulation contracts before they
+are considered for stable packages.
+
+<DocumentationBadges>
+  <DocumentationBadge tone="experimental">Experimental APIs</DocumentationBadge>
+  <DocumentationBadge tone="webgpu">WebGPU features available</DocumentationBadge>
+</DocumentationBadges>
+
+Install matching luma.gl package versions:
 
 ```bash
-yarn add @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+yarn add @luma.gl/gpgpu @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
 ```
 
-## WebXR
+## When to use it
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+Use an experimental module when its current contract fits your application and you can absorb
+changes between releases. Prefer Core, Engine, Shadertools, or another stable package when they
+already provide the required capability.
 
-- [WebXR](/docs/api-reference/experimental/webxr): WebGL-only session, frame, and raw camera helpers.
+## Live example
 
-## Surface Targets and Composable Effects
-
-<p class="badges">
-  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
-</p>
-
-[`GBuffer`](/docs/api-reference/experimental/g-buffer) owns the standard scene color,
-normal-roughness, velocity, and depth attachments used by depth-aware and temporal shader-pass
-pipelines. It also exposes named extra MRT channels for application-specific lighting, material,
-picking, or debug data.
-
-[`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) is a composable fullscreen
-consumer of those targets. It reconstructs view position from depth and resolves a directional
-light plus a fixed-capacity storage buffer of point lights from two named material attachments.
-
-[`ClusteredLightGrid`](/docs/api-reference/experimental/clustered-lighting) scales the same
-material contract to hundreds of local lights. A WebGPU compute pass bins view-space light spheres
-into screen/depth clusters, and `clusteredDeferredLighting` normally evaluates the current pixel's
-compact retained list. Saturated clusters fall back to checking all active lights so opaque direct
-lighting remains complete.
-
-The [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains how a scene render,
-`GBuffer` bindings, deferred lighting, ordered `ShaderPassPipeline` effects, temporal history, and
-OIT resolve pipelines compose into one render stack.
-
-## GPU Primitives and Command Graphs
-
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
-  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
-</p>
-
-The [GPU Primitives and Command Graphs guide](/docs/api-reference/experimental/gpu-primitives)
-introduces explicit command scheduling, typed table-backed graph views, hierarchical scan, stable
-compaction, stable key/value sorting, bounded two-dimensional complex FFTs, and GPU-written
-indirect draw commands.
-
-## GPU Simulations
-
-<p class="badges">
-  <img src="https://img.shields.io/badge/WebGPU-required-blueviolet.svg?style=flat-square" alt="WebGPU required" />
-</p>
-
-[`MLSMPMFluidSimulation`](/docs/api-reference/experimental/mls-mpm-fluid-simulation) evolves a
-fixed-capacity two-dimensional weakly compressible fluid with MLS-MPM/APIC transfers. It records
-ordered compute work into a caller-owned command encoder, exposes the current particle storage
-buffer for application rendering, and provides deterministic particle seeding and reset without
-hidden submission or readback.
-
-[`SpectralOceanSimulation`](/docs/api-reference/experimental/spectral-ocean-simulation) evolves a
-deterministic Phillips spectrum, composes three inverse `GPUFFT2D` transforms, and exposes
-render-ready displacement and normal/foam buffers without taking command-submission ownership.
-
-## Order-independent Transparency
-
-OIT keeps scene-level geometry capture in its renderers and exposes fullscreen resolve as standard
-`ShaderPassPipeline`s. The resolve pipelines run through the existing `ShaderPassRenderer`, where
-they can be ordered alongside color, blur, bloom, and other advanced effects.
-
-![Order-independent transparency architecture showing renderer-owned capture feeding reusable WBOIT and A-buffer resolve pipelines in the advanced effects system](/images/docs/oit-resolve-pipelines-white.png)
-
-- [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) captures, sorts, and
-  composites per-pixel fragment lists on WebGPU. It offers the most accurate result but consumes
-  bounded storage and performs per-pixel sorting.
-- [`WBOITRenderer`](/docs/api-reference/experimental/wboit-renderer) accumulates weighted color and
-  revealage on WebGPU or WebGL2. It avoids sorting and storage buffers, but the result is
-  approximate and requires two translucent geometry passes.
-
-Both renderers leave scene models, shader inputs, command submission, and fallback selection under
-application control.
-
-Compare A-buffer, weighted-blended, and ordinary alpha blending on the same overlapping scene:
+This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha
+blending on the same scene. It demonstrates how an experimental renderer can still compose with
+stable Engine models and Shadertools passes.
 
 <OITExample embedded showStats={false} />
 
-## Optical Materials
+## Module catalog
 
-[`glassMaterial`](/docs/api-reference/experimental/glass-material) provides portable WGSL and GLSL
-screen-space refraction, Schlick Fresnel reflection, chromatic dispersion, and Beer-Lambert
-absorption. [`reflectiveMaterial`](/docs/api-reference/experimental/reflective-material) adds
-lightweight glossy highlights and Fresnel-weighted environment reflection for other surfaces.
+### GPU Core and GPU analytics
 
-Both modules share `opticalLighting`, expose a `ShaderPlugin`, and can be composed with sorted
-alpha, weighted-blended OIT, or A-buffer OIT. `emissiveMaterial` shades self-illuminated objects,
-and `opticalPointLights` supplies a bounded, portable array of moving colored lights for the
-illuminated glass and reflective helpers. HDR transparency output can then feed reusable bloom
-and tone-mapping shader passes.
+| Module | Use it for |
+| --- | --- |
+| [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
+| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
+| `@luma.gl/experimental/models` | Private path and polygon rendering models, GPU input helpers, and model-specific planners. |
+| [`@luma.gl/gpgpu/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
+| [`@luma.gl/gpgpu/gpu-graph`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
+| [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
+| [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
+| [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
+| [GPU DGGS cells](/docs/api-reference/experimental/gpu-dggs) | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes. |
+| [GPU Trace](/docs/api-reference/experimental/gpu-trace) | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis. |
+| [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins. |
+| [GPU SQL](/docs/api-reference/experimental/gpu-sql) | Bounded SQL planning over registered GPU Dataframe inputs. |
+| [GPU Crossfilter](/docs/api-reference/experimental/gpu-crossfilter) | Linked GPU filtering, histograms, aggregates, and rendering masks. |
+| [Geospatial kernels](/docs/api-reference/experimental/geospatial) | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations. |
 
-The [Transparency](/docs/api-guide/shaders/transparency) and
-[Glass Effects](/docs/api-guide/shaders/glass-effects) guides describe render ordering, backend
-constraints, local lighting, and physically based limitations.
+### Scene rendering and lighting
 
-[`SpectralCausticsRenderer`](/docs/api-reference/experimental/spectral-caustics-renderer) provides
-a WebGPU-only geometry-derived alternative to the analytic `opticalCaustics` helper. It captures
-one convex refractor from a light view, traces six wavelength bands on the GPU, accumulates an HDR
-XYZ map, and exposes the `spectralCaustics` receiver module for additive planar lighting.
+| Module | Use it for |
+| --- | --- |
+| [SceneRenderer](/docs/api-reference/experimental/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
+| [DeferredSceneRenderer](/docs/api-reference/experimental/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
+| [PBR environments](/docs/api-reference/experimental/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
+| [GBuffer](/docs/api-reference/experimental/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
+| [Deferred lighting](/docs/api-reference/experimental/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
+| [Clustered lighting](/docs/api-reference/experimental/clustered-lighting) | Compute-binned local lights for deferred shading. |
+| [Shadow maps](/docs/api-reference/experimental/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
 
-## Hybrid Shadows
+### Materials and transparency
 
-[`ShadowMapRenderer`](/docs/api-reference/experimental/shadow-map-renderer) provides WebGPU-only
-cascaded directional, spot-array, and point cube-array maps with PCSS filtering. Applications draw
-casters through a per-view callback and explicitly multiply the `shadow` module's factors into
-their direct-light terms. A companion shader-pass pipeline adds primary-sun contact refinement.
+| Module | Use it for |
+| --- | --- |
+| [A-buffer renderer](/docs/api-reference/experimental/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
+| [Weighted blended OIT](/docs/api-reference/experimental/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
+| [Glass material](/docs/api-reference/experimental/glass-material) | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
+| [Reflective material](/docs/api-reference/experimental/reflective-material) | Lightweight glossy environment reflection. |
+| [Spectral caustics](/docs/api-reference/experimental/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
+| [Comparison splitter](/docs/api-reference/experimental/comparison-splitter) | Accessible before-and-after canvas comparisons. |
 
-## Packed Pixel Formats
+### Simulation and immersive input
 
-`RGBADecoder` and `TEXTURE_FORMAT_PIXEL_DECODERS` provide the existing experimental helpers for
-encoding and decoding packed texture formats.
+| Module | Use it for |
+| --- | --- |
+| [MLS-MPM fluid](/docs/api-reference/experimental/mls-mpm-fluid-simulation) | Fixed-capacity two-dimensional particle/grid fluid simulation. |
+| [Spectral ocean](/docs/api-reference/experimental/spectral-ocean-simulation) | Deterministic FFT-based ocean displacement and foam. |
+| [Volumetric fire](/docs/api-reference/experimental/volumetric-fire-simulation) | GPU-resident volumetric combustion and rendering. |
+| [WebXR](/docs/api-reference/experimental/webxr) | Experimental WebGPU/WebGL session, frame, and camera helpers. |
+
+## Core concepts
+
+Experimental modules follow the same ownership model as the rest of luma.gl: callers own the frame
+loop and command submission unless a reference explicitly says otherwise. GPU Core contributors
+declare work but do not submit it. Renderer and simulation references state which resources they
+own, borrow, cache, or expose.
+
+Use the [shared glossary](/docs/glossary) for resource, ownership, binding, pipeline, pass,
+submission, data hazard, indirect work, and GPU residency terminology.
+
+## Limits and compatibility
+
+Experimental APIs may change or be removed without the compatibility guarantees of stable
+packages. Many GPU Core and simulation modules require WebGPU; individual references state backend,
+feature, capacity, and memory requirements. Treat benchmark results as workload- and adapter-
+specific rather than universal performance claims.
+
+## Related modules
+
+- [Choosing a luma.gl API layer](/docs/api-guide)
+- [Core API](/docs/api-reference/core)
+- [Engine API](/docs/api-reference/engine)
+- [Shadertools API](/docs/api-reference/shadertools)
+- [Effects API](/docs/api-reference/effects)

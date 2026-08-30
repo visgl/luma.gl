@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js curve utilities (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {Vector2} from '@math.gl/core';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   Data,
@@ -13,7 +13,7 @@ import {
   makeData,
   makeVector
 } from 'apache-arrow';
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getRequiredArrowGPUVectorDataType} from '../gpu/arrow-gpu-data';
 
 /** WGSL floating-point matrix shapes currently exposed through Arrow helpers. */

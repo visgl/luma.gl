@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export const SPECTRAL_CAUSTICS_WAVELENGTH_COUNT = 6;
 export const SPECTRAL_CAUSTICS_WORKGROUP_SIZE = 64;

@@ -1,5 +1,5 @@
 // test/texture-memory-layout.tape.ts
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {registerTextureLayoutTests} from './texture-layout.spec.shared';
 
 registerTextureLayoutTests(test);

@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -407,6 +407,11 @@ test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async
     tapeTest.end();
     return;
   }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    tapeTest.comment('Skipping slow fp64 integer subtraction on software WebGPU');
+    tapeTest.end();
+    return;
+  }
 
   const coordinateCases = [
     {inputA: 20_000_000.123456, inputB: 20_000_000, label: 'projected coordinate offset'},
@@ -540,6 +545,11 @@ test('fp64 WGSL#normalize, classify, sign, and compare double-single values', as
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
     tapeTest.comment('WebGPU unavailable, skipping fp64 comparison diagnostics');
+    tapeTest.end();
+    return;
+  }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    tapeTest.comment('Skipping slow fp64 integer classification on software WebGPU');
     tapeTest.end();
     return;
   }

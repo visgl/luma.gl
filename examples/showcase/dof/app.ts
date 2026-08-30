@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /*
   Based on: https://github.com/tsherif/picogl.js/blob/master/examples/dof.html
@@ -24,9 +24,9 @@ import {
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {dofShaderPassPipeline} from '@luma.gl/effects';
+import {dofCompositeShaderPass} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/tables';
+import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 import {
@@ -404,7 +404,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.shaderPassRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [dofShaderPassPipeline]
+      shaderPasses: [dofCompositeShaderPass]
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'dof-settings',

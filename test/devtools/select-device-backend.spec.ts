@@ -3,7 +3,7 @@ import {describe, expect, test} from 'vitest';
 import {
   selectDeviceBackend,
   selectPreferredDeviceBackend
-} from '../../dev-modules/devtools-extensions/playwright/select-device-backend.mjs';
+} from '../../scripts/playwright/select-device-backend.mjs';
 
 describe('selectDeviceBackend', () => {
   test('returns false when a rendered device tab is disabled', async () => {
@@ -82,7 +82,7 @@ function makeDeviceTabLocator(
     async count(): Promise<number> {
       return tab ? 1 : 0;
     },
-    first() {
+    last() {
       return this;
     },
     async click(): Promise<void> {

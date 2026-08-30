@@ -1,18 +1,46 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
   getShaderModuleUniforms,
+  type PBRMaterialUniforms,
+  type PlatformInfo,
   pbrMaterial,
-  type PBRMaterialUniforms
+  pbrScene,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
 
 const FLOAT32_EPSILON = 1e-6;
+
+const WEBGPU_PLATFORM: PlatformInfo = {
+  type: 'webgpu',
+  shaderLanguage: 'wgsl',
+  shaderLanguageVersion: 300,
+  gpu: 'test',
+  features: new Set()
+};
+
+const DIFFUSE_TRANSMISSION_UNIFORMITY_SHADER = /* wgsl */ `
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+  return vec4f(f32(vertexIndex), 0.0, 0.0, 1.0);
+}
+
+@fragment
+fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
+  fragmentInputs.pbr_vPosition = position.xyz;
+  fragmentInputs.pbr_vNormal = vec3f(0.0, 0.0, 1.0);
+  fragmentInputs.pbr_vUV0 = position.xy * 0.01;
+  fragmentInputs.pbr_vUV1 = fragmentInputs.pbr_vUV0;
+  return pbr_filterColor(vec4f(1.0));
+}
+`;
 
 const CORE_UNIFORM_BUFFER_LAYOUT = {
   unlit: {offset: 0, size: 1},
@@ -55,7 +83,8 @@ const CORE_UNIFORM_BUFFER_LAYOUT = {
   anisotropyDirection: {offset: 58, size: 2},
   anisotropyMapEnabled: {offset: 60, size: 1},
   emissiveStrength: {offset: 61, size: 1},
-  IBLenabled: {offset: 62, size: 1},
+  dispersion: {offset: 62, size: 1},
+  IBLenabled: {offset: 63, size: 1},
   scaleIBLAmbient: {offset: 64, size: 2},
   scaleDiffBaseMR: {offset: 68, size: 4},
   scaleFGDSpec: {offset: 72, size: 4}
@@ -91,9 +120,30 @@ const TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT = Object.fromEntries(
   })
 );
 
+const NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT = {
+  bumpFactor: {offset: 348, size: 1},
+  bumpMapEnabled: {offset: 349, size: 1},
+  diffuseTransmissionFactor: {offset: 350, size: 1},
+  diffuseTransmissionMapEnabled: {offset: 351, size: 1},
+  diffuseTransmissionColorFactor: {offset: 352, size: 3},
+  diffuseTransmissionColorMapEnabled: {offset: 355, size: 1},
+  multiscatterColorFactor: {offset: 356, size: 3},
+  multiscatterColorMapEnabled: {offset: 359, size: 1},
+  scatterAnisotropy: {offset: 360, size: 1},
+  bumpUVSet: {offset: 361, size: 1},
+  bumpUVTransform: {offset: 364, size: 12},
+  diffuseTransmissionUVSet: {offset: 376, size: 1},
+  diffuseTransmissionUVTransform: {offset: 380, size: 12},
+  diffuseTransmissionColorUVSet: {offset: 392, size: 1},
+  diffuseTransmissionColorUVTransform: {offset: 396, size: 12},
+  multiscatterColorUVSet: {offset: 408, size: 1},
+  multiscatterColorUVTransform: {offset: 412, size: 12}
+} as const;
+
 const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   ...CORE_UNIFORM_BUFFER_LAYOUT,
-  ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT
+  ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT,
+  ...NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT
 };
 
 const EXPECTED_UNIFORM_NAMES = Object.keys(EXPECTED_UNIFORM_BUFFER_LAYOUT);
@@ -140,6 +190,7 @@ const fullPBRUniforms: Required<PBRMaterialUniforms> = {
   anisotropyDirection: [0.6, -0.8],
   anisotropyMapEnabled: true,
   emissiveStrength: 4.2,
+  dispersion: 0.65,
   IBLenabled: true,
   scaleIBLAmbient: [1.25, 0.75],
   scaleDiffBaseMR: [1, 0.5, 0.25, 0.125],
@@ -149,6 +200,68 @@ const fullPBRUniforms: Required<PBRMaterialUniforms> = {
 function almostEqual(actualValue: number, expectedValue: number): boolean {
   return Math.abs(actualValue - expectedValue) <= FLOAT32_EPSILON;
 }
+
+test('shadertools#pbrMaterial compiles texture-dependent diffuse-transmission IBL on WebGPU', async testCase => {
+  const diffuseTransmissionSource =
+    pbrMaterial.source?.match(/fn calculateDiffuseTransmissionIBL\([\s\S]*?\n}\n#endif/)?.[0] || '';
+
+  testCase.ok(diffuseTransmissionSource, 'diffuse-transmission IBL helper is present');
+  testCase.equal(
+    (diffuseTransmissionSource.match(/\btextureSampleLevel\(/g) || []).length,
+    2,
+    'scene and legacy environment paths use derivative-free cubemap sampling'
+  );
+  testCase.notOk(
+    /\btextureSample\(/.test(diffuseTransmissionSource),
+    'data-dependent transmission branches do not require uniform implicit derivatives'
+  );
+
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU unavailable; diffuse-transmission source assertions still run');
+    testCase.end();
+    return;
+  }
+
+  for (const useSceneEnvironment of [false, true]) {
+    const shaderSource = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: DIFFUSE_TRANSMISSION_UNIFORMITY_SHADER,
+      modules: useSceneEnvironment ? [pbrScene, pbrMaterial] : [pbrMaterial],
+      defines: {
+        HAS_NORMALS: true,
+        HAS_UV: true,
+        HAS_TRANSMISSIONMAP: true,
+        USE_IBL: true,
+        USE_MATERIAL_EXTENSIONS: true,
+        USE_SCENE_ENVIRONMENT: useSceneEnvironment
+      }
+    }).source;
+    const environmentName = useSceneEnvironment ? 'scene' : 'legacy';
+    const shader = device.createShader({
+      id: `pbr-diffuse-transmission-${environmentName}-uniformity`,
+      source: shaderSource
+    });
+
+    try {
+      const compilationErrors = (await shader.getCompilationInfo())
+        .filter(message => message.type === 'error')
+        .map(message => message.message);
+
+      testCase.equal(
+        compilationErrors.length,
+        0,
+        `${environmentName} IBL compiles with a texture-dependent transmission factor${
+          compilationErrors.length ? `: ${compilationErrors.join('; ')}` : ''
+        }`
+      );
+    } finally {
+      shader.destroy();
+    }
+  }
+
+  testCase.end();
+});
 
 test('shadertools#pbrMaterial exposes typed defaults and uniform names', testCase => {
   const pbrMaterialUniformTypecheck: Required<PBRMaterialUniforms> = pbrMaterial.defaultUniforms;
@@ -162,6 +275,50 @@ test('shadertools#pbrMaterial exposes typed defaults and uniform names', testCas
     EXPECTED_UNIFORM_NAMES,
     'uniform type field order is stable'
   );
+
+  testCase.end();
+});
+
+test('shadertools#pbrMaterial widens base and clearcoat specular lobes', testCase => {
+  const shaderSources = [
+    {
+      language: 'GLSL',
+      source: pbrMaterial.fs,
+      derivativeFunctionX: 'dFdx',
+      derivativeFunctionY: 'dFdy'
+    },
+    {
+      language: 'WGSL',
+      source: pbrMaterial.source,
+      derivativeFunctionX: 'dpdx',
+      derivativeFunctionY: 'dpdy'
+    }
+  ] as const;
+
+  for (const {language, source, derivativeFunctionX, derivativeFunctionY} of shaderSources) {
+    testCase.ok(
+      source.includes('normalDerivativeX = ' + derivativeFunctionX + '(normal)'),
+      language + ' derives the specular footprint from the shaded normal'
+    );
+    testCase.ok(
+      source.includes('normalDerivativeY = ' + derivativeFunctionY + '(normal)'),
+      language + ' derives the second axis of the specular footprint'
+    );
+    testCase.ok(
+      source.includes('kernelRoughnessSquared = min(2.0 * normalVariance, 1.0)'),
+      language + ' bounds the normal-variance roughness contribution'
+    );
+    testCase.ok(
+      source.includes('perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)'),
+      language + ' widens the base specular lobe'
+    );
+    testCase.ok(
+      source.includes(
+        'clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal)'
+      ),
+      language + ' widens the clearcoat specular lobe'
+    );
+  }
 
   testCase.end();
 });
@@ -194,7 +351,7 @@ test('shadertools#pbrMaterial uniform buffer layout matches expected std140 pack
 
   testCase.equal(
     shaderBlockLayout.byteLength,
-    1392,
+    1696,
     'uniform buffer layout reports the exact packed size'
   );
   testCase.deepEqual(
@@ -223,12 +380,12 @@ test('shadertools#pbrMaterial uniform store reports minimum allocation size sepa
 
   testCase.equal(
     uniformStore.getUniformBufferByteLength('material'),
-    1392,
+    1696,
     'uniform store keeps the minimum allocation size'
   );
   testCase.equal(
     uniformStore.getUniformBufferData('material').byteLength,
-    1392,
+    1696,
     'uniform store serializes only the packed block data'
   );
 
@@ -283,7 +440,8 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
     iridescenceIor: 1.18,
     anisotropyStrength: 0.5,
     anisotropyRotation: 1.25,
-    emissiveStrength: 4.2
+    emissiveStrength: 4.2,
+    dispersion: 0.65
   } as const;
 
   for (const [uniformName, expectedValue] of Object.entries(expectedScalarValues)) {
@@ -326,7 +484,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
     attenuationColor: [],
     sheenColorFactor: [],
     anisotropyRotation: [57],
-    IBLenabled: [63]
+    IBLenabled: []
   } as const;
 
   for (const [uniformName, paddingSlots] of Object.entries(expectedPaddingSlots)) {

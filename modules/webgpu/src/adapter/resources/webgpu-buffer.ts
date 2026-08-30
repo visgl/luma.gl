@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {log, Buffer, type BufferProps, type BufferMapCallback} from '@luma.gl/core';
 import {type WebGPUDevice} from '../webgpu-device';

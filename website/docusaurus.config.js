@@ -2,6 +2,10 @@ const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
 const {OptionDefaults: typedocOptionDefaults} = require('typedoc');
 const path = require('path');
 
+const examplesDirectory = path.resolve(__dirname, '../examples');
+const modulesDirectory = path.resolve(__dirname, '../modules');
+const websiteExamplesPath = path.resolve(__dirname, 'src/examples.tsx');
+const websiteReactLumaDirectory = path.resolve(__dirname, 'src/react-luma');
 const websiteBaseUrl = process.env.WEBSITE_BASE_URL || '/';
 const websiteBasePathSegments = websiteBaseUrl.split('/').filter(Boolean);
 const websiteRoutePrefix =
@@ -13,7 +17,7 @@ function prefixWebsiteRoute(route) {
 
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
-  tagline: 'WebGPU and WebGL2 API for visualization and compute',
+  tagline: 'WebGPU and WebGL2 for visualization and compute',
   siteUrl: 'https://luma.gl',
   baseUrl: websiteBaseUrl,
   repoUrl: 'https://github.com/visgl/luma.gl',
@@ -45,16 +49,83 @@ const config = getDocusaurusConfig({
       {
         redirects: [
           {
+            from: ['/examples/showcase/crossfilter-supremacy'],
+            to: '/examples/showcase/million-row-crossfilter'
+          },
+          {
             from: ['/examples/arrow/arrow-path-model'],
             to: '/examples/arrow/arrow-lines'
+          },
+          {
+            from: ['/examples/arrow/arrow-instancing'],
+            to: '/examples/showcase/instancing'
           },
           {
             from: ['/examples/experimental/video-texture'],
             to: '/examples/api/video-texture'
           },
           {
-            from: ['/docs/api-reference/tables/gpu-table-object-model'],
-            to: '/docs/api-reference/tables/gpu-table-lifecycle'
+            from: [
+              '/docs/api-reference/tables/gpu-table-object-model',
+              '/docs/api-reference/experimental/gpu-tables/gpu-table-object-model'
+            ],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
+          },
+          {
+            from: ['/docs/api-reference/tables'],
+            to: '/docs/api-reference/experimental/gpu-tables'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-constant'],
+            to: '/docs/api-reference/gpgpu/gpu-constant'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-data'],
+            to: '/docs/api-reference/gpgpu/gpu-data'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-data-view'],
+            to: '/docs/api-reference/gpgpu/gpu-data-view'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-vector'],
+            to: '/docs/api-reference/gpgpu/gpu-vector'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-vector-format'],
+            to: '/docs/api-reference/gpgpu/gpu-vector-format'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-record-batch'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-record-batch'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-schema'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-schema'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-input-schema'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-input-schema'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-structure'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-structure'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-lifecycle'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-shader-bindings'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings'
+          },
+          {
+            from: ['/docs/api-reference/tables/gpu-table-buffer-planner'],
+            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner'
           },
           {
             from: [
@@ -69,13 +140,10 @@ const config = getDocusaurusConfig({
         createRedirects(existingPath) {
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {
-            return [
-              existingPath
-                .replace('/docs/examples/tutorials/', '/docs/tutorials/')
-            ];
+            return [existingPath.replace('/docs/examples/tutorials/', '/docs/tutorials/')];
           }
-    
-            // docs/modules/*/api-reference <= modules/*/docs/api-reference
+
+          // docs/modules/*/api-reference <= modules/*/docs/api-reference
           if (existingPath.includes('/docs/modules/')) {
             return [
               existingPath
@@ -93,6 +161,7 @@ const config = getDocusaurusConfig({
 
 const {
   onBrokenMarkdownLinks,
+  presets: basePresets = [],
   plugins: basePlugins = [],
   staticDirectories = [],
   ...baseConfig
@@ -101,9 +170,42 @@ const {
 module.exports = {
   ...baseConfig,
   baseUrl: websiteBaseUrl,
+  themeConfig: {
+    ...baseConfig.themeConfig,
+    footer: baseConfig.themeConfig?.footer
+      ? {
+          ...baseConfig.themeConfig.footer,
+          links: baseConfig.themeConfig.footer.links.map(section => ({
+            ...section,
+            items: section.items.map(item =>
+              item.label === 'deck.gl' ? {...item, href: 'https://deck.gl'} : item
+            )
+          }))
+        }
+      : undefined
+  },
   staticDirectories: [...staticDirectories, '.generated/example-assets'],
+  presets: basePresets.map(preset => {
+    if (Array.isArray(preset) && preset[0] === 'classic') {
+      return [preset[0], {...preset[1], blog: false}];
+    }
+    return preset;
+  }),
   plugins: [
-    ...basePlugins.map((plugin) => {
+    ...basePlugins.map(plugin => {
+      if (
+        Array.isArray(plugin) &&
+        plugin[0] === '@docusaurus/plugin-content-docs' &&
+        plugin[1]?.id === 'examples'
+      ) {
+        return [
+          plugin[0],
+          {
+            ...plugin[1],
+            docItemComponent: path.resolve(__dirname, 'src/components/example-doc-item.tsx')
+          }
+        ];
+      }
       if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
         return [
           plugin[0],
@@ -121,14 +223,14 @@ module.exports = {
       '@signalwire/docusaurus-plugin-llms-txt',
       {
         siteTitle: 'luma.gl',
-        siteDescription:
-          'WebGPU and WebGL2 framework documentation for visualization and compute.',
+        siteDescription: 'WebGPU and WebGL2 framework documentation for visualization and compute.',
         // Plugin 1.x builds its route tree from base-prefixed Docusaurus paths.
         // Preserve the configured three levels after the post-build base-path normalization.
         depth: Math.min(5, 3 + websiteBasePathSegments.length),
         enableDescriptions: true,
         includeOrder: [
           '/docs/getting-started',
+          '/docs/capabilities',
           '/docs/tutorials/**',
           '/docs/api-guide/**',
           '/docs/api-reference/**',
@@ -169,19 +271,91 @@ module.exports = {
         }
       }
     ],
-    function arrowLayersSourceAlias() {
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'engine-api-reference',
+        name: '@luma.gl/engine generated API',
+        entryPoints: ['../modules/engine/src/index.ts'],
+        tsconfig: '../modules/engine/tsconfig.json',
+        out: '../docs/api-reference/generated/engine',
+        docsPath: '../docs',
+        readme: 'none',
+        excludeInternal: true,
+        excludePrivate: true,
+        excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
+        gitRevision: 'master',
+        sidebar: {autoConfiguration: false}
+      }
+    ],
+    [
+      'docusaurus-plugin-typedoc',
+      {
+        id: 'shadertools-api-reference',
+        name: '@luma.gl/shadertools generated API',
+        entryPoints: ['../modules/shadertools/src/index.ts'],
+        tsconfig: '../modules/shadertools/tsconfig.json',
+        out: '../docs/api-reference/generated/shadertools',
+        docsPath: '../docs',
+        readme: 'none',
+        excludeInternal: true,
+        excludePrivate: true,
+        excludeProtected: true,
+        blockTags: [...typedocOptionDefaults.blockTags, '@note', '@todo'],
+        gitRevision: 'master',
+        sidebar: {autoConfiguration: false}
+      }
+    ],
+    function deckCommunitySourceAliases() {
       return {
-        name: 'arrow-layers-source-alias',
-        configureWebpack() {
+        name: 'deck-community-source-aliases',
+        configureWebpack(_configuration, isServer) {
           return {
             resolve: {
               alias: {
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
-                  '../modules/arrow-layers/src/index.ts'
+                  '../modules/deck-arrow-layers/src/index.ts'
+                ),
+                '@deck.gl-community/gpu-layers$': path.resolve(
+                  __dirname,
+                  '../modules/deck-gpu-layers/src/index.ts'
+                ),
+                '@deck.gl-community/gpu-layers/query$': path.resolve(
+                  __dirname,
+                  '../modules/deck-gpu-layers/src/query/index.ts'
                 )
               }
             },
+            ...(isServer
+              ? {}
+              : {
+                  optimization: {
+                    splitChunks: {
+                      cacheGroups: {
+                        // The default shared chunk requires use by half of all documentation routes.
+                        websiteExamples: {
+                          name: 'website-examples',
+                          chunks: 'async',
+                          minChunks: 2,
+                          priority: 45,
+                          reuseExistingChunk: true,
+                          test(module) {
+                            const resource = module.resource;
+                            return Boolean(
+                              resource &&
+                                (resource === websiteExamplesPath ||
+                                  resource.startsWith(`${examplesDirectory}${path.sep}`) ||
+                                  resource.startsWith(`${modulesDirectory}${path.sep}`) ||
+                                  resource.startsWith(`${websiteReactLumaDirectory}${path.sep}`))
+                            );
+                          }
+                        }
+                      }
+                    }
+                  }
+                }),
             watchOptions: {
               aggregateTimeout: 200,
               poll: 1000
@@ -192,7 +366,8 @@ module.exports = {
     }
   ],
   future: {
-    v4: true
+    v4: true,
+    faster: true
   },
   markdown: {
     ...(config.markdown || {}),

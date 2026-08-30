@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Unstable text strategy APIs intended for diagnostics and benchmarks. */
 export {
@@ -45,6 +45,10 @@ export * from './model-utils/text-model-props';
 export * from './model-utils/text-shaders';
 export * from './model-utils/text-storage-state';
 export {getTextRendererModel} from './text-renderer';
+export {
+  DictionaryTextRenderer,
+  type DictionaryTextRendererProps
+} from './dictionary-text-renderer';
 export {
   createGPUTextData,
   getGPUTextDataProps,

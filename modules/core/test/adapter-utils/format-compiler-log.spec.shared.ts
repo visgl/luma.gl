@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CompilerMessage} from '@luma.gl/core';
 import {formatCompilerLog} from '@luma.gl/core/adapter-utils/format-compiler-log';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 const ERROR_LOG: CompilerMessage[] = [
   {

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
@@ -11,15 +11,15 @@ import {
   type CompiledGPUCommandGraph,
   type GPUSortAlgorithm,
   type GPUSortDirection
-} from '@luma.gl/experimental';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 
 const APP_ID = 'gpu-sort-app';
 const STYLE_ID = 'gpu-sort-example-style';
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
-const DATASET_LENGTHS = {small: 16, medium: 4096, large: 131_072} as const;
+const DATASET_LENGTHS = {small: 16, workgroup: 256, medium: 4096, large: 131_072} as const;
 
 type ExampleResources = {
   compiled: CompiledGPUCommandGraph;
@@ -85,17 +85,8 @@ class GPUSortExample {
     try {
       const device = await luma.createDevice({
         type: 'webgpu',
-        adapters: [webgpuAdapter],
-        createCanvasContext:
-          typeof OffscreenCanvas === 'undefined'
-            ? true
-            : {
-                canvas: new OffscreenCanvas(1, 1),
-                width: 1,
-                height: 1,
-                autoResize: false,
-                useDevicePixels: false
-              }
+        featureLevel: 'max',
+        adapters: [webgpuAdapter]
       });
       if (this.destroyed) {
         device.destroy();
@@ -444,7 +435,7 @@ const EXAMPLE_HTML = `
     <p>Stable paired uint32 sorting for one global domain or independent streaming batches.</p>
   </header>
   <section class="controls">
-    <label>Dataset<select data-dataset><option value="small">16 rows</option><option value="medium">4,096 rows</option><option value="large">131,072 rows</option></select></label>
+    <label>Dataset<select data-dataset><option value="small">16 rows</option><option value="workgroup">256 rows</option><option value="medium">4,096 rows</option><option value="large">131,072 rows</option></select></label>
     <label>Storage<select data-layout><option value="packed">One packed batch</option><option value="streamed" selected>Preserved Arrow batches</option></select></label>
     <label>Algorithm<select data-algorithm><option value="auto">Auto</option><option value="bitonic">Bitonic</option><option value="radix">Radix</option></select></label>
     <label>Direction<select data-direction><option value="ascending">Ascending</option><option value="descending">Descending</option></select></label>

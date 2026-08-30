@@ -1,6 +1,10 @@
+import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
+import {DeferredFP64Example} from '@site/src/components/docs/deferred-fp64-example';
 import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
 
 # fp64arithmetic
+
+<GPGPUDocsTabs active="fp64-arithmetic" />
 
 <ShaderModuleDocsTabs group="precision" active="fp64-arithmetic" />
 
@@ -14,6 +18,17 @@ for the numerical guarantees and tradeoffs of classic and integer-assisted
 double-single, native and software binary64, fixed point, and exact deltas. The
 [Mandelbrot and compute benchmark](/examples/experimental/fp64) runs these
 paths on the active GPU.
+
+## Live WebGPU benchmark
+
+The Mandelbrot views below compare native `f32` and double-single precision on
+your current device. Select **Run WebGPU benchmark** to measure native `f32`,
+automatic selection, classic double-single, and integer-controlled
+double-single across add, multiply, divide, and square-root workloads. Each
+result reports its measured GPU timestamp or queue-completion timing alongside
+numerical error; the benchmark runs only when requested.
+
+<DeferredFP64Example embeddedHeight={900} />
 
 ## Uniforms
 

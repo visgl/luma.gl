@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // TODO - replace with Promise.withResolvers once we upgrade TS baseline
 export function withResolvers<T>(): {

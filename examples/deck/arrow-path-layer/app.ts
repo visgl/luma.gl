@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowPathLayer} from '@deck.gl-community/arrow-layers';

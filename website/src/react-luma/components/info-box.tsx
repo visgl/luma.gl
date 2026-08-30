@@ -5,8 +5,11 @@ import {PanelContainer, type Panel, type PanelPlacement} from '@deck.gl-communit
 import {createRoot, type Root} from 'react-dom/client';
 import {
   configurePanelHostElement,
-  renderExamplePanel
+  renderExamplePanel,
+  type ExamplePanelAppearance
 } from '../../../../examples/example-panels';
+import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../../../examples/example-theme';
+import {isMobileExampleViewport} from '../utils/mobile-example-pixel-ratio';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 const INFO_BOX_DEFAULT_WIDTH = 420;
@@ -16,19 +19,73 @@ const INFO_BOX_VIEWPORT_RIGHT_MARGIN = 20;
 const INFO_BOX_VIEWPORT_BOTTOM_MARGIN = 12;
 const INFO_BOX_KEYBOARD_RESIZE_STEP = 10;
 const INFO_BOX_LARGE_KEYBOARD_RESIZE_STEP = 30;
-const INFO_BOX_STYLE: CSSProperties = {
+const INFO_BOX_BASE_STYLE: CSSProperties = {
   boxSizing: 'border-box',
-  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
-  backgroundColor: 'rgba(255, 255, 255, 0.96)',
-  borderRadius: 12,
-  color: '#111',
+  borderRadius: 'var(--luma-example-radius, 14px)',
   width: 420,
   minWidth: 0,
-  maxWidth: 'calc(100vw - 40px)',
+  maxWidth: '100%',
   overflow: 'hidden',
-  padding: '10px 16px',
+  padding: '13px 15px',
   zIndex: 10
 };
+const INFO_BOX_APPEARANCE_STYLES: Record<InfoBoxAppearance, CSSProperties> = {
+  cinematic: {
+    backdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`,
+    background:
+      'radial-gradient(ellipse at 12% 0%, rgba(56, 189, 248, 0.08), transparent 42%), linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(5, 12, 24, 0.91))',
+    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.cinematic.border})`,
+    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.cinematic.shadow})`,
+    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.cinematic.text})`,
+    colorScheme: 'dark',
+    WebkitBackdropFilter: `var(--luma-example-backdrop, ${EXAMPLE_THEME_TOKENS.cinematic.backdrop})`
+  },
+  light: {
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    border: `1px solid var(--luma-example-border, ${EXAMPLE_THEME_TOKENS.light.border})`,
+    boxShadow: `var(--luma-example-shadow, ${EXAMPLE_THEME_TOKENS.light.shadow})`,
+    color: `var(--luma-example-text, ${EXAMPLE_THEME_TOKENS.light.text})`,
+    colorScheme: 'light'
+  }
+};
+const INFO_BOX_CHROME_STYLE = `
+[data-info-box-appearance] [data-luma-example-chrome-action] {
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+[data-info-box-appearance] [data-luma-example-chrome-action]:hover,
+[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
+  border-color: var(--luma-example-accent) !important;
+  color: var(--luma-example-accent) !important;
+}
+[data-info-box-appearance] [data-luma-example-chrome-action]:focus-visible {
+  outline: 2px solid var(--luma-example-accent);
+  outline-offset: 2px;
+}
+[data-luma-example-source] .theme-code-block,
+[data-luma-example-source] .theme-code-block pre,
+[data-luma-example-source] .theme-code-block code {
+  background: var(--luma-example-surface) !important;
+  color: var(--luma-example-text) !important;
+}
+[data-luma-example-source] .theme-code-block {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-luma-example-source] .theme-code-block pre {
+  margin: 0 !important;
+  padding: 14px !important;
+}
+[data-info-box-appearance='cinematic'] [data-luma-example-source] .token.comment {
+  color: var(--luma-example-text-muted) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-info-box-appearance] [data-luma-example-chrome-action] {
+    transition: none;
+  }
+}
+`;
 
 let isInfoBoxCollapsedByDefault = true;
 
@@ -43,9 +100,13 @@ export type ExampleInfoProps = {
   title?: string;
 };
 
+export type InfoBoxAppearance = Extract<ExamplePanelAppearance, 'cinematic' | 'light'>;
+
 export type InfoBoxProps = React.PropsWithChildren<
   ExampleInfoProps & {
     html?: string;
+    /** Visual treatment shared by the InfoBox chrome and its panel content. */
+    appearance?: InfoBoxAppearance;
     panel?: Panel;
     style?: CSSProperties;
   }
@@ -58,6 +119,13 @@ type InfoBoxViewProps = InfoBoxProps & {
 type InfoBoxSize = {
   width: number;
   height: number;
+};
+
+type InfoBoxSizeBounds = {
+  minWidth: number;
+  minHeight: number;
+  maxWidth: number;
+  maxHeight: number;
 };
 
 type InfoBoxResizeState = {
@@ -126,6 +194,8 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
 };
 
 function InfoBoxView(props: InfoBoxViewProps) {
+  const appearance = props.appearance ?? 'cinematic';
+  const theme = EXAMPLE_THEME_TOKENS[appearance];
   const sourceUrl = getExampleSourceUrl(props);
   const sourcePaths = React.useMemo(
     () => getExampleSourcePaths(props),
@@ -133,10 +203,15 @@ function InfoBoxView(props: InfoBoxViewProps) {
   );
   const sourcePathsKey = sourcePaths.join('|');
   const title = getExampleTitle(props.id, props.title);
-  const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
+  const [isCollapsed, setIsCollapsed] = useState(
+    () =>
+      isInfoBoxCollapsedByDefault ||
+      (typeof window !== 'undefined' && isMobileExampleViewport(window))
+  );
   const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
   const [activeSourcePath, setActiveSourcePath] = useState('');
   const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
+  const [infoBoxSizeBounds, setInfoBoxSizeBounds] = useState<InfoBoxSizeBounds | null>(null);
   const [sourceResult, setSourceResult] = useState<{
     key: string;
     files?: ExampleSourceFile[];
@@ -147,6 +222,16 @@ function InfoBoxView(props: InfoBoxViewProps) {
   const panelHostRef = useRef<HTMLDivElement | null>(null);
   const resizeStateRef = useRef<InfoBoxResizeState | null>(null);
   const [hasPanelTabs, setHasPanelTabs] = useState(false);
+  const contentId = React.useId();
+  const setInfoBoxElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      infoBoxRef.current = element;
+      if (element) {
+        applyExampleTheme(element, appearance);
+      }
+    },
+    [appearance]
+  );
   const toggleCollapsed = () => setIsCollapsed(value => !value);
   const currentSourceResult = sourceResult?.key === sourcePathsKey ? sourceResult : null;
 
@@ -200,10 +285,43 @@ function InfoBoxView(props: InfoBoxViewProps) {
       return;
     }
 
-    configurePanelHostElement(panelHostElement);
+    configurePanelHostElement(panelHostElement, appearance);
     renderExamplePanel(panelHostElement, props.panel);
     return () => renderExamplePanel(panelHostElement, null);
-  }, [props.panel]);
+  }, [appearance, props.panel]);
+
+  useEffect(() => {
+    const infoBoxElement = infoBoxRef.current;
+    if (!infoBoxElement) {
+      return;
+    }
+
+    const boundaryElement = getInfoBoxBoundaryElement(infoBoxElement);
+    const updateSizeBounds = () => {
+      const nextBounds = getInfoBoxSizeBounds(infoBoxElement);
+      setInfoBoxSizeBounds(currentBounds =>
+        areInfoBoxSizeBoundsEqual(currentBounds, nextBounds) ? currentBounds : nextBounds
+      );
+      setInfoBoxSize(currentSize =>
+        currentSize ? clampInfoBoxSizeToBounds(currentSize, nextBounds) : currentSize
+      );
+    };
+
+    updateSizeBounds();
+    window.addEventListener('resize', updateSizeBounds);
+    window.addEventListener('scroll', updateSizeBounds, {capture: true, passive: true});
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateSizeBounds);
+    if (boundaryElement) {
+      resizeObserver?.observe(boundaryElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateSizeBounds);
+      window.removeEventListener('scroll', updateSizeBounds, true);
+      resizeObserver?.disconnect();
+    };
+  }, [isCollapsed]);
 
   const handleResizePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     const infoBoxElement = infoBoxRef.current;
@@ -282,7 +400,18 @@ function InfoBoxView(props: InfoBoxViewProps) {
     currentSourceResult?.files?.find(file => file.path === activeSourcePath) ||
     currentSourceResult?.files?.[0];
   const sourceContent = currentSourceResult?.error ? (
-    <p style={{margin: 0, color: '#b00020'}}>{currentSourceResult.error}</p>
+    <p
+      role="alert"
+      style={{
+        margin: 0,
+        padding: '12px 14px',
+        color: appearance === 'cinematic' ? '#fda4af' : '#be123c',
+        fontSize: 12,
+        lineHeight: 1.5
+      }}
+    >
+      {currentSourceResult.error}
+    </p>
   ) : (
     <CodeBlock language={getSourceLanguage(activeSourceFile?.path)}>
       {activeSourceFile?.source ?? '// Loading source…'}
@@ -291,22 +420,37 @@ function InfoBoxView(props: InfoBoxViewProps) {
 
   return (
     <div
-      ref={infoBoxRef}
+      ref={setInfoBoxElement}
+      data-info-box-appearance={appearance}
+      data-luma-info-box-collapsed={isCollapsed ? 'true' : 'false'}
       style={{
-        ...INFO_BOX_STYLE,
+        ...INFO_BOX_BASE_STYLE,
+        ...INFO_BOX_APPEARANCE_STYLES[appearance],
+        ...props.style,
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        width: infoBoxSize?.width ?? INFO_BOX_DEFAULT_WIDTH,
-        height: isCollapsed ? undefined : infoBoxSize?.height,
-        maxHeight: isCollapsed ? undefined : 'calc(100vh - var(--ifm-navbar-height) - 24px)',
-        ...props.style
+        width: infoBoxSize?.width ?? props.style?.width ?? INFO_BOX_DEFAULT_WIDTH,
+        height: isCollapsed ? undefined : (infoBoxSize?.height ?? props.style?.height),
+        maxWidth: infoBoxSizeBounds?.maxWidth ?? '100%',
+        maxHeight: isCollapsed ? undefined : infoBoxSizeBounds?.maxHeight
       }}
     >
-      <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12}}>
+      <style>{INFO_BOX_CHROME_STYLE}</style>
+      <div
+        data-luma-example-info-header=""
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12
+        }}
+      >
         <button
           type="button"
           aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+          aria-expanded={!isCollapsed}
+          aria-controls={contentId}
           onClick={toggleCollapsed}
           style={{
             minWidth: 0,
@@ -319,32 +463,104 @@ function InfoBoxView(props: InfoBoxViewProps) {
             color: 'inherit'
           }}
         >
-          {title ? <h3 style={{marginTop: 0, marginBottom: 0}}>{title}</h3> : null}
+          {title ? (
+            <span style={{display: 'flex', alignItems: 'center', gap: 8}}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 7,
+                  height: 7,
+                  flex: '0 0 7px',
+                  borderRadius: '50%',
+                  background: `var(--luma-example-accent, ${theme.accent})`,
+                  boxShadow: `0 0 12px var(--luma-example-accent, ${theme.accent})`
+                }}
+              />
+              <h3
+                data-luma-example-title=""
+                style={{
+                  color: 'inherit',
+                  fontSize: 17,
+                  fontWeight: 720,
+                  letterSpacing: '-0.022em',
+                  lineHeight: 1.3,
+                  marginTop: 0,
+                  marginBottom: 0
+                }}
+              >
+                {title}
+              </h3>
+            </span>
+          ) : null}
           {props.subtitle ? (
-            <div style={{color: '#596579', fontSize: 12, lineHeight: 1.35, marginTop: 2}}>
+            <div
+              data-luma-example-subtitle=""
+              style={{
+                color: `var(--luma-example-text-muted, ${theme.textMuted})`,
+                fontSize: 12,
+                lineHeight: 1.4,
+                marginTop: 5,
+                paddingLeft: title ? 15 : 0
+              }}
+            >
               {props.subtitle}
             </div>
           ) : null}
         </button>
-        <div style={{display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0}}>
+        <div
+          data-luma-example-chrome-actions=""
+          style={{display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0}}
+        >
           {sourceUrl ? (
-            <a href={sourceUrl} target="_blank" rel="noreferrer">
-              GitHub
+            <a
+              data-luma-example-chrome-action=""
+              data-luma-example-source-link=""
+              href={sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                minHeight: 29,
+                padding: '0 8px',
+                border: `1px solid var(--luma-example-border, ${theme.border})`,
+                borderRadius: 8,
+                background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                color: `var(--luma-example-text-muted, ${theme.textMuted})`,
+                fontSize: 11,
+                fontWeight: 650,
+                textDecoration: 'none'
+              }}
+            >
+              <svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13">
+                <path
+                  d="M8 1.5a6.5 6.5 0 0 0-2.06 12.67c.33.06.45-.14.45-.32v-1.13c-1.84.4-2.23-.79-2.23-.79-.3-.75-.73-.95-.73-.95-.6-.4.04-.4.04-.4.66.05 1 .68 1 .68.59 1 1.54.71 1.91.54.06-.43.23-.72.41-.89-1.46-.17-3-.72-3-3.24 0-.72.25-1.31.68-1.77-.07-.17-.3-.83.07-1.73 0 0 .56-.18 1.83.68a6.39 6.39 0 0 1 3.33 0c1.27-.86 1.83-.68 1.83-.68.36.9.13 1.56.06 1.73.43.46.69 1.05.69 1.77 0 2.53-1.54 3.07-3.01 3.23.24.21.45.62.45 1.25v1.85c0 .18.12.38.45.32A6.5 6.5 0 0 0 8 1.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span data-luma-example-source-label="">GitHub</span>
             </a>
           ) : null}
           <button
+            data-luma-example-chrome-action=""
+            data-luma-example-info-toggle=""
             type="button"
             aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+            aria-expanded={!isCollapsed}
+            aria-controls={contentId}
             onClick={toggleCollapsed}
             style={{
               flexShrink: 0,
-              border: '1px solid #d0d7de',
-              background: '#fff',
+              border: `1px solid var(--luma-example-border, ${theme.border})`,
+              background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
               borderRadius: 999,
+              color: `var(--luma-example-text, ${theme.text})`,
               minWidth: 56,
-              padding: '0 12px',
-              height: 28,
-              fontSize: 14,
+              padding: '0 11px',
+              height: 29,
+              fontSize: 11,
+              fontWeight: 650,
               lineHeight: 1,
               whiteSpace: 'nowrap',
               cursor: 'pointer'
@@ -355,6 +571,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
         </div>
       </div>
       <div
+        id={contentId}
         hidden={isCollapsed}
         aria-hidden={isCollapsed}
         style={{
@@ -368,22 +585,42 @@ function InfoBoxView(props: InfoBoxViewProps) {
         }}
       >
         {sourcePaths.length > 0 && !hasPanelTabs ? (
-          <div role="tablist" aria-label="Example information" style={{display: 'flex', gap: 4, marginBottom: 12}}>
+          <div
+            role="tablist"
+            aria-label="Example information"
+            style={{
+              display: 'flex',
+              gap: 5,
+              marginBottom: 12,
+              paddingBottom: 11,
+              borderBottom: `1px solid var(--luma-example-border, ${theme.border})`
+            }}
+          >
             {(['info', 'source'] as const).map(tab => (
               <button
+                data-luma-example-chrome-action=""
                 key={tab}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
                 style={{
-                  border: '1px solid #cbd5e1',
-                  borderRadius: 6,
-                  padding: '4px 9px',
-                  background: activeTab === tab ? '#e2e8f0' : '#fff',
-                  color: '#0f172a',
+                  border:
+                    activeTab === tab
+                      ? `1px solid var(--luma-example-accent, ${theme.accent})`
+                      : `1px solid var(--luma-example-border, ${theme.border})`,
+                  borderRadius: 7,
+                  padding: '5px 10px',
+                  background:
+                    activeTab === tab
+                      ? `color-mix(in srgb, var(--luma-example-accent, ${theme.accent}) 15%, var(--luma-example-surface-raised, ${theme.surfaceRaised}))`
+                      : `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                  color:
+                    activeTab === tab
+                      ? `var(--luma-example-accent, ${theme.accent})`
+                      : `var(--luma-example-text-muted, ${theme.textMuted})`,
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: activeTab === tab ? 700 : 500
                 }}
               >
@@ -404,15 +641,20 @@ function InfoBoxView(props: InfoBoxViewProps) {
         </div>
         {sourcePaths.length > 0 && !hasPanelTabs ? (
           <div
+            data-luma-example-source=""
             hidden={activeTab !== 'source'}
             aria-hidden={activeTab !== 'source'}
             style={{
+              border: `1px solid var(--luma-example-border, ${theme.border})`,
+              borderRadius: 9,
               minWidth: 0,
               minHeight: 0,
               flex: '1 1 auto',
               maxWidth: '100%',
               overflow: 'auto',
-              background: '#f6f8fa'
+              background: `var(--luma-example-surface, ${theme.surface})`,
+              color: `var(--luma-example-text, ${theme.text})`,
+              colorScheme: appearance === 'cinematic' ? 'dark' : 'light'
             }}
           >
             {currentSourceResult?.files && currentSourceResult.files.length > 0 ? (
@@ -421,29 +663,40 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 aria-label="Example source files"
                 style={{
                   alignItems: 'center',
-                  background: '#eef2f6',
+                  background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+                  borderBottom: `1px solid var(--luma-example-border, ${theme.border})`,
                   display: 'flex',
-                  gap: 4,
+                  gap: 5,
                   overflowX: 'auto',
-                  padding: '8px'
+                  padding: '8px 9px'
                 }}
               >
                 {currentSourceResult.files.map(file => (
                   <button
+                    data-luma-example-chrome-action=""
                     key={file.path}
                     type="button"
                     role="tab"
                     aria-selected={file.path === activeSourceFile?.path}
                     onClick={() => setActiveSourcePath(file.path)}
                     style={{
-                      background: file.path === activeSourceFile?.path ? '#fff' : 'transparent',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 5,
-                      color: '#0f172a',
+                      background:
+                        file.path === activeSourceFile?.path
+                          ? `var(--luma-example-surface, ${theme.surface})`
+                          : 'transparent',
+                      border:
+                        file.path === activeSourceFile?.path
+                          ? `1px solid var(--luma-example-accent, ${theme.accent})`
+                          : `1px solid var(--luma-example-border, ${theme.border})`,
+                      borderRadius: 6,
+                      color:
+                        file.path === activeSourceFile?.path
+                          ? `var(--luma-example-text, ${theme.text})`
+                          : `var(--luma-example-text-muted, ${theme.textMuted})`,
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: file.path === activeSourceFile?.path ? 700 : 500,
-                      padding: '4px 8px',
+                      padding: '5px 8px',
                       whiteSpace: 'nowrap'
                     }}
                   >
@@ -452,15 +705,18 @@ function InfoBoxView(props: InfoBoxViewProps) {
                 ))}
                 {props.stackBlitz ? (
                   <button
+                    data-luma-example-chrome-action=""
                     type="button"
-                    onClick={() => void openExampleInStackBlitz(title, currentSourceResult.files || [])}
+                    onClick={() =>
+                      void openExampleInStackBlitz(title, currentSourceResult.files || [])
+                    }
                     style={{
-                      background: '#146ef5',
-                      border: 0,
-                      borderRadius: 5,
-                      color: '#fff',
+                      background: `color-mix(in srgb, var(--luma-example-accent, ${theme.accent}) 18%, var(--luma-example-surface, ${theme.surface}))`,
+                      border: `1px solid var(--luma-example-accent, ${theme.accent})`,
+                      borderRadius: 6,
+                      color: `var(--luma-example-accent, ${theme.accent})`,
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 700,
                       marginLeft: 'auto',
                       padding: '5px 9px',
@@ -478,6 +734,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
       </div>
       {!isCollapsed ? (
         <button
+          data-luma-example-chrome-action=""
           type="button"
           aria-label="Resize info box"
           title="Resize info box"
@@ -496,11 +753,11 @@ function InfoBoxView(props: InfoBoxViewProps) {
             width: 28,
             height: 28,
             padding: 0,
-            border: '1px solid #94a3b8',
-            borderRadius: 6,
-            background: '#e2e8f0',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.18)',
-            color: '#334155',
+            border: `1px solid var(--luma-example-border, ${theme.border})`,
+            borderRadius: 7,
+            background: `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
+            boxShadow: '0 4px 12px rgba(2, 6, 23, 0.18)',
+            color: `var(--luma-example-text-muted, ${theme.textMuted})`,
             cursor: 'nwse-resize',
             fontSize: 19,
             lineHeight: 1,
@@ -523,17 +780,19 @@ function InfoBoxView(props: InfoBoxViewProps) {
   );
 }
 
-function getInfoBoxSizeBounds(infoBoxElement: HTMLElement): {
-  minWidth: number;
-  minHeight: number;
-  maxWidth: number;
-  maxHeight: number;
-} {
+function getInfoBoxBoundaryElement(infoBoxElement: HTMLElement): HTMLElement | null {
+  return infoBoxElement.closest<HTMLElement>('[data-luma-example-page]');
+}
+
+function getInfoBoxSizeBounds(infoBoxElement: HTMLElement): InfoBoxSizeBounds {
   const rect = infoBoxElement.getBoundingClientRect();
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-  const maxWidth = Math.max(1, viewportWidth - rect.left - INFO_BOX_VIEWPORT_RIGHT_MARGIN);
-  const maxHeight = Math.max(1, viewportHeight - rect.top - INFO_BOX_VIEWPORT_BOTTOM_MARGIN);
+  const boundaryRect = getInfoBoxBoundaryElement(infoBoxElement)?.getBoundingClientRect();
+  const boundaryRight = Math.min(viewportWidth, boundaryRect?.right ?? viewportWidth);
+  const boundaryBottom = Math.min(viewportHeight, boundaryRect?.bottom ?? viewportHeight);
+  const maxWidth = Math.max(1, boundaryRight - rect.left - INFO_BOX_VIEWPORT_RIGHT_MARGIN);
+  const maxHeight = Math.max(1, boundaryBottom - rect.top - INFO_BOX_VIEWPORT_BOTTOM_MARGIN);
 
   return {
     minWidth: Math.min(INFO_BOX_MIN_WIDTH, maxWidth),
@@ -544,11 +803,28 @@ function getInfoBoxSizeBounds(infoBoxElement: HTMLElement): {
 }
 
 function clampInfoBoxSize(infoBoxElement: HTMLElement, width: number, height: number): InfoBoxSize {
-  const {minWidth, minHeight, maxWidth, maxHeight} = getInfoBoxSizeBounds(infoBoxElement);
+  return clampInfoBoxSizeToBounds({width, height}, getInfoBoxSizeBounds(infoBoxElement));
+}
+
+function clampInfoBoxSizeToBounds(size: InfoBoxSize, bounds: InfoBoxSizeBounds): InfoBoxSize {
+  const {minWidth, minHeight, maxWidth, maxHeight} = bounds;
   return {
-    width: Math.min(maxWidth, Math.max(minWidth, width)),
-    height: Math.min(maxHeight, Math.max(minHeight, height))
+    width: Math.min(maxWidth, Math.max(minWidth, size.width)),
+    height: Math.min(maxHeight, Math.max(minHeight, size.height))
   };
+}
+
+function areInfoBoxSizeBoundsEqual(
+  first: InfoBoxSizeBounds | null,
+  second: InfoBoxSizeBounds
+): boolean {
+  return (
+    first !== null &&
+    first.minWidth === second.minWidth &&
+    first.minHeight === second.minHeight &&
+    first.maxWidth === second.maxWidth &&
+    first.maxHeight === second.maxHeight
+  );
 }
 
 function getExampleSourceUrl(props: ExampleInfoProps): string | null {

@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {checkType} from '@luma.gl/test-utils';
 import {dggs} from '@luma.gl/shadertools';
 import type {ShaderModule} from '@luma.gl/shadertools';

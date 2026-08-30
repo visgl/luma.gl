@@ -1,10 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) three.js authors
 
 // Forked from THREE.js under MIT license
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {toHalfFloat, fromHalfFloat} from '@luma.gl/shadertools';
 
 test('fp16#toHalfFloat', t => {

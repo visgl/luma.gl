@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {BindingDeclaration} from '@luma.gl/core';
 import {getWebGPUBindingVisibility} from '../../../src/adapter/resources/webgpu-pipeline-layout';
 

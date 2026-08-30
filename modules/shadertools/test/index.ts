@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // SHADER MODULE API
 
@@ -34,6 +34,7 @@ import './modules/math/fp64-arithmetic-compute.spec';
 import './modules/math/fp64-arithmetic-transform.spec';
 import './modules/math/fp64-utils.spec';
 import './modules/geospatial/dggs.spec';
+import './modules/volume/volume-raymarch.spec';
 
 // General modules tests
 import './modules/modules.spec';

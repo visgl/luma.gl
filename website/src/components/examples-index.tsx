@@ -1,16 +1,18 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {useDocsSidebar} from '@docusaurus/plugin-content-docs/client';
+import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import styled from 'styled-components';
+import {ExampleCard} from './example-card';
+import styles from './examples-index.module.css';
 
 type ExampleBackend = 'webgpu' | 'webgl2';
-type ExampleDifficulty = 'beginner' | 'intermediate' | 'advanced';
+type ExampleDifficulty = 'tutorial' | 'intermediate' | 'advanced';
+type ExampleDisplay = 'hdr-capable' | 'standard';
 type ExampleMaturity = 'stable' | 'experimental';
 
 type ExampleCustomProps = {
   backends?: ExampleBackend[];
-  description?: string;
   difficulty?: ExampleDifficulty;
+  display?: ExampleDisplay;
   maturity?: ExampleMaturity;
   topics?: string[];
 };
@@ -39,149 +41,24 @@ type CatalogItem = SidebarDocItem & {
   category: string;
   description: string;
   difficulty: ExampleDifficulty;
+  display: ExampleDisplay;
   maturity: ExampleMaturity;
   topics: string[];
+};
+
+type CatalogDocument = {
+  description?: string;
 };
 
 type ExamplesIndexProps = {
   getThumbnail: (item: SidebarDocItem) => string;
 };
 
-const MainExamples = styled.main`
-  padding: 1rem 0 2rem;
-`;
-
-const CatalogControls = styled.div`
-  background: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 12px;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(14rem, 2fr) repeat(4, minmax(8rem, 1fr));
-  margin: 0 1rem 1.5rem;
-  padding: 1rem;
-
-  input,
-  select {
-    background: var(--ifm-background-color);
-    border: 1px solid var(--ifm-color-emphasis-300);
-    border-radius: 8px;
-    color: var(--ifm-font-color-base);
-    font: inherit;
-    min-height: 2.65rem;
-    padding: 0.55rem 0.7rem;
-    width: 100%;
-  }
-
-  @media screen and (max-width: 996px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    input {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @media screen and (max-width: 520px) {
-    grid-template-columns: 1fr;
-
-    input {
-      grid-column: auto;
-    }
-  }
-`;
-
-const ResultsSummary = styled.p`
-  color: var(--ifm-color-emphasis-700);
-  margin: 0 1rem 1rem;
-`;
-
-const ExampleSection = styled.section`
-  margin: 0 1rem 2rem;
-`;
-
-const ExampleHeader = styled.h2`
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-  margin: 0 0 1rem;
-  padding-bottom: 0.45rem;
-`;
-
-const ExamplesGroup = styled.div`
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-`;
-
-const ExampleCard = styled.a`
-  background: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 10px;
-  color: var(--ifm-font-color-base);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  text-decoration: none;
-  transition: border-color var(--ifm-transition-fast), box-shadow var(--ifm-transition-fast),
-    transform var(--ifm-transition-fast);
-
-  &:hover,
-  &:focus-visible {
-    border-color: var(--ifm-color-primary);
-    box-shadow: var(--ifm-global-shadow-md);
-    color: var(--ifm-font-color-base);
-    text-decoration: none;
-    transform: translateY(-2px);
-  }
-
-  img {
-    aspect-ratio: 16 / 9;
-    background: var(--ifm-color-emphasis-100);
-    object-fit: cover;
-    width: 100%;
-  }
-`;
-
-const CardBody = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.9rem;
-
-  h3 {
-    font-size: 1.08rem;
-    margin: 0;
-  }
-
-  p {
-    color: var(--ifm-color-emphasis-700);
-    font-size: 0.9rem;
-    line-height: 1.45;
-    margin: 0;
-  }
-`;
-
-const Badges = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: auto;
-`;
-
-const Badge = styled.span`
-  background: var(--ifm-color-emphasis-100);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 999px;
-  color: var(--ifm-color-emphasis-800);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.18rem 0.45rem;
-`;
-
 export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const sidebar = useDocsSidebar() as SidebarRoot;
+  const {docs} = useDocsVersion();
   const baseUrl = useBaseUrl('/');
-  const catalog = useMemo(() => buildCatalog(sidebar), [sidebar]);
+  const catalog = useMemo(() => buildCatalog(sidebar, docs), [docs, sidebar]);
   const topics = useMemo(
     () => [...new Set(catalog.flatMap(item => item.topics))].sort(),
     [catalog]
@@ -189,6 +66,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
   const [query, setQuery] = useState('');
   const [backend, setBackend] = useState('all');
   const [difficulty, setDifficulty] = useState('all');
+  const [displayMode, setDisplayMode] = useState('all');
   const [maturity, setMaturity] = useState('all');
   const [topic, setTopic] = useState('all');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -198,6 +76,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     setQuery(parameters.get('q') || '');
     setBackend(parameters.get('backend') || 'all');
     setDifficulty(parameters.get('difficulty') || 'all');
+    setDisplayMode(parameters.get('display') || 'all');
     setMaturity(parameters.get('maturity') || 'all');
     setTopic(parameters.get('topic') || 'all');
     setIsInitialized(true);
@@ -211,84 +90,164 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
     if (query) parameters.set('q', query);
     if (backend !== 'all') parameters.set('backend', backend);
     if (difficulty !== 'all') parameters.set('difficulty', difficulty);
+    if (displayMode !== 'all') parameters.set('display', displayMode);
     if (maturity !== 'all') parameters.set('maturity', maturity);
     if (topic !== 'all') parameters.set('topic', topic);
     const search = parameters.toString();
-    window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}`);
-  }, [backend, difficulty, isInitialized, maturity, query, topic]);
+    const currentSearch = window.location.search.replace(/^\?/, '');
+    if (search !== currentSearch) {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+      );
+    }
+  }, [backend, difficulty, displayMode, isInitialized, maturity, query, topic]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredCatalog = catalog.filter(item => {
-    const searchableText = [item.label, item.description, item.category, ...item.topics]
+    const searchableText = [
+      item.label,
+      item.description,
+      item.category,
+      item.display,
+      ...item.topics
+    ]
       .join(' ')
       .toLowerCase();
     return (
       (!normalizedQuery || searchableText.includes(normalizedQuery)) &&
       (backend === 'all' || item.backends.includes(backend as ExampleBackend)) &&
       (difficulty === 'all' || item.difficulty === difficulty) &&
+      (displayMode === 'all' || item.display === displayMode) &&
       (maturity === 'all' || item.maturity === maturity) &&
       (topic === 'all' || item.topics.includes(topic))
     );
   });
   const categories = groupByCategory(filteredCatalog);
+  const activeFilterCount =
+    [backend, difficulty, displayMode, maturity, topic].filter(value => value !== 'all').length +
+    Number(Boolean(query));
+
+  const clearFilters = () => {
+    setQuery('');
+    setBackend('all');
+    setDifficulty('all');
+    setDisplayMode('all');
+    setMaturity('all');
+    setTopic('all');
+  };
 
   return (
-    <MainExamples>
-      <CatalogControls aria-label="Filter examples">
-        <input
-          type="search"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search examples, APIs, and topics…"
-          aria-label="Search examples"
-        />
-        <FilterSelect label="Backend" value={backend} onChange={setBackend} options={['webgpu', 'webgl2']} />
-        <FilterSelect
-          label="Difficulty"
-          value={difficulty}
-          onChange={setDifficulty}
-          options={['beginner', 'intermediate', 'advanced']}
-        />
-        <FilterSelect
-          label="Maturity"
-          value={maturity}
-          onChange={setMaturity}
-          options={['stable', 'experimental']}
-        />
-        <FilterSelect label="Topic" value={topic} onChange={setTopic} options={topics} />
-      </CatalogControls>
-      <ResultsSummary aria-live="polite">
-        Showing {filteredCatalog.length} of {catalog.length} examples
-      </ResultsSummary>
+    <div className={styles.mainExamples}>
+      <div className={styles.catalogControls} aria-label="Find examples">
+        <div className={styles.controlsHeading}>
+          <div>
+            <p className={styles.controlsEyebrow}>Find examples</p>
+            <p className={styles.controlsIntroduction}>
+              Search by name, topic, graphics API, or difficulty.
+            </p>
+          </div>
+          <span className={styles.catalogCount}>{catalog.length} examples</span>
+        </div>
+
+        <div className={styles.searchField}>
+          <svg className={styles.searchIcon} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.25" />
+            <path d="m12.5 12.5 4.25 4.25" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search examples, APIs, and techniques…"
+            aria-label="Search examples"
+          />
+        </div>
+
+        <div className={styles.filterGrid}>
+          <FilterSelect
+            label="Backend"
+            value={backend}
+            onChange={setBackend}
+            options={['webgpu', 'webgl2']}
+          />
+          <FilterSelect
+            label="Difficulty"
+            value={difficulty}
+            onChange={setDifficulty}
+            options={['tutorial', 'intermediate', 'advanced']}
+          />
+          <FilterSelect
+            label="Display"
+            value={displayMode}
+            onChange={setDisplayMode}
+            options={['hdr-capable', 'standard']}
+          />
+          <FilterSelect
+            label="Maturity"
+            value={maturity}
+            onChange={setMaturity}
+            options={['stable', 'experimental']}
+          />
+          <FilterSelect label="Topic" value={topic} onChange={setTopic} options={topics} />
+        </div>
+      </div>
+
+      <div className={styles.resultsBar}>
+        <p className={styles.resultsSummary} aria-live="polite">
+          Showing {filteredCatalog.length} of {catalog.length} examples
+        </p>
+        {activeFilterCount > 0 ? (
+          <button className={styles.clearFilters} type="button" onClick={clearFilters}>
+            Clear {activeFilterCount === 1 ? 'filter' : `${activeFilterCount} filters`}
+          </button>
+        ) : null}
+      </div>
+
       {categories.map(([category, items]) => (
-        <ExampleSection key={category}>
-          <ExampleHeader>{category}</ExampleHeader>
-          <ExamplesGroup>
+        <section className={styles.exampleSection} key={category}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.sectionEyebrow}>{getCategoryEyebrow(category)}</p>
+              <h2 className={styles.exampleHeader}>{category}</h2>
+            </div>
+            <span className={styles.sectionCount} aria-label={`${items.length} examples`}>
+              {String(items.length).padStart(2, '0')}
+            </span>
+          </div>
+          <div className={styles.examplesGroup}>
             {items.map(item => {
               const thumbnail = getThumbnail(item);
               const imageUrl = `${baseUrl}${thumbnail.replace(/^\//, '')}`;
               return (
-                <ExampleCard key={item.href || item.docId || item.label} href={item.href}>
-                  <img src={imageUrl} alt="" />
-                  <CardBody>
-                    <h3>{item.label}</h3>
-                    <p>{item.description}</p>
-                    <Badges>
-                      {item.backends.map(value => <Badge key={value}>{value}</Badge>)}
-                      <Badge>{item.difficulty}</Badge>
-                      {item.maturity === 'experimental' ? <Badge>experimental</Badge> : null}
-                    </Badges>
-                  </CardBody>
-                </ExampleCard>
+                <ExampleCard
+                  key={item.href || item.docId || item.label}
+                  href={item.href}
+                  imageUrl={imageUrl}
+                  title={item.label}
+                  description={item.description}
+                  category={item.category}
+                  backends={item.backends}
+                  highDynamicRange={item.display === 'hdr-capable'}
+                  difficulty={item.difficulty}
+                  maturity={item.maturity}
+                  topics={item.topics}
+                />
               );
             })}
-          </ExamplesGroup>
-        </ExampleSection>
+          </div>
+        </section>
       ))}
       {filteredCatalog.length === 0 ? (
-        <ResultsSummary>No examples match the selected filters.</ResultsSummary>
+        <div className={styles.emptyState}>
+          <p>No examples match the selected filters.</p>
+          <button className={styles.clearFilters} type="button" onClick={clearFilters}>
+            Clear all filters
+          </button>
+        </div>
       ) : null}
-    </MainExamples>
+    </div>
   );
 }
 
@@ -306,12 +265,19 @@ function FilterSelect({
   return (
     <select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
       <option value="all">{getAllOptionsLabel(label)}</option>
-      {options.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
+      {options.map(option => (
+        <option key={option} value={option}>
+          {formatLabel(option)}
+        </option>
+      ))}
     </select>
   );
 }
 
-function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
+function buildCatalog(
+  sidebar: SidebarRoot,
+  documents: Record<string, CatalogDocument>
+): CatalogItem[] {
   const catalog: CatalogItem[] = [];
 
   const visit = (items: Array<SidebarDocItem | SidebarCategoryItem>, category = 'Examples') => {
@@ -319,7 +285,8 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
       if (item.type === 'category') {
         visit(item.items, item.label);
       } else if (item.docId !== 'index') {
-        catalog.push(normalizeItem(item, category));
+        const documentDescription = item.docId ? documents[item.docId]?.description : undefined;
+        catalog.push(normalizeItem(item, category, documentDescription));
       }
     }
   };
@@ -328,35 +295,47 @@ function buildCatalog(sidebar: SidebarRoot): CatalogItem[] {
   return catalog;
 }
 
-function normalizeItem(item: SidebarDocItem, category: string): CatalogItem {
+function normalizeItem(
+  item: SidebarDocItem,
+  category: string,
+  documentDescription?: string
+): CatalogItem {
   const customProps = item.customProps || {};
   const topic = getDefaultTopic(category);
   return {
     ...item,
     backends: customProps.backends || getDefaultBackends(category),
     category,
-    description: customProps.description || `${item.label} — ${category.toLowerCase()} example.`,
+    description: documentDescription || `${item.label} — ${category.toLowerCase()} example.`,
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
+    display: customProps.display || 'standard',
     maturity: customProps.maturity || getDefaultMaturity(category),
     topics: customProps.topics || [topic]
   };
 }
 
 function getDefaultBackends(category: string): ExampleBackend[] {
-  return category === 'WebGPU' ||
-    category.includes('GPU Data') ||
-    category.includes('GPU Command Graph')
+  return category === 'WebGPU' || isGeneralPurposeGPUCategory(category)
     ? ['webgpu']
     : ['webgpu', 'webgl2'];
 }
 
+function isGeneralPurposeGPUCategory(category: string): boolean {
+  return category === 'GPGPU' || category.startsWith('GPGPU Graph');
+}
+
+function isGPUGraphLayerCategory(category: string): boolean {
+  return category.startsWith('GPU Graph Layers');
+}
+
 function getDefaultDifficulty(category: string): ExampleDifficulty {
-  if (category === 'Tutorials') return 'beginner';
+  if (category === 'Tutorials') return 'tutorial';
   if (
     category === 'Experimental' ||
     category === 'WebGPU' ||
-    category.includes('Arrow') ||
-    category.includes('GPU Command Graph')
+    isGeneralPurposeGPUCategory(category) ||
+    isGPUGraphLayerCategory(category) ||
+    category.includes('Arrow')
   ) {
     return 'advanced';
   }
@@ -366,7 +345,8 @@ function getDefaultDifficulty(category: string): ExampleDifficulty {
 function getDefaultMaturity(category: string): ExampleMaturity {
   return category === 'Experimental' ||
     category === 'WebGPU' ||
-    category.includes('GPU Command Graph')
+    isGeneralPurposeGPUCategory(category) ||
+    isGPUGraphLayerCategory(category)
     ? 'experimental'
     : 'stable';
 }
@@ -374,7 +354,8 @@ function getDefaultMaturity(category: string): ExampleMaturity {
 function getDefaultTopic(category: string): string {
   if (category === 'Tutorials') return 'fundamentals';
   if (category === 'Integrations') return 'integration';
-  if (category.includes('GPU Command Graph')) return 'compute';
+  if (isGPUGraphLayerCategory(category)) return 'integration';
+  if (isGeneralPurposeGPUCategory(category)) return 'compute';
   if (category.includes('GPU Data') || category.includes('Arrow')) return 'data';
   if (category === 'API') return 'api';
   return 'rendering';
@@ -390,14 +371,37 @@ function groupByCategory(items: CatalogItem[]): Array<[string, CatalogItem[]]> {
   return [...groups.entries()];
 }
 
+function getCategoryEyebrow(category: string): string {
+  if (category === 'WebGPU') return 'Next-generation graphics';
+  if (category === 'GPGPU Graph') return 'GPU data and compute pipelines';
+  if (category === 'GPGPU' || category === 'GPGPU Graph Modules') {
+    return 'Compute, projections, and GPU-native data';
+  }
+  if (isGPUGraphLayerCategory(category)) return 'GPU-driven deck.gl integrations';
+  if (category === 'Showcase') return 'Featured examples';
+  if (category === 'Tutorials') return 'Learn by building';
+  if (category === 'Experimental') return 'Emerging techniques';
+  if (category === 'Integrations') return 'Works with your stack';
+  if (category.includes('Arrow') || category.includes('Data')) return 'GPU-native data';
+  if (category.includes('Command Graph')) return 'Compute pipelines';
+  return 'Core capabilities';
+}
+
 function formatLabel(value: string): string {
-  return value === 'webgpu' ? 'WebGPU' : value === 'webgl2' ? 'WebGL2' : `${value[0].toUpperCase()}${value.slice(1)}`;
+  return value === 'webgpu'
+    ? 'WebGPU'
+    : value === 'webgl2'
+      ? 'WebGL2'
+      : value === 'hdr-capable'
+        ? 'HDR capable'
+        : `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
 function getAllOptionsLabel(label: string): string {
   const labels: Record<string, string> = {
     Backend: 'All backends',
     Difficulty: 'All difficulties',
+    Display: 'All displays',
     Maturity: 'All maturity levels',
     Topic: 'All topics'
   };

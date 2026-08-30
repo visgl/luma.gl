@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
 import {makeDeferredPointLightBufferData} from '@luma.gl/experimental';
@@ -531,6 +531,10 @@ describe('Lightstorm Megacity thunder schedule', () => {
     const strengthByRole = Object.fromEntries(
       firstLoopCrossings.map(crossing => [crossing.role, crossing.strength])
     );
+    expect(
+      Math.min(...firstLoopCrossings.map(crossing => crossing.strength))
+    ).toBeGreaterThanOrEqual(0.9);
+    expect(strengthByRole.reveal!).toBeGreaterThanOrEqual(1.4);
     expect(strengthByRole.reveal!).toBeGreaterThan(strengthByRole.canyon!);
     expect(strengthByRole.canyon!).toBeGreaterThan(strengthByRole.avenue!);
 

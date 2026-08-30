@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
@@ -10,16 +10,17 @@ import {
   brightnessContrast,
   bulgePinch,
   colorHalftone,
-  createClusteredVolumetricLightingShaderPassPipeline,
-  createGTAOShaderPassPipeline,
-  createHDRAutoExposureShaderPassPipeline,
-  createMotionBlurShaderPassPipeline,
-  createOutlineShaderPassPipeline,
-  createSSAOShaderPassPipeline,
-  createSSGIShaderPassPipeline,
-  createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline,
-  createVolumetricFogShaderPassPipeline,
+  createCameraReprojectionTAACompositeShaderPass,
+  createClusteredVolumetricLightingCompositeShaderPass,
+  createGTAOCompositeShaderPass,
+  createHDRAutoExposureCompositeShaderPass,
+  createMotionBlurCompositeShaderPass,
+  createOutlineCompositeShaderPass,
+  createSSAOCompositeShaderPass,
+  createSSGICompositeShaderPass,
+  createSSRCompositeShaderPass,
+  createTAACompositeShaderPass,
+  createVolumetricFogCompositeShaderPass,
   dof,
   denoise,
   dotScreen,
@@ -39,7 +40,7 @@ import {
   vignette,
   zoomBlur
 } from '../../src/index';
-import {ShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
+import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
 import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
 
@@ -77,17 +78,18 @@ const PLATFORM_INFO = {
 };
 
 const ADVANCED_SHADER_PASSES = [
-  createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
-  createGTAOShaderPassPipeline(),
-  createGTAOShaderPassPipeline({composition: 'ambient-only'}),
-  createHDRAutoExposureShaderPassPipeline(),
-  createSSGIShaderPassPipeline(),
-  createClusteredVolumetricLightingShaderPassPipeline(),
-  createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
-  createTAAShaderPassPipeline(),
-  createMotionBlurShaderPassPipeline(),
-  createSSRShaderPassPipeline(),
-  createVolumetricFogShaderPassPipeline()
+  createSSAOCompositeShaderPass({normalSource: 'normal-texture'}),
+  createGTAOCompositeShaderPass(),
+  createGTAOCompositeShaderPass({composition: 'ambient-only'}),
+  createHDRAutoExposureCompositeShaderPass(),
+  createSSGICompositeShaderPass(),
+  createClusteredVolumetricLightingCompositeShaderPass(),
+  createOutlineCompositeShaderPass({normalSource: 'normal-texture'}),
+  createCameraReprojectionTAACompositeShaderPass(),
+  createTAACompositeShaderPass(),
+  createMotionBlurCompositeShaderPass(),
+  createSSRCompositeShaderPass(),
+  createVolumetricFogCompositeShaderPass()
 ].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
 
 const SHADER_PASSES = [
@@ -170,7 +172,7 @@ async function getCompilationInfoWithTimeout(shader: {
 }
 
 test('postprocessing WGSL#assemble/compile', async testCase => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const webgpuDevice = await getOptionalWebGPUDevice();
 
   if (!webgpuDevice) {

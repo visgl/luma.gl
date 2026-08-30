@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // Adapted from deck.gl TextLayer utilities under the MIT License.
 
 export type Character = {
@@ -14,7 +14,7 @@ export type Character = {
   anchorY: number;
   /** Glyph quad origin relative to the current pen. Defaults to `anchorX`. */
   layoutOffsetX?: number;
-  /** Glyph quad vertical offset relative to the line baseline. Defaults to zero. */
+  /** Glyph quad top offset relative to the line baseline. Defaults to zero. */
   layoutOffsetY?: number;
   advance: number;
 };

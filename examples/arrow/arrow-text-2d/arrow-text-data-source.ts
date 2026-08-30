@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
 import {
@@ -25,7 +25,7 @@ import {
   type PickingManager,
   type PickingShouldPickOptions
 } from '@luma.gl/engine';
-import type {GPUTable} from '@luma.gl/tables';
+import type {GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 import {

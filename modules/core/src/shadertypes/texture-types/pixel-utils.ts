@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export type ImageData = {
   /** Offset into the data (in addition to any offset built-in to the ArrayBufferView) */

@@ -1,10 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
 import {makeArrowFixedSizeListVector, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
-import {TableTransform, getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/tables';
+import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {TableTransform} from '@luma.gl/experimental/gpu-tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,

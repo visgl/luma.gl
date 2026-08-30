@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs-tabs';
 
 # lighting
@@ -39,9 +40,9 @@ Phase 1 keeps `useByteColors` enabled by default for backward compatibility.
 
 ### `lights?: Light[]`
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 Preferred API for supplying lights. The array can contain:
 
@@ -89,9 +90,9 @@ type PointLight = {
 
 ### `SpotLight`
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 ```ts
 type SpotLight = {
@@ -197,9 +198,9 @@ Returns the packed point light at `index`.
 
 ### `lighting_getSpotLight(index)`
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 Returns the packed spot light at `index`.
 
@@ -213,9 +214,9 @@ Returns the attenuation factor for a point light.
 
 ### `getSpotLightAttenuation(spotLight, positionWorldspace)`
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 Returns the attenuation factor for a spot light, including cone falloff.
 

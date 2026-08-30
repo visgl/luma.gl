@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {WGSL_BINDABLE_VARIABLE_PATTERN, maskWGSLComments} from './wgsl-binding-scan';
 

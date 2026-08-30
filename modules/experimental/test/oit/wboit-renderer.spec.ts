@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   Buffer,
   type Device,
@@ -13,7 +13,7 @@ import {
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   WBOITRenderer,
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
   getWBOITSupport,
   wboit,
   wboitPlugin,
@@ -36,8 +36,8 @@ test('wboit module exposes portable capture helpers', t => {
   t.end();
 });
 
-test('WBOIT resolve is packaged as a ShaderPassPipeline', t => {
-  const pipeline = createWBOITResolveShaderPassPipeline();
+test('WBOIT resolve is packaged as a CompositeShaderPass', t => {
+  const pipeline = createWBOITResolveCompositeShaderPass();
   t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
   t.equal(pipeline.steps[0].shaderPass, wboitResolve, 'pipeline uses the exported resolve pass');
   t.deepEqual(

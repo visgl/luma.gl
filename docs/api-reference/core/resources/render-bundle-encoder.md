@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 import {RenderBundlesExample} from '@site/src/examples';
 
@@ -5,11 +6,11 @@ import {RenderBundlesExample} from '@site/src/examples';
 
 <CoreDocsTabs group="commands" active="render-bundle-encoder" />
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.4</DocumentationBadge>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 <RenderBundlesExample embedded />
 

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   CustomPanel,
@@ -20,16 +20,37 @@ import {
 } from '@deck.gl-community/panels';
 import {Fragment, h, render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
+import {applyExampleTheme, clearExampleTheme, EXAMPLE_THEME_TOKENS} from './example-theme';
 
 const EXAMPLE_PANEL_HOST_ID = 'example-panel-host';
+const EXAMPLE_PANEL_HOST_ATTRIBUTE = 'data-example-panel-host';
 const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
 const EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE = 'data-example-settings-sections';
 const EXAMPLE_SOURCE_PANEL_ID = 'example-source';
 const EXAMPLES_PATH_PREFIX = '/examples/';
 const MODEL_SETTING_NAMES = new Set(['modelKind', 'renderMode']);
+const EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE = 'data-example-panel-appearance';
 const EXAMPLE_PANEL_STYLE = `
 [data-example-panel-host] [aria-hidden='true'] {
   display: none !important;
+}
+[data-example-panel-host][${EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE}='cinematic'] [data-panel-theme-mode] {
+  --button-background: var(--luma-example-surface-raised, rgba(15, 23, 42, 0.72)) !important;
+  --button-icon-hover: rgb(240, 249, 255) !important;
+  --button-icon-idle: var(--luma-example-text-muted, rgb(148, 163, 184)) !important;
+  --button-stroke: var(--luma-example-border, rgba(148, 163, 184, 0.24)) !important;
+  --button-text: var(--luma-example-text, rgb(226, 232, 240)) !important;
+  --menu-background: transparent !important;
+  --menu-border-color: rgba(148, 163, 184, 0.2) !important;
+  --menu-divider: rgba(148, 163, 184, 0.18) !important;
+  --menu-item-hover: rgba(125, 211, 252, 0.12) !important;
+  --menu-text: var(--luma-example-text, rgb(226, 232, 240)) !important;
+  --menu-weak-background: rgba(15, 23, 42, 0.48) !important;
+  --range-decoration-active-color: var(--luma-example-accent, rgb(56, 189, 248)) !important;
+  --range-thumb-color: rgb(125, 211, 252) !important;
+  --range-track-color: rgba(71, 85, 105, 0.8) !important;
+  color: var(--luma-example-text, rgb(226, 232, 240));
+  color-scheme: dark;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] > label,
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] button,
@@ -52,6 +73,8 @@ button[aria-expanded]:not([aria-haspopup='listbox']) > span:first-child > span:f
 }
 `;
 
+export type ExamplePanelAppearance = 'inherit' | 'light' | 'cinematic';
+
 export type ExampleCustomPanelRenderer = (rootElement: HTMLElement) => void | (() => void);
 
 export type ExampleSettingsPanelProps = {
@@ -72,7 +95,7 @@ type ExampleSourceResult = {
 
 /** Returns the InfoBox host used by panel-backed example content. */
 export function makeExamplePanelHostHtml(hostId = EXAMPLE_PANEL_HOST_ID): string {
-  return `<div id="${hostId}" data-example-panel-host=""></div>`;
+  return `<div id="${hostId}" ${EXAMPLE_PANEL_HOST_ATTRIBUTE}=""></div>`;
 }
 
 /** Renders panel content directly inside an existing InfoBox host. */
@@ -173,19 +196,37 @@ function ExampleSourcePanelContent() {
   }, []);
 
   if (sourceResult.error) {
-    return h('p', {style: {margin: 0, color: '#b00020'}}, sourceResult.error);
+    return h(
+      'p',
+      {
+        role: 'alert',
+        style: {
+          margin: 0,
+          padding: '10px 12px',
+          borderLeft: '3px solid #f87171',
+          borderRadius: '0 6px 6px 0',
+          background: 'var(--luma-example-surface-raised, rgba(15, 23, 42, 0.72))',
+          color: 'var(--luma-example-text, rgb(226, 232, 240))',
+          font: '12px/1.5 ui-sans-serif, system-ui, sans-serif'
+        }
+      },
+      sourceResult.error
+    );
   }
 
   return h(
     'pre',
     {
+      'data-example-source-viewer': '',
       style: {
         margin: 0,
-        padding: '12px',
+        padding: '13px 14px',
         maxWidth: '100%',
         overflow: 'auto',
-        background: '#f6f8fa',
-        color: '#24292f',
+        border: '1px solid var(--luma-example-border, rgba(148, 163, 184, 0.24))',
+        borderRadius: '8px',
+        background: 'var(--luma-example-surface, rgb(8, 15, 27))',
+        color: 'var(--luma-example-text, rgb(226, 232, 240))',
         font: '12px/1.45 ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word'
@@ -440,11 +481,35 @@ export function getChangedSetting(
   return changedSettings?.find(changedSetting => changedSetting.name === settingName);
 }
 
-export function configurePanelHostElement(hostElement: HTMLElement): void {
+export function configurePanelHostElement(
+  hostElement: HTMLElement,
+  appearance: ExamplePanelAppearance = 'inherit'
+): void {
+  const inheritedAppearance = hostElement
+    .closest<HTMLElement>('[data-info-box-appearance]')
+    ?.getAttribute('data-info-box-appearance');
+  const resolvedAppearance =
+    appearance === 'inherit' &&
+    (inheritedAppearance === 'cinematic' || inheritedAppearance === 'light')
+      ? inheritedAppearance
+      : appearance;
+
+  hostElement.setAttribute(EXAMPLE_PANEL_HOST_ATTRIBUTE, '');
   hostElement.style.minWidth = '0';
   hostElement.style.width = '100%';
+  hostElement.setAttribute(EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE, resolvedAppearance);
+  if (resolvedAppearance === 'cinematic' || resolvedAppearance === 'light') {
+    applyExampleTheme(hostElement, resolvedAppearance);
+  } else {
+    clearExampleTheme(hostElement);
+  }
   hostElement.style.setProperty('--menu-backdrop-filter', 'unset');
-  hostElement.style.setProperty('--menu-background', 'transparent');
+  hostElement.style.setProperty(
+    '--menu-background',
+    resolvedAppearance === 'cinematic' || resolvedAppearance === 'light'
+      ? EXAMPLE_THEME_TOKENS[resolvedAppearance].surface
+      : 'transparent'
+  );
   hostElement.style.setProperty('--menu-border', 'none');
   hostElement.style.setProperty('--menu-shadow', 'none');
 }

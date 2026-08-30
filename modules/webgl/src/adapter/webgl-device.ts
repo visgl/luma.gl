@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
 import type {
@@ -46,8 +46,10 @@ import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
 import {WebGLPresentationContext} from './webgl-presentation-context';
 import type {Spector} from '../context/debug/spector-types';
-import {initializeSpectorJS} from '../context/debug/spector';
-import {makeDebugContext} from '../context/debug/webgl-developer-tools';
+import {
+  initializeRegisteredSpectorJS,
+  makeRegisteredDebugContext
+} from '../context/debug/debug-hooks';
 import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 
@@ -104,6 +106,7 @@ export class WebGLDevice extends Device {
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
+  private _isLost: boolean = false;
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
@@ -229,7 +232,7 @@ export class WebGLDevice extends Device {
     // Add spector debug instrumentation to context
     // We need to trust spector integration to decide if spector should be initialized
     // We also run spector instrumentation first, otherwise spector can clobber luma instrumentation.
-    this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
+    this.spectorJS = initializeRegisteredSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
     const contextData = getWebGLContextData(this.handle);
@@ -257,7 +260,10 @@ export class WebGLDevice extends Device {
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
     if (props.debug || props.debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {debugWebGL: true, traceWebGL: props.debugWebGL});
+      this.gl = makeRegisteredDebugContext(this.gl, {
+        debugWebGL: true,
+        traceWebGL: props.debugWebGL
+      });
       log.warn('WebGL debug mode activated. Performance reduced.')();
     }
     if (props.debugWebGL) {
@@ -279,13 +285,14 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
-    this.commandEncoder?.destroy();
     // Note that deck.gl (especially in React strict mode) depends on being able
     // to asynchronously create a Device against the same canvas (i.e. WebGL context)
     // multiple times and getting the same device back. Since deck.gl is not aware
     // of this sharing, it might call destroy() multiple times on the same device.
     // Therefore we must do nothing in destroy() if props._reuseDevices is true
     if (!this.props._reuseDevices && !this._reused) {
+      this._isLost = true;
+      this.commandEncoder?.destroy();
       // Delete the reference to the device that we store on the WebGL context
       const contextData = getWebGLContextData(this.handle);
       contextData.device = null;
@@ -293,7 +300,7 @@ export class WebGLDevice extends Device {
   }
 
   get isLost(): boolean {
-    return this.gl.isContextLost();
+    return this._isLost || this.gl.isContextLost();
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE

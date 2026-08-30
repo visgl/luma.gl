@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // MAIN API ACCESS POINT
 export type {AttachDeviceProps, CreateDeviceProps} from './adapter/luma';
@@ -13,6 +13,7 @@ export type {
   DeviceProps,
   DeviceInfo,
   DeviceFeature,
+  WebGPUDeviceFeature,
   BrowserDeviceFeature,
   DeviceTextureFormatCapabilities,
   WebGPUFeatureLevel,

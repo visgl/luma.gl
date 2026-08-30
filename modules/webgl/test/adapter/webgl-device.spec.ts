@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
 // TODO - duplicates core spec?
@@ -22,4 +22,13 @@ test('WebGLDevice#lost (Promise)', async t => {
   });
 
   device.destroy();
+});
+
+test('WebGLDevice#destroy marks the device lost', async t => {
+  const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
+
+  t.equal(device.isLost, false, 'device starts active');
+  device.destroy();
+  t.equal(device.isLost, true, 'destroy synchronously marks the device lost');
+  t.end();
 });

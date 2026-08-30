@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {isNumberArray} from '../utils/is-array';
 import {UniformValue} from '../adapter/types/uniforms';

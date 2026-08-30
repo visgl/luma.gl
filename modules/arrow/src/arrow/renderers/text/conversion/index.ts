@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {
   buildArrowGlyphLayout,
@@ -13,16 +13,26 @@ export {
   decodeArrowUtf8CodePoints,
   isArrowUtf8DictionaryType,
   isArrowUtf8DictionaryVector,
+  isArrowUtf8TextInputVector,
   isArrowUtf8TextVector,
+  isArrowUtf8ViewDictionaryType,
+  isArrowUtf8ViewDictionaryVector,
+  isArrowUtf8ViewType,
+  isArrowUtf8ViewVector,
   isArrowUtf8Vector,
+  normalizeArrowUtf8TextVector,
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary,
   type ArrowUtf8DictionaryIndexType,
   type ArrowUtf8Chunk,
   type ArrowUtf8TextAccessorContext,
   type ArrowUtf8TextIndexAccessor,
+  type ArrowUtf8TextInputType,
+  type ArrowUtf8TextInputVector,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
+  type ArrowUtf8View,
+  type ArrowUtf8ViewDictionary,
   type Utf8TextIndexTarget
 } from './arrow-text';
 export {

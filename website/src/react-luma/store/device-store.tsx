@@ -15,7 +15,12 @@ const FALLBACK_DEVICE_TYPE_ORDER: DeviceType[] = ['webgpu-core', 'webgpu-compati
 
 export type DeviceType = 'webgl' | 'webgpu-core' | 'webgpu-max' | 'webgpu-compatibility';
 export type CanvasContextProfile = 'default' | 'high-dynamic-range';
-type DeviceCacheKey = `${DeviceType}:${CanvasContextProfile}`;
+export type DeviceRequestOptions = {
+  xrCompatible?: boolean;
+};
+type DeviceCacheKey =
+  | `${DeviceType}:${CanvasContextProfile}`
+  | `${DeviceType}:${CanvasContextProfile}:xr-compatible`;
 
 const WEBGPU_FEATURE_LEVELS = {
   'webgpu-core': 'core',
@@ -49,18 +54,26 @@ export function getCanvasContainer() {
 
 export async function createDevice(
   type: DeviceType,
-  canvasContextProfile: CanvasContextProfile = 'default'
+  canvasContextProfile: CanvasContextProfile = 'default',
+  options: DeviceRequestOptions = {}
 ): Promise<Device> {
   const resolvedCanvasContextProfile = resolveCanvasContextProfile(type, canvasContextProfile);
-  const cacheKey: DeviceCacheKey = `${type}:${resolvedCanvasContextProfile}`;
+  const xrCompatible = options.xrCompatible === true && isWebGPUDeviceType(type);
+  const cacheKey: DeviceCacheKey = xrCompatible
+    ? `${type}:${resolvedCanvasContextProfile}:xr-compatible`
+    : `${type}:${resolvedCanvasContextProfile}`;
   cachedDevice[cacheKey] ||= (async () => {
     const device = await luma.createDevice({
       adapters: [webgl2Adapter, webgpuAdapter],
       ...getDeviceRequestProps(type),
+      ...(xrCompatible ? {xrCompatible: true} : {}),
       debugGPUTime: true,
       createCanvasContext: {
         container: getCanvasContainer(),
         alphaMode: 'opaque',
+        ...(isHighDynamicRangeCaptureRequested()
+          ? {pixelSizeSource: 'css-dpr' as const}
+          : {}),
         ...(resolvedCanvasContextProfile === 'high-dynamic-range'
           ? {
               colorFormat: 'rgba16float' as const,
@@ -83,7 +96,7 @@ export async function createDevice(
   } catch (error) {
     if (resolvedCanvasContextProfile === 'high-dynamic-range') {
       logError(`Failed to create ${type} HDR canvas; falling back to standard presentation`, error);
-      return await createDevice(type);
+      return await createDevice(type, 'default', options);
     }
     throw error;
   }
@@ -261,15 +274,23 @@ function resolveCanvasContextProfile(
   type: DeviceType,
   canvasContextProfile: CanvasContextProfile
 ): CanvasContextProfile {
+  const captureRequestsHighDynamicRange = isHighDynamicRangeCaptureRequested();
   const supportsHighDynamicRange =
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(dynamic-range: high)').matches;
   return canvasContextProfile === 'high-dynamic-range' &&
     isWebGPUDeviceType(type) &&
-    supportsHighDynamicRange
+    (supportsHighDynamicRange || captureRequestsHighDynamicRange)
     ? 'high-dynamic-range'
     : 'default';
+}
+
+function isHighDynamicRangeCaptureRequested(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('luma-hdr-capture') === '1'
+  );
 }
 
 function validateCreatedDeviceType(type: DeviceType, device: Device): void {

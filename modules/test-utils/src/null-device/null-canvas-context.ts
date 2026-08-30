@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';

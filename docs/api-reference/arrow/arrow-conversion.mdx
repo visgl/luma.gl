@@ -6,6 +6,44 @@ import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 
 ## Arrow Vector Factories
 
+## Fixed-Size-List Storage Columns
+
+`makeGPUVectorFromArrow()` and `makeGPUTableFromArrowTable()` upload numeric
+Arrow `FixedSizeList` columns wider than four elements as ordinary
+`GPUVector<'fixed-size-list<format,size>'>` values. The vector remains aligned
+with its containing table: `length` counts source rows, `valueLength` counts
+flattened elements, and original Arrow record batches remain separate GPU
+record batches.
+
+When calling `makeGPUVectorFromArrow()` directly, provide
+`{format: 'fixed-size-list<float32,768>'}` to retain that exact fixed-list
+generic in TypeScript; Arrow's runtime `FixedSizeList` type cannot otherwise
+encode the numeric width in its compile-time type.
+
+```ts
+import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+
+const table = makeGPUTableFromArrowTable(device, arrowTable, {
+  shaderLayout: {
+    attributes: [],
+    bindings: [
+      {name: 'embedding', type: 'read-only-storage', group: 0, location: 0},
+      {name: 'sourceIds', type: 'read-only-storage', group: 0, location: 1}
+    ]
+  },
+  validityColumns: {embedding: 'embeddingValidity'}
+});
+```
+
+The optional `validityColumns` mapping materializes a named, table-owned Uint32
+column that combines nullable parent rows and nullable child values. Stable row
+identifiers remain ordinary non-null sibling columns. Use
+`fixedSizeListColumns: ['embedding']` when a short one-to-four-element column
+should intentionally retain fixed-size-list storage semantics instead of its
+default vertex format. For physically padded rows, specify
+`validityColumns: {embedding: {name: 'embeddingValidity', dimensions: 3}}` to
+ignore nullable padding after the three meaningful coordinates.
+
 ## List Columns
 
 Arrow vector factories also support variable-length Arrow list columns whose
@@ -109,7 +147,7 @@ geometry, defaulting to one interleaved vertex buffer plus a separate optional
 index buffer.
 
 For lower-level table pipelines, import `GPUTableBufferPlanner` from
-`@luma.gl/tables` to produce deterministic GPU allocation plans from column
+`@luma.gl/experimental/gpu-tables` to produce deterministic GPU allocation plans from column
 descriptors while respecting device vertex and storage buffer limits.
 
 ## GPU Input Programming Guidelines
@@ -127,7 +165,7 @@ ArrowInputSchema
   -> validates the result against GPUInputSchema
 ```
 
-`GPUInputSchema` belongs to `@luma.gl/tables`. It declares required and optional
+`GPUInputSchema` belongs to `@luma.gl/experimental/gpu-tables`. It declares required and optional
 prepared vector names, accepted `GPUVector.format` values, semantic kinds, and
 which inputs are internal. It deliberately does not mention Arrow `DataType`
 objects, source column paths, temporal origins, tessellation, text dictionaries,
@@ -142,17 +180,18 @@ or fallback-vector generation.
 Use a simple Arrow input schema for direct one-column uploads. Keep model-family
 adapters for cross-column conversions such as path normalization, polygon
 tessellation, temporal conversion, and text glyph preparation. Do not make
-`@luma.gl/tables` depend on Apache Arrow to describe those policies.
+`@luma.gl/gpgpu` or `@luma.gl/experimental` depend on Apache Arrow to describe those policies.
 
 
 ## BufferLayouts
 
-The module can derive GPU `BufferLayout` entries from Arrow schemas and create
-`@luma.gl/tables` objects from compatible Arrow columns through
+The module can derive GPU `BufferLayout` entries from Arrow schemas and create primitive GPU data
+and experimental table objects from compatible Arrow columns through
 `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
-`makeGPUTableFromArrowTable()`. The generic GPU table object model is documented in
-[`@luma.gl/tables`](/docs/api-reference/tables), with an object model overview
-in [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure).
+`makeGPUTableFromArrowTable()`. Primitive storage is documented in the
+[GPGPU data reference](/docs/api-reference/gpgpu/gpu-data), while the higher-level object model is
+documented in [Experimental GPU Tables](/docs/api-reference/experimental/gpu-tables) and
+[GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure).
 
 Arrow upload helpers now produce format-first GPU objects:
 

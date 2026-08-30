@@ -12,21 +12,33 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/shadertools**
+
+- `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
+  renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
+  `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
+  `ShaderPassPipeline` suffix with `CompositeShaderPass`.
+- `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
+  `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
+  `new WGSLShaderAssembler()` for WGSL.
+- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
+  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
+  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+- `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
+  `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
+  `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or
+  `instanceof WGSLShaderAssembler` before assembling shader source.
+
 **@luma.gl/experimental**
 
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque
   `sourceTexture` and return the resolved color texture. Applications must render opaque color and
   depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
-- OIT fullscreen resolution is now exposed as `createABufferResolveShaderPassPipeline()` and
-  `createWBOITResolveShaderPassPipeline()`. `WBOITRenderer.capture()` returns the accumulation and
+- OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and
+  `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
 **@luma.gl/arrow**
-
-- Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
-  - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
-  - `TableTransform`, `GPUTableComputation`
-  - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
 - Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
   - `makeGPUDataFromArrowData(...)`, `makeGPUVectorFromArrow(...)`, `makeGPURecordBatchFromArrowRecordBatch(...)`, and `makeGPUTableFromArrowTable(...)`
   - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
@@ -36,9 +48,23 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 - `GPUTableEvaluator` and `getGPUTableEvaluator()` have been removed. Use `GPUDataEvaluator` and `getGPUDataEvaluator()` for one packed fixed-width `GPUData` chunk.
 - Leaf GPGPU operations no longer adapt `GPUVector` inputs. Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply one leaf transform independently across preserved `GPUVector.data[]` chunks.
-- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/experimental` with explicit key/value output views and command submission.
+- The experimental direct `BitonicArgsort` WebGPU helper has been removed. Use graph-native `GPUSort` from `@luma.gl/gpgpu/gpu-core` with explicit key/value output views and command submission.
 
 ## Upgrading to v9.4
+
+**GPU compute and table imports**
+
+- `@luma.gl/tables` has been removed without compatibility re-exports. Import primitive GPU data
+  APIs (`GPUData`, `GPUDataView`, `GPUVector`, `GPUVectorFormat`, `GPUConstant`, formats, and basic
+  helpers) from `@luma.gl/gpgpu/gpu-data`.
+- Import `GPURecordBatch`, `GPUTable`, schemas, table bindings, table computations, and generic table
+  planners from `@luma.gl/experimental/gpu-tables`.
+- Import path and polygon models, their GPU input helpers, and model-specific planners from
+  `@luma.gl/experimental/models`.
+- `@luma.gl/experimental/gpu-core` and `@luma.gl/experimental/gpu-graph` have been removed without
+  compatibility re-exports. Import them from `@luma.gl/gpgpu/gpu-core` and
+  `@luma.gl/gpgpu/gpu-graph`; graph benchmarks move to
+  `@luma.gl/gpgpu/gpu-graph/benchmarks`.
 
 **@luma.gl/core**
 
@@ -53,6 +79,21 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
   framebuffer and consume rasterized fragment output must pass `discard: false` to `run()`.
 - `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 - `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
+
+**@luma.gl/webgl**
+
+- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+
+**@luma.gl/webgpu**
+
+- `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
+
+**@luma.gl/arrow**
+
+- Arrow 2D text clip rectangles now require `FixedSizeList<Float32>[4]` columns, and GPU-backed
+  clip rectangles require `GPUVector<'float32x4'>`. Rebuild any previous
+  `FixedSizeList<Int16>[4]` or `GPUVector<'sint16x4'>` inputs as 32-bit floats. Rectangle values are
+  interpreted as `[x, y, width, height]` offsets in the text anchor's world coordinate space.
 
 ## Upgrading to v9.3
 
@@ -115,18 +156,18 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 | Updated API                   | Status     | Replacement                                  | Comment                                                         |
 | ----------------------------- | ---------- | -------------------------------------------- | --------------------------------------------------------------- |
-| `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
-| `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
-| `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`][webgl].      | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`           | Removed    |                                              | Use an alternative [debugger][debugging]                         |
-| `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | `Texture` no longer accept promises. Use `AsyncTexture`         |
-| `Parameters.blend`            | New        |                                              | Explicit activation of color blending                           |
-| `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |
-| `line-loop-webgl` topology    | Removed    | `line-list`.                                 | Reorganize your geometries                                      |
-| `glsl` shader template string | Removed    | `/* glsl */` comment                         | Enable syntax highlighting in vscode using before shader string |
-| `depth24unorm-stencil8`       | Removed    | `depth24plus-stencil8`                       | The `TextureFormat` was dropped from the WebGPU spec            |
-| `rgb8unorm-unsized`           | Removed    | `rgb8unorm`                                  | Drop support for unsized WebGL1 `TextureFormat`                 |
-| `rgba8unorm-unsized`          | Removed    | `rgb8aunorm`                                 | Drop support for unsized WebGL1 `TextureFormat`                 |
+| `luma.registerDevices()` | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends. |
+| `DeviceProps.canvas` | Moved | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`. |
+| `DeviceProps.<webgl options>` | Moved | [`DeviceProps.webgl.<options>`][webgl]. | Move canvas related props to `props.webgl: {}`. |
+| `DeviceProps.break` | Removed | — | Use an alternative [debugger][debugging] |
+| `TextureProps.data` (Promise) | Removed | `AsyncTexture` class | `Texture` no longer accept promises. Use `AsyncTexture` |
+| `Parameters.blend` | New | — | Explicit activation of color blending |
+| `triangle-fan-webgl` topology | Removed | `triangle-strip`. | Reorganize your geometries |
+| `line-loop-webgl` topology | Removed | `line-list`. | Reorganize your geometries |
+| `glsl` shader template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using before shader string |
+| `depth24unorm-stencil8` | Removed | `depth24plus-stencil8` | The `TextureFormat` was dropped from the WebGPU spec |
+| `rgb8unorm-unsized` | Removed | `rgb8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
+| `rgba8unorm-unsized` | Removed | `rgb8aunorm` | Drop support for unsized WebGL1 `TextureFormat` |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 [canvas]: /docs/api-reference/core/canvas-context#canvascontextprops
@@ -137,11 +178,11 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 | Updated API                          | Status  | Replacement                             | Comment                                            |
 | ------------------------------------ | ------- | --------------------------------------- | -------------------------------------------------- |
-| `ShaderModuleInstance`               | Removed | Use `ShaderModule` instead.             | Type has been removed.                             |
-| `initializeShaderModule()`           | Changed |                                         | Initializes the original shader module object      |
-| `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module           |
-| `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
-| `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
+| `ShaderModuleInstance` | Removed | Use `ShaderModule` instead. | Type has been removed. |
+| `initializeShaderModule()` | Changed | — | Initializes the original shader module object |
+| `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module |
+| `getDependencyGraph()` | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module |
+| `glsl` template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using comment |
 
 **@luma.gl/effects**
 

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -8,26 +8,28 @@ import {
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {
-  createMotionBlurShaderPassPipeline,
-  createOutlineShaderPassPipeline,
-  createSSAOShaderPassPipeline,
-  createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline,
-  createVolumetricFogShaderPassPipeline,
-  depthAwareBlurShaderPassPipeline
+  createMotionBlurCompositeShaderPass,
+  createOutlineCompositeShaderPass,
+  createSSAOCompositeShaderPass,
+  createSSRCompositeShaderPass,
+  createTAACompositeShaderPass,
+  createVolumetricFogCompositeShaderPass,
+  depthAwareBlurCompositeShaderPass
 } from '@luma.gl/effects';
 import {
-  createContactShadowShaderPassPipeline,
+  ComparisonSplitter,
+  createContactShadowCompositeShaderPass,
   GBuffer,
   shadow,
   ShadowMapRenderer,
   type ShadowShaderProps
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
   type Panel,
@@ -42,7 +44,6 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import {ComparisonSplitter} from './comparison-splitter';
 import {
   CityShadowCasterModels,
   getCityShadowLights,
@@ -203,7 +204,7 @@ const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
 
 const ADVANCED_EFFECTS_BACKGROUND_HTML = `
 <p><b>Hybrid render stack:</b> the city first writes a shared G-buffer with scene color, depth, normals, and velocity. Shadow maps handle geometric visibility from directional, spot, and point lights; screen-space passes then reuse the same buffers for contact shadows, ambient occlusion, reflections, fog, outlines, temporal antialiasing, and motion blur.</p>
-<p><b>Why this is composable:</b> each fullscreen effect declares the textures it reads and writes into an ordered <code>ShaderPassPipeline</code>. Effects can be toggled or reordered without changing the scene draw, while depth/normal/velocity-aware passes avoid treating the image as a flat bitmap.</p>
+<p><b>Why this is composable:</b> each fullscreen effect declares the textures it reads and writes into an ordered <code>CompositeShaderPass</code>. Effects can be toggled or reordered without changing the scene draw, while depth/normal/velocity-aware passes avoid treating the image as a flat bitmap.</p>
 <p><b>Visualization City vs. Illumination Lab:</b> this is the breadth-first showcase for cascaded, spot, point, and contact shadows plus SSAO, simple height fog, outlines, temporal AA, and motion blur. <b>Deferred Illumination Lab</b> goes deeper into deferred Cook-Torrance materials, hundreds of clustered lights, GTAO, colored diffuse bounce, and participating-media scattering. Both examples reuse the same screen-space reflection pipeline; they are not competing copies of SSR.</p>
 <p><b>Where the GPU work goes:</b> shadow maps trade extra light-view geometry passes for stable long-range occlusion. Screen-space effects trade texture bandwidth and fullscreen pixels for details that would be expensive to model with more scene geometry or rays. TAA and motion blur additionally consume frame history and velocity.</p>
 <p><b>What to watch:</b> debug views expose the intermediate contracts. The comparison split shows the cost/quality boundary between the base draw and the composed stack.</p>
@@ -425,7 +426,7 @@ fn advancedEffectsDisplay_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-const displayPipeline: ShaderPassPipeline = {
+const displayPipeline: CompositeShaderPass = {
   name: 'advancedEffectsDisplayPipeline',
   steps: [
     {
@@ -513,6 +514,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly panels: ExamplePanelManager;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly comparisonSplitter: ComparisonSplitter | null;
+  readonly orbitControls: OrbitControls | null;
   sceneGBuffer: GBuffer;
   renderer: ShaderPassRenderer;
   settings: AdvancedEffectsSettings = {...DEFAULT_SETTINGS};
@@ -548,16 +550,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas instanceof HTMLCanvasElement
         ? new ComparisonSplitter({
             canvas,
+            id: 'advanced-effects-comparison-splitter',
             value: this.settings.split,
             onChange: split => {
               this.settings = {...this.settings, split};
-            },
-            onCommit: split => this.settingsPanel.setSettingValue('split', split)
+            }
+          })
+        : null;
+    this.orbitControls =
+      canvas instanceof HTMLCanvasElement
+        ? new OrbitControls(canvas, {
+            target: [0, 5, 0],
+            distance: Math.hypot(43, 20),
+            yaw: 0,
+            pitch: Math.atan2(20, 43),
+            minDistance: 18,
+            maxDistance: 100,
+            minPitch: 0.06,
+            maxPitch: 1.38,
+            autoRotate: this.settings.animate,
+            autoRotateSpeed: 0.055
           })
         : null;
   }
 
-  onRender({device, width, height, aspect, tick}: AnimationProps): void {
+  onRender({
+    device,
+    width,
+    height,
+    aspect,
+    tick,
+    time: elapsedTimeMilliseconds
+  }: AnimationProps): void {
     const framebufferSizeChanged =
       this.framebufferSize[0] !== width || this.framebufferSize[1] !== height;
     if (framebufferSizeChanged) {
@@ -571,12 +595,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.comparisonSplitter?.updateLayout();
 
     const time = this.settings.animate ? tick / 1000 : this.previousTime;
-    const cameraAngle = this.settings.animate ? time * 0.055 : 0.55;
-    const eye: [number, number, number] = [
-      Math.sin(cameraAngle) * 43,
-      25 + Math.sin(cameraAngle * 1.7) * 3,
-      Math.cos(cameraAngle) * 43
-    ];
+    this.orbitControls?.update(elapsedTimeMilliseconds);
+    const eye = this.orbitControls?.getEyePosition() || [0, 25, 43];
+    eye[1] += Math.sin((this.orbitControls?.yaw || 0) * 1.7) * 3;
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(52),
       aspect,
@@ -716,6 +737,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize(): void {
     this.comparisonSplitter?.destroy();
+    this.orbitControls?.destroy();
     this.settingsPanel.finalize();
     this.panels.finalize();
     this.shadowCasters.destroy();
@@ -727,33 +749,35 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private createRenderer(): ShaderPassRenderer {
     const scale = SHADOW_QUALITY_SCALE[this.settings.shadowQuality];
-    const pipelines: ShaderPassPipeline[] = [];
+    const pipelines: CompositeShaderPass[] = [];
     const shadowDebugView = isShadowDebugView(this.settings.debugView);
     if (this.settings.contactShadowsEnabled) {
-      pipelines.push(createContactShadowShaderPassPipeline({quality: this.settings.shadowQuality}));
+      pipelines.push(
+        createContactShadowCompositeShaderPass({quality: this.settings.shadowQuality})
+      );
     }
     if (!shadowDebugView && this.settings.ssaoEnabled) {
       pipelines.push(
-        createSSAOShaderPassPipeline({normalSource: 'normal-texture', resolutionScale: scale})
+        createSSAOCompositeShaderPass({normalSource: 'normal-texture', resolutionScale: scale})
       );
     }
     if (!shadowDebugView && this.settings.depthBlurEnabled) {
-      pipelines.push(depthAwareBlurShaderPassPipeline);
+      pipelines.push(depthAwareBlurCompositeShaderPass);
     }
     if (!shadowDebugView && this.settings.ssrEnabled) {
-      pipelines.push(createSSRShaderPassPipeline({resolutionScale: scale}));
+      pipelines.push(createSSRCompositeShaderPass({resolutionScale: scale}));
     }
     if (!shadowDebugView && this.settings.fogEnabled) {
-      pipelines.push(createVolumetricFogShaderPassPipeline());
+      pipelines.push(createVolumetricFogCompositeShaderPass());
     }
     if (!shadowDebugView && this.settings.outlinesEnabled) {
-      pipelines.push(createOutlineShaderPassPipeline({normalSource: 'normal-texture'}));
+      pipelines.push(createOutlineCompositeShaderPass({normalSource: 'normal-texture'}));
     }
     if (!shadowDebugView && this.settings.taaEnabled) {
-      pipelines.push(createTAAShaderPassPipeline());
+      pipelines.push(createTAACompositeShaderPass());
     }
     if (!shadowDebugView && this.settings.motionBlurEnabled) {
-      pipelines.push(createMotionBlurShaderPassPipeline());
+      pipelines.push(createMotionBlurCompositeShaderPass());
     }
     pipelines.push(displayPipeline);
     return new ShaderPassRenderer(this.device, {shaderPasses: pipelines, flipY: true});
@@ -790,15 +814,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     const preset = getChangedSetting(changedSettings, 'preset')?.nextValue;
-    this.settings = {...this.settings, ...(nextSettings as AdvancedEffectsSettings)};
+    const split = this.settings.split;
+    this.settings = {...this.settings, ...(nextSettings as AdvancedEffectsSettings), split};
     if (typeof preset === 'string' && preset in PRESETS) {
       this.settings = {
         ...this.settings,
         ...PRESETS[preset as PresetName],
-        preset: preset as PresetName
+        preset: preset as PresetName,
+        split
       };
       this.settingsPanel.setSchemaAndSettings(makeSettingsSchema(), this.settings);
     }
+    this.orbitControls?.setAutoRotate(this.settings.animate);
     this.comparisonSplitter?.setValue(this.settings.split);
     this.comparisonSplitter?.setVisible(this.settings.debugView === 'Final');
     this.shadowRenderer.setProps({quality: this.settings.shadowQuality});
@@ -972,15 +999,6 @@ function makeSettingsSchema(): SettingsSchema {
               'Contact',
               'Combined'
             ]
-          },
-          {
-            name: 'split',
-            label: 'Before / After',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 1,
-            step: 0.01
           },
           toggle('animate', 'Animate City')
         ]

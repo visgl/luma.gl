@@ -1,4 +1,6 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderInputs
 
@@ -6,6 +8,15 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 `ShaderInputs` stores per-module uniform values and binding values for shader modules.
 It is the glue between engine classes like [`Model`](/docs/api-reference/engine/model) and [`Computation`](/docs/api-reference/engine/compute/computation) and the uniform layouts defined by `@luma.gl/shadertools` modules.
+
+<DocumentationContract title="ShaderInputs" rows={[
+  {label: 'Role', value: 'Bridge shader-module props to uniform and binding values'},
+  {label: 'Construction', value: 'A module map plus optional warning policy'},
+  {label: 'Updates', value: 'setProps() merges values by declared module schema'},
+  {label: 'Ownership', value: 'Does not take ownership of externally supplied GPU resources'},
+  {label: 'Portability', value: 'Uses shared module descriptors across WGSL and GLSL'},
+  {label: 'Performance', value: 'Update changed props; reuse the manager across draws'}
+]} />
 
 ## Usage
 
@@ -63,9 +74,9 @@ Currently a no-op placeholder for symmetry with other engine resource managers.
 
 Updates one or more modules by calling each module's `getUniforms()` function and splitting the result into uniforms and bindings.
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 If a module declares composite `uniformTypes`, `setProps()` preserves nested
 struct and array shapes at the module boundary and merges partial updates by the

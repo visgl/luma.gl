@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@luma.gl/scene": ["../../../modules/scene/src/index.ts"],
+      "@luma.gl/scene/gltf": ["../../../modules/scene/src/gltf.ts"],
+      "@luma.gl/scene/schemas": ["../../../modules/scene/src/schemas.ts"]
+    },
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["."]
+}

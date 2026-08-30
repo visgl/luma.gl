@@ -1,6 +1,7 @@
 //
 
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
   ExampleHeader,
@@ -10,107 +11,223 @@ import {
   LumaExample,
   ReactExample,
   type ExampleDisplayProps,
+  type LumaExampleProps,
   useStore
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
-import {makeArrowExamplePanelHostHtml} from '../../examples/arrow/arrow-example-panels';
-import AnimationApp from '../../examples/api/animation/app';
-import BlendingApp from '../../examples/api/blending/app';
-import CubemapApp from '../../examples/api/cubemap/app';
-import ArrowDggsPolygonsApp from '../../examples/arrow/arrow-dggs-polygons/app';
-import ArrowColumnRendererApp from '../../examples/arrow/arrow-columns/app';
-import ArrowMeshGeometryApp from '../../examples/arrow/arrow-mesh-geometry/app';
-import ArrowGeoArrowApp from '../../examples/arrow/arrow-geoarrow/app';
-import ArrowLinesApp from '../../examples/arrow/arrow-lines/app';
-import ArrowFloat64PrecisionApp from '../../examples/arrow/arrow-float64-precision/app';
-import ArrowPointRendererApp from '../../examples/arrow/arrow-points/app';
-import ArrowFilteringApp from '../../examples/arrow/arrow-filtering/app';
-import ArrowPolygonRendererApp from '../../examples/arrow/arrow-polygons/app';
-import BloomApp from '../../examples/experimental/bloom/app';
-import HTMLUIPrismApp from '../../examples/experimental/html-ui-prism/app';
-import GPUFrustumCullingApp from '../../examples/experimental/gpu-frustum-culling/app';
-import GPUTraceViewerApp from '../../examples/experimental/gpu-trace-viewer/app';
-import {
-  initializeGPUSortExample,
-  type GPUSortExampleHandle
-} from '../../examples/experimental/gpu-sort/src/app';
-import {
-  initializeGPUDataAnalysisExample,
-  type GPUDataAnalysisExampleHandle
-} from '../../examples/experimental/gpu-data-analysis/src/app';
-import FP64App from '../../examples/experimental/fp64/app';
-import GPT2App from '../../examples/experimental/gpt-2/app';
-import VideoTextureApp from '../../examples/api/video-texture/app';
-import WebXRKaleidoscopeApp from '../../examples/experimental/webxr-kaleidoscope/app';
-import {
-  initializeGPGPUShowcase,
-  type GPGPUShowcaseHandle
-} from '../../examples/v10/gpgpu/src/app';
-import ArrowParticlesApp from '../../examples/arrow/arrow-particles/app';
-import MultiCanvasApp from '../../examples/api/multi-canvas/app';
-import Texture3DApp from '../../examples/api/texture-3d/app';
-import TextureSamplingApp from '../../examples/api/texture-sampling/app';
-import TextureTesterApp from '../../examples/api/texture-tester/app';
-import initializeExternalWebGLContext, {
-  ExternalWebGLContextHandle
-} from '../../examples/integrations/external-context/app';
-import HelloReactApp from '../../examples/integrations/hello-react/app';
+import type {GPUSortExampleHandle} from '../../examples/experimental/gpu-sort/src/app';
+import type {GPUDataAnalysisExampleHandle} from '../../examples/experimental/gpu-data-analysis/src/app';
+import type {GPGPUShowcaseHandle} from '../../examples/v10/gpgpu/src/app';
+import type {ExternalWebGLContextHandle} from '../../examples/integrations/external-context/app';
+import type {GaussianSplatSourceCatalogEntry} from '../../examples/showcase/gaussian-splats/local-loaders';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
-import DOFApp from '../../examples/showcase/dof/app';
-import AdvancedEffectsApp from '../../examples/experimental/advanced-effects/app';
-import DeferredRenderingApp from '../../examples/experimental/deferred-rendering/app';
-import FluidFoundryApp from '../../examples/experimental/fluid-foundry/app';
-import SpectralCausticsApp from '../../examples/experimental/spectral-caustics/app';
-import ShadowMapApp from '../../examples/experimental/shadow-map/app';
-import ABufferApp from '../../examples/experimental/a-buffer/app';
-
-// import PerformanceApp from '../../examples/performance/stress-test/app';
-
-// import DOFApp from '../../examples/showcase/dof/app';
-// import GeospatialApp from '../../examples/showcase/geospatial/app';
-import GLTFApp from '../../examples/showcase/gltf/app';
-import ArrowInstancingApp from '../../examples/arrow/arrow-instancing/app';
-import ArrowTemporalStarfieldApp from '../../examples/arrow/arrow-temporal-starfield/app';
-import ArrowTimeColumnsApp from '../../examples/arrow/arrow-time-columns/app';
-import ArrowText2DApp from '../../examples/arrow/arrow-text-2d/app';
-import InstancingApp from '../../examples/showcase/instancing/app';
-import LightstormMegacityApp from '../../examples/showcase/lightstorm-megacity/app';
-import RenderBundlesApp from '../../examples/api/render-bundles/app';
-import TextSpaceCrawlApp from '../../examples/experimental/text-space-crawl/app';
-import PersistenceApp from '../../examples/showcase/persistence/app';
-import PostprocessingApp from '../../examples/showcase/postprocessing/app';
-import AntialiasingApp from '../../examples/experimental/antialiasing/app';
-import GlobeApp from '../../examples/showcase/globe/app';
-import PacketSprayingApp from '../../examples/showcase/packet-spraying/app';
-// import WanderingApp from '../../examples/showcase/wandering/app';
-
-import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
-import HelloTriangleApp from '../../examples/tutorials/hello-triangle/app';
-import HelloCubeApp from '../../examples/tutorials/hello-cube/app';
-import TwoCubesApp from '../../examples/tutorials/hello-two-cubes/app';
-import InstancedCubesApp from '../../examples/tutorials/hello-instanced-cubes/app';
-import HelloInstancingApp from '../../examples/tutorials/hello-instancing/app';
-import HelloGLTFApp from '../../examples/tutorials/hello-gltf/app';
-import LightingApp from '../../examples/tutorials/lighting/app';
-import ShaderHooksApp from '../../examples/tutorials/shader-hooks/app';
-import ShaderPluginsApp from '../../examples/tutorials/shader-plugins/app';
-import ShaderModulesApp from '../../examples/tutorials/shader-modules/app';
-import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/app';
-import TransformApp from '../../examples/tutorials/transform/app';
-import {createArrowPathLayerDeck} from '../../examples/deck/arrow-path-layer/app';
-import {createArrowPolygonLayerDeck} from '../../examples/deck/arrow-polygon-layer/app';
-import {createArrowTextLayerDeck} from '../../examples/deck/arrow-text-layer/app';
 
 const exampleConfig = {};
 
-type WebsiteExampleProps = ExampleDisplayProps & {
-  panel?: boolean;
-  showHeader?: boolean;
-  showStats?: boolean;
-  templateInfoPlacement?: 'header' | 'page';
+const loadAnimationApp = () => import('../../examples/api/animation/app');
+const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadCubemapApp = () => import('../../examples/api/cubemap/app');
+const loadArrowDggsPolygonsApp = () => import('../../examples/arrow/arrow-dggs-polygons/app');
+const loadArrowColumnRendererApp = () => import('../../examples/arrow/arrow-columns/app');
+const loadArrowMeshGeometryApp = () => import('../../examples/arrow/arrow-mesh-geometry/app');
+const loadArrowGeoArrowApp = () => import('../../examples/arrow/arrow-geoarrow/app');
+const loadArrowLinesApp = () => import('../../examples/arrow/arrow-lines/app');
+const loadArrowFloat64PrecisionApp = () => import('../../examples/arrow/arrow-float64-precision/app');
+const loadArrowPointRendererApp = () => import('../../examples/arrow/arrow-points/app');
+const loadArrowFilteringApp = () => import('../../examples/arrow/arrow-filtering/app');
+const loadArrowPolygonRendererApp = () => import('../../examples/arrow/arrow-polygons/app');
+const loadBloomApp = () => import('../../examples/experimental/bloom/app');
+const loadHTMLUIPrismApp = () => import('../../examples/experimental/html-ui-prism/app');
+const loadGPUFrustumCullingApp = () => import('../../examples/experimental/gpu-frustum-culling/app');
+const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene-graph/app');
+const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
+const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
+const loadGPUGraphExplorerApp = () => import('../../examples/experimental/gpu-graph-explorer/app');
+const loadLuCIMVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
+const loadGPT2App = () => import('../../examples/experimental/gpt-2/app');
+const loadVideoTextureApp = () => import('../../examples/api/video-texture/app');
+const loadWebXRKaleidoscopeApp = () => import('../../examples/experimental/webxr-kaleidoscope/app');
+const loadArrowParticlesApp = () => import('../../examples/arrow/arrow-particles/app');
+const loadMultiCanvasApp = () => import('../../examples/api/multi-canvas/app');
+const loadTexture3DApp = () => import('../../examples/api/texture-3d/app');
+const loadTextureSamplingApp = () => import('../../examples/api/texture-sampling/app');
+const loadTextureTesterApp = () => import('../../examples/api/texture-tester/app');
+const loadHelloReactApp = () => import('../../examples/integrations/hello-react/app');
+const loadDOFApp = () => import('../../examples/showcase/dof/app');
+const loadAdvancedEffectsApp = () => import('../../examples/experimental/advanced-effects/app');
+const loadDeferredRenderingApp = () => import('../../examples/experimental/deferred-rendering/app');
+const loadFluidFoundryApp = () => import('../../examples/experimental/fluid-foundry/app');
+const loadSpectralCausticsApp = () => import('../../examples/experimental/spectral-caustics/app');
+const loadVolumetricFireForgeApp = () => import('../../examples/experimental/volumetric-fire-forge/app');
+const loadVirtualGeometryCanyonApp = () => import('../../examples/experimental/virtual-geometry-canyon/app');
+const loadShadowMapApp = () => import('../../examples/experimental/shadow-map/app');
+const loadABufferApp = () => import('../../examples/experimental/a-buffer/app');
+const loadGLTFApp = () => import('../../examples/showcase/gltf/app');
+const loadGaussianSplatsApp = () => import('../../examples/showcase/gaussian-splats/app');
+const loadArrowTemporalStarfieldApp = () => import('../../examples/arrow/arrow-temporal-starfield/app');
+const loadArrowTimeColumnsApp = () => import('../../examples/arrow/arrow-time-columns/app');
+const loadArrowText2DApp = () => import('../../examples/arrow/arrow-text-2d/app');
+const loadInstancingApp = () => import('../../examples/showcase/instancing/app');
+const loadLightstormMegacityApp = () => import('../../examples/showcase/lightstorm-megacity/app');
+const loadLLMNetworkApp = () => import('../../examples/showcase/llm-network/app');
+const loadVectorFieldLabApp = () => import('../../examples/showcase/vector-field-lab/app');
+const loadQuantumStateStudioApp = () => import('../../examples/showcase/quantum-state-studio/app');
+const loadTempestOceanApp = () => import('../../examples/showcase/tempest-ocean/app');
+const loadRenderBundlesApp = () => import('../../examples/api/render-bundles/app');
+const loadTextSpaceCrawlApp = () => import('../../examples/experimental/text-space-crawl/app');
+const loadPersistenceApp = () => import('../../examples/showcase/persistence/app');
+const loadPostprocessingApp = () => import('../../examples/showcase/postprocessing/app');
+const loadAntialiasingApp = () => import('../../examples/experimental/antialiasing/app');
+const loadGlobeApp = () => import('../../examples/showcase/globe/app');
+const loadPacketSprayingApp = () => import('../../examples/showcase/packet-spraying/app');
+const loadHelloTriangleGeometryApp = () => import('../../examples/tutorials/hello-triangle-geometry/app');
+const loadHelloTriangleApp = () => import('../../examples/tutorials/hello-triangle/app');
+const loadHelloCubeApp = () => import('../../examples/tutorials/hello-cube/app');
+const loadTwoCubesApp = () => import('../../examples/tutorials/hello-two-cubes/app');
+const loadInstancedCubesApp = () => import('../../examples/tutorials/hello-instanced-cubes/app');
+const loadHelloInstancingApp = () => import('../../examples/tutorials/hello-instancing/app');
+const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
+const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
+const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
+const loadShaderPluginsApp = () => import('../../examples/tutorials/shader-plugins/app');
+const loadShaderModulesApp = () => import('../../examples/tutorials/shader-modules/app');
+const loadTransformFeedbackApp = () => import('../../examples/tutorials/transform-feedback/app');
+const loadTransformApp = () => import('../../examples/tutorials/transform/app');
+
+const loadBillionPointSpatialAtlasExample = () =>
+  import('../../examples/showcase/billion-point-spatial-atlas/app');
+const loadMillionRowCrossfilterExample = () =>
+  import('../../examples/showcase/million-row-crossfilter/app');
+const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
+const loadGPUSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadGPUGraphExplorerDeckExample = () => import('../../examples/deck/gpu-graph-explorer/app');
+const loadFP64Example = () => import('../../examples/experimental/fp64/app');
+const loadGPUSortExample = () => import('../../examples/experimental/gpu-sort/src/app');
+const loadGPUDataAnalysisExample = () =>
+  import('../../examples/experimental/gpu-data-analysis/src/app');
+const loadGPGPUShowcaseExample = () => import('../../examples/v10/gpgpu/src/app');
+const loadExternalContextExample = () =>
+  import('../../examples/integrations/external-context/app');
+const loadArrowPathLayerDeckExample = () => import('../../examples/deck/arrow-path-layer/app');
+const loadArrowPolygonLayerDeckExample = () =>
+  import('../../examples/deck/arrow-polygon-layer/app');
+const loadArrowTextLayerDeckExample = () => import('../../examples/deck/arrow-text-layer/app');
+const loadGPUCulledTraceDeckExample = () => import('../../examples/deck/gpu-culled-trace/app');
+
+const subscribeToInactiveApplication = (_listener: () => void): (() => void) => () => {};
+
+type WebsiteExampleProps = React.PropsWithChildren<
+  ExampleDisplayProps & {
+    autoStart?: boolean;
+    panel?: boolean;
+    showHeader?: boolean;
+    showStats?: boolean;
+    templateInfoPlacement?: 'header' | 'page';
+  }
+>;
+
+type DeferredExampleModuleState<Module> = {
+  module: Module | null;
+  errorMessage: string | null;
 };
+
+function useDeferredExampleModule<Module>(
+  loadModule: () => Promise<Module>,
+  enabled = true
+): DeferredExampleModuleState<Module> {
+  const [moduleState, setModuleState] = useState<DeferredExampleModuleState<Module>>({
+    module: null,
+    errorMessage: null
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    let isCancelled = false;
+    const loadingTimeout = window.setTimeout(() => {
+      void loadModule()
+        .then(module => {
+          if (!isCancelled) {
+            setModuleState({module, errorMessage: null});
+          }
+        })
+        .catch(error => {
+          if (!isCancelled) {
+            setModuleState({module: null, errorMessage: getErrorMessage(error)});
+          }
+        });
+    }, 0);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(loadingTimeout);
+    };
+  }, [enabled, loadModule]);
+
+  return moduleState;
+}
+
+function DeferredGPUExampleStatus({
+  title,
+  description,
+  errorMessage,
+  embedded,
+  embeddedHeight,
+  style
+}: {
+  title: string;
+  description: string;
+  errorMessage?: string | null;
+} & WebsiteExampleProps): React.JSX.Element {
+  return (
+    <ExamplePage
+      embedded={embedded}
+      embeddedHeight={embeddedHeight}
+      style={{
+        background:
+          'radial-gradient(ellipse at 22% 16%, rgba(56, 189, 248, 0.16), transparent 42%), #07101d',
+        ...style
+      }}
+    >
+      <div
+        aria-live="polite"
+        role={errorMessage ? 'alert' : 'status'}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'grid',
+          alignContent: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          padding: 32,
+          color: '#f1f5f9',
+          textAlign: 'center'
+        }}
+      >
+        <span
+          style={{
+            color: '#7dd3fc',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase'
+          }}
+        >
+          {errorMessage ? 'Unable to load GPU experience' : 'Preparing GPU experience'}
+        </span>
+        <strong style={{fontSize: 22, lineHeight: 1.2}}>{title}</strong>
+        <span style={{maxWidth: 420, color: '#b6c5d7', fontSize: 14, lineHeight: 1.6}}>
+          {errorMessage || description}
+        </span>
+      </div>
+    </ExamplePage>
+  );
+}
 
 type DeckExampleHandle = {
   finalize: () => void;
@@ -121,12 +238,32 @@ type CreateDeckExample = (
 ) =>
   | DeckExampleHandle
   | Promise<DeckExampleHandle>;
+
+const createDeferredArrowPathLayerDeck: CreateDeckExample = (parent, options) =>
+  loadArrowPathLayerDeckExample().then(({createArrowPathLayerDeck}) =>
+    createArrowPathLayerDeck(parent, options)
+  );
+const createDeferredArrowPolygonLayerDeck: CreateDeckExample = (parent, options) =>
+  loadArrowPolygonLayerDeckExample().then(({createArrowPolygonLayerDeck}) =>
+    createArrowPolygonLayerDeck(parent, options)
+  );
+const createDeferredArrowTextLayerDeck: CreateDeckExample = (parent, options) =>
+  loadArrowTextLayerDeckExample().then(({createArrowTextLayerDeck}) =>
+    createArrowTextLayerDeck(parent, options)
+  );
+const createDeferredGPUCulledTraceDeck: CreateDeckExample = (parent, options) =>
+  loadGPUCulledTraceDeckExample().then(({createGPUCulledTraceDeck}) =>
+    createGPUCulledTraceDeck(parent, options)
+  );
+
 type DeckArrowLayerPanelProps = {
   id: string;
   title: string;
+  devices?: Array<'webgpu' | 'webgl2'>;
 };
 
-function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
+async function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
+  const {makeArrowExamplePanelHostHtml} = await import('../../examples/arrow/arrow-example-panels');
   return makeHtmlCustomPanel({
     id: `${id}-info`,
     title,
@@ -134,11 +271,27 @@ function makeDeckArrowLayerInfoPanel({id, title}: DeckArrowLayerPanelProps) {
   });
 }
 
-function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
-  const panel = useMemo(
-    () => makeDeckArrowLayerInfoPanel({id, title}),
-    [id, title]
-  );
+function DeckArrowLayerPanel({id, title, devices = ['webgpu', 'webgl2']}: DeckArrowLayerPanelProps) {
+  const [panel, setPanel] = useState<Awaited<ReturnType<typeof makeDeckArrowLayerInfoPanel>>>();
+
+  useEffect(() => {
+    let isCancelled = false;
+    void makeDeckArrowLayerInfoPanel({id, title})
+      .then(nextPanel => {
+        if (!isCancelled) {
+          setPanel(nextPanel);
+        }
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          logError(`Failed to load ${id} Arrow inspection panel`, error);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [id, title]);
 
   return (
     <div
@@ -169,7 +322,7 @@ function DeckArrowLayerPanel({id, title}: DeckArrowLayerPanelProps) {
           panel={panel}
         />
         <DeviceTabs
-          devices={['webgpu', 'webgl2']}
+          devices={devices}
           style={{flexShrink: 0, marginLeft: 'auto', pointerEvents: 'auto'}}
         />
       </div>
@@ -208,13 +361,19 @@ function DeckArrowLayerCanvas({
 
     let isFinalized = false;
     let deck: DeckExampleHandle | null = null;
-    void Promise.resolve(createDeck(container, {device})).then(createdDeck => {
-      if (isFinalized) {
-        createdDeck.finalize();
-        return;
-      }
-      deck = createdDeck;
-    });
+    void Promise.resolve(createDeck(container, {device}))
+      .then(createdDeck => {
+        if (isFinalized) {
+          createdDeck.finalize();
+          return;
+        }
+        deck = createdDeck;
+      })
+      .catch(error => {
+        if (!isFinalized) {
+          logError(`Failed to initialize ${panel.id} Deck example`, error);
+        }
+      });
 
     return () => {
       isFinalized = true;
@@ -222,7 +381,7 @@ function DeckArrowLayerCanvas({
       container.replaceChildren();
       getCanvasContainer().appendChild(deviceCanvas);
     };
-  }, [createDeck, device]);
+  }, [createDeck, device, panel.id]);
 
   return (
     <>
@@ -252,7 +411,7 @@ export const DeckArrowPathLayerExample: React.FC<DeckArrowLayerExampleProps> = (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
-      createDeck: createArrowPathLayerDeck,
+      createDeck: createDeferredArrowPathLayerDeck,
       panel: {
         id: 'arrow-path-layer',
         title: 'Arrow Path Layer'
@@ -269,7 +428,7 @@ export const DeckArrowPolygonLayerExample: React.FC<DeckArrowLayerExampleProps> 
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
-      createDeck: createArrowPolygonLayerDeck,
+      createDeck: createDeferredArrowPolygonLayerDeck,
       panel: {
         id: 'arrow-polygon-layer',
         title: 'Arrow Polygon Layer'
@@ -286,7 +445,7 @@ export const DeckArrowTextLayerExample: React.FC<DeckArrowLayerExampleProps> = (
   <ReactExample
     component={DeckArrowLayerCanvas}
     componentProps={{
-      createDeck: createArrowTextLayerDeck,
+      createDeck: createDeferredArrowTextLayerDeck,
       panel: {
         id: 'arrow-text-layer',
         title: 'Arrow Text Layer'
@@ -296,6 +455,93 @@ export const DeckArrowTextLayerExample: React.FC<DeckArrowLayerExampleProps> = (
     style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
   />
 );
+
+export const DeckGPUCulledTraceExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => (
+  <ReactExample
+    component={DeckArrowLayerCanvas}
+    componentProps={{
+      createDeck: createDeferredGPUCulledTraceDeck,
+      panel: {
+        id: 'gpu-culled-trace',
+        title: 'GPU-Culled Trace with Arrow Text',
+        devices: ['webgpu']
+      }
+    }}
+    showStats={false}
+    style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+  />
+);
+
+export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => {
+  const {module, errorMessage} = useDeferredExampleModule(loadGPUSpatialTaxiExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        title="GPU Project + luSpatial Taxi Explorer"
+        description="Loading the projection, spatial-query, and interactive map tools."
+        errorMessage={errorMessage}
+        embedded={embedded}
+        style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+      />
+    );
+  }
+
+  return (
+    <ReactExample
+      component={DeckArrowLayerCanvas}
+      componentProps={{
+        createDeck: module.createGPUSpatialTaxiDeck,
+        panel: {
+          id: 'luspatial-taxi',
+          title: 'GPU Project + luSpatial Taxi Explorer',
+          devices: ['webgpu']
+        }
+      }}
+      showStats={false}
+      style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+    />
+  );
+};
+
+/** Loads the optional deck.gl graph integration only when its WebGPU example is opened. */
+export const DeckGPUGraphExplorerExample: React.FC<DeckArrowLayerExampleProps> = ({
+  embedded = false
+}) => {
+  const {module, errorMessage} = useDeferredExampleModule(loadGPUGraphExplorerDeckExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        title="GPU Graph + deck.gl Network Explorer"
+        description="Loading GPU graph analytics, progressive layout, and direct deck.gl layers."
+        errorMessage={errorMessage}
+        embedded={embedded}
+        style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+      />
+    );
+  }
+
+  return (
+    <ReactExample
+      component={DeckArrowLayerCanvas}
+      componentProps={{
+        createDeck: module.createGPUGraphExplorerDeck,
+        panel: {
+          id: 'gpu-graph-explorer',
+          title: 'GPU Graph + deck.gl Network Explorer',
+          devices: ['webgpu']
+        }
+      }}
+      showStats={false}
+      style={embedded ? DECK_ARROW_LAYER_EMBEDDED_STYLE : undefined}
+    />
+  );
+};
 
 type DeckArrowLayerExampleId = 'path' | 'polygon' | 'text';
 
@@ -545,23 +791,130 @@ const GPGPU_EXAMPLE_STYLE = `
 
 // Showcase Examples
 
-export const GLTFExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="gltf"
-    title="glTF"
-    directory="showcase"
-    template={GLTFApp}
-    config={exampleConfig}
-    canvasContextProfile="high-dynamic-range"
-    {...props}
-  />
-);
+export const ANARIPlaygroundExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/scene/playground.html');
+
+  return (
+    <ExamplePage style={{background: '#070913', minHeight: '720px'}}>
+      <iframe
+        title="ANARI Scene Lab"
+        src={source}
+        allow="clipboard-write"
+        style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}}
+      />
+    </ExamplePage>
+  );
+};
+
+export const GLTFExample: React.FC<WebsiteExampleProps> = props => {
+  const referenceDevice = getGLTFReferenceDeviceSelection();
+
+  return (
+    <LumaExample
+      id="gltf"
+      title="glTF Asset Studio"
+      subtitle="Physical materials · animated characters · standards-native glTF"
+      directory="showcase"
+      loadTemplate={loadGLTFApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      devices={referenceDevice ? [referenceDevice] : undefined}
+      {...props}
+    />
+  );
+};
+
+function getGLTFReferenceDeviceSelection(): NonNullable<LumaExampleProps['devices']>[number] | null {
+  if (
+    typeof window === 'undefined' ||
+    new URLSearchParams(window.location.search).get('gltf-reference') !== '1'
+  ) {
+    return null;
+  }
+
+  const deviceType = window.localStorage.getItem('luma-device-type');
+  switch (deviceType) {
+    case 'webgpu-core':
+    case 'webgpu-max':
+    case 'webgpu-compatibility':
+      return deviceType;
+    case 'webgl':
+      return 'webgl2';
+    default:
+      return null;
+  }
+}
+
+export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
+  if (typeof window !== 'undefined') {
+    delete window.__lumaGaussianSplatsLoaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splats"
+      title="Gaussian Splats"
+      subtitle="Progressive HDR Gaussian splat rendering"
+      directory="showcase"
+      devices={['webgpu', 'webgl2']}
+      loadTemplate={loadGaussianSplatsApp}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
+
+export const GaussianSplatViewerExample: React.FC<
+  WebsiteExampleProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}
+> = ({defaultScene, ...props}) => {
+  const loaderBundleUrl = useBaseUrl('/standalone-examples/gaussian-splats/loaders-gl.mjs');
+  const loadAnimationTemplate = useMemo(
+    () => async () => {
+      const {default: GaussianSplatsApp} = await loadGaussianSplatsApp();
+      const makeAnimationTemplate = () => {
+        if (!defaultScene) {
+          return GaussianSplatsApp;
+        }
+
+        return class GaussianSplatSceneAnimationTemplate extends GaussianSplatsApp {
+          constructor(animationProps: AnimationProps) {
+            super({...animationProps, defaultScene});
+          }
+        };
+      };
+      return {default: makeAnimationTemplate()};
+    },
+    [defaultScene]
+  );
+
+  if (typeof window !== 'undefined') {
+    window.__lumaGaussianSplatsLoaderBundleUrl = loaderBundleUrl;
+  }
+
+  return (
+    <LumaExample
+      id="gaussian-splat-viewer"
+      title="Gaussian Splat Viewer"
+      subtitle="Captured scenes and camera-driven, worker-decoded RAD landscapes"
+      directory="showcase"
+      sourcePath="examples/showcase/gaussian-splats/app.ts"
+      devices={['webgpu', 'webgl2']}
+      loadTemplate={loadAnimationTemplate}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      showStats
+      {...props}
+    />
+  );
+};
 
 export const InstancingExample: React.FC = props => (
   <LumaExample
     id="instancing"
     directory="showcase"
-    template={InstancingApp}
+    loadTemplate={loadInstancingApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}
@@ -575,20 +928,148 @@ export const LightstormMegacityExample: React.FC<WebsiteExampleProps> = props =>
     subtitle="GPU-driven city at data scale"
     directory="showcase"
     devices={['webgpu']}
-    template={LightstormMegacityApp}
+    loadTemplate={loadLightstormMegacityApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
 
-export const ArrowInstancingExample: React.FC = props => (
+export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
-    id="arrow-instancing"
-    title="Instancing"
-    directory="arrow"
-    template={ArrowInstancingApp}
+    id="vector-field-lab"
+    title="Vector Field Lab"
+    subtitle="Orbit linked 3D gradient, divergence, curl, and Laplacian volumes"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadVectorFieldLabApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const LLMNetworkExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="llm-network"
+    title="Inside a Transformer"
+    subtitle="Follow tokens through attention, hidden layers, and next-token prediction"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadLLMNetworkApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const QuantumStateStudioExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="quantum-state-studio"
+    title="Quantum State Studio"
+    subtitle="GPU-resident state vectors · linked probability, phase, Bloch, and correlation views"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadQuantumStateStudioApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const BillionPointSpatialAtlasExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadBillionPointSpatialAtlasExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="Billion-Point Spatial Atlas"
+        description="Loading the GPU-native spatial index and interactive atlas."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="billion-point-spatial-atlas"
+      title="Billion-Point Spatial Atlas"
+      subtitle="Indexed geospatial queries and indirect rendering at data scale"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      canvasContextProfile="high-dynamic-range"
+      {...props}
+    />
+  );
+};
+
+export const MillionRowCrossfilterExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadMillionRowCrossfilterExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="GPUCrossfilter: Million-Row Crossfilter Explorer"
+        description="Loading the million-row linked dashboard and GPU filtering pipeline."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="million-row-crossfilter"
+      title="Million-Row Crossfilter Explorer"
+      subtitle="One million points · one GPU-resident linked dashboard"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
+
+export const RasterLabExample: React.FC<WebsiteExampleProps> = props => {
+  const {module, errorMessage} = useDeferredExampleModule(loadRasterLabExample);
+
+  if (!module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="GPURaster: Satellite Raster Lab"
+        description="Loading synthetic satellite bands and the GPU-native raster-analysis graph."
+        errorMessage={errorMessage}
+      />
+    );
+  }
+
+  return (
+    <LumaExample
+      id="raster-lab"
+      title="Satellite Raster Lab"
+      subtitle="GPU-resident reflectance · masked NDVI · valid-pixel histograms"
+      directory="showcase"
+      devices={['webgpu']}
+      template={module.default}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
+
+export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="tempest-ocean"
+    title="Tempest Ocean: Spectral Stormfront"
+    subtitle="GPUFFT2D displacement · HDR whitecaps"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadTempestOceanApp}
+    config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
@@ -598,7 +1079,7 @@ export const ArrowText2DExample: React.FC = props => (
     id="arrow-text-2d"
     title="Text"
     directory="arrow"
-    template={ArrowText2DApp}
+    loadTemplate={loadArrowText2DApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -610,7 +1091,7 @@ export const ArrowTimeColumnsExample: React.FC = props => (
     id="arrow-time-columns"
     title="Time"
     directory="arrow"
-    template={ArrowTimeColumnsApp}
+    loadTemplate={loadArrowTimeColumnsApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -622,7 +1103,7 @@ export const ArrowTemporalStarfieldExample: React.FC = props => (
     id="arrow-temporal-starfield"
     title="Durations"
     directory="arrow"
-    template={ArrowTemporalStarfieldApp}
+    loadTemplate={loadArrowTemporalStarfieldApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -634,7 +1115,7 @@ export const ArrowLinesExample: React.FC = props => (
     id="arrow-lines"
     title="Lines"
     directory="arrow"
-    template={ArrowLinesApp}
+    loadTemplate={loadArrowLinesApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -646,7 +1127,7 @@ export const ArrowFloat64PrecisionExample: React.FC = props => (
     id="arrow-float64-precision"
     title="Float64 Origin Rebasing"
     directory="arrow"
-    template={ArrowFloat64PrecisionApp}
+    loadTemplate={loadArrowFloat64PrecisionApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -658,7 +1139,7 @@ export const ArrowGeoArrowExample: React.FC<WebsiteExampleProps> = props => (
     id="arrow-geoarrow"
     title="GeoArrow"
     directory="arrow"
-    template={ArrowGeoArrowApp}
+    loadTemplate={loadArrowGeoArrowApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -670,7 +1151,7 @@ export const ArrowPointRendererExample: React.FC = props => (
     id="arrow-points"
     title="Points"
     directory="arrow"
-    template={ArrowPointRendererApp}
+    loadTemplate={loadArrowPointRendererApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -682,7 +1163,7 @@ export const ArrowFilteringExample: React.FC = props => (
     id="arrow-filtering"
     title="ShaderPlugin Filtering"
     directory="arrow"
-    template={ArrowFilteringApp}
+    loadTemplate={loadArrowFilteringApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -694,7 +1175,7 @@ export const ArrowColumnRendererExample: React.FC = props => (
     id="arrow-columns"
     title="DGGS + time"
     directory="arrow"
-    template={ArrowColumnRendererApp}
+    loadTemplate={loadArrowColumnRendererApp}
     config={exampleConfig}
     devices={['webgpu']}
     showStats
@@ -707,7 +1188,7 @@ export const ArrowPolygonRendererExample: React.FC = props => (
     id="arrow-polygons"
     title="Polygons"
     directory="arrow"
-    template={ArrowPolygonRendererApp}
+    loadTemplate={loadArrowPolygonRendererApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -719,7 +1200,7 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
     id="arrow-dggs-polygons"
     title="Global Grids"
     directory="arrow"
-    template={ArrowDggsPolygonsApp}
+    loadTemplate={loadArrowDggsPolygonsApp}
     config={exampleConfig}
     devices={['webgpu']}
     showStats
@@ -737,16 +1218,24 @@ export const GPGPUExample: React.FC = () => {
       return;
     }
 
+    let isCancelled = false;
     let handle: GPGPUShowcaseHandle | null = null;
-    try {
-      setErrorMessage(null);
-      handle = initializeGPGPUShowcase({device});
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-      logError('Failed to initialize GPGPU example', error);
-    }
+    setErrorMessage(null);
+    void loadGPGPUShowcaseExample()
+      .then(({initializeGPGPUShowcase}) => {
+        if (!isCancelled) {
+          handle = initializeGPGPUShowcase({device});
+        }
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          setErrorMessage(getErrorMessage(error));
+          logError('Failed to initialize GPGPU example', error);
+        }
+      });
 
     return () => {
+      isCancelled = true;
       handle?.destroy();
     };
   }, [deviceType, device]);
@@ -825,15 +1314,23 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
     let handle: GPUSortExampleHandle | null = null;
-    try {
-      handle = initializeGPUSortExample();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-      logError('Failed to initialize GPU sort example', error);
-    }
+    void loadGPUSortExample()
+      .then(({initializeGPUSortExample}) => {
+        if (!isCancelled) {
+          handle = initializeGPUSortExample();
+        }
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          setErrorMessage(getErrorMessage(error));
+          logError('Failed to initialize GPU sort example', error);
+        }
+      });
 
     return () => {
+      isCancelled = true;
       handle?.destroy();
     };
   }, []);
@@ -862,14 +1359,24 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
     let handle: GPUDataAnalysisExampleHandle | null = null;
-    try {
-      handle = initializeGPUDataAnalysisExample();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-      logError('Failed to initialize GPU data-analysis example', error);
-    }
-    return () => handle?.destroy();
+    void loadGPUDataAnalysisExample()
+      .then(({initializeGPUDataAnalysisExample}) => {
+        if (!isCancelled) {
+          handle = initializeGPUDataAnalysisExample();
+        }
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          setErrorMessage(getErrorMessage(error));
+          logError('Failed to initialize GPU data-analysis example', error);
+        }
+      });
+    return () => {
+      isCancelled = true;
+      handle?.destroy();
+    };
   }, []);
 
   return (
@@ -897,7 +1404,7 @@ export const GPT2Example: React.FC = props => (
     showHeader={false}
     showStats={false}
     templateInfoPlacement="page"
-    template={GPT2App}
+    loadTemplate={loadGPT2App}
     config={exampleConfig}
     {...props}
   />
@@ -908,38 +1415,60 @@ export const TextSpaceCrawlExample: React.FC = props => (
     id="text-space-crawl"
     title="Text Space Crawl"
     directory="experimental"
-    template={TextSpaceCrawlApp}
+    loadTemplate={loadTextSpaceCrawlApp}
     config={exampleConfig}
     {...props}
   />
 );
 
-export const PersistenceExample: React.FC = props => (
+export const PersistenceExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="persistence"
     directory="showcase"
-    template={PersistenceApp}
+    loadTemplate={loadPersistenceApp}
     config={exampleConfig}
     {...props}
   />
 );
 
-export const PostprocessingExample: React.FC<WebsiteExampleProps> = props => (
-  <LumaExample
-    id="postprocessing"
-    directory="showcase"
-    template={PostprocessingApp}
-    config={exampleConfig}
-    {...props}
-  />
-);
+export const PostprocessingExample: React.FC<WebsiteExampleProps & {effect?: string}> = ({
+  effect,
+  ...props
+}) => {
+  const loadTemplate = useMemo(
+    () => async () => {
+      const {default: PostprocessingApp} = await loadPostprocessingApp();
+      if (!effect) {
+        return {default: PostprocessingApp};
+      }
+
+      return {
+        default: class FocusedPostprocessingApp extends PostprocessingApp {
+          static override initialEffectName = effect;
+        }
+      };
+    },
+    [effect]
+  );
+
+  return (
+    <LumaExample
+      id="postprocessing"
+      title="Effects: Image Processing"
+      directory="showcase"
+      loadTemplate={loadTemplate}
+      config={exampleConfig}
+      {...props}
+    />
+  );
+};
 
 export const AntialiasingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="antialiasing"
     title="Antialiasing Techniques"
     directory="experimental"
-    template={AntialiasingApp}
+    loadTemplate={loadAntialiasingApp}
     config={exampleConfig}
     {...props}
   />
@@ -950,56 +1479,63 @@ export const GlobeExample: React.FC = props => (
     id="globe"
     title="Globe"
     directory="showcase"
-    template={GlobeApp}
+    loadTemplate={loadGlobeApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
 
-export const PacketSprayingExample: React.FC = props => (
+export const PacketSprayingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="packet-spraying"
     title="Effects: Glass"
     subtitle="Network Packet Spraying"
     directory="showcase"
-    template={PacketSprayingApp}
+    loadTemplate={loadPacketSprayingApp}
     config={exampleConfig}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
 
-export const DOFExample: React.FC = props => (
+export const DOFExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="dof"
     title="Depth of Field"
     directory="showcase"
-    template={DOFApp}
+    loadTemplate={loadDOFApp}
     config={exampleConfig}
     {...props}
   />
 );
 
-export const AdvancedEffectsExample: React.FC = props => (
+export const AdvancedEffectsExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="advanced-effects"
     title="Advanced Effects: Visualization City"
     directory="experimental"
-    template={AdvancedEffectsApp}
+    loadTemplate={loadAdvancedEffectsApp}
     config={exampleConfig}
-    devices={['webgpu']}
+    devices={['webgpu-max']}
+    requiredDeviceLimits={{maxColorAttachmentBytesPerSample: 44}}
     {...props}
   />
 );
 
-export const DeferredRenderingExample: React.FC = props => (
+export const DeferredRenderingExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="deferred-rendering"
     title="Deferred Rendering: Illumination Lab"
     directory="experimental"
-    template={DeferredRenderingApp}
+    loadTemplate={loadDeferredRenderingApp}
     config={exampleConfig}
-    devices={['webgpu']}
+    devices={['webgpu-max', 'webgpu-core']}
+    requiredDeviceLimits={{
+      maxColorAttachments: 5,
+      maxColorAttachmentBytesPerSample: 32
+    }}
+    canvasContextProfile="high-dynamic-range"
     {...props}
   />
 );
@@ -1010,7 +1546,7 @@ export const FluidFoundryExample: React.FC<WebsiteExampleProps> = props => (
     title="Fluid Foundry: Liquid Metal Press"
     subtitle="GPU-resident MLS-MPM fluid"
     directory="experimental"
-    template={FluidFoundryApp}
+    loadTemplate={loadFluidFoundryApp}
     config={exampleConfig}
     devices={['webgpu']}
     canvasContextProfile="high-dynamic-range"
@@ -1023,7 +1559,7 @@ export const SpectralCausticsExample: React.FC<WebsiteExampleProps> = props => (
     id="spectral-caustics"
     title="Spectral Caustics: Prism Cathedral"
     directory="experimental"
-    template={SpectralCausticsApp}
+    loadTemplate={loadSpectralCausticsApp}
     config={exampleConfig}
     devices={['webgpu']}
     canvasContextProfile="high-dynamic-range"
@@ -1031,15 +1567,54 @@ export const SpectralCausticsExample: React.FC<WebsiteExampleProps> = props => (
   />
 );
 
-export const ShadowMapExample: React.FC = props => (
+export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="volumetric-fire-forge"
+    title="Volumetric Fire Forge"
+    subtitle="Reactive HDR fire on the GPU"
+    directory="experimental"
+    loadTemplate={loadVolumetricFireForgeApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    canvasContextProfile="high-dynamic-range"
+    {...props}
+  />
+);
+
+export const LuCIMVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lucim-volume-lab"
+    title="LuCIM Volume Lab"
+    subtitle="GPU-resident tri-planar volume segmentation"
+    directory="experimental"
+    loadTemplate={loadLuCIMVolumeLabApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const VirtualGeometryCanyonExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="virtual-geometry-canyon"
+    title="Virtual Geometry Canyon"
+    subtitle="GPU-driven hierarchical terrain LOD"
+    directory="experimental"
+    loadTemplate={loadVirtualGeometryCanyonApp}
+    config={exampleConfig}
+    devices={['webgpu']}
+    {...props}
+  />
+);
+
+export const ShadowMapExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="shadow-map"
     title="Effects: Shadow Map Quality"
     directory="experimental"
-    template={ShadowMapApp}
+    loadTemplate={loadShadowMapApp}
     config={exampleConfig}
     devices={['webgpu']}
-    showHeader={false}
     {...props}
   />
 );
@@ -1049,7 +1624,7 @@ export const OITExample: React.FC<WebsiteExampleProps> = props => (
     id="a-buffer"
     title="Order-independent Transparency"
     directory="experimental"
-    template={ABufferApp}
+    loadTemplate={loadABufferApp}
     config={exampleConfig}
     devices={['webgpu', 'webgl2']}
     {...props}
@@ -1061,7 +1636,7 @@ export const BloomExample: React.FC<WebsiteExampleProps> = props => (
     id="bloom"
     title="Bloom"
     directory="experimental"
-    template={BloomApp}
+    loadTemplate={loadBloomApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
     {...props}
@@ -1073,7 +1648,7 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraBlocked, setIsCameraBlocked] = useState(false);
   const handleUseCamera = async () => {
-    const app = VideoTextureApp.current;
+    const app = (await loadVideoTextureApp()).default.current;
     if (!app) {
       setCameraStatus('error');
       setCameraError('Example is still starting');
@@ -1098,7 +1673,7 @@ export const VideoTextureExample: React.FC<WebsiteExampleProps> = props => {
       id="video-texture"
       title="Video Texture"
       directory="api"
-      template={VideoTextureApp}
+      loadTemplate={loadVideoTextureApp}
       config={exampleConfig}
       headerControls={
         <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
@@ -1142,11 +1717,34 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
   type XRStatus = 'idle' | 'pending' | 'live' | 'error';
   type XRMode = 'immersive-ar' | 'immersive-vr';
 
+  const {module: webXRModule} = useDeferredExampleModule(loadWebXRKaleidoscopeApp);
+  const webXRApplication = webXRModule?.default;
+  const selectedDevice = useStore(store => store.device);
+  const activeApplication = useSyncExternalStore(
+    webXRApplication?.subscribeToCurrent || subscribeToInactiveApplication,
+    () => webXRApplication?.current || null,
+    () => null
+  );
   const [xrStatus, setXRStatus] = useState<XRStatus>('idle');
   const [xrMode, setXRMode] = useState<XRMode | null>(null);
   const [xrError, setXRError] = useState<string | null>(null);
+  const effectiveDevice = activeApplication?.device;
+  const usesWebGPU =
+    selectedDevice?.type === 'webgpu' || (!selectedDevice && effectiveDevice?.type === 'webgpu');
+  const hasWebGPUBinding = typeof window !== 'undefined' && 'XRGPUBinding' in window;
+  const hasNativeWebGPUXR =
+    usesWebGPU &&
+    selectedDevice?.type === effectiveDevice?.type &&
+    effectiveDevice?.props.xrCompatible === true &&
+    hasWebGPUBinding;
+  const backendDescription = usesWebGPU
+    ? hasNativeWebGPUXR
+      ? 'WebGPU · native stereo projection layers when supported'
+      : 'WebGPU desktop preview · choose WebGL2 for immersive fallback'
+    : 'WebGL2 · immersive stereo and optional AR camera access';
+
   const handleXRSession = async (sessionMode: XRMode) => {
-    const app = WebXRKaleidoscopeApp.current;
+    const app = webXRApplication?.current;
     if (!app) {
       setXRStatus('error');
       setXRError('Example is still starting');
@@ -1189,45 +1787,90 @@ export const WebXRKaleidoscopeExample: React.FC = props => {
     return `Enter ${label}`;
   };
   const getXRButtonStyle = (sessionMode: XRMode): React.CSSProperties => ({
-    border: '1px solid #0f766e',
+    border: '1px solid rgba(103, 232, 249, 0.4)',
     borderRadius: 999,
-    background: xrStatus === 'live' && xrMode === sessionMode ? '#ccfbf1' : '#fff',
-    color: '#0f172a',
+    background:
+      xrStatus === 'live' && xrMode === sessionMode
+        ? 'rgba(34, 211, 238, 0.24)'
+        : 'rgba(15, 23, 42, 0.84)',
+    color: '#ecfeff',
     cursor: xrStatus === 'pending' ? 'default' : 'pointer',
-    font: '600 14px system-ui, sans-serif',
-    padding: '8px 12px'
+    font: '600 13px system-ui, sans-serif',
+    letterSpacing: '0.01em',
+    padding: '9px 15px'
   });
 
   return (
     <LumaExample
       id="webxr-kaleidoscope"
-      title="WebXR Kaleidoscope"
+      title="WebXR: Immersive Prism Portal"
+      subtitle="Native GPU stereo with a portable WebGL2 fallback"
       directory="experimental"
-      devices={['webgl2']}
-      template={WebXRKaleidoscopeApp}
+      devices={['webgpu', 'webgl2']}
+      xrCompatible
+      loadTemplate={loadWebXRKaleidoscopeApp}
       config={exampleConfig}
       headerControls={
-        <div style={{display: 'flex', alignItems: 'center', gap: 10, marginTop: 12}}>
-          <button
-            type="button"
-            onClick={() => void handleXRSession('immersive-vr')}
-            disabled={xrStatus === 'pending'}
-            style={getXRButtonStyle('immersive-vr')}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(8, 15, 32, 0.96), rgba(15, 23, 42, 0.9))',
+            border: '1px solid rgba(103, 232, 249, 0.18)',
+            borderRadius: 16,
+            color: '#cbd5e1',
+            display: 'grid',
+            gap: 11,
+            marginTop: 14,
+            maxWidth: 560,
+            padding: '13px 15px'
+          }}
+        >
+          <div
+            style={{
+              color: '#a5f3fc',
+              font: '600 11px system-ui, sans-serif',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase'
+            }}
           >
-            {getXRButtonText('immersive-vr')}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleXRSession('immersive-ar')}
-            disabled={xrStatus === 'pending'}
-            style={getXRButtonStyle('immersive-ar')}
+            {backendDescription}
+          </div>
+          <div
+            style={{
+              alignItems: 'center',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 9
+            }}
           >
-            {getXRButtonText('immersive-ar')}
-          </button>
-          {xrStatus === 'pending' ? (
-            <span>Requesting {xrMode === 'immersive-ar' ? 'AR' : 'VR'} session</span>
+            <button
+              type="button"
+              onClick={() => void handleXRSession('immersive-vr')}
+              disabled={xrStatus === 'pending'}
+              style={getXRButtonStyle('immersive-vr')}
+            >
+              {getXRButtonText('immersive-vr')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleXRSession('immersive-ar')}
+              disabled={xrStatus === 'pending'}
+              style={getXRButtonStyle('immersive-ar')}
+            >
+              {getXRButtonText('immersive-ar')}
+            </button>
+            <span aria-live="polite" style={{fontSize: 12, lineHeight: 1.5}}>
+              {xrStatus === 'pending'
+                ? `Requesting ${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session`
+                : xrStatus === 'live'
+                  ? `${xrMode === 'immersive-ar' ? 'AR' : 'VR'} session active`
+                  : 'Drag to explore · headset optional'}
+            </span>
+          </div>
+          {xrError ? (
+            <span role="alert" style={{color: '#fda4af', fontSize: 12, lineHeight: 1.5}}>
+              {xrError}
+            </span>
           ) : null}
-          {xrError ? <span>{xrError}</span> : null}
         </div>
       }
       {...props}
@@ -1245,12 +1888,12 @@ function getCameraErrorMessage(error: unknown): string {
     : getErrorMessage(error);
 }
 
-export const HTMLUIPrismExample: React.FC = props => (
+export const HTMLUIPrismExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="html-ui-prism"
     title="HTML-in-Canvas Prism"
     directory="experimental"
-    template={HTMLUIPrismApp}
+    loadTemplate={loadHTMLUIPrismApp}
     config={exampleConfig}
     {...props}
   />
@@ -1261,8 +1904,45 @@ export const GPUTraceViewerExample: React.FC = props => (
     id="gpu-trace-viewer"
     title="GPU Hierarchical Trace Viewer"
     directory="experimental"
+    devices={['webgpu-max']}
+    loadTemplate={loadGPUTraceViewerApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUGraphExplorerExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="gpu-graph-explorer"
+    title="GPU Graph Interactive Graph Explorer"
+    subtitle="GPU-native topology, analytics, selection, and progressive force layout"
+    directory="experimental"
     devices={['webgpu']}
-    template={GPUTraceViewerApp}
+    loadTemplate={loadGPUGraphExplorerApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUTraceSceneExample: React.FC = props => (
+  <LumaExample
+    id="gpu-trace-scene"
+    title="GPU Scene Trace Explorer"
+    directory="experimental"
+    devices={['webgpu-max']}
+    loadTemplate={loadGPUTraceSceneApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUSceneGraphExample: React.FC = props => (
+  <LumaExample
+    id="gpu-scene-graph"
+    title="GPU Scene Graph Explorer"
+    directory="experimental"
+    devices={['webgpu-max']}
+    loadTemplate={loadGPUSceneGraphApp}
     config={exampleConfig}
     {...props}
   />
@@ -1274,7 +1954,7 @@ export const GPUFrustumCullingExample: React.FC = props => (
     title="GPU Frustum Culling"
     directory="experimental"
     devices={['webgpu']}
-    template={GPUFrustumCullingApp}
+    loadTemplate={loadGPUFrustumCullingApp}
     config={exampleConfig}
     {...props}
   />
@@ -1285,7 +1965,7 @@ export const ArrowMeshGeometryExample: React.FC = props => (
     id="arrow-mesh-geometry"
     title="Matrices"
     directory="arrow"
-    template={ArrowMeshGeometryApp}
+    loadTemplate={loadArrowMeshGeometryApp}
     config={exampleConfig}
     {...props}
   />
@@ -1296,7 +1976,7 @@ export const ArrowParticlesExample: React.FC = props => (
     id="arrow-particles"
     title="Particles"
     directory="arrow"
-    template={ArrowParticlesApp}
+    loadTemplate={loadArrowParticlesApp}
     config={exampleConfig}
     {...props}
   />
@@ -1308,7 +1988,7 @@ export const AnimationExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="animation"
     directory="api"
-    template={AnimationApp}
+    loadTemplate={loadAnimationApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -1320,7 +2000,7 @@ export const BlendingExample: React.FC<WebsiteExampleProps> = props => (
     id="blending"
     title="Blending"
     directory="api"
-    template={BlendingApp}
+    loadTemplate={loadBlendingApp}
     config={exampleConfig}
     devices={['webgpu', 'webgl2']}
     {...props}
@@ -1332,13 +2012,15 @@ export const CubemapExample: React.FC<WebsiteExampleProps> = props => (
     id="cubemap"
     title="Texture Cube"
     directory="api"
-    template={CubemapApp}
+    loadTemplate={loadCubemapApp}
     config={exampleConfig}
     {...props}
   />
 );
 
 export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
+  const {module: multiCanvasModule, errorMessage} = useDeferredExampleModule(loadMultiCanvasApp);
+  const MultiCanvasApp = multiCanvasModule?.default;
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
@@ -1349,15 +2031,15 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
     style: props.style
   };
 
-  if (presentationDeviceError) {
+  if (presentationDeviceError || errorMessage) {
     return (
       <ExamplePage {...exampleDisplayProps}>
-        <div>{presentationDeviceError}</div>
+        <div>{presentationDeviceError || errorMessage}</div>
       </ExamplePage>
     );
   }
 
-  return deviceType && presentationDevice ? (
+  return deviceType && presentationDevice && MultiCanvasApp ? (
     <ReactExample
       component={MultiCanvasApp}
       componentProps={{deviceType: getExampleDeviceType(presentationDevice), presentationDevice}}
@@ -1371,19 +2053,100 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
   );
 };
 
-export const FP64Example: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
+export const FP64Example: React.FC<WebsiteExampleProps> = ({
+  autoStart = false,
+  embeddedHeight,
+  ...props
+}) => {
+  const [isBenchmarkRequested, setIsBenchmarkRequested] = useState(!props.embedded || autoStart);
+  const {module, errorMessage} = useDeferredExampleModule(loadFP64Example, isBenchmarkRequested);
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
+  const previewImageUrl = useBaseUrl('/images/examples/experimental/fp64.jpg');
+
+  if (!isBenchmarkRequested) {
+    return (
+      <ExamplePage
+        embedded
+        embeddedHeight={300}
+        style={{
+          border: '1px solid rgba(148, 163, 184, 0.24)',
+          borderRadius: 12,
+          background: `linear-gradient(90deg, rgba(4, 10, 20, 0.97), rgba(4, 10, 20, 0.68)), url("${previewImageUrl}") center / cover`,
+          margin: '1.5rem 0'
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            alignContent: 'center',
+            justifyItems: 'start',
+            gap: 12,
+            padding: 28,
+            color: '#f8fafc'
+          }}
+        >
+          <span
+            style={{
+              color: '#a5b4fc',
+              fontSize: 11,
+              fontWeight: 750,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase'
+            }}
+          >
+            Optional interactive GPU benchmark
+          </span>
+          <strong style={{fontSize: 22, lineHeight: 1.2}}>
+            Explore floating-point precision.
+          </strong>
+          <span style={{maxWidth: 460, color: '#cbd5e1', fontSize: 14, lineHeight: 1.6}}>
+            Compare Mandelbrot rendering and compute precision when you are ready to use your GPU.
+          </span>
+          <button
+            onClick={() => setIsBenchmarkRequested(true)}
+            style={{
+              border: 0,
+              borderRadius: 999,
+              background: '#e2e8f0',
+              color: '#0f172a',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 700,
+              padding: '10px 16px'
+            }}
+            type="button"
+          >
+            Launch precision benchmark →
+          </button>
+        </div>
+      </ExamplePage>
+    );
+  }
 
   if (presentationDeviceError) {
     return <div>{presentationDeviceError}</div>;
   }
 
+  if (errorMessage || !module) {
+    return (
+      <DeferredGPUExampleStatus
+        {...props}
+        title="64-bit GPU Precision"
+        description="Loading the interactive Mandelbrot and floating-point compute benchmark."
+        errorMessage={errorMessage}
+        embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      />
+    );
+  }
+
   return deviceType && presentationDevice ? (
     <ReactExample
       {...props}
-      component={FP64App}
+      component={module.default}
       componentProps={{presentationDevice}}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
       showStats={false}
@@ -1404,7 +2167,7 @@ export const Texture3DExample: React.FC<WebsiteExampleProps> = props => (
     id="texture-3d"
     directory="api-3d"
     sourceDirectory="api"
-    template={Texture3DApp}
+    loadTemplate={loadTexture3DApp}
     config={exampleConfig}
     {...props}
   />
@@ -1415,7 +2178,7 @@ export const TextureSamplingExample: React.FC<WebsiteExampleProps> = props => (
     id="texture-sampling"
     title="Texture Sampling"
     directory="api"
-    template={TextureSamplingApp}
+    loadTemplate={loadTextureSamplingApp}
     config={exampleConfig}
     devices={['webgpu', 'webgl2']}
     {...props}
@@ -1426,6 +2189,8 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
   embeddedHeight,
   ...props
 }) => {
+  const {module: textureTesterModule, errorMessage} = useDeferredExampleModule(loadTextureTesterApp);
+  const TextureTesterApp = textureTesterModule?.default;
   const deviceType = useStore(store => store.deviceType);
   const presentationDevice = useStore(store => store.presentationDevice);
   const presentationDeviceError = useStore(store => store.presentationDeviceError);
@@ -1458,9 +2223,9 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
           />
         </div>
       ) : null}
-      {presentationDeviceError ? (
-        <div>{presentationDeviceError}</div>
-      ) : deviceType && presentationDevice ? (
+      {presentationDeviceError || errorMessage ? (
+        <div>{presentationDeviceError || errorMessage}</div>
+      ) : deviceType && presentationDevice && TextureTesterApp ? (
         <TextureTesterApp
           compact={props.embedded}
           deviceType={getExampleDeviceType(presentationDevice)}
@@ -1478,7 +2243,7 @@ export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
     id="render-bundles"
     title="Render Bundles"
     directory="api"
-    template={RenderBundlesApp}
+    loadTemplate={loadRenderBundlesApp}
     config={exampleConfig}
     devices={['webgpu']}
     showStats
@@ -1496,18 +2261,29 @@ export const ExternalContextExample: React.FC = () => {
     const container = containerRef.current;
     if (!container) return undefined;
 
+    let isCancelled = false;
     let exampleHandle: ExternalWebGLContextHandle | null = null;
 
-    initializeExternalWebGLContext({container})
+    loadExternalContextExample()
+      .then(({default: initializeExternalWebGLContext}) =>
+        initializeExternalWebGLContext({container})
+      )
       .then(instance => {
+        if (isCancelled) {
+          instance.destroy();
+          return;
+        }
         exampleHandle = instance;
       })
       .catch(caughtError => {
-        logError('External WebGL context example failed', caughtError);
-        setError(getErrorMessage(caughtError));
+        if (!isCancelled) {
+          logError('External WebGL context example failed', caughtError);
+          setError(getErrorMessage(caughtError));
+        }
       });
 
     return () => {
+      isCancelled = true;
       exampleHandle?.destroy();
     };
   }, []);
@@ -1526,6 +2302,8 @@ export const ExternalContextExample: React.FC = () => {
 };
 
 export const ReactStrictModeExample: React.FC = () => {
+  const {module: reactExampleModule, errorMessage} = useDeferredExampleModule(loadHelloReactApp);
+  const HelloReactApp = reactExampleModule?.default;
   const [showCube, setShowCube] = useState(true);
   const [mountCount, setMountCount] = useState(0);
 
@@ -1574,14 +2352,20 @@ export const ReactStrictModeExample: React.FC = () => {
         </div>
       </ExampleHeader>
       <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
-        <React.StrictMode>
-          <HelloReactApp
-            showControls={false}
-            showCube={showCube}
-            mountCount={mountCount}
-            onToggleCube={toggleCube}
-          />
-        </React.StrictMode>
+        {errorMessage ? (
+          <div role="alert">{errorMessage}</div>
+        ) : HelloReactApp ? (
+          <React.StrictMode>
+            <HelloReactApp
+              showControls={false}
+              showCube={showCube}
+              mountCount={mountCount}
+              onToggleCube={toggleCube}
+            />
+          </React.StrictMode>
+        ) : (
+          <div>Loading React example...</div>
+        )}
       </div>
     </ExamplePage>
   );
@@ -1593,7 +2377,7 @@ export const HelloTriangleExample: React.FC = props => (
   <LumaExample
     id="hello-triangle"
     directory="tutorials"
-    template={HelloTriangleApp}
+    loadTemplate={loadHelloTriangleApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1609,7 +2393,7 @@ export const HelloTriangleGeometryExample: React.FC = props => (
   <LumaExample
     id="hello-triangle-geometry"
     directory="tutorials"
-    template={HelloTriangleGeometryApp}
+    loadTemplate={loadHelloTriangleGeometryApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1621,7 +2405,7 @@ export const HelloCubeExample: React.FC = props => (
   <LumaExample
     id="hello-cube"
     directory="tutorials"
-    template={HelloCubeApp}
+    loadTemplate={loadHelloCubeApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1633,7 +2417,7 @@ export const InstancedCubesExample: React.FC = props => (
   <LumaExample
     id="instanced-cubes"
     directory="tutorials"
-    template={InstancedCubesApp}
+    loadTemplate={loadInstancedCubesApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1645,7 +2429,7 @@ export const TwoCubesExample: React.FC = props => (
   <LumaExample
     id="two-cubes"
     directory="tutorials"
-    template={TwoCubesApp}
+    loadTemplate={loadTwoCubesApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1657,7 +2441,7 @@ export const LightingExample: React.FC = props => (
   <LumaExample
     id="lighting"
     directory="tutorials"
-    template={LightingApp}
+    loadTemplate={loadLightingApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1669,7 +2453,7 @@ export const HelloGLTFExample: React.FC = props => (
   <LumaExample
     id="hello-gltf"
     directory="tutorials"
-    template={HelloGLTFApp}
+    loadTemplate={loadHelloGLTFApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1681,7 +2465,7 @@ export const HelloInstancingExample: React.FC = props => (
   <LumaExample
     id="hello-instancing"
     directory="tutorials"
-    template={HelloInstancingApp}
+    loadTemplate={loadHelloInstancingApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1693,7 +2477,7 @@ export const ShaderHooksExample: React.FC = props => (
   <LumaExample
     id="shader-hooks"
     directory="tutorials"
-    template={ShaderHooksApp}
+    loadTemplate={loadShaderHooksApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1705,7 +2489,7 @@ export const ShaderPluginsExample: React.FC = props => (
   <LumaExample
     id="shader-plugins"
     directory="tutorials"
-    template={ShaderPluginsApp}
+    loadTemplate={loadShaderPluginsApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1717,7 +2501,7 @@ export const ShaderModulesExample: React.FC = props => (
   <LumaExample
     id="shader-modules"
     directory="tutorials"
-    template={ShaderModulesApp}
+    loadTemplate={loadShaderModulesApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1729,7 +2513,7 @@ export const TransformFeedbackExample: React.FC = props => (
   <LumaExample
     id="transform-feedback"
     directory="tutorials"
-    template={TransformFeedbackApp}
+    loadTemplate={loadTransformFeedbackApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz
@@ -1742,7 +2526,7 @@ export const TransformExample: React.FC = props => (
   <LumaExample
     id="transform"
     directory="tutorials"
-    template={TransformApp}
+    loadTemplate={loadTransformApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz

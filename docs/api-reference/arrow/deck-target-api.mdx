@@ -1,13 +1,14 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 
 # deck.gl v10 API Directions
 
 <ArrowDocsTabs active="deck-api" />
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
+</DocumentationBadges>
 
 :::info
 This document outlines the shape of a hypothetical deck.gl v10 API.
@@ -181,7 +182,7 @@ new AnyLayer({
   positions: 'positions',
   colors: 'color',
   onClick: info => {
-    // Directional shape only. Exact PickingInfo field names are TBD.
+    // Illustrative shape: each layer documents the exact PickingInfo fields it exposes.
     const sourceRowIndex = info.arrow?.sourceRowIndex;
     const sourceRecordBatch = info.arrow?.recordBatch;
     const sourceTable = info.arrow?.table;

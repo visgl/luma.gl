@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer, _getDefaultBindGroupFactory} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -44,6 +44,18 @@ const BUILTIN_ONLY_RENDER_SOURCE = /* WGSL */ `
 }
 `;
 
+const UNSUPPORTED_RENDER_SOURCE = /* WGSL */ `
+@group(0) @binding(0) var textures: binding_array<texture_2d<f32>>;
+
+@vertex fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`;
+
 test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shaders', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
@@ -68,6 +80,26 @@ test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shad
   t.end();
 });
 
+test('RenderPipeline requires a layout when lightweight WGSL scanning is unsafe', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: UNSUPPORTED_RENDER_SOURCE});
+  t.throws(
+    () => webgpuDevice.createRenderPipeline({vs: shader, fs: shader}),
+    /assertion failed/,
+    'raw render pipeline rejects WGSL that cannot be scanned safely'
+  );
+
+  shader.destroy();
+  t.end();
+});
+
 test('RenderPipeline bind-group cache only invalidates when binding identities change', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
@@ -80,12 +112,14 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   const shader = webgpuDevice.createShader({source: RENDER_SOURCE});
   const renderPipeline = webgpuDevice.createRenderPipeline({
     vs: shader,
-    fs: shader,
-    shaderLayout: {
-      attributes: [],
-      bindings: [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}]
-    }
+    fs: shader
   });
+
+  t.deepEqual(
+    renderPipeline.shaderLayout.bindings,
+    [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}],
+    'raw render pipeline uses the lightweight WGSL scanner'
+  );
 
   const firstBuffer = webgpuDevice.createBuffer({
     id: 'first-uniform-buffer',

@@ -1,38 +1,113 @@
+---
+title: Reason about GPU memory
+description: Understand allocation, transfer, synchronization, readback, and residency before choosing buffer and texture workflows.
+---
+
 import {GpuMemoryDocsTabs} from '@site/src/components/docs/gpu-memory-docs-tabs';
 
-# GPU Memory
+# Reason about GPU memory
 
 <GpuMemoryDocsTabs active="gpu-memory" />
 
-Memory on GPU is managed through [Buffer](/docs/api-guide/gpu/gpu-buffers) and [Texture](/docs/api-guide/gpu/gpu-textures) resources.
+## Outcome
 
-This article provides some background information on how GPU memory works that can be helpful in understanding limitations and performance characteristics.
+Performance depends less on whether a value is in a buffer or texture than on **where it lives,
+how often it moves, and which processor must wait for it**. Keep durable data and intermediate
+results GPU-resident, update only what changed, and read back only results JavaScript must use.
 
-For how columns and rows can be arranged inside buffers, see [GPU memory layouts](./gpu-memory-layouts).
+Use [buffers](/docs/api-guide/gpu/gpu-buffers) for linear data and
+[textures](/docs/api-guide/gpu/gpu-textures) for sampled, renderable, or image-shaped data.
+[Memory layouts](/docs/api-guide/gpu/gpu-memory-layouts) explains how values are arranged inside
+those allocations.
 
-## Memory Upload Considerations
+## Mental model
 
-Many GPUs are separated from the main CPU and cannot directly access main memory. 
+The CPU records work faster and independently from the GPU that executes it. Data transfer and
+completion therefore have two separate questions:
 
-There are configurations, such as built-in GPUs like Intel Iris, that share memory with the CPU using a "Unified Memory Architecture". 
+1. **When is the data copied or mapped?**
+2. **Which earlier GPU work must complete before the copy, map, or read is valid?**
 
-While the upload and download of data between GPU and CPU is still very fast, it does add complications:
-- requires copying of potentially big memory blocks which takes some time
-- can increase memory pressure by permanently or temporarily requiring the application to allocate two copies of each memory block, one on the GPU and one on the CPU.
-- makes the amount of memory limited to whichever is smaller, GPU memory or CPU memory.
+```text
+CPU data ──upload──→ GPU resource ──GPU operations──→ GPU result
+    ↑                                                    │
+    └──────────── deliberate asynchronous readback ──────┘
+```
 
-In addition, this means that upload and download API is asynchronous which can add additional complexity to applications.
+Discrete GPUs often have physically separate memory; integrated GPUs may share physical memory
+with the CPU. The API still preserves GPU ownership and ordering rules. Unified memory can reduce
+transfer cost, but it does not make synchronization or resource usage disappear.
 
-## Memory Operation Synchronization
+## Allocate for the durable contract
 
-A GPU memory read or write may not always be completed immediately.
+Choose a resource from its long-lived requirements:
 
-GPUs executes its own commands queues independently from the CPU (the GPU and GPU driver may even optimize execution by rearranging order of operations). Therefore, to avoid unpredictable results, GPUs typically track the memory dependencies of each GPU operation, making sure that all preceding commands affecting a Buffer or Texture have completed in order before issuing e.g. a write or read. 
+- byte length or texture dimensions;
+- format and element layout;
+- every binding, copy, render, or storage usage it will need;
+- update frequency and expected lifetime;
+- device size and binding limits.
 
-This is sometimes referred to as a read forcing a synchronization of the GPU.
+Reuse the allocation for contents-only changes. Recreate it when the structural contract changes,
+such as a larger capacity, different format, or missing usage.
 
-## Synchronous Reads
+## Upload without stalling the frame
 
-WebGL is plagued by a synchronous `Buffer` readout limitation. Not only does the CPU block while waiting for the computers DMA system to read out the memory from the GPU, it also forces a synchronization, meaning that now the GPU must complete any pending commands before the GPU gets control back and can continue execution.
- 
-Note that a WebGL extension does exist that enables asynchronous buffer reads, but it is not implemented on MacOS which is the primary development environment for luma.gl, so at the moment of writing it is not supported by luma.gl.
+Small or infrequent updates can use resource write helpers. When an upload must be ordered with
+other GPU operations, encode it with the same command sequence. Large streaming workloads should
+use bounded batches so JavaScript preparation, temporary allocations, and queue work do not arrive
+as one large spike.
+
+Avoid keeping unnecessary full-size CPU and GPU copies indefinitely. Preserve CPU data when the
+application needs recovery, editing, or another consumer; otherwise release staging data after a
+safe upload boundary.
+
+## Keep intermediate results GPU-resident
+
+If one GPU operation produces data for another, bind or copy that result directly on the GPU.
+Reading the value into JavaScript merely to decide a following dispatch or draw introduces an
+avoidable round trip. WebGPU indirect dispatch and drawing are particularly useful for consuming
+GPU-produced counts without CPU synchronization.
+
+## Read back deliberately
+
+Readback has both latency and ordering cost. The CPU cannot receive a valid result until all GPU
+work that writes the requested range has completed.
+
+- Prefer asynchronous reads.
+- Read compact summaries rather than source-sized buffers.
+- Allow only a bounded number of readbacks in flight.
+- Associate each result with a generation so stale asynchronous output cannot overwrite newer
+  state.
+- Do not block a render path merely to update optional telemetry.
+
+WebGL 2 readback is more constrained and may perform a synchronous GPU read internally even when
+luma.gl exposes an asynchronous-compatible surface. Design performance-sensitive WebGL paths with
+that limitation in mind.
+
+## Decisions and tradeoffs
+
+| Question | Prefer |
+| --- | --- |
+| Does the CPU need the result? | Keep it GPU-resident unless JavaScript must consume it. |
+| Does only the contents change? | Update the existing allocation. |
+| Must transfer order match compute or rendering? | Encode operations into one explicit command sequence. |
+| Is the source much larger than the visible or analytical result? | Filter or aggregate on the GPU, then read back the bounded result. |
+| Can a large upload monopolize startup? | Stream chunks and publish progress across bounded steps. |
+| Is the resource temporary between graph stages? | Let GPU Core plan compatible transient reuse. |
+
+## Common mistakes
+
+- Assuming integrated GPU memory can be read by JavaScript without synchronization.
+- Reallocating whole resources for small updates.
+- Reading back source-sized data every frame.
+- Allowing stale asynchronous readbacks to publish after the view or dataset changed.
+- Ignoring `maxBufferSize`, binding-size, row-alignment, or texture-dimension limits.
+
+## Next steps
+
+- [GPU buffers](/docs/api-guide/gpu/gpu-buffers)
+- [GPU textures](/docs/api-guide/gpu/gpu-textures)
+- [GPU memory layouts](/docs/api-guide/gpu/gpu-memory-layouts)
+- [Storage buffers](/docs/api-guide/gpu/gpu-storage-buffers)
+- [Issuing GPU commands](/docs/api-guide/gpu/gpu-commands)

@@ -1,4 +1,5 @@
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # Model
 
@@ -8,6 +9,15 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 It assembles shaders, manages geometry and bindings, reuses immutable cached
 pipelines, and applies its dynamic draw state to a
 [`RenderPass`](/docs/api-reference/core/resources/render-pass).
+
+<DocumentationContract title="Model" rows={[
+  {label: 'Role', value: 'Connect shaders, inputs, geometry, pipelines, and draw state'},
+  {label: 'Construction', value: 'Device plus ModelProps'},
+  {label: 'Updates', value: 'Update inputs, bindings, attributes, counts, or pipeline-defining props'},
+  {label: 'Ownership', value: 'Owns internal pipelines; caller retains explicitly supplied resources'},
+  {label: 'Portability', value: 'Provide WGSL and GLSL for WebGPU and WebGL portability'},
+  {label: 'Performance', value: 'Reuse models and honor redraw state instead of rebuilding per frame'}
+]} />
 
 ## Usage
 

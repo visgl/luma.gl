@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, type RenderPass, type RenderPipelineParameters} from '@luma.gl/core';
 import {Matrix4, type NumericArray} from '@math.gl/core';

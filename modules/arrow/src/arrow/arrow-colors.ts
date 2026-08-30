@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, VertexFormat} from '@luma.gl/core';
 import {
@@ -9,7 +9,7 @@ import {
   GPUVectorEvaluator,
   type ColorInputFormat
 } from '@luma.gl/gpgpu';
-import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/tables';
+import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
 import {DataType, Field, FixedSizeList, Float16, Float32, Uint8, Vector} from 'apache-arrow';
 import {makeGPUVectorFromArrow} from './gpu/arrow-gpu-table-adapters';
 

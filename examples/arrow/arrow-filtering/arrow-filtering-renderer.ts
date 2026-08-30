@@ -1,12 +1,12 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
 import type {FilterShaderPluginProps, ShaderModule} from '@luma.gl/shadertools';
-import {filterShaderPlugin, ShaderAssembler} from '@luma.gl/shadertools';
-import {GPUTableModel, type GPUTable} from '@luma.gl/tables';
+import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {GPUTableModel, type GPUTable} from '@luma.gl/experimental/gpu-tables';
 import type {ArrowFilteringTable} from './arrow-filtering-data';
 
 const FILTERING_SHADER_LAYOUT = {
@@ -140,7 +140,10 @@ export class ArrowFilteringRenderer {
   readonly gpuTable: GPUTable;
 
   constructor(device: Device, arrowTable: ArrowFilteringTable) {
-    const shaderAssembler = new ShaderAssembler();
+    const shaderAssembler =
+      device.info.shadingLanguage === 'wgsl'
+        ? new WGSLShaderAssembler()
+        : new GLSLShaderAssembler();
     shaderAssembler.addShaderHook(
       device.info.shadingLanguage === 'wgsl'
         ? 'vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)'

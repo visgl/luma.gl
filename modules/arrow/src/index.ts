@@ -1,8 +1,16 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export type {NumericArrowType, ArrowColumnInfo} from './arrow/arrow-utils/arrow-types';
+export {
+  makeGPUSplatDataFromArrow,
+  makeGPUSplatDataFromArrowStream,
+  type GPUSplatArrowRecordBatchLike,
+  type GPUSplatArrowSource,
+  type GPUSplatArrowTableLike,
+  type MakeGPUSplatDataFromArrowOptions
+} from './arrow/renderers/splats/conversion/make-gpu-splat-data-from-arrow';
 export {
   makeGPUTextDataFromArrow,
   makeGPUTextDataFromArrowStream,
@@ -115,16 +123,26 @@ export {
   decodeArrowUtf8CodePoints,
   isArrowUtf8DictionaryType,
   isArrowUtf8DictionaryVector,
+  isArrowUtf8TextInputVector,
   isArrowUtf8TextVector,
+  isArrowUtf8ViewDictionaryType,
+  isArrowUtf8ViewDictionaryVector,
+  isArrowUtf8ViewType,
+  isArrowUtf8ViewVector,
   isArrowUtf8Vector,
+  normalizeArrowUtf8TextVector,
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary,
   type ArrowUtf8DictionaryIndexType,
   type ArrowUtf8Chunk,
   type ArrowUtf8TextAccessorContext,
   type ArrowUtf8TextIndexAccessor,
+  type ArrowUtf8TextInputType,
+  type ArrowUtf8TextInputVector,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
+  type ArrowUtf8View,
+  type ArrowUtf8ViewDictionary,
   type Utf8TextIndexTarget
 } from './arrow/renderers/text/conversion/arrow-text';
 export {
@@ -215,6 +233,17 @@ export {
   type PrepareArrowInputProps
 } from './arrow/gpu/arrow-input-schema';
 export {
+  makeGPUAnalyticsTableFromArrowTable,
+  type GPUAnalyticsDictionary,
+  type GPUAnalyticsTableFromArrowTableProps,
+  type GPUAnalyticsTableFromArrowTableResult,
+  type GPUAnalyticsTypeMapForArrow
+} from './arrow/gpu/arrow-gpu-analytics-adapters';
+export {
+  makeArrowTableFromGPUAnalyticsTable,
+  type ArrowTableFromGPUAnalyticsTableProps
+} from './arrow/gpu/arrow-gpu-analytics-readback';
+export {
   getRequiredArrowGPUVectorDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
@@ -222,6 +251,7 @@ export {
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
+  type ArrowGPUValidityColumn,
   type GPURecordBatchFromArrowRecordBatchProps,
   type GPUTableFromArrowTableProps,
   type GPUVectorFromArrowProps,

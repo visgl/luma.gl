@@ -12,7 +12,7 @@ interface IEvent<T> {
 type EventConstructor = {
   new <T>(): IEvent<T>;
 };
-enum LogLevel {
+declare enum LogLevel {
   noLog = 0,
   error = 1,
   warning = 2,
@@ -66,7 +66,7 @@ type CommandCapturedCallback = (command: ICommandCapture) => void;
 type CommandCapturedCallbacks = {
   [name: string]: CommandCapturedCallback[];
 };
-const enum CommandCaptureStatus {
+declare const enum CommandCaptureStatus {
   Unknown = 0,
   Unused = 10,
   Disabled = 20,
@@ -113,7 +113,7 @@ interface ICapture {
     };
   };
 }
-enum CaptureComparisonStatus {
+declare enum CaptureComparisonStatus {
   Equal = 0,
   Different = 1,
   OnlyInA = 2,
@@ -162,7 +162,7 @@ interface WebGlConstant {
   readonly description: string;
   readonly extensionName?: string;
 }
-export class WebGlConstants {
+export declare class WebGlConstants {
   static readonly DEPTH_BUFFER_BIT: WebGlConstant;
   static readonly STENCIL_BUFFER_BIT: WebGlConstant;
   static readonly COLOR_BUFFER_BIT: WebGlConstant;
@@ -1066,11 +1066,9 @@ interface IAvailableContext {
   readonly canvas: HTMLCanvasElement;
   readonly contextSpy: IContextSpy;
 }
-export abstract class Spector {
+export declare abstract class Spector {
   protected options;
-  static getFirstAvailable3dContext(canvas: HTMLCanvasElement): WebGLRenderingContexts {
-    return null as any;
-  }
+  static getFirstAvailable3dContext(canvas: HTMLCanvasElement): WebGLRenderingContexts;
   protected static tryGetContextFromHelperField: unknown;
   protected static tryGetContextFromCanvas: unknown;
   // @ts-ignore TODO
@@ -1094,7 +1092,7 @@ export abstract class Spector {
   protected retry;
   protected noFrameTimeout;
   protected marker;
-  constructor(options?: ISpectorOptions) {}
+  constructor(options?: ISpectorOptions);
   abstract displayUI(): void;
   abstract getResultUI(): IResultView;
   abstract getCaptureUI(): ICaptureMenu;

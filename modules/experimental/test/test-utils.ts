@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export function arraysEqual<T>(arr1: ArrayLike<T>, arr2: ArrayLike<T>): boolean {
   if (arr1.length !== arr2.length) {

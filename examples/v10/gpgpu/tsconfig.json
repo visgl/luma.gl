@@ -28,14 +28,12 @@
       "@luma.gl/gpgpu/*": ["../../../modules/gpgpu/src/*"],
       "@luma.gl/shadertools": ["../../../modules/shadertools/src/index.ts"],
       "@luma.gl/shadertools/*": ["../../../modules/shadertools/src/*"],
-      "@luma.gl/tables": ["../../../modules/tables/src/index.ts"],
-      "@luma.gl/tables/*": ["../../../modules/tables/src/*"],
       "@luma.gl/webgl": ["../../../modules/webgl/src/index.ts"],
       "@luma.gl/webgl/*": ["../../../modules/webgl/src/*"],
       "@luma.gl/webgpu": ["../../../modules/webgpu/src/index.ts"],
       "@luma.gl/webgpu/*": ["../../../modules/webgpu/src/*"],
-      "@math.gl/geoarrow": ["../../../modules/geoarrow/src/index.ts"],
-      "@math.gl/geoarrow/*": ["../../../modules/geoarrow/src/*"]
+      "@math.gl/geoarrow": ["../../../modules/math-geoarrow/src/index.ts"],
+      "@math.gl/geoarrow/*": ["../../../modules/math-geoarrow/src/*"]
     }
   },
   "include": ["."]

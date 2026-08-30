@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {makeStudioEnvironmentMipLevels} from '../../examples/showcase/packet-spraying/optics';
 
 test('packet-spraying builds a complete portable studio-environment reflection pyramid', testCase => {

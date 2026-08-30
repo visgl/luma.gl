@@ -1,0 +1,54 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Hexagonal Pixelate
+
+Replace fine image detail with a regular mosaic of hexagonal cells. `hexagonalPixelate` snaps
+source sampling positions to the nearest hexagonal center while preserving the broad scene
+composition and color palette.
+
+<PostprocessingExample embedded showStats={false} effect="hexagonalPixelate" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `hexagonalPixelate` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | One fullscreen sampling pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {hexagonalPixelate} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [hexagonalPixelate]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {hexagonalPixelate: {center: [0.5, 0.5], scale: 12}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `center` | `[0.5, 0.5]` | Normalized image origin used to align the hexagonal grid. |
+| `scale` | `10` | Hexagonal cell size in image pixels; minimum is `1`. |
+
+Smaller cells preserve finer scene structure, while larger cells emphasize the mosaic geometry.
+Animating `center` moves the grid alignment without moving the original image.
+
+## Composition and Cost
+
+The effect requires one fullscreen source-texture sample and no depth, history, or named targets.
+Place it before [Bloom](./bloom) when highlights should spread from the geometric mosaic, or
+after grading when the cells should preserve the finished scene palette.
+
+## Related Effects
+
+- [Color Halftone](./color-halftone) uses rotated print-screen cells instead of a hexagonal grid.
+- [Dot Screen](./dot-screen) creates a monochrome dot mosaic.
+- [Bloom](./bloom) can soften bright cell boundaries and concentrated highlights.

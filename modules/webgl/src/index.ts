@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // luma.gl Base WebGL wrapper library
 // Provides simple class/function wrappers around the low level webgl objects

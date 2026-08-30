@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   Buffer,
   CommandEncoder,
@@ -649,17 +649,30 @@ test('Model merges WGSL inferred bindings with explicit shader layout', async t 
     return;
   }
 
-  const model = new Model(webgpuDevice, {
-    id: 'wgsl-explicit-shader-layout-merge-test',
-    source: DUMMY_WGSL_WITH_BINDING,
-    shaderLayout: {attributes: [], bindings: []},
-    vertexCount: 3
-  });
+  let reflectionCount = 0;
+  const originalGetShaderLayout = webgpuDevice.getShaderLayout;
+  webgpuDevice.getShaderLayout = shaderSource => {
+    reflectionCount++;
+    return originalGetShaderLayout.call(webgpuDevice, shaderSource);
+  };
+
+  let model: Model;
+  try {
+    model = new Model(webgpuDevice, {
+      id: 'wgsl-explicit-shader-layout-merge-test',
+      source: DUMMY_WGSL_WITH_BINDING,
+      shaderLayout: {attributes: [], bindings: []},
+      vertexCount: 3
+    });
+  } finally {
+    webgpuDevice.getShaderLayout = originalGetShaderLayout;
+  }
 
   t.ok(
     model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
     'pipeline layout includes bindings inferred from WGSL'
   );
+  t.equal(reflectionCount, 0, 'model uses the interface scanned during shader assembly');
 
   model.destroy();
   t.end();

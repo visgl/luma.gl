@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Algebraic Varieties · luma.gl</title>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #02030a; color: #dce8ff; font: 14px/1.4 system-ui, sans-serif; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .controls { position: fixed; right: 18px; top: 18px; width: min(360px, calc(100vw - 36px)); max-height: calc(100vh - 36px); overflow: auto; padding: 16px; box-sizing: border-box; border: 1px solid #5875a866; border-radius: 12px; background: #07101dea; backdrop-filter: blur(12px); box-shadow: 0 15px 50px #0009; }
+      h1 { margin: 0 0 12px; font-size: 18px; letter-spacing: .02em; }
+      .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+      .tab-button { margin: 0; padding: 7px 3px; background: #111d30; }
+      .tab-button[aria-selected="true"] { border-color: #ed5cb1; background: #34213f; color: #fff; }
+      [data-variety-panel][hidden] { display: none; }
+      label { display: block; margin-top: 10px; color: #9fb6db; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+      select, input { width: 100%; margin-top: 5px; accent-color: #ee4eae; }
+      .toggle { display: flex; align-items: center; gap: 8px; }
+      .toggle input { width: auto; margin: 0; }
+      select { padding: 8px; color: #edf4ff; border: 1px solid #4c6488; border-radius: 7px; background: #0a1728; }
+      button { width: 100%; margin-top: 13px; padding: 8px; color: #dce8ff; border: 1px solid #5875a8; border-radius: 7px; background: #1a2942; cursor: pointer; }
+      button:hover { background: #263b5e; }
+      .background-copy { color: #bdd0ec; }
+      .background-copy p { margin: 0 0 10px; }
+      .equation { padding: 8px 10px; border-left: 2px solid #ed5cb1; background: #0b1728; color: #f2d8ec; font-family: ui-monospace, monospace; }
+      .surface-equation { margin-top: 12px; padding: 10px; border: 1px solid #634b78; border-radius: 8px; background: #100d1c; color: #f5d9ed; font: 12px/1.55 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+      [data-variety-description] { min-height: 58px; margin: 13px 0 0; color: #bdd0ec; }
+      .variety-info { max-width: 620px; }
+      .variety-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+      .variety-badges span { padding: 3px 7px; border-radius: 999px; background: #40578366; color: #cfe1ff; font-size: 11px; }
+      code { color: #f5d9ed; }
+      @media (max-width: 650px) { .controls { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: 58vh; } }
+    </style>
+  </head>
+  <body>
+    <aside class="controls">
+      <h1>Algebraic Varieties</h1>
+      <div class="tabs" role="tablist" aria-label="Variety information">
+        <button class="tab-button" data-variety-tab="surface" role="tab" aria-selected="true" type="button">Surface</button>
+        <button class="tab-button" data-variety-tab="background" role="tab" aria-selected="false" type="button">Background</button>
+        <button class="tab-button" data-variety-tab="rendering" role="tab" aria-selected="false" type="button">Rendering</button>
+      </div>
+      <section data-variety-panel="surface" role="tabpanel">
+        <label>Surface <select data-variety-preset></select></label>
+        <label>Coefficient deformation <input data-variety-deformation type="range" min="-0.35" max="0.35" step="0.005" value="0" /></label>
+        <label>HDR exposure <input data-variety-exposure type="range" min="0.55" max="2.2" step="0.025" value="1.15" /></label>
+        <label class="toggle"><input data-variety-singularities type="checkbox" checked /> Highlight singular regions</label>
+        <button data-variety-reset type="button">Reset current surface</button>
+        <div class="surface-equation" data-variety-equation aria-label="Defining equation"></div>
+        <p data-variety-description></p>
+      </section>
+      <section class="background-copy" data-variety-panel="background" role="tabpanel" hidden>
+        <p>An <strong>algebraic variety</strong> is the set of points where one or more polynomial equations vanish.</p>
+        <p class="equation">V = {x | f₁(x) = ··· = fₖ(x) = 0}</p>
+        <p>This gallery shows the <strong>real points</strong> of hypersurfaces <em>f(x,y,z)=0</em>. Algebraic geometers often study the richer complex and projective varieties; an affine view may therefore clip sheets that continue through infinity.</p>
+        <p>Where ∇f is nonzero it is perpendicular to the surface and supplies the shading normal. Points with both <em>f=0</em> and <em>∇f=0</em> are singular, optionally highlighted here in red.</p>
+        <p>Substituting a camera ray <em>o+td</em> into <em>f</em> produces a one-variable polynomial in <em>t</em>. The GPU samples and refines its nearest positive real root—without pretending that <em>f</em> is a distance field.</p>
+      </section>
+      <section class="background-copy" data-variety-panel="rendering" role="tabpanel" hidden>
+        <p>Each camera ray first intersects a conservative bounding sphere, producing a finite interval in which the surface can occur. WGSL then evaluates the polynomial along <em>o+td</em> at fixed samples and keeps the nearest sign change.</p>
+        <p>The bracket is refined with guarded secant steps and bisection. To recover tangent and even-multiplicity roots that never change sign, local minima of <em>|f| / max(|∇f|, ε)</em> seed clamped Newton steps using the ray derivative <em>∇f · d</em>.</p>
+        <p>Analytic gradients provide normals and reveal candidate singularities where <em>|∇f|</em> is small. Linear HDR lighting and specular highlights are compressed by an ACES-like display transform.</p>
+        <p>A reusable <code>GPUCommandGraph</code> render node encodes the fullscreen implicit-surface pass. The polynomial catalog supplies only field and gradient functions; intersection and shading remain geometry-agnostic.</p>
+        <p>This is numerical root finding, not a proof: fixed sampling can miss tightly clustered roots, and singular or grazing intersections are ill-conditioned. The polynomial value is never treated as a signed-distance field.</p>
+      </section>
+    </aside>
+    <script type="module">
+      import {makeAnimationLoop} from '@luma.gl/engine';
+      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import AlgebraicVarietiesAnimationLoopTemplate from './app.ts';
+      makeAnimationLoop(AlgebraicVarietiesAnimationLoopTemplate, {adapters: [webgpuAdapter]}).start();
+    </script>
+  </body>
+</html>

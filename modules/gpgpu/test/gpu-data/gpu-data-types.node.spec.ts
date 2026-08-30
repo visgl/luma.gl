@@ -1,0 +1,53 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector, type FixedSizeList, type GPUDataView} from '@luma.gl/gpgpu/gpu-data';
+import {expectTypeOf, test} from 'vitest';
+
+test('GPUData infers inline struct field types', () => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 64});
+  const data = new GPUData({
+    buffer,
+    length: 2,
+    format: {a: 'sint32', b: 'float32'},
+    layout: 'packed'
+  });
+
+  data satisfies GPUData<{a: 'sint32'; b: 'float32'}, 'packed'>;
+  expectTypeOf(data.getChild('b')).toEqualTypeOf<GPUDataView<'float32'> | null>();
+  expectTypeOf(data.getChild('missing')).toEqualTypeOf<null>();
+  const dynamicFieldName: string = 'b';
+  expectTypeOf(data.getChild(dynamicFieldName)).toEqualTypeOf<
+    GPUDataView<'sint32'> | GPUDataView<'float32'> | null
+  >();
+  expectTypeOf(data.format?.layout).toEqualTypeOf<'packed' | undefined>();
+
+  const scalarData = new GPUData({buffer, length: 2, format: 'float32'});
+  expectTypeOf(scalarData.format).toEqualTypeOf<'float32' | undefined>();
+
+  buffer.destroy();
+});
+
+test('GPUData and GPUVector preserve literal fixed-size-list formats', () => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 32});
+  const data = new GPUData({
+    buffer,
+    length: 2,
+    format: 'fixed-size-list<float32,4>'
+  });
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'embeddings',
+    data: [data]
+  });
+
+  expectTypeOf(data.format).toEqualTypeOf<FixedSizeList<'float32', 4> | undefined>();
+  expectTypeOf(vector.format).toEqualTypeOf<FixedSizeList<'float32', 4> | undefined>();
+
+  vector.destroy();
+  buffer.destroy();
+});

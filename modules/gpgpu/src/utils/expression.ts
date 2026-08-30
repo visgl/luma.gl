@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** JSON-friendly scalar expression tree for elementwise row transforms. */
 export type ExpressionLiteral = number | number[];

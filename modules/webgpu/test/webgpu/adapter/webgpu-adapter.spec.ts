@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   getEffectiveWebGPUFeatureLevel,
   getRequiredWebGPUFeatures,
@@ -91,6 +91,15 @@ test('WebGPUAdapter feature helpers keep requested profiles separate', t => {
     getRequiredWebGPUFeatures(coreFeatures, 'core'),
     [],
     'core does not request optional features'
+  );
+  t.deepEqual(
+    getRequiredWebGPUFeatures(coreFeatures, 'core', [
+      'subgroups',
+      'texture-compression-bc',
+      'subgroups'
+    ]),
+    ['texture-compression-bc'],
+    'core requests supported targeted features and ignores unsupported or duplicate entries'
   );
   t.deepEqual(
     getRequiredWebGPUFeatures(coreFeatures, 'max'),

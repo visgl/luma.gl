@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 // WebGL2 QuerySet (also handles disjoint timer extensions)
 import {QuerySet, QuerySetProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, Adapter, Device} from '@luma.gl/core';
 import {AnimationLoopTemplate} from './animation-loop-template';
@@ -14,6 +14,17 @@ export type MakeAnimationLoopProps = Omit<
 > & {
   /** List of adapters to use when creating the device */
   adapters?: Adapter[];
+  /** Runs after the template has encoded its frame and before the animation loop submits it. */
+  onAfterRender?: (
+    animationProps: AnimationProps,
+    animationLoopTemplate: AnimationLoopTemplate | null
+  ) => unknown;
+};
+
+/** Animation loop created from a template, with access to the active template instance. */
+export type TemplateAnimationLoop = AnimationLoop & {
+  /** Returns the template after initialization, or null before initialization and after failure. */
+  getAnimationLoopTemplate(): AnimationLoopTemplate | null;
 };
 
 /**
@@ -23,12 +34,16 @@ export type MakeAnimationLoopProps = Omit<
 export function makeAnimationLoop(
   AnimationLoopTemplateCtor: typeof AnimationLoopTemplate,
   props?: MakeAnimationLoopProps
-): AnimationLoop {
+): TemplateAnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
   const device =
     props?.device ||
-    luma.createDevice({id: 'animation-loop', adapters: props?.adapters, createCanvasContext: true});
+    luma.createDevice({
+      id: 'animation-loop',
+      adapters: props?.adapters,
+      createCanvasContext: true
+    });
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({
@@ -53,10 +68,25 @@ export function makeAnimationLoop(
       }
     },
 
-    onRender: (animationProps: AnimationProps) => renderLoop?.onRender(animationProps),
+    onRender(animationProps: AnimationProps): unknown {
+      const renderResult = renderLoop?.onRender(animationProps);
+      const afterRenderResult = props?.onAfterRender?.(animationProps, renderLoop);
+      return props?.onAfterRender
+        ? renderResult !== false || afterRenderResult !== false
+        : renderResult;
+    },
 
-    onFinalize: (animationProps: AnimationProps) => renderLoop?.onFinalize(animationProps)
+    onFinalize(animationProps: AnimationProps): void {
+      try {
+        renderLoop?.onFinalize(animationProps);
+      } finally {
+        renderLoop = null;
+      }
+    }
   });
+
+  const templateAnimationLoop = animationLoop as TemplateAnimationLoop;
+  templateAnimationLoop.getAnimationLoopTemplate = () => renderLoop;
 
   // @ts-expect-error Hack: adds info for the website to find
   animationLoop.getInfo = () => {
@@ -65,7 +95,7 @@ export function makeAnimationLoop(
     return this.AnimationLoopTemplateCtor.info;
   };
 
-  return animationLoop;
+  return templateAnimationLoop;
 }
 
 function setError(device: Device | null, error: Error): void {

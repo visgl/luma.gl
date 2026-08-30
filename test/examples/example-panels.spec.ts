@@ -1,29 +1,40 @@
-import {describe, expect, test, vi} from 'vitest';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
-import {
-  ExamplePanelManager,
-  ExampleSettingsPanelManager,
-  getSettingDefinitions,
-  makeExamplePanelHostHtml,
-  makeHtmlCustomPanel,
-  makeInlineSettingsSchema
-} from '../../examples/example-panels';
+import {describe, expect, test, vi} from 'vitest';
 import {
   ArrowExamplePanelManager,
   makeArrowExamplePanelHostHtml
 } from '../../examples/arrow/arrow-example-panels';
 import {
+  configurePanelHostElement,
+  ExamplePanelManager,
+  ExampleSettingsPanelManager,
+  getSettingDefinitions,
+  makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel,
+  makeInlineSettingsSchema
+} from '../../examples/example-panels';
+import {applyExampleTheme, EXAMPLE_THEME_TOKENS} from '../../examples/example-theme';
+import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
+import {
+  formatGLTFCrowdInfo,
+  isAnimatedGLTFCatalogModel
+} from '../../examples/showcase/gltf/gltf-catalog-app';
+import {
+  type EffectState,
+  flattenEffectSettings,
+  getEffectResolutionScale,
+  getInitialPostprocessingPassNames,
+  makePostprocessingUniforms,
+  reorderEffectPassNames,
+  unflattenEffectSettings,
+  updateEffectPassNames
+} from '../../examples/showcase/postprocessing/app';
+import {
   getTextSpaceCrawlColorKind,
   setTextSpaceCrawlColorKind
 } from '../../examples/text-space-crawl-color';
-import {makeGltfSettingsSchema} from '../../examples/showcase/gltf/app';
-import {
-  flattenEffectSettings,
-  makePostprocessingUniforms,
-  unflattenEffectSettings,
-  type EffectState
-} from '../../examples/showcase/postprocessing/app';
 
 const TEST_SETTINGS_SCHEMA: SettingsSchema = {
   title: 'Settings',
@@ -73,6 +84,245 @@ const MULTI_SELECT_SETTINGS_SCHEMA: SettingsSchema = {
 };
 
 describe('ExampleSettingsPanelManager', () => {
+  test('applies the shared cinematic semantic visual tokens', () => {
+    const hostElement = document.createElement('div');
+
+    applyExampleTheme(hostElement, 'cinematic');
+
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-surface-raised')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surfaceRaised
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-border')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.border
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.text
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text-muted')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.textMuted
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.accent
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-radius')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.radius
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-shadow')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.shadow
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.backdrop
+    );
+  });
+
+  test('replaces cinematic visual tokens with the light appearance', () => {
+    const hostElement = document.createElement('div');
+
+    applyExampleTheme(hostElement, 'cinematic');
+    applyExampleTheme(hostElement, 'light');
+
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-surface-raised')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surfaceRaised
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-border')).toBe(
+      EXAMPLE_THEME_TOKENS.light.border
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.light.text
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text-muted')).toBe(
+      EXAMPLE_THEME_TOKENS.light.textMuted
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.light.accent
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-radius')).toBe(
+      EXAMPLE_THEME_TOKENS.light.radius
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-shadow')).toBe(
+      EXAMPLE_THEME_TOKENS.light.shadow
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.light.backdrop
+    );
+  });
+
+  test('configures the shared cinematic card appearance for panel content', () => {
+    const hostElement = document.createElement('div');
+
+    configurePanelHostElement(hostElement, 'cinematic');
+
+    expect(hostElement.dataset.examplePanelHost).toBe('');
+    expect(hostElement.dataset.examplePanelAppearance).toBe('cinematic');
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(8, 15, 27)');
+    expect(hostElement.style.getPropertyValue('--menu-shadow')).toBe('none');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.accent
+    );
+
+    const cardElement = document.createElement('section');
+    const inheritedHostElement = document.createElement('div');
+    cardElement.dataset.infoBoxAppearance = 'cinematic';
+    cardElement.appendChild(inheritedHostElement);
+    configurePanelHostElement(inheritedHostElement);
+
+    expect(inheritedHostElement.dataset.examplePanelAppearance).toBe('cinematic');
+    expect(inheritedHostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.surface
+    );
+    expect(inheritedHostElement.style.getPropertyValue('--luma-example-backdrop')).toBe(
+      EXAMPLE_THEME_TOKENS.cinematic.backdrop
+    );
+  });
+
+  test('inherits the light appearance and preserves the panel framework background', () => {
+    const cardElement = document.createElement('section');
+    const hostElement = document.createElement('div');
+    cardElement.dataset.infoBoxAppearance = 'light';
+    cardElement.appendChild(hostElement);
+
+    configurePanelHostElement(hostElement);
+
+    expect(hostElement.dataset.examplePanelAppearance).toBe('light');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+      EXAMPLE_THEME_TOKENS.light.surface
+    );
+    expect(hostElement.style.getPropertyValue('--luma-example-text')).toBe(
+      EXAMPLE_THEME_TOKENS.light.text
+    );
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('rgb(255, 255, 255)');
+  });
+
+  test('leaves unthemed hosts available for inherited semantic visual tokens', () => {
+    const hostElement = document.createElement('div');
+
+    configurePanelHostElement(hostElement);
+
+    expect(hostElement.dataset.examplePanelAppearance).toBe('inherit');
+    expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe('');
+    expect(hostElement.style.getPropertyValue('--luma-example-accent')).toBe('');
+    expect(hostElement.style.getPropertyValue('--menu-background')).toBe('transparent');
+  });
+
+  test.each([
+    'cinematic',
+    'light'
+  ] as const)('clears stale %s tokens when returning to inherited appearance', appearance => {
+    const ancestorElement = document.createElement('section');
+    const hostElement = document.createElement('div');
+    ancestorElement.style.setProperty('--luma-example-surface', 'rgb(19, 41, 61)');
+    ancestorElement.style.setProperty('--luma-example-accent', 'rgb(203, 157, 93)');
+    ancestorElement.appendChild(hostElement);
+    document.body.appendChild(ancestorElement);
+
+    try {
+      configurePanelHostElement(hostElement, appearance);
+      expect(hostElement.style.getPropertyValue('--luma-example-surface')).toBe(
+        EXAMPLE_THEME_TOKENS[appearance].surface
+      );
+
+      configurePanelHostElement(hostElement, 'inherit');
+
+      for (const customProperty of [
+        '--luma-example-surface',
+        '--luma-example-surface-raised',
+        '--luma-example-border',
+        '--luma-example-text',
+        '--luma-example-text-muted',
+        '--luma-example-accent',
+        '--luma-example-radius',
+        '--luma-example-shadow',
+        '--luma-example-backdrop'
+      ]) {
+        expect(hostElement.style.getPropertyValue(customProperty)).toBe('');
+      }
+      expect(hostElement.dataset.examplePanelAppearance).toBe('inherit');
+      expect(hostElement.style.getPropertyValue('--menu-background')).toBe('transparent');
+      expect(getComputedStyle(hostElement).getPropertyValue('--luma-example-surface').trim()).toBe(
+        'rgb(19, 41, 61)'
+      );
+      expect(getComputedStyle(hostElement).getPropertyValue('--luma-example-accent').trim()).toBe(
+        'rgb(203, 157, 93)'
+      );
+    } finally {
+      ancestorElement.remove();
+    }
+  });
+
+  test.each([
+    'cinematic',
+    'light'
+  ] as const)('renders shared source code with the inherited %s visual theme', async appearance => {
+    const exampleWindow = window as Window & {website?: boolean};
+    const previousWebsiteState = exampleWindow.website;
+    const previousUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const fetchMock = vi
+      .spyOn(window, 'fetch')
+      .mockResolvedValue(new Response('export const sourceTheme = true;'));
+    let panelManager: ExamplePanelManager | null = null;
+
+    exampleWindow.website = true;
+    window.history.pushState(null, '', '/examples/showcase/persistence');
+    document.body.innerHTML = `<section data-info-box-appearance="${appearance}">${makeExamplePanelHostHtml()}</section>`;
+
+    try {
+      panelManager = new ExamplePanelManager({
+        panel: makeExampleTabbedPanel({
+          id: 'themed-source-tabs',
+          title: 'Themed example source',
+          panels: [
+            makeHtmlCustomPanel({
+              id: 'themed-overview',
+              title: 'Overview',
+              html: '<p>Overview</p>'
+            })
+          ]
+        })
+      });
+      panelManager.mount();
+
+      const sourceButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        button => button.textContent?.trim() === 'Source'
+      );
+      if (!sourceButton) {
+        throw new Error('Expected the shared source panel tab.');
+      }
+      sourceButton.click();
+
+      await vi.waitFor(() => {
+        const sourceViewer = document.querySelector<HTMLElement>('[data-example-source-viewer]');
+        expect(sourceViewer?.textContent).toContain('export const sourceTheme = true;');
+        expect(sourceViewer?.style.background).toContain('var(--luma-example-surface');
+        expect(sourceViewer?.style.color).toContain('var(--luma-example-text');
+        expect(sourceViewer && getComputedStyle(sourceViewer).backgroundColor).toBe(
+          EXAMPLE_THEME_TOKENS[appearance].surface
+        );
+        expect(sourceViewer && getComputedStyle(sourceViewer).color).toBe(
+          EXAMPLE_THEME_TOKENS[appearance].text
+        );
+      });
+    } finally {
+      panelManager?.finalize();
+      fetchMock.mockRestore();
+      document.body.replaceChildren();
+      window.history.replaceState(null, '', previousUrl);
+      if (previousWebsiteState === undefined) {
+        delete exampleWindow.website;
+      } else {
+        exampleWindow.website = previousWebsiteState;
+      }
+    }
+  });
+
   test('registers descriptors and forwards structured changes', () => {
     const changes: SettingsChangeDescriptor[][] = [];
     const settingsPanel = new ExampleSettingsPanelManager({
@@ -403,6 +653,98 @@ describe('text 3D crawl color compatibility', () => {
 });
 
 describe('postprocessing effect settings', () => {
+  test('opens effect documentation on the requested shader pass only', () => {
+    expect(getInitialPostprocessingPassNames('brightnessContrast')).toEqual(['brightnessContrast']);
+    expect(getInitialPostprocessingPassNames('gaussianBlur')).toEqual(['gaussianBlur']);
+    expect(getInitialPostprocessingPassNames('magnify')).toEqual(['magnify']);
+  });
+
+  test('preserves the gallery preset when no valid documentation effect is requested', () => {
+    expect(getInitialPostprocessingPassNames()).toEqual(['bloom', 'vignette']);
+    expect(getInitialPostprocessingPassNames('missingEffect')).toEqual(['bloom', 'vignette']);
+    expect(getInitialPostprocessingPassNames('toString')).toEqual(['bloom', 'vignette']);
+  });
+
+  test('renders empty and inexpensive effect stacks at native resolution', () => {
+    expect(getEffectResolutionScale([])).toBe(1);
+    expect(getEffectResolutionScale(['bloom', 'vignette'])).toBe(1);
+  });
+
+  test('restores native resolution when expensive preset effects are removed', () => {
+    const dreamZoomPassNames = ['zoomBlur', 'vignette'];
+    const graphicInkPassNames = ['brightnessContrast', 'ink'];
+
+    expect(getEffectResolutionScale(dreamZoomPassNames)).toBe(0.65);
+    expect(
+      getEffectResolutionScale(updateEffectPassNames(dreamZoomPassNames, 'zoomBlur', false))
+    ).toBe(1);
+    expect(getEffectResolutionScale(graphicInkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(updateEffectPassNames(graphicInkPassNames, 'ink', false))).toBe(
+      1
+    );
+  });
+
+  test('adapts resolution as expensive effects are added and removed', () => {
+    const inexpensivePassNames = ['vignette'];
+    const inkPassNames = updateEffectPassNames(inexpensivePassNames, 'ink', true);
+    const zoomPassNames = updateEffectPassNames(inkPassNames, 'zoomBlur', true);
+
+    expect(getEffectResolutionScale(inkPassNames)).toBe(0.75);
+    expect(getEffectResolutionScale(zoomPassNames)).toBe(0.65);
+    expect(getEffectResolutionScale(updateEffectPassNames(zoomPassNames, 'zoomBlur', false))).toBe(
+      0.75
+    );
+    expect(getEffectResolutionScale(updateEffectPassNames(['ink'], 'ink', false))).toBe(1);
+  });
+
+  test('adds effects to the stack only once', () => {
+    const activePassNames = ['bloom', 'vignette'];
+
+    expect(updateEffectPassNames(activePassNames, 'sepia', true)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(updateEffectPassNames(activePassNames, 'bloom', true)).toEqual(['bloom', 'vignette']);
+    expect(activePassNames).toEqual(['bloom', 'vignette']);
+  });
+
+  test('removes effects without changing the remaining stack order', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(updateEffectPassNames(activePassNames, 'vignette', false)).toEqual(['bloom', 'sepia']);
+    expect(updateEffectPassNames(activePassNames, 'noise', false)).toEqual([
+      'bloom',
+      'vignette',
+      'sepia'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('moves active effects earlier and later in the stack', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'vignette', -1)).toEqual([
+      'vignette',
+      'bloom',
+      'sepia'
+    ]);
+    expect(reorderEffectPassNames(activePassNames, 'vignette', 1)).toEqual([
+      'bloom',
+      'sepia',
+      'vignette'
+    ]);
+    expect(activePassNames).toEqual(['bloom', 'vignette', 'sepia']);
+  });
+
+  test('keeps effects within the stack bounds when reordering', () => {
+    const activePassNames = ['bloom', 'vignette', 'sepia'];
+
+    expect(reorderEffectPassNames(activePassNames, 'bloom', -1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'sepia', 1)).toEqual(activePassNames);
+    expect(reorderEffectPassNames(activePassNames, 'noise', -1)).toEqual(activePassNames);
+  });
+
   test('flattens and restores vector settings as scalar panel settings', () => {
     const effectState: EffectState = {
       amount: 0.5,
@@ -433,6 +775,51 @@ describe('postprocessing effect settings', () => {
 });
 
 describe('glTF controls', () => {
+  test('only offers source models with authored animation', () => {
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'RobotExpressive',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'SimpleSkinLOD',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'CesiumMan',
+        screenshot: 'screenshot/screenshot.gif'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'Fox',
+        screenshot: 'screenshot/screenshot.jpg'
+      })
+    ).toBe(true);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'DamagedHelmet',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'BabylonMSFTLOD',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+    expect(
+      isAnimatedGLTFCatalogModel({
+        name: 'MorphPrimitivesTest',
+        screenshot: 'screenshot/screenshot.png'
+      })
+    ).toBe(false);
+  });
+
   test('keeps the model selector in the settings schema', () => {
     expect(getSettingDefinitions(makeGltfSettingsSchema()).get('modelValue')).toEqual(
       expect.objectContaining({
@@ -440,6 +827,186 @@ describe('glTF controls', () => {
         options: [{label: 'Loading models...', value: 'loading-models'}]
       })
     );
+  });
+
+  test('exposes a genuinely instanced animated crowd of up to one hundred actors', () => {
+    expect(getSettingDefinitions(makeGltfSettingsSchema()).get('instanceCount')).toEqual(
+      expect.objectContaining({
+        label: 'Independent Characters',
+        type: 'number',
+        min: 1,
+        max: 100,
+        step: 1
+      })
+    );
+  });
+
+  test('surfaces clip, actor, crossfade, morph, material, and authored-camera controls', () => {
+    const definitions = getSettingDefinitions(
+      makeGltfSettingsSchema(
+        [],
+        [],
+        'studio',
+        {
+          clipNames: ['Idle', 'Walking'],
+          selectedClip: 'Idle',
+          duration: 2,
+          time: 0.5,
+          playing: true,
+          speed: 1,
+          crossFadeDuration: 0.35,
+          loop: 'repeat',
+          actors: [
+            {index: 0, id: 'left', clip: 'Idle', time: 0.5, speed: 1, playing: true},
+            {index: 1, id: 'right', clip: 'Walking', time: 1, speed: 1.2, playing: true}
+          ],
+          selectedActorIndex: 0,
+          variants: ['Red', 'Blue'],
+          selectedVariant: 'Red',
+          morphTargets: [
+            {identifier: '13:0', nodeIndex: 13, targetIndex: 0, label: 'Angry', value: 0}
+          ],
+          skinCount: 2,
+          jointCount: 86,
+          cameraCount: 1
+        },
+        [{name: 'Studio Camera'}]
+      )
+    );
+
+    expect(definitions.get('animationClip')?.options).toEqual([
+      {label: 'Idle', value: 'Idle'},
+      {label: 'Walking', value: 'Walking'}
+    ]);
+    expect(definitions.get('animationActor')?.options).toEqual([
+      {label: 'Actor 1 · Idle', value: '0'},
+      {label: 'Actor 2 · Walking', value: '1'}
+    ]);
+    expect(definitions.get('animationCrossFade')).toEqual(
+      expect.objectContaining({label: 'Crossfade Seconds', max: 2})
+    );
+    expect(definitions.get('instanceCount')).toEqual(
+      expect.objectContaining({label: 'Independent Characters', max: 100})
+    );
+    expect(definitions.get('morph__13__0')).toEqual(
+      expect.objectContaining({label: 'Angry', min: 0, max: 1})
+    );
+    expect(definitions.get('materialVariant')?.options).toEqual([
+      {label: 'Original materials', value: '__default__'},
+      {label: 'Red', value: 'Red'},
+      {label: 'Blue', value: 'Blue'}
+    ]);
+    expect(definitions.get('cameraSelection')?.options).toEqual([
+      {label: 'Studio orbit camera', value: '__orbit-camera__'},
+      {label: 'Studio Camera', value: '0'}
+    ]);
+  });
+
+  test('exposes automatic per-actor LOD and bounded screen-space detail bias', () => {
+    const settings = getSettingDefinitions(makeGltfSettingsSchema());
+
+    expect(settings.get('autoLOD')).toEqual(
+      expect.objectContaining({
+        label: 'Auto LOD',
+        type: 'boolean',
+        persist: 'none'
+      })
+    );
+    expect(settings.get('detailBias')).toEqual(
+      expect.objectContaining({
+        label: 'Detail Bias',
+        type: 'number',
+        min: 0.25,
+        max: 4,
+        step: 0.25
+      })
+    );
+    expect(settings.get('vertexBudget')).toEqual(
+      expect.objectContaining({
+        label: 'Vertex Budget',
+        type: 'number',
+        min: 0,
+        max: 1_000_000,
+        step: 100
+      })
+    );
+  });
+
+  test('reports real generated LOD buckets, culled actors, triangles, and draw counts', () => {
+    const summary = formatGLTFCrowdInfo(8, 3, ['Walking', 'Wave'], {
+      source: 'generated',
+      visibleActors: 7,
+      culledActors: 1,
+      drawCount: 3,
+      triangles: 1234,
+      vertices: 3702,
+      vertexBudget: 4500,
+      demotedActors: 2,
+      budgetSatisfied: true,
+      levels: [
+        {level: 0, actors: 2, triangles: 900},
+        {level: 1, actors: 3, triangles: 270},
+        {level: 2, actors: 2, triangles: 64}
+      ]
+    });
+
+    expect(summary).toContain('8 independently animated actors');
+    expect(summary).toContain('3 shared GPU draws');
+    expect(summary).toContain('Mixed actions: Walking, Wave');
+    expect(summary).toContain('Generated LOD');
+    expect(summary).toContain('L0: 2 · L1: 3 · L2: 2');
+    expect(summary).toContain('Visible: 7 · Culled: 1');
+    expect(summary).toContain('Triangles: 1,234');
+    expect(summary).toContain('Vertices: 3,702 / 4,500 · Demoted: 2');
+    expect(summary).not.toContain('Budget exceeded');
+  });
+
+  test('distinguishes authored mesh levels from generated detail', () => {
+    const summary = formatGLTFCrowdInfo(2, 1, [], {
+      source: 'authored',
+      visibleActors: 2,
+      culledActors: 0,
+      drawCount: 1,
+      triangles: 8,
+      vertices: 24,
+      demotedActors: 0,
+      budgetSatisfied: true,
+      levels: [{level: 0, actors: 2, triangles: 8}]
+    });
+
+    expect(summary).toContain('Authored LOD');
+    expect(summary).not.toContain('Generated LOD');
+  });
+
+  test('reports baked GPU clip sampling and independently deformed morph groups', () => {
+    const summary = formatGLTFCrowdInfo(6, 2, ['Walking', 'Wave'], undefined, {
+      mode: 'gpu',
+      sampleRate: 30,
+      frameCount: 462,
+      clipCount: 14,
+      morphGroupCount: 3
+    });
+
+    expect(summary).toContain('GPU sampled: 462 frames @ 30 fps');
+    expect(summary).toContain('Morph groups: 3');
+  });
+
+  test('reports an impossible vertex budget without implying actors were silently culled', () => {
+    const summary = formatGLTFCrowdInfo(4, 1, [], {
+      source: 'generated',
+      visibleActors: 4,
+      culledActors: 0,
+      drawCount: 1,
+      triangles: 20,
+      vertices: 60,
+      vertexBudget: 30,
+      demotedActors: 4,
+      budgetSatisfied: false,
+      levels: [{level: 2, actors: 4, triangles: 20}]
+    });
+
+    expect(summary).toContain('Visible: 4 · Culled: 0');
+    expect(summary).toContain('Vertices: 60 / 30 · Demoted: 4 · Budget exceeded');
   });
 });
 

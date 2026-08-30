@@ -1,5 +1,5 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {DocsPageTabs} from './docs-page-tabs';
 
 type ArrowDocsTab = {
   /** Stable tab identifier. */
@@ -32,22 +32,5 @@ const ARROW_DOCS_TABS: ArrowDocsTab[] = [
  * Renders page links with the same visual treatment as tabs for Arrow documentation pages.
  */
 export function ArrowDocsTabs({active}: {active: ArrowDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="Arrow documentation sections">
-      {ARROW_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+  return <DocsPageTabs active={active} group={{label: 'Arrow documentation', tabs: ARROW_DOCS_TABS}} />;
 }

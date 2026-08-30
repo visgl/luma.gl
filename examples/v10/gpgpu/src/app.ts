@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
 import {cleanEvaluate, type GPUDataEvaluator} from '@luma.gl/gpgpu';
@@ -244,16 +244,16 @@ async function makeOutputTableColumn(
 async function createEvaluationDevice(): Promise<Device> {
   return await luma.createDevice({
     adapters: [webgpuAdapter, webgl2Adapter],
-    createCanvasContext:
-      typeof OffscreenCanvas === 'undefined'
-        ? true
-        : {
-            canvas: new OffscreenCanvas(1, 1),
-            width: 1,
-            height: 1,
-            autoResize: false,
-            useDevicePixels: false
-          }
+    createCanvasContext: {
+      canvas:
+        typeof OffscreenCanvas === 'undefined'
+          ? document.createElement('canvas')
+          : new OffscreenCanvas(1, 1),
+      width: 1,
+      height: 1,
+      autoResize: false,
+      useDevicePixels: false
+    }
   });
 }
 

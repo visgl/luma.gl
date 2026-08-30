@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {BufferMapCallback, BufferProps, Device, Binding as CoreBinding} from '@luma.gl/core';
 import {Buffer} from '@luma.gl/core';

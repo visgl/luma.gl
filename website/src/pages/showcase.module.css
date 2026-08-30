@@ -69,6 +69,14 @@
   max-width: 680px;
 }
 
+.heroActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-top: 28px;
+}
+
 .gallery {
   border-top: 1px solid var(--showcase-border);
   padding-top: 28px;

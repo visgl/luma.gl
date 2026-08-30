@@ -1,10 +1,10 @@
 // deck.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
-import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {
@@ -16,7 +16,7 @@ import {
 
 const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const TRANSFORM_RUNS = 'Transform Runs';
-const GPGPU_SHADER_ASSEMBLER = new ShaderAssembler();
+const GPGPU_SHADER_ASSEMBLER = new GLSLShaderAssembler();
 
 export function runRowTransform({
   module,
@@ -117,7 +117,12 @@ set_result(result);
   device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
   transform.run({
     inputBuffers: inputBuffers,
-    outputBuffers: {[outputModule.varyings[0]]: outputBuffer}
+    outputBuffers: {
+      [outputModule.varyings[0]]:
+        output.offset === 0
+          ? outputBuffer
+          : {buffer: outputBuffer, byteOffset: output.offset, byteLength: output.byteLength}
+    }
   });
   if (placeholderBuffer) {
     bufferPool.recycle(placeholderBuffer);

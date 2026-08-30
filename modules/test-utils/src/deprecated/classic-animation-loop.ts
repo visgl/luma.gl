@@ -1,6 +1,6 @@
 // luma.gl
-// SPDX-License
-// Copyright (c) vis.gl contributors
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // @ts-nocheck This should be replaced with model animation loop
 

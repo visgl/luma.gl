@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   getArrowPickingModule,
@@ -9,13 +9,8 @@ import {
 } from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
-import {
-  GPUTableModel,
-  getGPUVectorBuffer,
-  type GPUInputSchema,
-  type GPUTable,
-  type GPUVector
-} from '@luma.gl/tables';
+import {getGPUVectorBuffer, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUTableModel, type GPUInputSchema, type GPUTable} from '@luma.gl/experimental/gpu-tables';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
   FS_GLSL,

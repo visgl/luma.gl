@@ -20,12 +20,16 @@ export {
 } from './components/device-info';
 
 // Examples
-export {ExamplePage} from './components/luma-example';
+export {ExamplePage, ExampleStage} from './components/luma-example';
 export {ExampleHeader} from './components/luma-example';
 export type {
   ExampleDisplayProps,
   ExamplePageProps,
-  LumaExampleProps
+  ExampleStageProps,
+  LumaExampleProps,
+  LumaExampleTemplate,
+  LumaExampleTemplateLoader,
+  LumaExampleTemplateModule
 } from './components/luma-example';
 export {ExampleStats} from './components/example-stats';
 export {InfoBox} from './components/info-box';

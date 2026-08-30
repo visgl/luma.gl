@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {getShaderModuleDependencies} from '../shader-module/shader-module-dependencies';
 import {PlatformInfo} from './platform-info';
@@ -18,8 +18,9 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
+import {scanWGSLInterface} from './wgsl-interface-scan';
 import {preprocess} from '../preprocessor/preprocessor';
-import type {AttributeShaderType} from '@luma.gl/core';
+import type {AttributeShaderType, ShaderLayout} from '@luma.gl/core';
 import type {ResolvedShaderPluginVarying} from '../shader-plugin';
 import {
   assembleShaderPluginVertexInputsWGSL,
@@ -86,6 +87,8 @@ export type AssembleShaderOptions = {
   pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
   /** WGSL vertex entry point selected by the render pipeline. */
   vertexEntryPoint?: string;
+  /** Whether WGSL interface scanning should include vertex attributes. */
+  scanVertexAttributes?: boolean;
   /** WGSL fragment entry point selected by the render pipeline. */
   fragmentEntryPoint?: string;
   /** Whether to inject prologue */
@@ -150,6 +153,7 @@ export function assembleWGSLShader(
   getUniforms: GetUniformsFunc;
   bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
   bindingTable: ShaderBindingDebugRow[];
+  shaderLayout: ShaderLayout | null;
 } {
   const modules = getShaderModuleDependencies(options.modules || []);
   const {source, bindingAssignments} = assembleShaderWGSL(options.platformInfo, {
@@ -163,7 +167,11 @@ export function assembleWGSLShader(
     source,
     getUniforms: assembleGetUniforms(modules),
     bindingAssignments,
-    bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments)
+    bindingTable: getShaderBindingDebugRowsFromWGSL(source, bindingAssignments),
+    shaderLayout: scanWGSLInterface(source, {
+      vertexEntryPoint: options.vertexEntryPoint,
+      scanVertexAttributes: options.scanVertexAttributes
+    })
   };
 }
 
@@ -924,13 +932,13 @@ function relocateWGSLModuleBindingMatch(
     const location =
       registryLocation !== undefined
         ? registryLocation
-        : relocationState.nextHintedBindingLocation === null
-          ? allocateAutoBindingLocation(group, context.usedBindingsByGroup)
-          : allocateAutoBindingLocation(
-              group,
-              context.usedBindingsByGroup,
-              relocationState.nextHintedBindingLocation
-            );
+        : allocateAutoBindingLocation(
+            group,
+            context.usedBindingsByGroup,
+            module.name,
+            relocationState.nextHintedBindingLocation ?? undefined,
+            context.bindingRegistry
+          );
     validateModuleWGSLBinding(module.name, group, location, name);
     if (
       registryLocation !== undefined &&
@@ -1114,9 +1122,19 @@ function registerUsedBindingLocation(
 function allocateAutoBindingLocation(
   group: number,
   usedBindingsByGroup: Map<number, Set<number>>,
-  preferredBindingLocation?: number
+  moduleName: string,
+  preferredBindingLocation?: number,
+  bindingRegistry?: Map<string, number>
 ): number {
   const usedBindings = usedBindingsByGroup.get(group) || new Set<number>();
+  const registeredBindingLocations = new Set<number>();
+  const registryGroupPrefix = `${group}:`;
+  const registryModulePrefix = `${registryGroupPrefix}${moduleName}:`;
+  for (const [registryKey, location] of bindingRegistry || []) {
+    if (registryKey.startsWith(registryModulePrefix)) {
+      registeredBindingLocations.add(location);
+    }
+  }
   let nextBinding =
     preferredBindingLocation ??
     (group === 0
@@ -1125,8 +1143,15 @@ function allocateAutoBindingLocation(
         ? Math.max(...usedBindings) + 1
         : 0);
 
-  while (usedBindings.has(nextBinding)) {
+  while (usedBindings.has(nextBinding) || registeredBindingLocations.has(nextBinding)) {
     nextBinding++;
+  }
+
+  // Active modules were reserved above; only stale, inactive modules can own this free slot.
+  for (const [registryKey, location] of bindingRegistry || []) {
+    if (location === nextBinding && registryKey.startsWith(registryGroupPrefix)) {
+      bindingRegistry?.delete(registryKey);
+    }
   }
 
   return nextBinding;

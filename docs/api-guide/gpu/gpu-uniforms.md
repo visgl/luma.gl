@@ -29,7 +29,7 @@ WebGL supports setting "free" uniforms on a program. While convenient, this is n
 
 | Feature | Uniform Buffers | Uniforms |
 | ------- | --------------- | -------- |
-| WebGL2  | ✅               | ✅        |
-| WebGPU  | ✅               | ❌        |
+| WebGL2 | ✅ | ✅ |
+| WebGPU | ✅ | ❌ |
 
 Also note that both JavaScript code and shader code needs to be written differently based on whether uniforms or uniform buffers are used, so any solution would also require shader code generation or transformation to be implemented.

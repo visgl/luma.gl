@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {UniformValue} from '@luma.gl/core';
 import {gouraudMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 export function registerGouraudMaterialTests(test: TapeTestFunction): void {
   test('shadertools#gouraudMaterial', t => {

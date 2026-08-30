@@ -1,12 +1,12 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {cleanEvaluate, interleave, GPUDataEvaluator, Operation} from '@luma.gl/gpgpu';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {
   getRunStats,
   getTestDevice,
@@ -42,8 +42,13 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
 
     const defaultProps = deviceType === 'webgpu' ? Computation.defaultProps : Model.defaultProps;
     const defaultShaderAssembler = defaultProps.shaderAssembler;
-    const contaminatedShaderAssembler = new ShaderAssembler();
-    contaminatedShaderAssembler.addShaderHook('vs:INVALID_GLSL_HOOK(inout invalid_type value)');
+    const contaminatedShaderAssembler =
+      deviceType === 'webgpu' ? new WGSLShaderAssembler() : new GLSLShaderAssembler();
+    contaminatedShaderAssembler.addShaderHook(
+      deviceType === 'webgpu'
+        ? 'vs:INVALID_WGSL_HOOK(value: ptr<function, invalid_type>)'
+        : 'vs:INVALID_GLSL_HOOK(inout invalid_type value)'
+    );
     defaultProps.shaderAssembler = contaminatedShaderAssembler;
 
     const result = interleave(

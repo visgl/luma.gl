@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Panel} from '@deck.gl-community/panels';
 import {makeHtmlCustomPanel} from '../../example-panels';

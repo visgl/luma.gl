@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {
   NormalizedDataType,
@@ -115,6 +115,7 @@ export type TextureFeature =
   | 'texture-compression-bc'
   | 'texture-compression-astc'
   | 'texture-compression-etc2'
+  | 'depth32float-stencil8'
   | 'texture-compression-etc1-webgl'
   | 'texture-compression-pvrtc-webgl'
   | 'texture-compression-atc-webgl'

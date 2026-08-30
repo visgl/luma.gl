@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   buildArrowPathSegmentTable,
   makeArrowFixedSizeListVector,
@@ -16,14 +16,13 @@ import {
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
+import {type GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   PathAttributeModel,
   PathStorageModel,
   PathTripsStorageModel,
-  createPathStorageState,
-  type GPUVector,
-  type GPUVectorFormat
-} from '@luma.gl/tables';
+  createPathStorageState
+} from '@luma.gl/experimental/models';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

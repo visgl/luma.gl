@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // Provides a unified API for getting and setting any WebGL parameter
 // Also knows default values of all parameters, enabling fast cache initialization

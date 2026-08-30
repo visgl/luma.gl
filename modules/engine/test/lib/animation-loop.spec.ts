@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
@@ -34,13 +34,15 @@ test('engine#AnimationLoop uses provided stats object', async t => {
   await animationLoop.waitForRender();
   await animationLoop.waitForRender();
 
+  let frameRateUpdated = frameRate.lastSampleTime > beforeFrameRate;
   let cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
-  for (let attempt = 0; !cpuTimeUpdated && attempt < 8; attempt++) {
+  for (let attempt = 0; (!frameRateUpdated || !cpuTimeUpdated) && attempt < 8; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 16));
     await animationLoop.waitForRender();
+    frameRateUpdated = frameRate.lastSampleTime > beforeFrameRate;
     cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
   }
-  t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
+  t.ok(frameRateUpdated, 'Frame Rate updates on custom stats object');
   t.ok(cpuTimeUpdated, 'CPU Time updates on custom stats object');
   t.equal(
     customStats.get('GPU Time').lastSampleTime,
@@ -221,7 +223,9 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
   // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
   console.error = () => {};
   try {
-    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {device});
+    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {
+      device
+    });
     const startResult = await animationLoop.start();
     t.is(startResult, null, 'Animation loop stops after template initialization failure');
     t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
@@ -234,6 +238,118 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
     }
   }
 
+  t.end();
+});
+
+test('engine#makeAnimationLoop exposes the active template instance', async t => {
+  const device = await getWebGLTestDevice();
+
+  class InspectableAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {}
+    override onFinalize(): void {}
+  }
+
+  const animationLoop = makeAnimationLoop(InspectableAnimationLoopTemplate, {
+    device
+  });
+  t.is(animationLoop.getAnimationLoopTemplate(), null, 'template is absent before initialization');
+  await animationLoop.start();
+  t.ok(
+    animationLoop.getAnimationLoopTemplate() instanceof InspectableAnimationLoopTemplate,
+    'initialized template is exposed'
+  );
+  animationLoop.destroy();
+  t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
+  t.end();
+});
+
+test('engine#makeAnimationLoop runs onAfterRender before device submission', async t => {
+  const device = await getWebGLTestDevice();
+  const frameStages: string[] = [];
+  let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
+    null;
+  const animationFrameProvider = {
+    requestAnimationFrame(callback: (time: DOMHighResTimeStamp, animationFrame?: unknown) => void) {
+      scheduledCallback = callback;
+      return 1;
+    },
+    cancelAnimationFrame() {}
+  };
+
+  class OrderedAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): void {
+      frameStages.push('template-render');
+    }
+    override onFinalize(): void {}
+  }
+
+  const originalSubmit = device.submit;
+  device.submit = commandBuffer => {
+    frameStages.push('device-submit');
+    originalSubmit.call(device, commandBuffer);
+  };
+  const animationLoop = makeAnimationLoop(OrderedAnimationLoopTemplate, {
+    device,
+    animationFrameProvider,
+    onAfterRender: animationProps => {
+      frameStages.push('after-render');
+      animationProps.animationLoop.stop();
+    }
+  });
+
+  try {
+    await animationLoop.start();
+    scheduledCallback?.(123);
+    t.deepEqual(
+      frameStages,
+      ['template-render', 'after-render', 'device-submit'],
+      'post-render hook runs while the frame command encoder is still open'
+    );
+  } finally {
+    animationLoop.destroy();
+    device.submit = originalSubmit;
+  }
+  t.end();
+});
+
+test('engine#makeAnimationLoop skips device submission when a frame is idle', async t => {
+  const device = await getWebGLTestDevice();
+  let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
+    null;
+  const animationFrameProvider = {
+    requestAnimationFrame(callback: (time: DOMHighResTimeStamp, animationFrame?: unknown) => void) {
+      scheduledCallback = callback;
+      return 1;
+    },
+    cancelAnimationFrame() {}
+  };
+
+  class IdleAnimationLoopTemplate extends AnimationLoopTemplate {
+    override onRender(): boolean {
+      return false;
+    }
+    override onFinalize(): void {}
+  }
+
+  let submissionCount = 0;
+  const originalSubmit = device.submit;
+  device.submit = commandBuffer => {
+    submissionCount++;
+    originalSubmit.call(device, commandBuffer);
+  };
+  const animationLoop = makeAnimationLoop(IdleAnimationLoopTemplate, {
+    device,
+    animationFrameProvider
+  });
+
+  try {
+    await animationLoop.start();
+    scheduledCallback?.(123);
+    t.is(submissionCount, 0, 'idle frame does not submit an empty command buffer');
+  } finally {
+    animationLoop.destroy();
+    device.submit = originalSubmit;
+  }
   t.end();
 });
 

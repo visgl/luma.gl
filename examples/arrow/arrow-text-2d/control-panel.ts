@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
 import {
@@ -339,7 +339,7 @@ export function makeArrowText2DSettingsSchema(
             persist: 'none',
             options: [
               {label: 'None', value: 'none'},
-              {label: 'Row - FixedSizeList<Int16, 4>', value: 'row-clip-rects'}
+              {label: 'Row - FixedSizeList<Float32, 4>', value: 'row-clip-rects'}
             ]
           }
         ]

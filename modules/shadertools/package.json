@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/shadertools",
-  "version": "9.4.0-alpha.3",
+  "version": "9.4.0-alpha.4",
   "description": "Shader module system for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -31,6 +31,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./wgsl": {
+      "types": "./dist/wgsl.d.ts",
+      "import": "./dist/wgsl.js",
+      "require": "./dist/wgsl.cjs"
     }
   },
   "files": [

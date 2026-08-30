@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 /** @todo - import from texture-types */
 // import { type TextureFormatPacked } from "../textures/texture-format-types";
 export type TextureFormatPacked =

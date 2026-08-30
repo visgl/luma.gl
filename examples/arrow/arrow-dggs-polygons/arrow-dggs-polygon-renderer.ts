@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   packDggsA5CellKey,
@@ -15,7 +15,8 @@ import {
   type PreparedDggsCellPathGPUVector
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {GPURenderable, type PathStorageModel} from '@luma.gl/tables';
+import {GPURenderable} from '@luma.gl/experimental/gpu-tables';
+import {type PathStorageModel} from '@luma.gl/experimental/models';
 import * as arrow from 'apache-arrow';
 import {
   createDggsPolygonPathModel,

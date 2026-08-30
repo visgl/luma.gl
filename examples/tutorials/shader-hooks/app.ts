@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
@@ -70,7 +70,7 @@ Modifying shader behavior with shader hooks
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
     this.uniformStore = new UniformStore(device, {
       app: {

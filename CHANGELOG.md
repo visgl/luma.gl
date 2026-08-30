@@ -2,6 +2,37 @@
 
 ## v9.4
 
+### v9.4.0-alpha.4
+
+- fix(gpgpu): remove circular reference (#2869)
+- perf(webgpu) Add lightweight WGSL interface scanner (#2854)
+- Add explicit GPU scene adapters (#2851)
+- perf(core): decouple luma from Device defaults (#2859)
+- fix(core): skip buffer debug copies outside debug mode (#2838)
+- Capture all HDR example screenshots (#2848)
+- feat(experimental) Add batch-preserving GPU hash joins (#2847)
+- Add stable sparse GPU joins (#2846)
+- feat(examples): add GPU-driven Virtual Geometry Canyon (#2843)
+- feat(experimental) Add bounded GPU hash indexing (#2844)
+- Add HDR gain-map screenshot capture (#2845)
+- feat(experimental): add WebGPU geospatial distance kernels (#2837)
+- Add Tempest Ocean WebGPU showcase (#2840)
+- feat(experimental): expose command graph extension APIs (#2832)
+- feat(experimental): add Volumetric Fire Forge (#2821)
+- feat(experimental): add GPU scene updates (#2839)
+- feat(experimental): add GPU virtual geometry selection (#2841)
+- Add reusable WebGPU spectral ocean simulation (#2836)
+- feat(experimental): add GPU scene records (#2834)
+- feat(examples): add cyclic Fluid Foundry spouts (#2835)
+- feat(examples): add Spectral Caustics Prism Cathedral (#2826)
+- refactor(engine): share computation dispatch setup (#2833)
+- feat(experimental) Add reusable WebGPU 2D FFT foundation (#2831)
+- feat(examples): add Fluid Foundry WebGPU showcase (#2830)
+- feat(experimental): add WebGPU MLS-MPM fluid simulation (#2828)
+- feat(shadertools): add precise raw fp64 deltas (#2829)
+- Add adaptive density LOD to GPU trace viewer (#2819)
+- feat(experimental): add GPU BVH queries (#2816)
+
 ### v9.4.0-alpha.3
 
 - feat(experimental): add spectral caustics renderer (#2825)
@@ -25,11 +56,11 @@
 - feat(experimental): add filtered GPU group counts (#2798)
 - Add LLM-friendly developer support (#2764)
 - feat(experimental): add irregular GPU histograms (#2794)
-- Add ANARI deferred renderer (#2791)
+- Add deferred renderer (#2791)
 - feat(experimental): add GPU grid statistics (#2792)
 - feat(experimental): add weighted GPU grid aggregation (#2789)
 - feat(experimental): add GPU scan variants (#2787)
-- feat: private experimental ANARI renderer, HDR showcase, and JSON playground (#2774)
+- feat: private experimental scene renderer, HDR showcase, and JSON playground (#2774)
 - feat(experimental): add reusable GPU visibility workflows (#2786)
 - feat(experimental): add GPU-native hierarchical trace manipulation (#2762)
 

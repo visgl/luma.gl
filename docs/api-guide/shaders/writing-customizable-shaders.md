@@ -33,7 +33,7 @@ A hook has three parts:
 ```typescript
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
 shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 ```
 

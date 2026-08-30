@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {VariableShaderType} from '../shadertypes/shader-types/shader-types';
 import type {UniformValue} from '../adapter/types/uniforms';

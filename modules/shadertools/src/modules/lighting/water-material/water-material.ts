@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumberArray2, NumberArray3, Vector2, Vector3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';

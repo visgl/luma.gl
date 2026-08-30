@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TypedArrayConstructor} from '@math.gl/types';
 import {
@@ -12,7 +12,7 @@ import {
   SphereGeometry,
   TruncatedConeGeometry
 } from '@luma.gl/engine';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 const GEOMETRY_TESTS = [
   {name: 'ConeGeometry', Geometry: ConeGeometry, props: [{height: 2}, {verticalAxis: 'z'}]},

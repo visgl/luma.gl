@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {expect, test} from 'vitest';
 import {
   add,
@@ -28,7 +28,12 @@ test(`GPGPU#cleanEvaluate`, async t => {
   const partial = add(x, y);
   const sum = add(partial, z);
 
-  await cleanEvaluate(device, {sum, x});
+  await cleanEvaluate(device, {
+    nested: {
+      sum,
+      retained: [{x}]
+    }
+  });
 
   expect(sum.gpuVector).toBeTruthy();
   expect(x.gpuVector).toBeTruthy();

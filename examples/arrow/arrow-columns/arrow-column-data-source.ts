@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {loadArrowColumnSourceData, type ArrowColumnSourceData} from './arrow-column-data';
 import {formatArrowColumnRendererMetrics} from './arrow-column-metrics';

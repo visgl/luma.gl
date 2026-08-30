@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   getRequiredArrowGPUVectorDataType,
@@ -25,15 +25,17 @@ import {
   wboitPlugin
 } from '@luma.gl/experimental';
 import {
-  GPURenderable,
-  GPURecordBatch,
-  GPUTable,
   getGPUVectorBuffer,
   getGPUVectorData,
   getRequiredGPUVector,
-  type GPUTypeMap,
   type GPUVector
-} from '@luma.gl/tables';
+} from '@luma.gl/gpgpu/gpu-data';
+import {
+  GPURenderable,
+  GPURecordBatch,
+  GPUTable,
+  type GPUTypeMap
+} from '@luma.gl/experimental/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

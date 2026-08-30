@@ -1,83 +1,20 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {FOUNDATION_DOCS_CATALOG} from './foundation-docs-catalog';
+import {DocsPageTabs} from './docs-page-tabs';
 
-type GpuGuideDocsTab = {
-  id: GpuGuideDocsTabId;
-  label: string;
-  href: string;
-};
-
-/** GPU guide documentation tab identifiers. */
 export type GpuGuideDocsTabId =
-  | 'overview'
-  | 'initialization'
-  | 'resources'
-  | 'data-processing'
-  | 'rendering'
-  | 'antialiasing'
-  | 'parameters'
-  | 'bindings'
-  | 'attributes'
-  | 'uniforms'
-  | 'textures'
-  | 'video-textures'
-  | 'tabular-data';
+  | 'core-guide' | 'initialization' | 'resources' | 'data-processing'
+  | 'rendering' | 'antialiasing' | 'parameters' | 'bindings' | 'attributes'
+  | 'uniforms' | 'textures' | 'video-textures' | 'tabular-data';
+export type GpuGuideDocsTabGroupId = 'lifecycle' | 'rendering' | 'shader-data';
 
-/** GPU guide documentation tab group identifiers. */
-export type GpuGuideDocsTabGroupId = 'execution' | 'shader-data';
+const GPU_GUIDE_GROUPS = {
+  lifecycle: 'guide-lifecycle',
+  rendering: 'guide-rendering',
+  'shader-data': 'guide-shader-data'
+} as const;
 
-const GPU_GUIDE_DOCS_TABS: Record<GpuGuideDocsTabGroupId, GpuGuideDocsTab[]> = {
-  execution: [
-    {id: 'overview', label: 'Overview', href: '/docs/api-guide/gpu'},
-    {id: 'initialization', label: 'Initialization', href: '/docs/api-guide/gpu/gpu-initialization'},
-    {id: 'resources', label: 'Resources', href: '/docs/api-guide/gpu/gpu-resources'},
-    {
-      id: 'data-processing',
-      label: 'Data Processing',
-      href: '/docs/api-guide/gpu/gpu-data-processing'
-    },
-    {id: 'rendering', label: 'Rendering', href: '/docs/api-guide/gpu/gpu-rendering'},
-    {
-      id: 'antialiasing',
-      label: 'Antialiasing',
-      href: '/docs/api-guide/gpu/gpu-antialiasing'
-    },
-    {id: 'parameters', label: 'Parameters', href: '/docs/api-guide/gpu/gpu-parameters'}
-  ],
-  'shader-data': [
-    {id: 'bindings', label: 'Bindings', href: '/docs/api-guide/gpu/gpu-bindings'},
-    {id: 'attributes', label: 'Attributes', href: '/docs/api-guide/gpu/gpu-attributes'},
-    {id: 'uniforms', label: 'Uniforms', href: '/docs/api-guide/gpu/gpu-uniforms'},
-    {id: 'textures', label: 'Textures', href: '/docs/api-guide/gpu/gpu-textures'},
-    {id: 'video-textures', label: 'Video Textures', href: '/docs/api-guide/gpu/video-textures'},
-    {id: 'tabular-data', label: 'Tabular Data', href: '/docs/api-guide/gpu/tabular-data-in-wgsl'}
-  ]
-};
-
-/** Renders page links with the same visual treatment as tabs for related GPU guide pages. */
-export function GpuGuideDocsTabs({
-  group,
-  active
-}: {
-  group: GpuGuideDocsTabGroupId;
-  active: GpuGuideDocsTabId;
-}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="GPU guide documentation sections">
-      {GPU_GUIDE_DOCS_TABS[group].map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+export function GpuGuideDocsTabs({group, active}: {group: GpuGuideDocsTabGroupId; active: GpuGuideDocsTabId}): ReactNode {
+  const tabGroup = FOUNDATION_DOCS_CATALOG.core[GPU_GUIDE_GROUPS[group]];
+  return <DocsPageTabs active={active} group={tabGroup} />;
 }

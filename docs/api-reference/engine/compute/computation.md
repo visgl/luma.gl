@@ -1,13 +1,14 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 # Computation
 
 <EngineDocsTabs group="compute" active="computation" />
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 `Computation` is the engine-level wrapper around WebGPU compute shaders.
 It plays the same role for compute work that [`Model`](/docs/api-reference/engine/model) plays for rendering: it assembles shaders, manages shader inputs and bindings, reuses cached pipelines, and dispatches work through a [`ComputePass`](/docs/api-reference/core/resources/compute-pass).

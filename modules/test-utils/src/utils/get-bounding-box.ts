@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 // Get the bounding box of a DOMElement relative to the page
 export function getBoundingBoxInPage(domElement: HTMLElement): {
   x: number;

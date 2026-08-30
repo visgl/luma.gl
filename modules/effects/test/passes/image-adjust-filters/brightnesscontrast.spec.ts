@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {brightnessContrast} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('brightnessContrast#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(brightnessContrast, {}, {});

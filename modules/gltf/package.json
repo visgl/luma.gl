@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/gltf",
-  "version": "9.4.0-alpha.3",
-  "description": "glTF support for luma.gl",
+  "version": "9.4.0-alpha.4",
+  "description": "Standards-first glTF rendering, physical materials, animation, and lossless asset interchange",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -12,9 +12,12 @@
     "access": "public"
   },
   "keywords": [
+    "gltf",
+    "glb",
+    "webgpu",
     "webgl",
-    "glsl",
-    "debug",
+    "pbr",
+    "animation",
     "3d"
   ],
   "types": "dist/index.d.ts",
@@ -45,9 +48,9 @@
     "@luma.gl/shadertools": "~9.4.0-alpha.1"
   },
   "dependencies": {
-    "@loaders.gl/core": "~4.4.2",
-    "@loaders.gl/gltf": "~4.4.2",
-    "@loaders.gl/textures": "~4.4.2",
+    "@loaders.gl/core": "~5.0.0-alpha.4",
+    "@loaders.gl/gltf": "~5.0.0-alpha.4",
+    "@loaders.gl/textures": "~5.0.0-alpha.4",
     "@math.gl/core": "^4.1.0"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"

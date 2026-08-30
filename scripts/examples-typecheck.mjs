@@ -22,18 +22,33 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-points',
   'arrow/arrow-polygons',
   'experimental/fluid-foundry',
+  'experimental/advanced-effects',
+  'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
+  'deck/luspatial-taxi',
+  'deck/gpu-culled-trace',
   'experimental/gpu-sort',
   'experimental/spectral-caustics',
+  'experimental/volumetric-fire-forge',
+  'experimental/virtual-geometry-canyon',
   'api/video-texture',
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
+  'showcase/algebraic-varieties',
+  'showcase/scene',
   'showcase/dof',
+  'showcase/gaussian-splats',
+  'showcase/billion-point-spatial-atlas',
   'showcase/lightstorm-megacity',
+  'showcase/llm-network',
+  'showcase/million-row-crossfilter',
+  'showcase/tempest-ocean',
+  'showcase/vector-field-lab',
   'showcase/packet-spraying',
   'showcase/persistence',
+  'showcase/raster-lab',
   'tutorials/hello-instanced-cubes',
   'tutorials/hello-instancing',
   'tutorials/hello-triangle',
@@ -44,6 +59,9 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/transform',
   'tutorials/transform-feedback'
 ]);
+
+const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab']);
+const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set(['showcase/scene', 'showcase/raster-lab']);
 
 const SHARED_COMPILER_OPTIONS = {
   noEmit: true,
@@ -67,14 +85,18 @@ const SHARED_COMPILER_OPTIONS = {
   paths: {
     '@luma.gl/arrow': [join(repoRoot, 'modules/arrow/src/index.ts')],
     '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
-    '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/arrow-layers/src/index.ts')],
-    '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/arrow-layers/src/*')],
-    '@math.gl/geoarrow': [join(repoRoot, 'modules/geoarrow/src/index.ts')],
-    '@math.gl/geoarrow/*': [join(repoRoot, 'modules/geoarrow/src/*')],
+    '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/deck-arrow-layers/src/index.ts')],
+    '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
+    '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],
+    '@deck.gl-community/gpu-layers/*': [join(repoRoot, 'modules/deck-gpu-layers/src/*')],
+    '@math.gl/geoarrow': [join(repoRoot, 'modules/math-geoarrow/src/index.ts')],
+    '@math.gl/geoarrow/*': [join(repoRoot, 'modules/math-geoarrow/src/*')],
     '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],
     '@luma.gl/experimental/*': [join(repoRoot, 'modules/experimental/src/*')],
-    '@luma.gl/tables': [join(repoRoot, 'modules/tables/src/index.ts')],
-    '@luma.gl/tables/*': [join(repoRoot, 'modules/tables/src/*')]
+    '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/src/index.ts')],
+    '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/src/*')],
+    '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
+    '@luma.gl/splats/*': [join(repoRoot, 'modules/splats/src/*')],
   }
 };
 
@@ -102,7 +124,8 @@ function getExampleWorkspaces() {
       const workspacePath = join(categoryPath, example.name);
       const packageJsonPath = join(workspacePath, 'package.json');
       const workspaceId = `${category.name}/${example.name}`;
-      if (!existsSync(packageJsonPath)) {
+      const hasPackageManifest = existsSync(packageJsonPath);
+      if (!hasPackageManifest && !PACKAGE_FREE_EXAMPLE_WORKSPACES.has(workspaceId)) {
         continue;
       }
 
@@ -112,7 +135,9 @@ function getExampleWorkspaces() {
         continue;
       }
 
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+      const packageJson = hasPackageManifest
+        ? JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+        : {};
       workspaces.push({
         name: packageJson.name ?? `${category.name}/${example.name}`,
         workspaceId,
@@ -124,10 +149,20 @@ function getExampleWorkspaces() {
   return workspaces;
 }
 
-function createTempTypecheckConfig(workspacePath) {
+function createTempTypecheckConfig(workspaces) {
   const tempDirectory = mkdtempSync(join(tmpdir(), 'luma-examples-typecheck-'));
   const ambientTypesPath = join(tempDirectory, 'ambient.d.ts');
   const tsconfigPath = join(tempDirectory, 'tsconfig.json');
+  const includedFiles = workspaces.flatMap(({workspacePath}) => [
+    `${workspacePath}/**/*.ts`,
+    `${workspacePath}/**/*.tsx`,
+    `${workspacePath}/**/*.d.ts`
+  ]);
+  const excludedFiles = workspaces.flatMap(({workspacePath}) => [
+    `${workspacePath}/node_modules`,
+    `${workspacePath}/dist`,
+    `${workspacePath}/vite.config.ts`
+  ]);
 
   writeFileSync(ambientTypesPath, AMBIENT_MODULE_DECLARATIONS);
   writeFileSync(
@@ -136,17 +171,8 @@ function createTempTypecheckConfig(workspacePath) {
       {
         extends: join(repoRoot, 'tsconfig.json'),
         compilerOptions: SHARED_COMPILER_OPTIONS,
-        include: [
-          `${workspacePath}/**/*.ts`,
-          `${workspacePath}/**/*.tsx`,
-          `${workspacePath}/**/*.d.ts`,
-          ambientTypesPath
-        ],
-        exclude: [
-          `${workspacePath}/node_modules`,
-          `${workspacePath}/dist`,
-          `${workspacePath}/vite.config.ts`
-        ]
+        include: [...includedFiles, ambientTypesPath],
+        exclude: excludedFiles
       },
       null,
       2
@@ -156,31 +182,38 @@ function createTempTypecheckConfig(workspacePath) {
   return {tempDirectory, tsconfigPath};
 }
 
-function typecheckWorkspace({name, workspacePath}) {
-  const {tempDirectory, tsconfigPath} = createTempTypecheckConfig(workspacePath);
+function runTypecheck(tsconfigPath, description) {
+  console.log(`Typechecking ${description}`);
+  const result = spawnSync(tscPath, ['-p', tsconfigPath, '--noEmit'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: 'pipe'
+  });
+
+  if (result.status !== 0) {
+    process.stderr.write(result.stdout || '');
+    process.stderr.write(result.stderr || '');
+    return false;
+  }
+
+  return true;
+}
+
+function typecheckWorkspaces(workspaces) {
+  if (workspaces.length === 0) {
+    return true;
+  }
+
+  const {tempDirectory, tsconfigPath} = createTempTypecheckConfig(workspaces);
 
   try {
-    console.log(`Typechecking ${name}`);
-    const result = spawnSync(tscPath, ['-p', tsconfigPath, '--noEmit'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      stdio: 'pipe'
-    });
-
-    if (result.status !== 0) {
-      process.stderr.write(result.stdout || '');
-      process.stderr.write(result.stderr || '');
-      return false;
-    }
-
-    return true;
+    return runTypecheck(tsconfigPath, `${workspaces.length} example workspaces together`);
   } finally {
     rmSync(tempDirectory, {recursive: true, force: true});
   }
 }
 
 const workspaces = getExampleWorkspaces();
-let allPassed = true;
 
 console.log(
   `Typechecking ${workspaces.length} example workspace${workspaces.length === 1 ? '' : 's'}: ${workspaces
@@ -188,8 +221,16 @@ console.log(
     .join(', ')}`
 );
 
-for (const workspace of workspaces) {
-  allPassed = typecheckWorkspace(workspace) && allPassed;
+const sharedConfigurationWorkspaces = workspaces.filter(
+  ({workspaceId}) => !NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
+);
+const nativeConfigurationWorkspaces = workspaces.filter(({workspaceId}) =>
+  NATIVE_TYPESCRIPT_CONFIG_WORKSPACES.has(workspaceId)
+);
+let allPassed = typecheckWorkspaces(sharedConfigurationWorkspaces);
+
+for (const {name, workspacePath} of nativeConfigurationWorkspaces) {
+  allPassed = runTypecheck(join(workspacePath, 'tsconfig.json'), name) && allPassed;
 }
 
 if (!allPassed) {

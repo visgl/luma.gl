@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
@@ -130,6 +130,10 @@ export abstract class Buffer extends Resource<BufferProps> {
     _byteOffset: number,
     byteLength: number
   ): void {
+    if (!this.device.props.debug) {
+      return;
+    }
+
     let arrayBufferView: ArrayBufferView | null = null;
     let arrayBuffer: ArrayBufferLike | null;
     if (ArrayBuffer.isView(data)) {

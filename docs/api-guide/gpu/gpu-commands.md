@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 import {CommandEncodingGraphic} from '@site/src/components/docs/command-encoding-graphic';
 
@@ -81,10 +82,10 @@ device.submit();
 
 ### ComputePass
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 Use a `ComputePass` when you are dispatching a compute pipeline.
 
@@ -104,10 +105,10 @@ Render and compute passes contribute commands to a `CommandEncoder`. Render bund
 
 ## Reusable Draw Commands
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 Use a `RenderBundleEncoder` when the same WebGPU draw commands run repeatedly and only already-bound buffer or texture contents change. It records draw commands without starting a render pass. `finish()` returns an immutable `RenderBundle`, and a normal `RenderPass` replays that bundle.
 

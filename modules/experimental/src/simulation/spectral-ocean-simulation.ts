@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type CommandEncoder, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -9,7 +9,7 @@ import {
   GPUFFT2D,
   type GPUFFT2DStats,
   makeGPUFFT2DStats
-} from '../gpu-primitives/gpu-fft2d';
+} from '@luma.gl/gpgpu/gpu-core';
 import {makeSpectralOceanInitialSpectrum} from './spectral-ocean-initial-spectrum';
 import {
   SPECTRAL_OCEAN_ASSEMBLY_SHADER,

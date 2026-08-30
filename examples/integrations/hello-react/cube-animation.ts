@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, CubeGeometry, ShaderInputs} from '@luma.gl/engine';

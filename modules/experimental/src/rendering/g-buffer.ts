@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {
   Device,
@@ -26,6 +26,16 @@ const DEFAULT_DEPTH_SAMPLER = {
 } as const satisfies SamplerProps;
 
 const RESERVED_ATTACHMENT_NAMES = new Set(['color', 'normalRoughness', 'velocity', 'depth']);
+const EIGHT_BYTE_COLOR_ATTACHMENT_FORMATS = new Set<TextureFormatColor>([
+  'rgba8unorm',
+  'rgba8unorm-srgb',
+  'rgba8snorm',
+  'bgra8unorm',
+  'bgra8unorm-srgb',
+  'rgb10a2uint',
+  'rgb10a2unorm',
+  'rg11b10ufloat'
+]);
 let nextGBufferId = 0;
 
 /** One caller-defined MRT channel appended after the standard G-buffer channels. */
@@ -50,6 +60,8 @@ export type GBufferProps = {
   colorFormat?: TextureFormatColor;
   /** Encoded view-normal plus roughness format. Defaults to rgba8unorm. */
   normalRoughnessFormat?: TextureFormatColor;
+  /** Whether to allocate the motion-vector attachment. Defaults to true. */
+  velocity?: boolean;
   /** Current-minus-previous UV velocity format. Defaults to rg16float. */
   velocityFormat?: TextureFormatColor;
   /** Depth format used for reconstruction and depth-aware effects. Defaults to depth24plus. */
@@ -74,7 +86,7 @@ type GBufferRenderTargets = {
   framebuffer: Framebuffer;
   colorTexture: Texture;
   normalRoughnessTexture: Texture;
-  velocityTexture: Texture;
+  velocityTexture?: Texture;
   depthTexture: Texture;
   extraColorTextures: Map<string, Texture>;
 };
@@ -85,7 +97,7 @@ type GBufferRenderTargets = {
  * The first three color attachments have a fixed shader contract:
  * - location 0: shaded scene color
  * - location 1: encoded view normal in RGB plus roughness in A
- * - location 2: current-minus-previous UV velocity in RG
+ * - location 2: current-minus-previous UV velocity in RG when enabled
  *
  * Additional color attachments follow in declaration order. The class only owns targets and
  * semantic bindings; callers remain responsible for drawing geometry and selecting clear values.
@@ -125,7 +137,11 @@ export class GBuffer {
 
   /** Current-minus-previous UV velocity written at fragment output location 2. */
   get velocityTexture(): Texture {
-    return this.renderTargets.velocityTexture;
+    const texture = this.renderTargets.velocityTexture;
+    if (!texture) {
+      throw new Error('GBuffer velocity attachment is disabled.');
+    }
+    return texture;
   }
 
   /** Sampleable scene depth attachment. */
@@ -194,6 +210,7 @@ function resolveGBufferProps(id: string, props: GBufferProps): ResolvedGBufferPr
     height: props.height,
     colorFormat: props.colorFormat || 'rgba8unorm',
     normalRoughnessFormat: props.normalRoughnessFormat || 'rgba8unorm',
+    velocity: props.velocity ?? true,
     velocityFormat: props.velocityFormat || 'rg16float',
     depthStencilFormat: props.depthStencilFormat || 'depth24plus',
     extraColorAttachments: props.extraColorAttachments || []
@@ -202,7 +219,13 @@ function resolveGBufferProps(id: string, props: GBufferProps): ResolvedGBufferPr
 
 function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void {
   validateGBufferSize(props.width, props.height);
-  const colorAttachmentCount = 3 + props.extraColorAttachments.length;
+  const colorAttachmentFormats = [
+    props.colorFormat,
+    props.normalRoughnessFormat,
+    ...(props.velocity ? [props.velocityFormat] : []),
+    ...props.extraColorAttachments.map(attachment => attachment.format)
+  ];
+  const colorAttachmentCount = colorAttachmentFormats.length;
   if (colorAttachmentCount > device.limits.maxColorAttachments) {
     throw new Error(
       'GBuffer requires ' +
@@ -215,7 +238,9 @@ function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void
 
   validateRenderableFormat(device, props.colorFormat, 'color');
   validateRenderableFormat(device, props.normalRoughnessFormat, 'normalRoughness');
-  validateRenderableFormat(device, props.velocityFormat, 'velocity');
+  if (props.velocity) {
+    validateRenderableFormat(device, props.velocityFormat, 'velocity');
+  }
   validateCreatableFormat(device, props.depthStencilFormat, 'depth');
 
   const names = new Set<string>();
@@ -234,6 +259,52 @@ function validateGBufferProps(device: Device, props: ResolvedGBufferProps): void
     names.add(attachment.name);
     validateRenderableFormat(device, attachment.format, attachment.name);
   }
+
+  const colorAttachmentBytesPerSample = calculateColorAttachmentBytesPerSample(
+    device,
+    colorAttachmentFormats
+  );
+  if (colorAttachmentBytesPerSample > device.limits.maxColorAttachmentBytesPerSample) {
+    throw new Error(
+      'GBuffer color attachments require ' +
+        colorAttachmentBytesPerSample +
+        ' bytes per sample, but the device supports ' +
+        device.limits.maxColorAttachmentBytesPerSample +
+        '.'
+    );
+  }
+}
+
+/** Mirrors WebGPU's render-target byte-cost and component-alignment calculation. */
+function calculateColorAttachmentBytesPerSample(
+  device: Device,
+  formats: readonly TextureFormatColor[]
+): number {
+  let totalBytes = 0;
+  for (const format of formats) {
+    const componentAlignment = getColorAttachmentComponentAlignment(format);
+    totalBytes = Math.ceil(totalBytes / componentAlignment) * componentAlignment;
+    const texelBytes = device.getTextureFormatInfo(format).bytesPerPixel;
+    // WebGPU assigns an eight-byte render-target cost to normalized four-channel 8-bit formats
+    // and the packed 32-bit formats above. Other formats use their texel copy footprint.
+    totalBytes += EIGHT_BYTE_COLOR_ATTACHMENT_FORMATS.has(format) ? 8 : texelBytes;
+  }
+  return totalBytes;
+}
+
+function getColorAttachmentComponentAlignment(format: TextureFormatColor): 1 | 2 | 4 {
+  if (
+    format.startsWith('r8') ||
+    format.startsWith('rg8') ||
+    format.startsWith('rgba8') ||
+    format.startsWith('bgra8')
+  ) {
+    return 1;
+  }
+  if (format.startsWith('r16') || format.startsWith('rg16') || format.startsWith('rgba16')) {
+    return 2;
+  }
+  return 4;
 }
 
 function validateGBufferSize(width: number, height: number): void {
@@ -277,12 +348,9 @@ function createGBufferRenderTargets(
     'normal-roughness',
     props.normalRoughnessFormat
   );
-  const velocityTexture = createGBufferColorTexture(
-    device,
-    props,
-    'velocity',
-    props.velocityFormat
-  );
+  const velocityTexture = props.velocity
+    ? createGBufferColorTexture(device, props, 'velocity', props.velocityFormat)
+    : undefined;
   const extraColorTextures = new Map(
     props.extraColorAttachments.map(attachment => [
       attachment.name,
@@ -310,7 +378,7 @@ function createGBufferRenderTargets(
     colorAttachments: [
       colorTexture,
       normalRoughnessTexture,
-      velocityTexture,
+      ...(velocityTexture ? [velocityTexture] : []),
       ...extraColorTextures.values()
     ],
     depthStencilAttachment: depthTexture
@@ -347,7 +415,7 @@ function destroyGBufferRenderTargets(renderTargets: GBufferRenderTargets): void 
   renderTargets.framebuffer.destroy();
   renderTargets.colorTexture.destroy();
   renderTargets.normalRoughnessTexture.destroy();
-  renderTargets.velocityTexture.destroy();
+  renderTargets.velocityTexture?.destroy();
   renderTargets.depthTexture.destroy();
   for (const texture of renderTargets.extraColorTextures.values()) {
     texture.destroy();

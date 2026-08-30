@@ -1,13 +1,13 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   getArrowVectorByteLength,
   type ArrowTextRenderer,
   type ArrowTextRendererInput
 } from '@luma.gl/arrow';
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
 
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.

@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
 import type {Device} from '@luma.gl/core';
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {TextAttributeModelProps} from '@luma.gl/text/experimental';
 import {DataType} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from './arrow-text';
@@ -26,7 +26,7 @@ export type ArrowTextConversionColumns = {
   positions?: string;
   /** Source column containing plain or dictionary-encoded UTF-8 labels. */
   text?: string;
-  /** Optional source column containing `FixedSizeList<Int16>[4]` clip rectangles. */
+  /** Optional source column containing deck-style `FixedSizeList<Float32>[4]` clip rectangles. */
   clipRects?: string;
   /** Optional source column containing packed row or character RGBA8 colors. */
   colors?: string;

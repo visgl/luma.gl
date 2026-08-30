@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {Device, RenderPassProps} from '@luma.gl/core';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';

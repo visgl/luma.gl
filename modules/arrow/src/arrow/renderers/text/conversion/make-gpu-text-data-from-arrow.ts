@@ -1,11 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
 import type {GPUTextData, GPUTextResources, GPUTextStrategy} from '@luma.gl/text';
 import {createGPUTextData, supportsGpuTextExpansion} from '@luma.gl/text/experimental';
-import {GPUVector} from '@luma.gl/tables';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import * as arrow from 'apache-arrow';
 import {supportsVertexStorageBuffers} from '../../arrow-renderer-utils';
 import type {
@@ -161,10 +161,13 @@ export function resolveGPUTextStrategy(
   const hasCharacterColors = Boolean(
     props.sourceVectors.colors && arrow.DataType.isList(props.sourceVectors.colors.type)
   );
+  const alignmentBufferCount =
+    Number(Boolean(props.sourceVectors.textAnchors)) +
+    Number(Boolean(props.sourceVectors.alignmentBaselines));
   const supportsStorage =
     device.type === 'webgpu' &&
     supportsVertexStorageBuffers(device, TEXT_STORAGE_VERTEX_STORAGE_BUFFER_COUNT) &&
-    supportsGpuTextExpansion(device);
+    supportsGpuTextExpansion(device, alignmentBufferCount);
   const supportsDictionary =
     device.type === 'webgpu' &&
     supportsVertexStorageBuffers(device, TEXT_DICTIONARY_VERTEX_STORAGE_BUFFER_COUNT);

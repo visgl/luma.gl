@@ -1,14 +1,14 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
 import {Expression} from '../../utils/expression';
 import {
-  ArithmeticOperationInputs,
-  ArithmeticOp,
-  ARITHMETIC_OPERATIONS
-} from '../arithmetic-operation';
+  ARITHMETIC_OPERATIONS,
+  type ArithmeticOperationInputs,
+  type ArithmeticOp
+} from '../arithmetic-expression';
 import {getValueAtRow} from './common';
 
 export const arithmetic: OperationHandler<ArithmeticOperationInputs> = ({

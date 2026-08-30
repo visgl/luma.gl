@@ -1,4 +1,4 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/webgl/constants';

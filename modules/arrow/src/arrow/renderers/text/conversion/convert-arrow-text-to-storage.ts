@@ -1,9 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import * as arrow from 'apache-arrow';
 import {
   supportsGpuUtf8TextExpansion,

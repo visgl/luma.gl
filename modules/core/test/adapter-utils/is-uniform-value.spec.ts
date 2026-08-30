@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('isUniformValue', async t => {
   const device = await getWebGLTestDevice();

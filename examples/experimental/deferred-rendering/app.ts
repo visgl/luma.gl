@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -8,29 +8,29 @@ import {
   AnimationLoopTemplate,
   CubeGeometry,
   Model,
+  OrbitControls,
   ShaderInputs,
   ShaderPassRenderer,
   SphereGeometry
 } from '@luma.gl/engine';
 import {
-  createBloomShaderPassPipeline,
-  createClusteredVolumetricLightingShaderPassPipeline,
-  createGTAOShaderPassPipeline,
-  createHDRAutoExposureShaderPassPipeline,
-  createSSGIShaderPassPipeline,
-  createSSRShaderPassPipeline
+  createBloomCompositeShaderPass,
+  createClusteredVolumetricLightingCompositeShaderPass,
+  createGTAOCompositeShaderPass,
+  createHDRAutoExposureCompositeShaderPass,
+  createSSGICompositeShaderPass,
+  createSSRCompositeShaderPass
 } from '@luma.gl/effects';
 import {
   ClusteredLightGrid,
-  createDeferredAmbientLightingShaderPassPipeline,
-  createClusteredDeferredLightingShaderPassPipeline,
+  createDeferredAmbientLightingCompositeShaderPass,
+  createClusteredDeferredLightingCompositeShaderPass,
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
-  OrbitControls,
   type DeferredPointLight
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
   type Panel,
@@ -140,17 +140,17 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   pointLightCount: 256,
   animate: true,
   autoOrbitCamera: true,
-  exposure: 1.15,
+  exposure: 0.82,
   highlightBoost: 1.4,
   autoExposureEnabled: true,
-  exposureKeyValue: 0.48,
-  minimumExposure: 0.45,
-  maximumExposure: 2.4,
+  exposureKeyValue: 0.16,
+  minimumExposure: 0.35,
+  maximumExposure: 1.2,
   exposureBrightenSpeed: 1.6,
   exposureDarkenSpeed: 2.8,
   bloomEnabled: true,
-  bloomThreshold: 0.78,
-  bloomIntensity: 0.34,
+  bloomThreshold: 0.96,
+  bloomIntensity: 0.15,
   bloomRadius: 8,
   bloomResolution: 1,
   sunIntensity: 2.8,
@@ -175,18 +175,18 @@ const DEFAULT_SETTINGS: DeferredRenderingSettings = {
   reflectionHistoryWeight: 0.84,
   reflectionResolution: 0.5,
   atmosphereEnabled: true,
-  atmosphereDensity: 0.055,
+  atmosphereDensity: 0.008,
   atmosphereHeightFalloff: 0.28,
   atmosphereAnisotropy: 0.46,
-  atmospherePointLightIntensity: 1.65,
-  atmosphereSunIntensity: 1.1,
-  atmosphereStrength: 0.82,
+  atmospherePointLightIntensity: 1.45,
+  atmosphereSunIntensity: 0.6,
+  atmosphereStrength: 0.18,
   atmosphereSampleCount: 10,
   atmosphereHistoryWeight: 0.88,
   atmosphereShadowStrength: 0.76,
   atmosphereResolution: 0.5,
   godRaysEnabled: true,
-  godRayIntensity: 1.65,
+  godRayIntensity: 0.5,
   godRayDensity: 0.94,
   godRayDecay: 0.96,
   godRaySampleCount: 18
@@ -347,7 +347,9 @@ fn deferredDisplay_toneMap(color: vec3f) -> vec3f {
   let standardColor = clamp(mapped, vec3f(0.0), vec3f(1.0));
   let peakIntensity = max(max(exposed.r, exposed.g), exposed.b);
   let highlightWeight = smoothstep(0.32, 1.35, peakIntensity);
-  let extendedHighlights = exposed * highlightWeight * deferredDisplay.highlightBoost * 0.68;
+  // Extended-range output needs only a restrained lift above the filmic SDR shoulder. Large
+  // multipliers wash out the entire laboratory instead of preserving isolated HDR highlights.
+  let extendedHighlights = exposed * highlightWeight * deferredDisplay.highlightBoost * 0.02;
   let displayColor = select(
     standardColor,
     standardColor + extendedHighlights,
@@ -495,7 +497,7 @@ fn deferredDisplay_sampleColor(
   DeferredDisplayBindings
 >;
 
-const deferredDisplayPipeline: ShaderPassPipeline = {
+const deferredDisplayPipeline: CompositeShaderPass = {
   name: 'deferredDisplayPipeline',
   steps: [
     {
@@ -682,7 +684,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onRender({device, width, height, aspect, tick}: AnimationProps): void {
+  onRender({
+    device,
+    width,
+    height,
+    aspect,
+    tick,
+    time: elapsedTimeMilliseconds
+  }: AnimationProps): void {
     this.synchronizeHighlightBoost();
 
     if (this.framebufferSize[0] !== width || this.framebufferSize[1] !== height) {
@@ -699,7 +708,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.frameIndex === 0
         ? 1 / 60
         : Math.min(Math.max((tick - this.previousFrameTick) / 1000, 1 / 240), 0.12);
-    this.orbitControls?.update(tick);
+    this.orbitControls?.update(elapsedTimeMilliseconds);
     const eye: NumberArray3 = this.orbitControls?.getEyePosition() || [0, 9.5, 18];
     const projectionMatrix = new Matrix4().perspective({
       fovy: radians(47),
@@ -731,14 +740,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       Math.round(this.settings.pointLightCount),
       MAX_EXAMPLE_POINT_LIGHTS
     );
-    const highlightBoost =
-      device.preferredColorFormat === 'rgba16float' ? this.settings.highlightBoost : 0;
-    const lightState = makeAnimatedPointLights(
-      time,
-      activeLightCount,
-      viewMatrix,
-      1 + highlightBoost * 1.45
-    );
+    const lightState = makeAnimatedPointLights(time, activeLightCount, viewMatrix);
     this.pointLightBuffer.write(
       makeDeferredPointLightBufferData(lightState.viewLights, MAX_CLUSTERED_POINT_LIGHTS)
     );
@@ -1098,7 +1100,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function createAmbientLightingRenderer(device: Device): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
-    shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()],
+    shaderPasses: [createDeferredAmbientLightingCompositeShaderPass()],
     colorFormat: 'rgba16float',
     flipY: true
   });
@@ -1134,34 +1136,34 @@ function shouldUseVolumetricPipeline(settings: DeferredRenderingSettings): boole
 }
 
 function createRenderer(device: Device, settings: DeferredRenderingSettings): ShaderPassRenderer {
-  const shaderPasses: (ShaderPass | ShaderPassPipeline)[] = [
-    createClusteredDeferredLightingShaderPassPipeline(),
+  const shaderPasses: (ShaderPass | CompositeShaderPass)[] = [
+    createClusteredDeferredLightingCompositeShaderPass(),
     ...(shouldUseAmbientOcclusionPipeline(settings)
       ? [
-          createGTAOShaderPassPipeline({
+          createGTAOCompositeShaderPass({
             composition: 'ambient-only',
             resolutionScale: settings.ambientOcclusionResolution
           })
         ]
       : []),
     ...(shouldUseGlobalIlluminationPipeline(settings)
-      ? [createSSGIShaderPassPipeline({resolutionScale: settings.globalIlluminationResolution})]
+      ? [createSSGICompositeShaderPass({resolutionScale: settings.globalIlluminationResolution})]
       : []),
     ...(shouldUseReflectionPipeline(settings)
-      ? [createSSRShaderPassPipeline({resolutionScale: settings.reflectionResolution})]
+      ? [createSSRCompositeShaderPass({resolutionScale: settings.reflectionResolution})]
       : []),
     ...(shouldUseVolumetricPipeline(settings)
       ? [
-          createClusteredVolumetricLightingShaderPassPipeline({
+          createClusteredVolumetricLightingCompositeShaderPass({
             resolutionScale: settings.atmosphereResolution
           })
         ]
       : []),
     ...(settings.autoExposureEnabled || settings.debugView === 'HDR Luminance'
-      ? [createHDRAutoExposureShaderPassPipeline()]
+      ? [createHDRAutoExposureCompositeShaderPass({initialExposure: settings.minimumExposure})]
       : []),
     ...(settings.bloomEnabled
-      ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
+      ? [createBloomCompositeShaderPass({resolutionScale: settings.bloomResolution})]
       : []),
     deferredDisplayPipeline
   ];
@@ -1341,8 +1343,7 @@ function makeLightMarkerData(): SurfaceInstanceData {
 function makeAnimatedPointLights(
   time: number,
   lightCount: number,
-  viewMatrix: Matrix4,
-  lightIntensityMultiplier = 1
+  viewMatrix: Matrix4
 ): {viewLights: DeferredPointLight[]; markerPositions: Float32Array} {
   const viewLights: DeferredPointLight[] = [];
   const markerPositions = new Float32Array(MAX_EXAMPLE_POINT_LIGHTS * 3);
@@ -1371,7 +1372,7 @@ function makeAnimatedPointLights(
       position: viewMatrix.transformAsPoint(worldPosition) as [number, number, number],
       range: 3.6 + (ring % 3) * 0.55,
       color: [color[0], color[1], color[2]],
-      intensity: (7.5 + (ring % 3) * 1.2) * lightIntensityMultiplier
+      intensity: 7.5 + (ring % 3) * 1.2
     });
   }
   return {viewLights, markerPositions};

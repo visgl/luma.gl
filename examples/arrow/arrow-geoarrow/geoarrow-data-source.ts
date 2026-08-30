@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeGeoArrowExampleData, type GeoArrowExampleData} from './geoarrow-data';
 import type {GeoArrowRenderer} from './geoarrow-renderer';

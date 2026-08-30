@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from '@luma.gl/shadertools';
 
@@ -16,6 +16,15 @@ fn opticalLighting_getFresnel(
 ) -> f32 {
   return baseReflectance + (1.0 - baseReflectance) *
     pow(1.0 - clamp(viewAlignment, 0.0, 1.0), exponent);
+}
+
+fn opticalLighting_getFilteredRoughness(normal: vec3<f32>, roughness: f32) -> f32 {
+  let normalDerivativeX = dpdx(normal);
+  let normalDerivativeY = dpdy(normal);
+  let normalVariance = dot(normalDerivativeX, normalDerivativeX) +
+    dot(normalDerivativeY, normalDerivativeY);
+  let kernelRoughnessSquared = min(2.0 * normalVariance, 1.0);
+  return clamp(sqrt(roughness * roughness + kernelRoughnessSquared), 0.04, 1.0);
 }
 
 fn opticalLighting_getMicrofacetSpecular(
@@ -73,6 +82,15 @@ vec3 opticalLighting_faceNormal(vec3 normal, vec3 viewDirection) {
 float opticalLighting_getFresnel(float viewAlignment, float baseReflectance, float exponent) {
   return baseReflectance + (1.0 - baseReflectance) *
     pow(1.0 - clamp(viewAlignment, 0.0, 1.0), exponent);
+}
+
+float opticalLighting_getFilteredRoughness(vec3 normal, float roughness) {
+  vec3 normalDerivativeX = dFdx(normal);
+  vec3 normalDerivativeY = dFdy(normal);
+  float normalVariance = dot(normalDerivativeX, normalDerivativeX) +
+    dot(normalDerivativeY, normalDerivativeY);
+  float kernelRoughnessSquared = min(2.0 * normalVariance, 1.0);
+  return clamp(sqrt(roughness * roughness + kernelRoughnessSquared), 0.04, 1.0);
 }
 
 float opticalLighting_getMicrofacetSpecular(

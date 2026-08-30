@@ -5,8 +5,8 @@ import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-ta
 <ShadertoolsDocsTabs active="shader-conventions" />
 
 :::caution
-This describes informal conventions that luma.gl applies to its shaders. 
-It is still a work in progress.
+These are luma.gl conventions rather than WebGPU or WebGL requirements. Existing built-in modules
+follow them, but applications must still declare and bind every group required by their shaders.
 :::
 
 ## Uniform Blocks

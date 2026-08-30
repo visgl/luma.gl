@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Program} from '@luma.gl/webgl-legacy';
 import {createTestContext} from '@luma.gl/test-utils';

@@ -1,30 +1,80 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
-import {Color, Device, RenderPass, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
+import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {Device, log, RenderPass} from '@luma.gl/core';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  type Model,
+  ModelNode,
+  OrbitControls
+} from '@luma.gl/engine';
 import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {
+  createGLTFAnimatedCrowd,
+  createScenegraphsFromGLTF,
+  type GLTFAnimatedCrowd,
+  type GLTFCrowdActorOptions,
+  type GLTFScenegraphs,
+  type PBREnvironment
+} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
+import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
+import {
+  GLTF_REFERENCE_EVIDENCE_SCHEMA,
+  GLTF_REFERENCE_EVIDENCE_VERSION,
+  getGLTFReferenceCaptureOptions,
+  getGLTFReferenceDrawMetrics,
+  getGLTFReferenceResourceMetrics,
+  type GLTFReferenceCaptureOptions,
+  type GLTFReferenceEvidence
+} from './gltf-reference-evidence';
+import {
+  GLTFAnimationStudio,
+  getGLTFStudioCameraState,
+  type GLTFAnimationStudioState
+} from './gltf-animation-studio';
+import {GLTF_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
 
 /* eslint-disable camelcase */
 
-const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
-const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
+const MODEL_DIRECTORY_URL = GLTF_SAMPLE_ASSETS_MODEL_URL;
+const MODEL_LIST_URL = `${GLTF_SAMPLE_ASSETS_MODEL_URL}/model-index.json`;
+const ROBOT_EXPRESSIVE_MODEL_URL = new URL(
+  '../scene/public/gltf/RobotExpressive.glb',
+  import.meta.url
+).href;
+const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
+  '../../../modules/gltf/test/data/SimpleSkinLOD.gltf',
+  import.meta.url
+).href;
+const BUMP_MATERIAL_MODEL_URL = new URL(
+  '../../../modules/gltf/test/data/BumpMaterial.gltf',
+  import.meta.url
+).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
 export const GLTF_MODEL_INFO_ID = 'model-info';
+export const GLTF_CROWD_INFO_ID = 'gltf-crowd-info';
+export const GLTF_ANIMATION_INFO_ID = 'gltf-animation-info';
 export const GLTF_CONTROL_PANEL_STYLE = 'display: grid; gap: 8px;';
 export const GLTF_CONTROL_ROW_STYLE =
   'display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; column-gap: 0.75rem;';
 export const GLTF_SELECT_STYLE = 'width: 100%; min-width: 0;';
 const MAX_CAMERA_TILT = 0.7;
 const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
+const MAXIMUM_GLTF_CROWD_ACTORS = 100;
+const ADDITIONAL_ANIMATED_GLTF_MODELS = new Set([
+  'Fox',
+  'MorphStressTest',
+  'RobotExpressive',
+  'SimpleMorph',
+  'SimpleSkinLOD'
+]);
 
 const lightSources = {
   ambientLight: {
@@ -69,6 +119,8 @@ const INFO_HTML = `\
 <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
 </div>
 <div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
+<div id="${GLTF_ANIMATION_INFO_ID}" style="margin-top: 8px;" hidden></div>
+<div id="${GLTF_CROWD_INFO_ID}" style="margin-top: 8px;" hidden></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
@@ -87,13 +139,51 @@ export type GLTFCatalogModel = {
   tags?: string[];
   variants?: Record<string, string>;
 };
+
+/** Identifies animated Khronos samples without fetching every model document. */
+export function isAnimatedGLTFCatalogModel(
+  model: Pick<GLTFCatalogModel, 'name' | 'screenshot'>
+): boolean {
+  return (
+    ADDITIONAL_ANIMATED_GLTF_MODELS.has(model.name) ||
+    /animat/i.test(model.name) ||
+    /(?:\.gif(?:[?#]|$)|(?:^|[/._-])animated(?:[._-]|$))/i.test(model.screenshot || '')
+  );
+}
+
 type GLTFModelMetadata = Pick<GLTFCatalogModel, 'summary' | 'description'>;
 
 const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
   PotOfCoalsAnimationPointer: {
     description:
       'A non-reflective bumpy glass-like surface distorts the hot coals underneath, using KHR_animation_pointer to animate the heat refraction effect.'
+  },
+  RobotExpressive: {
+    summary:
+      'An expressive skinned robot with 14 named actions, facial expressions, and independently animated crowd playback.'
+  },
+  SimpleSkinLOD: {
+    summary:
+      'An animated, skinned character with three authored MSFT_lod mesh levels and screen-coverage thresholds.'
   }
+};
+const ROBOT_EXPRESSIVE_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Robot Expressive',
+  name: 'RobotExpressive',
+  ...GLTF_MODEL_METADATA_OVERRIDES['RobotExpressive'],
+  variants: {'glTF-Binary': 'RobotExpressive.glb'}
+};
+const SIMPLE_SKIN_LOD_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Simple Skin LOD',
+  name: 'SimpleSkinLOD',
+  ...GLTF_MODEL_METADATA_OVERRIDES['SimpleSkinLOD'],
+  variants: {glTF: 'SimpleSkinLOD.gltf'}
+};
+const BUMP_MATERIAL_CATALOG_MODEL: GLTFCatalogModel = {
+  label: 'Bump Material',
+  name: 'BumpMaterial',
+  summary: 'A compact CC0 fixture for the experimental EXT_materials_bump extension.',
+  variants: {glTF: 'BumpMaterial.gltf'}
 };
 export type GLTFModelReference = {
   name: string;
@@ -101,22 +191,39 @@ export type GLTFModelReference = {
   fileName?: string;
 };
 
+declare global {
+  interface Window {
+    __lumaGLTFReferenceEvidence?: GLTFReferenceEvidence;
+    __lumaGLTFReferenceError?: string;
+    __lumaGLTFReferenceProgress?: {
+      stage: string;
+      updatedAt: string;
+    };
+  }
+}
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
+  orbitControls: OrbitControls;
   availableModels: GLTFCatalogModel[] = [];
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
+  animatedCrowd?: GLTFAnimatedCrowd;
+  readonly animationStudio = new GLTFAnimationStudio();
+  activeScenegraphOptions: Parameters<typeof createScenegraphsFromGLTF>[2] = {};
+  loadedGLTF?: GLTFPostprocessed;
+  previousCrowdFrameTime?: number;
+  crowdActionNames: string[] = [];
+  levelOfDetailBias = 1;
+  levelOfDetailVertexBudget = 0;
   modelLights: Light[] = [];
+  selectedCameraIndex: number | null = null;
   center = [0, 0, 0];
   cameraHeight = 0;
-  cameraOrbitDistance = 1;
-  minCameraOrbitDistance = 0.05;
-  maxCameraOrbitDistance = 40;
   sceneRadius = 1;
-  mouseCameraTime = 0;
-  mouseCameraTilt = 0;
   options: Record<string, boolean> = {
+    autoLOD: false,
     useModelLights: true,
     cameraAnimation: true,
     gltfAnimation: true
@@ -125,28 +232,98 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   gltfLoadGeneration: number = 0;
   cleanupCallbacks: Array<() => void> = [];
   modelMetadataCache = new Map<string, Promise<GLTFModelMetadata>>();
+  readonly referenceCaptureOptions: GLTFReferenceCaptureOptions | undefined;
+  referenceModelUrl = '';
+  referenceLoadMetrics?: {
+    loadMilliseconds: number;
+    fetchAndPostprocessMilliseconds: number;
+    scenegraphCreationMilliseconds: number;
+  };
+  referenceFrameCount = 0;
+  referenceFrameCpuMilliseconds = 0;
+  referenceInitialDrawCpuMilliseconds?: number;
+  referenceRenderStage = '';
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.referenceCaptureOptions = getGLTFReferenceCaptureOptions(window.location.search);
     ensureLoadingIndicatorStyles();
     this.options = loadOptions(this.options);
+    if (this.referenceCaptureOptions) {
+      this.options = {
+        ...this.options,
+        autoLOD: false,
+        useModelLights: false,
+        cameraAnimation: false,
+        gltfAnimation: false
+      };
+      delete window.__lumaGLTFReferenceEvidence;
+      delete window.__lumaGLTFReferenceError;
+      delete window.__lumaGLTFReferenceProgress;
+      void this.device.lost.then(loss => {
+        if (this.isFinalized || !this.referenceCaptureOptions) {
+          return;
+        }
+        const message = `WebGPU device lost during glTF reference capture: ${loss.message}`;
+        window.__lumaGLTFReferenceError = message;
+        this.publishReferenceRenderStage('device-lost');
+        log.error(message)();
+      });
+    }
+
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    this.orbitControls = new OrbitControls(canvas, {
+      distance: 1,
+      minDistance: 0.05,
+      maxDistance: 40,
+      minPitch: -MAX_CAMERA_TILT,
+      maxPitch: MAX_CAMERA_TILT,
+      rotateSpeed: 0.0035,
+      pitchSpeed: 0.01,
+      zoomSpeed: 0.0015,
+      autoRotate: this.options['cameraAnimation'],
+      autoRotateSpeed: 1
+    });
+    this.cleanupCallbacks.push(() => this.orbitControls.destroy());
 
     const modelStorageKey = this.getModelStorageKey();
-    window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
-    const initialModelName = window.localStorage[modelStorageKey];
+    if (!this.referenceCaptureOptions) {
+      window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
+    }
+    const initialModelName =
+      this.referenceCaptureOptions?.modelName || window.localStorage[modelStorageKey];
 
     this.cleanupCallbacks.push(...setOptionsUI(this.options));
 
-    this.fetchModelList()
+    const modelListPromise = this.referenceCaptureOptions
+      ? Promise.resolve([getReferenceCaptureCatalogModel(this.referenceCaptureOptions)])
+      : this.fetchModelList();
+    modelListPromise
       .then(models => {
         if (this.isFinalized) {
           return;
         }
         this.availableModels = models;
-        const cleanupModelMenu = this.initializeModelMenus(models, initialModelName);
+        const currentModelName = models.some(model => model.name === initialModelName)
+          ? initialModelName
+          : models.find(model => model.name === this.getDefaultModelName())?.name ||
+            models[0]?.name ||
+            initialModelName;
+        if (!this.referenceCaptureOptions) {
+          window.localStorage[modelStorageKey] = currentModelName;
+        }
+        const cleanupModelMenu = this.initializeModelMenus(models, currentModelName);
         this.cleanupCallbacks.push(cleanupModelMenu);
-        this.loadGLTF(initialModelName);
+        this.loadGLTF(
+          this.referenceCaptureOptions
+            ? {
+                name: this.referenceCaptureOptions.modelName,
+                variant: this.referenceCaptureOptions.variant,
+                fileName: this.referenceCaptureOptions.fileName
+              }
+            : currentModelName
+        );
       })
       .catch(error => {
         log.error(
@@ -158,50 +335,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
         this.loadGLTF(initialModelName);
       });
-
-    const mouseMoveHandler = (event: Event) => {
-      const mouseEvent = event as MouseEvent;
-      if (mouseEvent.buttons) {
-        this.mouseCameraTime -= mouseEvent.movementX * 3.5;
-        this.mouseCameraTilt = clampNumber(
-          this.mouseCameraTilt - mouseEvent.movementY * 0.01,
-          -MAX_CAMERA_TILT,
-          MAX_CAMERA_TILT
-        );
-      }
-    };
-    const canvas = this.device.getDefaultCanvasContext().canvas;
-    canvas.addEventListener('mousemove', mouseMoveHandler);
-    this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
-
-    const mouseWheelHandler = (event: Event) => {
-      const wheelEvent = event as WheelEvent;
-      wheelEvent.preventDefault();
-      const zoomFactor = Math.exp(clampNumber(wheelEvent.deltaY, -240, 240) * 0.0015);
-      this.cameraOrbitDistance = clampNumber(
-        this.cameraOrbitDistance * zoomFactor,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
-    };
-    canvas.addEventListener('wheel', mouseWheelHandler, {passive: false});
-    this.cleanupCallbacks.push(() =>
-      canvas.removeEventListener('wheel', mouseWheelHandler as EventListener)
-    );
   }
 
   onFinalize() {
     this.isFinalized = true;
     this.gltfLoadGeneration++;
+    delete window.__lumaGLTFReferenceEvidence;
+    delete window.__lumaGLTFReferenceError;
     for (const cleanupCallback of this.cleanupCallbacks) {
       cleanupCallback();
     }
     this.cleanupCallbacks = [];
+    this.animationStudio.detach();
+    this.animatedCrowd?.destroy();
+    this.animatedCrowd = undefined;
+    this.crowdActionNames = [];
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
+    this.loadedGLTF = undefined;
     this.modelLights = [];
     this.setViewerLoadingState(false);
     updateModelInfoBox();
+    updateCrowdInfo();
     updateExtensionSupportTable();
   }
 
@@ -209,11 +364,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return 'CesiumMan';
   }
 
+  isReferenceCapture(): boolean {
+    return Boolean(this.referenceCaptureOptions);
+  }
+
   getModelStorageKey(): string {
     return LAST_GLTF_MODEL_STORAGE_KEY;
   }
 
-  getClearColor(): Color {
+  getClearColor(): [number, number, number, number] {
     return [0, 0, 0, 1];
   }
 
@@ -248,7 +407,134 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   drawBackground(_renderPass: RenderPass): void {}
 
+  /** Lets richer showcase surfaces refresh controls after an asset or crowd changes. */
+  onScenegraphsChanged(_scenegraphs: GLTFScenegraphs): void {}
+
+  /** Selects a source-authored camera, or restores the studio orbit camera with null. */
+  selectCamera(cameraIndex: number | null): void {
+    const cameraCount = this.scenegraphsFromGLTF?.cameras?.length || 0;
+    this.selectedCameraIndex =
+      cameraIndex === null || cameraIndex < 0 || cameraIndex >= cameraCount ? null : cameraIndex;
+  }
+
+  /** Returns the number of independently animated actors sharing the current asset. */
+  getAnimationInstanceCount(): number {
+    return this.animatedCrowd?.actorCount || 1;
+  }
+
+  /** Toggles actor-specific mesh detail without rebuilding the crowd or resetting animation. */
+  setAutomaticLevelOfDetail(enabled: boolean): void {
+    this.options['autoLOD'] = enabled;
+    this.animatedCrowd?.setLODEnabled(enabled);
+  }
+
+  /** Increases or decreases authored/generated screen-coverage detail selection. */
+  setLevelOfDetailBias(bias: number): void {
+    this.levelOfDetailBias = clampNumber(bias, 0.25, 4);
+    this.animatedCrowd?.setLODBias(this.levelOfDetailBias);
+  }
+
+  /** Limits submitted actor vertices without changing animation state; zero means unlimited. */
+  setLevelOfDetailVertexBudget(vertexBudget: number): void {
+    this.levelOfDetailVertexBudget = clampNumber(Math.round(vertexBudget), 0, 1_000_000);
+    this.animatedCrowd?.setLODVertexBudget(this.levelOfDetailVertexBudget || undefined);
+  }
+
+  /** Places independently phased actors in one GPU-instanced draw per source primitive. */
+  setAnimationInstanceCount(instanceCount: number): void {
+    const actorCount = Math.max(1, Math.min(MAXIMUM_GLTF_CROWD_ACTORS, Math.floor(instanceCount)));
+    if (!this.loadedGLTF || (!this.animatedCrowd && actorCount === 1)) {
+      return;
+    }
+
+    if (!this.animatedCrowd) {
+      if (this.scenegraphsFromGLTF?.extensionSupport.has('EXT_mesh_gpu_instancing')) {
+        showError(new Error('GPU animated crowds cannot nest EXT_mesh_gpu_instancing.'));
+        return;
+      }
+
+      const previousScenegraphs = this.scenegraphsFromGLTF;
+      try {
+        this.animatedCrowd = createGLTFAnimatedCrowd(this.device, this.loadedGLTF, {
+          ...this.activeScenegraphOptions,
+          capacity: MAXIMUM_GLTF_CROWD_ACTORS,
+          gpuAnimation: {sampleRate: 30},
+          lod: {
+            enabled: this.options['autoLOD'],
+            autoGenerate: true,
+            ratios: [0.5, 0.25],
+            ...(this.levelOfDetailVertexBudget > 0
+              ? {vertexBudget: this.levelOfDetailVertexBudget}
+              : {})
+          }
+        });
+        this.animatedCrowd.setLODBias(this.levelOfDetailBias);
+      } catch (error) {
+        showError(error);
+        return;
+      }
+      destroyScenegraphs(previousScenegraphs);
+      this.scenegraphsFromGLTF = this.animatedCrowd.scenegraphs;
+      this.modelLights = this.animatedCrowd.scenegraphs.lights;
+      this.animationStudio.attach(this.animatedCrowd.scenegraphs);
+      this.animationStudio.attachCrowd(this.animatedCrowd);
+      this.previousCrowdFrameTime = undefined;
+      showError();
+    }
+
+    const clipNames = getAnimationClipNames(this.animatedCrowd.scenegraphs);
+    const preferredClips = ['Walking', 'Running', 'Dance', 'Wave', 'Idle'];
+    const availableClips = preferredClips.filter(name => clipNames.includes(name));
+    const playableClips = availableClips.length ? availableClips : clipNames;
+
+    const actorOptions: GLTFCrowdActorOptions[] = [];
+    const spacing = Math.max(this.sceneRadius * 2.5, 0.75);
+    for (let actorIndex = this.animatedCrowd.actorCount; actorIndex < actorCount; actorIndex++) {
+      const clip = playableClips.length
+        ? playableClips[actorIndex % playableClips.length]
+        : undefined;
+      const angle = actorIndex * 2.39996322973;
+      const radius = Math.sqrt(actorIndex) * spacing;
+      actorOptions.push({
+        id: `gltf-crowd-actor-${actorIndex}`,
+        ...(clip ? {clip} : {}),
+        phase: (actorIndex * 0.61803398875) % 1,
+        speed: 0.8 + (actorIndex % 5) * 0.1,
+        transform: new Matrix4().translate([Math.cos(angle) * radius, 0, Math.sin(angle) * radius])
+      });
+    }
+    if (actorOptions.length) {
+      this.animatedCrowd.addActors(actorOptions);
+    }
+
+    if (this.animatedCrowd.actorCount > actorCount) {
+      this.animatedCrowd.removeActors(
+        this.animatedCrowd.actors.slice(actorCount).map(actor => actor.id)
+      );
+    }
+
+    this.animationStudio.attachCrowd(this.animatedCrowd);
+    this.onScenegraphsChanged(this.animatedCrowd.scenegraphs);
+
+    this.crowdActionNames = Array.from(
+      new Set(
+        this.animatedCrowd.actors
+          .map(actor => actor.activeClip)
+          .filter((name): name is string => Boolean(name))
+      )
+    );
+    updateCrowdInfo(
+      actorCount,
+      this.animatedCrowd.lodStats.drawCount,
+      this.crowdActionNames,
+      this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined,
+      this.animatedCrowd.animationStats
+    );
+  }
+
   onRender({aspect, device, time}: AnimationProps): void {
+    const frameStartTime = performance.now();
+    let animationCpuMilliseconds = 0;
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
     this.drawBackground(renderPass);
 
@@ -257,32 +543,125 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
+    this.publishReferenceRenderStage('model-frame-started');
+
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
+    this.orbitControls.setAutoRotate(this.options['cameraAnimation']);
+    this.orbitControls.update(time);
 
-    const orbitDistance = this.cameraOrbitDistance;
-    const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
+    const actorCount = this.getAnimationInstanceCount();
+    const actorSpacing = Math.max(this.sceneRadius * 2.5, 0.75);
+    const crowdRadius =
+      actorCount > 1
+        ? Math.sqrt(actorCount - 1) * actorSpacing + this.sceneRadius
+        : this.sceneRadius;
+    const orbitDistance =
+      this.orbitControls.distance *
+      Math.max(1, crowdRadius / Math.max(this.sceneRadius, 0.001)) *
+      (this.referenceCaptureOptions?.distanceMultiplier || 1);
+    const far = Math.max(orbitDistance + crowdRadius * 2, 10);
     const near = Math.max(this.sceneRadius / 1000, 0.01);
-    const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
-    const orbitAngle = 0.001 * cameraTime;
-    const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
-    const verticalOrbitOffset =
-      orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(this.mouseCameraTilt);
-    const cameraPos = [
-      orbitDistance * horizontalOrbitScale * Math.sin(orbitAngle),
-      this.cameraHeight + verticalOrbitOffset,
-      orbitDistance * horizontalOrbitScale * Math.cos(orbitAngle)
-    ];
-
-    if (this.options['gltfAnimation']) {
-      this.scenegraphsFromGLTF.animator?.setTime(time);
+    if (this.options['gltfAnimation'] && !this.animatedCrowd) {
+      const animationStartTime = performance.now();
+      this.animationStudio.setPlaying(true);
+      this.animationStudio.update(time);
+      animationCpuMilliseconds += performance.now() - animationStartTime;
+    } else if (!this.animatedCrowd) {
+      this.animationStudio.setPlaying(false);
     }
 
-    const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
+    const {
+      projectionMatrix,
+      viewMatrix,
+      position: cameraPos
+    } = this.getCameraState({
+      aspect,
+      far,
+      near,
+      orbitDistance,
+      time
+    });
+    if (!this.referenceCaptureOptions) {
+      updateAnimationStudioInfo(this.animationStudio.getState());
+    }
 
     const pbrMaterialProps = this.getPBRMaterialProps();
     const hasPBRMaterialProps = Object.keys(pbrMaterialProps).length > 0;
 
+    if (this.animatedCrowd) {
+      const deltaSeconds =
+        this.previousCrowdFrameTime === undefined
+          ? 0
+          : Math.min(Math.max(time - this.previousCrowdFrameTime, 0) / 1000, 0.1);
+      this.previousCrowdFrameTime = time;
+      const canvas = device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+      const levelOfDetailView = this.options['autoLOD']
+        ? {
+            viewMatrix,
+            projectionMatrix,
+            viewportWidth: canvas.width,
+            viewportHeight: canvas.height
+          }
+        : undefined;
+
+      if (this.options['gltfAnimation']) {
+        const animationStartTime = performance.now();
+        this.animatedCrowd.update(deltaSeconds, levelOfDetailView);
+        animationCpuMilliseconds += performance.now() - animationStartTime;
+      } else if (levelOfDetailView) {
+        this.animatedCrowd.setLODView(levelOfDetailView);
+      }
+
+      const modelMatrix = new Matrix4();
+      const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+      for (const model of this.animatedCrowd.models) {
+        if (model.instanceCount === 0) {
+          continue;
+        }
+        model.shaderInputs.setProps({
+          lighting: this.getLightingProps(),
+          pbrProjection: {
+            camera: cameraPos,
+            modelViewProjectionMatrix,
+            modelMatrix,
+            normalMatrix: modelMatrix
+          }
+        });
+        if (hasPBRMaterialProps) {
+          if (model.material?.ownsModule('pbrMaterial')) {
+            model.material.setProps({pbrMaterial: pbrMaterialProps});
+          } else {
+            model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps});
+          }
+        }
+      }
+
+      const drawCount = this.animatedCrowd.draw(renderPass);
+      updateCrowdInfo(
+        this.animatedCrowd.actorCount,
+        drawCount,
+        this.crowdActionNames,
+        this.options['autoLOD'] ? this.animatedCrowd.lodStats : undefined,
+        this.animatedCrowd.animationStats
+      );
+      renderPass.end();
+      this.publishReferenceEvidence({
+        animationCpuMilliseconds,
+        cameraPosition: cameraPos,
+        drawMetrics: {
+          drawCount,
+          submittedIndexReferences: this.animatedCrowd.lodStats.vertices,
+          submittedVertexReferences: 0,
+          triangleCount: this.animatedCrowd.lodStats.triangles
+        },
+        far,
+        frameStartTime,
+        near
+      });
+      return;
+    }
+
+    const drawnModels: Model[] = [];
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
@@ -290,7 +669,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .multiplyRight(viewMatrix)
         .multiplyRight(modelMatrix);
 
-      const sceneShaderInputProps: Record<string, unknown> = {
+      model.shaderInputs.setProps({
         lighting: this.getLightingProps(),
         pbrProjection: {
           camera: cameraPos,
@@ -301,32 +680,185 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         skin: {
           scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
-      };
+      });
 
       if (hasPBRMaterialProps) {
         if (model.material?.ownsModule('pbrMaterial')) {
           model.material.setProps({pbrMaterial: pbrMaterialProps});
         } else {
-          sceneShaderInputProps.pbrMaterial = pbrMaterialProps;
+          model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps});
         }
       }
 
-      model.shaderInputs.setProps(sceneShaderInputProps);
-      model.draw(renderPass);
+      this.publishReferenceRenderStage(`drawing-model:${model.id}`);
+      if (model.draw(renderPass)) {
+        drawnModels.push(model);
+      }
+      this.publishReferenceRenderStage(`drew-model:${model.id}`);
     });
+    this.publishReferenceRenderStage('ending-render-pass');
     renderPass.end();
+    this.publishReferenceRenderStage('render-pass-ended');
+    this.publishReferenceEvidence({
+      animationCpuMilliseconds,
+      cameraPosition: cameraPos,
+      drawMetrics: getGLTFReferenceDrawMetrics(drawnModels),
+      far,
+      frameStartTime,
+      near
+    });
+    this.publishReferenceRenderStage('evidence-published');
+  }
+
+  private publishReferenceRenderStage(stage: string): void {
+    if (
+      !this.referenceCaptureOptions ||
+      this.referenceFrameCount > 0 ||
+      stage === this.referenceRenderStage
+    ) {
+      return;
+    }
+    this.referenceRenderStage = stage;
+    window.__lumaGLTFReferenceProgress = {stage, updatedAt: new Date().toISOString()};
+    log.log(0, `glTF reference render stage: ${stage}`)();
+  }
+
+  private publishReferenceEvidence(options: {
+    animationCpuMilliseconds: number;
+    cameraPosition: [number, number, number];
+    drawMetrics: ReturnType<typeof getGLTFReferenceDrawMetrics>;
+    far: number;
+    frameStartTime: number;
+    near: number;
+  }): void {
+    const captureOptions = this.referenceCaptureOptions;
+    const loadMetrics = this.referenceLoadMetrics;
+    if (!captureOptions || !loadMetrics || !this.scenegraphsFromGLTF || !this.referenceModelUrl) {
+      return;
+    }
+
+    const frameCpuMilliseconds = performance.now() - options.frameStartTime;
+    this.referenceFrameCount++;
+    this.referenceFrameCpuMilliseconds += frameCpuMilliseconds;
+    this.referenceInitialDrawCpuMilliseconds ??= frameCpuMilliseconds;
+
+    const deviceInfo = this.device.info;
+    window.__lumaGLTFReferenceEvidence = {
+      schema: GLTF_REFERENCE_EVIDENCE_SCHEMA,
+      version: GLTF_REFERENCE_EVIDENCE_VERSION,
+      status: 'ready',
+      model: {
+        name: captureOptions.modelName,
+        variant: captureOptions.variant,
+        fileName: captureOptions.fileName,
+        url: this.referenceModelUrl
+      },
+      renderer: {
+        backend: this.device.type,
+        vendor: deviceInfo.vendor,
+        renderer: deviceInfo.renderer,
+        version: deviceInfo.version,
+        gpu: deviceInfo.gpu,
+        gpuType: deviceInfo.gpuType,
+        gpuBackend: deviceInfo.gpuBackend,
+        featureLevel: deviceInfo.featureLevel,
+        shadingLanguage: deviceInfo.shadingLanguage
+      },
+      camera: {
+        yaw: captureOptions.yaw,
+        pitch: captureOptions.pitch,
+        distanceMultiplier: captureOptions.distanceMultiplier,
+        position: options.cameraPosition,
+        target: [this.center[0], this.center[1], this.center[2]],
+        verticalFieldOfViewRadians: Math.PI / 3,
+        near: options.near,
+        far: options.far
+      },
+      rendering: {
+        animation: captureOptions.studio ? 'fixed-studio-state' : 'disabled',
+        automaticLevelOfDetail: 'disabled',
+        environment: 'fixed-fallback-lights',
+        exposure: 1,
+        toneMapping: 'none',
+        outputColorSpace: 'srgb'
+      },
+      ...(captureOptions.studio
+        ? {
+            studio: this.getReferenceStudioEvidence()
+          }
+        : {}),
+      extensions: Array.from(this.scenegraphsFromGLTF.extensionSupport.values())
+        .map(extension => ({
+          extensionName: extension.extensionName,
+          required: extension.required,
+          supported: extension.supported,
+          supportLevel: extension.supportLevel,
+          standardStatus: extension.standardStatus
+        }))
+        .sort((leftExtension, rightExtension) =>
+          leftExtension.extensionName.localeCompare(rightExtension.extensionName)
+        ),
+      metrics: {
+        frameCount: this.referenceFrameCount,
+        averageFrameCpuMilliseconds: this.referenceFrameCpuMilliseconds / this.referenceFrameCount,
+        animationCpuMilliseconds: options.animationCpuMilliseconds,
+        ...loadMetrics,
+        initialDrawCpuMilliseconds: this.referenceInitialDrawCpuMilliseconds,
+        shaderCompilationMilliseconds: null,
+        shaderCompilationAvailability: 'not-exposed-by-device-api',
+        gpuMemoryBytes: this.device.statsManager.getStats('GPU Time and Memory').get('GPU Memory')
+          .count,
+        resources: getGLTFReferenceResourceMetrics(this.referenceModelUrl),
+        ...options.drawMetrics
+      }
+    };
   }
 
   async fetchModelList(): Promise<GLTFCatalogModel[]> {
     const response = await fetch(MODEL_LIST_URL);
     const models = (await response.json()) as GLTFCatalogModel[];
-    return models.map(model => ({
+    const catalogModels = models.map(model => ({
       ...model,
       hasGLBVariant: Boolean(model.variants?.['glTF-Binary'])
     }));
+    const catalogModelsByName = new Map(catalogModels.map(model => [model.name, model]));
+    const studioModels = GLTF_STUDIO_ASSETS.map(asset => {
+      const catalogModel = catalogModelsByName.get(asset.name);
+      const assetVariant = asset.model.variant || 'glTF';
+      const assetFileName = asset.model.fileName || `${asset.name}.gltf`;
+      return {
+        ...catalogModel,
+        label: asset.label,
+        name: asset.name,
+        summary: asset.description,
+        variants: {
+          ...catalogModel?.variants,
+          [assetVariant]: assetFileName
+        },
+        hasGLBVariant: assetVariant === 'glTF-Binary' || catalogModel?.hasGLBVariant
+      };
+    });
+    const orderedModels = [
+      ROBOT_EXPRESSIVE_CATALOG_MODEL,
+      SIMPLE_SKIN_LOD_CATALOG_MODEL,
+      BUMP_MATERIAL_CATALOG_MODEL,
+      ...studioModels,
+      ...catalogModels.filter(isAnimatedGLTFCatalogModel)
+    ];
+    return Array.from(new Map(orderedModels.map(model => [model.name, model])).values());
   }
 
   async loadGLTF(modelReference: string | GLTFModelReference) {
+    const loadStartTime = performance.now();
+    this.referenceModelUrl = '';
+    this.referenceLoadMetrics = undefined;
+    this.referenceFrameCount = 0;
+    this.referenceFrameCpuMilliseconds = 0;
+    this.referenceInitialDrawCpuMilliseconds = undefined;
+    this.referenceRenderStage = '';
+    delete window.__lumaGLTFReferenceEvidence;
+    delete window.__lumaGLTFReferenceError;
+    delete window.__lumaGLTFReferenceProgress;
     const loadGeneration = ++this.gltfLoadGeneration;
     const candidateModelReferences = getModelLoadCandidates(modelReference, this.availableModels);
     const primaryModelReference = candidateModelReferences[0];
@@ -353,13 +885,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         {modelUrl}
       )();
       const processedGLTF = postProcessGLTF(gltf);
+      const fetchAndPostprocessEndTime = performance.now();
 
-      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      const scenegraphCreationStartTime = performance.now();
+      const scenegraphOptions = {
         lights: true,
         imageBasedLightingEnvironment,
         pbrDebug: false,
         useTangents: true
-      });
+      };
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(
+        this.device,
+        processedGLTF,
+        scenegraphOptions
+      );
+      const scenegraphCreationEndTime = performance.now();
       log.log(0, `Created glTF scenegraphs: ${modelDescription}`)();
 
       if (this.isLoadStale(loadGeneration)) {
@@ -367,10 +907,29 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
 
+      this.animatedCrowd?.destroy();
+      this.animatedCrowd = undefined;
+      this.crowdActionNames = [];
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      this.animationStudio.attach(scenegraphsFromGLTF);
+      this.selectedCameraIndex = null;
+      this.loadedGLTF = processedGLTF;
+      this.activeScenegraphOptions = scenegraphOptions;
+      this.previousCrowdFrameTime = undefined;
       this.modelLights = scenegraphsFromGLTF.lights;
-      this.updateModelInfo(resolvedModelReference, loadGeneration);
+      this.referenceModelUrl = modelUrl;
+      this.referenceLoadMetrics = {
+        loadMilliseconds: scenegraphCreationEndTime - loadStartTime,
+        fetchAndPostprocessMilliseconds: fetchAndPostprocessEndTime - loadStartTime,
+        scenegraphCreationMilliseconds: scenegraphCreationEndTime - scenegraphCreationStartTime
+      };
+      updateCrowdInfo();
+      this.updateModelInfo(
+        resolvedModelReference,
+        loadGeneration,
+        getAnimationClipNames(scenegraphsFromGLTF)
+      );
       updateExtensionSupportTable(scenegraphsFromGLTF.extensionSupport);
 
       const activeSceneBounds =
@@ -379,18 +938,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.sceneRadius = activeSceneBounds.radius;
       const orbitDistance = activeSceneBounds.recommendedOrbitDistance;
       this.cameraHeight = this.center[1] + this.sceneRadius * 0.35;
-      this.minCameraOrbitDistance = Math.max(this.sceneRadius * 0.08, 0.025);
-      this.maxCameraOrbitDistance = Math.max(this.sceneRadius * 40, orbitDistance * 16);
-      this.cameraOrbitDistance = clampNumber(
-        orbitDistance,
-        this.minCameraOrbitDistance,
-        this.maxCameraOrbitDistance
-      );
-      this.mouseCameraTilt = clampNumber(
-        this.getDefaultCameraTilt(resolvedModelReference),
-        -MAX_CAMERA_TILT,
-        MAX_CAMERA_TILT
-      );
+      this.orbitControls.setProps({
+        target: [this.center[0], this.cameraHeight, this.center[2]],
+        distance: orbitDistance,
+        minDistance: Math.max(this.sceneRadius * 0.08, 0.025),
+        maxDistance: Math.max(this.sceneRadius * 40, orbitDistance * 16),
+        pitch: this.getDefaultCameraTilt(resolvedModelReference)
+      });
+      this.onScenegraphsChanged(scenegraphsFromGLTF);
+      this.applyReferenceStudioState();
+      if (this.referenceCaptureOptions?.studio) {
+        const studioReadyTime = performance.now();
+        this.referenceLoadMetrics = {
+          loadMilliseconds: studioReadyTime - loadStartTime,
+          fetchAndPostprocessMilliseconds: fetchAndPostprocessEndTime - loadStartTime,
+          scenegraphCreationMilliseconds: studioReadyTime - scenegraphCreationStartTime
+        };
+      }
 
       showError();
     } catch (error) {
@@ -398,12 +962,126 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
       log.error(`Failed to load glTF model: ${modelDescription}`, error)();
+      if (this.referenceCaptureOptions) {
+        window.__lumaGLTFReferenceError = error instanceof Error ? error.message : String(error);
+      }
       showError(error);
     } finally {
       if (!this.isLoadStale(loadGeneration)) {
         this.setViewerLoadingState(false);
       }
     }
+  }
+
+  private applyReferenceStudioState(): void {
+    const studioOptions = this.referenceCaptureOptions?.studio;
+    if (!studioOptions) {
+      return;
+    }
+
+    if (studioOptions.actorCount > 1) {
+      this.setAnimationInstanceCount(studioOptions.actorCount);
+    }
+    this.animationStudio.selectActor(studioOptions.selectedActorIndex);
+    this.animationStudio.setCrossFadeDuration(0);
+    if (studioOptions.clipName) {
+      this.animationStudio.selectClip(studioOptions.clipName);
+    }
+    this.animationStudio.setSpeed(studioOptions.speed);
+    this.animationStudio.setLoop(studioOptions.loop);
+    this.animationStudio.seek(studioOptions.time);
+    this.animationStudio.setPlaying(false);
+    for (const actor of this.animatedCrowd?.actors || []) {
+      actor.pause();
+    }
+    if (studioOptions.morphTarget) {
+      const morphTarget = this.animationStudio
+        .getState()
+        .morphTargets.find(target => target.label === studioOptions.morphTarget);
+      if (morphTarget) {
+        this.animationStudio.setMorphWeight(morphTarget.identifier, studioOptions.morphWeight);
+      }
+    }
+    if (studioOptions.variant) {
+      this.animationStudio.selectVariant(studioOptions.variant);
+    }
+    this.selectCamera(studioOptions.cameraIndex);
+  }
+
+  private getReferenceStudioEvidence(): NonNullable<GLTFReferenceEvidence['studio']> {
+    const state = this.animationStudio.getState();
+    return {
+      actorCount: state.actors.length,
+      selectedActorIndex: state.selectedActorIndex,
+      selectedClip: state.selectedClip,
+      time: state.time,
+      duration: state.duration,
+      speed: state.speed,
+      playing: state.playing,
+      loop: state.loop,
+      morphTargets: state.morphTargets.map(target => ({label: target.label, value: target.value})),
+      selectedVariant: state.selectedVariant,
+      skinCount: state.skinCount,
+      jointCount: state.jointCount,
+      cameraCount: state.cameraCount,
+      selectedCameraIndex: this.selectedCameraIndex
+    };
+  }
+
+  private getCameraState(options: {
+    aspect: number;
+    far: number;
+    near: number;
+    orbitDistance: number;
+    time: number;
+  }): {
+    projectionMatrix: Matrix4;
+    viewMatrix: Matrix4;
+    position: [number, number, number];
+  } {
+    const authoredCameraState =
+      this.selectedCameraIndex === null || !this.scenegraphsFromGLTF
+        ? undefined
+        : getGLTFStudioCameraState(this.scenegraphsFromGLTF, this.selectedCameraIndex, options);
+    if (authoredCameraState) {
+      return authoredCameraState;
+    }
+
+    const projectionMatrix = new Matrix4().perspective({
+      fovy: Math.PI / 3,
+      aspect: options.aspect,
+      near: options.near,
+      far: options.far
+    });
+    const referenceYaw = this.referenceCaptureOptions?.yaw;
+    const referencePitch = this.referenceCaptureOptions?.pitch;
+    let position: [number, number, number];
+    if (referenceYaw !== undefined && referencePitch !== undefined) {
+      const horizontalOrbitScale = Math.cos(referencePitch);
+      position = [
+        this.center[0] + options.orbitDistance * horizontalOrbitScale * Math.sin(referenceYaw),
+        this.cameraHeight +
+          options.orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(referencePitch),
+        this.center[2] + options.orbitDistance * horizontalOrbitScale * Math.cos(referenceYaw)
+      ];
+    } else {
+      const orbitControlsCameraPosition = this.orbitControls.getEyePosition();
+      const distanceScale =
+        options.orbitDistance / Math.max(this.orbitControls.distance, Number.EPSILON);
+      position = [
+        this.center[0] + (orbitControlsCameraPosition[0] - this.center[0]) * distanceScale,
+        this.cameraHeight +
+          (orbitControlsCameraPosition[1] - this.cameraHeight) *
+            CAMERA_TILT_HEIGHT_FACTOR *
+            distanceScale,
+        this.center[2] + (orbitControlsCameraPosition[2] - this.center[2]) * distanceScale
+      ];
+    }
+    return {
+      projectionMatrix,
+      viewMatrix: new Matrix4().lookAt({eye: position, center: this.center}),
+      position
+    };
   }
 
   getLightingProps(): LightingProps {
@@ -416,10 +1094,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   private updateModelInfo(
     modelReference: Required<GLTFModelReference>,
-    loadGeneration: number
+    loadGeneration: number,
+    actionNames: readonly string[] = []
   ): void {
     const catalogModel = this.availableModels.find(model => model.name === modelReference.name);
-    updateModelInfoBox(catalogModel, modelReference);
+    updateModelInfoBox(catalogModel, modelReference, actionNames);
+    if (this.referenceCaptureOptions) {
+      return;
+    }
 
     void this.fetchModelMetadata(modelReference.name).then(modelMetadata => {
       if (this.isLoadStale(loadGeneration)) {
@@ -431,7 +1113,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       if (mutableCatalogModel) {
         Object.assign(mutableCatalogModel, modelMetadata);
-        updateModelInfoBox(mutableCatalogModel, modelReference);
+        updateModelInfoBox(mutableCatalogModel, modelReference, actionNames);
         return;
       }
 
@@ -441,7 +1123,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           name: modelReference.name,
           ...modelMetadata
         },
-        modelReference
+        modelReference,
+        actionNames
       );
     });
   }
@@ -453,6 +1136,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     return this.modelMetadataCache.get(modelName)!;
   }
+}
+
+function getReferenceCaptureCatalogModel(
+  captureOptions: GLTFReferenceCaptureOptions
+): GLTFCatalogModel {
+  if (captureOptions.modelName === BUMP_MATERIAL_CATALOG_MODEL.name) {
+    return BUMP_MATERIAL_CATALOG_MODEL;
+  }
+
+  return {
+    label: captureOptions.modelName,
+    name: captureOptions.modelName,
+    hasGLBVariant: captureOptions.variant === 'glTF-Binary',
+    variants: {[captureOptions.variant]: captureOptions.fileName}
+  };
 }
 
 function setModelMenu(
@@ -577,6 +1275,16 @@ async function loadPreferredGLTF(candidateModelReferences: Required<GLTFModelRef
 }
 
 function getModelUrl(modelReference: Required<GLTFModelReference>): string {
+  if (modelReference.name === 'RobotExpressive') {
+    return ROBOT_EXPRESSIVE_MODEL_URL;
+  }
+  if (modelReference.name === 'SimpleSkinLOD') {
+    return SIMPLE_SKIN_LOD_MODEL_URL;
+  }
+  if (modelReference.name === 'BumpMaterial') {
+    return BUMP_MATERIAL_MODEL_URL;
+  }
+
   return `${MODEL_DIRECTORY_URL}/${modelReference.name}/${modelReference.variant}/${modelReference.fileName}`;
 }
 
@@ -615,10 +1323,6 @@ function loadOptions(defaultOptions: Record<string, boolean>): Record<string, bo
 
 export function saveOptions(options: Record<string, boolean>) {
   window.localStorage[GLTF_OPTIONS_STORAGE_KEY] = JSON.stringify(options);
-}
-
-function clampNumber(value: number, minValue: number, maxValue: number): number {
-  return Math.min(maxValue, Math.max(minValue, value));
 }
 
 function ensureLoadingIndicatorStyles(): void {
@@ -671,6 +1375,10 @@ function getModelLoadingLabel(modelDescription: string): string {
 }
 
 async function loadModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
+  if (modelName === 'RobotExpressive' || modelName === 'SimpleSkinLOD') {
+    return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
+  }
+
   const readmeUrl = `${MODEL_DIRECTORY_URL}/${modelName}/README.md`;
 
   try {
@@ -749,7 +1457,8 @@ function setLoadingState(isLoading: boolean, message?: string): void {
 
 function updateModelInfoBox(
   model?: Pick<GLTFCatalogModel, 'label' | 'name' | 'summary' | 'description'>,
-  modelReference?: Required<GLTFModelReference>
+  modelReference?: Required<GLTFModelReference>,
+  actionNames: readonly string[] = []
 ): void {
   const container = document.getElementById(GLTF_MODEL_INFO_ID) as HTMLDivElement | null;
   if (!container) {
@@ -780,6 +1489,36 @@ function updateModelInfoBox(
     variant.style.marginBottom = '6px';
     variant.textContent = modelReference.variant;
     container.append(variant);
+  }
+
+  if (actionNames.length) {
+    const actions = document.createElement('div');
+    actions.style.fontSize = '12px';
+    actions.style.marginBottom = '6px';
+    actions.textContent = `Actions: ${actionNames.join(' · ')}`;
+    container.append(actions);
+  }
+
+  const studioAsset = getGLTFStudioAsset(modelReference?.name || model?.name || '');
+  if (studioAsset?.features.length) {
+    const features = document.createElement('div');
+    features.style.fontSize = '12px';
+    features.style.marginBottom = '6px';
+    features.textContent = `Ledger features: ${studioAsset.features
+      .map(
+        feature => `${feature.extensionName} (${feature.standardStatus}; ${feature.supportLevel})`
+      )
+      .join(' · ')}`;
+    container.append(features);
+  }
+  if (studioAsset) {
+    const provenance = document.createElement('div');
+    provenance.style.fontSize = '12px';
+    provenance.style.marginBottom = '6px';
+    provenance.textContent =
+      `Provenance: ${studioAsset.source}@${studioAsset.sourceRevision} · ` +
+      `${studioAsset.license} · ${studioAsset.licenseLocation}`;
+    container.append(provenance);
   }
 
   if (summary) {
@@ -825,6 +1564,126 @@ function updateModelLightIndicator(modelLights: Light[], useModelLights: boolean
   const activeSource =
     useModelLights && modelLights.length > 0 ? 'using model lights' : 'using fallback demo lights';
   indicator.textContent = `Model lights: ${summary}; ${activeSource}.`;
+}
+
+function getAnimationClipNames(
+  scenegraphs: Pick<ReturnType<typeof createScenegraphsFromGLTF>, 'animations'>
+): string[] {
+  return Array.from(
+    new Set(
+      scenegraphs.animations
+        .map(animation => animation.name)
+        .filter((name): name is string => Boolean(name))
+    )
+  );
+}
+
+function updateAnimationStudioInfo(state: GLTFAnimationStudioState): void {
+  const container = document.getElementById(GLTF_ANIMATION_INFO_ID) as HTMLDivElement | null;
+  if (!container) {
+    return;
+  }
+
+  container.hidden =
+    state.clipNames.length === 0 &&
+    state.morphTargets.length === 0 &&
+    state.variants.length === 0 &&
+    state.cameraCount === 0;
+  const summary = formatGLTFAnimationStudioInfo(state);
+  if (container.textContent !== summary) {
+    container.textContent = summary;
+  }
+}
+
+export function formatGLTFAnimationStudioInfo(state: GLTFAnimationStudioState): string {
+  const actor = state.actors[state.selectedActorIndex];
+  const playback = state.selectedClip
+    ? `Actor ${state.selectedActorIndex + 1}/${Math.max(1, state.actors.length)} · ` +
+      `${state.selectedClip} · ${state.time.toFixed(2)} / ${state.duration.toFixed(2)} s · ` +
+      `${state.speed.toFixed(2)}× · ${state.playing ? 'playing' : 'paused'}`
+    : 'No authored animation clips';
+  const capabilities = [
+    state.skinCount ? `${state.skinCount} skins / ${state.jointCount} joints` : undefined,
+    state.morphTargets.length ? `${state.morphTargets.length} morph targets` : undefined,
+    state.variants.length ? `${state.variants.length} material variants` : undefined,
+    state.cameraCount ? `${state.cameraCount} authored cameras` : undefined,
+    actor?.id && state.actors.length > 1 ? actor.id : undefined
+  ].filter((value): value is string => Boolean(value));
+  return capabilities.length ? `${playback} · ${capabilities.join(' · ')}` : playback;
+}
+
+function updateCrowdInfo(
+  actorCount: number = 1,
+  drawCount: number = 0,
+  actionNames: readonly string[] = [],
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats'],
+  animationStats?: GLTFAnimatedCrowd['animationStats']
+): void {
+  const container = document.getElementById(GLTF_CROWD_INFO_ID) as HTMLDivElement | null;
+  if (!container) {
+    return;
+  }
+
+  container.hidden = actorCount <= 1;
+  const summary = formatGLTFCrowdInfo(
+    actorCount,
+    drawCount,
+    actionNames,
+    levelOfDetailStats,
+    animationStats
+  );
+  if (container.textContent !== summary) {
+    container.textContent = summary;
+  }
+}
+
+/** Formats real actor, draw, and optional level-of-detail work for the Studio status readout. */
+export function formatGLTFCrowdInfo(
+  actorCount: number,
+  drawCount: number,
+  actionNames: readonly string[] = [],
+  levelOfDetailStats?: GLTFAnimatedCrowd['lodStats'],
+  animationStats?: GLTFAnimatedCrowd['animationStats']
+): string {
+  const actionSummary = actionNames.length
+    ? ` · ${actionNames.length > 1 ? 'Mixed actions' : 'Action'}: ${actionNames.join(', ')}`
+    : '';
+  const activeLevels = levelOfDetailStats?.levels.filter(level => level.actors > 0) || [];
+  const levelSummary = activeLevels.length
+    ? activeLevels.map(level => `L${level.level}: ${level.actors.toLocaleString()}`).join(' · ')
+    : 'No visible levels';
+  const levelSource =
+    levelOfDetailStats?.source === 'authored'
+      ? 'Authored LOD'
+      : levelOfDetailStats?.source === 'generated'
+        ? 'Generated LOD'
+        : 'Single-level geometry';
+  const vertexBudgetSummary = levelOfDetailStats
+    ? ` · Vertices: ${levelOfDetailStats.vertices.toLocaleString()}` +
+      (levelOfDetailStats.vertexBudget
+        ? ` / ${levelOfDetailStats.vertexBudget.toLocaleString()}` +
+          ` · Demoted: ${levelOfDetailStats.demotedActors.toLocaleString()}` +
+          (levelOfDetailStats.budgetSatisfied ? '' : ' · Budget exceeded')
+        : '')
+    : '';
+  const levelOfDetailSummary = levelOfDetailStats
+    ? ` · ${levelSource}` +
+      ` · ${levelSummary} · Visible: ${levelOfDetailStats.visibleActors.toLocaleString()}` +
+      ` · Culled: ${levelOfDetailStats.culledActors.toLocaleString()}` +
+      ` · Triangles: ${levelOfDetailStats.triangles.toLocaleString()}` +
+      vertexBudgetSummary
+    : '';
+  const animationSummary =
+    animationStats?.mode === 'gpu'
+      ? ` · GPU sampled: ${animationStats.frameCount.toLocaleString()} frames` +
+        (animationStats.sampleRate ? ` @ ${animationStats.sampleRate} fps` : '') +
+        (animationStats.morphGroupCount
+          ? ` · Morph groups: ${animationStats.morphGroupCount.toLocaleString()}`
+          : '')
+      : '';
+  return actorCount > 1
+    ? `${actorCount.toLocaleString()} independently animated actors · ${drawCount} shared GPU draws${actionSummary}${animationSummary}${levelOfDetailSummary}`
+    : '';
 }
 
 function updateExtensionSupportTable(extensionSupport?: GLTFExtensionSupportMap) {
@@ -951,11 +1810,10 @@ function getModelLightSummary(modelLights: Light[]): string {
     .join(', ');
 }
 
+function clampNumber(value: number, minValue: number, maxValue: number): number {
+  return Math.min(Math.max(value, minValue), maxValue);
+}
+
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
-  for (const scene of scenegraphsFromGLTF?.scenes || []) {
-    scene.traverse(node => {
-      const model = (node as Partial<ModelNode>).model;
-      model?.destroy();
-    });
-  }
+  scenegraphsFromGLTF?.destroy();
 }

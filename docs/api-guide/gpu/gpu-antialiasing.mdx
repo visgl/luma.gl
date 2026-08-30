@@ -3,7 +3,7 @@ import {AntialiasingExample} from '@site/src/examples';
 
 # Antialiasing and Multisampling
 
-<GpuGuideDocsTabs group="execution" active="antialiasing" />
+<GpuGuideDocsTabs group="rendering" active="antialiasing" />
 
 Aliasing is not one problem with one switch. A jagged triangle edge, a shimmering checkerboard,
 an alpha-cutout leaf, a noisy shadow boundary, and a depth-aware postprocess halo come from
@@ -90,8 +90,8 @@ Start by identifying which artifact is aliasing:
     <div className="docs-antialiasing-flow__arrow" aria-hidden="true">←</div>
   </div>
   <p className="docs-antialiasing-flow__caption">
-    Depth participates in scene visibility during rasterization, then often becomes a separate
-    sampled input for later effects.
+    {'Depth participates in scene visibility during rasterization, then often becomes a separate ' +
+      'sampled input for later effects.'}
   </p>
 </div>
 
@@ -163,7 +163,7 @@ For WebGPU concepts and sample-count constraints, see the
 [WebGPU multisampling guide](https://webgpufundamentals.org/webgpu/lessons/webgpu-multisampling.html)
 and the [WebGPU specification](https://gpuweb.github.io/gpuweb/).
 
-:::caution Proposed API, not implemented
+:::caution[Proposed API, not implemented]
 
 [RFC #2741](https://github.com/visgl/luma.gl/issues/2741) proposes a framebuffer-level
 request for color-only offscreen MSAA:
@@ -232,7 +232,7 @@ never rasterized.
 TAA accumulates samples over time. It is better at subpixel motion and shimmer, but it requires a
 jittered projection, history buffers, velocity, and depth rejection to avoid ghosting. luma.gl
 exports [`fxaa`](/docs/api-guide/shaders/shader-passes) for WebGL and WebGPU shader-pass chains and
-`createTAAShaderPassPipeline()` for the WebGPU-oriented advanced-effects path. See the
+`createTAACompositeShaderPass()` for the WebGPU-oriented advanced-effects path. See the
 [Advanced Effects example](/examples/experimental/advanced-effects) for TAA combined with depth,
 velocity, SSAO, SSR, and motion blur.
 

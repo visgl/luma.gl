@@ -1,26 +1,26 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /* eslint-disable camelcase */
 
 import type {Texture} from '@luma.gl/core';
 import type {
   Matrix3,
-  Vector2,
-  Vector3,
-  Vector4,
   NumberArray2,
   NumberArray3,
   NumberArray4,
-  NumberArray9
+  NumberArray9,
+  Vector2,
+  Vector3,
+  Vector4
 } from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lighting} from '../lights/lighting';
 import {ibl} from '../ibl/ibl';
+import {lighting} from '../lights/lighting';
 
-import {vs, fs} from './pbr-material-glsl';
+import {fs, vs} from './pbr-material-glsl';
 import {source} from './pbr-material-wgsl';
 import {pbrProjection} from './pbr-projection';
 
@@ -46,6 +46,10 @@ export type PBRMaterialBindings = {
   pbr_iridescenceSampler?: Texture | null; // #ifdef HAS_IRIDESCENCEMAP
   pbr_iridescenceThicknessSampler?: Texture | null; // #ifdef HAS_IRIDESCENCETHICKNESSMAP
   pbr_anisotropySampler?: Texture | null; // #ifdef HAS_ANISOTROPYMAP
+  pbr_bumpSampler?: Texture | null; // #ifdef HAS_BUMPMAP
+  pbr_diffuseTransmissionSampler?: Texture | null; // #ifdef HAS_DIFFUSETRANSMISSIONMAP
+  pbr_diffuseTransmissionColorSampler?: Texture | null; // #ifdef HAS_DIFFUSETRANSMISSIONCOLORMAP
+  pbr_multiscatterColorSampler?: Texture | null; // #ifdef HAS_MULTISCATTERCOLORMAP
 };
 
 export type PBRMaterialUniforms = {
@@ -86,6 +90,9 @@ export type PBRMaterialUniforms = {
   specularIntensityMapEnabled?: boolean;
 
   ior?: number;
+
+  /** Chromatic transmission spread, expressed as 20 divided by the material Abbe number. */
+  dispersion?: number;
 
   transmissionFactor?: number;
   transmissionMapEnabled?: boolean;
@@ -150,6 +157,29 @@ export type PBRMaterialUniforms = {
   iridescenceThicknessUVTransform?: Readonly<NumberArray9 | Matrix3>;
   anisotropyUVSet?: number;
   anisotropyUVTransform?: Readonly<NumberArray9 | Matrix3>;
+
+  /** Surface-height scale for the draft EXT_materials_bump extension. */
+  bumpFactor?: number;
+  bumpMapEnabled?: boolean;
+  /** Fraction of dielectric diffuse energy transmitted into the opposite hemisphere. */
+  diffuseTransmissionFactor?: number;
+  diffuseTransmissionMapEnabled?: boolean;
+  diffuseTransmissionColorFactor?: Readonly<Vector3 | NumberArray3>;
+  diffuseTransmissionColorMapEnabled?: boolean;
+  /** Experimental multi-scatter albedo from the unratified volume-scattering draft. */
+  multiscatterColorFactor?: Readonly<Vector3 | NumberArray3>;
+  multiscatterColorMapEnabled?: boolean;
+  /** Henyey-Greenstein scattering anisotropy, ranging from -1 to 1. */
+  scatterAnisotropy?: number;
+
+  bumpUVSet?: number;
+  bumpUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  diffuseTransmissionUVSet?: number;
+  diffuseTransmissionUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  diffuseTransmissionColorUVSet?: number;
+  diffuseTransmissionColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  multiscatterColorUVSet?: number;
+  multiscatterColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
 };
 
 export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
@@ -223,6 +253,7 @@ export const pbrMaterial = {
     anisotropyMapEnabled: false,
 
     emissiveStrength: 1,
+    dispersion: 0,
 
     baseColorUVSet: 0,
     baseColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -257,7 +288,26 @@ export const pbrMaterial = {
     iridescenceThicknessUVSet: 0,
     iridescenceThicknessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     anisotropyUVSet: 0,
-    anisotropyUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+    anisotropyUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+
+    bumpFactor: 1,
+    bumpMapEnabled: false,
+    diffuseTransmissionFactor: 0,
+    diffuseTransmissionMapEnabled: false,
+    diffuseTransmissionColorFactor: [1, 1, 1],
+    diffuseTransmissionColorMapEnabled: false,
+    multiscatterColorFactor: [0, 0, 0],
+    multiscatterColorMapEnabled: false,
+    scatterAnisotropy: 0,
+
+    bumpUVSet: 0,
+    bumpUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    diffuseTransmissionUVSet: 0,
+    diffuseTransmissionUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    diffuseTransmissionColorUVSet: 0,
+    diffuseTransmissionColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    multiscatterColorUVSet: 0,
+    multiscatterColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
   } as Required<PBRMaterialUniforms>,
 
   name: 'pbrMaterial',
@@ -280,7 +330,11 @@ export const pbrMaterial = {
     {name: 'pbr_sheenRoughnessSampler', group: 3},
     {name: 'pbr_iridescenceSampler', group: 3},
     {name: 'pbr_iridescenceThicknessSampler', group: 3},
-    {name: 'pbr_anisotropySampler', group: 3}
+    {name: 'pbr_anisotropySampler', group: 3},
+    {name: 'pbr_bumpSampler', group: 3},
+    {name: 'pbr_diffuseTransmissionSampler', group: 3},
+    {name: 'pbr_diffuseTransmissionColorSampler', group: 3},
+    {name: 'pbr_multiscatterColorSampler', group: 3}
   ],
   dependencies: [lighting, ibl, pbrProjection],
   source,
@@ -306,6 +360,10 @@ export const pbrMaterial = {
     HAS_IRIDESCENCEMAP: false,
     HAS_IRIDESCENCETHICKNESSMAP: false,
     HAS_ANISOTROPYMAP: false,
+    HAS_BUMPMAP: false,
+    HAS_DIFFUSETRANSMISSIONMAP: false,
+    HAS_DIFFUSETRANSMISSIONCOLORMAP: false,
+    HAS_MULTISCATTERCOLORMAP: false,
     USE_MATERIAL_EXTENSIONS: false,
     ALPHA_CUTOFF: false,
     USE_IBL: false,
@@ -370,6 +428,7 @@ export const pbrMaterial = {
     anisotropyMapEnabled: 'i32',
 
     emissiveStrength: 'f32',
+    dispersion: 'f32',
 
     // IBL
     IBLenabled: 'i32',
@@ -413,6 +472,25 @@ export const pbrMaterial = {
     iridescenceThicknessUVSet: 'i32',
     iridescenceThicknessUVTransform: 'mat3x3<f32>',
     anisotropyUVSet: 'i32',
-    anisotropyUVTransform: 'mat3x3<f32>'
+    anisotropyUVTransform: 'mat3x3<f32>',
+
+    bumpFactor: 'f32',
+    bumpMapEnabled: 'i32',
+    diffuseTransmissionFactor: 'f32',
+    diffuseTransmissionMapEnabled: 'i32',
+    diffuseTransmissionColorFactor: 'vec3<f32>',
+    diffuseTransmissionColorMapEnabled: 'i32',
+    multiscatterColorFactor: 'vec3<f32>',
+    multiscatterColorMapEnabled: 'i32',
+    scatterAnisotropy: 'f32',
+
+    bumpUVSet: 'i32',
+    bumpUVTransform: 'mat3x3<f32>',
+    diffuseTransmissionUVSet: 'i32',
+    diffuseTransmissionUVTransform: 'mat3x3<f32>',
+    diffuseTransmissionColorUVSet: 'i32',
+    diffuseTransmissionColorUVTransform: 'mat3x3<f32>',
+    multiscatterColorUVSet: 'i32',
+    multiscatterColorUVTransform: 'mat3x3<f32>'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

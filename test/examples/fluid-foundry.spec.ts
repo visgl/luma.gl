@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -53,7 +53,7 @@ describe('Fluid Foundry: Liquid Metal Press', () => {
         viewer.postprocessingRenderer.passRenderers.map(
           passRenderer => passRenderer.passDefinition.name
         )
-      ).toEqual(['bloomShaderPassPipeline', 'toneMapping']);
+      ).toEqual(['bloomCompositeShaderPass', 'toneMapping']);
 
       viewer.onRender(makeAnimationProps(device, width, height, 1000));
       device.submit();

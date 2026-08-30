@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {isBrowser} from '@probe.gl/env';
 import {
   buildBitmapFontAtlas,
@@ -72,5 +72,27 @@ test('browser font builders cache and incrementally extend atlases', t => {
   t.equal(cachedAtlas.pages[0], initialAtlas.pages[0], 'equal inputs reuse the atlas page');
   t.equal(extendedAtlas.pages[0], initialAtlas.pages[0], 'new glyphs extend the cached page');
   t.deepEqual(Object.keys(extendedAtlas.mapping), ['A', 'B', 'C'], 'extension adds new glyphs');
+  t.end();
+});
+
+test('browser font builders align glyphs to a shared baseline', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  for (const [label, fontAtlas] of [
+    [
+      'bitmap',
+      buildBitmapFontAtlas(createFontAtlasSettings('descender-bitmap', {characterSet: 'ag'}))
+    ],
+    ['SDF', buildSdfFontAtlas(createFontAtlasSettings('descender-sdf', {characterSet: 'ag'}))]
+  ] as const) {
+    t.ok(
+      (fontAtlas.mapping.g?.layoutOffsetY ?? 0) + (fontAtlas.mapping.g?.height ?? 0) >
+        (fontAtlas.mapping.a?.layoutOffsetY ?? 0) + (fontAtlas.mapping.a?.height ?? 0),
+      `${label} g extends below the a baseline`
+    );
+  }
   t.end();
 });

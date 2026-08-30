@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device, Buffer, BufferRange, TransformFeedback, RenderPassProps} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
@@ -23,7 +23,7 @@ export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   feedbackBufferMode?: 'interleaved' | 'separate';
   /** A list of named outputs corresponding to shader declarations (varyings in WebGL) */
   outputs?: string[];
-  /** @deprecated Use run({outputBuffers}) instead - Map of output buffers that the shaders will write results of computations to */
+  /** @deprecated Use `run({outputBuffers})` instead - Map of output buffers that the shaders will write results of computations to */
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
 };
 

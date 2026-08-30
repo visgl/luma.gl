@@ -1,8 +1,8 @@
-import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-tabs';
+import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
 
 # Overview
 
-<ShaderLevelDocsTabs active="overview" />
+<ShadertoolsDocsTabs group="starting" active="shadertools-guide" />
 
 luma.gl applications must provide the shader source code that will ultimately
 run on the GPU. Such code must be provided as WGSL and/or GLSL depending on

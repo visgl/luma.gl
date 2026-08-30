@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
@@ -25,7 +25,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
       },
       {
         eval: equalAll(
-          GPUDataEvaluator.fromConstant([2, 4]),
+          [2, 4],
           GPUDataEvaluator.fromArray([2, 4, 2, 0, 2, 4], {type: 'uint32', size: 2})
         ),
         expected: {value: [1, 0, 1], type: 'uint32', size: 1}

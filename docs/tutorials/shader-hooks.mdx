@@ -93,7 +93,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));

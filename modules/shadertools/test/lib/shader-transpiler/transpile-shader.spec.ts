@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
-import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
+import test, {Test} from 'test/utils/vitest-tape';
 
 import {GL} from '@luma.gl/webgl/constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';

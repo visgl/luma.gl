@@ -1,79 +1,16 @@
 import React, {type ReactNode} from 'react';
-import Link from '@docusaurus/Link';
+import {FOUNDATION_DOCS_CATALOG} from './foundation-docs-catalog';
+import {DocsPageTabs} from './docs-page-tabs';
 
-type ShaderLevelDocsTab = {
-  /** Stable tab identifier. */
-  id: ShaderLevelDocsTabId;
-  /** User-facing tab label. */
-  label: string;
-  /** Documentation page URL. */
-  href: string;
-};
+export type ShaderLevelDocsTabId = 'shader-assembly' | 'writing-portable-shaders' | 'writing-customizable-shaders' | 'gpu-floating-point-precision' | 'shader-passes' | 'rendering-techniques' | 'transparency' | 'glass-effects';
+export type ShaderLevelDocsTabGroupId = 'authoring' | 'techniques';
 
-/** Shader-Level Programming documentation tab identifiers. */
-export type ShaderLevelDocsTabId =
-  | 'overview'
-  | 'shader-assembly'
-  | 'writing-portable-shaders'
-  | 'writing-customizable-shaders'
-  | 'gpu-floating-point-precision'
-  | 'shader-passes'
-  | 'rendering-techniques'
-  | 'transparency'
-  | 'glass-effects';
+const SHADER_GUIDE_GROUPS = {
+  authoring: 'guide-authoring',
+  techniques: 'guide-techniques'
+} as const;
 
-const SHADER_LEVEL_DOCS_TABS: ShaderLevelDocsTab[] = [
-  {id: 'overview', label: 'Overview', href: '/docs/api-guide/shaders'},
-  {
-    id: 'shader-assembly',
-    label: 'Shader Assembly',
-    href: '/docs/api-guide/shaders/shader-assembly'
-  },
-  {
-    id: 'writing-customizable-shaders',
-    label: 'Customizable Shaders',
-    href: '/docs/api-guide/shaders/writing-customizable-shaders'
-  },
-  {
-    id: 'writing-portable-shaders',
-    label: 'Portable Shaders',
-    href: '/docs/api-guide/shaders/writing-portable-shaders'
-  },
-  {
-    id: 'gpu-floating-point-precision',
-    label: 'GPU Precision',
-    href: '/docs/api-guide/shaders/gpu-floating-point-precision'
-  },
-  {id: 'shader-passes', label: 'Shader Passes', href: '/docs/api-guide/shaders/shader-passes'},
-  {
-    id: 'rendering-techniques',
-    label: 'Rendering Techniques',
-    href: '/docs/api-guide/shaders/rendering-techniques'
-  },
-  {id: 'transparency', label: 'Transparency', href: '/docs/api-guide/shaders/transparency'},
-  {id: 'glass-effects', label: 'Glass Effects', href: '/docs/api-guide/shaders/glass-effects'}
-];
-
-/**
- * Renders page links with the same visual treatment as tabs for Shader-Level Programming pages.
- */
-export function ShaderLevelDocsTabs({active}: {active: ShaderLevelDocsTabId}): ReactNode {
-  return (
-    <nav className="docs-page-tabs" aria-label="Shader-Level Programming documentation sections">
-      {SHADER_LEVEL_DOCS_TABS.map(tab => (
-        <Link
-          key={tab.id}
-          className={
-            tab.id === active
-              ? 'docs-page-tabs__tab docs-page-tabs__tab--active'
-              : 'docs-page-tabs__tab'
-          }
-          to={tab.href}
-          aria-current={tab.id === active ? 'page' : undefined}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
-  );
+export function ShaderLevelDocsTabs({active, group = 'authoring'}: {active: ShaderLevelDocsTabId; group?: ShaderLevelDocsTabGroupId}): ReactNode {
+  const tabGroup = FOUNDATION_DOCS_CATALOG.shadertools[SHADER_GUIDE_GROUPS[group]];
+  return <DocsPageTabs active={active} group={tabGroup} />;
 }

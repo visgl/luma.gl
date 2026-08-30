@@ -1,5 +1,5 @@
 import {uid} from '@luma.gl/core/utils/uid';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('Utils#uid', t => {
   t.ok(typeof uid() === 'string', 'Type of uid() is correct');

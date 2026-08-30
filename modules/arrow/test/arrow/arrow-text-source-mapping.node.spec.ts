@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {makeArrowFixedSizeListVector, resolveArrowTextSourceVectors} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
@@ -108,9 +108,9 @@ function makeArrowTextSourceVectors() {
     textAnchors: arrow.vectorFromArray([0, 1], new arrow.Uint8()),
     alignmentBaselines: arrow.vectorFromArray([0, 2], new arrow.Uint8()),
     clipRects: makeArrowFixedSizeListVector(
-      new arrow.Int16(),
+      new arrow.Float32(),
       4,
-      new Int16Array([0, 0, 8, 8, 0, 0, 8, 8])
+      new Float32Array([0, 0, 8, 8, 0, 0, 8, 8])
     )
   };
 }

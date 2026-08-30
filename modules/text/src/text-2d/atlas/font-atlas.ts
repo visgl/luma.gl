@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ExternalImage} from '@luma.gl/core';
 import type {CharacterMapping, TextKerning} from './text-utils';

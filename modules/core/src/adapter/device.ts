@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
@@ -39,6 +39,9 @@ import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-
 import type {ExternalImage} from '../shadertypes/image-types/image-types';
 import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
 import {getTextureFormatTable} from '../shadertypes/texture-types/texture-format-table';
+import {DEVICE_DEFAULT_PROPS} from './device-defaults';
+
+export {_getDefaultDebugValue} from './device-defaults';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -67,6 +70,10 @@ export type DeviceInfo = {
   fallback?: boolean;
   /** Effective WebGPU feature level used to create this device. Undefined for non-WebGPU devices. */
   featureLevel?: WebGPUDeviceFeatureLevel;
+  /** Minimum subgroup size reported by a WebGPU adapter, when available. */
+  subgroupMinSize?: number;
+  /** Maximum subgroup size reported by a WebGPU adapter, when available. */
+  subgroupMaxSize?: number;
   /** Shader language supported by device.createShader() */
   shadingLanguage: 'wgsl' | 'glsl';
   /** Highest supported shader language version: GLSL 3.00 = 300, WGSL 1.00 = 100 */
@@ -300,6 +307,8 @@ export type WebGPUDeviceFeature =
   | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
   | 'float32-filterable' // Is the float32 format filterable?
   | 'float32-blendable' // Is the float32 format blendable?
+  | 'texture-formats-tier1'
+  | 'texture-formats-tier2'
   | 'clip-distances'
   | 'dual-source-blending'
   | 'subgroups';
@@ -370,6 +379,10 @@ export type DeviceProps = {
   failIfMajorPerformanceCaveat?: boolean;
   /** WebGPU only: selects the feature/limit profile. Defaults to `'core'`; use `'max'` to request every supported adapter feature and limit, `'compatibility'` to opt into compatibility mode, or `'best-available'` to upgrade a compatibility adapter to core when possible. */
   featureLevel?: WebGPUFeatureLevel;
+  /** WebGPU only: additional supported device features to request without enabling the full `'max'` profile. Unsupported entries are ignored. */
+  optionalFeatures?: readonly WebGPUDeviceFeature[];
+  /** WebGPU only: requests an adapter that can present frames to a WebXR session. */
+  xrCompatible?: boolean;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
@@ -487,57 +500,7 @@ export interface DeviceFactory {
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
-  static defaultProps: Required<DeviceProps> = {
-    id: null!,
-    powerPreference: 'high-performance',
-    failIfMajorPerformanceCaveat: false,
-    featureLevel: undefined!,
-    createCanvasContext: undefined!,
-    // WebGL specific
-    webgl: {},
-
-    // Callbacks
-    // eslint-disable-next-line handle-callback-err
-    onError: (error: Error, context: unknown) => {},
-    onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
-      const [width, height] = context.getDevicePixelSize();
-      log.log(1, `${context} resized => ${width}x${height}px`)();
-    },
-    onPositionChange: (context: CanvasContext, info: {oldPosition: [number, number]}) => {
-      const [left, top] = context.getPosition();
-      log.log(1, `${context} repositioned => ${left},${top}`)();
-    },
-    onVisibilityChange: (context: CanvasContext) =>
-      log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
-    onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
-      log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
-
-    // Debug flags
-    debug: getDefaultDebugValue(),
-    debugGPUTime: false,
-    debugShaders: log.get('debug-shaders') || undefined!,
-    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
-    debugFactories: Boolean(log.get('debug-factories')),
-    debugWebGL: Boolean(log.get('debug-webgl')),
-    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
-    debugSpectorJSUrl: undefined!,
-
-    // Experimental
-    _reuseDevices: false,
-    _cacheShaders: true,
-    _destroyShaders: false,
-    _cachePipelines: true,
-    _sharePipelines: true,
-    _destroyPipelines: false,
-    // TODO - Change these after confirming things work as expected
-    _initializeFeatures: true,
-    _disabledFeatures: {
-      'compilation-status-async-webgl': true
-    },
-
-    // INTERNAL
-    _handle: undefined!
-  };
+  static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
   get [Symbol.toStringTag](): string {
     return 'Device';
@@ -581,6 +544,8 @@ export abstract class Device {
   abstract info: DeviceInfo;
   /** Optional capability discovery */
   abstract features: DeviceFeatures;
+  /** WGSL language extensions exposed by the browser. These are discovered, not requested. */
+  readonly wgslLanguageFeatures: ReadonlySet<string> = new Set();
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 
@@ -1098,37 +1063,4 @@ or create a device with the 'debug: true' prop.`;
 
     return newProps;
   }
-}
-
-/**
- * Internal helper for resolving the default `debug` prop.
- * Precedence is: explicit log debug value first, then `NODE_ENV`, then `false`.
- */
-export function _getDefaultDebugValue(logDebugValue: unknown, nodeEnv?: string): boolean {
-  if (logDebugValue !== undefined && logDebugValue !== null) {
-    return Boolean(logDebugValue);
-  }
-
-  if (nodeEnv !== undefined) {
-    return nodeEnv !== 'production';
-  }
-
-  return false;
-}
-
-function getDefaultDebugValue(): boolean {
-  return _getDefaultDebugValue(log.get('debug'), getNodeEnv());
-}
-
-function getNodeEnv(): string | undefined {
-  const processObject = (
-    globalThis as typeof globalThis & {
-      process?: {env?: Record<string, string | undefined>};
-    }
-  ).process;
-  if (!processObject?.env) {
-    return undefined;
-  }
-
-  return processObject.env['NODE_ENV'];
 }

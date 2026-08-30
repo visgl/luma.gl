@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {
@@ -9,7 +9,8 @@ import {
   supportsArrowIndexPicking
 } from '../../../engine/arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
-import {getGPUDataBuffersForLayout, type GPUTable} from '@luma.gl/tables';
+import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {
   TextAttributeModel,
   TextDictionaryModel,

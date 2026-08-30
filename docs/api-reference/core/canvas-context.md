@@ -1,3 +1,4 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 import {DeviceTabs} from '@site/src/react-luma';
 import {MultiCanvasExample} from '@site/src/examples';
@@ -126,10 +127,10 @@ presenting into the visible canvases.
 
 ### Additional canvas contexts
 
-<p className="badges">
-  <img src="https://img.shields.io/badge/WebGPU-yes-brightgreen.svg?style=flat-square" alt="WebGPU supported" />
-  <img src="https://img.shields.io/badge/WebGL2-no-red.svg?style=flat-square" alt="WebGL2 not supported" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="webgpu">WebGPU supported</DocumentationBadge>
+  <DocumentationBadge tone="neutral">WebGL 2 not supported</DocumentationBadge>
+</DocumentationBadges>
 
 Render into an additional canvas context:
 
@@ -160,18 +161,18 @@ canvasContext.getDevicePixelResolution()
 
 | Property               | Type                                                 |                                                                                                                                        |
 | ---------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `autoResize?`          | `boolean`                                            | Whether to resize drawing buffer when canvas size changes                                                                              |
-| `useDevicePixels?`     | `boolean`                                            | Whether to auto resize drawing buffer to device or CSS pixels                                                                          |
-| `pixelSizeSource?`     | `'exact' \| 'css-dpr'`                               | How tracked device pixel size is derived for HTML canvases. Defaults to `'exact'`.                                                     |
-| `width?`               | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                                                                            |
-| `height?`              | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                                                                           |  |
-| `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                                                          |
-| `container?`           | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body`                                                          |
-| `visible?`             | `boolean`                                            | Visibility (only used if new canvas is created).                                                                                       |
-| `alphaMode?`           | `'opaque' \| 'premultiplied'`                        | WebGPU presentation alpha mode.                                                                                                        |
-| `colorSpace?`          | `'srgb' \| 'display-p3'`                             | Presentation color space. Use `'display-p3'` for wide-gamut HDR output.                                                               |
-| `colorFormat?`         | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'`      | Optional WebGPU presentation texture format. Use `'rgba16float'` to retain HDR values.                                                |
-| `toneMapping?`         | `'standard' \| 'extended'`                           | WebGPU presentation tone mapping. `'extended'` preserves colors brighter than SDR white.                                              |
+| `autoResize?` | `boolean` | Whether to resize drawing buffer when canvas size changes |
+| `useDevicePixels?` | `boolean` | Whether to auto resize drawing buffer to device or CSS pixels |
+| `pixelSizeSource?` | `'exact' \| 'css-dpr'` | How tracked device pixel size is derived for HTML canvases. Defaults to `'exact'`. |
+| `width?` | `number` | Width in pixels of the canvas (if `canvas` is not supplied) |
+| `height?` | `number` | Height in pixels of the canvas (if `canvas` is not supplied) |
+| `canvas?` | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied. |
+| `container?` | `HTMLElement` | Parent DOM element for new canvas. Defaults to first child of `document.body` |
+| `visible?` | `boolean` | Visibility (only used if new canvas is created). |
+| `alphaMode?` | `'opaque' \| 'premultiplied'` | WebGPU presentation alpha mode. |
+| `colorSpace?` | `'srgb' \| 'display-p3'` | Presentation color space. Use `'display-p3'` for wide-gamut HDR output. |
+| `colorFormat?` | `'rgba8unorm' \| 'bgra8unorm' \| 'rgba16float'` | Optional WebGPU presentation texture format. Use `'rgba16float'` to retain HDR values. |
+| `toneMapping?` | `'standard' \| 'extended'` | WebGPU presentation tone mapping. `'extended'` preserves colors brighter than SDR white. |
 
 ### `useDevicePixels: boolean`
 

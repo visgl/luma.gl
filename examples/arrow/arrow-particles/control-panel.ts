@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-particles-streaming-status-row';
 const STREAMING_BATCH_FILL_ID = 'arrow-particles-streaming-fill';

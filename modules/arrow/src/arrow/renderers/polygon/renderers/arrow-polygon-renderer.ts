@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {ModelProps, PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
@@ -12,7 +12,7 @@ import {
   type PolygonBatchProps,
   type PolygonShaderInputs,
   type PolygonStorageModelProps
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 import {RecordBatch, Table} from 'apache-arrow';
 import {
   clearArrowPickingState,

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';

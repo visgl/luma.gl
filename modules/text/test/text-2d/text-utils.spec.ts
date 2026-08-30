@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {buildMapping, nextPowOfTwo} from '../../src/index';
 
 test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
@@ -35,5 +35,33 @@ test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
     layoutOffsetX: 0,
     layoutOffsetY: -3
   });
+  t.end();
+});
+
+test('text-2d mapping aligns glyphs to a shared baseline', t => {
+  const {mapping} = buildMapping({
+    characterSet: new Set('ag'),
+    measureText: character => ({
+      advance: 4,
+      width: 4,
+      ascent: character === 'g' ? 2 : 3,
+      descent: character === 'g' ? 2 : 1
+    }),
+    buffer: 1,
+    maxCanvasWidth: 32
+  });
+
+  t.equal(mapping.a?.layoutOffsetY, -3, 'non-descender top is offset by its ascent');
+  t.equal(mapping.g?.layoutOffsetY, -2, 'descender top is offset by its ascent');
+  t.equal(
+    (mapping.a?.layoutOffsetY ?? 0) + (mapping.a?.height ?? 0),
+    1,
+    'non-descender bottom uses its descent'
+  );
+  t.equal(
+    (mapping.g?.layoutOffsetY ?? 0) + (mapping.g?.height ?? 0),
+    2,
+    'descender extends below the shared baseline'
+  );
   t.end();
 });

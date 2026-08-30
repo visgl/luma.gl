@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/webgl/constants';
 import {PrimitiveTopology} from '@luma.gl/core';

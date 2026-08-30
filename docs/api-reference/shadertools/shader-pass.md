@@ -1,17 +1,27 @@
 import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderPass
 
-<ShadertoolsDocsTabs active="shader-pass" />
+<ShadertoolsDocsTabs group="execution" active="shader-pass" />
 
 `ShaderPass` is a [`ShaderModule`](/docs/api-reference/shadertools/shader-module)
 that can be executed as a standalone fullscreen texture-processing stage.
-`ShaderPass` and `ShaderPassPipeline` are descriptors from
+`ShaderPass` and `CompositeShaderPass` are descriptors from
 `@luma.gl/shadertools`; [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer)
 is the engine class that executes them.
 
 For the authoring model, see
 [Shader Passes](/docs/api-guide/shaders/shader-passes).
+
+<DocumentationContract title="ShaderPass" rows={[
+  {label: 'Languages', value: 'ShaderModule source for each supported backend'},
+  {label: 'Dependencies', value: 'Module dependencies plus ordered subpasses'},
+  {label: 'Inputs and outputs', value: 'Original, previous, named targets, and final texture'},
+  {label: 'Execution', value: 'Executed by Engine ShaderPassRenderer'},
+  {label: 'Compatibility', value: 'Determined by source language, formats, and pass features'},
+  {label: 'Cost', value: 'Each subpass is a draw and may require transient or history textures'}
+]} />
 
 ## Usage
 
@@ -19,14 +29,14 @@ For the authoring model, see
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [myShaderPass, myShaderPassPipeline]
+  shaderPasses: [myShaderPass, myCompositeShaderPass]
 });
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
 Use a plain `ShaderPass` when subpasses only need the logical `original` or
-`previous` texture sources. Use a `ShaderPassPipeline` when later steps need
+`previous` texture sources. Use a `CompositeShaderPass` when later steps need
 named intermediate render targets.
 
 ## Types
@@ -97,20 +107,20 @@ export type ShaderPassRenderTarget = {
 When one step reads and writes the same history target, it reads the previous frame and writes the
 current frame. `initialize` controls the first value after construction, resize, or reset.
 
-### `ShaderPassPipeline`
+### `CompositeShaderPass`
 
 ```ts
-export type ShaderPassPipeline<TargetNameT extends string = string> = {
+export type CompositeShaderPass<TargetNameT extends string = string> = {
   name: string;
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
-  steps: ShaderPassPipelineStep<TargetNameT>[];
+  steps: CompositeShaderPassStep<TargetNameT>[];
 };
 ```
 
-### `ShaderPassPipelineStep`
+### `CompositeShaderPassStep`
 
 ```ts
-export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+export type CompositeShaderPassStep<TargetNameT extends string = string> = {
   shaderPass: ShaderPass<any, any, any, any>;
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
   output?: 'previous' | TargetNameT;
@@ -118,7 +128,7 @@ export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
 };
 ```
 
-`ShaderPassPipeline` owns named render targets. A plain `ShaderPass` does not.
+`CompositeShaderPass` owns named render targets. A plain `ShaderPass` does not.
 For routing validation, draw-time uniforms and bindings, resize behavior, and
 presentation methods, see
 [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).

@@ -38,12 +38,12 @@ Most textures tend to be two dimensional textures, however GPUs can support addi
 
 | Dimension    | WebGPU | WebGL2 | Layout             | Description                                                          |
 | ------------ | ------ | ------ | ------------------ | -------------------------------------------------------------------- |
-| `1d`         | ✅     | ❌     | `TextureData`      | Contains a one dimensional texture (for compute)                     |
-| `2d`         | ✅     | ✅     | `TextureData`      | Contains a "normal" image texture                                    |
-| `2d-array`   | ✅     | ✅     | `TextureData[]`    | Holds an "array" of 2D textures.                                     |
-| `3d`         | ✅     | ✅     | `TextureData[]`    | Holds a "stack" of textures which enables 3D interpolation.          |
-| `cube`       | ✅     | ✅     | `TextureData[6]`   | Holds 6 textures representing sides of a cube.                       |
-| `cube-array` | ✅     | ❌     | `TextureData[6][]` | Holds an array where every 6 textures represent the sides of a cube. |
+| `1d` | ✅ | ❌ | `TextureData` | Contains a one dimensional texture (for compute) |
+| `2d` | ✅ | ✅ | `TextureData` | Contains a "normal" image texture |
+| `2d-array` | ✅ | ✅ | `TextureData[]` | Holds an "array" of 2D textures. |
+| `3d` | ✅ | ✅ | `TextureData[]` | Holds a "stack" of textures which enables 3D interpolation. |
+| `cube` | ✅ | ✅ | `TextureData[6]` | Holds 6 textures representing sides of a cube. |
+| `cube-array` | ✅ | ❌ | `TextureData[6][]` | Holds an array where every 6 textures represent the sides of a cube. |
 
 Sometimes a composite texture can be used as a unit, but sometimes it is necessary to specify a specific subtexture.
 
@@ -123,12 +123,12 @@ Mipmap usage is controlled via `SamplerProps.mipmapFilter`:
 
 | `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
 | -------------- | ----------- | ----------------------------------------------- | --------------------- | ------- |
-| `none`         | `nearest`   | No filtering, no mipmaps                        | none                  |         |
-| `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest |
-| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  |         |
-| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                |         |
-| `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest |
-| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             |         |
+| `none` | `nearest` | No filtering, no mipmaps | none | — |
+| `none` | `linear` | Filtering, no mipmaps | bilinear | slowest |
+| `nearest` | `nearest` | No filtering, sharp switching between mipmaps | none | — |
+| `nearest` | `linear` | No filtering, smooth transition between mipmaps | linear | — |
+| `linear` | `nearest` | Filtering, sharp switching between mipmaps | bilinear with mipmaps | fastest |
+| `linear` | `linear` | Filtering, smooth transition between mipmaps | trilinear | — |
 
 In addition, the `anisotropy` sampler property controls how many miplevels are used during sampling.
 
@@ -163,12 +163,12 @@ luma provides `Device` methods to help applications determine the capabilities o
 
 | Can textures with the format...                        | Check using                                |
 | ------------------------------------------------------ | ------------------------------------------ |
-| be **created and sampled** (using `nearest` filters)?  | `device.isTextureFormatSupported(format)`  |
-| be sampled using **linear filtering**?                 | `device.isTextureFormatFilterable(format)` |
+| be **created and sampled** (using `nearest` filters)? | `device.isTextureFormatSupported(format)` |
+| be sampled using **linear filtering**? | `device.isTextureFormatFilterable(format)` |
 | be rendered into? (render targets / color attachments) | `device.isTextureFormatRenderable(format)` |
-| be used for storage bindings?                          | N/A                                        |
-| be blended?                                            | Yes, if sampler type `float` is supported  |
-| support multisampling?                                 | N/A                                        |
+| be used for storage bindings? | N/A |
+| be blended? | Yes, if sampler type `float` is supported |
+| support multisampling? | N/A |
 
 Remarks
 
@@ -268,10 +268,10 @@ The buffer-copy rule is not a limitation of a specific platform, but rather a lo
 
 | Platform / Vendor              | 256-byte alignment reason                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Apple / Metal                  | Metal requires row strides aligned to 256 bytes for optimal performance and correctness.                  |
-| Direct3D 12 (Windows)          | D3D12 has alignment requirements for D3D12_TEXTURE_COPY_LOCATION buffer layouts.                          |
-| Vulkan (Linux/Windows/Android) | vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing.                          |
-| Mobile GPUs                    | Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access. |
+| Apple / Metal | Metal requires row strides aligned to 256 bytes for optimal performance and correctness. |
+| Direct3D 12 (Windows) | D3D12 has alignment requirements for D3D12_TEXTURE_COPY_LOCATION buffer layouts. |
+| Vulkan (Linux/Windows/Android) | vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing. |
+| Mobile GPUs | Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access. |
 
 Why `256`? It is a practical alignment boundary for buffer-backed texture copies across current GPU APIs and drivers:
 
@@ -308,8 +308,8 @@ This means that the same compressed asset can appear to "just work" on WebGL whi
 
 | Backend | Non-aligned compressed logical size | Padding behavior |
 | ------- | ----------------------------------- | ---------------- |
-| WebGL   | Often accepted                      | Usually implicit driver padding |
-| WebGPU  | Rejected                            | Application must pad explicitly |
+| WebGL | Often accepted | Usually implicit driver padding |
+| WebGPU | Rejected | Application must pad explicitly |
 
 Compressed texture uploads follow an additional alignment rule that is separate from row-stride alignment:
 

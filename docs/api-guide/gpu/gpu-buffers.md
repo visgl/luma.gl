@@ -34,14 +34,14 @@ The ability to copy memory between CPU, buffers and textures
 
 | Dimension                   | WebGPU | WebGL2 | Description                                           |
 | --------------------------- | ------ | ------ | ----------------------------------------------------- |
-| `Buffer.write()`            | ✅     | ✅     | Write a buffer synchronously                          |
-| `Buffer.mapAndWriteAsync()` | ✅     | ✅ \*     | Write a buffer synchronously                          |
-| `Buffer.readAsync()`        | ✅     | ✅ \*  | Read a buffer asynchronously without copy.            |
-| `Buffer.mapAndReadAsync()`  | ✅     | ✅ \*  | Read a buffer asynchronously                          |
-| `Buffer.readSyncWebGL()`    | ❌     | ✅     | Read a buffer synchronously                           |
-| `copyBufferToBuffer`        | ✅     | ✅     | Copy a buffer to another buffer without CPU roundtrip |
-| `copyBufferToTexture`       | ✅     | ✅ \*  | Copy a buffer to a texture without CPU roundtrip      |
-| `copyTextureToBuffer`       | ✅     | ✅ \*  | Copy a buffer to a texture without CPU roundtrip      |
+| `Buffer.write()` | ✅ | ✅ | Write a buffer synchronously |
+| `Buffer.mapAndWriteAsync()` | ✅ | ✅ \* | Write a buffer synchronously |
+| `Buffer.readAsync()` | ✅ | ✅ \* | Read a buffer asynchronously without copy. |
+| `Buffer.mapAndReadAsync()` | ✅ | ✅ \* | Read a buffer asynchronously |
+| `Buffer.readSyncWebGL()` | ❌ | ✅ | Read a buffer synchronously |
+| `copyBufferToBuffer` | ✅ | ✅ | Copy a buffer to another buffer without CPU roundtrip |
+| `copyBufferToTexture` | ✅ | ✅ \* | Copy a buffer to a texture without CPU roundtrip |
+| `copyTextureToBuffer` | ✅ | ✅ \* | Copy a buffer to a texture without CPU roundtrip |
 
 Remarks:
 

@@ -1,10 +1,10 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {dof, dofShaderPassPipeline} from '@luma.gl/effects';
+import {dof, dofCompositeShaderPass} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 
 test('dof#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(dof, {}, {});
@@ -17,22 +17,22 @@ test('dof#build/uniform', t => {
   t.end();
 });
 
-test('dofShaderPassPipeline#shape', t => {
-  t.equal(dofShaderPassPipeline.steps.length, 2, 'pipeline has two passes');
-  t.equal(dofShaderPassPipeline.steps[0].shaderPass, dof, 'first step uses dof');
-  t.equal(dofShaderPassPipeline.steps[1].shaderPass, dof, 'second step uses dof');
+test('dofCompositeShaderPass#shape', t => {
+  t.equal(dofCompositeShaderPass.steps.length, 2, 'pipeline has two passes');
+  t.equal(dofCompositeShaderPass.steps[0].shaderPass, dof, 'first step uses dof');
+  t.equal(dofCompositeShaderPass.steps[1].shaderPass, dof, 'second step uses dof');
   t.equal(
-    dofShaderPassPipeline.steps[0].inputs.sourceTexture,
+    dofCompositeShaderPass.steps[0].inputs.sourceTexture,
     'previous',
     'pipeline consumes the preceding effect output'
   );
   t.deepEqual(
-    dofShaderPassPipeline.steps[0].uniforms,
+    dofCompositeShaderPass.steps[0].uniforms,
     {texelOffset: [1, 0]},
     'first step runs horizontal blur'
   );
   t.deepEqual(
-    dofShaderPassPipeline.steps[1].uniforms,
+    dofCompositeShaderPass.steps[1].uniforms,
     {texelOffset: [0, 1]},
     'second step runs vertical blur'
   );

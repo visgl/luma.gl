@@ -1,12 +1,13 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {log} from '@luma.gl/core';
 import {loadScript} from '../../utils/load-script';
 import {getWebGLContextData} from '../helpers/webgl-context-data';
 
 import type {Spector} from './spector-types';
+import {registerSpectorJS} from './debug-hooks';
 
 /** Spector debug initialization options */
 type SpectorProps = {
@@ -106,3 +107,5 @@ export function initializeSpectorJS(props: SpectorProps): Spector | null {
 
   return spector;
 }
+
+registerSpectorJS({load: loadSpectorJS, initialize: initializeSpectorJS});

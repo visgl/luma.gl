@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVector} from '@luma.gl/tables';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {Data, FixedSizeList, Float32, Vector} from 'apache-arrow';
 import {makeArrowFixedSizeListVector} from '../../../vectors/arrow-fixed-size-list';
 

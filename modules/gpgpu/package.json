@@ -1,7 +1,7 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "9.4.0-alpha.3",
-  "description": "3D Engine Components for luma.gl",
+  "version": "9.4.0-alpha.4",
+  "description": "General-purpose GPU data, computation, and graph algorithms for luma.gl",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,56 @@
       "types": "./dist/operations/webgpu/index.d.ts",
       "import": "./dist/operations/webgpu/index.js",
       "require": "./dist/operations/webgpu/index.cjs"
+    },
+    "./gpu-data": {
+      "types": "./dist/gpu-data/index.d.ts",
+      "import": "./dist/gpu-data/index.js",
+      "require": "./dist/gpu-data/index.cjs"
+    },
+    "./gpu-core": {
+      "types": "./dist/gpu-core/index.d.ts",
+      "import": "./dist/gpu-core/index.js",
+      "require": "./dist/gpu-core/index.cjs"
+    },
+    "./gpu-parse": {
+      "types": "./dist/gpu-parse/index.d.ts",
+      "import": "./dist/gpu-parse/index.js",
+      "require": "./dist/gpu-parse/index.cjs"
+    },
+    "./gpu-graph": {
+      "types": "./dist/gpu-graph/index.d.ts",
+      "import": "./dist/gpu-graph/index.js",
+      "require": "./dist/gpu-graph/index.cjs"
+    },
+    "./gpu-graph/benchmarks": {
+      "types": "./dist/gpu-graph/benchmarks.d.ts",
+      "import": "./dist/gpu-graph/benchmarks.js",
+      "require": "./dist/gpu-graph/benchmarks.cjs"
+    },
+    "./gpu-vector-search": {
+      "types": "./dist/gpu-vector-search/index.d.ts",
+      "import": "./dist/gpu-vector-search/index.js",
+      "require": "./dist/gpu-vector-search/index.cjs"
+    },
+    "./gpu-dggs": {
+      "types": "./dist/gpu-dggs/index.d.ts",
+      "import": "./dist/gpu-dggs/index.js",
+      "require": "./dist/gpu-dggs/index.cjs"
+    },
+    "./gpu-dggs/benchmarks": {
+      "types": "./dist/gpu-dggs/benchmarks.d.ts",
+      "import": "./dist/gpu-dggs/benchmarks.js",
+      "require": "./dist/gpu-dggs/benchmarks.cjs"
+    },
+    "./gpu-h3": {
+      "types": "./dist/gpu-h3/index.d.ts",
+      "import": "./dist/gpu-h3/index.js",
+      "require": "./dist/gpu-h3/index.cjs"
+    },
+    "./gpu-a5": {
+      "types": "./dist/gpu-a5/index.d.ts",
+      "import": "./dist/gpu-a5/index.js",
+      "require": "./dist/gpu-a5/index.cjs"
     }
   },
   "files": [
@@ -58,7 +108,6 @@
     "@luma.gl/webgpu": "~9.4.0-alpha.1"
   },
   "dependencies": {
-    "@luma.gl/tables": "9.4.0-alpha.3",
     "@math.gl/core": "^4.1.0",
     "@math.gl/types": "^4.1.0",
     "@probe.gl/log": "^4.0.8",

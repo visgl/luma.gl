@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {VariableShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
 import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/webgl/constants';

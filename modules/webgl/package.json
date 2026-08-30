@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "9.4.0-alpha.3",
+  "version": "9.4.0-alpha.4",
   "description": "WebGL2 adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
@@ -25,6 +25,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js",
+      "require": "./dist/debug.cjs"
     },
     "./constants": {
       "types": "./dist/constants/index.d.ts",

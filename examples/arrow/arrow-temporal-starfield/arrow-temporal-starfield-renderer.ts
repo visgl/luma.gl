@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   getArrowFixedSizeListValues,
@@ -15,16 +15,18 @@ import {
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
 import {
+  getGPUVectorBuffer,
+  getGPUVectorData,
+  getRequiredGPUVector,
+  type GPUVector
+} from '@luma.gl/gpgpu/gpu-data';
+import {
   GPURenderable,
   GPURecordBatch,
   GPUTable,
   GPUTableModel,
-  getGPUVectorBuffer,
-  getGPUVectorData,
-  getRequiredGPUVector,
-  type GPUTypeMap,
-  type GPUVector
-} from '@luma.gl/tables';
+  type GPUTypeMap
+} from '@luma.gl/experimental/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

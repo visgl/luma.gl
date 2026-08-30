@@ -60,17 +60,17 @@ const sampler = device.createSampler(gl, {
 
 | Sampler Parameter | Values                                                  | Description                                                         |
 | ----------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
-| `type`            | `'color-sampler'` \* \| `'comparison-sampler'`          | Specify `'comparison-sampler'` to create a depth comparison sampler |
-| `addressModeU?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`)                   |
-| `addressModeV?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`)                   |
-| `addressModeW?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
-| `magFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
-| `minFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
-| `mipmapFilter?`   | `'none'` \* \| `'nearest'` \| `'linear'`                | Sample closest mipmap, or interpolate two closest mipmaps           |
-| `maxAnisotropy?`  | `number`                                                | Combine samples from multiple mipmap levels when appropriate        |
-| `lodMinClamp?`    | `number`                                                | Minimum level of detail to use when sampling                        |
-| `lodMaxClamp?`    | `number`                                                | Maximum level of detail to use when sampling                        |
-| `compare?`        | `less-equal` etc (see below)                            | Specifies compare function for a depth "comparison sampler"         |
+| `type` | `'color-sampler'` \* \| `'comparison-sampler'` | Specify `'comparison-sampler'` to create a depth comparison sampler |
+| `addressModeU?` | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `u` (`s`) |
+| `addressModeV?` | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `v` (`t`) |
+| `addressModeW?` | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`) |
+| `magFilter?` | `'nearest'` \* \| `'linear'` | Sample nearest texel, or interpolate closest texels |
+| `minFilter?` | `'nearest'` \* \| `'linear'` | Sample nearest texel, or interpolate closest texels |
+| `mipmapFilter?` | `'none'` \* \| `'nearest'` \| `'linear'` | Sample closest mipmap, or interpolate two closest mipmaps |
+| `maxAnisotropy?` | `number` | Combine samples from multiple mipmap levels when appropriate |
+| `lodMinClamp?` | `number` | Minimum level of detail to use when sampling |
+| `lodMaxClamp?` | `number` | Maximum level of detail to use when sampling |
+| `compare?` | `less-equal` etc (see below) | Specifies compare function for a depth "comparison sampler" |
 
 Use the interactive playground to compare wrapping, filtering, mipmaps, LOD clamps,
 anisotropy, and depth comparison sampling.
@@ -85,9 +85,9 @@ Controls how texture coordinates outside of the [0, 1] range are sampled.
 
 | Value              | Description                                                                            |
 | ------------------ | -------------------------------------------------------------------------------------- |
-| `repeat` (default) | use fractional part of texture coordinates                                             |
-| `clamp-to-edge`    | clamp texture coordinates                                                              |
-| `mirrored-repeat`  | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
+| `repeat` (default) | use fractional part of texture coordinates |
+| `clamp-to-edge` | clamp texture coordinates |
+| `mirrored-repeat` | use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac` |
 
 #### Texture Magnification Filter
 
@@ -97,8 +97,8 @@ Parameter: `magFilter`
 
 | Value               | Description        |
 | ------------------- | ------------------ |
-| `nearest` (default) | nearest texel      |
-| `linear`            | interpolated texel |
+| `nearest` (default) | nearest texel |
+| `linear` | interpolated texel |
 
 - `nearest` is faster than `linear`, but is not as smooth.
 
@@ -110,8 +110,8 @@ Parameter: `minFilter`
 
 | Value               | Description        |
 | ------------------- | ------------------ |
-| `nearest` (default) | nearest texel      |
-| `linear`            | interpolated texel |
+| `nearest` (default) | nearest texel |
+| `linear` | interpolated texel |
 
 #### Texture Mipmap Filter
 
@@ -121,9 +121,9 @@ Parameter: `mipmapFilter`
 
 | Value               | Description                 |
 | ------------------- | --------------------------- |
-| `nearest` (default) | nearest mipmap              |
-| `linear`            | interpolate between mipmaps |
-| `none`              | no mipmaps                  |
+| `nearest` (default) | nearest mipmap |
+| `linear` | interpolate between mipmaps |
+| `none` | no mipmaps |
 
 For more information, see [GPU Textures](/docs/api-guide/gpu/gpu-textures#mipmaps).
 

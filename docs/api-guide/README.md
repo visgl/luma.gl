@@ -1,24 +1,49 @@
+---
+title: Choosing a luma.gl API layer
+description: Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+---
+
 import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
 
-# A Tale of Three APIs
+# Choosing a luma.gl API layer
 
 <ApiOverviewDocsTabs active="overview" />
 
-The luma.gl API enables the creation of portable GPU applications that can run on top of either WebGPU, or WebGL 2.
-luma.gl is divided into different sub-APIs: the core GPU API, the shader API and the engine API.
+The luma.gl API enables portable GPU applications on WebGPU or WebGL 2. Choose the highest-level
+layer that expresses the work clearly, then move down only when the application needs more control.
 
-## Engine API
+| If you need to… | Start with |
+| --- | --- |
+| Render geometry, manage redraws, animate, or pick objects | **Engine** |
+| Create and control buffers, textures, passes, pipelines, and submission | **Core** |
+| Compose reusable WGSL/GLSL behavior | **Shadertools** |
+| Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core** |
 
-The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`.
-Scenegraphs are included and glTF support is available through the `@luma.gl/gltf` add-on module.
+Start with [How luma.gl fits together](/docs/api-guide/luma-layers) for one small rendered
+application viewed through each layer and concrete guidance on when to move up or down.
+
+## Engine
+
+The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`,
+`TextureTransform`, and `Computation`. Its
+[shared animation system](/docs/api-guide/engine/animation) adds keyframe tracks, clips, weighted
+mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while
+[glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
+live in the format-specific `@luma.gl/gltf` module.
+
+The experimental [`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consume
+format-independent scene descriptions instead of introducing a second glTF renderer. Their
+[physical lighting environments](/docs/api-reference/experimental/pbr-environment) can be prepared
+from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
-[Declarative Rendering with ANARI](/docs/api-guide/engine/anari-rendering). It introduces
-the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters,
+[Declarative Scene Rendering](/docs/api-guide/engine/anari-rendering). It introduces
+the experimental, private `@luma.gl/scene` workspace, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 
-## Core API
+## Core
 
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code
@@ -35,7 +60,7 @@ Core responsibilities for any GPU library are to enable applications to perform:
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.
 
-## Shader API
+## Shadertools
 
 The Shader API lets the application use a library of existing shader modules to create new custom shaders.
 It is also possible for developers to create new reusable shader modules.
@@ -43,7 +68,7 @@ It is also possible for developers to create new reusable shader modules.
 Most applications work with the engine API (`Model`, `AnimationLoop` and related classes), leveraging the core GPU API as necessary to obtain a `Device` and use it to create GPU resources such as `Buffer` and `Texture`.
 The shader API is used to assemble shaders and define shader modules.
 
-## General Usage
+## Typical application flow
 
 Most luma.gl applications will:
 

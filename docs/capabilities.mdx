@@ -1,0 +1,194 @@
+---
+title: Framework Capabilities
+description: Detailed feature matrices for GPU-native dataframes, graph and raster analytics, large-scale visualization, WebGPU and WebGL2 rendering, ray tracing, shaders, and assets.
+---
+
+# Visualization and compute, at GPU scale.
+
+Move massive datasets through GPU-resident pipelines. Filter, aggregate, project, and render
+without unnecessary CPU round trips. luma.gl is a modular, TypeScript-first framework for
+data-intensive visualization, portable GPU programming, and high-quality interactive rendering.
+
+Choose the level you need: typed columnar data, GPU-resident dataframes, graph and raster
+analytics, reusable compute operations, GPU command graphs, rendering primitives, composable
+visual effects, or retained three-dimensional scenes.
+
+**Massive data. GPU-native compute. Interactive visualization. WebGPU and WebGL2.**
+
+## The framework, module by module
+
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/api-guide/gpu/gpu-data-processing">
+    <span className="docs-api-card__kind">GPU-native computation</span>
+    <strong>Compute, tables, and Arrow</strong>
+    <span>Connect GPU-resident columns, reusable operations, command graphs, filtering, aggregation, and large-scale visualization.</span>
+    <span className="docs-api-card__meta">@luma.gl/gpgpu · @luma.gl/experimental</span>
+    <span className="docs-api-card__meta">@luma.gl/arrow · experimental / private</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/experimental">
+    <span className="docs-api-card__kind">Experimental GPU analytics</span>
+    <strong>Dataframes, graphs, and rasters</strong>
+    <span>Query GPU-resident tables, discover graph communities, and analyze cached scientific or geospatial raster tiles without unnecessary readback.</span>
+    <span className="docs-api-card__meta">GPU Dataframe · GPU Graph · GPURaster</span>
+    <span className="docs-api-card__meta">@luma.gl/experimental · private</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/core">
+    <span className="docs-api-card__logos" role="group" aria-label="Supported graphics backends">
+      <img
+        className="docs-api-card__logo"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="112"
+        height="38"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="96"
+        height="40"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Portable GPU foundation</span>
+    <strong>Core, WebGPU, and WebGL</strong>
+    <span>One application-facing device API for buffers, textures, pipelines, commands, and explicit GPU resource ownership.</span>
+    <span className="docs-api-card__meta">@luma.gl/core · @luma.gl/webgpu · @luma.gl/webgl</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/engine">
+    <span className="docs-api-card__kind">Rendering engine</span>
+    <strong>Models, geometry, and animation</strong>
+    <span>Build with models, GPU geometry, picking, instancing, render loops, and reusable animation mixing.</span>
+    <span className="docs-api-card__meta">@luma.gl/engine</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/shadertools">
+    <span className="docs-api-card__kind">Shader programming</span>
+    <strong>Reusable shaders and modules</strong>
+    <span>Compose WGSL and GLSL with typed shader modules, injection hooks, lighting, and high-precision visualization tools.</span>
+    <span className="docs-api-card__meta">@luma.gl/shadertools</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-guide/shaders/shader-passes">
+    <span className="docs-api-card__kind">Visual effects</span>
+    <strong>Composable image processing</strong>
+    <span>Combine bloom, ambient occlusion, reflections, indirect light, volumetrics, motion blur, and temporal antialiasing.</span>
+    <span className="docs-api-card__meta">@luma.gl/effects</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/scene">
+    <span
+      className="docs-api-card__logos"
+      role="group"
+      aria-label="ANARI-inspired scenes with glTF and experimental OpenUSD import"
+    >
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/anari.svg"
+        alt="ANARI"
+        width="168"
+        height="56"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="64"
+        height="32"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-dark"
+        src="/img/standards/openusd.png"
+        alt="OpenUSD"
+        width="70"
+        height="33"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Experimental retained scenes</span>
+    <strong>ANARI / Scene API</strong>
+    <span>Describe cameras, geometry, lights, and renderers; explore glTF and experimental OpenUSD import in the ANARI Playground.</span>
+    <span className="docs-api-card__meta">@luma.gl/scene · experimental / private</span>
+    <span className="docs-api-card__disclaimer">ANARI-inspired; not an ANARI-conformant implementation.</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/gltf">
+    <span className="docs-api-card__logos" role="group" aria-label="glTF on WebGPU and WebGL">
+      <img
+        className="docs-api-card__logo docs-api-card__logo--primary"
+        src="/img/standards/gltf.svg"
+        alt="glTF"
+        width="128"
+        height="64"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary"
+        src="/img/standards/webgpu.svg"
+        alt="WebGPU"
+        width="77"
+        height="26"
+        loading="lazy"
+      />
+      <img
+        className="docs-api-card__logo docs-api-card__logo--secondary docs-api-card__logo--on-light"
+        src="/img/standards/webgl.svg"
+        alt="WebGL"
+        width="62"
+        height="26"
+        loading="lazy"
+      />
+    </span>
+    <span className="docs-api-card__kind">Assets and materials</span>
+    <strong>glTF and physically based shading</strong>
+    <span>Render portable PBR assets, native glTF extensions, skeletal and morph animations, and independently animated GPU-instanced crowds.</span>
+    <span className="docs-api-card__meta">@luma.gl/gltf</span>
+  </a>
+  <a className="docs-api-card" href="/docs/api-reference/splats">
+    <span className="docs-api-card__kind">Experimental neural rendering</span>
+    <strong>Streaming Gaussian splats</strong>
+    <span>Render progressively streamed captured scenes with view-dependent harmonics, semantic picking and filtering, and bounded tile residency.</span>
+    <span className="docs-api-card__meta">@luma.gl/splats · experimental / private</span>
+  </a>
+</div>
+
+<div className="docs-api-card__attribution">
+  WebGPU logo by <a href="https://www.w3.org/">W3C</a>, used under the{' '}
+  <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International license</a>.
+  Standards marks identify related technologies and do not imply endorsement, certification, or conformance.
+</div>
+
+## How to read the feature matrices
+
+| Status | Meaning |
+| --- | --- |
+| **Available** | Implemented in a published framework module, subject to documented device and browser requirements. |
+| **Evolving** | Implemented in a published module, but integration, feature coverage, or the v10 API remains incomplete. |
+| **Experimental** | Implemented in an incubating or private module whose public contract may still change. |
+| **Opportunity** | A useful extension or known limitation; do not interpret it as existing functionality. |
+
+`WebGPU + WebGL2` means an application-facing path exists for both backends; exact shader,
+texture, or device-feature requirements can still differ. `WebGPU` identifies capabilities that
+require compute shaders, storage resources, or another WebGPU-specific implementation.
+
+## Explore the detailed matrices
+
+<div className="docs-api-card-grid">
+  <a className="docs-api-card" href="/docs/capabilities/gpu-data-compute">
+    <span className="docs-api-card__kind">Data and compute</span>
+    <strong>GPU-resident analytics</strong>
+    <span>Tables, Arrow, command graphs, dataframe operations, graph analytics, raster processing, queries, and GPU-driven visualization.</span>
+    <span className="docs-api-card__meta">WebGPU-first analytical capabilities</span>
+  </a>
+  <a className="docs-api-card" href="/docs/capabilities/rendering-visualization">
+    <span className="docs-api-card__kind">Rendering and visualization</span>
+    <strong>Portable visual systems</strong>
+    <span>Core resources, Engine workflows, shaders, effects, glTF, retained scenes, Gaussian splats, simulations, and immersive presentation.</span>
+    <span className="docs-api-card__meta">WebGPU and WebGL 2 where supported</span>
+  </a>
+</div>
+
+## Related pages
+
+- [Getting Started](/docs/getting-started)
+- [Choosing a luma.gl API layer](/docs/api-guide)
+- [API reference](/docs/api-reference)

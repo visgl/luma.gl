@@ -1,3 +1,10 @@
+---
+title: luma.gl documentation
+description: Learn high-performance WebGPU and WebGL 2 rendering, compute, shaders, models, and GPU data processing with luma.gl.
+---
+
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+
 # luma.gl Documentation
 
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the
@@ -5,30 +12,48 @@ web. It provides one application-facing API with pluggable WebGPU and WebGL2 bac
 plus higher-level building blocks for models, animation, shader composition, and GPU
 data processing.
 
-<p className="badges">
+Start with a live scene, follow the ideas behind a single rendered frame, and choose
+how much of the GPU you want to control. You can explore the examples and tutorials
+right here in your browser.
+
+<DocumentationBadges>
   <a href="https://www.npmjs.com/package/@luma.gl/core">
-    <img src="https://img.shields.io/npm/v/@luma.gl/core.svg?style=flat-square&label=npm" alt="npm package version" />
-  </a>{' '}
-  <a href="https://github.com/visgl/luma.gl/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square" alt="MIT license" />
-  </a>{' '}
-  <a href="https://www.typescriptlang.org/">
-    <img src="https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat-square" alt="TypeScript strict mode" />
+    <DocumentationBadge tone="version">npm package</DocumentationBadge>
   </a>
-</p>
+  <a href="https://github.com/visgl/luma.gl/blob/master/LICENSE">
+    <DocumentationBadge tone="stable">MIT license</DocumentationBadge>
+  </a>
+  <a href="https://www.typescriptlang.org/">
+    <DocumentationBadge tone="stable">TypeScript strict mode</DocumentationBadge>
+  </a>
+</DocumentationBadges>
+
+## Choose your starting point
 
 <div className="docs-api-card-grid">
   <a className="docs-api-card" href="/docs/getting-started">
     <span className="docs-api-card__kind">New to luma.gl</span>
-    <strong>Get a canvas running</strong>
-    <span>Create a Vite project, select WebGPU with WebGL2 fallback, and render your first frame.</span>
-    <span className="docs-api-card__meta">About ten minutes</span>
+    <strong>Discover what you can build</strong>
+    <span>Explore living worlds, physical simulations, visual effects, and GPU-powered data directly in your browser.</span>
+    <span className="docs-api-card__meta">No installation required</span>
+  </a>
+  <a className="docs-api-card" href="/docs/capabilities">
+    <span className="docs-api-card__kind">Framework capabilities</span>
+    <strong>Explore the complete feature set</strong>
+    <span>See how GPU-native data, large-scale visualization, compute pipelines, portable rendering, and visual effects fit together.</span>
+    <span className="docs-api-card__meta">Packages, techniques, and maturity</span>
   </a>
   <a className="docs-api-card" href="/docs/tutorials">
     <span className="docs-api-card__kind">Learn</span>
     <strong>Follow the fundamentals</strong>
     <span>Build from a triangle to textured geometry, instancing, reusable shaders, and GPU transforms.</span>
     <span className="docs-api-card__meta">Live, backend-switchable examples</span>
+  </a>
+  <a className="docs-api-card" href="/examples">
+    <span className="docs-api-card__kind">See it in action</span>
+    <strong>Explore live GPU examples</strong>
+    <span>Launch interactive scenes for lighting, oceans, fire, Gaussian splats, effects, and data visualization.</span>
+    <span className="docs-api-card__meta">Interactive examples in your browser</span>
   </a>
   <a className="docs-api-card" href="/docs/api-guide">
     <span className="docs-api-card__kind">Design and concepts</span>
@@ -43,6 +68,10 @@ data processing.
     <span className="docs-api-card__meta">Organized by npm package</span>
   </a>
 </div>
+
+When you are ready to turn an idea into your own application, the
+[Installing guide](/docs/developer-guide/installing) walks through your first project,
+device adapters, and your first rendered frame.
 
 ## Why luma.gl?
 
@@ -63,7 +92,7 @@ data processing.
 | --- | --- |
 | **luma.gl** | You are building a renderer, GPU compute workflow, visualization framework, or custom GPU feature and want explicit resource control. |
 | [deck.gl](https://deck.gl) | You need high-level geospatial or large-data visualization layers, picking, cameras, and interaction. |
-| Three.js or Babylon.js | You need a general-purpose scene engine with a large asset and material ecosystem. |
+| **A complete scene engine** | You need a batteries-included scene engine with an extensive asset and material ecosystem. |
 | Raw WebGPU | You need exact control over one backend and do not need luma.gl's portability, lifecycle, or shader tooling. |
 
 ## Three cooperating APIs
@@ -84,7 +113,8 @@ backends.
 Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined
 hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-Read [A Tale of Three APIs](/docs/api-guide) for the detailed object model.
+Explore [how the three APIs fit together](/docs/api-guide) for the complete object
+model and guidance on choosing the right layer.
 
 ## Supported environments
 
@@ -92,13 +122,15 @@ luma.gl targets current evergreen browsers. WebGPU feature availability varies b
 browser and platform; WebGL2 provides the compatibility path for portable rendering.
 Compute shaders, storage textures, and some advanced features remain WebGPU-only.
 
-Node.js can be used when the host supplies a WebGPU or WebGL implementation, but browser
-image, canvas, and video APIs require environment-specific replacements.
+Server-side rendering and compute are also possible when the host supplies a compatible
+GPU implementation. Browser-specific image, canvas, and video APIs may require
+environment-specific replacements.
 
 ## Project and releases
 
-This documentation describes luma.gl **v9.3**. See [What's New](/docs/whats-new) for
-current features and the [Upgrade Guide](/docs/upgrade-guide) for breaking changes.
+This documentation follows the current luma.gl development branch. See
+[What's New](/docs/whats-new) for release-specific features and the
+[Upgrade Guide](/docs/upgrade-guide) for breaking changes.
 
 luma.gl is an MIT-licensed OpenJS Foundation project governed by the vis.gl community.
 Use [GitHub Discussions](https://github.com/visgl/luma.gl/discussions) for design and

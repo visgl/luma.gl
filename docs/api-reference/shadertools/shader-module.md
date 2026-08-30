@@ -1,4 +1,6 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # ShaderModule
 
@@ -17,6 +19,15 @@ assembled source plus a combined uniform getter.
 
 For the composition model, see
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly).
+
+<DocumentationContract title="ShaderModule" rows={[
+  {label: 'Languages', value: 'WGSL source, GLSL vertex/fragment source, or both'},
+  {label: 'Dependencies', value: 'Resolved transitively and de-duplicated in deterministic order'},
+  {label: 'Hooks and injections', value: 'Named extension contracts and ordered source contributions'},
+  {label: 'Props and bindings', value: 'Typed descriptors mapped through getUniforms()'},
+  {label: 'Assembly output', value: 'Combined source, uniforms, bindings, and dependency metadata'},
+  {label: 'Cost', value: 'Assemble before pipeline creation and reuse the result'}
+]} />
 
 ## Usage
 
@@ -96,9 +107,9 @@ The `uniformTypes` map describes the shader-facing uniform layout for the
 module. Primitive uniform leaves use string shader types such as `'f32'`,
 `'vec3<f32>'`, and `'mat4x4<f32>'`.
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v9.3</DocumentationBadge>
+</DocumentationBadges>
 
 luma.gl also supports composite uniform descriptors:
 

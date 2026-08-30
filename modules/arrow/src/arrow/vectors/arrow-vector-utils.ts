@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   Data,
@@ -80,6 +80,10 @@ function getArrowVectorBufferByteLength(vector: Vector, countedVectors: Set<Vect
 function getArrowDataBufferByteLength(data: Data, countedVectors: Set<Vector>): number {
   let byteLength = 0;
   for (const buffer of data.buffers as unknown as unknown[]) {
+    byteLength += getBufferByteLength(buffer);
+  }
+  const variadicBuffers = (data as Data & {variadicBuffers?: readonly unknown[]}).variadicBuffers;
+  for (const buffer of variadicBuffers ?? []) {
     byteLength += getBufferByteLength(buffer);
   }
   for (const childData of data.children) {

@@ -1,10 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
-import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
+import test from 'test/utils/vitest-tape';
+import {WGSLShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
 import {skin} from '../../../src/modules/engine/skin/skin';
 import {ibl} from '../../../src/modules/lighting/ibl/ibl';
 import {lighting} from '../../../src/modules/lighting/lights/lighting';
@@ -22,6 +21,21 @@ const PLATFORM_INFO: PlatformInfo = {
 
 const FP64_INTEGER_MARKER = 'fn fp64_two_sum_integer_bits';
 const FP64_CLASSIC_MARKER = 'let splitValue = prevent_fp64_optimization';
+const FP64_PREDICATE_MARKERS = ['fn twoSum', 'fn twoSub', 'fn mul_fp64', 'fn sub_fp64'] as const;
+const FP64_GENERIC_VALUE_MARKERS = [
+  'fn fp64_add_raw_f32_bits',
+  'fn normalize_fp64',
+  'fn is_nan_fp64',
+  'fn is_finite_fp64',
+  'fn sign_fp64',
+  'fn compare_fp64'
+] as const;
+const FP64_RAW_MARKERS = ['fn fp64_decode_bits', 'fn sub_fp64u32_to_fp64'] as const;
+const FP64_DISTANCE_MARKERS = [
+  'fn fp64_scale_fp64_integer',
+  'fn div_fp64',
+  'fn sqrt_fp64'
+] as const;
 
 const APP_WGSL = /* wgsl */ `\
 struct AppFrameUniforms {
@@ -38,7 +52,7 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
 `;
 
 test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   const appleSource = shaderAssembler.assembleWGSLShader({
     platformInfo: {...PLATFORM_INFO, gpu: 'apple'},
@@ -80,6 +94,64 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
   t.notOk(
     disabledSource.includes(FP64_INTEGER_MARKER),
     'false override removes integer arithmetic'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#specializes integer fp64 predicate sources', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assemble = (defines: Record<string, boolean>) =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [fp64arithmetic],
+      defines
+    }).source;
+
+  const fullSource = assemble({LUMA_FP64_INTEGER_ARITHMETIC: true});
+  const predicateRawSource = assemble({
+    LUMA_FP64_INTEGER_ARITHMETIC: true,
+    LUMA_FP64_PREDICATE_ONLY: true
+  });
+  const predicateF32Source = assemble({
+    LUMA_FP64_INTEGER_ARITHMETIC: true,
+    LUMA_FP64_PREDICATE_ONLY: true,
+    LUMA_FP64_F32_INPUT_ONLY: true
+  });
+
+  for (const marker of [
+    ...FP64_PREDICATE_MARKERS,
+    ...FP64_GENERIC_VALUE_MARKERS,
+    ...FP64_RAW_MARKERS,
+    ...FP64_DISTANCE_MARKERS
+  ]) {
+    t.ok(fullSource.includes(marker), `full source retains ${marker}`);
+  }
+  for (const marker of FP64_PREDICATE_MARKERS) {
+    t.ok(predicateF32Source.includes(marker), `f32 predicate source retains ${marker}`);
+    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+  }
+  for (const marker of [...FP64_RAW_MARKERS, ...FP64_DISTANCE_MARKERS]) {
+    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
+  }
+  for (const marker of FP64_RAW_MARKERS) {
+    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+  }
+  for (const marker of FP64_DISTANCE_MARKERS) {
+    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+  }
+  for (const marker of FP64_GENERIC_VALUE_MARKERS) {
+    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
+    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+  }
+  t.ok(
+    predicateRawSource.length < fullSource.length * 0.8,
+    'raw predicate source stays at least 20% smaller than full fp64'
+  );
+  t.ok(
+    predicateF32Source.length < fullSource.length * 0.5,
+    'f32 predicate source stays at least 50% smaller than full fp64'
   );
 
   t.end();
@@ -356,6 +428,46 @@ struct Group2RegistryBUniforms {
 `
 };
 
+const PERMUTED_GROUP_3_TEXTURE_MODULE: ShaderModule = {
+  name: 'permutedGroup3TextureModule',
+  bindingLayout: [
+    {name: 'permutedMaterial', group: 3},
+    {name: 'pbr_baseColorSampler', group: 3},
+    {name: 'pbr_baseColorSamplerSampler', group: 3},
+    {name: 'pbr_transmissionSampler', group: 3},
+    {name: 'pbr_transmissionSamplerSampler', group: 3}
+  ],
+  source: /* wgsl */ `\
+struct PermutedMaterialUniforms {
+  value: f32
+};
+
+@group(3) @binding(0) var<uniform> permutedMaterial: PermutedMaterialUniforms;
+
+#if HAS_BASECOLORMAP
+@group(3) @binding(auto) var pbr_baseColorSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_baseColorSamplerSampler: sampler;
+#endif
+
+#if HAS_TRANSMISSIONMAP
+@group(3) @binding(auto) var pbr_transmissionSampler: texture_2d<f32>;
+@group(3) @binding(auto) var pbr_transmissionSamplerSampler: sampler;
+#endif
+`
+};
+
+const GROUP_3_EXPLICIT_REGISTRY_MODULE: ShaderModule = {
+  name: 'group3ExplicitRegistryModule',
+  bindingLayout: [{name: 'group3ExplicitRegistryBinding', group: 3}],
+  source: /* wgsl */ `\
+struct Group3ExplicitRegistryUniforms {
+  value: f32
+};
+
+@group(3) @binding(1) var<uniform> group3ExplicitRegistryBinding: Group3ExplicitRegistryUniforms;
+`
+};
+
 const MULTILINE_EXPLICIT_MODULE: ShaderModule = {
   name: 'multilineExplicitModule',
   bindingLayout: [{name: 'multilineExplicit', group: 2}],
@@ -448,7 +560,7 @@ var<uniform> unsupportedModuleBinding: UnsupportedAutoBindingUniforms;
 };
 
 test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -473,7 +585,12 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
     'assembled WGSL includes relocation summary for skin'
   );
 
-  const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
+  const shaderLayout = assembledShader.shaderLayout;
+  if (!shaderLayout) {
+    t.fail('assembled shader has a scanned layout');
+    t.end();
+    return;
+  }
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'appFrame')?.location,
     0,
@@ -539,7 +656,7 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
 });
 
 test('assembleWGSLShader#allocates multiple auto bindings in one module', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -570,7 +687,7 @@ test('assembleWGSLShader#allocates multiple auto bindings in one module', t => {
 });
 
 test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_0_AUTO_WGSL,
@@ -591,7 +708,7 @@ test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t 
 });
 
 test('assembleWGSLShader#relocates multiline application group 0 auto bindings', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_MULTILINE_GROUP_0_AUTO_WGSL,
@@ -612,7 +729,7 @@ test('assembleWGSLShader#relocates multiline application group 0 auto bindings',
 });
 
 test('assembleWGSLShader#allocates multiple application auto bindings in declaration order', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_MULTIPLE_AUTO_WGSL,
@@ -632,7 +749,7 @@ test('assembleWGSLShader#allocates multiple application auto bindings in declara
 });
 
 test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_EXPLICIT_AND_AUTO_WGSL,
@@ -652,7 +769,7 @@ test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
 });
 
 test('assembleWGSLShader#multiline explicit application bindings reserve occupied slots', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_MULTILINE_EXPLICIT_AND_AUTO_WGSL,
@@ -672,7 +789,7 @@ test('assembleWGSLShader#multiline explicit application bindings reserve occupie
 });
 
 test('assembleWGSLShader#supports binding-first module auto declarations', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -693,7 +810,7 @@ test('assembleWGSLShader#supports binding-first module auto declarations', t => 
 });
 
 test('assembleWGSLShader#multiline module bindings are discovered for reservation and relocation', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -718,7 +835,7 @@ test('assembleWGSLShader#multiline module bindings are discovered for reservatio
 });
 
 test('assembleWGSLShader#ignores line-comment binding annotations before private state', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -739,7 +856,7 @@ test('assembleWGSLShader#ignores line-comment binding annotations before private
 });
 
 test('assembleWGSLShader#ignores commented binding annotations above real bindings', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -760,7 +877,7 @@ test('assembleWGSLShader#ignores commented binding annotations above real bindin
 });
 
 test('assembleWGSLShader#ignores block-comment binding annotations before private state', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -781,7 +898,7 @@ test('assembleWGSLShader#ignores block-comment binding annotations before privat
 });
 
 test('assembleWGSLShader#binding table excludes commented declarations', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -802,7 +919,7 @@ test('assembleWGSLShader#binding table excludes commented declarations', t => {
 });
 
 test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic order', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -840,7 +957,12 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
     'assembled WGSL includes relocation summary for ibl'
   );
 
-  const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
+  const shaderLayout = assembledShader.shaderLayout;
+  if (!shaderLayout) {
+    t.fail('assembled shader has a scanned layout');
+    t.end();
+    return;
+  }
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'lighting')?.location,
     0,
@@ -887,7 +1009,7 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
 });
 
 test('assembleWGSLShader#allocates group 0 auto bindings in dependency order', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledSource = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
@@ -907,7 +1029,7 @@ test('assembleWGSLShader#allocates group 0 auto bindings in dependency order', t
 });
 
 test('assembleWGSLShader#application group 0 auto bindings reserve low slots before modules', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_0_AUTO_WITH_MODULE_WGSL,
@@ -934,7 +1056,7 @@ test('assembleWGSLShader#application group 0 auto bindings reserve low slots bef
 });
 
 test('assembleWGSLShader#preprocesses platform limit conditionals before auto binding relocation', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: {
       ...PLATFORM_INFO,
@@ -953,7 +1075,7 @@ test('assembleWGSLShader#preprocesses platform limit conditionals before auto bi
     'inactive vertex storage binding is not assigned a binding slot'
   );
 
-  const storageShader = new ShaderAssembler().assembleWGSLShader({
+  const storageShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: {
       ...PLATFORM_INFO,
       limits: {maxStorageBuffersInVertexStage: 1}
@@ -974,7 +1096,7 @@ test('assembleWGSLShader#preprocesses platform limit conditionals before auto bi
 });
 
 test('assembleWGSLShader#preprocesses module conditionals before auto binding relocation', t => {
-  const textureShader = new ShaderAssembler().assembleWGSLShader({
+  const textureShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_0_AUTO_WGSL,
     modules: [CONDITIONAL_DEPTH_MODULE],
@@ -994,7 +1116,7 @@ test('assembleWGSLShader#preprocesses module conditionals before auto binding re
     'only the active texture binding is assigned'
   );
 
-  const depthShader = new ShaderAssembler().assembleWGSLShader({
+  const depthShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_0_AUTO_WGSL,
     modules: [CONDITIONAL_DEPTH_MODULE],
@@ -1018,7 +1140,7 @@ test('assembleWGSLShader#preprocesses module conditionals before auto binding re
 });
 
 test('assembleWGSLShader#application auto bindings allocate before modules in non-zero groups', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_2_AUTO_WITH_MODULE_WGSL,
@@ -1045,7 +1167,7 @@ test('assembleWGSLShader#application auto bindings allocate before modules in no
 });
 
 test('assembleWGSLShader#keeps module auto allocations stable within one assembler', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   const firstShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1077,8 +1199,131 @@ test('assembleWGSLShader#keeps module auto allocations stable within one assembl
   t.end();
 });
 
+test('assembleWGSLShader#keeps disjoint texture permutations compatible when combined', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assemblePermutation = (defines: Record<string, boolean>) =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: PLATFORM_INFO,
+      source: APP_WGSL,
+      modules: [PERMUTED_GROUP_3_TEXTURE_MODULE],
+      defines
+    });
+
+  const transmissionOnly = assemblePermutation({HAS_TRANSMISSIONMAP: true});
+  const baseColorOnly = assemblePermutation({HAS_BASECOLORMAP: true});
+  const combined = assemblePermutation({HAS_BASECOLORMAP: true, HAS_TRANSMISSIONMAP: true});
+
+  const getBindingLocation = (
+    assembledShader: ReturnType<typeof assemblePermutation>,
+    name: string
+  ): number | undefined =>
+    assembledShader.bindingTable.find(binding => binding.name === name)?.binding;
+
+  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSampler'), 1);
+  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSamplerSampler'), 2);
+  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSampler'), 3);
+  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSamplerSampler'), 4);
+  t.equal(getBindingLocation(combined, 'pbr_transmissionSampler'), 1);
+  t.equal(getBindingLocation(combined, 'pbr_transmissionSamplerSampler'), 2);
+  t.equal(getBindingLocation(combined, 'pbr_baseColorSampler'), 3);
+  t.equal(getBindingLocation(combined, 'pbr_baseColorSamplerSampler'), 4);
+
+  t.end();
+});
+
+test('assembleWGSLShader#reclaims bindings from inactive runtime-generated modules', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const maximumBindingsPerGroup = 16;
+  let highestBindingLocation = 0;
+
+  for (let moduleIndex = 0; moduleIndex < maximumBindingsPerGroup * 4; moduleIndex++) {
+    const moduleName = `runtimeGeneratedMaterial${moduleIndex}`;
+    const textureName = `runtimeGeneratedTexture${moduleIndex}`;
+    const runtimeGeneratedModule: ShaderModule = {
+      name: moduleName,
+      bindingLayout: [
+        {name: textureName, group: 3},
+        {name: `${textureName}Sampler`, group: 3}
+      ],
+      source: /* wgsl */ `\
+@group(3) @binding(auto) var ${textureName}: texture_2d<f32>;
+@group(3) @binding(auto) var ${textureName}Sampler: sampler;
+`
+    };
+    const assembledShader = shaderAssembler.assembleWGSLShader({
+      platformInfo: {
+        ...PLATFORM_INFO,
+        limits: {maxBindingsPerBindGroup: maximumBindingsPerGroup}
+      },
+      source: APP_WGSL,
+      modules: [PERMUTED_GROUP_3_TEXTURE_MODULE, runtimeGeneratedModule],
+      defines: {HAS_TRANSMISSIONMAP: true}
+    });
+    const textureBindingLocation = assembledShader.bindingTable.find(
+      binding => binding.name === textureName
+    )?.binding;
+    const samplerBindingLocation = assembledShader.bindingTable.find(
+      binding => binding.name === `${textureName}Sampler`
+    )?.binding;
+
+    highestBindingLocation = Math.max(
+      highestBindingLocation,
+      textureBindingLocation ?? 0,
+      samplerBindingLocation ?? 0
+    );
+  }
+
+  t.ok(
+    highestBindingLocation < maximumBindingsPerGroup,
+    'historical runtime-generated modules never consume the available bind-group slots'
+  );
+  t.equal(
+    highestBindingLocation,
+    4,
+    'active material bindings stay stable while generated texture/sampler pairs reuse their slots'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#scopes inactive reservations to automatic bindings in their group', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+
+  shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [PERMUTED_GROUP_3_TEXTURE_MODULE],
+    defines: {HAS_TRANSMISSIONMAP: true}
+  });
+
+  const explicitShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [GROUP_3_EXPLICIT_REGISTRY_MODULE]
+  });
+  const isolatedGroupShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [GROUP_2_REGISTRY_A]
+  });
+
+  t.equal(
+    explicitShader.bindingTable.find(binding => binding.name === 'group3ExplicitRegistryBinding')
+      ?.binding,
+    1,
+    'inactive automatic reservations do not invalidate explicit bindings in a different shader'
+  );
+  t.equal(
+    isolatedGroupShader.bindingTable.find(binding => binding.name === 'group2RegistryA')?.binding,
+    0,
+    'inactive locations in another binding group do not change automatic allocation'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#rejects application group 0 bindings above reserved range', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   t.throws(
     () =>
@@ -1106,7 +1351,7 @@ fn vertexMain() -> @builtin(position) vec4<f32> {
 });
 
 test('assembleWGSLShader#rejects explicit module group 0 bindings below reserved range', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   t.throws(
     () =>
@@ -1123,7 +1368,7 @@ test('assembleWGSLShader#rejects explicit module group 0 bindings below reserved
 });
 
 test('assembleWGSLShader#rejects duplicate explicit module bindings', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   t.throws(
     () =>
@@ -1140,7 +1385,7 @@ test('assembleWGSLShader#rejects duplicate explicit module bindings', t => {
 });
 
 test('assembleWGSLShader#rejects unsupported application auto binding declaration forms', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   t.throws(
     () =>
@@ -1157,7 +1402,7 @@ test('assembleWGSLShader#rejects unsupported application auto binding declaratio
 });
 
 test('assembleWGSLShader#rejects unresolved auto bindings with module and binding names', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
 
   t.throws(
     () =>

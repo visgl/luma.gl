@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
 import {uid} from '../utils/uid';
@@ -193,9 +193,9 @@ export class ScenegraphNode {
   */
 
   _setScenegraphNodeProps(props: ScenegraphNodeProps): void {
-    // if ('display' in props) {
-    //   this.display = props.display;
-    // }
+    if (props.display !== undefined) {
+      this.display = props.display;
+    }
 
     if (props?.position) {
       this.setPosition(props.position);

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderProps, CompilerMessage} from '@luma.gl/core';
 import {Shader} from '@luma.gl/core';

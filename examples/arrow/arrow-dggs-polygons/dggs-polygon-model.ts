@@ -1,11 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {PreparedDggsCellPathGPUVector} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
-import {PathStorageModel} from '@luma.gl/tables';
+import {PathStorageModel} from '@luma.gl/experimental/models';
 import {DGGS_PATH_SOURCE, dggsViewport} from './dggs-polygon-model-shaders';
 
 export type DggsPolygonShaderInputs = ShaderInputs<{

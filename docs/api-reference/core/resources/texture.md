@@ -1,23 +1,43 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 import {Texture3DExample} from '@site/src/examples';
 
 # Texture
 
 <CoreDocsTabs group="textures" active="texture" />
 
-A `Texture` are GPU objects that contain one or more images that all have the same image format, that can be accessed from shaders.
+A `Texture` is a GPU resource containing one or more images with a shared pixel format. Shaders may
+sample it, read or write it as storage, or render into it when its declared usage allows that work.
 
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](/docs/api-guide/gpu/gpu-textures) to make sure you have a full picture.
 
 For upload and readback strategy, also see [GPU Commands](/docs/api-guide/gpu/gpu-commands).
 
+<DocumentationContract title="Texture" rows={[
+  {label: 'Creation', value: 'Device.createTexture() with dimensions, format, usage, mip levels, and samples'},
+  {label: 'Ownership', value: 'Application-owned texture; views and samplers have their own lifecycles'},
+  {label: 'Lifecycle', value: 'Create, upload or render, create views, bind, reuse, then destroy'},
+  {label: 'Backend support', value: 'Formats, storage access, multisampling, and dimensions are capability-dependent'},
+  {label: 'Validation', value: 'Format, usage, dimensions, row alignment, and view ranges must match the operation'},
+  {label: 'Cost', value: 'Allocation, copies, mip generation, and render-target changes can be expensive'}
+]} />
+
+:::warning Common mistake
+Do not recreate a texture every frame when only its contents changed. Reuse it and upload or render
+new content; recreate only when dimensions, format, usage, mip count, or sample count changes.
+:::
 
 ## Usage
 
 Creating a texture
 
 ```typescript
-const texture = device.createTexture({sampler: {addressModeU: 'clamp-to-edge'});
+const texture = device.createTexture({
+  width: 256,
+  height: 256,
+  format: 'rgba8unorm',
+  sampler: {addressModeU: 'clamp-to-edge'}
+});
 ```
 
 Setting texture data from an image
@@ -35,18 +55,20 @@ const imageData = new ImageData(data, width, height);
 texture.copyFromExternalImage({source: imageData});
 ```
 
-Setting texture data for non-8-bit-per-channel bit depths, texture arrays etc.
-
-:::caution
-This is still WIP
-:::
+For typed arrays, non-8-bit channel formats, array layers, and subregions, use `writeData()` with
+an explicit destination and source layout:
 
 ```ts
-const commandEncoder = device.createCommandEncoder();
-const buffer = device.createBuffer({usage: , byteLength});
-const texture = device.createTexture({ })
-commandEncoder.end();
+texture.writeData({
+  data: floatPixels,
+  width,
+  height,
+  bytesPerRow: width * 16
+});
 ```
+
+The source layout must match the texture format and selected extent. See [`writeData()`](#writedata)
+for WebGPU row-layout rules and WebGL emulation behavior.
 
 Reading from Textures In Shaders
 
@@ -128,12 +150,12 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 
 | Dimension | WebGPU | WebGL2 | Description |
 | --------- | ------ | ------ | -------------------------------------------------------------------- |
-| `1d`         | ✅      | ❌      | Contains a one dimensional texture (typically used for compute )     |
-| `2d`         | ✅      | ✅      | Contains a "normal" image texture                                    |
-| `2d-array`   | ✅      | ✅      | Holds an "array" of 2D textures.                                     |
-| `3d`         | ✅      | ✅      | Holds a "stack" of textures which enables 3D interpolation.          |
-| `cube`       | ✅      | ✅      | Holds 6 textures representing sides of a cube.                       |
-| `cube-array` | ✅      | ❌      | Holds an array where every 6 textures represent the sides of a cube. |
+| `1d` | ✅ | ❌ | Contains a one dimensional texture (typically used for compute ) |
+| `2d` | ✅ | ✅ | Contains a "normal" image texture |
+| `2d-array` | ✅ | ✅ | Holds an "array" of 2D textures. |
+| `3d` | ✅ | ✅ | Holds a "stack" of textures which enables 3D interpolation. |
+| `cube` | ✅ | ✅ | Holds 6 textures representing sides of a cube. |
+| `cube-array` | ✅ | ❌ | Holds an array where every 6 textures represent the sides of a cube. |
 
 The example below uploads procedural volume data to a `3d` texture and samples through its depth:
 
@@ -147,10 +169,10 @@ These are referred to as external (to the GPU) images.
 
 | Type | Description |
 | ---- | ----------- |
-| `Image` (`HTMLImageElement`)   | image will be used to fill the texture. width and height will be deduced.                             |
-| `Canvas` (`HTMLCanvasElement`) | canvas will be used to fill the texture. width and height will be deduced.                            |
-| `Video` (`HTMLVideoElement`)   | video will be used to continuously update the texture. width and height will be deduced.               |
-| `ImageData`                    | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
+| `Image` (`HTMLImageElement`) | image will be used to fill the texture. width and height will be deduced. |
+| `Canvas` (`HTMLCanvasElement`) | canvas will be used to fill the texture. width and height will be deduced. |
+| `Video` (`HTMLVideoElement`) | video will be used to continuously update the texture. width and height will be deduced. |
+| `ImageData` | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced. |
 
 ## TextureData
 
@@ -158,9 +180,9 @@ luma.gl allows textures to be created from a number of different data sources.
 
 | Type          | Description                                                                                           |
 | ------------- | ----------------------------------------------------------------------------------------------------- |
-| `null`        | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
-| `typed array` | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
-| `Buffer`      | Bytes will be interpreted according to format/type parameters and pixel store parameters.             |
+| `null` | A texture will be created with the appropriate format, size and width. Bytes will be "uninitialized". |
+| `typed array` | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
+| `Buffer` | Bytes will be interpreted according to format/type parameters and pixel store parameters. |
 
 ## CubeFace
 
@@ -268,19 +290,19 @@ copyExternalImage(options: {
 
 | Parameter             | Type                                       |                                                          |
 | --------------------- | ------------------------------------------ | -------------------------------------------------------- |
-| `image`               | `ExternalImage`                            | Image                                                    |
-| `sourceX?`            | `number`                                   | Copy from image x offset (default 0)                     |
-| `sourceY?`            | `number`                                   | Copy from image y offset (default 0)                     |
-| `width?`              | `number`                                   | Copy area width (default 1)                              |
-| `height?`             | `number`                                   | Copy area height (default 1)                             |
-| `depth?`              | `number`                                   | Copy depth (default 1)                                   |
-| `mipLevel?`           | `number`                                   | Which mip-level to copy into (default 0)                 |
-| `x?`                  | `number`                                   | Start copying into offset x (default 0)                  |
-| `y?`                  | `number`                                   | Start copying into offset y (default 0)                  |
-| `z?`                  | `number`                                   | Start copying from depth layer z (default 0)             |
-| `aspect?`             | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all') |
-| `colorSpace?`         | `'srgb'`                                   | Specific color space of image data                       |
-| `premultipliedAlpha?` | `boolean`                                  | premultiplied                                            |
+| `image` | `ExternalImage` | Image |
+| `sourceX?` | `number` | Copy from image x offset (default 0) |
+| `sourceY?` | `number` | Copy from image y offset (default 0) |
+| `width?` | `number` | Copy area width (default 1) |
+| `height?` | `number` | Copy area height (default 1) |
+| `depth?` | `number` | Copy depth (default 1) |
+| `mipLevel?` | `number` | Which mip-level to copy into (default 0) |
+| `x?` | `number` | Start copying into offset x (default 0) |
+| `y?` | `number` | Start copying into offset y (default 0) |
+| `z?` | `number` | Start copying from depth layer z (default 0) |
+| `aspect?` | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all') |
+| `colorSpace?` | `'srgb'` | Specific color space of image data |
+| `premultipliedAlpha?` | `boolean` | premultiplied |
 
 ### `writeData()`
 

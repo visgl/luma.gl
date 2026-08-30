@@ -8,7 +8,7 @@ Implemented experimentally for WebGPU.
 
 - Compose scene-aware fullscreen effects without adding a monolithic scene renderer.
 - Keep scene traversal and G-buffer generation application-owned.
-- Support transient intermediate targets and persistent temporal history in one pipeline model.
+- Support transient intermediate targets and persistent temporal history in one composite-pass model.
 - Preserve every existing color-only `ShaderPassRenderer` workflow.
 
 ## Scene Contract
@@ -21,9 +21,9 @@ velocity textures. The initial convention uses `depth24plus`, RGB normals encode
 Projection jitter remains application-owned. Temporal passes receive current and previous jitter
 as normalized texture offsets.
 
-## Pipeline Model
+## Composite-Pass Model
 
-`ShaderPassPipeline` continues to own named targets local to that pipeline. A render target can
+`CompositeShaderPass` continues to own named targets local to that composite pass. A render target can
 declare `lifetime: 'history'`, causing `ShaderPassRenderer` to allocate two physical textures.
 Before a history target is written in a frame, reads resolve to the previous physical texture.
 After the write, later steps resolve the new texture. Physical history swaps only after the entire
@@ -36,7 +36,7 @@ Construction, resize, and `resetHistory()` invalidate history. Targets initializ
 
 The reference composition order is SSAO, SSR, volumetric fog, outlines, TAA, and motion blur.
 Depth-aware bilateral blur is reusable and also cleans the half-resolution SSAO buffer. Each
-effect remains an ordinary `ShaderPassPipeline`, so applications may omit or reorder effects.
+effect remains an ordinary `CompositeShaderPass`, so applications may omit or reorder effects.
 
 ## Portability
 

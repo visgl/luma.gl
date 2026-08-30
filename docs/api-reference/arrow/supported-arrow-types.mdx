@@ -1,18 +1,19 @@
+import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 
 # Supported Arrow Types
 
 <ArrowDocsTabs active="supported-types" />
 
-<p class="badges">
-  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
-  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
-</p>
+<DocumentationBadges>
+  <DocumentationBadge tone="version">From v10</DocumentationBadge>
+  <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
+</DocumentationBadges>
 
 This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex
 attributes, WebGPU storage bindings, and model-specific conversion helpers.
 For the generic GPU table ownership model, see
-[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle).
+[GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle).
 
 ## Apache Arrow Preliminaries
 
@@ -48,7 +49,7 @@ Support depends on how the column is consumed. A column can be uploadable as a
 `GPUVector` without also being usable as a generic vertex attribute.
 
 Arrow adapters publish `GPUVector.format` strings from
-[`@luma.gl/tables`](/docs/api-reference/tables/gpu-vector-format). Arrow
+[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-vector-format). Arrow
 `DataType` values are retained only as adapter/readback metadata during
 migration.
 
@@ -57,6 +58,7 @@ migration.
 | `Float32` | `float32` | yes |
 | `FixedSizeList<Float32, 3>` | `float32x3` | yes |
 | `FixedSizeList<Uint8, 4>` as normalized color | `unorm8x4` | yes |
+| `FixedSizeList<Float32, 768>` embedding | `fixed-size-list<float32,768>` | no |
 | `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` | no |
 | `List<FixedSizeList<Uint8, 4>>` vertex colors | `vertex-list<unorm8x4>` | no |
 
@@ -64,6 +66,14 @@ migration.
 metadata owned by the producing adapter. They are not automatically exposed as
 ordinary vertex attributes; path, text, polygon, and geometry adapters must
 expand them or bind their flattened values explicitly.
+
+Numeric `FixedSizeList` columns wider than four elements become first-class
+`fixed-size-list<format,size>` storage columns. Their `GPUVector.length` is the
+logical table-row count, while `valueLength` counts flattened list elements.
+Short fixed-size lists retain their existing vertex-compatible formats unless
+the table adapter explicitly selects them with `fixedSizeListColumns`.
+`validityColumns` can materialize a caller-named Uint32 table column combining
+parent-row and child-coordinate validity.
 
 Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
 The `nullable` column refers to columns with actual null rows, not just nullable
@@ -73,7 +83,7 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ❌ | Scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
+| `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ✅ | Scalar `GPUVector` or selected `GPUTable` columns preserve normalized null bitmaps and nullable Arrow readback. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility; consumers must explicitly honor validity. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths; stable source-ID consumers reject actual null identifiers. |
 | `Float64` | 🟡 | ❌ | Raw values can be copied into a `GPUVector`, but generic render paths should repack them to `Float32`, origin-relative `Float32`, or `u32` word pairs at conversion boundaries. | No generic `f64` vertex attribute or WGSL scalar path; use prepared Float32 values or custom word-pair helpers. | Matrix columns truncate to Float32; Float64 paths become per-row Float32 deltas plus retained origins. |
 | `Uint64` carrying DGGS cell keys | 🟡 | ❌ | DGGS WebGPU helpers retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `convertDggsCellKeysToGPUPaths()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
 | `Bool` | ❌ | ❌ | Arrow Bool values are bit-packed, so they are not a directly uploadable scalar buffer. Repack to `Uint8` or `Uint32` when shaders need flags. | Use as integer 0/1 flags after repacking; otherwise keep on CPU as row metadata. | `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU input; a future adapter could publish repacked flag columns. |
@@ -82,7 +92,8 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ✅ | Fixed-width GPU rows preserve parent and child validity for Arrow readback; optional `validityColumns` publishes explicit GPU row masks.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; consuming models must explicitly honor validity, and 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`5 \| 384 \| 768 \| 1536 \| ...>` | ✅ | ✅ | Row-aligned `fixed-size-list<format,size>` GPU table storage; optional `validityColumns` publishes explicit parent/child row masks. | WebGPU storage and compute; never synthesized into a generic vertex attribute. | High-dimensional embeddings, fixed-width feature vectors, and caller-owned table-based compute. |
 | `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`PathAttributeModel` expands to segment attributes; `PathStorageModel` keeps values in storage. | `ArrowPathRenderer.convertToGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `PathAttributeModel` and `PathStorageModel`. |
 | `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path conversion emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths convert deltas on CPU; WebGPU storage paths convert them on GPU before rendering. | `ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` convert attribute paths.<br/>`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` converts storage paths. |
 | `List<numeric \|`<br/>`FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
@@ -120,13 +131,16 @@ routes a mixed DenseUnion geometry column through point, line, and polygon rende
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
 | `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `convertDggsCellIdsToGPUKeys()` when the encoding is supplied. | Arrow text conversion helpers, pure text models, and DGGS key parsing. |
+| `Utf8View` | 🟡 | 🟡 | `ArrowTextRenderer` dynamically detects Arrow 21.2 view records and normalizes inline and variadic bytes to `Utf8` before existing upload paths run. | Not a generic vertex attribute; consume through text-specific glyph expansion. | Arrow text conversion helpers and pure text models. |
 | `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | Arrow text conversion helpers and dictionary text models. |
+| `Dictionary<Utf8View, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary indices remain encoded while view-backed dictionary values normalize to `Utf8`. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | Arrow text conversion helpers and dictionary text models. |
 
 ### Other Columns
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
 | `Binary` | ❌ | ❌ | Variable-width byte rows need both offsets and value bytes. Support would mirror UTF-8 with explicit offset and byte-buffer bindings. | Compute shaders could consume offsets and bytes; not a generic vertex attribute. | Adapter-specific payloads such as WKB geometry, compressed attributes, or binary IDs. |
+| `BinaryView` | ❌ | ❌ | View records and variadic buffers are included in Arrow memory accounting, but luma.gl has no generic semantic or rendering adapter for opaque binary rows. | Application-specific compute could decode views; there is no generic shader-facing binding. | Deferred until a concrete binary payload renderer or compute adapter needs it. |
 | `FixedSizeBinary` | 🟡 | ❌ | Partially supported for interleaved data columns where each row is a fixed-width byte record. | Not a generic scalar/vector attribute; consume through an explicit interleaved buffer layout or storage decoding path. | Interleaved GPU buffers and packed application-defined row records. |
 | `Struct` | 🟡 | ❌ | Supported indirectly when the application selects supported child columns by field path. | Child fields can become separate shader columns after selection or flattening. | Nested style/object columns; GeoArrow separated coordinates can adapt into `FixedSizeList` values. |
 | `Map` | ❌ | ❌ | Map is variable-length key/value Struct data. A future adapter could support maps by reading a specific key from each row. | Not a generic shader column; use application-specific key selection or compute lookup after an adapter lowers the map shape. | Per-row properties or sparse attributes after application-specific lowering. |
@@ -174,12 +188,12 @@ accepted by the GPU.
 
 | Arrow column type           | Buffer layout format | Notes                                      |
 | --------------------------- | -------------------- | ------------------------------------------ |
-| `FixedSizeList<Float32, 4>` | `float32x4`          |                                            |
-| `FixedSizeList<Float16, 4>` | `float16x4`          | Shader sees f32; compact scene-linear/HDR color |
-| `FixedSizeList<Int16, 4>`   | `snorm16x4`          | Shader sees f32, normalized to [-1.0, 1.0] |
-| `FixedSizeList<Uint16, 4>`  | `unorm16x4`          |
-| `FixedSizeList<Int8, 4>`    | `snorm8x4`           |
-| `FixedSizeList<Uint8, 4>`   | `unorm8x4`           |
+| `FixedSizeList<Float32, 4>` | `float32x4` | — |
+| `FixedSizeList<Float16, 4>` | `float16x4` | Shader sees f32; compact scene-linear/HDR color |
+| `FixedSizeList<Int16, 4>` | `snorm16x4` | Shader sees f32, normalized to [-1.0, 1.0] |
+| `FixedSizeList<Uint16, 4>` | `unorm16x4` | — |
+| `FixedSizeList<Int8, 4>` | `snorm8x4` | — |
+| `FixedSizeList<Uint8, 4>` | `unorm8x4` | — |
 
 Semantic RGB color columns use three source components, but most luma.gl color
 shader interfaces consume RGBA. Current semantic color adapters treat RGB source
@@ -618,11 +632,11 @@ normalizes common glTF semantics to luma.gl shader attribute names:
 
 | Mesh Arrow column | Shader attribute |
 | ----------------- | ---------------- |
-| `POSITION`        | `positions`      |
-| `NORMAL`          | `normals`        |
-| `COLOR_0`         | `colors`         |
-| `TEXCOORD_0`      | `texCoords`      |
-| `TEXCOORD_1`      | `texCoords1`     |
+| `POSITION` | `positions` |
+| `NORMAL` | `normals` |
+| `COLOR_0` | `colors` |
+| `TEXCOORD_0` | `texCoords` |
+| `TEXCOORD_1` | `texCoords1` |
 
 Unknown column names are preserved unless `arrowPaths` maps a shader attribute
 name to a specific Arrow column name.
@@ -666,22 +680,22 @@ Arrow scalar numeric columns map to scalar shader attributes. Arrow
 
 | Shader attribute type | Portable Arrow columns                                                                                                                                               |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `f32`                 | `Float32`, `Float16`, `Int8`, `Uint8`, `Int16`, `Uint16`                                                                                                             |
-| `vec2<f32>`           | `FixedSizeList<Float32, 2>`, `FixedSizeList<Float16, 2>`, `FixedSizeList<Int8, 2>`, `FixedSizeList<Uint8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Uint16, 2>` |
-| `vec3<f32>`           | `FixedSizeList<Float32, 3>`                                                                                                                                          |
-| `vec4<f32>`           | `FixedSizeList<Float32, 4>`, `FixedSizeList<Float16, 4>`, `FixedSizeList<Int8, 4>`, `FixedSizeList<Uint8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Uint16, 4>` |
-| `f16`                 | `Float16`, `Int8`, `Uint8`, `Int16`, `Uint16`                                                                                                                        |
-| `vec2<f16>`           | `FixedSizeList<Float16, 2>`, `FixedSizeList<Int8, 2>`, `FixedSizeList<Uint8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Uint16, 2>`                              |
-| `vec3<f16>`           | None in portable WebGPU layouts                                                                                                                                      |
-| `vec4<f16>`           | `FixedSizeList<Float16, 4>`, `FixedSizeList<Int8, 4>`, `FixedSizeList<Uint8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Uint16, 4>`                              |
-| `i32`                 | `Int8`, `Int16`, `Int32`                                                                                                                                             |
-| `vec2<i32>`           | `FixedSizeList<Int8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Int32, 2>`                                                                                       |
-| `vec3<i32>`           | `FixedSizeList<Int32, 3>`                                                                                                                                            |
-| `vec4<i32>`           | `FixedSizeList<Int8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Int32, 4>`                                                                                       |
-| `u32`                 | `Uint8`, `Uint16`, `Uint32`                                                                                                                                          |
-| `vec2<u32>`           | `FixedSizeList<Uint8, 2>`, `FixedSizeList<Uint16, 2>`, `FixedSizeList<Uint32, 2>`                                                                                    |
-| `vec3<u32>`           | `FixedSizeList<Uint32, 3>`                                                                                                                                           |
-| `vec4<u32>`           | `FixedSizeList<Uint8, 4>`, `FixedSizeList<Uint16, 4>`, `FixedSizeList<Uint32, 4>`                                                                                    |
+| `f32` | `Float32`, `Float16`, `Int8`, `Uint8`, `Int16`, `Uint16` |
+| `vec2<f32>` | `FixedSizeList<Float32, 2>`, `FixedSizeList<Float16, 2>`, `FixedSizeList<Int8, 2>`, `FixedSizeList<Uint8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Uint16, 2>` |
+| `vec3<f32>` | `FixedSizeList<Float32, 3>` |
+| `vec4<f32>` | `FixedSizeList<Float32, 4>`, `FixedSizeList<Float16, 4>`, `FixedSizeList<Int8, 4>`, `FixedSizeList<Uint8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Uint16, 4>` |
+| `f16` | `Float16`, `Int8`, `Uint8`, `Int16`, `Uint16` |
+| `vec2<f16>` | `FixedSizeList<Float16, 2>`, `FixedSizeList<Int8, 2>`, `FixedSizeList<Uint8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Uint16, 2>` |
+| `vec3<f16>` | None in portable WebGPU layouts |
+| `vec4<f16>` | `FixedSizeList<Float16, 4>`, `FixedSizeList<Int8, 4>`, `FixedSizeList<Uint8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Uint16, 4>` |
+| `i32` | `Int8`, `Int16`, `Int32` |
+| `vec2<i32>` | `FixedSizeList<Int8, 2>`, `FixedSizeList<Int16, 2>`, `FixedSizeList<Int32, 2>` |
+| `vec3<i32>` | `FixedSizeList<Int32, 3>` |
+| `vec4<i32>` | `FixedSizeList<Int8, 4>`, `FixedSizeList<Int16, 4>`, `FixedSizeList<Int32, 4>` |
+| `u32` | `Uint8`, `Uint16`, `Uint32` |
+| `vec2<u32>` | `FixedSizeList<Uint8, 2>`, `FixedSizeList<Uint16, 2>`, `FixedSizeList<Uint32, 2>` |
+| `vec3<u32>` | `FixedSizeList<Uint32, 3>` |
+| `vec4<u32>` | `FixedSizeList<Uint8, 4>`, `FixedSizeList<Uint16, 4>`, `FixedSizeList<Uint32, 4>` |
 
 Component counts must match. For example, `FixedSizeList<Uint8, 4>` can feed
 `vec4<f32>`, but not `vec3<f32>`.
@@ -715,10 +729,10 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 
 ## Related References
 
-- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
+- [GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle)
 - [Attributes](/docs/api-guide/gpu/gpu-attributes)
 - [Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
-- [GPUInputSchema](/docs/api-reference/tables/gpu-input-schema)
+- [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema)
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [BufferLayout](/docs/api-reference/core/buffer-layout)
 - [Vertex Formats](/docs/api-reference/core/vertex-formats)

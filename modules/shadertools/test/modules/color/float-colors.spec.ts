@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -13,7 +13,7 @@ import {
   getShaderModuleUniforms,
   normalizeByteColor3,
   normalizeByteColor4,
-  ShaderAssembler,
+  WGSLShaderAssembler,
   STORAGE_COLOR_DEFAULT_BYTE_STRIDES,
   STORAGE_COLOR_FORMAT,
   storageColors,
@@ -185,7 +185,7 @@ void main(void) {
 });
 
 test('storageColors#assembledWGSLContract', t => {
-  const shaderAssembler = new ShaderAssembler();
+  const shaderAssembler = new WGSLShaderAssembler();
   const baseColorsShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
     source: WGSL_COMPUTE_APP,

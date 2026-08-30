@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {log} from '../utils/log';
 import type {PrimitiveDataType, NormalizedDataType} from '../shadertypes/data-types/data-types';

@@ -1,6 +1,44 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+export type {
+  CreatePBRMaterialOptions,
+  PBRMaterial,
+  PBRMaterialResources
+} from './engine/pbr-material';
+export {
+  createPBRMaterial,
+  createPBRMaterialFactory,
+  getPBRMaterialMapUniforms
+} from './engine/pbr-material';
+export type {CreatePBRModelOptions} from './engine/pbr-model';
+export {createPBRModel, getPBRGeometryDefines, getPBRTextureDefines} from './engine/pbr-model';
+export type {
+  PreparedScene,
+  RayTracingGraphStageStatistics,
+  RayTracingGraphStatistics,
+  SceneAlphaMode,
+  SceneCamera,
+  SceneEnvironment,
+  SceneMaterial,
+  SceneRenderOptions,
+  SceneRenderStatistics,
+  SceneSurface
+} from './engine/scene-renderer';
+export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
+export {DeferredSceneRenderer, supportsDeferredScene} from './engine/deferred-scene-renderer';
+export type {
+  RayTracingScenePrimitive,
+  RayTracingSceneRenderOptions
+} from './engine/ray-tracing-scene-renderer';
+export {RayTracingSceneRenderer} from './engine/ray-tracing-scene-renderer';
+export type {PreparePBREnvironmentOptions} from './engine/pbr-environment';
+export {
+  PBREnvironmentGenerator,
+  PreparedPBREnvironment,
+  preparePBREnvironment
+} from './engine/pbr-environment';
 
 export {type TextureFormatPacked, RGBADecoder} from './textures/rgba-decoder';
 
@@ -63,9 +101,9 @@ export type {
 export {aBuffer, aBufferPlugin} from './oit/a-buffer';
 export type {
   ABufferResolveProps,
-  ABufferResolveShaderPassPipelineOptions
-} from './oit/a-buffer-resolve-shader-pass-pipeline';
-export {createABufferResolveShaderPassPipeline} from './oit/a-buffer-resolve-shader-pass-pipeline';
+  ABufferResolveCompositeShaderPassOptions
+} from './oit/a-buffer-resolve-composite-shader-pass';
+export {createABufferResolveCompositeShaderPass} from './oit/a-buffer-resolve-composite-shader-pass';
 export type {
   ABufferCaptureContext,
   ABufferRenderOptions,
@@ -80,11 +118,11 @@ export {
 } from './oit/a-buffer-renderer';
 export type {WBOITPass, WBOITShaderModuleProps, WBOITShaderModuleUniforms} from './oit/wboit';
 export {wboit, wboitPlugin} from './oit/wboit';
-export type {WBOITResolveBindings} from './oit/wboit-resolve-shader-pass-pipeline';
+export type {WBOITResolveBindings} from './oit/wboit-resolve-composite-shader-pass';
 export {
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
   wboitResolve
-} from './oit/wboit-resolve-shader-pass-pipeline';
+} from './oit/wboit-resolve-composite-shader-pass';
 export type {
   WBOITCapture,
   WBOITCaptureContext,
@@ -109,7 +147,7 @@ export type {
 export {ShadowMapRenderer} from './shadows/shadow-map-renderer';
 export {shadow} from './shadows/shadow';
 export type {ContactShadowProps} from './shadows/contact-shadow';
-export {createContactShadowShaderPassPipeline} from './shadows/contact-shadow';
+export {createContactShadowCompositeShaderPass} from './shadows/contact-shadow';
 
 export type {
   GBufferExtraColorAttachment,
@@ -117,14 +155,31 @@ export type {
   GBufferShaderPassBindings
 } from './rendering/g-buffer';
 export {GBuffer} from './rendering/g-buffer';
+export type {
+  BloomPointSpreadFunction,
+  BloomPointSpreadFunctionOptions,
+  BloomSpectralPointSpreadFunction,
+  GPUConvolutionBloomEncodeOptions,
+  GPUConvolutionBloomLensOptions,
+  GPUConvolutionBloomProps,
+  GPUConvolutionBloomStats,
+  GPUConvolutionBloomSupport
+} from './rendering/fft-bloom';
+export {
+  getGPUConvolutionBloomSupport,
+  GPUConvolutionBloom,
+  makeBloomPointSpreadFunction,
+  makeBloomSpectralPointSpreadFunction,
+  makeGPUConvolutionBloomStats
+} from './rendering/fft-bloom';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
-  createDeferredAmbientLightingShaderPassPipeline,
+  createDeferredAmbientLightingCompositeShaderPass,
   deferredAmbientLighting
 } from './rendering/deferred-ambient-lighting';
 export type {DeferredLightingProps, DeferredPointLight} from './rendering/deferred-lighting';
 export {
-  createDeferredLightingShaderPassPipeline,
+  createDeferredLightingCompositeShaderPass,
   deferredLighting,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
@@ -139,7 +194,7 @@ export type {
 export {
   ClusteredLightGrid,
   clusteredDeferredLighting,
-  createClusteredDeferredLightingShaderPassPipeline,
+  createClusteredDeferredLightingCompositeShaderPass,
   DEFAULT_CLUSTER_DIMENSIONS,
   DEFAULT_MAX_LIGHTS_PER_CLUSTER,
   MAX_CLUSTERED_POINT_LIGHTS
@@ -167,6 +222,25 @@ export {
   SpectralCausticsRenderer
 } from './rendering/spectral-caustics-renderer';
 export type {
+  StructuredVolumeBounds,
+  StructuredVolumeBufferBinding,
+  StructuredVolumeDimensions,
+  StructuredVolumeGlyphStyle,
+  StructuredVolumeRendererPrepareOptions,
+  StructuredVolumeRendererProps,
+  StructuredVolumeScalarSource,
+  StructuredVolumeScalarStyle,
+  StructuredVolumeSources,
+  StructuredVolumeSupport,
+  StructuredVolumeVectorSource,
+  StructuredVolumeVectorStyle
+} from './rendering/structured-volume-renderer';
+export {
+  getStructuredVolumeSupport,
+  makeStructuredVolumeUniformData,
+  StructuredVolumeRenderer
+} from './rendering/structured-volume-renderer';
+export type {
   MLSMPMFluidFixedPointBounds,
   MLSMPMFluidForce,
   MLSMPMFluidSimulationProps,
@@ -187,12 +261,36 @@ export {
   MLS_MPM_FLUID_STAGE_ORDER,
   MLSMPMFluidSimulation
 } from './rendering/mls-mpm-fluid-simulation';
+export type {
+  VolumetricFireEmitter,
+  VolumetricFireSimulationBindings,
+  VolumetricFireSimulationProps,
+  VolumetricFireSimulationStepOptions
+} from './rendering/volumetric-fire-simulation';
+export {
+  DEFAULT_VOLUMETRIC_FIRE_DIMENSIONS,
+  DEFAULT_VOLUMETRIC_FIRE_PRESSURE_ITERATIONS,
+  makeVolumetricFireSimulationUniformData,
+  MAX_VOLUMETRIC_FIRE_EMITTERS,
+  VolumetricFireSimulation
+} from './rendering/volumetric-fire-simulation';
 
+export type {ComparisonSplitterProps} from './controls/comparison-splitter';
+export {ComparisonSplitter} from './controls/comparison-splitter';
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
+export type {
+  FlatControllerPick,
+  FlatControllerProps,
+  FlatViewState,
+  RectangleSelection,
+  RectangleSelectControllerProps
+} from './controls/flat-controller';
+export {FlatController, RectangleSelectController} from './controls/flat-controller';
 
 export * from './webxr/index';
 
-export * from './gpu-primitives/index';
+export {GPUGridIndex, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
+export type {GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
 
 export * from './simulation/index';

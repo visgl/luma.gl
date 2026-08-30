@@ -1,9 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /* eslint-disable camelcase, no-console, no-undef */
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';

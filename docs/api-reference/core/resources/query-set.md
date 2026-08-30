@@ -1,4 +1,8 @@
+import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+
 # QuerySet
+
+<CoreDocsTabs group="resources" active="query-set" />
 
 A `QuerySet` stores asynchronous GPU query results.
 

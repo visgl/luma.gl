@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export const fp64functionShader = /* glsl */ `\
 const vec2 E_FP64 = vec2(2.7182817459106445e+00, 8.254840366817007e-08);

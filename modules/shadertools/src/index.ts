@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // shadertools exports
 
@@ -10,6 +10,10 @@
  */
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-debug';
+export {
+  scanWGSLInterface,
+  type ScanWGSLInterfaceOptions
+} from './lib/shader-assembly/wgsl-interface-scan';
 
 // ShaderModules
 
@@ -31,9 +35,10 @@ export type {
   ShaderSubPass
 } from './lib/shader-module/shader-pass';
 export type {
-  ShaderPassPipeline,
-  ShaderPassPipelineStep
-} from './lib/shader-module/shader-pass-pipeline';
+  CompositeShaderPassComputeOptimization,
+  CompositeShaderPass,
+  CompositeShaderPassStep
+} from './lib/shader-module/composite-shader-pass';
 export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
@@ -61,7 +66,7 @@ export {resolveModules as _resolveModules} from './lib/shader-module/shader-modu
 export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
-export {ShaderAssembler} from './lib/shader-assembler';
+export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
 export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
 export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
 
@@ -98,6 +103,7 @@ export {
 
 // math libraries
 export {random} from './modules/math/random/random';
+export {volumeRaymarch} from './modules/volume/volume-raymarch';
 
 export {fp32} from './modules/math/fp32/fp32';
 export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
@@ -133,7 +139,13 @@ export type {FilterShaderPluginProps} from './modules/engine/filter/filter';
 export {filterShaderPlugin} from './modules/engine/filter/filter';
 export type {ClipShaderPluginProps} from './modules/engine/clip/clip';
 export {clipShaderPlugin} from './modules/engine/clip/clip';
-export {skin} from './modules/engine/skin/skin';
+export type {SkinProps, SkinUniforms} from './modules/engine/skin/skin';
+export {skin, SKIN_MAX_JOINTS} from './modules/engine/skin/skin';
+export type {
+  GPUAnimationBindings,
+  GPUAnimationProps
+} from './modules/engine/gpu-animation/gpu-animation';
+export {gpuAnimation} from './modules/engine/gpu-animation/gpu-animation';
 
 // lighting
 export {
@@ -169,9 +181,10 @@ export type {
 export type {
   PBRSceneBindings,
   PBRSceneProps,
-  PBRSceneUniforms
+  PBRSceneUniforms,
+  PBRToneMapMode
 } from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
-export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';
+export {pbrScene, PBR_TONE_MAP_MODE} from './modules/lighting/pbr-material/pbr-scene';

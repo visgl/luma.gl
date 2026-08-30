@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Resource, ResourceProps} from './resource';
 import type {ComputeShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';

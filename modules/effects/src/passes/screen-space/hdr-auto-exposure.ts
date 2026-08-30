@@ -1,18 +1,23 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 /** Construction options for GPU-resident HDR luminance metering and adaptation. */
-export type HDRAutoExposureShaderPassPipelineOptions = {
+export type HDRAutoExposureCompositeShaderPassOptions = {
   /**
    * Initial luminance-metering resolution. Defaults to one quarter of the drawing buffer.
    * Values below 0.25 are clamped to 0.25 so the fixed 4x4 extraction footprint covers the
    * complete source image.
    */
   meteringScale?: number;
+  /**
+   * Exposure used to seed persistent history on startup and after target recreation.
+   * Defaults to 1. Values below 0.0001 are clamped.
+   */
+  initialExposure?: number;
 };
 
 type HDRAutoExposureAdaptUniforms = {
@@ -252,9 +257,9 @@ fn hdrAutoExposureApply_sampleColor(
 >;
 
 /** Builds a logarithmic luminance pyramid, persistent adaptation, and HDR exposure resolve. */
-export function createHDRAutoExposureShaderPassPipeline(
-  options: HDRAutoExposureShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createHDRAutoExposureCompositeShaderPass(
+  options: HDRAutoExposureCompositeShaderPassOptions = {}
+): CompositeShaderPass<
   | 'hdrLuminanceQuarter'
   | 'hdrLuminanceSixteenth'
   | 'hdrLuminanceSixtyFourth'
@@ -263,13 +268,14 @@ export function createHDRAutoExposureShaderPassPipeline(
   | 'hdrExposureHistory'
 > {
   const meteringScale = Math.max(options.meteringScale ?? 0.25, 0.25);
+  const initialExposure = Math.max(options.initialExposure ?? 1, 0.0001);
   const sixteenthScale = meteringScale / 4;
   const sixtyFourthScale = sixteenthScale / 4;
   const twoFiftySixthScale = sixtyFourthScale / 4;
   const thousandthScale = twoFiftySixthScale / 4;
 
   return {
-    name: 'hdrAutoExposureShaderPassPipeline',
+    name: 'hdrAutoExposureCompositeShaderPass',
     renderTargets: {
       hdrLuminanceQuarter: {
         scale: [meteringScale, meteringScale],
@@ -295,7 +301,7 @@ export function createHDRAutoExposureShaderPassPipeline(
         scale: [thousandthScale, thousandthScale],
         format: 'rgba16float',
         lifetime: 'history',
-        initialize: {clearColor: [1, 1, 1, 1]}
+        initialize: {clearColor: [initialExposure, 1, 1, 1]}
       }
     },
     steps: [

@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import type {Device, SamplerProps, Texture} from '@luma.gl/core';
 import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {VideoTexture} from '../../src';

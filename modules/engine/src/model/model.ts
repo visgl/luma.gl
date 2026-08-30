@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
 import {type TypedArray} from '@math.gl/types';
@@ -32,6 +32,7 @@ import {
   PipelineFactory,
   ShaderFactory,
   UniformStore,
+  assert,
   log,
   dataTypeDecoder,
   getAttributeInfosFromLayouts,
@@ -42,7 +43,9 @@ import type {
   ShaderBindingDebugRow,
   ShaderModule,
   ShaderPlugin,
-  PlatformInfo
+  PlatformInfo,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import {
   mergeShaderPluginModules,
@@ -156,7 +159,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   pipelineFactory?: PipelineFactory;
   /** Factory used to create a {@link Shader}. Defaults to {@link Device} default factory. */
   shaderFactory?: ShaderFactory;
-  /** Shader assembler. Defaults to the ShaderAssembler.getShaderAssembler() */
+  /** Shader assembler. Defaults to the shared assembler for the device's shader language. */
   shaderAssembler?: ShaderAssembler;
 };
 
@@ -207,7 +210,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -316,7 +319,16 @@ export class Model {
   }
 
   constructor(device: Device, props: ModelProps) {
-    this.props = {...Model.defaultProps, ...props};
+    const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
+    this.props = {
+      ...Model.defaultProps,
+      ...props,
+      shaderAssembler:
+        props.shaderAssembler ??
+        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
+          ? defaultShaderAssembler
+          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;
@@ -358,7 +370,15 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
+      const shaderAssembler = this.props.shaderAssembler;
+      // WGSL sources require an assembler with WGSL-specific hooks and binding state.
+      assert(isShaderAssemblerForLanguage(shaderAssembler, 'wgsl'));
+      const {
+        source,
+        getUniforms,
+        bindingTable,
+        shaderLayout: assembledShaderLayout
+      } = shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules,
@@ -371,12 +391,14 @@ export class Model {
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       this._bindingTable = bindingTable;
-      // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      const reflectedShaderLayout = (
-        device as Device & {getShaderLayout?: (source: string) => any}
-      ).getShaderLayout?.(this.source);
+      // Infer the layout after modules have been added so their bindings are included.
+      const scannedOrReflectedShaderLayout =
+        assembledShaderLayout ??
+        (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
+          this.source
+        );
       const inferredShaderLayout = normalizeShaderPluginAttributeNames(
-        reflectedShaderLayout,
+        scannedOrReflectedShaderLayout,
         resolvedPlugins.vertexInputs
       );
       const shaderLayout = mergeInferredShaderLayout(
@@ -388,7 +410,10 @@ export class Model {
         mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
     } else {
       // GLSL
-      const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
+      const shaderAssembler = this.props.shaderAssembler;
+      // GLSL shader pairs require an assembler with GLSL-specific hooks.
+      assert(isShaderAssemblerForLanguage(shaderAssembler, 'glsl'));
+      const {vs, fs, getUniforms} = shaderAssembler.assembleGLSLShaderPair({
         platformInfo,
         ...this.props,
         modules,
@@ -1297,6 +1322,36 @@ export class Model {
 }
 
 // HELPERS
+
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl'
+): shaderAssembler is GLSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'wgsl'
+): shaderAssembler is WGSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl' | 'wgsl'
+): shaderAssembler is GLSLShaderAssembler | WGSLShaderAssembler;
+function isShaderAssemblerForLanguage(
+  shaderAssembler: ShaderAssembler,
+  shaderLanguage: 'glsl' | 'wgsl'
+): boolean {
+  if (
+    shaderAssembler.shaderLanguage !== undefined &&
+    shaderAssembler.shaderLanguage !== shaderLanguage
+  ) {
+    return false;
+  }
+
+  return shaderLanguage === 'glsl'
+    ? 'assembleGLSLShaderPair' in shaderAssembler &&
+        typeof shaderAssembler.assembleGLSLShaderPair === 'function'
+    : 'assembleWGSLShader' in shaderAssembler &&
+        typeof shaderAssembler.assembleWGSLShader === 'function';
+}
 
 function normalizeShaderPluginAttributeNames(
   shaderLayout: ShaderLayout | null | undefined,

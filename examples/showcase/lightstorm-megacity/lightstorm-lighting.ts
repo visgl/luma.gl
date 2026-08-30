@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {DeferredPointLight} from '@luma.gl/experimental';
 import type {Matrix4} from '@math.gl/core';

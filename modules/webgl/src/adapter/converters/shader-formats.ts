@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GL, GLDataType, GLPixelType} from '@luma.gl/webgl/constants';
 import {SignedDataType} from '@luma.gl/core';

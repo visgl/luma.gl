@@ -1,0 +1,54 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Edge Work
+
+Extract image contours by comparing neighborhood frequencies at different blur widths.
+`edgeWork` transforms a source image into a high-contrast line-oriented treatment without
+requiring scene depth or surface normals.
+
+<PostprocessingExample embedded showStats={false} effect="edgeWork" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `edgeWork` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | Two fullscreen sampling passes |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {edgeWork} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [edgeWork]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {edgeWork: {radius: 3}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Suggested range | Description |
+| --- | --- | --- | --- |
+| `radius` | `2` | `1` to `50` | Neighborhood size in pixels used to isolate image-frequency differences. |
+
+The descriptor selects its two internal `mode` values automatically. That implementation detail
+is not intended as a public control.
+
+## Performance and Composition
+
+Edge work uses two sampling passes, and larger radii increase the amount of neighborhood work.
+Because contours come entirely from visible color, it can respond to textures and lighting as well
+as geometry. Choose [Screen-Space Outlines](./outlines) when object depth and normal boundaries
+should determine the result instead.
+
+## Related Effects
+
+- [Ink](./ink) provides a one-pass color-neighborhood illustration effect.
+- [Screen-Space Outlines](./outlines) detects geometric depth and normal discontinuities.
+- [Brightness and Contrast](./brightness-contrast) can strengthen source-edge separation.

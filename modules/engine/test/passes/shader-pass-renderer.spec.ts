@@ -1,12 +1,13 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {Buffer, CommandEncoder, Texture} from '@luma.gl/core';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import {Buffer, CommandEncoder, Texture, type Device} from '@luma.gl/core';
+import {supportsComputeOptimization} from '../../src/passes/shader-pass-renderer';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -159,7 +160,7 @@ vec4 stagedColor_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoor
   ]
 };
 
-const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+const stagedPipeline: CompositeShaderPass<'extract' | 'blurred'> = {
   name: 'stagedPipeline',
   renderTargets: {
     extract: {},
@@ -189,7 +190,59 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   ]
 };
 
-const tintPipeline: ShaderPassPipeline<'scratch'> = {
+test('ShaderPassRenderer compute optimization requires storage-capable output formats', t => {
+  const compositeShaderPass: CompositeShaderPass<'output'> = {
+    name: 'storage-capability-gate',
+    renderTargets: {output: {format: 'bgra8unorm', storage: true}},
+    steps: [],
+    compute: {
+      name: 'storage-capability-compute',
+      source: '',
+      uniformModule: 'storageCapability',
+      uniformBinding: 'storageCapabilityUniforms',
+      uniformNames: [],
+      uniforms: {},
+      input: 'original',
+      outputs: {outputTexture: 'output'},
+      replacedPasses: [],
+      workgroupSize: [8, 8]
+    }
+  };
+  let supportsStorage = false;
+  const device = {
+    type: 'webgpu',
+    preferredColorFormat: 'bgra8unorm',
+    limits: {
+      maxStorageTexturesPerShaderStage: 4,
+      maxComputeWorkgroupSizeX: 256,
+      maxComputeWorkgroupSizeY: 256,
+      maxComputeInvocationsPerWorkgroup: 256
+    },
+    getTextureFormatCapabilities: (format: 'bgra8unorm') => ({
+      format,
+      create: true,
+      render: true,
+      filter: true,
+      blend: true,
+      store: supportsStorage
+    })
+  } as unknown as Device;
+
+  t.equal(
+    supportsComputeOptimization(device, compositeShaderPass),
+    false,
+    'unsupported storage format selects the render-pass fallback'
+  );
+  supportsStorage = true;
+  t.equal(
+    supportsComputeOptimization(device, compositeShaderPass),
+    true,
+    'storage-capable format enables the compute optimization'
+  );
+  t.end();
+});
+
+const tintPipeline: CompositeShaderPass<'scratch'> = {
   name: 'tintPipeline',
   renderTargets: {scratch: {}},
   steps: [
@@ -218,7 +271,7 @@ const invalidOutputPass: ShaderPass = {
   passes: [{sampler: true, output: 'missing' as any}]
 };
 
-const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
+const selfAliasingPipeline: CompositeShaderPass<'scratch'> = {
   name: 'selfAliasing',
   renderTargets: {scratch: {}},
   steps: [
@@ -230,7 +283,55 @@ const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
   ]
 };
 
-const historyPipeline: ShaderPassPipeline<'historyColor'> = {
+const reusedTargetPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
+  name: 'reusedTarget',
+  renderTargets: {
+    extract: {sampler: {minFilter: 'linear', magFilter: 'linear'}},
+    reconstructed: {
+      aliasFor: 'extract',
+      sampler: {minFilter: 'linear', magFilter: 'linear'}
+    }
+  },
+  steps: [
+    {
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'original'},
+      output: 'extract'
+    },
+    {
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'extract'},
+      output: 'previous'
+    },
+    {
+      shaderPass: invertPass,
+      inputs: {sourceTexture: 'previous'},
+      output: 'reconstructed'
+    },
+    {
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'reconstructed'},
+      output: 'previous'
+    }
+  ]
+};
+
+const indirectlyAliasingPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
+  name: 'indirectlyAliasing',
+  renderTargets: {
+    extract: {},
+    reconstructed: {aliasFor: 'extract'}
+  },
+  steps: [
+    {
+      shaderPass: combinePass,
+      inputs: {sourceTexture: 'previous', mixTexture: 'extract'},
+      output: 'reconstructed'
+    }
+  ]
+};
+
+const historyPipeline: CompositeShaderPass<'historyColor'> = {
   name: 'historyPipeline',
   renderTargets: {
     historyColor: {lifetime: 'history', initialize: 'original'}
@@ -249,7 +350,7 @@ const historyPipeline: ShaderPassPipeline<'historyColor'> = {
   ]
 };
 
-const reservedTargetPipeline: ShaderPassPipeline<'original'> = {
+const reservedTargetPipeline: CompositeShaderPass<'original'> = {
   name: 'reservedTarget',
   renderTargets: {original: {}},
   steps: [{shaderPass: copyPass}]
@@ -427,7 +528,7 @@ test('ShaderPassRenderer resolves module-scoped default bindings and lets draw b
   t.end();
 });
 
-test('ShaderPassRenderer resolves module-scoped bindings inside ShaderPassPipeline steps', async t => {
+test('ShaderPassRenderer resolves module-scoped bindings inside CompositeShaderPass steps', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -573,7 +674,7 @@ test('ShaderPassRenderer supports explicit texture orientation', async t => {
   t.end();
 });
 
-test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
+test('ShaderPassRenderer supports CompositeShaderPass targets', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -619,6 +720,64 @@ test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
     renderer.destroy();
     sourceTexture.destroy();
   }
+  t.end();
+});
+
+test('ShaderPassRenderer reuses compatible transient targets without double destruction', async t => {
+  const devices = await getTestDevices();
+  const device = devices.find(candidate => candidate.type !== 'webgpu');
+  if (!device) {
+    t.comment('WebGL is not available');
+    t.end();
+    return;
+  }
+
+  const sourceTexture = new DynamicTexture(device, {
+    id: 'reused-target-source',
+    usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+    dimension: '2d',
+    data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+  });
+  await sourceTexture.ready;
+  const activeTextureCount = device.statsManager.getStats('Resource Counts').get('Textures Active');
+  const texturesBeforeRenderer = activeTextureCount.count;
+  const renderer = new ShaderPassRenderer(device, {
+    shaderPasses: [reusedTargetPipeline],
+    shaderInputs: new ShaderInputs({copy: copyPass, invert: invertPass})
+  });
+
+  const targets = renderer.passRenderers[0].renderTargets;
+  t.equal(
+    targets.extract,
+    targets.reconstructed,
+    'logical target names share one owned allocation'
+  );
+  const output = renderer.renderToTexture({sourceTexture});
+  t.deepEqual(
+    Array.from(await readPixels(output!)),
+    [0, 255, 255, 255],
+    'expired contents can be replaced by a later non-overlapping pass'
+  );
+
+  const previousTexture = targets.extract.texture;
+  renderer.resize([4, 4]);
+  t.ok(previousTexture.destroyed, 'resizing releases the old allocation');
+  t.equal(
+    targets.extract.texture,
+    targets.reconstructed.texture,
+    'resizing preserves target reuse'
+  );
+  t.equal(targets.extract.texture.width, 4, 'the shared allocation receives the new size');
+
+  const sharedTexture = targets.extract.texture;
+  renderer.destroy();
+  t.ok(sharedTexture.destroyed, 'renderer destruction releases the shared allocation');
+  t.equal(
+    activeTextureCount.count,
+    texturesBeforeRenderer,
+    'all renderer-owned texture allocations are released exactly once'
+  );
+  sourceTexture.destroy();
   t.end();
 });
 
@@ -678,7 +837,7 @@ test('ShaderPassRenderer supports persistent history targets', async t => {
   t.end();
 });
 
-test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
+test('ShaderPassRenderer validates CompositeShaderPass routing', async t => {
   const devices = await getTestDevices();
   const webglDevice = devices.find(device => device.type !== 'webgpu');
   t.ok(webglDevice, 'has a test device');
@@ -718,6 +877,28 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
     'throws on reserved pipeline target names'
   );
 
+  for (const [description, alias] of [
+    ['unknown target', {aliasFor: 'missing'}],
+    ['mismatched scale', {aliasFor: 'extract', scale: [0.5, 0.5] as [number, number]}],
+    ['mismatched sampler', {aliasFor: 'extract', sampler: {minFilter: 'linear' as const}}],
+    ['persistent history', {aliasFor: 'extract', lifetime: 'history' as const}]
+  ] as const) {
+    const invalidAliasPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
+      name: 'invalidTargetAlias',
+      renderTargets: {extract: {}, reconstructed: alias},
+      steps: [{shaderPass: copyPass}]
+    };
+    t.throws(
+      () =>
+        new ShaderPassRenderer(webglDevice, {
+          shaderPasses: [invalidAliasPipeline],
+          shaderInputs: new ShaderInputs({copy: copyPass})
+        }),
+      /target alias/,
+      `rejects ${description} aliases`
+    );
+  }
+
   const sourceTexture = new DynamicTexture(webglDevice, {
     id: 'aliasing-source-texture',
     usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
@@ -736,7 +917,18 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
     'throws on self-aliasing pipeline target'
   );
 
+  const indirectAliasRenderer = new ShaderPassRenderer(webglDevice, {
+    shaderPasses: [indirectlyAliasingPipeline],
+    shaderInputs: new ShaderInputs({combine: combinePass})
+  });
+  t.throws(
+    () => indirectAliasRenderer.renderToTexture({sourceTexture}),
+    /cannot sample from the render target it is writing to/,
+    'rejects aliased targets sampled through a secondary texture binding'
+  );
+
   aliasingRenderer.destroy();
+  indirectAliasRenderer.destroy();
   sourceTexture.destroy();
   t.end();
 });

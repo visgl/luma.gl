@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
 import {
@@ -10,7 +10,7 @@ import {
   type PathAttributeModelProps,
   type PathStorageModelProps,
   type PathTripsStorageModelProps
-} from '@luma.gl/tables';
+} from '@luma.gl/experimental/models';
 import {
   makePathAttributeModelProps,
   convertArrowPathToGPUVectors,

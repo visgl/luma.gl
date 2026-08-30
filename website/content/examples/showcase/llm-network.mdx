@@ -1,0 +1,38 @@
+---
+title: 'Inside a Transformer'
+description: Follow prompt tokens through embeddings, multi-head attention, hidden layers, and next-token prediction in an interactive GPU-rendered explainer.
+sidebar_custom_props:
+  backends: [webgpu]
+  display: interactive
+  difficulty: intermediate
+  maturity: experimental
+  topics: [rendering, llm, transformer, education]
+---
+
+import {LLMNetworkExample} from '@site/src/examples';
+
+<LLMNetworkExample />
+
+Inside a Transformer is a visual explanation of the core data flow in a decoder-only language
+model. It complements the full GPT-2 compute example by emphasizing intuition rather than running
+inference or exposing a model trace.
+
+Choose a prompt and select any input token, then scroll or scrub through ten stages. Tokenization turns text
+into discrete indices. Embedding maps an index to a learned direction and adds position. Attention
+heads compare queries and keys under a causal mask, then mix value vectors. Feed-forward layers
+transform features while residual connections preserve context. Finally, the unembedding and
+softmax produce a next-token distribution. Training compares that prediction with the target token,
+then the learning half deliberately slows down: it derives the output error, reverses the MLP,
+splits gradients through value and Q/K attention paths, and finally applies an optimizer update.
+
+The animated network, signal pulses, attention map, hidden activations, output bars, and tilted 3D
+loss surface are rendered analytically by one full-screen luma.gl `Model`. The loss surface uses a
+differentiable rotated bowl with a ripple term; the descending parameter path follows its analytic
+gradient. A small uniform buffer carries the selected stage, token, layer, prompt, pointer, and
+animation speed to WGSL each frame. The surface projection is orbit-controllable: drag to change its
+yaw and pitch or use the wheel to zoom. Accessible HTML controls and labels remain separate from the
+GPU visualization. Chapter-specific hotspots explain tokenization, Q/K/V attention, residuals,
+activations, sampling, cross-entropy, gradients, and optimization on hover or keyboard focus.
+
+The weights and probabilities are deliberately illustrative. They make architecture and information
+flow legible; they are not measurements from a production language model.

@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeArrowFilteringTable, type ArrowFilteringTable} from './arrow-filtering-data';
 import {ArrowFilteringControlPanel, type ArrowFilteringControlState} from './control-panel';

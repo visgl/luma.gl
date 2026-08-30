@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
 import {
@@ -15,7 +15,7 @@ import {
   sequence,
   sqrt
 } from '@luma.gl/gpgpu';
-import type {GPUVector, GPUVectorFormat} from '@luma.gl/tables';
+import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {test} from 'vitest';
 
 test('GPUDataEvaluator type inference', () => {});

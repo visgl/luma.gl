@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Minimal insertion-ordered LRU cache used by font atlas generation. */
 export class LRUCache<ValueT> {

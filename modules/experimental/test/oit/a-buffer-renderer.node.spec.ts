@@ -1,15 +1,15 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
   ABufferRenderer,
   aBuffer,
   aBufferPlugin,
-  createABufferResolveShaderPassPipeline,
+  createABufferResolveCompositeShaderPass,
   getABufferSlicePlan,
   getABufferSupport
 } from '@luma.gl/experimental';
@@ -48,8 +48,8 @@ test('aBuffer plugin exposes the WGSL module only', t => {
   t.end();
 });
 
-test('A-buffer resolve is packaged as a ShaderPassPipeline', t => {
-  const pipeline = createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 8});
+test('A-buffer resolve is packaged as a CompositeShaderPass', t => {
+  const pipeline = createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 8});
   t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
   t.equal(pipeline.steps[0].shaderPass.name, 'aBufferResolve', 'pipeline uses the resolve pass');
   t.deepEqual(
@@ -68,7 +68,7 @@ test('A-buffer resolve is packaged as a ShaderPassPipeline', t => {
     'resolve restores HDR blue and alpha channels'
   );
   t.throws(
-    () => createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 0}),
+    () => createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 0}),
     /at least 1/,
     'invalid fragment limits are rejected'
   );

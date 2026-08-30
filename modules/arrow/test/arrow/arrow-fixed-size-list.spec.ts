@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   expandArrowVector,
   getArrowFixedSizeListValues,
@@ -20,7 +20,7 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {DynamicBuffer} from '@luma.gl/engine';
-import {GPUData, GPUVector} from '@luma.gl/tables';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

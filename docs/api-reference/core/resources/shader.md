@@ -1,4 +1,5 @@
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
+import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
 # Shader
 
@@ -8,6 +9,20 @@ The `Shader` class holds a compiled shader.
 - It takes shader source code and compiles it during construction.
 - Shaders are used as inputs when creating `RenderPipeline` and `ComputePipeline` objects.
 - A `Shader` is immutable and the same compiled shader can safely be referenced by many pipelines.
+
+<DocumentationContract title="Shader" rows={[
+  {label: 'Creation', value: 'Device.createShader() with source, language, stage information, and debug policy'},
+  {label: 'Ownership', value: 'Application- or factory-owned immutable resource; share it across pipelines'},
+  {label: 'Languages', value: 'WGSL on WebGPU; GLSL on WebGL 2; portable applications provide both paths'},
+  {label: 'Validation', value: 'Compilation diagnostics depend on backend, stage, entry point, and enabled features'},
+  {label: 'Lifecycle', value: 'Compile once, reuse across compatible pipelines, then destroy with its owner'},
+  {label: 'Cost', value: 'Compilation can be expensive and unpredictable; never rebuild unchanged shaders per frame'}
+]} />
+
+:::warning Common mistake
+Shadertools assembles source, but the active Core adapter still compiles it. Supplying only WGSL does
+not create a WebGL fallback, and supplying only GLSL does not create a WebGPU path.
+:::
 
 ## Usage
 
@@ -26,13 +41,13 @@ Properties for a Shader
 
 | Field         | Type                                                   | Description                                    |
 | ------------- | ------------------------------------------------------ | ---------------------------------------------- |
-| `id`          | `string`                                               | name/identifier (for debugging)                |
-| `stage`       | 'vertex' \| 'fragment' \| 'compute'                    | Required by WebGL                              |
-| `source`      | `string`                                               | Shader source code                             |
-| `sourceMap?`  | `string`                                               | WebGPU only                                    |
-| `language?`   | 'glsl' \| 'wgsl'                                       | wgsl in WebGPU only                            |
-| `entryPoint?` | `string`                                               | WGSL only, name of main function               |
-| `debug`       | `'error'` (default) `'never' \| 'warnings' \| 'always` | Will show a popup in the canvas with error log |
+| `id` | `string` | name/identifier (for debugging) |
+| `stage` | 'vertex' \| 'fragment' \| 'compute' | Required by WebGL |
+| `source` | `string` | Shader source code |
+| `sourceMap?` | `string` | WebGPU only |
+| `language?` | 'glsl' \| 'wgsl' | wgsl in WebGPU only |
+| `entryPoint?` | `string` | WGSL only, name of main function |
+| `debug` | `'error'` (default) `'never' \| 'warnings' \| 'always` | Will show a popup in the canvas with error log |
 
 ## Members
 

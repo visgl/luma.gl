@@ -1,12 +1,32 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // luma.gl Engine API
 
 // Animation
 export type {AnimationClipControllerProps} from './animation/animator';
 export {AnimationClipController, Animator} from './animation/animator';
+export type {
+  AnimationInterpolation,
+  AnimationSampler,
+  AnimationValueType
+} from './animation/animation-interpolation';
+export {evaluateAnimationSampler} from './animation/animation-interpolation';
+export type {AnimationBinding, AnimationTrackProps} from './animation/animation-track';
+export {AnimationTrack} from './animation/animation-track';
+export type {AnimationClipProps} from './animation/animation-clip';
+export {AnimationClip} from './animation/animation-clip';
+export type {AnimationActionProps, AnimationLoopMode} from './animation/animation-mixer';
+export {AnimationAction, AnimationMixer} from './animation/animation-mixer';
+export type {MorphTargetAttributes} from './animation/morph-targets';
+export {
+  applyMorphTargets,
+  decodeMorphTargetAttribute,
+  updateMorphTargetBuffers
+} from './animation/morph-targets';
+export type {SkinJointMatricesProps} from './animation/skin';
+export {updateSkinJointMatrices} from './animation/skin';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';
@@ -21,7 +41,12 @@ export type {
 export {AnimationLoop} from './animation-loop/animation-loop';
 
 export type {MakeAnimationLoopProps} from './animation-loop/make-animation-loop';
+export type {TemplateAnimationLoop} from './animation-loop/make-animation-loop';
 export {makeAnimationLoop} from './animation-loop/make-animation-loop';
+
+// Camera controls
+export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
+export {OrbitControls} from './controls/orbit-controls';
 
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
@@ -68,6 +93,12 @@ export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './g
 export {Geometry} from './geometry/geometry';
 export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
 export {makeInterleavedGeometry} from './geometry/geometry-utils';
+export type {
+  MeshSimplificationAttribute,
+  MeshSimplificationOptions,
+  MeshSimplificationResult
+} from './geometry/mesh-simplification';
+export {simplifyMesh} from './geometry/mesh-simplification';
 export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
 

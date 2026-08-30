@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
   getQualifierDetails,
@@ -9,7 +9,7 @@ import {
   typeToChannelSuffix,
   typeToChannelCount
 } from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 type ChannelCount = 1 | 2 | 3 | 4;
 

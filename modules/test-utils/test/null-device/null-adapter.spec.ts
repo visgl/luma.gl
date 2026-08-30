@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
 import {_refreshLostCachedTestDevice} from '../../src/create-test-device';
@@ -13,6 +13,15 @@ test('NullAdapter imports from the ESM package entry without circular init error
   expect(testUtilsModule.nullAdapter.type).toBe('null');
   expect(testUtilsModule.NullDevice.name).toBe('NullDevice');
 }, 15000);
+
+test('NullDevice#destroy marks the device lost', async () => {
+  const {NullDevice} = await import('../../src/index');
+  const device = new NullDevice({});
+
+  expect(device.isLost).toBe(false);
+  device.destroy();
+  expect(device.isLost).toBe(true);
+});
 
 test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
   let cachedDevicePromise: Promise<{isLost: boolean; id: string}> | null = Promise.resolve({

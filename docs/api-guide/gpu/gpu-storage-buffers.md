@@ -100,7 +100,7 @@ That supports patterns such as:
 - batch-preserving compute dispatch through `GPUTableComputation`.
 
 See [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and
-[GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle) for
+[GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle) for
 the full columnar workflow.
 
 ## Compute Pattern
@@ -146,4 +146,4 @@ batch-by-batch before dispatch.
 - [Tabular Data in WGSL](./tabular-data-in-wgsl)
 - [GPU Tables](./gpu-tables)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
-- [GPU Table Lifecycle](/docs/api-reference/tables/gpu-table-lifecycle)
+- [GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle)

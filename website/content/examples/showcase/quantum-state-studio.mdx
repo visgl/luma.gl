@@ -1,0 +1,49 @@
+---
+title: 'Quantum State Studio'
+description: Scrub classical quantum state vectors on the GPU through linked probability, phase, Bloch, interference, and correlation views.
+sidebar_custom_props:
+  backends: [webgpu]
+  display: hdr-capable
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation, quantum]
+---
+
+import {QuantumStateStudioExample} from '@site/src/examples';
+
+<QuantumStateStudioExample />
+
+Quantum State Studio is a visual showcase for luma.gl rendering and browser GPU compute. It runs a
+classical state-vector simulation: it is not a quantum computer, a production quantum SDK, or a
+claim of quantum speedup.
+
+Amplitudes are complex `f32` pairs in computational-basis order, with qubit zero as the
+least-significant index bit. Every gate writes a new slice in one GPU-resident history buffer. The
+editable circuit can therefore be scrubbed gate by gate without replaying earlier gates or mapping
+amplitudes back into JavaScript. One generic kernel applies a 2x2 complex matrix to a target qubit,
+optionally conditioned on one control bit; common and controlled gates are small descriptors over
+that primitive.
+
+The simulation `GPUCommandGraph` orders gate applications, derives probability and phase, and
+reduces probability normalization for every snapshot. A second graph derives the selected qubit's
+reduced Bloch vector and connected Z-correlation matrix. The luma.gl renderer binds those buffers
+directly to one cinematic linked-view model.
+
+The probability landscape uses height for probability and a cyclic hue for complex phase. The
+history view exposes constructive and destructive interference across gate boundaries. The Bloch
+view shrinks when the selected qubit is entangled with the rest of the pure state, while the
+correlation matrix makes Bell- and GHZ-like structure legible even when individual probabilities
+do not explain it.
+
+Presets include Bell and GHZ entanglement, an interference echo, a complete two-qubit Grover
+iteration, and a QFT decomposition with controlled phase rotations and bit reversal. Common gates
+can be appended directly in the showcase.
+
+State-vector cost is exponential. The example targets fluid 8–16 qubit exploration and guards at
+16 qubits; available circuit depth is also constrained by the full history retained for scrubbing.
+All math is `f32`, so small normalization drift accumulates with depth. The visualization measures
+that normalization but does not silently alter the simulated state.
+
+Natural extensions include small density matrices, noise and decoherence channels, tensor-network
+backends, entanglement entropy, Wigner or other complex phase-space views, and import adapters for
+OpenQASM, QIR, or external circuit tools.

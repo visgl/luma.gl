@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';

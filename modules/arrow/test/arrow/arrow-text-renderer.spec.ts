@@ -1,20 +1,25 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import test from 'test/utils/vitest-tape';
 import {
   ArrowTextRenderer,
   createArrowTextPickingManager,
   createArrowTextPickingModel,
   drawArrowTextPickingPass,
   getArrowTextRenderModules,
+  getArrowVectorByteLength,
+  isArrowUtf8ViewDictionaryVector,
+  isArrowUtf8ViewVector,
   makeGPUTextDataFromArrow,
   makeGPUTextDataFromArrowStream,
   makeArrowFixedSizeListVector,
+  normalizeArrowUtf8TextVector,
   prepareArrowTextInput,
   prepareArrowTextInputFromData,
   supportsTextIndexPicking,
+  type ArrowUtf8TextInputVector,
   type ArrowTextRendererDataBatchUpdate
 } from '@luma.gl/arrow';
 import type {RenderPass} from '@luma.gl/core';
@@ -134,6 +139,67 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
   t.end();
 });
 
+test('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible imports', async t => {
+  const labels = ['A', 'ABABABABABABA', null];
+  const texts = makeArrowUtf8ViewTexts(labels);
+  t.ok(isArrowUtf8ViewVector(texts), 'detects Utf8View by its runtime type ID');
+  const data = texts.data[0] as unknown as {
+    buffers: readonly (ArrayBufferView | undefined)[];
+    variadicBuffers: readonly Uint8Array[];
+  };
+  const fixedBufferByteLength = data.buffers.reduce(
+    (byteLength, buffer) => byteLength + (buffer?.byteLength ?? 0),
+    0
+  );
+  const variadicBufferByteLength = data.variadicBuffers.reduce(
+    (byteLength, buffer) => byteLength + buffer.byteLength,
+    0
+  );
+  t.equal(
+    getArrowVectorByteLength(texts),
+    fixedBufferByteLength + variadicBufferByteLength,
+    'counts view records, validity, and variadic buffers'
+  );
+
+  const normalized = normalizeArrowUtf8TextVector(texts);
+  t.ok(normalized.type instanceof arrow.Utf8, 'normalizes Utf8View to Utf8');
+  t.deepEqual(
+    Array.from(normalized),
+    labels,
+    'preserves sliced inline, out-of-line, and null labels'
+  );
+
+  const device = new NullDevice({});
+  const renderer = await ArrowTextRenderer.create(device, {
+    positions: makeArrowPositions(labels.length),
+    texts,
+    model: 'attribute',
+    fontAtlas: FONT_ATLAS
+  });
+  t.ok(
+    renderer.textInput.sourceVectors.texts.type instanceof arrow.Utf8,
+    'renderer retains normalized Utf8 source data'
+  );
+  t.equal(renderer.textRenderer.stats.glyphCount, 14, 'renderer expands every view-backed glyph');
+  renderer.destroy();
+  t.end();
+});
+
+test('Arrow Utf8View normalization preserves dictionary encoding', t => {
+  const texts = makeArrowUtf8ViewDictionaryTexts(['A', 'ABABABABABABA'], [1, 0, 1]);
+  t.ok(isArrowUtf8ViewDictionaryVector(texts), 'detects dictionary-encoded Utf8View');
+
+  const normalized = normalizeArrowUtf8TextVector(texts);
+  t.ok(arrow.DataType.isDictionary(normalized.type), 'preserves dictionary encoding');
+  t.ok(normalized.type.dictionary instanceof arrow.Utf8, 'normalizes dictionary values to Utf8');
+  t.deepEqual(
+    Array.from(normalized),
+    ['ABABABABABABA', 'A', 'ABABABABABABA'],
+    'preserves dictionary row values'
+  );
+  t.end();
+});
+
 test('ArrowTextRenderer can transfer GPUTextData ownership to a host', async t => {
   const device = new NullDevice({});
   const renderer = await ArrowTextRenderer.create(device, {
@@ -243,7 +309,7 @@ test('ArrowTextRenderer keeps auto text on attributes below compact compute limi
   const originalMaxStorageBuffersPerShaderStage = device.limits.maxStorageBuffersPerShaderStage;
   Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {
     configurable: true,
-    value: 8
+    value: 6
   });
   try {
     const renderer = await ArrowTextRenderer.create(device, {
@@ -304,6 +370,74 @@ function makeArrowPositions(rowCount: number): arrow.Vector<arrow.FixedSizeList<
 
 function makeArrowTexts(labels: readonly (string | null)[]): arrow.Vector<arrow.Utf8> {
   return arrow.vectorFromArray(labels, new arrow.Utf8()) as arrow.Vector<arrow.Utf8>;
+}
+
+function makeArrowUtf8ViewTexts(labels: readonly (string | null)[]): ArrowUtf8TextInputVector {
+  const Utf8View = (arrow as unknown as {Utf8View?: new () => arrow.DataType}).Utf8View;
+  if (Utf8View) {
+    return arrow.vectorFromArray(labels, new Utf8View()) as ArrowUtf8TextInputVector;
+  }
+
+  const type = {typeId: 24} as unknown as arrow.DataType;
+  const dataOffset = 1;
+  const values = new Uint8Array((labels.length + dataOffset) * 16);
+  const variadicBytes: number[] = [];
+  const nullBitmap = new Uint8Array(Math.ceil((labels.length + dataOffset) / 8));
+  const textEncoder = new TextEncoder();
+
+  for (let rowIndex = 0; rowIndex < labels.length; rowIndex++) {
+    const label = labels[rowIndex];
+    if (label === null) {
+      continue;
+    }
+    nullBitmap[(rowIndex + dataOffset) >> 3] |= 1 << ((rowIndex + dataOffset) & 7);
+    const encodedLabel = textEncoder.encode(label);
+    const viewByteOffset = (rowIndex + dataOffset) * 16;
+    const view = new DataView(values.buffer, viewByteOffset, 16);
+    view.setInt32(0, encodedLabel.byteLength, true);
+    if (encodedLabel.byteLength <= 12) {
+      values.set(encodedLabel, viewByteOffset + 4);
+      continue;
+    }
+    values.set(encodedLabel.subarray(0, 4), viewByteOffset + 4);
+    view.setInt32(8, 0, true);
+    view.setInt32(12, variadicBytes.length, true);
+    variadicBytes.push(...encodedLabel);
+  }
+
+  const variadicBuffers = [Uint8Array.from(variadicBytes)];
+  const data = {
+    type,
+    length: labels.length,
+    offset: dataOffset,
+    nullCount: labels.filter(label => label === null).length,
+    values,
+    nullBitmap,
+    buffers: [undefined, values, nullBitmap, undefined],
+    children: [],
+    variadicBuffers
+  };
+  return {type, data: [data], length: labels.length} as unknown as ArrowUtf8TextInputVector;
+}
+
+function makeArrowUtf8ViewDictionaryTexts(
+  dictionaryLabels: readonly string[],
+  indices: readonly number[]
+): ArrowUtf8TextInputVector {
+  const dictionary = makeArrowUtf8ViewTexts(dictionaryLabels);
+  const type = new arrow.Dictionary(dictionary.type, new arrow.Int8(), 0, false);
+  const values = Int8Array.from(indices);
+  const data = {
+    type,
+    length: indices.length,
+    offset: 0,
+    nullCount: 0,
+    values,
+    buffers: [undefined, values, undefined, undefined],
+    children: [],
+    dictionary
+  };
+  return {type, data: [data], length: indices.length} as unknown as ArrowUtf8TextInputVector;
 }
 
 function makeTextModelStateStub<ModelT extends TextDictionaryModel | TextStorageModel>(

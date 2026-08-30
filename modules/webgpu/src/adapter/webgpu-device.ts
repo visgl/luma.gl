@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
@@ -58,8 +58,12 @@ import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
+import {getWebGPUTextureFormatCapabilities} from './helpers/webgpu-texture-capabilities';
 
-import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+import {
+  getShaderLayoutFromWGSL,
+  type ScanWGSLInterfaceOptions
+} from '../wgsl/get-shader-layout-wgsl';
 import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
 import {getBindGroup} from './helpers/get-bind-group';
 import {
@@ -84,6 +88,7 @@ export class WebGPUDevice extends Device {
   readonly preferredDepthFormat = 'depth24plus';
 
   readonly features: DeviceFeatures;
+  override readonly wgslLanguageFeatures: ReadonlySet<string>;
   readonly info: DeviceInfo;
   readonly limits: DeviceLimits;
 
@@ -117,6 +122,8 @@ export class WebGPUDevice extends Device {
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;
+    const webgpu = navigator.gpu as GPU & {wgslLanguageFeatures?: Iterable<string>};
+    this.wgslLanguageFeatures = new Set(webgpu.wgslLanguageFeatures ?? []);
 
     this.info = this._getInfo();
     this.features = this._getFeatures();
@@ -153,6 +160,7 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    this._isLost = true;
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();
     this._defaultSampler = null;
@@ -163,8 +171,8 @@ export class WebGPUDevice extends Device {
     return this._isLost;
   }
 
-  getShaderLayout(source: string) {
-    return getShaderLayoutFromWGSL(source);
+  getShaderLayout(source: string, options?: ScanWGSLInterfaceOptions) {
+    return getShaderLayoutFromWGSL(source, options);
   }
 
   override isVertexFormatSupported(format: VertexFormat): boolean {
@@ -512,6 +520,8 @@ export class WebGPUDevice extends Device {
       gpuArchitecture,
       fallback,
       featureLevel: getWebGPUDeviceFeatureLevel(this.props.featureLevel),
+      subgroupMinSize: getOptionalAdapterNumber(this.adapterInfo, 'subgroupMinSize'),
+      subgroupMaxSize: getOptionalAdapterNumber(this.adapterInfo, 'subgroupMaxSize'),
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
@@ -584,12 +594,20 @@ export class WebGPUDevice extends Device {
   override _getDeviceSpecificTextureFormatCapabilities(
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
-    const {format} = capabilities;
-    if (format.includes('webgl')) {
-      return {format, create: false, render: false, filter: false, blend: false, store: false};
-    }
-    return capabilities;
+    return getWebGPUTextureFormatCapabilities(
+      capabilities.format,
+      this.features,
+      getWebGPUDeviceFeatureLevel(this.props.featureLevel)
+    );
   }
+}
+
+function getOptionalAdapterNumber(
+  adapterInfo: GPUAdapterInfo,
+  property: string
+): number | undefined {
+  const value = (adapterInfo as unknown as Record<string, unknown>)[property];
+  return typeof value === 'number' ? value : undefined;
 }
 
 function getWebGPUDeviceLimits(limits: GPUSupportedLimits): DeviceLimits {

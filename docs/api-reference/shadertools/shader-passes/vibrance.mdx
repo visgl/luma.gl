@@ -1,0 +1,53 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Vibrance
+
+Adjust subdued colors while protecting hues that are already strongly saturated. `vibrance`
+offers a more selective color-grade control than a uniform saturation adjustment.
+
+<PostprocessingExample embedded showStats={false} effect="vibrance" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `vibrance` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | One fullscreen color-filter pass |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {vibrance} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [vibrance]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {vibrance: {amount: 0.45}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Range | Description |
+| --- | --- | --- | --- |
+| `amount` | `0` | `-1` to `1` | Decreases or increases saturation in proportion to how muted each source color is. |
+
+The zero default leaves the source unchanged. Positive values reveal quieter color detail without
+applying the same increase to already vivid pixels.
+
+## Composition and Cost
+
+Vibrance is a single color-only pass and requires no intermediate history or scene attachments.
+It works well after a broad hue rotation, after a color halftone, or as a late finishing grade.
+Use [Hue and Saturation](./hue-saturation) when all colors should change with the same global
+saturation control.
+
+## Related Effects
+
+- [Hue and Saturation](./hue-saturation) adjusts all colors uniformly.
+- [Brightness and Contrast](./brightness-contrast) controls the tonal range instead of chroma.
+- [Color Halftone](./color-halftone) provides a complementary print-style color treatment.

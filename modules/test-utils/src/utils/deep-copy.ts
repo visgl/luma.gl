@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 /** Recursively copies objects */
 export function deepCopy(object: any): any {
   if (Array.isArray(object)) {

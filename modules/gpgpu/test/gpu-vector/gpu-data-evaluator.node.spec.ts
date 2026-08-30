@@ -1,12 +1,26 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core';
 import {GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/tables';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
+
+test('GPUDataEvaluator.fromArray preserves Float64Array view bounds', () => {
+  const source = new Float64Array([10, 20, 30, 40]);
+  const evaluator = GPUDataEvaluator.fromArray(source.subarray(1, 3), {size: 1});
+  const value = evaluator.value!;
+  const float64Value = new Float64Array(
+    value.buffer,
+    value.byteOffset,
+    value.byteLength / Float64Array.BYTES_PER_ELEMENT
+  );
+
+  expect(evaluator.length).toBe(2);
+  expect(Array.from(float64Value)).toEqual([20, 30]);
+});
 
 test('GPUDataEvaluator buffer pool allocates exact sizes and validates device limits', async () => {
   const device = new NullDevice({});
@@ -41,6 +55,61 @@ test('GPUDataEvaluator buffer pool allocates exact sizes and validates device li
   smallerEvaluator.destroy();
   oversizedEvaluator.destroy();
   device.destroy();
+});
+
+test('GPUDataEvaluator.bufferPoolSize purges cached buffers', async () => {
+  const originalPoolSize = GPUDataEvaluator.bufferPoolSize;
+  const device = new NullDevice({});
+  const evaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {type: 'uint8', size: 1});
+
+  try {
+    GPUDataEvaluator.bufferPoolSize = 1;
+    await evaluator.evaluate(device);
+    const buffer = evaluator.buffer;
+    const destroy = vi.spyOn(buffer, 'destroy');
+
+    evaluator.destroy();
+    expect(destroy).not.toHaveBeenCalled();
+
+    GPUDataEvaluator.bufferPoolSize = 0;
+    expect(destroy).toHaveBeenCalledOnce();
+  } finally {
+    GPUDataEvaluator.bufferPoolSize = originalPoolSize;
+    device.destroy();
+  }
+});
+
+test('GPUDataEvaluator buffer pool purges lost devices during recycle', async () => {
+  const originalPoolSize = GPUDataEvaluator.bufferPoolSize;
+  const device = new NullDevice({});
+  const activeDevice = new NullDevice({id: 'active-null-device'});
+  let isLost = false;
+  Object.defineProperty(device, 'isLost', {get: () => isLost});
+  const evaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {type: 'uint8', size: 1});
+  const activeEvaluator = GPUDataEvaluator.fromArray(new Uint8Array(8), {
+    type: 'uint8',
+    size: 1
+  });
+
+  try {
+    GPUDataEvaluator.bufferPoolSize = 1;
+    await evaluator.evaluate(device);
+    const buffer = evaluator.buffer;
+    const destroy = vi.spyOn(buffer, 'destroy');
+
+    evaluator.destroy();
+    expect(destroy).not.toHaveBeenCalled();
+
+    isLost = true;
+    await activeEvaluator.evaluate(activeDevice);
+    activeEvaluator.destroy();
+    expect(destroy).toHaveBeenCalledOnce();
+  } finally {
+    GPUDataEvaluator.bufferPoolSize = 0;
+    GPUDataEvaluator.bufferPoolSize = originalPoolSize;
+    device.destroy();
+    activeDevice.destroy();
+  }
 });
 
 test('GPUDataEvaluator.fromGPUData accepts packed Float16 chunks', () => {

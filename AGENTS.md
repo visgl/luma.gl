@@ -16,14 +16,17 @@
   - `yarn test-headless`
   - `yarn test-coverage`
   - `yarn website-debug`
-- Those commands delegate into the local `@luma.gl/devtools-extensions` workspace.
-- Reusable Vitest and Playwright wiring lives under [`dev-modules/devtools-extensions`](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions).
-- Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
-- For details, see [dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md).
+- The test commands use the shared `@vis.gl/dev-tools` Vitest runner and the root `vitest.config.ts`.
+- Luma-specific Playwright utilities live under [`scripts/playwright`](/Users/ibgreen/code/luma.gl/scripts/playwright).
+- Playwright example aliases and defaults live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
+- For details, see [docs/developer/dev-tools/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/docs/developer/dev-tools/llm-friendly-test-setup.md).
 
 ## Before committing
 - Format code: `yarn lint fix`
 - Always `yarn lint fix` after making changes to ensure that Biome formatting is maintained.
+
+## Pull requests
+- When opening a PR, wait 15 minutes for review comments, address them and respond, then make sure CI is green.
 
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
@@ -37,6 +40,8 @@
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
+- Every first-party source file with `SPDX-License-Identifier`, including tests and examples, must also declare each actual copyright holder using `SPDX-FileCopyrightText` (for example, `// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors`).
+- Preserve existing license expressions and upstream attribution; do not infer MIT licensing or ownership for generated, vendored, or third-party files.
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
 - Keep shipped runtime validation minimal to protect bundle size. Prefer static typing and simple assertions over heavy validation or verbose runtime error paths.
@@ -53,8 +58,10 @@
 - Preserve custom geometry names. When writing glTF custom semantics, follow the glTF `_NAME` convention.
 
 ## GPU table API boundaries
-- `@luma.gl/tables` owns generic GPU concepts only: `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`, `GPUSchema`, and `GPUVectorFormat`.
-- `@luma.gl/tables` and `@luma.gl/gpgpu` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
+- `@luma.gl/gpgpu/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
+- `@luma.gl/experimental/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
+- `@luma.gl/experimental/models` owns specialized path and polygon rendering models and their GPU input helpers.
+- `@luma.gl/gpgpu` and `@luma.gl/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
 - Keep memory layout and shader value types separate. `GPUVectorFormat` describes stored bytes such as `float32x3`, `unorm8x4`, and `vertex-list<float32x3>`; `ShaderLayout` describes shader-facing values such as `vec3<f32>` and `vec4<f32>`.
 - Use compatibility checks at adapter and model boundaries instead of encoding shader semantics into vector formats.

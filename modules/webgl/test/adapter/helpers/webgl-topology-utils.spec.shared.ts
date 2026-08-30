@@ -1,6 +1,6 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/webgl/constants';
 import {
@@ -10,7 +10,7 @@ import {
   getPrimitiveDrawMode,
   getVertexCount
 } from '@luma.gl/webgl/adapter/helpers/webgl-topology-utils';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 export function registerWebGLTopologyUtilsTests(test: TapeTestFunction): void {
   test('getPrimitiveDrawMode', t => {

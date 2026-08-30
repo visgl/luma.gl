@@ -1,0 +1,52 @@
+import {PostprocessingExample} from '@site/src/examples';
+
+# Triangle Blur
+
+Blend neighboring pixels with a linearly weighted pyramid kernel. `triangleBlur` uses separable
+horizontal and vertical passes to produce an inexpensive, visibly soft image treatment.
+
+<PostprocessingExample embedded showStats={false} effect="triangleBlur" />
+
+## At a Glance
+
+| Property | Value |
+| --- | --- |
+| Export | `triangleBlur` |
+| Backends | WebGPU and WebGL2 |
+| Render passes | Two separable fullscreen sampling passes |
+| Additional inputs | None |
+
+## Usage
+
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+import {triangleBlur} from '@luma.gl/effects';
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [triangleBlur]});
+
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  uniforms: {triangleBlur: {radius: 14}}
+});
+```
+
+## Parameters
+
+| Parameter | Default | Suggested range | Description |
+| --- | --- | --- | --- |
+| `radius` | `20` | `0` to `100` | Width of the triangular blur kernel in source-image pixels. |
+
+The descriptor owns its horizontal and vertical direction uniforms. A radius of zero suppresses
+the visible blur but does not remove the two configured fullscreen passes.
+
+## Composition and Cost
+
+The pass performs two separable draws and requires no scene depth or persistent history. Its
+triangular weights differ from the smoother bell-shaped [Gaussian Blur](./gaussian-blur) kernel;
+choose between them based on the desired reconstruction profile rather than pass count alone.
+
+## Related Effects
+
+- [Gaussian Blur](./gaussian-blur) produces a smoother photographic weight falloff.
+- [Tilt Shift](./tilt-shift) varies blur strength around a selected focal line.
+- [Zoom Blur](./zoom-blur) samples radially toward an adjustable focal center.
