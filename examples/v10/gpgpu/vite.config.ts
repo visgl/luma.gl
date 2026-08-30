@@ -10,8 +10,7 @@ const alias = {
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/webgl/constants': `${__dirname}/../../../modules/webgl/src/constants`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
-  '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`,
-  '@math.gl/geoarrow': `${__dirname}/../../../modules/math-geoarrow/src`
+  '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
 };
 
 export default defineConfig({

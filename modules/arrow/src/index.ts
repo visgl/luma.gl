@@ -345,6 +345,26 @@ export {
   type ConvertArrowPolygonToGPUVectorsOptions
 } from './arrow/renderers/polygon/conversion/arrow-polygon-gpu-vectors';
 export {
+  convertGeoArrowTableToDenseUnion,
+  convertGeoArrowTableToInterleaved,
+  convertGeoArrowTableToInterleavedAsync,
+  convertGeoArrowVectorToDenseUnion,
+  convertGeoArrowVectorToInterleaved,
+  type GeoArrowDenseUnionTableOptions,
+  type GeoArrowDenseUnionVectorOptions,
+  type GeoArrowInterleaveOptions,
+  type GeoArrowNativeEncoding,
+  type GeoArrowSerializedEncoding
+} from './arrow/geoarrow/arrow-geoarrow-conversion';
+export {
+  inferGeoArrowCoordinateLayoutFromArrowType,
+  inferGeoArrowDimensionFromArrowType,
+  inferGeoArrowEncodingFromArrowType,
+  makeArrowVectorFromGeoArrowColumn,
+  makeGeoArrowColumnFromArrowVector,
+  type MakeGeoArrowColumnFromArrowVectorOptions
+} from './arrow/geoarrow/arrow-geoarrow-adapter';
+export {
   getArrowRecordBatchAsyncIterator,
   getOptionalArrowColumn,
   getRequiredArrowColumn,

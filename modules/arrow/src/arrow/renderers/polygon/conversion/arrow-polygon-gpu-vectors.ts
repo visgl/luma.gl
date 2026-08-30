@@ -11,7 +11,7 @@ import {
   type ArrowPolygonSourceVectors,
   type ArrowPolygonTessellationOptions,
   type ArrowPolygonTessellationResult
-} from '@math.gl/geoarrow';
+} from '../../../geoarrow/arrow-polygon-tessellation';
 import {Field, FixedSizeList, Float32, List, Uint8, Uint32, type DataType} from 'apache-arrow';
 import {makeArrowRecordBatchSourceInfo} from '../../../engine/arrow-picking';
 
@@ -34,7 +34,7 @@ export {
   type ArrowPolygonVertexColorType,
   type ArrowTessellatedPolygonType,
   type ArrowTessellatedPolygonVertexColorType
-} from '@math.gl/geoarrow';
+} from '../../../geoarrow/arrow-polygon-tessellation';
 
 export type ConvertArrowPolygonToGPUVectorsOptions = ArrowPolygonTessellationOptions & {
   /** Stable resource id prefix. Defaults to `arrow-polygon-model`. */

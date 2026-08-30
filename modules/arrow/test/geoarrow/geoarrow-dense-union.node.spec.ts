@@ -8,7 +8,7 @@ import {
   convertGeoArrowTableToDenseUnion,
   convertGeoArrowVectorToDenseUnion,
   tessellateArrowPolygons
-} from '@math.gl/geoarrow';
+} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 const GEOMETRY_FIXTURE_PAIRS = [
@@ -47,8 +47,8 @@ test('convertGeoArrowTableToDenseUnion converts WKB/WKT mixed geometry fixtures'
       `${wkbFixture} preserves the coordinate dimension`
     );
     t.deepEqual(
-      getDenseUnionRows(convertedWKBGeometry),
-      getDenseUnionRows(convertedWKTGeometry),
+      normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKBGeometry)),
+      normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKTGeometry)),
       `${wkbFixture} and ${wktFixture} produce equivalent dense union rows`
     );
   }
@@ -75,7 +75,7 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
     [
       {typeId: 1, value: [30, 10]},
       {
-        typeId: 2,
+        typeId: 5,
         value: [
           [30, 10],
           [10, 30],
@@ -83,7 +83,7 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
         ]
       },
       {
-        typeId: 3,
+        typeId: 9,
         value: [
           [
             [30, 10],
@@ -101,6 +101,61 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
     convertGeoArrowVectorToDenseUnion(convertedGeometry),
     convertedGeometry,
     'returns an existing DenseUnion vector unchanged'
+  );
+  t.end();
+});
+
+test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
+  const geometry = arrow.vectorFromArray(
+    ['POINT (1 2)', null, 'LINESTRING (0 0, 1 1)'],
+    new arrow.Utf8()
+  );
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {
+    encoding: 'geoarrow.wkt'
+  });
+
+  t.equal(convertedGeometry.get(1), null, 'preserves a null through the dense-union adapter');
+  t.end();
+});
+
+test('convertGeoArrowVectorToDenseUnion lets math.gl infer WKB dimensions and preserve chunks', t => {
+  const sourceGeometry = loadGeoArrowFixture('example_point-z_wkb.arrows').getChild('geometry')!;
+  const splitRow = 2;
+  const chunkedGeometry = new arrow.Vector([
+    sourceGeometry.slice(0, splitRow).data[0],
+    sourceGeometry.slice(splitRow).data[0]
+  ]);
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(chunkedGeometry);
+
+  t.equal(convertedGeometry.data.length, 2, 'preserves both source Arrow chunks');
+  t.equal(
+    getDenseUnionCoordinateDimension(convertedGeometry),
+    3,
+    'uses the WKB headers to infer XYZ coordinates'
+  );
+  t.deepEqual(
+    getDenseUnionRows(convertedGeometry),
+    getDenseUnionRows(convertGeoArrowVectorToDenseUnion(sourceGeometry)),
+    'preserves all geometry rows across chunk boundaries'
+  );
+  t.end();
+});
+
+test('convertGeoArrowVectorToDenseUnion preserves EWKT dimensions and strips SRID prefixes', t => {
+  const geometry = arrow.vectorFromArray(['SRID=4326;POINT Z (1 2 3)'], new arrow.Utf8());
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {
+    encoding: 'geoarrow.wkt'
+  });
+
+  t.equal(
+    getDenseUnionCoordinateDimension(convertedGeometry),
+    3,
+    'preserves the EWKT coordinate dimension'
+  );
+  t.deepEqual(
+    getDenseUnionRows(convertedGeometry),
+    [{typeId: 2, value: [1, 2, 3]}],
+    'decodes the geometry after removing the SRID prefix'
   );
   t.end();
 });
@@ -207,6 +262,12 @@ function getDenseUnionRows(vector: arrow.Vector): {typeId: number; value: unknow
     });
   }
   return rows;
+}
+
+function normalizeDenseUnionNullTypeIds(
+  rows: {typeId: number; value: unknown}[]
+): {typeId: number; value: unknown}[] {
+  return rows.map(row => (row.value === null ? {typeId: 0, value: null} : row));
 }
 
 function getDenseUnionTypeId(vector: arrow.Vector, rowIndex: number): number {

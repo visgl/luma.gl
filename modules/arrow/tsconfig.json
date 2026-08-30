@@ -12,7 +12,6 @@
     {"path": "../engine"},
     {"path": "../experimental"},
     {"path": "../gpgpu"},
-    {"path": "../math-geoarrow"},
     {"path": "../splats"},
     {"path": "../text"}
   ]

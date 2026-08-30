@@ -7,7 +7,7 @@ import test from 'test/utils/vitest-tape';
 import {
   convertGeoArrowTableToInterleaved,
   convertGeoArrowVectorToInterleaved
-} from '@math.gl/geoarrow';
+} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 const FIXTURE_PAIRS = [
