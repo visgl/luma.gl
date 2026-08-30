@@ -6,6 +6,7 @@ import {
   makeArrowTableFromGPUAnalyticsTable,
   makeGPUAnalyticsTableFromArrowTable
 } from '@luma.gl/arrow';
+import {parseSQLPredicate} from '@loaders.gl/sql';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
   CompiledGPUDataFrameAggregation as CompiledLuDataFrameAggregation,
@@ -14,7 +15,7 @@ import {
   CompiledGPUDataFrameJoin as CompiledLuDataFrameJoin,
   GPUDataFrame as LuDataFrame
 } from '@luma.gl/experimental/gpu-dataframe';
-import {LuSQLContext} from '@luma.gl/experimental/gpu-sql';
+import {LuSQLContext, planGPUDataFrameQuery} from '@luma.gl/experimental/gpu-sql';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import test from 'test/utils/vitest-tape';
@@ -90,6 +91,49 @@ test('LuSQL executes Arrow filters, derived columns, global ordering, and select
   } finally {
     filtered.destroy();
     ordered.destroy();
+    frame.destroy();
+  }
+
+  testContext.end();
+});
+
+test('loaders.gl SQL predicates compile into reusable GPU-resident dataframe results', async testContext => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testContext.comment('WebGPU is not available');
+    testContext.end();
+    return;
+  }
+
+  const frame = new LuDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createLuSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
+    preserveParameters: true
+  });
+  const compiled = planGPUDataFrameQuery(frame, {
+    predicate,
+    columns: ['fare', 'category'],
+    parameters: {minimum: 8}
+  }).compile(new GPUCommandGraph(device, {id: 'loaders-sql-gpu-dataframe'}));
+
+  try {
+    const encoder = device.createCommandEncoder({id: 'loaders-sql-gpu-dataframe'});
+    compiled.encode(encoder, {minimum: 9});
+    device.submit(encoder.finish());
+
+    const result = await makeArrowTableFromGPUAnalyticsTable({
+      table: compiled.table,
+      validity: compiled.validity,
+      dictionaries: compiled.dictionaries,
+      rowIndices: compiled.rowIndices,
+      selectedCounts: compiled.selectedCounts
+    });
+    testContext.deepEqual(Array.from(result.getChild('fare') ?? []), [10, 11]);
+    testContext.deepEqual(Array.from(result.getChild('category') ?? []), ['premium', 'economy']);
+  } finally {
+    compiled.destroy();
     frame.destroy();
   }
 

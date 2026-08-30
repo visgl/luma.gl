@@ -4,12 +4,18 @@
 
 import {readFileSync} from 'node:fs';
 
+import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as luDataFrameModule from '@luma.gl/experimental/gpu-dataframe';
 import {GPUDataFrame as LuDataFrame} from '@luma.gl/experimental/gpu-dataframe';
 import * as sqlModule from '@luma.gl/experimental/gpu-sql';
-import {LuSQLContext, LuSQLQuery} from '@luma.gl/experimental/gpu-sql';
+import {
+  LuSQLContext,
+  LuSQLQuery,
+  makeGPUExpressionFromSQLPredicate,
+  planGPUDataFrameQuery
+} from '@luma.gl/experimental/gpu-sql';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -18,7 +24,7 @@ import {describe, expect, test, vi} from 'vitest';
 type LuSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
 
 describe('LuSQL immutable GPU dataframe planning', () => {
-  test('publishes SQL exclusively through its optional Arrow-free package subpath', () => {
+  test('publishes SQL and the loaders.gl planner adapter through its optional package subpath', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     ) as {
@@ -33,10 +39,42 @@ describe('LuSQL immutable GPU dataframe planning', () => {
       require: './dist/gpu-sql/index.cjs'
     });
     expect(packageJson.sideEffects).toBe(false);
+    expect(packageJson.dependencies?.['@loaders.gl/sql']).toBe('~5.0.0-alpha.3');
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
     expect(sqlModule.LuSQLContext).toBe(LuSQLContext);
     expect('LuSQLContext' in experimentalModule).toBe(false);
     expect('LuSQLContext' in luDataFrameModule).toBe(false);
+  });
+
+  test('lowers loaders.gl predicate syntax, projection, and reusable parameters without GPU work', () => {
+    const {device, frame} = createLuSQLNodeFixture();
+    const createBuffer = vi.spyOn(device, 'createBuffer');
+    const submit = vi.spyOn(device, 'submit');
+    const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
+      preserveParameters: true
+    });
+    const query = planGPUDataFrameQuery(frame, {
+      predicate,
+      columns: ['category'],
+      parameters: {minimum: 5}
+    });
+
+    expect(query.selectedColumns).toEqual(['category']);
+    expect(query.predicates).toHaveLength(1);
+    expect(query.predicates[0].node).toEqual(
+      makeGPUExpressionFromSQLPredicate(predicate, {minimum: 5}).node
+    );
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
+    expect(() => planGPUDataFrameQuery(frame, {predicate})).toThrow(/parameter/i);
+    expect(() =>
+      planGPUDataFrameQuery(frame, {predicate: parseSQLPredicate("fare = 'premium'")})
+    ).toThrow(/finite number, boolean, or null/i);
+    expect(() => planGPUDataFrameQuery(frame, {limit: 1})).toThrow(/source-ordered limits/i);
+
+    createBuffer.mockRestore();
+    submit.mockRestore();
+    frame.destroy();
   });
 
   test('plans projections, named parameters, arithmetic, global ordering, and limits without GPU work', () => {
