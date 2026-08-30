@@ -58,6 +58,7 @@ import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
+import {getWebGPUTextureFormatCapabilities} from './helpers/webgpu-texture-capabilities';
 
 import {
   getShaderLayoutFromWGSL,
@@ -593,11 +594,11 @@ export class WebGPUDevice extends Device {
   override _getDeviceSpecificTextureFormatCapabilities(
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
-    const {format} = capabilities;
-    if (format.includes('webgl')) {
-      return {format, create: false, render: false, filter: false, blend: false, store: false};
-    }
-    return capabilities;
+    return getWebGPUTextureFormatCapabilities(
+      capabilities.format,
+      this.features,
+      getWebGPUDeviceFeatureLevel(this.props.featureLevel)
+    );
   }
 }
 

@@ -115,6 +115,7 @@ export type TextureFeature =
   | 'texture-compression-bc'
   | 'texture-compression-astc'
   | 'texture-compression-etc2'
+  | 'depth32float-stencil8'
   | 'texture-compression-etc1-webgl'
   | 'texture-compression-pvrtc-webgl'
   | 'texture-compression-atc-webgl'
