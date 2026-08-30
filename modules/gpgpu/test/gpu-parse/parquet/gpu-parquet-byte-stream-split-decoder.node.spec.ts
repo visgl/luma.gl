@@ -8,7 +8,7 @@ import {
   GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE,
   getGPUParquetByteStreamSplitShaderSource,
   makeGPUParquetByteStreamSplitStats
-} from '@luma.gl/gpu-parse';
+} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';

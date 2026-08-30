@@ -127,6 +127,10 @@ export {
 
 export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
+export {GPUUint32Gather} from './gpu-uint32-gather';
+export type {GPUUint32GatherProps} from './gpu-uint32-gather';
+export {GPUByteRangeGather} from './gpu-byte-range-gather';
+export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
 export {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples

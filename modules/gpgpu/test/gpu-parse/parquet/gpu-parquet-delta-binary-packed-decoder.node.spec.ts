@@ -8,7 +8,7 @@ import {
   GPUParquetDeltaBinaryPackedUnpacker,
   getGPUParquetDeltaBinaryPackedShaderSource,
   parseParquetDeltaBinaryPackedPlan
-} from '@luma.gl/gpu-parse';
+} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';

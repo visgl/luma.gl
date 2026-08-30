@@ -25,6 +25,12 @@ export {
   type ParquetRleBitPackedRunPlan
 } from './parquet/parquet-rle-bit-packed';
 export {
+  parseParquetBitPackedRunPlan,
+  parseParquetDictionaryIndicesPlan,
+  parseParquetLengthPrefixedRleBitPackedRunPlan,
+  type ParquetDictionaryIndicesPlan
+} from './parquet/parquet-rle-framing';
+export {
   GPUParquetRleBitPackedDecoder,
   GPU_PARQUET_RLE_BIT_PACKED_WORKGROUP_SIZE,
   getGPUParquetRleBitPackedShaderSource,
@@ -57,3 +63,50 @@ export {
   GPUParquetDeltaBinaryPackedDecoder,
   type GPUParquetDeltaBinaryPackedDecoderProps
 } from './parquet/gpu-parquet-delta-binary-packed-decoder';
+export {
+  LZ4_RAW_SEQUENCE_DESCRIPTOR_WORDS,
+  parseLZ4RawDecompressionPlan,
+  type LZ4RawDecompressionPlan
+} from './compression/lz4-raw-plan';
+export {
+  GPULZ4RawDecompressor,
+  GPU_LZ4_RAW_WORKGROUP_SIZE,
+  getGPULZ4RawShaderSource,
+  type GPULZ4RawDecompressorProps
+} from './compression/gpu-lz4-raw-decompressor';
+export {
+  GPUParquetPlainBooleanDecoder,
+  GPU_PARQUET_PLAIN_BOOLEAN_WORKGROUP_SIZE,
+  getGPUParquetPlainBooleanShaderSource,
+  type GPUParquetPlainBooleanDecoderProps
+} from './parquet/gpu-parquet-plain-boolean-decoder';
+export {
+  parseParquetDeltaLengthByteArrayPlan,
+  type ParquetDeltaLengthByteArrayPlan
+} from './parquet/parquet-delta-length-byte-array';
+export {
+  GPUParquetDeltaLengthByteArrayDecoder,
+  type GPUParquetDeltaLengthByteArrayDecoderProps
+} from './parquet/gpu-parquet-delta-length-byte-array-decoder';
+export {
+  parseParquetDeltaByteArrayPlan,
+  type ParquetDeltaByteArrayPlan
+} from './parquet/parquet-delta-byte-array';
+export {
+  GPUParquetDeltaByteArrayDecoder,
+  GPU_PARQUET_DELTA_BYTE_ARRAY_WORKGROUP_SIZE,
+  getGPUParquetDeltaByteArrayReconstructionShaderSource,
+  type GPUParquetDeltaByteArrayDecoderProps
+} from './parquet/gpu-parquet-delta-byte-array-decoder';
+export {
+  parseParquetPlainByteArrayPlan,
+  type ParquetPlainByteArrayPlan
+} from './parquet/parquet-plain-byte-array';
+export {
+  GPUParquetPlainByteArrayDecoder,
+  type GPUParquetPlainByteArrayDecoderProps
+} from './parquet/gpu-parquet-plain-byte-array-decoder';
+export {
+  GPUParquetByteArrayDictionaryDecoder,
+  type GPUParquetByteArrayDictionaryDecoderProps
+} from './parquet/gpu-parquet-byte-array-dictionary-decoder';

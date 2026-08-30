@@ -3,7 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPUParquetRleDictionaryDecoder, parseParquetRleBitPackedRunPlan} from '@luma.gl/gpu-parse';
+import {
+  GPUParquetRleDictionaryDecoder,
+  parseParquetRleBitPackedRunPlan
+} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';

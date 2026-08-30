@@ -6,7 +6,7 @@ import {Buffer} from '@luma.gl/core';
 import {
   GPUParquetDeltaBinaryPackedDecoder,
   parseParquetDeltaBinaryPackedPlan
-} from '@luma.gl/gpu-parse';
+} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';

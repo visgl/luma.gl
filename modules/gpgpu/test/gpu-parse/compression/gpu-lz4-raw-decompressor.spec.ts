@@ -3,27 +3,32 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPUParquetRleBitPackedDecoder, parseParquetRleBitPackedRunPlan} from '@luma.gl/gpu-parse';
+import {GPULZ4RawDecompressor, parseLZ4RawDecompressionPlan} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 
-test('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', async testCase => {
+test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     testCase.comment('WebGPU is not available');
     testCase.end();
     return;
   }
-  const encoded = Uint8Array.from([6, 5, 3, 0x88, 0xc6, 0xfa, 0, 0]);
-  const plan = parseParquetRleBitPackedRunPlan(encoded, 3, 8);
-  const inputBuffer = device.createBuffer({data: encoded, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const compressed = Uint8Array.from([0x14, 65, 1, 0, 0x50, 66, 67, 68, 69, 70]);
+  const plan = parseLZ4RawDecompressionPlan(compressed);
+  const paddedCompressed = new Uint8Array(12);
+  paddedCompressed.set(compressed);
+  const inputBuffer = device.createBuffer({
+    data: paddedCompressed,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
   const descriptorBuffer = device.createBuffer({
-    data: plan.runDescriptors,
+    data: plan.sequenceDescriptors,
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const outputBuffer = device.createBuffer({
-    byteLength: 8 * Uint32Array.BYTES_PER_ELEMENT,
+    byteLength: 16,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
   const graph = new GPUCommandGraph(device);
@@ -39,24 +44,23 @@ test('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', asyn
     {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
     outputBuffer
   );
-  new GPUParquetRleBitPackedDecoder({
-    input: graph.createDataView(inputHandle, {format: 'uint32', length: 2}),
-    runDescriptors: graph.createDataView(descriptorHandle, {format: 'uint32', length: 8}),
-    output: graph.createDataView(outputHandle, {format: 'uint32', length: 8}),
-    encodedByteLength: plan.bytesConsumed,
-    valueCount: 8,
-    runCount: plan.runCount,
-    bitWidth: 3
+  new GPULZ4RawDecompressor({
+    input: graph.createDataView(inputHandle, {format: 'uint32', length: 3}),
+    sequenceDescriptors: graph.createDataView(descriptorHandle, {format: 'uint32', length: 10}),
+    output: graph.createDataView(outputHandle, {format: 'uint32', length: 4}),
+    compressedByteLength: plan.compressedByteLength,
+    outputByteLength: plan.outputByteLength,
+    sequenceCount: plan.sequenceCount
   }).addToGraph(graph);
   const compiled = graph.compile();
   try {
-    const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-hybrid-test'});
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-lz4-raw-test'});
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
     testCase.deepEqual(
-      Array.from(new Uint32Array(result.buffer, result.byteOffset, 8)),
-      [5, 5, 5, 0, 1, 2, 3, 4]
+      Array.from(new Uint8Array(result.buffer, result.byteOffset, plan.outputByteLength)),
+      [65, 65, 65, 65, 65, 65, 65, 65, 65, 66, 67, 68, 69, 70]
     );
   } finally {
     compiled.destroy();

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getParquetPhysicalTypeByteWidth, planParquetColumnDecode} from '@luma.gl/gpu-parse';
+import {getParquetPhysicalTypeByteWidth, planParquetColumnDecode} from '@luma.gl/gpgpu/gpu-parse';
 import test from 'test/utils/vitest-tape';
 
 test('planParquetColumnDecode recognizes zero-copy PLAIN physical payloads', testCase => {
