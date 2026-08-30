@@ -78,6 +78,7 @@ export class GPUParquetLevelLayout {
       }
     }
     if (props.definitionLevels.length === 0) {
+      addEmptyPass(graph, props);
       return;
     }
     addClassifyPass(graph, props);
@@ -101,6 +102,52 @@ export class GPUParquetLevelLayout {
     }).addToGraph(graph);
     addFinalizePass(graph, props);
   }
+}
+
+function addEmptyPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: Readonly<GPUParquetLevelLayoutProps>
+): void {
+  const dispatchLayout = getBoundedDispatchLayout(
+    'GPUParquetLevelLayoutEmpty',
+    1,
+    WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  const source = `const LIST_OFFSET: u32 = ${getViewElementOffset(props.listOffsets)}u;
+const NON_NULL_COUNT_OFFSET: u32 = ${getViewElementOffset(props.nonNullValueCount)}u;
+const ELEMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.elementCount)}u;
+const ROW_COUNT_OFFSET: u32 = ${getViewElementOffset(props.rowCount)}u;
+@group(0) @binding(0) var<storage, read_write> listOffsets: array<u32>;
+@group(0) @binding(1) var<storage, read_write> nonNullValueCount: array<u32>;
+@group(0) @binding(2) var<storage, read_write> elementCount: array<u32>;
+@group(0) @binding(3) var<storage, read_write> rowCount: array<u32>;
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3u,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, WORKGROUP_SIZE)}
+  if (index > 0u) { return; }
+  listOffsets[LIST_OFFSET] = 0u;
+  nonNullValueCount[NON_NULL_COUNT_OFFSET] = 0u;
+  elementCount[ELEMENT_COUNT_OFFSET] = 0u;
+  rowCount[ROW_COUNT_OFFSET] = 0u;
+}`;
+  addPass(
+    graph,
+    `${props.id}-empty`,
+    'GPUParquetLevelLayoutEmpty',
+    source,
+    1,
+    [
+      {name: 'listOffsets', view: props.listOffsets, usage: 'storage-write'},
+      {name: 'nonNullValueCount', view: props.nonNullValueCount, usage: 'storage-write'},
+      {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
+      {name: 'rowCount', view: props.rowCount, usage: 'storage-write'}
+    ],
+    dispatchLayout
+  );
 }
 
 function addClassifyPass<Parameters>(

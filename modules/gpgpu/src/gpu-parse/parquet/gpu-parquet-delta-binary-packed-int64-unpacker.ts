@@ -120,13 +120,19 @@ fn main(
   let minimumLow = descriptors[descriptorIndex + 4u];
   let minimumHigh = descriptors[descriptorIndex + 5u];
   let valueIndexWithinBlock = outputIndex - descriptorOutputOffset;
-  let firstBitIndex = payloadByteOffset * 8u + valueIndexWithinBlock * bitWidth;
+  let wholeBytesPerValue = bitWidth / 8u;
+  let remainingBitsPerValue = bitWidth & 7u;
+  let remainingBitProduct = (valueIndexWithinBlock & 7u) * remainingBitsPerValue;
+  let firstByteIndex = payloadByteOffset + valueIndexWithinBlock * wholeBytesPerValue +
+    (valueIndexWithinBlock / 8u) * remainingBitsPerValue + remainingBitProduct / 8u;
+  let firstBitWithinByte = remainingBitProduct & 7u;
   var adjustedLow = 0u;
   var adjustedHigh = 0u;
   for (var bitIndex = 0u; bitIndex < 64u; bitIndex++) {
     if (bitIndex < bitWidth) {
-      let sourceBitIndex = firstBitIndex + bitIndex;
-      let bit = (readEncodedByte(sourceBitIndex / 8u) >> (sourceBitIndex & 7u)) & 1u;
+      let relativeBitIndex = firstBitWithinByte + bitIndex;
+      let bit = (readEncodedByte(firstByteIndex + relativeBitIndex / 8u) >>
+        (relativeBitIndex & 7u)) & 1u;
       if (bitIndex < 32u) {
         adjustedLow |= bit << bitIndex;
       } else {

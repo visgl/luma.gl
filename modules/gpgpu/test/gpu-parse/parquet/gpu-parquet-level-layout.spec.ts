@@ -92,3 +92,67 @@ test('GPUParquetLevelLayout materializes validity, rows, and list offsets', asyn
   }
   testCase.end();
 });
+
+test('GPUParquetLevelLayout clears counts for an empty level stream', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+  const graph = new GPUCommandGraph(device);
+  const emptyBuffer = device.createBuffer({byteLength: 4, usage: Buffer.STORAGE});
+  const staleValue = Uint32Array.from([0xffffffff]);
+  const outputBuffers = Array.from({length: 4}, () =>
+    device.createBuffer({
+      data: staleValue,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+    })
+  );
+  const emptyHandle = graph.importBuffer(
+    {id: 'empty', byteLength: 4, usage: emptyBuffer.usage},
+    emptyBuffer
+  );
+  const emptyView = graph.createDataView(emptyHandle, {format: 'uint32', length: 0});
+  const outputViews = outputBuffers.map((buffer, index) => {
+    const handle = graph.importBuffer(
+      {id: `empty-output-${index}`, byteLength: 4, usage: buffer.usage},
+      buffer
+    );
+    return graph.createDataView(handle, {format: 'uint32', length: 1});
+  });
+  new GPUParquetLevelLayout({
+    definitionLevels: emptyView,
+    repetitionLevels: emptyView,
+    validity: emptyView,
+    valueOffsets: emptyView,
+    elementFlags: emptyView,
+    elementOffsets: emptyView,
+    rowStartFlags: emptyView,
+    rowIndices: emptyView,
+    listOffsets: outputViews[0],
+    nonNullValueCount: outputViews[1],
+    elementCount: outputViews[2],
+    rowCount: outputViews[3],
+    maxDefinitionLevel: 0,
+    elementDefinitionLevel: 0,
+    rowStartRepetitionLevel: 0
+  }).addToGraph(graph);
+  const compiled = graph.compile();
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-empty-level-layout-test'});
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+    for (const buffer of outputBuffers) {
+      const result = await buffer.readAsync();
+      testCase.equal(new Uint32Array(result.buffer, result.byteOffset, 1)[0], 0);
+    }
+  } finally {
+    compiled.destroy();
+    emptyBuffer.destroy();
+    for (const buffer of outputBuffers) {
+      buffer.destroy();
+    }
+  }
+  testCase.end();
+});
