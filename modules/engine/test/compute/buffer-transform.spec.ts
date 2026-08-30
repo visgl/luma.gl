@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {BufferTransform} from '@luma.gl/engine';
 import {Buffer, Device} from '@luma.gl/core';
@@ -21,14 +21,13 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test('BufferTransform#constructor', async t => {
+it('BufferTransform#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  t.ok(createBufferTransform(webglDevice), 'WebGL succeeds');
-  t.end();
+  expect(createBufferTransform(webglDevice), 'WebGL succeeds').toBeTruthy();
 });
 
-test('BufferTransform#run', async t => {
+it('BufferTransform#run', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
@@ -43,9 +42,7 @@ test('BufferTransform#run', async t => {
 
   const bytes = await transform.readAsync('dst');
   const array = new Float32Array(bytes.buffer, bytes.byteOffset, elementCount);
-  t.deepEqual(array, DST_ARRAY, 'output transformed');
-
-  t.end();
+  expect(array, 'output transformed').toEqual(DST_ARRAY);
 });
 
 function createBufferTransform(
