@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {type ShaderLayout, type BufferLayout} from '@luma.gl/core';
 import {sortedBufferLayoutByShaderSourceLocations} from '@luma.gl/engine/utils/buffer-layout-order';
 
@@ -134,11 +134,9 @@ const sortedBufferLayout = [
   }
 ];
 
-test('sortedBufferLayoutByShaderSourceLocations', t => {
+it('sortedBufferLayoutByShaderSourceLocations', () => {
   const result = sortedBufferLayoutByShaderSourceLocations(shaderLayout, bufferLayout);
   for (let i = 0; i < sortedBufferLayout.length; i++) {
-    t.deepEqual(result[i], sortedBufferLayout[i], `Buffer layout order is correct`);
-    // t.comment(JSON.stringify(result[i], null, 2));
+    expect(result[i], 'Buffer layout order is correct').toEqual(sortedBufferLayout[i]);
   }
-  t.end();
 });
