@@ -253,12 +253,12 @@ function simplifyGLTFMesh(
     ]) {
       const attribute = primitive.attributes[semantic];
       if (attribute) {
-        attributes.push({values: attribute.value, size: attribute.components});
+        attributes.push({values: getNumericAccessorValues(attribute), size: attribute.components});
       }
     }
 
     const simplified = simplifyMesh({
-      positions: positions.value,
+      positions: getNumericAccessorValues(positions),
       indices: sourceIndices,
       targetRatio,
       attributes,
@@ -302,6 +302,16 @@ function simplifyGLTFMesh(
     primitives,
     extras: {...sourceMesh.extras, geometricError}
   };
+}
+
+/** glTF component types are numeric even though loaders.gl's shared table type also includes BigInt. */
+function getNumericAccessorValues(
+  accessor: GLTFAccessorPostprocessed
+): Exclude<GLTFAccessorPostprocessed['value'], BigInt64Array | BigUint64Array> {
+  if (accessor.value instanceof BigInt64Array || accessor.value instanceof BigUint64Array) {
+    throw new Error('glTF mesh accessors cannot use BigInt component arrays');
+  }
+  return accessor.value;
 }
 
 function getPrimitiveIndices(

@@ -262,15 +262,12 @@ function translateNode(
       }
 
       const positionAccessor = primitive.attributes['POSITION'];
-      for (
-        let positionIndex = 0;
-        positionIndex < positionAccessor.value.length;
-        positionIndex += 3
-      ) {
+      const positionValues = getNumericAccessorValues(positionAccessor);
+      for (let positionIndex = 0; positionIndex < positionValues.length; positionIndex += 3) {
         const position = transform.transformAsPoint([
-          positionAccessor.value[positionIndex],
-          positionAccessor.value[positionIndex + 1],
-          positionAccessor.value[positionIndex + 2]
+          positionValues[positionIndex],
+          positionValues[positionIndex + 1],
+          positionValues[positionIndex + 2]
         ]);
         extendBounds(state.bounds, position);
       }
@@ -313,36 +310,37 @@ function getSurfaceIdentifier(
   surfaceIdentifier = createIdentifier(meshIdentifier, `primitive-${primitiveIndex}`, state);
   const geometry: JSONGeometryDeclaration = {
     '@@type': 'triangle',
-    'vertex.position': Array.from(positionAccessor.value)
+    'vertex.position': Array.from(getNumericAccessorValues(positionAccessor))
   };
   const normalAccessor = primitive.attributes['NORMAL'];
   if (normalAccessor) {
-    geometry['vertex.normal'] = Array.from(normalAccessor.value);
+    geometry['vertex.normal'] = Array.from(getNumericAccessorValues(normalAccessor));
   }
   const tangentAccessor = primitive.attributes['TANGENT'];
   if (tangentAccessor) {
-    geometry['vertex.tangent'] = Array.from(tangentAccessor.value);
+    geometry['vertex.tangent'] = Array.from(getNumericAccessorValues(tangentAccessor));
   }
   const jointAccessor = primitive.attributes['JOINTS_0'];
   if (jointAccessor) {
-    geometry['vertex.joint'] = Array.from(jointAccessor.value);
+    geometry['vertex.joint'] = Array.from(getNumericAccessorValues(jointAccessor));
   }
   const jointWeightAccessor = primitive.attributes['WEIGHTS_0'];
   if (jointWeightAccessor) {
+    const jointWeightValues = getNumericAccessorValues(jointWeightAccessor);
     const maximumJointWeight = jointWeightAccessor.normalized
-      ? jointWeightAccessor.value instanceof Uint8Array
+      ? jointWeightValues instanceof Uint8Array
         ? 255
-        : jointWeightAccessor.value instanceof Uint16Array
+        : jointWeightValues instanceof Uint16Array
           ? 65535
           : 1
       : 1;
     geometry['vertex.weight'] = Array.from(
-      jointWeightAccessor.value,
+      jointWeightValues,
       weight => weight / maximumJointWeight
     );
   }
   if (primitive.indices) {
-    geometry['primitive.index'] = Array.from(primitive.indices.value);
+    geometry['primitive.index'] = Array.from(getNumericAccessorValues(primitive.indices));
   }
 
   const vertexColors = getVertexColors(primitive, positionAccessor.count);
@@ -351,11 +349,13 @@ function getSurfaceIdentifier(
   }
   const textureCoordinates = primitive.attributes['TEXCOORD_0'];
   if (textureCoordinates) {
-    geometry['vertex.attribute1'] = Array.from(textureCoordinates.value);
+    geometry['vertex.attribute1'] = Array.from(getNumericAccessorValues(textureCoordinates));
   }
   const additionalTextureCoordinates = primitive.attributes['TEXCOORD_1'];
   if (additionalTextureCoordinates) {
-    geometry['vertex.attribute2'] = Array.from(additionalTextureCoordinates.value);
+    geometry['vertex.attribute2'] = Array.from(
+      getNumericAccessorValues(additionalTextureCoordinates)
+    );
   }
   if (primitive.targets?.length) {
     geometry.morphTargets = primitive.targets.map(target => {
@@ -367,7 +367,7 @@ function getSurfaceIdentifier(
             ? state.gltf.accessors[accessorReference]
             : accessorReference;
         if (accessor) {
-          attributes[attributeName] = Array.from(accessor.value);
+          attributes[attributeName] = Array.from(getNumericAccessorValues(accessor));
         }
       }
       return attributes;
@@ -387,7 +387,11 @@ function getSurfaceIdentifier(
         node: node.id,
         joints: sourceSkin.joints.map(jointIndex => state.gltf.nodes[jointIndex].id),
         ...(sourceSkin.inverseBindMatrices?.value
-          ? {inverseBindMatrices: Array.from(sourceSkin.inverseBindMatrices.value)}
+          ? {
+              inverseBindMatrices: Array.from(
+                getNumericAccessorValues(sourceSkin.inverseBindMatrices)
+              )
+            }
           : {})
       }
     : undefined;
@@ -532,6 +536,7 @@ function getVertexColors(
   }
 
   const colorSize = colorAccessor.components === 4 ? 4 : 3;
+  const colorValues = getNumericAccessorValues(colorAccessor);
   const colors = new Array<number>(vertexCount * colorSize);
   for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++) {
     const sourceColor = getAccessorColor(colorAccessor, vertexIndex);
@@ -540,7 +545,7 @@ function getVertexColors(
     colors[offset + 1] = sourceColor[1];
     colors[offset + 2] = sourceColor[2];
     if (colorSize === 4) {
-      const sourceAlpha = colorAccessor.value[vertexIndex * colorAccessor.components + 3];
+      const sourceAlpha = colorValues[vertexIndex * colorAccessor.components + 3];
       const divisor = colorAccessor.normalized
         ? colorAccessor.componentType === 5121
           ? 255
@@ -562,6 +567,7 @@ function getAccessorColor(
     return [1, 1, 1];
   }
   const offset = vertexIndex * accessor.components;
+  const values = getNumericAccessorValues(accessor);
   const divisor = accessor.normalized
     ? accessor.componentType === 5121
       ? 255
@@ -569,11 +575,17 @@ function getAccessorColor(
         ? 65535
         : 1
     : 1;
-  return [
-    accessor.value[offset] / divisor,
-    accessor.value[offset + 1] / divisor,
-    accessor.value[offset + 2] / divisor
-  ];
+  return [values[offset] / divisor, values[offset + 1] / divisor, values[offset + 2] / divisor];
+}
+
+/** glTF component types are numeric even though loaders.gl's shared table type also includes BigInt. */
+function getNumericAccessorValues(
+  accessor: GLTFAccessorPostprocessed
+): Exclude<GLTFAccessorPostprocessed['value'], BigInt64Array | BigUint64Array> {
+  if (accessor.value instanceof BigInt64Array || accessor.value instanceof BigUint64Array) {
+    throw new Error('glTF accessors cannot use BigInt component arrays');
+  }
+  return accessor.value;
 }
 
 function addMaterialTexture(
