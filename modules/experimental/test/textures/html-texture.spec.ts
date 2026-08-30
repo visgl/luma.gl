@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {Texture, type Device} from '@luma.gl/core';
 import {HTMLTexture} from '@luma.gl/experimental';
 import {getNullTestDevice} from '@luma.gl/test-utils';
@@ -54,101 +54,201 @@ class FakeCanvas {
   }
 }
 
-test('HTMLTexture configures paint cycle and tracks DOM uploads', async t => {
-  const device = await getNullTestDevice();
-  const fakeCanvas = new FakeCanvas();
-  const canvas = fakeCanvas as unknown as HTMLCanvasElement;
-  const element = {
+function makeSource(
+  canvas: HTMLCanvasElement,
+  bounds: {width: number; height: number} = {width: 2, height: 2}
+): Element {
+  return {
     parentElement: canvas,
-    getBoundingClientRect: () => ({width: 2, height: 2})
+    getBoundingClientRect: () => bounds
   } as unknown as Element;
-  const texture = new HTMLTexture(device, {
-    canvas,
-    element,
-    width: 2,
-    height: 2
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe('HTMLTexture', () => {
+  it('configures the paint cycle, uploads the DOM source, and releases its binding', async () => {
+    const device = await getNullTestDevice();
+    const fakeCanvas = new FakeCanvas();
+    const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+    const texture = new HTMLTexture(device, {
+      canvas,
+      element: makeSource(canvas),
+      width: 2,
+      height: 2
+    });
+    const initialTimestamp = texture.updateTimestamp;
+    const copyElementImage = vi.spyOn(texture.texture.constructor.prototype, 'copyElementImage');
+
+    expect(texture.isReady).toBe(true);
+    expect(texture[Symbol.toStringTag]).toBe('HTMLTexture');
+    expect(texture.toString()).toContain(':2x2px:(ready)');
+    expect(fakeCanvas.hasAttribute('layoutsubtree')).toBe(true);
+    expect(fakeCanvas.requestPaintCount).toBe(1);
+    expect(texture.texture.props.usage).toBe(Texture.SAMPLE | Texture.COPY_DST | Texture.RENDER);
+    expect(texture.resolveTextureBinding(TEXTURE_BINDING)).toBe(texture.texture);
+    expect(() => texture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING)).toThrow(
+      /use texture_2d for copied HTML path/
+    );
+
+    texture.requestUpdate();
+    expect(fakeCanvas.requestPaintCount).toBe(2);
+
+    fakeCanvas.dispatch('paint');
+    expect(copyElementImage).toHaveBeenCalledWith({
+      element: texture.element,
+      height: 2,
+      sourceHeight: 2,
+      sourceWidth: 2,
+      width: 2
+    });
+    expect(texture.updateTimestamp).toBeGreaterThan(initialTimestamp);
+
+    texture.destroy();
+    const destroyTimestamp = texture.updateTimestamp;
+    const paintCount = fakeCanvas.requestPaintCount;
+    expect(texture.isReady).toBe(false);
+    expect(texture.toString()).toContain('(destroyed)');
+    expect(texture.resolveTextureBinding(TEXTURE_BINDING)).toBeNull();
+    expect(texture.resize({width: 4, height: 4})).toBe(false);
+    texture.requestUpdate();
+    texture.destroy();
+    fakeCanvas.dispatch('paint');
+    expect(fakeCanvas.requestPaintCount).toBe(paintCount);
+    expect(texture.updateTimestamp).toBe(destroyTimestamp);
   });
-  const initialTimestamp = texture.updateTimestamp;
 
-  t.true(texture.isReady, 'copied HTML texture is ready after allocation');
-  t.true(fakeCanvas.hasAttribute('layoutsubtree'), 'constructor enables layoutsubtree');
-  t.equal(fakeCanvas.requestPaintCount, 1, 'constructor requests the first paint');
-  t.equal(
-    texture.texture.props.usage,
-    Texture.SAMPLE | Texture.COPY_DST | Texture.RENDER,
-    'default texture usage supports WebGPU element-image copies'
-  );
-  t.equal(
-    texture.resolveTextureBinding(TEXTURE_BINDING),
-    texture.texture,
-    'ordinary texture slots resolve copied HTML texture'
-  );
-  t.throws(
-    () => texture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
-    /use texture_2d for copied HTML path/,
-    'HTML textures do not resolve through external texture slots'
-  );
+  it('resizes bindings, updates samplers, and preserves explicit copy dimensions', async () => {
+    const device = await getNullTestDevice();
+    const fakeCanvas = new FakeCanvas();
+    const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+    const texture = new HTMLTexture(device, {
+      canvas,
+      element: makeSource(canvas, {width: 8, height: 6}),
+      id: 'html-texture-test',
+      sourceHeight: 5,
+      sourceWidth: 7,
+      width: 2,
+      height: 2
+    });
 
-  texture.requestUpdate();
-  t.equal(fakeCanvas.requestPaintCount, 2, 'requestUpdate delegates to canvas.requestPaint');
+    expect(texture.resize({width: 2, height: 2})).toBe(false);
+    expect(texture.resize({width: 4, height: 3})).toBe(true);
+    expect(texture.texture.id).toBe('html-texture-test');
+    expect(texture.texture.width).toBe(4);
+    expect(texture.texture.height).toBe(3);
+    expect(texture.generation).toBe(1);
 
-  fakeCanvas.dispatch('paint');
-  t.ok(texture.updateTimestamp > initialTimestamp, 'paint uploads element and updates timestamp');
+    const copyElementImage = vi.spyOn(texture.texture.constructor.prototype, 'copyElementImage');
+    fakeCanvas.dispatch('paint');
+    expect(copyElementImage).toHaveBeenCalledWith({
+      element: texture.element,
+      height: 3,
+      sourceHeight: 5,
+      sourceWidth: 7,
+      width: 4
+    });
 
-  texture.destroy();
-  t.false(texture.isReady, 'destroy makes HTML texture unavailable');
-  t.equal(texture.resolveTextureBinding(TEXTURE_BINDING), null, 'destroy clears texture binding');
-  const destroyTimestamp = texture.updateTimestamp;
-  fakeCanvas.dispatch('paint');
-  t.equal(texture.updateTimestamp, destroyTimestamp, 'destroy removes paint listener');
+    const setSampler = vi.spyOn(texture.texture.constructor.prototype, 'setSampler');
+    const sampler = {magFilter: 'nearest'} as const;
+    texture.setSampler(sampler);
+    expect(setSampler).toHaveBeenCalledWith(sampler);
+    expect(texture.generation).toBe(2);
+    texture.destroy();
+  });
 
-  t.end();
-});
+  it('rejects invalid DOM relationships and missing paint support', async () => {
+    const device = await getNullTestDevice();
+    const fakeCanvas = new FakeCanvas();
+    const canvas = fakeCanvas as unknown as HTMLCanvasElement;
 
-test('HTMLTexture rejects elements that are not direct canvas children', async t => {
-  const device = await getNullTestDevice();
-  const fakeCanvas = new FakeCanvas();
-  const canvas = fakeCanvas as unknown as HTMLCanvasElement;
-  const element = {parentElement: {}} as unknown as Element;
+    expect(
+      () =>
+        new HTMLTexture(device, {
+          canvas,
+          element: {parentElement: {}} as unknown as Element,
+          width: 2,
+          height: 2
+        })
+    ).toThrow(/direct child/);
 
-  t.throws(
-    () =>
-      new HTMLTexture(device, {
-        canvas,
-        element,
-        width: 2,
-        height: 2
-      }),
-    /direct child/,
-    'nested source elements are rejected before browser upload'
-  );
+    const canvasWithoutPaint = {
+      addEventListener: vi.fn(),
+      hasAttribute: () => true,
+      setAttribute: vi.fn()
+    } as unknown as HTMLCanvasElement;
+    expect(
+      () =>
+        new HTMLTexture(device, {
+          canvas: canvasWithoutPaint,
+          element: makeSource(canvasWithoutPaint),
+          width: 2,
+          height: 2
+        })
+    ).toThrow(/requestPaint\(\) is not available/);
+  });
 
-  t.end();
-});
+  it('detects and configures HTML-in-Canvas support', () => {
+    const fakeCanvas = new FakeCanvas();
+    const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+    const supportedDevice = {
+      features: {has: (feature: string) => feature === 'html-in-canvas'}
+    } as unknown as Device;
+    const unsupportedDevice = {
+      features: {has: () => false}
+    } as unknown as Device;
 
-test('HTMLTexture.isSupported gates luma.gl HTML-in-Canvas feature', t => {
-  const fakeCanvas = new FakeCanvas();
-  const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+    expect(HTMLTexture.isSupported(supportedDevice, canvas)).toBe(true);
+    expect((canvas as HTMLCanvasElement & {layoutSubtree?: boolean}).layoutSubtree).toBe(true);
+    expect(HTMLTexture.isSupported(unsupportedDevice, canvas)).toBe(false);
+    expect(HTMLTexture.isSupported(supportedDevice, null)).toBe(false);
+  });
 
-  const supportedDevice = {
-    features: {
-      has: (feature: string) => feature === 'html-in-canvas'
-    }
-  };
-  const unsupportedDevice = {
-    features: {
-      has: () => false
-    }
-  };
+  it('starts and disconnects requested mutation and resize observers', async () => {
+    const mutationDisconnect = vi.fn();
+    const resizeDisconnect = vi.fn();
+    const mutationObserve = vi.fn();
+    const resizeObserve = vi.fn();
+    vi.stubGlobal(
+      'MutationObserver',
+      class {
+        disconnect = mutationDisconnect;
+        observe = mutationObserve;
+      }
+    );
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        disconnect = resizeDisconnect;
+        observe = resizeObserve;
+      }
+    );
 
-  t.true(
-    HTMLTexture.isSupported(supportedDevice as unknown as Device, canvas),
-    'luma.gl HTML-in-Canvas feature is supported'
-  );
-  t.false(
-    HTMLTexture.isSupported(unsupportedDevice as unknown as Device, canvas),
-    'missing luma.gl HTML-in-Canvas feature is unsupported'
-  );
+    const device = await getNullTestDevice();
+    const fakeCanvas = new FakeCanvas();
+    const canvas = fakeCanvas as unknown as HTMLCanvasElement;
+    const element = makeSource(canvas);
+    const texture = new HTMLTexture(device, {
+      autoUpdate: true,
+      canvas,
+      element,
+      height: 2,
+      observeResize: true,
+      width: 2
+    });
 
-  t.end();
+    expect(mutationObserve).toHaveBeenCalledWith(element, {
+      attributes: true,
+      characterData: true,
+      childList: true,
+      subtree: true
+    });
+    expect(resizeObserve).toHaveBeenCalledWith(element);
+    texture.destroy();
+    expect(mutationDisconnect).toHaveBeenCalledOnce();
+    expect(resizeDisconnect).toHaveBeenCalledOnce();
+  });
 });
