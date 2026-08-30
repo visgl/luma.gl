@@ -8,7 +8,7 @@ import {
   convertGeoArrowTableToDenseUnion,
   convertGeoArrowVectorToDenseUnion,
   tessellateArrowPolygons
-} from '@math.gl/geoarrow';
+} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 const GEOMETRY_FIXTURE_PAIRS = [
@@ -75,7 +75,7 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
     [
       {typeId: 1, value: [30, 10]},
       {
-        typeId: 2,
+        typeId: 5,
         value: [
           [30, 10],
           [10, 30],
@@ -83,7 +83,7 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
         ]
       },
       {
-        typeId: 3,
+        typeId: 9,
         value: [
           [
             [30, 10],
@@ -102,6 +102,19 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
     convertedGeometry,
     'returns an existing DenseUnion vector unchanged'
   );
+  t.end();
+});
+
+test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
+  const geometry = arrow.vectorFromArray(
+    ['POINT (1 2)', null, 'LINESTRING (0 0, 1 1)'],
+    new arrow.Utf8()
+  );
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {
+    encoding: 'geoarrow.wkt'
+  });
+
+  t.equal(convertedGeometry.get(1), null, 'preserves a null through the dense-union adapter');
   t.end();
 });
 
