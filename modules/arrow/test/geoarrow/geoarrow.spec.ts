@@ -54,6 +54,23 @@ test('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate 
   t.end();
 });
 
+test('convertGeoArrowVectorToInterleaved preserves validity after a byte-aligned slice', t => {
+  const coordinates = Array.from({length: 12}, (_, index) => [index, index + 100, index + 200]);
+  const validRows = Array.from({length: 12}, () => true);
+  validRows[0] = false;
+  validRows[9] = false;
+  const convertedVector = convertGeoArrowVectorToInterleaved(
+    makeSeparatedPointVector(coordinates, validRows).slice(8, 11)
+  );
+
+  t.deepEqual(
+    getVectorRows(convertedVector),
+    [coordinates[8], null, coordinates[10]],
+    'uses the full Arrow validity bitmap offset'
+  );
+  t.end();
+});
+
 test('makeGeoArrowColumnFromArrowVector borrows Arrow coordinate buffers', t => {
   const vector = makeSeparatedPointVector([
     [1, 2, 3],

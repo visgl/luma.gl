@@ -233,7 +233,7 @@ function makeGeoArrowArrayFromArrowData(data: Data): GeoArrowArray {
 
 function makeGeoArrowValidity(data: Data): GeoArrowValidity | undefined {
   if (data.nullCount <= 0 || !data.nullBitmap || data.nullBitmap.length === 0) return undefined;
-  return {values: data.nullBitmap, bitOffset: data.offset & 7};
+  return {values: data.nullBitmap, bitOffset: data.offset};
 }
 
 function makeArrowDataFromGeoArrowArray(

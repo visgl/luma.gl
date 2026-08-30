@@ -77,6 +77,7 @@ const GEOARROW_SERIALIZED_ENCODINGS = new Set<GeoArrowSerializedEncoding>([
   'geoarrow.wkb',
   'geoarrow.wkt'
 ]);
+const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 /** Converts separated GeoArrow Struct coordinates in a vector to interleaved FixedSizeList rows. */
@@ -150,7 +151,9 @@ export function convertGeoArrowVectorToDenseUnion<T extends ArrowDataType>(
     coordinateLayout: null
   });
   const decodedColumn =
-    encoding === 'geoarrow.wkb' ? decodeGeoArrowWKB(sourceColumn) : decodeGeoArrowWKT(sourceColumn);
+    encoding === 'geoarrow.wkb'
+      ? decodeGeoArrowWKB(sourceColumn)
+      : decodeGeoArrowWKT(stripEWKTSRIDPrefixes(sourceColumn));
   assertNoGeometryCollections(decodedColumn);
   const unionColumn = convertGeoArrowColumn(decodedColumn, {encoding: 'geoarrow.geometry'});
   const chunkedColumn = splitGeoArrowColumn(
@@ -236,11 +239,62 @@ function getSerializedBytes(array: GeoArrowSerialized, rowIndex: number): Uint8A
 }
 
 function inferWKTDimension(wkt: string): GeoArrowDimension {
-  const dimensionToken = /^\s*[a-z]+\s+(ZM|Z|M)\b/i.exec(wkt)?.[1]?.toUpperCase();
+  const normalizedWKT = stripEWKTSRIDPrefix(wkt);
+  const dimensionToken = /^\s*[a-z]+\s+(ZM|Z|M)\b/i.exec(normalizedWKT)?.[1]?.toUpperCase();
   if (dimensionToken === 'ZM') return 'xyzm';
   if (dimensionToken === 'M') return 'xym';
   if (dimensionToken === 'Z') return 'xyz';
   return 'xy';
+}
+
+function stripEWKTSRIDPrefixes(column: GeoArrowColumn): GeoArrowColumn {
+  const chunks = column.chunks.map(chunk => {
+    if (chunk.kind !== 'serialized') {
+      throw new Error('Serialized column contains native storage');
+    }
+    const rows: Uint8Array[] = [];
+    let byteLength = 0;
+    let changed = false;
+    for (let rowIndex = 0; rowIndex < chunk.length; rowIndex++) {
+      const bytes = getSerializedBytes(chunk, rowIndex);
+      if (!isGeoArrowValueValid(chunk.validity, rowIndex)) {
+        rows.push(bytes);
+        byteLength += bytes.byteLength;
+        continue;
+      }
+      const wkt = textDecoder.decode(bytes);
+      const normalizedWKT = stripEWKTSRIDPrefix(wkt);
+      const normalizedBytes = normalizedWKT === wkt ? bytes : textEncoder.encode(normalizedWKT);
+      changed ||= normalizedBytes !== bytes;
+      rows.push(normalizedBytes);
+      byteLength += normalizedBytes.byteLength;
+    }
+    if (!changed) return chunk;
+
+    const values = new Uint8Array(byteLength);
+    const offsets = new Int32Array(chunk.length + 1);
+    let byteOffset = 0;
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      values.set(rows[rowIndex], byteOffset);
+      byteOffset += rows[rowIndex].byteLength;
+      offsets[rowIndex + 1] = byteOffset;
+    }
+    return {
+      kind: 'serialized' as const,
+      encoding: 'utf8' as const,
+      length: chunk.length,
+      offsets,
+      values,
+      validity: chunk.validity
+    };
+  });
+  return chunks.every((chunk, index) => chunk === column.chunks[index])
+    ? column
+    : {...column, chunks};
+}
+
+function stripEWKTSRIDPrefix(wkt: string): string {
+  return wkt.replace(/^\s*SRID\s*=\s*\d+\s*;\s*/i, '');
 }
 
 function mergeGeoArrowDimensions(

@@ -118,6 +118,25 @@ test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
   t.end();
 });
 
+test('convertGeoArrowVectorToDenseUnion preserves EWKT dimensions and strips SRID prefixes', t => {
+  const geometry = arrow.vectorFromArray(['SRID=4326;POINT Z (1 2 3)'], new arrow.Utf8());
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {
+    encoding: 'geoarrow.wkt'
+  });
+
+  t.equal(
+    getDenseUnionCoordinateDimension(convertedGeometry),
+    3,
+    'preserves the EWKT coordinate dimension'
+  );
+  t.deepEqual(
+    getDenseUnionRows(convertedGeometry),
+    [{typeId: 2, value: [1, 2, 3]}],
+    'decodes the geometry after removing the SRID prefix'
+  );
+  t.end();
+});
+
 test('convertGeoArrowTableToDenseUnion converts explicitly selected WKT columns', t => {
   const sourceTable = new arrow.Table({
     id: arrow.vectorFromArray([7], new arrow.Int32()),
