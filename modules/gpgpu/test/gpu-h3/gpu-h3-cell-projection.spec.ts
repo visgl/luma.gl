@@ -33,7 +33,7 @@ test('GPUH3CellProjection matches h3-js for global, pentagon, and high-resolutio
     t.ok(
       longitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES &&
         latitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES,
-      `cell ${cells[cellIndex]} center agrees with h3-js`
+      `cell ${cells[cellIndex]} center agrees with h3-js (GPU ${longitudeLatitudes.values[cellIndex * 2]}, ${longitudeLatitudes.values[cellIndex * 2 + 1]}; CPU ${longitude}, ${latitude})`
     );
     t.equal(longitudeLatitudes.validity[cellIndex], 1, 'valid cell sets the validity mask');
 

@@ -1747,8 +1747,37 @@ fn dggs_h3_get_vertex_offset(resolution: u32, vertexIndex: u32) -> vec3i {
   return vertices[pointIndex];
 }
 
+// Boundary generation retains the original home-face coordinates. Center projection applies face
+// overage separately because rewriting the center face changes the substrate vertex construction.
+fn dggs_h3_get_boundary_center_face_ijk(index: vec2u) -> DggsH3FaceIJK {
+  if (!dggs_h3_is_valid_cell_id(index)) {
+    return DggsH3FaceIJK(0u, vec3i(0), 0u);
+  }
+  let baseCell = dggs_h3_get_base_cell(index);
+  if (dggs_h3_is_base_cell_pentagon(baseCell)) {
+    return DggsH3FaceIJK(0u, vec3i(0), 0u);
+  }
+
+  var faceIJK = dggs_h3_get_base_cell_home(baseCell);
+  let cellResolution = dggs_h3_get_resolution(index);
+  var resolution = 1u;
+  loop {
+    if (resolution > cellResolution) {
+      break;
+    }
+    if (dggs_h3_is_resolution_class_iii(resolution)) {
+      faceIJK.coord = dggs_h3_down_ap7(faceIJK.coord);
+    } else {
+      faceIJK.coord = dggs_h3_down_ap7r(faceIJK.coord);
+    }
+    faceIJK.coord = dggs_h3_neighbor(faceIJK.coord, dggs_h3_get_digit(index, resolution));
+    resolution += 1u;
+  }
+  return faceIJK;
+}
+
 fn dggs_h3_get_boundary_vertex(index: vec2u, vertexIndex: u32) -> DggsH3BoundaryVertex {
-  let center = dggs_h3_get_center_face_ijk(index);
+  let center = dggs_h3_get_boundary_center_face_ijk(index);
   if (center.valid == 0u) {
     return DggsH3BoundaryVertex(0u, vec3i(0), 0u, 0u);
   }
@@ -1793,19 +1822,6 @@ fn dggs_h3_ijk_to_hex2d(coord: vec3i) -> vec2f {
   return vec2f(i - 0.5 * j, j * DGGS_H3_SQRT3_2);
 }
 
-fn dggs_h3_get_center_lnglat(index: vec2u) -> vec2f {
-  let center = dggs_h3_get_center_face_ijk(index);
-  if (center.valid == 0u) {
-    return vec2f(0.0);
-  }
-  return dggs_h3_hex2d_to_lnglat(
-    dggs_h3_ijk_to_hex2d(center.coord),
-    center.face,
-    dggs_h3_get_resolution(index),
-    false
-  );
-}
-
 fn dggs_h3_get_center_unit_vector(index: vec2u) -> vec3f {
   let center = dggs_h3_get_center_face_ijk(index);
   if (center.valid == 0u) {
@@ -1835,6 +1851,17 @@ fn dggs_h3_get_center_unit_vector(index: vec2u) -> vec3f {
       hexPoint.x * dggs_h3_get_face_unit_vector_basis(center.face, 1u) +
       hexPoint.y * dggs_h3_get_face_unit_vector_basis(center.face, 2u)
     )
+  );
+}
+
+fn dggs_h3_get_center_lnglat(index: vec2u) -> vec2f {
+  let unitVector = dggs_h3_get_center_unit_vector(index);
+  if (dot(unitVector, unitVector) < 0.5) {
+    return vec2f(0.0);
+  }
+  return vec2f(
+    atan2(unitVector.y, unitVector.x) * DGGS_RADIANS_TO_DEGREES,
+    atan2(unitVector.z, length(unitVector.xy)) * DGGS_RADIANS_TO_DEGREES
   );
 }
 
