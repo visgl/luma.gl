@@ -92,6 +92,12 @@ export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-availa
 /** Effective WebGPU feature level reported by a created WebGPU device. */
 export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
 
+/** Information supplied when a device is lost. */
+export type DeviceLostInfo = {
+  reason: 'destroyed' | 'unknown';
+  message: string;
+};
+
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
   /** max number of TextureDimension1D */
@@ -373,7 +379,7 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
-  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
+  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to `'default'`; WebGPU omits the adapter hint unless explicitly set. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
@@ -454,6 +460,8 @@ export type DeviceProps = {
    * Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
    */
   _destroyPipelines?: boolean;
+  /** Internal: request a software-backed WebGPU adapter. */
+  _forceFallbackAdapter?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -662,7 +670,7 @@ export abstract class Device {
   abstract get isLost(): boolean;
 
   /** Promise that resolves when device is lost */
-  abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  abstract readonly lost: Promise<DeviceLostInfo>;
 
   /**
    * Trigger device loss.

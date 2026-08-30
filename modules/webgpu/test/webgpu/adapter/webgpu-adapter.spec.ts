@@ -10,7 +10,10 @@ import {
   getWebGPUFeatureLevel,
   getWebGPURequestAdapterOptions
 } from '../../../src/adapter/webgpu-adapter';
-import {isHighDynamicRangeCanvasConfiguration} from '../../../src/adapter/webgpu-canvas-context';
+import {
+  isHighDynamicRangeCanvasConfiguration,
+  WebGPUCanvasContext
+} from '../../../src/adapter/webgpu-canvas-context';
 
 test('WebGPUAdapter imports from the ESM package entry without circular init errors', async t => {
   t.plan(2);
@@ -75,6 +78,14 @@ test('WebGPUAdapter feature level helpers map luma props to WebGPU requests', t 
     getWebGPURequestAdapterOptions({featureLevel: 'best-available'}),
     {featureLevel: 'compatibility'},
     'best available starts from a compatibility adapter'
+  );
+  t.deepEqual(
+    getWebGPURequestAdapterOptions({
+      featureLevel: 'compatibility',
+      _forceFallbackAdapter: true
+    }),
+    {featureLevel: 'compatibility', forceFallbackAdapter: true},
+    'software fallback is explicitly requested'
   );
 
   t.end();
@@ -173,3 +184,97 @@ test('isHighDynamicRangeCanvasConfiguration verifies accepted HDR presentation',
   );
   t.end();
 });
+
+test('WebGPUCanvasContext configures SDR without getConfiguration', t => {
+  const configurations: GPUCanvasConfiguration[] = [];
+  const context = makeMockCanvasContext({
+    preferredColorFormat: navigator.gpu.getPreferredCanvasFormat(),
+    toneMapping: 'standard',
+    handle: {
+      configure: configuration => configurations.push(configuration)
+    }
+  });
+
+  context._configureDevice();
+
+  t.equal(configurations.length, 1, 'standard canvas configures without introspection');
+  t.equal(
+    configurations[0]?.format,
+    navigator.gpu.getPreferredCanvasFormat(),
+    'standard canvas uses the browser preferred format'
+  );
+  t.equal(context.toneMapping, 'standard', 'standard tone mapping is recorded');
+  t.end();
+});
+
+test('WebGPUCanvasContext falls back from unverifiable or rejected HDR to SDR', t => {
+  const missingIntrospectionConfigurations: GPUCanvasConfiguration[] = [];
+  const missingIntrospectionContext = makeMockCanvasContext({
+    preferredColorFormat: 'rgba16float',
+    toneMapping: 'extended',
+    handle: {
+      configure: configuration => missingIntrospectionConfigurations.push(configuration)
+    }
+  });
+  missingIntrospectionContext._configureDevice();
+
+  t.equal(
+    missingIntrospectionConfigurations.length,
+    1,
+    'missing getConfiguration skips an unverifiable HDR request'
+  );
+  t.equal(
+    missingIntrospectionConfigurations[0]?.format,
+    navigator.gpu.getPreferredCanvasFormat(),
+    'missing getConfiguration uses the SDR format'
+  );
+  t.equal(
+    missingIntrospectionContext.toneMapping,
+    'standard',
+    'missing getConfiguration records the SDR fallback'
+  );
+
+  const rejectedConfigurations: GPUCanvasConfiguration[] = [];
+  const rejectedContext = makeMockCanvasContext({
+    preferredColorFormat: 'rgba16float',
+    toneMapping: 'extended',
+    handle: {
+      configure: configuration => {
+        rejectedConfigurations.push(configuration);
+        if (configuration.toneMapping?.mode === 'extended') {
+          throw new Error('HDR is unsupported');
+        }
+      },
+      getConfiguration: () => null
+    }
+  });
+  rejectedContext._configureDevice();
+
+  t.equal(rejectedConfigurations.length, 2, 'rejected HDR is followed by an SDR configuration');
+  t.equal(
+    rejectedConfigurations[1]?.format,
+    navigator.gpu.getPreferredCanvasFormat(),
+    'rejected HDR uses the SDR format'
+  );
+  t.equal(rejectedContext.toneMapping, 'standard', 'rejected HDR records the SDR fallback');
+  t.end();
+});
+
+function makeMockCanvasContext(options: {
+  preferredColorFormat: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
+  toneMapping: 'standard' | 'extended';
+  handle: Pick<GPUCanvasContext, 'configure'> & Partial<Pick<GPUCanvasContext, 'getConfiguration'>>;
+}): WebGPUCanvasContext {
+  const context = Object.create(WebGPUCanvasContext.prototype) as WebGPUCanvasContext;
+  Object.assign(context, {
+    device: {
+      preferredColorFormat: options.preferredColorFormat,
+      preferredDepthFormat: 'depth24plus',
+      handle: {}
+    },
+    handle: options.handle,
+    props: {toneMapping: options.toneMapping, colorSpace: 'srgb', alphaMode: 'opaque'},
+    _createDepthStencilAttachment: () => {}
+  });
+  return context;
+}
