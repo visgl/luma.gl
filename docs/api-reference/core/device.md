@@ -94,7 +94,9 @@ Specifies props to use when luma creates the device.
 Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
 
-`device.lost` preserves whether loss was intentional (`destroyed`) or unexpected (`unknown`).
+`device.creationInfo` describes the selection policy and failed fallback attempts that preceded a
+successful device. `device.lost` preserves whether loss was intentional (`destroyed`) or unexpected
+(`unknown`).
 
 #### Internal caching props
 

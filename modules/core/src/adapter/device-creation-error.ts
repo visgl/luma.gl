@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {WebGPUFeatureLevel} from './device';
+import type {WebGPUDeviceFeatureLevel, WebGPUFeatureLevel} from './device';
 
 /** Identifies the stage at which GPU device creation failed. */
 export type DeviceCreationPhase =
@@ -19,6 +19,17 @@ export type DeviceCreationAttempt = {
   software: boolean;
   phase: DeviceCreationPhase;
   error: Error;
+};
+
+/** Diagnostics retained on a successfully created device. */
+export type DeviceCreationInfo = {
+  requestedType: string;
+  selected: {
+    backend: DeviceCreationAttempt['backend'];
+    featureLevel?: WebGPUDeviceFeatureLevel;
+    software: boolean;
+  } | null;
+  attempts: readonly DeviceCreationAttempt[];
 };
 
 /** Error thrown after one or more device creation attempts fail. */

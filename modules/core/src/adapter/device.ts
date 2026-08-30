@@ -40,6 +40,7 @@ import type {ExternalImage} from '../shadertypes/image-types/image-types';
 import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
 import {getTextureFormatTable} from '../shadertypes/texture-types/texture-format-table';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
+import type {DeviceCreationInfo} from './device-creation-error';
 
 export {_getDefaultDebugValue} from './device-defaults';
 
@@ -545,6 +546,12 @@ export abstract class Device {
   _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
   private _moduleData: Record<string, Record<string, unknown>> = {};
+  /** Device selection and fallback attempts used to create this device. */
+  creationInfo: DeviceCreationInfo = {
+    requestedType: 'unknown',
+    selected: null,
+    attempts: []
+  };
 
   // Capabilities
 

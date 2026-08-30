@@ -5,7 +5,11 @@
 // MAIN API ACCESS POINT
 export type {AttachDeviceProps, CreateDeviceProps} from './adapter/luma';
 export {luma} from './adapter/luma';
-export type {DeviceCreationPhase, DeviceCreationAttempt} from './adapter/device-creation-error';
+export type {
+  DeviceCreationPhase,
+  DeviceCreationAttempt,
+  DeviceCreationInfo
+} from './adapter/device-creation-error';
 export {DeviceCreationError} from './adapter/device-creation-error';
 
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
