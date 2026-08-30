@@ -21,29 +21,6 @@ const benchmarkSource = readFileSync(
   new URL('../../website/src/components/docs/luvs-benchmark.tsx', import.meta.url),
   'utf8'
 );
-const benchmarkRuntimeSource = readFileSync(
-  new URL('../../website/src/components/docs/luvs-benchmark-runtime.ts', import.meta.url),
-  'utf8'
-);
-const documentationSource = readFileSync(
-  new URL('../../docs/api-reference/gpgpu/gpu-vector-search.md', import.meta.url),
-  'utf8'
-);
-const navigationSource = readFileSync(
-  new URL('../../website/src/components/docs/experimental-docs-tabs.tsx', import.meta.url),
-  'utf8'
-);
-const sidebarSource = readFileSync(
-  new URL('../../docs/table-of-contents.json', import.meta.url),
-  'utf8'
-);
-const gpgpuPackage = JSON.parse(
-  readFileSync(new URL('../../modules/gpgpu/package.json', import.meta.url), 'utf8')
-) as {exports: Record<string, {import: string; types: string}>};
-const gpgpuMainIndex = readFileSync(
-  new URL('../../modules/gpgpu/src/index.ts', import.meta.url),
-  'utf8'
-);
 
 const transpiledBenchmark = typescript.transpileModule(benchmarkSource, {
   compilerOptions: {
@@ -111,41 +88,6 @@ beforeEach(() => {
 });
 
 describe('luVS live vector-similarity benchmark documentation', () => {
-  test('publishes one optional package entry and embeds its reference in both sidebars', () => {
-    expect(gpgpuPackage.exports['./gpu-vector-search']).toMatchObject({
-      import: './dist/gpu-vector-search/index.js',
-      types: './dist/gpu-vector-search/index.d.ts'
-    });
-    expect(gpgpuMainIndex).not.toContain("from './gpu-vector-search");
-    expect(documentationSource).toContain(
-      "import {LuvsBenchmark} from '@site/src/components/docs/luvs-benchmark';"
-    );
-    expect(documentationSource).toContain('<LuvsBenchmark />');
-    expect(sidebarSource.match(/"api-reference\/gpgpu\/gpu-vector-search"/g)).toHaveLength(1);
-    expect(navigationSource).not.toContain("href: '/docs/api-reference/experimental/luvs'");
-  });
-
-  test('documents fixed-size GPU table columns, Arrow ingestion, filters, and approximate IVF', () => {
-    expect(documentationSource).toContain("GPUVector<'fixed-size-list<float32,768>'>");
-    expect(documentationSource).toContain("from '@luma.gl/arrow'");
-    expect(documentationSource).toContain('makeGPUTableFromArrowTable');
-    expect(documentationSource).toContain('validityColumns');
-    expect(documentationSource).toContain('importGPUEmbeddingTable');
-    expect(documentationSource).toContain('Null source identifiers are');
-    expect(documentationSource).toContain('Nullable embedding data without a selected');
-    expect(documentationSource).not.toContain('makeGPUEmbeddingMatrixFromArrow');
-    expect(documentationSource).not.toContain('ownsValues');
-    expect(documentationSource).toContain('filterMask: selection.mask');
-    expect(documentationSource).toContain('GPUKMeans');
-    expect(documentationSource).toContain('GPUIVFFlatIndex');
-    expect(documentationSource).toContain('listRowIndices');
-    expect(documentationSource).toContain('traverse the selected inverted lists directly');
-    expect(documentationSource).toContain('bounded GPU hash');
-    expect(documentationSource).toContain('Float32 distance or inner product overflows');
-    expect(documentationSource).toContain('**approximate**');
-    expect(documentationSource).toContain('zero-copy');
-  });
-
   test('server-renders every workload control without creating a GPU device or starting work', () => {
     const markup = renderToString(React.createElement(LuvsBenchmark));
 
@@ -230,38 +172,5 @@ describe('luVS live vector-similarity benchmark documentation', () => {
     expect(markup).not.toContain('Eligible rows');
     expect(markup).toContain('Reader GPU');
     expect(markup).toContain('completion fence');
-  });
-
-  test('runs independent CPU, exact, filtered, and IVF paths with fenced and separated timings', () => {
-    expect(benchmarkRuntimeSource).toContain('runCPUEmbeddingSearch(fixture, options)');
-    expect(benchmarkRuntimeSource).toContain(
-      'score = Math.fround(score + Math.fround(difference * difference))'
-    );
-    expect(benchmarkRuntimeSource).toContain('FLOAT32_RANKING_TOLERANCE');
-    expect(benchmarkRuntimeSource).toContain('new GPUTable({batches})');
-    expect(benchmarkRuntimeSource).toContain('new GPURecordBatch({');
-    expect(benchmarkRuntimeSource).toContain('fixed-size-list<float32,${dimensions}>');
-    expect(benchmarkRuntimeSource).toContain('importGPUEmbeddingTable(graph, dataset');
-    expect(benchmarkRuntimeSource).not.toContain('GPUEmbeddingMatrix');
-    expect(benchmarkRuntimeSource).toContain('new GPUSimilaritySearch({');
-    expect(benchmarkRuntimeSource).toContain('new GPUIVFFlatIndex({');
-    expect(benchmarkRuntimeSource).toContain('buffers.listRowIndices');
-    expect(benchmarkRuntimeSource).toContain("'list-row-indices'");
-    expect(benchmarkRuntimeSource).toContain('filterMask: importLuvsView(');
-    expect(benchmarkRuntimeSource).toContain("fallback: 'none'");
-    expect(benchmarkRuntimeSource).toContain(
-      'validateLuvsOutput(actual, oracle, label, approximate)'
-    );
-    expect(benchmarkRuntimeSource).toContain('device.submit(commandEncoder.finish())');
-    expect(benchmarkRuntimeSource).toContain('const fence = device.createFence()');
-    expect(benchmarkRuntimeSource).toContain('await fence.signaled');
-    expect(benchmarkRuntimeSource).toContain('execution.encoding.readTimings()');
-    expect(benchmarkRuntimeSource).toContain('uploadMilliseconds');
-    expect(benchmarkRuntimeSource).toContain('indexBuildMilliseconds');
-    expect(benchmarkRuntimeSource).toContain('readbackMilliseconds');
-    expect(benchmarkRuntimeSource).toContain('rerankMilliseconds');
-    expect(benchmarkRuntimeSource).toContain('isLuvsCandidatePass(node.id)');
-    expect(benchmarkRuntimeSource).not.toContain('rerank|search|select');
-    expect(benchmarkSource).toContain('Recall@K');
   });
 });

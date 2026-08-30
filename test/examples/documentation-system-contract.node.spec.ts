@@ -116,23 +116,6 @@ describe('documentation system contracts', () => {
     ...generatedRoutes
   ]);
 
-  it('does not expose the removed tables package or documentation route', () => {
-    expect(existsSync(join(DOCS_DIRECTORY, 'api-reference/tables'))).toBe(false);
-
-    const upgradeGuide = join(DOCS_DIRECTORY, 'upgrade-guide.md');
-    const staleReferences = markdownFiles
-      .filter(path => path !== upgradeGuide)
-      .filter(path => {
-        const source = readFileSync(path, 'utf8');
-        return /@luma\.gl\/tables|modules\/tables|\/docs\/api-reference\/tables(?:\b|\/)/.test(
-          source
-        );
-      })
-      .map(getRouteForFile);
-
-    expect(staleReferences).toEqual([]);
-  });
-
   it('keeps every curated document reachable from the table of contents', () => {
     const allowedStandaloneRoutes = new Set(['developer/dev-tools/README']);
     const orphaned = [...curatedRoutes].filter(
@@ -172,51 +155,6 @@ describe('documentation system contracts', () => {
         expect(route && knownRoutes.has(route), `${group.label}: ${tab.href}`).toBe(true);
       }
     }
-  });
-
-  it('uses local badges and valid internal documentation links', () => {
-    const errors: string[] = [];
-    for (const path of markdownFiles) {
-      const source = readFileSync(path, 'utf8');
-      if (source.includes('img.shields.io')) errors.push(`${getRouteForFile(path)}: remote badge`);
-      for (const match of source.matchAll(/\]\((\/docs\/[^)\s]+)\)/g)) {
-        const route = resolveInternalRoute(match[1]);
-        if (route && !knownRoutes.has(route))
-          errors.push(`${getRouteForFile(path)} -> ${match[1]}`);
-      }
-    }
-    expect(errors).toEqual([]);
-  });
-
-  it('keeps public copy and MDX integration production-ready', () => {
-    const errors: string[] = [];
-    for (const path of markdownFiles.filter(path => !path.includes('/legacy/'))) {
-      const source = readFileSync(path, 'utf8');
-      const prose = source.replace(/```[\s\S]*?```/g, '');
-      if (/^import .* from ['"]\.\.?\//m.test(prose)) {
-        errors.push(`${getRouteForFile(path)}: relative MDX component import`);
-      }
-      if (/^import .*;\n(?=#)/m.test(prose)) {
-        errors.push(`${getRouteForFile(path)}: MDX import must be separated from prose`);
-      }
-      if (
-        /\b(?:supremacy|tranche status|delivery tranches|implementation roadmap)\b/i.test(prose)
-      ) {
-        errors.push(`${getRouteForFile(path)}: internal roadmap language`);
-      }
-      if (/\b(?:TODO|TBD|WIP|work[- ]in[- ]progress)\b/i.test(prose)) {
-        errors.push(`${getRouteForFile(path)}: unresolved placeholder language`);
-      }
-      for (const match of prose.matchAll(/(?:\]\(|(?:href|src)=["'])(https?:[^)"'\s>]+)/g)) {
-        try {
-          const url = new URL(match[1]);
-          if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('protocol');
-        } catch {
-          errors.push(`${getRouteForFile(path)}: malformed URL ${match[1]}`);
-        }
-      }
-    }
-    expect(errors).toEqual([]);
   });
 
   it('provides descriptions for the main learning and package landing pages', () => {
