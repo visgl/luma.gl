@@ -1,6 +1,9 @@
 // luma.gl
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT AND Apache-2.0
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright 2016-2024 Uber Technologies, Inc.
+
+// H3 topology and projection constants and algorithms are derived from Uber's Apache-2.0 H3.
 
 /** WGSL source implementing 64-bit DGGS cell key and boundary helpers. */
 export const dggsWGSL = /* wgsl */ `\
@@ -239,6 +242,11 @@ struct DggsH3FaceIJK {
   face : u32,
   coord : vec3i,
   valid : u32,
+};
+
+struct DggsH3FaceIJKOverage {
+  faceIJK : DggsH3FaceIJK,
+  overage : u32,
 };
 
 struct DggsH3BoundaryVertex {
@@ -976,7 +984,10 @@ fn dggs_a5_normalize_longitude_to_center(longitude : f32, centerLongitude : f32)
 
 fn dggs_a5_sphere_to_lnglat(cartesian : vec3f) -> vec2f {
   let point = dggs_a5_normalize_vec3(cartesian);
-  let theta = atan2(point.y, point.x);
+  var theta = 0.0;
+  if (dot(point.xy, point.xy) > 1.0e-12) {
+    theta = atan2(point.y, point.x);
+  }
   let phi = acos(clamp(point.z, -1.0, 1.0));
   let longitude = dggs_a5_normalize_longitude(theta * DGGS_RADIANS_TO_DEGREES - DGGS_A5_LONGITUDE_OFFSET);
   let authalicLatitude = DGGS_PI_OVER_2 - phi;
@@ -996,6 +1007,33 @@ fn dggs_a5_face_to_lnglat(facePoint : vec2f, origin : u32) -> vec2f {
   );
   return dggs_a5_sphere_to_lnglat(
     dggs_a5_polyhedral_inverse(facePoint, faceTriangle, sphericalTriangle)
+  );
+}
+
+fn dggs_a5_get_center_lnglat(index : vec2u) -> vec2f {
+  let cell = dggs_a5_deserialize(index);
+  if (cell.valid == 0u || dggs_u64_is_zero(index)) {
+    return vec2f(0.0);
+  }
+  if (cell.resolution == 0u) {
+    return dggs_a5_sphere_to_lnglat(dggs_a5_quaternion_rotate(
+      vec3f(0.0, 0.0, 1.0),
+      dggs_a5_get_origin_quaternion(cell.origin)
+    ));
+  }
+  return dggs_a5_face_to_lnglat(
+    dggs_a5_get_cell_center_face_point(index, cell),
+    cell.origin
+  );
+}
+
+fn dggs_a5_get_center_unit_vector(index : vec2u) -> vec3f {
+  let longitudeLatitude = dggs_a5_get_center_lnglat(index) * DGGS_DEGREES_TO_RADIANS;
+  let cosLatitude = cos(longitudeLatitude.y);
+  return vec3f(
+    cosLatitude * cos(longitudeLatitude.x),
+    cosLatitude * sin(longitudeLatitude.x),
+    sin(longitudeLatitude.y)
   );
 }
 
@@ -1049,6 +1087,7 @@ fn dggs_h3_get_digit(index: vec2u, resolution: u32) -> u32 {
 fn dggs_h3_is_valid_cell_id(index: vec2u) -> bool {
   let cellResolution = dggs_h3_get_resolution(index);
   if (
+    (dggs_u64_high(index) >> 24u) != 8u ||
     !dggs_h3_is_cell_mode(index) ||
     cellResolution > DGGS_H3_MAX_RESOLUTION ||
     dggs_h3_get_base_cell(index) > DGGS_H3_MAX_BASE_CELL
@@ -1071,6 +1110,12 @@ fn dggs_h3_is_valid_cell_id(index: vec2u) -> bool {
       return false;
     }
     digitResolution += 1u;
+  }
+  if (
+    dggs_h3_is_base_cell_pentagon(dggs_h3_get_base_cell(index)) &&
+    dggs_h3_get_leading_non_zero_digit(index) == 1u
+  ) {
+    return false;
   }
   return true;
 }
@@ -1140,6 +1185,22 @@ fn dggs_h3_is_base_cell_pentagon(baseCell: u32) -> bool {
     baseCell == 97u ||
     baseCell == 107u ||
     baseCell == 117u;
+}
+
+fn dggs_h3_get_leading_non_zero_digit(index: vec2u) -> u32 {
+  let cellResolution = dggs_h3_get_resolution(index);
+  var resolution = 1u;
+  loop {
+    if (resolution > cellResolution) {
+      break;
+    }
+    let digit = dggs_h3_get_digit(index, resolution);
+    if (digit != 0u) {
+      return digit;
+    }
+    resolution += 1u;
+  }
+  return 0u;
 }
 
 fn dggs_h3_get_base_cell_home(baseCell: u32) -> DggsH3FaceIJK {
@@ -1327,6 +1388,74 @@ fn dggs_h3_get_face_axis_azimuths(face: u32) -> vec3f {
   return values[min(face, 19u)];
 }
 
+// Per face: unit-sphere center, Class II hex x axis, and Class II hex y axis.
+const DGGS_H3_FACE_UNIT_VECTOR_BASES = array<vec4f, 60>(
+    vec4f(0.219930779140, 0.658369178027, 0.719847537893, 0.0),
+    vec4f(0.404214808693, -0.733089476282, 0.546982822580, 0.0),
+    vec4f(0.887829285854, 0.170674676471, -0.427351511044, 0.0),
+    vec4f(-0.213923483450, 0.147817182955, 0.965601793521, 0.0),
+    vec4f(0.972137411506, -0.064768238220, 0.225286325522, 0.0),
+    vec4f(0.095841516985, 0.986891663629, -0.129843166477, 0.0),
+    vec4f(0.109262527878, -0.481195157287, 0.869777512129, 0.0),
+    vec4f(0.549081430333, 0.758619604829, 0.350721938339, 0.0),
+    vec4f(-0.828595970824, 0.439257914866, 0.347104020954, 0.0),
+    vec4f(0.742856730159, -0.359394167828, 0.564800593652, 0.0),
+    vec4f(-0.280304147989, 0.599180039695, 0.749941907518, 0.0),
+    vec4f(-0.607941989895, -0.715415342415, 0.344365249059, 0.0),
+    vec4f(0.811253470914, 0.344895323764, 0.472138773641, 0.0),
+    vec4f(-0.369836643998, -0.322746873758, 0.871237804641, 0.0),
+    vec4f(0.452867157880, -0.881408912551, -0.134274592492, 0.0),
+    vec4f(-0.105549814961, 0.979445729641, 0.171887461001, 0.0),
+    vec4f(-0.447904449344, 0.107499848833, -0.887595283200, 0.0),
+    vec4f(-0.887829285854, -0.170674676471, 0.427351511044, 0.0),
+    vec4f(-0.807540757997, 0.153355248590, 0.569526199488, 0.0),
+    vec4f(-0.581972789566, -0.050269394156, -0.811653041771, 0.0),
+    vec4f(-0.095841516985, -0.986891663629, 0.129843166477, 0.0),
+    vec4f(-0.284614806979, -0.864408097265, 0.414479255247, 0.0),
+    vec4f(-0.482102819721, -0.244644896962, -0.841264373195, 0.0),
+    vec4f(0.828595970824, -0.439257914866, -0.347104020954, 0.0),
+    vec4f(0.740562147385, -0.667329956457, -0.078983764633, 0.0),
+    vec4f(-0.286311443679, -0.207006321288, -0.935507423896, 0.0),
+    vec4f(0.607941989895, 0.715415342415, -0.344365249059, 0.0),
+    vec4f(0.851230398647, 0.472234378858, -0.228913738869, 0.0),
+    vec4f(-0.265175688426, 0.010631100574, -0.964141501009, 0.0),
+    vec4f(-0.452867157880, 0.881408912551, 0.134274592492, 0.0),
+    vec4f(-0.740562147385, 0.667329956457, 0.078983764633, 0.0),
+    vec4f(0.286311443679, 0.207006321288, 0.935507423896, 0.0),
+    vec4f(0.607941989895, 0.715415342415, -0.344365249059, 0.0),
+    vec4f(-0.851230398647, -0.472234378858, 0.228913738869, 0.0),
+    vec4f(0.265175688426, -0.010631100574, 0.964141501009, 0.0),
+    vec4f(-0.452867157880, 0.881408912551, 0.134274592492, 0.0),
+    vec4f(0.105549814961, -0.979445729641, -0.171887461001, 0.0),
+    vec4f(0.447904449344, -0.107499848833, 0.887595283200, 0.0),
+    vec4f(-0.887829285854, -0.170674676471, 0.427351511044, 0.0),
+    vec4f(0.807540757997, -0.153355248590, -0.569526199488, 0.0),
+    vec4f(0.581972789566, 0.050269394156, 0.811653041771, 0.0),
+    vec4f(-0.095841516985, -0.986891663629, 0.129843166477, 0.0),
+    vec4f(0.284614806979, 0.864408097265, -0.414479255247, 0.0),
+    vec4f(0.482102819721, 0.244644896962, 0.841264373195, 0.0),
+    vec4f(0.828595970824, -0.439257914866, -0.347104020954, 0.0),
+    vec4f(-0.742856730159, 0.359394167828, -0.564800593652, 0.0),
+    vec4f(0.280304147989, -0.599180039695, -0.749941907518, 0.0),
+    vec4f(-0.607941989895, -0.715415342415, 0.344365249059, 0.0),
+    vec4f(-0.811253470914, -0.344895323764, -0.472138773641, 0.0),
+    vec4f(0.369836643998, 0.322746873758, -0.871237804641, 0.0),
+    vec4f(0.452867157880, -0.881408912551, -0.134274592492, 0.0),
+    vec4f(-0.219930779140, -0.658369178027, -0.719847537893, 0.0),
+    vec4f(-0.404214808693, 0.733089476282, -0.546982822580, 0.0),
+    vec4f(0.887829285854, 0.170674676471, -0.427351511044, 0.0),
+    vec4f(0.213923483450, -0.147817182955, -0.965601793521, 0.0),
+    vec4f(-0.972137411506, 0.064768238220, -0.225286325522, 0.0),
+    vec4f(0.095841516985, 0.986891663629, -0.129843166477, 0.0),
+    vec4f(-0.109262527878, 0.481195157287, -0.869777512129, 0.0),
+    vec4f(-0.549081430333, -0.758619604829, -0.350721938339, 0.0),
+    vec4f(-0.828595970824, 0.439257914866, 0.347104020954, 0.0)
+);
+
+fn dggs_h3_get_face_unit_vector_basis(face: u32, basisIndex: u32) -> vec3f {
+  return DGGS_H3_FACE_UNIT_VECTOR_BASES[min(face, 19u) * 3u + min(basisIndex, 2u)].xyz;
+}
+
 fn dggs_h3_get_max_dim_by_cii_resolution(resolution: u32) -> i32 {
   let values = array<i32, 17>(
     2, -1, 14, -1, 98, -1, 686, -1, 4802, -1, 33614, -1, 235298, -1, 1647086, -1, 11529602
@@ -1416,18 +1545,127 @@ fn dggs_h3_down_ap7r(coord: vec3i) -> vec3i {
   return dggs_h3_ijk_normalize(iVector + jVector + kVector);
 }
 
+fn dggs_h3_divide_round_nearest_seven(value: i32) -> i32 {
+  return select((value - 3) / 7, (value + 3) / 7, value >= 0);
+}
+
+fn dggs_h3_up_ap7r(coord: vec3i) -> vec3i {
+  let i = coord.x - coord.z;
+  let j = coord.y - coord.z;
+  return dggs_h3_ijk_normalize(vec3i(
+    dggs_h3_divide_round_nearest_seven(2 * i + j),
+    dggs_h3_divide_round_nearest_seven(3 * j - i),
+    0
+  ));
+}
+
+fn dggs_h3_ijk_rotate_60_ccw(coord: vec3i) -> vec3i {
+  let iVector = vec3i(1, 1, 0) * coord.x;
+  let jVector = vec3i(0, 1, 1) * coord.y;
+  let kVector = vec3i(1, 0, 1) * coord.z;
+  return dggs_h3_ijk_normalize(iVector + jVector + kVector);
+}
+
+fn dggs_h3_ijk_rotate_60_cw(coord: vec3i) -> vec3i {
+  let iVector = vec3i(1, 0, 1) * coord.x;
+  let jVector = vec3i(1, 1, 0) * coord.y;
+  let kVector = vec3i(0, 1, 1) * coord.z;
+  return dggs_h3_ijk_normalize(iVector + jVector + kVector);
+}
+
+fn dggs_h3_rotate_digit_60_cw(digit: u32) -> u32 {
+  let values = array<u32, 8>(0u, 3u, 6u, 2u, 5u, 1u, 4u, 7u);
+  return values[min(digit, 7u)];
+}
+
+fn dggs_h3_get_face_neighbor(face: u32, quadrant: u32) -> DggsH3FaceIJK {
+  let neighborFaces = array<vec3u, 20>(
+    vec3u(4u, 1u, 5u),
+    vec3u(0u, 2u, 6u),
+    vec3u(1u, 3u, 7u),
+    vec3u(2u, 4u, 8u),
+    vec3u(3u, 0u, 9u),
+    vec3u(10u, 14u, 0u),
+    vec3u(11u, 10u, 1u),
+    vec3u(12u, 11u, 2u),
+    vec3u(13u, 12u, 3u),
+    vec3u(14u, 13u, 4u),
+    vec3u(5u, 6u, 15u),
+    vec3u(6u, 7u, 16u),
+    vec3u(7u, 8u, 17u),
+    vec3u(8u, 9u, 18u),
+    vec3u(9u, 5u, 19u),
+    vec3u(16u, 19u, 10u),
+    vec3u(17u, 15u, 11u),
+    vec3u(18u, 16u, 12u),
+    vec3u(19u, 17u, 13u),
+    vec3u(15u, 18u, 14u)
+  );
+  let neighborFace = neighborFaces[min(face, 19u)][min(quadrant, 3u) - 1u];
+  let isOuterBand = face < 5u || face >= 15u;
+  var translate = vec3i(0, 2, 2);
+  if (quadrant == 1u) {
+    translate = select(vec3i(2, 2, 0), vec3i(2, 0, 2), isOuterBand);
+  } else if (quadrant == 2u) {
+    translate = select(vec3i(2, 0, 2), vec3i(2, 2, 0), isOuterBand);
+  }
+  var counterClockwiseRotations = 3u;
+  if (isOuterBand && quadrant == 1u) {
+    counterClockwiseRotations = 1u;
+  } else if (isOuterBand && quadrant == 2u) {
+    counterClockwiseRotations = 5u;
+  }
+  return DggsH3FaceIJK(neighborFace, translate, counterClockwiseRotations);
+}
+
+fn dggs_h3_adjust_overage_class_ii(
+  input: DggsH3FaceIJK,
+  resolution: u32,
+  pentagonLeading4: bool
+) -> DggsH3FaceIJKOverage {
+  var faceIJK = input;
+  let maximumDimension = dggs_h3_get_max_dim_by_cii_resolution(resolution);
+  if (faceIJK.coord.x + faceIJK.coord.y + faceIJK.coord.z <= maximumDimension) {
+    return DggsH3FaceIJKOverage(faceIJK, 0u);
+  }
+
+  var quadrant = 1u;
+  if (faceIJK.coord.z > 0) {
+    quadrant = select(2u, 3u, faceIJK.coord.y > 0);
+    if (quadrant == 2u && pentagonLeading4) {
+      let origin = vec3i(maximumDimension, 0, 0);
+      faceIJK.coord = dggs_h3_ijk_rotate_60_cw(faceIJK.coord - origin) + origin;
+    }
+  }
+
+  let neighbor = dggs_h3_get_face_neighbor(faceIJK.face, quadrant);
+  faceIJK.face = neighbor.face;
+  var rotation = 0u;
+  loop {
+    if (rotation >= neighbor.valid) {
+      break;
+    }
+    faceIJK.coord = dggs_h3_ijk_rotate_60_ccw(faceIJK.coord);
+    rotation += 1u;
+  }
+  faceIJK.coord = dggs_h3_ijk_normalize(
+    faceIJK.coord + neighbor.coord * (maximumDimension / 2)
+  );
+  faceIJK.valid = 1u;
+  return DggsH3FaceIJKOverage(faceIJK, 2u);
+}
+
 fn dggs_h3_get_center_face_ijk(index: vec2u) -> DggsH3FaceIJK {
   if (!dggs_h3_is_valid_cell_id(index)) {
     return DggsH3FaceIJK(0u, vec3i(0), 0u);
   }
 
   let baseCell = dggs_h3_get_base_cell(index);
-  if (dggs_h3_is_base_cell_pentagon(baseCell)) {
-    return DggsH3FaceIJK(0u, vec3i(0), 0u);
-  }
-
   var faceIJK = dggs_h3_get_base_cell_home(baseCell);
   let cellResolution = dggs_h3_get_resolution(index);
+  let isPentagonBaseCell = dggs_h3_is_base_cell_pentagon(baseCell);
+  let leadingDigit = dggs_h3_get_leading_non_zero_digit(index);
+  let rotateDigits = isPentagonBaseCell && leadingDigit == 5u;
   var resolution = 1u;
   loop {
     if (resolution > cellResolution) {
@@ -1439,10 +1677,48 @@ fn dggs_h3_get_center_face_ijk(index: vec2u) -> DggsH3FaceIJK {
     } else {
       faceIJK.coord = dggs_h3_down_ap7r(faceIJK.coord);
     }
-    faceIJK.coord = dggs_h3_neighbor(faceIJK.coord, dggs_h3_get_digit(index, resolution));
+    var digit = dggs_h3_get_digit(index, resolution);
+    if (rotateDigits) {
+      digit = dggs_h3_rotate_digit_60_cw(digit);
+    }
+    faceIJK.coord = dggs_h3_neighbor(faceIJK.coord, digit);
     resolution += 1u;
   }
 
+  let originalCoord = faceIJK.coord;
+  var adjustedResolution = cellResolution;
+  if (dggs_h3_is_resolution_class_iii(cellResolution)) {
+    faceIJK.coord = dggs_h3_down_ap7r(faceIJK.coord);
+    adjustedResolution += 1u;
+  }
+
+  var adjustment = dggs_h3_adjust_overage_class_ii(
+    faceIJK,
+    adjustedResolution,
+    isPentagonBaseCell && leadingDigit == 4u
+  );
+  if (adjustment.overage != 0u) {
+    faceIJK = adjustment.faceIJK;
+    if (isPentagonBaseCell) {
+      var adjustmentCount = 0u;
+      loop {
+        if (adjustmentCount >= 4u) {
+          break;
+        }
+        adjustment = dggs_h3_adjust_overage_class_ii(faceIJK, adjustedResolution, false);
+        if (adjustment.overage == 0u) {
+          break;
+        }
+        faceIJK = adjustment.faceIJK;
+        adjustmentCount += 1u;
+      }
+    }
+    if (adjustedResolution != cellResolution) {
+      faceIJK.coord = dggs_h3_up_ap7r(faceIJK.coord);
+    }
+  } else if (adjustedResolution != cellResolution) {
+    faceIJK.coord = originalCoord;
+  }
   return faceIJK;
 }
 
@@ -1515,6 +1791,51 @@ fn dggs_h3_ijk_to_hex2d(coord: vec3i) -> vec2f {
   let i = f32(coord.x - coord.z);
   let j = f32(coord.y - coord.z);
   return vec2f(i - 0.5 * j, j * DGGS_H3_SQRT3_2);
+}
+
+fn dggs_h3_get_center_lnglat(index: vec2u) -> vec2f {
+  let center = dggs_h3_get_center_face_ijk(index);
+  if (center.valid == 0u) {
+    return vec2f(0.0);
+  }
+  return dggs_h3_hex2d_to_lnglat(
+    dggs_h3_ijk_to_hex2d(center.coord),
+    center.face,
+    dggs_h3_get_resolution(index),
+    false
+  );
+}
+
+fn dggs_h3_get_center_unit_vector(index: vec2u) -> vec3f {
+  let center = dggs_h3_get_center_face_ijk(index);
+  if (center.valid == 0u) {
+    return vec3f(0.0);
+  }
+
+  var hexPoint = dggs_h3_ijk_to_hex2d(center.coord);
+  let resolution = dggs_h3_get_resolution(index);
+  if (dggs_h3_is_resolution_class_iii(resolution)) {
+    hexPoint = vec2f(
+      0.944911182523 * hexPoint.x - 0.327326835354 * hexPoint.y,
+      0.327326835354 * hexPoint.x + 0.944911182523 * hexPoint.y
+    );
+  }
+  var scale = DGGS_H3_RES0_U_GNOMONIC;
+  var resolutionIndex = 0u;
+  loop {
+    if (resolutionIndex >= resolution) {
+      break;
+    }
+    scale *= DGGS_H3_RSQRT7;
+    resolutionIndex += 1u;
+  }
+  return normalize(
+    dggs_h3_get_face_unit_vector_basis(center.face, 0u) +
+    scale * (
+      hexPoint.x * dggs_h3_get_face_unit_vector_basis(center.face, 1u) +
+      hexPoint.y * dggs_h3_get_face_unit_vector_basis(center.face, 2u)
+    )
+  );
 }
 
 fn dggs_h3_geo_az_distance_rads(center: vec2f, azimuth: f32, distance: f32) -> vec2f {

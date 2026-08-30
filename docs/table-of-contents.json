@@ -540,7 +540,10 @@
             "label": "GPU Project",
             "items": [
               "api-reference/experimental/gpu-project",
-              "api-reference/experimental/geospatial"
+              "api-reference/experimental/geospatial",
+              "api-reference/experimental/gpu-dggs",
+              "api-reference/experimental/gpu-h3",
+              "api-reference/experimental/gpu-a5"
             ]
           },
           {

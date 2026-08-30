@@ -78,6 +78,10 @@ v10 execution model.
   `@luma.gl/experimental/models`.
 - **Arrow and text stay close to their data** - `@luma.gl/arrow` preserves source batches and type
   metadata. `@luma.gl/text` supports streamed GPU text and shared font resources.
+- **DGGS indexes decode where they are consumed** - Experimental `@luma.gl/gpgpu/gpu-dggs`,
+  `gpu-h3`, and `gpu-a5` command-graph passes project packed cell indexes to longitude/latitude or
+  unit-vector centers without CPU readback. A live, correctness-gated browser benchmark reports
+  completion-fence and compute-only timing on the reader's adapter.
 - **A glimpse of v10 is already running underneath** - Some focused APIs use `GPUCommandGraph`
   internally. Graph authoring, inspection, and tuning remain a v10 preview; 9.4 applications use
   the feature APIs directly.
