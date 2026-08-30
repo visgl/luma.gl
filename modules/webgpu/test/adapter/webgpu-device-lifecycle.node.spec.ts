@@ -4,7 +4,11 @@
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {DeviceCreationError, type DeviceProps} from '@luma.gl/core';
-import {getWebGPUAdapterInfo, WebGPUAdapter} from '../../src/adapter/webgpu-adapter';
+import {
+  getWebGPUAdapterInfo,
+  isSoftwareWebGPUAdapter,
+  WebGPUAdapter
+} from '../../src/adapter/webgpu-adapter';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -106,6 +110,17 @@ describe('WebGPU device creation lifecycle', () => {
     ).rejects.toMatchObject<DeviceCreationError>({phase: 'adapter-selection'});
 
     expect(nativeAdapter.requestDevice).not.toHaveBeenCalled();
+  });
+
+  test('detects software adapters from the standard adapter description', () => {
+    expect(
+      isSoftwareWebGPUAdapter(
+        {} as GPUAdapter,
+        {
+          description: 'Google SwiftShader'
+        } as GPUAdapterInfo
+      )
+    ).toBe(true);
   });
 
   test('retries one immediately lost device with a fresh adapter', async () => {

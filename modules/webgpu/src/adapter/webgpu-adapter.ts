@@ -364,9 +364,9 @@ export function isSoftwareWebGPUAdapter(adapter: GPUAdapter, adapterInfo: GPUAda
   const adapterType = String(extendedAdapterInfo.type || extendedAdapterInfo.gpuType || '')
     .split(' ')[0]
     .toLowerCase();
-  const description = `${adapterInfo.vendor || ''} ${extendedAdapterInfo.driver || ''} ${
-    adapterInfo.architecture || ''
-  }`;
+  const description = `${adapterInfo.vendor || ''} ${adapterInfo.description || ''} ${
+    extendedAdapterInfo.driver || ''
+  } ${adapterInfo.architecture || ''}`;
   return fallback || adapterType === 'cpu' || /SwiftShader|llvmpipe|lavapipe/i.test(description);
 }
 
