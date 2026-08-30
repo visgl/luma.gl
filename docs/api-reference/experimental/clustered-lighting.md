@@ -47,7 +47,7 @@ import {Buffer} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   ClusteredLightGrid,
-  createClusteredDeferredLightingShaderPassPipeline,
+  createClusteredDeferredLightingCompositeShaderPass,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS
 } from '@luma.gl/experimental';
@@ -71,7 +71,7 @@ clusteredLightGrid.encode(device.commandEncoder, {
 });
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [createClusteredDeferredLightingShaderPassPipeline()],
+  shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
   colorFormat: 'rgba16float'
 });
 
@@ -125,9 +125,9 @@ Returns `clusterLightCounts` and `clusterLightIndices` for
 Returns the dimensions, retained capacity, active point-light count from the latest `encode()`,
 and logarithmic depth-range uniforms needed by the fullscreen resolve.
 
-### `createClusteredDeferredLightingShaderPassPipeline()`
+### `createClusteredDeferredLightingCompositeShaderPass()`
 
-Returns a one-step `ShaderPassPipeline` that resolves the current cluster's point-light list into
+Returns a one-step `CompositeShaderPass` that resolves the current cluster's point-light list into
 the ordered `previous` color chain.
 
 ## Related pages

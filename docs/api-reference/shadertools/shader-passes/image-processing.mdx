@@ -24,17 +24,17 @@ live interactive example.
 ## Usage
 
 Individual [`ShaderPass`](/docs/api-reference/shadertools/shader-pass) descriptors and complete
-[`ShaderPassPipeline`](/docs/api-reference/shadertools/shader-pass#shaderpasspipeline) graphs can
+[`CompositeShaderPass`](/docs/api-reference/shadertools/shader-pass#compositeshaderpass) graphs can
 share one ordered [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer):
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping, vignette} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping, vignette} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   colorFormat: 'rgba16float',
   shaderPasses: [
-    createBloomShaderPassPipeline({quality: 'high', blurAlgorithm: 'dual-kawase'}),
+    createBloomCompositeShaderPass({quality: 'high', blurAlgorithm: 'dual-kawase'}),
     toneMapping,
     vignette
   ]
@@ -71,7 +71,7 @@ backends; fused downsampling and FFT convolution additionally require WebGPU.
 
 :::info
 deck.gl's existing [`PostProcessEffect`](https://deck.gl/docs/api-reference/core/post-process-effect)
-accepts individual shader-pass modules. Named-target `ShaderPassPipeline` graphs and the separate
+accepts individual shader-pass modules. Named-target `CompositeShaderPass` graphs and the separate
 WebGPU FFT bloom renderer require an integration that explicitly executes those rendering paths.
 :::
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {copyPass} from './copy-pass';
 
 type TAAUniforms = {
@@ -90,11 +90,11 @@ fn depthHistoryCopy_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createTAAShaderPassPipeline(): ShaderPassPipeline<
+export function createTAACompositeShaderPass(): CompositeShaderPass<
   'taaHistoryColor' | 'taaHistoryDepth'
 > {
   return {
-    name: 'taaShaderPassPipeline',
+    name: 'taaCompositeShaderPass',
     renderTargets: {
       taaHistoryColor: {lifetime: 'history', initialize: 'original'},
       taaHistoryDepth: {

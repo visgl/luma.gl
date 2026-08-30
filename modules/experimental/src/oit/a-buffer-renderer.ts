@@ -14,7 +14,7 @@ import {
 } from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {type ABufferShaderModuleProps} from './a-buffer';
-import {createABufferResolveShaderPassPipeline} from './a-buffer-resolve-shader-pass-pipeline';
+import {createABufferResolveCompositeShaderPass} from './a-buffer-resolve-composite-shader-pass';
 
 const A_BUFFER_HEAD_POINTER_HEADER_BYTE_LENGTH = 8;
 const A_BUFFER_HEAD_POINTER_BYTE_LENGTH = 4;
@@ -91,7 +91,7 @@ export type ABufferRenderOptions = {
 type ResolvedABufferRendererProps = Required<Omit<ABufferRendererProps, 'colorFormat'>>;
 
 /**
- * Captures exact order-independent transparency and resolves each slice through a ShaderPassPipeline.
+ * Captures exact order-independent transparency and resolves each slice through a CompositeShaderPass.
  *
  * The renderer captures translucent fragments into storage buffers, sorts each pixel's fragments
  * by depth, and resolves premultiplied colors over the supplied opaque source. Large targets are
@@ -138,7 +138,7 @@ export class ABufferRenderer {
     this.resolveRenderer = new ShaderPassRenderer(device, {
       colorFormat: props.colorFormat,
       shaderPasses: [
-        createABufferResolveShaderPassPipeline({
+        createABufferResolveCompositeShaderPass({
           maxFragmentsPerPixel: this.props.maxFragmentsPerPixel
         })
       ]

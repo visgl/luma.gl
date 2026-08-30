@@ -3,7 +3,7 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 # Depth-Aware Blur
 
 Smooth noisy screen-space results without bleeding across foreground/background boundaries.
-`depthAwareBlurShaderPassPipeline` combines Gaussian spatial weights with scene-depth similarity
+`depthAwareBlurCompositeShaderPass` combines Gaussian spatial weights with scene-depth similarity
 in two separable bilateral-filter passes.
 
 <AdvancedEffectsExample embedded showStats={false} />
@@ -12,7 +12,7 @@ in two separable bilateral-filter passes.
 
 | Property | Value |
 | --- | --- |
-| Exports | `depthAwareBlur` and `depthAwareBlurShaderPassPipeline` |
+| Exports | `depthAwareBlur` and `depthAwareBlurCompositeShaderPass` |
 | Backend | WebGPU |
 | Render passes | Two separable bilateral-filter passes |
 | Required binding | `depthTexture` |
@@ -22,10 +22,10 @@ in two separable bilateral-filter passes.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {depthAwareBlurShaderPassPipeline} from '@luma.gl/effects';
+import {depthAwareBlurCompositeShaderPass} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [depthAwareBlurShaderPassPipeline]
+  shaderPasses: [depthAwareBlurCompositeShaderPass]
 });
 
 renderer.renderToScreen({

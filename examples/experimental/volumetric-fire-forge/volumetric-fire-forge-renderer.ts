@@ -10,7 +10,7 @@ import {
   type Sampler,
   Texture
 } from '@luma.gl/core';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {CubeGeometry, Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
 import type {VolumetricFireSimulation} from '@luma.gl/experimental';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
@@ -19,7 +19,7 @@ import {
   VOLUMETRIC_FIRE_FORGE_VOLUME_BOUNDS
 } from './volumetric-fire-forge-scene';
 import {
-  createVolumetricFireCompositeShaderPassPipeline,
+  createVolumetricFireCompositeCompositeShaderPass,
   forgeSceneUniforms,
   FORGE_SCENE_SHADER,
   getVolumetricFireDebugMode,
@@ -137,7 +137,7 @@ export class VolumetricFireForgeRenderer {
         }
       });
       volumeRenderer = new ShaderPassRenderer(device, {
-        shaderPasses: [createVolumetricFireCompositeShaderPassPipeline()],
+        shaderPasses: [createVolumetricFireCompositeCompositeShaderPass()],
         colorFormat: this.sceneColorFormat
       });
       volumeSampler = device.createSampler({
@@ -150,7 +150,7 @@ export class VolumetricFireForgeRenderer {
       });
       postprocessingRenderer = new ShaderPassRenderer(device, {
         shaderPasses: [
-          createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+          createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
           toneMapping
         ],
         colorFormat: this.sceneColorFormat

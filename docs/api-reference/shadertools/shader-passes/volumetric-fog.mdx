@@ -3,7 +3,7 @@ import {AdvancedEffectsExample} from '@site/src/examples';
 # Volumetric Fog
 
 Add depth-aware height fog, directional atmospheric scattering, and temporally stabilized haze.
-`createVolumetricFogShaderPassPipeline` provides a compact participating-media treatment when a
+`createVolumetricFogCompositeShaderPass` provides a compact participating-media treatment when a
 full scene-lighting integration is unnecessary.
 
 <AdvancedEffectsExample embedded showStats={false} />
@@ -12,7 +12,7 @@ full scene-lighting integration is unnecessary.
 
 | Property | Value |
 | --- | --- |
-| Export | `createVolumetricFogShaderPassPipeline` |
+| Export | `createVolumetricFogCompositeShaderPass` |
 | Shader uniform namespace | `volumetricFog` |
 | Backend | WebGPU |
 | Render passes | Two: fog/history resolve and composed-color copy |
@@ -23,11 +23,11 @@ full scene-lighting integration is unnecessary.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createVolumetricFogShaderPassPipeline} from '@luma.gl/effects';
+import {createVolumetricFogCompositeShaderPass} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   colorFormat: 'rgba16float',
-  shaderPasses: [createVolumetricFogShaderPassPipeline()]
+  shaderPasses: [createVolumetricFogCompositeShaderPass()]
 });
 
 renderer.renderToScreen({

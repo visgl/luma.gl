@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Buffer, CommandEncoder, Texture, type Device} from '@luma.gl/core';
 import {supportsComputeOptimization} from '../../src/passes/shader-pass-renderer';
 
@@ -160,7 +160,7 @@ vec4 stagedColor_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoor
   ]
 };
 
-const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+const stagedPipeline: CompositeShaderPass<'extract' | 'blurred'> = {
   name: 'stagedPipeline',
   renderTargets: {
     extract: {},
@@ -191,7 +191,7 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
 };
 
 test('ShaderPassRenderer compute optimization requires storage-capable output formats', t => {
-  const pipeline: ShaderPassPipeline<'output'> = {
+  const compositeShaderPass: CompositeShaderPass<'output'> = {
     name: 'storage-capability-gate',
     renderTargets: {output: {format: 'bgra8unorm', storage: true}},
     steps: [],
@@ -229,20 +229,20 @@ test('ShaderPassRenderer compute optimization requires storage-capable output fo
   } as unknown as Device;
 
   t.equal(
-    supportsComputeOptimization(device, pipeline),
+    supportsComputeOptimization(device, compositeShaderPass),
     false,
     'unsupported storage format selects the render-pass fallback'
   );
   supportsStorage = true;
   t.equal(
-    supportsComputeOptimization(device, pipeline),
+    supportsComputeOptimization(device, compositeShaderPass),
     true,
     'storage-capable format enables the compute optimization'
   );
   t.end();
 });
 
-const tintPipeline: ShaderPassPipeline<'scratch'> = {
+const tintPipeline: CompositeShaderPass<'scratch'> = {
   name: 'tintPipeline',
   renderTargets: {scratch: {}},
   steps: [
@@ -271,7 +271,7 @@ const invalidOutputPass: ShaderPass = {
   passes: [{sampler: true, output: 'missing' as any}]
 };
 
-const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
+const selfAliasingPipeline: CompositeShaderPass<'scratch'> = {
   name: 'selfAliasing',
   renderTargets: {scratch: {}},
   steps: [
@@ -283,7 +283,7 @@ const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
   ]
 };
 
-const reusedTargetPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+const reusedTargetPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
   name: 'reusedTarget',
   renderTargets: {
     extract: {sampler: {minFilter: 'linear', magFilter: 'linear'}},
@@ -316,7 +316,7 @@ const reusedTargetPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
   ]
 };
 
-const indirectlyAliasingPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+const indirectlyAliasingPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
   name: 'indirectlyAliasing',
   renderTargets: {
     extract: {},
@@ -331,7 +331,7 @@ const indirectlyAliasingPipeline: ShaderPassPipeline<'extract' | 'reconstructed'
   ]
 };
 
-const historyPipeline: ShaderPassPipeline<'historyColor'> = {
+const historyPipeline: CompositeShaderPass<'historyColor'> = {
   name: 'historyPipeline',
   renderTargets: {
     historyColor: {lifetime: 'history', initialize: 'original'}
@@ -350,7 +350,7 @@ const historyPipeline: ShaderPassPipeline<'historyColor'> = {
   ]
 };
 
-const reservedTargetPipeline: ShaderPassPipeline<'original'> = {
+const reservedTargetPipeline: CompositeShaderPass<'original'> = {
   name: 'reservedTarget',
   renderTargets: {original: {}},
   steps: [{shaderPass: copyPass}]
@@ -528,7 +528,7 @@ test('ShaderPassRenderer resolves module-scoped default bindings and lets draw b
   t.end();
 });
 
-test('ShaderPassRenderer resolves module-scoped bindings inside ShaderPassPipeline steps', async t => {
+test('ShaderPassRenderer resolves module-scoped bindings inside CompositeShaderPass steps', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -674,7 +674,7 @@ test('ShaderPassRenderer supports explicit texture orientation', async t => {
   t.end();
 });
 
-test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
+test('ShaderPassRenderer supports CompositeShaderPass targets', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -837,7 +837,7 @@ test('ShaderPassRenderer supports persistent history targets', async t => {
   t.end();
 });
 
-test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
+test('ShaderPassRenderer validates CompositeShaderPass routing', async t => {
   const devices = await getTestDevices();
   const webglDevice = devices.find(device => device.type !== 'webgpu');
   t.ok(webglDevice, 'has a test device');
@@ -883,7 +883,7 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
     ['mismatched sampler', {aliasFor: 'extract', sampler: {minFilter: 'linear' as const}}],
     ['persistent history', {aliasFor: 'extract', lifetime: 'history' as const}]
   ] as const) {
-    const invalidAliasPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+    const invalidAliasPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
       name: 'invalidTargetAlias',
       renderTargets: {extract: {}, reconstructed: alias},
       steps: [{shaderPass: copyPass}]

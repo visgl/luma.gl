@@ -7,7 +7,7 @@ import {type ModelProps, ShaderPassRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shadertools';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
-  createDeferredLightingShaderPassPipeline,
+  createDeferredLightingCompositeShaderPass,
   type DeferredPointLight,
   MAX_DEFERRED_POINT_LIGHTS,
   makeDeferredPointLightBufferData
@@ -106,7 +106,7 @@ export class DeferredSceneRenderer extends SceneRenderer {
       usage: Buffer.STORAGE | Buffer.COPY_DST
     });
     this.lightingRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [createDeferredLightingShaderPassPipeline()],
+      shaderPasses: [createDeferredLightingCompositeShaderPass()],
       colorFormat: 'rgba16float',
       flipY: true
     });

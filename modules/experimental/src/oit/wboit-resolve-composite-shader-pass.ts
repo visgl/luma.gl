@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 /** External capture textures consumed by the weighted-blended OIT resolve pass. */
 export type WBOITResolveBindings = {
@@ -63,9 +63,9 @@ vec4 wboitResolve_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
 } as const satisfies ShaderPass<WBOITResolveBindings, Record<string, never>, WBOITResolveBindings>;
 
 /** Creates the fullscreen weighted-blended OIT resolve pipeline. */
-export function createWBOITResolveShaderPassPipeline(): ShaderPassPipeline {
+export function createWBOITResolveCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'wboitResolveShaderPassPipeline',
+    name: 'wboitResolveCompositeShaderPass',
     steps: [
       {
         shaderPass: wboitResolve,

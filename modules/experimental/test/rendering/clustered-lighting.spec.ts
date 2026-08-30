@@ -7,7 +7,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
   ClusteredLightGrid,
-  createClusteredDeferredLightingShaderPassPipeline,
+  createClusteredDeferredLightingCompositeShaderPass,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
@@ -16,7 +16,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 
 test('clustered lighting exposes one composable fullscreen resolve', testCase => {
-  const pipeline = createClusteredDeferredLightingShaderPassPipeline();
+  const pipeline = createClusteredDeferredLightingCompositeShaderPass();
   testCase.equal(pipeline.steps.length, 1, 'the resolve is one fullscreen pass');
   testCase.equal(
     pipeline.steps[0].shaderPass.name,
@@ -198,7 +198,7 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
     depthStencilAttachment: depthTexture
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createClusteredDeferredLightingShaderPassPipeline()],
+    shaderPasses: [createClusteredDeferredLightingCompositeShaderPass()],
     colorFormat: 'rgba16float',
     flipY: false
   });

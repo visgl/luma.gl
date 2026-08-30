@@ -4,7 +4,7 @@
 
 import type {Buffer, Texture} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 export const MAX_DEFERRED_POINT_LIGHTS = 64;
 
@@ -291,9 +291,9 @@ fn deferredLighting_sampleColor(
 >;
 
 /** Creates a fullscreen deferred-lighting step that composes into the previous color chain. */
-export function createDeferredLightingShaderPassPipeline(): ShaderPassPipeline {
+export function createDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'deferredLightingShaderPassPipeline',
+    name: 'deferredLightingCompositeShaderPass',
     steps: [
       {
         shaderPass: deferredLighting,

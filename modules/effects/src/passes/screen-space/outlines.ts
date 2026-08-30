@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {depthHelpers} from './screen-space-shader-helpers';
 
-export type OutlineShaderPassPipelineOptions = {
+export type OutlineCompositeShaderPassOptions = {
   normalSource?: 'reconstruct-from-depth' | 'normal-texture';
 };
 
@@ -82,16 +82,16 @@ fn screenSpaceOutline_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createOutlineShaderPassPipeline(
-  options: OutlineShaderPassPipelineOptions = {}
-): ShaderPassPipeline {
+export function createOutlineCompositeShaderPass(
+  options: OutlineCompositeShaderPassOptions = {}
+): CompositeShaderPass {
   const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
   const inputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
   if (!useNormalTexture) {
     inputs['normalTexture'] = 'previous';
   }
   return {
-    name: 'outlineShaderPassPipeline',
+    name: 'outlineCompositeShaderPass',
     steps: [{shaderPass: outlinePass, inputs, output: 'previous', uniforms: {useNormalTexture}}]
   };
 }

@@ -36,7 +36,7 @@ adjustments, or press Home and End to reveal either side completely.
 [Deferred Rendering: Illumination Lab](/examples/experimental/deferred-rendering) focuses on
 physically based deferred materials, hundreds of compute-clustered lights, higher-quality GTAO,
 colored diffuse global illumination, and participating-media scattering. Both examples use the
-same reusable `createSSRShaderPassPipeline()`; they do not maintain competing reflection effects.
+same reusable `createSSRCompositeShaderPass()`; they do not maintain competing reflection effects.
 
 ## Scene contract
 
@@ -50,7 +50,7 @@ The example deliberately keeps scene rendering outside `ShaderPassRenderer`. Its
 - `rgba16float` directional, spot, point, and cascade debug data;
 - sampled `depth24plus` depth.
 
-Those textures are passed as bindings to a normal ordered list of `ShaderPassPipeline` objects.
+Those textures are passed as bindings to a normal ordered list of `CompositeShaderPass` objects.
 The renderer owns only intermediate and temporal history textures.
 The standalone example requests the adapter's supported `max` feature level so this six-target
 layout is created only with limits the selected WebGPU adapter actually exposes.

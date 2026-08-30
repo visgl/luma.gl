@@ -5,8 +5,8 @@
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
 import type {
   ShaderPass,
-  ShaderPassPipeline,
-  ShaderPassPipelineStep,
+  CompositeShaderPass,
+  CompositeShaderPassStep,
   ShaderPassRenderTarget
 } from '@luma.gl/shadertools';
 import type {BloomProps, BloomUniforms} from './bloom';
@@ -45,7 +45,7 @@ type BloomTargetName =
   | 'blurEighth';
 
 /** Construction options for HDR-capable multiscale bloom. */
-export type BloomShaderPassPipelineOptions = BloomProps & {
+export type BloomCompositeShaderPassOptions = BloomProps & {
   /** Controls the number of bloom pyramid levels: low=2, medium=3, high=4, ultra=5. */
   quality?: keyof typeof BLOOM_QUALITY_LEVELS;
   /** Normalized contribution from progressively wider bloom levels. Defaults to 0.55. */
@@ -251,7 +251,7 @@ vec4 bloomExtract_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoo
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<
   Pick<
-    BloomShaderPassPipelineOptions,
+    BloomCompositeShaderPassOptions,
     'threshold' | 'softKnee' | 'fireflyReduction' | 'exposure' | 'exposureCompensation'
   >,
   Pick<BloomUniforms, 'threshold'> & {
@@ -861,12 +861,12 @@ vec4 bloomComposite_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texC
 >;
 
 /**
- * BloomShaderPassPipeline
+ * BloomCompositeShaderPass
  * Extracts bright pixels at half resolution, successively downsamples and blurs them, and
  * composites the multiscale glow over the preceding effect output.
  */
-export const bloomShaderPassPipeline = {
-  name: 'bloomShaderPassPipeline',
+export const bloomCompositeShaderPass = {
+  name: 'bloomCompositeShaderPass',
   renderTargets: {
     extractHalf: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
     blurHalfScratch: {scale: [0.5, 0.5], sampler: BLOOM_TARGET_SAMPLER},
@@ -943,12 +943,12 @@ export const bloomShaderPassPipeline = {
       uniforms: {intensity: 1}
     }
   ]
-} as const satisfies ShaderPassPipeline<BloomTargetName>;
+} as const satisfies CompositeShaderPass<BloomTargetName>;
 
 /** Creates configurable multiscale bloom that preserves high-dynamic-range radiance. */
-export function createBloomShaderPassPipeline(
-  options: BloomShaderPassPipelineOptions = {}
-): ShaderPassPipeline {
+export function createBloomCompositeShaderPass(
+  options: BloomCompositeShaderPassOptions = {}
+): CompositeShaderPass {
   const resolutionScale = options.resolutionScale ?? 1;
   const colorFormat = options.colorFormat ?? 'rgba16float';
   const energyConserving = options.energyConserving ?? false;
@@ -999,7 +999,7 @@ export function createBloomShaderPassPipeline(
   const verticalRadius = anamorphicRadius * (1 + Math.max(-anamorphicRatio, 0));
   const levels = BLOOM_PYRAMID_LEVELS.slice(0, BLOOM_QUALITY_LEVELS[quality]);
   const renderTargets: Record<string, ShaderPassRenderTarget> = {};
-  const steps: ShaderPassPipelineStep[] = [];
+  const steps: CompositeShaderPassStep[] = [];
   const makeRenderTarget = (scale: number): ShaderPassRenderTarget => ({
     scale: [scale * resolutionScale, scale * resolutionScale],
     format: colorFormat,
@@ -1140,7 +1140,7 @@ export function createBloomShaderPassPipeline(
   }
 
   return {
-    name: bloomShaderPassPipeline.name,
+    name: bloomCompositeShaderPass.name,
     renderTargets,
     steps,
     ...(downsample !== 'render'

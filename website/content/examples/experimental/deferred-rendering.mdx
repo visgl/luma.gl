@@ -104,27 +104,27 @@ velocity, and depth channels plus two named material extras:
 | `emissiveOcclusion` | Linear emissive color in RGB and ambient occlusion in A. |
 
 `ClusteredLightGrid` first bins each view-space point-light sphere into a `16 × 9 × 24`
-screen/log-depth grid. `createClusteredDeferredLightingShaderPassPipeline()` then reads those
+screen/log-depth grid. `createClusteredDeferredLightingCompositeShaderPass()` then reads those
 material targets and normally evaluates the current pixel's compact retained cluster list. If a
 cluster overflows, the opaque resolve instead scans all active point lights to preserve direct-light
 correctness. It reconstructs view-space position from depth, evaluates Cook-Torrance lighting, and
 writes HDR color back into the normal ordered shader-pass chain.
-`createDeferredAmbientLightingShaderPassPipeline()` separately extracts the linear ambient
+`createDeferredAmbientLightingCompositeShaderPass()` separately extracts the linear ambient
 contribution from the same material attachments.
-`createGTAOShaderPassPipeline({composition: 'ambient-only'})` then analytically integrates
+`createGTAOCompositeShaderPass({composition: 'ambient-only'})` then analytically integrates
 horizon angles at the configured buffer resolution over the unchanged depth and view-normal
 attachments, rotates and jitters sampling across animation frames, reprojects the previous AO
 result through the velocity buffer, rejects disocclusions with depth history, and applies a
 depth-aware separable blur. Its final composite attenuates only the isolated ambient contribution,
 leaving directional and point lights plus emissive materials untouched.
-`createSSGIShaderPassPipeline()` traces cosine-weighted hemisphere rays through that lit scene,
+`createSSGICompositeShaderPass()` traces cosine-weighted hemisphere rays through that lit scene,
 gathers nearby colored radiance, reprojects indirect-light history, rejects disocclusions in
 linearized view depth, and applies two depth/normal-aware denoising passes before composing the
 diffuse bounce.
-`createSSRShaderPassPipeline()` then launches roughness-jittered reflection rays into the lit
+`createSSRCompositeShaderPass()` then launches roughness-jittered reflection rays into the lit
 scene, reprojects reflection history through G-buffer velocity, rejects depth disocclusions,
 applies a roughness-adaptive depth/normal-aware blur, and adds the result back into `previous`.
-`createClusteredVolumetricLightingShaderPassPipeline()` then integrates real clustered point
+`createClusteredVolumetricLightingCompositeShaderPass()` then integrates real clustered point
 lights and occluded directional light through exponential height fog, applies Beer-Lambert
 extinction and an anisotropic phase function, traces radial camera-depth visibility toward the
 projected scene sun for crepuscular god rays, and ranks a bounded nearby-light set from the
@@ -133,9 +133,9 @@ ray marching never scans all active lights. It stabilizes in-scattering at the c
 resolution by reprojecting empty space with current/previous camera matrices, applying G-buffer
 velocity to opaque surfaces, and rejecting disocclusions against compact linear-depth history,
 then composites the participating medium over the existing opaque result.
-`createHDRAutoExposureShaderPassPipeline()` builds a center-weighted logarithmic luminance
+`createHDRAutoExposureCompositeShaderPass()` builds a center-weighted logarithmic luminance
 pyramid, adapts a persistent GPU exposure target without CPU readback, and applies the current
-camera response. `createBloomShaderPassPipeline()` thresholds HDR samples, successively low-pass
+camera response. `createBloomCompositeShaderPass()` thresholds HDR samples, successively low-pass
 filters, blurs, and combines bright highlights across three `rgba16float` scales.
 A final display pass tone maps the result or selects a G-buffer/cluster/AO/bounce/reflection/
 volume debug view.

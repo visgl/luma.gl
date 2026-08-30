@@ -35,10 +35,10 @@ export type {
   ShaderSubPass
 } from './lib/shader-module/shader-pass';
 export type {
-  ShaderPassComputeOptimization,
-  ShaderPassPipeline,
-  ShaderPassPipelineStep
-} from './lib/shader-module/shader-pass-pipeline';
+  CompositeShaderPassComputeOptimization,
+  CompositeShaderPass,
+  CompositeShaderPassStep
+} from './lib/shader-module/composite-shader-pass';
 export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';

@@ -5,7 +5,8 @@
 import type {UniformValue} from '../utils/uniform-types';
 import type {ShaderPass, ShaderPassInputSource, ShaderPassRenderTarget} from './shader-pass';
 
-export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+/** One ordered step in a {@link CompositeShaderPass}. */
+export type CompositeShaderPassStep<TargetNameT extends string = string> = {
   shaderPass: ShaderPass<any, any, any, any>;
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
   output?: 'previous' | TargetNameT;
@@ -13,7 +14,7 @@ export type ShaderPassPipelineStep<TargetNameT extends string = string> = {
 };
 
 /** Optional WebGPU compute stage that replaces equivalent fragment-only fallback passes. */
-export type ShaderPassComputeOptimization<TargetNameT extends string = string> = {
+export type CompositeShaderPassComputeOptimization<TargetNameT extends string = string> = {
   /** Stable identifier used for compute resources and command labels. */
   name: string;
   /** Complete WGSL compute entry point with explicit binding locations. */
@@ -24,7 +25,7 @@ export type ShaderPassComputeOptimization<TargetNameT extends string = string> =
   uniformBinding: string;
   /** Scalar uniform packing order used by the compute shader. */
   uniformNames: readonly string[];
-  /** Pipeline-level scalar defaults layered below per-frame runtime overrides. */
+  /** Composite-pass scalar defaults layered below per-frame runtime overrides. */
   uniforms: Record<string, number>;
   /** Logical source image consumed by the fused compute dispatch. */
   input: ShaderPassInputSource<TargetNameT>;
@@ -36,10 +37,11 @@ export type ShaderPassComputeOptimization<TargetNameT extends string = string> =
   workgroupSize: readonly [number, number];
 };
 
-export type ShaderPassPipeline<TargetNameT extends string = string> = {
+/** Declarative composition of shader passes with owned targets and optional compute execution. */
+export type CompositeShaderPass<TargetNameT extends string = string> = {
   name: string;
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
-  steps: ShaderPassPipelineStep<TargetNameT>[];
+  steps: CompositeShaderPassStep<TargetNameT>[];
   /** Optional fused WebGPU dispatch; existing fragment steps remain the portable fallback. */
-  compute?: ShaderPassComputeOptimization<TargetNameT>;
+  compute?: CompositeShaderPassComputeOptimization<TargetNameT>;
 };

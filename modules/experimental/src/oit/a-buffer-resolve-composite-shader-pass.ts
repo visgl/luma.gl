@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
-export type ABufferResolveShaderPassPipelineOptions = {
+export type ABufferResolveCompositeShaderPassOptions = {
   /** Maximum captured fragments sorted for one pixel. */
   maxFragmentsPerPixel: number;
 };
@@ -158,9 +158,9 @@ fn aBufferResolve_sampleColor(
 }
 
 /** Creates the fullscreen resolve pipeline used for each captured A-buffer slice. */
-export function createABufferResolveShaderPassPipeline(
-  options: ABufferResolveShaderPassPipelineOptions
-): ShaderPassPipeline {
+export function createABufferResolveCompositeShaderPass(
+  options: ABufferResolveCompositeShaderPassOptions
+): CompositeShaderPass {
   const maxFragmentsPerPixel = Math.floor(options.maxFragmentsPerPixel);
   if (maxFragmentsPerPixel < 1) {
     throw new Error('maxFragmentsPerPixel must be at least 1.');
@@ -168,7 +168,7 @@ export function createABufferResolveShaderPassPipeline(
 
   const shaderPass = createABufferResolveShaderPass(maxFragmentsPerPixel);
   return {
-    name: 'aBufferResolveShaderPassPipeline',
+    name: 'aBufferResolveCompositeShaderPass',
     steps: [
       {
         shaderPass,

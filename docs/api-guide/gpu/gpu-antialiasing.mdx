@@ -232,7 +232,7 @@ never rasterized.
 TAA accumulates samples over time. It is better at subpixel motion and shimmer, but it requires a
 jittered projection, history buffers, velocity, and depth rejection to avoid ghosting. luma.gl
 exports [`fxaa`](/docs/api-guide/shaders/shader-passes) for WebGL and WebGPU shader-pass chains and
-`createTAAShaderPassPipeline()` for the WebGPU-oriented advanced-effects path. See the
+`createTAACompositeShaderPass()` for the WebGPU-oriented advanced-effects path. See the
 [Advanced Effects example](/examples/experimental/advanced-effects) for TAA combined with depth,
 velocity, SSAO, SSR, and motion blur.
 

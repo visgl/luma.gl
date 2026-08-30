@@ -4,7 +4,7 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bloom, bloomShaderPassPipeline, createBloomShaderPassPipeline} from '@luma.gl/effects';
+import {bloom, bloomCompositeShaderPass, createBloomCompositeShaderPass} from '@luma.gl/effects';
 import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shadertools';
 import test from 'test/utils/vitest-tape';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -19,11 +19,11 @@ test('bloom#build/uniform', t => {
   t.end();
 });
 
-test('bloomShaderPassPipeline#routing', t => {
-  const extractionSteps = bloomShaderPassPipeline.steps.filter(
+test('bloomCompositeShaderPass#routing', t => {
+  const extractionSteps = bloomCompositeShaderPass.steps.filter(
     step => step.shaderPass.name === 'bloomExtract'
   );
-  const downsampleSteps = bloomShaderPassPipeline.steps.filter(
+  const downsampleSteps = bloomCompositeShaderPass.steps.filter(
     step => step.shaderPass.name === 'bloomDownsample'
   );
 
@@ -71,11 +71,11 @@ test('bloomShaderPassPipeline#routing', t => {
     /return color \/ max\(totalWeight, 0\.00001\)/,
     'GLSL extraction normalizes its dynamic footprint'
   );
-  for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
+  for (const target of Object.values(bloomCompositeShaderPass.renderTargets)) {
     t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
     t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
   }
-  const configurablePipeline = createBloomShaderPassPipeline({
+  const configurablePipeline = createBloomCompositeShaderPass({
     resolutionScale: 0.5,
     colorFormat: 'rgba8unorm',
     threshold: 0.55,
@@ -125,7 +125,7 @@ test('bloomShaderPassPipeline#routing', t => {
     1.75,
     'configurable bloom applies the requested intensity'
   );
-  const blurPass = bloomShaderPassPipeline.steps.find(
+  const blurPass = bloomCompositeShaderPass.steps.find(
     step => step.shaderPass.name === 'bloomBlur'
   )?.shaderPass;
   t.ok(blurPass, 'multiscale bloom includes a separable blur');
@@ -135,7 +135,7 @@ test('bloomShaderPassPipeline#routing', t => {
     'blur does not amplify tiny alpha into square halos'
   );
 
-  const compositePass = bloomShaderPassPipeline.steps.find(
+  const compositePass = bloomCompositeShaderPass.steps.find(
     step => step.shaderPass.name === 'bloomComposite'
   )?.shaderPass;
   t.ok(compositePass, 'multiscale bloom includes a glow composite');
@@ -156,7 +156,7 @@ test('bloomShaderPassPipeline#routing', t => {
   t.end();
 });
 
-test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase => {
+test('createBloomCompositeShaderPass#adaptive pyramid reconstruction', testCase => {
   const qualityLevels = [
     {quality: 'low', levelCount: 2, coarsestLevel: 'Quarter'},
     {quality: 'medium', levelCount: 3, coarsestLevel: 'Eighth'},
@@ -165,7 +165,7 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
   ] as const;
 
   for (const {quality, levelCount, coarsestLevel} of qualityLevels) {
-    const pipeline = createBloomShaderPassPipeline({quality});
+    const pipeline = createBloomCompositeShaderPass({quality});
     const extractionSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomExtract');
     const downsampleSteps = pipeline.steps.filter(
       step => step.shaderPass.name === 'bloomDownsample'
@@ -212,7 +212,7 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
     );
   }
 
-  const pipeline = createBloomShaderPassPipeline({
+  const pipeline = createBloomCompositeShaderPass({
     quality: 'ultra',
     radius: 10,
     scatter: 0.7,
@@ -271,7 +271,7 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
     'GLSL mixes pyramid levels without duplicating highlight energy'
   );
 
-  const verticalPipeline = createBloomShaderPassPipeline({radius: 10, anamorphicRatio: -0.5});
+  const verticalPipeline = createBloomCompositeShaderPass({radius: 10, anamorphicRatio: -0.5});
   const verticalBlurSteps = verticalPipeline.steps.filter(
     step => step.shaderPass.name === 'bloomBlur'
   );
@@ -284,7 +284,7 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
   testCase.end();
 });
 
-test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kernel', testCase => {
+test('createBloomCompositeShaderPass#anamorphic radii stay within the shader kernel', testCase => {
   const anamorphicCases = [
     {radius: 12, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
     {radius: 18, anamorphicRatio: 0.5, horizontalRadius: 24, verticalRadius: 16},
@@ -295,7 +295,7 @@ test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kern
   ];
 
   for (const {radius, anamorphicRatio, horizontalRadius, verticalRadius} of anamorphicCases) {
-    const pipeline = createBloomShaderPassPipeline({radius, anamorphicRatio});
+    const pipeline = createBloomCompositeShaderPass({radius, anamorphicRatio});
     const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
 
     testCase.deepEqual(
@@ -310,10 +310,10 @@ test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kern
   testCase.end();
 });
 
-test('createBloomShaderPassPipeline#optional cinematic lens effects', testCase => {
-  const defaultPipeline = createBloomShaderPassPipeline();
-  const dirtOnlyPipeline = createBloomShaderPassPipeline({lens: {dirtIntensity: 0.8}});
-  const cinematicPipeline = createBloomShaderPassPipeline({
+test('createBloomCompositeShaderPass#optional cinematic lens effects', testCase => {
+  const defaultPipeline = createBloomCompositeShaderPass();
+  const dirtOnlyPipeline = createBloomCompositeShaderPass({lens: {dirtIntensity: 0.8}});
+  const cinematicPipeline = createBloomCompositeShaderPass({
     quality: 'high',
     temporalStability: 0.7,
     lens: {
@@ -424,7 +424,7 @@ test('createBloomShaderPassPipeline#optional cinematic lens effects', testCase =
   );
   testCase.equal(compositeStep?.uniforms?.dirtIntensity, 0.35, 'configures the dirt-mask strength');
 
-  const clampedPipeline = createBloomShaderPassPipeline({
+  const clampedPipeline = createBloomCompositeShaderPass({
     temporalStability: 4,
     lens: {starburstIntensity: 1, starburstSpikes: 1, starburstLength: 500}
   });
@@ -486,7 +486,7 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
   });
   const renderer = new ShaderPassRenderer(device, {
     shaderPasses: [
-      createBloomShaderPassPipeline({
+      createBloomCompositeShaderPass({
         quality: 'medium',
         threshold: 1,
         radius: 3,
@@ -580,7 +580,7 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
 
     const flippedComputeRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({
+        createBloomCompositeShaderPass({
           quality: 'medium',
           threshold: 1,
           radius: 3,
@@ -592,7 +592,7 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
     });
     const flippedFragmentRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({
+        createBloomCompositeShaderPass({
           quality: 'medium',
           threshold: 1,
           radius: 3,
@@ -669,7 +669,7 @@ test('HDR bloom covers source texels at quarter pyramid resolution', async testC
     usage: Texture.SAMPLE | Texture.COPY_DST
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createBloomShaderPassPipeline({resolutionScale: 0.25})],
+    shaderPasses: [createBloomCompositeShaderPass({resolutionScale: 0.25})],
     colorFormat: 'rgba16float',
     flipY: false
   });
@@ -767,7 +767,7 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
     usage: Texture.SAMPLE | Texture.COPY_DST
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createBloomShaderPassPipeline()],
+    shaderPasses: [createBloomCompositeShaderPass()],
     colorFormat: 'rgba16float',
     flipY: false
   });
@@ -918,7 +918,7 @@ test('HDR bloom suppresses fireflies and applies its cinematic tint', async test
   });
   const renderer = new ShaderPassRenderer(device, {
     shaderPasses: [
-      createBloomShaderPassPipeline({
+      createBloomCompositeShaderPass({
         quality: 'medium',
         radius: 5,
         scatter: 0.4,

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
 import {copyPass} from './copy-pass';
 
@@ -242,11 +242,11 @@ fn cameraReprojectionTaaDepthHistoryCopy_sampleColor(
  * The caller must bind current depth and update both matrices/jitter every frame. Reset the
  * renderer history after resize, camera cuts, or moving-object topology changes.
  */
-export function createCameraReprojectionTAAShaderPassPipeline(): ShaderPassPipeline<
+export function createCameraReprojectionTAACompositeShaderPass(): CompositeShaderPass<
   'cameraReprojectionTaaHistoryColor' | 'cameraReprojectionTaaHistoryDepth'
 > {
   return {
-    name: 'cameraReprojectionTaaShaderPassPipeline',
+    name: 'cameraReprojectionTaaCompositeShaderPass',
     renderTargets: {
       cameraReprojectionTaaHistoryColor: {
         format: 'rgba16float',

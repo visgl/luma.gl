@@ -59,17 +59,17 @@ export type {
 export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
 export type {
   BloomLensEffectsOptions,
-  BloomShaderPassPipelineOptions
-} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+  BloomCompositeShaderPassOptions
+} from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export {
-  bloomShaderPassPipeline,
-  createBloomShaderPassPipeline
-} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+  bloomCompositeShaderPass,
+  createBloomCompositeShaderPass
+} from './passes/postprocessing/image-blur-filters/bloom-composite-shader-pass';
 export type {
   DofProps,
   DofUniforms
 } from './passes/screen-space/dof';
-export {dof, dofShaderPassPipeline} from './passes/screen-space/dof';
+export {dof, dofCompositeShaderPass} from './passes/screen-space/dof';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms
@@ -128,64 +128,64 @@ export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-f
 export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // Screen-space effects
-export type {ClusteredVolumetricLightingShaderPassPipelineOptions} from './passes/screen-space/clustered-volumetric-lighting';
+export type {ClusteredVolumetricLightingCompositeShaderPassOptions} from './passes/screen-space/clustered-volumetric-lighting';
 export {
   clusteredVolumetricComposite,
   clusteredVolumetricDepthHistoryCopy,
   clusteredVolumetricTemporal,
   clusteredVolumetricTrace,
-  createClusteredVolumetricLightingShaderPassPipeline
+  createClusteredVolumetricLightingCompositeShaderPass
 } from './passes/screen-space/clustered-volumetric-lighting';
 export type {CameraReprojectionTAAUniforms} from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export {
   cameraReprojectionTaaDepthHistoryCopy,
   cameraReprojectionTaaResolve,
-  createCameraReprojectionTAAShaderPassPipeline
+  createCameraReprojectionTAACompositeShaderPass
 } from './passes/screen-space/camera-reprojection-temporal-antialiasing';
 export type {DepthAwareBlurProps} from './passes/screen-space/depth-aware-blur';
 export {
   depthAwareBlur,
-  depthAwareBlurShaderPassPipeline
+  depthAwareBlurCompositeShaderPass
 } from './passes/screen-space/depth-aware-blur';
-export type {HDRAutoExposureShaderPassPipelineOptions} from './passes/screen-space/hdr-auto-exposure';
+export type {HDRAutoExposureCompositeShaderPassOptions} from './passes/screen-space/hdr-auto-exposure';
 export {
-  createHDRAutoExposureShaderPassPipeline,
+  createHDRAutoExposureCompositeShaderPass,
   hdrAutoExposureAdapt,
   hdrAutoExposureApply,
   hdrLuminanceExtract,
   hdrLuminanceReduce
 } from './passes/screen-space/hdr-auto-exposure';
-export {createMotionBlurShaderPassPipeline} from './passes/screen-space/motion-blur';
-export type {GTAOShaderPassPipelineOptions} from './passes/screen-space/gtao';
+export {createMotionBlurCompositeShaderPass} from './passes/screen-space/motion-blur';
+export type {GTAOCompositeShaderPassOptions} from './passes/screen-space/gtao';
 export {
-  createGTAOShaderPassPipeline,
+  createGTAOCompositeShaderPass,
   gtaoAmbientComposite,
   gtaoComposite,
   gtaoDepthHistoryCopy,
   gtaoEvaluate,
   gtaoTemporal
 } from './passes/screen-space/gtao';
-export type {OutlineShaderPassPipelineOptions} from './passes/screen-space/outlines';
-export {createOutlineShaderPassPipeline} from './passes/screen-space/outlines';
-export type {SSGIShaderPassPipelineOptions} from './passes/screen-space/screen-space-global-illumination';
+export type {OutlineCompositeShaderPassOptions} from './passes/screen-space/outlines';
+export {createOutlineCompositeShaderPass} from './passes/screen-space/outlines';
+export type {SSGICompositeShaderPassOptions} from './passes/screen-space/screen-space-global-illumination';
 export {
-  createSSGIShaderPassPipeline,
+  createSSGICompositeShaderPass,
   ssgiComposite,
   ssgiDepthHistoryCopy,
   ssgiSpatial,
   ssgiTemporal,
   ssgiTrace
 } from './passes/screen-space/screen-space-global-illumination';
-export type {SSRShaderPassPipelineOptions} from './passes/screen-space/screen-space-reflections';
+export type {SSRCompositeShaderPassOptions} from './passes/screen-space/screen-space-reflections';
 export {
-  createSSRShaderPassPipeline,
+  createSSRCompositeShaderPass,
   ssrComposite,
   ssrDepthHistoryCopy,
   ssrSpatial,
   ssrTemporal,
   ssrTrace
 } from './passes/screen-space/screen-space-reflections';
-export type {SSAOShaderPassPipelineOptions} from './passes/screen-space/ssao';
-export {createSSAOShaderPassPipeline} from './passes/screen-space/ssao';
-export {createTAAShaderPassPipeline} from './passes/screen-space/temporal-antialiasing';
-export {createVolumetricFogShaderPassPipeline} from './passes/screen-space/volumetric-fog';
+export type {SSAOCompositeShaderPassOptions} from './passes/screen-space/ssao';
+export {createSSAOCompositeShaderPass} from './passes/screen-space/ssao';
+export {createTAACompositeShaderPass} from './passes/screen-space/temporal-antialiasing';
+export {createVolumetricFogCompositeShaderPass} from './passes/screen-space/volumetric-fog';

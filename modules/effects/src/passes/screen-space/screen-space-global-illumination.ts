@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
 
 /** Construction options for temporally stabilized diffuse screen-space global illumination. */
-export type SSGIShaderPassPipelineOptions = {
+export type SSGICompositeShaderPassOptions = {
   /** Fractional tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
@@ -523,14 +523,14 @@ fn ssgiComposite_sampleColor(
 } as const satisfies ShaderPass<Partial<SSGICompositeUniforms>, SSGICompositeUniforms>;
 
 /** Creates a hemisphere-traced, temporally stabilized screen-space diffuse GI pipeline. */
-export function createSSGIShaderPassPipeline(
-  options: SSGIShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createSSGICompositeShaderPass(
+  options: SSGICompositeShaderPassOptions = {}
+): CompositeShaderPass<
   'ssgiRaw' | 'ssgiHistory' | 'ssgiHistoryDepth' | 'ssgiScratch' | 'ssgiIndirect'
 > {
   const scale = options.resolutionScale ?? 1;
   return {
-    name: 'ssgiShaderPassPipeline',
+    name: 'ssgiCompositeShaderPass',
     renderTargets: {
       ssgiRaw: {scale: [scale, scale], format: 'rgba16float'},
       ssgiHistory: {
