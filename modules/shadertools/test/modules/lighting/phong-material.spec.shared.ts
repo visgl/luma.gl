@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {phongMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-export function registerPhongMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#phongMaterial', t => {
+export function registerPhongMaterialTests(): void {
+  it('shadertools#phongMaterial', () => {
     let uniforms = phongMaterial.getUniforms({});
-    t.deepEqual(uniforms, phongMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
+    expect(uniforms, 'Default phong lighting uniforms ok').toEqual(phongMaterial.defaultUniforms);
 
     uniforms = phongMaterial.getUniforms({
       unlit: true,
@@ -17,41 +17,42 @@ export function registerPhongMaterialTests(test: TapeTestFunction): void {
       shininess: 0.0,
       specularColor: [255, 0, 0]
     });
-    t.is(uniforms.unlit, true, 'unlit');
-    t.is(uniforms.ambient, 0, 'ambient');
-    t.is(uniforms.diffuse, 0, 'diffuse');
-    t.is(uniforms.shininess, 0, 'shininess');
-    t.deepEqual(uniforms.specularColor, [255, 0, 0], 'specularColor');
+    expect(uniforms.unlit, 'unlit').toBe(true);
+    expect(uniforms.ambient, 'ambient').toBe(0);
+    expect(uniforms.diffuse, 'diffuse').toBe(0);
+    expect(uniforms.shininess, 'shininess').toBe(0);
+    expect(uniforms.specularColor, 'specularColor').toEqual([255, 0, 0]);
 
     uniforms = phongMaterial.getUniforms({});
-    t.equal(uniforms.unlit, false, 'unlit');
-    t.equal(uniforms.ambient, 0.35, 'ambient');
-    t.equal(uniforms.diffuse, 0.6, 'diffuse');
-    t.equal(uniforms.shininess, 32, 'shininess');
-    t.deepEqual(uniforms.specularColor, [38.25, 38.25, 38.25], 'specularColor');
-    t.ok(phongMaterial.defines?.LIGHTING_FRAGMENT, 'phongMaterial enables fragment lighting');
+    expect(uniforms.unlit, 'unlit').toBe(false);
+    expect(uniforms.ambient, 'ambient').toBe(0.35);
+    expect(uniforms.diffuse, 'diffuse').toBe(0.6);
+    expect(uniforms.shininess, 'shininess').toBe(32);
+    expect(uniforms.specularColor, 'specularColor').toEqual([38.25, 38.25, 38.25]);
+    expect(
+      phongMaterial.defines?.LIGHTING_FRAGMENT,
+      'phongMaterial enables fragment lighting'
+    ).toBeTruthy();
 
     uniforms = phongMaterial.getUniforms({
       specularColor: [2, 1, 0.5]
     });
-    t.deepEqual(uniforms.specularColor, [2, 1, 0.5], 'float specular colors pass through');
-    t.notOk(
+    expect(uniforms.specularColor, 'float specular colors pass through').toEqual([2, 1, 0.5]);
+    expect(
       'useByteColors' in phongMaterial.uniformTypes,
       'phongMaterial no longer owns useByteColors'
-    );
-    t.ok(
+    ).toBe(false);
+    expect(
       phongMaterial.dependencies?.some(module => module.name === 'floatColors'),
       'phongMaterial depends on floatColors'
-    );
-    t.ok(
+    ).toBe(true);
+    expect(
       phongMaterial.fs.includes('floatColors_normalize(material.specularColor)'),
       'fragment shader normalizes specularColor through floatColors'
-    );
-    t.ok(
+    ).toBe(true);
+    expect(
       phongMaterial.source.includes('floatColors_normalize(phongMaterial.specularColor)'),
       'WGSL shader normalizes specularColor through floatColors'
-    );
-
-    t.end();
+    ).toBe(true);
   });
 }

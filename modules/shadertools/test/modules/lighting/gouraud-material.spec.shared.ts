@@ -4,12 +4,12 @@
 
 import type {UniformValue} from '@luma.gl/core';
 import {gouraudMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-export function registerGouraudMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#gouraudMaterial', t => {
+export function registerGouraudMaterialTests(): void {
+  it('shadertools#gouraudMaterial', () => {
     let uniforms: Record<string, UniformValue | any> = gouraudMaterial.getUniforms?.({})!;
-    t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
+    expect(uniforms, 'Default phong lighting uniforms ok').toEqual(gouraudMaterial.defaultUniforms);
 
     uniforms = gouraudMaterial.getUniforms?.({
       unlit: true,
@@ -18,41 +18,42 @@ export function registerGouraudMaterialTests(test: TapeTestFunction): void {
       shininess: 0.0,
       specularColor: [255, 0, 0]
     })!;
-    t.is(uniforms.unlit, true, 'unlit');
-    t.is(uniforms.ambient, 0, 'ambient');
-    t.is(uniforms.diffuse, 0, 'diffuse');
-    t.is(uniforms.shininess, 0, 'shininess');
-    t.deepEqual(uniforms.specularColor, [255, 0, 0], 'specularColor');
+    expect(uniforms.unlit, 'unlit').toBe(true);
+    expect(uniforms.ambient, 'ambient').toBe(0);
+    expect(uniforms.diffuse, 'diffuse').toBe(0);
+    expect(uniforms.shininess, 'shininess').toBe(0);
+    expect(uniforms.specularColor, 'specularColor').toEqual([255, 0, 0]);
 
     uniforms = gouraudMaterial.getUniforms?.({})!;
-    t.equal(uniforms.unlit, false, 'unlit');
-    t.equal(uniforms.ambient, 0.35, 'ambient');
-    t.equal(uniforms.diffuse, 0.6, 'diffuse');
-    t.equal(uniforms.shininess, 32, 'shininess');
-    t.deepEqual(uniforms.specularColor, [38.25, 38.25, 38.25], 'specularColor');
-    t.ok(gouraudMaterial.defines?.LIGHTING_VERTEX, 'gouraudMaterial enables vertex lighting');
+    expect(uniforms.unlit, 'unlit').toBe(false);
+    expect(uniforms.ambient, 'ambient').toBe(0.35);
+    expect(uniforms.diffuse, 'diffuse').toBe(0.6);
+    expect(uniforms.shininess, 'shininess').toBe(32);
+    expect(uniforms.specularColor, 'specularColor').toEqual([38.25, 38.25, 38.25]);
+    expect(
+      gouraudMaterial.defines?.LIGHTING_VERTEX,
+      'gouraudMaterial enables vertex lighting'
+    ).toBeTruthy();
 
     uniforms = gouraudMaterial.getUniforms?.({
       specularColor: [2, 1, 0.5]
     })!;
-    t.deepEqual(uniforms.specularColor, [2, 1, 0.5], 'float specular colors pass through');
-    t.notOk(
+    expect(uniforms.specularColor, 'float specular colors pass through').toEqual([2, 1, 0.5]);
+    expect(
       'useByteColors' in gouraudMaterial.uniformTypes,
       'gouraudMaterial no longer owns useByteColors'
-    );
-    t.ok(
+    ).toBe(false);
+    expect(
       gouraudMaterial.dependencies?.some(module => module.name === 'floatColors'),
       'gouraudMaterial depends on floatColors'
-    );
-    t.ok(
+    ).toBe(true);
+    expect(
       gouraudMaterial.vs?.includes('floatColors_normalize(material.specularColor)'),
       'vertex shader normalizes specularColor through floatColors'
-    );
-    t.ok(
+    ).toBe(true);
+    expect(
       gouraudMaterial.source?.includes('floatColors_normalize(gouraudMaterial.specularColor)'),
       'WGSL shader normalizes specularColor through floatColors'
-    );
-
-    t.end();
+    ).toBe(true);
   });
 }
