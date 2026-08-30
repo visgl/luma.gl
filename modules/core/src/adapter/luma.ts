@@ -92,6 +92,7 @@ export class Luma {
   /** Creates a device. Asynchronously. */
   async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
     const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
+    clearDeviceCreationError();
 
     const adapter = this.selectAdapter(props.type, props.adapters);
     if (!adapter) {
@@ -105,7 +106,9 @@ export class Luma {
       if (props.waitForPageLoad) {
         await adapter.pageLoaded;
       }
-      return await adapter.create(props);
+      const device = await adapter.create(props);
+      clearDeviceCreationError();
+      return device;
     } catch (error) {
       if (props.debug) displayDeviceCreationError(error);
       throw error;
@@ -241,11 +244,17 @@ function displayDeviceCreationError(error: unknown): void {
   const canvas = document.querySelector('canvas');
   if (!canvas) return;
 
+  clearDeviceCreationError();
   const errorElement = document.createElement('div');
   errorElement.id = 'luma-device-error';
   errorElement.setAttribute('role', 'alert');
   errorElement.textContent = error instanceof Error ? error.message : String(error);
   canvas.after(errorElement);
+}
+
+function clearDeviceCreationError(): void {
+  if (typeof document === 'undefined') return;
+  document.getElementById('luma-device-error')?.remove();
 }
 
 /**

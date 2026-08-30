@@ -57,7 +57,31 @@ test('luma#createDevice displays debug failures beside a page canvas', async t =
   t.equal(errorElement?.previousElementSibling, canvas, 'the error is displayed beside the canvas');
   t.equal(errorElement?.getAttribute('role'), 'alert', 'the error is announced accessibly');
   t.equal(errorElement?.textContent, 'WebGPU unavailable', 'the native error is shown');
-  errorElement?.remove();
+
+  try {
+    await luma.createDevice({
+      type: 'webgpu',
+      adapters: [adapter],
+      debug: true,
+      waitForPageLoad: false
+    });
+  } catch {
+    // Expected repeated device creation failure.
+  }
+  t.equal(
+    document.querySelectorAll('#luma-device-error').length,
+    1,
+    'repeated failures replace the existing error'
+  );
+
+  const device = await luma.createDevice({
+    type: 'null',
+    adapters: [nullAdapter],
+    debug: true,
+    waitForPageLoad: false
+  });
+  t.equal(document.getElementById('luma-device-error'), null, 'success clears stale errors');
+  device.destroy();
   canvas.remove();
   t.end();
 });
