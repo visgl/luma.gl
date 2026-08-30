@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {preprocess} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 const TEST_CASES = [
   {
@@ -97,29 +97,17 @@ var attributePath = 1;
   }
 ];
 
-export function registerPreprocessorTests(test: TapeTestFunction): void {
-  test('preprocess', t => {
+export function registerPreprocessorTests(): void {
+  it('preprocess', () => {
     for (const testCase of TEST_CASES) {
       const result = preprocess(testCase.source, testCase.options);
-      t.equal(result, testCase.result, testCase.title);
+      expect(result, testCase.title).toBe(testCase.result);
     }
 
-    t.throws(
-      () => preprocess('#else\nvalue\n#endif'),
-      /Encountered #else/,
-      'orphaned #else throws'
+    expect(() => preprocess('#else\nvalue\n#endif')).toThrow(/Encountered #else/);
+    expect(() => preprocess('#ifdef USE_SHADOWS\nvalue')).toThrow(/Unterminated conditional block/);
+    expect(() => preprocess('#if USE_A && USE_B\nvalue\n#endif')).toThrow(
+      /Unsupported #if expression/
     );
-    t.throws(
-      () => preprocess('#ifdef USE_SHADOWS\nvalue'),
-      /Unterminated conditional block/,
-      'unterminated conditionals throw'
-    );
-    t.throws(
-      () => preprocess('#if USE_A && USE_B\nvalue\n#endif'),
-      /Unsupported #if expression/,
-      'unsupported #if expressions throw'
-    );
-
-    t.end();
   });
 }
