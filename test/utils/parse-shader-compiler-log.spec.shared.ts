@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
 import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
+import {expect, it} from 'vitest';
 
 const ERROR_LOG = `\
 WARNING: 0:264: '/' : Zero divided by zero during constant folding generated NaN
@@ -151,29 +151,26 @@ const EXPECTED_MESSAGES = [
   }
 ];
 
-export function registerParseShaderCompilerLogTests(test: TapeTestFunction): void {
-  test('parseShaderCompilerLog', t => {
+export function registerParseShaderCompilerLogTests(): void {
+  it('parseShaderCompilerLog', () => {
     const messages = parseShaderCompilerLog(ERROR_LOG);
-    t.deepEqual(messages, EXPECTED_MESSAGES, 'parseShaderCompilerLog generated correct messages');
+    expect(messages, 'parseShaderCompilerLog generated correct messages').toEqual(
+      EXPECTED_MESSAGES
+    );
 
-    t.deepEqual(
+    expect(
       parseShaderCompilerLog('ERROR: unsupported shader version'),
-      [{message: 'unsupported shader version', type: 'error', lineNum: 0, linePos: 0}],
       'two-segment messages are parsed without line info'
-    );
+    ).toEqual([{message: 'unsupported shader version', type: 'error', lineNum: 0, linePos: 0}]);
 
-    t.deepEqual(
+    expect(
       parseShaderCompilerLog('INFO::invalid'),
-      [{message: ':invalid', type: 'info', lineNum: 0, linePos: 0}],
       'malformed segmented messages fall back to line 0'
-    );
+    ).toEqual([{message: ':invalid', type: 'info', lineNum: 0, linePos: 0}]);
 
-    t.deepEqual(
+    expect(
       parseShaderCompilerLog('\nWARNING: 2:NaN: malformed position'),
-      [{message: 'malformed position', type: 'warning', lineNum: 0, linePos: 2}],
       'blank lines are ignored and NaN line numbers are normalized'
-    );
-
-    t.end();
+    ).toEqual([{message: 'malformed position', type: 'warning', lineNum: 0, linePos: 2}]);
   });
 }

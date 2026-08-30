@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {fillArray} from '@luma.gl/webgl/utils/fill-array';
 
 const FILL_ARRAY_TEST_CASES = [
@@ -13,15 +13,15 @@ const FILL_ARRAY_TEST_CASES = [
   }
 ];
 
-test('fillArray#import', t => {
-  t.ok(typeof fillArray === 'function', 'fillArray imported OK');
-  t.end();
+it('fillArray#import', () => {
+  expect(typeof fillArray, 'fillArray imported OK').toBe('function');
 });
 
-test('fillArray#tests', t => {
+it('fillArray#tests', () => {
   for (const tc of FILL_ARRAY_TEST_CASES) {
     const result = fillArray(tc.arguments);
-    t.deepEqual(result, tc.result, `fillArray ${tc.title} returned expected result`);
+    expect(result, `fillArray ${tc.title} returned expected result`).toEqual(
+      new Float32Array(tc.result)
+    );
   }
-  t.end();
 });

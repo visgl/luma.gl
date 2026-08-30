@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {deepArrayEqual} from '@luma.gl/webgl/context/state-tracker/deep-array-equal';
+import {expect, it} from 'vitest';
 
-test('WebGLState#deepArrayEqual', t => {
+it('WebGLState#deepArrayEqual', () => {
   const ARRAY = [0, 1, 2];
 
   const TEST_CASES = [
@@ -24,7 +24,6 @@ test('WebGLState#deepArrayEqual', t => {
   ];
 
   for (const tc of TEST_CASES) {
-    t.equals(deepArrayEqual(tc.x, tc.y), tc.result, tc.title);
+    expect(deepArrayEqual(tc.x, tc.y), tc.title).toBe(tc.result);
   }
-  t.end();
 });
