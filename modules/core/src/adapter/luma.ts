@@ -95,15 +95,21 @@ export class Luma {
 
     const adapter = this.selectAdapter(props.type, props.adapters);
     if (!adapter) {
-      throw new Error(ERROR_MESSAGE);
+      const error = new Error(ERROR_MESSAGE);
+      if (props.debug) displayDeviceCreationError(error);
+      throw error;
     }
 
-    // Wait for page to load so that CanvasContext's can access the DOM.
-    if (props.waitForPageLoad) {
-      await adapter.pageLoaded;
+    try {
+      // Wait for page to load so that CanvasContext's can access the DOM.
+      if (props.waitForPageLoad) {
+        await adapter.pageLoaded;
+      }
+      return await adapter.create(props);
+    } catch (error) {
+      if (props.debug) displayDeviceCreationError(error);
+      throw error;
     }
-
-    return await adapter.create(props);
   }
 
   /**
@@ -228,6 +234,18 @@ export class Luma {
 
     return null;
   }
+}
+
+function displayDeviceCreationError(error: unknown): void {
+  if (typeof document === 'undefined') return;
+  const canvas = document.querySelector('canvas');
+  if (!canvas) return;
+
+  const errorElement = document.createElement('div');
+  errorElement.id = 'luma-device-error';
+  errorElement.setAttribute('role', 'alert');
+  errorElement.textContent = error instanceof Error ? error.message : String(error);
+  canvas.after(errorElement);
 }
 
 /**

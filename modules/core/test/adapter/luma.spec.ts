@@ -4,7 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {nullAdapter} from '@luma.gl/test-utils';
-import {luma} from '@luma.gl/core';
+import {luma, type Adapter} from '@luma.gl/core';
 
 test('luma#attachDevice', async t => {
   const device = await luma.attachDevice(null, {adapters: [nullAdapter]});
@@ -28,6 +28,37 @@ test('luma#createDevice', async t => {
   t.equal(device.type, 'null', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
+  t.end();
+});
+
+test('luma#createDevice displays debug failures beside a page canvas', async t => {
+  const canvas = document.createElement('canvas');
+  document.body.prepend(canvas);
+  const adapter = {
+    type: 'webgpu',
+    pageLoaded: Promise.resolve(),
+    create: async () => {
+      throw new Error('WebGPU unavailable');
+    }
+  } as unknown as Adapter;
+
+  try {
+    await luma.createDevice({
+      type: 'webgpu',
+      adapters: [adapter],
+      debug: true,
+      waitForPageLoad: false
+    });
+  } catch {
+    // Expected device creation failure.
+  }
+
+  const errorElement = document.getElementById('luma-device-error');
+  t.equal(errorElement?.previousElementSibling, canvas, 'the error is displayed beside the canvas');
+  t.equal(errorElement?.getAttribute('role'), 'alert', 'the error is announced accessibly');
+  t.equal(errorElement?.textContent, 'WebGPU unavailable', 'the native error is shown');
+  errorElement?.remove();
+  canvas.remove();
   t.end();
 });
 
