@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   ShaderLayout,
   getAttributeInfosFromLayouts,
@@ -190,15 +190,12 @@ const resolvedLayout: Record<string, AttributeInfo> = {
   }
 };
 
-test('getAttributeInfosFromLayouts', t => {
+it('getAttributeInfosFromLayouts', () => {
   const result = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
   for (const key of Object.keys(resolvedLayout)) {
-    t.deepEqual(
-      result[key],
-      resolvedLayout[key],
-      `Interleaved attribute info for ${key} are correct`
+    expect(result[key], `Interleaved attribute info for ${key} are correct`).toEqual(
+      resolvedLayout[key]
     );
     // t.comment(JSON.stringify(result[key], null, 2));
   }
-  t.end();
 });
