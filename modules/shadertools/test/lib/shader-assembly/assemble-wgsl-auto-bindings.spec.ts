@@ -9,6 +9,7 @@ import {ibl} from '../../../src/modules/lighting/ibl/ibl';
 import {lighting} from '../../../src/modules/lighting/lights/lighting';
 import {dirlight} from '../../../src/modules/lighting/no-material/dirlight';
 import {pbrProjection} from '../../../src/modules/lighting/pbr-material/pbr-projection';
+import {fp32} from '../../../src/modules/math/fp32/fp32';
 import {fp64arithmetic} from '../../../src/modules/math/fp64/fp64';
 
 const PLATFORM_INFO: PlatformInfo = {
@@ -50,6 +51,37 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
   return vec4<f32>(x, 0.0, 0.0, 1.0);
 }
 `;
+
+test('assembleWGSLShader#selects precise fp32 tan implementation', t => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const assemble = (gpu: string, defines?: Record<string, boolean>) =>
+    shaderAssembler.assembleWGSLShader({
+      platformInfo: {...PLATFORM_INFO, gpu},
+      source: APP_WGSL,
+      modules: [fp32],
+      defines
+    }).source;
+
+  const appleSource = assemble('apple');
+  t.ok(appleSource.includes('fn tan_taylor_fp32'), 'Apple WebGPU selects Taylor tan');
+  t.notOk(appleSource.includes('return tan(a);'), 'Apple WebGPU omits native tan');
+
+  const defaultSource = assemble('test-gpu');
+  t.ok(defaultSource.includes('fn tan_taylor_fp32'), 'unknown WebGPU adapters select Taylor tan');
+
+  const nvidiaSource = assemble('nvidia');
+  t.notOk(nvidiaSource.includes('fn tan_taylor_fp32'), 'NVIDIA WebGPU omits Taylor tan');
+  t.ok(nvidiaSource.includes('return tan(a);'), 'NVIDIA WebGPU selects native tan');
+
+  const forcedSource = assemble('nvidia', {LUMA_FP32_TAN_PRECISION_WORKAROUND: true});
+  t.ok(forcedSource.includes('fn tan_taylor_fp32'), 'callers can force Taylor tan');
+
+  const disabledSource = assemble('apple', {LUMA_FP32_TAN_PRECISION_WORKAROUND: false});
+  t.ok(disabledSource.includes('return tan(a);'), 'callers can disable Taylor tan');
+  t.notOk(disabledSource.includes('fn tan_taylor_fp32'), 'false override removes Taylor tan');
+
+  t.end();
+});
 
 test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
   const shaderAssembler = new WGSLShaderAssembler();
