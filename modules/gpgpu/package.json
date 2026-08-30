@@ -62,6 +62,11 @@
       "types": "./dist/gpu-graph/benchmarks.d.ts",
       "import": "./dist/gpu-graph/benchmarks.js",
       "require": "./dist/gpu-graph/benchmarks.cjs"
+    },
+    "./gpu-vector-search": {
+      "types": "./dist/gpu-vector-search/index.d.ts",
+      "import": "./dist/gpu-vector-search/index.js",
+      "require": "./dist/gpu-vector-search/index.cjs"
     }
   },
   "files": [
