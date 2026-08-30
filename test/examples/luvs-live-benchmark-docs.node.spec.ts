@@ -26,7 +26,7 @@ const benchmarkRuntimeSource = readFileSync(
   'utf8'
 );
 const documentationSource = readFileSync(
-  new URL('../../docs/api-reference/experimental/luvs.md', import.meta.url),
+  new URL('../../docs/api-reference/gpgpu/gpu-vector-search.md', import.meta.url),
   'utf8'
 );
 const navigationSource = readFileSync(
@@ -37,11 +37,11 @@ const sidebarSource = readFileSync(
   new URL('../../docs/table-of-contents.json', import.meta.url),
   'utf8'
 );
-const experimentalPackage = JSON.parse(
-  readFileSync(new URL('../../modules/experimental/package.json', import.meta.url), 'utf8')
+const gpgpuPackage = JSON.parse(
+  readFileSync(new URL('../../modules/gpgpu/package.json', import.meta.url), 'utf8')
 ) as {exports: Record<string, {import: string; types: string}>};
-const experimentalMainIndex = readFileSync(
-  new URL('../../modules/experimental/src/index.ts', import.meta.url),
+const gpgpuMainIndex = readFileSync(
+  new URL('../../modules/gpgpu/src/index.ts', import.meta.url),
   'utf8'
 );
 
@@ -112,17 +112,17 @@ beforeEach(() => {
 
 describe('luVS live vector-similarity benchmark documentation', () => {
   test('publishes one optional package entry and embeds its reference in both sidebars', () => {
-    expect(experimentalPackage.exports['./luvs']).toMatchObject({
-      import: './dist/luvs/index.js',
-      types: './dist/luvs/index.d.ts'
+    expect(gpgpuPackage.exports['./gpu-vector-search']).toMatchObject({
+      import: './dist/gpu-vector-search/index.js',
+      types: './dist/gpu-vector-search/index.d.ts'
     });
-    expect(experimentalMainIndex).not.toContain("from './luvs");
+    expect(gpgpuMainIndex).not.toContain("from './gpu-vector-search");
     expect(documentationSource).toContain(
       "import {LuvsBenchmark} from '@site/src/components/docs/luvs-benchmark';"
     );
     expect(documentationSource).toContain('<LuvsBenchmark />');
-    expect(sidebarSource.match(/"api-reference\/experimental\/luvs"/g)).toHaveLength(2);
-    expect(navigationSource).toContain("href: '/docs/api-reference/experimental/luvs'");
+    expect(sidebarSource.match(/"api-reference\/gpgpu\/gpu-vector-search"/g)).toHaveLength(1);
+    expect(navigationSource).not.toContain("href: '/docs/api-reference/experimental/luvs'");
   });
 
   test('documents fixed-size GPU table columns, Arrow ingestion, filters, and approximate IVF', () => {
