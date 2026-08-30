@@ -3,9 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Log} from '@probe.gl/log';
-import type {Device, DeviceProps} from './device';
+import type {Device, DeviceProps, WebGPUFeatureLevel} from './device';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
 import {Adapter} from './adapter';
+import {
+  DeviceCreationError,
+  type DeviceCreationAttempt,
+  wrapDeviceCreationError
+} from './device-creation-error';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
@@ -16,13 +21,19 @@ declare global {
 
 const STARTUP_MESSAGE = 'set luma.log.level=1 (or higher) to trace rendering';
 
-const ERROR_MESSAGE =
-  'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
+const ERROR_MESSAGE = 'No matching device found. Import `@luma.gl/webgl` and/or `@luma.gl/webgpu`.';
+
+type DeviceCreationCandidate = {
+  adapter?: Adapter;
+  backend: DeviceCreationAttempt['backend'];
+  featureLevel?: WebGPUFeatureLevel;
+  software?: boolean;
+};
 
 /** Properties for creating a new device */
 export type CreateDeviceProps = {
-  /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
-  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available';
+  /** Selects an exact backend or an ordered device creation policy. */
+  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available' | 'best-available-webgpu';
   /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
   /**
@@ -92,18 +103,93 @@ export class Luma {
   /** Creates a device. Asynchronously. */
   async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
     const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
+    const candidates = this._getDeviceCreationCandidates(props);
+    const attempts: DeviceCreationAttempt[] = [];
+    const isBestAvailablePolicy = props.type.startsWith('best');
 
-    const adapter = this.selectAdapter(props.type, props.adapters);
-    if (!adapter) {
-      throw new Error(ERROR_MESSAGE);
+    for (const candidate of candidates) {
+      const attempt = {
+        backend: candidate.backend,
+        featureLevel: candidate.featureLevel,
+        software: Boolean(candidate.software),
+        phase: 'adapter-selection' as const
+      };
+
+      if (!candidate.adapter?.isSupported?.()) {
+        const error = new Error(`No ${candidate.backend} adapter`);
+        attempts.push({...attempt, error});
+        continue;
+      }
+
+      try {
+        if (props.waitForPageLoad) {
+          try {
+            await candidate.adapter.pageLoaded;
+          } catch (error) {
+            throw wrapDeviceCreationError(
+              error,
+              {...attempt, phase: 'adapter-request'},
+              `Waiting for ${candidate.backend} failed`
+            );
+          }
+        }
+
+        const device = await candidate.adapter.create({
+          ...props,
+          featureLevel: candidate.featureLevel,
+          _forceFallbackAdapter: Boolean(candidate.software),
+          failIfMajorPerformanceCaveat:
+            props.failIfMajorPerformanceCaveat ||
+            (isBestAvailablePolicy && candidate.backend === 'webgpu' && !candidate.software)
+        });
+        const selectedSoftware =
+          candidate.software ||
+          device.info.gpu === 'software' ||
+          device.info.gpuType === 'cpu' ||
+          Boolean(device.info.fallback);
+        if (
+          isBestAvailablePolicy &&
+          candidate.backend === 'webgpu' &&
+          !candidate.software &&
+          selectedSoftware
+        ) {
+          device.destroy();
+          attempts.push({
+            ...attempt,
+            phase: 'adapter-selection',
+            error: new Error('Software rejected')
+          });
+          replaceCanvasAfterFailedInitialization(props);
+          continue;
+        }
+        device.creationInfo = {
+          requestedType: props.type,
+          selected: {
+            backend: candidate.backend,
+            featureLevel: device.info.featureLevel,
+            software: selectedSoftware
+          },
+          attempts
+        };
+        if (attempts.length > 0) {
+          log.warn(`Recovered ${candidate.backend}; ${attempts.length} failed`, attempts)();
+        }
+        return device;
+      } catch (error) {
+        const structuredError = wrapDeviceCreationError(
+          error,
+          {...attempt, phase: 'wrapper-initialization'},
+          `Failed to create ${candidate.backend}`
+        );
+        attempts.push(...structuredError.attempts);
+        if (structuredError.phase === 'canvas-initialization') {
+          replaceCanvasAfterFailedInitialization(props);
+        }
+      }
     }
 
-    // Wait for page to load so that CanvasContext's can access the DOM.
-    if (props.waitForPageLoad) {
-      await adapter.pageLoaded;
-    }
-
-    return await adapter.create(props);
+    const lastError = attempts[attempts.length - 1]?.error;
+    throw new DeviceCreationError(lastError?.message || ERROR_MESSAGE, attempts, lastError);
   }
 
   /**
@@ -157,6 +243,8 @@ export class Luma {
     let selectedType: string | null = type;
     if (type === 'best-available') {
       selectedType = this.getBestAvailableAdapterType(adapters);
+    } else if (type === 'best-available-webgpu') {
+      selectedType = 'webgpu';
     }
 
     const adapterMap = this._getAdapterMap(adapters);
@@ -194,6 +282,56 @@ export class Luma {
     return map;
   }
 
+  protected _getDeviceCreationCandidates(
+    props: Required<CreateDeviceProps>
+  ): DeviceCreationCandidate[] {
+    const adapterMap = this._getAdapterMap(props.adapters);
+    if (!props.type.startsWith('best')) {
+      const adapter = adapterMap.get(props.type);
+      return [
+        {
+          adapter,
+          backend: props.type as DeviceCreationCandidate['backend'],
+          featureLevel: props.type === 'webgpu' ? props.featureLevel : undefined,
+          software: Boolean(props.type === 'webgpu' && props._forceFallbackAdapter)
+        }
+      ];
+    }
+
+    const featureLevels: WebGPUFeatureLevel[] =
+      props.featureLevel === 'max'
+        ? ['max', 'core', 'compatibility']
+        : props.featureLevel === 'compatibility'
+          ? ['compatibility']
+          : ['core', 'compatibility'];
+    const webgpuAdapter = adapterMap.get('webgpu');
+    const candidates: DeviceCreationCandidate[] = featureLevels.map(featureLevel => ({
+      adapter: webgpuAdapter,
+      backend: 'webgpu',
+      featureLevel
+    }));
+
+    if (props.type === 'best-available') {
+      candidates.push({
+        adapter: adapterMap.get('webgl'),
+        backend: 'webgl'
+      });
+      candidates.push({
+        adapter: adapterMap.get('null'),
+        backend: 'null'
+      });
+    } else if (!props.failIfMajorPerformanceCaveat) {
+      candidates.push({
+        adapter: webgpuAdapter,
+        backend: 'webgpu',
+        featureLevel: 'compatibility',
+        software: true
+      });
+    }
+
+    return candidates;
+  }
+
   /** Get type of a handle (for attachDevice) */
   protected _getTypeFromHandle(
     handle: unknown,
@@ -227,6 +365,21 @@ export class Luma {
     }
 
     return null;
+  }
+}
+
+function replaceCanvasAfterFailedInitialization(props: Required<CreateDeviceProps>): void {
+  const contextProps = props.createCanvasContext;
+  if (
+    typeof HTMLCanvasElement !== 'undefined' &&
+    contextProps &&
+    contextProps !== true &&
+    contextProps.canvas instanceof HTMLCanvasElement
+  ) {
+    const canvas = contextProps.canvas;
+    const replacement = canvas.cloneNode() as HTMLCanvasElement;
+    canvas.replaceWith(replacement);
+    contextProps.canvas = replacement;
   }
 }
 
