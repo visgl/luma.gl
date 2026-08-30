@@ -61,6 +61,7 @@ public class matrix for every scalar type. Object-oriented operations such as `G
 | `parseParquetDeltaByteArrayPlan` | BYTE_ARRAY uses prefix compression | prefix/suffix plans and suffix boundary |
 | `parseLZ4RawDecompressionPlan` | a page uses LZ4_RAW | sequence descriptors and exact output size |
 | `parseSnappyDecompressionPlan` | a page uses raw Snappy | generic literal/backreference descriptors and declared output size |
+| `planGPUParquetEncodedPageBatch` | loaders.gl returned deferred encoded pages | validated mixed GPU/CPU decisions and one aligned upload containing pages, dictionaries, and descriptors |
 
 Plans retain offsets into the original input. Pass that same packed input view to the GPU operation
 unless a function explicitly documents an isolated slice.
@@ -85,6 +86,7 @@ unless a function explicitly documents an isolated slice.
 | `GPUParquetLevelLayout` | decoded levels must become null/value and repeated-row layout | physical validity/value offsets, logical element offsets, row indices, list offsets, and counts |
 | `GPULZ4RawDecompressor` | a page body uses LZ4_RAW | semantic wrapper over `GPULZByteDecompressor` |
 | `GPUSnappyDecompressor` | a Parquet page body uses raw Snappy | semantic wrapper over `GPULZByteDecompressor` |
+| `addGPUParquetEncodedPageBatchToGraph` | a loaders.gl page-batch plan should become executable GPU work | decompression, level decoding, value decoding, dictionary reuse, and result graph views |
 
 ## Common recipes
 
@@ -139,48 +141,91 @@ Use the codec-specific GPU wrapper when operation names and metrics should retai
 use `GPULZByteDecompressor` directly when another byte-oriented LZ format can produce the same
 descriptor contract.
 
-## Proposed loaders.gl integration
+## loaders.gl integration
 
-A Parquet loader option such as `parquet.deferPageDecoding: 'gpu'` should parse the file and page
-metadata while preserving GPU-tractable page work. The returned object should be a transport-neutral
-description rather than a luma.gl command graph:
+loaders.gl 5.0.0-alpha.4 implements the transport-neutral boundary through
+`ParquetSource.readPages()`. It retains file I/O, Thrift metadata, schema traversal, page indexes,
+checksums, encryption, and range requests while returning `ParquetEncodedPageBatch` objects. The
+loader contract contains no luma.gl device or graph types.
 
-```ts
-type DeferredParquetPage = {
-  encoding: string;
-  compression: string;
-  physicalType: string;
-  valueCount: number;
-  nonNullValueCount: number;
-  typeLength?: number;
-  maxDefinitionLevel: number;
-  maxRepetitionLevel: number;
-  pageVersion: 1 | 2;
-  pageBytes: Uint8Array;
-  repetitionLevels?: {byteOffset: number; byteLength: number};
-  definitionLevels?: {byteOffset: number; byteLength: number};
-  values: {byteOffset: number; byteLength: number};
-  dictionaryPageId?: number;
-};
+Install loaders.gl explicitly when using this optional adapter:
+
+```sh
+yarn add @loaders.gl/parquet@5.0.0-alpha.4
 ```
 
-Recommended behavior:
+Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
-- The loader still handles file I/O, Thrift metadata, schema traversal, page boundaries, checksums,
-  encryption, and unsupported codec fallback.
-- `pageBytes` keeps compressed bytes only when the codec is GPU-supported; otherwise the loader
-  decompresses but preserves the encoded value representation.
-- Data Page V1/V2 level ranges are normalized explicitly so the GPU adapter never guesses framing.
-- Dictionary pages remain associated with data pages by a stable page ID and share ownership with
-  the returned batch.
-- CPU decoding remains the default. Deferred mode is opt-in and may return a mixed batch where only
-  supported pages are deferred.
-- The loader owns byte buffers until the consumer releases the batch. The GPU adapter may upload,
-  cache, or stream pages without loaders.gl depending on WebGPU.
+```ts
+import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {
+  addGPUParquetEncodedPageBatchToGraph,
+  createGPUParquetEncodedPageBatchInputBuffer,
+  planGPUParquetEncodedPageBatch
+} from '@luma.gl/gpgpu/gpu-parse';
 
-An adapter in luma.gl can map this object to the appropriate `parse...Plan` and `GPU...` operations.
-Keeping the contract free of `Device`, `Buffer`, and `GPUCommandGraph` types lets loaders.gl expose
-the option to other GPU runtimes too.
+const source = ParquetSourceLoader.createDataSource(parquetBlob, {});
+
+for await (const encodedBatch of source.readPages({
+  columns: ['position', 'category'],
+  preserveCompression: ['SNAPPY', 'LZ4_RAW']
+})) {
+  const plan = planGPUParquetEncodedPageBatch(encodedBatch, {
+    minimumGPUByteLength: 64 * 1024
+  });
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device);
+  const decodedBatch = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+
+  // Add table, filtering, rendering, or readback operations that consume decodedBatch.pages.
+  const compiled = graph.compile();
+  // Encode and submit the compiled graph, then destroy compiled and inputBuffer when finished.
+}
+```
+
+### What the adapter does
+
+- Validates page counts, ordinals, compression metadata, and every advertised section range before
+  uploading data.
+- Copies page sections and CPU-parsed descriptors into one four-byte-aligned upload instead of
+  creating one GPU buffer per page.
+- Reuses one immutable dictionary plan and graph resource across every dictionary data page in the
+  column chunk.
+- Composes Snappy or LZ4_RAW decompression, V1/V2 level decoding, and supported value decoders in
+  one command graph.
+- Returns packed-byte, uint32, split-uint64, or byte-array result views for downstream graph work.
+- Keeps unsupported pages in source order as `CPUParquetPageFallbackPlan`; no page is silently
+  omitted.
+
+`minimumGPUByteLength` is an application policy rather than a fixed library heuristic. Use zero
+after explicitly choosing GPU deferral, or set a measured crossover size when CPU decoding is
+available. `requireGPU: true` converts every fallback into an exception and is useful for tests and
+controlled pipelines.
+
+### Deliberate automatic-fallback cases
+
+- Compression codecs other than Snappy and LZ4_RAW.
+- Compressed V1 pages containing levels. V1 compresses the entire body, so level/value boundaries
+  are unknowable until decompression. V2 leaves level sections addressable and is fully composable.
+- Encodings whose serial control headers remain hidden inside a compressed value payload. The
+  loader may CPU-decompress these pages while still deferring their value decoding.
+- Encodings with no bounded automatic output allocation. Lower-level operations remain available
+  when an application supplies an explicit output capacity.
+
+CPU decoding remains the loaders.gl default. `readPages()` is the explicit opt-in, and mixed
+CPU/GPU execution remains caller-owned because loaders.gl should not depend on luma.gl.
+
+## Conformance and hardening
+
+The adapter tests real V1 and V2 pages emitted by loaders.gl's Parquet writer, including nullable,
+all-null, fixed-width, and variable-width values. Additional fixtures cover dictionary reuse,
+malformed section rejection, page thresholds, raw Snappy decompression, BYTE_STREAM_SPLIT, and
+definition-level decoding. Every lower-level decoder also retains focused truncation and boundary
+tests.
+
+Malformed framing and contradictory metadata throw during planning. Only recognized capability or
+policy boundaries become CPU fallbacks; corrupt data is never relabeled as an unsupported page.
 
 ## Support matrix
 

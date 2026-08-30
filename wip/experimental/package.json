@@ -49,8 +49,8 @@
     "@luma.gl/test-utils": "~9.3.0"
   },
   "peerDependencies": {
-    "@loaders.gl/gltf": "~5.0.0-alpha.1",
-    "@loaders.gl/images": "~5.0.0-alpha.1"
+    "@loaders.gl/gltf": "~5.0.0-alpha.4",
+    "@loaders.gl/images": "~5.0.0-alpha.4"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
