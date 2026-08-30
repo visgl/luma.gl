@@ -70,6 +70,60 @@ test('GPU Parquet page planner makes thresholds and fallback boundaries explicit
   testCase.end();
 });
 
+test('GPU Parquet page planner rejects mismatched compressed fixed-width output', testCase => {
+  const data = Uint8Array.from([3, 8, 1, 2, 3]);
+  const batch = {
+    shape: 'parquet-encoded-pages' as const,
+    rowGroup: {
+      index: 0,
+      rowOffset: 0,
+      rowCount: 1,
+      uncompressedByteLength: 3,
+      uncompressedSize: 3,
+      compressedByteLength: data.byteLength,
+      compressedSize: data.byteLength,
+      columns: [],
+      sortingColumns: []
+    },
+    projectedColumns: ['value'],
+    filterColumns: [],
+    columns: [
+      {
+        path: ['value'],
+        physicalType: 'INT32',
+        maxRepetitionLevel: 0,
+        maxDefinitionLevel: 0,
+        compression: 'SNAPPY',
+        valueCount: 1,
+        pages: [
+          {
+            type: 'data-v2' as const,
+            pageOrdinal: 0,
+            encoding: 'PLAIN',
+            repetitionLevelEncoding: 'RLE',
+            definitionLevelEncoding: 'RLE',
+            compression: 'SNAPPY',
+            compressionState: 'compressed' as const,
+            valueCount: 1,
+            nonNullValueCount: 1,
+            data,
+            values: {byteOffset: 0, byteLength: data.byteLength},
+            compressedByteLength: data.byteLength,
+            uncompressedByteLength: 3
+          }
+        ]
+      }
+    ]
+  } satisfies ParquetEncodedPageBatch;
+
+  testCase.throws(
+    () => planGPUParquetEncodedPageBatch(batch),
+    /PLAIN INT32 payload has 3 decoded bytes; expected 4/,
+    'cross-checks codec output metadata against the physical value layout'
+  );
+  testCase.end();
+});
+
 test('GPU Parquet page planner caches variable dictionaries across data pages', testCase => {
   const dictionaryData = Uint8Array.from([1, 0, 0, 0, 97, 2, 0, 0, 0, 98, 98]);
   const makeDictionaryPage = () => ({

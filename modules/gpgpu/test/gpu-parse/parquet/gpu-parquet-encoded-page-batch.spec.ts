@@ -77,6 +77,52 @@ test('loaders.gl encoded pages batch Snappy, levels, and values in one graph', a
   testCase.end();
 });
 
+test('compressed PLAIN page outputs remain available for graph readback', async testCase => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    testCase.comment('WebGPU is not available');
+    testCase.end();
+    return;
+  }
+
+  const expectedValues = new Uint8Array(new Float32Array([1, 2]).buffer);
+  const snappyValues = Uint8Array.from([8, 28, ...expectedValues]);
+  const plan = planGPUParquetEncodedPageBatch(
+    makeBatch(Uint8Array.from([4, 1, ...snappyValues]), 'PLAIN')
+  );
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-plain-readback-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const page = result.pages[0] as GPUParquetDecodedPage;
+  const readback = createReadbackBuffer(device, expectedValues.byteLength);
+  addReadbackCopy(
+    graph,
+    page.values.layout === 'split-uint64' ? page.values.low : page.values.values,
+    readback,
+    'plain-values'
+  );
+  const compiled = graph.compile();
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-plain-encoder'});
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+    const resultData = await readback.readAsync();
+    testCase.deepEqual(
+      Array.from(
+        new Uint8Array(resultData.buffer, resultData.byteOffset, expectedValues.byteLength)
+      ),
+      Array.from(expectedValues),
+      'copies the decompressed PLAIN output directly'
+    );
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+    readback.destroy();
+  }
+  testCase.end();
+});
+
 test('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -121,7 +167,10 @@ test('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages'
   testCase.end();
 });
 
-function makeBatch(data: Uint8Array): ParquetEncodedPageBatch {
+function makeBatch(
+  data: Uint8Array,
+  encoding: 'PLAIN' | 'BYTE_STREAM_SPLIT' = 'BYTE_STREAM_SPLIT'
+): ParquetEncodedPageBatch {
   return {
     shape: 'parquet-encoded-pages',
     rowGroup: {
@@ -149,7 +198,7 @@ function makeBatch(data: Uint8Array): ParquetEncodedPageBatch {
           {
             type: 'data-v2',
             pageOrdinal: 0,
-            encoding: 'BYTE_STREAM_SPLIT',
+            encoding,
             repetitionLevelEncoding: 'RLE',
             definitionLevelEncoding: 'RLE',
             compression: 'SNAPPY',

@@ -193,7 +193,8 @@ function addDecompressionToGraph<Parameters>(
   const output = createTransientPackedBytes(
     graph,
     `${id}-${plan.codec.toLowerCase()}-output`,
-    plan.outputByteLength
+    plan.outputByteLength,
+    Buffer.STORAGE | Buffer.COPY_SRC
   );
   if (plan.codec === 'SNAPPY') {
     new GPUSnappyDecompressor({

@@ -475,6 +475,7 @@ function planPage(
     sections.encodedValues,
     physicalType,
     physicalValueCount,
+    sections.decodedValuesByteLength,
     Boolean(compression),
     upload,
     dictionary,
@@ -604,6 +605,7 @@ function planValues(
   encoded: Uint8Array,
   physicalType: ParquetPhysicalType,
   valueCount: number,
+  decodedValuesByteLength: number,
   isCompressed: boolean,
   upload: GPUParquetUploadBuilder,
   dictionary: GPUParquetDictionaryPlan | undefined,
@@ -612,6 +614,12 @@ function planValues(
   const encoding = normalizeEncoding(page.encoding);
   if (encoding === 'PLAIN') {
     if (physicalType === 'BOOLEAN') {
+      const encodedByteLength = Math.ceil(valueCount / 8);
+      if (decodedValuesByteLength !== encodedByteLength) {
+        throw new Error(
+          `PLAIN BOOLEAN payload has ${decodedValuesByteLength} decoded bytes; expected ${encodedByteLength}`
+        );
+      }
       return Object.freeze({
         kind: 'plain-boolean' as const,
         valueCount,
@@ -644,9 +652,9 @@ function planValues(
       );
     }
     const decodedByteLength = multiplyUint32(valueCount, byteWidth, 'PLAIN decoded byte length');
-    if (!isCompressed && encoded.byteLength !== decodedByteLength) {
+    if (decodedValuesByteLength !== decodedByteLength) {
       throw new Error(
-        `PLAIN ${physicalType} payload has ${encoded.byteLength} bytes; expected ${decodedByteLength}`
+        `PLAIN ${physicalType} payload has ${decodedValuesByteLength} decoded bytes; expected ${decodedByteLength}`
       );
     }
     return Object.freeze({kind: 'plain-fixed' as const, valueCount, byteWidth, decodedByteLength});
@@ -665,9 +673,9 @@ function planValues(
       byteWidth,
       'BYTE_STREAM_SPLIT decoded byte length'
     );
-    if (!isCompressed && encoded.byteLength !== decodedByteLength) {
+    if (decodedValuesByteLength !== decodedByteLength) {
       throw new Error(
-        `BYTE_STREAM_SPLIT payload has ${encoded.byteLength} bytes; expected ${decodedByteLength}`
+        `BYTE_STREAM_SPLIT payload has ${decodedValuesByteLength} decoded bytes; expected ${decodedByteLength}`
       );
     }
     return Object.freeze({
