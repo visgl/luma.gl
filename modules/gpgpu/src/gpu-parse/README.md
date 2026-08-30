@@ -245,6 +245,34 @@ policy boundaries become CPU fallbacks; corrupt data is never relabeled as an un
 | Gzip, Brotli, Zstandard | Not supported | better supplied by dedicated implementations |
 | legacy LZ4 | Not supported | deprecated framing distinct from LZ4_RAW |
 
+## Follow-up roadmap
+
+Tranches 1 and 2 are complete: the package has composable low-level operations, and loaders.gl
+encoded-page batches can now be validated, uploaded once, and executed as mixed GPU/CPU command
+graphs. Further work should remain incremental. Each tranche below has a useful stopping point and
+does not require turning `gpu-parse` into a complete Parquet parser.
+
+| Tranche | Priority | Scope | Completion bar |
+| --- | --- | --- | --- |
+| 3. Close inexpensive adapter gaps | Recommended next | Let a loader choose preserve-compressed, CPU-decompress-but-keep-encoded, or CPU-decode per page; automatically use `DELTA_BYTE_ARRAY` when an exact output capacity is available; accept variable dictionaries and V1 level framing after loader-side decompression | Common supported encodings stop falling back merely because compression hides their serial control headers; no GPU metadata parser is introduced |
+| 4. Extract generic materialization primitives | High value | Generalize validity expansion, segmented offsets, compaction, scatter, and byte-range assembly from the Parquet level and byte-array paths | The same operations can materialize another columnar format without importing Parquet-specific classes |
+| 5. Assemble nested GPU columns | Selective | Compose multiple definition/repetition depths into validity, row, and list offsets; expose chunk-preserving `GPUData`/`GPUVector` results without adding Arrow to `@luma.gl/gpgpu` | Common required, optional, list, and nested-list columns can remain GPU-resident through their consumer boundary |
+| 6. Streaming and throughput | Measure first | Reuse compiled graph templates, pool upload/output buffers, batch compatible pages and columns, add backpressure, and benchmark CPU/GPU crossover thresholds | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
+| 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
+| 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
+
+The intended order is 3, 4, and then whichever of 5–7 is justified by an actual consumer. Tranche 8
+is not a completeness checklist.
+
+### Roadmap stop line
+
+The roadmap does not include GPU Thrift/schema parsing, file I/O, page indexes, encryption,
+checksums, or a second Arrow/table implementation. Those remain loader or adapter responsibilities.
+It also does not currently include Zstandard, Gzip, Brotli, deprecated framed LZ4, or a general GPU
+parser for serial encoding headers. These are substantial independent projects and should only be
+reconsidered with workload profiles showing that CPU or WebAssembly decompression is the dominant
+bottleneck after GPU value decoding is enabled.
+
 ## Boundaries
 
 The package does not parse Thrift metadata, decrypt pages, evaluate logical type annotations, build
