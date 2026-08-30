@@ -28,8 +28,15 @@ export {
   parseParquetBitPackedRunPlan,
   parseParquetDictionaryIndicesPlan,
   parseParquetLengthPrefixedRleBitPackedRunPlan,
+  type ParquetBitPackedPlan,
   type ParquetDictionaryIndicesPlan
 } from './parquet/parquet-rle-framing';
+export {
+  GPUParquetBitPackedDecoder,
+  GPU_PARQUET_BIT_PACKED_WORKGROUP_SIZE,
+  getGPUParquetBitPackedShaderSource,
+  type GPUParquetBitPackedDecoderProps
+} from './parquet/gpu-parquet-bit-packed-decoder';
 export {
   GPUParquetRleBitPackedDecoder,
   GPU_PARQUET_RLE_BIT_PACKED_WORKGROUP_SIZE,
@@ -49,6 +56,10 @@ export {
   type GPUParquetRleDictionaryDecoderProps
 } from './parquet/gpu-parquet-rle-dictionary-decoder';
 export {
+  GPUParquetLevelLayout,
+  type GPUParquetLevelLayoutProps
+} from './parquet/gpu-parquet-level-layout';
+export {
   PARQUET_DELTA_BINARY_PACKED_DESCRIPTOR_WORDS,
   parseParquetDeltaBinaryPackedPlan,
   type ParquetDeltaBinaryPackedPlan
@@ -64,7 +75,21 @@ export {
   type GPUParquetDeltaBinaryPackedDecoderProps
 } from './parquet/gpu-parquet-delta-binary-packed-decoder';
 export {
-  LZ4_RAW_SEQUENCE_DESCRIPTOR_WORDS,
+  PARQUET_DELTA_BINARY_PACKED_INT64_DESCRIPTOR_WORDS,
+  parseParquetDeltaBinaryPackedInt64Plan,
+  type ParquetDeltaBinaryPackedInt64Plan
+} from './parquet/parquet-delta-binary-packed-int64';
+export {
+  GPUParquetDeltaBinaryPackedInt64Unpacker,
+  getGPUParquetDeltaBinaryPackedInt64ShaderSource,
+  type GPUParquetDeltaBinaryPackedInt64UnpackerProps
+} from './parquet/gpu-parquet-delta-binary-packed-int64-unpacker';
+export {
+  GPUParquetDeltaBinaryPackedInt64Decoder,
+  type GPUParquetDeltaBinaryPackedInt64DecoderProps
+} from './parquet/gpu-parquet-delta-binary-packed-int64-decoder';
+export {
+  LZ4_RAW_DESCRIPTOR_WORDS,
   parseLZ4RawDecompressionPlan,
   type LZ4RawDecompressionPlan
 } from './compression/lz4-raw-plan';
@@ -72,8 +97,19 @@ export {
   GPULZ4RawDecompressor,
   GPU_LZ4_RAW_WORKGROUP_SIZE,
   getGPULZ4RawShaderSource,
+  makeGPULZ4RawDecompressorProps,
   type GPULZ4RawDecompressorProps
 } from './compression/gpu-lz4-raw-decompressor';
+export {
+  SNAPPY_DESCRIPTOR_WORDS,
+  parseSnappyDecompressionPlan,
+  type SnappyDecompressionPlan
+} from './compression/snappy-plan';
+export {
+  GPUSnappyDecompressor,
+  GPU_SNAPPY_WORKGROUP_SIZE,
+  type GPUSnappyDecompressorProps
+} from './compression/gpu-snappy-decompressor';
 export {
   GPUParquetPlainBooleanDecoder,
   GPU_PARQUET_PLAIN_BOOLEAN_WORKGROUP_SIZE,

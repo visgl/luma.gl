@@ -32,12 +32,11 @@ test('parseParquetLengthPrefixedRleBitPackedRunPlan consumes Data Page V1 framin
   testCase.end();
 });
 
-test('parseParquetBitPackedRunPlan adapts legacy encoding to the hybrid GPU decoder', testCase => {
-  const plan = parseParquetBitPackedRunPlan(Uint8Array.from([0x88, 0xc6]), 2, 8);
-  testCase.equal(plan.bytesConsumed, 2);
-  testCase.deepEqual(Array.from(plan.runDescriptors), [0, 8, 0, 1]);
+test('parseParquetBitPackedRunPlan validates legacy MSB-first payloads', testCase => {
+  const plan = parseParquetBitPackedRunPlan(Uint8Array.from([0x05, 0x39, 0x77]), 3, 8);
+  testCase.deepEqual(plan, {bitWidth: 3, valueCount: 8, bytesConsumed: 3});
   testCase.throws(
-    () => parseParquetBitPackedRunPlan(Uint8Array.from([0x88]), 2, 8),
+    () => parseParquetBitPackedRunPlan(Uint8Array.from([0x05, 0x39]), 3, 8),
     /payload is truncated/
   );
   testCase.end();

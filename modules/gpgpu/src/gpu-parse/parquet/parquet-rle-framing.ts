@@ -50,12 +50,19 @@ export function parseParquetLengthPrefixedRleBitPackedRunPlan(
   return rebaseRunPlan(localPlan, 4, payloadByteLength + 4);
 }
 
-/** Describes one deprecated standalone BIT_PACKED payload for the existing hybrid GPU decoder. */
+/** Parsed deprecated standalone BIT_PACKED payload metadata. */
+export type ParquetBitPackedPlan = {
+  bitWidth: number;
+  valueCount: number;
+  bytesConsumed: number;
+};
+
+/** Validates one deprecated standalone, MSB-first BIT_PACKED payload. */
 export function parseParquetBitPackedRunPlan(
   encoded: Uint8Array,
   bitWidth: number,
   valueCount: number
-): ParquetRleBitPackedRunPlan {
+): ParquetBitPackedPlan {
   validateBitWidth(bitWidth);
   validateValueCount(valueCount);
   const groupCount = Math.ceil(valueCount / 8);
@@ -63,14 +70,7 @@ export function parseParquetBitPackedRunPlan(
   if (payloadByteLength > encoded.length) {
     throw new Error('Parquet BIT_PACKED payload is truncated');
   }
-  const runDescriptors =
-    valueCount === 0 ? new Uint32Array() : Uint32Array.from([0, valueCount, 0, 1]);
-  return Object.freeze({
-    runDescriptors,
-    runCount: valueCount === 0 ? 0 : 1,
-    valueCount,
-    bytesConsumed: payloadByteLength
-  });
+  return Object.freeze({bitWidth, valueCount, bytesConsumed: payloadByteLength});
 }
 
 function rebaseRunPlan(

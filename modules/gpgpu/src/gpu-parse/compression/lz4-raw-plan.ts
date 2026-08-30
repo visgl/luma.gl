@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export const LZ4_RAW_SEQUENCE_DESCRIPTOR_WORDS = 5;
+export const LZ4_RAW_DESCRIPTOR_WORDS = 4;
 
 /** CPU-parsed LZ4_RAW sequence control data for GPU upload. */
 export type LZ4RawDecompressionPlan = {
-  /** `[outputOffset, literalLength, matchLength, literalSourceOffset, matchOffset]`. */
-  sequenceDescriptors: Uint32Array;
-  sequenceCount: number;
+  /** Generic `[outputOffset, byteLength, literalSourceOffset, matchOffset]` LZ spans. */
+  descriptors: Uint32Array;
+  descriptorCount: number;
   compressedByteLength: number;
   outputByteLength: number;
 };
@@ -29,7 +29,9 @@ export function parseLZ4RawDecompressionPlan(compressed: Uint8Array): LZ4RawDeco
     }
     compressedByteOffset += literalLength;
     if (compressedByteOffset === compressed.length) {
-      descriptors.push(outputByteOffset, literalLength, 0, literalSourceOffset, 0);
+      if (literalLength > 0) {
+        descriptors.push(outputByteOffset, literalLength, literalSourceOffset, 0);
+      }
       outputByteOffset = addOutputLength(outputByteOffset, literalLength);
       break;
     }
@@ -45,18 +47,15 @@ export function parseLZ4RawDecompressionPlan(compressed: Uint8Array): LZ4RawDeco
     const matchResult = readExtendedLength(compressed, compressedByteOffset, token & 15);
     const matchLength = matchResult.length + 4;
     compressedByteOffset = matchResult.nextByteOffset;
-    descriptors.push(
-      outputByteOffset,
-      literalLength,
-      matchLength,
-      literalSourceOffset,
-      matchOffset
-    );
+    if (literalLength > 0) {
+      descriptors.push(outputByteOffset, literalLength, literalSourceOffset, 0);
+    }
+    descriptors.push(outputByteOffset + literalLength, matchLength, 0, matchOffset);
     outputByteOffset = addOutputLength(outputByteOffset, literalLength + matchLength);
   }
   return Object.freeze({
-    sequenceDescriptors: Uint32Array.from(descriptors),
-    sequenceCount: descriptors.length / LZ4_RAW_SEQUENCE_DESCRIPTOR_WORDS,
+    descriptors: Uint32Array.from(descriptors),
+    descriptorCount: descriptors.length / LZ4_RAW_DESCRIPTOR_WORDS,
     compressedByteLength: compressed.length,
     outputByteLength: outputByteOffset
   });

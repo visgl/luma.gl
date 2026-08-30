@@ -3,24 +3,22 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPULZ4RawDecompressor, parseLZ4RawDecompressionPlan} from '@luma.gl/gpgpu/gpu-parse';
+import {GPUSnappyDecompressor, parseSnappyDecompressionPlan} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import test from 'test/utils/vitest-tape';
 
-test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
+test('GPUSnappyDecompressor resolves raw Snappy backreferences', async testCase => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     testCase.comment('WebGPU is not available');
     testCase.end();
     return;
   }
-  const compressed = Uint8Array.from([0x14, 65, 1, 0, 0x50, 66, 67, 68, 69, 70]);
-  const plan = parseLZ4RawDecompressionPlan(compressed);
-  const paddedCompressed = new Uint8Array(12);
-  paddedCompressed.set(compressed);
+  const compressed = Uint8Array.from([10, 8, 97, 98, 99, 22, 3, 0, 0, 33, 0, 0]);
+  const plan = parseSnappyDecompressionPlan(compressed.subarray(0, 10));
   const inputBuffer = device.createBuffer({
-    data: paddedCompressed,
+    data: compressed,
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const descriptorBuffer = device.createBuffer({
@@ -28,7 +26,7 @@ test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const outputBuffer = device.createBuffer({
-    byteLength: 16,
+    byteLength: 12,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
   });
   const graph = new GPUCommandGraph(device);
@@ -44,26 +42,23 @@ test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
     {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
     outputBuffer
   );
-  new GPULZ4RawDecompressor({
+  new GPUSnappyDecompressor({
     input: graph.createDataView(inputHandle, {format: 'uint32', length: 3}),
-    descriptors: graph.createDataView(descriptorHandle, {
-      format: 'uint32',
-      length: plan.descriptors.length
-    }),
-    output: graph.createDataView(outputHandle, {format: 'uint32', length: 4}),
+    descriptors: graph.createDataView(descriptorHandle, {format: 'uint32', length: 12}),
+    output: graph.createDataView(outputHandle, {format: 'uint32', length: 3}),
     compressedByteLength: plan.compressedByteLength,
     outputByteLength: plan.outputByteLength,
     descriptorCount: plan.descriptorCount
   }).addToGraph(graph);
   const compiled = graph.compile();
   try {
-    const commandEncoder = device.createCommandEncoder({id: 'gpu-lz4-raw-test'});
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-snappy-test'});
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint8Array(result.buffer, result.byteOffset, plan.outputByteLength)),
-      [65, 65, 65, 65, 65, 65, 65, 65, 65, 66, 67, 68, 69, 70]
+    testCase.equal(
+      new TextDecoder().decode(new Uint8Array(result.buffer, result.byteOffset, 10)),
+      'abcabcabc!'
     );
   } finally {
     compiled.destroy();

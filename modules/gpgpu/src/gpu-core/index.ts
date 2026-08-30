@@ -127,10 +127,19 @@ export {
 
 export {GPUScan} from './gpu-scan';
 export type {GPUScanInput, GPUScanProps} from './gpu-scan';
+export {GPUScanUint64} from './gpu-uint64-scan';
+export type {GPUScanUint64Props} from './gpu-uint64-scan';
 export {GPUUint32Gather} from './gpu-uint32-gather';
 export type {GPUUint32GatherProps} from './gpu-uint32-gather';
 export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
+export {
+  GPULZByteDecompressor,
+  GPU_LZ_BYTE_DESCRIPTOR_WORDS,
+  GPU_LZ_BYTE_WORKGROUP_SIZE,
+  getGPULZByteDecompressorShaderSource
+} from './gpu-lz-byte-decompressor';
+export type {GPULZByteDecompressorProps} from './gpu-lz-byte-decompressor';
 export {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples
