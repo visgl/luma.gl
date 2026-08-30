@@ -341,6 +341,71 @@ describe('GPUCommandGraph physical imported-buffer ownership', () => {
     }
   });
 
+  test('promotes typed imports beyond an undersized canonical raw handle', () => {
+    const fixture = createGraphAliasFixture('typed-capacity-promotion');
+    const sharedBuffer = fixture.device.createBuffer({
+      id: 'larger-physical-buffer',
+      byteLength: 32,
+      usage: Buffer.STORAGE
+    });
+    fixture.buffers.push(sharedBuffer);
+    const rawHandle = fixture.graph.importBuffer(
+      {id: 'partial-raw-import', byteLength: 16, usage: Buffer.STORAGE},
+      sharedBuffer
+    );
+    const data = new GPUData({
+      buffer: sharedBuffer,
+      format: 'uint32',
+      length: 4,
+      byteOffset: 16,
+      ownsBuffer: false
+    });
+    fixture.data.push(data);
+    const view = fixture.graph.importGPUData('complete-typed-import', data);
+
+    try {
+      expect(view.buffer).not.toBe(rawHandle);
+      expect(view.buffer.byteLength).toBe(32);
+      expect(fixture.graph.importGPUData('complete-typed-import-again', data).buffer).toBe(
+        view.buffer
+      );
+    } finally {
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
+  test('promotes typed imports beyond canonical raw-handle usage flags', () => {
+    const fixture = createGraphAliasFixture('typed-usage-promotion');
+    const sharedBuffer = createGraphAliasBuffer(
+      fixture,
+      'multi-usage-physical-buffer',
+      Buffer.STORAGE | Buffer.COPY_SRC
+    );
+    const rawHandle = fixture.graph.importBuffer(
+      {id: 'storage-only-raw-import', byteLength: 16, usage: Buffer.STORAGE},
+      sharedBuffer
+    );
+    const data = createGraphAliasData(fixture, sharedBuffer);
+    const view = fixture.graph.importGPUData('multi-usage-typed-import', data);
+
+    try {
+      expect(view.buffer).not.toBe(rawHandle);
+      expect(view.buffer.usage & Buffer.COPY_SRC).toBe(Buffer.COPY_SRC);
+      expect(() =>
+        fixture.graph.addCopyPass({
+          id: 'read-promoted-copy-source',
+          resources: [{buffer: view, usage: 'copy-source'}],
+          compile: () => ({encode: vi.fn()})
+        })
+      ).not.toThrow();
+      expect(fixture.graph.importGPUData('multi-usage-typed-import-again', data).buffer).toBe(
+        view.buffer
+      );
+    } finally {
+      destroyGraphAliasFixture(fixture);
+    }
+  });
+
   test('preserves a typed DynamicBuffer wrapper imported after its raw backing', () => {
     const fixture = createGraphAliasFixture('typed-dynamic-wrapper');
     const originalBuffer = createGraphAliasBuffer(fixture, 'original-backing');
