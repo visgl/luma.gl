@@ -80,6 +80,7 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
 
   const computation = new Computation(outputBuffer.device, {
     source,
+    modules: module.dependencies,
     shaderAssembler: GPGPU_SHADER_ASSEMBLER,
     shaderLayout: {
       bindings: [
