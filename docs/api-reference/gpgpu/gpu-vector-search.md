@@ -1,17 +1,15 @@
----
-title: GPU Vector Search
-description: Run exact GPU vector similarity search over borrowed fixed-size GPU data.
----
+import {LuvsBenchmark} from '@site/src/components/docs/luvs-benchmark';
 
-# GPU Vector Search
+# GPU Vector Search: Similarity, Clustering, and IVF-flat
 
 ## Overview
 
 `@luma.gl/gpgpu/gpu-vector-search` is a headless WebGPU computation backend for high-dimensional vector
-similarity. Applications use its GPU-resident nearest neighbors, scores, and selection counts for
-semantic selection, similar-item highlighting, color encoding, and other visualization workflows.
+similarity. Applications use its GPU-resident nearest neighbors, scores, selection counts, cluster
+labels, and centroids for semantic selection, similar-item highlighting, color encoding, and other
+visualization workflows.
 
-GPU Vector Search does not provide a graph visualization, graph-based approximate index, embedding explorer,
+luVS does not provide a graph visualization, graph-based approximate index, embedding explorer,
 vector database, hosted inference, or renderer. Applications retain their existing visualization
 stack and own command submission, output buffers, optional readback, and rendering.
 
@@ -22,10 +20,10 @@ stack and own command submission, output buffers, optional readback, and renderi
 A chart can already filter records by numeric range, category, or visible region. Embeddings add
 another useful relationship: records with nearby coordinates may represent similar documents,
 images, products, or events. A selected record can therefore drive a linked selection of its
-nearest neighbors or provide a reusable similarity-based highlighting and color channel.
+nearest neighbors, while cluster labels can provide a reusable visual grouping or color channel.
 
 Transferring every embedding to the CPU for each interaction makes that relationship expensive and
-breaks composition with GPU-resident filters. GPU Vector Search contributes bounded compute passes to the same
+breaks composition with GPU-resident filters. luVS contributes bounded compute passes to the same
 `GPUCommandGraph` as the existing selection and rendering workflow. The result is ordinary GPU
 data that later passes can consume; applications still decide what to draw and when to submit.
 
@@ -41,15 +39,14 @@ Arrow FixedSizeList<Float32>[768]
     -> GPUVector<'fixed-size-list<float32,768>'>
     -> GPURecordBatch / GPUTable column
     -> borrowed GraphEmbeddingMatrix view
-    -> exact similarity-search graph passes
+    -> exact search, clustering, or IVF-flat graph passes
 ```
 
 `GPUData` owns or borrows one underlying buffer, `GPUVector` preserves its ordered chunks, and
 `GPUTable` preserves source batches and column ownership. `GraphEmbeddingMatrix` is only a
 non-owning, graph-specific description of those existing rows; it neither uploads values nor adds
 another lifetime to destroy. This keeps Apache Arrow in `@luma.gl/arrow`, generic storage in
-`@luma.gl/gpgpu/gpu-data`, and similarity algorithms in the optional
-`@luma.gl/gpgpu/gpu-vector-search` subpath.
+`@luma.gl/gpgpu/gpu-data` and `@luma.gl/experimental/gpu-tables`, and similarity algorithms in this optional subpath.
 
 ### Stable identifiers, logical rows, and validity serve different purposes
 
@@ -79,58 +76,155 @@ turn a full scan into an index: they exclude rows from ranking but do not remove
 inspect the relevant source flags. Stable-ID allowlists larger than 16 entries use a bounded GPU
 hash index to avoid linearly rescanning the complete allowlist for every candidate.
 
-### Deterministic k-means and IVF-flat indexing
+### Why deterministic k-means precedes an inverted index
 
-`GPUKMeans` partitions valid embedding rows into reusable centroid labels using bounded,
-deterministic reductions. It avoids non-portable Float32 atomics, preserves source chunks, and
-publishes caller-owned labels, centroid values, counts, and optional convergence status.
+K-means partitions similar rows into `clusterCount` groups. `GPUKMeans` first chooses valid source
+rows near evenly spaced positions, then repeats two Lloyd steps: assign each finite row to the
+closest squared-Euclidean centroid and recompute every centroid from its assigned rows. Cluster
+labels can be visualized directly, and the same partition forms the lists used by IVF-flat.
 
-`GPUIVFFlatIndex` reuses those centroids to build an inverted-file layout. Each list stores stable
-source IDs alongside logical row indices, while candidate scores are computed against the original
-Float32 embeddings. Probing fewer lists bounds query work but is approximate; probing all lists
-restores complete coverage. `fallback: 'expand'` can visit additional lists when filters leave
-fewer than `k` eligible rows.
+Standard WebGPU does not provide portable Float32 atomic addition. Rather than hiding unsupported
+atomics or accepting order-dependent compare-and-swap sums, one invocation per centroid
+coordinate accumulates assigned rows in their preserved source order. This makes the centroid
+update reproducible while exposing a real throughput tradeoff: deterministic segmented reduction
+can be slower than device-specific atomic implementations.
 
-Both operations are graph contributors. Applications own the embedding table, index buffers,
-outputs, and submission lifecycle; changing source rows requires an explicit index rebuild.
+The graph statically records at most `maxIterations`; after convergence, its assignment and
+centroid-reduction shaders return early, although already-declared bookkeeping and dispatch
+overhead remain. GPU-resident status publishes the executed iteration count, changed-label count,
+and convergence flag without a mandatory CPU round trip. Empty clusters keep their previous
+centroids, and invalid rows receive the reserved `0xffffffff` label.
+
+### What an IVF-flat index actually stores
+
+IVF means **inverted file**: each centroid owns a contiguous list of the rows assigned to it.
+Flat means the original vectors remain uncompressed and candidate scores are computed against
+their original Float32 coordinates. There are no approximate-neighbor graph edges, product
+quantization codes, or copied embedding buffers.
+
+Consider five rows with stable IDs `[42, 90, 17, 80, 52]` and three centroid assignments:
+
+```text
+logical row:     [ 0,  1,  2,  3,  4]
+stable ID:       [42, 90, 17, 80, 52]
+labels:          [ 1,  0,  1,  2,  0]
+
+listCounts:      [ 2,  2,  1]
+listOffsets:     [ 0,  2,  4,  5]
+listSourceIds:   [90, 52, 42, 17, 80]
+listRowIndices:  [ 1,  4,  0,  2,  3]
+```
+
+List `1` occupies the half-open range `[listOffsets[1], listOffsets[2])`, so its entries are
+stable IDs `42` and `17` at logical rows `0` and `2`. `listSourceIds` cannot replace
+`listRowIndices`: the former is the application-facing answer, while the latter locates the
+unchanged embedding and filter row. Within each list, logical rows stay sorted so binary searches
+can restrict preserved source tiles to actual indexed members.
+
+The approximate persistent index size is
+`4 * (listCount * dimensions + 3 * rowCount + 2 * listCount + 1)` bytes for Float32 centroids,
+Uint32 labels, counts, offsets, stable IDs, and logical row references. This excludes source
+embeddings, optional status, and graph-owned scratch. Every persistent packed index allocation
+must fit the device's maximum storage-buffer binding size; oversized indexes fail explicitly.
+
+### Probes exchange recall for bounded candidate work
+
+For each query, IVF-flat first scores the centroids and chooses `probeCount` lists. It then reads
+only those indexed row ranges, applies validity and linked-selection masks, and exactly scores
+the surviving original vectors. For reasonably balanced lists, probing `P` of `C` centroids
+visits roughly `P * N / C` candidates rather than all `N` rows. Real list populations may be
+uneven, so applications should inspect candidate counts instead of assuming that estimate.
+
+When `probeCount < listCount`, the result is approximate: an unprobed list may contain a closer
+neighbor even when the selected lists already contain `k` valid results. Increasing probes
+improves recall while increasing candidate work; probing every list restores complete coverage.
+`recall@K` compares the returned stable IDs against exact search on the same dataset and filter.
+
+The default `fallback: 'expand'` visits all lists only when the probed lists produce fewer than
+`k` eligible candidates. It prevents a restrictive filter from returning unnecessarily short
+results, but it does not guarantee exactness when the original probes already contain `k`
+matches. `fallback: 'none'` retains the strict probe bound and can return fewer results.
+
+### Choosing the appropriate operation
+
+| Requirement | Operation | Main tradeoff |
+| --- | --- | --- |
+| True nearest neighbors for every query | `GPUSimilaritySearch` | Scans all eligible source rows; no index build. |
+| Stable visual grouping or reusable centroid labels | `GPUKMeans` | Bounded training cost and deterministic Float32 reductions. |
+| Repeated queries over a largely unchanged dataset | `GPUIVFFlatIndex` | Pays a build and index-storage cost to reduce per-query candidates. |
+| Guaranteed complete IVF coverage | IVF-flat with `probeCount: listCount` | Examines every inverted list; little search-work advantage over exact search. |
+| Strictly bounded approximate interaction | IVF-flat with fewer probes and `fallback: 'none'` | Faster candidate selection can lower recall and result counts. |
+
+An index is useful only when enough repeated searches amortize its k-means training, list
+construction, and additional storage. Changing embedding rows or their assignments requires an
+explicit rebuild; `updatePolicy` is `'rebuild'`. Changing only queries or a source-aligned
+selection mask can reuse the existing index and a compatible compiled search-only command graph.
+
+Exact search also supports stable-ID `candidateIds`, query-specific `queryFilterMask`, and
+`excludeSelf`; the current IVF-flat search deliberately supports only a source-aligned
+`filterMask`, probe selection, and its configured fallback. Applications that require the
+additional exact-only constraints should keep the exact path or encode equivalent source-aligned
+selection flags explicitly before using IVF-flat.
 
 ### Lifecycle, ownership, and current limits
 
-Applications own the source table, stable-ID and validity columns, and result buffers. A
-`GPUCommandGraph` borrows those imports and owns only its declared transient scratch and
-node-created pipelines or computations after compilation. Contributors add passes; they never
-compile the graph, submit work, read results back, resize caller storage, or destroy borrowed
-allocations.
+Applications own the source table, stable-ID and validity columns, result buffers, and persistent
+IVF index buffers. A `GPUCommandGraph` borrows those imports and owns only its declared transient
+scratch and node-created pipelines or computations after compilation. Contributors add passes;
+they never compile the graph, submit work, read results back, resize caller storage, or destroy
+borrowed allocations.
 
-Repeated encodings of a compiled graph can change queries or selection flags without rebuilding
-the source table. Source data, outputs, and render consumers must share the same WebGPU device.
-Query output and embedding chunks are tiled to active device limits.
+Build and search can share one graph, but every encoding of that graph reruns all declared build
+passes and retrains the index. To amortize training, submit and complete a dedicated build graph,
+then reimport the source embedding table and every persistent caller-owned index buffer into a
+separate search-only graph. Graph views belong to the graph that imported them, even when both
+graphs borrow the same physical buffers. Repeated encodings of the search graph can then change
+queries or selection flags without rebuilding. Source data, indexes, and render consumers must
+share the same WebGPU device. Query output and embedding chunks are tiled to active device limits,
+while persistent packed IVF arrays and the bounded query-by-list probe flags must each fit a
+storage binding.
 
-The current scope is Float32 fixed-size embeddings, Uint32 row identities, exact
-squared-Euclidean, cosine, or inner-product search, deterministic k-means, and IVF-flat indexes.
-Native Float64 arithmetic, distributed search, incremental index updates, and direct WebGL
-interoperation are not provided.
+The current scope is Float32 fixed-size embeddings, Uint32 row identities, squared-Euclidean
+k-means, exact or IVF-flat search, full index rebuilds, and explicit selection masks. Native
+Float64 arithmetic, incremental index updates, distributed search, hierarchical graph indexes,
+product quantization, and direct WebGL interoperation are not provided.
 
-### Device loss invalidates compiled graphs
+### Device loss invalidates compiled graphs and indexes
 
-All WebGPU buffers and compiled graph state belong to the device that created them. Applications
-should observe `device.lost` and stop encoding or submitting work when that promise resolves; a
-lost device cannot safely resume an existing graph.
+All WebGPU buffers and compiled graph state belong to the device that created them. Monitor
+`device.lost` and stop encoding or submitting work when that promise resolves; a lost device
+cannot safely resume an existing graph, and an index created on it cannot be transferred to a
+replacement device.
 
-To recover, destroy the compiled graph's owned resources, dispose caller-owned tables and result
+To recover, destroy the compiled graph's owned resources, dispose caller-owned tables and index
 buffers according to their existing ownership rules, and create a new device. Re-upload the
-original Arrow or application data, reconstruct the table and borrowed graph views, and allocate
-new outputs before accepting another query.
+original Arrow or application data, reconstruct the table and borrowed graph views, allocate new
+outputs, and rebuild any IVF-flat index before accepting another query. This explicit boundary is
+particularly important for resource-constrained software adapters used by browser test runners.
 
 ## Attribution
 
-GPU Vector Search is inspired by [NVIDIA RAPIDS cuVS](https://github.com/NVIDIA/cuvs), which is distributed under
+luVS is inspired by [NVIDIA RAPIDS cuVS](https://github.com/NVIDIA/cuvs), which is distributed under
 the [Apache License 2.0](https://github.com/NVIDIA/cuvs/blob/main/LICENSE).
 
-GPU Vector Search is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuVS source code, CUDA
+luVS is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuVS source code, CUDA
 kernels, or FAISS implementations are copied into this module. It is not affiliated with or endorsed
 by NVIDIA or the RAPIDS project, and it neither implements a compatible cuVS API nor claims feature
 parity.
+
+## Live CPU versus WebGPU benchmark
+
+Run the benchmark explicitly to compare the same deterministic vectors on your browser's CPU and
+WebGPU adapter. Dataset size, dimensions, query count, K, selection density, IVF list count, and
+probe count are configurable. The exact GPU paths are checked against an independent CPU oracle;
+the approximate IVF-flat path reports recall@K against exact search.
+
+<LuvsBenchmark />
+
+GPU query measurements include command encoding, submission, and an explicit completion fence.
+Initial upload, IVF training/index construction, and correctness readback are reported separately.
+Warmups precede repeated measured runs, and displayed query times are medians. Results depend on
+the current browser, WebGPU adapter, data dimensions, filtering, thermal conditions, and workload.
 
 ## Fixed-size GPU table embedding columns
 
@@ -163,20 +257,20 @@ The embedding width is encoded in the format and remains available when a column
 its table. `GPUData.byteStride` may exceed `rowByteLength` for padded rows; `byteOffset` identifies
 the first logical row in its allocation. `GPUTable` and `GPURecordBatch` preserve batch boundaries,
 source-row provenance, and ownership. Stable source IDs and optional GPU validity are separate,
-ordinary row-aligned Uint32 columns. GPU Vector Search borrows those table resources; it does not introduce a
+ordinary row-aligned Uint32 columns. luVS borrows those table resources; it does not introduce a
 second owning matrix abstraction or silently concatenate, repack, or copy source batches.
 Its graph bindings align packed buffer offsets internally; ordinary generic WebGPU table bindings
 still require storage offsets aligned to the active device limit.
 
 Storage bindings are bounded by the active WebGPU device. At a 128 MiB binding limit, one packed
 binding holds about 87,381 rows at 384 dimensions, 43,690 rows at 768 dimensions, or 21,845 rows
-at 1,536 dimensions. GPU Vector Search processes original chunks in bounded tiles and merges their candidates
+at 1,536 dimensions. luVS processes original chunks in bounded tiles and merges their candidates
 into one deterministic global top-K without materializing a complete query-by-dataset score matrix.
 
 ## Ingest Apache Arrow embedding columns
 
-Apache Arrow conversion belongs to `@luma.gl/arrow`, not the generic GPU data runtime or vector
-search subpath:
+Apache Arrow conversion belongs to `@luma.gl/arrow`, not the generic table runtime or experimental
+similarity package:
 
 ```ts
 import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
@@ -207,7 +301,7 @@ discard preceding chunks and their original provenance; explicit source-ID colum
 identity across those boundaries.
 
 If an embedding column contains null parent rows or null child coordinates, select its explicit
-GPU validity sibling when importing it into GPU Vector Search. Nullable embedding data without a selected
+GPU validity sibling when importing it into luVS. Nullable embedding data without a selected
 validity column is rejected instead of admitting zero-filled null rows as candidate vectors.
 
 ```ts
@@ -301,11 +395,19 @@ An optional `tileSize` bounds candidate work without changing exact global resul
 ## Reuse GPU-resident linked selections
 
 Pass a source-aligned Uint32 view or chunk-preserving vector of selection flags directly into the
-search. Zero rejects the row; nonzero accepts it. The mask can come from GPU Crossfilter, a GPU
-dataframe query, or an application-owned graph pass:
+search. Zero rejects the row; nonzero accepts it. Existing LuxFilter masks already use this layout:
 
 ```ts
+import {LuxFilterSelection} from '@luma.gl/experimental/luxfilter';
 import {GPUSimilaritySearch} from '@luma.gl/gpgpu/gpu-vector-search';
+
+const selection = new LuxFilterSelection(graph, {
+  id: 'visible-category',
+  kind: 'range',
+  input: categoryValues
+});
+
+selection.addToGraph(graph);
 
 new GPUSimilaritySearch({
   dataset,
@@ -315,24 +417,53 @@ new GPUSimilaritySearch({
   resultCounts,
   candidateCounts,
   k: 10,
-  filterMask: selectionMask
+  filterMask: selection.mask
 }).addToGraph(graph);
 ```
 
-Update the mask and encode the previously compiled graph again. The current selection and
-embedding candidates remain on the GPU. Optional `candidateIds` restrict search to stable source
-identifiers. Allowlists with more than 16 entries use a bounded GPU hash index; smaller lists use
-direct membership checks. Oversized allowlists are rejected, so use a source-aligned filter mask
-when the requested identifiers exceed bounded index capacity. Optional `queryFilterMask` supplies
-query-specific source-aligned flags. Candidate counts distinguish no eligible rows from a valid
-but short nearest-neighbor list.
+Update `selection.setRange([minimum, maximum])` and encode the previously compiled graph again.
+The current selection and embedding candidates remain on the GPU. Optional `candidateIds` restrict
+search to stable source identifiers. Allowlists with more than 16 entries use a bounded GPU hash
+index; smaller lists use direct membership checks. Oversized allowlists are rejected, so use a
+source-aligned filter mask when the requested identifiers exceed bounded index capacity. Optional
+`queryFilterMask` supplies query-specific source-aligned flags. Candidate counts distinguish no
+eligible rows from a valid but short nearest-neighbor list.
+
+## Generate GPU k-means clusters
+
+`GPUKMeans` assigns source rows to reusable centroids without float32 atomics. Its deterministic,
+bounded segmented reductions produce caller-owned cluster labels and centroid buffers suitable for
+cluster-based coloring or IVF training:
+
+```ts
+import {GPUKMeans} from '@luma.gl/gpgpu/gpu-vector-search';
+
+new GPUKMeans({
+  dataset,
+  clusterCount: 16,
+  centroids,
+  labels,
+  counts,
+  status,
+  maxIterations: 12,
+  seed: 'evenly-spaced'
+}).addToGraph(graph);
+```
+
+`centroids` contains `clusterCount * dimensions` Float32 values, `labels` preserves dataset rows or
+chunks, and `counts` contains one Uint32 population per cluster. Optional `status` exposes
+`[executedIterations, changedLabels, converged]` on the GPU. Empty clusters retain their preceding
+centroids; invalid source rows do not receive an eligible cluster assignment.
 
 ## Build and query an IVF-flat index
 
-```ts
-import {GPUIVFFlatIndex, GPUKMeans} from '@luma.gl/gpgpu/gpu-vector-search';
+`GPUIVFFlatIndex` trains ordinary flat k-means centroids, counts list memberships, prefix-scans
+list offsets, and publishes parallel packed source IDs and dataset-row references. Searches
+traverse the selected inverted lists directly instead of scanning unrelated dataset rows. The
+index does not build or traverse an approximate neighbor graph:
 
-new GPUKMeans({dataset, clusterCount: 32, centroids, labels, counts}).addToGraph(graph);
+```ts
+import {GPUIVFFlatIndex} from '@luma.gl/gpgpu/gpu-vector-search';
 
 const index = new GPUIVFFlatIndex({
   dataset,
@@ -342,24 +473,45 @@ const index = new GPUIVFFlatIndex({
   listCounts,
   listOffsets,
   listSourceIds,
-  listRowIndices
+  listRowIndices,
+  maxIterations: 12
 });
+
 index.addToGraph(graph);
+
 index.addSearchToGraph(graph, {
   queries,
   outputIds,
   outputScores,
   resultCounts,
+  candidateCounts,
   k: 10,
-  metric: 'cosine',
+  metric: 'squared-euclidean',
   probeCount: 4,
+  filterMask: currentSelection,
   fallback: 'expand'
 });
 ```
 
-The index stores no copied embedding matrix. `listSourceIds` are application-facing IDs and
-`listRowIndices` locate the corresponding source rows for exact reranking. Index buffers must fit
-the device's storage-binding limit and remain on the same WebGPU device as the source table.
+`listSourceIds` and `listRowIndices` each contain up to `dataset.rowCount` Uint32 entries in
+matching list order. A source ID is the stable application-facing identifier returned by search;
+its parallel row index locates the original chunk-preserving embedding and source-aligned filter
+flag. For each probed list, the search visits only entries between `listOffsets[list]` and
+`listOffsets[list + 1]`; candidate work therefore follows actual list membership rather than
+performing a full dataset eligibility scan.
+
+When `probeCount` is smaller than `listCount`, results are **approximate** because unprobed lists
+may contain closer rows. Candidate distances inside the probed lists are reranked exactly against
+the original Float32 embeddings; recall@K should be measured against exact search. The default
+`'expand'` fallback considers all lists when restrictive filters leave fewer than K eligible
+candidates. Select `'none'` to keep probing bounded and accept fewer results.
+
+Index construction, command encoding, submission, reuse, and disposal remain explicit. To schedule
+training separately from reusable searches, import the same caller-owned physical index buffers
+into a second command graph, construct a second `GPUIVFFlatIndex` descriptor around those views,
+and call `addSearchToGraph()` only after submitting the original build. List storage and embedding
+buffers stay on one WebGPU device; luVS does not claim distributed processing or cross-API
+zero-copy sharing with a WebGL-based renderer.
 
 ## Integrate GPU results with rendering
 
@@ -370,7 +522,7 @@ needs concrete CPU values.
 
 WebGPU buffers cannot be handed directly to a renderer that owns an unrelated WebGL context.
 Interoperation with WebGL-based applications such as a WebGL cosmos.gl renderer requires an
-explicit supported transfer or readback boundary; GPU Vector Search does not claim WebGPU-to-WebGL zero-copy.
+explicit supported transfer or readback boundary; luVS does not claim WebGPU-to-WebGL zero-copy.
 
 See [GPU Crossfilter](/docs/api-reference/experimental/gpu-crossfilter),
 [GPU command graphs](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and
