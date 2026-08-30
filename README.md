@@ -11,6 +11,9 @@
   <a href="https://coveralls.io/github/visgl/luma.gl?branch=master">
     <img src="https://img.shields.io/coveralls/visgl/luma.gl.svg?style=flat-square&label=coverage" alt="coverage" />
   </a>
+  <a href="https://github.com/visgl/luma.gl/stargazers">
+    <img src="https://img.shields.io/github/stars/visgl/luma.gl.svg?style=flat-square&label=stars" alt="GitHub stars" />
+  </a>
 </p>
 
 <h1 align="center">luma.gl | <a href="https://luma.gl">Docs</a></h1>
