@@ -9,7 +9,7 @@ import {
   ABufferRenderer,
   aBuffer,
   aBufferPlugin,
-  createABufferResolveShaderPassPipeline
+  createABufferResolveCompositeShaderPass
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -71,7 +71,7 @@ test('aBufferPlugin applies fragment-only storage visibility to WebGPU models', 
   t.end();
 });
 
-test('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async t => {
+test('A-buffer resolve CompositeShaderPass compiles on WebGPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -80,11 +80,11 @@ test('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async t => {
   }
 
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 12})]
+    shaderPasses: [createABufferResolveCompositeShaderPass({maxFragmentsPerPixel: 12})]
   });
   t.equal(
     renderer.passRenderers[0].passDefinition.name,
-    'aBufferResolveShaderPassPipeline',
+    'aBufferResolveCompositeShaderPass',
     'resolve pipeline creates a WebGPU fullscreen model'
   );
   renderer.destroy();

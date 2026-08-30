@@ -7,7 +7,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 `WBOITRenderer` implements weighted blended order-independent transparency on WebGPU and WebGL2.
 It owns floating-point accumulation and revealage targets, records geometry capture passes, and
 resolves the captured transparency over an application-owned opaque color texture through a
-`ShaderPassPipeline`.
+`CompositeShaderPass`.
 
 ## Usage
 
@@ -15,7 +15,7 @@ resolves the captured transparency over an application-owned opaque color textur
 import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
 import {
   WBOITRenderer,
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
   wboit,
   wboitPlugin
 } from '@luma.gl/experimental';
@@ -62,7 +62,7 @@ Use `wboit_capturePremultipliedColor` when RGB is already multiplied by alpha.
 
 `render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects
 stack, call `capture()` and pass its bindings to a `ShaderPassRenderer` containing
-`createWBOITResolveShaderPassPipeline()`:
+`createWBOITResolveCompositeShaderPass()`:
 
 ```ts
 const capture = renderer.capture({
@@ -73,7 +73,7 @@ const capture = renderer.capture({
 });
 
 const effects = new ShaderPassRenderer(device, {
-  shaderPasses: [createWBOITResolveShaderPassPipeline(), bloomShaderPassPipeline]
+  shaderPasses: [createWBOITResolveCompositeShaderPass(), bloomCompositeShaderPass]
 });
 const output = effects.renderToTexture({sourceTexture: sceneColor, bindings: capture.bindings});
 ```
@@ -85,7 +85,7 @@ For each frame the renderer:
 1. Draws opaque depth into an internal depth target shared by both capture passes.
 2. Accumulates weighted premultiplied color and weighted alpha into `rgba16float`.
 3. Accumulates multiplicative revealage into a second `rgba16float` target.
-4. Runs `createWBOITResolveShaderPassPipeline()` to composite the normalized weighted color and
+4. Runs `createWBOITResolveCompositeShaderPass()` to composite the normalized weighted color and
    revealage over `sourceTexture`.
 
 `prepareTranslucent` and `drawTranslucent` are called twice, once with `pass: 'accumulation'` and

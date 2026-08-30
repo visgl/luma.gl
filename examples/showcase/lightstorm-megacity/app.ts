@@ -4,8 +4,8 @@
 
 import {Buffer, type Device, type RenderBundle, type TextureFormatColor} from '@luma.gl/core';
 import {
-  createBloomShaderPassPipeline,
-  createSSRShaderPassPipeline,
+  createBloomCompositeShaderPass,
+  createSSRCompositeShaderPass,
   toneMapping
 } from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -59,7 +59,7 @@ import {
 } from './lightstorm-lightning';
 import {LightstormThunderController} from './lightstorm-thunder';
 import {
-  createLightstormDeferredLightingShaderPassPipeline,
+  createLightstormDeferredLightingCompositeShaderPass,
   getLightstormVisibilityShader,
   LIGHTSTORM_LIGHTNING_SHADER,
   LIGHTSTORM_LIGHT_MARKER_SHADER,
@@ -323,16 +323,16 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     });
     this.deferredLightingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createLightstormDeferredLightingShaderPassPipeline(this.sceneColorFormat),
+        createLightstormDeferredLightingCompositeShaderPass(this.sceneColorFormat),
         ...(this.sceneColorFormat === 'rgba16float'
-          ? [createSSRShaderPassPipeline({resolutionScale: 0.5})]
+          ? [createSSRCompositeShaderPass({resolutionScale: 0.5})]
           : [])
       ],
       colorFormat: this.sceneColorFormat
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+        createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
         toneMapping
       ],
       colorFormat: this.sceneColorFormat

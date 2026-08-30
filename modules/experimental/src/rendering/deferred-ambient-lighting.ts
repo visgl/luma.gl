@@ -4,7 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray3} from '@math.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 type DeferredAmbientLightingUniforms = {
   ambientColor: Readonly<NumberArray3>;
@@ -80,9 +80,9 @@ fn deferredAmbientLighting_sampleColor(
 >;
 
 /** Creates a reusable fullscreen ambient-light extraction pass over deferred G-buffer material. */
-export function createDeferredAmbientLightingShaderPassPipeline(): ShaderPassPipeline {
+export function createDeferredAmbientLightingCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'deferredAmbientLightingShaderPassPipeline',
+    name: 'deferredAmbientLightingCompositeShaderPass',
     steps: [
       {
         shaderPass: deferredAmbientLighting,

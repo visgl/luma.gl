@@ -12,7 +12,7 @@ import {
   type AnimationProps,
   type ShaderPassRendererRenderOptions
 } from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -195,7 +195,7 @@ export default class TempestOceanAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: 'rgba16float', resolutionScale: 0.62}),
+        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.62}),
         toneMapping
       ],
       colorFormat: 'rgba16float'

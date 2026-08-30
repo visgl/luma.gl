@@ -5,7 +5,7 @@ import {BloomExample} from '@site/src/examples';
 
 <EngineDocsTabs group="fullscreen" active="shader-pass-renderer" />
 
-`ShaderPassRenderer` applies one or more `ShaderPass` or `ShaderPassPipeline` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
+`ShaderPassRenderer` applies one or more `ShaderPass` or `CompositeShaderPass` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 
 Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model), and [`SwapFramebuffers`](/docs/api-reference/engine/compute/swap) to manage the pass chain.
 
@@ -21,7 +21,7 @@ model, see [Shader Passes](/docs/api-guide/shaders/shader-passes).
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [myShaderPass, myShaderPassPipeline]
+  shaderPasses: [myShaderPass, myCompositeShaderPass]
 });
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
@@ -53,13 +53,13 @@ The renderer always provides two logical texture sources:
 
 Plain `ShaderPass` objects may route subpasses only against those logical sources.
 
-`ShaderPassPipeline` adds pipeline-global named render targets that any later step in that pipeline may read:
+`CompositeShaderPass` adds owned named render targets that any later step in that composite pass may read:
 
 ```ts
-type ShaderPassPipeline<TargetNameT extends string = string> = {
+type CompositeShaderPass<TargetNameT extends string = string> = {
   name: string;
   renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
-  steps: ShaderPassPipelineStep<TargetNameT>[];
+  steps: CompositeShaderPassStep<TargetNameT>[];
 };
 
 type ShaderPassRenderTarget = {
@@ -68,7 +68,7 @@ type ShaderPassRenderTarget = {
   sampler?: SamplerProps;
 };
 
-type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+type CompositeShaderPassStep<TargetNameT extends string = string> = {
   shaderPass: ShaderPass;
   inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
   output?: 'previous' | TargetNameT;
@@ -89,7 +89,7 @@ This lets the renderer orchestrate existing passes without turning `ShaderPass.p
 At draw time, the renderer merges three uniform layers for each shader pass:
 
 - values already stored in `shaderInputs`
-- uniforms declared on the pass or pipeline step
+- uniforms declared on the pass or composite-pass step
 - `options.uniforms` passed to `renderToTexture()` / `renderToScreen()`
 
 Bindings follow a similar pattern:
@@ -109,7 +109,7 @@ pass, then layers `options.bindings` on top for per-frame overrides.
 This example extracts highlights into one named target, runs an existing blur pass into another, then composites back to `previous`:
 
 ```ts
-const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+const bloomPipeline: CompositeShaderPass<'extract' | 'blurred'> = {
   name: 'bloom',
   renderTargets: {
     extract: {},
@@ -141,7 +141,7 @@ const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
 };
 ```
 
-Using `previous` for the primary color input makes the pipeline compose in its declared position
+Using `previous` for the primary color input makes the composite pass compose in its declared position
 in `shaderPasses`. `original` remains available for an intentional bypass of preceding effects.
 
 ## Types
@@ -150,7 +150,7 @@ in `shaderPasses`. `original` remains available for an intentional bypass of pre
 
 ```ts
 export type ShaderPassRendererProps = {
-  shaderPasses: (ShaderPass | ShaderPassPipeline)[];
+  shaderPasses: (ShaderPass | CompositeShaderPass)[];
   shaderInputs?: ShaderInputs;
   colorFormat?: TextureFormatColor;
   flipY?: boolean;
@@ -178,7 +178,7 @@ Double-buffered framebuffer pair used while running the shared `previous` chain.
 
 ### `passRenderers`
 
-Internal per-entry renderers. A renderer for a `ShaderPassPipeline` owns that pipeline's named render targets.
+Internal per-entry renderers. A renderer for a `CompositeShaderPass` owns that composite pass's named render targets.
 
 ### `textureModel`
 
@@ -196,7 +196,7 @@ Destroys owned pass renderers, swap framebuffers, and texture model.
 
 ### `resize(size?: [number, number]): void`
 
-Resizes the internal swap framebuffers and all pipeline render targets to match the provided size or the current canvas size.
+Resizes the internal swap framebuffers and all composite-pass render targets to match the provided size or the current canvas size.
 
 Named targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
 
@@ -279,10 +279,10 @@ buffer has been submitted.
   `device.commandEncoder`; use the `encodeTo*()` variants when composing with a command graph or
   another caller-owned encoder.
 - Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
-- Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
-- Target names `original` and `previous` are reserved and may not be used as pipeline target names.
-- A plain `ShaderPass` used outside a pipeline may only reference `original` and `previous`.
-- The renderer throws if a pass or pipeline step references an unknown input source or output target.
+- Named render targets are declared only on `CompositeShaderPass`, not on `ShaderPass`.
+- Target names `original` and `previous` are reserved and may not be used as composite-pass target names.
+- A plain `ShaderPass` may only reference `original` and `previous`.
+- The renderer throws if a pass or composite-pass step references an unknown input source or output target.
 - The renderer throws if a subpass tries to read from and write to the same named render target in one draw.
 - A `history` target is the exception: same-target reads resolve to the previous physical texture,
   and the write becomes visible to later steps only after that draw succeeds.

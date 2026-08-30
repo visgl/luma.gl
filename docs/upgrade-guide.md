@@ -14,6 +14,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 **@luma.gl/shadertools**
 
+- `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
+  renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
+  `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
+  `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 - `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
   `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
   `new WGSLShaderAssembler()` for WGSL.
@@ -30,8 +34,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - `ABufferRenderer.render()` and `WBOITRenderer.render()` now accept an already-rendered opaque
   `sourceTexture` and return the resolved color texture. Applications must render opaque color and
   depth before invoking the OIT renderer; the former base-pass/framebuffer callbacks were removed.
-- OIT fullscreen resolution is now exposed as `createABufferResolveShaderPassPipeline()` and
-  `createWBOITResolveShaderPassPipeline()`. `WBOITRenderer.capture()` returns the accumulation and
+- OIT fullscreen resolution is now exposed as `createABufferResolveCompositeShaderPass()` and
+  `createWBOITResolveCompositeShaderPass()`. `WBOITRenderer.capture()` returns the accumulation and
   revealage bindings for inserting the WBOIT resolve into a larger shader-pass stack.
 
 **@luma.gl/arrow**

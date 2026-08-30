@@ -6,7 +6,7 @@ import type {CommandEncoder, Device} from '@luma.gl/core';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {Matrix4Like, NumberArray3, NumberArray16} from '@math.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 export const MAX_CLUSTERED_POINT_LIGHTS = 512;
 export const DEFAULT_CLUSTER_DIMENSIONS = [16, 9, 24] as const;
@@ -563,9 +563,9 @@ fn clusteredDeferredLighting_sampleColor(
 >;
 
 /** Creates a fullscreen clustered deferred-lighting step for the previous color chain. */
-export function createClusteredDeferredLightingShaderPassPipeline(): ShaderPassPipeline {
+export function createClusteredDeferredLightingCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'clusteredDeferredLightingShaderPassPipeline',
+    name: 'clusteredDeferredLightingCompositeShaderPass',
     steps: [
       {
         shaderPass: clusteredDeferredLighting,

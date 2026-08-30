@@ -6,9 +6,9 @@ import type {Binding, BindingDeclaration, CommandEncoder, TextureFormatColor} fr
 import {Buffer, Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
-  ShaderPassComputeOptimization,
+  CompositeShaderPassComputeOptimization,
   ShaderPassInputSource,
-  ShaderPassPipeline,
+  CompositeShaderPass,
   ShaderPassRenderTarget
 } from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
@@ -23,7 +23,7 @@ import {BackgroundTextureModel} from '../models/billboard-texture-model';
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
 import {textureTransform} from './texture-transform-module';
 
-type ShaderPassLike = ShaderPass | ShaderPassPipeline;
+type ShaderPassLike = ShaderPass | CompositeShaderPass;
 type ShaderSubPass = NonNullable<ShaderPass['passes']>[0];
 
 type EffectiveSubPass = {
@@ -50,7 +50,7 @@ const RESERVED_RENDER_TARGET_NAMES = new Set(['original', 'previous']);
 
 /** Construction props for {@link ShaderPassRenderer}. */
 export type ShaderPassRendererProps = {
-  /** List of ShaderPasses or ShaderPassPipelines to apply to the sourceTexture */
+  /** List of ShaderPasses or CompositeShaderPasses to apply to the sourceTexture */
   shaderPasses: ShaderPassLike[];
   /** Optional typed ShaderInputs object for setting uniforms */
   shaderInputs?: ShaderInputs;
@@ -79,7 +79,7 @@ export type ShaderPassRendererRenderOptions = {
  *
  * The renderer owns:
  * - a shared ping-pong pair for the logical `previous` chain
- * - any named render targets declared by `ShaderPassPipeline`
+ * - any named render targets declared by `CompositeShaderPass`
  * - a fullscreen model used both to seed the chain and to present to the screen
  *
  * Per-draw `uniforms` and `bindings` passed to `renderToTexture()` or `renderToScreen()` are
@@ -140,7 +140,7 @@ export class ShaderPassRenderer {
     }
   }
 
-  /** Invalidates persistent pipeline targets without destroying their allocations. */
+  /** Invalidates persistent composite-pass targets without destroying their allocations. */
   resetHistory(): void {
     for (const passRenderer of this.passRenderers) {
       passRenderer.resetHistory();
@@ -306,14 +306,14 @@ export class ShaderPassRenderer {
   }
 }
 
-/** Renders one `ShaderPass` or `ShaderPassPipeline` entry in the chain. */
+/** Renders one `ShaderPass` or `CompositeShaderPass` entry in the chain. */
 class PassRenderer {
   device: Device;
   shaderInputs: ShaderInputs;
   passDefinition: ShaderPassLike;
   renderTargets: Record<string, ManagedRenderTarget>;
   subPassExecutions: EffectiveSubPass[];
-  computeRenderer?: PipelineComputeRenderer;
+  computeRenderer?: CompositeShaderPassComputeRenderer;
 
   constructor(
     device: Device,
@@ -325,11 +325,11 @@ class PassRenderer {
     this.shaderInputs = shaderInputs;
     this.passDefinition = passDefinition;
 
-    if (isShaderPassPipeline(passDefinition)) {
+    if (isCompositeShaderPass(passDefinition)) {
       validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
       this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
       if (supportsComputeOptimization(device, passDefinition)) {
-        this.computeRenderer = new PipelineComputeRenderer(
+        this.computeRenderer = new CompositeShaderPassComputeRenderer(
           device,
           passDefinition.compute!,
           this.renderTargets,
@@ -517,17 +517,17 @@ class PassRenderer {
   }
 
   private createStepExecutions(
-    pipeline: ShaderPassPipeline,
-    step: ShaderPassPipeline['steps'][number],
+    compositeShaderPass: CompositeShaderPass,
+    step: CompositeShaderPass['steps'][number],
     flipY: boolean
   ): EffectiveSubPass[] {
     validateShaderPassDoesNotOwnRenderTargets(
       step.shaderPass,
-      `${pipeline.name}/${step.shaderPass.name}`
+      `${compositeShaderPass.name}/${step.shaderPass.name}`
     );
 
     return this.createPassExecutions(step.shaderPass, {
-      ownerName: `${pipeline.name}/${step.shaderPass.name}`,
+      ownerName: `${compositeShaderPass.name}/${step.shaderPass.name}`,
       firstInputs: step.inputs,
       lastOutput: step.output,
       uniformOverrides: step.uniforms,
@@ -592,8 +592,8 @@ class PassRenderer {
 }
 
 /** Executes one optional WebGPU compute replacement before the remaining fragment passes. */
-class PipelineComputeRenderer {
-  readonly optimization: ShaderPassComputeOptimization;
+class CompositeShaderPassComputeRenderer {
+  readonly optimization: CompositeShaderPassComputeOptimization;
 
   private readonly renderTargets: Record<string, ManagedRenderTarget>;
   private readonly shaderInputs: ShaderInputs;
@@ -602,7 +602,7 @@ class PipelineComputeRenderer {
 
   constructor(
     device: Device,
-    optimization: ShaderPassComputeOptimization,
+    optimization: CompositeShaderPassComputeOptimization,
     renderTargets: Record<string, ManagedRenderTarget>,
     shaderInputs: ShaderInputs
   ) {
@@ -756,17 +756,20 @@ class SubPassRenderer {
 
 function getExecutableShaderPasses(shaderPasses: ShaderPassLike[]): ShaderPass[] {
   return shaderPasses.flatMap(shaderPass =>
-    isShaderPassPipeline(shaderPass) ? shaderPass.steps.map(step => step.shaderPass) : [shaderPass]
+    isCompositeShaderPass(shaderPass) ? shaderPass.steps.map(step => step.shaderPass) : [shaderPass]
   );
 }
 
-function isShaderPassPipeline(shaderPass: ShaderPassLike): shaderPass is ShaderPassPipeline {
+function isCompositeShaderPass(shaderPass: ShaderPassLike): shaderPass is CompositeShaderPass {
   return 'steps' in shaderPass;
 }
 
-/** @internal Returns whether a pipeline's optional compute path is valid for this device. */
-export function supportsComputeOptimization(device: Device, pipeline: ShaderPassPipeline): boolean {
-  const optimization = pipeline.compute;
+/** @internal Returns whether a composite pass's optional compute path is valid for this device. */
+export function supportsComputeOptimization(
+  device: Device,
+  compositeShaderPass: CompositeShaderPass
+): boolean {
+  const optimization = compositeShaderPass.compute;
   if (!optimization || device.type !== 'webgpu') {
     return false;
   }
@@ -784,7 +787,7 @@ export function supportsComputeOptimization(device: Device, pipeline: ShaderPass
   }
 
   return outputNames.every(targetName => {
-    const target = pipeline.renderTargets?.[targetName];
+    const target = compositeShaderPass.renderTargets?.[targetName];
     if (!target?.storage) {
       return false;
     }
@@ -801,7 +804,7 @@ function validateShaderPassDoesNotOwnRenderTargets(
     .renderTargets;
   if (renderTargets && Object.keys(renderTargets).length > 0) {
     throw new Error(
-      `${ownerName}: ShaderPass.renderTargets is not supported; use ShaderPassPipeline.renderTargets instead`
+      `${ownerName}: ShaderPass.renderTargets is not supported; use CompositeShaderPass.renderTargets instead`
     );
   }
 }
@@ -859,7 +862,7 @@ function mergeUniforms(
  *
  * Merge order is:
  * 1. persisted renderer-level shader inputs
- * 2. uniforms baked into the pipeline or subpass definition
+ * 2. uniforms baked into the composite pass or subpass definition
  * 3. per-draw runtime overrides
  */
 function resolveExecutionUniforms(

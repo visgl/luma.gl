@@ -4,8 +4,8 @@
 
 import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
-  bloomShaderPassPipeline,
-  createCameraReprojectionTAAShaderPassPipeline
+  bloomCompositeShaderPass,
+  createCameraReprojectionTAACompositeShaderPass
 } from '@luma.gl/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from '@luma.gl/experimental';
@@ -272,14 +272,14 @@ export class ANARIRenderingRuntime implements ANARIRendererRuntime {
 
   private getBloomRenderer(frameResources: FrameResources): ShaderPassRenderer {
     frameResources.bloomRenderer ||= new ShaderPassRenderer(this.device, {
-      shaderPasses: [bloomShaderPassPipeline]
+      shaderPasses: [bloomCompositeShaderPass]
     });
     return frameResources.bloomRenderer;
   }
 
   private getTemporalAntialiasingRenderer(frameResources: FrameResources): ShaderPassRenderer {
     frameResources.temporalAntialiasingRenderer ||= new ShaderPassRenderer(this.device, {
-      shaderPasses: [createCameraReprojectionTAAShaderPassPipeline()],
+      shaderPasses: [createCameraReprojectionTAACompositeShaderPass()],
       colorFormat: 'rgba16float'
     });
     return frameResources.temporalAntialiasingRenderer;

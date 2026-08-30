@@ -14,9 +14,9 @@ import {
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {type WBOITPass, type WBOITShaderModuleProps} from './wboit';
 import {
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
   type WBOITResolveBindings
-} from './wboit-resolve-shader-pass-pipeline';
+} from './wboit-resolve-composite-shader-pass';
 
 const WBOIT_COLOR_FORMAT = 'rgba16float';
 let nextWBOITResourceId = 0;
@@ -83,7 +83,7 @@ type WBOITRenderTargets = {
 };
 
 /**
- * Captures approximate weighted-blended transparency and resolves it through a ShaderPassPipeline.
+ * Captures approximate weighted-blended transparency and resolves it through a CompositeShaderPass.
  *
  * The renderer supports WebGPU and WebGL2 devices with blendable `rgba16float` render targets.
  * It does not submit the device command encoder.
@@ -130,7 +130,7 @@ export class WBOITRenderer {
     this.renderTargets = createWBOITRenderTargets(device, 1, 1);
     this.resolveRenderer = new ShaderPassRenderer(device, {
       colorFormat: props.colorFormat,
-      shaderPasses: [createWBOITResolveShaderPassPipeline()]
+      shaderPasses: [createWBOITResolveCompositeShaderPass()]
     });
   }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {createBloomShaderPassPipeline} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass} from '@luma.gl/effects';
 import {WgslReflect} from 'wgsl_reflect';
 import test from 'test/utils/vitest-tape';
 
@@ -15,7 +15,7 @@ test('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', te
   ] as const;
 
   for (const {quality, levelCount} of qualityLevels) {
-    const pipeline = createBloomShaderPassPipeline({quality, downsample: 'auto'});
+    const pipeline = createBloomCompositeShaderPass({quality, downsample: 'auto'});
     const optimization = pipeline.compute;
 
     testCase.ok(optimization, `${quality} includes a portable fused-compute optimization`);
@@ -52,7 +52,7 @@ test('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', te
     );
   }
 
-  const portablePipeline = createBloomShaderPassPipeline({downsample: 'render'});
+  const portablePipeline = createBloomCompositeShaderPass({downsample: 'render'});
   testCase.equal(portablePipeline.compute, undefined, 'render-only mode omits the compute stage');
   testCase.ok(
     Object.values(portablePipeline.renderTargets || {}).every(target => !target.storage),
@@ -62,12 +62,12 @@ test('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', te
 });
 
 test('HDR bloom shares expired targets without overwriting live lens highlights', testCase => {
-  const reusedPipeline = createBloomShaderPassPipeline({quality: 'ultra'});
-  const dedicatedPipeline = createBloomShaderPassPipeline({
+  const reusedPipeline = createBloomCompositeShaderPass({quality: 'ultra'});
+  const dedicatedPipeline = createBloomCompositeShaderPass({
     quality: 'ultra',
     reuseRenderTargets: false
   });
-  const opticalPipeline = createBloomShaderPassPipeline({
+  const opticalPipeline = createBloomCompositeShaderPass({
     quality: 'ultra',
     lens: {starburstIntensity: 1}
   });
@@ -98,7 +98,7 @@ test('HDR bloom shares expired targets without overwriting live lens highlights'
 });
 
 test('HDR bloom supports exposure-aware extraction and four-fetch bicubic reconstruction', testCase => {
-  const pipeline = createBloomShaderPassPipeline({
+  const pipeline = createBloomCompositeShaderPass({
     threshold: 1.5,
     exposure: 2,
     exposureCompensation: -1,
@@ -137,8 +137,8 @@ test('HDR bloom supports exposure-aware extraction and four-fetch bicubic recons
 });
 
 test('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid', testCase => {
-  const gaussian = createBloomShaderPassPipeline({quality: 'ultra'});
-  const dualKawase = createBloomShaderPassPipeline({
+  const gaussian = createBloomCompositeShaderPass({quality: 'ultra'});
+  const dualKawase = createBloomCompositeShaderPass({
     quality: 'ultra',
     blurAlgorithm: 'dual-kawase'
   });
@@ -163,7 +163,7 @@ test('HDR bloom can remove separable passes with a normalized dual-Kawase pyrami
 });
 
 test('HDR bloom reprojects depth-validated history without another history target', testCase => {
-  const pipeline = createBloomShaderPassPipeline({
+  const pipeline = createBloomCompositeShaderPass({
     temporalStability: 0.8,
     temporalReprojection: true,
     temporalDepthThreshold: 0.025,
@@ -198,7 +198,7 @@ test('HDR bloom reprojects depth-validated history without another history targe
 });
 
 test('HDR bloom can scatter every source pixel without additive energy duplication', testCase => {
-  const pipeline = createBloomShaderPassPipeline({
+  const pipeline = createBloomCompositeShaderPass({
     threshold: 3,
     intensity: 0.4,
     energyConserving: true

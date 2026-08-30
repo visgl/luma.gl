@@ -6,8 +6,8 @@ import test from 'test/utils/vitest-tape';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  createDeferredAmbientLightingShaderPassPipeline,
-  createDeferredLightingShaderPassPipeline,
+  createDeferredAmbientLightingCompositeShaderPass,
+  createDeferredLightingCompositeShaderPass,
   deferredAmbientLighting,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
@@ -56,7 +56,7 @@ test('deferred lighting packs fixed-size point-light records', testCase => {
 });
 
 test('deferred lighting exposes one composable fullscreen resolve', testCase => {
-  const pipeline = createDeferredLightingShaderPassPipeline();
+  const pipeline = createDeferredLightingCompositeShaderPass();
   testCase.equal(pipeline.steps.length, 1, 'the resolve is one fullscreen pass');
   testCase.equal(
     pipeline.steps[0].shaderPass.name,
@@ -69,7 +69,7 @@ test('deferred lighting exposes one composable fullscreen resolve', testCase => 
 });
 
 test('deferred ambient lighting isolates the material ambient contribution', testCase => {
-  const pipeline = createDeferredAmbientLightingShaderPassPipeline();
+  const pipeline = createDeferredAmbientLightingCompositeShaderPass();
   testCase.equal(pipeline.steps.length, 1, 'ambient extraction remains one composable pass');
   testCase.equal(
     pipeline.steps[0].shaderPass,
@@ -154,7 +154,7 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [createDeferredLightingShaderPassPipeline()],
+    shaderPasses: [createDeferredLightingCompositeShaderPass()],
     flipY: false
   });
   renderer.resize([width, height]);

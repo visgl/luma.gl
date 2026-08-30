@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for the horizon-based GTAO pipeline. */
-export type GTAOShaderPassPipelineOptions = {
+export type GTAOCompositeShaderPassOptions = {
   /** Fractional AO evaluation, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
   /** Apply visibility to the full image or only to a separately supplied ambient-light texture. */
@@ -507,15 +507,15 @@ fn gtaoAmbientComposite_sampleColor(
 >;
 
 /** Creates a temporally stabilized horizon-based ambient-occlusion pipeline. */
-export function createGTAOShaderPassPipeline(
-  options: GTAOShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createGTAOCompositeShaderPass(
+  options: GTAOCompositeShaderPassOptions = {}
+): CompositeShaderPass<
   'gtaoRaw' | 'gtaoHistory' | 'gtaoHistoryDepth' | 'gtaoScratch' | 'gtaoBlurred'
 > {
   const scale = options.resolutionScale ?? 1;
   const composite = options.composition === 'ambient-only' ? gtaoAmbientComposite : gtaoComposite;
   return {
-    name: 'gtaoShaderPassPipeline',
+    name: 'gtaoCompositeShaderPass',
     renderTargets: {
       gtaoRaw: {scale: [scale, scale], format: 'rgba8unorm'},
       gtaoHistory: {

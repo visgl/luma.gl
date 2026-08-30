@@ -53,7 +53,7 @@ describe('Fluid Foundry: Liquid Metal Press', () => {
         viewer.postprocessingRenderer.passRenderers.map(
           passRenderer => passRenderer.passDefinition.name
         )
-      ).toEqual(['bloomShaderPassPipeline', 'toneMapping']);
+      ).toEqual(['bloomCompositeShaderPass', 'toneMapping']);
 
       viewer.onRender(makeAnimationProps(device, width, height, 1000));
       device.submit();

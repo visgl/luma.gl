@@ -67,12 +67,12 @@ describe('Volumetric Fire Forge', () => {
         viewer.renderer.volumeRenderer.passRenderers.map(
           passRenderer => passRenderer.passDefinition.name
         )
-      ).toEqual(['volumetricFireCompositeShaderPassPipeline']);
+      ).toEqual(['volumetricFireCompositeCompositeShaderPass']);
       expect(
         viewer.renderer.postprocessingRenderer.passRenderers.map(
           passRenderer => passRenderer.passDefinition.name
         )
-      ).toEqual(['bloomShaderPassPipeline', 'toneMapping']);
+      ).toEqual(['bloomCompositeShaderPass', 'toneMapping']);
 
       viewer.onRender(makeAnimationProps(device, 1000));
       device.submit();

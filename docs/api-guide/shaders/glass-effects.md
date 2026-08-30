@@ -248,7 +248,7 @@ Render emissive objects into an `rgba16float` scene attachment when the device s
 and filtering that format. Preserve the same color format through transparency resolves so packet
 cores and specular highlights can exceed display brightness until postprocessing.
 
-Use `bloomShaderPassPipeline` after opaque and translucent composition, followed by filmic
+Use `bloomCompositeShaderPass` after opaque and translucent composition, followed by filmic
 `toneMapping`. Keep the bloom threshold above ordinary scene brightness to avoid glowing inactive
 links or the entire glass silhouette. When floating-point scene color is unavailable, fall back to
 the preferred display format and reduce the extraction threshold.

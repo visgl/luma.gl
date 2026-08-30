@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # Clustered Volumetric Lighting
 
 Integrate participating-media illumination from the same directional and clustered point lights
-used by scene shading. `createClusteredVolumetricLightingShaderPassPipeline` combines height fog,
+used by scene shading. `createClusteredVolumetricLightingCompositeShaderPass` combines height fog,
 anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising,
 and Beer-Lambert extinction.
 
@@ -13,7 +13,7 @@ and Beer-Lambert extinction.
 
 | Property | Value |
 | --- | --- |
-| Export | `createClusteredVolumetricLightingShaderPassPipeline` |
+| Export | `createClusteredVolumetricLightingCompositeShaderPass` |
 | Backend | WebGPU |
 | Render passes | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
 | Required scene inputs | Depth, velocity, camera transforms, directional lighting, and point-light storage |
@@ -24,7 +24,7 @@ and Beer-Lambert extinction.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createClusteredVolumetricLightingShaderPassPipeline} from '@luma.gl/effects';
+import {createClusteredVolumetricLightingCompositeShaderPass} from '@luma.gl/effects';
 
 clusteredLightGrid.encode(device.commandEncoder, {
   pointLights,
@@ -37,7 +37,7 @@ clusteredLightGrid.encode(device.commandEncoder, {
 const renderer = new ShaderPassRenderer(device, {
   colorFormat: 'rgba16float',
   shaderPasses: [
-    createClusteredVolumetricLightingShaderPassPipeline({resolutionScale: 0.5})
+    createClusteredVolumetricLightingCompositeShaderPass({resolutionScale: 0.5})
   ]
 });
 

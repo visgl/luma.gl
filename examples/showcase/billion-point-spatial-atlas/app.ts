@@ -4,7 +4,7 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -506,7 +506,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.pickingModel = this.createModel('picking');
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+        createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
         toneMapping
       ],
       colorFormat: this.sceneColorFormat

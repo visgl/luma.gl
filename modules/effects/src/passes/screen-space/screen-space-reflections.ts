@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray16} from '@math.gl/core';
 
 /** Construction options for temporally stabilized screen-space reflections. */
-export type SSRShaderPassPipelineOptions = {
+export type SSRCompositeShaderPassOptions = {
   /** Fractional ray-tracing, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
@@ -654,14 +654,14 @@ fn ssrComposite_sampleColor(
 >;
 
 /** Creates a roughness-aware, temporally stabilized screen-space reflection pipeline. */
-export function createSSRShaderPassPipeline(
-  options: SSRShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createSSRCompositeShaderPass(
+  options: SSRCompositeShaderPassOptions = {}
+): CompositeShaderPass<
   'ssrRaw' | 'ssrHistory' | 'ssrHistoryDepth' | 'ssrScratch' | 'ssrReflection'
 > {
   const scale = options.resolutionScale ?? 1;
   return {
-    name: 'ssrShaderPassPipeline',
+    name: 'ssrCompositeShaderPass',
     renderTargets: {
       ssrRaw: {scale: [scale, scale], format: 'rgba16float'},
       ssrHistory: {

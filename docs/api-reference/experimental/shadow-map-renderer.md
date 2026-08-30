@@ -74,7 +74,7 @@ effective quality, capacity, cascade count, or map size changes.
 
 ## Contact refinement
 
-`createContactShadowShaderPassPipeline({quality})` creates a depth ray-march, two depth/normal-aware
+`createContactShadowCompositeShaderPass({quality})` creates a depth ray-march, two depth/normal-aware
 bilateral passes, and a composite. Bind camera depth, view-space normals, projection matrices, the
 primary directional-light vector, and a texture containing that light's already-shadowed direct
 contribution. The composite subtracts only the occluded directional direct term, preserving ambient

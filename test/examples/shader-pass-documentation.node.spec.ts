@@ -53,7 +53,7 @@ const EFFECT_DOCUMENTATION = {
     backend: 'portable'
   },
   'hdr-auto-exposure': {
-    exportName: 'createHDRAutoExposureShaderPassPipeline',
+    exportName: 'createHDRAutoExposureCompositeShaderPass',
     exampleName: 'DeferredRenderingExample',
     backend: 'webgpu'
   },
@@ -95,52 +95,52 @@ const EFFECT_DOCUMENTATION = {
   },
   fxaa: {exportName: 'fxaa', exampleName: 'AntialiasingExample', backend: 'portable'},
   'temporal-antialiasing': {
-    exportName: 'createTAAShaderPassPipeline',
+    exportName: 'createTAACompositeShaderPass',
     exampleName: 'AdvancedEffectsExample',
     backend: 'webgpu'
   },
   'camera-reprojection-antialiasing': {
-    exportName: 'createCameraReprojectionTAAShaderPassPipeline',
+    exportName: 'createCameraReprojectionTAACompositeShaderPass',
     exampleName: 'ANARIPlaygroundExample',
     backend: 'webgpu'
   },
   'motion-blur': {
-    exportName: 'createMotionBlurShaderPassPipeline',
+    exportName: 'createMotionBlurCompositeShaderPass',
     exampleName: 'AdvancedEffectsExample',
     backend: 'webgpu'
   },
   ssao: {
-    exportName: 'createSSAOShaderPassPipeline',
+    exportName: 'createSSAOCompositeShaderPass',
     exampleName: 'AdvancedEffectsExample',
     backend: 'webgpu'
   },
   gtao: {
-    exportName: 'createGTAOShaderPassPipeline',
+    exportName: 'createGTAOCompositeShaderPass',
     exampleName: 'DeferredRenderingExample',
     backend: 'webgpu'
   },
   'screen-space-global-illumination': {
-    exportName: 'createSSGIShaderPassPipeline',
+    exportName: 'createSSGICompositeShaderPass',
     exampleName: 'DeferredRenderingExample',
     backend: 'webgpu'
   },
   'screen-space-reflections': {
-    exportName: 'createSSRShaderPassPipeline',
+    exportName: 'createSSRCompositeShaderPass',
     exampleName: 'DeferredRenderingExample',
     backend: 'webgpu'
   },
   outlines: {
-    exportName: 'createOutlineShaderPassPipeline',
+    exportName: 'createOutlineCompositeShaderPass',
     exampleName: 'AdvancedEffectsExample',
     backend: 'webgpu'
   },
   'volumetric-fog': {
-    exportName: 'createVolumetricFogShaderPassPipeline',
+    exportName: 'createVolumetricFogCompositeShaderPass',
     exampleName: 'AdvancedEffectsExample',
     backend: 'webgpu'
   },
   'clustered-volumetric-lighting': {
-    exportName: 'createClusteredVolumetricLightingShaderPassPipeline',
+    exportName: 'createClusteredVolumetricLightingCompositeShaderPass',
     exampleName: 'DeferredRenderingExample',
     backend: 'webgpu'
   },

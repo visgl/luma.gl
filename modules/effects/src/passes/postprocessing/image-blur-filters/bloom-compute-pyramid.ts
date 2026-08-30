@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TextureFormatColor} from '@luma.gl/core';
-import type {ShaderPassComputeOptimization} from '@luma.gl/shadertools';
+import type {CompositeShaderPassComputeOptimization} from '@luma.gl/shadertools';
 
 const BLOOM_COMPUTE_WORKGROUP_SIZE = 16;
 
@@ -20,7 +20,7 @@ type BloomComputePyramidOptions = {
 /** Builds a single-dispatch, workgroup-local HDR extraction and downsampling pyramid. */
 export function createBloomComputePyramid(
   options: BloomComputePyramidOptions
-): ShaderPassComputeOptimization {
+): CompositeShaderPassComputeOptimization {
   const outputs = Object.fromEntries(
     options.levelNames.map(levelName => [`output${levelName}`, `extract${levelName}`])
   );
