@@ -48,6 +48,8 @@ type FormatConfig =
     }
   | {kind: 'float'; channels: PerFloatChannelConfig[]};
 
+type FloatFormatConfig = Extract<FormatConfig, {kind: 'float-shared-exponent' | 'float'}>;
+
 // Table of all supported packed formats
 const FORMAT_CONFIG_TABLE: Record<
   | 'rgba4unorm-webgl'
@@ -175,34 +177,33 @@ export function decodePackedRGBAFloat(
   bits: number,
   format: 'rgb9e5ufloat' | 'rg11b10ufloat'
 ): [number, number, number, number] {
-  const cfg = FORMAT_CONFIG_TABLE[format] as any;
-  if (cfg.kind === 'float-shared-exponent') {
-    const mR = extractShared(bits, cfg.channels[0] as SharedExpChannelConfig);
-    const mG = extractShared(bits, cfg.channels[1] as SharedExpChannelConfig);
-    const mB = extractShared(bits, cfg.channels[2] as SharedExpChannelConfig);
-    const e = extractShared(bits, cfg.channels[3] as SharedExpChannelConfig);
-    if (e === 0) return [0, 0, 0, 1];
-    const factor = Math.pow(2, e - cfg.bias - cfg.mantBits);
-    return [mR * factor, mG * factor, mB * factor, 1];
+  const formatConfig = getFloatFormatConfig(format);
+  if (formatConfig.kind === 'float-shared-exponent') {
+    const redMantissa = extractShared(bits, formatConfig.channels[0]);
+    const greenMantissa = extractShared(bits, formatConfig.channels[1]);
+    const blueMantissa = extractShared(bits, formatConfig.channels[2]);
+    const exponent = extractShared(bits, formatConfig.channels[3]);
+    const factor = Math.pow(2, exponent - formatConfig.bias - formatConfig.mantBits);
+    return [redMantissa * factor, greenMantissa * factor, blueMantissa * factor, 1];
   }
-  const rRaw = extractRaw(bits, cfg.channels[0] as ChannelConfig);
-  const gRaw = extractRaw(bits, cfg.channels[1] as ChannelConfig);
-  const bRaw = extractRaw(bits, cfg.channels[2] as ChannelConfig);
+  const redRaw = extractRaw(bits, makeChannelConfig(formatConfig.channels[0]));
+  const greenRaw = extractRaw(bits, makeChannelConfig(formatConfig.channels[1]));
+  const blueRaw = extractRaw(bits, makeChannelConfig(formatConfig.channels[2]));
   return [
-    decodeUF(
-      rRaw,
-      (cfg.channels[0] as PerFloatChannelConfig).mantBits,
-      (cfg.channels[0] as PerFloatChannelConfig).expBits
+    decodeUnsignedFloat(
+      redRaw,
+      formatConfig.channels[0].mantBits,
+      formatConfig.channels[0].expBits
     ),
-    decodeUF(
-      gRaw,
-      (cfg.channels[1] as PerFloatChannelConfig).mantBits,
-      (cfg.channels[1] as PerFloatChannelConfig).expBits
+    decodeUnsignedFloat(
+      greenRaw,
+      formatConfig.channels[1].mantBits,
+      formatConfig.channels[1].expBits
     ),
-    decodeUF(
-      bRaw,
-      (cfg.channels[2] as PerFloatChannelConfig).mantBits,
-      (cfg.channels[2] as PerFloatChannelConfig).expBits
+    decodeUnsignedFloat(
+      blueRaw,
+      formatConfig.channels[2].mantBits,
+      formatConfig.channels[2].expBits
     ),
     1
   ];
@@ -216,36 +217,61 @@ export function encodePackedRGBAFloat(
   rgba: [number, number, number, number],
   format: 'rgb9e5ufloat' | 'rg11b10ufloat'
 ): number {
-  const cfg = FORMAT_CONFIG_TABLE[format];
+  const formatConfig = getFloatFormatConfig(format);
   let bits = 0;
-  if (cfg.kind === 'float-shared-exponent') {
-    const [r, g, b] = rgba;
-    const maxV = Math.max(r, g, b);
-    const eRaw =
-      maxV <= 0 ? 0 : Math.min(Math.max(Math.floor(Math.log2(maxV)) + cfg.bias, 1), (1 << 5) - 1);
-    bits = insertRaw(
-      bits,
-      encodeUF(r, cfg.mantBits, 5, cfg.bias),
-      cfg.channels[0] as ChannelConfig
+  if (formatConfig.kind === 'float-shared-exponent') {
+    const maximumFiniteValue = 65408;
+    const channels = rgba
+      .slice(0, 3)
+      .map(value =>
+        Number.isFinite(value) && value > 0 ? Math.min(value, maximumFiniteValue) : 0
+      );
+    const maximumChannel = Math.max(...channels);
+    if (maximumChannel === 0) {
+      return 0;
+    }
+
+    const maximumExponent = (1 << 5) - 1;
+    let exponent = Math.min(
+      Math.max(Math.floor(Math.log2(maximumChannel)) + formatConfig.bias + 1, 0),
+      maximumExponent
     );
-    bits = insertRaw(
-      bits,
-      encodeUF(g, cfg.mantBits, 5, cfg.bias),
-      cfg.channels[1] as ChannelConfig
-    );
-    bits = insertRaw(
-      bits,
-      encodeUF(b, cfg.mantBits, 5, cfg.bias),
-      cfg.channels[2] as ChannelConfig
-    );
-    bits = insertRaw(bits, eRaw, cfg.channels[3] as ChannelConfig);
+    let denominator = Math.pow(2, exponent - formatConfig.bias - formatConfig.mantBits);
+    if (Math.round(maximumChannel / denominator) === 1 << formatConfig.mantBits) {
+      exponent = Math.min(exponent + 1, maximumExponent);
+      denominator *= 2;
+    }
+
+    const maximumMantissa = (1 << formatConfig.mantBits) - 1;
+    for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
+      const mantissa = Math.min(Math.round(channels[channelIndex] / denominator), maximumMantissa);
+      bits = insertRaw(bits, mantissa, formatConfig.channels[channelIndex]);
+    }
+    bits = insertRaw(bits, exponent, formatConfig.channels[3]);
   } else {
-    const [r, g, b] = rgba;
-    bits = insertRaw(bits, Math.round(r), cfg.channels[0] as ChannelConfig);
-    bits = insertRaw(bits, Math.round(g), cfg.channels[1] as ChannelConfig);
-    bits = insertRaw(bits, Math.round(b), cfg.channels[2] as ChannelConfig);
+    for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
+      const channelConfig = formatConfig.channels[channelIndex];
+      const encodedValue = encodeUnsignedFloat(
+        rgba[channelIndex],
+        channelConfig.mantBits,
+        channelConfig.expBits
+      );
+      bits = insertRaw(bits, encodedValue, makeChannelConfig(channelConfig));
+    }
   }
   return bits;
+}
+
+function getFloatFormatConfig(format: 'rgb9e5ufloat' | 'rg11b10ufloat'): FloatFormatConfig {
+  // These keys are constrained to the two float entries in FORMAT_CONFIG_TABLE.
+  return FORMAT_CONFIG_TABLE[format] as FloatFormatConfig;
+}
+
+function makeChannelConfig(channelConfig: PerFloatChannelConfig): ChannelConfig {
+  return {
+    shift: channelConfig.shift,
+    mask: (1 << (channelConfig.mantBits + channelConfig.expBits)) - 1
+  };
 }
 
 /** Extract raw bits or defaultValue for integer/unorm channels */
@@ -270,21 +296,60 @@ function insertRaw(bits: number, value: number, cfg: ChannelConfig): number {
 }
 
 /** Decode unsigned float from mantissa+exponent bits */
-function decodeUF(raw: number, mantBits: number, expBits: number): number {
-  const expMask = (1 << expBits) - 1;
-  const bias = (1 << (expBits - 1)) - 1;
-  const eRaw = raw >>> mantBits;
-  const mRaw = raw & ((1 << mantBits) - 1);
-  if (eRaw === 0) return mRaw * Math.pow(2, 1 - bias - mantBits);
-  if (eRaw === expMask) return mRaw === 0 ? Infinity : NaN;
-  return (1 + mRaw / (1 << mantBits)) * Math.pow(2, eRaw - bias);
+function decodeUnsignedFloat(
+  raw: number,
+  mantissaBitCount: number,
+  exponentBitCount: number
+): number {
+  const exponentMask = (1 << exponentBitCount) - 1;
+  const exponentBias = (1 << (exponentBitCount - 1)) - 1;
+  const exponent = raw >>> mantissaBitCount;
+  const mantissa = raw & ((1 << mantissaBitCount) - 1);
+  if (exponent === 0) {
+    return mantissa * Math.pow(2, 1 - exponentBias - mantissaBitCount);
+  }
+  if (exponent === exponentMask) {
+    return mantissa === 0 ? Infinity : NaN;
+  }
+  return (1 + mantissa / (1 << mantissaBitCount)) * Math.pow(2, exponent - exponentBias);
 }
 
 /** Encode a float value into mantissa+exponent raw bits */
-function encodeUF(value: number, mantBits: number, expBits: number, bias: number): number {
-  if (value <= 0) return 0;
-  const expRaw = Math.min(Math.max(Math.floor(Math.log2(value)) + bias, 1), (1 << expBits) - 1);
-  const factor = Math.pow(2, mantBits - (expRaw - bias));
-  const mantRaw = Math.round(value * factor);
-  return ((expRaw << mantBits) | (mantRaw & ((1 << mantBits) - 1))) >>> 0;
+function encodeUnsignedFloat(
+  value: number,
+  mantissaBitCount: number,
+  exponentBitCount: number
+): number {
+  const exponentMask = (1 << exponentBitCount) - 1;
+  const mantissaMask = (1 << mantissaBitCount) - 1;
+  const exponentBias = (1 << (exponentBitCount - 1)) - 1;
+  if (Number.isNaN(value)) {
+    return (exponentMask << mantissaBitCount) | 1;
+  }
+  if (value === Infinity) {
+    return exponentMask << mantissaBitCount;
+  }
+  if (value <= 0) {
+    return 0;
+  }
+
+  const minimumNormalValue = Math.pow(2, 1 - exponentBias);
+  if (value < minimumNormalValue) {
+    return Math.min(
+      Math.round(value / Math.pow(2, 1 - exponentBias - mantissaBitCount)),
+      mantissaMask
+    );
+  }
+
+  const unbiasedExponent = Math.floor(Math.log2(value));
+  let exponent = unbiasedExponent + exponentBias;
+  let mantissa = Math.round((value / Math.pow(2, unbiasedExponent) - 1) * (1 << mantissaBitCount));
+  if (mantissa > mantissaMask) {
+    exponent++;
+    mantissa = 0;
+  }
+  if (exponent >= exponentMask) {
+    return exponentMask << mantissaBitCount;
+  }
+  return ((exponent << mantissaBitCount) | mantissa) >>> 0;
 }
