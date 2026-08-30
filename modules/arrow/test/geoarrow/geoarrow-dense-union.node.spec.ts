@@ -47,8 +47,8 @@ test('convertGeoArrowTableToDenseUnion converts WKB/WKT mixed geometry fixtures'
       `${wkbFixture} preserves the coordinate dimension`
     );
     t.deepEqual(
-      getDenseUnionRows(convertedWKBGeometry),
-      getDenseUnionRows(convertedWKTGeometry),
+      normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKBGeometry)),
+      normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKTGeometry)),
       `${wkbFixture} and ${wktFixture} produce equivalent dense union rows`
     );
   }
@@ -115,6 +115,29 @@ test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
   });
 
   t.equal(convertedGeometry.get(1), null, 'preserves a null through the dense-union adapter');
+  t.end();
+});
+
+test('convertGeoArrowVectorToDenseUnion lets math.gl infer WKB dimensions and preserve chunks', t => {
+  const sourceGeometry = loadGeoArrowFixture('example_point-z_wkb.arrows').getChild('geometry')!;
+  const splitRow = 2;
+  const chunkedGeometry = new arrow.Vector([
+    sourceGeometry.slice(0, splitRow).data[0],
+    sourceGeometry.slice(splitRow).data[0]
+  ]);
+  const convertedGeometry = convertGeoArrowVectorToDenseUnion(chunkedGeometry);
+
+  t.equal(convertedGeometry.data.length, 2, 'preserves both source Arrow chunks');
+  t.equal(
+    getDenseUnionCoordinateDimension(convertedGeometry),
+    3,
+    'uses the WKB headers to infer XYZ coordinates'
+  );
+  t.deepEqual(
+    getDenseUnionRows(convertedGeometry),
+    getDenseUnionRows(convertGeoArrowVectorToDenseUnion(sourceGeometry)),
+    'preserves all geometry rows across chunk boundaries'
+  );
   t.end();
 });
 
@@ -239,6 +262,12 @@ function getDenseUnionRows(vector: arrow.Vector): {typeId: number; value: unknow
     });
   }
   return rows;
+}
+
+function normalizeDenseUnionNullTypeIds(
+  rows: {typeId: number; value: unknown}[]
+): {typeId: number; value: unknown}[] {
+  return rows.map(row => (row.value === null ? {typeId: 0, value: null} : row));
 }
 
 function getDenseUnionTypeId(vector: arrow.Vector, rowIndex: number): number {

@@ -13,7 +13,6 @@ import {
   type GeoArrowSerialized
 } from '@math.gl/geoarrow';
 import {decodeGeoArrowWKB, decodeGeoArrowWKT} from '@math.gl/geoarrow/wkb';
-import {parseWKB} from '@math.gl/wkb';
 import {
   Data,
   DataType,
@@ -144,7 +143,7 @@ export function convertGeoArrowVectorToDenseUnion<T extends ArrowDataType>(
 ): Vector {
   if (DataType.isDenseUnion(vector.type)) return vector;
   const encoding = resolveSerializedEncoding(vector, options);
-  const dimension = inferSerializedGeoArrowDimension(vector, encoding);
+  const dimension = encoding === 'geoarrow.wkb' ? 'xy' : inferWKTGeoArrowDimension(vector);
   const sourceColumn = makeGeoArrowColumnFromArrowVector(vector, {
     encoding,
     dimension,
@@ -152,14 +151,20 @@ export function convertGeoArrowVectorToDenseUnion<T extends ArrowDataType>(
   });
   const decodedColumn =
     encoding === 'geoarrow.wkb'
-      ? decodeGeoArrowWKB(sourceColumn)
+      ? decodeGeoArrowWKB(sourceColumn, {encoding: 'geoarrow.geometry'})
       : decodeGeoArrowWKT(stripEWKTSRIDPrefixes(sourceColumn));
   assertNoGeometryCollections(decodedColumn);
-  const unionColumn = convertGeoArrowColumn(decodedColumn, {encoding: 'geoarrow.geometry'});
-  const chunkedColumn = splitGeoArrowColumn(
-    unionColumn,
-    vector.data.map(data => data.length)
-  );
+  const unionColumn =
+    decodedColumn.encoding === 'geoarrow.geometry'
+      ? decodedColumn
+      : convertGeoArrowColumn(decodedColumn, {encoding: 'geoarrow.geometry'});
+  const chunkedColumn =
+    encoding === 'geoarrow.wkb'
+      ? unionColumn
+      : splitGeoArrowColumn(
+          unionColumn,
+          vector.data.map(data => data.length)
+        );
   return makeArrowVectorFromGeoArrowColumn(chunkedColumn);
 }
 
@@ -205,12 +210,9 @@ function resolveSerializedEncoding<T extends ArrowDataType>(
   throw new Error('GeoArrow dense-union conversion requires Binary WKB or Utf8 WKT input');
 }
 
-function inferSerializedGeoArrowDimension(
-  vector: Vector,
-  encoding: GeoArrowSerializedEncoding
-): GeoArrowDimension {
+function inferWKTGeoArrowDimension(vector: Vector): GeoArrowDimension {
   const column = makeGeoArrowColumnFromArrowVector(vector, {
-    encoding,
+    encoding: 'geoarrow.wkt',
     dimension: 'xy',
     coordinateLayout: null
   });
@@ -220,10 +222,7 @@ function inferSerializedGeoArrowDimension(
     for (let rowIndex = 0; rowIndex < serialized.length; rowIndex++) {
       if (!isGeoArrowValueValid(serialized.validity, rowIndex)) continue;
       const bytes = getSerializedBytes(serialized, rowIndex);
-      const rowDimension =
-        encoding === 'geoarrow.wkb'
-          ? (parseWKB(bytes).dimension as GeoArrowDimension)
-          : inferWKTDimension(textDecoder.decode(bytes));
+      const rowDimension = inferWKTDimension(textDecoder.decode(bytes));
       dimension = mergeGeoArrowDimensions(dimension, rowDimension);
     }
   }

@@ -4867,9 +4867,8 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/splats": "workspace:*"
     "@luma.gl/text": "npm:9.4.0-alpha.4"
-    "@math.gl/geoarrow": "npm:5.0.0-alpha.3"
+    "@math.gl/geoarrow": "npm:5.0.0-alpha.4"
     "@math.gl/types": "npm:^4.1.0"
-    "@math.gl/wkb": "npm:5.0.0-alpha.3"
     apache-arrow: "npm:^17.0.0"
   peerDependencies:
     apache-arrow: ">=17.0.0"
@@ -5223,19 +5222,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/core@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/core@npm:5.0.0-alpha.3"
+"@math.gl/core@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/core@npm:5.0.0-alpha.4"
   dependencies:
-    "@math.gl/types": "npm:5.0.0-alpha.3"
-  checksum: 10c0/207072659f38dd96e767ea33feb2550de3d95fda605487edef2faf36e6c6771501c2c8f504697228efa090fb6fbcbff919aeee9946b15e0ad1437b39dac487ef
+    "@math.gl/types": "npm:5.0.0-alpha.4"
+  checksum: 10c0/e221bceaac1f5af013b24d49bd080506a636ad95b09cb449465e6e74bbf43742b567c5a1ba7729a91dab30a5e581dc7cf2ab3abea9f3aafd54fa834738df3ebf
   languageName: node
   linkType: hard
 
-"@math.gl/crs@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/crs@npm:5.0.0-alpha.3"
-  checksum: 10c0/e38db3e92023b92ca6803899cab1a572faebabedf3e8ea59909ca57344e1d8980366c8b6a4ffe51b1d52f0bda42a816337ef886bb6c44077e09c489f1f205a7c
+"@math.gl/crs@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/crs@npm:5.0.0-alpha.4"
+  checksum: 10c0/9e0c540e04e0bcd7b9667f7187c32e252d6032df3c75775fc9758c31cce00fd1da91b45bc5f17a0c17b76a02a706ccb347be95ce5fe4b12169d6373b9c2542eb
   languageName: node
   linkType: hard
 
@@ -5277,15 +5276,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/geoarrow@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/geoarrow@npm:5.0.0-alpha.3"
+"@math.gl/geoarrow@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/geoarrow@npm:5.0.0-alpha.4"
   dependencies:
-    "@math.gl/crs": "npm:5.0.0-alpha.3"
-    "@math.gl/polygon": "npm:5.0.0-alpha.3"
-    "@math.gl/types": "npm:5.0.0-alpha.3"
-    "@math.gl/wkb": "npm:5.0.0-alpha.3"
-  checksum: 10c0/535fdd0750df381279b50696df912a2097eac35fda54f3b123e68a308dc4ac4add026cdbc937521a79f24743812d2d32681f673d526ffd15fa6ace2c23187432
+    "@math.gl/crs": "npm:5.0.0-alpha.4"
+    "@math.gl/polygon": "npm:5.0.0-alpha.4"
+    "@math.gl/types": "npm:5.0.0-alpha.4"
+    "@math.gl/wkb": "npm:5.0.0-alpha.4"
+  checksum: 10c0/dbd91585c97f1858d19c44d5c92871924d0014a7513a862fa96e13dfac94d1ca1b596d3f2553c31cd341e1c9c611428055df48c3bebf26b3c771efb486911005
   languageName: node
   linkType: hard
 
@@ -5308,12 +5307,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/polygon@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/polygon@npm:5.0.0-alpha.3"
+"@math.gl/polygon@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/polygon@npm:5.0.0-alpha.4"
   dependencies:
-    "@math.gl/core": "npm:5.0.0-alpha.3"
-  checksum: 10c0/e613de1a26f9d58a4ea871b491e55a3299a8c08d01e1120a3cdb98c1aff5d09fcf8c1c15e24198daec30e9ec9ca6d3024c3148481bc97cddaaf523faaa595582
+    "@math.gl/core": "npm:5.0.0-alpha.4"
+  checksum: 10c0/c08ee74eb95c5670540402fd615663b0d621563c80faaeb45966e4c1001c793d31dc9ccd4ea6b69b139ba9c2c4153c7606466e8e2c416630b2ae411d24a9087f
   languageName: node
   linkType: hard
 
@@ -5347,10 +5346,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/types@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/types@npm:5.0.0-alpha.3"
-  checksum: 10c0/64b2283d841c5d03d387e03bd75c10f1f3ac3a1cbfbd56ac5125a84c8f59cfb61ce5cbe4e8c9c22728d07016c7436ed80684f68de9c9e20a80ec1e784a6e94ac
+"@math.gl/types@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/types@npm:5.0.0-alpha.4"
+  checksum: 10c0/f4e0d05803909650e52d12dba30f93d25b5031006a7bb1c0d03650f9c27f82d8b8b920348892e41979ac5c070b920420bf1d4b8aeab2de1e865fdec1b8c68acd
   languageName: node
   linkType: hard
 
@@ -5363,10 +5362,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/wkb@npm:5.0.0-alpha.3":
-  version: 5.0.0-alpha.3
-  resolution: "@math.gl/wkb@npm:5.0.0-alpha.3"
-  checksum: 10c0/9e7ea2e033358eeb307e90eecc2882d2c63b8d15bb5890958534f8cd62b8f64a42cfb8e20462a0243f406f5275f19e1bbc00489cc5bd20bdc26ebc4add6793e8
+"@math.gl/wkb@npm:5.0.0-alpha.4":
+  version: 5.0.0-alpha.4
+  resolution: "@math.gl/wkb@npm:5.0.0-alpha.4"
+  checksum: 10c0/1e2e49466a7858405c52e471da7f939c193d89a0cd7ec02133a57d8439203f44c7e5480cb050c369f08f04ff2571a122490e688167e3aab405b185937527fe30
   languageName: node
   linkType: hard
 
