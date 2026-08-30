@@ -18,8 +18,9 @@ export function isGPUTableIndexColumnName(
  * Named GPU table columns mapped to their canonical memory formats.
  *
  * The value type is a memory-layout string such as `float32x3`,
- * `unorm8x4`, `vertex-list<float32x3>`, or `value-list<uint8>`. Shader value declarations live in
- * `ShaderLayout`; compatibility is checked at adapter boundaries.
+ * `unorm8x4`, `vertex-list<float32x3>`, `value-list<uint8>`, or
+ * `fixed-size-list<float32,768>`. Shader value declarations live in `ShaderLayout`;
+ * compatibility is checked at adapter boundaries.
  */
 export type GPUTypeMap = Record<string, GPUVectorFormat>;
 
