@@ -307,6 +307,8 @@ export type WebGPUDeviceFeature =
   | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
   | 'float32-filterable' // Is the float32 format filterable?
   | 'float32-blendable' // Is the float32 format blendable?
+  | 'texture-formats-tier1'
+  | 'texture-formats-tier2'
   | 'clip-distances'
   | 'dual-source-blending'
   | 'subgroups';
