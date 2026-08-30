@@ -79,6 +79,21 @@ turn a full scan into an index: they exclude rows from ranking but do not remove
 inspect the relevant source flags. Stable-ID allowlists larger than 16 entries use a bounded GPU
 hash index to avoid linearly rescanning the complete allowlist for every candidate.
 
+### Deterministic k-means and IVF-flat indexing
+
+`GPUKMeans` partitions valid embedding rows into reusable centroid labels using bounded,
+deterministic reductions. It avoids non-portable Float32 atomics, preserves source chunks, and
+publishes caller-owned labels, centroid values, counts, and optional convergence status.
+
+`GPUIVFFlatIndex` reuses those centroids to build an inverted-file layout. Each list stores stable
+source IDs alongside logical row indices, while candidate scores are computed against the original
+Float32 embeddings. Probing fewer lists bounds query work but is approximate; probing all lists
+restores complete coverage. `fallback: 'expand'` can visit additional lists when filters leave
+fewer than `k` eligible rows.
+
+Both operations are graph contributors. Applications own the embedding table, index buffers,
+outputs, and submission lifecycle; changing source rows requires an explicit index rebuild.
+
 ### Lifecycle, ownership, and current limits
 
 Applications own the source table, stable-ID and validity columns, and result buffers. A
@@ -92,9 +107,9 @@ the source table. Source data, outputs, and render consumers must share the same
 Query output and embedding chunks are tiled to active device limits.
 
 The current scope is Float32 fixed-size embeddings, Uint32 row identities, exact
-squared-Euclidean, cosine, or inner-product search, and explicit selection masks. Native Float64
-arithmetic, distributed search, approximate indexes, and direct WebGL interoperation are not
-provided.
+squared-Euclidean, cosine, or inner-product search, deterministic k-means, and IVF-flat indexes.
+Native Float64 arithmetic, distributed search, incremental index updates, and direct WebGL
+interoperation are not provided.
 
 ### Device loss invalidates compiled graphs
 
@@ -311,6 +326,40 @@ direct membership checks. Oversized allowlists are rejected, so use a source-ali
 when the requested identifiers exceed bounded index capacity. Optional `queryFilterMask` supplies
 query-specific source-aligned flags. Candidate counts distinguish no eligible rows from a valid
 but short nearest-neighbor list.
+
+## Build and query an IVF-flat index
+
+```ts
+import {GPUIVFFlatIndex, GPUKMeans} from '@luma.gl/gpgpu/gpu-vector-search';
+
+new GPUKMeans({dataset, clusterCount: 32, centroids, labels, counts}).addToGraph(graph);
+
+const index = new GPUIVFFlatIndex({
+  dataset,
+  listCount: 32,
+  centroids,
+  labels,
+  listCounts,
+  listOffsets,
+  listSourceIds,
+  listRowIndices
+});
+index.addToGraph(graph);
+index.addSearchToGraph(graph, {
+  queries,
+  outputIds,
+  outputScores,
+  resultCounts,
+  k: 10,
+  metric: 'cosine',
+  probeCount: 4,
+  fallback: 'expand'
+});
+```
+
+The index stores no copied embedding matrix. `listSourceIds` are application-facing IDs and
+`listRowIndices` locate the corresponding source rows for exact reranking. Index buffers must fit
+the device's storage-binding limit and remain on the same WebGPU device as the source table.
 
 ## Integrate GPU results with rendering
 
