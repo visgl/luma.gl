@@ -2,6 +2,12 @@
 
 ## v9.4
 
+### v9.4.0-beta.4
+
+- feat(shadertools): WebGPU implementation of tan_fp32 (#3156)
+- feat(gpgpu): broaden operation inputs (#3134)
+- feat(gpgpu): clean nested evaluation results (#3133)
+
 ### v9.4.0-beta.3
 
 - feat(gpgpu): buffer pool improvements (#3126)
