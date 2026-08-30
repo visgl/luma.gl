@@ -636,7 +636,8 @@ export class GPUCommandGraph<Parameters = void> {
   private readonly buffers = new Map<string, GraphBufferHandle>();
   private readonly textures = new Map<string, GraphTextureHandle>();
   private readonly externalTextures = new Map<string, GraphExternalTextureHandle>();
-  private readonly tableBufferHandles = new Map<Buffer, GraphBufferHandle>();
+  private readonly importedBufferHandles = new Map<Buffer, GraphBufferHandle>();
+  private readonly dynamicBufferHandles = new Map<DynamicBuffer, GraphBufferHandle>();
   private readonly nodes: GPUCommandGraphNode<Parameters>[] = [];
   private readonly nodeIds = new Set<string>();
   private compiled = false;
@@ -678,7 +679,17 @@ export class GPUCommandGraph<Parameters = void> {
     if (defaultBuffer) {
       validateImportedBuffer(defaultBuffer, descriptor, this.device);
     }
-    return this.addBuffer(new GraphBufferHandle(this, descriptor, false, defaultBuffer));
+    const handle = this.addBuffer(new GraphBufferHandle(this, descriptor, false, defaultBuffer));
+    if (defaultBuffer) {
+      const coreBuffer = getCoreBuffer(defaultBuffer);
+      if (!this.importedBufferHandles.has(coreBuffer)) {
+        this.importedBufferHandles.set(coreBuffer, handle);
+      }
+      if (defaultBuffer instanceof DynamicBuffer && !this.dynamicBufferHandles.has(defaultBuffer)) {
+        this.dynamicBufferHandles.set(defaultBuffer, handle);
+      }
+    }
+    return handle;
   }
 
   /**
@@ -1077,13 +1088,24 @@ export class GPUCommandGraph<Parameters = void> {
       throw new Error(`GPUCommandGraph import "${id}" requires GPUData.format`);
     }
     const coreBuffer = getCoreBuffer(data.buffer);
-    let handle = this.tableBufferHandles.get(coreBuffer);
+    const requirements = {
+      byteLength: getGPUDataEndByteOffset(data),
+      usage: coreBuffer.usage
+    };
+    let handle =
+      data.buffer instanceof DynamicBuffer
+        ? this.getDynamicBufferHandle(data.buffer, requirements)
+        : this.getImportedBufferHandle(coreBuffer, requirements);
     if (!handle) {
       handle = this.importBuffer(
         {id, byteLength: coreBuffer.byteLength, usage: coreBuffer.usage},
         data.buffer
       );
-      this.tableBufferHandles.set(coreBuffer, handle);
+      if (data.buffer instanceof DynamicBuffer) {
+        this.dynamicBufferHandles.set(data.buffer, handle);
+      } else {
+        this.importedBufferHandles.set(coreBuffer, handle);
+      }
     }
     return this.createDataView(handle, {
       format: data.format,
@@ -1092,6 +1114,64 @@ export class GPUCommandGraph<Parameters = void> {
       byteStride: data.byteStride,
       rowByteLength: data.rowByteLength
     });
+  }
+
+  private getDynamicBufferHandle(
+    buffer: DynamicBuffer,
+    requirements: Pick<GraphBufferDescriptor, 'byteLength' | 'usage'>
+  ): GraphBufferHandle | undefined {
+    const cachedHandle = this.dynamicBufferHandles.get(buffer);
+    if (
+      cachedHandle?.defaultBuffer === buffer &&
+      doesGraphBufferHandleCoverRequirements(cachedHandle, requirements)
+    ) {
+      return cachedHandle;
+    }
+    this.dynamicBufferHandles.delete(buffer);
+    for (const handle of this.buffers.values()) {
+      if (
+        handle.defaultBuffer === buffer &&
+        doesGraphBufferHandleCoverRequirements(handle, requirements)
+      ) {
+        this.dynamicBufferHandles.set(buffer, handle);
+        return handle;
+      }
+    }
+    return undefined;
+  }
+
+  private getImportedBufferHandle(
+    buffer: Buffer,
+    requirements: Pick<GraphBufferDescriptor, 'byteLength' | 'usage'>
+  ): GraphBufferHandle | undefined {
+    const cachedHandle = this.importedBufferHandles.get(buffer);
+    if (
+      cachedHandle?.defaultBuffer &&
+      getCoreBuffer(cachedHandle.defaultBuffer) === buffer &&
+      doesGraphBufferHandleCoverRequirements(cachedHandle, requirements)
+    ) {
+      return cachedHandle;
+    }
+    this.importedBufferHandles.delete(buffer);
+    for (const [dynamicBuffer, handle] of this.dynamicBufferHandles) {
+      if (
+        dynamicBuffer.buffer === buffer &&
+        doesGraphBufferHandleCoverRequirements(handle, requirements)
+      ) {
+        this.importedBufferHandles.set(buffer, handle);
+        return handle;
+      }
+    }
+    for (const handle of this.buffers.values()) {
+      if (
+        handle.defaultBuffer === buffer &&
+        doesGraphBufferHandleCoverRequirements(handle, requirements)
+      ) {
+        this.importedBufferHandles.set(buffer, handle);
+        return handle;
+      }
+    }
+    return undefined;
   }
 
   private assertBuffer(buffer: GraphBufferHandle): void {
@@ -1850,6 +1930,24 @@ export class CompiledGPUCommandGraph<Parameters = void> {
 /** Unwraps a dynamic import to the concrete buffer used for validation and encoding. */
 function getCoreBuffer(buffer: GraphImportedBuffer): Buffer {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
+}
+
+/** Returns the exclusive physical byte offset required by one typed GPU data import. */
+function getGPUDataEndByteOffset(data: GPUData): number {
+  const byteLength =
+    data.length === 0 ? 0 : (data.length - 1) * data.byteStride + data.rowByteLength;
+  return data.byteOffset + byteLength;
+}
+
+/** Returns whether one canonical handle covers a typed import's capacity and usage. */
+function doesGraphBufferHandleCoverRequirements(
+  handle: GraphBufferHandle,
+  requirements: Pick<GraphBufferDescriptor, 'byteLength' | 'usage'>
+): boolean {
+  return (
+    handle.byteLength >= requirements.byteLength &&
+    (handle.usage & requirements.usage) === requirements.usage
+  );
 }
 
 /** Unwraps a ready dynamic import to the concrete texture used for validation and encoding. */

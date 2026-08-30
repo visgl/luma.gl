@@ -35,6 +35,8 @@ v9.4.
   across logical rows.
 - [`GPUVectorFormat`](/docs/api-reference/gpgpu/gpu-vector-format) describes stored bytes
   independently from shader-facing value types.
+- [`GPU Vector Search`](/docs/api-reference/gpgpu/gpu-vector-search) performs exact, bounded
+  similarity search over borrowed fixed-size GPU rows.
 
 Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a separate raw buffer;
 it preserves its ordered `GPUData` chunks and their source batch boundaries. Packing and repacking

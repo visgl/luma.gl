@@ -23,7 +23,7 @@ import {
 import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUTable} from '../table/gpu-table';
-import {getGPUVectorFormatInfo} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorFormatInfo, isFixedSizeListGPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 type GPUBuffer = Buffer | DynamicBuffer;
 
@@ -530,10 +530,19 @@ function getShaderAttributeBufferLayout(
 }
 
 function getGPUDataBinding(data: GPUData): Binding {
+  const fixedSizeListByteLength =
+    data.format && isFixedSizeListGPUVectorFormat(data.format)
+      ? data.length === 0
+        ? 0
+        : (data.length - 1) * data.byteStride + data.rowByteLength
+      : undefined;
   return {
     buffer: data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer,
     offset: data.byteOffset,
-    size: data.valueByteLength ?? data.valueLength * data.byteStride
+    size:
+      fixedSizeListByteLength === undefined
+        ? (data.valueByteLength ?? data.valueLength * data.byteStride)
+        : Math.max(data.valueByteLength ?? 0, fixedSizeListByteLength)
   };
 }
 
