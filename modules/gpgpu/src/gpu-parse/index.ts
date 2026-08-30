@@ -12,6 +12,31 @@ export {
   type ParquetPhysicalType
 } from './parquet/parquet-column-decode-plan';
 export {
+  planGPUParquetEncodedPageBatch,
+  type LoadersGLParquetEncodedColumnChunk,
+  type LoadersGLParquetEncodedPage,
+  type LoadersGLParquetEncodedPageBatch,
+  type LoadersGLParquetEncodedPageSection,
+  type CPUParquetPageFallbackPlan,
+  type GPUParquetCompressionPlan,
+  type GPUParquetDecodedPagePlan,
+  type GPUParquetDictionaryPlan,
+  type GPUParquetEncodedPageBatchPlan,
+  type GPUParquetEncodedPageBatchPlanOptions,
+  type GPUParquetLevelPlan,
+  type GPUParquetUploadSection,
+  type GPUParquetValuePlan
+} from './parquet/parquet-encoded-page-batch';
+export {
+  addGPUParquetEncodedPageBatchToGraph,
+  createGPUParquetEncodedPageBatchInputBuffer,
+  type GPUParquetByteArrayPageValues,
+  type GPUParquetDecodedPage,
+  type GPUParquetEncodedPageBatch,
+  type GPUParquetFixedPageValues,
+  type GPUParquetInt64PageValues
+} from './parquet/gpu-parquet-encoded-page-batch';
+export {
   GPUParquetByteStreamSplitDecoder,
   GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE,
   getGPUParquetByteStreamSplitShaderSource,

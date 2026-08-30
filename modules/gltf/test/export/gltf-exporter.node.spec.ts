@@ -115,7 +115,13 @@ describe('source-faithful glTF asset export', () => {
       expect(encodeGLB).toHaveBeenCalledOnce();
       expect(encodeGLB.mock.calls[0][0]).toMatchObject({
         json: {asset: {version: '2.0'}},
-        binary: expect.any(Uint8Array)
+        buffers: [
+          {
+            arrayBuffer: expect.any(ArrayBuffer),
+            byteOffset: expect.any(Number),
+            byteLength: expect.any(Number)
+          }
+        ]
       });
       expect(binary).toBeInstanceOf(ArrayBuffer);
     } finally {

@@ -56,6 +56,7 @@ stable Engine models and Shadertools passes.
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
 | [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
+| [GPU DGGS cells](/docs/api-reference/experimental/gpu-dggs) | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes. |
 | [GPU Trace](/docs/api-reference/experimental/gpu-trace) | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis. |
 | [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins. |
 | [GPU SQL](/docs/api-reference/experimental/gpu-sql) | Bounded SQL planning over registered GPU Dataframe inputs. |
