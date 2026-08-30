@@ -77,6 +77,40 @@ describe('LuSQL immutable GPU dataframe planning', () => {
     frame.destroy();
   });
 
+  test('compiles projection-only plans without binding an arbitrary source column', () => {
+    const device = new NullDevice({id: 'loaders-sql-projection-only-node'});
+    const batch = new GPURecordBatch<{
+      position: 'float32x3';
+      category: 'uint32';
+    }>({
+      gpuData: {
+        position: new GPUData({
+          buffer: device.createBuffer({
+            data: Float32Array.of(0, 1, 2, 3, 4, 5),
+            usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+          }),
+          format: 'float32x3',
+          length: 2,
+          ownsBuffer: true
+        }),
+        category: createLuSQLNodeData(device, Uint32Array.of(0, 1), 'uint32')
+      },
+      fields: [
+        {name: 'position', format: 'float32x3', nullable: false},
+        {name: 'category', format: 'uint32', nullable: false}
+      ]
+    });
+    const frame = new LuDataFrame({
+      table: new GPUTable({batches: [batch]}),
+      ownership: 'owned'
+    });
+    const query = planGPUDataFrameQuery(frame, {columns: ['category']});
+
+    expect(query.predicates).toEqual([]);
+    expect(query.selectedColumns).toEqual(['category']);
+    frame.destroy();
+  });
+
   test('plans projections, named parameters, arithmetic, global ordering, and limits without GPU work', () => {
     const {device, frame} = createLuSQLNodeFixture();
     const createBuffer = vi.spyOn(device, 'createBuffer');

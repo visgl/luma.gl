@@ -69,13 +69,9 @@ export function planGPUDataFrameQuery<
     throw new Error('GPU dataframe loaders.gl query plan is missing its projection');
   }
 
-  const firstColumn = frame.columnNames[0];
-  if (!firstColumn) {
-    throw new Error('GPU dataframe loaders.gl queries require at least one source column');
-  }
   const predicates = filterStep
     ? [makeGPUExpressionFromSQLPredicate(filterStep.predicate, parameters)]
-    : [makeGPUDataFrameTautology(firstColumn)];
+    : [];
 
   // loaders.gl validated every runtime column name against the source schema above.
   return new GPUDataFrameQuery<T, SelectedColumns, T>(
@@ -205,14 +201,4 @@ function combineGPUExpressionNodes(
   return nodes
     .slice(1)
     .reduce<GPUExpressionNode>((left, right) => ({kind: 'binary', operator, left, right}), first);
-}
-
-function makeGPUDataFrameTautology(columnName: string): GPUExpression<boolean, string> {
-  const source = makeGPUColumnNode(columnName);
-  return new GPUExpression({
-    kind: 'binary',
-    operator: 'or',
-    left: {kind: 'unary', operator: 'is-valid', operand: source},
-    right: {kind: 'unary', operator: 'is-null', operand: source}
-  });
 }
