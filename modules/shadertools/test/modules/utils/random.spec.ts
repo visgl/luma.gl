@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {random} from '@luma.gl/shadertools';
+import {expect, it} from 'vitest';
 
-test('random#build', t => {
-  t.ok(random.fs, 'random module fs is ok');
-  t.end();
+it('random#build', () => {
+  expect(random.fs, 'random module fs is ok').toBeTruthy();
 });
