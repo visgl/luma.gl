@@ -86,6 +86,7 @@
     <script type="module">
       const startup = document.querySelector('#raster-startup');
       const status = document.querySelector('[data-raster-startup-status]');
+      const softwareVisualSmoke = new URLSearchParams(window.location.search).has('visual-smoke');
 
       try {
         if (!navigator.gpu) {
@@ -103,6 +104,7 @@
         status.textContent = 'Acquiring a WebGPU device for resident raster analysis…';
         const device = await luma.createDevice({
           id: 'gpu-raster-satellite-raster-lab',
+          type: softwareVisualSmoke ? 'webgpu' : 'best-available',
           adapters: [webgpuAdapter],
           featureLevel: 'best-available',
           powerPreference: 'high-performance',

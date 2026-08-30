@@ -92,6 +92,7 @@
     <script type="module">
       const startup = document.querySelector('#crossfilter-startup');
       const status = document.querySelector('[data-startup-status]');
+      const softwareVisualSmoke = new URLSearchParams(window.location.search).has('visual-smoke');
 
       try {
         if (!navigator.gpu) {
@@ -109,6 +110,7 @@
         status.textContent = 'Acquiring a high-performance WebGPU device…';
         const device = await luma.createDevice({
           id: 'million-row-crossfilter',
+          type: softwareVisualSmoke ? 'webgpu' : 'best-available',
           adapters: [webgpuAdapter],
           featureLevel: 'best-available',
           powerPreference: 'high-performance',
