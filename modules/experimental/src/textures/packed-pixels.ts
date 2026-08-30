@@ -223,9 +223,7 @@ export function encodePackedRGBAFloat(
     const maximumFiniteValue = 65408;
     const channels = rgba
       .slice(0, 3)
-      .map(value =>
-        Number.isFinite(value) && value > 0 ? Math.min(value, maximumFiniteValue) : 0
-      );
+      .map(value => (value > 0 ? Math.min(value, maximumFiniteValue) : 0));
     const maximumChannel = Math.max(...channels);
     if (maximumChannel === 0) {
       return 0;
@@ -335,10 +333,8 @@ function encodeUnsignedFloat(
 
   const minimumNormalValue = Math.pow(2, 1 - exponentBias);
   if (value < minimumNormalValue) {
-    return Math.min(
-      Math.round(value / Math.pow(2, 1 - exponentBias - mantissaBitCount)),
-      mantissaMask
-    );
+    const mantissa = Math.round(value / Math.pow(2, 1 - exponentBias - mantissaBitCount));
+    return mantissa > mantissaMask ? 1 << mantissaBitCount : mantissa;
   }
 
   const unbiasedExponent = Math.floor(Math.log2(value));

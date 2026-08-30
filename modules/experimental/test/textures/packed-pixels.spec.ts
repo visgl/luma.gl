@@ -89,6 +89,26 @@ describe('packed texture pixels', () => {
     expect(nonFiniteDecoded[2]).toBe(0);
   });
 
+  it('saturates positive infinity in shared-exponent encoding', () => {
+    const decoded = rgbaDecoder.decodeRGBA(
+      rgbaDecoder.encodeRGBA([Infinity, Number.NaN, -1, 1], 'rgb9e5ufloat'),
+      'rgb9e5ufloat'
+    );
+
+    expect(decoded).toEqual([65408, 0, 0, 1]);
+  });
+
+  it('rounds subnormals across the minimum-normal boundary', () => {
+    const redAndGreenValue = 63.75 * Math.pow(2, -20);
+    const blueValue = 31.75 * Math.pow(2, -19);
+    const decoded = rgbaDecoder.decodeRGBA(
+      rgbaDecoder.encodeRGBA([redAndGreenValue, redAndGreenValue, blueValue, 1], 'rg11b10ufloat'),
+      'rg11b10ufloat'
+    );
+
+    expect(decoded).toEqual([Math.pow(2, -14), Math.pow(2, -14), Math.pow(2, -14), 1]);
+  });
+
   it('deduplicates tables and reports missing codecs', () => {
     const decoder = new RGBADecoder();
     decoder.addTable(TEXTURE_FORMAT_PIXEL_DECODERS);
