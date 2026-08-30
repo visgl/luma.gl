@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   type BufferLayout,
   type ShaderLayout,
@@ -21,7 +21,7 @@ const shaderLayout: ShaderLayout = {
   ]
 };
 
-test('resolveLogicalAttributeMappings resolves interleaved, shorthand, and default mappings', t => {
+it('resolveLogicalAttributeMappings resolves interleaved, shorthand, and default mappings', () => {
   const bufferLayout: BufferLayout[] = [
     {
       name: 'particles',
@@ -33,7 +33,7 @@ test('resolveLogicalAttributeMappings resolves interleaved, shorthand, and defau
     {name: 'vertexPositions', format: 'float32x3'}
   ];
 
-  t.deepEqual(resolveLogicalAttributeMappings(shaderLayout, bufferLayout), [
+  expect(resolveLogicalAttributeMappings(shaderLayout, bufferLayout)).toEqual([
     {
       attributeName: 'instancePositions',
       bufferName: 'particles',
@@ -71,29 +71,25 @@ test('resolveLogicalAttributeMappings resolves interleaved, shorthand, and defau
       stepMode: 'vertex'
     }
   ]);
-  t.end();
 });
 
-test('resolveLogicalAttributeMappings distinguishes zero from omitted stride', t => {
+it('resolveLogicalAttributeMappings distinguishes zero from omitted stride', () => {
   const mappings = resolveLogicalAttributeMappings(shaderLayout, [
     {name: 'vertexPositions', format: 'float32x3', byteStride: 0},
     {name: 'colors', format: 'float32x4'}
   ]);
 
-  t.equal(
+  expect(
     mappings.find(mapping => mapping.attributeName === 'vertexPositions')?.byteStride,
-    0,
     'preserves an explicit zero stride'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     mappings.find(mapping => mapping.attributeName === 'colors')?.byteStride,
-    16,
     'resolves an omitted stride to the packed format size'
-  );
-  t.end();
+  ).toBe(16);
 });
 
-test('getLogicalBufferSlots keeps logical layout order and appends unmapped shader attributes', t => {
+it('getLogicalBufferSlots keeps logical layout order and appends unmapped shader attributes', () => {
   const bufferLayout: BufferLayout[] = [
     {name: 'vertexPositions', format: 'float32x3'},
     {
@@ -102,16 +98,15 @@ test('getLogicalBufferSlots keeps logical layout order and appends unmapped shad
     }
   ];
 
-  t.deepEqual(getLogicalBufferSlots(shaderLayout, bufferLayout), {
+  expect(getLogicalBufferSlots(shaderLayout, bufferLayout)).toEqual({
     vertexPositions: 0,
     particles: 1,
     instanceVelocities: 2,
     colors: 3
   });
-  t.end();
 });
 
-test('getBufferLayoutMinAttributeLocation returns the first referenced shader location', t => {
+it('getBufferLayoutMinAttributeLocation returns the first referenced shader location', () => {
   const bufferLayout: BufferLayout = {
     name: 'particles',
     attributes: [
@@ -120,10 +115,8 @@ test('getBufferLayoutMinAttributeLocation returns the first referenced shader lo
     ]
   };
 
-  t.equal(
+  expect(
     getBufferLayoutMinAttributeLocation(bufferLayout, shaderLayout),
-    0,
     'minimum shader location is derived from the referenced attributes'
-  );
-  t.end();
+  ).toBe(0);
 });
