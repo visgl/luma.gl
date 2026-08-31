@@ -2,32 +2,32 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {ARROW_TABLES} from '@luma.gl/arrow/test/data/arrow/make-arrow-tables';
 
 import {getArrowPaths, getArrowDataByPath} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-test('getArrowTablePaths', async t => {
+it('getArrowTablePaths', async () => {
   const {simpleTable} = ARROW_TABLES;
   let paths = getArrowPaths(simpleTable);
-  t.deepEqual(paths, ['age', 'height'], 'got correct paths from simple table');
+  expect(paths, 'got correct paths from simple table').toEqual(['age', 'height']);
 
   const {nestedTable} = ARROW_TABLES;
   paths = getArrowPaths(nestedTable);
-  t.deepEqual(paths, ['data.age', 'data.height'], 'got correct paths from nested table');
+  expect(paths, 'got correct paths from nested table').toEqual(['data.age', 'data.height']);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowDataByPath', async t => {
+it('getArrowDataByPath', async () => {
   const {simpleTable} = ARROW_TABLES;
   const ageData = getArrowDataByPath(simpleTable, 'age');
-  t.equal(ageData.typeId, arrow.Type.Int, 'extracted age from table struct');
+  expect(ageData.typeId, 'extracted age from table struct').toBe(arrow.Type.Int);
 
   const {nestedTable} = ARROW_TABLES;
   const heightData = getArrowDataByPath(nestedTable, 'data.height');
-  t.equal(heightData.type.typeId, arrow.Type.Float, 'extracted age from nested table struct');
+  expect(heightData.type.typeId, 'extracted age from nested table struct').toBe(arrow.Type.Float);
 
-  t.end();
+  void 0;
 });

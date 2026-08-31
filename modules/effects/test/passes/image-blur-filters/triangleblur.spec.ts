@@ -4,13 +4,13 @@
 
 import {triangleBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('triangleBlur#build/uniform', t => {
+it('triangleBlur#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(triangleBlur, {}, {});
 
-  t.ok(uniforms, 'triangleBlur module build is ok');
-  t.equal(uniforms.radius, 20, 'triangleBlur radius uniform is ok');
-  t.deepEqual(uniforms.delta, [1, 0], 'triangleBlur delta uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'triangleBlur module build is ok').toBe(true);
+  expect(uniforms.radius, 'triangleBlur radius uniform is ok').toBe(20);
+  expect(uniforms.delta, 'triangleBlur delta uniform is ok').toEqual([1, 0]);
+  void 0;
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   convertArrowTemporalToGPUVector,
   convertArrowTemporalToGPUVectors,
@@ -14,7 +14,7 @@ import {
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('convertArrowTemporalToGPUVector emits relative scalar timestamps with persisted origin', async t => {
+it('convertArrowTemporalToGPUVector emits relative scalar timestamps with persisted origin', async () => {
   const device = new NullDevice({});
   const source = makeTemporalVector(
     new arrow.TimestampMillisecond(),
@@ -23,20 +23,21 @@ test('convertArrowTemporalToGPUVector emits relative scalar timestamps with pers
   const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
-  t.deepEqual(Array.from(result.toArray()), [0, 5], 'subtracts the first valid timestamp');
-  t.equal(prepared.field.metadata.get(TEMPORAL_ORIGIN_METADATA_KEY), '1000', 'stores origin');
-  t.equal(prepared.field.metadata.get(TEMPORAL_UNIT_METADATA_KEY), 'millisecond', 'stores unit');
-  t.equal(
-    prepared.field.metadata.get(TEMPORAL_ORIGIN_POLICY_METADATA_KEY),
-    'first-valid',
-    'stores origin policy'
+  expect(Array.from(result.toArray()), 'subtracts the first valid timestamp').toEqual([0, 5]);
+  expect(prepared.field.metadata.get(TEMPORAL_ORIGIN_METADATA_KEY), 'stores origin').toBe('1000');
+  expect(prepared.field.metadata.get(TEMPORAL_UNIT_METADATA_KEY), 'stores unit').toBe(
+    'millisecond'
   );
+  expect(
+    prepared.field.metadata.get(TEMPORAL_ORIGIN_POLICY_METADATA_KEY),
+    'stores origin policy'
+  ).toBe('first-valid');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVectors preserves aligned scalar temporal rows', async t => {
+it('convertArrowTemporalToGPUVectors preserves aligned scalar temporal rows', async () => {
   const device = new NullDevice({});
   const prepared = await convertArrowTemporalToGPUVectors(device, {
     eventDates: makeTemporalVector(new arrow.DateDay(), new Int32Array([20, 21, 21])),
@@ -58,34 +59,30 @@ test('convertArrowTemporalToGPUVectors preserves aligned scalar temporal rows', 
   const eventStarts = await readArrowGPUVectorAsync(prepared.eventStarts!.temporal);
   const eventDurations = await readArrowGPUVectorAsync(prepared.eventDurations!.temporal);
 
-  t.deepEqual(Array.from(eventDates.toArray()), [0, 1, 1], 'keeps DateDay row alignment');
-  t.deepEqual(
-    Array.from(eventTimes.toArray()),
-    [0, 2_000, 4_000],
-    'keeps TimeMillisecond row alignment'
+  expect(Array.from(eventDates.toArray()), 'keeps DateDay row alignment').toEqual([0, 1, 1]);
+  expect(Array.from(eventTimes.toArray()), 'keeps TimeMillisecond row alignment').toEqual([
+    0, 2_000, 4_000
+  ]);
+  expect(Array.from(eventStarts.toArray()), 'keeps TimestampMillisecond row alignment').toEqual([
+    0, 1_000, 2_000
+  ]);
+  expect(Array.from(eventDurations.toArray()), 'keeps DurationMillisecond row alignment').toEqual([
+    5, 10, 15
+  ]);
+  expect(prepared.eventDates!.temporalInfo.origin, 'uses first valid DateDay origin').toBe(20);
+  expect(prepared.eventTimes!.temporalInfo.origin, 'uses first valid time origin').toBe(8_000);
+  expect(prepared.eventStarts!.temporalInfo.origin, 'uses first valid timestamp origin').toBe(
+    1_000n
   );
-  t.deepEqual(
-    Array.from(eventStarts.toArray()),
-    [0, 1_000, 2_000],
-    'keeps TimestampMillisecond row alignment'
-  );
-  t.deepEqual(
-    Array.from(eventDurations.toArray()),
-    [5, 10, 15],
-    'keeps DurationMillisecond row alignment'
-  );
-  t.equal(prepared.eventDates!.temporalInfo.origin, 20, 'uses first valid DateDay origin');
-  t.equal(prepared.eventTimes!.temporalInfo.origin, 8_000, 'uses first valid time origin');
-  t.equal(prepared.eventStarts!.temporalInfo.origin, 1_000n, 'uses first valid timestamp origin');
-  t.equal(prepared.eventDurations!.temporalInfo.origin, 0n, 'uses zero duration origin');
+  expect(prepared.eventDurations!.temporalInfo.origin, 'uses zero duration origin').toBe(0n);
 
   for (const temporalColumn of Object.values(prepared)) {
     temporalColumn.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVector preserves temporal list offsets for Trips-style streams', async t => {
+it('convertArrowTemporalToGPUVector preserves temporal list offsets for Trips-style streams', async () => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
     new arrow.TimestampMillisecond(),
@@ -95,22 +92,20 @@ test('convertArrowTemporalToGPUVector preserves temporal list offsets for Trips-
   const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
-  t.deepEqual(
+  expect(
     Array.from(result.data[0]!.valueOffsets as Int32Array),
-    [0, 2, 3],
     'preserves path-aligned temporal list offsets'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 3]);
+  expect(
     Array.from(result.data[0]!.children[0]!.values as Float32Array),
-    [0, 10, 25],
     'emits relative Float32 temporal values'
-  );
+  ).toEqual([0, 10, 25]);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVector reads sliced temporal list rows', async t => {
+it('convertArrowTemporalToGPUVector reads sliced temporal list rows', async () => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
     new arrow.TimestampMillisecond(),
@@ -120,45 +115,42 @@ test('convertArrowTemporalToGPUVector reads sliced temporal list rows', async t 
   const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
-  t.deepEqual(
+  expect(
     Array.from(result.data[0]!.valueOffsets as Int32Array),
-    [0, 2, 3],
     'normalizes sliced path-aligned temporal list offsets'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 3]);
+  expect(
     Array.from(result.data[0]!.children[0]!.values as Float32Array),
-    [0, 10, 25],
     'reads the sliced temporal leaf values'
-  );
-  t.equal(prepared.temporalInfo.origin, 1000n, 'uses the first sliced timestamp as origin');
+  ).toEqual([0, 10, 25]);
+  expect(prepared.temporalInfo.origin, 'uses the first sliced timestamp as origin').toBe(1000n);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVector keeps durations relative to zero', async t => {
+it('convertArrowTemporalToGPUVector keeps durations relative to zero', async () => {
   const device = new NullDevice({});
   const source = makeTemporalVector(new arrow.DurationMillisecond(), new BigInt64Array([5n, 10n]));
   const prepared = await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
-  t.deepEqual(Array.from(result.toArray()), [5, 10], 'leaves duration magnitudes unchanged');
-  t.equal(prepared.field.metadata.get(TEMPORAL_ORIGIN_METADATA_KEY), '0', 'stores zero origin');
-  t.equal(
+  expect(Array.from(result.toArray()), 'leaves duration magnitudes unchanged').toEqual([5, 10]);
+  expect(prepared.field.metadata.get(TEMPORAL_ORIGIN_METADATA_KEY), 'stores zero origin').toBe('0');
+  expect(
     prepared.field.metadata.get(TEMPORAL_ORIGIN_POLICY_METADATA_KEY),
-    'zero',
     'stores zero-origin policy'
-  );
+  ).toBe('zero');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVector WebGPU matches CPU fallback', async t => {
+it('convertArrowTemporalToGPUVector WebGPU matches CPU fallback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('Skipping temporal WebGPU conversion test without hardware WebGPU');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const source = makeTemporalVector(
@@ -170,29 +162,27 @@ test('convertArrowTemporalToGPUVector WebGPU matches CPU fallback', async t => {
   const gpuResult = await readArrowGPUVectorAsync(gpuPrepared.temporal);
   const cpuResult = await readArrowGPUVectorAsync(cpuPrepared.temporal);
 
-  t.deepEqual(Array.from(gpuResult.toArray()), Array.from(cpuResult.toArray()), 'matches CPU');
+  expect(Array.from(gpuResult.toArray()), 'matches CPU').toEqual(Array.from(cpuResult.toArray()));
 
   gpuPrepared.destroy();
   cpuPrepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowTemporalToGPUVector rejects nullable temporal payloads', async t => {
+it('convertArrowTemporalToGPUVector rejects nullable temporal payloads', async () => {
   const device = new NullDevice({});
   const source = makeNullableTimestampVector();
 
   try {
     await convertArrowTemporalToGPUVector(device, source, {preferGPU: false});
-    t.fail('rejects nullable temporal rows');
+    expect(false, 'rejects nullable temporal rows').toBe(true);
   } catch (error) {
-    t.match(
-      (error as Error).message,
-      /does not support nullable temporal rows/,
-      'rejects nullable temporal rows'
+    expect((error as Error).message, 'rejects nullable temporal rows').toMatch(
+      /does not support nullable temporal rows/
     );
   }
 
-  t.end();
+  void 0;
 });
 
 function makeTemporalVector<T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration>(

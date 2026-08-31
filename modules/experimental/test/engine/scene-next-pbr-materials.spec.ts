@@ -7,7 +7,7 @@ import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/experimental';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ExperimentalMaterialTarget = {
   color: Texture;
@@ -16,12 +16,12 @@ type ExperimentalMaterialTarget = {
   destroy(): void;
 };
 
-test('SceneRenderer exchanges diffuse reflection for backlit transmission and bounded volume scattering', async testCase => {
+it('SceneRenderer exchanges diffuse reflection for backlit transmission and bounded volume scattering', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getExperimentalMaterialDevices()) {
     if (isSoftwareBackedWebGL(device)) {
-      testCase.comment('software WebGL cannot reliably compile full-suite physical PBR variants');
+      void 0;
       continue;
     }
 
@@ -32,7 +32,7 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
     const options = makeExperimentalMaterialOptions(device, surface, target.framebuffer, [0, 0, 1]);
 
     try {
-      testCase.equal(renderer.render(options).drawCount, 1, `${device.type} renders backlit PBR`);
+      expect(renderer.render(options).drawCount, `${device.type} renders backlit PBR`).toBe(1);
       device.submit();
 
       if (supportsPixelReadback(device)) {
@@ -47,15 +47,15 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
         device.submit();
         const transmittedBacklight = await readMaterialPixel(target.color);
 
-        testCase.ok(
-          transmittedBacklight[0] > opaqueBacklight[0] + 35,
+        expect(
+          Boolean(transmittedBacklight[0] > opaqueBacklight[0] + 35),
           `${device.type} receives diffuse light from the opposite hemisphere (${opaqueBacklight[0]} -> ${transmittedBacklight[0]})`
-        );
-        testCase.ok(
-          transmittedBacklight[0] > transmittedBacklight[1] * 2,
+        ).toBe(true);
+        expect(
+          Boolean(transmittedBacklight[0] > transmittedBacklight[1] * 2),
           `${device.type} applies the authored diffuse-transmission color`
-        );
-        testCase.equal(transmittedBacklight[3], 255, `${device.type} preserves opaque alpha`);
+        ).toBe(true);
+        expect(transmittedBacklight[3], `${device.type} preserves opaque alpha`).toBe(255);
 
         options.lights = [
           {type: 'directional', color: [1, 1, 1], direction: [0, 0, -1], intensity: 3}
@@ -76,10 +76,10 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
         device.submit();
         const transmittedFrontlight = await readMaterialPixel(target.color);
 
-        testCase.ok(
-          opaqueFrontlight[0] > transmittedFrontlight[0] + 30,
+        expect(
+          Boolean(opaqueFrontlight[0] > transmittedFrontlight[0] + 30),
           `${device.type} exchanges front-facing diffuse energy for transmission`
-        );
+        ).toBe(true);
 
         options.lights = [
           {type: 'directional', color: [1, 1, 1], direction: [0, 0, 1], intensity: 3}
@@ -97,10 +97,10 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
         device.submit();
         const scatteredBacklight = await readMaterialPixel(target.color);
 
-        testCase.ok(
-          scatteredBacklight[0] > scatteredBacklight[1] + 15,
+        expect(
+          Boolean(scatteredBacklight[0] > scatteredBacklight[1] + 15),
           `${device.type} applies thickness-aware experimental scattering color`
-        );
+        ).toBe(true);
       } else {
         surface.material.uniforms = {
           ...surface.material.uniforms,
@@ -110,11 +110,7 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
           multiscatterColorFactor: [0.8, 0.4, 0.2],
           scatterAnisotropy: 0.3
         };
-        testCase.equal(
-          renderer.render(options).drawCount,
-          1,
-          'software WebGPU shades transmission'
-        );
+        expect(renderer.render(options).drawCount, 'software WebGPU shades transmission').toBe(1);
         device.submit();
       }
     } finally {
@@ -123,16 +119,19 @@ test('SceneRenderer exchanges diffuse reflection for backlit transmission and bo
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one supported physical-material backend runs');
-  testCase.end();
+  expect(
+    Boolean(testedDeviceCount > 0),
+    'at least one supported physical-material backend runs'
+  ).toBe(true);
+  void 0;
 });
 
-test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter texture bindings', async testCase => {
+it('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter texture bindings', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getExperimentalMaterialDevices()) {
     if (isSoftwareBackedWebGL(device)) {
-      testCase.comment('software WebGL cannot reliably compile multiple physical texture bindings');
+      void 0;
       continue;
     }
 
@@ -158,11 +157,7 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
 
     try {
       surface.material.uniforms = {...surface.material.uniforms, bumpFactor: 0};
-      testCase.equal(
-        renderer.render(options).drawCount,
-        1,
-        `${device.type} binds bump + normal maps`
-      );
+      expect(renderer.render(options).drawCount, `${device.type} binds bump + normal maps`).toBe(1);
       device.submit();
 
       if (supportsPixelReadback(device)) {
@@ -172,10 +167,10 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
         device.submit();
         const bumpedNormal = await readMaterialPixel(target.color);
 
-        testCase.ok(
-          Math.abs(bumpedNormal[0] - flatNormal[0]) > 8,
+        expect(
+          Boolean(Math.abs(bumpedNormal[0] - flatNormal[0]) > 8),
           `${device.type} perturbs mapped normals from the linear bump height channel (${flatNormal[0]} -> ${bumpedNormal[0]})`
-        );
+        ).toBe(true);
       }
 
       surface.material.bindings = {
@@ -200,19 +195,18 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
         {type: 'directional', color: [1, 1, 1], direction: [0, 0, 1], intensity: 3}
       ];
 
-      testCase.equal(
+      expect(
         renderer.render(options).drawCount,
-        1,
         `${device.type} specializes all four optional extension sampler bindings`
-      );
+      ).toBe(1);
       device.submit();
 
       if (supportsPixelReadback(device)) {
         const texturedTransmission = await readMaterialPixel(target.color);
-        testCase.ok(
-          texturedTransmission[0] > texturedTransmission[1] * 1.5,
+        expect(
+          Boolean(texturedTransmission[0] > texturedTransmission[1] * 1.5),
           `${device.type} combines diffuse alpha, authored color, and scattering textures`
-        );
+        ).toBe(true);
       }
     } finally {
       renderer.destroy();
@@ -225,8 +219,11 @@ test('SceneRenderer specializes bump, diffuse alpha/color, and draft scatter tex
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one supported textured-material backend runs');
-  testCase.end();
+  expect(
+    Boolean(testedDeviceCount > 0),
+    'at least one supported textured-material backend runs'
+  ).toBe(true);
+  void 0;
 });
 
 function makeExperimentalMaterialSurface(device: Device): SceneSurface {

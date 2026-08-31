@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {WebXRCameraTexture} from '../../src';
 
@@ -20,7 +20,7 @@ const EXTERNAL_TEXTURE_BINDING = {
   location: 0
 } as const;
 
-test('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per generation', async t => {
+it('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per generation', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
   const cameraTextureHandle = gl.createTexture()!;
@@ -35,7 +35,7 @@ test('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per ge
   let getCameraImageCallCount = 0;
   const xrWebGLBinding = {
     getCameraImage(receivedCamera: XRCamera) {
-      t.equal(receivedCamera, camera, 'resolves selected XRCamera');
+      expect(receivedCamera, 'resolves selected XRCamera').toBe(camera);
       getCameraImageCallCount++;
       return cameraTextureHandle;
     }
@@ -44,55 +44,60 @@ test('webxr#WebXRCameraTexture resolves borrowed raw camera textures once per ge
   const webXRCameraTexture = new WebXRCameraTexture(device, xrWebGLBinding);
 
   try {
-    t.false(webXRCameraTexture.isReady, 'source is not ready before a view is selected');
-    t.equal(
+    expect(
+      Boolean(webXRCameraTexture.isReady),
+      'source is not ready before a view is selected'
+    ).toBe(false);
+    expect(
       webXRCameraTexture.resolveTextureBinding(TEXTURE_BINDING),
-      null,
       'unbound source does not resolve'
-    );
+    ).toBe(null);
 
     webXRCameraTexture.setView(view);
     const firstGeneration = webXRCameraTexture.generation;
     const firstResolution = webXRCameraTexture.resolveTextureBinding(TEXTURE_BINDING);
 
-    t.true(webXRCameraTexture.isReady, 'camera-backed view is ready');
-    t.ok(firstResolution, 'camera texture resolves');
-    t.equal(firstResolution?.width, camera.width, 'camera width propagates');
-    t.equal(firstResolution?.height, camera.height, 'camera height propagates');
-    t.equal(firstResolution?.props.handle, cameraTextureHandle, 'borrowed handle is wrapped');
-    t.true(firstResolution?.isHandleBorrowed, 'camera texture handle is borrowed');
-    t.equal(getCameraImageCallCount, 1, 'first generation resolves camera image once');
-    t.equal(
-      webXRCameraTexture.resolveTextureBinding(TEXTURE_BINDING),
-      firstResolution,
-      'same generation reuses borrowed wrapper'
+    expect(Boolean(webXRCameraTexture.isReady), 'camera-backed view is ready').toBe(true);
+    expect(Boolean(firstResolution), 'camera texture resolves').toBe(true);
+    expect(firstResolution?.width, 'camera width propagates').toBe(camera.width);
+    expect(firstResolution?.height, 'camera height propagates').toBe(camera.height);
+    expect(firstResolution?.props.handle, 'borrowed handle is wrapped').toBe(cameraTextureHandle);
+    expect(Boolean(firstResolution?.isHandleBorrowed), 'camera texture handle is borrowed').toBe(
+      true
     );
-    t.equal(getCameraImageCallCount, 1, 'same generation does not reacquire camera image');
+    expect(getCameraImageCallCount, 'first generation resolves camera image once').toBe(1);
+    expect(
+      webXRCameraTexture.resolveTextureBinding(TEXTURE_BINDING),
+      'same generation reuses borrowed wrapper'
+    ).toBe(firstResolution);
+    expect(getCameraImageCallCount, 'same generation does not reacquire camera image').toBe(1);
 
     webXRCameraTexture.setView(view);
     const secondResolution = webXRCameraTexture.resolveTextureBinding(TEXTURE_BINDING);
 
-    t.ok(webXRCameraTexture.generation > firstGeneration, 'new XR view sample advances generation');
-    t.equal(secondResolution, firstResolution, 'same borrowed handle reuses luma wrapper');
-    t.equal(getCameraImageCallCount, 2, 'next generation reacquires camera image once');
-    t.throws(
+    expect(
+      Boolean(webXRCameraTexture.generation > firstGeneration),
+      'new XR view sample advances generation'
+    ).toBe(true);
+    expect(secondResolution, 'same borrowed handle reuses luma wrapper').toBe(firstResolution);
+    expect(getCameraImageCallCount, 'next generation reacquires camera image once').toBe(2);
+    expect(
       () => webXRCameraTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
-      /does not support external-texture bindings/,
       'WebXR camera texture does not route through ExternalTexture'
-    );
+    ).toThrow(/does not support external-texture bindings/);
 
     webXRCameraTexture.setView(null);
-    t.false(webXRCameraTexture.isReady, 'null view clears camera readiness');
+    expect(Boolean(webXRCameraTexture.isReady), 'null view clears camera readiness').toBe(false);
 
     webXRCameraTexture.destroy();
-    t.equal(deleteTextureCallCount, 0, 'destroying wrapper does not delete browser handle');
+    expect(deleteTextureCallCount, 'destroying wrapper does not delete browser handle').toBe(0);
   } finally {
     gl.deleteTexture = originalDeleteTexture;
     originalDeleteTexture(cameraTextureHandle);
     device.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 function makeXRView(camera: XRCamera): XRView {

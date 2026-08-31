@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {OrbitControls as EngineOrbitControls} from '@luma.gl/engine';
 import {OrbitControls} from '../../src/controls/orbit-controls';
 
-test('OrbitControls preserves the experimental compatibility re-export', t => {
-  t.equal(OrbitControls, EngineOrbitControls, 'both packages expose the same engine-owned class');
-  t.end();
+it('OrbitControls preserves the experimental compatibility re-export', () => {
+  expect(OrbitControls, 'both packages expose the same engine-owned class').toBe(
+    EngineOrbitControls
+  );
+  void 0;
 });
 
-test('OrbitControls advances auto-rotation from elapsed milliseconds', t => {
+it('OrbitControls advances auto-rotation from elapsed milliseconds', () => {
   const controls = new OrbitControls(makeTestCanvas(), {
     yaw: 0,
     autoRotate: true,
@@ -21,12 +23,12 @@ test('OrbitControls advances auto-rotation from elapsed milliseconds', t => {
   controls.update(1000);
   controls.update(1100);
 
-  t.equal(controls.yaw, 0.008, 'uses 100 elapsed milliseconds as 0.1 seconds');
+  expect(controls.yaw, 'uses 100 elapsed milliseconds as 0.1 seconds').toBe(0.008);
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls updates camera configuration without resetting manual state', t => {
+it('OrbitControls updates camera configuration without resetting manual state', () => {
   const controls = new OrbitControls(makeTestCanvas(), {
     distance: 10,
     minDistance: 2,
@@ -37,16 +39,16 @@ test('OrbitControls updates camera configuration without resetting manual state'
 
   controls.setProps({target: [3, 4, 5], distance: 1, yaw: 0.8, maxPitch: 0.5, pitch: 1});
 
-  t.deepEqual(controls.props.target, [3, 4, 5], 'updates the camera target');
-  t.equal(controls.distance, 2, 'clamps the requested zoom to the current minimum');
-  t.equal(controls.yaw, 0.8, 'updates the requested yaw');
-  t.equal(controls.pitch, 0.5, 'clamps the requested pitch');
+  expect(controls.props.target, 'updates the camera target').toEqual([3, 4, 5]);
+  expect(controls.distance, 'clamps the requested zoom to the current minimum').toBe(2);
+  expect(controls.yaw, 'updates the requested yaw').toBe(0.8);
+  expect(controls.pitch, 'clamps the requested pitch').toBe(0.5);
 
   controls.setProps({minDistance: 0.5});
-  t.equal(controls.distance, 2, 'preserves the current zoom when only its limits change');
+  expect(controls.distance, 'preserves the current zoom when only its limits change').toBe(2);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
 function makeTestCanvas(): HTMLCanvasElement {

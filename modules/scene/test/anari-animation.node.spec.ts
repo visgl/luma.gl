@@ -10,39 +10,37 @@ import {GroupNode} from '@luma.gl/engine';
 import type {GLTFAnimation, GLTFMaterialAnimationProperty, GLTFScenegraphs} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   type ANARIJSONScene,
   createANARIJSONScene
 } from '../../../examples/showcase/scene/playground-scene';
 
-test('ANARI keeps optional glTF integration isolated from its root entry point', async testContext => {
+it('ANARI keeps optional glTF integration isolated from its root entry point', async () => {
   const packageContents = JSON.parse(
     await readFile(new URL('../package.json', import.meta.url), 'utf8')
   );
 
-  testContext.equal(
+  expect(
     packageContents.peerDependenciesMeta['@luma.gl/gltf'].optional,
-    true,
     'the glTF integration dependency remains optional'
-  );
-  testContext.deepEqual(
+  ).toBe(true);
+  expect(
     packageContents.exports['./gltf'],
-    {
-      types: './dist/gltf.d.ts',
-      import: './dist/gltf.js',
-      require: './dist/gltf.cjs'
-    },
     'the isolated adapter declares TypeScript, ESM, and CommonJS entry points'
-  );
-  testContext.notOk(
-    'makeANARIAnimationScene' in coreANARI,
+  ).toEqual({
+    types: './dist/gltf.d.ts',
+    import: './dist/gltf.js',
+    require: './dist/gltf.cjs'
+  });
+  expect(
+    Boolean('makeANARIAnimationScene' in coreANARI),
     'loading the retained-object root does not import the optional glTF adapter'
-  );
-  testContext.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('ANARI glTF projection preserves named matrix-authored meshless parents', testContext => {
+it('ANARI glTF projection preserves named matrix-authored meshless parents', () => {
   const parentTransform = Array.from(new Matrix4().translate([3, 4, 5]));
   const parent = new GroupNode({id: 'Named glTF parent', matrix: parentTransform});
   const child = new GroupNode({id: 'Named glTF child', position: [0, 2, 0]});
@@ -87,35 +85,29 @@ test('ANARI glTF projection preserves named matrix-authored meshless parents', t
     instanceIdentifiers: {'retained-child': ['retained-instance']}
   });
 
-  testContext.deepEqual(
+  expect(
     animation.nodes?.['retained-parent']?.matrix,
-    parentTransform,
     'named matrix-authored source nodes retain their explicit static transform'
-  );
-  testContext.equal(
+  ).toEqual(parentTransform);
+  expect(
     animation.nodes?.['retained-child']?.parent,
-    'retained-parent',
     'meshless source parents remain in the serialized hierarchy'
-  );
-  testContext.deepEqual(
+  ).toBe('retained-parent');
+  expect(
     animation.nodes?.['retained-child']?.instances,
-    ['retained-instance'],
     'source mesh nodes retain shared-surface instance references'
-  );
-  testContext.equal(
+  ).toEqual(['retained-instance']);
+  expect(
     animation.clips?.[0]?.tracks[0]?.target.identifier,
-    'retained-child',
     'animation channels use the same mapped identities as scenegraph nodes'
+  ).toBe('retained-child');
+  expect(animation.playback?.clip, 'imported animation data selects its first clip').toBe(
+    'Named node animation'
   );
-  testContext.equal(
-    animation.playback?.clip,
-    'Named node animation',
-    'imported animation data selects its first clip'
-  );
-  testContext.end();
+  void 0;
 });
 
-test('ANARI projects glTF node, material, and UV pointer channels without parsing glTF', testContext => {
+it('ANARI projects glTF node, material, and UV pointer channels without parsing glTF', () => {
   const scalarSampler = {input: [0, 1], interpolation: 'LINEAR', output: [[0], [1]]};
   const animations: GLTFAnimation[] = [
     {
@@ -169,31 +161,28 @@ test('ANARI projects glTF node, material, and UV pointer channels without parsin
     samplerIdentifiers: {'0:baseColor': 'retained-sampler'}
   });
 
-  testContext.equal(clips.length, 1, 'the parsed source animation becomes one declarative clip');
-  testContext.equal(
+  expect(clips.length, 'the parsed source animation becomes one declarative clip').toBe(1);
+  expect(
     clips[0].tracks.length,
-    4,
     'transform, material, sampler, and morph-weight channels are preserved'
-  );
-  testContext.deepEqual(
+  ).toBe(4);
+  expect(
     clips[0].tracks.map(track => track.target),
-    [
-      {type: 'node', identifier: 'retained-parent', path: 'translation'},
-      {type: 'material', identifier: 'retained-material', path: 'baseColor', component: 0},
-      {type: 'sampler', identifier: 'retained-sampler', path: 'offset', component: 1},
-      {type: 'node', identifier: 'retained-parent', path: 'weights'}
-    ],
     'format-owned channels target stable retained scene objects'
-  );
-  testContext.deepEqual(
+  ).toEqual([
+    {type: 'node', identifier: 'retained-parent', path: 'translation'},
+    {type: 'material', identifier: 'retained-material', path: 'baseColor', component: 0},
+    {type: 'sampler', identifier: 'retained-sampler', path: 'offset', component: 1},
+    {type: 'node', identifier: 'retained-parent', path: 'weights'}
+  ]);
+  expect(
     clips[0].tracks[2].baseTransform,
-    {offset: [0.25, 0], rotation: 0, scale: [1, 1]},
     'texture-pointer tracks preserve their authored base transform'
-  );
-  testContext.end();
+  ).toEqual({offset: [0.25, 0], rotation: 0, scale: [1, 1]});
+  void 0;
 });
 
-test('ANARI maps advanced glTF material channels onto canonical retained property names', testContext => {
+it('ANARI maps advanced glTF material channels onto canonical retained property names', () => {
   const properties: {
     property: GLTFMaterialAnimationProperty;
     component?: number;
@@ -230,19 +219,18 @@ test('ANARI maps advanced glTF material channels onto canonical retained propert
     materialIdentifiers: ['retained-material']
   });
 
-  testContext.deepEqual(
+  expect(
     clip.tracks.map(track => track.target.path),
-    properties.map(({expected}) => expected),
     'glTF extension channels use the shared ANARI physical-material vocabulary'
-  );
-  testContext.ok(
-    clip.tracks.slice(-2).every(track => track.target.component === undefined),
+  ).toEqual(properties.map(({expected}) => expected));
+  expect(
+    Boolean(clip.tracks.slice(-2).every(track => track.target.component === undefined)),
     'packed iridescence ranges become independent retained scalar properties'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI animation pointers preserve authored alpha-mode and blended opacity', testContext => {
+it('ANARI animation pointers preserve authored alpha-mode and blended opacity', () => {
   const animations: GLTFAnimation[] = [
     {
       name: 'Base color',
@@ -281,21 +269,18 @@ test('ANARI animation pointers preserve authored alpha-mode and blended opacity'
     materialAlphaModes: ['OPAQUE']
   });
 
-  testContext.deepEqual(
+  expect(
     transparentClip.tracks.map(track => track.target.path),
-    ['baseColor', 'opacity', 'opacity'],
     'RGBA and alpha-component pointers both update retained blend opacity'
-  );
-  testContext.deepEqual(
+  ).toEqual(['baseColor', 'opacity', 'opacity']);
+  expect(
     transparentClip.tracks[1].values,
-    [[0.2], [0.8]],
     'full base-color tracks preserve their authored alpha keyframes'
-  );
-  testContext.deepEqual(
+  ).toEqual([[0.2], [0.8]]);
+  expect(
     opaqueClip.tracks.map(track => track.target.path),
-    ['baseColor'],
     'opaque materials ignore alpha-only pointers and remain opaque'
-  );
+  ).toEqual(['baseColor']);
 
   const device = new ANARIDevice(new NullDevice({}));
   const material = device.newMaterial('physicallyBased', {
@@ -310,21 +295,17 @@ test('ANARI animation pointers preserve authored alpha-mode and blended opacity'
   playback.update(2);
   playback.update(2.5);
 
-  testContext.ok(
-    Math.abs((material.getParameter('opacity') || 0) - 0.5) < 1e-10,
+  expect(
+    Boolean(Math.abs((material.getParameter('opacity') || 0) - 0.5) < 1e-10),
     'shared mixer updates the opacity parameter consumed by the shared PBR renderer'
-  );
-  testContext.equal(
-    material.version,
-    3,
-    'color and duplicate alpha tracks still commit once per frame'
-  );
+  ).toBe(true);
+  expect(material.version, 'color and duplicate alpha tracks still commit once per frame').toBe(3);
 
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI initially paused clips remain seekable before first playback', testContext => {
+it('ANARI initially paused clips remain seekable before first playback', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const material = device.newMaterial('physicallyBased', {roughness: 0.2});
   const animations = makeANARIAnimationScene(
@@ -347,17 +328,20 @@ test('ANARI initially paused clips remain seekable before first playback', testC
   );
 
   animations.seek(0.5);
-  testContext.ok(
-    Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10,
+  expect(
+    Boolean(Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10),
     'an initially paused clip can still be scrubbed to a visible pose'
-  );
-  testContext.ok(animations.mixer.getAction('Paused clip')?.paused, 'scrubbing preserves pause');
+  ).toBe(true);
+  expect(
+    Boolean(animations.mixer.getAction('Paused clip')?.paused),
+    'scrubbing preserves pause'
+  ).toBe(true);
 
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI authored clip tracks take precedence over legacy procedural instance animation', testContext => {
+it('ANARI authored clip tracks take precedence over legacy procedural instance animation', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const description: ANARIJSONScene = {
     version: 1,
@@ -394,7 +378,7 @@ test('ANARI authored clip tracks take precedence over legacy procedural instance
   const world = scene.frame.getParameter('world');
   const retainedInstances = world.getParameter('instance');
   if (!Array.isArray(retainedInstances) || !retainedInstances[0]) {
-    testContext.fail('the mixed scene should expose one retained instance');
+    expect(false, 'the mixed scene should expose one retained instance').toBe(true);
     return;
   }
   const instance = retainedInstances[0];
@@ -403,28 +387,25 @@ test('ANARI authored clip tracks take precedence over legacy procedural instance
   const initialVersion = instance.version;
   scene.update(0.5);
 
-  testContext.equal(
+  expect(
     instance.version,
-    initialVersion + 1,
     'authored and procedural declarations do not commit the same instance twice'
-  );
-  testContext.equal(
+  ).toBe(initialVersion + 1);
+  expect(
     instance.getParameter('transform')?.[12],
-    0.5,
     'the authored clip controls the retained instance transform'
-  );
-  testContext.equal(
+  ).toBe(0.5);
+  expect(
     instance.getParameter('transform')?.[13],
-    0,
     'legacy bob animation does not overwrite an authored transform track'
-  );
+  ).toBe(0);
 
   scene.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI animation propagates meshless parents and commits each retained object once', testContext => {
+it('ANARI animation propagates meshless parents and commits each retained object once', () => {
   const graphicsDevice = new NullDevice({});
   const device = new ANARIDevice(graphicsDevice);
   const group = device.newGroup();
@@ -518,69 +499,48 @@ test('ANARI animation propagates meshless parents and commits each retained obje
   });
 
   animations.update(10);
-  testContext.equal(
-    material.version,
-    1,
-    'unchanged initial samples do not create redundant commits'
-  );
+  expect(material.version, 'unchanged initial samples do not create redundant commits').toBe(1);
   animations.update(10.5);
 
-  testContext.equal(
-    firstInstance.version,
-    2,
-    'multiple parent tracks commit the first instance once'
-  );
-  testContext.equal(secondInstance.version, 2, 'shared surface placements remain independent');
-  testContext.equal(material.version, 2, 'multiple material tracks create one retained commit');
-  testContext.equal(sampler.version, 2, 'multiple UV tracks create one retained sampler commit');
-  testContext.equal(light.version, 2, 'animated light properties commit once');
-  testContext.equal(camera.version, 2, 'animated camera properties commit once');
-  testContext.equal(
-    firstInstance.getParameter('transform')?.[12],
-    2,
-    'parent translation reaches child'
-  );
-  testContext.equal(
-    firstInstance.getParameter('transform')?.[13],
-    2,
-    'child translation is preserved'
-  );
-  testContext.equal(firstInstance.getParameter('transform')?.[0], 1.5, 'child scale is composed');
-  testContext.ok(
-    Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10,
+  expect(firstInstance.version, 'multiple parent tracks commit the first instance once').toBe(2);
+  expect(secondInstance.version, 'shared surface placements remain independent').toBe(2);
+  expect(material.version, 'multiple material tracks create one retained commit').toBe(2);
+  expect(sampler.version, 'multiple UV tracks create one retained sampler commit').toBe(2);
+  expect(light.version, 'animated light properties commit once').toBe(2);
+  expect(camera.version, 'animated camera properties commit once').toBe(2);
+  expect(firstInstance.getParameter('transform')?.[12], 'parent translation reaches child').toBe(2);
+  expect(firstInstance.getParameter('transform')?.[13], 'child translation is preserved').toBe(2);
+  expect(firstInstance.getParameter('transform')?.[0], 'child scale is composed').toBe(1.5);
+  expect(
+    Boolean(Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10),
     'shared mixer interpolates material parameters'
-  );
-  testContext.deepEqual(
+  ).toBe(true);
+  expect(
     sampler.getParameter('transform')?.slice(6, 8),
-    [0.25, 0.5],
     'UV pointer components update their shared sampler transform'
-  );
+  ).toEqual([0.25, 0.5]);
 
   animations.pause();
   animations.update(11);
-  testContext.equal(
-    material.version,
-    2,
-    'paused scenes do not repeatedly commit unchanged objects'
-  );
+  expect(material.version, 'paused scenes do not repeatedly commit unchanged objects').toBe(2);
   animations.seek(0.75);
-  testContext.ok(
-    Math.abs((material.getParameter('roughness') || 0) - 0.65) < 1e-10,
+  expect(
+    Boolean(Math.abs((material.getParameter('roughness') || 0) - 0.65) < 1e-10),
     'scrubbing updates a paused clip'
-  );
+  ).toBe(true);
   animations.play();
   animations.update(11.25);
-  testContext.ok(
-    Math.abs((material.getParameter('roughness') || 0) - 0.2) < 1e-10,
+  expect(
+    Boolean(Math.abs((material.getParameter('roughness') || 0) - 0.2) < 1e-10),
     'resumed playback advances from scrubbed time and respects repeat boundaries'
-  );
+  ).toBe(true);
   animations.setSpeed(2);
   animations.update(11.5);
-  testContext.ok(
-    Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10,
+  expect(
+    Boolean(Math.abs((material.getParameter('roughness') || 0) - 0.5) < 1e-10),
     'speed changes scale future frame deltas without jumping to wall-clock time'
-  );
+  ).toBe(true);
 
   device.destroy();
-  testContext.end();
+  void 0;
 });

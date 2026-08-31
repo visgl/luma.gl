@@ -4,12 +4,12 @@
 
 import {denoise} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('denoise#build/uniform', t => {
+it('denoise#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(denoise, {}, {});
 
-  t.ok(uniforms, 'denoise module build is ok');
-  t.equal(uniforms.strength, 0.5, 'denoise strength uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'denoise module build is ok').toBe(true);
+  expect(uniforms.strength, 'denoise strength uniform is ok').toBe(0.5);
+  void 0;
 });

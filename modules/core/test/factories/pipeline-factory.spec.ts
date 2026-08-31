@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {luma, PipelineFactory} from '@luma.gl/core';
@@ -92,28 +92,28 @@ function getSharedRenderPipelineCount(
     .get('SharedRenderPipelines Active').count;
 }
 
-test('PipelineFactory#import', t => {
-  t.ok(PipelineFactory !== undefined, 'PipelineFactory import successful');
-  t.end();
+it('PipelineFactory#import', () => {
+  expect(Boolean(PipelineFactory !== undefined), 'PipelineFactory import successful').toBe(true);
+  void 0;
 });
 
-test('PipelineFactory#getDefaultPipelineFactory', async t => {
+it('PipelineFactory#getDefaultPipelineFactory', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const pm1 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const pm2 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
 
-  t.ok(pm1 instanceof PipelineFactory, 'Default pipeline manager created');
-  t.ok(pm1 === pm2, 'Default pipeline manager cached');
+  expect(Boolean(pm1 instanceof PipelineFactory), 'Default pipeline manager created').toBe(true);
+  expect(Boolean(pm1 === pm2), 'Default pipeline manager cached').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#release', async t => {
+it('PipelineFactory#release', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -125,19 +125,22 @@ test('PipelineFactory#release', async t => {
   const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   pipelineFactory.release(pipeline1);
-  t.ok(!pipeline1.destroyed, 'Pipeline not deleted when still referenced.');
+  expect(Boolean(!pipeline1.destroyed), 'Pipeline not deleted when still referenced.').toBe(true);
 
   pipelineFactory.release(pipeline2);
-  t.ok(!pipeline2.destroyed, 'Pipeline remains cached after all references are released.');
+  expect(
+    Boolean(!pipeline2.destroyed),
+    'Pipeline remains cached after all references are released.'
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with parameters', async t => {
+it('PipelineFactory#caching with parameters', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -160,7 +163,7 @@ test('PipelineFactory#caching with parameters', async t => {
     topology: 'triangle-list',
     parameters: paramsA
   });
-  t.isEqual(pipeline1, pipeline2, 'Caches identical pipelines');
+  expect(pipeline1, 'Caches identical pipelines').toBe(pipeline2);
 
   const paramsB = {cullMode: 'front'};
   const pipeline3 = pipelineFactory.createRenderPipeline({
@@ -169,48 +172,46 @@ test('PipelineFactory#caching with parameters', async t => {
     topology: 'triangle-list',
     parameters: paramsB
   });
-  t.notEqual(pipeline1, pipeline3, 'Does not cache wrapper pipelines with different parameters');
-  t.equal(
-    pipeline1.sharedRenderPipeline,
-    pipeline3.sharedRenderPipeline,
-    'Reuses the shared WebGL render pipeline record'
+  expect(pipeline1, 'Does not cache wrapper pipelines with different parameters').not.toBe(
+    pipeline3
   );
-  t.equal(
+  expect(pipeline1.sharedRenderPipeline, 'Reuses the shared WebGL render pipeline record').toBe(
+    pipeline3.sharedRenderPipeline
+  );
+  expect(
     getSharedRenderPipelineCount(webglDevice),
-    initialSharedRenderPipelineCount + 1,
     'Tracks one active shared render pipeline for compatible WebGL wrappers'
-  );
-  t.equal(pipeline1.handle, pipeline3.handle, 'Reuses the underlying WebGLProgram');
+  ).toBe(initialSharedRenderPipelineCount + 1);
+  expect(pipeline1.handle, 'Reuses the underlying WebGLProgram').toBe(pipeline3.handle);
 
   pipelineFactory.release(pipeline1);
   pipelineFactory.release(pipeline2);
-  t.notOk(
-    isProgramDestroyed(pipeline3.handle),
+  expect(
+    Boolean(isProgramDestroyed(pipeline3.handle)),
     'Shared program remains alive while another wrapper uses it'
-  );
+  ).toBe(false);
   pipelineFactory.release(pipeline3);
-  t.equal(
+  expect(
     getSharedRenderPipelineCount(webglDevice),
-    initialSharedRenderPipelineCount + 1,
     'Shared render pipeline resource remains cached after release'
-  );
-  t.notOk(
-    isProgramDestroyed(pipeline3.handle),
+  ).toBe(initialSharedRenderPipelineCount + 1);
+  expect(
+    Boolean(isProgramDestroyed(pipeline3.handle)),
     'Shared program remains cached after the last wrapper is released'
-  );
-  t.notOk(
-    pipeline3.sharedRenderPipeline?.destroyed,
+  ).toBe(false);
+  expect(
+    Boolean(pipeline3.sharedRenderPipeline?.destroyed),
     'Shared render pipeline resource remains cached after the last wrapper is released'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with topology on webgl', async t => {
+it('PipelineFactory#caching with topology on webgl', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -230,28 +231,25 @@ test('PipelineFactory#caching with topology on webgl', async t => {
     topology: 'line-strip'
   });
 
-  t.notEqual(
-    trianglePipeline,
-    linePipeline,
-    'Does not cache wrapper pipelines with different topology'
+  expect(trianglePipeline, 'Does not cache wrapper pipelines with different topology').not.toBe(
+    linePipeline
   );
-  t.equal(
+  expect(
     trianglePipeline.handle,
-    linePipeline.handle,
     'Reuses the underlying WebGLProgram across topology variants'
-  );
+  ).toBe(linePipeline.handle);
 
   pipelineFactory.release(trianglePipeline);
   pipelineFactory.release(linePipeline);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with bufferLayout on webgl', async t => {
+it('PipelineFactory#caching with bufferLayout on webgl', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -273,33 +271,31 @@ test('PipelineFactory#caching with bufferLayout on webgl', async t => {
     bufferLayout: [{name: 'positions', format: 'float32x4'}]
   });
 
-  t.notEqual(
+  expect(
     trianglePipeline,
-    interleavedPipeline,
     'Does not cache wrapper pipelines with different buffer layouts'
-  );
-  t.equal(
+  ).not.toBe(interleavedPipeline);
+  expect(
     trianglePipeline.handle,
-    interleavedPipeline.handle,
     'Reuses the underlying WebGLProgram across buffer layout variants'
-  );
+  ).toBe(interleavedPipeline.handle);
 
   pipelineFactory.release(trianglePipeline);
   pipelineFactory.release(interleavedPipeline);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with WebGPU attachment formats', async t => {
+it('PipelineFactory#caching with WebGPU attachment formats', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (!webgpuDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -337,26 +333,22 @@ test('PipelineFactory#caching with WebGPU attachment formats', async t => {
     parameters: {depthWriteEnabled: true}
   });
 
-  t.equal(
+  expect(
     preferredFormatsPipeline,
-    repeatedPreferredFormatsPipeline,
     'Caches identical WebGPU pipelines when effective attachment formats match'
-  );
-  t.notEqual(
+  ).toBe(repeatedPreferredFormatsPipeline);
+  expect(
     explicitFormatsPipeline,
-    screenFormatsPipeline,
     'Does not cache WebGPU pipelines with different color and depth attachment formats'
-  );
-  t.notEqual(
+  ).not.toBe(screenFormatsPipeline);
+  expect(
     preferredFormatsPipeline,
-    explicitFormatsPipeline,
     'Does not reuse a pipeline when switching from preferred to explicit attachment formats'
-  );
-  t.notEqual(
+  ).not.toBe(explicitFormatsPipeline);
+  expect(
     explicitFormatsPipeline,
-    screenFormatsPipeline,
     'Does not cache WebGPU pipelines with different entry points'
-  );
+  ).not.toBe(screenFormatsPipeline);
 
   pipelineFactory.release(preferredFormatsPipeline);
   pipelineFactory.release(repeatedPreferredFormatsPipeline);
@@ -364,19 +356,19 @@ test('PipelineFactory#caching with WebGPU attachment formats', async t => {
   pipelineFactory.release(screenFormatsPipeline);
   shader.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with explicit WebGPU depth attachments when depth writes are disabled', async t => {
+it('PipelineFactory#caching with explicit WebGPU depth attachments when depth writes are disabled', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (!webgpuDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -397,24 +389,23 @@ test('PipelineFactory#caching with explicit WebGPU depth attachments when depth 
     depthStencilAttachmentFormat: 'depth24plus'
   });
 
-  t.notEqual(
+  expect(
     colorOnlyPipeline,
-    depthAttachedPipeline,
     'Does not cache WebGPU pipelines across explicit depth attachment changes when depth writes are disabled'
-  );
+  ).not.toBe(depthAttachedPipeline);
 
   pipelineFactory.release(colorOnlyPipeline);
   pipelineFactory.release(depthAttachedPipeline);
   shader.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#caching with shaderLayout on webgl', async t => {
+it('PipelineFactory#caching with shaderLayout on webgl', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -438,28 +429,26 @@ test('PipelineFactory#caching with shaderLayout on webgl', async t => {
     }
   });
 
-  t.notEqual(
+  expect(
     defaultPipeline,
-    overrideLayoutPipeline,
     'Does not cache wrapper pipelines with different shader layout overrides'
-  );
-  t.equal(
+  ).not.toBe(overrideLayoutPipeline);
+  expect(
     defaultPipeline.handle,
-    overrideLayoutPipeline.handle,
     'Reuses the underlying WebGLProgram across shader layout variants'
-  );
+  ).toBe(overrideLayoutPipeline.handle);
 
   pipelineFactory.release(defaultPipeline);
   pipelineFactory.release(overrideLayoutPipeline);
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#shared WebGL program cache is keyed by shader identity', async t => {
+it('PipelineFactory#shared WebGL program cache is keyed by shader identity', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -472,24 +461,21 @@ test('PipelineFactory#shared WebGL program cache is keyed by shader identity', a
   const pipeline1 = pipelineFactory.createRenderPipeline({vs: vs1, fs, topology: 'triangle-list'});
   const pipeline2 = pipelineFactory.createRenderPipeline({vs: vs2, fs, topology: 'triangle-list'});
 
-  t.notEqual(
+  expect(
     pipeline1.sharedRenderPipeline,
-    pipeline2.sharedRenderPipeline,
     'Does not share WebGL programs across different shader sources'
-  );
-  t.notEqual(
-    pipeline1.handle,
-    pipeline2.handle,
-    'Creates a distinct WebGLProgram when shaders differ'
+  ).not.toBe(pipeline2.sharedRenderPipeline);
+  expect(pipeline1.handle, 'Creates a distinct WebGLProgram when shaders differ').not.toBe(
+    pipeline2.handle
   );
 
   pipelineFactory.release(pipeline1);
   pipelineFactory.release(pipeline2);
 
-  t.end();
+  void 0;
 });
 
-test.skip('PipelineFactory#sharing can be disabled independently from wrapper caching', async t => {
+it.skip('PipelineFactory#sharing can be disabled independently from wrapper caching', async () => {
   let webglDevice: WebGLDevice | null = null;
   try {
     webglDevice = (await luma.createDevice({
@@ -521,46 +507,40 @@ test.skip('PipelineFactory#sharing can be disabled independently from wrapper ca
       parameters: {cullMode: 'front'}
     });
 
-    t.notEqual(
-      pipeline1,
-      pipeline2,
-      'Still creates distinct wrapper pipelines when parameters differ'
+    expect(pipeline1, 'Still creates distinct wrapper pipelines when parameters differ').not.toBe(
+      pipeline2
     );
-    t.notEqual(
+    expect(
       pipeline1.sharedRenderPipeline,
-      pipeline2.sharedRenderPipeline,
       'Creates distinct shared render pipeline resources when sharing is disabled'
-    );
-    t.equal(
+    ).not.toBe(pipeline2.sharedRenderPipeline);
+    expect(
       getSharedRenderPipelineCount(webglDevice),
-      initialSharedRenderPipelineCount + 2,
       'Tracks separate shared render pipeline resources for each wrapper when sharing is disabled'
-    );
-    t.notEqual(
+    ).toBe(initialSharedRenderPipelineCount + 2);
+    expect(
       pipeline1.handle,
-      pipeline2.handle,
       'Does not share the underlying WebGLProgram when sharing is disabled'
-    );
+    ).not.toBe(pipeline2.handle);
 
     pipelineFactory.release(pipeline1);
     pipelineFactory.release(pipeline2);
-    t.equal(
+    expect(
       getSharedRenderPipelineCount(webglDevice),
-      initialSharedRenderPipelineCount + 2,
       'Shared render pipeline resources remain cached after release'
-    );
+    ).toBe(initialSharedRenderPipelineCount + 2);
   } finally {
     webglDevice?.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('PipelineFactory#shared WebGL program cache is keyed by transform feedback varyings', async t => {
+it('PipelineFactory#shared WebGL program cache is keyed by transform feedback varyings', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -582,19 +562,17 @@ test('PipelineFactory#shared WebGL program cache is keyed by transform feedback 
     varyings: ['otherValue']
   } as any);
 
-  t.notEqual(
+  expect(
     pipeline1.sharedRenderPipeline,
-    pipeline2.sharedRenderPipeline,
     'Does not share WebGL programs across different transform feedback varying sets'
-  );
-  t.notEqual(
+  ).not.toBe(pipeline2.sharedRenderPipeline);
+  expect(
     pipeline1.handle,
-    pipeline2.handle,
     'Creates distinct WebGLPrograms when transform feedback varyings differ'
-  );
+  ).not.toBe(pipeline2.handle);
 
   pipelineFactory.release(pipeline1);
   pipelineFactory.release(pipeline2);
 
-  t.end();
+  void 0;
 });

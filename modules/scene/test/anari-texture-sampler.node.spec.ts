@@ -1,13 +1,13 @@
 import {ANARIDevice} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   type ANARIJSONScene,
   createANARIJSONScene,
   preloadANARIJSONTextures
 } from '../../../examples/showcase/scene/playground-scene';
 
-test('ANARI JSON textures materialize authored samplers and decode color textures exactly once', async testContext => {
+it('ANARI JSON textures materialize authored samplers and decode color textures exactly once', async () => {
   const originalCreateImageBitmap = globalThis.createImageBitmap;
   globalThis.createImageBitmap = async () => ({width: 8, height: 4}) as ImageBitmap;
   const device = new ANARIDevice(new NullDevice({}));
@@ -57,52 +57,41 @@ test('ANARI JSON textures materialize authored samplers and decode color texture
     const material = surface?.getParameter('material');
     const colorTexture = material?.getParameter('baseColorTexture')?.getParameter('image');
     const dataTexture = material?.getParameter('normalTexture')?.getParameter('image');
-    testContext.equal(
+    expect(
       colorTexture?.format,
-      'rgba8unorm-srgb',
       'authored color maps use hardware sRGB decoding without manual duplicate conversion'
-    );
-    testContext.equal(dataTexture?.format, 'rgba8unorm', 'authored data maps remain linear');
-    testContext.equal(
+    ).toBe('rgba8unorm-srgb');
+    expect(dataTexture?.format, 'authored data maps remain linear').toBe('rgba8unorm');
+    expect(
       colorTexture?.mipLevels,
-      4,
       'authored mipmap filtering allocates the complete 8×4 source-image mip chain'
-    );
-    testContext.equal(
-      dataTexture?.mipLevels,
-      1,
-      'ordinary data textures avoid unused mip allocation'
-    );
-    testContext.equal(
+    ).toBe(4);
+    expect(dataTexture?.mipLevels, 'ordinary data textures avoid unused mip allocation').toBe(1);
+    expect(
       colorTexture?.sampler.props.addressModeU,
-      'clamp-to-edge',
       'horizontal clamp reaches the backend sampler'
-    );
-    testContext.equal(
+    ).toBe('clamp-to-edge');
+    expect(
       colorTexture?.sampler.props.addressModeV,
-      'mirror-repeat',
       'vertical mirror wrapping reaches the backend sampler'
-    );
-    testContext.equal(
+    ).toBe('mirror-repeat');
+    expect(
       colorTexture?.sampler.props.minFilter,
-      'nearest',
       'authored nearest minification reaches the backend sampler'
-    );
-    testContext.equal(
+    ).toBe('nearest');
+    expect(
       colorTexture?.sampler.props.magFilter,
-      'nearest',
       'authored nearest magnification reaches the backend sampler'
-    );
-    testContext.equal(
+    ).toBe('nearest');
+    expect(
       colorTexture?.sampler.props.mipmapFilter,
-      'linear',
       'authored linear mipmap filtering reaches the backend sampler'
-    );
+    ).toBe('linear');
     handle.destroy();
   } finally {
     device.destroy();
     globalThis.createImageBitmap = originalCreateImageBitmap;
   }
 
-  testContext.end();
+  void 0;
 });

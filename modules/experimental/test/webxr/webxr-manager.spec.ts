@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {WebXRManager} from '../../src';
 
-test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebuffer', async t => {
+it('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebuffer', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
   const xrFramebufferHandle = gl.createFramebuffer()!;
@@ -17,7 +17,7 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
   const xrFrame = {
     session,
     getViewerPose: (receivedReferenceSpace: XRReferenceSpace) => {
-      t.equal(receivedReferenceSpace, referenceSpace, 'queries configured reference space');
+      expect(receivedReferenceSpace, 'queries configured reference space').toBe(referenceSpace);
       return {views: [leftView, rightView]} as XRViewerPose;
     }
   } as XRFrame;
@@ -43,8 +43,8 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
       receivedSession: XRSession,
       receivedContext: WebGLRenderingContext | WebGL2RenderingContext
     ) {
-      t.equal(receivedSession, session, 'creates layer for selected session');
-      t.equal(receivedContext, gl, 'creates layer for luma WebGL context');
+      expect(receivedSession, 'creates layer for selected session').toBe(session);
+      expect(receivedContext, 'creates layer for luma WebGL context').toBe(gl);
     }
 
     getViewport(view: XRView): XRViewport {
@@ -59,32 +59,29 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
     await webXRManager.setSession(session);
     const frameState = webXRManager.getFrameState(xrFrame);
 
-    t.equal(makeXRCompatibleCallCount, 1, 'makes WebGL context XR compatible');
-    t.equal(session.updatedBaseLayer, webXRManager.baseLayer, 'updates session render state');
-    t.ok(frameState, 'active XR frame resolves state');
-    t.equal(frameState?.framebuffer.props.handle, xrFramebufferHandle, 'wraps XR framebuffer');
-    t.equal(
-      frameState?.views[0]?.framebuffer,
-      frameState?.framebuffer,
-      'left WebGL eye uses the shared XR framebuffer'
+    expect(makeXRCompatibleCallCount, 'makes WebGL context XR compatible').toBe(1);
+    expect(session.updatedBaseLayer, 'updates session render state').toBe(webXRManager.baseLayer);
+    expect(Boolean(frameState), 'active XR frame resolves state').toBe(true);
+    expect(frameState?.framebuffer.props.handle, 'wraps XR framebuffer').toBe(xrFramebufferHandle);
+    expect(frameState?.views[0]?.framebuffer, 'left WebGL eye uses the shared XR framebuffer').toBe(
+      frameState?.framebuffer
     );
-    t.equal(
+    expect(
       frameState?.views[1]?.framebuffer,
-      frameState?.framebuffer,
       'right WebGL eye uses the shared XR framebuffer'
+    ).toBe(frameState?.framebuffer);
+    expect(frameState?.views[0]?.viewport, 'left viewport resolves').toEqual([0, 0, 32, 32]);
+    expect(frameState?.views[1]?.viewport, 'right viewport resolves').toEqual([32, 0, 32, 32]);
+    expect(frameState?.views[1]?.index, 'view state keeps pose view order').toBe(1);
+    expect(frameState?.views[0]?.projectionMatrix, 'keeps projection').toBe(
+      leftView.projectionMatrix
     );
-    t.deepEqual(frameState?.views[0]?.viewport, [0, 0, 32, 32], 'left viewport resolves');
-    t.deepEqual(frameState?.views[1]?.viewport, [32, 0, 32, 32], 'right viewport resolves');
-    t.equal(frameState?.views[1]?.index, 1, 'view state keeps pose view order');
-    t.equal(frameState?.views[0]?.projectionMatrix, leftView.projectionMatrix, 'keeps projection');
-    t.equal(
-      frameState?.views[0]?.viewMatrix,
-      leftView.transform.inverse.matrix,
-      'uses inverse XR transform as view matrix'
+    expect(frameState?.views[0]?.viewMatrix, 'uses inverse XR transform as view matrix').toBe(
+      leftView.transform.inverse.matrix
     );
 
     webXRManager.destroy();
-    t.equal(deleteFramebufferCallCount, 0, 'destroying wrapper does not delete XR framebuffer');
+    expect(deleteFramebufferCallCount, 'destroying wrapper does not delete XR framebuffer').toBe(0);
   } finally {
     globalThis.XRWebGLLayer = originalXRWebGLLayer;
     gl.makeXRCompatible = originalMakeXRCompatible;
@@ -93,10 +90,10 @@ test('webxr#WebXRManager resolves WebGL XR frame state without owning XR framebu
     device.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t => {
+it('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
   const referenceSpace = {} as XRReferenceSpace;
@@ -125,14 +122,15 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
     await webXRManager.setSession(session);
     const frameState = webXRManager.getFrameState(xrFrame);
 
-    t.ok(frameState, 'active XR frame resolves state');
-    t.equal(frameState?.framebuffer.props.handle, null, 'wraps null as the default framebuffer');
-    t.equal(
-      frameState?.views[0]?.framebuffer,
-      frameState?.framebuffer,
-      'view exposes the backwards-compatible shared framebuffer'
+    expect(Boolean(frameState), 'active XR frame resolves state').toBe(true);
+    expect(frameState?.framebuffer.props.handle, 'wraps null as the default framebuffer').toBe(
+      null
     );
-    t.deepEqual(frameState?.views[0]?.viewport, [0, 0, 64, 32], 'viewport still resolves');
+    expect(
+      frameState?.views[0]?.framebuffer,
+      'view exposes the backwards-compatible shared framebuffer'
+    ).toBe(frameState?.framebuffer);
+    expect(frameState?.views[0]?.viewport, 'viewport still resolves').toEqual([0, 0, 64, 32]);
 
     webXRManager.destroy();
   } finally {
@@ -141,7 +139,7 @@ test('webxr#WebXRManager accepts null XRWebGLLayer framebuffer handles', async t
     device.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 function makeXRSession(

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   buildArrowPathSegmentTable,
   makeArrowFixedSizeListVector,
@@ -30,40 +30,38 @@ type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type Float64PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
 type ColorListArrowType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 
-test('Arrow path-family models declare prepared GPU input schemas', t => {
-  t.deepEqual(
+it('Arrow path-family models declare prepared GPU input schemas', () => {
+  expect(
     PathAttributeModel.gpuInputSchema,
-    [
-      {
-        columnName: 'paths',
-        kind: 'positions',
-        required: true,
-        formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
-      },
-      {
-        columnName: 'colors',
-        kind: 'colors',
-        required: false,
-        formats: ['unorm8x4', 'vertex-list<unorm8x4>']
-      },
-      {
-        columnName: 'widths',
-        kind: 'scalars',
-        required: false,
-        formats: ['float32']
-      },
-      {
-        columnName: 'viewOrigins',
-        kind: 'positions',
-        required: false,
-        formats: ['float32x4'],
-        internal: true
-      }
-    ],
     'attribute paths declare prepared renderer inputs'
-  );
-  t.deepEqual(
-    PathStorageModel.gpuInputSchema,
+  ).toEqual([
+    {
+      columnName: 'paths',
+      kind: 'positions',
+      required: true,
+      formats: ['vertex-list<float32x2>', 'vertex-list<float32x3>', 'vertex-list<float32x4>']
+    },
+    {
+      columnName: 'colors',
+      kind: 'colors',
+      required: false,
+      formats: ['unorm8x4', 'vertex-list<unorm8x4>']
+    },
+    {
+      columnName: 'widths',
+      kind: 'scalars',
+      required: false,
+      formats: ['float32']
+    },
+    {
+      columnName: 'viewOrigins',
+      kind: 'positions',
+      required: false,
+      formats: ['float32x4'],
+      internal: true
+    }
+  ]);
+  expect(PathStorageModel.gpuInputSchema, 'storage paths add optional prepared timestamps').toEqual(
     [
       ...PathAttributeModel.gpuInputSchema.slice(0, 3),
       {
@@ -73,42 +71,34 @@ test('Arrow path-family models declare prepared GPU input schemas', t => {
         formats: ['vertex-list<float32>']
       },
       PathAttributeModel.gpuInputSchema[3]
-    ],
-    'storage paths add optional prepared timestamps'
+    ]
   );
-  t.deepEqual(
+  expect(
     PathTripsStorageModel.gpuInputSchema,
-    [
-      ...PathAttributeModel.gpuInputSchema.slice(0, 3),
-      {
-        columnName: 'timestamps',
-        kind: 'time',
-        required: true,
-        formats: ['vertex-list<float32>']
-      },
-      PathAttributeModel.gpuInputSchema[3]
-    ],
     'Trips storage paths require prepared timestamps'
+  ).toEqual([
+    ...PathAttributeModel.gpuInputSchema.slice(0, 3),
+    {
+      columnName: 'timestamps',
+      kind: 'time',
+      required: true,
+      formats: ['vertex-list<float32>']
+    },
+    PathAttributeModel.gpuInputSchema[3]
+  ]);
+  expect(PathAttributeModel.gpuInputSchema, 'attribute model retains its schema reference').toBe(
+    PathAttributeModel.gpuInputSchema
   );
-  t.equal(
-    PathAttributeModel.gpuInputSchema,
-    PathAttributeModel.gpuInputSchema,
-    'attribute model retains its schema reference'
+  expect(PathStorageModel.gpuInputSchema, 'storage model retains its schema reference').toBe(
+    PathStorageModel.gpuInputSchema
   );
-  t.equal(
-    PathStorageModel.gpuInputSchema,
-    PathStorageModel.gpuInputSchema,
-    'storage model retains its schema reference'
+  expect(PathTripsStorageModel.gpuInputSchema, 'Trips model retains its schema reference').toBe(
+    PathTripsStorageModel.gpuInputSchema
   );
-  t.equal(
-    PathTripsStorageModel.gpuInputSchema,
-    PathTripsStorageModel.gpuInputSchema,
-    'Trips model retains its schema reference'
-  );
-  t.end();
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors maps same-name Table and RecordBatch columns', t => {
+it('resolveArrowPathSourceVectors maps same-name Table and RecordBatch columns', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const table = new arrow.Table(sourceVectors);
   const resolvedFromTable = resolveArrowPathSourceVectors(PathAttributeModel, {data: table});
@@ -116,22 +106,20 @@ test('resolveArrowPathSourceVectors maps same-name Table and RecordBatch columns
     data: table.batches[0]!
   });
 
-  assertPathVectorEqual(t, resolvedFromTable.paths, sourceVectors.paths, 'Table paths');
-  assertPathVectorEqual(t, resolvedFromRecordBatch.paths, sourceVectors.paths, 'RecordBatch paths');
-  t.deepEqual(
+  assertPathVectorEqual(resolvedFromTable.paths, sourceVectors.paths, 'Table paths');
+  assertPathVectorEqual(resolvedFromRecordBatch.paths, sourceVectors.paths, 'RecordBatch paths');
+  expect(
     Array.from(getFixedSizeListValues(resolvedFromTable.colors!)),
-    Array.from(getFixedSizeListValues(sourceVectors.colors)),
     'same-name colors resolve from Table'
-  );
-  t.deepEqual(
+  ).toEqual(Array.from(getFixedSizeListValues(sourceVectors.colors)));
+  expect(
     Array.from(resolvedFromTable.widths!.data[0]!.values as Float32Array),
-    Array.from(sourceVectors.widths.data[0]!.values as Float32Array),
     'same-name widths resolve from Table'
-  );
-  t.end();
+  ).toEqual(Array.from(sourceVectors.widths.data[0]!.values as Float32Array));
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors maps nested string selectors', t => {
+it('resolveArrowPathSourceVectors maps nested string selectors', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const table = makeNestedArrowPathTable('source', sourceVectors);
   const resolved = resolveArrowPathSourceVectors(PathAttributeModel, {
@@ -143,16 +131,15 @@ test('resolveArrowPathSourceVectors maps nested string selectors', t => {
     }
   });
 
-  assertPathVectorEqual(t, resolved.paths, sourceVectors.paths, 'nested paths');
-  t.deepEqual(
+  assertPathVectorEqual(resolved.paths, sourceVectors.paths, 'nested paths');
+  expect(
     Array.from(getFixedSizeListValues(resolved.colors!)),
-    Array.from(getFixedSizeListValues(sourceVectors.colors)),
     'nested colors resolve from explicit path'
-  );
-  t.end();
+  ).toEqual(Array.from(getFixedSizeListValues(sourceVectors.colors)));
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors supports direct vectors and optional disable', t => {
+it('resolveArrowPathSourceVectors supports direct vectors and optional disable', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const resolved = resolveArrowPathSourceVectors(PathStorageModel, {
     selectors: {
@@ -162,17 +149,17 @@ test('resolveArrowPathSourceVectors supports direct vectors and optional disable
     }
   });
 
-  t.equal(resolved.paths, sourceVectors.paths, 'direct paths do not require a Table');
-  t.equal(resolved.colors, undefined, 'null disables optional colors');
-  t.equal(resolved.widths, sourceVectors.widths, 'direct widths do not require a Table');
-  t.equal(resolved.timestamps, undefined, 'omitted optional timestamps are skipped');
-  t.end();
+  expect(resolved.paths, 'direct paths do not require a Table').toBe(sourceVectors.paths);
+  expect(resolved.colors, 'null disables optional colors').toBe(undefined);
+  expect(resolved.widths, 'direct widths do not require a Table').toBe(sourceVectors.widths);
+  expect(resolved.timestamps, 'omitted optional timestamps are skipped').toBe(undefined);
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors rejects internal input selectors', t => {
+it('resolveArrowPathSourceVectors rejects internal input selectors', () => {
   const sourceVectors = makeArrowPathSourceVectors();
 
-  t.throws(
+  expect(
     () =>
       resolveArrowPathSourceVectors(PathAttributeModel, {
         selectors: {
@@ -180,31 +167,29 @@ test('resolveArrowPathSourceVectors rejects internal input selectors', t => {
           viewOrigins: sourceVectors.paths
         } as never
       }),
-    /source selector "viewOrigins" is not declared as source-mappable/,
     'internal inputs are unavailable to source mapping'
-  );
-  t.end();
+  ).toThrow(/source selector "viewOrigins" is not declared as source-mappable/);
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors skips missing optional columns and rejects missing required columns', t => {
+it('resolveArrowPathSourceVectors skips missing optional columns and rejects missing required columns', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const pathsOnlyTable = new arrow.Table({paths: sourceVectors.paths});
   const resolved = resolveArrowPathSourceVectors(PathAttributeModel, {data: pathsOnlyTable});
 
-  t.equal(resolved.colors, undefined, 'missing optional colors are skipped');
-  t.equal(resolved.widths, undefined, 'missing optional widths are skipped');
-  t.throws(
+  expect(resolved.colors, 'missing optional colors are skipped').toBe(undefined);
+  expect(resolved.widths, 'missing optional widths are skipped').toBe(undefined);
+  expect(
     () =>
       resolveArrowPathSourceVectors(PathAttributeModel, {
         data: new arrow.Table({colors: sourceVectors.colors, widths: sourceVectors.widths})
       }),
-    /source column "paths" for "paths" is missing/,
     'missing required paths throw'
-  );
-  t.end();
+  ).toThrow(/source column "paths" for "paths" is missing/);
+  void 0;
 });
 
-test('resolveArrowPathSourceVectors requires Trips timestamps', t => {
+it('resolveArrowPathSourceVectors requires Trips timestamps', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const timestamps = makeTemporalListVector(
     new arrow.TimestampMillisecond(),
@@ -212,22 +197,23 @@ test('resolveArrowPathSourceVectors requires Trips timestamps', t => {
     new Int32Array([0, 3, 7])
   );
 
-  t.throws(
+  expect(
     () =>
       resolveArrowPathSourceVectors(PathTripsStorageModel, {
         data: new arrow.Table(sourceVectors)
       }),
-    /source column "timestamps" for "timestamps" is missing/,
     'Trips source mapping requires timestamps'
-  );
+  ).toThrow(/source column "timestamps" for "timestamps" is missing/);
   const resolved = resolveArrowPathSourceVectors(PathTripsStorageModel, {
     data: new arrow.Table({...sourceVectors, timestamps})
   });
-  t.equal(resolved.timestamps?.length, timestamps.length, 'Trips timestamps resolve by default');
-  t.end();
+  expect(resolved.timestamps?.length, 'Trips timestamps resolve by default').toBe(
+    timestamps.length
+  );
+  void 0;
 });
 
-test('buildArrowPathSegmentTable expands path rows and repeats row styles', t => {
+it('buildArrowPathSegmentTable expands path rows and repeats row styles', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const result = buildArrowPathSegmentTable({
     rowTable: new arrow.Table({
@@ -237,74 +223,64 @@ test('buildArrowPathSegmentTable expands path rows and repeats row styles', t =>
     paths: sourceVectors.paths
   });
 
-  t.equal(result.table.numRows, 5, 'emits one Arrow row per generated segment');
-  t.deepEqual(result.segmentLayout.startIndices, [0, 2, 5], 'retains path segment offsets');
-  t.deepEqual(
+  expect(result.table.numRows, 'emits one Arrow row per generated segment').toBe(5);
+  expect(result.segmentLayout.startIndices, 'retains path segment offsets').toEqual([0, 2, 5]);
+  expect(
     Array.from(result.segmentLayout.segmentStartPositions),
-    [0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 1, 0, 0],
     'segment starts preserve open and closed path order'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 3, 1, 0, 0]);
+  expect(
     Array.from(result.segmentLayout.segmentEndPositions),
-    [1, 0, 0, 0, 1, 1, 0, 0, 3, 0, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0],
     'segment ends preserve the source path edge order'
-  );
-  t.deepEqual(
+  ).toEqual([1, 0, 0, 0, 1, 1, 0, 0, 3, 0, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0]);
+  expect(
     Array.from(result.segmentLayout.segmentPreviousPositions),
-    [0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],
     'previous positions preserve open caps and closed joins'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]);
+  expect(
     Array.from(result.segmentLayout.segmentNextPositions),
-    [1, 1, 0, 0, 1, 1, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],
     'next positions preserve open caps and closed joins'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 0, 0, 1, 1, 0, 0, 3, 1, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]);
+  expect(
     Array.from(result.segmentLayout.segmentFlags),
-    [1, 2, 5, 4, 6],
     'segment flags identify first, last, and closed rows'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2, 5, 4, 6]);
+  expect(
     Array.from(result.segmentLayout.segmentStartColors),
-    [
-      packColor([255, 0, 0, 255]),
-      packColor([255, 0, 0, 255]),
-      packColor([0, 255, 0, 255]),
-      packColor([0, 255, 0, 255]),
-      packColor([0, 255, 0, 255])
-    ],
     'generated segment starts retain row colors'
-  );
-  t.deepEqual(
+  ).toEqual([
+    packColor([255, 0, 0, 255]),
+    packColor([255, 0, 0, 255]),
+    packColor([0, 255, 0, 255]),
+    packColor([0, 255, 0, 255]),
+    packColor([0, 255, 0, 255])
+  ]);
+  expect(
     Array.from(result.segmentLayout.segmentEndColors),
-    [
-      packColor([255, 0, 0, 255]),
-      packColor([255, 0, 0, 255]),
-      packColor([0, 255, 0, 255]),
-      packColor([0, 255, 0, 255]),
-      packColor([0, 255, 0, 255])
-    ],
     'generated segment ends retain row colors'
-  );
-  t.deepEqual(
+  ).toEqual([
+    packColor([255, 0, 0, 255]),
+    packColor([255, 0, 0, 255]),
+    packColor([0, 255, 0, 255]),
+    packColor([0, 255, 0, 255]),
+    packColor([0, 255, 0, 255])
+  ]);
+  expect(
     Array.from(getFixedSizeListValues(result.table.getChild('colors')!)),
-    [255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255],
     'RGBA row styles repeat across generated segments'
-  );
-  t.deepEqual(
+  ).toEqual([255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]);
+  expect(
     Array.from(result.table.getChild('widths')!.data[0]!.values as Float32Array),
-    [2, 2, 4, 4, 4],
     'scalar row styles repeat across generated segments'
-  );
-  t.deepEqual(
+  ).toEqual([2, 2, 4, 4, 4]);
+  expect(
     Array.from(result.table.getChild('rowIndices')!.data[0]!.values as Uint32Array),
-    [0, 0, 1, 1, 1],
     'generated rows retain source path row indices'
-  );
-  t.end();
+  ).toEqual([0, 0, 1, 1, 1]);
+  void 0;
 });
 
-test('buildArrowPathSegmentTable expands path-aligned color lists', t => {
+it('buildArrowPathSegmentTable expands path-aligned color lists', () => {
   const sourceVectors = makeArrowPathSourceVectors();
   const colors = makeColorListVector(
     new Int32Array([0, 3, 7]),
@@ -318,33 +294,31 @@ test('buildArrowPathSegmentTable expands path-aligned color lists', t => {
     paths: sourceVectors.paths
   });
 
-  t.deepEqual(
+  expect(
     Array.from(result.segmentLayout.segmentStartColors),
-    [
-      packColor([255, 0, 0, 255]),
-      packColor([255, 128, 0, 255]),
-      packColor([0, 255, 0, 255]),
-      packColor([0, 255, 255, 255]),
-      packColor([0, 0, 255, 255])
-    ],
     'segment start colors use each segment start vertex'
-  );
-  t.deepEqual(
+  ).toEqual([
+    packColor([255, 0, 0, 255]),
+    packColor([255, 128, 0, 255]),
+    packColor([0, 255, 0, 255]),
+    packColor([0, 255, 255, 255]),
+    packColor([0, 0, 255, 255])
+  ]);
+  expect(
     Array.from(result.segmentLayout.segmentEndColors),
-    [
-      packColor([255, 128, 0, 255]),
-      packColor([255, 255, 0, 255]),
-      packColor([0, 255, 255, 255]),
-      packColor([0, 0, 255, 255]),
-      packColor([255, 0, 255, 255])
-    ],
     'segment end colors use each segment end vertex'
-  );
+  ).toEqual([
+    packColor([255, 128, 0, 255]),
+    packColor([255, 255, 0, 255]),
+    packColor([0, 255, 255, 255]),
+    packColor([0, 0, 255, 255]),
+    packColor([255, 0, 255, 255])
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', t => {
+it('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', () => {
   for (const dimension of [3, 4] as const) {
     const path = makePathVector(
       new Int32Array([0, 2]),
@@ -356,22 +330,20 @@ test('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', t => 
       paths: path
     });
 
-    t.deepEqual(
+    expect(
       Array.from(result.segmentLayout.segmentStartPositions.subarray(0, 4)),
-      dimension === 3 ? [0, 1, 2, 0] : [0, 1, 2, 3],
       `vec${dimension} starts preserve source coordinate lanes`
-    );
-    t.deepEqual(
+    ).toEqual(dimension === 3 ? [0, 1, 2, 0] : [0, 1, 2, 3]);
+    expect(
       Array.from(result.segmentLayout.segmentEndPositions.subarray(0, 4)),
-      dimension === 3 ? [3, 4, 5, 0] : [4, 5, 6, 7],
       `vec${dimension} ends preserve source coordinate lanes`
-    );
+    ).toEqual(dimension === 3 ? [3, 4, 5, 0] : [4, 5, 6, 7]);
   }
 
-  t.end();
+  void 0;
 });
 
-test('PathAttributeModel derives from GPUTableModel and packs generated segment records', async t => {
+it('PathAttributeModel derives from GPUTableModel and packs generated segment records', async () => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
   const model = new PathAttributeModel(
@@ -406,47 +378,43 @@ test('PathAttributeModel derives from GPUTableModel and packs generated segment 
     layout => layout.name === 'pathViewOriginData'
   );
 
-  t.equal(model.instanceCount, 5, 'instance count uses generated segment rows');
-  t.deepEqual(model.segmentLayout.startIndices, [0, 2, 5], 'model exposes segment offsets');
-  t.equal(expandedPathLayout?.byteStride, 80, 'expanded segment records use an 80-byte stride');
-  t.equal(pathViewOriginLayout?.byteStride, 16, 'view-origin records use a 16-byte stride');
-  t.deepEqual(
+  expect(model.instanceCount, 'instance count uses generated segment rows').toBe(5);
+  expect(model.segmentLayout.startIndices, 'model exposes segment offsets').toEqual([0, 2, 5]);
+  expect(expandedPathLayout?.byteStride, 'expanded segment records use an 80-byte stride').toBe(80);
+  expect(pathViewOriginLayout?.byteStride, 'view-origin records use a 16-byte stride').toBe(16);
+  expect(
     expandedPathLayout?.attributes,
-    [
-      {attribute: 'segmentStartPositions', format: 'float32x4', byteOffset: 0},
-      {attribute: 'segmentEndPositions', format: 'float32x4', byteOffset: 16},
-      {attribute: 'segmentStartColors', format: 'uint32', byteOffset: 72},
-      {attribute: 'segmentEndColors', format: 'uint32', byteOffset: 76}
-    ],
     'default generated vertex data exposes segment endpoints and packed colors'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'segmentStartPositions', format: 'float32x4', byteOffset: 0},
+    {attribute: 'segmentEndPositions', format: 'float32x4', byteOffset: 16},
+    {attribute: 'segmentStartColors', format: 'uint32', byteOffset: 72},
+    {attribute: 'segmentEndColors', format: 'uint32', byteOffset: 76}
+  ]);
+  expect(
     Array.from(firstSegmentPositions),
-    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
     'packed record stores start, end, previous, and next positions'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]);
+  expect(
     Array.from(firstSegmentMetadata),
-    [1, 0],
     'packed record stores generated flags and source row index'
-  );
-  t.deepEqual(
+  ).toEqual([1, 0]);
+  expect(
     Array.from(firstSegmentColors),
-    [packColor([255, 0, 0, 255]), packColor([255, 0, 0, 255])],
     'packed record stores generated segment endpoint colors'
-  );
+  ).toEqual([packColor([255, 0, 0, 255]), packColor([255, 0, 0, 255])]);
 
   model.destroy();
   pathProps.destroy();
-  t.end();
+  void 0;
 });
 
-test('PathAttributeModel requires prepared path state', t => {
+it('PathAttributeModel requires prepared path state', () => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
   const paths = makeGpuArrowPathVector(device, 'paths', sourceVectors.paths);
 
-  t.throws(
+  expect(
     () =>
       new PathAttributeModel(
         device,
@@ -455,15 +423,14 @@ test('PathAttributeModel requires prepared path state', t => {
           paths
         } as never)
       ),
-    /pathState/,
     'prepared path state is visible at the path model boundary'
-  );
+  ).toThrow(/pathState/);
 
   paths.destroy();
-  t.end();
+  void 0;
 });
 
-test('PathAttributeModel validates prepared inputs by GPUVector.format', async t => {
+it('PathAttributeModel validates prepared inputs by GPUVector.format', async () => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
   const sourceVectors = makeArrowPathSourceVectors();
@@ -474,7 +441,7 @@ test('PathAttributeModel validates prepared inputs by GPUVector.format', async t
     'float32x4'
   );
 
-  t.throws(
+  expect(
     () =>
       new PathAttributeModel(
         device,
@@ -484,22 +451,21 @@ test('PathAttributeModel validates prepared inputs by GPUVector.format', async t
           colors: invalidColors as unknown as NonNullable<PreparedArrowPathGPUVectors['colors']>
         })
       ),
-    /colors GPUVector\.format "float32x4" must be one of unorm8x4, vertex-list<unorm8x4>/,
     'prepared color validation rejects a valid Arrow color vector with the wrong GPU format'
-  );
+  ).toThrow(/colors GPUVector\.format "float32x4" must be one of unorm8x4, vertex-list<unorm8x4>/);
 
   invalidColors.destroy();
   pathProps.destroy();
-  t.end();
+  void 0;
 });
 
-test('PathAttributeModel rejects prepared state row mismatches', async t => {
+it('PathAttributeModel rejects prepared state row mismatches', async () => {
   const device = new NullDevice({});
   const pathProps = await makeGpuArrowPathProps(device);
   const sourceVectors = makeArrowPathSourceVectors();
   const mismatchedPaths = makeGpuArrowPathVector(device, 'paths', sourceVectors.paths.slice(0, 1));
 
-  t.throws(
+  expect(
     () =>
       new PathAttributeModel(
         device,
@@ -511,16 +477,15 @@ test('PathAttributeModel rejects prepared state row mismatches', async t => {
           paths: mismatchedPaths
         })
       ),
-    /prepared path rows must match path GPU rows/,
     'prepared state rows stay aligned with path GPU rows'
-  );
+  ).toThrow(/prepared path rows must match path GPU rows/);
 
   mismatchedPaths.destroy();
   pathProps.destroy();
-  t.end();
+  void 0;
 });
 
-test('PathAttributeModel splits generated path buffers by source-row boundaries', async t => {
+it('PathAttributeModel splits generated path buffers by source-row boundaries', async () => {
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 300});
   const pathProps = await makeGpuArrowPathProps(device);
@@ -532,53 +497,49 @@ test('PathAttributeModel splits generated path buffers by source-row boundaries'
     })
   );
 
-  t.equal(model.renderBatches.length, 2, 'generated path output splits into two render batches');
-  t.deepEqual(
-    model.renderBatches.map(batch => batch.segmentCount),
-    [2, 3],
-    'batching preserves whole source-path rows'
+  expect(model.renderBatches.length, 'generated path output splits into two render batches').toBe(
+    2
   );
-  t.equal(model.instanceCount, 5, 'aggregate segment count remains unchanged');
+  expect(
+    model.renderBatches.map(batch => batch.segmentCount),
+    'batching preserves whole source-path rows'
+  ).toEqual([2, 3]);
+  expect(model.instanceCount, 'aggregate segment count remains unchanged').toBe(5);
 
   model.destroy();
   pathProps.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors keeps Float32 paths unchanged without closure', async t => {
+it('convertArrowPathToGPUVectors keeps Float32 paths unchanged without closure', async () => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
   const prepared = await convertArrowPathToGPUVectors(device, sourceVectors);
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
-  t.equal(prepared.sourceOrigins, undefined, 'Float32 conversion does not create source origins');
-  t.equal(
-    prepared.paths.format,
-    'vertex-list<float32x2>',
-    'path coordinates use vertex-list format'
+  expect(prepared.sourceOrigins, 'Float32 conversion does not create source origins').toBe(
+    undefined
   );
-  t.equal(prepared.colors?.format, 'unorm8x4', 'row colors use normalized RGBA8 format');
-  t.equal(
-    prepared.viewOrigins,
-    undefined,
-    'Float32 conversion does not create view-origin vectors'
+  expect(prepared.paths.format, 'path coordinates use vertex-list format').toBe(
+    'vertex-list<float32x2>'
   );
-  t.deepEqual(
+  expect(prepared.colors?.format, 'row colors use normalized RGBA8 format').toBe('unorm8x4');
+  expect(prepared.viewOrigins, 'Float32 conversion does not create view-origin vectors').toBe(
+    undefined
+  );
+  expect(
     Array.from(getPathValues(preparedPaths)),
-    Array.from(getPathValues(sourceVectors.paths)),
     'Float32 coordinate payload is uploaded unchanged'
-  );
-  t.deepEqual(
-    Array.from(getPathOffsets(preparedPaths)),
-    Array.from(getPathOffsets(sourceVectors.paths)),
-    'Float32 path offsets are preserved'
+  ).toEqual(Array.from(getPathValues(sourceVectors.paths)));
+  expect(Array.from(getPathOffsets(preparedPaths)), 'Float32 path offsets are preserved').toEqual(
+    Array.from(getPathOffsets(sourceVectors.paths))
   );
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors tags path-aligned vertex colors', async t => {
+it('convertArrowPathToGPUVectors tags path-aligned vertex colors', async () => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowPathSourceVectors();
   const prepared = await convertArrowPathToGPUVectors(device, {
@@ -592,17 +553,16 @@ test('convertArrowPathToGPUVectors tags path-aligned vertex colors', async t => 
     )
   });
 
-  t.equal(
+  expect(
     prepared.colors?.format,
-    'vertex-list<unorm8x4>',
     'path-aligned colors use vertex-list normalized RGBA8 format'
-  );
+  ).toBe('vertex-list<unorm8x4>');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors converts Float64 paths to per-row Float32 deltas', async t => {
+it('convertArrowPathToGPUVectors converts Float64 paths to per-row Float32 deltas', async () => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3, 5]),
@@ -614,27 +574,27 @@ test('convertArrowPathToGPUVectors converts Float64 paths to per-row Float32 del
   const prepared = await convertArrowPathToGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
-  t.deepEqual(
+  expect(
     Array.from(getPathValues(preparedPaths)),
-    [0, 0, 0.5, 0.25, 2, 3, 0, 0, -0.25, 0.75],
     'Float64 coordinates become Float32 deltas from each path origin'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0.5, 0.25, 2, 3, 0, 0, -0.25, 0.75]);
+  expect(
     Array.from(prepared.sourceOrigins || []),
-    [1_000_000_000, -1_000_000_000, 0, 0, 20_000_000_000, 10, 0, 0],
     'per-row Float64 origins are retained on CPU'
+  ).toEqual([1_000_000_000, -1_000_000_000, 0, 0, 20_000_000_000, 10, 0, 0]);
+  expect(Boolean(prepared.viewOrigins), 'Float64 conversion creates view-origin GPU storage').toBe(
+    true
   );
-  t.ok(prepared.viewOrigins, 'Float64 conversion creates view-origin GPU storage');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathStorageToGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async t => {
+it('convertArrowPathStorageToGPUVectors converts Float64 paths to per-row Float32 deltas on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -648,23 +608,23 @@ test('convertArrowPathStorageToGPUVectors converts Float64 paths to per-row Floa
   const prepared = await convertArrowPathStorageToGPUVectors(device, {paths});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
-  t.deepEqual(
+  expect(
     Array.from(getPathValues(preparedPaths)),
-    [0, 0, 0.5, 0.25, 2, 3, 0, 0, -0.25, 0.75],
     'storage conversion converts Float64 coordinates into Float32 deltas on the GPU'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0.5, 0.25, 2, 3, 0, 0, -0.25, 0.75]);
+  expect(
     Array.from(prepared.sourceOrigins || []),
-    [1_000_000_000, -1_000_000_000, 0, 0, 20_000_000_000, 10, 0, 0],
     'storage conversion retains only compact per-row Float64 origins on CPU'
+  ).toEqual([1_000_000_000, -1_000_000_000, 0, 0, 20_000_000_000, 10, 0, 0]);
+  expect(Boolean(prepared.viewOrigins), 'storage conversion creates view-origin GPU storage').toBe(
+    true
   );
-  t.ok(prepared.viewOrigins, 'storage conversion creates view-origin GPU storage');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors closes Float64 delta paths by appending the first delta', async t => {
+it('convertArrowPathToGPUVectors closes Float64 delta paths by appending the first delta', async () => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
@@ -674,23 +634,23 @@ test('convertArrowPathToGPUVectors closes Float64 delta paths by appending the f
   const prepared = await convertArrowPathToGPUVectors(device, {paths, closed});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
-  t.deepEqual(Array.from(getPathOffsets(preparedPaths)), [0, 4], 'closure appends one delta point');
-  t.deepEqual(
+  expect(Array.from(getPathOffsets(preparedPaths)), 'closure appends one delta point').toEqual([
+    0, 4
+  ]);
+  expect(
     Array.from(getPathValues(preparedPaths)),
-    [0, 0, 1, 0, 1, 1, 0, 0],
     'the injected closing point is the first delta, usually zero'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 1, 0, 1, 1, 0, 0]);
+  expect(
     Array.from(prepared.sourceOrigins || []),
-    [10_000_000, -10_000_000, 0, 0],
     'closing delta paths does not change the per-row origin'
-  );
+  ).toEqual([10_000_000, -10_000_000, 0, 0]);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors updates view origins without rewriting path deltas', async t => {
+it('convertArrowPathToGPUVectors updates view origins without rewriting path deltas', async () => {
   const device = new NullDevice({});
   const paths = makeFloat64PathVector(
     new Int32Array([0, 3]),
@@ -714,16 +674,17 @@ test('convertArrowPathToGPUVectors updates view origins without rewriting path d
     viewOriginBytesAfter.byteLength / Float32Array.BYTES_PER_ELEMENT
   );
 
-  t.deepEqual(
+  expect(
     Array.from(
       new Uint8Array(pathBytesAfter.buffer, pathBytesAfter.byteOffset, pathBytesAfter.byteLength)
     ),
+    'path delta GPU buffer is stable across view updates'
+  ).toEqual(
     Array.from(
       new Uint8Array(pathBytesBefore.buffer, pathBytesBefore.byteOffset, pathBytesBefore.byteLength)
-    ),
-    'path delta GPU buffer is stable across view updates'
+    )
   );
-  t.deepEqual(
+  expect(
     Array.from(
       new Uint8Array(
         deltaSegmentBytesAfter.buffer,
@@ -731,16 +692,17 @@ test('convertArrowPathToGPUVectors updates view origins without rewriting path d
         deltaSegmentBytesAfter.byteLength
       )
     ),
+    'expanded delta segment buffer is stable across view updates'
+  ).toEqual(
     Array.from(
       new Uint8Array(
         deltaSegmentBytesBefore.buffer,
         deltaSegmentBytesBefore.byteOffset,
         deltaSegmentBytesBefore.byteLength
       )
-    ),
-    'expanded delta segment buffer is stable across view updates'
+    )
   );
-  t.notDeepEqual(
+  expect(
     Array.from(
       new Uint8Array(
         viewOriginBytesAfter.buffer,
@@ -748,26 +710,26 @@ test('convertArrowPathToGPUVectors updates view origins without rewriting path d
         viewOriginBytesAfter.byteLength
       )
     ),
+    'view-origin buffer is rewritten across view updates'
+  ).not.toEqual(
     Array.from(
       new Uint8Array(
         viewOriginBytesBefore.buffer,
         viewOriginBytesBefore.byteOffset,
         viewOriginBytesBefore.byteLength
       )
-    ),
-    'view-origin buffer is rewritten across view updates'
+    )
   );
-  t.deepEqual(
+  expect(
     Array.from(updatedOrigins.subarray(0, 8)),
-    [210, 620, 30, 0, 210, 620, 30, 0],
     'updated view origins repeat once per generated segment'
-  );
+  ).toEqual([210, 620, 30, 0, 210, 620, 30, 0]);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors split Float64 transform matches CPU full transform', async t => {
+it('convertArrowPathToGPUVectors split Float64 transform matches CPU full transform', async () => {
   const device = new NullDevice({});
   const sourceOrigin = [1_000_000_000, -1_000_000_000, 100];
   const deltas = [
@@ -809,20 +771,14 @@ test('convertArrowPathToGPUVectors split Float64 transform matches CPU full tran
         preparedDeltas[deltaOffset + 2] ?? 0
       ])
     );
-    assertApproxArray(
-      t,
-      splitTransform,
-      fullTransform,
-      1e-3,
-      `point ${pointIndex} split transform`
-    );
+    assertApproxArray(splitTransform, fullTransform, 1e-3, `point ${pointIndex} split transform`);
   }
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowPathToGPUVectors rejects unsupported path inputs', async t => {
+it('convertArrowPathToGPUVectors rejects unsupported path inputs', async () => {
   const device = new NullDevice({});
   const invalidDimensionPaths = makeFloat64PathVector(
     new Int32Array([0, 1]),
@@ -834,12 +790,12 @@ test('convertArrowPathToGPUVectors rejects unsupported path inputs', async t => 
 
   try {
     await convertArrowPathToGPUVectors(device, {paths: invalidDimensionPaths});
-    t.fail('invalid path dimensions should be rejected');
+    expect(false, 'invalid path dimensions should be rejected').toBe(true);
   } catch (error) {
-    t.ok(
-      /FixedSizeList<Float32\|Float64>\[2\.\.4\]/.test((error as Error).message),
+    expect(
+      Boolean(/FixedSizeList<Float32\|Float64>\[2\.\.4\]/.test((error as Error).message)),
       'coordinate dimensions outside 2..4 are rejected'
-    );
+    ).toBe(true);
   }
 
   try {
@@ -847,22 +803,22 @@ test('convertArrowPathToGPUVectors rejects unsupported path inputs', async t => 
       ...sourceVectors,
       closed: mismatchedClosed
     });
-    t.fail('closed flag row mismatches should be rejected');
+    expect(false, 'closed flag row mismatches should be rejected').toBe(true);
   } catch (error) {
-    t.ok(
-      /closed rows must match paths rows/.test((error as Error).message),
+    expect(
+      Boolean(/closed rows must match paths rows/.test((error as Error).message)),
       'closed rows must align'
-    );
+    ).toBe(true);
   }
 
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel emits indexed compute-generated segment records', async t => {
+it('PathStorageModel emits indexed compute-generated segment records', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -881,50 +837,47 @@ test('PathStorageModel emits indexed compute-generated segment records', async t
     layout => layout.name === 'compactPathVertexData'
   );
 
-  t.equal(model.segmentCount, 5, 'storage expansion emits one generated row per path segment');
-  t.equal(model.pathRangeByteLength, 32, 'storage paths retain one 16-byte path range per row');
-  t.equal(model.pathRecordByteStride, 12, 'default storage path records use three u32 words');
-  t.equal(
+  expect(model.segmentCount, 'storage expansion emits one generated row per path segment').toBe(5);
+  expect(model.pathRangeByteLength, 'storage paths retain one 16-byte path range per row').toBe(32);
+  expect(model.pathRecordByteStride, 'default storage path records use three u32 words').toBe(12);
+  expect(
     model.generatedRenderBufferByteLength,
-    60,
     'five generated segment records keep the compact 12-byte indexed stride'
+  ).toBe(60);
+  expect(compactPathLayout?.byteStride, 'generated storage path records use a 12-byte stride').toBe(
+    12
   );
-  t.equal(compactPathLayout?.byteStride, 12, 'generated storage path records use a 12-byte stride');
-  t.deepEqual(
+  expect(
     compactPathLayout?.attributes,
-    [
-      {attribute: 'segmentStartPointIndices', format: 'uint32', byteOffset: 0},
-      {attribute: 'segmentFlags', format: 'uint32', byteOffset: 4},
-      {attribute: 'rowIndices', format: 'uint32', byteOffset: 8}
-    ],
     'default storage rendering exposes compact segment records plus source row indices'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'segmentStartPointIndices', format: 'uint32', byteOffset: 0},
+    {attribute: 'segmentFlags', format: 'uint32', byteOffset: 4},
+    {attribute: 'rowIndices', format: 'uint32', byteOffset: 8}
+  ]);
+  expect(
     Array.from(generatedPathWords.subarray(0, 3)),
-    [0, 1, 0],
     'compute output stores start point index, flags, and row index'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 0]);
+  expect(
     Array.from({length: 5}, (_, segmentIndex) => generatedPathWords[segmentIndex * 3 + 1]),
-    [1, 2, 5, 4, 6],
     'compute output preserves first, last, and closed path flags'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2, 5, 4, 6]);
+  expect(
     Array.from({length: 5}, (_, segmentIndex) => generatedPathWords[segmentIndex * 3 + 2]),
-    [0, 0, 1, 1, 1],
     'compute output preserves source path row indices'
-  );
+  ).toEqual([0, 0, 1, 1, 1]);
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel skips zero-segment render batches', async t => {
+it('PathStorageModel skips zero-segment render batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -936,26 +889,25 @@ test('PathStorageModel skips zero-segment render batches', async t => {
     ...pathProps
   });
 
-  t.deepEqual(
+  expect(
     model.renderBatches.map(batch => batch.segmentCount),
-    [0],
     'one-point paths retain a zero-segment render batch'
-  );
-  t.doesNotThrow(
+  ).toEqual([0]);
+  expect(
     () => model.draw({} as RenderPass),
     'zero-segment render batches return without issuing a render pass draw'
-  );
+  ).not.toThrow();
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel binds path-aligned vertex colors', async t => {
+it('PathStorageModel binds path-aligned vertex colors', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -982,20 +934,23 @@ test('PathStorageModel binds path-aligned vertex colors', async t => {
     styleConfigBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.ok(bindings.pathVertexColors, 'binds a flattened path vertex color storage buffer');
-  t.equal(styleConfigWords[5], 0, 'row color storage is disabled for color lists');
-  t.equal(styleConfigWords[10], 1, 'vertex color storage is enabled for color lists');
+  expect(
+    Boolean(bindings.pathVertexColors),
+    'binds a flattened path vertex color storage buffer'
+  ).toBe(true);
+  expect(styleConfigWords[5], 'row color storage is disabled for color lists').toBe(0);
+  expect(styleConfigWords[10], 'vertex color storage is enabled for color lists').toBe(1);
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel preserves legacy segment records when requested by shader layout', async t => {
+it('PathStorageModel preserves legacy segment records when requested by shader layout', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1016,41 +971,38 @@ test('PathStorageModel preserves legacy segment records when requested by shader
     layout => layout.name === 'compactPathVertexData'
   );
 
-  t.equal(model.pathRecordByteStride, 24, 'legacy shader layouts keep six u32 words');
-  t.equal(
+  expect(model.pathRecordByteStride, 'legacy shader layouts keep six u32 words').toBe(24);
+  expect(
     model.generatedRenderBufferByteLength,
-    120,
     'legacy segment records keep the 24-byte indexed stride'
-  );
-  t.equal(compactPathLayout?.byteStride, 24, 'legacy buffer layout uses a 24-byte stride');
-  t.deepEqual(
+  ).toBe(120);
+  expect(compactPathLayout?.byteStride, 'legacy buffer layout uses a 24-byte stride').toBe(24);
+  expect(
     compactPathLayout?.attributes,
-    [
-      {attribute: 'segmentStartPointIndices', format: 'uint32', byteOffset: 0},
-      {attribute: 'segmentEndPointIndices', format: 'uint32', byteOffset: 4},
-      {attribute: 'segmentPreviousPointIndices', format: 'uint32', byteOffset: 8},
-      {attribute: 'segmentNextPointIndices', format: 'uint32', byteOffset: 12},
-      {attribute: 'segmentFlags', format: 'uint32', byteOffset: 16},
-      {attribute: 'rowIndices', format: 'uint32', byteOffset: 20}
-    ],
     'legacy storage rendering exposes all precomputed neighbor indices'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'segmentStartPointIndices', format: 'uint32', byteOffset: 0},
+    {attribute: 'segmentEndPointIndices', format: 'uint32', byteOffset: 4},
+    {attribute: 'segmentPreviousPointIndices', format: 'uint32', byteOffset: 8},
+    {attribute: 'segmentNextPointIndices', format: 'uint32', byteOffset: 12},
+    {attribute: 'segmentFlags', format: 'uint32', byteOffset: 16},
+    {attribute: 'rowIndices', format: 'uint32', byteOffset: 20}
+  ]);
+  expect(
     Array.from(generatedPathWords.subarray(0, 6)),
-    [0, 1, 0, 2, 1, 0],
     'legacy compute output stores start, end, previous, next point indices, flags, and row index'
-  );
+  ).toEqual([0, 1, 0, 2, 1, 0]);
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel compact records derive the same neighbors as legacy records', async t => {
+it('PathStorageModel compact records derive the same neighbors as legacy records', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1081,28 +1033,29 @@ test('PathStorageModel compact records derive the same neighbors as legacy recor
     legacyModel.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.deepEqual(
+  expect(
     Array.from({length: compactModel.segmentCount}, (_, segmentIndex) =>
       deriveLegacyPathStorageRecord(compactPathWords, segmentIndex, pathOffsets)
     ),
+    'compact start/flags/row records derive the same open and closed neighbor indices'
+  ).toEqual(
     Array.from({length: legacyModel.segmentCount}, (_, segmentIndex) =>
       Array.from(legacyPathWords.subarray(segmentIndex * 6, segmentIndex * 6 + 6))
-    ),
-    'compact start/flags/row records derive the same open and closed neighbor indices'
+    )
   );
 
   compactModel.destroy();
   legacyModel.destroy();
   destroyPathStorageGpuArrowProps(compactPathProps);
   destroyPathStorageGpuArrowProps(legacyPathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel uses a shared zero origin when view origins are absent', async t => {
+it('PathStorageModel uses a shared zero origin when view origins are absent', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1112,19 +1065,21 @@ test('PathStorageModel uses a shared zero origin when view origins are absent', 
     ...pathProps
   });
 
-  t.equal(model.rowStorageByteLength, 72, 'default row storage does not allocate origins per row');
-  t.equal(model.pathRangeByteLength, 32, 'path ranges account for per-row storage separately');
+  expect(model.rowStorageByteLength, 'default row storage does not allocate origins per row').toBe(
+    72
+  );
+  expect(model.pathRangeByteLength, 'path ranges account for per-row storage separately').toBe(32);
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel refreshes row styles without rebuilding segment buffers', async t => {
+it('PathStorageModel refreshes row styles without rebuilding segment buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1140,29 +1095,26 @@ test('PathStorageModel refreshes row styles without rebuilding segment buffers',
 
   model.setProps({color: [255, 0, 0, 255], width: 4});
 
-  t.equal(model.storageState, storageState, 'row-style updates preserve storage state');
-  t.equal(
-    model.compactPathVertexData,
-    compactPathVertexData,
-    'row-style updates preserve generated segment data'
+  expect(model.storageState, 'row-style updates preserve storage state').toBe(storageState);
+  expect(model.compactPathVertexData, 'row-style updates preserve generated segment data').toBe(
+    compactPathVertexData
   );
-  t.equal(model.renderBatches, renderBatches, 'row-style updates preserve render batches');
-  t.notEqual(
+  expect(model.renderBatches, 'row-style updates preserve render batches').toBe(renderBatches);
+  expect(
     model.styleConfigBuffer,
-    styleConfigBuffer,
     'row-style updates refresh the owned storage style config'
-  );
+  ).not.toBe(styleConfigBuffer);
 
   model.destroy();
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('PathTripsStorageModel binds prepared path-aligned timestamps', async t => {
+it('PathTripsStorageModel binds prepared path-aligned timestamps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1183,20 +1135,20 @@ test('PathTripsStorageModel binds prepared path-aligned timestamps', async t => 
   });
   const bindings = (model as any)._getBindings();
 
-  t.ok(bindings.pathTimestamps, 'binds the prepared temporal path stream');
-  t.ok(bindings.tripPathConfig, 'binds Trips-style temporal uniforms');
-  t.equal(model.segmentCount, 5, 'reuses the storage-backed path segment layout');
+  expect(Boolean(bindings.pathTimestamps), 'binds the prepared temporal path stream').toBe(true);
+  expect(Boolean(bindings.tripPathConfig), 'binds Trips-style temporal uniforms').toBe(true);
+  expect(model.segmentCount, 'reuses the storage-backed path segment layout').toBe(5);
 
   model.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel splits compute-generated segment buffers by storage limits', async t => {
+it('PathStorageModel splits compute-generated segment buffers by storage limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const originalMaxStorageBufferBindingSize = device.limits.maxStorageBufferBindingSize;
@@ -1212,18 +1164,16 @@ test('PathStorageModel splits compute-generated segment buffers by storage limit
       ...pathProps
     });
 
-    t.equal(model.storageState.batches.length, 1, 'row bindings retain the source path batch');
-    t.equal(model.renderBatches.length, 2, 'generated path output splits into render batches');
-    t.deepEqual(
+    expect(model.storageState.batches.length, 'row bindings retain the source path batch').toBe(1);
+    expect(model.renderBatches.length, 'generated path output splits into render batches').toBe(2);
+    expect(
       model.renderBatches.map(batch => batch.segmentCount),
-      [2, 3],
       'storage batching preserves whole source-path rows'
-    );
-    t.equal(
+    ).toEqual([2, 3]);
+    expect(
       model.generatedRenderBufferByteLength,
-      60,
       'aggregate generated path byte accounting stays exact'
-    );
+    ).toBe(60);
 
     model.destroy();
     destroyPathStorageGpuArrowProps(pathProps);
@@ -1233,43 +1183,41 @@ test('PathStorageModel splits compute-generated segment buffers by storage limit
       configurable: true
     });
   }
-  t.end();
+  void 0;
 });
 
-test('PathStorageModel rejects non-WebGPU devices', t => {
+it('PathStorageModel rejects non-WebGPU devices', () => {
   const device = new NullDevice({});
   const pathProps = makePathStorageGpuArrowProps(device);
 
-  t.throws(
+  expect(
     () =>
       new PathStorageModel(device, {
         id: 'arrow-path-storage-model-test',
         ...pathProps
       }),
-    /WebGPU-only/,
     'storage path model reports its backend contract'
-  );
+  ).toThrow(/WebGPU-only/);
 
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
-test('createPathStorageState rejects non-WebGPU devices', t => {
+it('createPathStorageState rejects non-WebGPU devices', () => {
   const device = new NullDevice({});
   const pathProps = makePathStorageGpuArrowProps(device);
 
-  t.throws(
+  expect(
     () =>
       createPathStorageState(device, {
         id: 'arrow-path-storage-state-test',
         ...pathProps
       }),
-    /WebGPU device/,
     'storage-state builder reports its backend contract'
-  );
+  ).toThrow(/WebGPU device/);
 
   destroyPathStorageGpuArrowProps(pathProps);
-  t.end();
+  void 0;
 });
 
 async function makeGpuArrowPathProps(device: Device): Promise<PreparedArrowPathGPUVectors> {
@@ -1545,23 +1493,16 @@ function getPathValues(vector: arrow.Vector<PathArrowType>): Float32Array {
 }
 
 function assertPathVectorEqual(
-  t: {
-    deepEqual: (actual: unknown, expected: unknown, message?: string) => void;
-  },
   actual: arrow.Vector,
   expected: arrow.Vector<PathArrowType>,
   label: string
 ): void {
   const actualPaths = actual as arrow.Vector<PathArrowType>;
-  t.deepEqual(
-    Array.from(getPathOffsets(actualPaths)),
-    Array.from(getPathOffsets(expected)),
-    `${label} offsets match`
+  expect(Array.from(getPathOffsets(actualPaths)), `${label} offsets match`).toEqual(
+    Array.from(getPathOffsets(expected))
   );
-  t.deepEqual(
-    Array.from(getPathValues(actualPaths)),
-    Array.from(getPathValues(expected)),
-    `${label} values match`
+  expect(Array.from(getPathValues(actualPaths)), `${label} values match`).toEqual(
+    Array.from(getPathValues(expected))
   );
 }
 
@@ -1648,14 +1589,13 @@ function packColor(color: readonly number[]): number {
 }
 
 function assertApproxArray(
-  t: {ok: (value: boolean, message?: string) => void},
   actual: readonly number[],
   expected: readonly number[],
   epsilon: number,
   label: string
 ): void {
-  t.ok(
-    actual.every((value, index) => Math.abs(value - (expected[index] ?? 0)) <= epsilon),
+  expect(
+    Boolean(actual.every((value, index) => Math.abs(value - (expected[index] ?? 0)) <= epsilon)),
     `${label}: ${actual.join(', ')} ~= ${expected.join(', ')}`
-  );
+  ).toBe(true);
 }

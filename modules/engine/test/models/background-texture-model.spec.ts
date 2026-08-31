@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {BackgroundTextureModel, DynamicTexture} from '@luma.gl/engine';
 import {Texture} from '@luma.gl/core';
 
 // Ensure setProps updates the texture immediately when texture is ready
 
-test('BackgroundTextureModel#setProps updates texture', async t => {
+it('BackgroundTextureModel#setProps updates texture', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -31,19 +31,19 @@ test('BackgroundTextureModel#setProps updates texture', async t => {
     await Promise.all([texture1.ready, texture2.ready]);
 
     const model = new BackgroundTextureModel(device, {backgroundTexture: texture1});
-    t.equal(model.backgroundTexture, texture1.texture, 'initial texture set');
+    expect(model.backgroundTexture, 'initial texture set').toBe(texture1.texture);
 
     model.setProps({backgroundTexture: texture2});
-    t.equal(model.backgroundTexture, texture2.texture, 'background texture updated');
+    expect(model.backgroundTexture, 'background texture updated').toBe(texture2.texture);
 
     model.destroy();
     texture1.destroy();
     texture2.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('BackgroundTextureModel#blend uses destination alpha compositing', async t => {
+it('BackgroundTextureModel#blend uses destination alpha compositing', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -59,30 +59,26 @@ test('BackgroundTextureModel#blend uses destination alpha compositing', async t 
     await texture.ready;
 
     const model = new BackgroundTextureModel(device, {backgroundTexture: texture, blend: true});
-    t.equal(model.parameters.blend, true, 'blending enabled');
-    t.equal(
+    expect(model.parameters.blend, 'blending enabled').toBe(true);
+    expect(
       model.parameters.blendColorSrcFactor,
-      'one-minus-dst-alpha',
       'background color scales with scene transparency'
-    );
-    t.equal(
+    ).toBe('one-minus-dst-alpha');
+    expect(
       model.parameters.blendColorDstFactor,
-      'one',
       'scene color is preserved during background compositing'
-    );
-    t.equal(
+    ).toBe('one');
+    expect(
       model.parameters.blendAlphaSrcFactor,
-      'one-minus-dst-alpha',
       'background alpha follows destination transparency'
-    );
-    t.equal(
+    ).toBe('one-minus-dst-alpha');
+    expect(
       model.parameters.blendAlphaDstFactor,
-      'one',
       'scene alpha is preserved during background compositing'
-    );
+    ).toBe('one');
 
     model.destroy();
     texture.destroy();
   }
-  t.end();
+  void 0;
 });

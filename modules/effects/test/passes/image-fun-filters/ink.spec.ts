@@ -4,12 +4,12 @@
 
 import {ink} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('ink#build/uniform', t => {
+it('ink#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(ink, {}, {});
 
-  t.ok(uniforms, 'ink module build is ok');
-  t.equal(uniforms.strength, 0.25, 'ink strength uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'ink module build is ok').toBe(true);
+  expect(uniforms.strength, 'ink strength uniform is ok').toBe(0.25);
+  void 0;
 });

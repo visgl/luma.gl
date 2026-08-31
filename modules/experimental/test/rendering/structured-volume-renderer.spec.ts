@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
@@ -14,11 +14,11 @@ import {
 const OUTPUT_SIZE = 32;
 const DIMENSIONS = [4, 4, 4] as const;
 
-test('StructuredVolumeRenderer keeps buffer and texture sampling visually equivalent', async testContext => {
+it('StructuredVolumeRenderer keeps buffer and texture sampling visually equivalent', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
   const values = new Float32Array(DIMENSIONS[0] * DIMENSIONS[1] * DIMENSIONS[2]);
@@ -61,11 +61,12 @@ test('StructuredVolumeRenderer keeps buffer and texture sampling visually equiva
     const bufferCenter = Array.from(bufferPixels.slice(centerOffset, centerOffset + 4));
     const textureCenter = Array.from(texturePixels.slice(centerOffset, centerOffset + 4));
 
-    testContext.ok(bufferCenter[3] > 0, 'buffer volume produces non-transparent center pixels');
-    testContext.deepEqual(
-      textureCenter,
-      bufferCenter,
-      'manual texture trilinear sampling matches buffers'
+    expect(
+      Boolean(bufferCenter[3] > 0),
+      'buffer volume produces non-transparent center pixels'
+    ).toBe(true);
+    expect(textureCenter, 'manual texture trilinear sampling matches buffers').toEqual(
+      bufferCenter
     );
   } finally {
     bufferRenderer.destroy();
@@ -73,14 +74,14 @@ test('StructuredVolumeRenderer keeps buffer and texture sampling visually equiva
     buffer.destroy();
     texture.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
-test('StructuredVolumeRenderer glyph output responds to vector orientation', async testContext => {
+it('StructuredVolumeRenderer glyph output responds to vector orientation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
   const xBuffer = makeVectorBuffer(device, [1, 0, 0]);
@@ -97,18 +98,18 @@ test('StructuredVolumeRenderer glyph output responds to vector orientation', asy
     const xEnergy = xPixels.reduce((sum, value) => sum + value, 0);
     const yEnergy = yPixels.reduce((sum, value) => sum + value, 0);
 
-    testContext.ok(xEnergy > 0 && yEnergy > 0, 'both orientations render visible glyphs');
-    testContext.notDeepEqual(
-      Array.from(yPixels),
-      Array.from(xPixels),
-      'orientation changes glyph projection'
+    expect(Boolean(xEnergy > 0 && yEnergy > 0), 'both orientations render visible glyphs').toBe(
+      true
+    );
+    expect(Array.from(yPixels), 'orientation changes glyph projection').not.toEqual(
+      Array.from(xPixels)
     );
   } finally {
     renderer.destroy();
     xBuffer.destroy();
     yBuffer.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
 async function renderScalarVolume(

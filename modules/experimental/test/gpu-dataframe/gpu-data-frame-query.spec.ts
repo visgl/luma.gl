@@ -16,7 +16,7 @@ import {
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 type GPUDataFrameQuerySchema = {
@@ -37,11 +37,11 @@ type GPUDataFrameQueryFixture = {
   sourceBuffers: Buffer[];
 };
 
-test('GPUDataFrame filters nullable GPU batches while preserving stable source rows', async testContext => {
+it('GPUDataFrame filters nullable GPU batches while preserving stable source rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -57,73 +57,62 @@ test('GPUDataFrame filters nullable GPU batches while preserving stable source r
       .filter(and(column('fare').greaterThan(literal(10)), column('category').isValid()))
       .select(['category']);
 
-    testContext.equal(
+    expect(
       createBufferSpy.mock.calls.length,
-      0,
       'immutable query planning does not allocate GPU storage'
-    );
-    testContext.equal(submitSpy.mock.calls.length, 0, 'query planning does not submit GPU work');
+    ).toBe(0);
+    expect(submitSpy.mock.calls.length, 'query planning does not submit GPU work').toBe(0);
 
     const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
       id: 'gpu-dataframe-nullable-batch-filter'
     });
     compiled = query.compile(graph);
-    testContext.deepEqual(
+    expect(
       compiled.table.schema.fields.map(field => field.name),
-      ['category'],
       'projection removes hidden predicate columns from the published table'
-    );
-    testContext.deepEqual(
+    ).toEqual(['category']);
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [2, 0, 3],
       'published table preserves source batches instead of fabricating a CPU-selected row count'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 3]);
+    expect(
       compiled.selectionMask.data.map(chunk => chunk.length),
-      [2, 0, 3],
       'selection masks preserve source batch and chunk topology'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 3]);
+    expect(
       compiled.rowIndices.data.map(chunk => chunk.length),
-      [2, 0, 3],
       'selected row IDs retain independent per-batch capacity'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 3]);
+    expect(
       compiled.selectedCounts.data.map(chunk => chunk.length),
-      [1, 1, 1],
       'every source batch has an independent GPU-resident selection count'
-    );
+    ).toEqual([1, 1, 1]);
 
     fixture.frame.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => !buffer.destroyed)),
       'compilation retains the owned source lease after the original dataframe is released'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-nullable-batch-filter'});
     compiled.encode(commandEncoder);
-    testContext.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'compiled queries only encode caller-owned commands'
+    expect(submitSpy.mock.calls.length, 'compiled queries only encode caller-owned commands').toBe(
+      0
     );
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUVectorChunks(compiled.selectionMask),
-      [[0, 1], [], [1, 0, 0]],
       'nullable predicates exclude invalid rows without treating nulls as valid'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [1, 0, 0]]);
+    expect(
       await readGPUVectorChunks(compiled.selectedCounts),
-      [[1], [0], [1]],
       'zero-row batches retain deterministic zero counts'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1], [0], [1]]);
+    expect(
       await readSelectedSourceRows(compiled.rowIndices, compiled.selectedCounts),
-      [[41], [], [42]],
       'per-batch compaction publishes stable global source-row identities'
-    );
+    ).toEqual([[41], [], [42]]);
 
     const outputBuffers = [
       ...compiled.selectionMask.data,
@@ -131,14 +120,14 @@ test('GPUDataFrame filters nullable GPU batches while preserving stable source r
       ...compiled.selectedCounts.data
     ].map(chunk => getGPUDataBuffer(chunk));
     compiled.destroy();
-    testContext.ok(
-      outputBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(outputBuffers.every(buffer => buffer.destroyed)),
       'compiled queries destroy only their owned GPU output allocations'
-    );
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => buffer.destroyed),
+    ).toBe(true);
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => buffer.destroyed)),
       'owned source and validity buffers are released after the final compiled lease'
-    );
+    ).toBe(true);
     compiled.destroy();
   } finally {
     compiled?.destroy();
@@ -147,14 +136,14 @@ test('GPUDataFrame filters nullable GPU batches while preserving stable source r
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame expressions apply SQL-style nullable Boolean semantics and signed arithmetic', async testContext => {
+it('GPUDataFrame expressions apply SQL-style nullable Boolean semantics and signed arithmetic', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -184,40 +173,36 @@ test('GPUDataFrame expressions apply SQL-style nullable Boolean semantics and si
     signedQuery.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUVectorChunks(nullableQuery.selectionMask),
-      [[1, 1], [], [0, 1, 0]],
       'FALSE AND NULL remains FALSE, while TRUE AND NULL remains NULL before negation'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 1], [], [0, 1, 0]]);
+    expect(
       await readSelectedSourceRows(nullableQuery.rowIndices, nullableQuery.selectedCounts),
-      [[40, 41], [], [43]],
       'nullable Boolean expressions preserve source IDs and exclude unresolved rows'
-    );
-    testContext.deepEqual(
+    ).toEqual([[40, 41], [], [43]]);
+    expect(
       await readGPUVectorChunks(signedQuery.selectionMask),
-      [[0, 1], [], [1, 1, 0]],
       'signed integer arithmetic and unsigned categorical validity share one fused predicate'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [1, 1, 0]]);
+    expect(
       await readSelectedSourceRows(signedQuery.rowIndices, signedQuery.selectedCounts),
-      [[41], [], [42, 43]],
       'signed arithmetic filtering preserves independent source batches'
-    );
+    ).toEqual([[41], [], [42, 43]]);
   } finally {
     nullableQuery.destroy();
     signedQuery.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame reuses a compiled graph with ordered parameter updates in one encoder', async testContext => {
+it('GPUDataFrame reuses a compiled graph with ordered parameter updates in one encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -269,14 +254,13 @@ test('GPUDataFrame reuses a compiled graph with ordered parameter updates in one
     compiled.encode(commandEncoder, {minimumFare: 30});
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await Promise.all(
         countSnapshots.map(async buffer => (await readGPUBufferValues(buffer, 1))[0])
       ),
-      [1, 0, 2],
       'the first encoded dispatch observes its own threshold even within a shared command encoder'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 0, 2]);
+    expect(
       await Promise.all(
         maskSnapshots.map((buffer, batchIndex) =>
           buffer
@@ -284,19 +268,16 @@ test('GPUDataFrame reuses a compiled graph with ordered parameter updates in one
             : Promise.resolve([])
         )
       ),
-      [[0, 1], [], [1, 0, 1]],
       'encoder-ordered parameter staging preserves the first dispatch result'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [1, 0, 1]]);
+    expect(
       await readGPUVectorChunks(compiled.selectedCounts),
-      [[0], [0], [1]],
       'the second dispatch applies updated parameters without recompiling the graph'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0], [0], [1]]);
+    expect(
       await readSelectedSourceRows(compiled.rowIndices, compiled.selectedCounts),
-      [[], [], [44]],
       're-encoding preserves stable source IDs after parameter changes'
-    );
+    ).toEqual([[], [], [44]]);
   } finally {
     for (const buffer of countSnapshots) buffer.destroy();
     for (const buffer of maskSnapshots) buffer?.destroy();
@@ -304,14 +285,14 @@ test('GPUDataFrame reuses a compiled graph with ordered parameter updates in one
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame lowers scalar constant columns into safe GPU expression controls', async testContext => {
+it('GPUDataFrame lowers scalar constant columns into safe GPU expression controls', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -367,40 +348,34 @@ test('GPUDataFrame lowers scalar constant columns into safe GPU expression contr
     mixedInteger.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUVectorChunks(constantOnly.selectionMask),
-      [[1, 1], [], [1, 1, 1]],
       'a uint32 constant-only predicate accepts every original source row'
-    );
-    testContext.equal(
+    ).toEqual([[1, 1], [], [1, 1, 1]]);
+    expect(
       constantOnly.table.gpuConstants.tier,
-      constants.tier,
       'constant-only projections preserve the caller-owned immutable GPUConstant identity'
-    );
-    testContext.deepEqual(
+    ).toBe(constants.tier);
+    expect(
       await readGPUVectorChunks(mixedFloat.selectionMask),
-      [[0, 0], [], [1, 0, 1]],
       'float32 constants combine with nullable GPU vector values without dropping validity'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0], [], [1, 0, 1]]);
+    expect(
       await readGPUVectorChunks(mixedInteger.selectionMask),
-      [[0, 1], [], [1, 1, 0]],
       'signed and unsigned constant controls preserve exact native scalar types'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [1, 1, 0]]);
+    expect(
       await readSelectedSourceRows(mixedInteger.rowIndices, mixedInteger.selectedCounts),
-      [[41], [], [42, 43]],
       'mixed constant/vector filtering retains source identities and nullable categorical rows'
-    );
+    ).toEqual([[41], [], [42, 43]]);
 
     const invalidGraph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
       id: 'gpu-dataframe-unsupported-vector-constant'
     });
-    testContext.throws(
+    expect(
       () => frame.filter(column('position').greaterThan(literal(0))).compile(invalidGraph),
-      /scalar|format|32-bit/i,
       'non-scalar GPUConstant formats are rejected before shader generation'
-    );
+    ).toThrow(/scalar|format|32-bit/i);
   } finally {
     constantOnly.destroy();
     mixedFloat.destroy();
@@ -409,14 +384,14 @@ test('GPUDataFrame lowers scalar constant columns into safe GPU expression contr
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame compiles schema-only empty queries and rejects unresolved nonempty validity', async testContext => {
+it('GPUDataFrame compiles schema-only empty queries and rejects unresolved nonempty validity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -452,22 +427,16 @@ test('GPUDataFrame compiles schema-only empty queries and rejects unresolved non
   });
 
   try {
-    testContext.deepEqual(
+    expect(
       emptyQuery.table.schema.fields.map(field => field.name),
-      ['category'],
       'schema-only queries retain typed projections without requiring nonexistent source vectors'
-    );
-    testContext.deepEqual(emptyQuery.selectionMask.data, [], 'zero batches create no mask chunks');
-    testContext.deepEqual(
-      emptyQuery.rowIndices.data,
-      [],
-      'zero batches create no row-index chunks'
-    );
-    testContext.deepEqual(
+    ).toEqual(['category']);
+    expect(emptyQuery.selectionMask.data, 'zero batches create no mask chunks').toEqual([]);
+    expect(emptyQuery.rowIndices.data, 'zero batches create no row-index chunks').toEqual([]);
+    expect(
       emptyQuery.selectedCounts.data,
-      [],
       'zero batches create no synthetic GPU selection counts'
-    );
+    ).toEqual([]);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-schema-only-encode'});
     emptyQuery.encode(commandEncoder);
@@ -478,17 +447,15 @@ test('GPUDataFrame compiles schema-only empty queries and rejects unresolved non
     });
     const createBufferSpy = vi.spyOn(device, 'createBuffer');
     try {
-      testContext.throws(
+      expect(
         () =>
           unresolvedFrame.filter(column('fare').greaterThan(literal(10))).compile(unresolvedGraph),
-        /validity/i,
         'nonempty nullable columns cannot be evaluated without an explicit GPU validity sidecar'
-      );
-      testContext.equal(
+      ).toThrow(/validity/i);
+      expect(
         createBufferSpy.mock.calls.length,
-        0,
         'invalid nullable queries fail before allocating GPU output storage'
-      );
+      ).toBe(0);
     } finally {
       createBufferSpy.mockRestore();
     }
@@ -499,7 +466,7 @@ test('GPUDataFrame compiles schema-only empty queries and rejects unresolved non
     schemaOnlyFrame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUDataFrameQueryFixture(device: Device): GPUDataFrameQueryFixture {

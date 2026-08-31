@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   Buffer,
   CommandEncoder,
@@ -122,7 +122,7 @@ function makeCountingTextureBindingSource(texture: Texture): TextureBindingSourc
   };
 }
 
-test('Model#construct/destruct', async t => {
+it('Model#construct/destruct', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const model = new Model(webglDevice, {
@@ -133,21 +133,21 @@ test('Model#construct/destruct', async t => {
     fs: DUMMY_FS
   });
 
-  t.ok(model, 'Model constructor does not throw errors');
-  t.ok(model.id, 'Model has an id');
-  t.ok(model.pipeline, 'Created pipeline');
-  t.false(model.pipeline.destroyed, 'Pipeline starts alive');
+  expect(Boolean(model), 'Model constructor does not throw errors').toBe(true);
+  expect(Boolean(model.id), 'Model has an id').toBe(true);
+  expect(Boolean(model.pipeline), 'Created pipeline').toBe(true);
+  expect(Boolean(model.pipeline.destroyed), 'Pipeline starts alive').toBe(false);
 
   model.destroy();
-  t.false(
-    model.pipeline.destroyed,
+  expect(
+    Boolean(model.pipeline.destroyed),
     'Pipeline wrapper remains cached by default after last release'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('Model#draw skips zero-instance submissions', async t => {
+it('Model#draw skips zero-instance submissions', async () => {
   const device = await getNullTestDevice();
   const model = new Model(device, {
     id: 'zero-draw-test',
@@ -166,19 +166,19 @@ test('Model#draw skips zero-instance submissions', async t => {
     return draw(options);
   };
 
-  t.ok(model.draw(renderPass), 'zero-instance draw is a successful no-op');
-  t.equal(drawCallCount, 0, 'zero-instance draw is not submitted');
+  expect(Boolean(model.draw(renderPass)), 'zero-instance draw is a successful no-op').toBe(true);
+  expect(drawCallCount, 'zero-instance draw is not submitted').toBe(0);
 
   model.setInstanceCount(1);
-  t.ok(model.draw(renderPass), 'non-empty draw succeeds');
-  t.equal(drawCallCount, 1, 'non-empty draw is submitted');
+  expect(Boolean(model.draw(renderPass)), 'non-empty draw succeeds').toBe(true);
+  expect(drawCallCount, 'non-empty draw is submitted').toBe(1);
 
   renderPass.end();
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model#multiple delete', async t => {
+it('Model#multiple delete', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const model1 = new Model(webglDevice, {
@@ -198,16 +198,19 @@ test('Model#multiple delete', async t => {
   });
 
   model1.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program still in use');
+  expect(Boolean(model2.pipeline.destroyed === false), 'program still in use').toBe(true);
   model1.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program still in use');
+  expect(Boolean(model2.pipeline.destroyed === false), 'program still in use').toBe(true);
   model2.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
+  expect(
+    Boolean(model2.pipeline.destroyed === false),
+    'program remains cached after last release by default'
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('Model reuses one texture source resolution while preparing bind groups', async t => {
+it('Model reuses one texture source resolution while preparing bind groups', async () => {
   const webglDevice = await getWebGLTestDevice();
   const texture = webglDevice.createTexture({width: 1, height: 1});
   const textureBindingSource = makeCountingTextureBindingSource(texture);
@@ -227,14 +230,14 @@ test('Model reuses one texture source resolution while preparing bind groups', a
   const bindings = (model as any)._getBindings(shaderLayout);
   (model as any)._getBindGroups(shaderLayout, bindings);
 
-  t.equal(textureBindingSource.resolutionCount, 1, 'bind group preparation reuses resolution');
+  expect(textureBindingSource.resolutionCount, 'bind group preparation reuses resolution').toBe(1);
 
   model.destroy();
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model#setAttributes', async t => {
+it('Model#setAttributes', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
@@ -261,27 +264,29 @@ test('Model#setAttributes', async t => {
     ]
   });
 
-  t.is(
+  expect(
     stats.get('Buffers Active').count - initialActiveBuffers,
-    2,
     'Created new buffers for attributes'
-  );
+  ).toBe(2);
 
   model.setAttributes({positions: buffer1, normals: buffer2});
 
-  t.deepEqual(model.bufferAttributes, {}, 'no longer stores local attributes');
+  expect(model.bufferAttributes, 'no longer stores local attributes').toEqual({});
 
-  t.is(stats.get('Buffers Active').count - initialActiveBuffers, 2, 'Did not create new buffers');
+  expect(
+    stats.get('Buffers Active').count - initialActiveBuffers,
+    'Did not create new buffers'
+  ).toBe(2);
 
   model.destroy();
 
   buffer1.destroy();
   buffer2.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#setters, getters', async t => {
+it('Model#setters, getters', async () => {
   const webglDevice = await getWebGLTestDevice();
   const model = new Model(webglDevice, {
     id: 'setters-getters-test',
@@ -291,20 +296,20 @@ test('Model#setters, getters', async t => {
   });
 
   model.setVertexCount(12);
-  t.is(model.vertexCount, 12, 'set vertex count');
+  expect(model.vertexCount, 'set vertex count').toBe(12);
 
   model.setInstanceCount(4);
-  t.is(model.instanceCount, 4, 'set instance count');
+  expect(model.instanceCount, 'set instance count').toBe(4);
 
   model.setTopology('triangle-list');
-  t.is(model.topology, 'triangle-list', 'set topology');
+  expect(model.topology, 'set topology').toBe('triangle-list');
 
   model.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#draw', async t => {
+it('Model#draw', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const model = new Model(webglDevice, {
@@ -329,15 +334,15 @@ test('Model#draw', async t => {
 
   model.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#draw skips implicit predraw on WebGPU', async t => {
+it('Model#draw skips implicit predraw on WebGPU', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -366,8 +371,8 @@ test('Model#draw skips implicit predraw on WebGPU', async t => {
     framebuffer
   });
 
-  t.ok(model.draw(renderPass), 'WebGPU model draw succeeds');
-  t.equal(model.predrawCallCount, 0, 'WebGPU draw does not call predraw implicitly');
+  expect(Boolean(model.draw(renderPass)), 'WebGPU model draw succeeds').toBe(true);
+  expect(model.predrawCallCount, 'WebGPU draw does not call predraw implicitly').toBe(0);
 
   renderPass.end();
   webgpuDevice.submit();
@@ -375,15 +380,15 @@ test('Model#draw skips implicit predraw on WebGPU', async t => {
   framebuffer.destroy();
   model.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#draw records WebGPU render bundles', async t => {
+it('Model#draw records WebGPU render bundles', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -403,7 +408,10 @@ test('Model#draw records WebGPU render bundles', async t => {
     depthStencilAttachmentFormat: 'depth24plus'
   });
 
-  t.ok(model.draw(renderBundleEncoder), 'WebGPU model draw records into render bundle encoder');
+  expect(
+    Boolean(model.draw(renderBundleEncoder)),
+    'WebGPU model draw records into render bundle encoder'
+  ).toBe(true);
 
   const renderBundle = renderBundleEncoder.finish();
   const renderPass = webgpuDevice.beginRenderPass({
@@ -419,15 +427,15 @@ test('Model#draw records WebGPU render bundles', async t => {
   framebuffer.destroy();
   model.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#draw skips WebGPU render pipelines that failed init', async t => {
+it('Model#draw skips WebGPU render pipelines that failed init', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -438,34 +446,34 @@ test('Model#draw skips WebGPU render pipelines that failed init', async t => {
   });
 
   const linkStatus = await waitForPipelineError(model.pipeline);
-  t.equal(linkStatus, 'error', 'model render pipeline is marked errored');
-  t.ok(model.pipeline.isErrored, 'model render pipeline reports errored state');
+  expect(linkStatus, 'model render pipeline is marked errored').toBe('error');
+  expect(Boolean(model.pipeline.isErrored), 'model render pipeline reports errored state').toBe(
+    true
+  );
 
   const framebuffer = webgpuDevice
     .getDefaultCanvasContext()
     .getCurrentFramebuffer({depthStencilFormat: false});
   const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
 
-  t.equal(model.draw(renderPass), false, 'first draw is skipped when the pipeline is errored');
-  t.equal(model.draw(renderPass), false, 'repeated draws remain skipped');
-  t.equal(
-    model.needsRedraw(),
-    'render pipeline initialization failed',
-    'model keeps failure reason'
+  expect(model.draw(renderPass), 'first draw is skipped when the pipeline is errored').toBe(false);
+  expect(model.draw(renderPass), 'repeated draws remain skipped').toBe(false);
+  expect(model.needsRedraw(), 'model keeps failure reason').toBe(
+    'render pipeline initialization failed'
   );
 
   renderPass.end();
   renderPass.destroy();
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model resolves DynamicBuffer shader bindings to the current backing buffer', async t => {
+it('Model resolves DynamicBuffer shader bindings to the current backing buffer', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -483,27 +491,28 @@ test('Model resolves DynamicBuffer shader bindings to the current backing buffer
   });
 
   const initialBuffer = dynamicBuffer.buffer;
-  t.equal(
+  expect(
     (model as any)._getBindings().appFrame,
-    initialBuffer,
     'initial binding resolves to the current DynamicBuffer backing buffer'
-  );
+  ).toBe(initialBuffer);
 
   dynamicBuffer.resize({byteLength: 32});
-  t.equal(
+  expect(
     (model as any)._getBindings().appFrame,
-    dynamicBuffer.buffer,
     'binding resolution uses the resized backing buffer'
-  );
-  t.ok(dynamicBuffer.buffer !== initialBuffer, 'resize replaces the backing buffer');
+  ).toBe(dynamicBuffer.buffer);
+  expect(
+    Boolean(dynamicBuffer.buffer !== initialBuffer),
+    'resize replaces the backing buffer'
+  ).toBe(true);
 
   model.destroy();
   dynamicBuffer.destroy();
-  t.end();
+  void 0;
 });
 
 // TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
-test.skip('Model rebinds DynamicBuffer attributes during predraw', async t => {
+it.skip('Model rebinds DynamicBuffer attributes during predraw', async () => {
   const webglDevice = await getWebGLTestDevice();
   const dynamicBuffer = new DynamicBuffer(webglDevice, {
     data: new Float32Array(16).fill(1),
@@ -520,27 +529,28 @@ test.skip('Model rebinds DynamicBuffer attributes during predraw', async t => {
   });
 
   const initialBuffer = dynamicBuffer.buffer;
-  t.equal(model.vertexArray.attributes[0], initialBuffer, 'initial attribute buffer is bound');
+  expect(model.vertexArray.attributes[0], 'initial attribute buffer is bound').toBe(initialBuffer);
 
   dynamicBuffer.resize({
     byteLength: dynamicBuffer.byteLength + Float32Array.BYTES_PER_ELEMENT * 4
   });
   model.predraw(webglDevice.commandEncoder);
 
-  t.equal(
-    model.vertexArray.attributes[0],
-    dynamicBuffer.buffer,
-    'predraw rebinds resized DynamicBuffer attributes'
+  expect(model.vertexArray.attributes[0], 'predraw rebinds resized DynamicBuffer attributes').toBe(
+    dynamicBuffer.buffer
   );
-  t.ok(dynamicBuffer.buffer !== initialBuffer, 'attribute buffer handle was replaced');
+  expect(
+    Boolean(dynamicBuffer.buffer !== initialBuffer),
+    'attribute buffer handle was replaced'
+  ).toBe(true);
 
   model.destroy();
   dynamicBuffer.destroy();
-  t.end();
+  void 0;
 });
 
 // TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
-test.skip('Model rebinds DynamicBuffer index buffers during predraw', async t => {
+it.skip('Model rebinds DynamicBuffer index buffers during predraw', async () => {
   const webglDevice = await getWebGLTestDevice();
   const dynamicIndexBuffer = new DynamicBuffer(webglDevice, {
     data: new Uint16Array([0, 1, 2]),
@@ -558,29 +568,30 @@ test.skip('Model rebinds DynamicBuffer index buffers during predraw', async t =>
   });
 
   const initialIndexBuffer = dynamicIndexBuffer.buffer;
-  t.equal(model.vertexArray.indexBuffer, initialIndexBuffer, 'initial index buffer is bound');
+  expect(model.vertexArray.indexBuffer, 'initial index buffer is bound').toBe(initialIndexBuffer);
 
   dynamicIndexBuffer.resize({byteLength: 8, preserveData: true});
   model.predraw(webglDevice.commandEncoder);
 
-  t.equal(
-    model.vertexArray.indexBuffer,
-    dynamicIndexBuffer.buffer,
-    'predraw rebinds resized DynamicBuffer index buffers'
+  expect(model.vertexArray.indexBuffer, 'predraw rebinds resized DynamicBuffer index buffers').toBe(
+    dynamicIndexBuffer.buffer
   );
-  t.equal(model.vertexArray.indexBuffer?.byteLength, 8, 'index buffer uses resized byteLength');
-  t.ok(dynamicIndexBuffer.buffer !== initialIndexBuffer, 'index buffer handle was replaced');
+  expect(model.vertexArray.indexBuffer?.byteLength, 'index buffer uses resized byteLength').toBe(8);
+  expect(
+    Boolean(dynamicIndexBuffer.buffer !== initialIndexBuffer),
+    'index buffer handle was replaced'
+  ).toBe(true);
 
   model.destroy();
   dynamicIndexBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model#getBindingDebugTable', async t => {
+it('Model#getBindingDebugTable', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping binding debug table test');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -591,7 +602,7 @@ test('Model#getBindingDebugTable', async t => {
     vertexCount: 3
   });
 
-  t.deepEqual(
+  expect(
     wgslModel.getBindingDebugTable().map(row => ({
       name: row.name,
       group: row.group,
@@ -599,31 +610,30 @@ test('Model#getBindingDebugTable', async t => {
       owner: row.owner,
       moduleName: row.moduleName
     })),
-    [
-      {
-        name: 'appFrame',
-        group: 0,
-        binding: 0,
-        owner: 'application',
-        moduleName: undefined
-      },
-      {
-        name: 'pbrProjection',
-        group: 0,
-        binding: 100,
-        owner: 'module',
-        moduleName: 'pbrProjection'
-      },
-      {
-        name: 'skin',
-        group: 0,
-        binding: 101,
-        owner: 'module',
-        moduleName: 'skin'
-      }
-    ],
     'WGSL model exposes assembled binding debug rows before draw'
-  );
+  ).toEqual([
+    {
+      name: 'appFrame',
+      group: 0,
+      binding: 0,
+      owner: 'application',
+      moduleName: undefined
+    },
+    {
+      name: 'pbrProjection',
+      group: 0,
+      binding: 100,
+      owner: 'module',
+      moduleName: 'pbrProjection'
+    },
+    {
+      name: 'skin',
+      group: 0,
+      binding: 101,
+      owner: 'module',
+      moduleName: 'skin'
+    }
+  ]);
 
   wgslModel.destroy();
 
@@ -635,17 +645,17 @@ test('Model#getBindingDebugTable', async t => {
     vertexCount: 3
   });
 
-  t.deepEqual(glslModel.getBindingDebugTable(), [], 'GLSL model reports no WGSL binding rows');
+  expect(glslModel.getBindingDebugTable(), 'GLSL model reports no WGSL binding rows').toEqual([]);
 
   glslModel.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model merges WGSL inferred bindings with explicit shader layout', async t => {
+it('Model merges WGSL inferred bindings with explicit shader layout', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping explicit WGSL shader layout merge test');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -668,21 +678,21 @@ test('Model merges WGSL inferred bindings with explicit shader layout', async t 
     webgpuDevice.getShaderLayout = originalGetShaderLayout;
   }
 
-  t.ok(
-    model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
+  expect(
+    Boolean(model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame')),
     'pipeline layout includes bindings inferred from WGSL'
-  );
-  t.equal(reflectionCount, 0, 'model uses the interface scanned during shader assembly');
+  ).toBe(true);
+  expect(reflectionCount, 'model uses the interface scanned during shader assembly').toBe(0);
 
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model assembles shader input modules alongside explicit modules', async t => {
+it('Model assembles shader input modules alongside explicit modules', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping shader input module merge test');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -694,17 +704,20 @@ test('Model assembles shader input modules alongside explicit modules', async t 
     vertexCount: 3
   });
 
-  t.notOk(model.source.includes('@binding(auto)'), 'application auto binding is resolved');
-  t.ok(
-    model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
+  expect(
+    Boolean(model.source.includes('@binding(auto)')),
+    'application auto binding is resolved'
+  ).toBe(false);
+  expect(
+    Boolean(model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame')),
     'shader input binding is included in the pipeline layout'
-  );
+  ).toBe(true);
 
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model#topology', async t => {
+it('Model#topology', async () => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
       id: 'topology-test',
@@ -716,13 +729,11 @@ test('Model#topology', async t => {
       vertexCount: 3
     });
 
-    t.equal(model.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+    expect(model.topology, 'Pipeline has triangle-list topology').toBe('triangle-list');
     if (device.type === 'webgpu') {
       // Cached model in WebGL can have a different topology
-      t.equal(
-        model.pipeline.props.topology,
-        'triangle-list',
-        'Pipeline has triangle-list topology'
+      expect(model.pipeline.props.topology, 'Pipeline has triangle-list topology').toBe(
+        'triangle-list'
       );
     }
 
@@ -734,10 +745,12 @@ test('Model#topology', async t => {
     const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
     model.draw(renderPass);
 
-    t.equal(model.topology, 'line-strip', 'Pipeline has line-strip topology');
+    expect(model.topology, 'Pipeline has line-strip topology').toBe('line-strip');
     if (device.type === 'webgpu') {
       // Cached model in WebGL can have a different topology
-      t.equal(model.pipeline.props.topology, 'line-strip', 'Pipeline has triangle-list topology');
+      expect(model.pipeline.props.topology, 'Pipeline has triangle-list topology').toBe(
+        'line-strip'
+      );
     }
 
     renderPass.end();
@@ -746,7 +759,7 @@ test('Model#topology', async t => {
     model.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 async function waitForPipelineError(pipeline: {
@@ -758,16 +771,16 @@ async function waitForPipelineError(pipeline: {
   return pipeline.linkStatus;
 }
 
-test('Model#pipeline caching', async t => {
+it('Model#pipeline caching', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(webglDevice)) {
-    t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -794,29 +807,29 @@ test('Model#pipeline caching', async t => {
     uniforms: {x: -0.5}
   });
 
-  t.ok(model1.pipeline === model2.pipeline, 'Pipelines are shared.');
+  expect(Boolean(model1.pipeline === model2.pipeline), 'Pipelines are shared.').toBe(true);
 
   const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  t.ok(model1.draw(renderPass), 'First model draw succeeded');
+  expect(Boolean(model1.draw(renderPass)), 'First model draw succeeded').toBe(true);
 
-  t.ok(model2.draw(renderPass), 'Second model draw succeeded');
+  expect(Boolean(model2.draw(renderPass)), 'Second model draw succeeded').toBe(true);
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
   model2.predraw(webglDevice.commandEncoder); // Forces a pipeline update
-  t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
+  expect(Boolean(model1.pipeline !== model2.pipeline), 'Pipeline updated').toBe(true);
 
-  t.ok(model2.draw(renderPass), 'Pipeline updates still draw');
+  expect(Boolean(model2.draw(renderPass)), 'Pipeline updates still draw').toBe(true);
 
   renderPass.destroy();
 
   model1.destroy();
   model2.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Model#setBufferLayout is idempotent', async t => {
+it('Model#setBufferLayout is idempotent', async () => {
   const webglDevice = await getWebGLTestDevice();
   const model = new Model(webglDevice, {
     id: 'set-buffer-layout-idempotent-test',
@@ -830,23 +843,23 @@ test('Model#setBufferLayout is idempotent', async t => {
 
   model.setBufferLayout([{name: 'a', format: 'float32x3'}]);
 
-  t.equal(model.pipeline, pipeline, 'same buffer layout does not recreate pipeline');
-  t.equal(model.vertexArray, vertexArray, 'same buffer layout does not recreate vertex array');
+  expect(model.pipeline, 'same buffer layout does not recreate pipeline').toBe(pipeline);
+  expect(model.vertexArray, 'same buffer layout does not recreate vertex array').toBe(vertexArray);
 
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('Model#pipeline caching with defines and modules', async t => {
+it('Model#pipeline caching with defines and modules', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(webglDevice)) {
-    t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -859,7 +872,7 @@ test('Model#pipeline caching with defines and modules', async t => {
     fs: DUMMY_FS
   });
 
-  t.ok(model1.pipeline, 'Got a pipeline');
+  expect(Boolean(model1.pipeline), 'Got a pipeline').toBe(true);
 
   // reuse assembled shaders; this cache is already tested in shader-factory.spec.ts.
   const vs = shaderFactory.createShader({stage: 'vertex', source: model1.vs});
@@ -867,7 +880,7 @@ test('Model#pipeline caching with defines and modules', async t => {
 
   const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
-  t.ok(model1.pipeline === pipeline2, 'Got cached pipeline');
+  expect(Boolean(model1.pipeline === pipeline2), 'Got cached pipeline').toBe(true);
 
   const defineModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-2',
@@ -877,7 +890,9 @@ test('Model#pipeline caching with defines and modules', async t => {
     defines: {MY_DEFINE: true}
   });
 
-  t.ok(model1.pipeline !== defineModel1.pipeline, 'Define triggers new pipeline');
+  expect(Boolean(model1.pipeline !== defineModel1.pipeline), 'Define triggers new pipeline').toBe(
+    true
+  );
 
   const defineModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-3',
@@ -887,7 +902,10 @@ test('Model#pipeline caching with defines and modules', async t => {
     defines: {MY_DEFINE: true}
   });
 
-  t.ok(defineModel1.pipeline === defineModel2.pipeline, 'Got cached pipeline with defines');
+  expect(
+    Boolean(defineModel1.pipeline === defineModel2.pipeline),
+    'Got cached pipeline with defines'
+  ).toBe(true);
 
   const moduleModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-4',
@@ -897,8 +915,13 @@ test('Model#pipeline caching with defines and modules', async t => {
     modules: [mockModule]
   });
 
-  t.ok(model1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
-  t.ok(defineModel1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
+  expect(Boolean(model1.pipeline !== moduleModel1.pipeline), 'Module triggers new pipeline').toBe(
+    true
+  );
+  expect(
+    Boolean(defineModel1.pipeline !== moduleModel1.pipeline),
+    'Module triggers new pipeline'
+  ).toBe(true);
 
   const moduleModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-5',
@@ -908,7 +931,10 @@ test('Model#pipeline caching with defines and modules', async t => {
     modules: [mockModule]
   });
 
-  t.ok(moduleModel1.pipeline === moduleModel2.pipeline, 'Got cached pipeline with modules');
+  expect(
+    Boolean(moduleModel1.pipeline === moduleModel2.pipeline),
+    'Got cached pipeline with modules'
+  ).toBe(true);
 
   const defineModuleModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-6',
@@ -919,15 +945,18 @@ test('Model#pipeline caching with defines and modules', async t => {
     defines: {MY_DEFINE: true}
   });
 
-  t.ok(pipeline2 !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline');
-  t.ok(
-    defineModel1.pipeline !== defineModuleModel1.pipeline,
+  expect(
+    Boolean(pipeline2 !== defineModuleModel1.pipeline),
     'Module and define triggers new pipeline'
-  );
-  t.ok(
-    moduleModel1.pipeline !== defineModuleModel1.pipeline,
+  ).toBe(true);
+  expect(
+    Boolean(defineModel1.pipeline !== defineModuleModel1.pipeline),
     'Module and define triggers new pipeline'
-  );
+  ).toBe(true);
+  expect(
+    Boolean(moduleModel1.pipeline !== defineModuleModel1.pipeline),
+    'Module and define triggers new pipeline'
+  ).toBe(true);
 
   const defineModuleModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-7',
@@ -938,15 +967,15 @@ test('Model#pipeline caching with defines and modules', async t => {
     defines: {MY_DEFINE: true}
   });
 
-  t.ok(
-    defineModuleModel1.pipeline === defineModuleModel2.pipeline,
+  expect(
+    Boolean(defineModuleModel1.pipeline === defineModuleModel2.pipeline),
     'Got cached pipeline with modules and defines'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('Model#plugins assemble backend contributions', async t => {
+it('Model#plugins assemble backend contributions', async () => {
   const nullDevice = await getNullTestDevice();
   const pluginModule = {name: 'model-plugin-module', vs: '', fs: ''};
 
@@ -965,11 +994,14 @@ test('Model#plugins assemble backend contributions', async t => {
     ]
   });
 
-  t.ok(glslModel.fs.includes('float pluginMarker = 1.0;'), 'GLSL plugin injection is assembled');
-  t.ok(
-    glslModel.shaderInputs.getModules().some(module => module.name === pluginModule.name),
+  expect(
+    Boolean(glslModel.fs.includes('float pluginMarker = 1.0;')),
+    'GLSL plugin injection is assembled'
+  ).toBe(true);
+  expect(
+    Boolean(glslModel.shaderInputs.getModules().some(module => module.name === pluginModule.name)),
     'plugin modules participate in shader inputs'
-  );
+  ).toBe(true);
   glslModel.destroy();
 
   const webgpuDevice = await getWebGPUTestDevice();
@@ -987,14 +1019,14 @@ test('Model#plugins assemble backend contributions', async t => {
       ]
     });
 
-    t.ok(
-      wgslModel.source.includes('const PLUGIN_MARKER: f32 = 1.0;'),
+    expect(
+      Boolean(wgslModel.source.includes('const PLUGIN_MARKER: f32 = 1.0;')),
       'WGSL plugin injection is assembled'
-    );
+    ).toBe(true);
     wgslModel.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 function isSoftwareBackedDevice(device: Device): boolean {

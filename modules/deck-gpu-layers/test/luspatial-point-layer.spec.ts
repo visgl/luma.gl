@@ -9,18 +9,18 @@ import type {Model} from '@luma.gl/engine';
 import {DrawCommandBuffer} from '@luma.gl/gpgpu/gpu-core';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi, type MockInstance} from 'vitest';
 
 const TEST_VIEWPORT_SIZE = 64;
 const TEST_TIMEOUT_MILLISECONDS = 10_000;
 type TestDeck = Deck<OrthographicView>;
 
-test('LuSpatialPointLayer links and submits a caller-owned indirect draw', async tapeTest => {
+it('LuSpatialPointLayer links and submits a caller-owned indirect draw', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -81,16 +81,26 @@ test('LuSpatialPointLayer links and submits a caller-owned indirect draw', async
     deck.redraw('luSpatial browser smoke');
     await waitForIndirectDraw(drawSpy, () => layerError ?? deckError);
 
-    tapeTest.equal(model.pipeline.linkStatus, 'success', 'the real WebGPU pipeline linked');
-    tapeTest.equal(layerError, null, 'the layer reported no error');
-    tapeTest.equal(deckError, null, 'Deck reported no rendering error');
-    tapeTest.ok(drawSpy.mock.calls.length > 0, 'the real indirect draw command was submitted');
+    expect(model.pipeline.linkStatus, 'the real WebGPU pipeline linked').toBe('success');
+    expect(layerError, 'the layer reported no error').toBe(null);
+    expect(deckError, 'Deck reported no rendering error').toBe(null);
+    expect(
+      Boolean(drawSpy.mock.calls.length > 0),
+      'the real indirect draw command was submitted'
+    ).toBe(true);
 
     deck.finalize();
     deck = null;
-    tapeTest.notOk(positions.destroyed, 'the caller-owned position buffer remains alive');
-    tapeTest.notOk(pointIds.destroyed, 'the caller-owned point-ID buffer remains alive');
-    tapeTest.notOk(drawCommands.buffer.destroyed, 'the caller-owned command buffer remains alive');
+    expect(Boolean(positions.destroyed), 'the caller-owned position buffer remains alive').toBe(
+      false
+    );
+    expect(Boolean(pointIds.destroyed), 'the caller-owned point-ID buffer remains alive').toBe(
+      false
+    );
+    expect(
+      Boolean(drawCommands.buffer.destroyed),
+      'the caller-owned command buffer remains alive'
+    ).toBe(false);
   } finally {
     deck?.finalize();
     restoreShaderAssembler();
@@ -101,7 +111,7 @@ test('LuSpatialPointLayer links and submits a caller-owned indirect draw', async
     pointIds.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
 function createTestDeck(

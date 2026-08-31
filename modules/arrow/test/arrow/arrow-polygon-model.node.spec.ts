@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {tesselateAsync, tessellateArrowPolygons} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-test('@luma.gl/arrow tessellateArrowPolygons delegates geometry work to math.gl', t => {
+it('@luma.gl/arrow tessellateArrowPolygons delegates geometry work to math.gl', () => {
   const coordinateData = makeFixedSizeListData(
     new arrow.Float32(),
     2,
@@ -16,12 +16,12 @@ test('@luma.gl/arrow tessellateArrowPolygons delegates geometry work to math.gl'
 
   const result = tessellateArrowPolygons({polygons}, {tessellated: true});
 
-  t.deepEqual(Array.from(result.indices), [0, 1, 2], 'returns tessellated triangle indices');
-  t.equal(result.vertexCount, 3, 'returns output vertices');
-  t.end();
+  expect(Array.from(result.indices), 'returns tessellated triangle indices').toEqual([0, 1, 2]);
+  expect(result.vertexCount, 'returns output vertices').toBe(3);
+  void 0;
 });
 
-test('@luma.gl/arrow tesselateAsync preserves the compatibility entrypoint', async t => {
+it('@luma.gl/arrow tesselateAsync preserves the compatibility entrypoint', async () => {
   const coordinateData = makeFixedSizeListData(
     new arrow.Float32(),
     2,
@@ -31,8 +31,8 @@ test('@luma.gl/arrow tesselateAsync preserves the compatibility entrypoint', asy
 
   const result = await tesselateAsync({polygons}, {tessellated: true});
 
-  t.deepEqual(Array.from(result.indices), [0, 1, 2], 'returns async triangle indices');
-  t.end();
+  expect(Array.from(result.indices), 'returns async triangle indices').toEqual([0, 1, 2]);
+  void 0;
 });
 
 function makeFixedSizeListData<T extends arrow.DataType>(

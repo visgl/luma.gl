@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {WGSLShaderAssembler, type PlatformInfo, type ShaderModule} from '@luma.gl/shadertools';
 import {skin} from '../../../src/modules/engine/skin/skin';
 import {ibl} from '../../../src/modules/lighting/ibl/ibl';
@@ -52,7 +52,7 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
 }
 `;
 
-test('assembleWGSLShader#selects precise fp32 tan implementation', t => {
+it('assembleWGSLShader#selects precise fp32 tan implementation', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assemble = (gpu: string, defines?: Record<string, boolean>) =>
     shaderAssembler.assembleWGSLShader({
@@ -63,27 +63,47 @@ test('assembleWGSLShader#selects precise fp32 tan implementation', t => {
     }).source;
 
   const appleSource = assemble('apple');
-  t.ok(appleSource.includes('fn tan_taylor_fp32'), 'Apple WebGPU selects Taylor tan');
-  t.notOk(appleSource.includes('return tan(a);'), 'Apple WebGPU omits native tan');
+  expect(
+    Boolean(appleSource.includes('fn tan_taylor_fp32')),
+    'Apple WebGPU selects Taylor tan'
+  ).toBe(true);
+  expect(Boolean(appleSource.includes('return tan(a);')), 'Apple WebGPU omits native tan').toBe(
+    false
+  );
 
   const defaultSource = assemble('test-gpu');
-  t.ok(defaultSource.includes('fn tan_taylor_fp32'), 'unknown WebGPU adapters select Taylor tan');
+  expect(
+    Boolean(defaultSource.includes('fn tan_taylor_fp32')),
+    'unknown WebGPU adapters select Taylor tan'
+  ).toBe(true);
 
   const nvidiaSource = assemble('nvidia');
-  t.notOk(nvidiaSource.includes('fn tan_taylor_fp32'), 'NVIDIA WebGPU omits Taylor tan');
-  t.ok(nvidiaSource.includes('return tan(a);'), 'NVIDIA WebGPU selects native tan');
+  expect(
+    Boolean(nvidiaSource.includes('fn tan_taylor_fp32')),
+    'NVIDIA WebGPU omits Taylor tan'
+  ).toBe(false);
+  expect(Boolean(nvidiaSource.includes('return tan(a);')), 'NVIDIA WebGPU selects native tan').toBe(
+    true
+  );
 
   const forcedSource = assemble('nvidia', {LUMA_FP32_TAN_PRECISION_WORKAROUND: true});
-  t.ok(forcedSource.includes('fn tan_taylor_fp32'), 'callers can force Taylor tan');
+  expect(Boolean(forcedSource.includes('fn tan_taylor_fp32')), 'callers can force Taylor tan').toBe(
+    true
+  );
 
   const disabledSource = assemble('apple', {LUMA_FP32_TAN_PRECISION_WORKAROUND: false});
-  t.ok(disabledSource.includes('return tan(a);'), 'callers can disable Taylor tan');
-  t.notOk(disabledSource.includes('fn tan_taylor_fp32'), 'false override removes Taylor tan');
+  expect(Boolean(disabledSource.includes('return tan(a);')), 'callers can disable Taylor tan').toBe(
+    true
+  );
+  expect(
+    Boolean(disabledSource.includes('fn tan_taylor_fp32')),
+    'false override removes Taylor tan'
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
+it('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
   const appleSource = shaderAssembler.assembleWGSLShader({
@@ -91,22 +111,28 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
     source: APP_WGSL,
     modules: [fp64arithmetic]
   }).source;
-  t.ok(appleSource.includes(FP64_INTEGER_MARKER), 'Apple WebGPU selects integer arithmetic');
-  t.notOk(appleSource.includes(FP64_CLASSIC_MARKER), 'Apple WebGPU omits classic arithmetic');
+  expect(
+    Boolean(appleSource.includes(FP64_INTEGER_MARKER)),
+    'Apple WebGPU selects integer arithmetic'
+  ).toBe(true);
+  expect(
+    Boolean(appleSource.includes(FP64_CLASSIC_MARKER)),
+    'Apple WebGPU omits classic arithmetic'
+  ).toBe(false);
 
   const defaultSource = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_WGSL,
     modules: [fp64arithmetic]
   }).source;
-  t.ok(
-    defaultSource.includes(FP64_CLASSIC_MARKER),
+  expect(
+    Boolean(defaultSource.includes(FP64_CLASSIC_MARKER)),
     'other WebGPU adapters retain classic arithmetic'
-  );
-  t.notOk(
-    defaultSource.includes(FP64_INTEGER_MARKER),
+  ).toBe(true);
+  expect(
+    Boolean(defaultSource.includes(FP64_INTEGER_MARKER)),
     'integer arithmetic is not enabled globally'
-  );
+  ).toBe(false);
 
   const forcedSource = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -114,7 +140,10 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
     modules: [fp64arithmetic],
     defines: {LUMA_FP64_INTEGER_ARITHMETIC: true}
   }).source;
-  t.ok(forcedSource.includes(FP64_INTEGER_MARKER), 'callers can force integer arithmetic');
+  expect(
+    Boolean(forcedSource.includes(FP64_INTEGER_MARKER)),
+    'callers can force integer arithmetic'
+  ).toBe(true);
 
   const disabledSource = shaderAssembler.assembleWGSLShader({
     platformInfo: {...PLATFORM_INFO, gpu: 'apple'},
@@ -122,16 +151,19 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
     modules: [fp64arithmetic],
     defines: {LUMA_FP64_INTEGER_ARITHMETIC: false}
   }).source;
-  t.ok(disabledSource.includes(FP64_CLASSIC_MARKER), 'callers can disable the Apple default');
-  t.notOk(
-    disabledSource.includes(FP64_INTEGER_MARKER),
+  expect(
+    Boolean(disabledSource.includes(FP64_CLASSIC_MARKER)),
+    'callers can disable the Apple default'
+  ).toBe(true);
+  expect(
+    Boolean(disabledSource.includes(FP64_INTEGER_MARKER)),
     'false override removes integer arithmetic'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#specializes integer fp64 predicate sources', t => {
+it('assembleWGSLShader#specializes integer fp64 predicate sources', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assemble = (defines: Record<string, boolean>) =>
     shaderAssembler.assembleWGSLShader({
@@ -158,35 +190,56 @@ test('assembleWGSLShader#specializes integer fp64 predicate sources', t => {
     ...FP64_RAW_MARKERS,
     ...FP64_DISTANCE_MARKERS
   ]) {
-    t.ok(fullSource.includes(marker), `full source retains ${marker}`);
+    expect(Boolean(fullSource.includes(marker)), `full source retains ${marker}`).toBe(true);
   }
   for (const marker of FP64_PREDICATE_MARKERS) {
-    t.ok(predicateF32Source.includes(marker), `f32 predicate source retains ${marker}`);
-    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+    expect(
+      Boolean(predicateF32Source.includes(marker)),
+      `f32 predicate source retains ${marker}`
+    ).toBe(true);
+    expect(
+      Boolean(predicateRawSource.includes(marker)),
+      `raw predicate source retains ${marker}`
+    ).toBe(true);
   }
   for (const marker of [...FP64_RAW_MARKERS, ...FP64_DISTANCE_MARKERS]) {
-    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
+    expect(
+      Boolean(predicateF32Source.includes(marker)),
+      `f32 predicate source omits ${marker}`
+    ).toBe(false);
   }
   for (const marker of FP64_RAW_MARKERS) {
-    t.ok(predicateRawSource.includes(marker), `raw predicate source retains ${marker}`);
+    expect(
+      Boolean(predicateRawSource.includes(marker)),
+      `raw predicate source retains ${marker}`
+    ).toBe(true);
   }
   for (const marker of FP64_DISTANCE_MARKERS) {
-    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+    expect(
+      Boolean(predicateRawSource.includes(marker)),
+      `raw predicate source omits ${marker}`
+    ).toBe(false);
   }
   for (const marker of FP64_GENERIC_VALUE_MARKERS) {
-    t.notOk(predicateF32Source.includes(marker), `f32 predicate source omits ${marker}`);
-    t.notOk(predicateRawSource.includes(marker), `raw predicate source omits ${marker}`);
+    expect(
+      Boolean(predicateF32Source.includes(marker)),
+      `f32 predicate source omits ${marker}`
+    ).toBe(false);
+    expect(
+      Boolean(predicateRawSource.includes(marker)),
+      `raw predicate source omits ${marker}`
+    ).toBe(false);
   }
-  t.ok(
-    predicateRawSource.length < fullSource.length * 0.8,
+  expect(
+    Boolean(predicateRawSource.length < fullSource.length * 0.8),
     'raw predicate source stays at least 20% smaller than full fp64'
-  );
-  t.ok(
-    predicateF32Source.length < fullSource.length * 0.5,
+  ).toBe(true);
+  expect(
+    Boolean(predicateF32Source.length < fullSource.length * 0.5),
     'f32 predicate source stays at least 50% smaller than full fp64'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
 const APP_GROUP_0_AUTO_WGSL = /* wgsl */ `\
@@ -591,7 +644,7 @@ var<uniform> unsupportedModuleBinding: UnsupportedAutoBindingUniforms;
 `
 };
 
-test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
+it('assembleWGSLShader#relocates stock group 0 auto bindings', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -600,53 +653,49 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
   });
   const assembledSource = assembledShader.source;
 
-  t.ok(
-    assembledSource.includes('@group(0) @binding(100) var<uniform> pbrProjection'),
+  expect(
+    Boolean(assembledSource.includes('@group(0) @binding(100) var<uniform> pbrProjection')),
     'pbrProjection relocated to group 0 binding 100'
-  );
-  t.ok(
-    assembledSource.includes('// pbrProjection.pbrProjection -> @group(0) @binding(100)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('// pbrProjection.pbrProjection -> @group(0) @binding(100)')),
     'assembled WGSL includes relocation summary for pbrProjection'
-  );
-  t.ok(
-    assembledSource.includes('@group(0) @binding(101) var<uniform> skin'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(0) @binding(101) var<uniform> skin')),
     'skin relocated to group 0 binding 101'
-  );
-  t.ok(
-    assembledSource.includes('// skin.skin -> @group(0) @binding(101)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('// skin.skin -> @group(0) @binding(101)')),
     'assembled WGSL includes relocation summary for skin'
-  );
+  ).toBe(true);
 
   const shaderLayout = assembledShader.shaderLayout;
   if (!shaderLayout) {
-    t.fail('assembled shader has a scanned layout');
-    t.end();
+    expect(false, 'assembled shader has a scanned layout').toBe(true);
+    void 0;
     return;
   }
-  t.equal(
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'appFrame')?.location,
-    0,
     'app binding kept at location 0'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'pbrProjection')?.location,
-    100,
     'pbrProjection reflected at relocated location'
-  );
-  t.equal(
+  ).toBe(100);
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'skin')?.location,
-    101,
     'skin reflected at relocated location'
-  );
-  t.deepEqual(
+  ).toBe(101);
+  expect(
     assembledShader.bindingAssignments,
-    [
-      {moduleName: 'pbrProjection', name: 'pbrProjection', group: 0, location: 100},
-      {moduleName: 'skin', name: 'skin', group: 0, location: 101}
-    ],
     'binding assignments are returned for relocated module bindings'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {moduleName: 'pbrProjection', name: 'pbrProjection', group: 0, location: 100},
+    {moduleName: 'skin', name: 'skin', group: 0, location: 101}
+  ]);
+  expect(
     assembledShader.bindingTable.map(row => ({
       name: row.name,
       group: row.group,
@@ -655,39 +704,38 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
       owner: row.owner,
       moduleName: row.moduleName
     })),
-    [
-      {
-        name: 'appFrame',
-        group: 0,
-        binding: 0,
-        kind: 'uniform',
-        owner: 'application',
-        moduleName: undefined
-      },
-      {
-        name: 'pbrProjection',
-        group: 0,
-        binding: 100,
-        kind: 'uniform',
-        owner: 'module',
-        moduleName: 'pbrProjection'
-      },
-      {
-        name: 'skin',
-        group: 0,
-        binding: 101,
-        kind: 'uniform',
-        owner: 'module',
-        moduleName: 'skin'
-      }
-    ],
     'binding table includes both application and relocated module bindings'
-  );
+  ).toEqual([
+    {
+      name: 'appFrame',
+      group: 0,
+      binding: 0,
+      kind: 'uniform',
+      owner: 'application',
+      moduleName: undefined
+    },
+    {
+      name: 'pbrProjection',
+      group: 0,
+      binding: 100,
+      kind: 'uniform',
+      owner: 'module',
+      moduleName: 'pbrProjection'
+    },
+    {
+      name: 'skin',
+      group: 0,
+      binding: 101,
+      kind: 'uniform',
+      owner: 'module',
+      moduleName: 'skin'
+    }
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#allocates multiple auto bindings in one module', t => {
+it('assembleWGSLShader#allocates multiple auto bindings in one module', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -696,29 +744,28 @@ test('assembleWGSLShader#allocates multiple auto bindings in one module', t => {
   });
   const assembledSource = assembledShader.source;
 
-  t.ok(
-    assembledSource.includes('@group(2) @binding(0) var<uniform> group2First'),
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(0) var<uniform> group2First')),
     'first group 2 auto binding assigned location 0'
-  );
-  t.ok(
-    assembledSource.includes('@group(2) @binding(1) var<uniform> group2Second'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(1) var<uniform> group2Second')),
     'second group 2 auto binding assigned location 1'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable
       .filter(row => row.group === 2)
       .map(row => ({name: row.name, binding: row.binding, owner: row.owner})),
-    [
-      {name: 'group2First', binding: 0, owner: 'module'},
-      {name: 'group2Second', binding: 1, owner: 'module'}
-    ],
     'binding table captures deterministic module allocation order'
-  );
+  ).toEqual([
+    {name: 'group2First', binding: 0, owner: 'module'},
+    {name: 'group2Second', binding: 1, owner: 'module'}
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t => {
+it('assembleWGSLShader#relocates application group 0 auto bindings from 0', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -726,20 +773,19 @@ test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t 
     modules: []
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(0) @binding(0) var<uniform> appAuto'),
+  expect(
+    Boolean(assembledShader.source.includes('@group(0) @binding(0) var<uniform> appAuto')),
     'application group 0 auto binding assigned location 0'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
-    0,
     'binding table reflects relocated application group 0 binding'
-  );
+  ).toBe(0);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#relocates multiline application group 0 auto bindings', t => {
+it('assembleWGSLShader#relocates multiline application group 0 auto bindings', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -747,20 +793,19 @@ test('assembleWGSLShader#relocates multiline application group 0 auto bindings',
     modules: []
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(0) @binding(0)\nvar<uniform> appAuto'),
+  expect(
+    Boolean(assembledShader.source.includes('@group(0) @binding(0)\nvar<uniform> appAuto')),
     'multiline application auto binding preserves formatting and assigns location 0'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
-    0,
     'binding table reflects relocated multiline application binding'
-  );
+  ).toBe(0);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#allocates multiple application auto bindings in declaration order', t => {
+it('assembleWGSLShader#allocates multiple application auto bindings in declaration order', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -768,19 +813,19 @@ test('assembleWGSLShader#allocates multiple application auto bindings in declara
     modules: []
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(0) var<uniform> appFirst'),
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(0) var<uniform> appFirst')),
     'first application auto binding assigned location 0'
-  );
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(1) var<uniform> appSecond'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(1) var<uniform> appSecond')),
     'second application auto binding assigned location 1'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
+it('assembleWGSLShader#application auto bindings skip occupied slots', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -788,19 +833,19 @@ test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
     modules: []
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(3) var<uniform> appExplicit'),
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(3) var<uniform> appExplicit')),
     'explicit application binding kept at location 3'
-  );
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(0) var<uniform> appAuto'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(0) var<uniform> appAuto')),
     'application auto binding uses the first free slot'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#multiline explicit application bindings reserve occupied slots', t => {
+it('assembleWGSLShader#multiline explicit application bindings reserve occupied slots', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -808,19 +853,19 @@ test('assembleWGSLShader#multiline explicit application bindings reserve occupie
     modules: []
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> appExplicit'),
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> appExplicit')),
     'multiline explicit application binding is preserved'
-  );
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> appAuto'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> appAuto')),
     'application auto binding allocates around multiline explicit reservation'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#supports binding-first module auto declarations', t => {
+it('assembleWGSLShader#supports binding-first module auto declarations', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -828,20 +873,19 @@ test('assembleWGSLShader#supports binding-first module auto declarations', t => 
     modules: [BINDING_FIRST_AUTO_MODULE]
   });
 
-  t.ok(
-    assembledShader.source.includes('@binding(0) @group(2) var<uniform> bindingFirstAuto'),
+  expect(
+    Boolean(assembledShader.source.includes('@binding(0) @group(2) var<uniform> bindingFirstAuto')),
     'binding-first module declaration remains supported'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'bindingFirstAuto')?.binding,
-    0,
     'binding table reflects binding-first relocation result'
-  );
+  ).toBe(0);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#multiline module bindings are discovered for reservation and relocation', t => {
+it('assembleWGSLShader#multiline module bindings are discovered for reservation and relocation', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -849,24 +893,25 @@ test('assembleWGSLShader#multiline module bindings are discovered for reservatio
     modules: [MULTILINE_EXPLICIT_MODULE, MULTILINE_AUTO_MODULE]
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> multilineExplicit'),
+  expect(
+    Boolean(
+      assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> multilineExplicit')
+    ),
     'multiline explicit module binding is preserved'
-  );
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> multilineAuto'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> multilineAuto')),
     'multiline module auto binding allocates around explicit reservation'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'multilineAuto')?.binding,
-    1,
     'binding table reflects relocated multiline module auto binding'
-  );
+  ).toBe(1);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#ignores line-comment binding annotations before private state', t => {
+it('assembleWGSLShader#ignores line-comment binding annotations before private state', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -874,20 +919,19 @@ test('assembleWGSLShader#ignores line-comment binding annotations before private
     modules: [COMMENTED_PRIVATE_STATE_MODULE]
   });
 
-  t.deepEqual(
+  expect(
     assembledShader.bindingAssignments,
-    [],
     'no module binding assignments are produced for commented private state'
-  );
-  t.notOk(
-    assembledShader.bindingTable.find(row => row.name === 'geometry'),
+  ).toEqual([]);
+  expect(
+    Boolean(assembledShader.bindingTable.find(row => row.name === 'geometry')),
     'binding table omits private state that only follows a commented annotation'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#ignores commented binding annotations above real bindings', t => {
+it('assembleWGSLShader#ignores commented binding annotations above real bindings', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -895,20 +939,21 @@ test('assembleWGSLShader#ignores commented binding annotations above real bindin
     modules: [COMMENTED_REAL_BINDING_MODULE]
   });
 
-  t.ok(
-    assembledShader.source.includes('@group(2) @binding(0) var<uniform> commentedRealBinding'),
+  expect(
+    Boolean(
+      assembledShader.source.includes('@group(2) @binding(0) var<uniform> commentedRealBinding')
+    ),
     'real binding keeps its actual declaration and auto-allocation'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'commentedRealBinding')?.binding,
-    0,
     'binding table reflects the real binding instead of the commented annotation'
-  );
+  ).toBe(0);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#ignores block-comment binding annotations before private state', t => {
+it('assembleWGSLShader#ignores block-comment binding annotations before private state', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -916,20 +961,19 @@ test('assembleWGSLShader#ignores block-comment binding annotations before privat
     modules: [BLOCK_COMMENTED_PRIVATE_STATE_MODULE]
   });
 
-  t.deepEqual(
+  expect(
     assembledShader.bindingAssignments,
-    [],
     'block-commented binding annotations do not create module bindings'
-  );
-  t.notOk(
-    assembledShader.bindingTable.find(row => row.name === 'geometry'),
+  ).toEqual([]);
+  expect(
+    Boolean(assembledShader.bindingTable.find(row => row.name === 'geometry')),
     'binding table omits private state following a block-commented annotation'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#binding table excludes commented declarations', t => {
+it('assembleWGSLShader#binding table excludes commented declarations', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -937,20 +981,19 @@ test('assembleWGSLShader#binding table excludes commented declarations', t => {
     modules: [COMMENTED_BINDING_TABLE_MODULE]
   });
 
-  t.equal(
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'visibleBinding')?.binding,
-    0,
     'visible binding is still discovered'
-  );
-  t.notOk(
-    assembledShader.bindingTable.find(row => row.name === 'hiddenBinding'),
+  ).toBe(0);
+  expect(
+    Boolean(assembledShader.bindingTable.find(row => row.name === 'hiddenBinding')),
     'binding table excludes commented-out declarations'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic order', t => {
+it('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic order', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -960,62 +1003,58 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
   });
   const assembledSource = assembledShader.source;
 
-  t.ok(
-    assembledSource.includes('@group(2) @binding(0) var<uniform> lighting'),
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(0) var<uniform> lighting')),
     'lighting allocated first in group 2'
-  );
-  t.ok(
-    assembledSource.includes('@group(2) @binding(16) var<uniform> dirlight'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(16) var<uniform> dirlight')),
     'dirlight allocated at its hinted group 2 slot'
-  );
-  t.ok(
-    assembledSource.includes('@group(2) @binding(32) var pbr_diffuseEnvSampler'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(32) var pbr_diffuseEnvSampler')),
     'ibl diffuse texture allocated at its hinted group 2 slot'
-  );
-  t.ok(
-    assembledSource.includes('@group(2) @binding(37) var pbr_brdfLUTSampler'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(2) @binding(37) var pbr_brdfLUTSampler')),
     'ibl bindings remain contiguous within the hinted range'
-  );
-  t.ok(
-    assembledSource.includes('// lighting.lighting -> @group(2) @binding(0)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('// lighting.lighting -> @group(2) @binding(0)')),
     'assembled WGSL includes relocation summary for lighting'
-  );
-  t.ok(
-    assembledSource.includes('// dirlight.dirlight -> @group(2) @binding(16)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('// dirlight.dirlight -> @group(2) @binding(16)')),
     'assembled WGSL includes relocation summary for dirlight'
-  );
-  t.ok(
-    assembledSource.includes('// ibl.pbr_diffuseEnvSampler -> @group(2) @binding(32)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('// ibl.pbr_diffuseEnvSampler -> @group(2) @binding(32)')),
     'assembled WGSL includes relocation summary for ibl'
-  );
+  ).toBe(true);
 
   const shaderLayout = assembledShader.shaderLayout;
   if (!shaderLayout) {
-    t.fail('assembled shader has a scanned layout');
-    t.end();
+    expect(false, 'assembled shader has a scanned layout').toBe(true);
+    void 0;
     return;
   }
-  t.equal(
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'lighting')?.location,
-    0,
     'lighting reflected at location 0'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'dirlight')?.location,
-    16,
     'dirlight reflected at location 16'
-  );
-  t.equal(
+  ).toBe(16);
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'pbr_diffuseEnvSampler')?.location,
-    32,
     'ibl diffuse texture reflected at relocated location'
-  );
-  t.equal(
+  ).toBe(32);
+  expect(
     shaderLayout.bindings.find(binding => binding.name === 'pbr_brdfLUTSampler')?.location,
-    37,
     'ibl sampler reflected at relocated location'
-  );
-  t.deepEqual(
+  ).toBe(37);
+  expect(
     assembledShader.bindingTable
       .filter(row => row.group === 2)
       .map(row => ({
@@ -1024,23 +1063,22 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
         owner: row.owner,
         moduleName: row.moduleName
       })),
-    [
-      {name: 'lighting', binding: 0, owner: 'module', moduleName: 'lighting'},
-      {name: 'dirlight', binding: 16, owner: 'module', moduleName: 'dirlight'},
-      {name: 'pbr_diffuseEnvSampler', binding: 32, owner: 'module', moduleName: 'ibl'},
-      {name: 'pbr_diffuseEnvSamplerSampler', binding: 33, owner: 'module', moduleName: 'ibl'},
-      {name: 'pbr_specularEnvSampler', binding: 34, owner: 'module', moduleName: 'ibl'},
-      {name: 'pbr_specularEnvSamplerSampler', binding: 35, owner: 'module', moduleName: 'ibl'},
-      {name: 'pbr_brdfLUT', binding: 36, owner: 'module', moduleName: 'ibl'},
-      {name: 'pbr_brdfLUTSampler', binding: 37, owner: 'module', moduleName: 'ibl'}
-    ],
     'binding table reports stable stock group 2 layout'
-  );
+  ).toEqual([
+    {name: 'lighting', binding: 0, owner: 'module', moduleName: 'lighting'},
+    {name: 'dirlight', binding: 16, owner: 'module', moduleName: 'dirlight'},
+    {name: 'pbr_diffuseEnvSampler', binding: 32, owner: 'module', moduleName: 'ibl'},
+    {name: 'pbr_diffuseEnvSamplerSampler', binding: 33, owner: 'module', moduleName: 'ibl'},
+    {name: 'pbr_specularEnvSampler', binding: 34, owner: 'module', moduleName: 'ibl'},
+    {name: 'pbr_specularEnvSamplerSampler', binding: 35, owner: 'module', moduleName: 'ibl'},
+    {name: 'pbr_brdfLUT', binding: 36, owner: 'module', moduleName: 'ibl'},
+    {name: 'pbr_brdfLUTSampler', binding: 37, owner: 'module', moduleName: 'ibl'}
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#allocates group 0 auto bindings in dependency order', t => {
+it('assembleWGSLShader#allocates group 0 auto bindings in dependency order', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledSource = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1048,19 +1086,19 @@ test('assembleWGSLShader#allocates group 0 auto bindings in dependency order', t
     modules: [GROUP_0_DEPENDENCY_B]
   }).source;
 
-  t.ok(
-    assembledSource.includes('@group(0) @binding(100) var<uniform> group0DependencyA'),
+  expect(
+    Boolean(assembledSource.includes('@group(0) @binding(100) var<uniform> group0DependencyA')),
     'dependency module allocated first'
-  );
-  t.ok(
-    assembledSource.includes('@group(0) @binding(101) var<uniform> group0DependencyB'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledSource.includes('@group(0) @binding(101) var<uniform> group0DependencyB')),
     'dependent module allocated second'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#application group 0 auto bindings reserve low slots before modules', t => {
+it('assembleWGSLShader#application group 0 auto bindings reserve low slots before modules', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1068,26 +1106,23 @@ test('assembleWGSLShader#application group 0 auto bindings reserve low slots bef
     modules: [pbrProjection, skin]
   });
 
-  t.equal(
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
-    0,
     'application binding uses location 0'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'pbrProjection')?.binding,
-    100,
     'module binding still starts at reserved group 0 module range'
-  );
-  t.equal(
+  ).toBe(100);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'skin')?.binding,
-    101,
     'subsequent module binding remains in reserved group 0 module range'
-  );
+  ).toBe(101);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#preprocesses platform limit conditionals before auto binding relocation', t => {
+it('assembleWGSLShader#preprocesses platform limit conditionals before auto binding relocation', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: {
@@ -1097,15 +1132,14 @@ test('assembleWGSLShader#preprocesses platform limit conditionals before auto bi
     source: APP_VERTEX_STORAGE_LIMIT_WGSL
   });
 
-  t.notOk(
-    assembledShader.source.includes('vertexStorage'),
+  expect(
+    Boolean(assembledShader.source.includes('vertexStorage')),
     'inactive vertex storage binding is stripped from assembled source'
-  );
-  t.deepEqual(
+  ).toBe(false);
+  expect(
     assembledShader.bindingTable.map(row => row.name),
-    ['appAuto'],
     'inactive vertex storage binding is not assigned a binding slot'
-  );
+  ).toEqual(['appAuto']);
 
   const storageShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: {
@@ -1114,39 +1148,37 @@ test('assembleWGSLShader#preprocesses platform limit conditionals before auto bi
     },
     source: APP_VERTEX_STORAGE_LIMIT_WGSL
   });
-  t.ok(
-    storageShader.source.includes('vertexStorage'),
+  expect(
+    Boolean(storageShader.source.includes('vertexStorage')),
     'active vertex storage binding remains in assembled source'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     storageShader.bindingTable.map(row => row.name),
-    ['appAuto', 'vertexStorage'],
     'active vertex storage binding is assigned after the app uniform'
-  );
+  ).toEqual(['appAuto', 'vertexStorage']);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#preprocesses module conditionals before auto binding relocation', t => {
+it('assembleWGSLShader#preprocesses module conditionals before auto binding relocation', () => {
   const textureShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: APP_GROUP_0_AUTO_WGSL,
     modules: [CONDITIONAL_DEPTH_MODULE],
     defines: {USE_DEPTH_SAMPLER: false}
   });
-  t.ok(
-    textureShader.source.includes('var conditionalDepth: texture_2d<f32>'),
+  expect(
+    Boolean(textureShader.source.includes('var conditionalDepth: texture_2d<f32>')),
     'inactive depth sampler branch is stripped before relocation'
-  );
-  t.notOk(
-    textureShader.source.includes('texture_depth_2d'),
+  ).toBe(true);
+  expect(
+    Boolean(textureShader.source.includes('texture_depth_2d')),
     'depth texture branch is stripped before relocation'
-  );
-  t.deepEqual(
+  ).toBe(false);
+  expect(
     textureShader.bindingTable.map(row => row.name),
-    ['appAuto', 'conditionalDepth'],
     'only the active texture binding is assigned'
-  );
+  ).toEqual(['appAuto', 'conditionalDepth']);
 
   const depthShader = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1154,24 +1186,23 @@ test('assembleWGSLShader#preprocesses module conditionals before auto binding re
     modules: [CONDITIONAL_DEPTH_MODULE],
     defines: {USE_DEPTH_SAMPLER: true}
   });
-  t.ok(
-    depthShader.source.includes('var conditionalDepth: texture_depth_2d'),
+  expect(
+    Boolean(depthShader.source.includes('var conditionalDepth: texture_depth_2d')),
     'active depth texture branch remains in assembled source'
-  );
-  t.ok(
-    depthShader.source.includes('var conditionalDepthSampler: sampler'),
+  ).toBe(true);
+  expect(
+    Boolean(depthShader.source.includes('var conditionalDepthSampler: sampler')),
     'active depth sampler remains in assembled source'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     depthShader.bindingTable.map(row => row.name),
-    ['appAuto', 'conditionalDepth', 'conditionalDepthSampler'],
     'active depth bindings are assigned after the app uniform'
-  );
+  ).toEqual(['appAuto', 'conditionalDepth', 'conditionalDepthSampler']);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#application auto bindings allocate before modules in non-zero groups', t => {
+it('assembleWGSLShader#application auto bindings allocate before modules in non-zero groups', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1179,26 +1210,23 @@ test('assembleWGSLShader#application auto bindings allocate before modules in no
     modules: [GROUP_2_AUTO_MODULE]
   });
 
-  t.equal(
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'appGroup2')?.binding,
-    0,
     'application binding takes the first slot in group 2'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'group2First')?.binding,
-    1,
     'module binding allocates around application-owned slot'
-  );
-  t.equal(
+  ).toBe(1);
+  expect(
     assembledShader.bindingTable.find(row => row.name === 'group2Second')?.binding,
-    2,
     'later module binding stays contiguous after application-owned slot'
-  );
+  ).toBe(2);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#keeps module auto allocations stable within one assembler', t => {
+it('assembleWGSLShader#keeps module auto allocations stable within one assembler', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
   const firstShader = shaderAssembler.assembleWGSLShader({
@@ -1212,26 +1240,23 @@ test('assembleWGSLShader#keeps module auto allocations stable within one assembl
     modules: [GROUP_2_REGISTRY_B, GROUP_2_REGISTRY_A]
   });
 
-  t.equal(
+  expect(
     firstShader.bindingTable.find(row => row.name === 'group2RegistryA')?.binding,
-    0,
     'first assembly allocates the initial slot'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     secondShader.bindingTable.find(row => row.name === 'group2RegistryA')?.binding,
-    0,
     'same module binding keeps its slot in a later shader assembled by the same assembler'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     secondShader.bindingTable.find(row => row.name === 'group2RegistryB')?.binding,
-    1,
     'new module binding is allocated around the existing registry assignment'
-  );
+  ).toBe(1);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#keeps disjoint texture permutations compatible when combined', t => {
+it('assembleWGSLShader#keeps disjoint texture permutations compatible when combined', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assemblePermutation = (defines: Record<string, boolean>) =>
     shaderAssembler.assembleWGSLShader({
@@ -1251,19 +1276,19 @@ test('assembleWGSLShader#keeps disjoint texture permutations compatible when com
   ): number | undefined =>
     assembledShader.bindingTable.find(binding => binding.name === name)?.binding;
 
-  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSampler'), 1);
-  t.equal(getBindingLocation(transmissionOnly, 'pbr_transmissionSamplerSampler'), 2);
-  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSampler'), 3);
-  t.equal(getBindingLocation(baseColorOnly, 'pbr_baseColorSamplerSampler'), 4);
-  t.equal(getBindingLocation(combined, 'pbr_transmissionSampler'), 1);
-  t.equal(getBindingLocation(combined, 'pbr_transmissionSamplerSampler'), 2);
-  t.equal(getBindingLocation(combined, 'pbr_baseColorSampler'), 3);
-  t.equal(getBindingLocation(combined, 'pbr_baseColorSamplerSampler'), 4);
+  expect(getBindingLocation(transmissionOnly, 'pbr_transmissionSampler'), '').toBe(1);
+  expect(getBindingLocation(transmissionOnly, 'pbr_transmissionSamplerSampler'), '').toBe(2);
+  expect(getBindingLocation(baseColorOnly, 'pbr_baseColorSampler'), '').toBe(3);
+  expect(getBindingLocation(baseColorOnly, 'pbr_baseColorSamplerSampler'), '').toBe(4);
+  expect(getBindingLocation(combined, 'pbr_transmissionSampler'), '').toBe(1);
+  expect(getBindingLocation(combined, 'pbr_transmissionSamplerSampler'), '').toBe(2);
+  expect(getBindingLocation(combined, 'pbr_baseColorSampler'), '').toBe(3);
+  expect(getBindingLocation(combined, 'pbr_baseColorSamplerSampler'), '').toBe(4);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#reclaims bindings from inactive runtime-generated modules', t => {
+it('assembleWGSLShader#reclaims bindings from inactive runtime-generated modules', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const maximumBindingsPerGroup = 16;
   let highestBindingLocation = 0;
@@ -1305,20 +1330,19 @@ test('assembleWGSLShader#reclaims bindings from inactive runtime-generated modul
     );
   }
 
-  t.ok(
-    highestBindingLocation < maximumBindingsPerGroup,
+  expect(
+    Boolean(highestBindingLocation < maximumBindingsPerGroup),
     'historical runtime-generated modules never consume the available bind-group slots'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     highestBindingLocation,
-    4,
     'active material bindings stay stable while generated texture/sampler pairs reuse their slots'
-  );
+  ).toBe(4);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#scopes inactive reservations to automatic bindings in their group', t => {
+it('assembleWGSLShader#scopes inactive reservations to automatic bindings in their group', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
   shaderAssembler.assembleWGSLShader({
@@ -1339,25 +1363,23 @@ test('assembleWGSLShader#scopes inactive reservations to automatic bindings in t
     modules: [GROUP_2_REGISTRY_A]
   });
 
-  t.equal(
+  expect(
     explicitShader.bindingTable.find(binding => binding.name === 'group3ExplicitRegistryBinding')
       ?.binding,
-    1,
     'inactive automatic reservations do not invalidate explicit bindings in a different shader'
-  );
-  t.equal(
+  ).toBe(1);
+  expect(
     isolatedGroupShader.bindingTable.find(binding => binding.name === 'group2RegistryA')?.binding,
-    0,
     'inactive locations in another binding group do not change automatic allocation'
-  );
+  ).toBe(0);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#rejects application group 0 bindings above reserved range', t => {
+it('assembleWGSLShader#rejects application group 0 bindings above reserved range', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
-  t.throws(
+  expect(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
@@ -1375,77 +1397,78 @@ fn vertexMain() -> @builtin(position) vec4<f32> {
 `,
         modules: []
       }),
-    /Application binding "appReserved" in group 0 uses reserved binding 100/,
     'application group 0 binding 100 rejected'
-  );
+  ).toThrow(/Application binding "appReserved" in group 0 uses reserved binding 100/);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#rejects explicit module group 0 bindings below reserved range', t => {
+it('assembleWGSLShader#rejects explicit module group 0 bindings below reserved range', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
-  t.throws(
+  expect(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
         source: APP_WGSL,
         modules: [INVALID_GROUP_0_MODULE]
       }),
-    /Module "invalidGroup0Module" binding "invalidGroup0Binding" in group 0 uses reserved application binding 0/,
     'module explicit group 0 binding below 100 rejected'
+  ).toThrow(
+    /Module "invalidGroup0Module" binding "invalidGroup0Binding" in group 0 uses reserved application binding 0/
   );
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#rejects duplicate explicit module bindings', t => {
+it('assembleWGSLShader#rejects duplicate explicit module bindings', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
-  t.throws(
+  expect(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
         source: APP_WGSL,
         modules: [DUPLICATE_GROUP_2_MODULE_A, DUPLICATE_GROUP_2_MODULE_B]
       }),
-    /Duplicate WGSL binding assignment for module "duplicateGroup2ModuleB" binding "duplicateGroup2B": group 2, binding 0/,
     'duplicate explicit module bindings rejected'
+  ).toThrow(
+    /Duplicate WGSL binding assignment for module "duplicateGroup2ModuleB" binding "duplicateGroup2B": group 2, binding 0/
   );
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#rejects unsupported application auto binding declaration forms', t => {
+it('assembleWGSLShader#rejects unsupported application auto binding declaration forms', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
-  t.throws(
+  expect(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
         source: UNSUPPORTED_APP_AUTO_WGSL,
         modules: []
       }),
-    /Unsupported @binding\(auto\) declaration form in application WGSL/,
     'application WGSL unsupported form error is specific'
-  );
+  ).toThrow(/Unsupported @binding\(auto\) declaration form in application WGSL/);
 
-  t.end();
+  void 0;
 });
 
-test('assembleWGSLShader#rejects unresolved auto bindings with module and binding names', t => {
+it('assembleWGSLShader#rejects unresolved auto bindings with module and binding names', () => {
   const shaderAssembler = new WGSLShaderAssembler();
 
-  t.throws(
+  expect(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
         source: APP_WGSL,
         modules: [UNSUPPORTED_MODULE_AUTO_BINDING]
       }),
-    /Unresolved @binding\(auto\) for module "unsupportedModuleAutoBinding" binding "unsupportedModuleBinding" remained in assembled WGSL source/,
     'module-side unresolved auto binding error identifies the owning module and binding'
+  ).toThrow(
+    /Unresolved @binding\(auto\) for module "unsupportedModuleAutoBinding" binding "unsupportedModuleBinding" remained in assembled WGSL source/
   );
 
-  t.end();
+  void 0;
 });

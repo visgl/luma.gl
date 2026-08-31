@@ -7,7 +7,7 @@ import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/experimental';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ReferenceRenderTarget = {
   color: Texture;
@@ -16,12 +16,12 @@ type ReferenceRenderTarget = {
   destroy(): void;
 };
 
-test('SceneRenderer applies exposure, exact sRGB encoding, and selectable reference tone maps', async testCase => {
+it('SceneRenderer applies exposure, exact sRGB encoding, and selectable reference tone maps', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getReferenceTestDevices()) {
     if (isSoftwareBackedWebGL(device)) {
-      testCase.comment('software WebGL cannot reliably compile full-suite reference PBR variants');
+      void 0;
       continue;
     }
 
@@ -43,28 +43,24 @@ test('SceneRenderer applies exposure, exact sRGB encoding, and selectable refere
       options.toneMapMode = 0;
       options.exposure = 1;
       options.outputColorSpace = 'srgb';
-      testCase.equal(
-        renderer.render(options).drawCount,
-        1,
-        `${device.type} shades reference color`
-      );
+      expect(renderer.render(options).drawCount, `${device.type} shades reference color`).toBe(1);
       device.submit();
 
       if (supportsPixelReadback(device)) {
         const standardColor = await readUnsignedPixel(target.color, 16, 16);
-        testCase.ok(
-          Math.abs(standardColor[0] - 137) <= 2 && Math.abs(standardColor[1] - 188) <= 2,
+        expect(
+          Boolean(Math.abs(standardColor[0] - 137) <= 2 && Math.abs(standardColor[1] - 188) <= 2),
           `${device.type} applies the exact linear-to-sRGB transfer function`
-        );
+        ).toBe(true);
 
         options.outputColorSpace = 'linear';
         renderer.render(options);
         device.submit();
         const linearColor = await readUnsignedPixel(target.color, 16, 16);
-        testCase.ok(
-          Math.abs(linearColor[0] - 64) <= 2 && Math.abs(linearColor[1] - 128) <= 2,
+        expect(
+          Boolean(Math.abs(linearColor[0] - 64) <= 2 && Math.abs(linearColor[1] - 128) <= 2),
           `${device.type} preserves linear output without a second transfer function`
-        );
+        ).toBe(true);
 
         options.outputColorSpace = 'srgb';
         options.exposure = 0.5;
@@ -76,10 +72,10 @@ test('SceneRenderer applies exposure, exact sRGB encoding, and selectable refere
         renderer.render(options);
         device.submit();
         const highExposure = await readUnsignedPixel(target.color, 16, 16);
-        testCase.ok(
-          highExposure[0] > lowExposure[0] + 50,
+        expect(
+          Boolean(highExposure[0] > lowExposure[0] + 50),
           `${device.type} applies scene exposure to physical fragment output`
-        );
+        ).toBe(true);
 
         options.toneMapMode = 1;
         renderer.render(options);
@@ -96,18 +92,16 @@ test('SceneRenderer applies exposure, exact sRGB encoding, and selectable refere
         device.submit();
         const acesColor = await readUnsignedPixel(target.color, 16, 16);
 
-        testCase.ok(
-          Math.abs(reinhardColor[2] - neutralColor[2]) > 10,
+        expect(
+          Boolean(Math.abs(reinhardColor[2] - neutralColor[2]) > 10),
           `${device.type} distinguishes Reinhard and Khronos PBR Neutral highlights`
-        );
-        testCase.ok(
-          Math.abs(acesColor[0] - neutralColor[0]) > 5,
+        ).toBe(true);
+        expect(
+          Boolean(Math.abs(acesColor[0] - neutralColor[0]) > 5),
           `${device.type} distinguishes ACES from Khronos PBR Neutral tone mapping`
-        );
+        ).toBe(true);
       } else {
-        testCase.comment(
-          'software WebGPU renders exposure/tone modes without unsupported MAP_READ'
-        );
+        void 0;
       }
     } finally {
       renderer.destroy();
@@ -115,16 +109,18 @@ test('SceneRenderer applies exposure, exact sRGB encoding, and selectable refere
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one portable reference-color backend runs');
-  testCase.end();
+  expect(Boolean(testedDeviceCount > 0), 'at least one portable reference-color backend runs').toBe(
+    true
+  );
+  void 0;
 });
 
-test('SceneRenderer presents clear backgrounds identically to physical fragments', async testCase => {
+it('SceneRenderer presents clear backgrounds identically to physical fragments', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getReferenceTestDevices()) {
     if (isSoftwareBackedWebGL(device)) {
-      testCase.comment('software WebGL cannot reliably compile full-suite reference PBR variants');
+      void 0;
       continue;
     }
 
@@ -156,28 +152,26 @@ test('SceneRenderer presents clear backgrounds identically to physical fragments
         options.toneMapMode = toneMapMode;
         options.outputColorSpace = outputColorSpace;
         options.surfaces = [];
-        testCase.equal(renderer.render(options).drawCount, 0, 'clears the uncovered target');
+        expect(renderer.render(options).drawCount, 'clears the uncovered target').toBe(0);
         device.submit();
 
         if (supportsPixelReadback(device)) {
           const clearPixel = await readUnsignedPixel(target.color, 16, 16);
           options.surfaces = [matchingSurface];
-          testCase.equal(renderer.render(options).drawCount, 1, 'draws the matching unlit surface');
+          expect(renderer.render(options).drawCount, 'draws the matching unlit surface').toBe(1);
           device.submit();
           const shadedPixel = await readUnsignedPixel(target.color, 16, 16);
 
           for (let channelIndex = 0; channelIndex < 4; channelIndex++) {
-            testCase.ok(
-              Math.abs(clearPixel[channelIndex] - shadedPixel[channelIndex]) <= 2,
+            expect(
+              Boolean(Math.abs(clearPixel[channelIndex] - shadedPixel[channelIndex]) <= 2),
               `${device.type} matches background channel ${channelIndex} for exposure ${exposure}, tone map ${toneMapMode}, and ${outputColorSpace} output`
-            );
+            ).toBe(true);
           }
         } else {
           options.surfaces = [matchingSurface];
-          testCase.equal(
-            renderer.render(options).drawCount,
-            1,
-            'software WebGPU renders matching color'
+          expect(renderer.render(options).drawCount, 'software WebGPU renders matching color').toBe(
+            1
           );
           device.submit();
         }
@@ -188,16 +182,18 @@ test('SceneRenderer presents clear backgrounds identically to physical fragments
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one portable background backend runs');
-  testCase.end();
+  expect(Boolean(testedDeviceCount > 0), 'at least one portable background backend runs').toBe(
+    true
+  );
+  void 0;
 });
 
-test('SceneRenderer preserves linear HDR radiance and captures chromatic physical dispersion', async testCase => {
+it('SceneRenderer preserves linear HDR radiance and captures chromatic physical dispersion', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getReferenceTestDevices()) {
     if (isSoftwareBackedWebGL(device)) {
-      testCase.comment('software WebGL cannot reliably compile full-suite transmission variants');
+      void 0;
       continue;
     }
 
@@ -234,7 +230,7 @@ test('SceneRenderer preserves linear HDR radiance and captures chromatic physica
     options.toneMapMode = 0;
 
     try {
-      testCase.equal(renderer.render(options).drawCount, 2, `${device.type} captures opaque color`);
+      expect(renderer.render(options).drawCount, `${device.type} captures opaque color`).toBe(2);
       device.submit();
 
       if (supportsPixelReadback(device)) {
@@ -247,14 +243,14 @@ test('SceneRenderer preserves linear HDR radiance and captures chromatic physica
           Math.abs(ordinaryRefraction[0] - dispersedRefraction[0]) +
           Math.abs(ordinaryRefraction[1] - dispersedRefraction[1]) +
           Math.abs(ordinaryRefraction[2] - dispersedRefraction[2]);
-        testCase.ok(
-          colorDifference >= 4,
+        expect(
+          Boolean(colorDifference >= 4),
           `${device.type} separates transmission wavelengths using ratified dispersion (${colorDifference})`
-        );
-        testCase.equal(dispersedRefraction[3], 255, `${device.type} keeps dispersive glass opaque`);
+        ).toBe(true);
+        expect(dispersedRefraction[3], `${device.type} keeps dispersive glass opaque`).toBe(255);
       } else {
         glass.material.uniforms = {...glass.material.uniforms, dispersion: 24};
-        testCase.equal(renderer.render(options).drawCount, 2, 'software WebGPU renders dispersion');
+        expect(renderer.render(options).drawCount, 'software WebGPU renders dispersion').toBe(2);
         device.submit();
       }
 
@@ -277,25 +273,24 @@ test('SceneRenderer preserves linear HDR radiance and captures chromatic physica
             highDynamicRangeTarget.framebuffer
           );
           highDynamicRangeOptions.exposure = 2;
-          testCase.equal(
+          expect(
             renderer.render(highDynamicRangeOptions).drawCount,
-            1,
             `${device.type} renders to a true HDR attachment`
-          );
+          ).toBe(1);
           device.submit();
           const highDynamicRangePixel = await readFloat16Pixel(
             highDynamicRangeTarget.color,
             16,
             16
           );
-          testCase.ok(
-            Math.abs(highDynamicRangePixel[0] - 4) < 0.05,
+          expect(
+            Boolean(Math.abs(highDynamicRangePixel[0] - 4) < 0.05),
             `${device.type} preserves unclamped HDR linear red radiance (${highDynamicRangePixel[0]})`
-          );
-          testCase.ok(
-            Math.abs(highDynamicRangePixel[1] - 1) < 0.03,
+          ).toBe(true);
+          expect(
+            Boolean(Math.abs(highDynamicRangePixel[1] - 1) < 0.03),
             `${device.type} applies exposure before linear HDR presentation`
-          );
+          ).toBe(true);
         } finally {
           highDynamicRangeTarget.destroy();
         }
@@ -306,8 +301,10 @@ test('SceneRenderer preserves linear HDR radiance and captures chromatic physica
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one portable transmission backend runs');
-  testCase.end();
+  expect(Boolean(testedDeviceCount > 0), 'at least one portable transmission backend runs').toBe(
+    true
+  );
+  void 0;
 });
 
 function makeFullscreenGeometry(

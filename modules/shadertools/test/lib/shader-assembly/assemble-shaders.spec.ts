@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {
@@ -317,12 +317,15 @@ function createTestLog() {
   };
 }
 
-test('assembleGLSLShaderPair#import', async t => {
-  t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
-  t.end();
+it('assembleGLSLShaderPair#import', async () => {
+  expect(
+    Boolean(assembleGLSLShaderPair !== undefined),
+    'assembleGLSLShaderPair import successful'
+  ).toBe(true);
+  void 0;
 });
 
-test('assembleGLSLShaderPair#version_directive', async t => {
+it('assembleGLSLShaderPair#version_directive', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const assembleResult = assembleGLSLShaderPair({
@@ -332,20 +335,18 @@ test('assembleGLSLShaderPair#version_directive', async t => {
     modules: [picking]
   });
   // Verify version directive remains as first line.
-  t.equal(
+  expect(
     assembleResult.vs.indexOf('#version 300'),
-    0,
     'version directive should be first statement'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     assembleResult.fs.indexOf('#version 300'),
-    0,
     'version directive should be first statement'
-  );
-  t.end();
+  ).toBe(0);
+  void 0;
 });
 
-test('assembleGLSLShaderPair#warns on non-std140 app-authored uniform blocks', t => {
+it('assembleGLSLShaderPair#warns on non-std140 app-authored uniform blocks', () => {
   const log = createTestLog();
   const vs = `\
 #version 300 es
@@ -366,20 +367,20 @@ void main(void) {
     log
   });
 
-  t.equal(log.warnCalled.length, 1, 'warns once for the non-std140 block');
-  t.ok(
-    String(log.warnCalled[0][0]).includes('vertex shader uniform block AppBlock'),
+  expect(log.warnCalled.length, 'warns once for the non-std140 block').toBe(1);
+  expect(
+    Boolean(String(log.warnCalled[0][0]).includes('vertex shader uniform block AppBlock')),
     'warning includes stage and block name'
-  );
-  t.ok(
-    String(log.warnCalled[0][0]).includes('layout(std140)'),
+  ).toBe(true);
+  expect(
+    Boolean(String(log.warnCalled[0][0]).includes('layout(std140)')),
     'warning recommends explicit std140'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleGLSLShaderPair#does not warn for explicit std140 uniform blocks', t => {
+it('assembleGLSLShaderPair#does not warn for explicit std140 uniform blocks', () => {
   const log = createTestLog();
   const vs = `\
 #version 300 es
@@ -399,11 +400,11 @@ void main(void) {
     log
   });
 
-  t.equal(log.warnCalled.length, 0, 'does not warn for explicit std140');
-  t.end();
+  expect(log.warnCalled.length, 'does not warn for explicit std140').toBe(0);
+  void 0;
 });
 
-test('assembleGLSLShaderPair#warns on handwritten module GLSL uniform blocks without std140', t => {
+it('assembleGLSLShaderPair#warns on handwritten module GLSL uniform blocks without std140', () => {
   const log = createTestLog();
   const moduleWithDefaultBlock = {
     name: 'module-default-block',
@@ -425,16 +426,16 @@ uniform module_default_blockUniforms {
     log
   });
 
-  t.equal(log.warnCalled.length, 1, 'warns for handwritten module block');
-  t.ok(
-    String(log.warnCalled[0][0]).includes('module_default_blockUniforms'),
+  expect(log.warnCalled.length, 'warns for handwritten module block').toBe(1);
+  expect(
+    Boolean(String(log.warnCalled[0][0]).includes('module_default_blockUniforms')),
     'warning includes module block name'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleGLSLShaderPair#warns only for non-std140 blocks and deduplicates by block name', t => {
+it('assembleGLSLShaderPair#warns only for non-std140 blocks and deduplicates by block name', () => {
   const log = createTestLog();
   const vs = `\
 #version 300 es
@@ -460,14 +461,20 @@ void main(void) {
     log
   });
 
-  t.equal(log.warnCalled.length, 1, 'warns once for the non-std140 block name');
-  t.ok(String(log.warnCalled[0][0]).includes('BadBlock'), 'warning targets the non-std140 block');
-  t.ok(!String(log.warnCalled[0][0]).includes('GoodBlock'), 'warning ignores std140 blocks');
+  expect(log.warnCalled.length, 'warns once for the non-std140 block name').toBe(1);
+  expect(
+    Boolean(String(log.warnCalled[0][0]).includes('BadBlock')),
+    'warning targets the non-std140 block'
+  ).toBe(true);
+  expect(
+    Boolean(!String(log.warnCalled[0][0]).includes('GoodBlock')),
+    'warning ignores std140 blocks'
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleGLSLShaderPair#getUniforms', async t => {
+it('assembleGLSLShaderPair#getUniforms', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   // inject spy into the picking module's getUniforms
@@ -483,7 +490,7 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
     fs: FS_GLSL_300
   });
   // Verify getUniforms is function
-  t.is(typeof assembleResult.getUniforms, 'function', 'getUniforms should be function');
+  expect(typeof assembleResult.getUniforms, 'getUniforms should be function').toBe('function');
 
   // With shader modules
   const testModule = {
@@ -492,7 +499,10 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
     fs: '',
     getUniforms: (opts, context) => {
       // Check a uniform generated by its dependency
-      t.ok(context.picking_uActive, 'module getUniforms is called with correct context');
+      expect(
+        Boolean(context.picking_uActive),
+        'module getUniforms is called with correct context'
+      ).toBe(true);
       return {};
     },
     dependencies: [picking]
@@ -506,12 +516,12 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
   });
 
   // Verify getUniforms is function
-  t.is(typeof assembleResult.getUniforms, 'function', 'getUniforms should be function');
+  expect(typeof assembleResult.getUniforms, 'getUniforms should be function').toBe('function');
 
-  t.end();
+  void 0;
 });
 
-test('assembleGLSLShaderPair#defines', async t => {
+it('assembleGLSLShaderPair#defines', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const assembleResult = assembleGLSLShaderPair({
@@ -521,13 +531,19 @@ test('assembleGLSLShaderPair#defines', async t => {
     defines: {IS_TEST: true}
   });
 
-  t.ok(assembleResult.vs.indexOf('#define IS_TEST true') > 0, 'has application defines');
-  t.ok(assembleResult.fs.indexOf('#define IS_TEST true') > 0, 'has application defines');
+  expect(
+    Boolean(assembleResult.vs.indexOf('#define IS_TEST true') > 0),
+    'has application defines'
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('#define IS_TEST true') > 0),
+    'has application defines'
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
+it('assembleGLSLShaderPair#fp64 platform defines compile', async () => {
   const webglDevice = await getWebGLTestDevice();
   const basePlatformInfo = getInfo(webglDevice);
   const platformTestCases = [
@@ -569,19 +585,19 @@ test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
     });
 
     for (const expectedDefine of platformTestCase.expectedDefines) {
-      t.ok(
-        assembleResult.vs.includes(expectedDefine),
+      expect(
+        Boolean(assembleResult.vs.includes(expectedDefine)),
         `${platformTestCase.label} includes ${expectedDefine}`
-      );
+      ).toBe(true);
     }
 
-    t.ok(
-      compileAndLinkShaders(t, webglDevice, assembleResult),
+    expect(
+      Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
       `${platformTestCase.label} fp64 assembly compiles and links`
-    );
+    ).toBe(true);
   }
 
-  t.end();
+  void 0;
 });
 
 /** Note that */
@@ -598,7 +614,7 @@ const pickingInject = {
   }
 };
 
-test('assembleGLSLShaderPair#shaderhooks', async t => {
+it('assembleGLSLShaderPair#shaderhooks', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const hookFunctions = [
@@ -624,31 +640,31 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
   // Verify version directive remains as first line.
-  t.ok(
-    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
+  expect(
+    Boolean(assembleResult.vs.indexOf('LUMAGL_pickColor') > -1),
     'hook function injected into vertex shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1),
     'hook function injected into fragment shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('if (color.a == 0.0) discard;') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('if (color.a == 0.0) discard;') > -1),
     'hook header injected into fragment shader'
-  );
-  t.ok(
-    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1),
     'injection code not included in vertex shader without module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1),
     'injection code not included in fragment shader without module'
-  );
+  ).toBe(true);
 
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1,
+  expect(
+    Boolean(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1),
     'regex injection code not included in fragment shader without module'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -658,33 +674,35 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
   // Verify version directive remains as first line.
-  t.ok(
-    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
+  expect(
+    Boolean(assembleResult.vs.indexOf('LUMAGL_pickColor') > -1),
     'hook function injected into vertex shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1),
     'hook function injected into fragment shader'
-  );
+  ).toBe(true);
 
-  t.ok(
-    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1,
+  expect(
+    Boolean(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1),
     'injection code included in vertex shader with module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1),
     'injection code included in fragment shader with module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color.a *= 1.2;') >
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembleResult.fs.indexOf('color.a *= 1.2;') >
+        assembleResult.fs.indexOf('color = picking_filterColor(color)')
+    ),
     'hook footer injected after injection code'
-  );
+  ).toBe(true);
 
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1,
+  expect(
+    Boolean(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1),
     'regex injection code included in fragment shader with module'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -698,19 +716,21 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
 
-  t.ok(
-    assembleResult.vs.indexOf('color *= 0.1') > -1,
+  expect(
+    Boolean(assembleResult.vs.indexOf('color *= 0.1') > -1),
     'argument injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color += 0.1') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(assembleResult.fs.indexOf('color += 0.1') > -1),
     'argument injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color += 0.1') <
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembleResult.fs.indexOf('color += 0.1') <
+        assembleResult.fs.indexOf('color = picking_filterColor(color)')
+    ),
     'argument injection code injected in the correct order'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -720,15 +740,17 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
 
-  t.ok(
-    assembleResult.fs.indexOf('color.r = 1.0') > -1,
+  expect(
+    Boolean(assembleResult.fs.indexOf('color.r = 1.0') > -1),
     'module injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color.r = 1.0') <
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembleResult.fs.indexOf('color.r = 1.0') <
+        assembleResult.fs.indexOf('color = picking_filterColor(color)')
+    ),
     'module injection code injected in the correct order'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -740,15 +762,15 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
 
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
+  expect(
+    Boolean(assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1),
     'regex injection code included in shader hook'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('WGSLShaderAssembler#assembleWGSLShader supports hooks and named injections', t => {
+it('WGSLShaderAssembler#assembleWGSLShader supports hooks and named injections', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
   shaderAssembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
@@ -790,42 +812,44 @@ fn fragmentMain() -> @location(0) vec4<f32> {
     ]
   });
 
-  t.ok(
-    assembledShader.source.includes('fn OFFSET_POSITION(position: ptr<function, vec4<f32>>) {'),
+  expect(
+    Boolean(
+      assembledShader.source.includes('fn OFFSET_POSITION(position: ptr<function, vec4<f32>>) {')
+    ),
     'WGSL vertex hook functions use WGSL syntax'
-  );
-  t.ok(
-    assembledShader.source.includes('fn FILTER_COLOR(color: ptr<function, vec4<f32>>) {'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('fn FILTER_COLOR(color: ptr<function, vec4<f32>>) {')),
     'WGSL fragment hook functions use WGSL syntax'
-  );
-  t.ok(
-    assembledShader.source.includes('(*position).x += 0.5;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('(*position).x += 0.5;')),
     'WGSL vertex hook injections are included'
-  );
-  t.ok(
-    assembledShader.source.includes('(*color).r = 0.25;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('(*color).r = 0.25;')),
     'WGSL fragment hook injections are included'
-  );
-  t.ok(
-    assembledShader.source.includes('fn getColor() -> vec4<f32>'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('fn getColor() -> vec4<f32>')),
     'WGSL fragment declaration injections enter unified shader source'
-  );
-  t.ok(
-    assembledShader.source.includes('let vertexStart = 1u;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('let vertexStart = 1u;')),
     'WGSL vertex start injection lands'
-  );
-  t.ok(
-    assembledShader.source.includes('let fragmentEnd = 2u;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('let fragmentEnd = 2u;')),
     'WGSL fragment end injection lands'
-  );
-  t.notOk(
-    assembledShader.source.includes('void OFFSET_POSITION'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.source.includes('void OFFSET_POSITION')),
     'WGSL hook functions do not use GLSL declarations'
-  );
-  t.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('assembleGLSLShaderPair#injection order', async t => {
+it('assembleGLSLShaderPair#injection order', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   let assembleResult = assembleGLSLShaderPair({
@@ -844,10 +868,10 @@ test('assembleGLSLShaderPair#injection order', async t => {
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
+  expect(
+    Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
     'Hook functions have access to injected variables.'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -857,16 +881,16 @@ test('assembleGLSLShaderPair#injection order', async t => {
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
 
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
+  expect(
+    Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
     'Hook functions have access to injected variables through modules.'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleGLSLShaderPair#transpilation', async t => {
+it.skip('assembleGLSLShaderPair#transpilation', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   let assembleResult = assembleGLSLShaderPair({
@@ -876,16 +900,22 @@ test.skip('assembleGLSLShaderPair#transpilation', async t => {
     modules: [picking]
   });
 
-  t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!/\bin vec4\b/.exec(assembleResult.vs), '"in" keyword removed');
+  expect(
+    Boolean(assembleResult.vs.indexOf('#version 300 es') === -1),
+    'es 3.0 version directive removed'
+  ).toBe(true);
+  expect(Boolean(!/\bin vec4\b/.exec(assembleResult.vs)), '"in" keyword removed').toBe(true);
 
-  t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!/\bout vec4\b/.exec(assembleResult.fs), '"out" keyword removed');
+  expect(
+    Boolean(assembleResult.fs.indexOf('#version 300 es') === -1),
+    'es 3.0 version directive removed'
+  ).toBe(true);
+  expect(Boolean(!/\bout vec4\b/.exec(assembleResult.fs)), '"out" keyword removed').toBe(true);
 
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
+  expect(
+    Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
     'assemble GLSL300 + picking and transpile to GLSL100'
-  );
+  ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
@@ -894,25 +924,25 @@ test.skip('assembleGLSLShaderPair#transpilation', async t => {
     modules: [picking]
   });
 
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
+  expect(
+    Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
     'assemble GLSL300 + picking and transpile to GLSL100'
-  );
+  ).toBe(true);
 
   const extension = webglDevice.gl.getExtension('OES_standard_derivatives');
   // TODO - this doesn't work in headless gl
   if (isBrowser() && extension) {
-    t.comment(JSON.stringify(extension));
+    void 0;
     assembleResult = assembleGLSLShaderPair({
       platformInfo: getInfo(webglDevice),
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK
     });
 
-    t.ok(
-      compileAndLinkShaders(t, webglDevice, assembleResult),
+    expect(
+      Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
       'Deck shaders transpile 300 to 100 valid program'
-    );
+    ).toBe(true);
   }
 
   assembleResult = assembleGLSLShaderPair({
@@ -922,17 +952,17 @@ test.skip('assembleGLSLShaderPair#transpilation', async t => {
     modules: [pbrMaterial]
   });
 
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
+  expect(
+    Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
     'assemble GLSL300 + PBR assemble, WebGL2'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
 // HELPERS
 
-function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
+function compileAndLinkShaders(device: WebGLDevice, assembleResult) {
   const gl = device.gl;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const vShader: WebGLShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader;
@@ -940,8 +970,8 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   gl.compileShader(vShader);
   let compileStatus = gl.getShaderParameter(vShader, gl.COMPILE_STATUS);
   if (!compileStatus) {
-    const infoLog = gl.getShaderInfoLog(vShader);
-    t.comment(`VS COMPILATION FAILED LOG: ${infoLog}`);
+    const _infoLog = gl.getShaderInfoLog(vShader);
+    void 0;
     return false;
   }
 
@@ -950,8 +980,8 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
   gl.compileShader(fShader);
   compileStatus = gl.getShaderParameter(fShader, gl.COMPILE_STATUS);
   if (!compileStatus) {
-    const infoLog = gl.getShaderInfoLog(fShader);
-    t.comment(`FS COMPILATION FAILED, LOG: ${infoLog}`);
+    const _infoLog = gl.getShaderInfoLog(fShader);
+    void 0;
     return false;
   }
 
@@ -962,8 +992,8 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
 
   const linkStatus = gl.getProgramParameter(program, gl.LINK_STATUS);
   if (!linkStatus) {
-    const infoLog = gl.getProgramInfoLog(program);
-    t.comment(`LINK FAILED, LOG ${infoLog}`);
+    const _infoLog = gl.getProgramInfoLog(program);
+    void 0;
     // t.comment(assembleResult.fs.slice(1000))
   }
 

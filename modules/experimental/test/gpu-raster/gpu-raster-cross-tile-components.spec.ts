@@ -14,7 +14,7 @@ import {
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ScalarFormat = 'uint32' | 'float32';
 
@@ -77,11 +77,11 @@ type CrossFixture = {
 
 const GUARD_VALUE = 4000000001;
 
-test('LuRaster global dense IDs use true monolithic row-major roots and merge weighted cross-tile partials', async testCase => {
+it('LuRaster global dense IDs use true monolithic row-major roots and merge weighted cross-tile partials', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -117,113 +117,93 @@ test('LuRaster global dense IDs use true monolithic row-major roots and merge we
     submitGraph(device, execution.compiled, `submit-monolithic-root-order-${index}`);
     const westResult = execution.tiles.find(tile => tile.bounds[0] === 0)!;
     const eastResult = execution.tiles.find(tile => tile.bounds[0] === 3)!;
-    testCase.deepEqual(
+    expect(
       await readLogical(westResult.outputLabels),
-      [0, 0, 0, 2, 0, 1, 0, 0, 0],
       `arrival order ${index}: eastern first-row root precedes a western later-row root globally`
-    );
-    testCase.deepEqual(
+    ).toEqual([0, 0, 0, 2, 0, 1, 0, 0, 0]);
+    expect(
       await readLogical(eastResult.outputLabels),
-      [1, 1, 0, 1, 0, 0, 0, 3, 0],
       `arrival order ${index}: seam members share the same globally ordered dense identifier`
-    );
-    testCase.deepEqual(
+    ).toEqual([1, 1, 0, 1, 0, 0, 0, 3, 0]);
+    expect(
       await readLogical(westResult.outputValidity),
-      [0, 1, 1, 1, 1, 1, 1, 1, 1],
       `arrival order ${index}: nodata validity remains separate from legitimate zero background`
-    );
-    testCase.equal(
+    ).toEqual([0, 1, 1, 1, 1, 1, 1, 1, 1]);
+    expect(
       (await readLogical(execution.componentCount))[0],
-      3,
       'global component count is exact'
-    );
-    testCase.equal(
+    ).toBe(3);
+    expect(
       (await readLogical(execution.requiredComponentCount))[0],
-      3,
       'unclamped global count remains available'
-    );
-    testCase.equal((await readLogical(execution.converged))[0], 1, 'bounded seam unions converge');
-    testCase.equal(
+    ).toBe(3);
+    expect((await readLogical(execution.converged))[0], 'bounded seam unions converge').toBe(1);
+    expect(
       (await readLogical(execution.overflow))[0],
-      0,
       'adequate global capacity does not overflow'
-    );
-    testCase.deepEqual(
+    ).toBe(0);
+    expect(
       await readLogical(execution.output.pixelCounts),
-      [4, 1, 1, 0],
       'merged geometry counts preserve all seam-connected observations'
-    );
-    testCase.deepEqual(
+    ).toEqual([4, 1, 1, 0]);
+    expect(
       await readLogical(execution.output.intensityCounts),
-      [3, 1, 1, 0],
       'missing intensities alter only valid intensity populations'
-    );
-    testCase.deepEqual(
+    ).toEqual([3, 1, 1, 0]);
+    expect(
       await readLogical(execution.output.intensitySums),
-      [80, 50, 60, 0],
       'merged sums retain every calibrated tile partial'
-    );
+    ).toEqual([80, 50, 60, 0]);
     const means = await readLogical(execution.output.intensityMeans);
-    assertClose(
-      testCase,
-      means[0]!,
-      80 / 3,
-      'merged mean weights exact valid-intensity population'
+    assertClose(means[0]!, 80 / 3, 'merged mean weights exact valid-intensity population');
+    expect(means.slice(1, 3), 'singleton means remain exact').toEqual([50, 60]);
+    expect(Boolean(Number.isNaN(means[3])), 'unused global group receives canonical NaN').toBe(
+      true
     );
-    testCase.deepEqual(means.slice(1, 3), [50, 60], 'singleton means remain exact');
-    testCase.ok(Number.isNaN(means[3]), 'unused global group receives canonical NaN');
-    testCase.deepEqual(
+    expect(
       (await readLogical(execution.output.intensityMinimums)).slice(0, 3),
-      [10, 50, 60],
       'merged minimum is not a per-tile mean'
-    );
-    testCase.deepEqual(
+    ).toEqual([10, 50, 60]);
+    expect(
       (await readLogical(execution.output.intensityMaximums)).slice(0, 3),
-      [40, 50, 60],
       'merged maximum spans both tile populations'
-    );
-    testCase.equal(
+    ).toEqual([40, 50, 60]);
+    expect(
       (await readLogical(execution.output.columnSums))[0],
-      14,
       'tile-local column moments receive the eastern origin exactly once'
-    );
-    testCase.equal(
+    ).toBe(14);
+    expect(
       (await readLogical(execution.output.rowSums))[0],
-      4,
       'global row moments sum mergeable tile partials'
-    );
-    testCase.equal(
+    ).toBe(4);
+    expect(
       (await readLogical(execution.output.centroidColumns))[0],
-      3.5,
       'global centroid remains local to the full-level metadata'
-    );
-    testCase.equal(
+    ).toBe(3.5);
+    expect(
       (await readLogical(execution.output.centroidRows))[0],
-      1,
       'global row centroid is count-weighted'
-    );
-    testCase.deepEqual(
+    ).toBe(1);
+    expect(
       await readLogical(execution.output.areas),
-      [28, 7, 7, 0],
       'affine determinant yields square coordinate units without duplicate halo pixels'
-    );
-    testCase.deepEqual(
+    ).toEqual([28, 7, 7, 0]);
+    expect(
       getRasterRegionWorldCentroid(metadata, 3.5, 1),
-      [10000008.25, -20000001.25],
       'retained full-level affine converts merged centroids at double precision'
-    );
-    await assertGuards(testCase, execution, `monolithic order ${index}`);
-    destroyExecution(testCase, execution);
+    ).toEqual([10000008.25, -20000001.25]);
+    await assertGuards(execution, `monolithic order ${index}`);
+    destroyExecution(execution);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('LuRaster four-tile diagonal seam junctions respect connectivity, nodata barriers, and bounded IDs', async testCase => {
+it('LuRaster four-tile diagonal seam junctions respect connectivity, nodata barriers, and bounded IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
   const metadata: GPURasterMetadata = {
@@ -248,17 +228,15 @@ test('LuRaster four-tile diagonal seam junctions respect connectivity, nodata ba
       regionCapacity: 2
     });
     submitGraph(device, execution.compiled, `submit-four-tile-corners-${connectivity}`);
-    testCase.equal(
+    expect(
       (await readLogical(execution.componentCount))[0],
-      connectivity === 8 ? 1 : 2,
       `${connectivity}-connectivity ${connectivity === 8 ? 'joins' : 'separates'} opposite corners despite missing orthogonal tiles`
-    );
-    testCase.deepEqual(
+    ).toBe(connectivity === 8 ? 1 : 2);
+    expect(
       (await readLogical(execution.output.pixelCounts)).slice(0, connectivity === 8 ? 1 : 2),
-      connectivity === 8 ? [2] : [1, 1],
       'four-way tile junctions contribute each owned core exactly once'
-    );
-    destroyExecution(testCase, execution);
+    ).toEqual(connectivity === 8 ? [2] : [1, 1]);
+    destroyExecution(execution);
   }
 
   const truncated = makeExecution(device, {
@@ -270,42 +248,35 @@ test('LuRaster four-tile diagonal seam junctions respect connectivity, nodata ba
     capacity: 1
   });
   submitGraph(device, truncated.compiled, 'submit-bounded-four-way-regions');
-  testCase.equal(
+  expect(
     (await readLogical(truncated.componentCount))[0],
-    1,
     'global count clamps to explicit capacity'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     (await readLogical(truncated.requiredComponentCount))[0],
-    2,
     'required count retains exact global population'
-  );
-  testCase.equal(
+  ).toBe(2);
+  expect(
     (await readLogical(truncated.overflow))[0],
-    1,
     'insufficient global output capacity is explicit'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     (await readLogical(truncated.converged))[0],
-    1,
     'capacity overflow does not fabricate union nonconvergence'
-  );
-  testCase.deepEqual(
+  ).toBe(1);
+  expect(
     await readLogical(truncated.tiles[3]!.outputLabels),
-    [0],
     'over-capacity foreground never aliases background labels'
-  );
-  testCase.deepEqual(
+  ).toEqual([0]);
+  expect(
     await readLogical(truncated.tiles[3]!.outputValidity),
-    [0],
     'over-capacity foreground is independently invalidated'
-  );
-  testCase.deepEqual(
+  ).toEqual([0]);
+  expect(
     await readLogical(truncated.output.pixelCounts),
-    [1, 0],
     'only globally in-capacity rows merge into bounded output arrays'
-  );
-  destroyExecution(testCase, truncated);
+  ).toEqual([1, 0]);
+  destroyExecution(truncated);
 
   const blocked = makeExecution(device, {
     id: 'nodata-corner-barrier',
@@ -320,25 +291,23 @@ test('LuRaster four-tile diagonal seam junctions respect connectivity, nodata ba
     regionCapacity: 2
   });
   submitGraph(device, blocked.compiled, 'submit-nodata-corner-barrier');
-  testCase.equal(
+  expect(
     (await readLogical(blocked.componentCount))[0],
-    1,
     'a missing diagonal never creates a seam equivalence'
-  );
-  testCase.deepEqual(
+  ).toBe(1);
+  expect(
     await readLogical(blocked.tiles[3]!.outputValidity),
-    [0],
     'missing corner validity remains missing'
-  );
-  destroyExecution(testCase, blocked);
-  testCase.end();
+  ).toEqual([0]);
+  destroyExecution(blocked);
+  void 0;
 });
 
-test('LuRaster cross-tile replay fail-closes upstream and union convergence and saturates merged unsigned populations', async testCase => {
+it('LuRaster cross-tile replay fail-closes upstream and union convergence and saturates merged unsigned populations', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -360,63 +329,55 @@ test('LuRaster cross-tile replay fail-closes upstream and union convergence and 
   };
   const execution = makeExecution(device, fixture);
   submitGraph(device, execution.compiled, 'submit-cross-tile-converged');
-  testCase.equal(
+  expect(
     (await readLogical(execution.componentCount))[0],
-    1,
     'touching edges form one global region'
-  );
-  testCase.deepEqual(
+  ).toBe(1);
+  expect(
     await readLogical(execution.output.intensityMeans),
-    [6, Number.NaN],
     'valid touching regions merge weighted intensity'
-  );
+  ).toEqual([6, Number.NaN]);
 
   writeLogical(execution.tiles[0]!.converged, [0]);
   submitGraph(device, execution.compiled, 'reencode-upstream-nonconvergence');
-  await assertCleared(testCase, execution, 'upstream nonconvergence');
-  testCase.equal(
+  await assertCleared(execution, 'upstream nonconvergence');
+  expect(
     (await readLogical(execution.converged))[0],
-    0,
     'global convergence exposes invalid upstream union'
-  );
+  ).toBe(0);
 
   writeLogical(execution.tiles[0]!.converged, [1]);
   writeLogical(execution.tiles[1]!.overflow, [1]);
   submitGraph(device, execution.compiled, 'reencode-upstream-capacity-overflow');
-  await assertCleared(testCase, execution, 'upstream local overflow');
-  testCase.equal(
+  await assertCleared(execution, 'upstream local overflow');
+  expect(
     (await readLogical(execution.overflow))[0],
-    1,
     'local truncation is an explicit global overflow'
-  );
+  ).toBe(1);
 
   writeLogical(execution.tiles[1]!.overflow, [0]);
   submitGraph(device, execution.compiled, 'reencode-recovered-cross-tile-components');
-  testCase.equal(
+  expect(
     (await readLogical(execution.componentCount))[0],
-    1,
     'graph replay restores the true component count'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     (await readLogical(execution.overflow))[0],
-    0,
     'overflow is reset between successful encodings'
-  );
+  ).toBe(0);
 
   writeLogical(execution.tiles[0]!.measurements.pixelCounts, [4294967295, 0]);
   submitGraph(device, execution.compiled, 'reencode-saturated-global-population');
-  testCase.equal(
+  expect(
     (await readLogical(execution.output.pixelCounts))[0],
-    4294967295,
     'merged unsigned population saturates at maximum uint32'
-  );
-  testCase.equal(
+  ).toBe(4294967295);
+  expect(
     (await readLogical(execution.overflow))[0],
-    1,
     'merged population overflow never silently wraps'
-  );
-  await assertGuards(testCase, execution, 'cross-tile convergence and saturation');
-  destroyExecution(testCase, execution);
+  ).toBe(1);
+  await assertGuards(execution, 'cross-tile convergence and saturation');
+  destroyExecution(execution);
 
   const insufficient = makeExecution(device, {
     ...fixture,
@@ -424,14 +385,13 @@ test('LuRaster cross-tile replay fail-closes upstream and union convergence and 
     maximumIterations: 1
   });
   submitGraph(device, insufficient.compiled, 'submit-insufficient-seam-rounds');
-  await assertCleared(testCase, insufficient, 'insufficient seam propagation rounds');
-  testCase.equal(
+  await assertCleared(insufficient, 'insufficient seam propagation rounds');
+  expect(
     (await readLogical(insufficient.converged))[0],
-    0,
     'bounded seam propagation cannot claim stabilization too early'
-  );
-  destroyExecution(testCase, insufficient);
-  testCase.end();
+  ).toBe(0);
+  destroyExecution(insufficient);
+  void 0;
 });
 
 function makeExecution(device: Device, fixture: CrossFixture): CrossExecution {
@@ -720,59 +680,47 @@ async function readLogical(entry: GuardedBuffer): Promise<number[]> {
   return Array.from(values.slice(entry.prefixLength, entry.prefixLength + entry.length));
 }
 
-async function assertCleared(
-  testCase: Test,
-  execution: CrossExecution,
-  label: string
-): Promise<void> {
-  testCase.equal(
+async function assertCleared(execution: CrossExecution, label: string): Promise<void> {
+  expect(
     (await readLogical(execution.componentCount))[0],
-    0,
     `${label}: global component count clears`
-  );
-  testCase.equal(
+  ).toBe(0);
+  expect(
     (await readLogical(execution.requiredComponentCount))[0],
-    0,
     `${label}: exact required count clears`
-  );
-  testCase.deepEqual(
+  ).toBe(0);
+  expect(
     await readLogical(execution.output.pixelCounts),
-    Array.from({length: execution.output.pixelCounts.length}, () => 0),
     `${label}: all grouped populations clear`
-  );
+  ).toEqual(Array.from({length: execution.output.pixelCounts.length}, () => 0));
   for (const tile of execution.tiles) {
-    testCase.deepEqual(
+    expect(
       await readLogical(tile.outputLabels),
-      Array.from({length: tile.outputLabels.length}, () => 0),
       `${label}: globally relabeled pixels clear`
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from({length: tile.outputLabels.length}, () => 0));
+    expect(
       await readLogical(tile.outputValidity),
-      Array.from({length: tile.outputValidity.length}, () => 0),
       `${label}: valid background is withheld until global convergence`
-    );
+    ).toEqual(Array.from({length: tile.outputValidity.length}, () => 0));
   }
 }
 
-async function assertGuards(
-  testCase: Test,
-  execution: CrossExecution,
-  label: string
-): Promise<void> {
+async function assertGuards(execution: CrossExecution, label: string): Promise<void> {
   for (const entry of execution.owned) {
     const bytes = await entry.buffer.readAsync();
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-    testCase.deepEqual(
+    expect(
       Array.from(words.slice(0, entry.prefixLength)),
-      Array.from({length: entry.prefixLength}, () => GUARD_VALUE),
       `${label}: ${entry.buffer.id} retains offset prefix`
-    );
-    testCase.equal(words.at(-1), GUARD_VALUE, `${label}: ${entry.buffer.id} retains suffix`);
+    ).toEqual(Array.from({length: entry.prefixLength}, () => GUARD_VALUE));
+    expect(words.at(-1), `${label}: ${entry.buffer.id} retains suffix`).toBe(GUARD_VALUE);
   }
 }
 
-function assertClose(testCase: Test, actual: number, expected: number, label: string): void {
-  testCase.ok(Math.abs(actual - expected) < 0.00001, `${label}: ${actual} ≈ ${expected}`);
+function assertClose(actual: number, expected: number, label: string): void {
+  expect(Boolean(Math.abs(actual - expected) < 0.00001), `${label}: ${actual} ≈ ${expected}`).toBe(
+    true
+  );
 }
 
 function submitGraph(
@@ -785,13 +733,13 @@ function submitGraph(
   device.submit(encoder.finish());
 }
 
-function destroyExecution(testCase: Test, execution: CrossExecution): void {
+function destroyExecution(execution: CrossExecution): void {
   execution.compiled.destroy();
   for (const {buffer} of execution.owned) {
-    testCase.notOk(
-      buffer.destroyed,
+    expect(
+      Boolean(buffer.destroyed),
       'cross-tile graph destruction leaves caller-owned resources alive'
-    );
+    ).toBe(false);
     buffer.destroy();
   }
 }

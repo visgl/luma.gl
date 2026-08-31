@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
@@ -18,7 +18,7 @@ import {
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
-test('spectral caustics renderer packs trace uniforms at WGSL offsets', testCase => {
+it('spectral caustics renderer packs trace uniforms at WGSL offsets', () => {
   const uniformData = makeSpectralCausticsUniformData(
     {
       lightViewProjectionMatrix: IDENTITY_MATRIX,
@@ -38,75 +38,67 @@ test('spectral caustics renderer packs trace uniforms at WGSL offsets', testCase
   );
   const values = new Float32Array(uniformData);
 
-  testCase.equal(
-    uniformData.byteLength,
-    SPECTRAL_CAUSTICS_UNIFORM_BYTE_LENGTH,
-    'uniform byte length matches the WGSL struct'
+  expect(uniformData.byteLength, 'uniform byte length matches the WGSL struct').toBe(
+    SPECTRAL_CAUSTICS_UNIFORM_BYTE_LENGTH
   );
-  testCase.deepEqual(
+  expect(
     Array.from(
       values.slice(
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.receiverOriginWidth,
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.receiverOriginWidth + 4
       )
     ),
-    [1, 2, 3, 10],
     'receiver origin and width share one aligned vec4'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 2, 3, 10]);
+  expect(
     Array.from(
       values.slice(
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.receiverBitangentIntensity,
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.receiverBitangentIntensity + 4
       )
     ),
-    [0, 0, 1, 12],
     'receiver bitangent and HDR intensity share one aligned vec4'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0, 1, 12]);
+  expect(
     Array.from(
       values.slice(
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.targetSizes,
         SPECTRAL_CAUSTICS_UNIFORM_OFFSETS.targetSizes + 4
       )
     ),
-    [64, 256, 2.5, 0],
     'capture, output, and splat dimensions occupy the final vec4'
-  );
-  testCase.end();
+  ).toEqual([64, 256, 2.5, 0]);
+  void 0;
 });
 
-test('spectral caustics renderer shaders expose trace and additive splat entry points', testCase => {
+it('spectral caustics renderer shaders expose trace and additive splat entry points', () => {
   const traceReflection = new WgslReflect(SPECTRAL_CAUSTICS_TRACE_SHADER);
   const splatReflection = new WgslReflect(SPECTRAL_CAUSTICS_SPLAT_SHADER);
 
-  testCase.deepEqual(
+  expect(
     traceReflection.entry.compute.map(entry => entry.name),
-    ['main'],
     'trace shader has one compute entry point'
-  );
-  testCase.deepEqual(
+  ).toEqual(['main']);
+  expect(
     splatReflection.entry.vertex.map(entry => entry.name),
-    ['vertexMain'],
     'splat shader has one vertex entry point'
-  );
-  testCase.deepEqual(
+  ).toEqual(['vertexMain']);
+  expect(
     splatReflection.entry.fragment.map(entry => entry.name),
-    ['fragmentMain'],
     'splat shader has one fragment entry point'
-  );
-  testCase.ok(
-    traceReflection.storage.some(storage => storage.name === 'photonSplats'),
+  ).toEqual(['fragmentMain']);
+  expect(
+    Boolean(traceReflection.storage.some(storage => storage.name === 'photonSplats')),
     'trace shader writes the photon-splat storage buffer'
-  );
-  testCase.ok(
-    splatReflection.storage.some(storage => storage.name === 'photonSplats'),
+  ).toBe(true);
+  expect(
+    Boolean(splatReflection.storage.some(storage => storage.name === 'photonSplats')),
     'splat shader reads the same photon-splat storage buffer'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('spectral caustics renderer rejects invalid optical and receiver inputs', testCase => {
+it('spectral caustics renderer rejects invalid optical and receiver inputs', () => {
   const validOptions = {
     lightViewProjectionMatrix: IDENTITY_MATRIX,
     inverseLightViewProjectionMatrix: IDENTITY_MATRIX,
@@ -119,40 +111,35 @@ test('spectral caustics renderer rejects invalid optical and receiver inputs', t
   };
   const dimensions = {captureSize: 64, mapSize: 256, splatRadius: 2};
 
-  testCase.throws(
+  expect(
     () =>
       makeSpectralCausticsUniformData({...validOptions, receiverTangent: [2, 0, 0]}, dimensions),
-    /unit length/,
     'non-unit receiver axes are rejected'
-  );
-  testCase.throws(
+  ).toThrow(/unit length/);
+  expect(
     () => makeSpectralCausticsUniformData({...validOptions, absorption: [0, -0.1, 0]}, dimensions),
-    /non-negative/,
     'negative absorption is rejected'
-  );
-  testCase.throws(
+  ).toThrow(/non-negative/);
+  expect(
     () => makeSpectralCausticsUniformData({...validOptions, refractiveIndex: 1}, dimensions),
-    /greater than one/,
     'a non-refractive material is rejected'
-  );
-  testCase.throws(
+  ).toThrow(/greater than one/);
+  expect(
     () => makeSpectralCausticsUniformData({...validOptions, receiverWidth: Infinity}, dimensions),
-    /positive and finite/,
     'non-finite receiver dimensions are rejected'
-  );
-  testCase.throws(
+  ).toThrow(/positive and finite/);
+  expect(
     () => makeSpectralCausticsUniformData(validOptions, {...dimensions, mapSize: 0}),
-    /positive integer/,
     'invalid uniform target dimensions are rejected'
-  );
-  testCase.end();
+  ).toThrow(/positive integer/);
+  void 0;
 });
 
-test('spectral caustics renderer records and owns its WebGPU pipeline resources', async testCase => {
+it('spectral caustics renderer records and owns its WebGPU pipeline resources', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -177,11 +164,11 @@ test('spectral caustics renderer records and owns its WebGPU pipeline resources'
   });
   device.submit();
 
-  testCase.equal(receiverProps.causticMap, causticMap, 'encode returns the owned HDR XYZ map');
-  testCase.equal(causticMap.format, 'rgba16float', 'caustic radiance remains floating point');
+  expect(receiverProps.causticMap, 'encode returns the owned HDR XYZ map').toBe(causticMap);
+  expect(causticMap.format, 'caustic radiance remains floating point').toBe('rgba16float');
   renderer.destroy();
   renderer.destroy();
-  testCase.ok(causticMap.destroyed, 'destroy releases the owned caustic map');
-  testCase.throws(() => renderer.causticMap, /destroyed/, 'destroyed renderer rejects reuse');
-  testCase.end();
+  expect(Boolean(causticMap.destroyed), 'destroy releases the owned caustic map').toBe(true);
+  expect(() => renderer.causticMap, 'destroyed renderer rejects reuse').toThrow(/destroyed/);
+  void 0;
 });

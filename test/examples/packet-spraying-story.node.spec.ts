@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   SWITCH_CONFIRMATION_DURATION,
   SWITCH_PROBE_DURATION
@@ -30,7 +30,7 @@ import {
   shouldAdvanceNetworkAutorotationScenario
 } from '../../examples/showcase/packet-spraying/story';
 
-test('packet-spraying handheld rendering preserves glass with a bounded mobile GPU budget', testCase => {
+it('packet-spraying handheld rendering preserves glass with a bounded mobile GPU budget', () => {
   const handheld = makeNetworkRenderProfile({
     coarsePointer: true,
     maxTouchPoints: 5,
@@ -38,23 +38,21 @@ test('packet-spraying handheld rendering preserves glass with a bounded mobile G
     viewportWidth: 390
   });
 
-  testCase.equal(handheld.handheld, true, 'touchscreen phone viewports use the mobile profile');
-  testCase.equal(handheld.bloomQuality, 'low', 'phone bloom uses a smaller two-level pyramid');
-  testCase.equal(handheld.bloomResolutionScale, 0.75, 'phone bloom targets are downsampled');
-  testCase.equal(
+  expect(handheld.handheld, 'touchscreen phone viewports use the mobile profile').toBe(true);
+  expect(handheld.bloomQuality, 'phone bloom uses a smaller two-level pyramid').toBe('low');
+  expect(handheld.bloomResolutionScale, 'phone bloom targets are downsampled').toBe(0.75);
+  expect(
     handheld.orderIndependentTransparency,
-    false,
     'phone glass uses the existing depth-sorted transparency path'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     handheld.preferFloatingPointColor,
-    false,
     'phone scene and refraction textures use portable 8-bit formats'
-  );
-  testCase.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('packet-spraying retains complete desktop optics in narrow non-touch viewports', testCase => {
+it('packet-spraying retains complete desktop optics in narrow non-touch viewports', () => {
   const desktop = makeNetworkRenderProfile({
     coarsePointer: false,
     maxTouchPoints: 0,
@@ -69,304 +67,297 @@ test('packet-spraying retains complete desktop optics in narrow non-touch viewpo
   });
 
   for (const profile of [desktop, tablet]) {
-    testCase.equal(profile.handheld, false);
-    testCase.equal(profile.bloomQuality, 'high');
-    testCase.equal(profile.bloomResolutionScale, 1);
-    testCase.equal(profile.orderIndependentTransparency, true);
-    testCase.equal(profile.preferFloatingPointColor, true);
+    expect(profile.handheld, '').toBe(false);
+    expect(profile.bloomQuality, '').toBe('high');
+    expect(profile.bloomResolutionScale, '').toBe(1);
+    expect(profile.orderIndependentTransparency, '').toBe(true);
+    expect(profile.preferFloatingPointColor, '').toBe(true);
   }
-  testCase.end();
+  void 0;
 });
 
-test('packet-spraying guided tour tells the complete MRC recovery story', testCase => {
-  testCase.deepEqual(
+it('packet-spraying guided tour tells the complete MRC recovery story', () => {
+  expect(
     NETWORK_STORY_CHAPTERS.map(chapter => chapter.id),
-    ['conversations', 'packet-spraying', 'congestion', 'failure', 'recovery'],
     'chapters progress from independent conversations through confirmed recovery'
-  );
-  testCase.deepEqual(
+  ).toEqual(['conversations', 'packet-spraying', 'congestion', 'failure', 'recovery']);
+  expect(
     NETWORK_STORY_CHAPTERS.map(chapter => chapter.networkState),
-    ['healthy', 'healthy', 'congested', 'failed', 'recovering'],
     'each chapter requests the corresponding switch state'
-  );
-  testCase.deepEqual(
+  ).toEqual(['healthy', 'healthy', 'congested', 'failed', 'recovering']);
+  expect(
     NETWORK_STORY_CHAPTERS.map(chapter => chapter.navigationLabel),
-    ['Traffic', 'Spraying', 'Congestion', 'Failure', 'Recovery'],
     'every network scenario exposes a recognizable compact navigation label'
-  );
-  testCase.ok(
-    NETWORK_STORY_CHAPTERS.every(chapter => chapter.duration >= 7),
+  ).toEqual(['Traffic', 'Spraying', 'Congestion', 'Failure', 'Recovery']);
+  expect(
+    Boolean(NETWORK_STORY_CHAPTERS.every(chapter => chapter.duration >= 7)),
     'each chapter leaves enough time to observe the network behavior'
-  );
-  testCase.ok(
-    SWITCH_POSITIONS[GUIDED_STORY_SWITCH_INDEX],
+  ).toBe(true);
+  expect(
+    Boolean(SWITCH_POSITIONS[GUIDED_STORY_SWITCH_INDEX]),
     'the scripted story targets a real physical spine switch'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('packet-spraying guided tour wraps forward and backward between chapters', testCase => {
-  testCase.equal(getWrappedStoryChapterIndex(-1), NETWORK_STORY_CHAPTERS.length - 1);
-  testCase.equal(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), 0);
-  testCase.equal(getNetworkStoryChapter(-1).id, 'recovery');
-  testCase.equal(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, 'conversations');
-  testCase.end();
+it('packet-spraying guided tour wraps forward and backward between chapters', () => {
+  expect(getWrappedStoryChapterIndex(-1), '').toBe(NETWORK_STORY_CHAPTERS.length - 1);
+  expect(getWrappedStoryChapterIndex(NETWORK_STORY_CHAPTERS.length), '').toBe(0);
+  expect(getNetworkStoryChapter(-1).id, '').toBe('recovery');
+  expect(getNetworkStoryChapter(NETWORK_STORY_CHAPTERS.length).id, '').toBe('conversations');
+  void 0;
 });
 
-test('packet-spraying autorotation advances scenarios every twenty unpaused seconds', testCase => {
+it('packet-spraying autorotation advances scenarios every twenty unpaused seconds', () => {
   const idleAutorotation = {
     animationPaused: false,
     autoRotate: true,
     guidedStoryPlaying: false
   };
 
-  testCase.equal(NETWORK_AUTOROTATION_SCENARIO_DURATION, 20);
-  testCase.equal(
+  expect(NETWORK_AUTOROTATION_SCENARIO_DURATION, '').toBe(20);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(19.999, idleAutorotation),
-    false,
     'the current scenario remains visible for twenty complete seconds'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(20, idleAutorotation),
-    true,
     'an autorotating idle camera advances at the twenty-second boundary'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, autoRotate: false}),
-    false,
     'a stationary camera never changes the selected scenario'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, animationPaused: true}),
-    false,
     'paused packet animations remain available for inspection'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(20, {...idleAutorotation, guidedStoryPlaying: true}),
-    false,
     'authored guided playback retains its own chapter timing'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     shouldAdvanceNetworkAutorotationScenario(Number.NaN, idleAutorotation),
-    false,
     'invalid animation timestamps cannot skip scenarios'
-  );
-  testCase.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('packet-spraying chapter timeline tracks duration-weighted guided playback', testCase => {
+it('packet-spraying chapter timeline tracks duration-weighted guided playback', () => {
   const firstChapter = getNetworkStoryProgress(0, 3.5);
   const secondChapter = getNetworkStoryProgress(1, 4);
   const finalChapter = getNetworkStoryProgress(NETWORK_STORY_CHAPTERS.length - 1, 7);
 
-  testCase.equal(firstChapter.chapterProgress, 0.5, 'individual chapter progress is normalized');
-  testCase.equal(secondChapter.chapterProgress, 0.5, 'different chapter lengths remain normalized');
-  testCase.ok(
-    secondChapter.overallProgress > firstChapter.overallProgress,
+  expect(firstChapter.chapterProgress, 'individual chapter progress is normalized').toBe(0.5);
+  expect(secondChapter.chapterProgress, 'different chapter lengths remain normalized').toBe(0.5);
+  expect(
+    Boolean(secondChapter.overallProgress > firstChapter.overallProgress),
     'the complete tour advances monotonically'
-  );
-  testCase.equal(finalChapter.overallProgress, 1, 'finishing the final chapter completes the tour');
-  testCase.equal(
+  ).toBe(true);
+  expect(finalChapter.overallProgress, 'finishing the final chapter completes the tour').toBe(1);
+  expect(
     getNetworkStoryProgress(0, -4).chapterProgress,
-    0,
     'negative playback times clamp to zero'
-  );
-  testCase.equal(
+  ).toBe(0);
+  expect(
     getNetworkStoryProgress(0, Number.NaN).chapterProgress,
-    0,
     'invalid playback times cannot poison timeline state'
-  );
-  testCase.end();
+  ).toBe(0);
+  void 0;
 });
 
-test('packet-spraying cinematic story beats explain load, failure, and confirmed recovery', testCase => {
-  testCase.ok(
-    NETWORK_STORY_CHAPTERS.every(chapter => chapter.beats.every(beat => beat.camera)),
+it('packet-spraying cinematic story beats explain load, failure, and confirmed recovery', () => {
+  expect(
+    Boolean(NETWORK_STORY_CHAPTERS.every(chapter => chapter.beats.every(beat => beat.camera))),
     'every named network event has an authored camera shot'
-  );
-  testCase.ok(
-    NETWORK_STORY_CHAPTERS.every(chapter =>
-      chapter.beats.every(
-        (beat, beatIndex) =>
-          beat.position >= 0 &&
-          beat.position < 1 &&
-          (beatIndex === 0 || beat.position >= chapter.beats[beatIndex - 1].position)
+  ).toBe(true);
+  expect(
+    Boolean(
+      NETWORK_STORY_CHAPTERS.every(chapter =>
+        chapter.beats.every(
+          (beat, beatIndex) =>
+            beat.position >= 0 &&
+            beat.position < 1 &&
+            (beatIndex === 0 || beat.position >= chapter.beats[beatIndex - 1].position)
+        )
       )
     ),
     'chapter event markers remain ordered within their timeline segments'
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     NETWORK_STORY_CHAPTERS[1].beats.map(beat => beat.pathIndex),
-    [0, 1, 2, 3],
     'the spraying chapter visits all four independent spine paths'
-  );
-  testCase.equal(getNetworkStoryBeat(1, 0), null, 'the first path waits for its explicit beat');
-  testCase.equal(getNetworkStoryBeat(1, 2.5)?.id, 'path-2');
-  testCase.equal(getNetworkStoryBeat(1, 7.5)?.id, 'path-4');
-  testCase.equal(getNetworkStoryBeat(2, 0)?.id, 'pressure', 'congestion is visible immediately');
-  testCase.equal(getNetworkStoryBeat(3, 0)?.id, 'packet-loss', 'failure begins with packet loss');
-  testCase.equal(
+  ).toEqual([0, 1, 2, 3]);
+  expect(getNetworkStoryBeat(1, 0), 'the first path waits for its explicit beat').toBe(null);
+  expect(getNetworkStoryBeat(1, 2.5)?.id, '').toBe('path-2');
+  expect(getNetworkStoryBeat(1, 7.5)?.id, '').toBe('path-4');
+  expect(getNetworkStoryBeat(2, 0)?.id, 'congestion is visible immediately').toBe('pressure');
+  expect(getNetworkStoryBeat(3, 0)?.id, 'failure begins with packet loss').toBe('packet-loss');
+  expect(
     getNetworkStoryBeat(4, SWITCH_PROBE_DURATION - 0.01)?.id,
-    'probe',
     'the outbound probe remains active until it reaches the repaired switch'
-  );
-  testCase.equal(
+  ).toBe('probe');
+  expect(
     getNetworkStoryBeat(4, SWITCH_PROBE_DURATION)?.id,
-    'confirmation',
     'the cyan confirmation begins exactly when the outbound probe arrives'
-  );
-  testCase.equal(
+  ).toBe('confirmation');
+  expect(
     getNetworkStoryBeat(4, SWITCH_PROBE_DURATION + SWITCH_CONFIRMATION_DURATION)?.id,
-    'restored',
     'ordinary traffic resumes exactly when the recovery acknowledgment completes'
-  );
-  testCase.equal(
+  ).toBe('restored');
+  expect(
     getNetworkStoryBeat(4, Number.NaN)?.id,
-    'probe',
     'invalid elapsed times safely remain at the initial recovery beat'
-  );
-  testCase.end();
+  ).toBe('probe');
+  void 0;
 });
 
-test('packet-spraying beat cameras inherit chapter framing without sharing target arrays', testCase => {
+it('packet-spraying beat cameras inherit chapter framing without sharing target arrays', () => {
   const chapter = NETWORK_STORY_CHAPTERS[2];
   const beat = chapter.beats[1];
   const chapterCamera = makeNetworkStoryCamera(chapter, null);
   const beatCamera = makeNetworkStoryCamera(chapter, beat);
 
-  testCase.deepEqual(chapterCamera, chapter.camera, 'a chapter starts from its establishing shot');
-  testCase.equal(
-    beatCamera.distance,
-    beat.camera?.distance,
-    'a beat can tighten the camera distance'
+  expect(chapterCamera, 'a chapter starts from its establishing shot').toEqual(chapter.camera);
+  expect(beatCamera.distance, 'a beat can tighten the camera distance').toBe(beat.camera?.distance);
+  expect(beatCamera.target, 'a beat can focus a network event').toEqual(beat.camera?.target);
+  expect(beatCamera.target, 'resolved camera targets are safe to animate in place').not.toBe(
+    beat.camera?.target
   );
-  testCase.deepEqual(beatCamera.target, beat.camera?.target, 'a beat can focus a network event');
-  testCase.notEqual(
-    beatCamera.target,
-    beat.camera?.target,
-    'resolved camera targets are safe to animate in place'
-  );
-  testCase.end();
+  void 0;
 });
 
-test('packet-spraying portrait cameras preserve enough horizontal framing for the network', testCase => {
+it('packet-spraying portrait cameras preserve enough horizontal framing for the network', () => {
   const phoneAspect = 390 / 844;
   const phoneVerticalFieldOfView = getNetworkVerticalFieldOfView(phoneAspect);
   const phoneHorizontalFieldOfView =
     (2 * Math.atan(Math.tan((phoneVerticalFieldOfView * Math.PI) / 360) * phoneAspect) * 180) /
     Math.PI;
 
-  testCase.equal(getNetworkVerticalFieldOfView(16 / 9), 50, 'desktop framing remains unchanged');
-  testCase.equal(getNetworkVerticalFieldOfView(1), 50, 'square framing remains unchanged');
-  testCase.equal(getNetworkVerticalFieldOfView(0.9), 60, 'wide portraits retain familiar framing');
-  testCase.ok(phoneVerticalFieldOfView > 80, 'phone portraits receive a wider vertical field');
-  testCase.ok(
-    Math.abs(phoneHorizontalFieldOfView - 48) < 0.001,
+  expect(getNetworkVerticalFieldOfView(16 / 9), 'desktop framing remains unchanged').toBe(50);
+  expect(getNetworkVerticalFieldOfView(1), 'square framing remains unchanged').toBe(50);
+  expect(getNetworkVerticalFieldOfView(0.9), 'wide portraits retain familiar framing').toBe(60);
+  expect(
+    Boolean(phoneVerticalFieldOfView > 80),
+    'phone portraits receive a wider vertical field'
+  ).toBe(true);
+  expect(
+    Boolean(Math.abs(phoneHorizontalFieldOfView - 48) < 0.001),
     'phone portraits retain the minimum horizontal network field of view'
-  );
-  testCase.equal(getNetworkVerticalFieldOfView(0.1), 105, 'extreme portrait fields remain bounded');
-  testCase.equal(getNetworkVerticalFieldOfView(Number.NaN), 50, 'invalid aspect ratios stay safe');
-  testCase.equal(getNetworkVerticalViewportOffset(16 / 9), 0, 'desktop cameras remain centered');
-  testCase.ok(
-    getNetworkVerticalViewportOffset(phoneAspect) > 0.2,
+  ).toBe(true);
+  expect(getNetworkVerticalFieldOfView(0.1), 'extreme portrait fields remain bounded').toBe(105);
+  expect(getNetworkVerticalFieldOfView(Number.NaN), 'invalid aspect ratios stay safe').toBe(50);
+  expect(getNetworkVerticalViewportOffset(16 / 9), 'desktop cameras remain centered').toBe(0);
+  expect(
+    Boolean(getNetworkVerticalViewportOffset(phoneAspect) > 0.2),
     'phone portraits move the network above the guided-story panel'
-  );
-  testCase.ok(
-    getNetworkVerticalViewportOffset(0.1) <= 0.28,
+  ).toBe(true);
+  expect(
+    Boolean(getNetworkVerticalViewportOffset(0.1) <= 0.28),
     'portrait composition shifts remain bounded'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     getNetworkVerticalViewportOffset(Number.NaN),
-    0,
     'invalid aspect ratios cannot displace the scene'
-  );
-  testCase.end();
+  ).toBe(0);
+  void 0;
 });
 
-test('packet-spraying visual style introduces optical effects in readable cinematic stages', testCase => {
+it('packet-spraying visual style introduces optical effects in readable cinematic stages', () => {
   const diagram = makeNetworkOpticsProfile(0);
   const clearGlass = makeNetworkOpticsProfile(3);
   const cinematic = makeNetworkOpticsProfile(DEFAULT_NETWORK_OPTICS_LEVEL);
   const fireworks = makeNetworkOpticsProfile(MAX_NETWORK_OPTICS_LEVEL);
 
-  testCase.equal(diagram.label, 'Diagram', 'zero preserves a packet-first diagram');
-  testCase.equal(diagram.refraction, 0, 'diagram mode disables background distortion');
-  testCase.equal(diagram.illumination, 0, 'diagram mode disables secondary packet lighting');
-  testCase.equal(diagram.caustics, 0, 'diagram mode disables projected caustics');
-  testCase.equal(diagram.bloom, 0, 'diagram mode disables screen-space bloom');
+  expect(diagram.label, 'zero preserves a packet-first diagram').toBe('Diagram');
+  expect(diagram.refraction, 'diagram mode disables background distortion').toBe(0);
+  expect(diagram.illumination, 'diagram mode disables secondary packet lighting').toBe(0);
+  expect(diagram.caustics, 'diagram mode disables projected caustics').toBe(0);
+  expect(diagram.bloom, 'diagram mode disables screen-space bloom').toBe(0);
 
-  testCase.equal(clearGlass.label, 'Clear glass', 'early settings first reveal clean glass');
-  testCase.equal(clearGlass.surface, 1, 'surface highlights are available before heavy optics');
-  testCase.equal(clearGlass.spectral, 0, 'clear glass avoids spectral visual clutter');
-  testCase.equal(clearGlass.caustics, 0, 'caustics wait for higher visual settings');
+  expect(clearGlass.label, 'early settings first reveal clean glass').toBe('Clear glass');
+  expect(clearGlass.surface, 'surface highlights are available before heavy optics').toBe(1);
+  expect(clearGlass.spectral, 'clear glass avoids spectral visual clutter').toBe(0);
+  expect(clearGlass.caustics, 'caustics wait for higher visual settings').toBe(0);
 
-  testCase.equal(cinematic.label, 'Cinematic', 'the default uses the balanced cinematic profile');
-  testCase.ok(cinematic.refraction > 0.9, 'cinematic mode enables convincing glass refraction');
-  testCase.ok(cinematic.illumination > 0.9, 'cinematic mode lights nearby switches');
-  testCase.ok(cinematic.spectral < 0.5, 'cinematic mode keeps spectral accents restrained');
-  testCase.ok(cinematic.caustics < 0.25, 'cinematic mode keeps caustics below maximum');
-
-  testCase.equal(fireworks.label, 'Fireworks', 'eleven enables the complete visual treatment');
-  testCase.ok(fireworks.spectral > 1, 'fireworks enhances wavelength-dependent glass');
-  testCase.ok(fireworks.caustics > 1, 'fireworks intensifies focused optical caustics');
-  testCase.ok(fireworks.bloom > 1, 'fireworks intensifies selective bloom');
-  testCase.equal(makeNetworkOpticsProfile(-5).level, 0, 'negative values clamp to diagram mode');
-  testCase.equal(
-    makeNetworkOpticsProfile(15).level,
-    MAX_NETWORK_OPTICS_LEVEL,
-    'values above eleven stay bounded'
+  expect(cinematic.label, 'the default uses the balanced cinematic profile').toBe('Cinematic');
+  expect(
+    Boolean(cinematic.refraction > 0.9),
+    'cinematic mode enables convincing glass refraction'
+  ).toBe(true);
+  expect(Boolean(cinematic.illumination > 0.9), 'cinematic mode lights nearby switches').toBe(true);
+  expect(
+    Boolean(cinematic.spectral < 0.5),
+    'cinematic mode keeps spectral accents restrained'
+  ).toBe(true);
+  expect(Boolean(cinematic.caustics < 0.25), 'cinematic mode keeps caustics below maximum').toBe(
+    true
   );
-  testCase.equal(
+
+  expect(fireworks.label, 'eleven enables the complete visual treatment').toBe('Fireworks');
+  expect(Boolean(fireworks.spectral > 1), 'fireworks enhances wavelength-dependent glass').toBe(
+    true
+  );
+  expect(Boolean(fireworks.caustics > 1), 'fireworks intensifies focused optical caustics').toBe(
+    true
+  );
+  expect(Boolean(fireworks.bloom > 1), 'fireworks intensifies selective bloom').toBe(true);
+  expect(makeNetworkOpticsProfile(-5).level, 'negative values clamp to diagram mode').toBe(0);
+  expect(makeNetworkOpticsProfile(15).level, 'values above eleven stay bounded').toBe(
+    MAX_NETWORK_OPTICS_LEVEL
+  );
+  expect(
     makeNetworkOpticsProfile(Number.NaN).level,
-    DEFAULT_NETWORK_OPTICS_LEVEL,
     'invalid values return to the cinematic default'
-  );
-  testCase.end();
+  ).toBe(DEFAULT_NETWORK_OPTICS_LEVEL);
+  void 0;
 });
 
-test('packet-spraying hover highlights glass without washing out transparency or switch faults', testCase => {
+it('packet-spraying hover highlights glass without washing out transparency or switch faults', () => {
   const clearSwitch: [number, number, number, number] = [0.28, 0.48, 0.82, 0.3];
   const failedSwitch: [number, number, number, number] = [1, 0.065, 0.035, 0.59];
   const planeHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 1, 0);
   const pathHighlight = makeNetworkSwitchHighlightColor(clearSwitch, 0, 1);
 
-  testCase.deepEqual(
+  expect(
     makeNetworkSwitchHighlightColor(clearSwitch, 0, 0),
-    clearSwitch,
     'unfocused switches retain their original glass color'
-  );
-  testCase.ok(
-    planeHighlight[1] > clearSwitch[1] && planeHighlight[2] > clearSwitch[2],
+  ).toEqual(clearSwitch);
+  expect(
+    Boolean(planeHighlight[1] > clearSwitch[1] && planeHighlight[2] > clearSwitch[2]),
     'hovered plane switches ease toward a visible cool glass highlight'
-  );
-  testCase.ok(
-    planeHighlight.every(channel => channel <= 1) && pathHighlight.every(channel => channel <= 1),
+  ).toBe(true);
+  expect(
+    Boolean(
+      planeHighlight.every(channel => channel <= 1) && pathHighlight.every(channel => channel <= 1)
+    ),
     'switch focus remains representable without clipping on standard-range WebGL displays'
-  );
-  testCase.ok(
-    planeHighlight[1] - planeHighlight[2] * 0.6 > 0.008 &&
-      pathHighlight[1] - pathHighlight[2] * 0.6 > 0.008,
+  ).toBe(true);
+  expect(
+    Boolean(
+      planeHighlight[1] - planeHighlight[2] * 0.6 > 0.008 &&
+        pathHighlight[1] - pathHighlight[2] * 0.6 > 0.008
+    ),
     'fully focused switches activate the chromatic Fresnel rim without exceeding display range'
-  );
-  testCase.ok(
-    makeNetworkSwitchHighlightColor(clearSwitch, 0.5, 0)[2] < planeHighlight[2],
+  ).toBe(true);
+  expect(
+    Boolean(makeNetworkSwitchHighlightColor(clearSwitch, 0.5, 0)[2] < planeHighlight[2]),
     'partial plane focus fades in before reaching the complete Fresnel rim'
-  );
-  testCase.ok(
-    pathHighlight[1] > planeHighlight[1],
+  ).toBe(true);
+  expect(
+    Boolean(pathHighlight[1] > planeHighlight[1]),
     'focused backbone paths retain a distinct cyan glass accent'
-  );
-  testCase.equal(planeHighlight[3], clearSwitch[3], 'plane highlighting preserves glass opacity');
-  testCase.equal(pathHighlight[3], clearSwitch[3], 'path highlighting preserves glass opacity');
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(planeHighlight[3], 'plane highlighting preserves glass opacity').toBe(clearSwitch[3]);
+  expect(pathHighlight[3], 'path highlighting preserves glass opacity').toBe(clearSwitch[3]);
+  expect(
     makeNetworkSwitchHighlightColor(failedSwitch, 1, 1),
-    failedSwitch,
     'failed or congested switch colors remain visually authoritative'
-  );
-  testCase.end();
+  ).toEqual(failedSwitch);
+  void 0;
 });
 
-test('packet-spraying floating-point highlights preserve honest display capabilities', testCase => {
+it('packet-spraying floating-point highlights preserve honest display capabilities', () => {
   const standardProfile = makeNetworkDynamicRangeProfile({
     deviceType: 'webgl',
     displaySupportsHighDynamicRange: true,
@@ -431,100 +422,106 @@ test('packet-spraying floating-point highlights preserve honest display capabili
     visualIntensity: DEFAULT_NETWORK_OPTICS_LEVEL
   });
 
-  testCase.equal(standardProfile.displayMode, 'standard', '8-bit scenes remain standard range');
-  testCase.equal(standardProfile.highlightBoost, 0, 'standard scenes do not claim false headroom');
-  testCase.equal(standardProfile.emissionScale, 1, 'standard scenes retain their packet emission');
-  testCase.equal(standardProfile.exposureScale, 1, 'standard scenes retain their midtone exposure');
-  testCase.equal(
+  expect(standardProfile.displayMode, '8-bit scenes remain standard range').toBe('standard');
+  expect(standardProfile.highlightBoost, 'standard scenes do not claim false headroom').toBe(0);
+  expect(standardProfile.emissionScale, 'standard scenes retain their packet emission').toBe(1);
+  expect(standardProfile.exposureScale, 'standard scenes retain their midtone exposure').toBe(1);
+  expect(
     floatingPointProfile.displayMode,
-    'floating-point',
     'floating-point scene color is distinguished from display HDR'
-  );
-  testCase.equal(
+  ).toBe('floating-point');
+  expect(
     floatingPointProfile.maximumLuminance,
-    1,
     'SDR presentation never emits unsupported extended-range values'
-  );
-  testCase.ok(
-    floatingPointProfile.highlightBoost > 0,
+  ).toBe(1);
+  expect(
+    Boolean(floatingPointProfile.highlightBoost > 0),
     'floating-point scenes retain bright detail'
-  );
-  testCase.ok(
-    floatingPointProfile.emissionScale < 1.2,
+  ).toBe(true);
+  expect(
+    Boolean(floatingPointProfile.emissionScale < 1.2),
     'SDR presentation receives only restrained floating-point accents'
-  );
-  testCase.equal(extendedProfile.displayMode, 'extended-hdr', 'true HDR requires an FP16 canvas');
-  testCase.ok(
-    extendedProfile.highlightBoost > floatingPointProfile.highlightBoost,
+  ).toBe(true);
+  expect(extendedProfile.displayMode, 'true HDR requires an FP16 canvas').toBe('extended-hdr');
+  expect(
+    Boolean(extendedProfile.highlightBoost > floatingPointProfile.highlightBoost),
     'an extended display may use more of the available highlight headroom'
-  );
-  testCase.ok(
-    extendedProfile.maximumLuminance > 2,
+  ).toBe(true);
+  expect(
+    Boolean(extendedProfile.maximumLuminance > 2),
     'true HDR preserves packet and glass highlights well above SDR white'
-  );
-  testCase.ok(
-    Math.abs(defaultExtendedProfile.highlightBoost - DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST) < 0.01,
+  ).toBe(true);
+  expect(
+    Boolean(
+      Math.abs(defaultExtendedProfile.highlightBoost - DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST) < 0.01
+    ),
     'the guided tour uses a restrained HDR highlight setting by default'
-  );
-  testCase.ok(
-    defaultExtendedProfile.maximumLuminance < 2,
+  ).toBe(true);
+  expect(
+    Boolean(defaultExtendedProfile.maximumLuminance < 2),
     'default HDR highlights remain below twice SDR white'
-  );
-  testCase.ok(
-    defaultExtendedProfile.emissionScale < 1.25 && defaultExtendedProfile.specularScale < 1.15,
+  ).toBe(true);
+  expect(
+    Boolean(
+      defaultExtendedProfile.emissionScale < 1.25 && defaultExtendedProfile.specularScale < 1.15
+    ),
     'the default keeps packet emission and glass reflections restrained'
-  );
-  testCase.ok(
-    lowExtendedProfile.maximumLuminance < 1.25 && lowExtendedProfile.emissionScale < 1.05,
+  ).toBe(true);
+  expect(
+    Boolean(lowExtendedProfile.maximumLuminance < 1.25 && lowExtendedProfile.emissionScale < 1.05),
     'the bottom of the slider stays close to SDR instead of lifting the scene'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     maximumExtendedProfile.maximumLuminance,
-    4,
     'maximum HDR reaches the tone mapper display-headroom limit'
-  );
-  testCase.ok(
-    maximumExtendedProfile.emissionScale > 2.5 && maximumExtendedProfile.specularScale > 1.8,
+  ).toBe(4);
+  expect(
+    Boolean(
+      maximumExtendedProfile.emissionScale > 2.5 && maximumExtendedProfile.specularScale > 1.8
+    ),
     'maximum HDR clearly accelerates packet cores and polished glass highlights'
-  );
-  testCase.ok(
-    maximumExtendedProfile.exposureScale < defaultExtendedProfile.exposureScale &&
-      maximumExtendedProfile.exposureScale <= 1,
+  ).toBe(true);
+  expect(
+    Boolean(
+      maximumExtendedProfile.exposureScale < defaultExtendedProfile.exposureScale &&
+        maximumExtendedProfile.exposureScale <= 1
+    ),
     'opening highlight headroom does not brighten scene midtones'
-  );
-  testCase.ok(
-    maximumExtendedProfile.bloomThresholdScale > maximumExtendedProfile.bloomIntensityScale,
+  ).toBe(true);
+  expect(
+    Boolean(
+      maximumExtendedProfile.bloomThresholdScale > maximumExtendedProfile.bloomIntensityScale
+    ),
     'maximum HDR raises the bloom threshold faster than bloom intensity for selective accents'
-  );
-  testCase.ok(
-    maximumFloatingPointProfile.emissionScale < 1.1 &&
-      maximumFloatingPointProfile.specularScale < 1.05,
+  ).toBe(true);
+  expect(
+    Boolean(
+      maximumFloatingPointProfile.emissionScale < 1.1 &&
+        maximumFloatingPointProfile.specularScale < 1.05
+    ),
     'floating-point SDR receives only restrained highlight shaping at slider maximum'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     maximumFloatingPointProfile.maximumLuminance,
-    1,
     'floating-point SDR never receives extended display luminance'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     diagramExtendedProfile.highlightBoost,
-    extendedProfile.highlightBoost,
     'visual style does not change independently selected HDR brightness'
-  );
-  testCase.equal(
+  ).toBe(extendedProfile.highlightBoost);
+  expect(
     diagramExtendedProfile.maximumLuminance,
-    extendedProfile.maximumLuminance,
     'diagram mode preserves extended display headroom'
-  );
-  testCase.ok(
-    extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale,
+  ).toBe(extendedProfile.maximumLuminance);
+  expect(
+    Boolean(extendedProfile.bloomThresholdScale > floatingPointProfile.bloomThresholdScale),
     'selective bloom remains above ordinary scene brightness'
-  );
-  testCase.ok(
-    extendedProfile.illuminationScale > floatingPointProfile.illuminationScale,
+  ).toBe(true);
+  expect(
+    Boolean(extendedProfile.illuminationScale > floatingPointProfile.illuminationScale),
     'HDR displays can show stronger packet-driven glass lighting without washing out SDR'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     makeNetworkDynamicRangeProfile({
       deviceType: 'webgpu',
       displaySupportsHighDynamicRange: true,
@@ -533,8 +530,7 @@ test('packet-spraying floating-point highlights preserve honest display capabili
       sceneColorFormat: 'rgba16float',
       visualIntensity: 0
     }).highlightBoost,
-    MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
     'the HDR control remains bounded independently of visual style'
-  );
-  testCase.end();
+  ).toBe(MAX_NETWORK_HDR_HIGHLIGHT_BOOST);
+  void 0;
 });

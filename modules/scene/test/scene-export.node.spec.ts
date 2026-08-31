@@ -1,12 +1,12 @@
 import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
 import {
   exportANARIJSONSceneToGLTF,
   exportANARIJSONSceneToUSD
 } from '../../../examples/showcase/scene/scene-export';
 
-test('ANARI scene exporter writes static glTF scene assets', async testContext => {
+it('ANARI scene exporter writes static glTF scene assets', async () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[1].scene);
   scene.textures = {
     crystal: {
@@ -20,29 +20,31 @@ test('ANARI scene exporter writes static glTF scene assets', async testContext =
 
   const gltf = JSON.parse(await exportANARIJSONSceneToGLTF(scene));
 
-  testContext.equal(gltf.asset.version, '2.0', 'export uses glTF 2.0');
-  testContext.ok(gltf.meshes.length > 0, 'procedural ANARI geometry bakes into glTF meshes');
-  testContext.ok(gltf.nodes.length > 0, 'retained ANARI instances become glTF nodes');
-  testContext.equal(gltf.images.length, 1, 'retained image samplers become glTF images');
-  testContext.ok(
-    gltf.buffers[0].uri.startsWith('data:application/octet-stream;base64,'),
-    'mesh buffers are embedded for standalone downloads'
+  expect(gltf.asset.version, 'export uses glTF 2.0').toBe('2.0');
+  expect(Boolean(gltf.meshes.length > 0), 'procedural ANARI geometry bakes into glTF meshes').toBe(
+    true
   );
-  testContext.end();
+  expect(Boolean(gltf.nodes.length > 0), 'retained ANARI instances become glTF nodes').toBe(true);
+  expect(gltf.images.length, 'retained image samplers become glTF images').toBe(1);
+  expect(
+    Boolean(gltf.buffers[0].uri.startsWith('data:application/octet-stream;base64,')),
+    'mesh buffers are embedded for standalone downloads'
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI scene exporter writes static USDA stages', testContext => {
+it('ANARI scene exporter writes static USDA stages', () => {
   const usd = exportANARIJSONSceneToUSD(PLAYGROUND_PRESETS[2].scene);
 
-  testContext.match(usd, /#usda 1.0/, 'export uses ASCII USD');
-  testContext.match(usd, /def Xform "World"/, 'export creates a USD world root');
-  testContext.match(usd, /def Mesh/, 'procedural ANARI geometry bakes into USD meshes');
-  testContext.match(usd, /UsdPreviewSurface/, 'ANARI materials become preview-surface shaders');
-  testContext.match(usd, /xformOp:transform/, 'retained instances become USD transforms');
-  testContext.end();
+  expect(usd, 'export uses ASCII USD').toMatch(/#usda 1.0/);
+  expect(usd, 'export creates a USD world root').toMatch(/def Xform "World"/);
+  expect(usd, 'procedural ANARI geometry bakes into USD meshes').toMatch(/def Mesh/);
+  expect(usd, 'ANARI materials become preview-surface shaders').toMatch(/UsdPreviewSurface/);
+  expect(usd, 'retained instances become USD transforms').toMatch(/xformOp:transform/);
+  void 0;
 });
 
-test('ANARI glTF export preserves alpha masking, authored cutoff, and material sidedness', async testContext => {
+it('ANARI glTF export preserves alpha masking, authored cutoff, and material sidedness', async () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const materialIdentifier = Object.keys(scene.materials)[0];
   const material = scene.materials[materialIdentifier];
@@ -55,24 +57,23 @@ test('ANARI glTF export preserves alpha masking, authored cutoff, and material s
   const maskedMaterial = maskedDocument.materials.find(
     candidate => candidate.name === materialIdentifier
   );
-  testContext.equal(maskedMaterial.alphaMode, 'MASK', 'masked materials preserve their alpha mode');
-  testContext.equal(maskedMaterial.alphaCutoff, 0.35, 'masked materials preserve their cutoff');
-  testContext.equal(maskedMaterial.doubleSided, true, 'authored two-sided rendering round-trips');
+  expect(maskedMaterial.alphaMode, 'masked materials preserve their alpha mode').toBe('MASK');
+  expect(maskedMaterial.alphaCutoff, 'masked materials preserve their cutoff').toBe(0.35);
+  expect(maskedMaterial.doubleSided, 'authored two-sided rendering round-trips').toBe(true);
 
   material.alphaMode = 'opaque';
   const opaqueDocument = JSON.parse(await exportANARIJSONSceneToGLTF(scene));
   const opaqueMaterial = opaqueDocument.materials.find(
     candidate => candidate.name === materialIdentifier
   );
-  testContext.equal(
+  expect(
     opaqueMaterial.alphaMode,
-    undefined,
     'explicit opaque materials do not become blended solely because their alpha changes'
-  );
-  testContext.end();
+  ).toBe(undefined);
+  void 0;
 });
 
-test('ANARI glTF export preserves authored punctual-light cones, direction, and intensity', async testContext => {
+it('ANARI glTF export preserves authored punctual-light cones, direction, and intensity', async () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   scene.lights = [
     {
@@ -91,36 +92,28 @@ test('ANARI glTF export preserves authored punctual-light cones, direction, and 
   const authoredLight = gltf.extensions.KHR_lights_punctual.lights[0];
   const authoredLightNode = gltf.nodes.find(node => node.name === 'authored-spot');
 
-  testContext.equal(authoredLight.type, 'spot', 'authored punctual-light type round-trips');
-  testContext.equal(authoredLight.intensity, 0, 'zero-valued authored light intensity survives');
-  testContext.deepEqual(
-    authoredLight.color,
-    [0.2, 0.4, 0.6],
-    'linear authored light color survives'
-  );
-  testContext.deepEqual(
-    authoredLight.spot,
-    {innerConeAngle: 0.2, outerConeAngle: 0.6},
-    'authored inner and outer spot cone angles round-trip'
-  );
-  testContext.deepEqual(
-    authoredLightNode.translation,
-    [1, 2, 3],
-    'authored punctual-light position survives'
-  );
-  testContext.equal(
+  expect(authoredLight.type, 'authored punctual-light type round-trips').toBe('spot');
+  expect(authoredLight.intensity, 'zero-valued authored light intensity survives').toBe(0);
+  expect(authoredLight.color, 'linear authored light color survives').toEqual([0.2, 0.4, 0.6]);
+  expect(authoredLight.spot, 'authored inner and outer spot cone angles round-trip').toEqual({
+    innerConeAngle: 0.2,
+    outerConeAngle: 0.6
+  });
+  expect(authoredLightNode.translation, 'authored punctual-light position survives').toEqual([
+    1, 2, 3
+  ]);
+  expect(
     authoredLightNode.rotation.length,
-    4,
     'non-default light direction becomes an authored glTF node rotation'
-  );
-  testContext.ok(
-    gltf.extensionsUsed.includes('KHR_lights_punctual'),
+  ).toBe(4);
+  expect(
+    Boolean(gltf.extensionsUsed.includes('KHR_lights_punctual')),
     'the punctual-light extension is declared'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI glTF export preserves canonical material extensions, authored samplers, and secondary UVs', async testContext => {
+it('ANARI glTF export preserves canonical material extensions, authored samplers, and secondary UVs', async () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   scene.geometries.halo = {
     '@@type': 'triangle',
@@ -188,81 +181,66 @@ test('ANARI glTF export preserves canonical material extensions, authored sample
   const gltf = JSON.parse(await exportANARIJSONSceneToGLTF(scene));
   const exportedMaterial = gltf.materials.find(candidate => candidate.name === 'halo');
   const haloPrimitive = gltf.meshes.find(mesh => mesh.name === 'halo').primitives[0];
-  testContext.ok(
-    haloPrimitive.attributes.TEXCOORD_1 !== undefined,
+  expect(
+    Boolean(haloPrimitive.attributes.TEXCOORD_1 !== undefined),
     'secondary UVs become TEXCOORD_1'
-  );
+  ).toBe(true);
 
   for (const {slot, pathSegments, colorSpace} of getTextureTransformSlotDefinitions()) {
     let textureInfo = exportedMaterial;
     for (const pathSegment of pathSegments) {
       textureInfo = textureInfo?.[pathSegment];
     }
-    testContext.equal(
+    expect(
       typeof textureInfo?.index,
-      'number',
       `${slot} is written at its canonical glTF material path`
-    );
+    ).toBe('number');
     if (colorSpace === 'linear') {
-      testContext.equal(
-        textureInfo.texCoord,
-        1,
-        `${slot} preserves authored secondary UV selection`
-      );
-      testContext.deepEqual(
+      expect(textureInfo.texCoord, `${slot} preserves authored secondary UV selection`).toBe(1);
+      expect(
         textureInfo.extensions?.KHR_texture_transform?.offset,
-        [0.25, 0.5],
         `${slot} preserves authored texture offsets`
-      );
-      testContext.deepEqual(
+      ).toEqual([0.25, 0.5]);
+      expect(
         textureInfo.extensions?.KHR_texture_transform?.scale,
-        [2, 3],
         `${slot} preserves authored texture scale`
-      );
+      ).toEqual([2, 3]);
     }
   }
 
   const authoredColorTexture = gltf.textures.find(texture => texture.name === 'authoredColor');
   const authoredDataTexture = gltf.textures.find(texture => texture.name === 'authoredData');
-  testContext.notEqual(
+  expect(
     authoredColorTexture.sampler,
-    authoredDataTexture.sampler,
     'different authored samplers remain independently addressable'
-  );
-  testContext.deepEqual(
+  ).not.toBe(authoredDataTexture.sampler);
+  expect(
     gltf.samplers[authoredDataTexture.sampler],
-    {wrapS: 33071, wrapT: 33648, magFilter: 9728, minFilter: 9986},
     'portable filter, wrap, and mipmap settings round-trip into glTF sampler enums'
+  ).toEqual({wrapS: 33071, wrapT: 33648, magFilter: 9728, minFilter: 9986});
+  expect(exportedMaterial.alphaMode, 'masked alpha mode round-trips').toBe('MASK');
+  expect(exportedMaterial.alphaCutoff, 'authored alpha cutoff round-trips').toBe(0.37);
+  expect(exportedMaterial.doubleSided, 'authored face culling round-trips').toBe(true);
+  expect(exportedMaterial.normalTexture.scale, 'normal-map strength round-trips').toBe(0.35);
+  expect(exportedMaterial.occlusionTexture.strength, 'occlusion-map strength round-trips').toBe(
+    0.65
   );
-  testContext.equal(exportedMaterial.alphaMode, 'MASK', 'masked alpha mode round-trips');
-  testContext.equal(exportedMaterial.alphaCutoff, 0.37, 'authored alpha cutoff round-trips');
-  testContext.equal(exportedMaterial.doubleSided, true, 'authored face culling round-trips');
-  testContext.equal(exportedMaterial.normalTexture.scale, 0.35, 'normal-map strength round-trips');
-  testContext.equal(
-    exportedMaterial.occlusionTexture.strength,
-    0.65,
-    'occlusion-map strength round-trips'
-  );
-  testContext.deepEqual(
+  expect(
     exportedMaterial.extensions.KHR_materials_specular.specularColorFactor,
-    [0.3, 0.4, 0.5],
     'specular material factors round-trip'
-  );
-  testContext.equal(
+  ).toEqual([0.3, 0.4, 0.5]);
+  expect(
     exportedMaterial.extensions.KHR_materials_volume.attenuationDistance,
-    2.5,
     'volume attenuation round-trips'
-  );
-  testContext.equal(
+  ).toBe(2.5);
+  expect(
     exportedMaterial.extensions.KHR_materials_iridescence.iridescenceThicknessMaximum,
-    375,
     'thin-film material factors round-trip'
-  );
-  testContext.equal(
+  ).toBe(375);
+  expect(
     exportedMaterial.extensions.KHR_materials_anisotropy.anisotropyRotation,
-    0.72,
     'anisotropy material factors round-trip'
-  );
+  ).toBe(0.72);
   for (const extension of [
     'KHR_materials_specular',
     'KHR_materials_ior',
@@ -275,10 +253,10 @@ test('ANARI glTF export preserves canonical material extensions, authored sample
     'KHR_materials_unlit',
     'KHR_texture_transform'
   ]) {
-    testContext.ok(
-      gltf.extensionsUsed.includes(extension),
+    expect(
+      Boolean(gltf.extensionsUsed.includes(extension)),
       `${extension} is declared on the asset`
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });

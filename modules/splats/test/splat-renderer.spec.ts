@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
@@ -12,13 +12,15 @@ import {getTestDevices} from '@luma.gl/test-utils';
 import './splat-renderer.node.spec';
 import './splat-spherical-harmonics.node.spec';
 
-test('SplatRenderer renders Gaussian source batches on WebGPU and WebGL2', async t => {
+it('SplatRenderer renders Gaussian source batches on WebGPU and WebGL2', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
-  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+  expect(Boolean(devices.length > 0), 'at least one browser graphics backend is available').toBe(
+    true
+  );
 
   for (const device of devices) {
     if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
-      t.comment('Skipping Gaussian splat WebGL2 rendering on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -33,51 +35,56 @@ test('SplatRenderer renders Gaussian source batches on WebGPU and WebGL2', async
     renderer.appendData(secondBatch);
     renderer.predraw(device.commandEncoder);
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0], clearDepth: 1});
-    t.ok(renderer.draw(renderPass), `${device.type}: renders preserved Gaussian source batches`);
+    expect(
+      Boolean(renderer.draw(renderPass)),
+      `${device.type}: renders preserved Gaussian source batches`
+    ).toBe(true);
     renderPass.end();
     device.submit();
 
-    t.equal(renderer.table?.batches.length, 2, `${device.type}: preserves both source batches`);
-    t.deepEqual(
+    expect(renderer.table?.batches.length, `${device.type}: preserves both source batches`).toBe(2);
+    expect(
       Array.from(renderer.getSortedIndices()),
-      [0, 1],
       `${device.type}: retains camera-dependent global source ordering`
-    );
+    ).toEqual([0, 1]);
     if (device.type === 'webgpu') {
-      t.equal(
+      expect(
         renderer.model?.bufferLayout.length,
-        0,
         'WebGPU consumes source vectors through storage'
-      );
-      t.ok(renderer.stats.rendererGpuByteLength > 0, 'WebGPU owns sorted-index storage buffers');
+      ).toBe(0);
+      expect(
+        Boolean(renderer.stats.rendererGpuByteLength > 0),
+        'WebGPU owns sorted-index storage buffers'
+      ).toBe(true);
     } else {
-      t.equal(
+      expect(
         renderer.model?.bufferLayout.length,
-        6,
         'WebGL2 consumes instanced source attributes'
-      );
+      ).toBe(6);
     }
 
     const sourceBuffer = firstBatch.positions.data[0].buffer;
     renderer.destroy();
-    t.notOk(
-      sourceBuffer.destroyed,
+    expect(
+      Boolean(sourceBuffer.destroyed),
       `${device.type}: destroying the renderer preserves source data`
-    );
+    ).toBe(false);
     firstBatch.destroy();
     secondBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU and WebGL2', async t => {
+it('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU and WebGL2', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
-  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+  expect(Boolean(devices.length > 0), 'at least one browser graphics backend is available').toBe(
+    true
+  );
 
   for (const device of devices) {
     if (isSoftwareBackedDevice(device)) {
-      t.comment(`Skipping Gaussian splat ${device.type} HDR readback on a software-backed adapter`);
+      void 0;
       continue;
     }
 
@@ -126,35 +133,39 @@ test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU 
     };
 
     const toneMappedColor = await readCenterColor();
-    t.equal(prepared.colors.format, 'float32x4', `${device.type}: retains Float32 source radiance`);
-    t.equal(
+    expect(prepared.colors.format, `${device.type}: retains Float32 source radiance`).toBe(
+      'float32x4'
+    );
+    expect(
       renderer.props.toneMapping,
-      'reinhard',
       `${device.type}: automatically compresses highlights on an SDR target`
-    );
-    t.ok(
-      toneMappedColor[0] > 180 && toneMappedColor[0] < 235,
+    ).toBe('reinhard');
+    expect(
+      Boolean(toneMappedColor[0] > 180 && toneMappedColor[0] < 235),
       `${device.type}: compresses a 4× HDR red highlight without clipping it`
-    );
-    t.ok(
-      toneMappedColor[1] > 110 && toneMappedColor[1] < 145,
+    ).toBe(true);
+    expect(
+      Boolean(toneMappedColor[1] > 110 && toneMappedColor[1] < 145),
       `${device.type}: retains a distinct 1× linear green channel`
-    );
+    ).toBe(true);
 
     renderer.setProps({exposure: 0.25});
     const reducedExposureColor = await readCenterColor();
-    t.ok(
-      reducedExposureColor[0] < toneMappedColor[0] - 45,
+    expect(
+      Boolean(reducedExposureColor[0] < toneMappedColor[0] - 45),
       `${device.type}: adjusts Float32 highlight intensity through exposure`
-    );
+    ).toBe(true);
 
     renderer.setProps({exposure: 1, toneMapping: 'none'});
     const unmappedColor = await readCenterColor();
-    t.ok(
-      unmappedColor[0] >= 250 && unmappedColor[1] >= 245,
+    expect(
+      Boolean(unmappedColor[0] >= 250 && unmappedColor[1] >= 245),
       `${device.type}: explicit unmapped radiance reaches the SDR attachment clamp`
-    );
-    t.notOk(renderer.model?.pipeline.isErrored, `${device.type}: retains a valid render pipeline`);
+    ).toBe(true);
+    expect(
+      Boolean(renderer.model?.pipeline.isErrored),
+      `${device.type}: retains a valid render pipeline`
+    ).toBe(false);
 
     readback.destroy();
     renderer.destroy();
@@ -163,18 +174,18 @@ test('SplatRenderer preserves and tone-maps Float32 Gaussian radiance on WebGPU 
     colorTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer evaluates higher-order directional radiance on WebGPU and WebGL2', async t => {
+it('SplatRenderer evaluates higher-order directional radiance on WebGPU and WebGL2', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
-  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+  expect(Boolean(devices.length > 0), 'at least one browser graphics backend is available').toBe(
+    true
+  );
 
   for (const device of devices) {
     if (isSoftwareBackedDevice(device)) {
-      t.comment(
-        `Skipping Gaussian splat ${device.type} directional readback on a software adapter`
-      );
+      void 0;
       continue;
     }
 
@@ -222,7 +233,10 @@ test('SplatRenderer evaluates higher-order directional radiance on WebGPU and We
         clearColor: [0, 0, 0, 0],
         clearDepth: 1
       });
-      t.ok(renderer.draw(renderPass), `${device.type}: renders higher-order directional radiance`);
+      expect(
+        Boolean(renderer.draw(renderPass)),
+        `${device.type}: renders higher-order directional radiance`
+      ).toBe(true);
       renderPass.end();
       device.submit();
       colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
@@ -231,19 +245,18 @@ test('SplatRenderer evaluates higher-order directional radiance on WebGPU and We
       centerColors.push(pixels.slice(centerPixelOffset, centerPixelOffset + 4));
     }
 
-    t.ok(
-      centerColors[1][0] > centerColors[0][0] + 120,
+    expect(
+      Boolean(centerColors[1][0] > centerColors[0][0] + 120),
       `${device.type}: reverses the first-order red basis when the camera crosses the Gaussian`
-    );
-    t.ok(
-      Math.abs(centerColors[1][1] - centerColors[0][1]) < 5,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centerColors[1][1] - centerColors[0][1]) < 5),
       `${device.type}: leaves unrelated DC color channels unchanged`
-    );
-    t.deepEqual(
+    ).toBe(true);
+    expect(
       Array.from(source.colors),
-      [0.5, 0.5, 0.25, 1],
       `${device.type}: preserves caller-owned DC color coefficients`
-    );
+    ).toEqual([0.5, 0.5, 0.25, 1]);
 
     readback.destroy();
     renderer.destroy();
@@ -252,14 +265,14 @@ test('SplatRenderer evaluates higher-order directional radiance on WebGPU and We
     colorTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer WebGL preserves HDR directional radiance from byte-backed source colors', async t => {
+it('SplatRenderer WebGL preserves HDR directional radiance from byte-backed source colors', async () => {
   const [device] = await getTestDevices(['webgl']);
   if (!device || isSoftwareBackedDevice(device)) {
-    t.comment('Skipping byte-backed spherical-harmonic WebGL readback without hardware support');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -299,7 +312,10 @@ test('SplatRenderer WebGL preserves HDR directional radiance from byte-backed so
     clearColor: [0, 0, 0, 0],
     clearDepth: 1
   });
-  t.ok(renderer.draw(renderPass), 'renders unclamped spherical-harmonic WebGL radiance');
+  expect(
+    Boolean(renderer.draw(renderPass)),
+    'renders unclamped spherical-harmonic WebGL radiance'
+  ).toBe(true);
   renderPass.end();
   device.submit();
 
@@ -311,34 +327,33 @@ test('SplatRenderer WebGL preserves HDR directional radiance from byte-backed so
   colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
   const pixels = await readback.readAsync(0, layout.byteLength);
   const centerPixelOffset = 8 * layout.bytesPerRow + 8 * 4;
-  t.ok(
-    pixels[centerPixelOffset] > 120,
+  expect(
+    Boolean(pixels[centerPixelOffset] > 120),
     'applies exposure after preserving a directional red highlight above one'
-  );
-  t.ok(
-    pixels[centerPixelOffset + 1] < 10,
+  ).toBe(true);
+  expect(
+    Boolean(pixels[centerPixelOffset + 1] < 10),
     'preserves negative directional green radiance until display output'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     renderer.model?.bufferLayout.find(bufferLayout => bufferLayout.name === 'colors')?.format,
-    'float32x4',
     'uses floating-point attributes for evaluated byte-backed spherical harmonics'
-  );
-  t.deepEqual(Array.from(source.colors), [128, 64, 32, 255], 'preserves original source bytes');
+  ).toBe('float32x4');
+  expect(Array.from(source.colors), 'preserves original source bytes').toEqual([128, 64, 32, 255]);
 
   readback.destroy();
   renderer.destroy();
   prepared.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer WebGL composites unsorted rows across interleaved source batches', async t => {
+it('SplatRenderer WebGL composites unsorted rows across interleaved source batches', async () => {
   const [device] = await getTestDevices(['webgl']);
   if (!device || isSoftwareBackedDevice(device)) {
-    t.comment('Skipping globally sorted Gaussian WebGL readback without hardware support');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -382,7 +397,9 @@ test('SplatRenderer WebGL composites unsorted rows across interleaved source bat
     clearColor: [0, 0, 0, 0],
     clearDepth: 1
   });
-  t.ok(renderer.draw(renderPass), 'draws all three globally ordered source rows');
+  expect(Boolean(renderer.draw(renderPass)), 'draws all three globally ordered source rows').toBe(
+    true
+  );
   renderPass.end();
   device.submit();
 
@@ -397,10 +414,20 @@ test('SplatRenderer WebGL composites unsorted rows across interleaved source bat
   const red = pixels[centerPixelOffset];
   const green = pixels[centerPixelOffset + 1];
   const blue = pixels[centerPixelOffset + 2];
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [1, 2, 0], 'retains exact global row order');
-  t.ok(red > green + 25, 'blends the nearest red row after the middle green source batch');
-  t.ok(green > blue + 10, 'blends the middle green source batch after the furthest blue row');
-  t.deepEqual(Array.from(firstSource.colors), [255, 0, 0, 255, 0, 0, 255, 255], 'preserves source');
+  expect(Array.from(renderer.getSortedIndices()), 'retains exact global row order').toEqual([
+    1, 2, 0
+  ]);
+  expect(
+    Boolean(red > green + 25),
+    'blends the nearest red row after the middle green source batch'
+  ).toBe(true);
+  expect(
+    Boolean(green > blue + 10),
+    'blends the middle green source batch after the furthest blue row'
+  ).toBe(true);
+  expect(Array.from(firstSource.colors), 'preserves source').toEqual([
+    255, 0, 0, 255, 0, 0, 255, 255
+  ]);
 
   readback.destroy();
   renderer.destroy();
@@ -408,18 +435,18 @@ test('SplatRenderer WebGL composites unsorted rows across interleaved source bat
   secondBatch.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebGL depth buffer', async t => {
+it('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebGL depth buffer', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
-  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+  expect(Boolean(devices.length > 0), 'at least one browser graphics backend is available').toBe(
+    true
+  );
 
   for (const device of devices) {
     if (isSoftwareBackedDevice(device)) {
-      t.comment(
-        `Skipping Gaussian splat ${device.type} mixed-depth readback on a software adapter`
-      );
+      void 0;
       continue;
     }
 
@@ -462,10 +489,10 @@ test('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebG
         clearColor: [0, 0, 0, 0],
         clearDepth: 1
       });
-      t.ok(
-        renderer.drawMixed(renderPass, {opaqueMeshes: [mesh]}),
+      expect(
+        Boolean(renderer.drawMixed(renderPass, {opaqueMeshes: [mesh]})),
         `${device.type}: composites opaque mesh and Gaussian draws into the shared pass`
-      );
+      ).toBe(true);
       renderPass.end();
       device.submit();
       colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
@@ -474,14 +501,14 @@ test('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebG
       centerColors.push(pixels.slice(centerPixelOffset, centerPixelOffset + 4));
     }
 
-    t.ok(
-      centerColors[0][2] > 220 && centerColors[0][0] < 15,
+    expect(
+      Boolean(centerColors[0][2] > 220 && centerColors[0][0] < 15),
       `${device.type}: nearer opaque mesh depth fully occludes the red Gaussian`
-    );
-    t.ok(
-      centerColors[1][0] > 180 && centerColors[1][2] < 80,
+    ).toBe(true);
+    expect(
+      Boolean(centerColors[1][0] > 180 && centerColors[1][2] < 80),
       `${device.type}: nearer Gaussian remains visible over the farther opaque mesh`
-    );
+    ).toBe(true);
 
     readback.destroy();
     renderer.destroy();
@@ -492,19 +519,19 @@ test('SplatRenderer composites mixed mesh scenes against a shared WebGPU or WebG
     colorTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscreen target', async t => {
+it('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscreen target', async () => {
   const [device] = await getTestDevices(['webgpu']);
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -532,7 +559,7 @@ test('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscr
     clearColor: [0, 0, 0, 0],
     clearDepth: 1
   });
-  t.ok(renderer.draw(renderPass), 'records a WebGPU Gaussian splat draw');
+  expect(Boolean(renderer.draw(renderPass)), 'records a WebGPU Gaussian splat draw').toBe(true);
   renderPass.end();
   device.submit();
 
@@ -543,30 +570,33 @@ test('SplatRenderer WebGPU pipeline writes visible Gaussian color into an offscr
   });
   colorTexture.readBuffer({width: 16, height: 16}, readback);
   const pixels = await readback.readAsync(0, layout.byteLength);
-  t.ok(
-    pixels.some((component, componentIndex) => componentIndex % 4 !== 3 && component > 0),
+  expect(
+    Boolean(pixels.some((component, componentIndex) => componentIndex % 4 !== 3 && component > 0)),
     'writes non-black Gaussian color after shader compilation and GPU submission'
-  );
-  t.notOk(renderer.model?.pipeline.isErrored, 'retains a successfully compiled render pipeline');
+  ).toBe(true);
+  expect(
+    Boolean(renderer.model?.pipeline.isErrored),
+    'retains a successfully compiled render pipeline'
+  ).toBe(false);
 
   readback.destroy();
   renderer.destroy();
   prepared.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the camera moves', async t => {
+it('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the camera moves', async () => {
   const [device] = await getTestDevices(['webgpu']);
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping Gaussian splat WebGPU pixel readback on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -613,7 +643,10 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
-    t.ok(renderer.draw(renderPass), 'renders densely interleaved Gaussian source batches');
+    expect(
+      Boolean(renderer.draw(renderPass)),
+      'renders densely interleaved Gaussian source batches'
+    ).toBe(true);
     renderPass.end();
     device.submit();
 
@@ -623,17 +656,21 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
     centerColors.push(pixels.slice(centerPixelOffset, centerPixelOffset + 4));
   }
 
-  t.deepEqual(furthestBatchIndices, [1, 0], 'small camera changes swap the furthest source batch');
-  t.equal(renderer.stats.drawCallCount, 64, 'bounds globally ordered depth-slab draw calls');
-  t.ok(
-    centerColors.every(color => color[0] > 40 && color[1] > 40),
+  expect(furthestBatchIndices, 'small camera changes swap the furthest source batch').toEqual([
+    1, 0
+  ]);
+  expect(renderer.stats.drawCallCount, 'bounds globally ordered depth-slab draw calls').toBe(64);
+  expect(
+    Boolean(centerColors.every(color => color[0] > 40 && color[1] > 40)),
     'composites overlapping red and green Gaussian source batches'
-  );
-  t.ok(
-    Math.abs(centerColors[0][0] - centerColors[1][0]) <= 8 &&
-      Math.abs(centerColors[0][1] - centerColors[1][1]) <= 8,
+  ).toBe(true);
+  expect(
+    Boolean(
+      Math.abs(centerColors[0][0] - centerColors[1][0]) <= 8 &&
+        Math.abs(centerColors[0][1] - centerColors[1][1]) <= 8
+    ),
     'keeps dense transparent overlap stable when one distant row swaps source batches'
-  );
+  ).toBe(true);
 
   readback.destroy();
   renderer.destroy();
@@ -641,7 +678,7 @@ test('SplatRenderer WebGPU keeps dense cross-batch transparency stable as the ca
   secondBatch.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
-  t.end();
+  void 0;
 });
 
 function isSoftwareBackedDevice(device: Device): boolean {

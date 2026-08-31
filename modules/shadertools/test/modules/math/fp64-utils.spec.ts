@@ -2,36 +2,36 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {fp64} from '@luma.gl/shadertools';
 import {_Pose as Pose} from '@math.gl/core';
 
-test('fp64#fp64LowPart', t => {
+it('fp64#fp64LowPart', () => {
   const x = Math.PI;
   const x32 = new Float32Array([x])[0];
 
-  t.is(fp64.fp64LowPart(x) + x32, x, 'returns correct result');
+  expect(fp64.fp64LowPart(x) + x32, 'returns correct result').toBe(x);
 
-  t.end();
+  void 0;
 });
 
-test('fp64#fp64ify', t => {
+it('fp64#fp64ify', () => {
   const x = Math.PI;
 
   const xHi = Math.fround(x);
   const xLow = x - xHi;
 
-  t.deepEqual(fp64.fp64ify(x), [xHi, xLow], 'returns correct result');
+  expect(fp64.fp64ify(x), 'returns correct result').toEqual([xHi, xLow]);
 
   const target = new Array(10);
   fp64.fp64ify(x, target, 4);
 
-  t.deepEqual(target.slice(4, 6), [xHi, xLow], 'populates target array');
+  expect(target.slice(4, 6), 'populates target array').toEqual([xHi, xLow]);
 
-  t.end();
+  void 0;
 });
 
-test('fp64#fp64ifyMatrix4', t => {
+it('fp64#fp64ifyMatrix4', () => {
   const matrix = new Pose({
     yaw: -0.00032679972032649654,
     pitch: 0.0017499351314303354,
@@ -43,8 +43,8 @@ test('fp64#fp64ifyMatrix4', t => {
 
   const matrix64 = fp64.fp64ifyMatrix4(matrix);
 
-  t.ok(matrix64 instanceof Float32Array, 'returns Float32Array');
-  t.ok(matrix64.every(Number.isFinite), 'returns valid matrix');
+  expect(Boolean(matrix64 instanceof Float32Array), 'returns Float32Array').toBe(true);
+  expect(Boolean(matrix64.every(Number.isFinite)), 'returns valid matrix').toBe(true);
 
-  t.end();
+  void 0;
 });

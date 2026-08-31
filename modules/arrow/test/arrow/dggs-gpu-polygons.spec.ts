@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import type {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   packDggsA5CellKey,
   packDggsGeohashKey,
@@ -91,11 +90,11 @@ const H3_UNSUPPORTED_PATH_TEST_KEYS = [
   0x83f004fffffffffn
 ] as const;
 
-test('arrow#convertDggsCellIdsToGPUKeys parses Utf8 DGGS keys on the GPU', async t => {
+it('arrow#convertDggsCellIdsToGPUKeys parses Utf8 DGGS keys on the GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -107,24 +106,23 @@ test('arrow#convertDggsCellIdsToGPUKeys parses Utf8 DGGS keys on the GPU', async
     });
     try {
       const keyVector = await readArrowGPUVectorAsync(preparedKeys.keys);
-      t.deepEqual(
+      expect(
         Array.from(keyVector.data[0]!.values as BigUint64Array),
-        testCase.expectedKeys,
         `parses ${encoding} strings into Uint64 keys`
-      );
+      ).toEqual(testCase.expectedKeys);
     } finally {
       preparedKeys.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('arrow#convertDggsCellIdsToGPUKeys parses sliced Utf8 DGGS keys on the GPU', async t => {
+it('arrow#convertDggsCellIdsToGPUKeys parses sliced Utf8 DGGS keys on the GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -137,23 +135,22 @@ test('arrow#convertDggsCellIdsToGPUKeys parses sliced Utf8 DGGS keys on the GPU'
   });
   try {
     const keyVector = await readArrowGPUVectorAsync(preparedKeys.keys);
-    t.deepEqual(
+    expect(
       Array.from(keyVector.data[0]!.values as BigUint64Array),
-      STRING_KEY_TEST_CASES.geohash.expectedKeys,
       'parses the sliced Utf8 logical rows'
-    );
+    ).toEqual(STRING_KEY_TEST_CASES.geohash.expectedKeys);
   } finally {
     preparedKeys.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GPU', async t => {
+it('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -217,33 +214,27 @@ test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GP
     });
     try {
       const pathVector = await readArrowGPUVectorAsync(preparedPaths.paths);
-      t.equal(
+      expect(
         preparedPaths.pointCount,
-        testCase.pointCount,
         `${testCase.encoding} uses expected fixed path point count`
-      );
-      t.deepEqual(
+      ).toBe(testCase.pointCount);
+      expect(
         Array.from(getPathOffsets(pathVector)),
-        makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
         `${testCase.encoding} path offsets use the fixed point count`
-      );
-      t.deepEqual(
+      ).toEqual(makeExpectedOffsets(testCase.keys.length, testCase.pointCount));
+      expect(
         Array.from(preparedPaths.paths.data[0]!.valueOffsets || []),
-        makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
         `${testCase.encoding} GPUData keeps renderer-facing path offsets`
-      );
-      t.equal(
+      ).toEqual(makeExpectedOffsets(testCase.keys.length, testCase.pointCount));
+      expect(
         getPathCoordinateComponentCount(pathVector),
-        2,
         `${testCase.encoding} defaults to two Float32 coordinate components`
-      );
-      t.equal(
+      ).toBe(2);
+      expect(
         preparedPaths.pathByteLength,
-        testCase.keys.length * testCase.pointCount * 2 * Float32Array.BYTES_PER_ELEMENT,
         `${testCase.encoding} reports Float32 path byte length`
-      );
+      ).toBe(testCase.keys.length * testCase.pointCount * 2 * Float32Array.BYTES_PER_ELEMENT);
       assertCoordinateArrayClose(
-        t,
         Array.from(getPathValues(pathVector)),
         testCase.expectedCoordinates,
         testCase.tolerance,
@@ -264,28 +255,23 @@ test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GP
     );
     try {
       const splitPathVector = await readArrowGPUVectorAsync(preparedSplitPaths.paths);
-      t.equal(
+      expect(
         preparedSplitPaths.pointCount,
-        testCase.pointCount,
         `${testCase.encoding} fp64-split uses expected fixed path point count`
-      );
-      t.deepEqual(
+      ).toBe(testCase.pointCount);
+      expect(
         Array.from(getPathOffsets(splitPathVector)),
-        makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
         `${testCase.encoding} fp64-split path offsets use the fixed point count`
-      );
-      t.equal(
+      ).toEqual(makeExpectedOffsets(testCase.keys.length, testCase.pointCount));
+      expect(
         getPathCoordinateComponentCount(splitPathVector),
-        4,
         `${testCase.encoding} fp64-split emits four Float32 coordinate components`
-      );
-      t.equal(
+      ).toBe(4);
+      expect(
         preparedSplitPaths.pathByteLength,
-        testCase.keys.length * testCase.pointCount * 4 * Float32Array.BYTES_PER_ELEMENT,
         `${testCase.encoding} fp64-split reports doubled path byte length`
-      );
+      ).toBe(testCase.keys.length * testCase.pointCount * 4 * Float32Array.BYTES_PER_ELEMENT);
       assertFp64SplitCoordinateArrayClose(
-        t,
         Array.from(getPathValues(splitPathVector)),
         testCase.expectedCoordinates,
         testCase.tolerance,
@@ -296,7 +282,7 @@ test('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GP
     }
   }
 
-  t.end();
+  void 0;
 });
 
 function makeUint64Vector(values: readonly bigint[]): arrow.Vector<arrow.Uint64> {
@@ -374,33 +360,31 @@ function makeZeroPathCoordinates(rowCount: number, pointCount: number): number[]
 }
 
 function assertCoordinateArrayClose(
-  t: Test,
   actual: number[],
   expected: number[],
   tolerance: number,
   message: string
 ): void {
-  t.equal(actual.length, expected.length, `${message}: coordinate count`);
+  expect(actual.length, `${message}: coordinate count`).toBe(expected.length);
   for (
     let coordinateIndex = 0;
     coordinateIndex < Math.min(actual.length, expected.length);
     coordinateIndex++
   ) {
-    t.ok(
-      Math.abs(actual[coordinateIndex]! - expected[coordinateIndex]!) <= tolerance,
+    expect(
+      Boolean(Math.abs(actual[coordinateIndex]! - expected[coordinateIndex]!) <= tolerance),
       `${message}: coordinate ${coordinateIndex} (${actual[coordinateIndex]} ~= ${expected[coordinateIndex]})`
-    );
+    ).toBe(true);
   }
 }
 
 function assertFp64SplitCoordinateArrayClose(
-  t: Test,
   actual: number[],
   expected: number[],
   tolerance: number,
   message: string
 ): void {
-  t.equal(actual.length, expected.length * 2, `${message}: coordinate count`);
+  expect(actual.length, `${message}: coordinate count`).toBe(expected.length * 2);
   for (
     let coordinateIndex = 0;
     coordinateIndex < Math.min(actual.length / 2, expected.length);
@@ -410,10 +394,12 @@ function assertFp64SplitCoordinateArrayClose(
     const componentIndex = coordinateIndex % 2;
     const highComponentIndex = pointIndex * 4 + componentIndex;
     const lowComponentIndex = pointIndex * 4 + 2 + componentIndex;
-    t.ok(
-      Math.abs(actual[highComponentIndex]! - expected[coordinateIndex]!) <= tolerance,
+    expect(
+      Boolean(Math.abs(actual[highComponentIndex]! - expected[coordinateIndex]!) <= tolerance),
       `${message}: high coordinate ${coordinateIndex} (${actual[highComponentIndex]} ~= ${expected[coordinateIndex]})`
+    ).toBe(true);
+    expect(actual[lowComponentIndex], `${message}: low coordinate ${coordinateIndex} is zero`).toBe(
+      0
     );
-    t.equal(actual[lowComponentIndex], 0, `${message}: low coordinate ${coordinateIndex} is zero`);
   }
 }

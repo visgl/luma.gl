@@ -2,38 +2,37 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebXRInputRay, getWebXRInputRayPlaneIntersection} from '../../src/webxr/webxr-input';
 import type {WebXRInputState} from '../../src/webxr/webxr-manager';
 
-test('webxr#getWebXRInputRay resolves origin and normalized target-ray direction', testCase => {
+it('webxr#getWebXRInputRay resolves origin and normalized target-ray direction', () => {
   const matrix = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, -3, 4, 0, 2, 5, 7, 1]);
   const inputState = makeMockWebXRInputState(matrix);
   const ray = getWebXRInputRay(inputState);
 
-  testCase.equal(ray?.inputState, inputState, 'retains source input state');
-  testCase.equal(ray?.matrix, matrix, 'retains source target-ray matrix');
-  testCase.deepEqual(ray?.origin, [2, 5, 7], 'uses matrix translation as origin');
-  testCase.deepEqual(ray?.direction, [0, 0.6, -0.8], 'normalizes negative local z');
-  testCase.end();
+  expect(ray?.inputState, 'retains source input state').toBe(inputState);
+  expect(ray?.matrix, 'retains source target-ray matrix').toBe(matrix);
+  expect(ray?.origin, 'uses matrix translation as origin').toEqual([2, 5, 7]);
+  expect(ray?.direction, 'normalizes negative local z').toEqual([0, 0.6, -0.8]);
+  void 0;
 });
 
-test('webxr#getWebXRInputRay handles missing and degenerate target rays', testCase => {
-  testCase.equal(
+it('webxr#getWebXRInputRay handles missing and degenerate target rays', () => {
+  expect(
     getWebXRInputRay(makeMockWebXRInputState(null)),
-    null,
     'missing target ray matrices do not produce rays'
-  );
+  ).toBe(null);
 
   const ray = getWebXRInputRay(
     makeMockWebXRInputState(new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 4, 5, 1]))
   );
-  testCase.deepEqual(ray?.origin, [3, 4, 5], 'still resolves origin');
-  testCase.deepEqual(ray?.direction, [0, 0, -1], 'falls back to forward direction');
-  testCase.end();
+  expect(ray?.origin, 'still resolves origin').toEqual([3, 4, 5]);
+  expect(ray?.direction, 'falls back to forward direction').toEqual([0, 0, -1]);
+  void 0;
 });
 
-test('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom planes', testCase => {
+it('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom planes', () => {
   const floorRay = {
     inputState: makeMockWebXRInputState(null),
     origin: [0, 1.6, 0],
@@ -42,9 +41,9 @@ test('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom pla
   };
   const floorHit = getWebXRInputRayPlaneIntersection(floorRay);
 
-  testCase.equal(floorHit?.ray, floorRay, 'retains source ray');
-  testCase.equal(floorHit?.distance, 2, 'returns normalized ray distance');
-  testCase.deepEqual(floorHit?.point, [0, 0, -1.2], 'intersects default y=0 floor plane');
+  expect(floorHit?.ray, 'retains source ray').toBe(floorRay);
+  expect(floorHit?.distance, 'returns normalized ray distance').toBe(2);
+  expect(floorHit?.point, 'intersects default y=0 floor plane').toEqual([0, 0, -1.2]);
 
   const wallRay = {
     inputState: makeMockWebXRInputState(null),
@@ -57,12 +56,12 @@ test('webxr#getWebXRInputRayPlaneIntersection resolves floor hits and custom pla
     planeNormal: [0, 0, 2]
   });
 
-  testCase.equal(wallHit?.distance, 2, 'normalizes custom plane normals');
-  testCase.deepEqual(wallHit?.point, [1, 2, 1], 'intersects custom plane');
-  testCase.end();
+  expect(wallHit?.distance, 'normalizes custom plane normals').toBe(2);
+  expect(wallHit?.point, 'intersects custom plane').toEqual([1, 2, 1]);
+  void 0;
 });
 
-test('webxr#getWebXRInputRayPlaneIntersection rejects unusable hits', testCase => {
+it('webxr#getWebXRInputRayPlaneIntersection rejects unusable hits', () => {
   const ray = {
     inputState: makeMockWebXRInputState(null),
     origin: [0, 1, 0],
@@ -70,32 +69,27 @@ test('webxr#getWebXRInputRayPlaneIntersection rejects unusable hits', testCase =
     matrix: new Float32Array(16)
   };
 
-  testCase.equal(
+  expect(
     getWebXRInputRayPlaneIntersection(ray, {minDistance: 1.5}),
-    null,
     'rejects hits before minDistance'
-  );
-  testCase.equal(
+  ).toBe(null);
+  expect(
     getWebXRInputRayPlaneIntersection(ray, {maxDistance: 0.5}),
-    null,
     'rejects hits after maxDistance'
-  );
-  testCase.equal(
+  ).toBe(null);
+  expect(
     getWebXRInputRayPlaneIntersection({...ray, direction: [0, 1, 0]}),
-    null,
     'rejects intersections behind the ray origin'
-  );
-  testCase.equal(
+  ).toBe(null);
+  expect(
     getWebXRInputRayPlaneIntersection({...ray, direction: [1, 0, 0]}),
-    null,
     'rejects rays parallel to the plane'
-  );
-  testCase.equal(
+  ).toBe(null);
+  expect(
     getWebXRInputRayPlaneIntersection(ray, {planeNormal: [0, 0, 0]}),
-    null,
     'rejects degenerate plane normals'
-  );
-  testCase.end();
+  ).toBe(null);
+  void 0;
 });
 
 function makeMockWebXRInputState(targetRayMatrix: Float32Array | null): WebXRInputState {

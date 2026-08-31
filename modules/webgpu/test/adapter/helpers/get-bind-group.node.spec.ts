@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Bindings, ShaderLayout} from '@luma.gl/core';
 import {
   formatBindGroupCreationErrorSummary,
@@ -13,7 +13,7 @@ import {WebGPUExternalTexture} from '../../../src/adapter/resources/webgpu-exter
 import {WebGPUPipelineLayout} from '../../../src/adapter/resources/webgpu-pipeline-layout';
 import {WebGPUTexture} from '../../../src/adapter/resources/webgpu-texture';
 
-test('formatBindGroupCreationErrorSummary formats compact missing-binding summaries', t => {
+it('formatBindGroupCreationErrorSummary formats compact missing-binding summaries', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [
@@ -31,21 +31,22 @@ test('formatBindGroupCreationErrorSummary formats compact missing-binding summar
     {binding: 0, resource: {} as GPUBufferBinding}
   ] as GPUBindGroupEntry[];
 
-  t.equal(
+  expect(
     formatBindGroupCreationErrorSummary(shaderLayout, bindings, entries, 0),
+    'summary reports expected/provided/missing bindings in binding order'
+  ).toBe(
     [
       'bindGroup creation failed for group 0: expected 3, provided 2',
       'expected: appFrame@0, pbrProjection@100, skin@101',
       'provided: appFrame@0, pbrProjection@100',
       'missing: skin@101'
-    ].join('\n'),
-    'summary reports expected/provided/missing bindings in binding order'
+    ].join('\n')
   );
 
-  t.end();
+  void 0;
 });
 
-test('formatBindGroupCreationErrorSummary reports unmatched logical bindings and unexpected entries', t => {
+it('formatBindGroupCreationErrorSummary reports unmatched logical bindings and unexpected entries', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [{name: 'appFrame', type: 'uniform', group: 0, location: 0}]
@@ -59,22 +60,23 @@ test('formatBindGroupCreationErrorSummary reports unmatched logical bindings and
     {binding: 0, resource: {} as GPUBufferBinding}
   ] as GPUBindGroupEntry[];
 
-  t.equal(
+  expect(
     formatBindGroupCreationErrorSummary(shaderLayout, bindings, entries, 0),
+    'summary calls out logical names that do not map to the group and entries outside the layout'
+  ).toBe(
     [
       'bindGroup creation failed for group 0: expected 1, provided 2',
       'expected: appFrame@0',
       'provided: appFrame@0, ?@7',
       'unexpected entries: ?@7',
       'unmatched logical bindings: extraBinding'
-    ].join('\n'),
-    'summary calls out logical names that do not map to the group and entries outside the layout'
+    ].join('\n')
   );
 
-  t.end();
+  void 0;
 });
 
-test('getBindGroupLabel uses pipeline id, group, and expected binding names', t => {
+it('getBindGroupLabel uses pipeline id, group, and expected binding names', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [
@@ -84,21 +86,19 @@ test('getBindGroupLabel uses pipeline id, group, and expected binding names', t 
     ]
   };
 
-  t.equal(
+  expect(
     getBindGroupLabel('scatter-plot', shaderLayout, 0),
-    'scatter-plot/group0[appFrame,pbrProjection,skin]',
     'label uses pipeline id and binding names in binding order'
-  );
-  t.equal(
+  ).toBe('scatter-plot/group0[appFrame,pbrProjection,skin]');
+  expect(
     getBindGroupLabel('scatter-plot', shaderLayout, 1),
-    'scatter-plot/group1[empty]',
     'empty groups get an explicit empty label'
-  );
+  ).toBe('scatter-plot/group1[empty]');
 
-  t.end();
+  void 0;
 });
 
-test('WebGPU external texture bindings use external handles and paired samplers', t => {
+it('WebGPU external texture bindings use external handles and paired samplers', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [
@@ -118,19 +118,18 @@ test('WebGPU external texture bindings use external handles and paired samplers'
     0
   ) as unknown as GPUBindGroupDescriptor;
 
-  t.deepEqual(
+  expect(
     descriptor.entries,
-    [
-      {binding: 0, resource: 'external-handle'},
-      {binding: 1, resource: 'sampler-handle'}
-    ],
     'native external texture binds its handle and default sampler'
-  );
+  ).toEqual([
+    {binding: 0, resource: 'external-handle'},
+    {binding: 1, resource: 'sampler-handle'}
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('WebGPU external texture bindings reject copied texture fallback views', t => {
+it('WebGPU external texture bindings reject copied texture fallback views', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [
@@ -150,12 +149,12 @@ test('WebGPU external texture bindings reject copied texture fallback views', t 
     0
   );
 
-  t.equal(bindGroup, null, 'copied texture cannot satisfy an external texture slot');
+  expect(bindGroup, 'copied texture cannot satisfy an external texture slot').toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('WebGPU external texture shader layouts emit externalTexture bind group entries', t => {
+it('WebGPU external texture shader layouts emit externalTexture bind group entries', () => {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: [{name: 'videoTexture', type: 'external-texture', group: 0, location: 4}]
@@ -169,13 +168,11 @@ test('WebGPU external texture shader layouts emit externalTexture bind group ent
   const entries = (pipelineLayout as any).mapShaderLayoutToBindGroupEntriesByGroup();
 
   globalThis.GPUShaderStage = originalGPUShaderStage;
-  t.deepEqual(
-    entries,
-    [[{binding: 4, visibility: 7, externalTexture: {}}]],
-    'pipeline layout uses WebGPU externalTexture descriptor'
-  );
+  expect(entries, 'pipeline layout uses WebGPU externalTexture descriptor').toEqual([
+    [{binding: 4, visibility: 7, externalTexture: {}}]
+  ]);
 
-  t.end();
+  void 0;
 });
 
 function makeMockWebGPUDevice(): any {

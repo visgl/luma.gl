@@ -16,7 +16,7 @@ import {
   type GPURasterGlobalAccumulator
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type TiledFixture = {
   id: string;
@@ -86,65 +86,52 @@ const TILED_FIXTURES: readonly TiledFixture[] = [
   }
 ];
 
-test('GPURaster global replay preserves calibrated monolithic statistics and Otsu under tile reordering', async testCase => {
+it('GPURaster global replay preserves calibrated monolithic statistics and Otsu under tile reordering', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const forward = await runGlobalAnalysis(device, [0, 1, 2]);
   const reverse = await runGlobalAnalysis(device, [2, 1, 0]);
 
-  testCase.deepEqual(forward.extent, [-2, 3.5], 'masked calibrated tile extrema share one domain');
-  testCase.equal(
-    forward.count,
-    6,
-    'raw nodata, explicit masks, NaN, and infinity never contribute'
-  );
-  testCase.equal(forward.sum, 8, 'distinct per-tile calibrations apply exactly once');
-  testCase.equal(forward.overflow, 0, 'ordinary tiled populations do not publish overflow');
-  testCase.deepEqual(
+  expect(forward.extent, 'masked calibrated tile extrema share one domain').toEqual([-2, 3.5]);
+  expect(forward.count, 'raw nodata, explicit masks, NaN, and infinity never contribute').toBe(6);
+  expect(forward.sum, 'distinct per-tile calibrations apply exactly once').toBe(8);
+  expect(forward.overflow, 'ordinary tiled populations do not publish overflow').toBe(0);
+  expect(
     forward.histogram,
-    makeExpectedHistogram([-2, 2, 3, 1.5, 3.5, 0], [-2, 3.5], 8),
     'replayed local partials merge only after the complete global extent is known'
+  ).toEqual(makeExpectedHistogram([-2, 2, 3, 1.5, 3.5, 0], [-2, 3.5], 8));
+  expect(forward.extent, 'global extent matches one GPU raster').toEqual(forward.referenceExtent);
+  expect(forward.count, 'global count matches one GPU raster').toBe(forward.referenceCount);
+  expect(forward.sum, 'global sum matches one GPU raster').toBe(forward.referenceSum);
+  expect(forward.histogram, 'global replay matches monolithic GPU histogram bins exactly').toEqual(
+    forward.referenceHistogram
   );
-  testCase.deepEqual(
-    forward.extent,
-    forward.referenceExtent,
-    'global extent matches one GPU raster'
-  );
-  testCase.equal(forward.count, forward.referenceCount, 'global count matches one GPU raster');
-  testCase.equal(forward.sum, forward.referenceSum, 'global sum matches one GPU raster');
-  testCase.deepEqual(
-    forward.histogram,
-    forward.referenceHistogram,
-    'global replay matches monolithic GPU histogram bins exactly'
-  );
-  testCase.equal(
+  expect(
     forward.threshold,
-    forward.referenceThreshold,
     'global Otsu consumes the same stable histogram/domain as monolithic analysis'
-  );
-  testCase.equal(forward.percentileValidity, 1, 'non-overflowed percentiles remain valid');
-  testCase.ok(
-    forward.percentile >= forward.extent[0]! && forward.percentile <= forward.extent[1]!,
+  ).toBe(forward.referenceThreshold);
+  expect(forward.percentileValidity, 'non-overflowed percentiles remain valid').toBe(1);
+  expect(
+    Boolean(forward.percentile >= forward.extent[0]! && forward.percentile <= forward.extent[1]!),
     'global percentile remains inside its calibrated GPU domain'
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     reverse,
-    forward,
     'reverse traversal, all-invalid tiles, and mixed nodata preserve global outputs'
-  );
-  testCase.end();
+  ).toEqual(forward);
+  void 0;
 });
 
-test('GPURaster merge-only re-encoding retains global history and saturates sticky overflow safely', async testCase => {
+it('GPURaster merge-only re-encoding retains global history and saturates sticky overflow safely', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -210,75 +197,65 @@ test('GPURaster merge-only re-encoding retains global history and saturates stic
   const compiledReplay = replay.compile();
 
   submitGraph(device, compiledReplay, 'first-replay');
-  testCase.equal((await readUnsigned(buffers.count))[0], 3, 'first replay publishes three samples');
-  testCase.deepEqual(
+  expect((await readUnsigned(buffers.count))[0], 'first replay publishes three samples').toBe(3);
+  expect(
     await readUnsigned(buffers.histogram),
-    [3, 0, 0, 0],
     'equal-valued samples occupy the first stable-domain bin'
-  );
+  ).toEqual([3, 0, 0, 0]);
 
   submitGraph(device, compiledReplay, 'second-replay');
-  testCase.equal(
+  expect(
     (await readUnsigned(buffers.count))[0],
-    6,
     're-encoding a merge-only graph retains previously merged population'
-  );
-  testCase.deepEqual(
+  ).toBe(6);
+  expect(
     await readUnsigned(buffers.histogram),
-    [6, 0, 0, 0],
     'only per-tile scratch is cleared; persistent histogram bins remain cumulative'
-  );
+  ).toEqual([6, 0, 0, 0]);
 
   buffers.count.write(Uint32Array.from([0xfffffffe]));
   buffers.histogram.write(Uint32Array.from([0xfffffffe, 0, 0, 0]));
   buffers.overflow.write(Uint32Array.from([0]));
   submitGraph(device, compiledReplay, 'overflowing-replay');
 
-  testCase.equal(
+  expect(
     (await readUnsigned(buffers.count))[0],
-    0xffffffff,
     'global population saturates instead of wrapping beyond uint32'
-  );
-  testCase.equal(
+  ).toBe(0xffffffff);
+  expect(
     (await readUnsigned(buffers.histogram))[0],
-    0xffffffff,
     'global histogram bins saturate instead of silently wrapping'
-  );
-  testCase.equal(
+  ).toBe(0xffffffff);
+  expect(
     (await readUnsigned(buffers.overflow))[0]! & 0b11,
-    0b11,
     'count and histogram saturation publish independently sticky overflow bits'
-  );
-  testCase.equal(
+  ).toBe(0b11);
+  expect(
     (await readViewUnsigned(percentileValidity, ownedBuffers))[0],
-    0,
     'overflowed global populations cannot produce a falsely precise percentile'
-  );
-  testCase.ok(
-    Number.isNaN((await readViewFloat(percentile, ownedBuffers))[0]),
+  ).toBe(0);
+  expect(
+    Boolean(Number.isNaN((await readViewFloat(percentile, ownedBuffers))[0])),
     'overflowed percentile values publish an explicit invalid floating result'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiledInitializer, 'explicit-global-reinitialization');
-  testCase.equal((await readUnsigned(buffers.count))[0], 0, 'only explicit reset clears totals');
-  testCase.deepEqual(
+  expect((await readUnsigned(buffers.count))[0], 'only explicit reset clears totals').toBe(0);
+  expect(
     await readUnsigned(buffers.histogram),
-    [0, 0, 0, 0],
     'explicit reset clears all caller-owned global histogram bins'
-  );
-  testCase.equal(
-    (await readUnsigned(buffers.overflow))[0],
-    0,
-    'explicit reset clears sticky flags'
-  );
+  ).toEqual([0, 0, 0, 0]);
+  expect((await readUnsigned(buffers.overflow))[0], 'explicit reset clears sticky flags').toBe(0);
 
   compiledReplay.destroy();
   compiledInitializer.destroy();
   for (const buffer of [...Object.values(buffers), ...ownedBuffers]) {
-    testCase.notOk(buffer.destroyed, 'compiled graphs never own borrowed persistent storage');
+    expect(Boolean(buffer.destroyed), 'compiled graphs never own borrowed persistent storage').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 async function runGlobalAnalysis(device: Device, order: readonly number[]): Promise<GlobalOutputs> {

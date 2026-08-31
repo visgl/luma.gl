@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {GL, GLParameters} from '@luma.gl/webgl/constants';
@@ -10,14 +10,11 @@ import {WebGLDevice, setDeviceParameters, getGLParameters, resetGLParameters} fr
 
 // Settings test, could be beneficial to not reuse a context
 
-const getOrSkipWebGLTestDevice = async (t: {
-  comment: (...messages: unknown[]) => void;
-  end: () => void;
-}): Promise<WebGLDevice | null> => {
+const getOrSkipWebGLTestDevice = async (): Promise<WebGLDevice | null> => {
   const device = await getWebGLTestDevice();
   if (!device || !device.gl || device.isLost) {
-    t.comment('WebGL device not available');
-    t.end();
+    void 0;
+    void 0;
     return null;
   }
   return device;
@@ -30,77 +27,77 @@ const getGLParameter = (device: WebGLDevice, parameter: keyof GLParameters): any
   return parameters[parameter];
 };
 
-test('setDeviceParameters#cullMode', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#cullMode', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
 
   resetGLParameters(device.gl);
 
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE), false, 'got expected value');
+  expect(getGLParameter(device, GL.CULL_FACE), 'got expected value').toEqual(false);
 
   setDeviceParameters(device, {cullMode: 'front'});
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE), true, 'got expected value');
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE_MODE), GL.FRONT, 'got expected value');
+  expect(getGLParameter(device, GL.CULL_FACE), 'got expected value').toEqual(true);
+  expect(getGLParameter(device, GL.CULL_FACE_MODE), 'got expected value').toEqual(GL.FRONT);
 
   setDeviceParameters(device, {cullMode: 'back'});
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE), true, 'got expected value');
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE_MODE), GL.BACK, 'got expected value');
+  expect(getGLParameter(device, GL.CULL_FACE), 'got expected value').toEqual(true);
+  expect(getGLParameter(device, GL.CULL_FACE_MODE), 'got expected value').toEqual(GL.BACK);
 
   setDeviceParameters(device, {cullMode: 'none'});
-  t.deepEqual(getGLParameter(device, GL.CULL_FACE), false, 'got expected value');
+  expect(getGLParameter(device, GL.CULL_FACE), 'got expected value').toEqual(false);
 
-  t.end();
+  void 0;
 });
 
-test('setDeviceParameters#frontFace', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#frontFace', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
 
   resetGLParameters(device.gl);
 
-  t.deepEqual(getGLParameter(device, GL.FRONT_FACE), GL.CCW, 'got expected value');
+  expect(getGLParameter(device, GL.FRONT_FACE), 'got expected value').toEqual(GL.CCW);
 
   setDeviceParameters(device, {frontFace: 'cw'});
-  t.deepEqual(getGLParameter(device, GL.FRONT_FACE), GL.CW, 'got expected value');
+  expect(getGLParameter(device, GL.FRONT_FACE), 'got expected value').toEqual(GL.CW);
 
   setDeviceParameters(device, {frontFace: 'ccw'});
-  t.deepEqual(getGLParameter(device, GL.FRONT_FACE), GL.CCW, 'got expected value');
+  expect(getGLParameter(device, GL.FRONT_FACE), 'got expected value').toEqual(GL.CCW);
 
-  t.end();
+  void 0;
 });
 
-test('setDeviceParameters#depthWriteEnabled', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#depthWriteEnabled', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
 
   resetGLParameters(device.gl);
 
-  t.deepEqual(getGLParameter(device, GL.DEPTH_WRITEMASK), true, 'got expected value');
+  expect(getGLParameter(device, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(true);
 
   setDeviceParameters(device, {depthWriteEnabled: false});
-  t.deepEqual(getGLParameter(device, GL.DEPTH_WRITEMASK), false, 'got expected value');
+  expect(getGLParameter(device, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(false);
 
   setDeviceParameters(device, {depthWriteEnabled: true});
-  t.deepEqual(getGLParameter(device, GL.DEPTH_WRITEMASK), true, 'got expected value');
+  expect(getGLParameter(device, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(true);
 
-  t.end();
+  void 0;
 });
 
-test('setDeviceParameters#blending', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#blending', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
 
   resetGLParameters(device.gl);
 
-  t.equal(getGLParameter(device, GL.BLEND), false, 'blending disabled');
+  expect(getGLParameter(device, GL.BLEND), 'blending disabled').toBe(false);
 
   setDeviceParameters(device, {
     blend: true,
@@ -108,21 +105,18 @@ test('setDeviceParameters#blending', async t => {
     blendAlphaOperation: 'subtract'
   });
 
-  t.equal(getGLParameter(device, GL.BLEND), true, 'GL.BLEND = true');
-  t.equal(
-    getGLParameter(device, GL.BLEND_EQUATION_RGB),
-    GL.FUNC_ADD,
-    'GL.BLEND_EQUATION_RGB = GL.FUNC_ADD'
+  expect(getGLParameter(device, GL.BLEND), 'GL.BLEND = true').toBe(true);
+  expect(getGLParameter(device, GL.BLEND_EQUATION_RGB), 'GL.BLEND_EQUATION_RGB = GL.FUNC_ADD').toBe(
+    GL.FUNC_ADD
   );
-  t.equal(
+  expect(
     getGLParameter(device, GL.BLEND_EQUATION_ALPHA),
-    GL.FUNC_SUBTRACT,
     'GL.BLEND_EQUATION_ALPHA = GL.FUNC_SUBTRACT'
-  );
-  t.equal(getGLParameter(device, GL.BLEND_SRC_RGB), GL.ONE, 'GL.BLEND_SRC_RGB = GL.ONE');
-  t.equal(getGLParameter(device, GL.BLEND_DST_RGB), GL.ZERO, 'GL.BLEND_DST_RGB = GL.ZERO');
-  t.equal(getGLParameter(device, GL.BLEND_SRC_ALPHA), GL.ONE, 'GL.BLEND_SRC_ALPHA = GL.ONE');
-  t.equal(getGLParameter(device, GL.BLEND_DST_ALPHA), GL.ZERO, 'GL.BLEND_DST_ALPHA = GL.ZERO');
+  ).toBe(GL.FUNC_SUBTRACT);
+  expect(getGLParameter(device, GL.BLEND_SRC_RGB), 'GL.BLEND_SRC_RGB = GL.ONE').toBe(GL.ONE);
+  expect(getGLParameter(device, GL.BLEND_DST_RGB), 'GL.BLEND_DST_RGB = GL.ZERO').toBe(GL.ZERO);
+  expect(getGLParameter(device, GL.BLEND_SRC_ALPHA), 'GL.BLEND_SRC_ALPHA = GL.ONE').toBe(GL.ONE);
+  expect(getGLParameter(device, GL.BLEND_DST_ALPHA), 'GL.BLEND_DST_ALPHA = GL.ZERO').toBe(GL.ZERO);
 
   setDeviceParameters(device, {
     blend: true,
@@ -134,61 +128,57 @@ test('setDeviceParameters#blending', async t => {
     blendAlphaDstFactor: 'one'
   });
 
-  t.equal(getGLParameter(device, GL.BLEND), true, 'GL.BLEND = true');
-  t.equal(getGLParameter(device, GL.BLEND_EQUATION_RGB), GL.MAX, 'GL.BLEND_EQUATION_RGB = GL.MAX');
-  t.equal(
-    getGLParameter(device, GL.BLEND_EQUATION_ALPHA),
-    GL.MIN,
-    'GL.BLEND_EQUATION_ALPHA = GL.MIN'
+  expect(getGLParameter(device, GL.BLEND), 'GL.BLEND = true').toBe(true);
+  expect(getGLParameter(device, GL.BLEND_EQUATION_RGB), 'GL.BLEND_EQUATION_RGB = GL.MAX').toBe(
+    GL.MAX
   );
-  t.equal(
-    getGLParameter(device, GL.BLEND_SRC_RGB),
-    GL.SRC_ALPHA,
-    'GL.BLEND_SRC_RGB = GL.SRC_ALPHA'
+  expect(getGLParameter(device, GL.BLEND_EQUATION_ALPHA), 'GL.BLEND_EQUATION_ALPHA = GL.MIN').toBe(
+    GL.MIN
   );
-  t.equal(
-    getGLParameter(device, GL.BLEND_DST_RGB),
-    GL.DST_ALPHA,
-    'GL.BLEND_DST_RGB = GL.DST_ALPHA'
+  expect(getGLParameter(device, GL.BLEND_SRC_RGB), 'GL.BLEND_SRC_RGB = GL.SRC_ALPHA').toBe(
+    GL.SRC_ALPHA
   );
-  t.equal(getGLParameter(device, GL.BLEND_SRC_ALPHA), GL.ZERO, 'GL.BLEND_SRC_ALPHA = GL.ZERO');
-  t.equal(getGLParameter(device, GL.BLEND_DST_ALPHA), GL.ONE, 'GL.BLEND_DST_ALPHA = GL.ONE');
+  expect(getGLParameter(device, GL.BLEND_DST_RGB), 'GL.BLEND_DST_RGB = GL.DST_ALPHA').toBe(
+    GL.DST_ALPHA
+  );
+  expect(getGLParameter(device, GL.BLEND_SRC_ALPHA), 'GL.BLEND_SRC_ALPHA = GL.ZERO').toBe(GL.ZERO);
+  expect(getGLParameter(device, GL.BLEND_DST_ALPHA), 'GL.BLEND_DST_ALPHA = GL.ONE').toBe(GL.ONE);
 
-  t.end();
+  void 0;
 });
 
-test('setDeviceParameters#depthCompare', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#depthCompare', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
   resetGLParameters(device.gl);
 
-  t.equal(getGLParameter(device, GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
+  expect(getGLParameter(device, GL.DEPTH_TEST), 'GL.DEPTH_TEST = false').toBe(false);
 
   setDeviceParameters(device, {depthCompare: 'less'});
-  t.equal(getGLParameter(device, GL.DEPTH_TEST), true, 'GL.DEPTH_TEST = true');
-  t.equal(getGLParameter(device, GL.DEPTH_FUNC), GL.LESS, 'GL.DEPTH_FUNC = GL.LESS');
+  expect(getGLParameter(device, GL.DEPTH_TEST), 'GL.DEPTH_TEST = true').toBe(true);
+  expect(getGLParameter(device, GL.DEPTH_FUNC), 'GL.DEPTH_FUNC = GL.LESS').toBe(GL.LESS);
 
   setDeviceParameters(device, {depthCompare: 'always'});
-  t.equal(getGLParameter(device, GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
-  t.equal(getGLParameter(device, GL.DEPTH_FUNC), GL.ALWAYS, 'GL.DEPTH_FUNC = GL.ALWAYS');
+  expect(getGLParameter(device, GL.DEPTH_TEST), 'GL.DEPTH_TEST = false').toBe(false);
+  expect(getGLParameter(device, GL.DEPTH_FUNC), 'GL.DEPTH_FUNC = GL.ALWAYS').toBe(GL.ALWAYS);
 
-  t.end();
+  void 0;
 });
 
-test('setDeviceParameters#depthClearValue', async t => {
-  const device = await getOrSkipWebGLTestDevice(t);
+it('setDeviceParameters#depthClearValue', async () => {
+  const device = await getOrSkipWebGLTestDevice();
   if (!device) {
     return;
   }
   const gl = device.gl;
 
   resetGLParameters(gl);
-  t.deepEqual(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 1, 'got expected clear depth');
+  expect(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 'got expected clear depth').toEqual(1);
 
   setDeviceParameters(device, {clearDepth: 0});
-  t.deepEqual(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 0, 'set clear depth works');
+  expect(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 'set clear depth works').toEqual(0);
 
-  t.end();
+  void 0;
 });

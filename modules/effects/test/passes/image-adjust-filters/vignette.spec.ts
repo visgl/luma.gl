@@ -4,13 +4,13 @@
 
 import {vignette} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('vignette#build/uniform', t => {
+it('vignette#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(vignette, {}, {});
 
-  t.ok(uniforms, 'vignette module build is ok');
-  t.equal(uniforms.radius, 0.5, 'vignette radius uniform is ok');
-  t.equal(uniforms.amount, 0.5, 'vignette amount uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'vignette module build is ok').toBe(true);
+  expect(uniforms.radius, 'vignette radius uniform is ok').toBe(0.5);
+  expect(uniforms.amount, 'vignette amount uniform is ok').toBe(0.5);
+  void 0;
 });

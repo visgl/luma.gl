@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {
   getTransformPlatformInfo,
@@ -267,12 +267,12 @@ function splitCasesForOperation(
 }
 
 for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
-  test(`fp64#${arithmeticOperation.operationName}`, async tapeTest => {
+  it(`fp64#${arithmeticOperation.operationName}`, async () => {
     const webGLDevice = await getWebGLTestDevice();
     const platformInfo = getTransformPlatformInfo(webGLDevice);
     if (platformInfo.isAppleMetal && arithmeticOperation.operationName === 'sqrt_fp64') {
-      tapeTest.comment('Skipping sqrt_fp64 transform coverage on Apple Metal');
-      tapeTest.end();
+      void 0;
+      void 0;
       return;
     }
     const {mustPassCases, diagnosticCases} = splitCasesForOperation(
@@ -280,38 +280,35 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
       platformInfo
     );
 
-    tapeTest.comment(`Platform ${platformInfo.label}`);
+    void 0;
 
     await runArithmeticCases(webGLDevice, {
       ...arithmeticOperation,
       testCases: mustPassCases,
-      tapeTest,
       caseKind: 'must-pass'
     });
 
     await runArithmeticCases(webGLDevice, {
       ...arithmeticOperation,
       testCases: diagnosticCases,
-      tapeTest,
       caseKind: 'diagnostic',
       includeScalarOutputs: true
     });
 
-    tapeTest.end();
+    void 0;
   });
 }
 
 for (const helperOperation of HELPER_DIAGNOSTICS) {
-  test(`fp64#${helperOperation.operationName} diagnostic`, async tapeTest => {
+  it(`fp64#${helperOperation.operationName} diagnostic`, async () => {
     const webGLDevice = await getWebGLTestDevice();
-    const platformInfo = getTransformPlatformInfo(webGLDevice);
-    tapeTest.comment(`Platform ${platformInfo.label}`);
+    const _platformInfo = getTransformPlatformInfo(webGLDevice);
+    void 0;
 
     await runHelperDiagnostics(webGLDevice, {
-      ...helperOperation,
-      tapeTest
+      ...helperOperation
     });
 
-    tapeTest.end();
+    void 0;
   });
 }

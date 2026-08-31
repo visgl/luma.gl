@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '../../src';
 
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
@@ -13,7 +13,7 @@ function makeLayoutWriter(
   return {layout, writer: new ShaderBlockWriter(layout)};
 }
 
-test('unaligned scalar forces padding before vec4', t => {
+it('unaligned scalar forces padding before vec4', () => {
   const uniformTypes = {
     scalar: 'f32',
     vector: 'vec4<f32>'
@@ -27,18 +27,18 @@ test('unaligned scalar forces padding before vec4', t => {
   });
 
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 42, 'scalar');
-  t.equal(view[1], 0, 'padding');
-  t.equal(view[2], 0, 'padding');
-  t.equal(view[3], 0, 'padding');
-  t.equal(view[4], 1, 'vector[0]');
-  t.equal(view[5], 2, 'vector[1]');
-  t.equal(view[6], 3, 'vector[2]');
-  t.equal(view[7], 4, 'vector[3]');
-  t.end();
+  expect(view[0], 'scalar').toBe(42);
+  expect(view[1], 'padding').toBe(0);
+  expect(view[2], 'padding').toBe(0);
+  expect(view[3], 'padding').toBe(0);
+  expect(view[4], 'vector[0]').toBe(1);
+  expect(view[5], 'vector[1]').toBe(2);
+  expect(view[6], 'vector[2]').toBe(3);
+  expect(view[7], 'vector[3]').toBe(4);
+  void 0;
 });
 
-test('nested struct layout (struct inside struct)', t => {
+it('nested struct layout (struct inside struct)', () => {
   const uniformTypes = {
     light: {
       transform: {
@@ -63,15 +63,15 @@ test('nested struct layout (struct inside struct)', t => {
 
   const view = new Float32Array(data.buffer);
 
-  t.equal(view[0], 1, 'transform.position[0]');
-  t.equal(view[1], 2);
-  t.equal(view[2], 3);
-  t.equal(view[3], 10, 'transform.range reuses vec3 tail slot');
-  t.ok(almostEqual(view[4], 0.8), 'light.intensity');
-  t.end();
+  expect(view[0], 'transform.position[0]').toBe(1);
+  expect(view[1], '').toBe(2);
+  expect(view[2], '').toBe(3);
+  expect(view[3], 'transform.range reuses vec3 tail slot').toBe(10);
+  expect(Boolean(almostEqual(view[4], 0.8)), 'light.intensity').toBe(true);
+  void 0;
 });
 
-test('array of primitives uses std140 stride', t => {
+it('array of primitives uses std140 stride', () => {
   const uniformTypes = {
     thresholds: ['f32', 3]
   } as const;
@@ -83,13 +83,13 @@ test('array of primitives uses std140 stride', t => {
   });
 
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'thresholds[0]');
-  t.equal(view[4], 2, 'thresholds[1]');
-  t.equal(view[8], 3, 'thresholds[2]');
-  t.end();
+  expect(view[0], 'thresholds[0]').toBe(1);
+  expect(view[4], 'thresholds[1]').toBe(2);
+  expect(view[8], 'thresholds[2]').toBe(3);
+  void 0;
 });
 
-test('array of matrices accepts packed values', t => {
+it('array of matrices accepts packed values', () => {
   const {writer} = makeLayoutWriter({
     jointMatrix: ['mat4x4<f32>', 2]
   });
@@ -101,14 +101,14 @@ test('array of matrices accepts packed values', t => {
   });
 
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'jointMatrix[0][0]');
-  t.equal(view[15], 1, 'jointMatrix[0][15]');
-  t.equal(view[16], 2, 'jointMatrix[1][0]');
-  t.equal(view[31], 2, 'jointMatrix[1][15]');
-  t.end();
+  expect(view[0], 'jointMatrix[0][0]').toBe(1);
+  expect(view[15], 'jointMatrix[0][15]').toBe(1);
+  expect(view[16], 'jointMatrix[1][0]').toBe(2);
+  expect(view[31], 'jointMatrix[1][15]').toBe(2);
+  void 0;
 });
 
-test('array of structs layout', t => {
+it('array of structs layout', () => {
   const uniformTypes = {
     lights: [
       {
@@ -131,21 +131,21 @@ test('array of structs layout', t => {
   const view = new Float32Array(data.buffer);
 
   // First struct
-  t.equal(view[0], 1, 'lights[0].position[0]');
-  t.equal(view[1], 2, 'lights[0].position[1]');
-  t.equal(view[2], 3, 'lights[0].position[2]');
-  t.equal(view[3], 0.5, 'lights[0].intensity reuses vec3 tail slot');
+  expect(view[0], 'lights[0].position[0]').toBe(1);
+  expect(view[1], 'lights[0].position[1]').toBe(2);
+  expect(view[2], 'lights[0].position[2]').toBe(3);
+  expect(view[3], 'lights[0].intensity reuses vec3 tail slot').toBe(0.5);
 
   // Second struct
-  t.equal(view[4], 4, 'lights[1].position[0]');
-  t.equal(view[5], 5, 'lights[1].position[1]');
-  t.equal(view[6], 6, 'lights[1].position[2]');
-  t.equal(view[7], 1.0, 'lights[1].intensity reuses vec3 tail slot');
+  expect(view[4], 'lights[1].position[0]').toBe(4);
+  expect(view[5], 'lights[1].position[1]').toBe(5);
+  expect(view[6], 'lights[1].position[2]').toBe(6);
+  expect(view[7], 'lights[1].intensity reuses vec3 tail slot').toBe(1.0);
 
-  t.end();
+  void 0;
 });
 
-test('partial nested updates preserve unspecified leaves', t => {
+it('partial nested updates preserve unspecified leaves', () => {
   const uniformStore = new UniformStore({type: 'webgl'} as any, {
     lighting: {
       uniformTypes: {
@@ -180,16 +180,16 @@ test('partial nested updates preserve unspecified leaves', t => {
   const data = uniformStore.getUniformBufferData('lighting');
   const view = new Float32Array(data.buffer);
 
-  t.equal(view[0], 1, 'default position[0] preserved');
-  t.equal(view[1], 2, 'default position[1] preserved');
-  t.equal(view[2], 3, 'default position[2] preserved');
-  t.equal(view[3], 10, 'default range preserved');
-  t.ok(almostEqual(view[4], 0.8), 'updated intensity written');
+  expect(view[0], 'default position[0] preserved').toBe(1);
+  expect(view[1], 'default position[1] preserved').toBe(2);
+  expect(view[2], 'default position[2] preserved').toBe(3);
+  expect(view[3], 'default range preserved').toBe(10);
+  expect(Boolean(almostEqual(view[4], 0.8)), 'updated intensity written').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('UniformStore keeps minimum uniform buffer allocation separate from packed block size', t => {
+it('UniformStore keeps minimum uniform buffer allocation separate from packed block size', () => {
   const uniformStore = new UniformStore({type: 'webgl'} as any, {
     app: {
       uniformTypes: {
@@ -208,22 +208,20 @@ test('UniformStore keeps minimum uniform buffer allocation separate from packed 
     offset: 'vec2<f32>'
   });
 
-  t.equal(packedLayout.byteLength, 16, 'layout byteLength is the exact packed size');
-  t.equal(
+  expect(packedLayout.byteLength, 'layout byteLength is the exact packed size').toBe(16);
+  expect(
     uniformStore.getUniformBufferByteLength('app'),
-    1024,
     'UniformStore still reports the minimum allocation size'
-  );
-  t.equal(
+  ).toBe(1024);
+  expect(
     uniformStore.getUniformBufferData('app').byteLength,
-    16,
     'serialized uniform data uses the exact packed size'
-  );
+  ).toBe(16);
 
-  t.end();
+  void 0;
 });
 
-test('uniform layout accepts WGSL alias types', t => {
+it('uniform layout accepts WGSL alias types', () => {
   const {writer} = makeLayoutWriter({
     camera: 'vec3f',
     modelMatrix: 'mat4x4f'
@@ -235,17 +233,17 @@ test('uniform layout accepts WGSL alias types', t => {
   });
 
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'camera[0]');
-  t.equal(view[1], 2, 'camera[1]');
-  t.equal(view[2], 3, 'camera[2]');
-  t.equal(view[4], 1, 'modelMatrix[0]');
-  t.equal(view[9], 1, 'modelMatrix[5]');
-  t.equal(view[14], 1, 'modelMatrix[10]');
-  t.equal(view[19], 1, 'modelMatrix[15]');
-  t.end();
+  expect(view[0], 'camera[0]').toBe(1);
+  expect(view[1], 'camera[1]').toBe(2);
+  expect(view[2], 'camera[2]').toBe(3);
+  expect(view[4], 'modelMatrix[0]').toBe(1);
+  expect(view[9], 'modelMatrix[5]').toBe(1);
+  expect(view[14], 'modelMatrix[10]').toBe(1);
+  expect(view[19], 'modelMatrix[15]').toBe(1);
+  void 0;
 });
 
-test('wgsl-uniform keeps native WGSL matrix packing', t => {
+it('wgsl-uniform keeps native WGSL matrix packing', () => {
   const {layout, writer} = makeLayoutWriter(
     {
       transform: 'mat2x2<f32>',
@@ -254,9 +252,9 @@ test('wgsl-uniform keeps native WGSL matrix packing', t => {
     {layout: 'wgsl-uniform'}
   );
 
-  t.equal(layout.fields.transform?.offset, 0, 'mat2x2 starts at 0');
-  t.equal(layout.fields.transform?.size, 4, 'mat2x2 uses native WGSL size');
-  t.equal(layout.fields.exposure?.offset, 4, 'scalar follows matrix without std140 padding');
+  expect(layout.fields.transform?.offset, 'mat2x2 starts at 0').toBe(0);
+  expect(layout.fields.transform?.size, 'mat2x2 uses native WGSL size').toBe(4);
+  expect(layout.fields.exposure?.offset, 'scalar follows matrix without std140 padding').toBe(4);
 
   const data = writer.getData({
     transform: [1, 2, 3, 4],
@@ -264,11 +262,13 @@ test('wgsl-uniform keeps native WGSL matrix packing', t => {
   });
 
   const view = new Float32Array(data.buffer);
-  t.deepEqual(Array.from(view.slice(0, 5)), [1, 2, 3, 4, 5], 'matrix columns are packed densely');
-  t.end();
+  expect(Array.from(view.slice(0, 5)), 'matrix columns are packed densely').toEqual([
+    1, 2, 3, 4, 5
+  ]);
+  void 0;
 });
 
-test('wgsl-storage packs primitive arrays densely', t => {
+it('wgsl-storage packs primitive arrays densely', () => {
   const {layout, writer} = makeLayoutWriter(
     {
       thresholds: ['f32', 3]
@@ -276,20 +276,22 @@ test('wgsl-storage packs primitive arrays densely', t => {
     {layout: 'wgsl-storage'}
   );
 
-  t.equal(layout.fields['thresholds[0]']?.offset, 0, 'threshold[0] offset');
-  t.equal(layout.fields['thresholds[1]']?.offset, 1, 'threshold[1] offset');
-  t.equal(layout.fields['thresholds[2]']?.offset, 2, 'threshold[2] offset');
+  expect(layout.fields['thresholds[0]']?.offset, 'threshold[0] offset').toBe(0);
+  expect(layout.fields['thresholds[1]']?.offset, 'threshold[1] offset').toBe(1);
+  expect(layout.fields['thresholds[2]']?.offset, 'threshold[2] offset').toBe(2);
 
   const data = writer.getData({
     thresholds: [1, 2, 3]
   });
 
   const view = new Float32Array(data.buffer);
-  t.deepEqual(Array.from(view.slice(0, 3)), [1, 2, 3], 'array elements use storage-buffer stride');
-  t.end();
+  expect(Array.from(view.slice(0, 3)), 'array elements use storage-buffer stride').toEqual([
+    1, 2, 3
+  ]);
+  void 0;
 });
 
-test('wgsl-storage packs vec3 tails and nested structs without std140 struct padding', t => {
+it('wgsl-storage packs vec3 tails and nested structs without std140 struct padding', () => {
   const {layout, writer} = makeLayoutWriter(
     {
       light: {
@@ -303,14 +305,13 @@ test('wgsl-storage packs vec3 tails and nested structs without std140 struct pad
     {layout: 'wgsl-storage'}
   );
 
-  t.equal(layout.fields['light.transform.position']?.offset, 0, 'vec3 offset');
-  t.equal(layout.fields['light.transform.position']?.size, 3, 'vec3 uses native WGSL size');
-  t.equal(layout.fields['light.transform.range']?.offset, 3, 'scalar reuses vec3 tail slot');
-  t.equal(
+  expect(layout.fields['light.transform.position']?.offset, 'vec3 offset').toBe(0);
+  expect(layout.fields['light.transform.position']?.size, 'vec3 uses native WGSL size').toBe(3);
+  expect(layout.fields['light.transform.range']?.offset, 'scalar reuses vec3 tail slot').toBe(3);
+  expect(
     layout.fields['light.intensity']?.offset,
-    4,
     'outer struct is not rounded up to std140 size'
-  );
+  ).toBe(4);
 
   const data = writer.getData({
     light: {
@@ -323,11 +324,13 @@ test('wgsl-storage packs vec3 tails and nested structs without std140 struct pad
   });
 
   const view = new Float32Array(data.buffer);
-  t.deepEqual(Array.from(view.slice(0, 5)), [1, 2, 3, 4, 5], 'nested struct uses storage layout');
-  t.end();
+  expect(Array.from(view.slice(0, 5)), 'nested struct uses storage layout').toEqual([
+    1, 2, 3, 4, 5
+  ]);
+  void 0;
 });
 
-test('ShaderBlockLayout matches project-style scalar/vec3 std140 packing', t => {
+it('ShaderBlockLayout matches project-style scalar/vec3 std140 packing', () => {
   const uniformTypes = {
     flag0: 'f32',
     mode0: 'i32',
@@ -365,9 +368,9 @@ test('ShaderBlockLayout matches project-style scalar/vec3 std140 packing', t => 
 
   for (const [uniformName, expected] of Object.entries(expectedLayout)) {
     const actual = layout.fields[uniformName];
-    t.ok(actual, `${uniformName} exists`);
-    t.equal(actual?.offset, expected.offset, `${uniformName} offset`);
-    t.equal(actual?.size, expected.size, `${uniformName} size`);
+    expect(Boolean(actual), `${uniformName} exists`).toBe(true);
+    expect(actual?.offset, `${uniformName} offset`).toBe(expected.offset);
+    expect(actual?.size, `${uniformName} size`).toBe(expected.size);
   }
 
   const data = writer.getData({
@@ -390,25 +393,25 @@ test('ShaderBlockLayout matches project-style scalar/vec3 std140 packing', t => 
   const view = new Float32Array(data.buffer);
   const intView = new Int32Array(data.buffer);
 
-  t.equal(view[0], 1, 'flag0 value');
-  t.equal(intView[1], 2, 'mode0 value');
-  t.equal(view[4], 11.125, 'metersPerUnit[0]');
-  t.equal(view[5], 12.25, 'metersPerUnit[1]');
-  t.equal(view[6], 13.5, 'metersPerUnit[2]');
-  t.equal(intView[7], 3, 'mode1 value');
-  t.equal(view[8], 14.75, 'scale value');
-  t.equal(view[20], 41.125, 'viewportSize[0]');
-  t.equal(view[21], 42.25, 'viewportSize[1]');
-  t.equal(view[35], 4, 'flag1 value');
+  expect(view[0], 'flag0 value').toBe(1);
+  expect(intView[1], 'mode0 value').toBe(2);
+  expect(view[4], 'metersPerUnit[0]').toBe(11.125);
+  expect(view[5], 'metersPerUnit[1]').toBe(12.25);
+  expect(view[6], 'metersPerUnit[2]').toBe(13.5);
+  expect(intView[7], 'mode1 value').toBe(3);
+  expect(view[8], 'scale value').toBe(14.75);
+  expect(view[20], 'viewportSize[0]').toBe(41.125);
+  expect(view[21], 'viewportSize[1]').toBe(42.25);
+  expect(view[35], 'flag1 value').toBe(4);
 
   for (const paddingIndex of [2, 3, 9, 10, 11, 27, 31]) {
-    t.equal(view[paddingIndex], 0, `padding at ${paddingIndex} remains zero`);
+    expect(view[paddingIndex], `padding at ${paddingIndex} remains zero`).toBe(0);
   }
 
-  t.end();
+  void 0;
 });
 
-test('ShaderBlockLayout matches original deck project std140 packing', t => {
+it('ShaderBlockLayout matches original deck project std140 packing', () => {
   // Mirrors deck.gl master:
   // modules/core/src/shaderlib/project/project.ts
   const uniformTypes = {
@@ -454,9 +457,9 @@ test('ShaderBlockLayout matches original deck project std140 packing', t => {
 
   for (const [uniformName, expected] of Object.entries(expectedLayout)) {
     const actual = layout.fields[uniformName];
-    t.ok(actual, `${uniformName} exists`);
-    t.equal(actual?.offset, expected.offset, `${uniformName} offset`);
-    t.equal(actual?.size, expected.size, `${uniformName} size`);
+    expect(Boolean(actual), `${uniformName} exists`).toBe(true);
+    expect(actual?.offset, `${uniformName} offset`).toBe(expected.offset);
+    expect(actual?.size, `${uniformName} size`).toBe(expected.size);
   }
 
   const data = writer.getData({
@@ -482,24 +485,24 @@ test('ShaderBlockLayout matches original deck project std140 packing', t => {
   const view = new Float32Array(data.buffer);
   const intView = new Int32Array(data.buffer);
 
-  t.equal(view[0], 1, 'wrapLongitude value');
-  t.equal(intView[1], 3, 'coordinateSystem value');
-  t.equal(view[4], 11.125, 'commonUnitsPerMeter[0]');
-  t.equal(view[8], 14.75, 'scale value');
-  t.equal(view[20], 41.125, 'center[0]');
-  t.equal(view[35], 112, 'modelMatrix[11]');
-  t.equal(view[55], 216, 'viewProjectionMatrix[15]');
-  t.equal(view[56], 301.25, 'viewportSize[0]');
-  t.equal(view[58], 303.75, 'devicePixelRatio value');
-  t.equal(view[59], 304.5, 'focalDistance value');
-  t.equal(view[60], 401.125, 'cameraPosition[0]');
-  t.equal(view[64], 501.125, 'coordinateOrigin[0]');
-  t.equal(view[68], 601.125, 'commonOrigin[0]');
-  t.equal(view[71], 1, 'pseudoMeters value');
+  expect(view[0], 'wrapLongitude value').toBe(1);
+  expect(intView[1], 'coordinateSystem value').toBe(3);
+  expect(view[4], 'commonUnitsPerMeter[0]').toBe(11.125);
+  expect(view[8], 'scale value').toBe(14.75);
+  expect(view[20], 'center[0]').toBe(41.125);
+  expect(view[35], 'modelMatrix[11]').toBe(112);
+  expect(view[55], 'viewProjectionMatrix[15]').toBe(216);
+  expect(view[56], 'viewportSize[0]').toBe(301.25);
+  expect(view[58], 'devicePixelRatio value').toBe(303.75);
+  expect(view[59], 'focalDistance value').toBe(304.5);
+  expect(view[60], 'cameraPosition[0]').toBe(401.125);
+  expect(view[64], 'coordinateOrigin[0]').toBe(501.125);
+  expect(view[68], 'commonOrigin[0]').toBe(601.125);
+  expect(view[71], 'pseudoMeters value').toBe(1);
 
   for (const paddingIndex of [9, 10, 11, 63, 67]) {
-    t.equal(view[paddingIndex], 0, `vec3 tail padding at ${paddingIndex} remains zero`);
+    expect(view[paddingIndex], `vec3 tail padding at ${paddingIndex} remains zero`).toBe(0);
   }
 
-  t.end();
+  void 0;
 });

@@ -21,7 +21,7 @@ import {
   type GPURasterTileSourceMetadata
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type RasterSamples = Float32Array | Uint32Array | Int32Array;
 
@@ -32,25 +32,25 @@ const SOURCE_REGIONS: readonly GPURasterPixelBounds[] = [
   [3, 3, 5, 5]
 ];
 
-test('GPURaster tile halo gather preserves exact scalar formats, masks, raw nodata, and offset guards', async testCase => {
+it('GPURaster tile halo gather preserves exact scalar formats, masks, raw nodata, and offset guards', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   for (const format of ['float32', 'uint32', 'sint32'] as const) {
-    await assertExactHaloTransfer(testCase, device, format);
+    await assertExactHaloTransfer(device, format);
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster tile halo pins diagonal/ragged WebGPU imports through core publication and fencing', async testCase => {
+it('GPURaster tile halo pins diagonal/ragged WebGPU imports through core publication and fencing', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -72,14 +72,10 @@ test('GPURaster tile halo pins diagonal/ragged WebGPU imports through core publi
     stages: [{requiredHalo: 1}]
   });
 
-  testCase.deepEqual(lease.plan.corePixelBounds, [2, 0, 4, 2], 'half-open owning core');
-  testCase.deepEqual(lease.plan.availablePixelBounds, [1, 0, 5, 3], 'ragged clipped neighborhood');
-  testCase.equal(
-    lease.tiles.length,
-    6,
-    'all horizontal, vertical, and diagonal imports are pinned'
-  );
-  testCase.equal(source.requests.length, 6, 'one bounded decode per full canonical source tile');
+  expect(lease.plan.corePixelBounds, 'half-open owning core').toEqual([2, 0, 4, 2]);
+  expect(lease.plan.availablePixelBounds, 'ragged clipped neighborhood').toEqual([1, 0, 5, 3]);
+  expect(lease.tiles.length, 'all horizontal, vertical, and diagonal imports are pinned').toBe(6);
+  expect(source.requests.length, 'one bounded decode per full canonical source tile').toBe(6);
 
   const graph = new GPUCommandGraph(device, {id: 'resident-tile-halo'});
   const availableLength = lease.plan.width * lease.plan.height;
@@ -158,40 +154,36 @@ test('GPURaster tile halo pins diagonal/ragged WebGPU imports through core publi
   ]);
   cache.destroy();
 
-  testCase.ok(
-    importedBuffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(importedBuffers.every(buffer => !buffer.destroyed)),
     'submitted source imports remain pinned'
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     (await readSamples(assembled, 'uint32')).slice(1, availableLength + 1),
-    makeRegionValues('uint32', lease.plan.availablePixelBounds),
     'GPU assembles every neighboring raw native uint32 sample without CPU staging'
-  );
-  testCase.deepEqual(
+  ).toEqual(makeRegionValues('uint32', lease.plan.availablePixelBounds));
+  expect(
     (await readSamples(core, 'uint32')).slice(1, coreLength + 1),
-    makeRegionValues('uint32', lease.plan.corePixelBounds),
     'only half-open owned core samples are published'
-  );
-  testCase.deepEqual(
+  ).toEqual(makeRegionValues('uint32', lease.plan.corePixelBounds));
+  expect(
     (await readSamples(coreValidity, 'uint32')).slice(1, coreLength + 1),
-    makeRegionValidity(lease.plan.corePixelBounds),
     'native decoded nodata/validity flags survive gather and publication'
-  );
+  ).toEqual(makeRegionValidity(lease.plan.corePixelBounds));
 
   gate.resolve();
   await released;
-  testCase.ok(
-    importedBuffers.every(buffer => buffer.destroyed),
+  expect(
+    Boolean(importedBuffers.every(buffer => buffer.destroyed)),
     'all six source leases release after one fence'
-  );
-  testCase.equal(cache.stats.gpuBytes, 0, 'composite teardown returns all resident GPU bytes');
+  ).toBe(true);
+  expect(cache.stats.gpuBytes, 'composite teardown returns all resident GPU bytes').toBe(0);
   compiled.destroy();
   for (const buffer of [assembled, assembledValidity, core, coreValidity]) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function assertExactHaloTransfer(
-  testCase: Test,
   device: Device,
   format: GPURasterScalarFormat
 ): Promise<void> {
@@ -273,32 +265,28 @@ async function assertExactHaloTransfer(
 
   const valueGuard = getGuardValue(format);
   const maskGuard = getGuardValue('uint32');
-  testCase.deepEqual(
+  expect(
     await readSamples(assembled, format),
-    [valueGuard, ...makeRegionValues(format, availableBounds), valueGuard],
     `${format} exact raw scalar values and nonzero destination offset`
-  );
-  testCase.deepEqual(
+  ).toEqual([valueGuard, ...makeRegionValues(format, availableBounds), valueGuard]);
+  expect(
     await readSamples(assembledValidity, 'uint32'),
-    [maskGuard, maskGuard, ...makeRegionValidity(availableBounds), maskGuard],
     `${format} exact source validity with independently offset storage bindings`
-  );
-  testCase.deepEqual(
+  ).toEqual([maskGuard, maskGuard, ...makeRegionValidity(availableBounds), maskGuard]);
+  expect(
     await readSamples(output, format),
-    [valueGuard, ...makeRegionValues(format, coreBounds), valueGuard],
     `${format} core excludes every padded halo sample and preserves guards`
-  );
-  testCase.deepEqual(
+  ).toEqual([valueGuard, ...makeRegionValues(format, coreBounds), valueGuard]);
+  expect(
     await readSamples(outputValidity, 'uint32'),
-    [maskGuard, ...makeRegionValidity(coreBounds), maskGuard],
     `${format} core publishes only owned validity flags`
-  );
+  ).toEqual([maskGuard, ...makeRegionValidity(coreBounds), maskGuard]);
 
   compiled.destroy();
-  testCase.ok(
-    ownedBuffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(ownedBuffers.every(buffer => !buffer.destroyed)),
     `${format} graph borrows all storage`
-  );
+  ).toBe(true);
   for (const buffer of ownedBuffers) buffer.destroy();
 }
 

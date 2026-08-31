@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Framebuffer} from '@luma.gl/core';
 
 import {
@@ -14,44 +14,42 @@ import {
 } from '../../src/modules/picking/picking-manager';
 import {getNullTestDevice} from '@luma.gl/test-utils';
 
-test('PickingManager#resolvePickingMode', t => {
-  t.equal(resolvePickingMode('webgl'), 'color', 'color is the default mode');
-  t.equal(resolvePickingMode('webgl', 'auto'), 'color', 'WebGL auto-selects color picking');
-  t.equal(resolvePickingMode('webgpu', 'auto'), 'index', 'WebGPU auto-selects index picking');
-  t.equal(resolvePickingMode('webgpu', 'color'), 'color', 'explicit color override honored');
-  t.equal(resolvePickingMode('webgpu', 'index'), 'index', 'explicit index override honored');
-  t.equal(
+it('PickingManager#resolvePickingMode', () => {
+  expect(resolvePickingMode('webgl'), 'color is the default mode').toBe('color');
+  expect(resolvePickingMode('webgl', 'auto'), 'WebGL auto-selects color picking').toBe('color');
+  expect(resolvePickingMode('webgpu', 'auto'), 'WebGPU auto-selects index picking').toBe('index');
+  expect(resolvePickingMode('webgpu', 'color'), 'explicit color override honored').toBe('color');
+  expect(resolvePickingMode('webgpu', 'index'), 'explicit index override honored').toBe('index');
+  expect(
     resolvePickingMode('webgl', 'index', true),
-    'index',
     'explicit index override is allowed on capable WebGL devices'
-  );
-  t.throws(
+  ).toBe('index');
+  expect(
     () => resolvePickingMode('webgl', 'index', false),
-    /requires WebGPU or a WebGL device that supports renderable rg32sint textures/,
     'forcing index on unsupported WebGL fails clearly'
-  );
-  t.end();
+  ).toThrow(/requires WebGPU or a WebGL device that supports renderable rg32sint textures/);
+  void 0;
 });
 
-test('PickingManager#supportsIndexPicking', t => {
+it('PickingManager#supportsIndexPicking', () => {
   const device = getNullTestDevice();
-  t.equal(supportsIndexPicking(device), false, 'NullDevice does not support index picking');
-  t.end();
+  expect(supportsIndexPicking(device), 'NullDevice does not support index picking').toBe(false);
+  void 0;
 });
 
-test('PickingManager#shouldPick', t => {
+it('PickingManager#shouldPick', () => {
   const picker = new PickingManager(getNullTestDevice(), {});
-  t.equal(picker.shouldPick([12, 34]), true, 'first cursor position should pick');
-  t.equal(picker.shouldPick([12, 34]), false, 'same cursor position is suppressed');
-  t.equal(picker.shouldPick([12, 34], {force: true}), true, 'forced pick reruns in place');
-  t.equal(picker.shouldPick([13, 34]), true, 'cursor movement should pick');
-  t.equal(picker.shouldPick(null), false, 'missing cursor position clears without picking');
-  t.equal(picker.shouldPick([13, 34]), true, 'cursor can pick again after clearing');
+  expect(picker.shouldPick([12, 34]), 'first cursor position should pick').toBe(true);
+  expect(picker.shouldPick([12, 34]), 'same cursor position is suppressed').toBe(false);
+  expect(picker.shouldPick([12, 34], {force: true}), 'forced pick reruns in place').toBe(true);
+  expect(picker.shouldPick([13, 34]), 'cursor movement should pick').toBe(true);
+  expect(picker.shouldPick(null), 'missing cursor position clears without picking').toBe(false);
+  expect(picker.shouldPick([13, 34]), 'cursor can pick again after clearing').toBe(true);
   picker.destroy();
-  t.end();
+  void 0;
 });
 
-test('PickingManager#getTooltip', async t => {
+it('PickingManager#getTooltip', async () => {
   let tooltipPickInfo: {batchIndex: number | null; objectIndex: number | null} | null = null;
   class TooltipPickingManager extends PickingManager {
     override getFramebuffer(): Framebuffer {
@@ -78,40 +76,35 @@ test('PickingManager#getTooltip', async t => {
   });
 
   const pickInfo = await picker.updatePickInfo([12, 34]);
-  t.deepEqual(pickInfo, {batchIndex: 2, objectIndex: 7}, 'pick result is returned');
-  t.deepEqual(
-    tooltipPickInfo,
-    {batchIndex: 2, objectIndex: 7},
-    'tooltip formatter receives the decoded pick info'
-  );
+  expect(pickInfo, 'pick result is returned').toEqual({batchIndex: 2, objectIndex: 7});
+  expect(tooltipPickInfo, 'tooltip formatter receives the decoded pick info').toEqual({
+    batchIndex: 2,
+    objectIndex: 7
+  });
   picker.destroy();
-  t.end();
+  void 0;
 });
 
-test('PickingManager#decodeIndexPickInfo', t => {
-  t.deepEqual(
+it('PickingManager#decodeIndexPickInfo', () => {
+  expect(
     decodeIndexPickInfo(new Int32Array([-1, -1])),
-    {objectIndex: null, batchIndex: null},
     'invalid index pick decodes to null'
-  );
-  t.deepEqual(
+  ).toEqual({objectIndex: null, batchIndex: null});
+  expect(
     decodeIndexPickInfo(new Int32Array([17, 3])),
-    {objectIndex: 17, batchIndex: 3},
     'valid index pick decodes correctly'
-  );
-  t.end();
+  ).toEqual({objectIndex: 17, batchIndex: 3});
+  void 0;
 });
 
-test('PickingManager#decodeColorPickInfo', t => {
-  t.deepEqual(
+it('PickingManager#decodeColorPickInfo', () => {
+  expect(
     decodeColorPickInfo(new Uint8Array([0, 0, 0, 0])),
-    {objectIndex: null, batchIndex: null},
     'all-zero color pick decodes to null'
-  );
-  t.deepEqual(
+  ).toEqual({objectIndex: null, batchIndex: null});
+  expect(
     decodeColorPickInfo(new Uint8Array([18, 0, 0, 4])),
-    {objectIndex: 17, batchIndex: 3},
     'encoded color pick decodes to object and batch indices'
-  );
-  t.end();
+  ).toEqual({objectIndex: 17, batchIndex: 3});
+  void 0;
 });

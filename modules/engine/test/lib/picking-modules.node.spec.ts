@@ -2,60 +2,78 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 import {ShaderInputs, indexColorPicking} from '../../src';
 import {pickingUniforms} from '../../src/modules/picking/picking-uniforms';
 
-test('pickingUniforms#indexMode', t => {
+it('pickingUniforms#indexMode', () => {
   const shaderInputs = new ShaderInputs({picking: pickingUniforms});
 
   shaderInputs.setProps({picking: {indexMode: 'instance'}});
-  t.equal(shaderInputs.moduleUniforms.picking.indexMode, 0, 'instance mode maps to 0');
+  expect(shaderInputs.moduleUniforms.picking.indexMode, 'instance mode maps to 0').toBe(0);
 
   shaderInputs.setProps({picking: {indexMode: 'attribute'}});
-  t.equal(shaderInputs.moduleUniforms.picking.indexMode, 1, 'attribute mode maps to 1');
+  expect(shaderInputs.moduleUniforms.picking.indexMode, 'attribute mode maps to 1').toBe(1);
 
   shaderInputs.setProps({picking: {indexMode: 'vertex'}});
-  t.equal(shaderInputs.moduleUniforms.picking.indexMode, 2, 'vertex mode maps to 2');
+  expect(shaderInputs.moduleUniforms.picking.indexMode, 'vertex mode maps to 2').toBe(2);
 
-  t.end();
+  void 0;
 });
 
-test('indexColorPicking#shader sources', t => {
-  t.equal(indexColorPicking.name, 'picking', 'module keeps the picking shader module name');
-  t.ok(indexColorPicking.vs?.includes('gl_InstanceID'), 'GLSL supports instance index mode');
-  t.ok(indexColorPicking.vs?.includes('gl_VertexID'), 'GLSL supports vertex index mode');
-  t.ok(
-    indexColorPicking.vs?.includes('picking_objectIndex = objectIndex'),
+it('indexColorPicking#shader sources', () => {
+  expect(indexColorPicking.name, 'module keeps the picking shader module name').toBe('picking');
+  expect(
+    Boolean(indexColorPicking.vs?.includes('gl_InstanceID')),
+    'GLSL supports instance index mode'
+  ).toBe(true);
+  expect(
+    Boolean(indexColorPicking.vs?.includes('gl_VertexID')),
+    'GLSL supports vertex index mode'
+  ).toBe(true);
+  expect(
+    Boolean(indexColorPicking.vs?.includes('picking_objectIndex = objectIndex')),
     'GLSL supports attribute mode'
-  );
-  t.ok(
-    indexColorPicking.fs?.includes(
-      'return vec4(float(red), float(green), float(blue), float(alpha)) / 255.0'
+  ).toBe(true);
+  expect(
+    Boolean(
+      indexColorPicking.fs?.includes(
+        'return vec4(float(red), float(green), float(blue), float(alpha)) / 255.0'
+      )
     ),
     'GLSL encodes integer object and batch ids to RGBA'
-  );
-  t.ok(
-    indexColorPicking.source?.includes(
-      'fn picking_getInstanceObjectIndex(instanceIndex: u32) -> i32'
+  ).toBe(true);
+  expect(
+    Boolean(
+      indexColorPicking.source?.includes(
+        'fn picking_getInstanceObjectIndex(instanceIndex: u32) -> i32'
+      )
     ),
     'WGSL exposes instance index helper'
-  );
-  t.ok(
-    indexColorPicking.source?.includes('fn picking_getVertexObjectIndex(vertexIndex: u32) -> i32'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      indexColorPicking.source?.includes('fn picking_getVertexObjectIndex(vertexIndex: u32) -> i32')
+    ),
     'WGSL exposes vertex index helper'
-  );
-  t.ok(
-    indexColorPicking.source?.includes(
-      'fn picking_getAttributeObjectIndex(objectIndex: i32) -> i32'
+  ).toBe(true);
+  expect(
+    Boolean(
+      indexColorPicking.source?.includes(
+        'fn picking_getAttributeObjectIndex(objectIndex: i32) -> i32'
+      )
     ),
     'WGSL exposes attribute index helper'
-  );
-  t.ok(
-    indexColorPicking.source?.includes('fn picking_getPickingColor(objectIndex: i32) -> vec4<f32>'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      indexColorPicking.source?.includes(
+        'fn picking_getPickingColor(objectIndex: i32) -> vec4<f32>'
+      )
+    ),
     'WGSL exposes RGBA picking color encoder'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });

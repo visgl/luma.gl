@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   makeArrowFixedSizeListVector,
   makeGPURecordBatchFromArrowRecordBatch,
@@ -14,7 +14,7 @@ import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', t => {
+it('GPUTable creates GPU vectors from shader-compatible Arrow table columns', () => {
   const device = new NullDevice({});
   const table = makeGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -28,57 +28,53 @@ test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', 
 
   const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
 
-  t.notOk('table' in gpuTable, 'does not retain the source Arrow table');
-  t.equal(gpuTable.numRows, table.numRows, 'exposes source table row count');
-  t.equal(gpuTable.numCols, gpuTable.schema.fields.length, 'exposes GPU schema column count');
-  t.equal(gpuTable.nullCount, table.nullCount, 'exposes source table null count');
-  t.equal(gpuTable.schema.metadata.get('table'), 'source', 'exposes GPU schema metadata');
-  t.equal(gpuTable.schema.fields.length, 2, 'exposes selected GPU fields');
-  t.deepEqual(
+  expect(Boolean('table' in gpuTable), 'does not retain the source Arrow table').toBe(false);
+  expect(gpuTable.numRows, 'exposes source table row count').toBe(table.numRows);
+  expect(gpuTable.numCols, 'exposes GPU schema column count').toBe(gpuTable.schema.fields.length);
+  expect(gpuTable.nullCount, 'exposes source table null count').toBe(table.nullCount);
+  expect(gpuTable.schema.metadata.get('table'), 'exposes GPU schema metadata').toBe('source');
+  expect(gpuTable.schema.fields.length, 'exposes selected GPU fields').toBe(2);
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['positions', 'colors'],
     'GPU schema fields use shader attribute names'
+  ).toEqual(['positions', 'colors']);
+  expect(gpuTable.bufferLayout, 'derives buffer layouts for matching shader attributes').toEqual([
+    {name: 'positions', format: 'float32x2'},
+    {name: 'colors', format: 'unorm8x4'}
+  ]);
+  expect(
+    Boolean(gpuTable.gpuVectors.positions instanceof GPUVector),
+    'creates a positions GPU vector'
+  ).toBe(true);
+  expect(
+    Boolean(gpuTable.gpuVectors.colors instanceof GPUVector),
+    'creates a colors GPU vector'
+  ).toBe(true);
+  expect(gpuTable.gpuVectors.positions.dataType, 'vector exposes type').toBe(
+    table.getChild('positions')?.type
   );
-  t.deepEqual(
-    gpuTable.bufferLayout,
-    [
-      {name: 'positions', format: 'float32x2'},
-      {name: 'colors', format: 'unorm8x4'}
-    ],
-    'derives buffer layouts for matching shader attributes'
-  );
-  t.ok(gpuTable.gpuVectors.positions instanceof GPUVector, 'creates a positions GPU vector');
-  t.ok(gpuTable.gpuVectors.colors instanceof GPUVector, 'creates a colors GPU vector');
-  t.equal(
-    gpuTable.gpuVectors.positions.dataType,
-    table.getChild('positions')?.type,
-    'vector exposes type'
-  );
-  t.equal(gpuTable.gpuVectors.positions.length, 2, 'vector exposes length');
-  t.equal(gpuTable.gpuVectors.positions.stride, 2, 'vector exposes stride');
-  t.equal(gpuTable.gpuVectors.colors.stride, 4, 'vector exposes color stride');
-  t.equal(
+  expect(gpuTable.gpuVectors.positions.length, 'vector exposes length').toBe(2);
+  expect(gpuTable.gpuVectors.positions.stride, 'vector exposes stride').toBe(2);
+  expect(gpuTable.gpuVectors.colors.stride, 'vector exposes color stride').toBe(4);
+  expect(
     gpuTable.schema.fields[0].metadata.get('semantic'),
-    'position',
     'preserves same-name field metadata'
-  );
-  t.equal(
-    gpuTable.batches[0].gpuData.positions.buffer,
+  ).toBe('position');
+  expect(
     gpuTable.batches[0].gpuData.positions.buffer,
     'exposes positions as a Model attribute buffer'
-  );
-  t.equal(
-    gpuTable.batches[0].gpuData.colors.buffer,
+  ).toBe(gpuTable.batches[0].gpuData.positions.buffer);
+  expect(
     gpuTable.batches[0].gpuData.colors.buffer,
     'exposes colors as a Model attribute buffer'
-  );
-  t.notOk('attributes' in gpuTable, 'does not cache derived attribute buffers');
+  ).toBe(gpuTable.batches[0].gpuData.colors.buffer);
+  expect(Boolean('attributes' in gpuTable), 'does not cache derived attribute buffers').toBe(false);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable maps shader attributes through Arrow paths', t => {
+it('GPUTable maps shader attributes through Arrow paths', () => {
   const device = new NullDevice({});
   const table = makeGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -91,33 +87,31 @@ test('GPUTable maps shader attributes through Arrow paths', t => {
     arrowPaths: {instanceColors: 'colors'}
   });
 
-  t.deepEqual(
-    gpuTable.bufferLayout,
-    [{name: 'instanceColors', format: 'unorm8x4'}],
-    'derives buffer layouts from explicit Arrow paths'
-  );
-  t.ok(gpuTable.batches[0].gpuData.instanceColors, 'retains renamed shader attribute data');
-  t.deepEqual(
+  expect(gpuTable.bufferLayout, 'derives buffer layouts from explicit Arrow paths').toEqual([
+    {name: 'instanceColors', format: 'unorm8x4'}
+  ]);
+  expect(
+    Boolean(gpuTable.batches[0].gpuData.instanceColors),
+    'retains renamed shader attribute data'
+  ).toBe(true);
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['instanceColors'],
     'renamed GPU schema field uses shader attribute name'
-  );
-  t.equal(
+  ).toEqual(['instanceColors']);
+  expect(
     gpuTable.schema.fields[0].metadata.get('semantic'),
-    'color',
     'renamed GPU schema field preserves source field metadata'
-  );
-  t.equal(
+  ).toBe('color');
+  expect(
     gpuTable.schema.fields[0].format,
-    'unorm8x4',
     'renamed GPU schema field preserves GPU memory format'
-  );
+  ).toBe('unorm8x4');
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable exposes storage-selected Arrow columns as GPUData', t => {
+it('GPUTable exposes storage-selected Arrow columns as GPUData', () => {
   const device = new NullDevice({});
   const table = makeGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -127,24 +121,22 @@ test('GPUTable exposes storage-selected Arrow columns as GPUData', t => {
 
   const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
 
-  t.deepEqual(
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['positions'],
     'storage-backed table columns participate in the selected GPU schema'
-  );
-  t.equal(gpuTable.numCols, 1, 'storage-backed selected columns count toward table columns');
-  t.equal(
-    gpuTable.batches[0].gpuData.positions.buffer,
+  ).toEqual(['positions']);
+  expect(gpuTable.numCols, 'storage-backed selected columns count toward table columns').toBe(1);
+  expect(
     gpuTable.batches[0].gpuData.positions.buffer,
     'exposes the batch-local GPUData buffer as a model-ready storage binding'
-  );
-  t.notOk('bindings' in gpuTable, 'does not cache storage bindings');
+  ).toBe(gpuTable.batches[0].gpuData.positions.buffer);
+  expect(Boolean('bindings' in gpuTable), 'does not cache storage bindings').toBe(false);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable preserves nested Arrow field metadata', t => {
+it('GPUTable preserves nested Arrow field metadata', () => {
   const device = new NullDevice({});
   const table = makeNestedGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -157,21 +149,19 @@ test('GPUTable preserves nested Arrow field metadata', t => {
     arrowPaths: {instanceColors: 'style.colors'}
   });
 
-  t.equal(
+  expect(
     gpuTable.schema.fields[0].name,
-    'instanceColors',
     'nested path GPU schema field uses shader attribute name'
-  );
-  t.equal(
+  ).toBe('instanceColors');
+  expect(
     gpuTable.schema.fields[0].metadata.get('semantic'),
-    'nested-color',
     'nested path GPU schema field preserves leaf field metadata'
-  );
+  ).toBe('nested-color');
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable preserves record batch boundaries with real batch-owned GPU buffers', t => {
+it('GPUTable preserves record batch boundaries with real batch-owned GPU buffers', () => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
@@ -186,50 +176,52 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
 
   const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
 
-  t.equal(gpuTable.numRows, 4, 'keeps the full table row count');
-  t.equal(gpuTable.batches.length, 2, 'exposes one GPU record batch per Arrow batch');
-  t.ok(gpuTable.batches[0] instanceof GPURecordBatch, 'creates GPURecordBatch views');
-  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'keeps vector data chunk boundaries');
-  t.ok(
-    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType),
+  expect(gpuTable.numRows, 'keeps the full table row count').toBe(4);
+  expect(gpuTable.batches.length, 'exposes one GPU record batch per Arrow batch').toBe(2);
+  expect(
+    Boolean(gpuTable.batches[0] instanceof GPURecordBatch),
+    'creates GPURecordBatch views'
+  ).toBe(true);
+  expect(gpuTable.gpuVectors.positions.data.length, 'keeps vector data chunk boundaries').toBe(2);
+  expect(
+    Boolean(
+      arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType)
+    ),
     'aggregate vectors preserve adapter data type metadata'
-  );
-  t.equal(gpuTable.batches[1].numRows, 2, 'tracks rows per record batch');
-  t.deepEqual(
+  ).toBe(true);
+  expect(gpuTable.batches[1].numRows, 'tracks rows per record batch').toBe(2);
+  expect(
     gpuTable.batches.map(batch => batch.sourceInfo),
-    [
-      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2}
-    ],
     'retains source row offsets without retaining the CPU Arrow table'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+    {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2}
+  ]);
+  expect(
     gpuTable.batches[1].bufferLayout,
-    gpuTable.bufferLayout,
     'retains table buffer layout metadata on GPU batches'
-  );
-  t.notEqual(
+  ).toEqual(gpuTable.bufferLayout);
+  expect(
     gpuTable.batches[1].gpuData.positions.buffer,
-    gpuTable.batches[0].gpuData.positions.buffer,
     'record batches keep separate GPU buffers'
-  );
-  t.equal(
+  ).not.toBe(gpuTable.batches[0].gpuData.positions.buffer);
+  expect(
     gpuTable.gpuVectors.positions.data[0].buffer,
-    gpuTable.batches[0].gpuData.positions.buffer,
     'aggregate vectors expose the first batch chunk'
-  );
-  t.equal(
+  ).toBe(gpuTable.batches[0].gpuData.positions.buffer);
+  expect(
     gpuTable.gpuVectors.positions.data[1].buffer,
-    gpuTable.batches[1].gpuData.positions.buffer,
     'aggregate vectors expose the second batch chunk'
+  ).toBe(gpuTable.batches[1].gpuData.positions.buffer);
+  expect(gpuTable.gpuVectors.positions.data.length, 'aggregate vector has no direct buffer').toBe(
+    2
   );
-  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'aggregate vector has no direct buffer');
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable packBatches collapses owned batches in place', t => {
+it('GPUTable packBatches collapses owned batches in place', () => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
@@ -247,26 +239,33 @@ test('GPUTable packBatches collapses owned batches in place', t => {
 
   gpuTable.packBatches();
 
-  t.equal(gpuTable.batches.length, 1, 'replaces all preserved batches with one packed batch');
-  t.equal(gpuTable.batches[0].numRows, 4, 'preserves the packed row count');
-  t.equal(gpuTable.gpuVectors.positions.data.length, 1, 'exposes one packed aggregate chunk');
-  t.ok(
-    arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType),
+  expect(gpuTable.batches.length, 'replaces all preserved batches with one packed batch').toBe(1);
+  expect(gpuTable.batches[0].numRows, 'preserves the packed row count').toBe(4);
+  expect(gpuTable.gpuVectors.positions.data.length, 'exposes one packed aggregate chunk').toBe(1);
+  expect(
+    Boolean(
+      arrow.DataType.isFixedSizeList(gpuTable.gpuVectors.positions.dataType as arrow.DataType)
+    ),
     'packed vectors preserve adapter data type metadata'
-  );
-  t.equal(
-    gpuTable.batches[0].gpuData.positions.buffer,
+  ).toBe(true);
+  expect(
     gpuTable.batches[0].gpuData.positions.buffer,
     'updates direct table attributes to the packed batch buffer'
-  );
-  t.ok(firstPositionsBuffer.destroyed, 'destroys the first superseded owned batch buffer');
-  t.ok(secondPositionsBuffer.destroyed, 'destroys the second superseded owned batch buffer');
+  ).toBe(gpuTable.batches[0].gpuData.positions.buffer);
+  expect(
+    Boolean(firstPositionsBuffer.destroyed),
+    'destroys the first superseded owned batch buffer'
+  ).toBe(true);
+  expect(
+    Boolean(secondPositionsBuffer.destroyed),
+    'destroys the second superseded owned batch buffer'
+  ).toBe(true);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable packBatches greedily merges adjacent batches to the requested size', t => {
+it('GPUTable packBatches greedily merges adjacent batches to the requested size', () => {
   const device = new NullDevice({});
   const batches = [
     makeGpuMetadataTable().batches[0],
@@ -285,18 +284,17 @@ test('GPUTable packBatches greedily merges adjacent batches to the requested siz
 
   gpuTable.packBatches({minBatchSize: 3});
 
-  t.deepEqual(
+  expect(
     gpuTable.batches.map(batch => batch.numRows),
-    [4, 2],
     'merges adjacent batches until each emitted batch reaches the threshold'
-  );
-  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'retains one chunk per packed batch');
+  ).toEqual([4, 2]);
+  expect(gpuTable.gpuVectors.positions.data.length, 'retains one chunk per packed batch').toBe(2);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable addBatch appends an already-owned GPU record batch in place', t => {
+it('GPUTable addBatch appends an already-owned GPU record batch in place', () => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
@@ -318,29 +316,27 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
 
   gpuTable.addBatch(gpuRecordBatch);
 
-  t.equal(gpuTable.batches.length, 2, 'appends the supplied GPU batch');
-  t.equal(gpuTable.numRows, 4, 'updates the aggregate row count');
-  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'extends aggregate vector chunks');
-  t.equal(
+  expect(gpuTable.batches.length, 'appends the supplied GPU batch').toBe(2);
+  expect(gpuTable.numRows, 'updates the aggregate row count').toBe(4);
+  expect(gpuTable.gpuVectors.positions.data.length, 'extends aggregate vector chunks').toBe(2);
+  expect(
     gpuTable.gpuVectors.positions.data[1].buffer,
-    appendedPositionsBuffer,
     'keeps the appended batch buffer identity visible through data[]'
-  );
-  t.deepEqual(
+  ).toBe(appendedPositionsBuffer);
+  expect(
     gpuTable.batches[1].sourceInfo,
-    {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2},
     'preserves explicit source-row metadata on appended Arrow batches'
-  );
+  ).toEqual({sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 2});
 
   gpuTable.destroy();
-  t.ok(
-    appendedPositionsBuffer.destroyed,
+  expect(
+    Boolean(appendedPositionsBuffer.destroyed),
     'table destruction follows the appended batch destroy path'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers', t => {
+it('GPUTable static batches bind UTF-8 storage through batch GPUData buffers', () => {
   const device = new NullDevice({});
   const positions = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -358,27 +354,25 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
   };
   const gpuTable = makeGPUTableFromArrowTable(device, sourceTable, {shaderLayout});
 
-  t.equal(
+  expect(
     gpuTable.batches[0].gpuData.texts.buffer,
-    gpuTable.gpuVectors.texts.data[0].buffer,
     'batch-local UTF-8 storage binding resolves through GPUData'
-  );
-  t.equal(gpuTable.gpuVectors.texts.data.length, 2, 'keeps UTF-8 aggregate chunk boundaries');
-  t.ok(
-    arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.dataType as arrow.DataType),
+  ).toBe(gpuTable.gpuVectors.texts.data[0].buffer);
+  expect(gpuTable.gpuVectors.texts.data.length, 'keeps UTF-8 aggregate chunk boundaries').toBe(2);
+  expect(
+    Boolean(arrow.DataType.isUtf8(gpuTable.gpuVectors.texts.dataType as arrow.DataType)),
     'aggregate UTF-8 vectors preserve adapter data type metadata'
-  );
-  t.throws(
+  ).toBe(true);
+  expect(
     () => gpuTable.packBatches(),
-    /does not support variable-length GPUData "texts"/,
     'generic packing rejects variable-length storage payloads instead of truncating them'
-  );
+  ).toThrow(/does not support variable-length GPUData "texts"/);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable select keeps requested columns and destroys dropped batch data', t => {
+it('GPUTable select keeps requested columns and destroys dropped batch data', () => {
   const device = new NullDevice({});
   const table = makeGpuMetadataTable();
   const shaderLayout: ShaderLayout = {
@@ -393,25 +387,25 @@ test('GPUTable select keeps requested columns and destroys dropped batch data', 
 
   gpuTable.select('positions');
 
-  t.deepEqual(
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['positions'],
     'retains only the requested table schema field'
-  );
-  t.deepEqual(
+  ).toEqual(['positions']);
+  expect(
     gpuTable.batches[0].schema.fields.map(field => field.name),
-    ['positions'],
     'restitches batch schemas to the selected column set'
+  ).toEqual(['positions']);
+  expect(Boolean(gpuTable.gpuVectors.positions), 'keeps selected aggregate vectors').toBe(true);
+  expect(Boolean(gpuTable.gpuVectors.colors), 'removes dropped aggregate vectors').toBe(false);
+  expect(Boolean(droppedColorsBuffer.destroyed), 'destroys dropped batch-local GPU vectors').toBe(
+    true
   );
-  t.ok(gpuTable.gpuVectors.positions, 'keeps selected aggregate vectors');
-  t.notOk(gpuTable.gpuVectors.colors, 'removes dropped aggregate vectors');
-  t.ok(droppedColorsBuffer.destroyed, 'destroys dropped batch-local GPU vectors');
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable select prunes dropped storage data', t => {
+it('GPUTable select prunes dropped storage data', () => {
   const device = new NullDevice({});
   const positions = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -427,19 +421,27 @@ test('GPUTable select prunes dropped storage data', t => {
   const gpuTable = makeGPUTableFromArrowTable(device, table, {shaderLayout});
   const droppedTextsBuffer = gpuTable.batches[0].gpuData.texts.buffer;
 
-  t.ok(gpuTable.batches[0].gpuData.texts, 'starts with batch-local storage data');
+  expect(Boolean(gpuTable.batches[0].gpuData.texts), 'starts with batch-local storage data').toBe(
+    true
+  );
 
   gpuTable.select('positions');
 
-  t.notOk(gpuTable.gpuVectors.texts, 'removes the dropped aggregate storage vector');
-  t.notOk(gpuTable.batches[0].gpuData.texts, 'removes dropped batch storage data');
-  t.ok(droppedTextsBuffer.destroyed, 'destroys the dropped storage vector buffer');
+  expect(Boolean(gpuTable.gpuVectors.texts), 'removes the dropped aggregate storage vector').toBe(
+    false
+  );
+  expect(Boolean(gpuTable.batches[0].gpuData.texts), 'removes dropped batch storage data').toBe(
+    false
+  );
+  expect(Boolean(droppedTextsBuffer.destroyed), 'destroys the dropped storage vector buffer').toBe(
+    true
+  );
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable detachVector removes one live column and transfers its ownership', t => {
+it('GPUTable detachVector removes one live column and transfers its ownership', () => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
@@ -456,28 +458,42 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
 
   const detachedColors = gpuTable.detachVector('colors');
 
-  t.deepEqual(
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['positions'],
     'removes the detached table column'
-  );
-  t.equal(detachedColors.data.length, 2, 'returns all detached batch data chunks');
-  t.ok(
-    arrow.DataType.isFixedSizeList(detachedColors.dataType as arrow.DataType),
+  ).toEqual(['positions']);
+  expect(detachedColors.data.length, 'returns all detached batch data chunks').toBe(2);
+  expect(
+    Boolean(arrow.DataType.isFixedSizeList(detachedColors.dataType as arrow.DataType)),
     'detached vectors preserve adapter data type metadata'
-  );
-  t.ok(detachedColors.ownsBuffer, 'detached vector retains the removed GPU ownership');
+  ).toBe(true);
+  expect(
+    Boolean(detachedColors.ownsBuffer),
+    'detached vector retains the removed GPU ownership'
+  ).toBe(true);
 
   gpuTable.destroy();
-  t.notOk(colorsBuffers[0].destroyed, 'table no longer destroys the first detached column buffer');
-  t.notOk(colorsBuffers[1].destroyed, 'table no longer destroys the second detached column buffer');
+  expect(
+    Boolean(colorsBuffers[0].destroyed),
+    'table no longer destroys the first detached column buffer'
+  ).toBe(false);
+  expect(
+    Boolean(colorsBuffers[1].destroyed),
+    'table no longer destroys the second detached column buffer'
+  ).toBe(false);
   detachedColors.destroy();
-  t.ok(colorsBuffers[0].destroyed, 'detached vector destroys the first removed column buffer');
-  t.ok(colorsBuffers[1].destroyed, 'detached vector destroys the second removed column buffer');
-  t.end();
+  expect(
+    Boolean(colorsBuffers[0].destroyed),
+    'detached vector destroys the first removed column buffer'
+  ).toBe(true);
+  expect(
+    Boolean(colorsBuffers[1].destroyed),
+    'detached vector destroys the second removed column buffer'
+  ).toBe(true);
+  void 0;
 });
 
-test('GPUTable detachBatches removes a live batch range and restitches aggregates', t => {
+it('GPUTable detachBatches removes a live batch range and restitches aggregates', () => {
   const device = new NullDevice({});
   const batches = [
     makeGpuMetadataTable().batches[0],
@@ -497,19 +513,25 @@ test('GPUTable detachBatches removes a live batch range and restitches aggregate
 
   const detachedBatches = gpuTable.detachBatches({first: 1, last: 2});
 
-  t.equal(detachedBatches.length, 1, 'returns the detached half-open batch range');
-  t.equal(gpuTable.batches.length, 2, 'removes detached batches from the table');
-  t.equal(gpuTable.numRows, 4, 'updates table row count after detaching');
-  t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'restitches aggregate data chunks');
+  expect(detachedBatches.length, 'returns the detached half-open batch range').toBe(1);
+  expect(gpuTable.batches.length, 'removes detached batches from the table').toBe(2);
+  expect(gpuTable.numRows, 'updates table row count after detaching').toBe(4);
+  expect(gpuTable.gpuVectors.positions.data.length, 'restitches aggregate data chunks').toBe(2);
 
   gpuTable.destroy();
-  t.notOk(detachedBatchBuffer.destroyed, 'table no longer destroys detached batch buffers');
+  expect(
+    Boolean(detachedBatchBuffer.destroyed),
+    'table no longer destroys detached batch buffers'
+  ).toBe(false);
   detachedBatches[0].destroy();
-  t.ok(detachedBatchBuffer.destroyed, 'detached batch retains normal destroy ownership');
-  t.end();
+  expect(
+    Boolean(detachedBatchBuffer.destroyed),
+    'detached batch retains normal destroy ownership'
+  ).toBe(true);
+  void 0;
 });
 
-test('GPURecordBatch creates GPUData from one Arrow record batch', t => {
+it('GPURecordBatch creates GPUData from one Arrow record batch', () => {
   const device = new NullDevice({});
   const recordBatch = makeGpuMetadataTable().batches[0];
   const shaderLayout: ShaderLayout = {
@@ -521,19 +543,20 @@ test('GPURecordBatch creates GPUData from one Arrow record batch', t => {
     shaderLayout
   });
 
-  t.equal(gpuRecordBatch.numRows, 2, 'exposes source batch row count');
-  t.deepEqual(
+  expect(gpuRecordBatch.numRows, 'exposes source batch row count').toBe(2);
+  expect(
     gpuRecordBatch.schema.fields.map(field => field.name),
-    ['positions'],
     'selects shader-compatible fields'
+  ).toEqual(['positions']);
+  expect(Boolean(gpuRecordBatch.gpuData.positions), 'retains batch-local attribute data').toBe(
+    true
   );
-  t.ok(gpuRecordBatch.gpuData.positions, 'retains batch-local attribute data');
 
   gpuRecordBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable creates metadata from existing GPU vectors', t => {
+it('GPUTable creates metadata from existing GPU vectors', () => {
   const device = new NullDevice({});
   const positions = new GPUVector({
     type: 'buffer',
@@ -559,29 +582,24 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
 
   const gpuTable = new GPUTable({vectors: {positions, weights}});
 
-  t.equal(gpuTable.numRows, 2, 'deduces row count');
-  t.equal(gpuTable.numCols, 2, 'deduces column count');
-  t.deepEqual(
+  expect(gpuTable.numRows, 'deduces row count').toBe(2);
+  expect(gpuTable.numCols, 'deduces column count').toBe(2);
+  expect(
     gpuTable.schema.fields.map(field => field.name),
-    ['positions', 'weights'],
     'deduces schema fields from vector names'
-  );
-  t.deepEqual(
-    gpuTable.bufferLayout,
-    [
-      {name: 'positions', byteStride: 8, format: 'float32x2'},
-      {name: 'weights', byteStride: 4, format: 'float32'}
-    ],
-    'synthesizes buffer layouts for regular vectors'
-  );
-  t.equal(gpuTable.batches[0].gpuData.positions.buffer, positions.data[0].buffer);
-  t.equal(gpuTable.batches[0].gpuData.weights.buffer, weights.data[0].buffer);
+  ).toEqual(['positions', 'weights']);
+  expect(gpuTable.bufferLayout, 'synthesizes buffer layouts for regular vectors').toEqual([
+    {name: 'positions', byteStride: 8, format: 'float32x2'},
+    {name: 'weights', byteStride: 4, format: 'float32'}
+  ]);
+  expect(gpuTable.batches[0].gpuData.positions.buffer, '').toBe(positions.data[0].buffer);
+  expect(gpuTable.batches[0].gpuData.weights.buffer, '').toBe(weights.data[0].buffer);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable creates metadata from interleaved GPU vectors', t => {
+it('GPUTable creates metadata from interleaved GPU vectors', () => {
   const device = new NullDevice({});
   const instances = new GPUVector({
     type: 'interleaved',
@@ -599,27 +617,28 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
 
   const gpuTable = new GPUTable({vectors: [instances]});
 
-  t.equal(gpuTable.schema.fields[0].name, 'instances', 'uses vector name in schema');
-  t.notOk(gpuTable.schema.fields[0].format, 'does not synthesize one format for interleaved rows');
-  t.deepEqual(
-    gpuTable.bufferLayout,
-    [
-      {
-        name: 'instances',
-        byteStride: 16,
-        attributes: [
-          {attribute: 'positions', format: 'float32x3', byteOffset: 0},
-          {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
-        ]
-      }
-    ],
-    'uses interleaved buffer layout from vector'
-  );
-  t.deepEqual(Object.keys(gpuTable.batches[0].gpuData), ['instances'], 'keeps shared layout data');
-  t.equal(gpuTable.batches[0].gpuData.instances.buffer, instances.data[0].buffer);
+  expect(gpuTable.schema.fields[0].name, 'uses vector name in schema').toBe('instances');
+  expect(
+    Boolean(gpuTable.schema.fields[0].format),
+    'does not synthesize one format for interleaved rows'
+  ).toBe(false);
+  expect(gpuTable.bufferLayout, 'uses interleaved buffer layout from vector').toEqual([
+    {
+      name: 'instances',
+      byteStride: 16,
+      attributes: [
+        {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+        {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
+      ]
+    }
+  ]);
+  expect(Object.keys(gpuTable.batches[0].gpuData), 'keeps shared layout data').toEqual([
+    'instances'
+  ]);
+  expect(gpuTable.batches[0].gpuData.instances.buffer, '').toBe(instances.data[0].buffer);
 
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
 function makeGpuMetadataTable(): arrow.Table {

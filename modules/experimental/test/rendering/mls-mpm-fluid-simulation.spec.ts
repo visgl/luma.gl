@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getMLSMPMFluidSimulationSupport,
   MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
@@ -11,11 +11,11 @@ import {
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {MLS_MPM_FLUID_PARTICLE_FLOAT_COUNT} from '../../src/rendering/mls-mpm-fluid-simulation-shaders';
 
-test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async testCase => {
+it('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -25,7 +25,7 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
     gridSize: [16, 16],
     particleCount
   });
-  testCase.equal(support.supported, true, 'the core WebGPU device supports the bounded solver');
+  expect(support.supported, 'the core WebGPU device supports the bounded solver').toBe(true);
   const simulation = new MLSMPMFluidSimulation(device, {
     id: 'mls-mpm-fluid-browser-test',
     gridSize: [16, 16],
@@ -43,27 +43,27 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
       particleCount
     );
     const initialSummary = summarizeParticles(clampedInitialParticles);
-    testCase.ok(
-      initialSummary.minimumPositionX >= 2 / 15 - 1e-5 &&
-        initialSummary.minimumPositionY >= 2 / 15 - 1e-5,
+    expect(
+      Boolean(
+        initialSummary.minimumPositionX >= 2 / 15 - 1e-5 &&
+          initialSummary.minimumPositionY >= 2 / 15 - 1e-5
+      ),
       'generated seeds are clamped to the full-stencil interior'
-    );
-    testCase.equal(simulation.particleCount, particleCount, 'particle capacity is public');
-    testCase.deepEqual(simulation.gridSize, [16, 16], 'grid dimensions are immutable');
-    testCase.equal(simulation.stats.gridCellCount, 256, 'grid statistics expose cell count');
-    testCase.equal(
+    ).toBe(true);
+    expect(simulation.particleCount, 'particle capacity is public').toBe(particleCount);
+    expect(simulation.gridSize, 'grid dimensions are immutable').toEqual([16, 16]);
+    expect(simulation.stats.gridCellCount, 'grid statistics expose cell count').toBe(256);
+    expect(
       simulation.stats.gridBufferByteLength,
-      256 * 3 * Int32Array.BYTES_PER_ELEMENT,
       'grid statistics describe the 12-byte atomic cell ABI'
-    );
+    ).toBe(256 * 3 * Int32Array.BYTES_PER_ELEMENT);
     const tinyDeltaEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-tiny-delta'});
-    testCase.throws(
+    expect(
       () => simulation.encode(tinyDeltaEncoder, {deltaTime: Number.MIN_VALUE}),
-      /deltaTime/,
       'the public encoder rejects a delta that cannot produce practical f32 simulation work'
-    );
-    testCase.equal(simulation.stats.encodeCount, 0, 'a rejected tiny delta records no encode');
-    testCase.equal(simulation.stats.stepCount, 0, 'a rejected tiny delta records no substeps');
+    ).toThrow(/deltaTime/);
+    expect(simulation.stats.encodeCount, 'a rejected tiny delta records no encode').toBe(0);
+    expect(simulation.stats.stepCount, 'a rejected tiny delta records no substeps').toBe(0);
 
     const fallingGravity = [
       [0, -4],
@@ -75,23 +75,26 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
     for (const gravity of fallingGravity) {
       simulation.encode(fallingEncoder, {deltaTime: 1 / 120, gravity});
     }
-    testCase.equal(
+    expect(
       simulation.particleBuffer,
-      initialParticleBuffer,
       'four steps return to the first buffer in the double-buffer pair'
-    );
-    testCase.equal(simulation.stats.encodeCount, 4, 'public encode calls have a separate count');
-    testCase.equal(simulation.stats.stepCount, 8, 'CFL splitting records two substeps per encode');
-    testCase.equal(simulation.stats.lastSubstepCount, 2, 'the latest split count is observable');
-    testCase.ok(
-      Math.abs(simulation.stats.stableDeltaTime - 1 / 240) < 1e-12 &&
-        Math.abs(simulation.stats.lastSubstepDeltaTime - 1 / 240) < 1e-12,
+    ).toBe(initialParticleBuffer);
+    expect(simulation.stats.encodeCount, 'public encode calls have a separate count').toBe(4);
+    expect(simulation.stats.stepCount, 'CFL splitting records two substeps per encode').toBe(8);
+    expect(simulation.stats.lastSubstepCount, 'the latest split count is observable').toBe(2);
+    expect(
+      Boolean(
+        Math.abs(simulation.stats.stableDeltaTime - 1 / 240) < 1e-12 &&
+          Math.abs(simulation.stats.lastSubstepDeltaTime - 1 / 240) < 1e-12
+      ),
       'stable and actual substep deltas are observable'
-    );
+    ).toBe(true);
     device.submit(fallingEncoder.finish());
 
     const fallingParticles = await readParticleBuffer(simulation.particleBuffer, particleCount);
-    testCase.ok(fallingParticles.every(Number.isFinite), 'particle state remains finite');
+    expect(Boolean(fallingParticles.every(Number.isFinite)), 'particle state remains finite').toBe(
+      true
+    );
     const separatelySubmittedSimulation = new MLSMPMFluidSimulation(device, {
       id: 'mls-mpm-fluid-separate-submission-reference',
       gridSize: [16, 16],
@@ -116,27 +119,31 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
         separatelySubmittedSimulation.particleBuffer,
         particleCount
       );
-      testCase.deepEqual(
+      expect(
         fallingParticles,
-        separatelySubmittedParticles,
         'four encodes on one command encoder match four separately submitted steps'
-      );
+      ).toEqual(separatelySubmittedParticles);
     } finally {
       separatelySubmittedSimulation.destroy();
     }
     const fallingSummary = summarizeParticles(fallingParticles);
-    testCase.ok(fallingSummary.meanVelocityY < -0.02, 'gravity accelerates particles downward');
-    testCase.ok(
-      fallingSummary.minimumPositionX >= 2 / 15 - 1e-5 &&
-        fallingSummary.maximumPositionX <= 1 - 2 / 15 + 1e-5 &&
-        fallingSummary.minimumPositionY >= 2 / 15 - 1e-5 &&
-        fallingSummary.maximumPositionY <= 1 - 2 / 15 + 1e-5,
+    expect(
+      Boolean(fallingSummary.meanVelocityY < -0.02),
+      'gravity accelerates particles downward'
+    ).toBe(true);
+    expect(
+      Boolean(
+        fallingSummary.minimumPositionX >= 2 / 15 - 1e-5 &&
+          fallingSummary.maximumPositionX <= 1 - 2 / 15 + 1e-5 &&
+          fallingSummary.minimumPositionY >= 2 / 15 - 1e-5 &&
+          fallingSummary.maximumPositionY <= 1 - 2 / 15 + 1e-5
+      ),
       'particle advection enforces the configured solid boundary'
-    );
-    testCase.ok(
-      fallingSummary.minimumDeformation >= 0.6 && fallingSummary.maximumDeformation <= 1.4,
+    ).toBe(true);
+    expect(
+      Boolean(fallingSummary.minimumDeformation >= 0.6 && fallingSummary.maximumDeformation <= 1.4),
       'MLS deformation stays inside its stability interval'
-    );
+    ).toBe(true);
 
     const gridBytes = await simulation.gridBuffer.readAsync();
     const gridValues = new Int32Array(
@@ -150,26 +157,26 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
       maximumGridMass = Math.max(maximumGridMass, gridValues[valueOffset]);
       minimumGridVelocityY = Math.min(minimumGridVelocityY, gridValues[valueOffset + 2]);
     }
-    testCase.ok(maximumGridMass > 0, 'particle-to-grid scatter leaves observable grid mass');
-    testCase.ok(
-      minimumGridVelocityY < 0,
+    expect(
+      Boolean(maximumGridMass > 0),
+      'particle-to-grid scatter leaves observable grid mass'
+    ).toBe(true);
+    expect(
+      Boolean(minimumGridVelocityY < 0),
       'the submitted grid is in its documented post-update velocity phase'
-    );
+    ).toBe(true);
 
     const resetEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-reset'});
     simulation.reset(resetEncoder);
-    testCase.equal(simulation.stats.stepCount, 0, 'reset restores the CPU-side step index');
-    testCase.equal(
+    expect(simulation.stats.stepCount, 'reset restores the CPU-side step index').toBe(0);
+    expect(
       simulation.particleBuffer,
-      initialParticleBuffer,
       'reset deterministically selects the first particle buffer'
-    );
+    ).toBe(initialParticleBuffer);
     device.submit(resetEncoder.finish());
     const resetParticles = await readParticleBuffer(simulation.particleBuffer, particleCount);
-    testCase.deepEqual(
-      resetParticles,
-      clampedInitialParticles,
-      'reset restores the constructor seed byte for byte'
+    expect(resetParticles, 'reset restores the constructor seed byte for byte').toEqual(
+      clampedInitialParticles
     );
 
     const forceEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-local-force'});
@@ -178,34 +185,33 @@ test('MLSMPMFluidSimulation records four-stage APIC transport on WebGPU', async 
       gravity: [0, 0],
       force: {position: [0.32, 0.48], radius: 0.55, vector: [40, 0]}
     });
-    testCase.notEqual(
+    expect(
       simulation.particleBuffer,
-      initialParticleBuffer,
       'one encoded step selects the other particle buffer'
-    );
+    ).not.toBe(initialParticleBuffer);
     device.submit(forceEncoder.finish());
     const forcedParticles = await readParticleBuffer(simulation.particleBuffer, particleCount);
     const forcedSummary = summarizeParticles(forcedParticles);
-    testCase.ok(
-      forcedSummary.meanVelocityX > 0.02,
+    expect(
+      Boolean(forcedSummary.meanVelocityX > 0.02),
       'the optional local force accelerates particles'
-    );
+    ).toBe(true);
   } finally {
     const finalParticleBuffer = simulation.particleBuffer;
     simulation.destroy();
     simulation.destroy();
-    testCase.equal(finalParticleBuffer.destroyed, true, 'particle buffers are released once');
-    testCase.equal(simulation.gridBuffer.destroyed, true, 'the atomic grid is released once');
+    expect(finalParticleBuffer.destroyed, 'particle buffers are released once').toBe(true);
+    expect(simulation.gridBuffer.destroyed, 'the atomic grid is released once').toBe(true);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('MLSMPMFluidSimulation rejects an excessive per-encode work plan', async testCase => {
+it('MLSMPMFluidSimulation rejects an excessive per-encode work plan', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -219,35 +225,33 @@ test('MLSMPMFluidSimulation rejects an excessive per-encode work plan', async te
   });
   try {
     const requestedSubstepCount = Math.ceil(1 / 30 / simulation.stats.stableDeltaTime);
-    testCase.ok(
-      requestedSubstepCount > MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
+    expect(
+      Boolean(requestedSubstepCount > MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE),
       'a legal high-resolution material configuration can exceed the work budget'
-    );
-    testCase.equal(
+    ).toBe(true);
+    expect(
       simulation.stats.maximumSubstepCount,
-      MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE,
       'the work budget is observable before encoding'
-    );
+    ).toBe(MAX_MLS_MPM_FLUID_SUBSTEPS_PER_ENCODE);
     const commandEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-excessive-work'});
-    testCase.throws(
+    expect(
       () => simulation.encode(commandEncoder, {deltaTime: 1 / 30}),
-      /requires \d+ substeps; maximum is 128.*Reduce deltaTime or solver resolution/,
       'an excessive command stream is rejected with an actionable error'
-    );
-    testCase.equal(simulation.stats.encodeCount, 0, 'rejected work records no encode');
-    testCase.equal(simulation.stats.stepCount, 0, 'rejected work records no substeps');
+    ).toThrow(/requires \d+ substeps; maximum is 128.*Reduce deltaTime or solver resolution/);
+    expect(simulation.stats.encodeCount, 'rejected work records no encode').toBe(0);
+    expect(simulation.stats.stepCount, 'rejected work records no substeps').toBe(0);
   } finally {
     simulation.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async testCase => {
+it('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -267,9 +271,17 @@ test('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async
     affineSimulation.encode(affineEncoder, {deltaTime: 1 / 240, gravity: [0, 0]});
     device.submit(affineEncoder.finish());
     const affineParticle = await readParticleBuffer(affineSimulation.particleBuffer, 1);
-    testCase.ok(affineParticle[5] < -0.5, 'the first-column y derivative remains negative');
-    testCase.ok(affineParticle[6] > 0.25, 'the second-column x derivative remains positive');
-    testCase.ok(affineParticle[7] > 0.1, 'the positive diagonal derivative is retained');
+    expect(
+      Boolean(affineParticle[5] < -0.5),
+      'the first-column y derivative remains negative'
+    ).toBe(true);
+    expect(
+      Boolean(affineParticle[6] > 0.25),
+      'the second-column x derivative remains positive'
+    ).toBe(true);
+    expect(Boolean(affineParticle[7] > 0.1), 'the positive diagonal derivative is retained').toBe(
+      true
+    );
   } finally {
     affineSimulation.destroy();
   }
@@ -290,14 +302,20 @@ test('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async
     pressureSimulation.encode(compressedEncoder, {deltaTime: 1 / 240, gravity: [0, 0]});
     device.submit(compressedEncoder.finish());
     const compressedParticle = await readParticleBuffer(pressureSimulation.particleBuffer, 1);
-    testCase.ok(compressedParticle[8] > 0.8, 'compressed particle pressure expands its volume');
+    expect(
+      Boolean(compressedParticle[8] > 0.8),
+      'compressed particle pressure expands its volume'
+    ).toBe(true);
 
     pressureSimulation.particleBuffer.write(makeParticleState({deformation: 1.2}));
     const expandedEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-expanded-step'});
     pressureSimulation.encode(expandedEncoder, {deltaTime: 1 / 240, gravity: [0, 0]});
     device.submit(expandedEncoder.finish());
     const expandedParticle = await readParticleBuffer(pressureSimulation.particleBuffer, 1);
-    testCase.ok(expandedParticle[8] < 1.2, 'expanded particle pressure contracts its volume');
+    expect(
+      Boolean(expandedParticle[8] < 1.2),
+      'expanded particle pressure contracts its volume'
+    ).toBe(true);
   } finally {
     pressureSimulation.destroy();
   }
@@ -313,17 +331,19 @@ test('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async
   });
   try {
     const initialParticles = await readParticleBuffer(lowMassSimulation.particleBuffer, 2);
-    testCase.ok(
-      Math.abs(initialParticles[0] - 2 / 15) < 1e-5 &&
-        Math.abs(initialParticles[1] - 2 / 15) < 1e-5 &&
-        Math.abs(initialParticles[12] - (1 - 2 / 15)) < 1e-5 &&
-        Math.abs(initialParticles[13] - (1 - 2 / 15)) < 1e-5,
+    expect(
+      Boolean(
+        Math.abs(initialParticles[0] - 2 / 15) < 1e-5 &&
+          Math.abs(initialParticles[1] - 2 / 15) < 1e-5 &&
+          Math.abs(initialParticles[12] - (1 - 2 / 15)) < 1e-5 &&
+          Math.abs(initialParticles[13] - (1 - 2 / 15)) < 1e-5
+      ),
       'explicit edge seeds are clamped to the complete transfer stencil'
-    );
-    testCase.ok(
-      lowMassSimulation.particleMass * lowMassSimulation.stats.massFixedPointScale >= 1024,
+    ).toBe(true);
+    expect(
+      Boolean(lowMassSimulation.particleMass * lowMassSimulation.stats.massFixedPointScale >= 1024),
       'dynamic scale retains useful fractional mass precision'
-    );
+    ).toBe(true);
     const lowMassEncoder = device.createCommandEncoder({id: 'mls-mpm-fluid-low-mass-step'});
     lowMassSimulation.encode(lowMassEncoder, {deltaTime: 1 / 240, gravity: [0, 0]});
     device.submit(lowMassEncoder.finish());
@@ -337,12 +357,15 @@ test('MLSMPMFluidSimulation preserves APIC orientation and pressure sign', async
     for (let valueOffset = 0; valueOffset < gridValues.length; valueOffset += 3) {
       maximumGridMass = Math.max(maximumGridMass, gridValues[valueOffset]);
     }
-    testCase.ok(maximumGridMass > 0, 'minimum-mass particles survive atomic grid quantization');
+    expect(
+      Boolean(maximumGridMass > 0),
+      'minimum-mass particles survive atomic grid quantization'
+    ).toBe(true);
   } finally {
     lowMassSimulation.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 async function readParticleBuffer(

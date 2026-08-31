@@ -4,37 +4,32 @@
 
 import {dof, dofCompositeShaderPass} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('dof#build/uniform', t => {
+it('dof#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(dof, {}, {});
 
-  t.ok(uniforms, 'dof module build is ok');
-  t.deepEqual(uniforms.depthRange, [0.1, 100], 'depth range uniform is ok');
-  t.equal(uniforms.focusDistance, 1, 'focus distance uniform is ok');
-  t.equal(uniforms.blurCoefficient, 1, 'blur coefficient uniform is ok');
-  t.equal(uniforms.pixelsPerMillimeter, 1, 'pixels per millimeter uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'dof module build is ok').toBe(true);
+  expect(uniforms.depthRange, 'depth range uniform is ok').toEqual([0.1, 100]);
+  expect(uniforms.focusDistance, 'focus distance uniform is ok').toBe(1);
+  expect(uniforms.blurCoefficient, 'blur coefficient uniform is ok').toBe(1);
+  expect(uniforms.pixelsPerMillimeter, 'pixels per millimeter uniform is ok').toBe(1);
+  void 0;
 });
 
-test('dofCompositeShaderPass#shape', t => {
-  t.equal(dofCompositeShaderPass.steps.length, 2, 'pipeline has two passes');
-  t.equal(dofCompositeShaderPass.steps[0].shaderPass, dof, 'first step uses dof');
-  t.equal(dofCompositeShaderPass.steps[1].shaderPass, dof, 'second step uses dof');
-  t.equal(
+it('dofCompositeShaderPass#shape', () => {
+  expect(dofCompositeShaderPass.steps.length, 'pipeline has two passes').toBe(2);
+  expect(dofCompositeShaderPass.steps[0].shaderPass, 'first step uses dof').toBe(dof);
+  expect(dofCompositeShaderPass.steps[1].shaderPass, 'second step uses dof').toBe(dof);
+  expect(
     dofCompositeShaderPass.steps[0].inputs.sourceTexture,
-    'previous',
     'pipeline consumes the preceding effect output'
-  );
-  t.deepEqual(
-    dofCompositeShaderPass.steps[0].uniforms,
-    {texelOffset: [1, 0]},
-    'first step runs horizontal blur'
-  );
-  t.deepEqual(
-    dofCompositeShaderPass.steps[1].uniforms,
-    {texelOffset: [0, 1]},
-    'second step runs vertical blur'
-  );
-  t.end();
+  ).toBe('previous');
+  expect(dofCompositeShaderPass.steps[0].uniforms, 'first step runs horizontal blur').toEqual({
+    texelOffset: [1, 0]
+  });
+  expect(dofCompositeShaderPass.steps[1].uniforms, 'second step runs vertical blur').toEqual({
+    texelOffset: [0, 1]
+  });
+  void 0;
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeShaderBlockLayout} from '@luma.gl/core';
 import {
   assembleGLSLShaderPair,
@@ -44,66 +44,67 @@ const GLSL_PLATFORM_INFO: PlatformInfo = {
   features: new Set()
 };
 
-registerWaterMaterialTests(test);
+registerWaterMaterialTests(it);
 
-test('shadertools#waterMaterial exposes typed defaults and stable uniform names', testCase => {
+it('shadertools#waterMaterial exposes typed defaults and stable uniform names', () => {
   const waterMaterialUniformTypecheck: Required<WaterMaterialUniforms> =
     waterMaterial.defaultUniforms;
-  testCase.ok(waterMaterialUniformTypecheck, 'waterMaterial default uniforms are typed');
-
-  const uniforms = getShaderModuleUniforms(waterMaterial, {}, {});
-  testCase.ok(uniforms, 'default water uniforms resolve');
-  testCase.deepEqual(
-    Object.keys(waterMaterial.uniformTypes),
-    EXPECTED_UNIFORM_NAMES,
-    'uniform type field order is stable'
+  expect(Boolean(waterMaterialUniformTypecheck), 'waterMaterial default uniforms are typed').toBe(
+    true
   );
 
-  testCase.end();
+  const uniforms = getShaderModuleUniforms(waterMaterial, {}, {});
+  expect(Boolean(uniforms), 'default water uniforms resolve').toBe(true);
+  expect(Object.keys(waterMaterial.uniformTypes), 'uniform type field order is stable').toEqual(
+    EXPECTED_UNIFORM_NAMES
+  );
+
+  void 0;
 });
 
-test('shadertools#waterMaterial shader uniform blocks match uniformTypes order', testCase => {
+it('shadertools#waterMaterial shader uniform blocks match uniformTypes order', () => {
   const fragmentValidationResult = getShaderModuleUniformLayoutValidationResult(
     waterMaterial,
     'fragment'
   );
   const wgslValidationResult = getShaderModuleUniformLayoutValidationResult(waterMaterial, 'wgsl');
 
-  testCase.ok(fragmentValidationResult?.matches, 'fragment validation result matches');
-  testCase.ok(wgslValidationResult?.matches, 'WGSL validation result matches');
-  testCase.deepEqual(
+  expect(Boolean(fragmentValidationResult?.matches), 'fragment validation result matches').toBe(
+    true
+  );
+  expect(Boolean(wgslValidationResult?.matches), 'WGSL validation result matches').toBe(true);
+  expect(
     getShaderModuleUniformBlockFields(waterMaterial, 'fragment'),
-    EXPECTED_UNIFORM_NAMES,
     'GLSL uniform block order matches uniformTypes'
-  );
-  testCase.deepEqual(
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
+  expect(
     getShaderModuleUniformBlockFields(waterMaterial, 'wgsl'),
-    EXPECTED_UNIFORM_NAMES,
     'WGSL uniform struct order matches uniformTypes'
-  );
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#waterMaterial uniform layout is packable and keyed by the shader schema', testCase => {
+it('shadertools#waterMaterial uniform layout is packable and keyed by the shader schema', () => {
   const shaderBlockLayout = makeShaderBlockLayout(waterMaterial.uniformTypes);
 
-  testCase.ok(shaderBlockLayout.byteLength > 0, 'uniform buffer layout reports a packed size');
-  testCase.deepEqual(
+  expect(
+    Boolean(shaderBlockLayout.byteLength > 0),
+    'uniform buffer layout reports a packed size'
+  ).toBe(true);
+  expect(
     Object.keys(shaderBlockLayout.fields),
-    EXPECTED_UNIFORM_NAMES,
     'uniform buffer layout key order matches uniform definitions'
-  );
-  testCase.equal(
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
+  expect(
     shaderBlockLayout.fields.mappingMode.size,
-    1,
     'integer mapping mode is represented in the uniform layout'
-  );
+  ).toBe(1);
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#waterMaterial assembles with lighting helpers for GLSL and exposes WGSL source', testCase => {
+it('shadertools#waterMaterial assembles with lighting helpers for GLSL and exposes WGSL source', () => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: `\
@@ -124,38 +125,34 @@ void main(void) {
     modules: [waterMaterial]
   });
 
-  testCase.ok(
-    assembledShader.fs.includes('vec4 water_getColor('),
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 water_getColor(')),
     'assembled GLSL contains water shading helpers'
-  );
-  testCase.ok(
-    assembledShader.fs.includes('lighting_getDirectionalLight('),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('lighting_getDirectionalLight(')),
     'assembled GLSL includes lighting dependency helpers'
-  );
-  testCase.ok(
-    waterMaterial.source?.includes('fn water_getColor('),
+  ).toBe(true);
+  expect(
+    Boolean(waterMaterial.source?.includes('fn water_getColor(')),
     'WGSL source exposes the water shading helper'
-  );
+  ).toBe(true);
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#waterMaterial forwards time changes deterministically', testCase => {
+it('shadertools#waterMaterial forwards time changes deterministically', () => {
   const firstUniforms = getShaderModuleUniforms(waterMaterial, {time: 1.25}, {});
   const secondUniforms = getShaderModuleUniforms(waterMaterial, {time: 2.5}, {});
 
-  testCase.equal(firstUniforms.time, 1.25, 'first time sample is forwarded');
-  testCase.equal(secondUniforms.time, 2.5, 'second time sample is forwarded');
-  testCase.notEqual(
-    firstUniforms.time,
-    secondUniforms.time,
-    'time updates change the output uniforms'
+  expect(firstUniforms.time, 'first time sample is forwarded').toBe(1.25);
+  expect(secondUniforms.time, 'second time sample is forwarded').toBe(2.5);
+  expect(firstUniforms.time, 'time updates change the output uniforms').not.toBe(
+    secondUniforms.time
   );
-  testCase.deepEqual(
-    secondUniforms.waveADirection,
-    waterMaterial.defaultUniforms.waveADirection,
-    'time updates do not perturb unrelated defaults'
+  expect(secondUniforms.waveADirection, 'time updates do not perturb unrelated defaults').toEqual(
+    waterMaterial.defaultUniforms.waveADirection
   );
 
-  testCase.end();
+  void 0;
 });

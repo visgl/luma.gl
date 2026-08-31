@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   GPUTableBufferPlanner,
   type GPUTableColumnDescriptor
@@ -10,7 +10,7 @@ import {
 import type {Device} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUTableBufferPlanner builds shared-geometry allocation groups deterministically', t => {
+it('GPUTableBufferPlanner builds shared-geometry allocation groups deterministically', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: true},
@@ -23,45 +23,42 @@ test('GPUTableBufferPlanner builds shared-geometry allocation groups determinist
     ]
   });
 
-  t.deepEqual(
+  expect(
     plan.groups.map(group => [group.id, group.kind, group.columns.map(column => column.id)]),
-    [
-      ['interleaved-shared-geometry-columns', 'interleaved-shared-geometry-columns', ['positions']],
-      [
-        'interleaved-constant-attribute-columns',
-        'interleaved-constant-attribute-columns',
-        ['instanceSizes']
-      ],
-      ['position-attribute-columns', 'position-attribute-columns', ['instancePositions']],
-      ['instanceAngles', 'separate-attribute-column', ['instanceAngles']]
-    ],
     'builds stable groups independent of input order'
-  );
-  t.equal(
+  ).toEqual([
+    ['interleaved-shared-geometry-columns', 'interleaved-shared-geometry-columns', ['positions']],
+    [
+      'interleaved-constant-attribute-columns',
+      'interleaved-constant-attribute-columns',
+      ['instanceSizes']
+    ],
+    ['position-attribute-columns', 'position-attribute-columns', ['instancePositions']],
+    ['instanceAngles', 'separate-attribute-column', ['instanceAngles']]
+  ]);
+  expect(
     plan.groups.find(group => group.id === 'interleaved-constant-attribute-columns')?.rowCount,
-    4,
     'shared-geometry constants use shared geometry row count'
-  );
-  t.equal(
+  ).toBe(4);
+  expect(
     plan.groups.find(group => group.id === 'interleaved-constant-attribute-columns')?.stepMode,
-    'vertex',
     'shared-geometry constants use vertex step mode'
-  );
-  t.deepEqual(
-    [...plan.packedColumnIds].sort(),
-    ['instanceAngles', 'instancePositions', 'instanceSizes', 'positions'],
-    'tracks planner-owned vertex buffer columns'
-  );
-  t.equal(
+  ).toBe('vertex');
+  expect([...plan.packedColumnIds].sort(), 'tracks planner-owned vertex buffer columns').toEqual([
+    'instanceAngles',
+    'instancePositions',
+    'instanceSizes',
+    'positions'
+  ]);
+  expect(
     plan.mappingsByColumnId.instancePositions[0].bufferName,
-    'position-attribute-columns',
     'maps position column to position group'
-  );
+  ).toBe('position-attribute-columns');
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner builds row-geometry constants with instance step mode', t => {
+it('GPUTableBufferPlanner builds row-geometry constants with instance step mode', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: false},
@@ -78,25 +75,24 @@ test('GPUTableBufferPlanner builds row-geometry constants with instance step mod
     ]
   });
 
-  t.deepEqual(
+  expect(
     plan.groups.map(group => [group.id, group.kind, group.columns.map(column => column.id)]),
-    [
-      [
-        'interleaved-constant-attribute-columns',
-        'interleaved-constant-attribute-columns',
-        ['angles']
-      ],
-      ['position-attribute-columns', 'position-attribute-columns', ['positions']]
-    ],
     'row-geometry mode separates constants from positions'
-  );
-  t.equal(plan.groups[0].rowCount, 1, 'row-geometry constants use one materialized row');
-  t.equal(plan.groups[0].stepMode, 'instance', 'row-geometry constants use instance step mode');
+  ).toEqual([
+    [
+      'interleaved-constant-attribute-columns',
+      'interleaved-constant-attribute-columns',
+      ['angles']
+    ],
+    ['position-attribute-columns', 'position-attribute-columns', ['positions']]
+  ]);
+  expect(plan.groups[0].rowCount, 'row-geometry constants use one materialized row').toBe(1);
+  expect(plan.groups[0].stepMode, 'row-geometry constants use instance step mode').toBe('instance');
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner uses priority for separate vs interleaved data columns', t => {
+it('GPUTableBufferPlanner uses priority for separate vs interleaved data columns', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 2}),
     modelInfo: {isInstanced: true},
@@ -107,23 +103,22 @@ test('GPUTableBufferPlanner uses priority for separate vs interleaved data colum
     ]
   });
 
-  t.deepEqual(
+  expect(
     plan.groups.map(group => [group.id, group.kind, group.columns.map(column => column.id)]),
-    [
-      ['instanceColors', 'separate-attribute-column', ['instanceColors']],
-      [
-        'interleaved-attribute-columns',
-        'interleaved-attribute-columns',
-        ['instanceAngles', 'instancePickingColors']
-      ]
-    ],
     'assigns scarce separate slots by priority, then id'
-  );
+  ).toEqual([
+    ['instanceColors', 'separate-attribute-column', ['instanceColors']],
+    [
+      'interleaved-attribute-columns',
+      'interleaved-attribute-columns',
+      ['instanceAngles', 'instancePickingColors']
+    ]
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner marks unsupported columns as unmanaged', t => {
+it('GPUTableBufferPlanner marks unsupported columns as unmanaged', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 16}),
     modelInfo: {isInstanced: true},
@@ -142,37 +137,40 @@ test('GPUTableBufferPlanner marks unsupported columns as unmanaged', t => {
     ]
   });
 
-  t.deepEqual(
+  expect(
     Object.fromEntries(
       Object.entries(plan.groupsByColumnId).map(([columnId, groups]) => [columnId, groups[0].kind])
     ),
-    {
-      externalValues: 'unmanaged-attribute-column',
-      generatedPickingColors: 'separate-attribute-column',
-      indices: 'unmanaged-attribute-column',
-      nonPosition64: 'unmanaged-attribute-column',
-      noAllocValues: 'unmanaged-attribute-column',
-      transitionValues: 'unmanaged-attribute-column'
-    },
     'keeps unsafe columns unmanaged while allowing generated noAlloc CPU data'
-  );
-  t.notOk(
-    GPUTableBufferPlanner.shouldSkipColumnBuffer(
-      makeColumn('transitionValues', {isTransition: true})
+  ).toEqual({
+    externalValues: 'unmanaged-attribute-column',
+    generatedPickingColors: 'separate-attribute-column',
+    indices: 'unmanaged-attribute-column',
+    nonPosition64: 'unmanaged-attribute-column',
+    noAllocValues: 'unmanaged-attribute-column',
+    transitionValues: 'unmanaged-attribute-column'
+  });
+  expect(
+    Boolean(
+      GPUTableBufferPlanner.shouldSkipColumnBuffer(
+        makeColumn('transitionValues', {isTransition: true})
+      )
     ),
     'does not skip unmanaged transition columns'
-  );
-  t.ok(
-    GPUTableBufferPlanner.shouldSkipColumnBuffer(
-      makeColumn('generatedPickingColors', {noAlloc: true, allowNoAllocManaged: true})
+  ).toBe(false);
+  expect(
+    Boolean(
+      GPUTableBufferPlanner.shouldSkipColumnBuffer(
+        makeColumn('generatedPickingColors', {noAlloc: true, allowNoAllocManaged: true})
+      )
     ),
     'can skip generated noAlloc columns that the planner can publish'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner maps fp64 position high and low components separately', t => {
+it('GPUTableBufferPlanner maps fp64 position high and low components separately', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: true},
@@ -193,43 +191,41 @@ test('GPUTableBufferPlanner maps fp64 position high and low components separatel
     ]
   });
 
-  t.deepEqual(
+  expect(
     plan.groups.map(group => [group.id, group.columns]),
+    'splits fp64 position columns into low constants and high position group'
+  ).toEqual([
     [
+      'interleaved-constant-attribute-columns',
       [
-        'interleaved-constant-attribute-columns',
-        [
-          {id: 'instanceSourcePositions', fp64Component: 'low'},
-          {id: 'instanceTargetPositions', fp64Component: 'low'}
-        ]
-      ],
-      [
-        'position-attribute-columns',
-        [
-          {id: 'instanceSourcePositions', fp64Component: 'high'},
-          {id: 'instanceTargetPositions', fp64Component: 'high'}
-        ]
+        {id: 'instanceSourcePositions', fp64Component: 'low'},
+        {id: 'instanceTargetPositions', fp64Component: 'low'}
       ]
     ],
-    'splits fp64 position columns into low constants and high position group'
-  );
-  t.deepEqual(
+    [
+      'position-attribute-columns',
+      [
+        {id: 'instanceSourcePositions', fp64Component: 'high'},
+        {id: 'instanceTargetPositions', fp64Component: 'high'}
+      ]
+    ]
+  ]);
+  expect(
     plan.mappingsByColumnId.instanceSourcePositions.map(mapping => [
       mapping.attributeName,
       mapping.bufferName,
       mapping.fp64Component
     ]),
-    [
-      ['instanceSourcePositions64Low', 'interleaved-constant-attribute-columns', 'low'],
-      ['instanceSourcePositions', 'position-attribute-columns', 'high']
-    ],
     'maps shader-visible fp64 attributes'
-  );
+  ).toEqual([
+    ['instanceSourcePositions64Low', 'interleaved-constant-attribute-columns', 'low'],
+    ['instanceSourcePositions', 'position-attribute-columns', 'high']
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled', t => {
+it('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled', () => {
   const webgpuPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({
       type: 'webgpu',
@@ -280,39 +276,43 @@ test('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled
     ]
   });
 
-  t.deepEqual(
+  expect(
     webgpuPlan.groups
       .filter(group => group.kind === 'separate-storage-column')
       .map(group => group.id)
       .sort(),
-    ['elevations', 'fillColors'],
     'uses dedicated storage buffers on WebGPU row geometries'
-  );
-  t.deepEqual(
-    [...webgpuPlan.storageColumnIds].sort(),
-    ['elevations', 'fillColors'],
-    'tracks storage columns'
-  );
-  t.notOk(webgpuPlan.packedColumnIds.has('fillColors'), 'storage columns are not packed columns');
-  t.notOk(
-    webglPlan.groups.some(group => group.kind === 'separate-storage-column'),
+  ).toEqual(['elevations', 'fillColors']);
+  expect([...webgpuPlan.storageColumnIds].sort(), 'tracks storage columns').toEqual([
+    'elevations',
+    'fillColors'
+  ]);
+  expect(
+    Boolean(webgpuPlan.packedColumnIds.has('fillColors')),
+    'storage columns are not packed columns'
+  ).toBe(false);
+  expect(
+    Boolean(webglPlan.groups.some(group => group.kind === 'separate-storage-column')),
     'does not use storage buffers on WebGL'
-  );
-  t.notOk(
-    sharedGeometryPlan.groups.some(group => group.kind === 'separate-storage-column'),
+  ).toBe(false);
+  expect(
+    Boolean(sharedGeometryPlan.groups.some(group => group.kind === 'separate-storage-column')),
     'does not use storage buffers for shared-geometry mode'
-  );
-  t.notOk(
-    vertexStorageLimitedPlan.groups.some(
-      group => group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
+  ).toBe(false);
+  expect(
+    Boolean(
+      vertexStorageLimitedPlan.groups.some(
+        group =>
+          group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
+      )
     ),
     'does not use storage buffers when the vertex stage storage limit is zero'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner stacks storage groups and falls back on size limits', t => {
+it('GPUTableBufferPlanner stacks storage groups and falls back on size limits', () => {
   const countLimitedPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({
       type: 'webgpu',
@@ -345,33 +345,33 @@ test('GPUTableBufferPlanner stacks storage groups and falls back on size limits'
   const stackedGroup = countLimitedPlan.groups.find(
     group => group.kind === 'stacked-storage-columns'
   );
-  t.deepEqual(
+  expect(
     stackedGroup && [stackedGroup.id, stackedGroup.columns.map(column => column.id)],
-    ['stacked-storage-columns', ['fillColors', 'elevations']],
     'stacks overflow storage columns when only one binding is available'
-  );
-  t.deepEqual(
-    stackedGroup?.byteOffsets,
-    {fillColors: 0, elevations: 256},
-    'aligns stacked storage columns'
-  );
-  t.equal(
+  ).toEqual(['stacked-storage-columns', ['fillColors', 'elevations']]);
+  expect(stackedGroup?.byteOffsets, 'aligns stacked storage columns').toEqual({
+    fillColors: 0,
+    elevations: 256
+  });
+  expect(
     countLimitedPlan.mappingsByColumnId.elevations[0].byteOffset,
-    256,
     'adds storage byte offsets to mappings'
-  );
-  t.notOk(
-    sizeLimitedPlan.groups.some(
-      group => group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
+  ).toBe(256);
+  expect(
+    Boolean(
+      sizeLimitedPlan.groups.some(
+        group =>
+          group.kind === 'separate-storage-column' || group.kind === 'stacked-storage-columns'
+      )
     ),
     'falls back to vertex buffers when storage binding size is too small'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('GPUTableBufferPlanner validates vertex buffer count and array stride limits', t => {
-  t.throws(
+it('GPUTableBufferPlanner validates vertex buffer count and array stride limits', () => {
+  expect(
     () =>
       GPUTableBufferPlanner.getAllocationPlan({
         device: createDevice({maxVertexBuffers: 1}),
@@ -381,10 +381,9 @@ test('GPUTableBufferPlanner validates vertex buffer count and array stride limit
           makeColumn('instanceColors', {priority: 'high'})
         ]
       }),
-    /requires 2 vertex buffers/,
     'throws when required vertex buffers exceed device limit'
-  );
-  t.throws(
+  ).toThrow(/requires 2 vertex buffers/);
+  expect(
     () =>
       GPUTableBufferPlanner.getAllocationPlan({
         device: createDevice({maxVertexBuffers: 1, maxVertexBufferArrayStride: 16}),
@@ -394,11 +393,10 @@ test('GPUTableBufferPlanner validates vertex buffer count and array stride limit
           makeColumn('instanceSizes', {byteStride: 12, priority: 'low'})
         ]
       }),
-    /requires byteStride 24/,
     'throws when interleaved group stride exceeds device limit'
-  );
+  ).toThrow(/requires byteStride 24/);
 
-  t.end();
+  void 0;
 });
 
 function makeColumn(

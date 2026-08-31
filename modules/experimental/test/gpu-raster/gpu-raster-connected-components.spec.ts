@@ -10,7 +10,7 @@ import {
   type GPURasterConnectivity
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ComponentFixture = {
   id: string;
@@ -43,11 +43,11 @@ type ComponentExecution = {
 
 const GUARD_VALUE = 4000000001;
 
-test('GPURaster component roots distinguish valid background, independent nodata, and empty islands', async testCase => {
+it('GPURaster component roots distinguish valid background, independent nodata, and empty islands', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -101,35 +101,32 @@ test('GPURaster component roots distinguish valid background, independent nodata
   for (const {fixture, labels, validity, rounds} of fixtures) {
     const execution = makeExecution(device, fixture);
     submitGraph(device, execution.compiled, `${fixture.id}-submit`);
-    testCase.deepEqual(
+    expect(
       await readLogical(execution.output),
-      labels,
       `${fixture.id} retains sparse one-based root identity and zero background`
-    );
-    testCase.deepEqual(
+    ).toEqual(labels);
+    expect(
       await readLogical(execution.outputValidity),
-      validity,
       `${fixture.id} separates real zero observations from missing/nodata samples`
-    );
-    testCase.equal((await readLogical(execution.converged))[0], 1, `${fixture.id} converges`);
-    testCase.equal(
+    ).toEqual(validity);
+    expect((await readLogical(execution.converged))[0], `${fixture.id} converges`).toBe(1);
+    expect(
       (await readLogical(execution.iterationCount))[0],
-      rounds,
       `${fixture.id} publishes only active rounds after indirect no-work gating`
-    );
-    await assertGuards(testCase, execution.output, `${fixture.id} output labels`);
-    await assertGuards(testCase, execution.outputValidity, `${fixture.id} output validity`);
-    destroyExecution(testCase, execution);
+    ).toBe(rounds);
+    await assertGuards(execution.output, `${fixture.id} output labels`);
+    await assertGuards(execution.outputValidity, `${fixture.id} output validity`);
+    destroyExecution(execution);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster component rounds converge deterministically across winding workgroups and nodata barriers', async testCase => {
+it('GPURaster component rounds converge deterministically across winding workgroups and nodata barriers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -161,42 +158,38 @@ test('GPURaster component rounds converge deterministically across winding workg
   const expected = makeReferenceLabels(fixture);
   const labels = await readLogical(execution.output);
 
-  testCase.deepEqual(
+  expect(
     labels,
-    expected.labels,
     'minimum-root atomic hooking and bounded path compression match a winding CPU flood fill'
-  );
-  testCase.deepEqual(
+  ).toEqual(expected.labels);
+  expect(
     await readLogical(execution.outputValidity),
-    expected.validity,
     'a missing connector prevents two physically adjacent snake regions from joining'
-  );
-  testCase.equal((await readLogical(execution.converged))[0], 1, 'all bounded rounds converge');
-  testCase.ok(
-    (await readLogical(execution.iterationCount))[0]! <= 32,
+  ).toEqual(expected.validity);
+  expect((await readLogical(execution.converged))[0], 'all bounded rounds converge').toBe(1);
+  expect(
+    Boolean((await readLogical(execution.iterationCount))[0]! <= 32),
     'actual convergence work never exceeds its explicit round budget'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     new Set(labels.filter(label => label !== 0)).size,
-    2,
     'one missing connector deterministically divides the long component in two'
-  );
-  testCase.equal(
+  ).toBe(2);
+  expect(
     labels[barrierRow * width + barrierColumn],
-    0,
     'a nodata connector never publishes a foreground root'
-  );
-  await assertGuards(testCase, execution.converged, 'caller-owned convergence state');
-  await assertGuards(testCase, execution.iterationCount, 'caller-owned round count');
-  destroyExecution(testCase, execution);
-  testCase.end();
+  ).toBe(0);
+  await assertGuards(execution.converged, 'caller-owned convergence state');
+  await assertGuards(execution.iterationCount, 'caller-owned round count');
+  destroyExecution(execution);
+  void 0;
 });
 
-test('GPURaster insufficient rounds invalidate every pixel and graph reuse resets convergence exactly', async testCase => {
+it('GPURaster insufficient rounds invalidate every pixel and graph reuse resets convergence exactly', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -209,65 +202,47 @@ test('GPURaster insufficient rounds invalidate every pixel and graph reuse reset
     maximumIterations: 1
   });
   submitGraph(device, insufficient.compiled, 'submit-insufficient-components');
-  testCase.deepEqual(
+  expect(
     await readLogical(insufficient.output),
-    [0, 0, 0],
     'partial union-find roots never escape when stabilization was not reached'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0, 0]);
+  expect(
     await readLogical(insufficient.outputValidity),
-    [0, 0, 0],
     'even valid background is withheld until the complete component result is safe'
+  ).toEqual([0, 0, 0]);
+  expect((await readLogical(insufficient.converged))[0], 'insufficient budget is explicit').toBe(0);
+  expect((await readLogical(insufficient.iterationCount))[0], 'exactly one active round ran').toBe(
+    1
   );
-  testCase.equal(
-    (await readLogical(insufficient.converged))[0],
-    0,
-    'insufficient budget is explicit'
-  );
-  testCase.equal(
-    (await readLogical(insufficient.iterationCount))[0],
-    1,
-    'exactly one active round ran'
-  );
-  await assertGuards(testCase, insufficient.output, 'invalidated sparse labels');
-  await assertGuards(testCase, insufficient.outputValidity, 'invalidated observation validity');
+  await assertGuards(insufficient.output, 'invalidated sparse labels');
+  await assertGuards(insufficient.outputValidity, 'invalidated observation validity');
 
   writeLogical(insufficient.source, [0, 0, 0]);
   submitGraph(device, insufficient.compiled, 'reencode-converged-empty-components');
-  testCase.deepEqual(
+  expect(
     await readLogical(insufficient.output),
-    [0, 0, 0],
     'reused graph publishes clean background after replacing the caller-owned source'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0, 0]);
+  expect(
     await readLogical(insufficient.outputValidity),
-    [1, 1, 1],
     're-encoding restores observation validity after an earlier nonconverged execution'
-  );
-  testCase.equal(
-    (await readLogical(insufficient.converged))[0],
-    1,
-    'graph reuse resets convergence'
-  );
-  testCase.equal(
-    (await readLogical(insufficient.iterationCount))[0],
-    1,
-    'active round counters reset'
+  ).toEqual([1, 1, 1]);
+  expect((await readLogical(insufficient.converged))[0], 'graph reuse resets convergence').toBe(1);
+  expect((await readLogical(insufficient.iterationCount))[0], 'active round counters reset').toBe(
+    1
   );
 
   writeLogical(insufficient.source, [1, 1, 0]);
   submitGraph(device, insufficient.compiled, 'reencode-nonconverged-components');
-  testCase.equal(
+  expect(
     (await readLogical(insufficient.converged))[0],
-    0,
     'later difficult inputs cannot inherit a previous successful convergence flag'
-  );
-  testCase.deepEqual(
+  ).toBe(0);
+  expect(
     await readLogical(insufficient.outputValidity),
-    [0, 0, 0],
     'later nonconvergence clears every previously valid output'
-  );
-  destroyExecution(testCase, insufficient);
+  ).toEqual([0, 0, 0]);
+  destroyExecution(insufficient);
 
   const stabilized = makeExecution(device, {
     id: 'exact-component-stabilization',
@@ -277,23 +252,17 @@ test('GPURaster insufficient rounds invalidate every pixel and graph reuse reset
     maximumIterations: 2
   });
   submitGraph(device, stabilized.compiled, 'submit-exact-component-stabilization');
-  testCase.deepEqual(
+  expect(
     await readLogical(stabilized.output),
-    [1, 1],
     'one change round plus one clean stabilization round publishes the exact minimum root'
-  );
-  testCase.equal(
-    (await readLogical(stabilized.converged))[0],
-    1,
-    'exact two-round budget succeeds'
-  );
-  testCase.equal(
+  ).toEqual([1, 1]);
+  expect((await readLogical(stabilized.converged))[0], 'exact two-round budget succeeds').toBe(1);
+  expect(
     (await readLogical(stabilized.iterationCount))[0],
-    2,
     'stabilization contributes one actual active round'
-  );
-  destroyExecution(testCase, stabilized);
-  testCase.end();
+  ).toBe(2);
+  destroyExecution(stabilized);
+  void 0;
 });
 
 function makeExecution(device: Device, fixture: ComponentFixture): ComponentExecution {
@@ -463,14 +432,13 @@ async function readLogical(entry: GuardedBuffer): Promise<number[]> {
   return (await readGuarded(entry)).slice(entry.prefixLength, entry.prefixLength + entry.length);
 }
 
-async function assertGuards(testCase: Test, entry: GuardedBuffer, label: string): Promise<void> {
+async function assertGuards(entry: GuardedBuffer, label: string): Promise<void> {
   const values = await readGuarded(entry);
-  testCase.deepEqual(
+  expect(
     values.slice(0, entry.prefixLength),
-    Array.from({length: entry.prefixLength}, () => GUARD_VALUE),
     `${label} preserves every offset-backed prefix guard`
-  );
-  testCase.equal(values.at(-1), GUARD_VALUE, `${label} preserves its caller-owned suffix guard`);
+  ).toEqual(Array.from({length: entry.prefixLength}, () => GUARD_VALUE));
+  expect(values.at(-1), `${label} preserves its caller-owned suffix guard`).toBe(GUARD_VALUE);
 }
 
 function submitGraph(
@@ -483,13 +451,13 @@ function submitGraph(
   device.submit(encoder.finish());
 }
 
-function destroyExecution(testCase: Test, execution: ComponentExecution): void {
+function destroyExecution(execution: ComponentExecution): void {
   execution.compiled.destroy();
   for (const {buffer} of execution.owned) {
-    testCase.notOk(
-      buffer.destroyed,
+    expect(
+      Boolean(buffer.destroyed),
       'component graph destruction does not destroy borrowed storage'
-    );
+    ).toBe(false);
     buffer.destroy();
   }
 }

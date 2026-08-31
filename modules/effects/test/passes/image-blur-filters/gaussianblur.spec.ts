@@ -4,13 +4,13 @@
 
 import {gaussianBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('gaussianBlur#build/uniform', t => {
+it('gaussianBlur#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(gaussianBlur, {}, {});
 
-  t.ok(uniforms, 'gaussianBlur module build is ok');
-  t.equal(uniforms.radius, 12, 'gaussianBlur radius uniform is ok');
-  t.deepEqual(uniforms.delta, [1, 0], 'gaussianBlur delta uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'gaussianBlur module build is ok').toBe(true);
+  expect(uniforms.radius, 'gaussianBlur radius uniform is ok').toBe(12);
+  expect(uniforms.delta, 'gaussianBlur delta uniform is ok').toEqual([1, 0]);
+  void 0;
 });
