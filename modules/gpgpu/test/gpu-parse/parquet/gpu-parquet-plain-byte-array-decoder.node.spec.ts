@@ -8,25 +8,23 @@ import {
   parseParquetPlainByteArrayPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 const ENCODED = Uint8Array.from([
   0, 0, 0, 0, 3, 0, 0, 0, 99, 97, 116, 1, 0, 0, 0, 100, 5, 0, 0, 0, 104, 111, 114, 115, 101
 ]);
 
-test('parseParquetPlainByteArrayPlan exposes generic byte ranges', testCase => {
+it('parseParquetPlainByteArrayPlan exposes generic byte ranges', () => {
   const plan = parseParquetPlainByteArrayPlan(ENCODED, 4);
-  testCase.deepEqual(Array.from(plan.sourceOffsets), [4, 8, 15, 20]);
-  testCase.deepEqual(Array.from(plan.valueLengths), [0, 3, 1, 5]);
-  testCase.deepEqual(Array.from(plan.valueOffsets), [0, 0, 3, 4]);
-  testCase.equal(plan.bytesConsumed, ENCODED.length);
-  testCase.equal(plan.outputByteLength, 9);
-  testCase.throws(() => parseParquetPlainByteArrayPlan(ENCODED.subarray(0, 23), 4), /truncated/);
-  testCase.end();
+  expect(Array.from(plan.sourceOffsets)).toEqual([4, 8, 15, 20]);
+  expect(Array.from(plan.valueLengths)).toEqual([0, 3, 1, 5]);
+  expect(Array.from(plan.valueOffsets)).toEqual([0, 0, 3, 4]);
+  expect(plan.bytesConsumed).toBe(ENCODED.length);
+  expect(plan.outputByteLength).toBe(9);
+  expect(() => parseParquetPlainByteArrayPlan(ENCODED.subarray(0, 23), 4)).toThrow(/truncated/);
 });
 
-test('GPUParquetPlainByteArrayDecoder delegates to GPUByteRangeGather', testCase => {
+it('GPUParquetPlainByteArrayDecoder delegates to GPUByteRangeGather', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const addComputePass = vi.spyOn(graph, 'addComputePass');
   const makeView = (id: string, length: number) => {
@@ -42,8 +40,7 @@ test('GPUParquetPlainByteArrayDecoder delegates to GPUByteRangeGather', testCase
     encodedByteLength: ENCODED.length,
     outputByteLength: 9
   }).addToGraph(graph);
-  testCase.equal(addComputePass.mock.calls[0][0].workload?.operation, 'GPUByteRangeGather');
-  testCase.end();
+  expect(addComputePass.mock.calls[0][0].workload?.operation).toBe('GPUByteRangeGather');
 });
 
 function makeSupportDevice(): Device {
