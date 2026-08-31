@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPUParquetLevelLayout} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetLevelLayout materializes validity, rows, and list offsets', async testCase => {
+it('GPUParquetLevelLayout materializes validity, rows, and list offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const graph = new GPUCommandGraph(device);
@@ -74,30 +72,27 @@ test('GPUParquetLevelLayout materializes validity, rows, and list offsets', asyn
       const result = await buffer.readAsync();
       return Array.from(new Uint32Array(result.buffer, result.byteOffset, length));
     };
-    testCase.deepEqual(await read(validity.buffer, 5), [1, 1, 0, 1, 0]);
-    testCase.deepEqual(await read(valueOffsets.buffer, 5), [0, 1, 2, 2, 3]);
-    testCase.deepEqual(await read(elementFlags.buffer, 5), [1, 1, 1, 1, 1]);
-    testCase.deepEqual(await read(elementOffsets.buffer, 5), [0, 1, 2, 3, 4]);
-    testCase.deepEqual(await read(rowStartFlags.buffer, 5), [0, 0, 1, 1, 0]);
-    testCase.deepEqual(await read(rowIndices.buffer, 5), [0, 0, 1, 2, 2]);
-    testCase.deepEqual((await read(listOffsets.buffer, 6)).slice(0, 4), [0, 2, 3, 5]);
-    testCase.deepEqual(await read(nonNullValueCount.buffer, 1), [3]);
-    testCase.deepEqual(await read(elementCount.buffer, 1), [5]);
-    testCase.deepEqual(await read(rowCount.buffer, 1), [3]);
+    expect(await read(validity.buffer, 5)).toEqual([1, 1, 0, 1, 0]);
+    expect(await read(valueOffsets.buffer, 5)).toEqual([0, 1, 2, 2, 3]);
+    expect(await read(elementFlags.buffer, 5)).toEqual([1, 1, 1, 1, 1]);
+    expect(await read(elementOffsets.buffer, 5)).toEqual([0, 1, 2, 3, 4]);
+    expect(await read(rowStartFlags.buffer, 5)).toEqual([0, 0, 1, 1, 0]);
+    expect(await read(rowIndices.buffer, 5)).toEqual([0, 0, 1, 2, 2]);
+    expect((await read(listOffsets.buffer, 6)).slice(0, 4)).toEqual([0, 2, 3, 5]);
+    expect(await read(nonNullValueCount.buffer, 1)).toEqual([3]);
+    expect(await read(elementCount.buffer, 1)).toEqual([5]);
+    expect(await read(rowCount.buffer, 1)).toEqual([3]);
   } finally {
     compiled.destroy();
     for (const buffer of buffers) {
       buffer.destroy();
     }
   }
-  testCase.end();
 });
 
-test('GPUParquetLevelLayout clears counts for an empty level stream', async testCase => {
+it('GPUParquetLevelLayout clears counts for an empty level stream', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const graph = new GPUCommandGraph(device);
@@ -145,7 +140,7 @@ test('GPUParquetLevelLayout clears counts for an empty level stream', async test
     device.submit(commandEncoder.finish());
     for (const buffer of outputBuffers) {
       const result = await buffer.readAsync();
-      testCase.equal(new Uint32Array(result.buffer, result.byteOffset, 1)[0], 0);
+      expect(new Uint32Array(result.buffer, result.byteOffset, 1)[0]).toBe(0);
     }
   } finally {
     compiled.destroy();
@@ -154,5 +149,4 @@ test('GPUParquetLevelLayout clears counts for an empty level stream', async test
       buffer.destroy();
     }
   }
-  testCase.end();
 });

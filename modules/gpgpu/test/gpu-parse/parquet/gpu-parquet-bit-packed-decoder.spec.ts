@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPUParquetBitPackedDecoder, parseParquetBitPackedRunPlan} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetBitPackedDecoder decodes deprecated MSB-first values', async testCase => {
+it('GPUParquetBitPackedDecoder decodes deprecated MSB-first values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const encoded = Uint8Array.from([0x05, 0x39, 0x77, 0]);
@@ -44,14 +42,12 @@ test('GPUParquetBitPackedDecoder decodes deprecated MSB-first values', async tes
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint32Array(result.buffer, result.byteOffset, 8)),
-      [0, 1, 2, 3, 4, 5, 6, 7]
-    );
+    expect(Array.from(new Uint32Array(result.buffer, result.byteOffset, 8))).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7
+    ]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

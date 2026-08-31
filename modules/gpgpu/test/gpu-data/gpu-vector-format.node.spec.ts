@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   GPUData,
   GPUVector,
@@ -19,61 +19,81 @@ import {
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUVector format helpers parse fixed and variable-length formats', t => {
+it('GPUVector format helpers parse fixed and variable-length formats', () => {
   const fixedInfo = getGPUVectorFormatInfo('float32x3');
   const vertexListInfo = getGPUVectorFormatInfo('vertex-list<unorm8x4>');
   const valueListInfo = getGPUVectorFormatInfo('value-list<uint8>');
   const fixedSizeListInfo = getGPUVectorFormatInfo('fixed-size-list<float32,768>');
   const fixedSizeVectorListInfo = getGPUVectorFormatInfo('fixed-size-list<float32x3,2>');
 
-  t.equal(fixedInfo.elementFormat, 'float32x3', 'fixed vector element format is unchanged');
-  t.equal(fixedInfo.vertexList, false, 'fixed vector is not a vertex list');
-  t.equal(fixedInfo.valueList, false, 'fixed vector is not a value list');
-  t.equal(fixedInfo.fixedSizeList, false, 'fixed vector is not a fixed-size list');
-  t.equal(fixedInfo.elementByteLength, 12, 'fixed vector element byte length is decoded');
-  t.equal(fixedInfo.byteLength, 12, 'fixed vector byte length is decoded');
-  t.equal(vertexListInfo.elementFormat, 'unorm8x4', 'vertex-list exposes its element format');
-  t.equal(vertexListInfo.vertexList, true, 'vertex-list marker is decoded');
-  t.equal(vertexListInfo.valueList, false, 'vertex-list is not a value-list');
-  t.equal(vertexListInfo.primitiveType, 'f32', 'normalized list elements expose f32 values');
-  t.equal(valueListInfo.elementFormat, 'uint8', 'value-list exposes its element format');
-  t.equal(valueListInfo.vertexList, false, 'value-list is not a vertex-list');
-  t.equal(valueListInfo.valueList, true, 'value-list marker is decoded');
-  t.equal(fixedSizeListInfo.elementFormat, 'float32', 'fixed-size list exposes its element format');
-  t.equal(fixedSizeListInfo.fixedSizeList, true, 'fixed-size-list marker is decoded');
-  t.equal(fixedSizeListInfo.vertexList, false, 'fixed-size list is not a vertex list');
-  t.equal(
-    fixedSizeListInfo.valueList,
-    false,
-    'fixed-size list is not a variable-length value list'
+  expect(fixedInfo.elementFormat, 'fixed vector element format is unchanged').toBe('float32x3');
+  expect(fixedInfo.vertexList, 'fixed vector is not a vertex list').toBe(false);
+  expect(fixedInfo.valueList, 'fixed vector is not a value list').toBe(false);
+  expect(fixedInfo.fixedSizeList, 'fixed vector is not a fixed-size list').toBe(false);
+  expect(fixedInfo.elementByteLength, 'fixed vector element byte length is decoded').toBe(12);
+  expect(fixedInfo.byteLength, 'fixed vector byte length is decoded').toBe(12);
+  expect(vertexListInfo.elementFormat, 'vertex-list exposes its element format').toBe('unorm8x4');
+  expect(vertexListInfo.vertexList, 'vertex-list marker is decoded').toBe(true);
+  expect(vertexListInfo.valueList, 'vertex-list is not a value-list').toBe(false);
+  expect(vertexListInfo.primitiveType, 'normalized list elements expose f32 values').toBe('f32');
+  expect(valueListInfo.elementFormat, 'value-list exposes its element format').toBe('uint8');
+  expect(valueListInfo.vertexList, 'value-list is not a vertex-list').toBe(false);
+  expect(valueListInfo.valueList, 'value-list marker is decoded').toBe(true);
+  expect(fixedSizeListInfo.elementFormat, 'fixed-size list exposes its element format').toBe(
+    'float32'
   );
-  t.equal(fixedSizeListInfo.listSize, 768, 'fixed-size list exposes its logical row cardinality');
-  t.equal(fixedSizeListInfo.components, 1, 'fixed-size list preserves scalar element components');
-  t.equal(fixedSizeListInfo.elementByteLength, 4, 'fixed-size list exposes element byte length');
-  t.equal(fixedSizeListInfo.byteLength, 3072, 'fixed-size list byte length describes one full row');
-  t.equal(fixedSizeVectorListInfo.components, 3, 'vector-valued fixed lists retain element shape');
-  t.equal(fixedSizeVectorListInfo.elementByteLength, 12, 'vector-valued lists expose element size');
-  t.equal(fixedSizeVectorListInfo.byteLength, 24, 'vector-valued lists expose complete row size');
-  t.equal(getGPUVectorElementFormat('vertex-list<unorm8x4>'), 'unorm8x4');
-  t.equal(getGPUVectorElementFormat('value-list<uint8>'), 'uint8');
-  t.equal(getGPUVectorElementFormat('fixed-size-list<float32,768>'), 'float32');
-  t.ok(isVertexListGPUVectorFormat('vertex-list<unorm8x4>'), 'recognizes vertex-list syntax');
-  t.ok(isValueListGPUVectorFormat('value-list<uint8>'), 'recognizes value-list syntax');
-  t.ok(
-    isFixedSizeListGPUVectorFormat('fixed-size-list<float32,768>'),
+  expect(fixedSizeListInfo.fixedSizeList, 'fixed-size-list marker is decoded').toBe(true);
+  expect(fixedSizeListInfo.vertexList, 'fixed-size list is not a vertex list').toBe(false);
+  expect(fixedSizeListInfo.valueList, 'fixed-size list is not a variable-length value list').toBe(
+    false
+  );
+  expect(fixedSizeListInfo.listSize, 'fixed-size list exposes its logical row cardinality').toBe(
+    768
+  );
+  expect(fixedSizeListInfo.components, 'fixed-size list preserves scalar element components').toBe(
+    1
+  );
+  expect(fixedSizeListInfo.elementByteLength, 'fixed-size list exposes element byte length').toBe(
+    4
+  );
+  expect(fixedSizeListInfo.byteLength, 'fixed-size list byte length describes one full row').toBe(
+    3072
+  );
+  expect(fixedSizeVectorListInfo.components, 'vector-valued fixed lists retain element shape').toBe(
+    3
+  );
+  expect(fixedSizeVectorListInfo.elementByteLength, 'vector-valued lists expose element size').toBe(
+    12
+  );
+  expect(fixedSizeVectorListInfo.byteLength, 'vector-valued lists expose complete row size').toBe(
+    24
+  );
+  expect(getGPUVectorElementFormat('vertex-list<unorm8x4>')).toBe('unorm8x4');
+  expect(getGPUVectorElementFormat('value-list<uint8>')).toBe('uint8');
+  expect(getGPUVectorElementFormat('fixed-size-list<float32,768>')).toBe('float32');
+  expect(
+    Boolean(isVertexListGPUVectorFormat('vertex-list<unorm8x4>')),
+    'recognizes vertex-list syntax'
+  ).toBe(true);
+  expect(
+    Boolean(isValueListGPUVectorFormat('value-list<uint8>')),
+    'recognizes value-list syntax'
+  ).toBe(true);
+  expect(
+    Boolean(isFixedSizeListGPUVectorFormat('fixed-size-list<float32,768>')),
     'recognizes canonical fixed-size-list syntax'
-  );
-  t.notOk(isVertexListGPUVectorFormat('list<unorm8x4>'), 'generic list syntax is not accepted');
-  t.throws(
+  ).toBe(true);
+  expect(
+    Boolean(isVertexListGPUVectorFormat('list<unorm8x4>')),
+    'generic list syntax is not accepted'
+  ).toBe(false);
+  expect(
     () => getGPUVectorFormatInfo('list<unorm8x4>' as never),
-    /Unsupported GPUVector format/,
     'generic list syntax is reserved'
-  );
-
-  t.end();
+  ).toThrow(/Unsupported GPUVector format/);
 });
 
-test('GPUVector fixed-size-list formats require canonical positive safe cardinalities', t => {
+it('GPUVector fixed-size-list formats require canonical positive safe cardinalities', () => {
   const invalidFormats = [
     'fixed-size-list<float32,0>',
     'fixed-size-list<float32,-1>',
@@ -90,56 +110,49 @@ test('GPUVector fixed-size-list formats require canonical positive safe cardinal
   ];
 
   for (const invalidFormat of invalidFormats) {
-    t.notOk(
-      isFixedSizeListGPUVectorFormat(invalidFormat),
+    expect(
+      Boolean(isFixedSizeListGPUVectorFormat(invalidFormat)),
       `rejects noncanonical fixed-size-list syntax ${invalidFormat}`
-    );
-    t.throws(
+    ).toBe(false);
+    expect(
       () => getGPUVectorFormatInfo(invalidFormat as never),
-      /Unsupported GPUVector format/,
       `cannot decode invalid fixed-size-list format ${invalidFormat}`
-    );
+    ).toThrow(/Unsupported GPUVector format/);
   }
-  t.throws(
+  expect(
     () => getGPUVectorFormatInfo('fixed-size-list<float32,9007199254740991>'),
-    /Unsupported GPUVector format/,
     'rejects fixed-size-list rows whose physical byte length exceeds a safe integer'
-  );
-  t.throws(
+  ).toThrow(/Unsupported GPUVector format/);
+  expect(
     () => getGPUVectorFormatInfo('fixed-size-list<float64,3>' as never),
-    /Unsupported GPUVector format/,
     'rejects an unsupported fixed-size-list element format'
-  );
-
-  t.end();
+  ).toThrow(/Unsupported GPUVector format/);
 });
 
-test('GPUVector format helpers validate shader compatibility', t => {
-  t.ok(
-    isGPUVectorFormatCompatibleWithShaderType('unorm8x4', 'vec4<f32>'),
+it('GPUVector format helpers validate shader compatibility', () => {
+  expect(
+    Boolean(isGPUVectorFormatCompatibleWithShaderType('unorm8x4', 'vec4<f32>')),
     'normalized RGBA8 can feed vec4<f32>'
-  );
-  t.ok(
-    isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec3<f32>'),
+  ).toBe(true);
+  expect(
+    Boolean(isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec3<f32>')),
     'float32x3 can feed vec3<f32>'
-  );
-  t.notOk(
-    isGPUVectorFormatCompatibleWithShaderType('uint32x2', 'vec2<i32>'),
+  ).toBe(true);
+  expect(
+    Boolean(isGPUVectorFormatCompatibleWithShaderType('uint32x2', 'vec2<i32>')),
     'unsigned integer memory cannot feed signed integer shader values'
-  );
-  t.notOk(
-    isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec4<f32>'),
+  ).toBe(false);
+  expect(
+    Boolean(isGPUVectorFormatCompatibleWithShaderType('float32x3', 'vec4<f32>')),
     'component mismatch is rejected'
-  );
-  t.notOk(
-    isGPUVectorFormatCompatibleWithShaderType('fixed-size-list<float32,1>', 'f32'),
+  ).toBe(false);
+  expect(
+    Boolean(isGPUVectorFormatCompatibleWithShaderType('fixed-size-list<float32,1>', 'f32')),
     'fixed-size-list storage columns never masquerade as vertex shader attributes'
-  );
-
-  t.end();
+  ).toBe(false);
 });
 
-test('GPUData derives complete fixed-size-list row and flattened-value metadata', t => {
+it('GPUData derives complete fixed-size-list row and flattened-value metadata', () => {
   const device = new NullDevice({});
   const packedData = new GPUData({
     buffer: device.createBuffer({byteLength: 2 * 768 * Float32Array.BYTES_PER_ELEMENT}),
@@ -167,81 +180,81 @@ test('GPUData derives complete fixed-size-list row and flattened-value metadata'
     ownsBuffer: true
   });
 
-  t.equal(packedData.length, 2, 'length remains the logical row count');
-  t.equal(packedData.valueLength, 1536, 'valueLength counts flattened fixed-list elements');
-  t.equal(packedData.stride, 768, 'stride counts scalar components in one logical row');
-  t.equal(packedData.rowByteLength, 3072, 'row payload spans all fixed-list elements');
-  t.equal(packedData.byteStride, 3072, 'packed row stride defaults to the complete row payload');
-  t.equal(paddedData.rowByteLength, 3072, 'padding does not change the logical row payload');
-  t.equal(paddedData.byteStride, 3104, 'explicit padded row stride is preserved');
-  t.equal(vectorElementData.valueLength, 2, 'vector-valued lists count flattened vector elements');
-  t.equal(vectorElementData.stride, 6, 'vector-valued rows count every scalar component');
-  t.equal(vectorElementData.rowByteLength, 24, 'vector-valued rows span their complete payload');
-  t.equal(emptyData.valueLength, 0, 'empty fixed-size lists expose no flattened values');
-  t.equal(emptyData.rowByteLength, 1536, 'empty fixed-size lists retain their complete row format');
+  expect(packedData.length, 'length remains the logical row count').toBe(2);
+  expect(packedData.valueLength, 'valueLength counts flattened fixed-list elements').toBe(1536);
+  expect(packedData.stride, 'stride counts scalar components in one logical row').toBe(768);
+  expect(packedData.rowByteLength, 'row payload spans all fixed-list elements').toBe(3072);
+  expect(packedData.byteStride, 'packed row stride defaults to the complete row payload').toBe(
+    3072
+  );
+  expect(paddedData.rowByteLength, 'padding does not change the logical row payload').toBe(3072);
+  expect(paddedData.byteStride, 'explicit padded row stride is preserved').toBe(3104);
+  expect(vectorElementData.valueLength, 'vector-valued lists count flattened vector elements').toBe(
+    2
+  );
+  expect(vectorElementData.stride, 'vector-valued rows count every scalar component').toBe(6);
+  expect(vectorElementData.rowByteLength, 'vector-valued rows span their complete payload').toBe(
+    24
+  );
+  expect(emptyData.valueLength, 'empty fixed-size lists expose no flattened values').toBe(0);
+  expect(emptyData.rowByteLength, 'empty fixed-size lists retain their complete row format').toBe(
+    1536
+  );
 
   packedData.destroy();
   paddedData.destroy();
   vectorElementData.destroy();
   emptyData.destroy();
-  t.end();
 });
 
-test('GPUData rejects malformed fixed-size-list row layouts and out-of-range views', t => {
+it('GPUData rejects malformed fixed-size-list row layouts and out-of-range views', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 28});
   const format = 'fixed-size-list<float32,3>' as const;
 
-  t.throws(
+  expect(
     () => new GPUData({buffer, format, length: 2, valueLength: 5}),
-    /valueLength must equal its flattened row elements/,
     'rejects flattened counts that do not match fixed row cardinality'
-  );
-  t.throws(
+  ).toThrow(/valueLength must equal its flattened row elements/);
+  expect(
     () => new GPUData({buffer, format, length: 1, stride: 2}),
-    /stride cannot truncate its row components/,
     'rejects scalar strides smaller than the fixed row cardinality'
-  );
-  t.throws(
+  ).toThrow(/stride cannot truncate its row components/);
+  expect(
     () => new GPUData({buffer, format, length: 1, rowByteLength: 8}),
-    /rowByteLength cannot truncate its row payload/,
     'rejects row payloads that omit fixed-list elements'
-  );
-  t.throws(
+  ).toThrow(/rowByteLength cannot truncate its row payload/);
+  expect(
     () => new GPUData({buffer, format, length: 2, byteStride: 8}),
-    /byteStride cannot overlap its row payload/,
     'rejects row strides that overlap adjacent fixed-list rows'
-  );
-  t.throws(
+  ).toThrow(/byteStride cannot overlap its row payload/);
+  expect(
     () => new GPUData({buffer, format, length: 2, byteOffset: 5}),
-    /exceeds its backing buffer byte length/,
     'rejects fixed-list ranges that run beyond the physical allocation'
-  );
-  t.throws(
+  ).toThrow(/exceeds its backing buffer byte length/);
+  expect(
     () => new GPUData({buffer, format, length: 1, byteOffset: -1}),
-    /safe non-negative integers/,
     'rejects negative row byte offsets'
-  );
-  t.throws(
+  ).toThrow(/safe non-negative integers/);
+  expect(
     () => new GPUData({buffer, format, length: 2, byteStride: Number.MAX_SAFE_INTEGER}),
-    /byte range must use safe integers/,
     'rejects final-row spans that overflow safe integer arithmetic'
-  );
-  t.throws(
+  ).toThrow(/byte range must use safe integers/);
+  expect(
     () => new GPUData({buffer, format, length: Number.MAX_SAFE_INTEGER}),
-    /safe non-negative integers/,
     'rejects flattened element counts that overflow safe integer arithmetic'
-  );
+  ).toThrow(/safe non-negative integers/);
 
   const paddedData = new GPUData({buffer, format, length: 2, byteStride: 16});
-  t.equal(paddedData.rowByteLength, 12, 'accepts padded rows without requiring final-row padding');
+  expect(paddedData.rowByteLength, 'accepts padded rows without requiring final-row padding').toBe(
+    12
+  );
 
   paddedData.destroy();
   buffer.destroy();
-  t.end();
 });
 
-test('GPUVector preserves fixed-size-list rows, padded layouts, and source chunks', t => {
+it('GPUVector preserves fixed-size-list rows, padded layouts, and source chunks', () => {
   const device = new NullDevice({});
   const packedVector = new GPUVector({
     type: 'buffer',
@@ -279,36 +292,36 @@ test('GPUVector preserves fixed-size-list rows, padded layouts, and source chunk
     ownsData: false
   });
 
-  t.equal(packedVector.length, 3, 'buffer-backed vectors retain logical rows');
-  t.equal(packedVector.valueLength, 1152, 'buffer-backed vectors count flattened elements');
-  t.equal(packedVector.stride, 384, 'buffer-backed vectors derive scalar row stride');
-  t.equal(packedVector.byteStride, 1536, 'buffer-backed vectors derive complete row bytes');
-  t.equal(paddedVector.rowByteLength, 3072, 'padded vectors retain the actual row payload');
-  t.equal(paddedVector.byteStride, 3104, 'padded vectors retain explicit physical row stride');
-  t.equal(chunkedVector.length, 3, 'chunk-backed vectors aggregate logical rows');
-  t.equal(chunkedVector.valueLength, 1152, 'chunk-backed vectors aggregate flattened elements');
-  t.equal(chunkedVector.data.length, 2, 'chunk-backed vectors preserve source chunk boundaries');
-  t.equal(
-    chunkedVector.data[0],
-    firstChunk,
-    'chunk-backed vectors borrow the original first chunk'
+  expect(packedVector.length, 'buffer-backed vectors retain logical rows').toBe(3);
+  expect(packedVector.valueLength, 'buffer-backed vectors count flattened elements').toBe(1152);
+  expect(packedVector.stride, 'buffer-backed vectors derive scalar row stride').toBe(384);
+  expect(packedVector.byteStride, 'buffer-backed vectors derive complete row bytes').toBe(1536);
+  expect(paddedVector.rowByteLength, 'padded vectors retain the actual row payload').toBe(3072);
+  expect(paddedVector.byteStride, 'padded vectors retain explicit physical row stride').toBe(3104);
+  expect(chunkedVector.length, 'chunk-backed vectors aggregate logical rows').toBe(3);
+  expect(chunkedVector.valueLength, 'chunk-backed vectors aggregate flattened elements').toBe(1152);
+  expect(chunkedVector.data.length, 'chunk-backed vectors preserve source chunk boundaries').toBe(
+    2
   );
-  t.equal(
-    chunkedVector.data[1],
-    secondChunk,
-    'chunk-backed vectors borrow the original second chunk'
+  expect(chunkedVector.data[0], 'chunk-backed vectors borrow the original first chunk').toBe(
+    firstChunk
+  );
+  expect(chunkedVector.data[1], 'chunk-backed vectors borrow the original second chunk').toBe(
+    secondChunk
   );
 
   chunkedVector.destroy();
-  t.notOk(firstChunk.buffer.destroyed, 'borrowed chunk ownership remains with the original owner');
+  expect(
+    Boolean(firstChunk.buffer.destroyed),
+    'borrowed chunk ownership remains with the original owner'
+  ).toBe(false);
   packedVector.destroy();
   paddedVector.destroy();
   firstChunk.destroy();
   secondChunk.destroy();
-  t.end();
 });
 
-test('Appendable GPUVector preserves fixed-size-list rows without implicit packing', t => {
+it('Appendable GPUVector preserves fixed-size-list rows without implicit packing', () => {
   const device = new NullDevice({});
   const embeddings = new GPUVector({
     type: 'appendable',
@@ -332,18 +345,25 @@ test('Appendable GPUVector preserves fixed-size-list rows without implicit packi
   embeddings.appendDataChunk(firstChunk);
   embeddings.appendDataChunk(secondChunk);
 
-  t.equal(embeddings.length, 3, 'appendable fixed-size lists count logical rows');
-  t.equal(embeddings.valueLength, 1152, 'appendable fixed-size lists count flattened elements');
-  t.equal(embeddings.byteStride, 1536, 'appendable fixed-size lists retain full-row byte stride');
-  t.equal(embeddings.data.length, 2, 'appending preserves separately owned source chunks');
+  expect(embeddings.length, 'appendable fixed-size lists count logical rows').toBe(3);
+  expect(embeddings.valueLength, 'appendable fixed-size lists count flattened elements').toBe(1152);
+  expect(embeddings.byteStride, 'appendable fixed-size lists retain full-row byte stride').toBe(
+    1536
+  );
+  expect(embeddings.data.length, 'appending preserves separately owned source chunks').toBe(2);
 
   embeddings.destroy();
-  t.ok(firstChunk.buffer.destroyed, 'appendable vector destroys the first owned chunk');
-  t.ok(secondChunk.buffer.destroyed, 'appendable vector destroys the second owned chunk');
-  t.end();
+  expect(
+    Boolean(firstChunk.buffer.destroyed),
+    'appendable vector destroys the first owned chunk'
+  ).toBe(true);
+  expect(
+    Boolean(secondChunk.buffer.destroyed),
+    'appendable vector destroys the second owned chunk'
+  ).toBe(true);
 });
 
-test('GPUVector accepts format as canonical metadata and synthesizes table layouts', t => {
+it('GPUVector accepts format as canonical metadata and synthesizes table layouts', () => {
   const device = new NullDevice({});
   const colors = new GPUVector({
     type: 'buffer',
@@ -357,15 +377,14 @@ test('GPUVector accepts format as canonical metadata and synthesizes table layou
   });
   const table = new GPUTable({vectors: {colors}});
 
-  t.equal(colors.format, 'unorm8x4', 'stores the canonical GPUVector format');
-  t.notOk('type' in colors, 'drops the deprecated type alias');
-  t.equal(table.bufferLayout[0].format, 'unorm8x4', 'table layout uses GPUVector.format');
+  expect(colors.format, 'stores the canonical GPUVector format').toBe('unorm8x4');
+  expect(Boolean('type' in colors), 'drops the deprecated type alias').toBe(false);
+  expect(table.bufferLayout[0].format, 'table layout uses GPUVector.format').toBe('unorm8x4');
 
   table.destroy();
-  t.end();
 });
 
-test('GPU tables preserve explicit fixed-size-list attribute expansion', t => {
+it('GPU tables preserve explicit fixed-size-list attribute expansion', () => {
   const device = new NullDevice({});
   const embeddings = new GPUVector({
     type: 'interleaved',
@@ -382,20 +401,21 @@ test('GPU tables preserve explicit fixed-size-list attribute expansion', t => {
   });
   const table = new GPUTable({vectors: {embeddings}});
 
-  t.equal(embeddings.valueLength, 8, 'explicitly expanded columns retain flattened element counts');
-  t.equal(embeddings.stride, 4, 'explicitly expanded columns retain scalar row cardinality');
-  t.equal(table.bufferLayout.length, 1, 'retains the caller-owned explicit attribute layout');
-  t.deepEqual(
+  expect(
+    embeddings.valueLength,
+    'explicitly expanded columns retain flattened element counts'
+  ).toBe(8);
+  expect(embeddings.stride, 'explicitly expanded columns retain scalar row cardinality').toBe(4);
+  expect(table.bufferLayout.length, 'retains the caller-owned explicit attribute layout').toBe(1);
+  expect(
     table.bufferLayout[0].attributes?.map(attribute => attribute.attribute),
-    ['embeddingPart0', 'embeddingPart1'],
     'does not replace an adapter-provided attribute expansion'
-  );
+  ).toEqual(['embeddingPart0', 'embeddingPart1']);
 
   table.destroy();
-  t.end();
 });
 
-test('GPU tables retain fixed-size-list storage columns without synthetic vertex attributes', t => {
+it('GPU tables retain fixed-size-list storage columns without synthetic vertex attributes', () => {
   const device = new NullDevice({});
   const embeddings = new GPUVector({
     type: 'buffer',
@@ -415,29 +435,27 @@ test('GPU tables retain fixed-size-list storage columns without synthetic vertex
   });
   const table = new GPUTable({vectors: {embeddings, identifiers}});
 
-  t.equal(table.numRows, 2, 'fixed-size-list vector lengths remain table row counts');
-  t.equal(table.gpuVectors.embeddings.valueLength, 3072, 'table retains flattened element counts');
-  t.equal(
+  expect(table.numRows, 'fixed-size-list vector lengths remain table row counts').toBe(2);
+  expect(table.gpuVectors.embeddings.valueLength, 'table retains flattened element counts').toBe(
+    3072
+  );
+  expect(
     table.schema.fields.find(field => field.name === 'embeddings')?.format,
-    'fixed-size-list<float32,1536>',
     'schema retains the complete fixed-size-list memory format'
-  );
-  t.deepEqual(
+  ).toBe('fixed-size-list<float32,1536>');
+  expect(
     table.bufferLayout.map(layout => layout.name),
-    ['identifiers'],
     'only vertex-compatible columns receive synthesized buffer layouts'
-  );
-  t.equal(
+  ).toEqual(['identifiers']);
+  expect(
     table.batches[0].gpuData.embeddings.format,
-    'fixed-size-list<float32,1536>',
     'record batches retain row-aligned storage columns'
-  );
+  ).toBe('fixed-size-list<float32,1536>');
 
   table.destroy();
-  t.end();
 });
 
-test('GPU tables preserve fixed-size-list batches until explicitly packed', t => {
+it('GPU tables preserve fixed-size-list batches until explicitly packed', () => {
   const device = new NullDevice({});
   const firstBatch = new GPURecordBatch({
     gpuData: {
@@ -461,40 +479,38 @@ test('GPU tables preserve fixed-size-list batches until explicitly packed', t =>
   });
   const table = new GPUTable({batches: [firstBatch, secondBatch]});
 
-  t.equal(table.batches.length, 2, 'table construction preserves source batch boundaries');
-  t.equal(table.numRows, 3, 'preserved batches contribute logical rows');
-  t.equal(
-    table.gpuVectors.embeddings.valueLength,
-    1152,
-    'aggregate vector tracks flattened values'
+  expect(table.batches.length, 'table construction preserves source batch boundaries').toBe(2);
+  expect(table.numRows, 'preserved batches contribute logical rows').toBe(3);
+  expect(table.gpuVectors.embeddings.valueLength, 'aggregate vector tracks flattened values').toBe(
+    1152
   );
-  t.equal(table.gpuVectors.embeddings.data.length, 2, 'aggregate vector borrows both batch chunks');
+  expect(
+    table.gpuVectors.embeddings.data.length,
+    'aggregate vector borrows both batch chunks'
+  ).toBe(2);
 
   table.packBatches();
 
-  t.equal(
+  expect(
     table.batches.length,
-    1,
     'only explicit packing combines adjacent fixed-size-list batches'
+  ).toBe(1);
+  expect(table.numRows, 'explicit packing preserves logical rows').toBe(3);
+  expect(table.gpuVectors.embeddings.valueLength, 'explicit packing preserves list elements').toBe(
+    1152
   );
-  t.equal(table.numRows, 3, 'explicit packing preserves logical rows');
-  t.equal(
-    table.gpuVectors.embeddings.valueLength,
-    1152,
-    'explicit packing preserves list elements'
+  expect(table.gpuVectors.embeddings.data.length, 'explicit packing creates one owned chunk').toBe(
+    1
   );
-  t.equal(table.gpuVectors.embeddings.data.length, 1, 'explicit packing creates one owned chunk');
-  t.equal(
+  expect(
     table.batches[0].gpuData.embeddings.byteStride,
-    1536,
     'explicit packing preserves complete fixed-size-list row stride'
-  );
+  ).toBe(1536);
 
   table.destroy();
-  t.end();
 });
 
-test('GPU tables reject packing incompatible fixed-size-list physical row layouts', t => {
+it('GPU tables reject packing incompatible fixed-size-list physical row layouts', () => {
   const device = new NullDevice({});
   const incompatibleLayouts = [
     [
@@ -525,25 +541,22 @@ test('GPU tables reject packing incompatible fixed-size-list physical row layout
     );
     const table = new GPUTable({batches});
 
-    t.deepEqual(table.bufferLayout, [], 'storage-only list layouts remain intentionally empty');
-    t.throws(
+    expect(table.bufferLayout, 'storage-only list layouts remain intentionally empty').toEqual([]);
+    expect(
       () => table.packBatches(),
-      /matching fixed-size-list row layouts.*embeddings/,
       'rejects incompatible physical row layouts before copying source buffers'
-    );
-    t.equal(table.batches.length, 2, 'rejected packing preserves every original batch');
-    t.notOk(
-      batches.some(batch => batch.gpuData.embeddings.buffer.destroyed),
+    ).toThrow(/matching fixed-size-list row layouts.*embeddings/);
+    expect(table.batches.length, 'rejected packing preserves every original batch').toBe(2);
+    expect(
+      Boolean(batches.some(batch => batch.gpuData.embeddings.buffer.destroyed)),
       'failed packing leaves caller-owned source buffers intact'
-    );
+    ).toBe(false);
 
     table.destroy();
   }
-
-  t.end();
 });
 
-test('GPU tables preserve variable-length packing errors before validating adapter metadata', t => {
+it('GPU tables preserve variable-length packing errors before validating adapter metadata', () => {
   const device = new NullDevice({});
   const batches = [0, 1].map(
     () =>
@@ -565,18 +578,16 @@ test('GPU tables preserve variable-length packing errors before validating adapt
   );
   const table = new GPUTable({batches});
 
-  t.throws(
+  expect(
     () => table.packBatches(),
-    /does not support variable-length GPUData "texts"/,
     'retains the existing variable-length rejection before inspecting adapter metadata'
-  );
-  t.equal(table.batches.length, 2, 'failed packing leaves both source batches unchanged');
+  ).toThrow(/does not support variable-length GPUData "texts"/);
+  expect(table.batches.length, 'failed packing leaves both source batches unchanged').toBe(2);
 
   table.destroy();
-  t.end();
 });
 
-test('GPU tables reject packing nullable fixed-size-list rows and scalar source identifiers', t => {
+it('GPU tables reject packing nullable fixed-size-list rows and scalar source identifiers', () => {
   const device = new NullDevice({});
   const firstEmbeddings = new GPUData({
     buffer: device.createBuffer({byteLength: 12}),
@@ -598,17 +609,15 @@ test('GPU tables reject packing nullable fixed-size-list rows and scalar source 
     ]
   });
 
-  t.throws(
+  expect(
     () => nullableEmbeddings.packBatches(),
-    /cannot preserve null or readback metadata.*embeddings/,
     'does not silently erase nullable fixed-size-list row eligibility'
-  );
-  t.equal(nullableEmbeddings.batches.length, 2, 'failed packing preserves every source batch');
-  t.deepEqual(
+  ).toThrow(/cannot preserve null or readback metadata.*embeddings/);
+  expect(nullableEmbeddings.batches.length, 'failed packing preserves every source batch').toBe(2);
+  expect(
     Array.from(nullableEmbeddings.batches[0].gpuData.embeddings.nullBitmap ?? []),
-    [0],
     'failed packing retains normalized fixed-size-list validity metadata'
-  );
+  ).toEqual([0]);
 
   const firstSourceIdentifiers = new GPUData({
     buffer: device.createBuffer({byteLength: 4}),
@@ -631,28 +640,24 @@ test('GPU tables reject packing nullable fixed-size-list rows and scalar source 
     ]
   });
 
-  t.throws(
+  expect(
     () => nullableIdentifiers.packBatches(),
-    /cannot preserve null or readback metadata.*sourceIdentifiers/,
     'does not turn null stable source identifiers into valid physical zero values'
-  );
-  t.equal(
+  ).toThrow(/cannot preserve null or readback metadata.*sourceIdentifiers/);
+  expect(
     nullableIdentifiers.batches.length,
-    2,
     'failed identifier packing preserves both batches'
-  );
-  t.equal(
+  ).toBe(2);
+  expect(
     nullableIdentifiers.batches[0].gpuData.sourceIdentifiers.readbackMetadata?.adapter,
-    'numeric-validity',
     'failed packing retains adapter-owned numeric readback metadata'
-  );
+  ).toBe('numeric-validity');
 
   nullableEmbeddings.destroy();
   nullableIdentifiers.destroy();
-  t.end();
 });
 
-test('GPU tables reject packing adapter readback metadata even without a row bitmap', t => {
+it('GPU tables reject packing adapter readback metadata even without a row bitmap', () => {
   const device = new NullDevice({});
   const firstData = new GPUData({
     buffer: device.createBuffer({byteLength: 4}),
@@ -674,18 +679,16 @@ test('GPU tables reject packing adapter readback metadata even without a row bit
     ]
   });
 
-  t.throws(
+  expect(
     () => table.packBatches(),
-    /cannot preserve null or readback metadata.*values/,
     'generic tables never silently discard adapter-owned reconstruction metadata'
-  );
-  t.equal(table.batches.length, 2, 'metadata rejection occurs before any batch is replaced');
+  ).toThrow(/cannot preserve null or readback metadata.*values/);
+  expect(table.batches.length, 'metadata rejection occurs before any batch is replaced').toBe(2);
 
   table.destroy();
-  t.end();
 });
 
-test('GPURecordBatch synthesizes fixed-size-list schemas without vertex layouts', t => {
+it('GPURecordBatch synthesizes fixed-size-list schemas without vertex layouts', () => {
   const device = new NullDevice({});
   const embeddings = new GPUData({
     buffer: device.createBuffer({byteLength: 2 * 768 * Float32Array.BYTES_PER_ELEMENT}),
@@ -696,18 +699,19 @@ test('GPURecordBatch synthesizes fixed-size-list schemas without vertex layouts'
   const batch = new GPURecordBatch({gpuData: {embeddings}});
   const table = new GPUTable({batches: [batch]});
 
-  t.equal(batch.numRows, 2, 'record batches infer logical fixed-size-list rows');
-  t.equal(batch.gpuData.embeddings.valueLength, 1536, 'record batches retain flattened values');
-  t.equal(batch.schema.fields[0].format, 'fixed-size-list<float32,768>', 'schema keeps row shape');
-  t.deepEqual(batch.bufferLayout, [], 'storage-only batches have no synthetic vertex layouts');
-  t.deepEqual(table.bufferLayout, [], 'storage-only tables have no synthetic vertex layouts');
-  t.equal(table.gpuVectors.embeddings.length, 2, 'aggregate vectors retain logical rows');
+  expect(batch.numRows, 'record batches infer logical fixed-size-list rows').toBe(2);
+  expect(batch.gpuData.embeddings.valueLength, 'record batches retain flattened values').toBe(1536);
+  expect(batch.schema.fields[0].format, 'schema keeps row shape').toBe(
+    'fixed-size-list<float32,768>'
+  );
+  expect(batch.bufferLayout, 'storage-only batches have no synthetic vertex layouts').toEqual([]);
+  expect(table.bufferLayout, 'storage-only tables have no synthetic vertex layouts').toEqual([]);
+  expect(table.gpuVectors.embeddings.length, 'aggregate vectors retain logical rows').toBe(2);
 
   table.destroy();
-  t.end();
 });
 
-test('GPUTable rejects vertex-list vectors without adapter-specific layout handling', t => {
+it('GPUTable rejects vertex-list vectors without adapter-specific layout handling', () => {
   const device = new NullDevice({});
   const colors = new GPUVector({
     type: 'buffer',
@@ -720,17 +724,15 @@ test('GPUTable rejects vertex-list vectors without adapter-specific layout handl
     ownsBuffer: true
   });
 
-  t.throws(
+  expect(
     () => new GPUTable({vectors: {colors}}),
-    /cannot synthesize a generic buffer layout for vertex-list vector/,
     'generic table layout synthesis rejects vertex lists'
-  );
+  ).toThrow(/cannot synthesize a generic buffer layout for vertex-list vector/);
 
   colors.destroy();
-  t.end();
 });
 
-test('GPUVector rejects explicitly mismatched chunk formats', t => {
+it('GPUVector rejects explicitly mismatched chunk formats', () => {
   const device = new NullDevice({});
   const firstBuffer = device.createBuffer({byteLength: 4});
   const secondBuffer = device.createBuffer({byteLength: 4});
@@ -753,8 +755,8 @@ test('GPUVector rejects explicitly mismatched chunk formats', t => {
     ownsData: false
   });
 
-  t.equal(firstData.buffer, firstBuffer, 'GPUData accepts the same Buffer input as GPUVector');
-  t.throws(
+  expect(firstData.buffer, 'GPUData accepts the same Buffer input as GPUVector').toBe(firstBuffer);
+  expect(
     () =>
       new GPUVector({
         type: 'data',
@@ -762,21 +764,17 @@ test('GPUVector rejects explicitly mismatched chunk formats', t => {
         data: [firstData, secondData],
         ownsData: false
       }),
-    /data chunks must share the declared format/,
     'constructor rejects mixed explicit formats'
-  );
-  t.throws(
-    () => colors.addData(secondData),
-    /requires matching formats/,
-    'addData rejects mixed explicit formats'
+  ).toThrow(/data chunks must share the declared format/);
+  expect(() => colors.addData(secondData), 'addData rejects mixed explicit formats').toThrow(
+    /requires matching formats/
   );
 
   firstBuffer.destroy();
   secondBuffer.destroy();
-  t.end();
 });
 
-test('GPUVector honors borrowed GPUData chunk ownership', t => {
+it('GPUVector honors borrowed GPUData chunk ownership', () => {
   const device = new NullDevice({});
   const borrowedBuffer = device.createBuffer({byteLength: 4});
   const borrowedData = new GPUData({
@@ -795,11 +793,20 @@ test('GPUVector honors borrowed GPUData chunk ownership', t => {
 
   borrowedVector.destroy();
 
-  t.notOk(borrowedVector.ownsBuffer, 'borrowed data vectors do not report retained GPU ownership');
-  t.notOk(borrowedBuffer.destroyed, 'borrowed data vector destroy leaves the buffer alive');
+  expect(
+    Boolean(borrowedVector.ownsBuffer),
+    'borrowed data vectors do not report retained GPU ownership'
+  ).toBe(false);
+  expect(
+    Boolean(borrowedBuffer.destroyed),
+    'borrowed data vector destroy leaves the buffer alive'
+  ).toBe(false);
 
   borrowedData.destroy();
-  t.ok(borrowedBuffer.destroyed, 'original GPUData owner can still destroy the buffer');
+  expect(
+    Boolean(borrowedBuffer.destroyed),
+    'original GPUData owner can still destroy the buffer'
+  ).toBe(true);
 
   const ownedBuffer = device.createBuffer({byteLength: 4});
   const ownedData = new GPUData({
@@ -818,11 +825,12 @@ test('GPUVector honors borrowed GPUData chunk ownership', t => {
 
   ownedVector.destroy();
 
-  t.ok(ownedBuffer.destroyed, 'owned data vector destroy releases the buffer');
-  t.end();
+  expect(Boolean(ownedBuffer.destroyed), 'owned data vector destroy releases the buffer').toBe(
+    true
+  );
 });
 
-test('GPUVector table helpers expose single-chunk vectors and required columns', t => {
+it('GPUVector table helpers expose single-chunk vectors and required columns', () => {
   const device = new NullDevice({});
   const firstData = new GPUData({
     buffer: device.createBuffer({byteLength: 8}),
@@ -855,33 +863,30 @@ test('GPUVector table helpers expose single-chunk vectors and required columns',
     batches: [batch]
   });
 
-  t.equal(
-    getRequiredGPUVector(table, 'positions'),
-    table.gpuVectors.positions,
-    'finds the table aggregate vector by name'
+  expect(getRequiredGPUVector(table, 'positions'), 'finds the table aggregate vector by name').toBe(
+    table.gpuVectors.positions
   );
-  t.equal(batch.gpuData.positions, firstData, 'record batch retains one GPUData per column');
-  t.equal(getGPUVectorData(positions), firstData, 'returns the single retained GPUData chunk');
-  t.equal(getGPUVectorBuffer(positions), firstData.buffer, 'returns the single retained buffer');
-  t.throws(
+  expect(batch.gpuData.positions, 'record batch retains one GPUData per column').toBe(firstData);
+  expect(getGPUVectorData(positions), 'returns the single retained GPUData chunk').toBe(firstData);
+  expect(getGPUVectorBuffer(positions), 'returns the single retained buffer').toBe(
+    firstData.buffer
+  );
+  expect(
     () => getRequiredGPUVector(table, 'missing', 'test table'),
-    /test table is missing GPU vector "missing"/,
     'reports missing required columns with owner context'
-  );
-  t.throws(
+  ).toThrow(/test table is missing GPU vector "missing"/);
+  expect(
     () => getGPUVectorData(chunkedPositions),
-    /GPUVector "chunkedPositions" requires exactly one GPUData chunk/,
     'single-chunk helpers reject aggregate vectors'
-  );
+  ).toThrow(/GPUVector "chunkedPositions" requires exactly one GPUData chunk/);
 
   table.destroy();
   chunkedPositions.destroy();
   firstData.destroy();
   secondData.destroy();
-  t.end();
 });
 
-test('GPURecordBatch owns one row-aligned GPUData chunk per column', t => {
+it('GPURecordBatch owns one row-aligned GPUData chunk per column', () => {
   const device = new NullDevice({});
   const positionsBuffer = device.createBuffer({byteLength: 16});
   const colorsBuffer = device.createBuffer({byteLength: 8});
@@ -909,14 +914,13 @@ test('GPURecordBatch owns one row-aligned GPUData chunk per column', t => {
   });
   const batch = new GPURecordBatch({gpuData: {positions, colors}});
 
-  t.equal(batch.numRows, 2, 'derives rows from GPUData length');
-  t.deepEqual(
+  expect(batch.numRows, 'derives rows from GPUData length').toBe(2);
+  expect(
     batch.schema.fields.map(field => field.name),
-    ['positions', 'colors'],
     'synthesizes fields from keyed GPUData'
-  );
-  t.equal(batch.gpuData.positions, positions, 'retains the keyed data chunk');
-  t.throws(
+  ).toEqual(['positions', 'colors']);
+  expect(batch.gpuData.positions, 'retains the keyed data chunk').toBe(positions);
+  expect(
     () =>
       new GPURecordBatch({
         gpuData: {
@@ -924,18 +928,16 @@ test('GPURecordBatch owns one row-aligned GPUData chunk per column', t => {
           colors: mismatchedColors
         }
       }),
-    /matching GPUData row counts/,
     'rejects mismatched column lengths'
-  );
+  ).toThrow(/matching GPUData row counts/);
 
   batch.destroy();
   mismatchedColors.destroy();
-  t.ok(positionsBuffer.destroyed, 'destroys owned position data');
-  t.ok(colorsBuffer.destroyed, 'destroys owned color data');
-  t.end();
+  expect(Boolean(positionsBuffer.destroyed), 'destroys owned position data').toBe(true);
+  expect(Boolean(colorsBuffer.destroyed), 'destroys owned color data').toBe(true);
 });
 
-test('GPURecordBatch accepts explicit layouts for format-less interleaved GPUData', t => {
+it('GPURecordBatch accepts explicit layouts for format-less interleaved GPUData', () => {
   const device = new NullDevice({});
   const data = new GPUData({
     buffer: device.createBuffer({byteLength: 32}),
@@ -960,16 +962,15 @@ test('GPURecordBatch accepts explicit layouts for format-less interleaved GPUDat
   });
   const emptyBatch = new GPURecordBatch({gpuData: {}, numRows: 0});
 
-  t.equal(batch.numRows, 2, 'derives interleaved row count from GPUData');
-  t.equal(batch.schema.fields[0].format, undefined, 'keeps format-less interleaved field');
-  t.equal(emptyBatch.numRows, 0, 'accepts explicit empty batches');
+  expect(batch.numRows, 'derives interleaved row count from GPUData').toBe(2);
+  expect(batch.schema.fields[0].format, 'keeps format-less interleaved field').toBe(undefined);
+  expect(emptyBatch.numRows, 'accepts explicit empty batches').toBe(0);
 
   batch.destroy();
   emptyBatch.destroy();
-  t.end();
 });
 
-test('GPUTable keeps storage in GPU vectors instead of cached bindings', t => {
+it('GPUTable keeps storage in GPU vectors instead of cached bindings', () => {
   const device = new NullDevice({});
   const positions = new GPUVector({
     type: 'buffer',
@@ -992,10 +993,11 @@ test('GPUTable keeps storage in GPU vectors instead of cached bindings', t => {
   });
   const table = new GPUTable({vectors: {positions, weights}});
 
-  t.notOk('bindings' in table, 'does not cache bindings on the table');
-  t.notOk('bindings' in table.batches[0], 'does not cache bindings on the batch');
-  t.equal(table.gpuVectors.weights.data[0].buffer, weightsBuffer, 'keeps storage on GPUData');
+  expect(Boolean('bindings' in table), 'does not cache bindings on the table').toBe(false);
+  expect(Boolean('bindings' in table.batches[0]), 'does not cache bindings on the batch').toBe(
+    false
+  );
+  expect(table.gpuVectors.weights.data[0].buffer, 'keeps storage on GPUData').toBe(weightsBuffer);
 
   table.destroy();
-  t.end();
 });

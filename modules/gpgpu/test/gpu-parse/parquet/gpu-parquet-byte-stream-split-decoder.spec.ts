@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUParquetByteStreamSplitDecoder} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetByteStreamSplitDecoder restores fixed-width physical bytes', async testCase => {
+it('GPUParquetByteStreamSplitDecoder restores fixed-width physical bytes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -28,13 +26,11 @@ test('GPUParquetByteStreamSplitDecoder restores fixed-width physical bytes', asy
       fixture.valueCount,
       fixture.byteWidth
     );
-    testCase.deepEqual(
+    expect(
       Array.from(decoded),
-      Array.from(fixture.decoded),
       `${fixture.valueCount} values with byte width ${fixture.byteWidth}`
-    );
+    ).toEqual(Array.from(fixture.decoded));
   }
-  testCase.end();
 });
 
 type ByteStreamSplitFixture = {

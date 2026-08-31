@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,18 +10,15 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const ENCODED = Uint8Array.from([
   128, 1, 4, 3, 6, 3, 3, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 97, 116, 100, 111, 103,
   115, 101
 ]);
 
-test('GPUParquetDeltaLengthByteArrayDecoder produces lengths and offsets', async testCase => {
+it('GPUParquetDeltaLengthByteArrayDecoder produces lengths and offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const plan = parseParquetDeltaLengthByteArrayPlan(ENCODED);
@@ -79,14 +77,12 @@ test('GPUParquetDeltaLengthByteArrayDecoder produces lengths and offsets', async
     device.submit(commandEncoder.finish());
     const lengths = await lengthsBuffer.readAsync();
     const offsets = await offsetsBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint32Array(lengths.buffer, lengths.byteOffset, plan.lengthPlan.valueCount)),
-      [3, 1, 4]
-    );
-    testCase.deepEqual(
-      Array.from(new Uint32Array(offsets.buffer, offsets.byteOffset, plan.lengthPlan.valueCount)),
-      [0, 3, 4]
-    );
+    expect(
+      Array.from(new Uint32Array(lengths.buffer, lengths.byteOffset, plan.lengthPlan.valueCount))
+    ).toEqual([3, 1, 4]);
+    expect(
+      Array.from(new Uint32Array(offsets.buffer, offsets.byteOffset, plan.lengthPlan.valueCount))
+    ).toEqual([0, 3, 4]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
@@ -94,5 +90,4 @@ test('GPUParquetDeltaLengthByteArrayDecoder produces lengths and offsets', async
     lengthsBuffer.destroy();
     offsetsBuffer.destroy();
   }
-  testCase.end();
 });

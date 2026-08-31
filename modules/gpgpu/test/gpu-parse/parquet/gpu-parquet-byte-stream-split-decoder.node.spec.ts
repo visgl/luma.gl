@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -10,11 +11,10 @@ import {
   makeGPUParquetByteStreamSplitStats
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 
-test('makeGPUParquetByteStreamSplitStats publishes byte and dispatch bounds', testCase => {
-  testCase.deepEqual(makeGPUParquetByteStreamSplitStats(257, 8), {
+it('makeGPUParquetByteStreamSplitStats publishes byte and dispatch bounds', () => {
+  expect(makeGPUParquetByteStreamSplitStats(257, 8)).toEqual({
     valueCount: 257,
     byteWidth: 8,
     byteLength: 2056,
@@ -22,7 +22,7 @@ test('makeGPUParquetByteStreamSplitStats publishes byte and dispatch bounds', te
     workgroupCount: 3,
     workgroupSize: 256
   });
-  testCase.deepEqual(makeGPUParquetByteStreamSplitStats(5, 3), {
+  expect(makeGPUParquetByteStreamSplitStats(5, 3)).toEqual({
     valueCount: 5,
     byteWidth: 3,
     byteLength: 15,
@@ -30,7 +30,7 @@ test('makeGPUParquetByteStreamSplitStats publishes byte and dispatch bounds', te
     workgroupCount: 1,
     workgroupSize: 256
   });
-  testCase.deepEqual(makeGPUParquetByteStreamSplitStats(0, 8), {
+  expect(makeGPUParquetByteStreamSplitStats(0, 8)).toEqual({
     valueCount: 0,
     byteWidth: 8,
     byteLength: 0,
@@ -38,15 +38,14 @@ test('makeGPUParquetByteStreamSplitStats publishes byte and dispatch bounds', te
     workgroupCount: 0,
     workgroupSize: 256
   });
-  testCase.ok(Object.isFrozen(makeGPUParquetByteStreamSplitStats(1, 4)));
-  testCase.equal(GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE, 256);
-  testCase.throws(() => makeGPUParquetByteStreamSplitStats(-1, 4), /valueCount.*non-negative/);
-  testCase.throws(() => makeGPUParquetByteStreamSplitStats(1, 0), /byteWidth.*positive/);
-  testCase.throws(() => makeGPUParquetByteStreamSplitStats(0x40000000, 4), /byte length.*uint32/);
-  testCase.end();
+  expect(Boolean(Object.isFrozen(makeGPUParquetByteStreamSplitStats(1, 4)))).toBe(true);
+  expect(GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE).toBe(256);
+  expect(() => makeGPUParquetByteStreamSplitStats(-1, 4)).toThrow(/valueCount.*non-negative/);
+  expect(() => makeGPUParquetByteStreamSplitStats(1, 0)).toThrow(/byteWidth.*positive/);
+  expect(() => makeGPUParquetByteStreamSplitStats(0x40000000, 4)).toThrow(/byte length.*uint32/);
 });
 
-test('GPUParquetByteStreamSplitDecoder validates graph views and ownership', testCase => {
+it('GPUParquetByteStreamSplitDecoder validates graph views and ownership', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -66,45 +65,42 @@ test('GPUParquetByteStreamSplitDecoder validates graph views and ownership', tes
     valueCount: 7,
     byteWidth: 8
   });
-  testCase.doesNotThrow(() => decoder.addToGraph(graph));
+  expect(() => decoder.addToGraph(graph)).not.toThrow();
 
   const shortInput = graph.createDataView(inputHandle, {format: 'uint32', length: 13});
-  testCase.throws(
+  expect(
     () =>
       new GPUParquetByteStreamSplitDecoder({
         input: shortInput,
         output,
         valueCount: 7,
         byteWidth: 8
-      }),
-    /input is shorter/
-  );
+      })
+  ).toThrow(/input is shorter/);
   const stridedOutput = graph.createDataView(outputHandle, {
     format: 'uint32',
     length: 16,
     byteStride: 8
   });
-  testCase.throws(
+  expect(
     () =>
       new GPUParquetByteStreamSplitDecoder({
         input,
         output: stridedOutput,
         valueCount: 7,
         byteWidth: 8
-      }),
-    /must be packed/
-  );
+      })
+  ).toThrow(/must be packed/);
   const aliasedOutput = graph.createDataView(inputHandle, {format: 'uint32', length: 16});
-  testCase.throws(
+  expect(
     () =>
       new GPUParquetByteStreamSplitDecoder({
         input,
         output: aliasedOutput,
         valueCount: 7,
         byteWidth: 8
-      }),
-    /separate buffers/
-  );
+      })
+  ).toThrow(/separate buffers/);
 
   const otherGraph = new GPUCommandGraph(makeSupportDevice());
   const otherOutputHandle = otherGraph.importBuffer({
@@ -122,11 +118,10 @@ test('GPUParquetByteStreamSplitDecoder validates graph views and ownership', tes
     valueCount: 7,
     byteWidth: 8
   });
-  testCase.throws(() => crossGraphDecoder.addToGraph(graph), /different GPUCommandGraph/);
-  testCase.end();
+  expect(() => crossGraphDecoder.addToGraph(graph)).toThrow(/different GPUCommandGraph/);
 });
 
-test('GPUParquetByteStreamSplitDecoder emits a byte-addressed bounded shader', testCase => {
+it('GPUParquetByteStreamSplitDecoder emits a byte-addressed bounded shader', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -149,15 +144,11 @@ test('GPUParquetByteStreamSplitDecoder emits a byte-addressed bounded shader', t
   const source = getGPUParquetByteStreamSplitShaderSource(decoder, {x: 1, y: 1, z: 1});
   const reflection = new WgslReflect(source);
 
-  testCase.deepEqual(
-    reflection.entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /encodedByteIndex = byteIndexWithinValue \* VALUE_COUNT \+ valueIndex/);
-  testCase.match(source, /readEncodedByte\(encodedByteIndex\) << \(byteLane \* 8u\)/);
-  testCase.match(source, /outputWordIndex >= WORD_COUNT/);
-  testCase.match(source, /workgroupId\.z/);
-  testCase.end();
+  expect(reflection.entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/encodedByteIndex = byteIndexWithinValue \* VALUE_COUNT \+ valueIndex/);
+  expect(source).toMatch(/readEncodedByte\(encodedByteIndex\) << \(byteLane \* 8u\)/);
+  expect(source).toMatch(/outputWordIndex >= WORD_COUNT/);
+  expect(source).toMatch(/workgroupId\.z/);
 });
 
 function makeSupportDevice(): Device {

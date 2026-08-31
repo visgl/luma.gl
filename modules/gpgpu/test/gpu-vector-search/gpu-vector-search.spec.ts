@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -17,7 +18,6 @@ import {
 import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
-import test, {type Test} from 'test/utils/vitest-tape';
 import {
   importGPUEmbeddingTable,
   importGPUEmbeddingVector
@@ -89,7 +89,7 @@ type SearchExecution = {
 
 let fixtureSequence = 0;
 
-test('GPUSimilaritySearch CPU oracle independently defines metrics, zero vectors, and tie ordering', t => {
+it('GPUSimilaritySearch CPU oracle independently defines metrics, zero vectors, and tie ordering', () => {
   const fixture: SimilaritySearchFixture = {
     dimensions: 2,
     dataset: [
@@ -118,49 +118,40 @@ test('GPUSimilaritySearch CPU oracle independently defines metrics, zero vectors
   const queries = getCPUFixtureRows(fixture.queries, fixture.dimensions);
 
   const euclidean = getIndependentCPUSimilarityResults(fixture, dataset, queries);
-  t.deepEqual(
-    euclidean.sourceRowIds.slice(0, 4),
-    [3, 9, 2, 4],
-    'distance ties use stable source IDs'
-  );
-  t.deepEqual(euclidean.scores.slice(0, 4), [0, 0, 1, 4], 'squared Euclidean distances are exact');
+  expect(euclidean.sourceRowIds.slice(0, 4), 'distance ties use stable source IDs').toEqual([
+    3, 9, 2, 4
+  ]);
+  expect(euclidean.scores.slice(0, 4), 'squared Euclidean distances are exact').toEqual([
+    0, 0, 1, 4
+  ]);
 
   const innerProduct = getIndependentCPUSimilarityResults(
     {...fixture, metric: 'inner-product'},
     dataset,
     queries
   );
-  t.deepEqual(
-    innerProduct.sourceRowIds.slice(0, 4),
-    [3, 9, 2, 4],
-    'inner products sort descending'
-  );
-  t.deepEqual(
-    innerProduct.scores.slice(0, 4),
-    [1, 1, 0, -1],
-    'inner-product values are independent'
-  );
+  expect(innerProduct.sourceRowIds.slice(0, 4), 'inner products sort descending').toEqual([
+    3, 9, 2, 4
+  ]);
+  expect(innerProduct.scores.slice(0, 4), 'inner-product values are independent').toEqual([
+    1, 1, 0, -1
+  ]);
 
   const cosine = getIndependentCPUSimilarityResults(
     {...fixture, metric: 'cosine'},
     dataset,
     queries
   );
-  t.deepEqual(
-    cosine.sourceRowIds.slice(4, 8),
-    [2, 3, 4, 9],
-    'zero-query cosine ties remain stable'
-  );
-  t.deepEqual(
-    cosine.scores.slice(4, 8),
-    [1, 0, 0, 0],
-    'two zero vectors have unit cosine similarity'
-  );
-  t.deepEqual(cosine.candidateCounts, [4, 4], 'candidate counts remain independent from top-K');
-  t.end();
+  expect(cosine.sourceRowIds.slice(4, 8), 'zero-query cosine ties remain stable').toEqual([
+    2, 3, 4, 9
+  ]);
+  expect(cosine.scores.slice(4, 8), 'two zero vectors have unit cosine similarity').toEqual([
+    1, 0, 0, 0
+  ]);
+  expect(cosine.candidateCounts, 'candidate counts remain independent from top-K').toEqual([4, 4]);
 });
 
-test('GPUSimilaritySearch validates generic matrix shape and independent writable outputs', t => {
+it('GPUSimilaritySearch validates generic matrix shape and independent writable outputs', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   const graph = new GPUCommandGraph(device, {id: 'similarity-node-validation'});
@@ -193,34 +184,30 @@ test('GPUSimilaritySearch validates generic matrix shape and independent writabl
     k: 1
   };
 
-  t.doesNotThrow(
+  expect(
     () => new GPUSimilaritySearch(validProps),
     'accepts distinct caller-owned buffers'
-  );
-  t.throws(
+  ).not.toThrow();
+  expect(
     () => new GPUSimilaritySearch({...validProps, k: -1}),
-    /result count/,
     'rejects negative result counts'
-  );
-  t.throws(
+  ).toThrow(/result count/);
+  expect(
     () => new GPUSimilaritySearch({...validProps, tileSize: 0}),
-    /tileSize/,
     'rejects nonpositive tile bounds'
-  );
-  t.throws(
+  ).toThrow(/tileSize/);
+  expect(
     () =>
       new GPUSimilaritySearch({
         ...validProps,
         metric: 'euclidean' as GPUEmbeddingMetric
       }),
-    /metric/,
     'rejects unsupported metrics'
-  );
-  t.throws(
+  ).toThrow(/metric/);
+  expect(
     () => new GPUSimilaritySearch({...validProps, resultCounts: outputIds}),
-    /must not overlap/,
     'rejects aliased writable result buffers'
-  );
+  ).toThrow(/must not overlap/);
   const malformedStride = new GPUData<FixedSizeList<'float32', 2>>({
     buffer: dataset.vector.data[0].buffer,
     format: 'fixed-size-list<float32,2>',
@@ -235,11 +222,10 @@ test('GPUSimilaritySearch validates generic matrix shape and independent writabl
     format: 'fixed-size-list<float32,2>',
     data: [malformedStride]
   });
-  t.throws(
+  expect(
     () => importGPUEmbeddingVector(graph, malformedVector),
-    /aligned, bounded fixed-size float32 rows/,
     'rejects physical row strides narrower than the embedding dimensions'
-  );
+  ).toThrow(/aligned, bounded fixed-size float32 rows/);
 
   const mismatchedRows = new GPUVector({
     type: 'data',
@@ -248,20 +234,18 @@ test('GPUSimilaritySearch validates generic matrix shape and independent writabl
     data: dataset.vector.data
   });
   Object.defineProperty(mismatchedRows, 'length', {value: 2});
-  t.throws(
+  expect(
     () => importGPUEmbeddingVector(graph, mismatchedRows),
-    /source chunk rows/,
     'rejects aggregate row counts that disagree with source topology'
-  );
-  t.throws(
+  ).toThrow(/source chunk rows/);
+  expect(
     () =>
       importGPUEmbeddingVector(graph, dataset.vector, {
         id: 'invalid-source-offset',
         sourceRowOffset: INVALID_SOURCE_ROW_ID
       }),
-    /aligned, bounded fixed-size float32 rows/,
     'reserves the maximum uint32 value for invalid result slots'
-  );
+  ).toThrow(/aligned, bounded fixed-size float32 rows/);
 
   const boundedValues = new GPUVector<FixedSizeList<'float32', 2>>({
     type: 'buffer',
@@ -279,28 +263,24 @@ test('GPUSimilaritySearch validates generic matrix shape and independent writabl
   Object.defineProperty(boundedValues.data[0], 'length', {value: 2});
   Object.defineProperty(boundedValues.data[0], 'valueLength', {value: 4});
   ownedVectors.push(boundedValues);
-  t.throws(
+  expect(
     () => importGPUEmbeddingVector(graph, boundedValues),
-    /declared GPUData byte range/,
     'never exposes unrelated bytes beyond the declared GPUData slice'
-  );
+  ).toThrow(/declared GPUData byte range/);
 
-  t.throws(
+  expect(
     () => importGPUEmbeddingVector(graph, dataset.vector, {dimensions: 3}),
-    /fit within its fixed-size-list rows/,
     'rejects meaningful dimensions beyond the physical fixed-size-list cardinality'
-  );
-  t.throws(
+  ).toThrow(/fit within its fixed-size-list rows/);
+  expect(
     () => importGPUEmbeddingVector(graph, dataset.vector, {dimensions: 0}),
-    /fit within its fixed-size-list rows/,
     'rejects zero meaningful embedding dimensions'
-  );
+  ).toThrow(/fit within its fixed-size-list rows/);
 
   destroyOwnedVectors(ownedVectors);
-  t.end();
 });
 
-test('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned table metadata', t => {
+it('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned table metadata', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   const graph = new GPUCommandGraph(device, {id: 'embedding-table-node-validation'});
@@ -353,35 +333,42 @@ test('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned ta
     id: 'table-column'
   });
 
-  t.equal(imported.dimensions, 3, 'embedding dimensions come from fixed-size-list schema metadata');
-  t.equal(imported.rowCount, 3, 'logical row count is independent from flattened coordinate count');
-  t.deepEqual(
+  expect(
+    imported.dimensions,
+    'embedding dimensions come from fixed-size-list schema metadata'
+  ).toBe(3);
+  expect(
+    imported.rowCount,
+    'logical row count is independent from flattened coordinate count'
+  ).toBe(3);
+  expect(
     imported.chunks.map(chunk => chunk.rowCount),
-    [2, 0, 1],
     'empty and uneven record-batch boundaries are preserved without packing'
-  );
-  t.deepEqual(
+  ).toEqual([2, 0, 1]);
+  expect(
     imported.chunks.map(chunk => chunk.sourceRowOffset),
-    [9, 11, 27],
     'existing record-batch source provenance becomes the implicit stable row positions'
+  ).toEqual([9, 11, 27]);
+  expect(imported.chunks[0].rowStride, 'padded physical row stride stays in float32 units').toBe(5);
+  expect(imported.chunks[0].byteOffset, 'nonzero GPUData offsets are preserved').toBe(
+    Float32Array.BYTES_PER_ELEMENT
   );
-  t.equal(imported.chunks[0].rowStride, 5, 'padded physical row stride stays in float32 units');
-  t.equal(
-    imported.chunks[0].byteOffset,
-    Float32Array.BYTES_PER_ELEMENT,
-    'nonzero GPUData offsets are preserved'
+  expect(imported.chunks[0].values.length, 'the final row does not require trailing padding').toBe(
+    8
   );
-  t.equal(imported.chunks[0].values.length, 8, 'the final row does not require trailing padding');
-  t.ok(
-    imported.chunks.every(chunk => chunk.sourceRowIds),
+  expect(
+    Boolean(imported.chunks.every(chunk => chunk.sourceRowIds)),
     'stable IDs remain table-owned columns'
-  );
-  t.ok(
-    imported.chunks.every(chunk => chunk.validity),
+  ).toBe(true);
+  expect(
+    Boolean(imported.chunks.every(chunk => chunk.validity)),
     'validity remains a table-owned column'
-  );
-  t.equal(table.gpuVectors.embedding.length, 3, 'the aggregate source column remains row-oriented');
-  t.equal(table.gpuVectors.embedding.valueLength, 9, 'flattened value count remains separate');
+  ).toBe(true);
+  expect(
+    table.gpuVectors.embedding.length,
+    'the aggregate source column remains row-oriented'
+  ).toBe(3);
+  expect(table.gpuVectors.embedding.valueLength, 'flattened value count remains separate').toBe(9);
 
   const singleBatch = importGPUEmbeddingTable(graph, batches[0], {
     column: 'embedding',
@@ -390,13 +377,17 @@ test('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned ta
     validity: 'valid',
     id: 'single-batch'
   });
-  t.equal(singleBatch.dimensions, 2, 'callers may explicitly ignore trailing fixed-list features');
-  t.equal(singleBatch.chunks[0].rowStride, 5, 'physical row stride survives feature truncation');
-  t.equal(singleBatch.chunks[0].values.length, 7, 'only meaningful coordinates enter the view');
+  expect(singleBatch.dimensions, 'callers may explicitly ignore trailing fixed-list features').toBe(
+    2
+  );
+  expect(singleBatch.chunks[0].rowStride, 'physical row stride survives feature truncation').toBe(
+    5
+  );
+  expect(singleBatch.chunks[0].values.length, 'only meaningful coordinates enter the view').toBe(7);
 
   const sourceIdData = fixture.sourceRowIds!.data[0];
   Object.defineProperty(sourceIdData, 'nullBitmap', {value: Uint8Array.from([0b11])});
-  t.doesNotThrow(
+  expect(
     () =>
       importGPUEmbeddingTable(graph, batches[0], {
         id: 'nullable-schema-all-valid',
@@ -404,54 +395,50 @@ test('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned ta
         sourceRowIds: 'stableId'
       }),
     'nullable source-ID schemas are allowed when every actual row remains valid'
-  );
+  ).not.toThrow();
   Object.defineProperty(sourceIdData, 'nullBitmap', {value: Uint8Array.from([0b01])});
-  t.throws(
+  expect(
     () =>
       importGPUEmbeddingVector(graph, fixture.vector, {
         id: 'nullable-source-id-vector',
         sourceRowIds: fixture.sourceRowIds
       }),
-    /source-row IDs must not contain null/,
     'vector imports reject actual null stable IDs without GPU readback'
-  );
-  t.throws(
+  ).toThrow(/source-row IDs must not contain null/);
+  expect(
     () =>
       importGPUEmbeddingTable(graph, table, {
         id: 'nullable-source-id-table',
         column: 'embedding',
         sourceRowIds: 'stableId'
       }),
-    /source-row IDs must not contain null/,
     'table imports reject null stable IDs before treating physical zero as a real ID'
-  );
+  ).toThrow(/source-row IDs must not contain null/);
   Object.defineProperty(sourceIdData, 'nullBitmap', {value: undefined});
 
   const embeddingData = fixture.vector.data[0];
   Object.defineProperty(embeddingData, 'nullBitmap', {value: Uint8Array.from([0b01])});
-  t.throws(
+  expect(
     () => importGPUEmbeddingVector(graph, fixture.vector, {id: 'nullable-vector-without-mask'}),
-    /null values require explicit GPU validity flags/,
     'nullable vector rows cannot silently enter search without a caller-owned GPU validity mask'
-  );
-  t.throws(
+  ).toThrow(/null values require explicit GPU validity flags/);
+  expect(
     () =>
       importGPUEmbeddingTable(graph, batches[0], {
         id: 'nullable-table-without-mask',
         column: 'embedding'
       }),
-    /null values require explicit GPU validity flags/,
     'nullable table rows cannot silently enter search without a selected GPU validity column'
-  );
-  t.doesNotThrow(
+  ).toThrow(/null values require explicit GPU validity flags/);
+  expect(
     () =>
       importGPUEmbeddingVector(graph, fixture.vector, {
         id: 'nullable-vector-with-mask',
         validity: fixture.validity
       }),
     'an explicitly selected GPU validity vector permits intentional nullable-row filtering'
-  );
-  t.doesNotThrow(
+  ).not.toThrow();
+  expect(
     () =>
       importGPUEmbeddingTable(graph, batches[0], {
         id: 'nullable-table-with-mask',
@@ -459,36 +446,32 @@ test('importGPUEmbeddingTable borrows fixed-size-list batches and row-aligned ta
         validity: 'valid'
       }),
     'an explicitly selected GPU validity column permits intentional nullable-row filtering'
-  );
+  ).not.toThrow();
   Object.defineProperty(embeddingData, 'nullBitmap', {value: undefined});
 
-  t.throws(
+  expect(
     () => importGPUEmbeddingTable(graph, table, {column: 'missing'}),
-    /does not contain column/,
     'rejects missing embedding columns'
-  );
-  t.throws(
+  ).toThrow(/does not contain column/);
+  expect(
     () => importGPUEmbeddingTable(graph, table, {column: 'embedding', validity: 'missing'}),
-    /row-aligned uint32 column/,
     'rejects absent explicitly requested validity columns'
-  );
-  t.throws(
+  ).toThrow(/row-aligned uint32 column/);
+  expect(
     () => importGPUEmbeddingTable(graph, table, {column: 'embedding', dimensions: 4}),
-    /fit within its fixed-size-list rows/,
     'rejects meaningful dimensions beyond the existing fixed-list cardinality'
-  );
+  ).toThrow(/fit within its fixed-size-list rows/);
 
   const compiled = graph.compile();
   compiled.destroy();
-  t.ok(
-    ownedVectors.every(vector => vector.data.every(chunk => !chunk.buffer.destroyed)),
+  expect(
+    Boolean(ownedVectors.every(vector => vector.data.every(chunk => !chunk.buffer.destroyed))),
     'graph destruction never destroys buffers owned by existing table columns'
-  );
+  ).toBe(true);
   destroyOwnedVectors(ownedVectors);
-  t.end();
 });
 
-test('importGPUEmbeddingTable retains schema dimensions for an empty caller-owned GPU table', t => {
+it('importGPUEmbeddingTable retains schema dimensions for an empty caller-owned GPU table', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   const graph = new GPUCommandGraph(device, {id: 'empty-embedding-table'});
@@ -499,15 +482,16 @@ test('importGPUEmbeddingTable retains schema dimensions for an empty caller-owne
     }
   });
   const imported = importGPUEmbeddingTable(graph, table, {column: 'embedding'});
-  t.equal(imported.dimensions, 768, 'schema metadata remains available without uploaded batches');
-  t.equal(imported.rowCount, 0, 'empty table imports have no logical rows');
-  t.deepEqual(imported.chunks, [], 'no placeholder GPU allocations are invented');
-  t.end();
+  expect(imported.dimensions, 'schema metadata remains available without uploaded batches').toBe(
+    768
+  );
+  expect(imported.rowCount, 'empty table imports have no logical rows').toBe(0);
+  expect(imported.chunks, 'no placeholder GPU allocations are invented').toEqual([]);
 });
 
-test('GPUSimilaritySearch consumes nullable Arrow fixed-size lists through ordinary GPU tables', async t => {
+it('GPUSimilaritySearch consumes nullable Arrow fixed-size lists through ordinary GPU tables', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const embeddingType = new arrow.FixedSizeList(
     4,
@@ -551,7 +535,7 @@ test('GPUSimilaritySearch consumes nullable Arrow fixed-size lists through ordin
   const queryTable = makeGPUTableFromArrowTable(device, querySource, tableOptions);
   const graph = new GPUCommandGraph(device, {id: 'arrow-fixed-size-list-similarity'});
   const ownedVectors: GPUVector[] = [];
-  t.throws(
+  expect(
     () =>
       importGPUEmbeddingTable(graph, datasetTable, {
         id: 'dataset-without-validity',
@@ -559,9 +543,8 @@ test('GPUSimilaritySearch consumes nullable Arrow fixed-size lists through ordin
         dimensions: 3,
         sourceRowIds: 'sourceIds'
       }),
-    /null values require explicit GPU validity flags/,
     'nullable Arrow parent rows and nullable padding cannot bypass explicit GPU validity'
-  );
+  ).toThrow(/null values require explicit GPU validity flags/);
   const dataset = importGPUEmbeddingTable(graph, datasetTable, {
     id: 'dataset',
     column: 'embedding',
@@ -596,52 +579,51 @@ test('GPUSimilaritySearch consumes nullable Arrow fixed-size lists through ordin
     compiled.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
 
-    t.equal(datasetTable.gpuVectors.embedding.format, 'fixed-size-list<float32,4>');
-    t.equal(datasetTable.gpuVectors.embedding.length, 4, 'embedding values remain table rows');
-    t.equal(
+    expect(datasetTable.gpuVectors.embedding.format).toBe('fixed-size-list<float32,4>');
+    expect(datasetTable.gpuVectors.embedding.length, 'embedding values remain table rows').toBe(4);
+    expect(
       datasetTable.gpuVectors.embedding.valueLength,
-      16,
       'physical coordinates remain values'
-    );
-    t.deepEqual(
+    ).toBe(16);
+    expect(
       dataset.chunks.map(chunk => chunk.rowCount),
-      [2, 2],
       'Arrow batches stay distinct'
-    );
-    t.equal(
+    ).toEqual([2, 2]);
+    expect(
       dataset.dimensions,
-      3,
       'explicit dimensions ignore the nullable fourth padding feature'
+    ).toBe(3);
+    expect(dataset.chunks[0].rowStride, 'physical Arrow fixed-list cardinality stays intact').toBe(
+      4
     );
-    t.equal(dataset.chunks[0].rowStride, 4, 'physical Arrow fixed-list cardinality stays intact');
-    t.deepEqual(
+    expect(
       await readUint32View(ownedVectors, outputIds, 3),
-      [42, 3, 7],
       'parent-null rows are removed while nullable padding and stable Arrow source IDs are honored'
-    );
-    t.deepEqual(await readFloat32View(ownedVectors, outputScores, 3), [0, 1, 1]);
-    t.deepEqual(await readUint32View(ownedVectors, resultCounts, 1), [3]);
-    t.deepEqual(await readUint32View(ownedVectors, candidateCounts, 1), [3]);
+    ).toEqual([42, 3, 7]);
+    expect(await readFloat32View(ownedVectors, outputScores, 3)).toEqual([0, 1, 1]);
+    expect(await readUint32View(ownedVectors, resultCounts, 1)).toEqual([3]);
+    expect(await readUint32View(ownedVectors, candidateCounts, 1)).toEqual([3]);
 
     compiled.destroy();
-    t.ok(
-      datasetTable.batches.every(batch =>
-        Object.values(batch.gpuData).every(data => !data.buffer.destroyed)
+    expect(
+      Boolean(
+        datasetTable.batches.every(batch =>
+          Object.values(batch.gpuData).every(data => !data.buffer.destroyed)
+        )
       ),
       'graph destruction never takes ownership away from the ordinary GPU table'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     destroyOwnedVectors(ownedVectors);
     datasetTable.destroy();
     queryTable.destroy();
   }
-  t.end();
 });
 
-test('GPUSimilaritySearch searches 384-, 768-, and 1536-dimensional fixed-size GPU table rows', async t => {
+it('GPUSimilaritySearch searches 384-, 768-, and 1536-dimensional fixed-size GPU table rows', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   for (const dimensions of [384, 768, 1536]) {
     const identifier = `high-dimensional-table-${dimensions}`;
@@ -726,22 +708,22 @@ test('GPUSimilaritySearch searches 384-, 768-, and 1536-dimensional fixed-size G
       const encoder = device.createCommandEncoder({id: `${identifier}-encoder`});
       compiled.encode(encoder, {parameters: undefined});
       device.submit(encoder.finish());
-      t.equal(dataset.dimensions, dimensions, `${dimensions} features derive from table schema`);
-      t.equal(dataset.chunks[0].rowStride, dimensions + 1, 'physical row padding is retained');
-      t.equal(dataset.chunks[0].byteOffset, 4, 'table chunk offsets survive graph import');
-      t.equal(
+      expect(dataset.dimensions, `${dimensions} features derive from table schema`).toBe(
+        dimensions
+      );
+      expect(dataset.chunks[0].rowStride, 'physical row padding is retained').toBe(dimensions + 1);
+      expect(dataset.chunks[0].byteOffset, 'table chunk offsets survive graph import').toBe(4);
+      expect(
         dataset.chunks[0].values.length,
-        2 * dimensions + 1,
         'the final padded row needs only its meaningful payload'
-      );
-      t.equal(dataset.chunks[0].sourceRowOffset, 5, 'record-batch source provenance survives');
-      t.deepEqual(
+      ).toBe(2 * dimensions + 1);
+      expect(dataset.chunks[0].sourceRowOffset, 'record-batch source provenance survives').toBe(5);
+      expect(
         await readUint32View(ownedVectors, outputIds, 2),
-        [7, 80],
         `${dimensions}-dimensional rows search their original table-owned buffers`
-      );
-      t.deepEqual(await readFloat32View(ownedVectors, outputScores, 2), [0, 2]);
-      t.deepEqual(await readUint32View(ownedVectors, resultCounts, 1), [2]);
+      ).toEqual([7, 80]);
+      expect(await readFloat32View(ownedVectors, outputScores, 2)).toEqual([0, 2]);
+      expect(await readUint32View(ownedVectors, resultCounts, 1)).toEqual([2]);
     } finally {
       compiled.destroy();
       destroyOwnedVectors(ownedVectors);
@@ -749,12 +731,11 @@ test('GPUSimilaritySearch searches 384-, 768-, and 1536-dimensional fixed-size G
       queryTable.destroy();
     }
   }
-  t.end();
 });
 
-test('importGPUEmbeddingTable rejects sliced nullable Arrow source IDs across preserved batches', async t => {
+it('importGPUEmbeddingTable rejects sliced nullable Arrow source IDs across preserved batches', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const embeddingType = new arrow.FixedSizeList(
     2,
@@ -788,29 +769,27 @@ test('importGPUEmbeddingTable rejects sliced nullable Arrow source IDs across pr
   const graph = new GPUCommandGraph(device, {id: 'nullable-arrow-source-row-ids'});
 
   try {
-    t.equal(table.batches.length, 2, 'the Arrow upload retains both source record batches');
-    t.ok(
-      table.batches[0].gpuData.sourceIds.nullBitmap,
+    expect(table.batches.length, 'the Arrow upload retains both source record batches').toBe(2);
+    expect(
+      Boolean(table.batches[0].gpuData.sourceIds.nullBitmap),
       'nullable numeric IDs retain generic validity'
-    );
-    t.throws(
+    ).toBe(true);
+    expect(
       () =>
         importGPUEmbeddingTable(graph, table, {
           column: 'embedding',
           sourceRowIds: 'sourceIds'
         }),
-      /source-row IDs must not contain null/,
       'sliced null IDs never silently collide with a real stable ID of zero'
-    );
+    ).toThrow(/source-row IDs must not contain null/);
   } finally {
     table.destroy();
   }
-  t.end();
 });
 
-test('GPUSimilaritySearch matches independent CPU exact search for every metric', async t => {
+it('GPUSimilaritySearch matches independent CPU exact search for every metric', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const sharedFixture = {
     dimensions: 5,
@@ -847,15 +826,13 @@ test('GPUSimilaritySearch matches independent CPU exact search for every metric'
   for (const metric of ['squared-euclidean', 'inner-product', 'cosine'] as const) {
     const fixture = {...sharedFixture, metric};
     const result = await runGPUSimilaritySearch(device, fixture);
-    assertMatchesIndependentCPU(t, fixture, result, `${metric} batched exact search`);
+    assertMatchesIndependentCPU(fixture, result, `${metric} batched exact search`);
   }
-
-  t.end();
 });
 
-test('GPUSimilaritySearch preserves chunk boundaries, offsets, padding, validity, and global ties', async t => {
+it('GPUSimilaritySearch preserves chunk boundaries, offsets, padding, validity, and global ties', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 3,
@@ -893,19 +870,26 @@ test('GPUSimilaritySearch preserves chunk boundaries, offsets, padding, validity
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'chunk-preserving globally merged top-K');
-  t.deepEqual(result.sourceRowIds.slice(0, 2), [4, 80], 'cross-shard score ties sort by source ID');
-  t.ok(
-    result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length === 5,
+  assertMatchesIndependentCPU(fixture, result, 'chunk-preserving globally merged top-K');
+  expect(result.sourceRowIds.slice(0, 2), 'cross-shard score ties sort by source ID').toEqual([
+    4, 80
+  ]);
+  expect(
+    Boolean(
+      result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length ===
+        5
+    ),
     'bounded tiles preserve every nonempty source row without materializing a distance matrix'
-  );
-  t.ok(result.importedBuffersSurviveDestruction, 'graph destruction preserves caller-owned chunks');
-  t.end();
+  ).toBe(true);
+  expect(
+    Boolean(result.importedBuffersSurviveDestruction),
+    'graph destruction preserves caller-owned chunks'
+  ).toBe(true);
 });
 
-test('GPUSimilaritySearch defines zero-vector cosine and rejects invalid, NaN, and Infinity rows', async t => {
+it('GPUSimilaritySearch defines zero-vector cosine and rejects invalid, NaN, and Infinity rows', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 3,
@@ -940,17 +924,18 @@ test('GPUSimilaritySearch defines zero-vector cosine and rejects invalid, NaN, a
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'nonfinite-aware cosine semantics');
-  t.equal(result.sourceRowIds[0], 10, 'two zero vectors are the best cosine match');
-  t.equal(result.scores[0], 1, 'two zero vectors have unit cosine similarity');
-  t.deepEqual(result.resultCounts, [3, 3, 0, 0, 0], 'invalid query rows produce no matches');
-  t.deepEqual(result.candidateCounts, [3, 3, 0, 0, 0], 'invalid query rows report no candidates');
-  t.end();
+  assertMatchesIndependentCPU(fixture, result, 'nonfinite-aware cosine semantics');
+  expect(result.sourceRowIds[0], 'two zero vectors are the best cosine match').toBe(10);
+  expect(result.scores[0], 'two zero vectors have unit cosine similarity').toBe(1);
+  expect(result.resultCounts, 'invalid query rows produce no matches').toEqual([3, 3, 0, 0, 0]);
+  expect(result.candidateCounts, 'invalid query rows report no candidates').toEqual([
+    3, 3, 0, 0, 0
+  ]);
 });
 
-test('GPUSimilaritySearch retains infinite scores produced by finite Float32 embeddings', async t => {
+it('GPUSimilaritySearch retains infinite scores produced by finite Float32 embeddings', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const magnitude = Math.fround(3e38);
   const innerProduct = await runGPUSimilaritySearch(device, {
@@ -962,15 +947,22 @@ test('GPUSimilaritySearch retains infinite scores produced by finite Float32 emb
     candidateCounts: true
   });
 
-  t.deepEqual(
+  expect(
     innerProduct.sourceRowIds,
-    [9, 5, 2],
     'positive and negative overflow remain ordered around finite inner products'
+  ).toEqual([9, 5, 2]);
+  expect(innerProduct.scores[0], 'positive overflow remains a result').toBe(
+    Number.POSITIVE_INFINITY
   );
-  t.equal(innerProduct.scores[0], Number.POSITIVE_INFINITY, 'positive overflow remains a result');
-  t.equal(innerProduct.scores[2], Number.NEGATIVE_INFINITY, 'negative overflow remains a result');
-  t.deepEqual(innerProduct.resultCounts, [3], 'all finite embedding rows fill the top-K outputs');
-  t.deepEqual(innerProduct.candidateCounts, [3], 'candidate and result populations stay aligned');
+  expect(innerProduct.scores[2], 'negative overflow remains a result').toBe(
+    Number.NEGATIVE_INFINITY
+  );
+  expect(innerProduct.resultCounts, 'all finite embedding rows fill the top-K outputs').toEqual([
+    3
+  ]);
+  expect(innerProduct.candidateCounts, 'candidate and result populations stay aligned').toEqual([
+    3
+  ]);
 
   const squaredDistance = await runGPUSimilaritySearch(device, {
     dimensions: 1,
@@ -981,17 +973,17 @@ test('GPUSimilaritySearch retains infinite scores produced by finite Float32 emb
     candidateCounts: true
   });
 
-  t.deepEqual(
+  expect(
     squaredDistance.sourceRowIds,
-    [9, 2, 5],
     'overflowed squared distances remain deterministic under stable source-ID ties'
-  );
-  t.deepEqual(
+  ).toEqual([9, 2, 5]);
+  expect(
     squaredDistance.scores,
-    [0, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
     'valid finite rows keep their overflowed Float32 distance values'
-  );
-  t.deepEqual(squaredDistance.resultCounts, [3], 'infinite distances still fill oversized top-K');
+  ).toEqual([0, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY]);
+  expect(squaredDistance.resultCounts, 'infinite distances still fill oversized top-K').toEqual([
+    3
+  ]);
 
   const indeterminateInnerProduct = await runGPUSimilaritySearch(device, {
     dimensions: 2,
@@ -1010,23 +1002,20 @@ test('GPUSimilaritySearch retains infinite scores produced by finite Float32 emb
     candidateCounts: true
   });
 
-  t.deepEqual(
+  expect(
     indeterminateInnerProduct.sourceRowIds,
-    [7, INVALID_SOURCE_ROW_ID],
     'indeterminate infinity-minus-infinity scores remain excluded'
-  );
-  t.deepEqual(indeterminateInnerProduct.resultCounts, [1], 'only non-NaN scores become results');
-  t.deepEqual(
+  ).toEqual([7, INVALID_SOURCE_ROW_ID]);
+  expect(indeterminateInnerProduct.resultCounts, 'only non-NaN scores become results').toEqual([1]);
+  expect(
     indeterminateInnerProduct.candidateCounts,
-    [2],
     'candidate counts still describe finite eligible source rows'
-  );
-  t.end();
+  ).toEqual([2]);
 });
 
-test('GPUSimilaritySearch preserves finite-magnitude cosine ordering without intermediate overflow', async t => {
+it('GPUSimilaritySearch preserves finite-magnitude cosine ordering without intermediate overflow', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   for (const magnitude of [1e10, 1e20, 3e38, 1e-20]) {
     const fixture: SimilaritySearchFixture = {
@@ -1048,25 +1037,23 @@ test('GPUSimilaritySearch preserves finite-magnitude cosine ordering without int
     };
     const result = await runGPUSimilaritySearch(device, fixture);
 
-    assertMatchesIndependentCPU(t, fixture, result, `finite ${magnitude}-magnitude cosine search`);
-    t.deepEqual(
+    assertMatchesIndependentCPU(fixture, result, `finite ${magnitude}-magnitude cosine search`);
+    expect(
       result.sourceRowIds,
-      [9, 2, 4],
       `${magnitude}-magnitude aligned, orthogonal, and opposite vectors remain ordered`
-    );
+    ).toEqual([9, 2, 4]);
     for (const [scoreIndex, expectedScore] of [1, 0, -1].entries()) {
-      t.ok(
-        Math.abs(result.scores[scoreIndex] - expectedScore) < 0.000001,
+      expect(
+        Boolean(Math.abs(result.scores[scoreIndex] - expectedScore) < 0.000001),
         `${magnitude}-magnitude cosine ${scoreIndex} stays within Float32 rounding tolerance`
-      );
+      ).toBe(true);
     }
   }
-  t.end();
 });
 
-test('GPUSimilaritySearch applies packed source-aligned GPU masks at sparse source offsets', async t => {
+it('GPUSimilaritySearch applies packed source-aligned GPU masks at sparse source offsets', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const baseFixture = {
     dimensions: 2,
@@ -1095,20 +1082,13 @@ test('GPUSimilaritySearch applies packed source-aligned GPU masks at sparse sour
   ]) {
     const fixture = {...baseFixture, filterMask};
     const result = await runGPUSimilaritySearch(device, fixture);
-    assertMatchesIndependentCPU(
-      t,
-      fixture,
-      result,
-      `packed filter ${filterMask.slice(5).join('')}`
-    );
+    assertMatchesIndependentCPU(fixture, result, `packed filter ${filterMask.slice(5).join('')}`);
   }
-
-  t.end();
 });
 
-test('GPUSimilaritySearch accepts LuxFilter-compatible chunk-preserving selection masks', async t => {
+it('GPUSimilaritySearch accepts LuxFilter-compatible chunk-preserving selection masks', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 2,
@@ -1145,14 +1125,13 @@ test('GPUSimilaritySearch accepts LuxFilter-compatible chunk-preserving selectio
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'LuxFilter-compatible chunked GPU masks');
-  t.deepEqual(result.candidateCounts, [3, 3], 'sparse chunk masks expose exact eligible counts');
-  t.end();
+  assertMatchesIndependentCPU(fixture, result, 'LuxFilter-compatible chunked GPU masks');
+  expect(result.candidateCounts, 'sparse chunk masks expose exact eligible counts').toEqual([3, 3]);
 });
 
-test('GPUSimilaritySearch combines query-specific GPU masks and stable candidate-ID allowlists', async t => {
+it('GPUSimilaritySearch combines query-specific GPU masks and stable candidate-ID allowlists', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 2,
@@ -1190,18 +1169,15 @@ test('GPUSimilaritySearch combines query-specific GPU masks and stable candidate
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'per-query masks with stable-ID allowlists');
-  t.deepEqual(
-    result.candidateCounts,
-    [2, 2],
-    'candidate counts include every combined restriction'
-  );
-  t.end();
+  assertMatchesIndependentCPU(fixture, result, 'per-query masks with stable-ID allowlists');
+  expect(result.candidateCounts, 'candidate counts include every combined restriction').toEqual([
+    2, 2
+  ]);
 });
 
-test('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on the GPU', async t => {
+it('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on the GPU', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const rows = Array.from({length: 64}, (_, rowIndex) => [rowIndex, rowIndex % 5]);
   const sourceRowIds = rows.map((_, rowIndex) => 4000 + rowIndex * 17);
@@ -1224,22 +1200,20 @@ test('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on 
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'hashed stable candidate-ID membership');
-  t.ok(
-    result.nodeOrder.some(nodeId => nodeId.includes('-candidate-index-build')),
+  assertMatchesIndependentCPU(fixture, result, 'hashed stable candidate-ID membership');
+  expect(
+    Boolean(result.nodeOrder.some(nodeId => nodeId.includes('-candidate-index-build'))),
     'substantial allowlists build bounded GPU membership instead of repeated linear scans'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     result.candidateCounts,
-    [selectedIds.length, selectedIds.length],
     'duplicate requested IDs do not duplicate eligible dataset rows'
-  );
-  t.end();
+  ).toEqual([selectedIds.length, selectedIds.length]);
 });
 
-test('GPUSimilaritySearch preserves every allowlisted ID when bounded GPU hash insertion overflows', async t => {
+it('GPUSimilaritySearch preserves every allowlisted ID when bounded GPU hash insertion overflows', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const sourceRowIds = Array.from({length: 24}, (_, rowIndex) => 7000 + rowIndex * 13);
   const fixture: SimilaritySearchFixture = {
@@ -1301,21 +1275,20 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
 
   try {
     const result = await runGPUSimilaritySearch(device, fixture);
-    assertMatchesIndependentCPU(t, fixture, result, 'overflowed GPU candidate index fallback');
-    t.ok(
-      result.nodeOrder.some(nodeId => nodeId.includes('-simulate-candidate-overflow')),
+    assertMatchesIndependentCPU(fixture, result, 'overflowed GPU candidate index fallback');
+    expect(
+      Boolean(result.nodeOrder.some(nodeId => nodeId.includes('-simulate-candidate-overflow'))),
       'the real GPU build reports overflow after every hash-table key is removed'
-    );
-    t.deepEqual(result.candidateCounts, [sourceRowIds.length], 'no allowlisted row disappears');
+    ).toBe(true);
+    expect(result.candidateCounts, 'no allowlisted row disappears').toEqual([sourceRowIds.length]);
   } finally {
     GPUHashIndex.prototype.addToGraph = originalAddToGraph;
   }
-  t.end();
 });
 
-test('GPUSimilaritySearch excludes query source IDs without conflating row position and identity', async t => {
+it('GPUSimilaritySearch excludes query source IDs without conflating row position and identity', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 2,
@@ -1351,22 +1324,23 @@ test('GPUSimilaritySearch excludes query source IDs without conflating row posit
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'explicit stable-ID self exclusion');
-  t.deepEqual(result.candidateCounts, [3, 3], 'self-exclusion reduces eligible candidate counts');
-  t.notOk(
-    result.sourceRowIds.slice(0, 4).includes(8),
+  assertMatchesIndependentCPU(fixture, result, 'explicit stable-ID self exclusion');
+  expect(result.candidateCounts, 'self-exclusion reduces eligible candidate counts').toEqual([
+    3, 3
+  ]);
+  expect(
+    Boolean(result.sourceRowIds.slice(0, 4).includes(8)),
     'the first query excludes its own source ID'
-  );
-  t.notOk(
-    result.sourceRowIds.slice(4, 8).includes(2),
+  ).toBe(false);
+  expect(
+    Boolean(result.sourceRowIds.slice(4, 8).includes(2)),
     'the second query excludes its own source ID'
-  );
-  t.end();
+  ).toBe(false);
 });
 
-test('GPUSimilaritySearch handles zero K, oversized K, empty datasets, and zero query rows', async t => {
+it('GPUSimilaritySearch handles zero K, oversized K, empty datasets, and zero query rows', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const edgeFixtures: SimilaritySearchFixture[] = [
     {
@@ -1429,15 +1403,13 @@ test('GPUSimilaritySearch handles zero K, oversized K, empty datasets, and zero 
 
   for (const [fixtureIndex, fixture] of edgeFixtures.entries()) {
     const result = await runGPUSimilaritySearch(device, fixture);
-    assertMatchesIndependentCPU(t, fixture, result, `empty-result edge case ${fixtureIndex}`);
+    assertMatchesIndependentCPU(fixture, result, `empty-result edge case ${fixtureIndex}`);
   }
-
-  t.end();
 });
 
-test('GPUSimilaritySearch globally merges bounded shards with exact stable ordering', async t => {
+it('GPUSimilaritySearch globally merges bounded shards with exact stable ordering', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const rows = Array.from({length: 41}, (_, rowIndex) => [
     ((rowIndex * 17) % 23) - 11,
@@ -1473,18 +1445,22 @@ test('GPUSimilaritySearch globally merges bounded shards with exact stable order
   };
   const result = await runGPUSimilaritySearch(device, fixture);
 
-  assertMatchesIndependentCPU(t, fixture, result, 'globally merged bounded shard selection');
-  t.ok(
-    result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length >= 14,
+  assertMatchesIndependentCPU(fixture, result, 'globally merged bounded shard selection');
+  expect(
+    Boolean(
+      result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length >=
+        14
+    ),
     'small tile limits produce independent bounded candidate passes'
+  ).toBe(true);
+  expect(result.candidateCounts?.[0], 'global candidate counts include every source chunk').toBe(
+    41
   );
-  t.equal(result.candidateCounts?.[0], 41, 'global candidate counts include every source chunk');
-  t.end();
 });
 
-test('GPUSimilaritySearch shards physical bindings while preserving padded rows and exact results', async t => {
+it('GPUSimilaritySearch shards physical bindings while preserving padded rows and exact results', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 3,
@@ -1515,17 +1491,18 @@ test('GPUSimilaritySearch shards physical bindings while preserving padded rows 
   const result = await withReducedDeviceLimits(device, {maxStorageBufferBindingSize: 512}, () =>
     runGPUSimilaritySearch(device, fixture)
   );
-  assertMatchesIndependentCPU(t, fixture, result, 'storage-binding-aware physical sharding');
-  t.ok(
-    result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length > 1,
+  assertMatchesIndependentCPU(fixture, result, 'storage-binding-aware physical sharding');
+  expect(
+    Boolean(
+      result.nodeOrder.filter(identifier => identifier.includes('prepare-dataset-tile')).length > 1
+    ),
     'artificially small storage bindings force exact multi-pass sharding'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('GPUSimilaritySearch uses bounded multidimensional dispatch for query batches', async t => {
+it('GPUSimilaritySearch uses bounded multidimensional dispatch for query batches', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const fixture: SimilaritySearchFixture = {
     dimensions: 2,
@@ -1551,14 +1528,15 @@ test('GPUSimilaritySearch uses bounded multidimensional dispatch for query batch
     runGPUSimilaritySearch(device, fixture)
   );
 
-  assertMatchesIndependentCPU(t, fixture, result, 'bounded multidimensional query dispatch');
-  t.equal(result.resultCounts.length, 257, 'every query survives the artificial dispatch limit');
-  t.end();
+  assertMatchesIndependentCPU(fixture, result, 'bounded multidimensional query dispatch');
+  expect(result.resultCounts.length, 'every query survives the artificial dispatch limit').toBe(
+    257
+  );
 });
 
-test('GPUSimilaritySearch reuses compiled graphs for dynamic GPU selections and buffer overrides', async t => {
+it('GPUSimilaritySearch reuses compiled graphs for dynamic GPU selections and buffer overrides', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) return finishWithoutWebGPU(t);
+  if (!device) return finishWithoutWebGPU();
 
   const identifier = `similarity-repeat-${fixtureSequence++}`;
   const graph = new GPUCommandGraph(device, {id: identifier});
@@ -1626,28 +1604,25 @@ test('GPUSimilaritySearch reuses compiled graphs for dynamic GPU selections and 
     const firstEncoder = device.createCommandEncoder({id: `${identifier}-first-encoder`});
     compiled.encode(firstEncoder, {parameters: undefined});
     device.submit(firstEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUint32View(ownedVectors, outputIds, 2),
-      [50, INVALID_SOURCE_ROW_ID],
       'the first graph encoding consumes the current source selection'
-    );
-    t.deepEqual(await readUint32View(ownedVectors, candidateCounts, 1), [1]);
+    ).toEqual([50, INVALID_SOURCE_ROW_ID]);
+    expect(await readUint32View(ownedVectors, candidateCounts, 1)).toEqual([1]);
 
     const selectionVector = ownedVectors.find(vector => vector.name === filterMask.buffer.id);
     selectionVector!.data[0].buffer.write(new Uint32Array([0, 1]));
     const secondEncoder = device.createCommandEncoder({id: `${identifier}-second-encoder`});
     compiled.encode(secondEncoder, {parameters: undefined});
     device.submit(secondEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUint32View(ownedVectors, outputIds, 2),
-      [3, INVALID_SOURCE_ROW_ID],
       'dynamic GPU selection changes are observed without graph recompilation'
-    );
-    t.deepEqual(
+    ).toEqual([3, INVALID_SOURCE_ROW_ID]);
+    expect(
       await readUint32View(ownedVectors, candidateCounts, 1),
-      [1],
       'repeated graph encodings reset candidate counts instead of accumulating stale results'
-    );
+    ).toEqual([1]);
 
     selectionVector!.data[0].buffer.write(new Uint32Array([1, 1]));
     const thirdEncoder = device.createCommandEncoder({id: `${identifier}-third-encoder`});
@@ -1656,32 +1631,31 @@ test('GPUSimilaritySearch reuses compiled graphs for dynamic GPU selections and 
       buffers: {[`${identifier}-queries-chunk-0-values`]: replacementQuery}
     });
     device.submit(thirdEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUint32View(ownedVectors, outputIds, 2),
-      [3, 50],
       'encoded buffer overrides replace query values without recompilation'
-    );
-    t.deepEqual(await readUint32View(ownedVectors, resultCounts, 1), [2]);
-    t.deepEqual(await readUint32View(ownedVectors, candidateCounts, 1), [2]);
+    ).toEqual([3, 50]);
+    expect(await readUint32View(ownedVectors, resultCounts, 1)).toEqual([2]);
+    expect(await readUint32View(ownedVectors, candidateCounts, 1)).toEqual([2]);
 
     compiled.destroy();
-    t.ok(
-      ownedVectors.every(vector => vector.data.every(chunk => !chunk.buffer.destroyed)),
+    expect(
+      Boolean(ownedVectors.every(vector => vector.data.every(chunk => !chunk.buffer.destroyed))),
       'compiled graph destruction never claims original caller-owned buffers'
-    );
-    t.notOk(replacementQuery.destroyed, 'compiled graph destruction never claims override buffers');
+    ).toBe(true);
+    expect(
+      Boolean(replacementQuery.destroyed),
+      'compiled graph destruction never claims override buffers'
+    ).toBe(false);
   } finally {
     compiled.destroy();
     replacementQuery.destroy();
     destroyOwnedVectors(ownedVectors);
   }
-
-  t.end();
 });
 
-function finishWithoutWebGPU(testContext: Test): void {
-  testContext.comment('WebGPU is not available');
-  testContext.end();
+function finishWithoutWebGPU(): void {
+  // Vitest considers a test that returns without assertions successful when WebGPU is unavailable.
 }
 
 function getCPUFixtureRows(
@@ -1810,7 +1784,6 @@ function calculateIndependentCPUScore(
 }
 
 function assertMatchesIndependentCPU(
-  testContext: Test,
   fixture: SimilaritySearchFixture,
   result: SearchExecution,
   message: string
@@ -1820,24 +1793,21 @@ function assertMatchesIndependentCPU(
     getCPUFixtureRows(fixture.dataset, fixture.dimensions),
     getCPUFixtureRows(fixture.queries, fixture.dimensions)
   );
-  testContext.deepEqual(result.sourceRowIds, expected.sourceRowIds, `${message}: source IDs`);
-  testContext.deepEqual(result.resultCounts, expected.resultCounts, `${message}: result counts`);
+  expect(result.sourceRowIds, `${message}: source IDs`).toEqual(expected.sourceRowIds);
+  expect(result.resultCounts, `${message}: result counts`).toEqual(expected.resultCounts);
   if (fixture.candidateCounts) {
-    testContext.deepEqual(
-      result.candidateCounts,
-      expected.candidateCounts,
-      `${message}: candidate counts`
+    expect(result.candidateCounts, `${message}: candidate counts`).toEqual(
+      expected.candidateCounts
     );
   }
-  testContext.equal(result.scores.length, expected.scores.length, `${message}: score count`);
+  expect(result.scores.length, `${message}: score count`).toBe(expected.scores.length);
   for (const [scoreIndex, score] of result.scores.entries()) {
     const expectedScore = expected.scores[scoreIndex];
     const matches = Number.isFinite(expectedScore)
       ? Math.abs(score - expectedScore) <= 0.00005 * Math.max(1, Math.abs(expectedScore))
       : Object.is(score, expectedScore);
-    testContext.ok(
-      matches,
-      `${message}: score ${scoreIndex} equals ${expectedScore} (got ${score})`
+    expect(matches, `${message}: score ${scoreIndex} equals ${expectedScore} (got ${score})`).toBe(
+      true
     );
   }
 }

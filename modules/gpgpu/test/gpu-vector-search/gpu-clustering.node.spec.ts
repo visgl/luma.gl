@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -5,7 +6,6 @@
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, getViewBindingRange, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 import {
   GPU_CLUSTERING_WORKGROUP_SIZE,
   getGPUClusteringDispatchLayout,
@@ -16,36 +16,36 @@ import {
 } from '../../src/gpu-vector-search/gpu-clustering-utils';
 import type {GraphEmbeddingMatrix} from '../../src/gpu-vector-search/types';
 
-test('luVS clustering uses bounded multidimensional dispatch without uint32 wraparound', t => {
-  t.equal(GPU_CLUSTERING_WORKGROUP_SIZE, 64, 'workgroups fit portable WebGPU limits');
-  t.deepEqual(getGPUClusteringDispatchLayout('k-means', 0, 2), {x: 1, y: 1, z: 1});
-  t.deepEqual(getGPUClusteringDispatchLayout('k-means', 2 * 64 + 1, 2), {
+it('luVS clustering uses bounded multidimensional dispatch without uint32 wraparound', () => {
+  expect(GPU_CLUSTERING_WORKGROUP_SIZE, 'workgroups fit portable WebGPU limits').toBe(64);
+  expect(getGPUClusteringDispatchLayout('k-means', 0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUClusteringDispatchLayout('k-means', 2 * 64 + 1, 2)).toEqual({
     x: 2,
     y: 2,
     z: 1
   });
-  t.deepEqual(getGPUClusteringDispatchLayout('k-means', 4 * 64 + 1, 2), {
+  expect(getGPUClusteringDispatchLayout('k-means', 4 * 64 + 1, 2)).toEqual({
     x: 2,
     y: 2,
     z: 2
   });
-  t.throws(
-    () => getGPUClusteringDispatchLayout('k-means', 8 * 64 + 1, 2),
+  expect(() => getGPUClusteringDispatchLayout('k-means', 8 * 64 + 1, 2)).toThrow(
     /exceeding the 3D dispatch limit/
   );
 
   const source = getGPUClusteringInvocationIndexSource({x: 2, y: 2, z: 2});
-  t.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
-  t.match(source, /\* 2u \+ workgroupId\.x/);
-  t.ok(
-    source.indexOf('workgroupIndex >= 67108864u') <
-      source.indexOf('workgroupIndex * 64u + localInvocationIndex'),
+  expect(source).toMatch(/workgroupId\.z \* 2u \+ workgroupId\.y/);
+  expect(source).toMatch(/\* 2u \+ workgroupId\.x/);
+  expect(
+    Boolean(
+      source.indexOf('workgroupIndex >= 67108864u') <
+        source.indexOf('workgroupIndex * 64u + localInvocationIndex')
+    ),
     'the overflow guard executes before index multiplication'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('luVS clustering rejects malformed direct graph matrices before tiling or allocation', t => {
+it('luVS clustering rejects malformed direct graph matrices before tiling or allocation', () => {
   const values = {
     buffer: {byteLength: 16},
     format: 'float32',
@@ -60,83 +60,74 @@ test('luVS clustering rejects malformed direct graph matrices before tiling or a
     chunks: [{values, rowCount: 2, rowStride: 2, byteOffset: 0, sourceRowOffset: 0}]
   };
 
-  t.doesNotThrow(() => validateGPUClusteringEmbeddingMatrix(matrix, 'fixture'));
+  expect(() => validateGPUClusteringEmbeddingMatrix(matrix, 'fixture')).not.toThrow();
   for (const dimensions of [0, -1, 1.5, Number.NaN]) {
-    t.throws(
+    expect(
       () => validateGPUClusteringEmbeddingMatrix({...matrix, dimensions}, 'fixture'),
-      /dimensions must be a positive uint32 integer/,
       `${dimensions} embedding dimensions are rejected before any tile loop`
-    );
+    ).toThrow(/dimensions must be a positive uint32 integer/);
   }
   for (const rowCount of [-1, 1.5, Number.POSITIVE_INFINITY]) {
-    t.throws(
+    expect(
       () => validateGPUClusteringEmbeddingMatrix({...matrix, rowCount}, 'fixture'),
-      /row count must be a non-negative uint32 integer/,
       `${rowCount} logical rows are rejected`
-    );
+    ).toThrow(/row count must be a non-negative uint32 integer/);
   }
   for (const rowStride of [0, -1, 1, 1.5]) {
-    t.throws(
+    expect(
       () =>
         validateGPUClusteringEmbeddingMatrix(
           {...matrix, chunks: [{...matrix.chunks[0], rowStride}]},
           'fixture'
         ),
-      /row stride must contain every embedding dimension/,
       `${rowStride} cannot advance a complete embedding row`
-    );
+    ).toThrow(/row stride must contain every embedding dimension/);
   }
-  t.throws(
+  expect(
     () =>
       validateGPUClusteringEmbeddingMatrix(
         {...matrix, chunks: [{...matrix.chunks[0], byteOffset: 4}]},
         'fixture'
       ),
-    /byte offset must match/,
     'physical offsets cannot silently diverge from the imported view'
-  );
-  t.throws(
+  ).toThrow(/byte offset must match/);
+  expect(
     () =>
       validateGPUClusteringEmbeddingMatrix(
         {...matrix, chunks: [{...matrix.chunks[0], rowStride: 3}]},
         'fixture'
       ),
-    /rows exceed their declared/,
     'padded rows must fit inside the declared flat view'
-  );
-  t.throws(
+  ).toThrow(/rows exceed their declared/);
+  expect(
     () => validateGPUClusteringEmbeddingMatrix({...matrix, rowCount: 1}, 'fixture'),
-    /row count must match the sum/,
     'matrix and chunk row totals must agree exactly'
-  );
-  t.throws(
+  ).toThrow(/row count must match the sum/);
+  expect(
     () =>
       validateGPUClusteringEmbeddingMatrix(
         {...matrix, chunks: [{...matrix.chunks[0], sourceRowOffset: 0xffffffff}]},
         'fixture'
       ),
-    /source rows must fit below/,
     'implicit source IDs cannot enter the reserved invalid-ID range'
-  );
+  ).toThrow(/source rows must fit below/);
 
   const shortValidity = {
     ...values,
     format: 'uint32',
     length: 1
   } as GraphDataView<'uint32'>;
-  t.throws(
+  expect(
     () =>
       validateGPUClusteringEmbeddingMatrix(
         {...matrix, chunks: [{...matrix.chunks[0], validity: shortValidity}]},
         'fixture'
       ),
-    /validity flags must contain one value per source row/,
     'optional GPU metadata must cover every source row'
-  );
-  t.end();
+  ).toThrow(/validity flags must contain one value per source row/);
 });
 
-test('luVS clustering bounds every independently aligned row-parallel scalar binding', t => {
+it('luVS clustering bounds every independently aligned row-parallel scalar binding', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   device.limits.maxStorageBufferBindingSize = 512;
@@ -197,10 +188,7 @@ test('luVS clustering bounds every independently aligned row-parallel scalar bin
 
   try {
     const tiles = getGPUClusteringMatrixTiles(graph, matrix);
-    t.deepEqual(
-      tiles.map(tile => tile.rowCount),
-      [65, 63]
-    );
+    expect(tiles.map(tile => tile.rowCount)).toEqual([65, 63]);
     for (const tile of tiles) {
       const views = [
         tile.values,
@@ -209,14 +197,13 @@ test('luVS clustering bounds every independently aligned row-parallel scalar bin
         getGPUClusteringTileRowView(graph, labels, tile),
         getGPUClusteringTileRowView(graph, filter, tile)
       ];
-      t.ok(
-        views.every(view => getViewBindingRange(view).size <= 512),
+      expect(
+        Boolean(views.every(view => getViewBindingRange(view).size <= 512)),
         'embedding values, source IDs, validity, labels, and filters all fit the binding limit'
-      );
+      ).toBe(true);
     }
   } finally {
     for (const buffer of buffers) buffer.destroy();
     device.destroy();
   }
-  t.end();
 });

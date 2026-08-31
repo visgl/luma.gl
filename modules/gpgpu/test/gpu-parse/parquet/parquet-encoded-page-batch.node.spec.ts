@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,45 +7,47 @@ import type {ParquetEncodedPageBatch} from '@loaders.gl/parquet';
 import {ParquetJSWriter} from '@loaders.gl/parquet';
 import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/gpgpu/gpu-parse';
-import test from 'test/utils/vitest-tape';
 
-test('loaders.gl alpha.4 V1 and V2 pages produce mixed GPU batch plans', async testCase => {
-  testCase.equal(ParquetJSWriter.version, '5.0.0-alpha.4', 'uses the requested loaders.gl release');
+it('loaders.gl alpha.4 V1 and V2 pages produce mixed GPU batch plans', async () => {
+  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.4');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);
     const plan = planGPUParquetEncodedPageBatch(batch);
-    testCase.equal(plan.gpuPageCount, 4, `plans every V${useDataPageV2 ? 2 : 1} page`);
-    testCase.equal(plan.cpuFallbackPageCount, 0, 'does not silently fall back');
-    testCase.equal(plan.pages[0].mode, 'gpu', 'first page is GPU-addressable');
+    expect(plan.gpuPageCount, `plans every V${useDataPageV2 ? 2 : 1} page`).toBe(4);
+    expect(plan.cpuFallbackPageCount, 'does not silently fall back').toBe(0);
+    expect(plan.pages[0].mode, 'first page is GPU-addressable').toBe('gpu');
     if (plan.pages[0].mode === 'gpu') {
-      testCase.equal(plan.pages[0].physicalValueCount, 2, 'counts non-null physical values');
-      testCase.equal(plan.pages[0].definitionLevels?.valueCount, 2, 'retains definition levels');
-      testCase.equal(plan.pages[0].values.kind, 'plain-fixed', 'plans fixed PLAIN values');
+      expect(plan.pages[0].physicalValueCount, 'counts non-null physical values').toBe(2);
+      expect(plan.pages[0].definitionLevels?.valueCount, 'retains definition levels').toBe(2);
+      expect(plan.pages[0].values.kind, 'plans fixed PLAIN values').toBe('plain-fixed');
     }
     const allNullPage = plan.pages[3];
-    testCase.equal(allNullPage.mode, 'gpu', 'all-null pages remain valid GPU work');
+    expect(allNullPage.mode, 'all-null pages remain valid GPU work').toBe('gpu');
     if (allNullPage.mode === 'gpu') {
-      testCase.equal(allNullPage.physicalValueCount, 0, 'all-null page has no physical values');
-      testCase.equal(allNullPage.values.kind, 'plain-byte-array');
-      testCase.equal(allNullPage.values.decodedByteLength, 0);
+      expect(allNullPage.physicalValueCount, 'all-null page has no physical values').toBe(0);
+      expect(allNullPage.values.kind).toBe('plain-byte-array');
+      expect(allNullPage.values.decodedByteLength).toBe(0);
     }
-    testCase.ok(plan.uploadData.byteLength % 4 === 0, 'batch upload is word aligned');
+    expect(Boolean(plan.uploadData.byteLength % 4 === 0), 'batch upload is word aligned').toBe(
+      true
+    );
   }
-  testCase.end();
 });
 
-test('GPU Parquet page planner makes thresholds and fallback boundaries explicit', async testCase => {
+it('GPU Parquet page planner makes thresholds and fallback boundaries explicit', async () => {
   const batch = await makeEncodedPageBatch(true);
   const thresholdPlan = planGPUParquetEncodedPageBatch(batch, {minimumGPUByteLength: 1024});
-  testCase.equal(thresholdPlan.gpuPageCount, 0);
-  testCase.equal(thresholdPlan.cpuFallbackPageCount, 4);
-  testCase.ok(
-    thresholdPlan.pages.every(page =>
-      page.mode === 'cpu-fallback' ? page.reason === 'below-gpu-threshold' : false
+  expect(thresholdPlan.gpuPageCount).toBe(0);
+  expect(thresholdPlan.cpuFallbackPageCount).toBe(4);
+  expect(
+    Boolean(
+      thresholdPlan.pages.every(page =>
+        page.mode === 'cpu-fallback' ? page.reason === 'below-gpu-threshold' : false
+      )
     ),
     'every small page reports the threshold decision'
-  );
+  ).toBe(true);
 
   const malformed = {
     ...batch,
@@ -62,15 +65,13 @@ test('GPU Parquet page planner makes thresholds and fallback boundaries explicit
       ...batch.columns.slice(1)
     ]
   } satisfies ParquetEncodedPageBatch;
-  testCase.throws(
+  expect(
     () => planGPUParquetEncodedPageBatch(malformed),
-    /values section extends beyond the page body/,
     'rejects invalid loaders.gl section ranges before upload'
-  );
-  testCase.end();
+  ).toThrow(/values section extends beyond the page body/);
 });
 
-test('GPU Parquet page planner rejects mismatched compressed fixed-width output', testCase => {
+it('GPU Parquet page planner rejects mismatched compressed fixed-width output', () => {
   const data = Uint8Array.from([3, 8, 1, 2, 3]);
   const batch = {
     shape: 'parquet-encoded-pages' as const,
@@ -116,15 +117,13 @@ test('GPU Parquet page planner rejects mismatched compressed fixed-width output'
     ]
   } satisfies ParquetEncodedPageBatch;
 
-  testCase.throws(
+  expect(
     () => planGPUParquetEncodedPageBatch(batch),
-    /PLAIN INT32 payload has 3 decoded bytes; expected 4/,
     'cross-checks codec output metadata against the physical value layout'
-  );
-  testCase.end();
+  ).toThrow(/PLAIN INT32 payload has 3 decoded bytes; expected 4/);
 });
 
-test('GPU Parquet page planner caches variable dictionaries across data pages', testCase => {
+it('GPU Parquet page planner caches variable dictionaries across data pages', () => {
   const dictionaryData = Uint8Array.from([1, 0, 0, 0, 97, 2, 0, 0, 0, 98, 98]);
   const makeDictionaryPage = () => ({
     type: 'dictionary' as const,
@@ -189,28 +188,25 @@ test('GPU Parquet page planner caches variable dictionaries across data pages', 
   } satisfies ParquetEncodedPageBatch;
 
   const plan = planGPUParquetEncodedPageBatch(batch);
-  testCase.equal(plan.gpuPageCount, 2);
-  testCase.equal(plan.dictionaries[0]?.kind, 'byte-array');
-  testCase.ok(
-    plan.pages.every(
-      page =>
-        page.mode === 'gpu' &&
-        page.values.kind === 'dictionary-byte-array' &&
-        page.values.dictionary === plan.dictionaries[0]
+  expect(plan.gpuPageCount).toBe(2);
+  expect(plan.dictionaries[0]?.kind).toBe('byte-array');
+  expect(
+    Boolean(
+      plan.pages.every(
+        page =>
+          page.mode === 'gpu' &&
+          page.values.kind === 'dictionary-byte-array' &&
+          page.values.dictionary === plan.dictionaries[0]
+      )
     ),
     'both pages share one immutable dictionary plan'
-  );
+  ).toBe(true);
   if (plan.pages[0].mode === 'gpu' && plan.pages[0].values.kind === 'dictionary-byte-array') {
-    testCase.equal(plan.pages[0].values.decodedByteLength, 3, 'plans exact gathered byte size');
+    expect(plan.pages[0].values.decodedByteLength, 'plans exact gathered byte size').toBe(3);
   }
   if (plan.pages[1].mode === 'gpu' && plan.pages[1].values.kind === 'dictionary-byte-array') {
-    testCase.equal(
-      plan.pages[1].values.decodedByteLength,
-      2,
-      'plans the second page independently'
-    );
+    expect(plan.pages[1].values.decodedByteLength, 'plans the second page independently').toBe(2);
   }
-  testCase.end();
 });
 
 async function makeEncodedPageBatch(useDataPageV2: boolean): Promise<ParquetEncodedPageBatch> {
