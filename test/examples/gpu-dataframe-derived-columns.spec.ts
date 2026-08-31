@@ -5,15 +5,14 @@
 import {describe, expect, test, vi} from 'vitest';
 import {initializeGPUDataAnalysisExample} from '../../examples/experimental/gpu-data-analysis/src/app';
 
-describe('GPU data-analysis luDF derived-column example', () => {
-  test('executes an opt-in derived-column filter over existing Arrow-backed GPU buffers', async () => {
+describe('GPU data-analysis loaders.gl SQL example', () => {
+  test('executes an opt-in loaders.gl predicate over existing Arrow-backed GPU buffers', async () => {
     const container = document.createElement('main');
     container.id = 'gpu-data-analysis-app';
     document.body.append(container);
     const example = initializeGPUDataAnalysisExample();
     const dataset = container.querySelector<HTMLSelectElement>('[data-dataset]');
     const button = container.querySelector<HTMLButtonElement>('[data-gpu-dataframe-run]');
-    const adjustment = container.querySelector<HTMLInputElement>('[data-gpu-dataframe-adjustment]');
     const expression = container.querySelector<HTMLElement>('[data-gpu-dataframe-expression]');
     const selected = container.querySelector<HTMLElement>('[data-gpu-dataframe-selected]');
     const rate = container.querySelector<HTMLElement>('[data-gpu-dataframe-rate]');
@@ -25,7 +24,6 @@ describe('GPU data-analysis luDF derived-column example', () => {
     try {
       expect(dataset).not.toBeNull();
       expect(button).not.toBeNull();
-      expect(adjustment).not.toBeNull();
       expect(expression).not.toBeNull();
       expect(selected).not.toBeNull();
       expect(rate).not.toBeNull();
@@ -36,7 +34,6 @@ describe('GPU data-analysis luDF derived-column example', () => {
       if (
         !dataset ||
         !button ||
-        !adjustment ||
         !expression ||
         !selected ||
         !rate ||
@@ -59,16 +56,13 @@ describe('GPU data-analysis luDF derived-column example', () => {
       );
 
       expect(result.textContent).toContain('without copying rows');
-      expect(expression.textContent).toContain('value × 2 + 1 > 1');
-      adjustment.value = '1.25';
-      adjustment.dispatchEvent(new Event('input', {bubbles: true}));
-      expect(expression.textContent).toContain('value × 2 + 1.25 > 1');
+      expect(expression.textContent).toContain('value > :threshold');
       button.click();
 
       await vi.waitFor(
         () => {
           expect(result.textContent).toContain('selected rows');
-          expect(result.textContent).toContain('value × 2 + 1.25');
+          expect(result.textContent).toContain('loaders.gl WHERE value > :threshold');
           expect(result.textContent).toContain('first GPU values');
           expect(result.textContent).toContain('CPU verified');
           expect(selected.textContent).toMatch(/[\d,]+/);
@@ -86,7 +80,7 @@ describe('GPU data-analysis luDF derived-column example', () => {
 
       await vi.waitFor(
         () => {
-          expect(expression.textContent).toContain('> 0.75');
+          expect(expression.textContent).toContain('threshold = 0.75');
           expect(selected.textContent).not.toBe(previousSelection);
           expect(result.textContent).toContain('CPU verified');
         },

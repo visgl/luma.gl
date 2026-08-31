@@ -18,11 +18,9 @@ const EXAMPLE_SHELL = readFileSync(
   'utf8'
 );
 
-describe('GPU data-analysis luDF derived-column demo', () => {
-  test('offers an explicit interactive derived-column action without changing automatic startup', () => {
-    expect(EXAMPLE_SHELL).toContain('GPU DATAFRAME / DERIVED COLUMN LAB');
-    expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-adjustment');
-    expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-multiplier');
+describe('GPU data-analysis loaders.gl SQL demo', () => {
+  test('offers an explicit interactive loaders.gl query action without changing automatic startup', () => {
+    expect(EXAMPLE_SHELL).toContain('LOADERS.GL SQL / GPU DATAFRAME LAB');
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-threshold');
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-run');
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-result');
@@ -34,18 +32,18 @@ describe('GPU data-analysis luDF derived-column demo', () => {
     expect(EXAMPLE_SOURCE).not.toContain('await this.runGPUDataFrameDemo()');
   });
 
-  test('reuses Arrow-uploaded GPU columns and validates parameterized derivation and filtering', () => {
+  test('reuses Arrow-uploaded GPU columns and validates parameterized loaders.gl filtering', () => {
     expect(EXAMPLE_SOURCE).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(EXAMPLE_SOURCE).toContain("from '@loaders.gl/sql'");
+    expect(EXAMPLE_SOURCE).toContain("from '@luma.gl/experimental/gpu-sql'");
     expect(EXAMPLE_SOURCE).toContain('resources.values.data.map(');
     expect(EXAMPLE_SOURCE).toContain(
       'gpuData: {value: valueData, category: resources.groupKeys.data[batchIndex]}'
     );
-    expect(EXAMPLE_SOURCE).toContain('.withColumn(');
-    expect(EXAMPLE_SOURCE).toContain("parameter('adjustment', adjustment)");
-    expect(EXAMPLE_SOURCE).toContain("parameter('multiplier', multiplier)");
-    expect(EXAMPLE_SOURCE).toContain("parameter('threshold', threshold)");
-    expect(EXAMPLE_SOURCE).toContain(".filter(column('adjustedValue').greaterThan(");
-    expect(EXAMPLE_SOURCE).toContain(".select(['category', 'adjustedValue'])");
+    expect(EXAMPLE_SOURCE).toContain("parseSQLPredicate('value > :threshold'");
+    expect(EXAMPLE_SOURCE).toContain('planGPUDataFrameQuery(frame, {');
+    expect(EXAMPLE_SOURCE).toContain("columns: ['category', 'value']");
+    expect(EXAMPLE_SOURCE).toContain('parameters: {threshold}');
     expect(EXAMPLE_SOURCE).toContain('compiled.selectedCounts');
     expect(EXAMPLE_SOURCE).toContain('CPU verified');
     expect(EXAMPLE_SOURCE).toContain('compiled?.destroy()');

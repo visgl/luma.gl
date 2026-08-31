@@ -54,11 +54,11 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-alpha.4",
-    "@loaders.gl/gltf": "~5.0.0-alpha.4",
-    "@loaders.gl/las": "~5.0.0-alpha.4",
-    "@loaders.gl/parquet": "~5.0.0-alpha.4",
-    "@loaders.gl/polyfills": "~5.0.0-alpha.4",
+    "@loaders.gl/core": "~5.0.0-alpha.5",
+    "@loaders.gl/gltf": "~5.0.0-alpha.5",
+    "@loaders.gl/las": "~5.0.0-alpha.5",
+    "@loaders.gl/parquet": "~5.0.0-alpha.5",
+    "@loaders.gl/polyfills": "~5.0.0-alpha.5",
     "@math.gl/dggs-geohash": "^4.1.0",
     "@math.gl/dggs-quadkey": "^4.1.0",
     "@math.gl/dggs-s2": "^4.1.0",
@@ -90,17 +90,18 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*"
+    "@luma.gl/webgl": "workspace:*",
+    "@loaders.gl/schema-utils@npm:5.0.0-alpha.5": "patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@~5.0.0-alpha.4": {
+    "@loaders.gl/gltf@~5.0.0-alpha.5": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.4"
+        "@loaders.gl/core": "~5.0.0-alpha.5"
       }
     },
-    "@loaders.gl/images@~5.0.0-alpha.4": {
+    "@loaders.gl/images@~5.0.0-alpha.5": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.4"
+        "@loaders.gl/core": "~5.0.0-alpha.5"
       }
     }
   },
