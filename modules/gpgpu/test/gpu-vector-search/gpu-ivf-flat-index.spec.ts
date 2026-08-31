@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,18 +7,15 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 import {importGPUEmbeddingVector} from '../../src/gpu-vector-search/embedding-matrix';
 import {GPUIVFFlatIndex} from '../../src/gpu-vector-search/gpu-ivf-flat-index';
 import type {GraphEmbeddingMatrix} from '../../src/gpu-vector-search/types';
 
 const INVALID_SOURCE_ID = 0xffffffff;
 
-test('GPUIVFFlatIndex builds stable lists and exactly reranks bounded approximate probes', async t => {
+it('GPUIVFFlatIndex builds stable lists and exactly reranks bounded approximate probes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -62,9 +60,11 @@ test('GPUIVFFlatIndex builds stable lists and exactly reranks bounded approximat
     status: status.view,
     maxIterations: 3
   });
-  t.equal(index.isBuildRegistered, false, 'the constructor does not build or submit index work');
+  expect(index.isBuildRegistered, 'the constructor does not build or submit index work').toBe(
+    false
+  );
   index.addBuildToGraph(graph);
-  t.equal(index.isBuildRegistered, true, 'index construction has an explicit graph lifecycle');
+  expect(index.isBuildRegistered, 'index construction has an explicit graph lifecycle').toBe(true);
 
   const approximate = makeSearchOutputs(graph, resources, 'approximate', 2, 2);
   index.addSearchToGraph(graph, {
@@ -145,87 +145,73 @@ test('GPUIVFFlatIndex builds stable lists and exactly reranks bounded approximat
     compiled.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
 
-    t.deepEqual(
-      await readUnsigned(listCounts.buffer, 2),
-      [3, 3],
-      'both inverted lists are counted'
-    );
-    t.deepEqual(
+    expect(await readUnsigned(listCounts.buffer, 2), 'both inverted lists are counted').toEqual([
+      3, 3
+    ]);
+    expect(
       await readUnsigned(listOffsets.buffer, 3),
-      [0, 3, 6],
       'exclusive offsets include the trailing total'
-    );
-    t.deepEqual(
+    ).toEqual([0, 3, 6]);
+    expect(
       await readUnsigned(listSourceIds.buffer, 6),
-      [42, 7, 9, 100, 101, 102],
       'explicit source IDs remain stable in original source order'
-    );
-    t.deepEqual(
+    ).toEqual([42, 7, 9, 100, 101, 102]);
+    expect(
       await readUnsigned(listRowIndices.buffer, 6),
-      [0, 1, 2, 3, 4, 5],
       'persistent logical row references remain parallel to stable inverted-list source IDs'
-    );
-    t.deepEqual(
+    ).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(
       await readSearchOutputs(approximate, 2, 2),
-      {
-        ids: [42, 7, 100, 101],
-        scores: [0, 1, 0, 1],
-        resultCounts: [2, 2],
-        candidateCounts: [3, 3]
-      },
       'bounded exact reranking breaks equal-score ties by stable source ID'
-    );
-    t.deepEqual(
+    ).toEqual({
+      ids: [42, 7, 100, 101],
+      scores: [0, 1, 0, 1],
+      resultCounts: [2, 2],
+      candidateCounts: [3, 3]
+    });
+    expect(
       await readSearchOutputs(expanded, 2, 2),
-      {
-        ids: [9, 100, 100, 9],
-        scores: [1, 200, 0, 181],
-        resultCounts: [2, 2],
-        candidateCounts: [2, 2]
-      },
       'restrictive chunked LuxFilter masks expand all lists when fewer than K candidates remain'
-    );
-    t.deepEqual(
+    ).toEqual({
+      ids: [9, 100, 100, 9],
+      scores: [1, 200, 0, 181],
+      resultCounts: [2, 2],
+      candidateCounts: [2, 2]
+    });
+    expect(
       await readSearchOutputs(restricted, 2, 2),
-      {
-        ids: [9, INVALID_SOURCE_ID, 100, INVALID_SOURCE_ID],
-        scores: [1, Number.POSITIVE_INFINITY, 0, Number.POSITIVE_INFINITY],
-        resultCounts: [1, 1],
-        candidateCounts: [1, 1]
-      },
       'disabling fallback preserves approximate reduced probing and explicit result counts'
-    );
-    t.deepEqual(
+    ).toEqual({
+      ids: [9, INVALID_SOURCE_ID, 100, INVALID_SOURCE_ID],
+      scores: [1, Number.POSITIVE_INFINITY, 0, Number.POSITIVE_INFINITY],
+      resultCounts: [1, 1],
+      candidateCounts: [1, 1]
+    });
+    expect(
       await readSearchOutputs(zeroResults, 2, 0),
-      {ids: [], scores: [], resultCounts: [0, 0], candidateCounts: [3, 3]},
       'zero K never binds empty result arrays and still reports filtered eligible candidates'
-    );
-    t.deepEqual(
+    ).toEqual({ids: [], scores: [], resultCounts: [0, 0], candidateCounts: [3, 3]});
+    expect(
       await readUnsigned(zeroResultsWithoutCounts.resultCounts, 2),
-      [0, 0],
       'zero K without candidate counts clears result counts without evaluating source rows'
-    );
+    ).toEqual([0, 0]);
 
     const repeatEncoder = device.createCommandEncoder({id: 'ivf-flat-repeat'});
     compiled.encode(repeatEncoder, {parameters: undefined});
     device.submit(repeatEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUnsigned(listSourceIds.buffer, 6),
-      [42, 7, 9, 100, 101, 102],
       'repeated graph encodings deterministically rebuild all stable source IDs'
-    );
+    ).toEqual([42, 7, 9, 100, 101, 102]);
   } finally {
     compiled.destroy();
     for (const resource of resources) resource.destroy();
   }
-  t.end();
 });
 
-test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-finite semantics', async t => {
+it('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-finite semantics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -280,7 +266,7 @@ test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-fini
     format: 'uint32',
     length: dataset.rowCount
   });
-  t.throws(
+  expect(
     () =>
       new GPUIVFFlatIndex({
         id: 'overlapping-index',
@@ -293,9 +279,8 @@ test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-fini
         listSourceIds: index.listSourceIds,
         listRowIndices: index.listRowIndices
       }),
-    /must not overlap source embedding data/,
     'writable inverted-list assignments cannot overwrite embedding source rows'
-  );
+  ).toThrow(/must not overlap source embedding data/);
   index.addToGraph(graph);
 
   const cosine = makeSearchOutputs(graph, resources, 'cosine', 3, 3);
@@ -326,7 +311,7 @@ test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-fini
     tileSize: 2
   });
 
-  t.throws(
+  expect(
     () =>
       index.addSearchToGraph(graph, {
         id: 'aliased-result',
@@ -335,9 +320,8 @@ test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-fini
         outputIds: index.listSourceIds,
         k: 1
       }),
-    /must not alias source or index buffers/,
     'query results must not overwrite caller-owned inverted-list source IDs'
-  );
+  ).toThrow(/must not alias source or index buffers/);
 
   const compiled = graph.compile();
   try {
@@ -346,86 +330,79 @@ test('GPUIVFFlatIndex preserves cosine, inner-product, zero-vector, and non-fini
     device.submit(encoder.finish());
 
     const cosineOutput = await readSearchOutputs(cosine, 3, 3);
-    t.equal(
+    expect(
       (await readUnsigned(metricLabels.buffer, dataset.rowCount)).at(-1),
-      INVALID_SOURCE_ID,
       'the reserved invalid source ID never enters cluster labels or inverted-list candidate ranges'
-    );
-    t.deepEqual(
+    ).toBe(INVALID_SOURCE_ID);
+    expect(
       (await readUnsigned(metricRowIndices.buffer, dataset.rowCount)).slice(0, 4),
-      [0, 1, 2, 5],
       'sorted persistent row references exclude non-finite rows and reserved source IDs'
-    );
-    t.deepEqual(
+    ).toEqual([0, 1, 2, 5]);
+    expect(
       cosineOutput.ids,
-      [12, 3, 5, 3, 5, 7, INVALID_SOURCE_ID, INVALID_SOURCE_ID, INVALID_SOURCE_ID],
       'zero vectors, large equal-direction vectors, and invalid queries preserve deterministic IDs'
-    );
-    t.deepEqual(cosineOutput.scores.slice(0, 3), [1, 0, 0], 'zero-vector cosine remains exact');
-    t.ok(
-      Math.abs(cosineOutput.scores[3] - 1) < 1e-6 && Math.abs(cosineOutput.scores[4] - 1) < 1e-6,
+    ).toEqual([12, 3, 5, 3, 5, 7, INVALID_SOURCE_ID, INVALID_SOURCE_ID, INVALID_SOURCE_ID]);
+    expect(cosineOutput.scores.slice(0, 3), 'zero-vector cosine remains exact').toEqual([1, 0, 0]);
+    expect(
+      Boolean(
+        Math.abs(cosineOutput.scores[3] - 1) < 1e-6 && Math.abs(cosineOutput.scores[4] - 1) < 1e-6
+      ),
       'clamped normalized cosine handles near-maximum float32 inputs without overflowing norms'
-    );
-    t.deepEqual(
+    ).toBe(true);
+    expect(
       cosineOutput.scores.slice(5),
-      [0, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY],
       'invalid cosine results retain their metric-specific negative-infinity sentinel'
-    );
-    t.deepEqual(cosineOutput.resultCounts, [3, 3, 0], 'non-finite queries have no matches');
-    t.deepEqual(cosineOutput.candidateCounts, [4, 4, 0], 'non-finite source rows remain excluded');
+    ).toEqual([0, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY]);
+    expect(cosineOutput.resultCounts, 'non-finite queries have no matches').toEqual([3, 3, 0]);
+    expect(cosineOutput.candidateCounts, 'non-finite source rows remain excluded').toEqual([
+      4, 4, 0
+    ]);
 
     const innerProductOutput = await readSearchOutputs(innerProduct, 3, 3);
-    t.deepEqual(
+    expect(
       innerProductOutput.ids,
-      [3, 5, 7, 5, 3, 7, INVALID_SOURCE_ID, INVALID_SOURCE_ID, INVALID_SOURCE_ID],
       'inner-product ties use stable IDs and positive overflow sorts before finite products'
-    );
-    t.equal(
+    ).toEqual([3, 5, 7, 5, 3, 7, INVALID_SOURCE_ID, INVALID_SOURCE_ID, INVALID_SOURCE_ID]);
+    expect(
       innerProductOutput.scores[3],
-      Number.POSITIVE_INFINITY,
       'finite Float32 source values retain an overflowing inner-product score'
-    );
-    t.deepEqual(innerProductOutput.resultCounts, [3, 3, 0]);
-    t.deepEqual(innerProductOutput.candidateCounts, [4, 4, 0]);
+    ).toBe(Number.POSITIVE_INFINITY);
+    expect(innerProductOutput.resultCounts).toEqual([3, 3, 0]);
+    expect(innerProductOutput.candidateCounts).toEqual([4, 4, 0]);
 
     const squaredOverflowOutput = await readSearchOutputs(squaredOverflow, 3, 4);
-    t.deepEqual(
+    expect(
       squaredOverflowOutput.ids,
-      [
-        12,
-        3,
-        5,
-        7,
-        5,
-        3,
-        7,
-        12,
-        INVALID_SOURCE_ID,
-        INVALID_SOURCE_ID,
-        INVALID_SOURCE_ID,
-        INVALID_SOURCE_ID
-      ],
       'overflowing squared-distance ties still fill top-K in stable source-ID order'
-    );
-    t.deepEqual(
+    ).toEqual([
+      12,
+      3,
+      5,
+      7,
+      5,
+      3,
+      7,
+      12,
+      INVALID_SOURCE_ID,
+      INVALID_SOURCE_ID,
+      INVALID_SOURCE_ID,
+      INVALID_SOURCE_ID
+    ]);
+    expect(
       squaredOverflowOutput.scores.slice(4, 8),
-      [0, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
       'all finite source embeddings retain their representable or infinite distance scores'
-    );
-    t.deepEqual(squaredOverflowOutput.resultCounts, [4, 4, 0]);
-    t.deepEqual(squaredOverflowOutput.candidateCounts, [4, 4, 0]);
+    ).toEqual([0, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY]);
+    expect(squaredOverflowOutput.resultCounts).toEqual([4, 4, 0]);
+    expect(squaredOverflowOutput.candidateCounts).toEqual([4, 4, 0]);
   } finally {
     compiled.destroy();
     for (const resource of resources) resource.destroy();
   }
-  t.end();
 });
 
-test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported search graphs', async t => {
+it('GPUIVFFlatIndex preserves indexed stable IDs across independently imported search graphs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -467,18 +444,17 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
   };
 
   for (const dimensions of [0, -1, 1.5]) {
-    t.throws(
+    expect(
       () =>
         new GPUIVFFlatIndex({
           ...buildProps,
           dataset: {...buildDataset, dimensions}
         }),
-      /dimensions must be a positive uint32 integer/,
       `direct IVF descriptor rejects ${dimensions} embedding dimensions`
-    );
+    ).toThrow(/dimensions must be a positive uint32 integer/);
   }
   for (const rowStride of [0, 1]) {
-    t.throws(
+    expect(
       () =>
         new GPUIVFFlatIndex({
           ...buildProps,
@@ -487,15 +463,13 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
             chunks: [{...buildDataset.chunks[0], rowStride}, ...buildDataset.chunks.slice(1)]
           }
         }),
-      /row stride must contain every embedding dimension/,
       `direct IVF descriptor rejects incomplete stride ${rowStride} without entering tile loops`
-    );
+    ).toThrow(/row stride must contain every embedding dimension/);
   }
-  t.throws(
+  expect(
     () => new GPUIVFFlatIndex({...buildProps, dataset: {...buildDataset, rowCount: -1}}),
-    /row count must be a non-negative uint32 integer/,
     'negative direct IVF row counts fail synchronously before allocation'
-  );
+  ).toThrow(/row count must be a non-negative uint32 integer/);
 
   const buildIndex = new GPUIVFFlatIndex(buildProps);
   buildIndex.addToGraph(buildGraph);
@@ -505,11 +479,10 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
     const buildEncoder = device.createCommandEncoder({id: 'luvs-ivf-prebuilt-build-encoder'});
     compiledBuild.encode(buildEncoder, {parameters: undefined});
     device.submit(buildEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUnsigned(listSourceIds.buffer, 4),
-      [42, 7, 99, 3],
       'the build persists explicit stable IDs separately from logical source positions'
-    );
+    ).toEqual([42, 7, 99, 3]);
 
     const searchGraph = new GPUCommandGraph(device, {id: 'luvs-ivf-prebuilt-search'});
     const searchDataset = reimportEmbeddingViewWithoutSourceIds(
@@ -541,7 +514,7 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
     });
     const results = makeSearchOutputs(searchGraph, resources, 'prebuilt-search-results', 2, 2);
 
-    t.throws(
+    expect(
       () =>
         searchIndex.addSearchToGraph(searchGraph, {
           id: 'invalid-prebuilt-query',
@@ -552,9 +525,8 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
           ...results.views,
           k: 2
         }),
-      /row stride must contain every embedding dimension/,
       'manually constructed query descriptors fail before graph resources or nodes are created'
-    );
+    ).toThrow(/row stride must contain every embedding dimension/);
 
     searchIndex.addSearchToGraph(searchGraph, {
       id: 'prebuilt-search-results',
@@ -568,29 +540,25 @@ test('GPUIVFFlatIndex preserves indexed stable IDs across independently imported
     const searchEncoder = device.createCommandEncoder({id: 'luvs-ivf-prebuilt-search-encoder'});
     compiledSearch.encode(searchEncoder, {parameters: undefined});
     device.submit(searchEncoder.finish());
-    t.deepEqual(
+    expect(
       await readSearchOutputs(results, 2, 2),
-      {
-        ids: [42, 7, 99, 3],
-        scores: [0, 1, 0, 1],
-        resultCounts: [2, 2],
-        candidateCounts: [4, 4]
-      },
       'reranking uses persisted inverted-list IDs even when search embedding chunks omit source IDs'
-    );
+    ).toEqual({
+      ids: [42, 7, 99, 3],
+      scores: [0, 1, 0, 1],
+      resultCounts: [2, 2],
+      candidateCounts: [4, 4]
+    });
   } finally {
     compiledSearch?.destroy();
     compiledBuild.destroy();
     for (const resource of resources) resource.destroy();
   }
-  t.end();
 });
 
-test('GPUIVFFlatIndex initializes empty datasets and accepts zero-row query batches', async t => {
+it('GPUIVFFlatIndex initializes empty datasets and accepts zero-row query batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -635,31 +603,33 @@ test('GPUIVFFlatIndex initializes empty datasets and accepts zero-row query batc
     const encoder = device.createCommandEncoder({id: 'ivf-flat-empty-encoder'});
     compiled.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
-    t.deepEqual(await readUnsigned(listCounts.buffer, 2), [0, 0], 'empty list counts are cleared');
-    t.deepEqual(await readUnsigned(listOffsets.buffer, 3), [0, 0, 0], 'empty offsets include zero');
-    t.deepEqual(await readUnsigned(status.buffer, 3), [0, 0, 1], 'empty training starts converged');
-    t.deepEqual(
+    expect(await readUnsigned(listCounts.buffer, 2), 'empty list counts are cleared').toEqual([
+      0, 0
+    ]);
+    expect(await readUnsigned(listOffsets.buffer, 3), 'empty offsets include zero').toEqual([
+      0, 0, 0
+    ]);
+    expect(await readUnsigned(status.buffer, 3), 'empty training starts converged').toEqual([
+      0, 0, 1
+    ]);
+    expect(
       await readSearchOutputs(results, 1, 2),
-      {
-        ids: [INVALID_SOURCE_ID, INVALID_SOURCE_ID],
-        scores: [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
-        resultCounts: [0],
-        candidateCounts: [0]
-      },
       'empty candidate populations preserve explicit sentinel scores and zero match counts'
-    );
+    ).toEqual({
+      ids: [INVALID_SOURCE_ID, INVALID_SOURCE_ID],
+      scores: [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
+      resultCounts: [0],
+      candidateCounts: [0]
+    });
   } finally {
     compiled.destroy();
     for (const resource of resources) resource.destroy();
   }
-  t.end();
 });
 
-test('GPUIVFFlatIndex shards query outputs under artificial binding and dispatch limits', async t => {
+it('GPUIVFFlatIndex shards query outputs under artificial binding and dispatch limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -703,12 +673,14 @@ test('GPUIVFFlatIndex shards query outputs under artificial binding and dispatch
 
       const compiled = graph.compile();
       try {
-        t.ok(
-          compiled.stats.nodeOrder.filter(identifier =>
-            identifier.includes('bounded-results-query-')
-          ).length >= 3,
+        expect(
+          Boolean(
+            compiled.stats.nodeOrder.filter(identifier =>
+              identifier.includes('bounded-results-query-')
+            ).length >= 3
+          ),
           'query-major results are split across multiple independently bounded graph passes'
-        );
+        ).toBe(true);
         const encoder = device.createCommandEncoder({id: 'ivf-flat-bounded-query-encoder'});
         compiled.encode(encoder, {parameters: undefined});
         device.submit(encoder.finish());
@@ -719,27 +691,25 @@ test('GPUIVFFlatIndex shards query outputs under artificial binding and dispatch
             const difference = (first - queryValue) ** 2 - (second - queryValue) ** 2;
             return difference || first - second;
           });
-          t.deepEqual(
+          expect(
             actual.ids.slice(queryIndex * 4, queryIndex * 4 + 4),
-            expected,
             `bounded query ${queryIndex} preserves deterministic exact global order`
-          );
+          ).toEqual(expected);
         }
-        t.ok(
-          actual.resultCounts.every(count => count === 4),
+        expect(
+          Boolean(actual.resultCounts.every(count => count === 4)),
           'all 257 query result counts survive'
-        );
-        t.ok(
-          actual.candidateCounts.every(count => count === 4),
+        ).toBe(true);
+        expect(
+          Boolean(actual.candidateCounts.every(count => count === 4)),
           'all 257 query candidate counts survive'
-        );
+        ).toBe(true);
       } finally {
         compiled.destroy();
         for (const resource of resources) resource.destroy();
       }
     }
   );
-  t.end();
 });
 
 type EmbeddingFixture = {values: Float32Array; sourceIds?: Uint32Array};

@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,17 +10,14 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const ENCODED = Uint8Array.from([
   128, 1, 4, 5, 20, 1, 3, 255, 254, 253, 35, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 
-test('GPUParquetDeltaBinaryPackedDecoder reconstructs signed INT32 bit patterns', async testCase => {
+it('GPUParquetDeltaBinaryPackedDecoder reconstructs signed INT32 bit patterns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const plan = parseParquetDeltaBinaryPackedPlan(ENCODED);
@@ -65,15 +63,13 @@ test('GPUParquetDeltaBinaryPackedDecoder reconstructs signed INT32 bit patterns'
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Int32Array(result.buffer, result.byteOffset, 5)),
-      [10, 12, 15, 14, 18]
-    );
+    expect(Array.from(new Int32Array(result.buffer, result.byteOffset, 5))).toEqual([
+      10, 12, 15, 14, 18
+    ]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     descriptorBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

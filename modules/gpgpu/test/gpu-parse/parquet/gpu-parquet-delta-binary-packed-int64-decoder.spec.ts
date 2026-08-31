@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,13 +10,10 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetDeltaBinaryPackedInt64Decoder reconstructs signed INT64 values', async testCase => {
+it('GPUParquetDeltaBinaryPackedInt64Decoder reconstructs signed INT64 values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const encoded = Uint8Array.from([
@@ -72,14 +70,12 @@ test('GPUParquetDeltaBinaryPackedInt64Decoder reconstructs signed INT64 values',
       outputLowBuffer.readAsync(),
       outputHighBuffer.readAsync()
     ]);
-    testCase.deepEqual(
-      Array.from(new Uint32Array(lowResult.buffer, lowResult.byteOffset, 3)),
-      [0, 2, 0xffffffff]
-    );
-    testCase.deepEqual(
-      Array.from(new Uint32Array(highResult.buffer, highResult.byteOffset, 3)),
-      [1, 1, 0]
-    );
+    expect(Array.from(new Uint32Array(lowResult.buffer, lowResult.byteOffset, 3))).toEqual([
+      0, 2, 0xffffffff
+    ]);
+    expect(Array.from(new Uint32Array(highResult.buffer, highResult.byteOffset, 3))).toEqual([
+      1, 1, 0
+    ]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
@@ -87,5 +83,4 @@ test('GPUParquetDeltaBinaryPackedInt64Decoder reconstructs signed INT64 values',
     outputLowBuffer.destroy();
     outputHighBuffer.destroy();
   }
-  testCase.end();
 });

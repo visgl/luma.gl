@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -7,16 +8,13 @@ import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUH3CellProjection} from '@luma.gl/gpgpu/gpu-h3';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {cellToLatLng, getPentagons, getRes0Cells, gridDisk, latLngToCell} from 'h3-js';
-import test from 'test/utils/vitest-tape';
 
 const GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;
 const UNIT_VECTOR_TOLERANCE = 0.0006;
 
-test('GPUH3CellProjection matches h3-js for global, pentagon, and high-resolution cells', async t => {
+it('GPUH3CellProjection matches h3-js for global, pentagon, and high-resolution cells', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -30,41 +28,40 @@ test('GPUH3CellProjection matches h3-js for global, pentagon, and high-resolutio
       normalizeLongitude(longitudeLatitudes.values[cellIndex * 2] - longitude)
     );
     const latitudeError = Math.abs(longitudeLatitudes.values[cellIndex * 2 + 1] - latitude);
-    t.ok(
-      longitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES &&
-        latitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES,
+    expect(
+      Boolean(
+        longitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES &&
+          latitudeError <= GEOGRAPHIC_TOLERANCE_DEGREES
+      ),
       `cell ${cells[cellIndex]} center agrees with h3-js (GPU ${longitudeLatitudes.values[cellIndex * 2]}, ${longitudeLatitudes.values[cellIndex * 2 + 1]}; CPU ${longitude}, ${latitude})`
-    );
-    t.equal(longitudeLatitudes.validity[cellIndex], 1, 'valid cell sets the validity mask');
+    ).toBe(true);
+    expect(longitudeLatitudes.validity[cellIndex], 'valid cell sets the validity mask').toBe(1);
 
     const expectedUnitVector = makeUnitVector(longitude, latitude);
     for (let component = 0; component < 3; component++) {
-      t.ok(
-        Math.abs(unitVectors.values[cellIndex * 3 + component] - expectedUnitVector[component]) <=
-          UNIT_VECTOR_TOLERANCE,
+      expect(
+        Boolean(
+          Math.abs(unitVectors.values[cellIndex * 3 + component] - expectedUnitVector[component]) <=
+            UNIT_VECTOR_TOLERANCE
+        ),
         `cell ${cells[cellIndex]} unit-vector component ${component} agrees with h3-js`
-      );
+      ).toBe(true);
     }
-    t.equal(unitVectors.validity[cellIndex], 1, 'unit-vector projection preserves validity');
+    expect(unitVectors.validity[cellIndex], 'unit-vector projection preserves validity').toBe(1);
   }
-
-  t.end();
 });
 
-test('GPUH3CellProjection rejects invalid split-uint64 rows', async t => {
+it('GPUH3CellProjection rejects invalid split-uint64 rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const validCell = latLngToCell(37.775, -122.418, 9);
   const invalidCells = [0n, BigInt(`0x${validCell}`) | (1n << 63n)];
   const result = await runH3Projection(device, invalidCells, 'lnglat');
-  t.deepEqual(Array.from(result.values), [0, 0, 0, 0], 'invalid rows produce zero coordinates');
-  t.deepEqual(Array.from(result.validity), [0, 0], 'invalid rows clear the validity mask');
-  t.end();
+  expect(Array.from(result.values), 'invalid rows produce zero coordinates').toEqual([0, 0, 0, 0]);
+  expect(Array.from(result.validity), 'invalid rows clear the validity mask').toEqual([0, 0]);
 });
 
 type H3ProjectionKind = 'lnglat' | 'unit-vector';

@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,17 +10,14 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const ENCODED = Uint8Array.from([
   0, 0, 0, 0, 3, 0, 0, 0, 99, 97, 116, 1, 0, 0, 0, 100, 5, 0, 0, 0, 104, 111, 114, 115, 101
 ]);
 
-test('GPUParquetPlainByteArrayDecoder gathers variable values contiguously', async testCase => {
+it('GPUParquetPlainByteArrayDecoder gathers variable values contiguously', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const plan = parseParquetPlainByteArrayPlan(ENCODED, 4);
@@ -56,13 +54,9 @@ test('GPUParquetPlainByteArrayDecoder gathers variable values contiguously', asy
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await buffers[4].readAsync();
-    testCase.equal(
-      new TextDecoder().decode(result.subarray(0, plan.outputByteLength)),
-      'catdhorse'
-    );
+    expect(new TextDecoder().decode(result.subarray(0, plan.outputByteLength))).toBe('catdhorse');
   } finally {
     compiled.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
-  testCase.end();
 });

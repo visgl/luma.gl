@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPUParquetByteArrayDictionaryDecoder} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetByteArrayDictionaryDecoder composes gathers and scan', async testCase => {
+it('GPUParquetByteArrayDictionaryDecoder composes gathers and scan', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const dictionaryBytes = new TextEncoder().encode('catdoghorse');
@@ -60,18 +58,15 @@ test('GPUParquetByteArrayDictionaryDecoder composes gathers and scan', async tes
     const lengths = await buffers[4].readAsync();
     const offsets = await buffers[5].readAsync();
     const output = await buffers[6].readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint32Array(lengths.buffer, lengths.byteOffset, 4)),
-      [5, 3, 3, 5]
-    );
-    testCase.deepEqual(
-      Array.from(new Uint32Array(offsets.buffer, offsets.byteOffset, 4)),
-      [0, 5, 8, 11]
-    );
-    testCase.equal(new TextDecoder().decode(output), 'horsecatdoghorse');
+    expect(Array.from(new Uint32Array(lengths.buffer, lengths.byteOffset, 4))).toEqual([
+      5, 3, 3, 5
+    ]);
+    expect(Array.from(new Uint32Array(offsets.buffer, offsets.byteOffset, 4))).toEqual([
+      0, 5, 8, 11
+    ]);
+    expect(new TextDecoder().decode(output)).toBe('horsecatdoghorse');
   } finally {
     compiled.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
-  testCase.end();
 });

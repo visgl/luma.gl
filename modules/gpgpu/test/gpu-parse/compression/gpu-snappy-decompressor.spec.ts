@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPUSnappyDecompressor, parseSnappyDecompressionPlan} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUSnappyDecompressor resolves raw Snappy backreferences', async testCase => {
+it('GPUSnappyDecompressor resolves raw Snappy backreferences', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const compressed = Uint8Array.from([10, 8, 97, 98, 99, 22, 3, 0, 0, 33, 0, 0]);
@@ -56,8 +54,7 @@ test('GPUSnappyDecompressor resolves raw Snappy backreferences', async testCase 
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.equal(
-      new TextDecoder().decode(new Uint8Array(result.buffer, result.byteOffset, 10)),
+    expect(new TextDecoder().decode(new Uint8Array(result.buffer, result.byteOffset, 10))).toBe(
       'abcabcabc!'
     );
   } finally {
@@ -66,5 +63,4 @@ test('GPUSnappyDecompressor resolves raw Snappy backreferences', async testCase 
     descriptorBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

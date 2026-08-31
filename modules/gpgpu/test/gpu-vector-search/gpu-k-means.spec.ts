@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,18 +7,15 @@ import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 import {importGPUEmbeddingVector} from '../../src/gpu-vector-search/embedding-matrix';
 import {GPUKMeans} from '../../src/gpu-vector-search/gpu-k-means';
 import type {GraphEmbeddingMatrix} from '../../src/gpu-vector-search/types';
 
 const INVALID_CLUSTER_LABEL = 0xffffffff;
 
-test('GPUKMeans trains deterministic centroids across padded, nullable, and empty chunks', async t => {
+it('GPUKMeans trains deterministic centroids across padded, nullable, and empty chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -81,45 +79,53 @@ test('GPUKMeans trains deterministic centroids across padded, nullable, and empt
       )
     ).flat();
     const centroidValues = await readFloating(buffers[4], 4);
-    t.deepEqual(
+    expect(
       labelValues,
-      [0, 0, INVALID_CLUSTER_LABEL, 1, 1, 0, INVALID_CLUSTER_LABEL],
       'nullable and non-finite rows are excluded without changing source chunk topology'
-    );
-    t.deepEqual(await readUnsigned(buffers[5], 2), [3, 2], 'cluster counts ignore invalid rows');
-    t.ok(Math.abs(centroidValues[0] - 1 / 30) < 1e-6, 'low-cluster x centroid is deterministic');
-    t.ok(Math.abs(centroidValues[1] - 1 / 30) < 1e-6, 'low-cluster y centroid is deterministic');
-    t.ok(Math.abs(centroidValues[2] - 10.1) < 1e-5, 'high-cluster x centroid is accurate');
-    t.ok(Math.abs(centroidValues[3] - 9.9) < 1e-5, 'high-cluster y centroid is accurate');
-    t.deepEqual(
+    ).toEqual([0, 0, INVALID_CLUSTER_LABEL, 1, 1, 0, INVALID_CLUSTER_LABEL]);
+    expect(await readUnsigned(buffers[5], 2), 'cluster counts ignore invalid rows').toEqual([3, 2]);
+    expect(
+      Boolean(Math.abs(centroidValues[0] - 1 / 30) < 1e-6),
+      'low-cluster x centroid is deterministic'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centroidValues[1] - 1 / 30) < 1e-6),
+      'low-cluster y centroid is deterministic'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centroidValues[2] - 10.1) < 1e-5),
+      'high-cluster x centroid is accurate'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centroidValues[3] - 9.9) < 1e-5),
+      'high-cluster y centroid is accurate'
+    ).toBe(true);
+    expect(
       await readUnsigned(buffers[6], 3),
-      [2, 0, 1],
       'GPU status reports two executed iterations and deterministic convergence'
-    );
+    ).toEqual([2, 0, 1]);
 
     const repeatedEncoder = device.createCommandEncoder({id: 'luvs-k-means-repeat'});
     compiled.encode(repeatedEncoder, {parameters: undefined});
     device.submit(repeatedEncoder.finish());
-    t.deepEqual(
+    expect(
       await readUnsigned(buffers[5], 2),
-      [3, 2],
       'repeated graph encoding rebuilds the same deterministic clusters'
-    );
+    ).toEqual([3, 2]);
   } finally {
     compiled.destroy();
     for (const buffer of buffers) {
-      t.notOk(buffer.destroyed, 'the graph does not destroy caller-owned resources');
+      expect(Boolean(buffer.destroyed), 'the graph does not destroy caller-owned resources').toBe(
+        false
+      );
       buffer.destroy();
     }
   }
-  t.end();
 });
 
-test('GPUKMeans preserves empty clusters and rejects overlapping writable outputs', async t => {
+it('GPUKMeans preserves empty clusters and rejects overlapping writable outputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -135,29 +141,27 @@ test('GPUKMeans preserves empty clusters and rejects overlapping writable output
   const clusteringProps = {dataset, clusterCount: 3, centroids, labels, counts, status};
 
   for (const dimensions of [0, -1, 1.5]) {
-    t.throws(
+    expect(
       () =>
         new GPUKMeans({
           ...clusteringProps,
           dataset: {...dataset, dimensions}
         }),
-      /dimensions must be a positive uint32 integer/,
       `direct k-means matrix rejects ${dimensions} dimensions before allocation`
-    );
+    ).toThrow(/dimensions must be a positive uint32 integer/);
   }
   for (const rowStride of [0, 1]) {
-    t.throws(
+    expect(
       () =>
         new GPUKMeans({
           ...clusteringProps,
           dataset: {...dataset, chunks: [{...dataset.chunks[0], rowStride}]}
         }),
-      /row stride must contain every embedding dimension/,
       `direct k-means matrix rejects incomplete stride ${rowStride}`
-    );
+    ).toThrow(/row stride must contain every embedding dimension/);
   }
 
-  t.throws(
+  expect(
     () =>
       new GPUKMeans({
         dataset,
@@ -167,14 +171,13 @@ test('GPUKMeans preserves empty clusters and rejects overlapping writable output
         counts,
         status: counts
       }),
-    /separate graph buffers/,
     'caller-owned status and group counts cannot alias'
-  );
+  ).toThrow(/separate graph buffers/);
   const overlappingLabels = graph.createDataView(dataset.chunks[0].values.buffer, {
     format: 'uint32',
     length: 1
   });
-  t.throws(
+  expect(
     () =>
       new GPUKMeans({
         dataset,
@@ -184,9 +187,8 @@ test('GPUKMeans preserves empty clusters and rejects overlapping writable output
         counts,
         status
       }),
-    /must not overlap source embedding data/,
     'writable cluster labels cannot overwrite source embedding components'
-  );
+  ).toThrow(/must not overlap source embedding data/);
 
   new GPUKMeans({
     dataset,
@@ -202,29 +204,25 @@ test('GPUKMeans preserves empty clusters and rejects overlapping writable output
     const encoder = device.createCommandEncoder({id: 'luvs-k-means-empty-clusters-encoder'});
     compiled.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
-    t.deepEqual(await readUnsigned(buffers[3], 3), [1, 0, 0], 'empty clusters have zero members');
-    t.deepEqual(
+    expect(await readUnsigned(buffers[3], 3), 'empty clusters have zero members').toEqual([
+      1, 0, 0
+    ]);
+    expect(
       await readFloating(buffers[1], 6),
-      [4, 5, 4, 5, 4, 5],
       'empty clusters retain their deterministic seeded centroid'
-    );
-    t.deepEqual(
-      await readUnsigned(buffers[4], 3),
-      [2, 0, 1],
-      'training converges without readback'
-    );
+    ).toEqual([4, 5, 4, 5, 4, 5]);
+    expect(await readUnsigned(buffers[4], 3), 'training converges without readback').toEqual([
+      2, 0, 1
+    ]);
   } finally {
     compiled.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
-  t.end();
 });
 
-test('GPUKMeans keeps large finite same-sign centroid coordinates finite', async t => {
+it('GPUKMeans keeps large finite same-sign centroid coordinates finite', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -259,16 +257,28 @@ test('GPUKMeans keeps large finite same-sign centroid coordinates finite', async
     device.submit(encoder.finish());
 
     const centroidValues = await readFloating(buffers[1], 2);
-    t.ok(centroidValues.every(Number.isFinite), 'finite rows never create infinite centroids');
-    t.ok(Math.abs(centroidValues[0] / 3e38 - 1) < 1e-6, 'positive mean remains near 3e38');
-    t.ok(Math.abs(centroidValues[1] / -3e38 - 1) < 1e-6, 'negative mean remains near -3e38');
-    t.deepEqual(await readUnsigned(buffers[2], 2), [0, 0], 'both finite rows retain their labels');
-    t.deepEqual(await readUnsigned(buffers[3], 1), [2], 'both finite rows remain in the cluster');
+    expect(
+      Boolean(centroidValues.every(Number.isFinite)),
+      'finite rows never create infinite centroids'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centroidValues[0] / 3e38 - 1) < 1e-6),
+      'positive mean remains near 3e38'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(centroidValues[1] / -3e38 - 1) < 1e-6),
+      'negative mean remains near -3e38'
+    ).toBe(true);
+    expect(await readUnsigned(buffers[2], 2), 'both finite rows retain their labels').toEqual([
+      0, 0
+    ]);
+    expect(await readUnsigned(buffers[3], 1), 'both finite rows remain in the cluster').toEqual([
+      2
+    ]);
   } finally {
     compiled.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
-  t.end();
 });
 
 type EmbeddingChunkFixture = {
