@@ -1398,6 +1398,7 @@ export function getCandidateDensityShader(props: TraceSpanChunkShaderProps): str
   return /* wgsl */ `
 ${TRACE_SHADER_DECLARATIONS}
 ${getSpanChunkDeclarations(props)}
+const DENSITY_BIN_COUNT: u32 = ${TRACE_DENSITY_BIN_COUNT}u;
 struct TraceSpanBatch {
   firstSpanIndex: u32,
   spanCount: u32,
@@ -1459,7 +1460,7 @@ fn main(
     sourceVisible && (isDensityModeActive() || !processExpanded || !threadExpanded) &&
     !retainedExactSpan;
   if (densityVisible && focusVisible) {
-    let maximumBin = f32(${TRACE_DENSITY_BIN_COUNT - 1}u);
+    let maximumBin = f32(DENSITY_BIN_COUNT - 1u);
     let firstBin = u32(clamp(
       floor((span.start - viewUniforms.densityBinOrigin) /
         viewUniforms.densityBinDuration),
@@ -1472,11 +1473,15 @@ fn main(
       0.0,
       maximumBin
     ));
+    // The fixed upper bound prevents malformed view uniforms from wrapping a u32 loop forever.
     // Preserve temporal coverage: a long span contributes to every density bin it crosses.
-    for (var bin = firstBin; bin <= lastBin; bin++) {
+    for (var bin = firstBin; bin < DENSITY_BIN_COUNT; bin++) {
       let densityKey =
-        (u32(lane) * ${TRACE_DENSITY_BIN_COUNT}u + bin) * ${TRACE_GROUPS.length}u + span.group;
-      atomicAdd(&densityBins[densityKey], 1u);
+        (u32(lane) * DENSITY_BIN_COUNT + bin) * ${TRACE_GROUPS.length}u + span.group;
+      if (densityKey < arrayLength(&densityBins)) {
+        atomicAdd(&densityBins[densityKey], 1u);
+      }
+      if (bin >= lastBin) { break; }
     }
   }
 }`;

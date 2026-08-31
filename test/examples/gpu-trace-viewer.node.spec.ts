@@ -1023,8 +1023,12 @@ it('GPU trace adaptive LOD shaders parse as WGSL', () => {
   );
   expect(
     getCandidateDensityShader(spanChunk),
-    'density aggregation preserves long-span coverage across bins'
-  ).toMatch(/for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/);
+    'density aggregation has a fixed upper bound while preserving long-span coverage'
+  ).toMatch(/for \(var bin = firstBin; bin < DENSITY_BIN_COUNT; bin\+\+\)/);
+  expect(
+    getCandidateDensityShader(spanChunk),
+    'density aggregation guards every zoom-derived storage access'
+  ).toMatch(/densityKey < arrayLength\(&densityBins\)/);
   expect(
     getCandidateDensityShader(spanChunk),
     'density aggregation uses scroll-stable trace-time bin membership'
