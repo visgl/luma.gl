@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -16,54 +15,43 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUGraphTraversalToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-graph-traversal';
 
-test('GPUMask composes canonical GPU selection masks', async t => {
+it('GPUMask composes canonical GPU selection masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const first = Uint32Array.from([0, 1, 2, 0, 9, 1]);
   const second = Uint32Array.from([0, 1, 0, 8, 3, 0]);
   const third = Uint32Array.from([0, 0, 1, 1, 7, 1]);
-  t.deepEqual(
+  expect(
     await runMask(device, [first, second], 'and'),
-    [0, 1, 0, 0, 1, 0],
     'intersection treats every nonzero input as true'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 0, 0, 1, 0]);
+  expect(
     await runMask(device, [first, second], 'or'),
-    [0, 1, 1, 1, 1, 1],
     'union writes canonical zero and one values'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 1, 1, 1, 1]);
+  expect(
     await runMask(device, [first, second, third], 'xor'),
-    [0, 0, 0, 0, 1, 0],
     'exclusive union supports more than two masks'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 1, 0]);
+  expect(
     await runMask(device, [first, second, third], 'difference'),
-    [0, 0, 0, 0, 0, 0],
     'difference excludes every later matching input'
-  );
-  t.deepEqual(
-    await runMask(device, [first], 'not'),
-    [1, 0, 0, 1, 0, 0],
-    'inversion canonicalizes nonzero values'
-  );
-  t.deepEqual(await runMask(device, [new Uint32Array(0)], 'and'), [], 'empty masks add no work');
-  t.end();
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(await runMask(device, [first], 'not'), 'inversion canonicalizes nonzero values').toEqual([
+    1, 0, 0, 1, 0, 0
+  ]);
+  expect(await runMask(device, [new Uint32Array(0)], 'and'), 'empty masks add no work').toEqual([]);
 });
 
-test('GPUMask preserves imported GPUVector chunk boundaries', async t => {
+it('GPUMask preserves imported GPUVector chunk boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -79,128 +67,103 @@ test('GPUMask preserves imported GPUVector chunk boundaries', async t => {
   new GPUMask({inputs: [firstView, secondView], output: outputView}).addToGraph(graph);
   const compiled = graph.compile();
   submitGraph(device, compiled, 'chunked-mask');
-  t.deepEqual(
+  expect(
     await Promise.all(
       output.buffers.map((buffer, index) => readUint32(buffer, firstChunks[index].length))
     ),
-    [[1, 0, 0], [], [0, 1]],
     'each existing chunk receives only its source-aligned selected rows'
-  );
-  t.deepEqual(
+  ).toEqual([[1, 0, 0], [], [0, 1]]);
+  expect(
     compiled.stats.nodeOrder,
-    ['gpu-mask-chunk-0', 'gpu-mask-chunk-2'],
     'empty chunks preserve their identity without generating a dispatch'
-  );
+  ).toEqual(['gpu-mask-chunk-0', 'gpu-mask-chunk-2']);
   compiled.destroy();
   destroyVectorFixture(first);
   destroyVectorFixture(second);
   destroyVectorFixture(output);
-  t.end();
 });
 
-test('GPUHierarchyLayout scans live parent and child expansion states', async t => {
+it('GPUHierarchyLayout scans live parent and child expansion states', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runHierarchyLayout(device, Uint32Array.from([1, 0]), Uint32Array.from([1, 0, 1, 1]), 2),
-    {heights: [4, 1, 1, 0], offsets: [0, 4, 5, 6]},
     'expanded children and collapsed parent summaries receive stable scanned row offsets'
-  );
-  t.deepEqual(
+  ).toEqual({heights: [4, 1, 1, 0], offsets: [0, 4, 5, 6]});
+  expect(
     await runHierarchyLayout(device, Uint32Array.from([1, 1]), Uint32Array.from([1, 0, 0, 1]), 2),
-    {heights: [4, 1, 1, 4], offsets: [0, 4, 5, 6]},
     'individually collapsed children retain one row while expanded children retain four'
-  );
-  t.deepEqual(
+  ).toEqual({heights: [4, 1, 1, 4], offsets: [0, 4, 5, 6]});
+  expect(
     await runHierarchyLayout(device, new Uint32Array(0), new Uint32Array(0), 2),
-    {heights: [], offsets: []},
     'an empty hierarchy adds no scan or dispatch'
-  );
-  t.end();
+  ).toEqual({heights: [], offsets: []});
 });
 
-test('GPUHierarchyLayout preserves uneven parent and child partitions', async t => {
+it('GPUHierarchyLayout preserves uneven parent and child partitions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const result = await runPartitionedHierarchyLayout(device);
-  t.deepEqual(
+  expect(
     result.heights,
-    [[4, 1, 1], [], [0, 1, 4]],
     'global parent IDs remain correct when one child chunk crosses parent chunk boundaries'
-  );
-  t.deepEqual(
-    result.offsets,
-    [[0, 4, 5], [], [6, 6, 7]],
-    'the vector-wide scan preserves empty and uneven output chunks'
-  );
-  t.ok(
-    result.nodeOrder.includes('partitioned-hierarchy-heights-child-0-parent-2'),
+  ).toEqual([[4, 1, 1], [], [0, 1, 4]]);
+  expect(result.offsets, 'the vector-wide scan preserves empty and uneven output chunks').toEqual([
+    [0, 4, 5],
+    [],
+    [6, 6, 7]
+  ]);
+  expect(
+    Boolean(result.nodeOrder.includes('partitioned-hierarchy-heights-child-0-parent-2')),
     'the crossing child chunk is split against the relevant parent partition'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     result.updatedOffsets,
-    [[0, 4, 5], [], [6, 6, 10]],
     'replacing one child batch updates the vector-wide layout without recompiling the graph'
-  );
-  t.end();
+  ).toEqual([[0, 4, 5], [], [6, 6, 10]]);
 });
 
-test('GPUGraphTraversal expands outgoing, incoming, and bidirectional frontiers', async t => {
+it('GPUGraphTraversal expands outgoing, incoming, and bidirectional frontiers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runTraversal(device, {seeds: [0], maxDepth: 0}),
-    [1, 0, 0, 0, 0, 0],
     'zero-hop traversal preserves the selected seed'
-  );
-  t.deepEqual(
+  ).toEqual([1, 0, 0, 0, 0, 0]);
+  expect(
     await runTraversal(device, {seeds: [0], maxDepth: 1}),
-    [1, 1, 1, 0, 0, 0],
     'one-hop traversal returns direct outgoing neighbors'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 0, 0, 0]);
+  expect(
     await runTraversal(device, {seeds: [0], maxDepth: 3}),
-    [1, 1, 1, 1, 1, 0],
     'multi-hop traversal handles cycles and shared descendants'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 1, 1, 0]);
+  expect(
     await runTraversal(device, {seeds: [3], maxDepth: 1, direction: 'incoming'}),
-    [0, 1, 1, 1, 0, 0],
     'reverse CSR returns direct incoming dependencies'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 1, 1, 0, 0]);
+  expect(
     await runTraversal(device, {seeds: [1], maxDepth: 1, direction: 'both'}),
-    [1, 1, 1, 1, 0, 0],
     'bidirectional traversal combines parents and children in the same frontier'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 1, 0, 0]);
+  expect(
     await runTraversal(device, {seeds: [0, 99, 5], maxDepth: 1}),
-    [1, 1, 1, 0, 0, 1],
     'multiple seeds are retained while out-of-range references are ignored'
-  );
-  t.end();
+  ).toEqual([1, 1, 1, 0, 0, 1]);
 });
 
-test('GPUGraphTraversal executes packed initialization, seeds, and expansion in three dimensions', async t => {
+it('GPUGraphTraversal executes packed initialization, seeds, and expansion in three dimensions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -239,21 +202,19 @@ test('GPUGraphTraversal executes packed initialization, seeds, and expansion in 
       expectedOutput[sourceNode] = 1;
       expectedOutput[sourceNode + 1] = 1;
     }
-    t.deepEqual(
+    expect(
       await readUint32(buffers.output, nodeCount),
-      Array.from(expectedOutput),
       'initialization, seed publication, and outgoing expansion cover x, y, and z workgroups'
-    );
+    ).toEqual(Array.from(expectedOutput));
 
     for (const passName of ['initialize', 'seed', 'depth-0-clear', 'depth-0-outgoing']) {
       const dispatchIndex = dispatchSpy.mock.instances.findIndex(
         computation => (computation as Computation).id === `packed-bounded-traversal-${passName}`
       );
-      t.deepEqual(
+      expect(
         dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
-        [2, 2, 2],
         `${passName} respects the synthetic two-workgroup limit in every dimension`
-      );
+      ).toEqual([2, 2, 2]);
     }
   } finally {
     dispatchSpy.mockRestore();
@@ -262,67 +223,57 @@ test('GPUGraphTraversal executes packed initialization, seeds, and expansion in 
       buffer.destroy();
     }
   }
-  t.end();
 });
 
-test('GPUGraphTraversal reads dynamic seed counts and traversal depth', async t => {
+it('GPUGraphTraversal reads dynamic seed counts and traversal depth', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runTraversal(device, {
       seeds: [0, 5],
       activeSeedCount: 1,
       maxDepth: 3,
       activeDepth: 1
     }),
-    [1, 1, 1, 0, 0, 0],
     'GPU-resident counts restrict both seed selection and traversal depth'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 0, 0, 0]);
+  expect(
     await runTraversal(device, {
       seeds: [0, 5],
       activeSeedCount: 0,
       maxDepth: 3,
       activeDepth: 2
     }),
-    [0, 0, 0, 0, 0, 0],
     'zero active seeds clear every previously selected node'
-  );
-  t.end();
+  ).toEqual([0, 0, 0, 0, 0, 0]);
 });
 
-test('GPUGraphTraversal follows global IDs across local CSR partitions', async t => {
+it('GPUGraphTraversal follows global IDs across local CSR partitions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const result = await runPartitionedTraversal(device);
-  t.deepEqual(
+  expect(
     result.output,
-    [[1, 1], [], [1, 1], [1, 0]],
     'cross-partition edges match the packed traversal while preserving output topology'
-  );
-  t.ok(
-    result.nodeOrder.includes('partitioned-traversal-depth-0-outgoing-source-0-target-2') &&
-      result.nodeOrder.includes('partitioned-traversal-depth-1-outgoing-source-2-target-3'),
+  ).toEqual([[1, 1], [], [1, 1], [1, 0]]);
+  expect(
+    Boolean(
+      result.nodeOrder.includes('partitioned-traversal-depth-0-outgoing-source-0-target-2') &&
+        result.nodeOrder.includes('partitioned-traversal-depth-1-outgoing-source-2-target-3')
+    ),
     'source-to-target partition pairs make cross-partition routing explicit'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('GPUGraphTraversal routes large seed and output partitions through three-dimensional dispatches', async t => {
+it('GPUGraphTraversal routes large seed and output partitions through three-dimensional dispatches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -383,11 +334,10 @@ test('GPUGraphTraversal routes large seed and output partitions through three-di
         1;
       expectedLastPartition[sourceNode] = 1;
     }
-    t.deepEqual(
+    expect(
       await readVectorFixture(output),
-      [Array.from(expectedFirstPartition), [], Array.from(expectedLastPartition)],
       'large chunks preserve their empty partition while following global IDs in both directions'
-    );
+    ).toEqual([Array.from(expectedFirstPartition), [], Array.from(expectedLastPartition)]);
 
     for (const passName of [
       'partition-0-initialize',
@@ -403,11 +353,10 @@ test('GPUGraphTraversal routes large seed and output partitions through three-di
         computation =>
           (computation as Computation).id === `partitioned-bounded-traversal-${passName}`
       );
-      t.deepEqual(
+      expect(
         dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
-        [2, 2, 2],
         `${passName} preserves the bounded three-dimensional dispatch`
-      );
+      ).toEqual([2, 2, 2]);
     }
   } finally {
     dispatchSpy.mockRestore();
@@ -416,61 +365,51 @@ test('GPUGraphTraversal routes large seed and output partitions through three-di
       destroyVectorFixture(fixture);
     }
   }
-  t.end();
 });
 
-test('GPUAncestorProjection reconnects visible nodes across hidden parent chains', async t => {
+it('GPUAncestorProjection reconnects visible nodes across hidden parent chains', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const invalid = 0xffffffff;
-  t.deepEqual(
+  expect(
     await runAncestorProjection(
       device,
       Uint32Array.from([invalid, 0, 1, 2, 3, 4]),
       Uint32Array.from([1, 0, 1, 0, 0, 1]),
       8
     ),
-    [0, 0, 2, 2, 2, 5],
     'visible records project to themselves and filtered records select the nearest visible parent'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 2, 2, 2, 5]);
+  expect(
     await runAncestorProjection(
       device,
       Uint32Array.from([invalid, 0, 1, 2, 3, 4]),
       Uint32Array.from([1, 0, 1, 0, 0, 1]),
       1
     ),
-    [0, 0, 2, 2, invalid, 5],
     'depth-bounded projection rejects unresolved hidden-parent chains'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 2, 2, invalid, 5]);
+  expect(
     await runAncestorProjection(
       device,
       Uint32Array.from([1, 0, 99]),
       Uint32Array.from([0, 0, 0]),
       6
     ),
-    [invalid, invalid, invalid],
     'cycles and out-of-range parents resolve to the sentinel'
-  );
-  t.deepEqual(
+  ).toEqual([invalid, invalid, invalid]);
+  expect(
     await runAncestorProjection(device, new Uint32Array(0), new Uint32Array(0), 4),
-    [],
     'empty parent mappings do not dispatch'
-  );
-  t.end();
+  ).toEqual([]);
 });
 
-test('GPU trace-manipulation primitives reject incompatible views', async t => {
+it('GPU trace-manipulation primitives reject incompatible views', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -488,27 +427,23 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
   const first = graph.createDataView(firstHandle, {format: 'uint32', length: 4});
   const second = graph.createDataView(secondHandle, {format: 'uint32', length: 4});
   const short = graph.createDataView(secondHandle, {format: 'uint32', length: 2});
-  t.throws(
+  expect(
     () => new GPUMask({inputs: [], output: second}),
-    /at least one input/,
     'mask composition requires an input'
-  );
-  t.throws(
+  ).toThrow(/at least one input/);
+  expect(
     () => new GPUMask({inputs: [first, first], output: second, operation: 'not'}),
-    /exactly one input/,
     'inversion rejects ambiguous source masks'
-  );
-  t.throws(
+  ).toThrow(/exactly one input/);
+  expect(
     () => new GPUMask({inputs: [first], output: first}),
-    /separate buffers/,
     'read-write mask aliases are rejected'
-  );
-  t.throws(
+  ).toThrow(/separate buffers/);
+  expect(
     () => new GPUMask({inputs: [first], output: short}),
-    /length/,
     'mask composition requires matching row counts'
-  );
-  t.throws(
+  ).toThrow(/length/);
+  expect(
     () =>
       new GPUHierarchyLayout({
         parentStates: short,
@@ -517,10 +452,9 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         offsets: first,
         childrenPerParent: 0
       }),
-    /positive/,
     'hierarchy layout requires a positive child grouping'
-  );
-  t.throws(
+  ).toThrow(/positive/);
+  expect(
     () =>
       new GPUHierarchyLayout({
         parentStates: short,
@@ -529,16 +463,14 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         offsets: first,
         childrenPerParent: 3
       }),
-    /parent count/,
     'hierarchy layout requires complete source-aligned child groups'
-  );
-  t.throws(
+  ).toThrow(/parent count/);
+  expect(
     () => new GPUGraphTraversal({offsets: short, neighbors: first, seeds: first, output: second}),
-    /one more row/,
     'CSR offsets must describe every output node'
-  );
+  ).toThrow(/one more row/);
   const offsets = graph.createDataView(firstHandle, {format: 'uint32', length: 5});
-  t.throws(
+  expect(
     () =>
       new GPUGraphTraversal({
         offsets,
@@ -547,10 +479,9 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         output: second,
         direction: 'both'
       }),
-    /reverse adjacency/,
     'bidirectional traversal requires reverse CSR'
-  );
-  t.throws(
+  ).toThrow(/reverse adjacency/);
+  expect(
     () =>
       new GPUGraphTraversal({
         offsets,
@@ -559,10 +490,9 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         output: second,
         maxDepth: -1
       }),
-    /nonnegative/,
     'negative traversal depth is rejected'
-  );
-  t.throws(
+  ).toThrow(/nonnegative/);
+  expect(
     () =>
       new GPUGraphTraversal({
         offsets,
@@ -571,10 +501,9 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         output: second,
         maxDepth: 1025
       }),
-    /at most 1024/,
     'traversal depth is bounded before graph-node expansion'
-  );
-  t.throws(
+  ).toThrow(/at most 1024/);
+  expect(
     () =>
       new GPUGraphTraversal({
         offsets,
@@ -583,26 +512,22 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         output: second,
         maxDepth: 0x100000000
       }),
-    /at most 1024/,
     'traversal depth cannot reach an unrepresentable WGSL literal'
-  );
-  t.throws(
+  ).toThrow(/at most 1024/);
+  expect(
     () => new GPUAncestorProjection({parents: first, visibility: short, output: second}),
-    /matching lengths/,
     'ancestor projection requires source-aligned masks'
-  );
-  t.throws(
+  ).toThrow(/matching lengths/);
+  expect(
     () => new GPUAncestorProjection({parents: first, visibility: second, output: second}),
-    /separate buffer/,
     'ancestor projection rejects writable input aliases'
-  );
-  t.throws(
+  ).toThrow(/separate buffer/);
+  expect(
     () =>
       new GPUAncestorProjection({parents: first, visibility: first, output: second, maxDepth: -1}),
-    /nonnegative/,
     'ancestor projection rejects negative depth'
-  );
-  t.throws(
+  ).toThrow(/nonnegative/);
+  expect(
     () =>
       new GPUAncestorProjection({
         parents: first,
@@ -610,10 +535,8 @@ test('GPU trace-manipulation primitives reject incompatible views', async t => {
         output: second,
         maxDepth: 0x100000000
       }),
-    /uint32/,
     'ancestor projection rejects depth constants that WGSL cannot represent'
-  );
-  t.end();
+  ).toThrow(/uint32/);
 });
 
 async function runHierarchyLayout(

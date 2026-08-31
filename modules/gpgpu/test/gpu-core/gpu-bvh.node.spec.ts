@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import type {GPUCommandGraph, GraphDataView} from '../../src/gpu-core/gpu-command-graph';
 import {GPUBVH, type GPUBVHStrategy} from '../../src/gpu-core/gpu-bvh';
 
@@ -15,27 +15,24 @@ type MockGraph = GPUCommandGraph & {
   recordedNodes: RecordedGraphNode[];
 };
 
-test('GPUBVH automatically fuses portable small hierarchies into one graph node', testCase => {
+it('GPUBVH automatically fuses portable small hierarchies into one graph node', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 3, leafCapacity: 128, sourceCount: 87});
   hierarchy.addToGraph(graph);
 
-  testCase.equal(hierarchy.strategy, 'auto');
-  testCase.equal(hierarchy.resolvedStrategy, 'fused');
-  testCase.deepEqual(
+  expect(hierarchy.strategy).toBe('auto');
+  expect(hierarchy.resolvedStrategy).toBe('fused');
+  expect(
     graph.recordedNodes.map(node => node.id),
-    ['test-bvh-fused-refit'],
     'all eight parent levels are synchronized within one graph node'
-  );
-  testCase.equal(
+  ).toEqual(['test-bvh-fused-refit']);
+  expect(
     graph.recordedNodes[0].resources.length,
-    8,
     'generated source IDs preserve the default CORE storage-buffer limit'
-  );
-  testCase.end();
+  ).toBe(8);
 });
 
-test('GPUBVH preserves explicit source IDs in the fused graph contributor', testCase => {
+it('GPUBVH preserves explicit source IDs in the fused graph contributor', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {
     dimension: 2,
@@ -45,36 +42,26 @@ test('GPUBVH preserves explicit source IDs in the fused graph contributor', test
   });
   hierarchy.addToGraph(graph);
 
-  testCase.equal(hierarchy.resolvedStrategy, 'fused');
-  testCase.deepEqual(
+  expect(hierarchy.resolvedStrategy).toBe('fused');
+  expect(
     graph.recordedNodes.map(node => node.id),
-    ['test-bvh-fused-refit', 'test-bvh-remap-source-ids'],
     'stable source IDs are remapped after the complete fused hierarchy is published'
-  );
-  testCase.equal(
+  ).toEqual(['test-bvh-fused-refit', 'test-bvh-remap-source-ids']);
+  expect(
     graph.recordedNodes[0].resources.length,
-    8,
     'explicit IDs do not exceed the default CORE storage-buffer limit'
+  ).toBe(8);
+  expect(graph.recordedNodes[1].resources.length, 'identity remapping needs two buffers').toBe(2);
+  expect(graph.recordedNodes[1].resources[0].usage, 'stable source IDs are never overwritten').toBe(
+    'storage-read'
   );
-  testCase.equal(
-    graph.recordedNodes[1].resources.length,
-    2,
-    'identity remapping needs two buffers'
-  );
-  testCase.equal(
-    graph.recordedNodes[1].resources[0].usage,
-    'storage-read',
-    'stable source IDs are never overwritten'
-  );
-  testCase.equal(
+  expect(
     graph.recordedNodes[1].resources[1].usage,
-    'storage-read-write',
     'remapping waits for published leaf identities and preserves empty leaf slots'
-  );
-  testCase.end();
+  ).toBe('storage-read-write');
 });
 
-test('GPUBVH remaps explicit source IDs after per-level hierarchy publication', testCase => {
+it('GPUBVH remaps explicit source IDs after per-level hierarchy publication', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {
     dimension: 3,
@@ -85,40 +72,31 @@ test('GPUBVH remaps explicit source IDs after per-level hierarchy publication', 
   });
   hierarchy.addToGraph(graph);
 
-  testCase.equal(hierarchy.resolvedStrategy, 'level');
-  testCase.deepEqual(
-    graph.recordedNodes.map(node => node.id),
-    [
-      'test-bvh-load-leaves',
-      'test-bvh-refit-depth-1',
-      'test-bvh-refit-depth-0',
-      'test-bvh-remap-source-ids'
-    ]
-  );
-  testCase.equal(
+  expect(hierarchy.resolvedStrategy).toBe('level');
+  expect(graph.recordedNodes.map(node => node.id)).toEqual([
+    'test-bvh-load-leaves',
+    'test-bvh-refit-depth-1',
+    'test-bvh-refit-depth-0',
+    'test-bvh-remap-source-ids'
+  ]);
+  expect(
     Math.max(...graph.recordedNodes.map(node => node.resources.length)),
-    8,
     'every level and source-ID remapping pass remains within CORE storage-buffer limits'
-  );
-  testCase.end();
+  ).toBe(8);
 });
 
-test('GPUBVH fuses empty and singleton hierarchies without requiring a parent level', testCase => {
+it('GPUBVH fuses empty and singleton hierarchies without requiring a parent level', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 2, leafCapacity: 1, sourceCount: 0});
   hierarchy.addToGraph(graph);
 
-  testCase.equal(hierarchy.resolvedStrategy, 'fused');
-  testCase.equal(hierarchy.internalNodeCount, 0);
-  testCase.equal(hierarchy.levelCount, 1);
-  testCase.deepEqual(
-    graph.recordedNodes.map(node => node.id),
-    ['test-bvh-fused-refit']
-  );
-  testCase.end();
+  expect(hierarchy.resolvedStrategy).toBe('fused');
+  expect(hierarchy.internalNodeCount).toBe(0);
+  expect(hierarchy.levelCount).toBe(1);
+  expect(graph.recordedNodes.map(node => node.id)).toEqual(['test-bvh-fused-refit']);
 });
 
-test('GPUBVH retains forced and automatic multi-pass hierarchy construction', testCase => {
+it('GPUBVH retains forced and automatic multi-pass hierarchy construction', () => {
   const forcedGraph = makeGraph();
   const forcedHierarchy = makeHierarchy(forcedGraph, {
     dimension: 2,
@@ -128,11 +106,12 @@ test('GPUBVH retains forced and automatic multi-pass hierarchy construction', te
   });
   forcedHierarchy.addToGraph(forcedGraph);
 
-  testCase.equal(forcedHierarchy.resolvedStrategy, 'level');
-  testCase.deepEqual(
-    forcedGraph.recordedNodes.map(node => node.id),
-    ['test-bvh-load-leaves', 'test-bvh-refit-depth-1', 'test-bvh-refit-depth-0']
-  );
+  expect(forcedHierarchy.resolvedStrategy).toBe('level');
+  expect(forcedGraph.recordedNodes.map(node => node.id)).toEqual([
+    'test-bvh-load-leaves',
+    'test-bvh-refit-depth-1',
+    'test-bvh-refit-depth-0'
+  ]);
 
   const largeGraph = makeGraph();
   const largeHierarchy = makeHierarchy(largeGraph, {
@@ -142,19 +121,18 @@ test('GPUBVH retains forced and automatic multi-pass hierarchy construction', te
   });
   largeHierarchy.addToGraph(largeGraph);
 
-  testCase.equal(largeHierarchy.resolvedStrategy, 'level');
-  testCase.equal(largeGraph.recordedNodes.length, 9, 'one leaf load precedes eight tree levels');
-  testCase.end();
+  expect(largeHierarchy.resolvedStrategy).toBe('level');
+  expect(largeGraph.recordedNodes.length, 'one leaf load precedes eight tree levels').toBe(9);
 });
 
-test('GPUBVH checks workgroup capacity and rejects unsupported forced fusion', testCase => {
+it('GPUBVH checks workgroup capacity and rejects unsupported forced fusion', () => {
   const restrictedInvocations = makeGraph({maxComputeInvocationsPerWorkgroup: 32});
   const invocationHierarchy = makeHierarchy(restrictedInvocations, {
     dimension: 2,
     leafCapacity: 64,
     sourceCount: 17
   });
-  testCase.equal(invocationHierarchy.resolvedStrategy, 'level');
+  expect(invocationHierarchy.resolvedStrategy).toBe('level');
 
   const restrictedStorage = makeGraph({maxComputeWorkgroupStorageSize: 1024});
   const storageHierarchy = makeHierarchy(restrictedStorage, {
@@ -162,18 +140,15 @@ test('GPUBVH checks workgroup capacity and rejects unsupported forced fusion', t
     leafCapacity: 32,
     sourceCount: 17
   });
-  testCase.equal(storageHierarchy.resolvedStrategy, 'level');
-  testCase.throws(
-    () =>
-      makeHierarchy(restrictedStorage, {
-        dimension: 3,
-        leafCapacity: 32,
-        sourceCount: 17,
-        strategy: 'fused'
-      }),
-    /fused strategy exceeds portable single-workgroup limits/
-  );
-  testCase.end();
+  expect(storageHierarchy.resolvedStrategy).toBe('level');
+  expect(() =>
+    makeHierarchy(restrictedStorage, {
+      dimension: 3,
+      leafCapacity: 32,
+      sourceCount: 17,
+      strategy: 'fused'
+    })
+  ).toThrow(/fused strategy exceeds portable single-workgroup limits/);
 });
 
 function makeGraph(limitOverrides: Record<string, number> = {}): MockGraph {

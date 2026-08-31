@@ -12,57 +12,54 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGridIndexToGraphWithDispatchLimit,
   getGPUGridIndexDispatchLayout,
   getGPUGridIndexInvocationIndexSource
 } from '../../src/gpu-core/gpu-grid-index-internals';
 
-test('GPUGridIndex plans bounded multidimensional direct dispatches', t => {
+it('GPUGridIndex plans bounded multidimensional direct dispatches', () => {
   const maximum = 65_535;
   const oneDimensionalRowCapacity = maximum * 256;
 
-  t.deepEqual(getGPUGridIndexDispatchLayout(0, maximum), {x: 1, y: 1, z: 1});
-  t.deepEqual(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity, maximum), {
+  expect(getGPUGridIndexDispatchLayout(0, maximum)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity, maximum)).toEqual({
     x: maximum,
     y: 1,
     z: 1
   });
-  t.deepEqual(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity + 1, maximum), {
+  expect(getGPUGridIndexDispatchLayout(oneDimensionalRowCapacity + 1, maximum)).toEqual({
     x: maximum,
     y: 2,
     z: 1
   });
-  t.deepEqual(
+  expect(
     getGPUGridIndexDispatchLayout(4 * 256 + 1, 2),
-    {x: 2, y: 2, z: 2},
     'a small synthetic limit exercises the third dispatch dimension'
+  ).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGridIndexDispatchLayout(8 * 256 + 1, 2)).toThrow(
+    /exceeding the 3D dispatch limit/
   );
-  t.throws(() => getGPUGridIndexDispatchLayout(8 * 256 + 1, 2), /exceeding the 3D dispatch limit/);
 
   const source = getGPUGridIndexInvocationIndexSource({x: 3, y: 2, z: 2});
-  t.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
-  t.match(source, /\* 3u \+ workgroupId\.x/);
-  t.match(
-    source,
-    /workgroupIndex >= 16777216u/,
-    'padded workgroups cannot wrap the uint32 invocation index'
+  expect(source).toMatch(/workgroupId\.z \* 2u \+ workgroupId\.y/);
+  expect(source).toMatch(/\* 3u \+ workgroupId\.x/);
+  expect(source, 'padded workgroups cannot wrap the uint32 invocation index').toMatch(
+    /workgroupIndex >= 16777216u/
   );
-  t.ok(
-    source.indexOf('workgroupIndex >= 16777216u') <
-      source.indexOf('workgroupIndex * 256u + localInvocationIndex'),
+  expect(
+    Boolean(
+      source.indexOf('workgroupIndex >= 16777216u') <
+        source.indexOf('workgroupIndex * 256u + localInvocationIndex')
+    ),
     'the uint32 guard executes before invocation-index multiplication'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('GPUGridIndex executes a small three-dimensional dispatch layout', async t => {
+it('GPUGridIndex executes a small three-dimensional dispatch layout', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -81,26 +78,21 @@ test('GPUGridIndex executes a small three-dimensional dispatch layout', async t 
     }
   );
 
-  t.deepEqual(
-    result.cellOffsets,
-    [0, positionCount],
-    'every multidimensional invocation is counted'
-  );
-  t.equal(result.count, positionCount, 'the padded dispatch does not add phantom rows');
-  t.equal(result.overflow, 0, 'the exact-capacity result does not overflow');
-  t.deepEqual(
+  expect(result.cellOffsets, 'every multidimensional invocation is counted').toEqual([
+    0,
+    positionCount
+  ]);
+  expect(result.count, 'the padded dispatch does not add phantom rows').toBe(positionCount);
+  expect(result.overflow, 'the exact-capacity result does not overflow').toBe(0);
+  expect(
     result.objectIds.sort((left, right) => left - right),
-    Array.from({length: positionCount}, (_, index) => index),
     'scatter visits every source row exactly once'
-  );
-  t.end();
+  ).toEqual(Array.from({length: positionCount}, (_, index) => index));
 });
 
-test('GPUGridIndex scans cell offsets through a multidimensional dispatch', async t => {
+it('GPUGridIndex scans cell offsets through a multidimensional dispatch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -132,27 +124,22 @@ test('GPUGridIndex scans cell offsets through a multidimensional dispatch', asyn
     return 3;
   });
 
-  t.deepEqual(
+  expect(
     result.cellOffsets,
-    expectedOffsets,
     'the five-block cell-count scan and offset pass preserve every empty cell'
-  );
-  t.deepEqual(
+  ).toEqual(expectedOffsets);
+  expect(
     scanDispatch?.slice(1),
-    [2, 2, 2],
     'the GridIndex synthetic device limit reaches its nested scan dispatch'
-  );
-  t.deepEqual(result.objectIds, [0, 1, 2], 'widely separated cells retain their source rows');
-  t.equal(result.count, 3, 'the complete index count survives the multidimensional scan');
-  t.equal(result.overflow, 0, 'the exact-capacity index does not overflow');
-  t.end();
+  ).toEqual([2, 2, 2]);
+  expect(result.objectIds, 'widely separated cells retain their source rows').toEqual([0, 1, 2]);
+  expect(result.count, 'the complete index count survives the multidimensional scan').toBe(3);
+  expect(result.overflow, 'the exact-capacity index does not overflow').toBe(0);
 });
 
-test('GPUGridIndex builds bounded 2D cells with stable logical IDs', async t => {
+it('GPUGridIndex builds bounded 2D cells with stable logical IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -161,24 +148,22 @@ test('GPUGridIndex builds bounded 2D cells with stable logical IDs', async t => 
     firstSourceIndex: 10
   });
 
-  t.deepEqual(result.cellOffsets, [0, 1, 2, 3, 5], 'exclusive offsets delimit row-major cells');
-  t.equal(result.count, 5, 'only finite in-domain positions are indexed');
-  t.equal(result.overflow, 0, 'exact capacity does not overflow');
-  t.deepEqual(result.objectIds.slice(0, 3), [10, 11, 12], 'single-entry cells preserve source IDs');
-  t.deepEqual(
+  expect(result.cellOffsets, 'exclusive offsets delimit row-major cells').toEqual([0, 1, 2, 3, 5]);
+  expect(result.count, 'only finite in-domain positions are indexed').toBe(5);
+  expect(result.overflow, 'exact capacity does not overflow').toBe(0);
+  expect(result.objectIds.slice(0, 3), 'single-entry cells preserve source IDs').toEqual([
+    10, 11, 12
+  ]);
+  expect(
     result.objectIds.slice(3).sort((left, right) => left - right),
-    [13, 14],
     'clustered cell contains both stable source IDs regardless of atomic order'
-  );
-  t.equal(result.updatePolicy, 'rebuild', 'the initial update contract is explicit');
-  t.end();
+  ).toEqual([13, 14]);
+  expect(result.updatePolicy, 'the initial update contract is explicit').toBe('rebuild');
 });
 
-test('GPUGridIndex normalizes bounds whose full span exceeds float32', async t => {
+it('GPUGridIndex normalizes bounds whose full span exceeds float32', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -190,16 +175,13 @@ test('GPUGridIndex normalizes bounds whose full span exceeds float32', async t =
     [-3e38, 0, 3e38, 1],
     1
   );
-  t.deepEqual(result.cellOffsets, [0, 0, 1, 1], 'zero maps to the middle of extreme bounds');
-  t.deepEqual(result.objectIds, [0], 'the accepted point keeps its logical ID');
-  t.end();
+  expect(result.cellOffsets, 'zero maps to the middle of extreme bounds').toEqual([0, 0, 1, 1]);
+  expect(result.objectIds, 'the accepted point keeps its logical ID').toEqual([0]);
 });
 
-test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
+it('GPUGridIndex rejects overlapping scatter inputs and output', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -221,7 +203,7 @@ test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
   const outputs = createIndexOutputs(device, 1, 2);
   const importedOutputs = importIndexOutputs(graph, outputs, 1, 2);
 
-  t.throws(
+  expect(
     () =>
       new GPUGridIndex({
         positions,
@@ -230,9 +212,8 @@ test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
         ...importedOutputs,
         objectIds: overlappingObjectIds
       }),
-    /positions and objectIds must not overlap/,
     'position reads cannot alias object ID writes'
-  );
+  ).toThrow(/positions and objectIds must not overlap/);
 
   const separatePositionsBuffer = createInputBuffer(device, Float32Array.from([0, 0, 1, 1]));
   const separatePositions = importView(
@@ -247,7 +228,7 @@ test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
     length: 2,
     byteOffset: 4
   });
-  t.throws(
+  expect(
     () =>
       new GPUGridIndex({
         positions: separatePositions,
@@ -257,31 +238,30 @@ test('GPUGridIndex rejects overlapping scatter inputs and output', async t => {
         ...importedOutputs,
         objectIds: overlappingObjectIds
       }),
-    /sourceIds and objectIds must not overlap/,
     'source ID reads cannot alias object ID writes'
-  );
+  ).toThrow(/sourceIds and objectIds must not overlap/);
 
   sharedBuffer.destroy();
   separatePositionsBuffer.destroy();
   for (const buffer of Object.values(outputs)) buffer.destroy();
-  t.end();
 });
 
-test('GPUGridIndex reports capacity overflow without corrupting offsets', async t => {
+it('GPUGridIndex reports capacity overflow without corrupting offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const positions = Float32Array.from([0, 0, 1, 0, 0, 1, 2, 2, 2, 2]);
   const result = await runGridIndex(device, positions, 'float32x2', [2, 2], [0, 0, 2, 2], 4);
-  t.deepEqual(result.cellOffsets, [0, 1, 2, 3, 5], 'offsets describe the untruncated index');
-  t.equal(result.count, 5, 'count reports required capacity');
-  t.equal(result.overflow, 1, 'overflow reports truncated object ID storage');
-  t.deepEqual(result.objectIds.slice(0, 3), [0, 1, 2], 'complete cells remain addressable');
-  t.ok(result.objectIds[3] === 3 || result.objectIds[3] === 4, 'bounded tail stores one valid ID');
+  expect(result.cellOffsets, 'offsets describe the untruncated index').toEqual([0, 1, 2, 3, 5]);
+  expect(result.count, 'count reports required capacity').toBe(5);
+  expect(result.overflow, 'overflow reports truncated object ID storage').toBe(1);
+  expect(result.objectIds.slice(0, 3), 'complete cells remain addressable').toEqual([0, 1, 2]);
+  expect(
+    Boolean(result.objectIds[3] === 3 || result.objectIds[3] === 4),
+    'bounded tail stores one valid ID'
+  ).toBe(true);
 
   const zeroCapacity = await runGridIndex(
     device,
@@ -291,18 +271,15 @@ test('GPUGridIndex reports capacity overflow without corrupting offsets', async 
     [0, 0, 1, 1],
     0
   );
-  t.deepEqual(zeroCapacity.cellOffsets, [0, 1], 'zero capacity still publishes exact offsets');
-  t.deepEqual(zeroCapacity.objectIds, [], 'zero capacity performs no object-ID writes');
-  t.equal(zeroCapacity.count, 1, 'zero capacity reports the required row count');
-  t.equal(zeroCapacity.overflow, 1, 'zero capacity reports overflow for accepted input');
-  t.end();
+  expect(zeroCapacity.cellOffsets, 'zero capacity still publishes exact offsets').toEqual([0, 1]);
+  expect(zeroCapacity.objectIds, 'zero capacity performs no object-ID writes').toEqual([]);
+  expect(zeroCapacity.count, 'zero capacity reports the required row count').toBe(1);
+  expect(zeroCapacity.overflow, 'zero capacity reports overflow for accepted input').toBe(1);
 });
 
-test('GPUGridIndex builds 3D cells and preserves explicit source IDs', async t => {
+it('GPUGridIndex builds 3D cells and preserves explicit source IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -315,18 +292,15 @@ test('GPUGridIndex builds 3D cells and preserves explicit source IDs', async t =
     4,
     {sourceIds: Uint32Array.from([90, 80, 70, 60, 50])}
   );
-  t.deepEqual(result.cellOffsets, [0, 1, 2, 3, 4], 'layer-major 3D cells have exact offsets');
-  t.deepEqual(result.objectIds, [90, 80, 70, 60], 'explicit IDs replace generated row IDs');
-  t.equal(result.count, 4, 'out-of-domain 3D positions are ignored');
-  t.equal(result.overflow, 0, 'accepted 3D positions fit capacity');
-  t.end();
+  expect(result.cellOffsets, 'layer-major 3D cells have exact offsets').toEqual([0, 1, 2, 3, 4]);
+  expect(result.objectIds, 'explicit IDs replace generated row IDs').toEqual([90, 80, 70, 60]);
+  expect(result.count, 'out-of-domain 3D positions are ignored').toBe(4);
+  expect(result.overflow, 'accepted 3D positions fit capacity').toBe(0);
 });
 
-test('GPUGridIndex preserves vector chunks and rebuilds after input updates', async t => {
+it('GPUGridIndex preserves vector chunks and rebuilds after input updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -363,30 +337,26 @@ test('GPUGridIndex preserves vector chunks and rebuilds after input updates', as
   const compiled = graph.compile();
 
   encode(device, compiled);
-  t.deepEqual(await readUint32(outputs.cellOffsets, 5), [0, 1, 2, 3, 4]);
-  t.deepEqual(
+  expect(await readUint32(outputs.cellOffsets, 5)).toEqual([0, 1, 2, 3, 4]);
+  expect(
     compiled.stats.nodeOrder.filter(id => id.includes('-count-')),
-    ['gpu-grid-index-count-0', 'gpu-grid-index-count-2'],
     'empty chunks retain identity without adding count work'
-  );
+  ).toEqual(['gpu-grid-index-count-0', 'gpu-grid-index-count-2']);
 
   buffers[2].write(Float32Array.from([0, 0, 0, 0]));
   encode(device, compiled);
-  t.deepEqual(
+  expect(
     await readUint32(outputs.cellOffsets, 5),
-    [0, 3, 4, 4, 4],
     'rewriting one source chunk causes the next encoding to rebuild the complete compact index'
-  );
-  t.equal(
+  ).toEqual([0, 3, 4, 4, 4]);
+  expect(
     compiled.stats.logicalTransientBufferCount,
-    3,
     'build scratch is graph-owned and visible'
-  );
+  ).toBe(3);
 
   compiled.destroy();
   vector.destroy();
   for (const buffer of [...buffers, ...Object.values(outputs)]) buffer.destroy();
-  t.end();
 });
 
 type IndexOutputs = {

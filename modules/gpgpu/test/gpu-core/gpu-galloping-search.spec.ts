@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUGallopingSearch,
@@ -15,11 +15,9 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const BUFFER_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 
-test('GPUGallopingSearch matches segmented lower bounds and recovers from unsorted queries', async t => {
+it('GPUGallopingSearch matches segmented lower bounds and recovers from unsorted queries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -44,7 +42,7 @@ test('GPUGallopingSearch matches segmented lower bounds and recovers from unsort
     output: output.view,
     validationErrors: validationErrors.view
   });
-  t.deepEqual(search.stats, {
+  expect(search.stats).toEqual({
     orderedValueCount: 10,
     indirect: false,
     segmentCount: 2,
@@ -58,25 +56,21 @@ test('GPUGallopingSearch matches segmented lower bounds and recovers from unsort
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readUint32(output.buffer), [0, 1, 3, 5, 6, 8, 6, 9]);
-  t.equal(
+  expect(await readUint32(output.buffer)).toEqual([0, 1, 3, 5, 6, 8, 6, 9]);
+  expect(
     (await readUint32(validationErrors.buffer))[0],
-    GPU_GALLOPING_SEARCH_UNSORTED_QUERIES,
     'decreasing queries are reported while falling back to a correct lower bound'
-  );
+  ).toBe(GPU_GALLOPING_SEARCH_UNSORTED_QUERIES);
 
   compiled.destroy();
   for (const resource of [values, queries, segments, output, validationErrors]) {
     resource.buffer.destroy();
   }
-  t.end();
 });
 
-test('GPUGallopingSearch follows a sorted index over strided canonical values', async t => {
+it('GPUGallopingSearch follows a sorted index over strided canonical values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -106,7 +100,7 @@ test('GPUGallopingSearch follows a sorted index over strided canonical values', 
     output: output.view,
     validationErrors: validationErrors.view
   });
-  t.deepEqual(search.stats, {
+  expect(search.stats).toEqual({
     orderedValueCount: 5,
     indirect: true,
     segmentCount: 1,
@@ -120,22 +114,19 @@ test('GPUGallopingSearch follows a sorted index over strided canonical values', 
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readUint32(output.buffer), [0, 1, 2, 4, 5]);
-  t.deepEqual(await readUint32(validationErrors.buffer), [0]);
+  expect(await readUint32(output.buffer)).toEqual([0, 1, 2, 4, 5]);
+  expect(await readUint32(validationErrors.buffer)).toEqual([0]);
 
   compiled.destroy();
   sourceBuffer.destroy();
   for (const resource of [valueOrder, queries, segments, output, validationErrors]) {
     resource.buffer.destroy();
   }
-  t.end();
 });
 
-test('GPUGallopingSearch supports uint32 values, empty segments, and offset views', async t => {
+it('GPUGallopingSearch supports uint32 values, empty segments, and offset views', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -158,14 +149,13 @@ test('GPUGallopingSearch supports uint32 values, empty segments, and offset view
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readUint32(output.buffer), [99, 0, 1, 3, 5, 99]);
-  t.deepEqual(await readUint32(validationErrors.buffer), [0]);
+  expect(await readUint32(output.buffer)).toEqual([99, 0, 1, 3, 5, 99]);
+  expect(await readUint32(validationErrors.buffer)).toEqual([0]);
 
   compiled.destroy();
   for (const resource of [values, queries, segments, output, validationErrors]) {
     resource.buffer.destroy();
   }
-  t.end();
 });
 
 function makeView<Format extends GPUGallopingSearchFormat | 'uint32'>(

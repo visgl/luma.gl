@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -10,7 +11,6 @@ import {
   GPU_CONVOLUTION_AUTO_DIRECT_KERNEL_AREA,
   makeGPUConvolutionStats
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   getGPUConvolutionDirectShaderSource,
@@ -18,32 +18,31 @@ import {
   getGPUConvolutionPackShaderSource
 } from '../../src/gpu-core/gpu-convolution';
 
-test('GPUConvolution publishes direct and padded FFT workload plans', testCase => {
-  testCase.deepEqual(
+it('GPUConvolution publishes direct and padded FFT workload plans', () => {
+  expect(
     makeGPUConvolutionStats({
       width: 8,
       height: 6,
       kernelWidth: 3,
       kernelHeight: 3
-    }),
-    {
-      width: 8,
-      height: 6,
-      kernelWidth: 3,
-      kernelHeight: 3,
-      boundary: 'zero',
-      elementCount: 48,
-      kernelElementCount: 9,
-      directMultiplyAddCount: 432,
-      fftWidth: 16,
-      fftHeight: 8,
-      fftElementCount: 128,
-      fftTransformPassCount: 9,
-      fftDispatchCount: 30,
-      fftComplexBufferByteLength: 1024,
-      fftLogicalTransientByteLength: 9216
-    }
-  );
+    })
+  ).toEqual({
+    width: 8,
+    height: 6,
+    kernelWidth: 3,
+    kernelHeight: 3,
+    boundary: 'zero',
+    elementCount: 48,
+    kernelElementCount: 9,
+    directMultiplyAddCount: 432,
+    fftWidth: 16,
+    fftHeight: 8,
+    fftElementCount: 128,
+    fftTransformPassCount: 9,
+    fftDispatchCount: 30,
+    fftComplexBufferByteLength: 1024,
+    fftLogicalTransientByteLength: 9216
+  });
   const wrap = makeGPUConvolutionStats({
     width: 8,
     height: 8,
@@ -51,37 +50,33 @@ test('GPUConvolution publishes direct and padded FFT workload plans', testCase =
     kernelHeight: 3,
     boundary: 'wrap'
   });
-  testCase.equal(wrap.fftWidth, 8);
-  testCase.equal(wrap.fftHeight, 8);
-  testCase.equal(wrap.fftTransformPassCount, 8);
-  testCase.equal(GPU_CONVOLUTION_AUTO_DIRECT_KERNEL_AREA, 4096);
-  testCase.throws(
-    () => makeGPUConvolutionStats({width: 8, height: 8, kernelWidth: 4, kernelHeight: 3}),
-    /must be odd/
-  );
-  testCase.end();
+  expect(wrap.fftWidth).toBe(8);
+  expect(wrap.fftHeight).toBe(8);
+  expect(wrap.fftTransformPassCount).toBe(8);
+  expect(GPU_CONVOLUTION_AUTO_DIRECT_KERNEL_AREA).toBe(4096);
+  expect(() =>
+    makeGPUConvolutionStats({width: 8, height: 8, kernelWidth: 4, kernelHeight: 3})
+  ).toThrow(/must be odd/);
 });
 
-test('GPUConvolution support exposes the automatic crossover and FFT constraints', testCase => {
+it('GPUConvolution support exposes the automatic crossover and FFT constraints', () => {
   const device = makeSupportDevice();
-  testCase.equal(
+  expect(
     getGPUConvolutionSupport(device, {
       width: 64,
       height: 32,
       kernelWidth: 3,
       kernelHeight: 3
-    }).strategy,
-    'direct'
-  );
-  testCase.equal(
+    }).strategy
+  ).toBe('direct');
+  expect(
     getGPUConvolutionSupport(device, {
       width: 64,
       height: 32,
       kernelWidth: 65,
       kernelHeight: 65
-    }).strategy,
-    'fft'
-  );
+    }).strategy
+  ).toBe('fft');
   const automaticFallback = getGPUConvolutionSupport(device, {
     width: 60,
     height: 30,
@@ -89,8 +84,8 @@ test('GPUConvolution support exposes the automatic crossover and FFT constraints
     kernelHeight: 11,
     boundary: 'wrap'
   });
-  testCase.equal(automaticFallback.supported, true);
-  testCase.equal(automaticFallback.strategy, 'direct');
+  expect(automaticFallback.supported).toBe(true);
+  expect(automaticFallback.strategy).toBe('direct');
   const explicitUnsupported = getGPUConvolutionSupport(device, {
     width: 60,
     height: 30,
@@ -99,17 +94,16 @@ test('GPUConvolution support exposes the automatic crossover and FFT constraints
     boundary: 'wrap',
     strategy: 'fft'
   });
-  testCase.equal(explicitUnsupported.supported, false);
-  testCase.match(explicitUnsupported.reason || '', /power-of-two/);
-  testCase.end();
+  expect(explicitUnsupported.supported).toBe(false);
+  expect(explicitUnsupported.reason || '').toMatch(/power-of-two/);
 });
 
-test('GPUConvolution validates views, capacity, aliasing, and graph ownership', testCase => {
+it('GPUConvolution validates views, capacity, aliasing, and graph ownership', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const input = makeView(graph, 'input', 64);
   const kernel = makeView(graph, 'kernel', 9);
   const output = makeView(graph, 'output', 64);
-  testCase.doesNotThrow(
+  expect(
     () =>
       new GPUConvolution({
         input,
@@ -120,8 +114,8 @@ test('GPUConvolution validates views, capacity, aliasing, and graph ownership', 
         kernelWidth: 3,
         kernelHeight: 3
       })
-  );
-  testCase.throws(
+  ).not.toThrow();
+  expect(
     () =>
       new GPUConvolution({
         input,
@@ -131,11 +125,10 @@ test('GPUConvolution validates views, capacity, aliasing, and graph ownership', 
         height: 8,
         kernelWidth: 3,
         kernelHeight: 3
-      }),
-    /output must contain at least/
-  );
+      })
+  ).toThrow(/output must contain at least/);
   const aliasedOutput = graph.createDataView(input.buffer, {format: 'float32', length: 64});
-  testCase.throws(
+  expect(
     () =>
       new GPUConvolution({
         input,
@@ -145,28 +138,24 @@ test('GPUConvolution validates views, capacity, aliasing, and graph ownership', 
         height: 8,
         kernelWidth: 3,
         kernelHeight: 3
-      }),
-    /separate buffer/
-  );
+      })
+  ).toThrow(/separate buffer/);
   const otherGraph = new GPUCommandGraph(makeSupportDevice());
   const otherOutput = makeView(otherGraph, 'other-output', 64);
-  testCase.throws(
-    () =>
-      new GPUConvolution({
-        input,
-        kernel,
-        output: otherOutput,
-        width: 8,
-        height: 8,
-        kernelWidth: 3,
-        kernelHeight: 3
-      }).addToGraph(graph),
-    /different GPUCommandGraph/
-  );
-  testCase.end();
+  expect(() =>
+    new GPUConvolution({
+      input,
+      kernel,
+      output: otherOutput,
+      width: 8,
+      height: 8,
+      kernelWidth: 3,
+      kernelHeight: 3
+    }).addToGraph(graph)
+  ).toThrow(/different GPUCommandGraph/);
 });
 
-test('GPUConvolution generated direct, packing, and FFT shaders reflect', testCase => {
+it('GPUConvolution generated direct, packing, and FFT shaders reflect', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const input = makeView(graph, 'input', 64);
   const kernel = makeView(graph, 'kernel', 9);
@@ -199,15 +188,11 @@ test('GPUConvolution generated direct, packing, and FFT shaders reflect', testCa
     {x: 1, y: 1, z: 1}
   );
   for (const source of [direct, pack, fft]) {
-    testCase.deepEqual(
-      new WgslReflect(source).entry.compute.map(entry => entry.name),
-      ['main']
-    );
+    expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
   }
-  testCase.match(direct, /wrappedX/, 'direct wrap boundary is explicit');
-  testCase.match(pack, /packedKernel/, 'FFT path centers the kernel in the padded field');
-  testCase.match(fft, /multiplyComplex/, 'FFT path consumes shared complex arithmetic');
-  testCase.end();
+  expect(direct, 'direct wrap boundary is explicit').toMatch(/wrappedX/);
+  expect(pack, 'FFT path centers the kernel in the padded field').toMatch(/packedKernel/);
+  expect(fft, 'FFT path consumes shared complex arithmetic').toMatch(/multiplyComplex/);
 });
 
 function makeView(graph: GPUCommandGraph, id: string, length: number) {
