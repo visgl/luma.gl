@@ -14,11 +14,9 @@ import {
   type PolygonStorageModelProps
 } from '@luma.gl/experimental/models';
 import {DataType, RecordBatch, Table, Uint8, Vector} from 'apache-arrow';
-import {
-  canConvertColors,
-  convertArrowColorsToArrow,
-  type ArrowColorType
-} from '../../../arrow-colors';
+import {canConvertColors} from '../../../arrow-colors';
+import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
+import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-table-adapters';
 import {
   clearArrowPickingState,
   createArrowPickingManager,
@@ -500,13 +498,20 @@ export async function prepareArrowPolygonInput(
     ? getArrowVectorByteLength(sourceVectors.colors)
     : 0;
   if (sourceVectors.colors && needsArrowColorConversion(sourceVectors.colors)) {
+    const preparedColors = await convertArrowToGPUVector(device, sourceVectors.colors, {
+      name: `${options.id ?? 'arrow-polygons'}-colors`,
+      semantic: 'color',
+      format: 'unorm8x4'
+    });
+    let normalizedColors: Vector;
+    try {
+      normalizedColors = await readArrowGPUVectorAsync(preparedColors.vector);
+    } finally {
+      preparedColors.destroy();
+    }
     sourceVectors = {
       ...sourceVectors,
-      colors: await convertArrowColorsToArrow(
-        device,
-        sourceVectors.colors as Vector<ArrowColorType>,
-        {name: `${options.id ?? 'arrow-polygons'}-colors`}
-      )
+      colors: normalizedColors as ArrowPolygonSourceVectors['colors']
     };
   }
   const startedAt = getTimestampMilliseconds();

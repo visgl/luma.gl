@@ -43,6 +43,8 @@ export type {
   ConvertColorsInputs,
   ConvertColorsProps
 } from './operations/convert-colors';
+export {castData} from './operations/cast-data';
+export type {CastDataInputs, CastDataProps} from './operations/cast-data';
 export {dot} from './operations/dot';
 export {equalAll} from './operations/equal-all';
 export {interleave} from './operations/interleave';

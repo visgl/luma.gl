@@ -4,12 +4,10 @@
 
 import {
   canConvertColors,
-  convertArrowColorsToArrow,
-  convertColors,
+  convertArrowToGPUVector,
   getArrowPaths,
   getArrowRecordBatchAsyncIterator,
   readArrowGPUVectorAsync,
-  type ArrowColorType,
   type ArrowRecordBatchSource
 } from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
@@ -95,7 +93,15 @@ export async function convertArrowLayerColorGPUVector(
       converted: false
     };
   }
-  return {vector: await convertColors(device, vector, {name}), converted: true};
+  const prepared = await convertArrowToGPUVector(device, vector, {
+    name,
+    semantic: 'color',
+    format: 'unorm8x4'
+  });
+  return {
+    vector: prepared.vector as GPUVector<'unorm8x4'>,
+    converted: prepared.ownsVector
+  };
 }
 
 /** Reads one borrowed GPU vector, optionally normalizing fixed-width colors before readback. */
@@ -127,7 +133,16 @@ export async function convertArrowLayerColorVector(
   if (!canConvertColors(vector)) {
     return vector;
   }
-  return await convertArrowColorsToArrow(device, vector as Vector<ArrowColorType>, {name});
+  const prepared = await convertArrowToGPUVector(device, vector, {
+    name,
+    semantic: 'color',
+    format: 'unorm8x4'
+  });
+  try {
+    return await readArrowGPUVectorAsync(prepared.vector);
+  } finally {
+    prepared.destroy();
+  }
 }
 
 function hasNullRows(nullBitmap: Uint8Array, length: number): boolean {

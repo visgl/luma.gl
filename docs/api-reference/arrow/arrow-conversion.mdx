@@ -4,6 +4,91 @@ import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 
 <ArrowDocsTabs active="conversion" />
 
+## Universal Arrow-to-GPU Planning
+
+`planArrowGPUConversion()` and `convertArrowToGPUVector()` are the common
+schema-to-storage boundary for Arrow-backed GPU inputs. The planner is side-effect
+free. It reports the selected semantic family, physical strategy, execution
+backend, source and target formats, preserved chunk count, estimated bytes and
+passes, ownership, reasons, and lossy-conversion warnings before any GPU resource
+is allocated.
+
+```ts
+import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/arrow';
+
+const plan = planArrowGPUConversion(device, sourceVector, {
+  semantic: 'color',
+  format: 'unorm8x4'
+});
+
+const prepared = await convertArrowToGPUVector(device, sourceVector, {
+  name: 'instanceColors',
+  semantic: 'color',
+  format: 'unorm8x4'
+});
+
+// prepared.vector is ready for a GPU table or model.
+prepared.destroy();
+```
+
+The planner selects among:
+
+- zero-copy borrowing when an input `GPUVector` already has the exact format;
+- direct Arrow upload when the physical bytes already match;
+- reinterpret upload when only GPU normalization metadata changes, such as
+  `Uint8x4` to `unorm8x4`;
+- chunk-preserving numeric conversion for bit-packed Boolean, 64-bit numeric,
+  normalized, and format-changing scalar/list inputs;
+- semantic color, temporal, and matrix conversion using their specialized
+  conversion implementations.
+
+Use `policy: 'require-zero-copy'` or `policy: 'require-direct'` to turn a
+performance expectation into a checked invariant. `prefer-gpu` and `prefer-cpu`
+control converter families that offer both paths. Unsupported types, incompatible
+shapes, and nullable matrix or temporal inputs are rejected during planning.
+Caller-owned GPU inputs are never destroyed by a borrowed prepared result.
+
+On WebGPU, directly uploadable numeric casts run through the reusable GPGPU
+`castData()` operation instead of converting every value on the CPU. Float64 is
+handled specially: Arrow's binary64 bytes upload unchanged and Xiaoji's
+`fround()` operation splits each value into adjacent high and residual-low
+Float32 lanes in one compute pass. `prepared.vector` is a strided view of the
+high lanes and `prepared.residualVector` is a zero-copy view of the low lanes.
+Both views preserve Arrow chunks and null/readback metadata; destroying the
+prepared result releases their shared allocation. Non-WebGPU devices, or
+`policy: 'prefer-cpu'`, use the equivalent chunk-preserving CPU fallback.
+
+`planArrowTableGPUConversion()` and `convertArrowTableToGPUTable()` apply the same
+decisions to an ordered output schema. Each output column names an Arrow source
+path and its semantic/format contract. The result preserves Arrow record-batch
+boundaries, source row offsets, field metadata, null metadata, and one owned GPU
+allocation per output chunk; it never implicitly packs streaming batches.
+
+`convertArrowRecordBatchesToGPURecordBatches()` accepts sync or async record-batch
+streams and yields independently owned GPU batches. It preserves batch/row source
+identity and carries the first resolved temporal origin into later batches, so a
+long timestamp stream does not silently change coordinate systems at each batch.
+
+```ts
+const prepared = await convertArrowTableToGPUTable(device, arrowTable, {
+  columns: [
+    {name: 'instancePositions', source: 'geometry.position'},
+    {
+      name: 'instanceColors',
+      source: 'style.color',
+      semantic: 'color',
+      format: 'unorm8x4'
+    },
+    {name: 'eventTime', source: 'event.timestamp', semantic: 'temporal'}
+  ]
+});
+```
+
+The direct `makeGPUVectorFromArrow()` and `makeGPUTableFromArrowTable()` factories
+remain useful when the source layout is already known to be GPU-compatible. Use
+the planner boundary when schemas vary, diagnostics matter, or a semantic
+conversion may be required.
+
 ## Arrow Vector Factories
 
 ## Fixed-Size-List Storage Columns
@@ -140,6 +225,7 @@ builders.
 canonical Float32 column-major `wgsl-storage` GPU vector. Canonical Float32 GPU
 vectors pass through, raw Arrow Float64 rows truncate to Float32 during CPU
 conversion, and non-canonical GPU-resident rows normalize with WebGPU compute.
+Arrow source chunks remain separate prepared GPU chunks.
 The same prepared column can lower into matrix attribute columns or bind as
 `array<matCxR<f32>>`.
 
