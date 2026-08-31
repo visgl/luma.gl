@@ -58,6 +58,17 @@ it('SplatRADHierarchyManager requests the single global Spark root only once', (
   ).toEqual([[0, 0]]);
   expect(manager.requestedRows, 'exposes the original missing global source row').toEqual([0]);
 
+  manager.clearRequestedPage(0);
+  manager.update(makeRADView());
+  expect(
+    requests.map(request => [request.rowIndex, request.pageIndex]),
+    'retries a transient root-page failure instead of retargeting an empty retained tree'
+  ).toEqual([
+    [0, 0],
+    [0, 0]
+  ]);
+  expect(manager.requestedRows, 'restores the missing global root request').toEqual([0]);
+
   const root = makeRADPage(device, {id: 'root', rowIndexBase: 0, positions: [0, 0, 0]});
   expect(
     Boolean(manager.registerPage(root)),
@@ -83,6 +94,30 @@ it('SplatRADHierarchyManager requests the single global Spark root only once', (
     false
   );
   root.data.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager preserves synchronous root retry invalidation', () => {
+  let requestCount = 0;
+  let manager!: SplatRADHierarchyManager;
+  manager = new SplatRADHierarchyManager({
+    onPageRequest: request => {
+      requestCount++;
+      if (requestCount === 1) {
+        manager.clearRequestedPage(request.pageIndex);
+      }
+    }
+  });
+
+  manager.update(makeRADView());
+  expect(manager.hasPendingTraversal, 'keeps callback-requested root refresh work pending').toBe(
+    true
+  );
+  manager.update(makeRADView());
+  expect(requestCount, 'reissues the synchronously cleared root request').toBe(2);
+  expect(manager.requestedRows, 'retains the retried root demand').toEqual([0]);
+
+  manager.destroy();
   void 0;
 });
 
@@ -164,6 +199,54 @@ it('SplatRADHierarchyManager refines mixed parent and childless rows independent
   manager.destroy();
   root.data.destroy();
   children.data.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager clears fallback diagnostics when missing children become resident', () => {
+  const device = new NullDevice({});
+  const parent = makeRADPage(device, {
+    id: 'resolved-fallback-parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const child = makeRADPage(device, {
+    id: 'resolved-fallback-child',
+    rowIndexBase: 1,
+    positions: [0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent],
+    pageSize: 1,
+    maximumScreenSpaceError: 50,
+    refinementHysteresis: 0
+  });
+  const view = (distance: number): SplatHierarchyView => ({
+    ...makeRADView(),
+    cameraPosition: [0, 0, distance],
+    verticalFieldOfView: Math.PI / 2
+  });
+
+  manager.update(view(1));
+  expect(manager.frontier[0].isFallback, 'marks the parent while its child page is missing').toBe(
+    true
+  );
+  manager.registerPage(child);
+  manager.update(view(100));
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'keeps the coarse parent when the resident child is below the refinement threshold'
+  ).toEqual([[0]]);
+  expect(manager.frontier[0].isFallback, 'does not report resolved child data as missing').toBe(
+    false
+  );
+  expect(manager.stats.fallbackRowCount, 'removes the stale fallback diagnostic count').toBe(0);
+
+  manager.destroy();
+  parent.data.destroy();
+  child.data.destroy();
+  device.destroy();
   void 0;
 });
 
@@ -249,6 +332,75 @@ it('SplatRADHierarchyManager pins partial child pages until all replacing rows e
   parent.data.destroy();
   firstChild.data.destroy();
   secondChild.data.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager preserves partial child pins across bounded retarget slices', () => {
+  const device = new NullDevice({});
+  const residency = new SplatResidencyManager({maxResidentChunks: 2});
+  const parent = makeRADPage(device, {
+    id: 'retargeted-parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [2],
+    childStarts: [2]
+  });
+  const firstChild = makeRADPage(device, {
+    id: 'retargeted-first-child',
+    rowIndexBase: 2,
+    positions: [-0.1, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent, firstChild],
+    pageSize: 1,
+    residencyManager: residency,
+    maximumScreenSpaceError: 1,
+    maxTraversalRows: 1
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(8);
+  }
+  expect(getFrontierSourceRows(manager.frontier), 'starts with coherent parent coverage').toEqual([
+    [0]
+  ]);
+  expect(
+    Boolean(residency.getChunk('retargeted-first-child')?.pinned),
+    'protects the already resident partial child page'
+  ).toBe(true);
+
+  manager.update({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+  expect(manager.hasPendingTraversal, 'keeps the bounded retained-tree retarget in progress').toBe(
+    true
+  );
+  expect(
+    Boolean(residency.getChunk('retargeted-first-child')?.pinned),
+    'does not release useful partial child residency before revisiting its branch'
+  ).toBe(true);
+  manager.update({...makeRADView(), cameraPosition: [0.02, 0, 2]});
+  manager.continueTraversal(8);
+  expect(
+    manager.hasPendingTraversal,
+    'keeps the mandatory latest-camera retarget pending after draining older work'
+  ).toBe(true);
+  expect(
+    Boolean(residency.getChunk('retargeted-first-child')?.pinned),
+    'does not release traversal-only pins between consecutive camera retargets'
+  ).toBe(true);
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(
+    Boolean(residency.getChunk('retargeted-first-child')?.pinned),
+    'keeps the confirmed partial child page protected after retarget completion'
+  ).toBe(true);
+
+  manager.destroy();
+  residency.destroy();
+  parent.data.destroy();
+  firstChild.data.destroy();
+  device.destroy();
   void 0;
 });
 
@@ -594,11 +746,13 @@ it('SplatRADHierarchyManager cancels stale page demand and restores evicted pare
   expect(requested, 'requests the source page containing a missing global child').toEqual([2]);
   manager.update({
     ...makeRADView(),
-    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -5, 0, 0, 1]
+    cameraPosition: [0, 0, 100],
+    verticalFieldOfView: Math.PI / 2
   });
-  expect(cancelled, 'cancels the loader-owned page after the camera leaves its parent').toEqual([
-    2
-  ]);
+  expect(
+    cancelled,
+    'cancels detail demand once its visible parent no longer needs refinement'
+  ).toEqual([2]);
   expect(manager.stats.requestedPageCount, 'drops the no-longer-relevant source page demand').toBe(
     0
   );
@@ -859,7 +1013,7 @@ it('SplatRADHierarchyManager applies documented angular detail zones', () => {
   void 0;
 });
 
-it('SplatRADHierarchyManager stabilizes source-row replacement around the camera threshold', () => {
+it('SplatRADHierarchyManager retains resolved source rows across the camera threshold', () => {
   const device = new NullDevice({});
   const parent = makeRADPage(device, {
     id: 'parent',
@@ -899,10 +1053,16 @@ it('SplatRADHierarchyManager stabilizes source-row replacement around the camera
     'does not churn source pages when the camera hovers inside the deadband'
   ).toEqual([[1]]);
   manager.update(view(2.6));
-  expect(getFrontierSourceRows(manager.frontier), 'restores coarse coverage below it').toEqual([
-    [0]
-  ]);
-  expect(events, 'does not signal unnecessary renderer rebuilds').toEqual([[[0]], [[1]], [[0]]]);
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'keeps resident detail instead of de-resolving a visible branch below active capacity'
+  ).toEqual([[1]]);
+  manager.update(view(1.6));
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'keeps the same retained child topology when the camera returns'
+  ).toEqual([[1]]);
+  expect(events, 'does not signal unnecessary renderer rebuilds').toEqual([[[0]], [[1]]]);
 
   manager.destroy();
   parent.data.destroy();
@@ -1067,6 +1227,604 @@ it('SplatRADHierarchyManager resumes deterministic best-first traversal in bound
 
   manager.destroy();
   page.data.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager retargets a resolved frontier without collapsing camera detail', () => {
+  const device = new NullDevice({});
+  const totalRowCount = 511;
+  const positions: number[] = [];
+  const childCounts: number[] = [];
+  const childStarts: number[] = [];
+  for (let rowIndex = 0; rowIndex < totalRowCount; rowIndex++) {
+    positions.push((rowIndex % 16) / 256 - 0.03125, 0, 0);
+    childCounts.push(rowIndex < 255 ? 2 : 0);
+    childStarts.push(rowIndex < 255 ? rowIndex * 2 + 1 : 0);
+  }
+  const page = makeRADPage(device, {
+    id: 'retargeted-tree',
+    rowIndexBase: 0,
+    positions,
+    childCounts,
+    childStarts
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 256,
+    maxTraversalRows: 31
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(31);
+  }
+  expect(manager.stats.activeRowCount, 'resolves the complete visible leaf frontier').toBe(256);
+  const resolvedRows = getFrontierSourceRows(manager.frontier);
+
+  manager.update({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+  expect(
+    manager.stats.activeRowCount,
+    'does not restart a small root traversal when only the camera changes'
+  ).toBe(256);
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'keeps the coherent resolved leaf partition while retargeting its priorities'
+  ).toEqual(resolvedRows);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager preserves overlap while retargeting newly visible branches', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'retargeted-frustum',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, -0.4, 0, 0, 1.2, 0, 0, 2, 0, 0, 3, 0, 0],
+    scales: [0.5, 0.5, 0.5, ...Array.from({length: 12}, () => 0.05)],
+    childCounts: [4, 0, 0, 0, 0],
+    childStarts: [1, 0, 0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 4,
+    maxTraversalRows: 3
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(3);
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'starts with only the child visible in the original frustum'
+  ).toEqual([[1]]);
+
+  manager.update({
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.4, 0, 0, 1]
+  });
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'does not replace already visible overlap with the coarse root during retargeting'
+  ).toContain(1);
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'does not publish the coarse ancestor beside its retained child'
+  ).not.toContain(0);
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(3);
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'adds the newly visible sibling without discarding retained overlap'
+  ).toEqual([[1, 2]]);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager traverses visible descendants with an offscreen RAD parent', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'retargeted-nonbounding-parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, 0.9, 0, 0],
+    scales: Array.from({length: 6}, () => 0.01),
+    childCounts: [1, 0],
+    childStarts: [1, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maxTraversalRows: 2
+  });
+
+  const shiftedView: SplatHierarchyView = {
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1.4, 0, 0, 1]
+  };
+  manager.update(shiftedView);
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'finds the visible child on the initial traversal because a parent splat is not a subtree bound'
+  ).toEqual([[1]]);
+
+  manager.update(makeRADView());
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'keeps the visible child while retargeting the retained hierarchy'
+  ).toEqual([[1]]);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager requests unknown descendants behind an offscreen RAD parent', () => {
+  const device = new NullDevice({});
+  const requested: number[] = [];
+  const parent = makeRADPage(device, {
+    id: 'offscreen-missing-parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [parent],
+    pageSize: 1,
+    maximumScreenSpaceError: 0,
+    onPageRequest: request => requested.push(request.rowIndex)
+  });
+  const shiftedView: SplatHierarchyView = {
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1.4, 0, 0, 1]
+  };
+
+  manager.update(shiftedView);
+  expect(requested, 'does not treat an offscreen splat as a bound for its unknown subtree').toEqual(
+    [1]
+  );
+
+  const child = makeRADPage(device, {
+    id: 'offscreen-missing-child',
+    rowIndexBase: 1,
+    positions: [0.9, 0, 0]
+  });
+  expect(manager.registerPage(child), 'admits the requested descendant page').toBe(true);
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(8);
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'discovers the visible streamed child after its offscreen parent requested it'
+  ).toEqual([[1]]);
+
+  manager.destroy();
+  parent.data.destroy();
+  child.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager keeps visible capacity when an offscreen parent cannot cover it', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'offscreen-capacity-parent',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, 0.8, 0, 0, 1, 0, 0],
+    scales: Array.from({length: 9}, () => 0.01),
+    childCounts: [2, 0, 0],
+    childStarts: [1, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 1
+  });
+
+  manager.update({
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1.4, 0, 0, 1]
+  });
+  expect(manager.stats.activeRowCount, 'uses the one-row renderer capacity').toBe(1);
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'keeps one visible child instead of publishing its invisible parent'
+  ).toEqual([1]);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager refines and reprioritizes capacity-limited offscreen branches', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'offscreen-capacity-refinement',
+    rowIndexBase: 0,
+    positions: [3, 0, 0, -0.5, 0, 0, 0.5, 0, 0, -0.45, 0, 0, 1.5, 0, 0],
+    scales: Array.from({length: 15}, () => 0.01),
+    childCounts: [2, 1, 1, 0, 0],
+    childStarts: [1, 3, 4, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 1,
+    maxTraversalRows: 1
+  });
+
+  manager.update({...makeRADView(), foveation: {strength: 10, radius: 0}});
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'continues refining the selected capacity-limited branch to its visible leaf'
+  ).toEqual([3]);
+
+  manager.update({
+    ...makeRADView(),
+    foveation: {strength: 10, radius: 0},
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1]
+  });
+  const newlyVisibleRightRows: number[][] = [];
+  while (manager.hasPendingTraversal) {
+    newlyVisibleRightRows.push(getFrontierSourceRows(manager.continueTraversal(1)).flat());
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'moves limited capacity to the newly centered sibling and refines its retained subtree'
+  ).toEqual([4]);
+  expect(
+    newlyVisibleRightRows.every(rows => rows.length > 0),
+    'keeps coarse or retained coverage while descendant visibility catches up'
+  ).toBe(true);
+
+  manager.update({...makeRADView(), foveation: {strength: 10, radius: 0}});
+  const restoredLeftRows: number[][] = [];
+  while (manager.hasPendingTraversal) {
+    restoredLeftRows.push(getFrontierSourceRows(manager.continueTraversal(1)).flat());
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'reactivates the previously resolved leaf after descendant visibility catches up'
+  ).toEqual([3]);
+  expect(
+    restoredLeftRows.every(rows => rows.length > 0),
+    'never drops the capacity-limited scene while switching back'
+  ).toBe(true);
+  manager.update({
+    ...makeRADView(),
+    foveation: {strength: 10, radius: 0},
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1]
+  });
+  const restoredRightRows: number[][] = [];
+  while (manager.hasPendingTraversal) {
+    restoredRightRows.push(getFrontierSourceRows(manager.continueTraversal(1)).flat());
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'settles either capacity branch at its visible leaf'
+  ).toEqual([4]);
+  expect(
+    restoredRightRows.every(rows => rows.length > 0),
+    'keeps coverage while repeatedly changing descendant visibility'
+  ).toBe(true);
+  expect(manager.stats.activeRowCount, 'never exceeds the one-row renderer capacity').toBe(1);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager preserves coverage while offscreen sibling grandchildren swap', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'offscreen-sibling-grandchildren',
+    rowIndexBase: 0,
+    positions: [3, 0, 0, -3, 0, 0, 3, 0, 0, 1.5, 0, 0, -0.45, 0, 0],
+    scales: Array.from({length: 15}, () => 0.01),
+    childCounts: [2, 1, 1, 0, 0],
+    childStarts: [1, 4, 3, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 1,
+    maxTraversalRows: 1
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'starts with the left visible leaf'
+  ).toEqual([4]);
+
+  manager.update({
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1]
+  });
+  const switchedRows: number[][] = [];
+  const switchedActiveRowCounts: number[] = [];
+  while (manager.hasPendingTraversal) {
+    switchedRows.push(getFrontierSourceRows(manager.continueTraversal(1)).flat());
+    switchedActiveRowCounts.push(manager.stats.activeRowCount);
+  }
+  expect(
+    switchedRows.every(rows => rows.length > 0),
+    'retargets the dormant sibling before releasing the currently visible leaf'
+  ).toBe(true);
+  expect(
+    switchedActiveRowCounts.every(activeRowCount => activeRowCount <= 1),
+    'enforces active capacity in the same slice that child visibility changes'
+  ).toBe(true);
+  expect(
+    getFrontierSourceRows(manager.frontier).flat(),
+    'settles on the newly visible grandchild behind the other offscreen branch'
+  ).toEqual([3]);
+  expect(manager.stats.activeRowCount, 'keeps the global active-row capacity exact').toBe(1);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager releases offscreen internal traversal pins after settling', () => {
+  const device = new NullDevice({});
+  const root = makeRADPage(device, {
+    id: 'offscreen-pin-root',
+    rowIndexBase: 0,
+    positions: [0, 0, 0],
+    childCounts: [1],
+    childStarts: [1]
+  });
+  const internal = makeRADPage(device, {
+    id: 'offscreen-pin-internal',
+    rowIndexBase: 1,
+    positions: [0.2, 0, 0],
+    childCounts: [1],
+    childStarts: [2]
+  });
+  const leaf = makeRADPage(device, {
+    id: 'offscreen-pin-leaf',
+    rowIndexBase: 2,
+    positions: [0.4, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [root, internal, leaf],
+    pageSize: 1,
+    maximumScreenSpaceError: 0,
+    maxTraversalRows: 1
+  });
+
+  manager.update({
+    ...makeRADView(),
+    modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -5, 0, 0, 1]
+  });
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(manager.frontier, 'settles with no visible hierarchy rows').toEqual([]);
+  expect(
+    manager.residencyManager.stats.pinnedChunkCount,
+    'releases pages protected only while traversing an offscreen internal branch'
+  ).toBe(0);
+
+  manager.destroy();
+  root.data.destroy();
+  internal.data.destroy();
+  leaf.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager preserves relevant page demand across a bounded camera retarget', () => {
+  const device = new NullDevice({});
+  const requested: number[] = [];
+  const cancelled: number[] = [];
+  const page = makeRADPage(device, {
+    id: 'retargeted-request',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, -0.1, 0, 0, 0.1, 0, 0],
+    childCounts: [2, 1, 0],
+    childStarts: [1, 3, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    pageSize: 1,
+    maximumScreenSpaceError: 1,
+    maxTraversalRows: 1,
+    onPageRequest: request => requested.push(request.pageIndex),
+    onPageCancel: request => cancelled.push(request.pageIndex)
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(8);
+  }
+  expect(requested, 'starts one missing descendant page request').toEqual([3]);
+
+  manager.update({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+  expect(
+    manager.requestedRows,
+    'keeps prior page demand while the bounded retarget has not revisited its branch'
+  ).toEqual([3]);
+  expect(cancelled, 'does not abort useful transport work between retarget slices').toEqual([]);
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(
+    manager.requestedRows,
+    'retains demand after confirming the branch is still visible'
+  ).toEqual([3]);
+
+  manager.update({
+    ...makeRADView(),
+    cameraPosition: [0, 0, 100],
+    verticalFieldOfView: Math.PI / 2
+  });
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(1);
+  }
+  expect(cancelled, 'cancels detail demand once the coarse visible branch is sufficient').toEqual([
+    3
+  ]);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager interleaves new page discovery before retained retarget drains', () => {
+  const device = new NullDevice({});
+  const requested: number[] = [];
+  const page = makeRADPage(device, {
+    id: 'retargeted-refinement-fairness',
+    rowIndexBase: 0,
+    positions: Array.from({length: 21}, () => 0),
+    childCounts: [2, 1, 4, 0, 0, 0, 0],
+    childStarts: [1, 100, 3, 0, 0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    pageSize: 1,
+    maximumScreenSpaceError: 0,
+    maxTraversalRows: 5,
+    onPageRequest: request => requested.push(request.pageIndex)
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(64);
+  }
+  expect(requested, 'discovers the missing high-priority descendant initially').toEqual([100]);
+
+  manager.clearRequestedPage(100);
+  requested.length = 0;
+  manager.update({...makeRADView(), cameraPosition: [0.01, 0, 2]});
+
+  expect(
+    requested,
+    'reserves work for current-view page discovery while retained retarget work remains'
+  ).toEqual([100]);
+  expect(
+    manager.hasPendingTraversal,
+    'continues the lower-priority retained retarget after discovering current-view demand'
+  ).toBe(true);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager progresses across consecutive one-row camera retargets', () => {
+  const device = new NullDevice({});
+  const requested: number[] = [];
+  const page = makeRADPage(device, {
+    id: 'one-row-retarget-fairness',
+    rowIndexBase: 0,
+    positions: Array.from({length: 21}, () => 0),
+    childCounts: [2, 1, 4, 0, 0, 0, 0],
+    childStarts: [1, 100, 3, 0, 0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    pageSize: 1,
+    maximumScreenSpaceError: 0,
+    maxTraversalRows: 1,
+    onPageRequest: request => requested.push(request.pageIndex)
+  });
+
+  manager.update(makeRADView());
+  while (manager.hasPendingTraversal) {
+    manager.continueTraversal(64);
+  }
+  expect(requested, 'discovers initial missing descendant demand').toEqual([100]);
+
+  manager.clearRequestedPage(100);
+  requested.length = 0;
+  for (let cameraUpdateIndex = 1; cameraUpdateIndex <= 10; cameraUpdateIndex++) {
+    manager.update({
+      ...makeRADView(),
+      cameraPosition: [cameraUpdateIndex / 1_000, 0, 2]
+    });
+  }
+  expect(
+    requested,
+    'does not restart at the root and starve page discovery on every changed camera update'
+  ).toEqual([100]);
+  expect(
+    manager.hasPendingTraversal,
+    'leaves retained retarget work to continue after the refinement slice'
+  ).toBe(true);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
+it('SplatRADHierarchyManager coarsens newly visible dormant siblings within active capacity', () => {
+  const device = new NullDevice({});
+  const page = makeRADPage(device, {
+    id: 'retargeted-capacity',
+    rowIndexBase: 0,
+    positions: [0, 0, 0, 0, 0, 0, 4, 0, 0, -4, 0, 0],
+    childCounts: [3, 0, 0, 0],
+    childStarts: [1, 0, 0, 0]
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 2,
+    maxTraversalRows: 16
+  });
+
+  manager.update(makeRADView());
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'starts with only the centered visible child'
+  ).toEqual([[1]]);
+
+  manager.update({
+    ...makeRADView(),
+    modelViewProjectionMatrix: [0.2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+  });
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'uses the coherent parent rather than exceeding capacity with newly visible siblings'
+  ).toEqual([[0]]);
+  expect(manager.stats.activeRowCount, 'keeps the renderer-visible frontier within capacity').toBe(
+    1
+  );
+
+  manager.update(makeRADView());
+  expect(
+    getFrontierSourceRows(manager.frontier),
+    'reactivates the retained centered child without rebuilding discarded topology'
+  ).toEqual([[1]]);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
   void 0;
 });
 

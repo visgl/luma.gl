@@ -1086,7 +1086,7 @@ describe('published Gaussian splat viewer', () => {
     device.destroy();
   });
 
-  test('cancels obsolete RAD hierarchy requests and restores demand after camera return', async () => {
+  test('preserves unknown RAD hierarchy demand behind an offscreen parent', async () => {
     const source = makeGaussianRADFixture(1, {
       chunkSize: 10,
       includeLoDTree: true
@@ -1116,13 +1116,12 @@ describe('published Gaussian splat viewer', () => {
       ...visibleView,
       modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -100, 0, 0, 1]
     });
-    await scene.waitForIdle();
-    expect(requestedPageSignals[1]?.aborted).toBe(true);
+    expect(requestedPageSignals[1]?.aborted).toBe(false);
     expect(scene.hierarchy.frontier).toHaveLength(0);
 
     scene.update(visibleView);
-    await vi.waitFor(() => expect(pendingPageResponses).toHaveLength(3));
-    pendingPageResponses[2]?.();
+    expect(pendingPageResponses).toHaveLength(2);
+    pendingPageResponses[1]?.();
     await scene.waitForIdle();
 
     expect(scene.hierarchy.frontier.map(entry => entry.data.rowIndexBase)).toEqual([10]);
@@ -1134,7 +1133,7 @@ describe('published Gaussian splat viewer', () => {
     device.destroy();
   });
 
-  test('restarts canceled RAD page demand when the camera returns before request cleanup', async () => {
+  test('reuses in-flight RAD page demand when the camera returns before cleanup', async () => {
     const source = makeGaussianRADFixture(1, {
       chunkSize: 10,
       includeLoDTree: true
@@ -1162,11 +1161,11 @@ describe('published Gaussian splat viewer', () => {
       modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -100, 0, 0, 1]
     });
     scene.update(visibleView);
-    expect(requestedPageSignals[1]?.aborted).toBe(true);
+    expect(requestedPageSignals[1]?.aborted).toBe(false);
     expect(scene.hierarchy.stats.fallbackRowCount).toBe(1);
 
-    await vi.waitFor(() => expect(pendingPageResponses).toHaveLength(3));
-    pendingPageResponses[2]?.();
+    expect(pendingPageResponses).toHaveLength(2);
+    pendingPageResponses[1]?.();
     await scene.waitForIdle();
 
     expect(scene.hierarchy.frontier.map(entry => entry.data.rowIndexBase)).toEqual([10]);
