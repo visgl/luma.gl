@@ -30,17 +30,25 @@ type AppProps = {
 type AppState = {
   benchmarkError: string | null;
   benchmarkResults: FP64ComputeBenchmarkResult[] | null;
-  currentZoomLabel: string;
+  fp64RenderTiming: FP64RenderTiming | null;
   initializationError: string | null;
   isBenchmarkRunning: boolean;
   isReady: boolean;
+  renderWidth: number;
   selectedArithmeticMode: FP64ArithmeticMode;
   selectedBackend: RenderingBackend;
   selectedPresetId: ZoomPresetId;
+  zoomDepth: number;
 };
 
 type RenderingBackend = 'auto' | 'webgl' | 'webgpu';
 type FP64ArithmeticMode = 'classic' | 'hybrid' | 'integer';
+type FP64RenderTimingSource = 'CPU encode' | 'GPU completion';
+
+type FP64RenderTiming = {
+  milliseconds: number;
+  source: FP64RenderTimingSource;
+};
 
 type ZoomPresetId = 'seahorse' | 'elephant';
 
@@ -82,16 +90,28 @@ type VisualizationRenderer = {
   presentationContext: PresentationContext | null;
   shaderInputs: ShaderInputs<any> | null;
   spec: VisualizationSpec;
+  timing: VisualizationTiming | null;
+};
+
+type VisualizationTiming = {
+  destroyed: boolean;
+  readPending: boolean;
+  smoothedMilliseconds: number | null;
+  source: FP64RenderTimingSource | null;
 };
 
 const CANVAS_WIDTH = 420;
 const CANVAS_HEIGHT = 280;
+const MIN_RENDER_WIDTH = 160;
+const MAX_RENDER_WIDTH = 640;
+const RENDER_ASPECT_RATIO = CANVAS_WIDTH / CANVAS_HEIGHT;
 const FIXED_ITERATION_LIMIT = 1400;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
 const MIN_PIXEL_SCALE = 1e-12;
-const ZOOM_RATE = 0.45;
-const ZOOM_CYCLE_DURATION = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE) / ZOOM_RATE;
+const MAX_ZOOM_DEPTH = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE);
+const RENDER_TIMING_SAMPLE_INTERVAL = 5;
+const RENDER_TIMING_SMOOTHING = 0.2;
 const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   seahorse: {
     label: 'Seahorse',
@@ -127,13 +147,15 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     this.state = {
       benchmarkError: null,
       benchmarkResults: null,
-      currentZoomLabel: formatZoomScale(INITIAL_PIXEL_SCALE),
+      fp64RenderTiming: null,
       initializationError: null,
       isBenchmarkRunning: false,
       isReady: false,
+      renderWidth: CANVAS_WIDTH,
       selectedArithmeticMode: 'hybrid',
       selectedBackend: 'auto',
-      selectedPresetId: DEFAULT_PRESET_ID
+      selectedPresetId: DEFAULT_PRESET_ID,
+      zoomDepth: 0
     };
     const hasExternalDevice = Boolean(props.device || props.presentationDevice);
     this.settingsPanel = new ExampleSettingsPanelManager({
@@ -142,7 +164,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       settings: {
         selectedArithmeticMode: 'hybrid',
         selectedBackend: 'auto',
-        selectedPresetId: DEFAULT_PRESET_ID
+        selectedPresetId: DEFAULT_PRESET_ID,
+        renderWidth: CANVAS_WIDTH,
+        zoomDepth: 0
       },
       onSettingsChange: this.handleSettingsChange
     });
@@ -187,6 +211,22 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     if (previousState.selectedPresetId !== this.state.selectedPresetId) {
       this.renderer?.setZoomPreset(ZOOM_PRESETS[this.state.selectedPresetId]);
     }
+
+    if (previousState.zoomDepth !== this.state.zoomDepth) {
+      this.renderer?.setZoomDepth(this.state.zoomDepth);
+    }
+
+    if (previousState.renderWidth !== this.state.renderWidth) {
+      this.renderer?.setRenderWidth(this.state.renderWidth);
+    }
+
+    if (
+      this.state.fp64RenderTiming &&
+      (previousState.zoomDepth !== this.state.zoomDepth ||
+        previousState.renderWidth !== this.state.renderWidth)
+    ) {
+      this.setState({fp64RenderTiming: null});
+    }
   }
 
   override componentWillUnmount(): void {
@@ -203,7 +243,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     this.setState({
       benchmarkError: null,
       benchmarkResults: null,
-      currentZoomLabel: formatZoomScale(INITIAL_PIXEL_SCALE),
+      fp64RenderTiming: null,
       initializationError: null,
       isBenchmarkRunning: false,
       isReady: false
@@ -222,7 +262,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         canvases as HTMLCanvasElement[],
         ZOOM_PRESETS[this.state.selectedPresetId],
         this.state.selectedArithmeticMode,
-        this.handleFrame
+        this.state.zoomDepth,
+        this.state.renderWidth,
+        this.handleFP64RenderTiming
       );
 
       if (!this.isReadyForInitialization(initializationGeneration)) {
@@ -261,14 +303,17 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     const {
       benchmarkError,
       benchmarkResults,
-      currentZoomLabel,
+      fp64RenderTiming,
       initializationError,
       isBenchmarkRunning,
       isReady,
+      renderWidth,
       selectedArithmeticMode,
-      selectedPresetId
+      selectedPresetId,
+      zoomDepth
     } = this.state;
     const selectedPreset = ZOOM_PRESETS[selectedPresetId];
+    const currentZoomLabel = formatZoomScale(getPixelScale(zoomDepth));
     const visualizationSpecs = getVisualizationSpecs();
 
     return (
@@ -292,7 +337,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: 20,
-            alignItems: 'start',
+            alignItems: 'stretch',
             minWidth: 0
           }}
         >
@@ -300,7 +345,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
             <div
               data-fp64-visualization={visualization.kind}
               key={visualization.kind}
-              style={{display: 'grid', gap: 12, minWidth: 0}}
+              style={{display: 'grid', gridTemplateRows: '1fr auto', gap: 12, minWidth: 0}}
             >
               <ExamplePaneCopy
                 description={visualization.description}
@@ -314,7 +359,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
                   currentZoomLabel,
                   visualization.kind,
                   this.device,
-                  selectedArithmeticMode
+                  selectedArithmeticMode,
+                  fp64RenderTiming,
+                  renderWidth
                 )}
               />
             </div>
@@ -353,6 +400,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     return await luma.createDevice({
       adapters: [webgpuAdapter, webgl2Adapter],
       type: selectedBackend === 'auto' ? 'best-available' : selectedBackend,
+      featureLevel: 'best-available',
       createCanvasContext: {
         canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
         width: CANVAS_WIDTH,
@@ -373,10 +421,14 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       changedSettings,
       'selectedArithmeticMode'
     )?.nextValue;
+    const zoomDepth = getChangedSetting(changedSettings, 'zoomDepth')?.nextValue;
+    const renderWidth = getChangedSetting(changedSettings, 'renderWidth')?.nextValue;
     if (
       isZoomPresetId(selectedPresetId) ||
       isRenderingBackend(selectedBackend) ||
-      isFP64ArithmeticMode(selectedArithmeticMode)
+      isFP64ArithmeticMode(selectedArithmeticMode) ||
+      isZoomDepth(zoomDepth) ||
+      isRenderWidth(renderWidth)
     ) {
       this.setState({
         selectedArithmeticMode: isFP64ArithmeticMode(selectedArithmeticMode)
@@ -385,17 +437,18 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         selectedBackend: isRenderingBackend(selectedBackend)
           ? selectedBackend
           : this.state.selectedBackend,
+        renderWidth: isRenderWidth(renderWidth) ? renderWidth : this.state.renderWidth,
         selectedPresetId: isZoomPresetId(selectedPresetId)
           ? selectedPresetId
-          : this.state.selectedPresetId
+          : this.state.selectedPresetId,
+        zoomDepth: isZoomDepth(zoomDepth) ? zoomDepth : this.state.zoomDepth
       });
     }
   };
 
-  private handleFrame = (pixelScale: number): void => {
-    const currentZoomLabel = formatZoomScale(pixelScale);
-    if (currentZoomLabel !== this.state.currentZoomLabel) {
-      this.setState({currentZoomLabel});
+  private handleFP64RenderTiming = (fp64RenderTiming: FP64RenderTiming): void => {
+    if (this.isComponentMounted) {
+      this.setState({fp64RenderTiming});
     }
   };
 
@@ -477,6 +530,29 @@ export function makeFP64SettingsSchema(includeBackend = true): SettingsSchema {
               label: preset.label,
               value
             }))
+          },
+          {
+            name: 'zoomDepth',
+            label: 'Zoom depth (powers of 2)',
+            description: 'Scrub the same fixed zoom level in both precision views.',
+            type: 'number',
+            persist: 'none',
+            min: 0,
+            max: MAX_ZOOM_DEPTH,
+            step: 0.1,
+            sliderDebounceMs: 0
+          },
+          {
+            name: 'renderWidth',
+            label: 'Render-buffer width (pixels)',
+            description:
+              'Changes GPU fragment workload for both views without changing their CSS size.',
+            type: 'number',
+            persist: 'none',
+            min: MIN_RENDER_WIDTH,
+            max: MAX_RENDER_WIDTH,
+            step: 20,
+            sliderDebounceMs: 80
           }
         ]
       }
@@ -496,6 +572,14 @@ function isFP64ArithmeticMode(value: unknown): value is FP64ArithmeticMode {
   return value === 'classic' || value === 'hybrid' || value === 'integer';
 }
 
+function isZoomDepth(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isRenderWidth(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export function renderToDOM(
   container: HTMLElement,
   props: {device?: Device | null; presentationDevice?: Device | null} = {}
@@ -511,11 +595,14 @@ export function renderToDOM(
 class MultiCanvasRenderer {
   readonly device: Device;
   readonly fullscreenBuffer: ReturnType<Device['createBuffer']>;
-  readonly onFrame?: (pixelScale: number) => void;
+  readonly onFP64RenderTiming?: (timing: FP64RenderTiming) => void;
+  readonly renderingOrder: VisualizationRenderer[];
   readonly visualizations: VisualizationRenderer[];
 
   animationFrame: number | null = null;
-  startTime = 0;
+  frameIndex = 0;
+  isRunning = false;
+  zoomDepth: number;
   zoomPreset: ZoomPreset;
 
   constructor(
@@ -523,10 +610,13 @@ class MultiCanvasRenderer {
     canvases: HTMLCanvasElement[],
     zoomPreset: ZoomPreset,
     arithmeticMode: FP64ArithmeticMode,
-    onFrame?: (pixelScale: number) => void
+    zoomDepth: number,
+    renderWidth: number,
+    onFP64RenderTiming?: (timing: FP64RenderTiming) => void
   ) {
     this.device = device;
-    this.onFrame = onFrame;
+    this.onFP64RenderTiming = onFP64RenderTiming;
+    this.zoomDepth = zoomDepth;
     this.zoomPreset = zoomPreset;
     this.fullscreenBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
     this.visualizations = getVisualizationSpecs().map((spec, index) => {
@@ -536,7 +626,8 @@ class MultiCanvasRenderer {
           canvases[index],
           this.fullscreenBuffer,
           spec,
-          arithmeticMode
+          arithmeticMode,
+          renderWidth
         );
       } catch (error) {
         return {
@@ -544,21 +635,27 @@ class MultiCanvasRenderer {
           model: null,
           presentationContext: null,
           shaderInputs: null,
-          spec
+          spec,
+          timing: null
         };
       }
     });
+    this.renderingOrder = [
+      ...this.visualizations.filter(visualization => visualization.spec.kind === 'fp64'),
+      ...this.visualizations.filter(visualization => visualization.spec.kind === 'fp32')
+    ];
   }
 
   start(): void {
-    if (this.animationFrame !== null) {
+    if (this.isRunning) {
       return;
     }
-    this.startTime = performance.now();
+    this.isRunning = true;
     this.animationFrame = requestAnimationFrame(this.animate);
   }
 
   pause(): void {
+    this.isRunning = false;
     if (this.animationFrame !== null) {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
@@ -568,7 +665,8 @@ class MultiCanvasRenderer {
   destroy(): void {
     this.pause();
 
-    for (const visualization of this.visualizations) {
+    for (const visualization of this.renderingOrder) {
+      destroyVisualizationTiming(visualization.timing);
       visualization.model?.destroy();
       visualization.presentationContext?.destroy();
     }
@@ -578,7 +676,19 @@ class MultiCanvasRenderer {
 
   setZoomPreset(zoomPreset: ZoomPreset): void {
     this.zoomPreset = zoomPreset;
-    this.startTime = performance.now();
+  }
+
+  setZoomDepth(zoomDepth: number): void {
+    this.zoomDepth = zoomDepth;
+    this.resetRenderTiming();
+  }
+
+  setRenderWidth(renderWidth: number): void {
+    const renderHeight = getRenderHeight(renderWidth);
+    for (const visualization of this.visualizations) {
+      visualization.presentationContext?.setDrawingBufferSize(renderWidth, renderHeight);
+    }
+    this.resetRenderTiming();
   }
 
   hasActiveVisualizations(): boolean {
@@ -596,17 +706,43 @@ class MultiCanvasRenderer {
       );
   }
 
-  private animate = (timestamp: number): void => {
-    const time = (timestamp - this.startTime) / 1000;
-    const pixelScale = getPixelScale(time);
-
-    this.onFrame?.(pixelScale);
-
+  private resetRenderTiming(): void {
     for (const visualization of this.visualizations) {
-      renderVisualization(this.device, visualization, time, this.zoomPreset);
+      if (visualization.timing) {
+        visualization.timing.smoothedMilliseconds = null;
+        visualization.timing.source = null;
+      }
+    }
+  }
+
+  private animate = (): void => {
+    this.animationFrame = null;
+    const pixelScale = getPixelScale(this.zoomDepth);
+    const sampleTiming = this.frameIndex % RENDER_TIMING_SAMPLE_INTERVAL === 0;
+
+    for (const visualization of this.renderingOrder) {
+      renderVisualization(
+        this.device,
+        visualization,
+        pixelScale,
+        this.zoomPreset,
+        sampleTiming ? this.onFP64RenderTiming : undefined
+      );
     }
 
-    this.animationFrame = requestAnimationFrame(this.animate);
+    this.frameIndex++;
+    const submittedWork = waitForSubmittedWork(this.device);
+    if (submittedWork) {
+      void submittedWork.then(this.scheduleNextFrame, this.scheduleNextFrame);
+    } else {
+      this.scheduleNextFrame();
+    }
+  };
+
+  private scheduleNextFrame = (): void => {
+    if (this.isRunning) {
+      this.animationFrame = requestAnimationFrame(this.animate);
+    }
   };
 }
 
@@ -615,7 +751,8 @@ function createVisualizationRenderer(
   canvas: HTMLCanvasElement,
   buffer: ReturnType<Device['createBuffer']>,
   spec: VisualizationSpec,
-  arithmeticMode: FP64ArithmeticMode
+  arithmeticMode: FP64ArithmeticMode,
+  renderWidth: number
 ): VisualizationRenderer {
   const presentationContext = device.createPresentationContext({
     canvas,
@@ -624,6 +761,7 @@ function createVisualizationRenderer(
     autoResize: false,
     useDevicePixels: false
   });
+  presentationContext.setDrawingBufferSize(renderWidth, getRenderHeight(renderWidth));
 
   const shaderInputs =
     spec.kind === 'fp64'
@@ -656,7 +794,8 @@ function createVisualizationRenderer(
     model,
     presentationContext,
     shaderInputs,
-    spec
+    spec,
+    timing: spec.kind === 'fp64' ? createVisualizationTiming() : null
   };
 }
 
@@ -690,8 +829,9 @@ export function getVisualizationDefines(
 function renderVisualization(
   device: Device,
   visualization: VisualizationRenderer,
-  elapsedTime: number,
-  zoomPreset: ZoomPreset
+  pixelScale: number,
+  zoomPreset: ZoomPreset,
+  onFP64RenderTiming?: (timing: FP64RenderTiming) => void
 ): void {
   if (!visualization.model || !visualization.presentationContext || !visualization.shaderInputs) {
     return;
@@ -704,7 +844,7 @@ function renderVisualization(
   const aspectRatio = width / Math.max(height, 1);
   const centerX = zoomPreset.centerX;
   const centerY = zoomPreset.centerY;
-  const scale = getPixelScale(elapsedTime);
+  const scale = pixelScale;
   const fp64CenterX = split64(centerX);
   const fp64CenterY = split64(centerY);
   const fp64Scale = split64(scale);
@@ -735,6 +875,9 @@ function renderVisualization(
 
   visualization.model.updateShaderInputs();
 
+  const timing = visualization.timing;
+  const measureTiming = Boolean(onFP64RenderTiming && timing && !timing.readPending);
+  const cpuStartTime = measureTiming ? performance.now() : 0;
   const renderPass = device.beginRenderPass({
     framebuffer,
     clearColor: visualization.spec.clearColor
@@ -743,6 +886,72 @@ function renderVisualization(
   visualization.model.draw(renderPass);
   renderPass.end();
   visualization.presentationContext.present();
+
+  if (measureTiming && timing && onFP64RenderTiming) {
+    const cpuMilliseconds = performance.now() - cpuStartTime;
+    const submittedWork = waitForSubmittedWork(device);
+    if (submittedWork) {
+      readFP64CompletionTiming(timing, submittedWork, cpuStartTime, onFP64RenderTiming);
+    } else {
+      updateFP64RenderTiming(timing, cpuMilliseconds, 'CPU encode', onFP64RenderTiming);
+    }
+  }
+}
+
+function createVisualizationTiming(): VisualizationTiming {
+  return {
+    destroyed: false,
+    readPending: false,
+    smoothedMilliseconds: null,
+    source: null
+  };
+}
+
+function destroyVisualizationTiming(timing: VisualizationTiming | null): void {
+  if (!timing) {
+    return;
+  }
+  timing.destroyed = true;
+}
+
+function readFP64CompletionTiming(
+  timing: VisualizationTiming,
+  submittedWork: Promise<void>,
+  startTime: number,
+  onFP64RenderTiming: (timing: FP64RenderTiming) => void
+): void {
+  timing.readPending = true;
+  void submittedWork
+    .then(() => {
+      updateFP64RenderTiming(
+        timing,
+        performance.now() - startTime,
+        'GPU completion',
+        onFP64RenderTiming
+      );
+    })
+    .catch(() => {})
+    .finally(() => {
+      timing.readPending = false;
+    });
+}
+
+function updateFP64RenderTiming(
+  timing: VisualizationTiming,
+  milliseconds: number,
+  source: FP64RenderTimingSource,
+  onFP64RenderTiming: (timing: FP64RenderTiming) => void
+): void {
+  if (timing.destroyed || !Number.isFinite(milliseconds) || milliseconds <= 0) {
+    return;
+  }
+  timing.smoothedMilliseconds =
+    timing.smoothedMilliseconds === null || timing.source !== source
+      ? milliseconds
+      : timing.smoothedMilliseconds * (1 - RENDER_TIMING_SMOOTHING) +
+        milliseconds * RENDER_TIMING_SMOOTHING;
+  timing.source = source;
+  onFP64RenderTiming({milliseconds: timing.smoothedMilliseconds, source});
 }
 
 function split64(value: number): [number, number] {
@@ -756,9 +965,21 @@ function computeIterationLimit(pixelScale: number): number {
   return Math.min(FIXED_ITERATION_LIMIT, Math.round(220 + zoomDepth * 28));
 }
 
-function getPixelScale(elapsedTime: number): number {
-  const cycleTime = elapsedTime % ZOOM_CYCLE_DURATION;
-  return INITIAL_PIXEL_SCALE * Math.pow(0.5, cycleTime * ZOOM_RATE);
+function getPixelScale(zoomDepth: number): number {
+  const clampedZoomDepth = Math.max(0, Math.min(MAX_ZOOM_DEPTH, zoomDepth));
+  return INITIAL_PIXEL_SCALE * Math.pow(0.5, clampedZoomDepth);
+}
+
+function getRenderHeight(renderWidth: number): number {
+  return Math.round(renderWidth / RENDER_ASPECT_RATIO);
+}
+
+function waitForSubmittedWork(device: Device): Promise<void> | null {
+  if (device.type !== 'webgpu') {
+    return null;
+  }
+  const queue = (device.handle as {queue?: {onSubmittedWorkDone?: () => Promise<void>}}).queue;
+  return queue?.onSubmittedWorkDone?.() || null;
 }
 
 function formatZoomScale(pixelScale: number): string {
@@ -770,21 +991,37 @@ function getOverlayLines(
   currentZoomLabel: string,
   kind: 'fp32' | 'fp64',
   device: Device | null,
-  arithmeticMode: FP64ArithmeticMode
+  arithmeticMode: FP64ArithmeticMode,
+  fp64RenderTiming: FP64RenderTiming | null,
+  renderWidth: number
 ): string[] {
   const precisionLabel =
     device?.type === 'webgpu' ? `fp64 ${arithmeticMode}` : 'fp64 classic (WebGL2)';
 
-  return [
+  const overlayLines = [
     'mode = mandelbrot zoom',
     `target = ${zoomPreset.label}`,
     `x = ${zoomPreset.centerX}`,
     `y = ${zoomPreset.centerY}`,
     `scale = ${currentZoomLabel}`,
+    `render buffer = ${renderWidth} × ${getRenderHeight(renderWidth)}`,
     `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
     kind === 'fp32' ? 'precision = native fp32' : `precision = ${precisionLabel}`,
     'iterations = adaptive'
   ];
+  if (kind === 'fp64') {
+    overlayLines.push(
+      fp64RenderTiming ? formatFP64RenderTiming(fp64RenderTiming) : 'fp64 render = sampling…'
+    );
+  }
+  return overlayLines;
+}
+
+export function formatFP64RenderTiming(timing: FP64RenderTiming): string {
+  const framesPerSecondEquivalent = 1000 / timing.milliseconds;
+  const milliseconds =
+    timing.milliseconds < 1 ? timing.milliseconds.toFixed(3) : timing.milliseconds.toFixed(2);
+  return `fp64 ${timing.source} = ${milliseconds} ms · ${framesPerSecondEquivalent.toFixed(1)} FPS-equivalent`;
 }
 
 function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
@@ -1378,7 +1615,7 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.02, 0.015, 0.04, 1],
       description:
-        'Single-precision Mandelbrot fragment shader. The view starts on the Seahorse target and zooms in from there.',
+        'Single-precision Mandelbrot fragment shader. Use the shared zoom slider to inspect the selected target.',
       fragmentShaderGLSL: MANDELBROT32_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT32_FRAGMENT_WGSL,
       kind: 'fp32',
@@ -1387,7 +1624,7 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.01, 0.015, 0.03, 1],
       description:
-        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, the live zoom uses a hybrid path with integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
+        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, hybrid mode uses integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
       fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
       kind: 'fp64',

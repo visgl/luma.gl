@@ -6,6 +6,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe, expect, test} from 'vitest';
 import FP64App, {
+  formatFP64RenderTiming,
   getVisualizationDefines,
   makeFP64SettingsSchema
 } from '../../examples/experimental/fp64/app';
@@ -21,6 +22,7 @@ describe('FP64 example responsive layout', () => {
     expect(markup).toContain(
       'grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr))'
     );
+    expect(markup.match(/grid-template-rows:1fr auto/g)?.length).toBe(2);
     expect(singlePrecisionPane).toBeGreaterThanOrEqual(0);
     expect(singlePrecisionCanvas).toBeGreaterThan(singlePrecisionPane);
     expect(doublePrecisionPane).toBeGreaterThan(singlePrecisionCanvas);
@@ -40,6 +42,8 @@ describe('FP64 example responsive layout', () => {
     const settings = makeFP64SettingsSchema().sections.flatMap(section => section.settings);
     const backendSetting = settings.find(setting => setting.name === 'selectedBackend');
     const arithmeticSetting = settings.find(setting => setting.name === 'selectedArithmeticMode');
+    const zoomSetting = settings.find(setting => setting.name === 'zoomDepth');
+    const renderWidthSetting = settings.find(setting => setting.name === 'renderWidth');
 
     expect(backendSetting?.options).toContainEqual({label: 'WebGL2', value: 'webgl'});
     expect(arithmeticSetting?.options).toEqual([
@@ -47,8 +51,23 @@ describe('FP64 example responsive layout', () => {
       {label: 'Hybrid · balanced', value: 'hybrid'},
       {label: 'Integer · reliable', value: 'integer'}
     ]);
+    expect(zoomSetting).toEqual(
+      expect.objectContaining({type: 'number', min: 0, step: 0.1, sliderDebounceMs: 0})
+    );
+    expect(renderWidthSetting).toEqual(
+      expect.objectContaining({type: 'number', min: 160, max: 640, step: 20})
+    );
     expect(makeFP64SettingsSchema(false).sections[0].settings).not.toContainEqual(
       expect.objectContaining({name: 'selectedBackend'})
+    );
+  });
+
+  test('formats render time as an explicitly labeled FPS-equivalent', () => {
+    expect(formatFP64RenderTiming({milliseconds: 4, source: 'GPU completion'})).toBe(
+      'fp64 GPU completion = 4.00 ms · 250.0 FPS-equivalent'
+    );
+    expect(formatFP64RenderTiming({milliseconds: 0.25, source: 'CPU encode'})).toBe(
+      'fp64 CPU encode = 0.250 ms · 4000.0 FPS-equivalent'
     );
   });
 
