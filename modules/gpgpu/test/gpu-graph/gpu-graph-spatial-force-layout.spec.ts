@@ -13,8 +13,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphSpatialForceLayoutToGraphWithDispatchLimit,
   getGPUGraphSpatialForceLayoutDispatchLayout
@@ -411,21 +410,18 @@ const spatialScenarios: SpatialScenario[] = [
   }
 ];
 
-test('GPUGraphSpatialForceLayout plans bounded 3D vertex, grid, and centroid dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphSpatialForceLayoutDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphSpatialForceLayoutDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphSpatialForceLayoutDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphSpatialForceLayoutDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphSpatialForceLayoutDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphSpatialForceLayout plans bounded 3D vertex, grid, and centroid dispatch', () => {
+  expect(getGPUGraphSpatialForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphSpatialForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphSpatialForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphSpatialForceLayoutDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphSpatialForceLayoutDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of spatialScenarios) {
-  test(`GPUGraphSpatialForceLayout GPU spatial physics: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphSpatialForceLayout GPU spatial physics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -434,33 +430,30 @@ for (const scenario of spatialScenarios) {
     try {
       compileSpatialLayout(fixture, scenario.maximumWorkgroups);
       executeSpatialLayout(fixture);
-      await assertSpatialLayout(tapeTest, fixture, scenario, expected);
-      tapeTest.deepEqual(
+      await assertSpatialLayout(fixture, scenario, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'spatial acceleration preserves caller-owned graph chunks and empty edge batches'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.differsFromExact) {
         const exact = calculateExpectedSpatialLayout({...scenario, theta: 0});
         const actual = await readCoordinateVector(fixture.layout.positions);
-        tapeTest.ok(
-          actual.some((coordinate, index) => Math.abs(coordinate - exact.positions[index]) > 1e-5),
+        expect(
+          Boolean(
+            actual.some((coordinate, index) => Math.abs(coordinate - exact.positions[index]) > 1e-5)
+          ),
           'far-cell monopoles are explicitly approximate rather than silently presented as exact'
-        );
+        ).toBe(true);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphSpatialForceLayout repeatedly rebuilds spatial cells across warm starts and deterministic reset', async tapeTest => {
+it('GPUGraphSpatialForceLayout repeatedly rebuilds spatial cells across warm starts and deterministic reset', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -488,20 +481,16 @@ test('GPUGraphSpatialForceLayout repeatedly rebuilds spatial cells across warm s
 
   try {
     compileSpatialLayout(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'spatial layout construction never submits work'
-    );
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'spatial layout construction never submits work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'grid rebuilds and approximation never read source edges back to the CPU'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executeSpatialLayout(fixture);
-    await assertSpatialLayout(tapeTest, fixture, initial, expectedInitial);
+    await assertSpatialLayout(fixture, initial, expectedInitial);
 
     const warmStart = {
       ...initial,
@@ -510,23 +499,16 @@ test('GPUGraphSpatialForceLayout repeatedly rebuilds spatial cells across warm s
       reset: 0
     };
     executeSpatialLayout(fixture);
-    await assertSpatialLayout(
-      tapeTest,
-      fixture,
-      warmStart,
-      calculateExpectedSpatialLayout(warmStart)
-    );
+    await assertSpatialLayout(fixture, warmStart, calculateExpectedSpatialLayout(warmStart));
 
     (fixture.layout.reset!.data[0].buffer as Buffer).write(Uint32Array.from([1]));
     executeSpatialLayout(fixture);
-    await assertSpatialLayout(tapeTest, fixture, initial, expectedInitial);
+    await assertSpatialLayout(fixture, initial, expectedInitial);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Computes the exact documented flat-grid monopole approximation without GPU-side atomics. */
@@ -1084,7 +1066,6 @@ function executeSpatialLayout(fixture: SpatialExecutionFixture): void {
 }
 
 async function assertSpatialLayout(
-  tapeTest: Test,
   fixture: SpatialExecutionFixture,
   scenario: SpatialScenario,
   expected: ExpectedSpatialLayout
@@ -1118,52 +1099,39 @@ async function assertSpatialLayout(
   ]);
 
   assertClose(
-    tapeTest,
     positions,
     expected.positions,
     'accelerated GPU coordinates match CPU near/far physics'
   );
   assertClose(
-    tapeTest,
     velocities,
     expected.velocities,
     'accelerated GPU velocities preserve exact attraction and damping'
   );
-  tapeTest.deepEqual(
-    offsets,
-    expected.grid.offsets,
-    'row-major cell offsets retain all accepted vertices'
+  expect(offsets, 'row-major cell offsets retain all accepted vertices').toEqual(
+    expected.grid.offsets
   );
   assertClose(
-    tapeTest,
     centers,
     expected.grid.centers,
     'nonempty caller-owned cell centers equal true floating centroids'
   );
-  tapeTest.equal(
-    count[0],
-    expected.grid.acceptedCount,
-    'spatial index reports full in-domain vertex count'
+  expect(count[0], 'spatial index reports full in-domain vertex count').toBe(
+    expected.grid.acceptedCount
   );
-  tapeTest.equal(
-    overflow[0],
-    Number(expected.grid.overflow),
-    'spatial ID capacity overflow stays explicit'
+  expect(overflow[0], 'spatial ID capacity overflow stays explicit').toBe(
+    Number(expected.grid.overflow)
   );
-  tapeTest.equal(invalid[0], expected.invalidEdgeCount, 'invalid source edges remain excluded');
-  tapeTest.equal(
-    topologyOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward topology capacity is explicit'
+  expect(invalid[0], 'invalid source edges remain excluded').toBe(expected.invalidEdgeCount);
+  expect(topologyOverflow[0], 'forward topology capacity is explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse topology capacity is explicit'
+    expect(reverseOverflow[0], 'reverse topology capacity is explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
-  if (reset) tapeTest.equal(reset[0], 0, 'one-shot deterministic reset is consumed on the GPU');
+  if (reset) expect(reset[0], 'one-shot deterministic reset is consumed on the GPU').toBe(0);
 
   for (const [cellIndex, expectedVertices] of expected.grid.cells.entries()) {
     const first = offsets[cellIndex];
@@ -1174,52 +1142,44 @@ async function assertSpatialLayout(
     const expectedStored = expectedVertices
       .slice(0, Math.max(0, last - first))
       .sort((left, right) => left - right);
-    tapeTest.deepEqual(
-      actual,
-      expectedStored,
-      'atomic cell placement preserves every stored stable vertex ID'
+    expect(actual, 'atomic cell placement preserves every stored stable vertex ID').toEqual(
+      expectedStored
     );
   }
 
   if (expected.failed) {
-    tapeTest.deepEqual(
-      positions,
-      Array.from(new Float32Array(scenario.positions)),
-      'invalid topology or index preserves render coordinates'
+    expect(positions, 'invalid topology or index preserves render coordinates').toEqual(
+      Array.from(new Float32Array(scenario.positions))
     );
-    tapeTest.ok(
-      velocities.every(velocity => velocity === 0),
+    expect(
+      Boolean(velocities.every(velocity => velocity === 0)),
       'invalid topology or index clears progressive velocities'
-    );
+    ).toBe(true);
   }
 
   for (const [vertexIndex, pinned] of (scenario.pinned ?? []).entries()) {
     if (pinned) {
-      tapeTest.equal(
-        positions[vertexIndex * 2],
-        scenario.positions[vertexIndex * 2],
-        'pinned x never moves'
+      expect(positions[vertexIndex * 2], 'pinned x never moves').toBe(
+        scenario.positions[vertexIndex * 2]
       );
-      tapeTest.equal(
-        positions[vertexIndex * 2 + 1],
-        scenario.positions[vertexIndex * 2 + 1],
-        'pinned y never moves'
+      expect(positions[vertexIndex * 2 + 1], 'pinned y never moves').toBe(
+        scenario.positions[vertexIndex * 2 + 1]
       );
-      tapeTest.equal(velocities[vertexIndex * 2], 0, 'pinned horizontal velocity remains zero');
-      tapeTest.equal(velocities[vertexIndex * 2 + 1], 0, 'pinned vertical velocity remains zero');
+      expect(velocities[vertexIndex * 2], 'pinned horizontal velocity remains zero').toBe(0);
+      expect(velocities[vertexIndex * 2 + 1], 'pinned vertical velocity remains zero').toBe(0);
     }
   }
 }
 
-function assertClose(tapeTest: Test, actual: number[], expected: number[], message: string): void {
+function assertClose(actual: number[], expected: number[], message: string): void {
   const largestError = actual.reduce(
     (largest, value, index) => Math.max(largest, Math.abs(value - expected[index])),
     0
   );
-  tapeTest.ok(
-    largestError <= SPATIAL_TOLERANCE,
+  expect(
+    Boolean(largestError <= SPATIAL_TOLERANCE),
     `${message} within ${SPATIAL_TOLERANCE}: ${largestError}`
-  );
+  ).toBe(true);
 }
 
 async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> {
@@ -1236,12 +1196,12 @@ async function readCoordinateVector(vector: GPUVector<'float32x2'>): Promise<num
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length * 2));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: SpatialExecutionFixture): void {
+function destroyExecutionFixture(fixture: SpatialExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying graph-owned grid scratch preserves every caller-owned topology, layout, and index allocation'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

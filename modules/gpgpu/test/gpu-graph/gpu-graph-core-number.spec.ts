@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphCoreNumberToGraphWithDispatchLimit,
   getGPUGraphCoreNumberDispatchLayout
@@ -245,20 +244,17 @@ const coreNumberScenarios: CoreNumberScenario[] = [
   }
 ];
 
-test('GPUGraphCoreNumber plans bounded three-dimensional graph dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphCoreNumberDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphCoreNumberDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphCoreNumberDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphCoreNumberDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphCoreNumber plans bounded three-dimensional graph dispatch', () => {
+  expect(getGPUGraphCoreNumberDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphCoreNumberDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphCoreNumberDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphCoreNumberDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of coreNumberScenarios) {
-  test(`GPUGraphCoreNumber GPU decomposition: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphCoreNumber GPU decomposition: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -267,19 +263,16 @@ for (const scenario of coreNumberScenarios) {
     try {
       compileCoreNumber(fixture, scenario.maximumWorkgroups);
       executeCoreNumber(fixture);
-      await assertCoreNumbers(tapeTest, fixture, expected, scenario);
+      await assertCoreNumbers(fixture, expected, scenario);
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-    tapeTest.end();
   });
 }
 
-test('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encoding', async tapeTest => {
+it('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -294,7 +287,7 @@ test('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encodin
   try {
     compileCoreNumber(fixture);
     executeCoreNumber(fixture);
-    await assertCoreNumbers(tapeTest, fixture, expectedInitial, initial);
+    await assertCoreNumbers(fixture, expectedInitial, initial);
 
     const updated: CoreNumberScenario = {
       ...initial,
@@ -303,18 +296,15 @@ test('GPUGraphCoreNumber rereads caller-owned edge columns on each graph encodin
     };
     (fixture.graph.targetVertices.data[0].buffer as Buffer).write(Uint32Array.from([1, 2, 3]));
     executeCoreNumber(fixture);
-    await assertCoreNumbers(tapeTest, fixture, calculateExpectedCoreNumbers(updated), updated);
+    await assertCoreNumbers(fixture, calculateExpectedCoreNumbers(updated), updated);
   } finally {
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-  tapeTest.end();
 });
 
-test('GPUGraphCoreNumber schedules GPU work without submission or source readback', async tapeTest => {
+it('GPUGraphCoreNumber schedules GPU work without submission or source readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -334,19 +324,18 @@ test('GPUGraphCoreNumber schedules GPU work without submission or source readbac
   const readbacks = sourceBuffers.map(chunk => vi.spyOn(chunk.buffer as Buffer, 'readAsync'));
   try {
     compileCoreNumber(fixture);
-    tapeTest.equal(submit.mock.calls.length, 0, 'construction and compilation never submit work');
+    expect(submit.mock.calls.length, 'construction and compilation never submit work').toBe(0);
     executeCoreNumber(fixture);
-    await assertCoreNumbers(tapeTest, fixture, expected, scenario);
-    tapeTest.ok(
-      readbacks.every(readback => readback.mock.calls.length === 0),
+    await assertCoreNumbers(fixture, expected, scenario);
+    expect(
+      Boolean(readbacks.every(readback => readback.mock.calls.length === 0)),
       'source and adjacency data remain resident on the caller-owned device'
-    );
+    ).toBe(true);
   } finally {
     submit.mockRestore();
     for (const readback of readbacks) readback.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-  tapeTest.end();
 });
 
 /** Independently builds simple weak neighborhoods and compares bounded H-index to exact peeling. */
@@ -671,7 +660,6 @@ function executeCoreNumber(fixture: CoreNumberExecutionFixture): void {
 }
 
 async function assertCoreNumbers(
-  tapeTest: Test,
   fixture: CoreNumberExecutionFixture,
   expected: ExpectedCoreNumbers,
   scenario: CoreNumberScenario
@@ -681,59 +669,38 @@ async function assertCoreNumbers(
     readUint32Vector(fixture.topology.invalidEdgeCount),
     readUint32Vector(fixture.topology.forward.overflow)
   ]);
-  tapeTest.deepEqual(
-    output,
-    expected.output,
-    'bounded GPU core numbers match synchronous H-indices'
-  );
-  tapeTest.equal(
-    invalidEdges[0],
-    expected.invalidEdgeCount,
-    'invalid source endpoints are excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward overflow stays explicit'
+  expect(output, 'bounded GPU core numbers match synchronous H-indices').toEqual(expected.output);
+  expect(invalidEdges[0], 'invalid source endpoints are excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'forward overflow stays explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (scenario.expectedCoreNumbers) {
-    tapeTest.deepEqual(
+    expect(
       expected.exactCoreNumbers,
-      scenario.expectedCoreNumbers,
       'independent simple-graph peeling produces the documented exact shell numbers'
-    );
+    ).toEqual(scenario.expectedCoreNumbers);
   }
   if (!expected.forwardOverflow && !expected.reverseOverflow) {
-    tapeTest.ok(
-      output.every((value, vertex) => value >= expected.exactCoreNumbers[vertex]),
+    expect(
+      Boolean(output.every((value, vertex) => value >= expected.exactCoreNumbers[vertex])),
       'bounded, unconverged output remains a valid upper bound on exact core numbers'
-    );
+    ).toBe(true);
     if (expected.converged) {
-      tapeTest.deepEqual(
-        output,
-        expected.exactCoreNumbers,
-        'converged H-indices equal exact peeling'
-      );
+      expect(output, 'converged H-indices equal exact peeling').toEqual(expected.exactCoreNumbers);
     }
   }
   if (fixture.operation.converged) {
     const converged = await readUint32Vector(fixture.operation.converged);
-    tapeTest.equal(converged[0], Number(expected.converged), 'fixed-point convergence is truthful');
+    expect(converged[0], 'fixed-point convergence is truthful').toBe(Number(expected.converged));
   }
   if (fixture.operation.degeneracy) {
     const degeneracy = await readUint32Vector(fixture.operation.degeneracy);
-    tapeTest.equal(
-      degeneracy[0],
-      expected.degeneracy,
-      'GPU max reduction reports graph degeneracy'
-    );
+    expect(degeneracy[0], 'GPU max reduction reports graph degeneracy').toBe(expected.degeneracy);
   }
   if (fixture.topology.reverse) {
     const reverseOverflow = await readUint32Vector(fixture.topology.reverse.overflow);
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse overflow stays explicit'
+    expect(reverseOverflow[0], 'reverse overflow stays explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
 }
@@ -748,12 +715,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: CoreNumberExecutionFixture): void {
+function destroyExecutionFixture(fixture: CoreNumberExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying graph-owned scratch never destroys caller-owned source or output buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

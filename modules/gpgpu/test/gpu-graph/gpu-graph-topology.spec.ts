@@ -7,7 +7,7 @@ import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUGraph, GPUGraphTopology, type GPUGraphAdjacency} from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {addGPUGraphTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-topology-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
@@ -165,11 +165,9 @@ const topologyScenarios: TopologyScenario[] = [
 ];
 
 for (const scenario of topologyScenarios) {
-  test(`GPUGraphTopology GPU CSR: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphTopology GPU CSR: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -178,25 +176,20 @@ for (const scenario of topologyScenarios) {
     try {
       compileTopology(fixture, scenario.maximumWorkgroups);
       executeTopology(fixture);
-      await assertTopology(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertTopology(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'GPU construction retains every source chunk and empty source batch'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphTopology rebuilds overflow, invalid edges, and weighted reverse CSR on every encoding', async tapeTest => {
+it('GPUGraphTopology rebuilds overflow, invalid edges, and weighted reverse CSR on every encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -216,7 +209,7 @@ test('GPUGraphTopology rebuilds overflow, invalid edges, and weighted reverse CS
   try {
     compileTopology(fixture);
     executeTopology(fixture);
-    await assertTopology(tapeTest, fixture, buildExpectedTopology(original));
+    await assertTopology(fixture, buildExpectedTopology(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 9]));
@@ -226,17 +219,14 @@ test('GPUGraphTopology rebuilds overflow, invalid edges, and weighted reverse CS
     };
 
     executeTopology(fixture);
-    await assertTopology(tapeTest, fixture, buildExpectedTopology(updated));
-    tapeTest.equal(
+    await assertTopology(fixture, buildExpectedTopology(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'rewriting caller-owned source storage never replaces its preserved source chunk'
-    );
+    ).toBe(sourceBuffer);
   } finally {
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Computes a CPU reference without promising deterministic atomic order within one CSR row. */
@@ -480,40 +470,30 @@ function executeTopology(fixture: ExecutionFixture): void {
 }
 
 async function assertTopology(
-  tapeTest: Test,
   fixture: ExecutionFixture,
   expected: ExpectedTopology
 ): Promise<void> {
-  await assertAdjacency(tapeTest, 'forward', fixture.topology.forward, expected.forward);
+  await assertAdjacency('forward', fixture.topology.forward, expected.forward);
   if (fixture.topology.reverse && expected.reverse) {
-    await assertAdjacency(tapeTest, 'reverse', fixture.topology.reverse, expected.reverse);
+    await assertAdjacency('reverse', fixture.topology.reverse, expected.reverse);
   }
   const invalidEdgeCount = (await readUint32Vector(fixture.topology.invalidEdgeCount))[0];
-  tapeTest.equal(
-    invalidEdgeCount,
-    expected.invalidEdgeCount,
-    'each invalid source edge is counted once'
+  expect(invalidEdgeCount, 'each invalid source edge is counted once').toBe(
+    expected.invalidEdgeCount
   );
 }
 
 async function assertAdjacency(
-  tapeTest: Test,
   name: string,
   adjacency: GPUGraphAdjacency,
   expected: ExpectedAdjacency
 ): Promise<void> {
   const result = await readAdjacency(adjacency);
   const capacity = adjacency.neighbors.length;
-  tapeTest.deepEqual(
-    result.offsets,
-    expected.offsets,
-    `${name} offsets remain exact and untruncated`
-  );
-  tapeTest.equal(result.count, expected.count, `${name} count reports required adjacency capacity`);
-  tapeTest.equal(
-    result.overflow,
-    Number(expected.count > capacity),
-    `${name} reports capacity overflow`
+  expect(result.offsets, `${name} offsets remain exact and untruncated`).toEqual(expected.offsets);
+  expect(result.count, `${name} count reports required adjacency capacity`).toBe(expected.count);
+  expect(result.overflow, `${name} reports capacity overflow`).toBe(
+    Number(expected.count > capacity)
   );
 
   const actualRows = expected.rows.map((_row, vertexIndex) => {
@@ -531,11 +511,10 @@ async function assertAdjacency(
   const expectedRows = expected.rows.map(row => [...row].sort(compareAdjacencyRecords));
 
   if (expected.count <= capacity) {
-    tapeTest.deepEqual(
+    expect(
       actualRows,
-      expectedRows,
       `${name} preserves every neighbor, stable edge ID, and aligned weight`
-    );
+    ).toEqual(expectedRows);
     return;
   }
 
@@ -556,11 +535,14 @@ async function assertAdjacency(
     });
   });
 
-  tapeTest.ok(rowSizesMatch, `${name} capacity never writes outside each untruncated CSR row`);
-  tapeTest.ok(
-    recordsBelongToExpectedRows,
+  expect(
+    Boolean(rowSizesMatch),
+    `${name} capacity never writes outside each untruncated CSR row`
+  ).toBe(true);
+  expect(
+    Boolean(recordsBelongToExpectedRows),
     `${name} truncated rows contain valid neighbor, edge ID, and weight tuples`
-  );
+  ).toBe(true);
 }
 
 function compareAdjacencyRecords(left: AdjacencyRecord, right: AdjacencyRecord): number {
@@ -593,12 +575,12 @@ async function readFloat32Vector(vector: GPUVector<'float32'>): Promise<number[]
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: ExecutionFixture): void {
+function destroyExecutionFixture(fixture: ExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying the compiled graph and borrowed vectors preserves caller-owned buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }
