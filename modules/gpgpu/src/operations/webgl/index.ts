@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {arithmetic} from './arithmetic';
+import {convertColors} from './convert-colors';
 import {extent} from './extent';
 import {interleave} from './interleave';
 import {fround} from './fround';
@@ -18,6 +19,7 @@ import {swizzle} from './swizzle';
 /** WebGL backend for built-in GPGPU operations, implemented with transform feedback. */
 export {
   arithmetic,
+  convertColors,
   dot,
   equalAll,
   extent,
