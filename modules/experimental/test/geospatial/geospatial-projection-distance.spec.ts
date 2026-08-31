@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -19,48 +19,44 @@ import {
   getGeospatialInvocationIndexSource
 } from '../../src/geospatial/geospatial-utils';
 
-test('geospatial dispatch crosses the one-dimensional WebGPU limit without allocating rows', tapeTest => {
+it('geospatial dispatch crosses the one-dimensional WebGPU limit without allocating rows', () => {
   const maximum = 65_535;
   const oneDimensionalRowCapacity = maximum * GEOSPATIAL_WORKGROUP_SIZE;
 
-  tapeTest.deepEqual(getGeospatialDispatchLayout(0, maximum), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGeospatialDispatchLayout(oneDimensionalRowCapacity, maximum), {
+  expect(getGeospatialDispatchLayout(0, maximum), '').toEqual({x: 1, y: 1, z: 1});
+  expect(getGeospatialDispatchLayout(oneDimensionalRowCapacity, maximum), '').toEqual({
     x: maximum,
     y: 1,
     z: 1
   });
-  tapeTest.deepEqual(getGeospatialDispatchLayout(oneDimensionalRowCapacity + 1, maximum), {
+  expect(getGeospatialDispatchLayout(oneDimensionalRowCapacity + 1, maximum), '').toEqual({
     x: maximum,
     y: 2,
     z: 1
   });
-  tapeTest.deepEqual(
+  expect(
     getGeospatialDispatchLayout(9 * GEOSPATIAL_WORKGROUP_SIZE + 1, 3),
-    {x: 3, y: 3, z: 2},
     'a small synthetic limit exercises the third dispatch dimension'
-  );
-  tapeTest.throws(
-    () => getGeospatialDispatchLayout(27 * GEOSPATIAL_WORKGROUP_SIZE + 1, 3),
+  ).toEqual({x: 3, y: 3, z: 2});
+  expect(() => getGeospatialDispatchLayout(27 * GEOSPATIAL_WORKGROUP_SIZE + 1, 3), '').toThrow(
     /exceeding the 3D dispatch limit/
   );
 
   const source = getGeospatialInvocationIndexSource({x: 3, y: 2, z: 2});
-  tapeTest.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
-  tapeTest.match(source, /\* 3u \+ workgroupId\.x/);
-  tapeTest.match(
-    source,
-    /workgroupIndex >= 16777216u/,
-    'padded workgroups cannot wrap the uint32 invocation index'
+  expect(source, '').toMatch(/workgroupId\.z \* 2u \+ workgroupId\.y/);
+  expect(source, '').toMatch(/\* 3u \+ workgroupId\.x/);
+  expect(source, 'padded workgroups cannot wrap the uint32 invocation index').toMatch(
+    /workgroupIndex >= 16777216u/
   );
-  tapeTest.match(source, /workgroupIndex \* 256u \+ localId\.x/);
-  tapeTest.end();
+  expect(source, '').toMatch(/workgroupIndex \* 256u \+ localId\.x/);
+  void 0;
 });
 
-test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumference', async tapeTest => {
+it('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumference', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -118,10 +114,10 @@ test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumferenc
     [0, 91],
     [0, Number.NaN]
   ] as const) {
-    tapeTest.throws(
+    expect(
       () => new GPUSinusoidalProjection({positions: localPositions, output: localOutput, origin}),
-      /valid longitude\/latitude degrees/
-    );
+      ''
+    ).toThrow(/valid longitude\/latitude degrees/);
   }
 
   const compiled = graph.compile();
@@ -131,22 +127,20 @@ test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumferenc
 
   const kilometresPerDegree = 40_000 / 360;
   const local = await readFloat32(localOutputBuffer, 8);
-  assertClose(tapeTest, local[0], -kilometresPerDegree, 0.02, 'east is negative x');
-  assertClose(tapeTest, local[2], kilometresPerDegree, 0.02, 'west is positive x');
+  assertClose(local[0], -kilometresPerDegree, 0.02, 'east is negative x');
+  assertClose(local[2], kilometresPerDegree, 0.02, 'west is positive x');
   assertClose(
-    tapeTest,
     local[4],
     -kilometresPerDegree * Math.cos((30 * Math.PI) / 180),
     0.02,
     'x scale uses the midpoint latitude rather than the point latitude'
   );
-  assertClose(tapeTest, local[5], -60 * kilometresPerDegree, 0.02, 'north is negative y');
-  tapeTest.ok(
-    local[6] === 0 && local[7] === 0,
+  assertClose(local[5], -60 * kilometresPerDegree, 0.02, 'north is negative y');
+  expect(
+    Boolean(local[6] === 0 && local[7] === 0),
     'the projection origin maps to numerical zero regardless of its IEEE sign bit'
-  );
+  ).toBe(true);
   assertClose(
-    tapeTest,
     (await readFloat32(circumferenceOutputBuffer, 2))[0],
     -40_000,
     0.02,
@@ -156,13 +150,12 @@ test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumferenc
   const raw = await readFloat32(rawOutputBuffer, 2);
   const rawExpected = getSinusoidalProjection(rawPoint, rawOrigin);
   assertClose(
-    tapeTest,
     raw[0],
     rawExpected[0],
     Math.abs(rawExpected[0]) * 1e-4 + 1e-12,
     'raw binary64 subtraction preserves a delta smaller than one f32 ULP at the origin'
   );
-  tapeTest.notEqual(raw[0], 0);
+  expect(raw[0], '').not.toBe(0);
 
   compiled.destroy();
   for (const buffer of [
@@ -175,14 +168,14 @@ test('GPUSinusoidalProjection matches cuSpatial sign, midpoint, and circumferenc
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUHaversineDistance covers f32 antimeridian, polar, and radius cases', async tapeTest => {
+it('GPUHaversineDistance covers f32 antimeridian, polar, and radius cases', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -222,14 +215,13 @@ test('GPUHaversineDistance covers f32 antimeridian, polar, and radius cases', as
     radius: 1
   }).addToGraph(graph);
 
-  tapeTest.throws(
-    () => new GPUHaversineDistance({left, right, output, radius: 0}),
+  expect(() => new GPUHaversineDistance({left, right, output, radius: 0}), '').toThrow(
     /positive and representable as float32/
   );
-  tapeTest.throws(
+  expect(
     () => new GPUHaversineDistance({left, right, output, radius: Number.MAX_VALUE}),
-    /positive and representable as float32/
-  );
+    ''
+  ).toThrow(/positive and representable as float32/);
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'haversine-f32-envelope-encoding'});
@@ -242,18 +234,19 @@ test('GPUHaversineDistance covers f32 antimeridian, polar, and radius cases', as
     const rightPoint: Point = [rightValues[index * 2], rightValues[index * 2 + 1]];
     const expected = getHaversineDistance(leftPoint, rightPoint);
     assertClose(
-      tapeTest,
       actual[index],
       expected,
       2,
       `difficult f32 case ${index} stays inside the documented 2 km envelope`
     );
   }
-  tapeTest.ok(actual[0] < 0.25, 'the antimeridian case follows the short arc');
-  tapeTest.ok(actual[1] < 0.25, 'near-polar longitudes converge');
-  tapeTest.ok(actual[4] > 0, 'adjacent f32 longitude values do not collapse after conversion');
+  expect(Boolean(actual[0] < 0.25), 'the antimeridian case follows the short arc').toBe(true);
+  expect(Boolean(actual[1] < 0.25), 'near-polar longitudes converge').toBe(true);
+  expect(
+    Boolean(actual[4] > 0),
+    'adjacent f32 longitude values do not collapse after conversion'
+  ).toBe(true);
   assertClose(
-    tapeTest,
     (await readFloat32(radiusOutputBuffer, 1))[0],
     Math.PI / 2,
     2e-6,
@@ -264,14 +257,14 @@ test('GPUHaversineDistance covers f32 antimeridian, polar, and radius cases', as
   for (const buffer of [...inputBuffers, outputBuffer, radiusOutputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUHaversineDistance preserves raw binary64 coordinate deltas', async tapeTest => {
+it('GPUHaversineDistance preserves raw binary64 coordinate deltas', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -302,27 +295,26 @@ test('GPUHaversineDistance preserves raw binary64 coordinate deltas', async tape
   for (let index = 0; index < actual.length; index++) {
     const expected = getHaversineDistance(rawLeft[index], rawRight[index]);
     assertClose(
-      tapeTest,
       actual[index],
       expected,
       expected * 1e-4 + 1e-12,
       `raw binary64 input preserves sub-f32 ${index === 0 ? 'longitude' : 'latitude'} delta`
     );
-    tapeTest.notEqual(actual[index], 0);
+    expect(actual[index], '').not.toBe(0);
   }
 
   compiled.destroy();
   for (const buffer of [leftBuffer, rightBuffer, outputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('point and point-to-segment f32 distances match CPU oracles', async tapeTest => {
+it('point and point-to-segment f32 distances match CPU oracles', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -362,42 +354,41 @@ test('point and point-to-segment f32 distances match CPU oracles', async tapeTes
 
   const floatPointDistances = await readFloat32(floatPointOutputBuffer, 3);
   const floatSegmentDistances = await readFloat32(floatSegmentOutputBuffer, 3);
-  assertClose(tapeTest, floatPointDistances[0], 5, 1e-6, 'f32 point distance matches 3-4-5');
-  tapeTest.equal(floatPointDistances[1], 0);
-  tapeTest.ok(
-    !Number.isFinite(floatPointDistances[2]),
+  assertClose(floatPointDistances[0], 5, 1e-6, 'f32 point distance matches 3-4-5');
+  expect(floatPointDistances[1], '').toBe(0);
+  expect(
+    Boolean(!Number.isFinite(floatPointDistances[2])),
     'non-finite point distance stays non-finite'
-  );
+  ).toBe(true);
   assertClose(
-    tapeTest,
     floatSegmentDistances[0],
     Math.sqrt(13),
     1e-6,
     'projection clamps to the segment endpoint'
   );
-  tapeTest.equal(floatSegmentDistances[1], 2, 'orthogonal projection lands inside the segment');
-  tapeTest.ok(
-    !Number.isFinite(floatSegmentDistances[2]),
+  expect(floatSegmentDistances[1], 'orthogonal projection lands inside the segment').toBe(2);
+  expect(
+    Boolean(!Number.isFinite(floatSegmentDistances[2])),
     'non-finite point-to-segment distance stays non-finite'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [...inputBuffers, floatPointOutputBuffer, floatSegmentOutputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('point and point-to-segment raw binary64 distances match CPU oracles', async tapeTest => {
+it('point and point-to-segment raw binary64 distances match CPU oracles', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -448,41 +439,35 @@ test('point and point-to-segment raw binary64 distances match CPU oracles', asyn
       rawPoints[index][0] - rawOtherPoints[index][0],
       rawPoints[index][1] - rawOtherPoints[index][1]
     );
-    assertRelativeClose(tapeTest, actualPoint, expectedPoint, 2e-6, `raw point case ${index}`);
+    assertRelativeClose(actualPoint, expectedPoint, 2e-6, `raw point case ${index}`);
     const actualSegment = rawSegmentDistances[index * 2] + rawSegmentDistances[index * 2 + 1];
     const expectedSegment = getPointSegmentDistance(
       rawPoints[index],
       rawStarts[index],
       rawEnds[index]
     );
-    assertRelativeClose(
-      tapeTest,
-      actualSegment,
-      expectedSegment,
-      2e-6,
-      `raw segment case ${index}`
-    );
+    assertRelativeClose(actualSegment, expectedSegment, 2e-6, `raw segment case ${index}`);
   }
-  tapeTest.notEqual(rawPointDistances[1], 0, 'precise point output retains a low limb');
-  tapeTest.notEqual(rawSegmentDistances[3], 0, 'precise segment output retains a low limb');
+  expect(rawPointDistances[1], 'precise point output retains a low limb').not.toBe(0);
+  expect(rawSegmentDistances[3], 'precise segment output retains a low limb').not.toBe(0);
 
   compiled.destroy();
   for (const buffer of [...inputBuffers, rawPointOutputBuffer, rawSegmentOutputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('precise planar distances scale extreme intermediate products', async tapeTest => {
+it('precise planar distances scale extreme intermediate products', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -580,21 +565,18 @@ test('precise planar distances scale extreme intermediate products', async tapeT
     (_, index) => pointOutput[index * 2] + pointOutput[index * 2 + 1]
   );
   assertRelativeClose(
-    tapeTest,
     pointDistances[0],
     1e20,
     2e-6,
     'a finite 1e20 distance does not overflow while squaring'
   );
   assertRelativeClose(
-    tapeTest,
     pointDistances[1],
     largePower,
     2e-6,
     'a large power-of-two distance remains finite'
   );
   assertClose(
-    tapeTest,
     pointDistances[2] / smallPower,
     1,
     2e-6,
@@ -605,16 +587,14 @@ test('precise planar distances scale extreme intermediate products', async tapeT
   const segmentDistances = segmentPoints.map(
     (_, index) => segmentOutput[index * 2] + segmentOutput[index * 2 + 1]
   );
-  tapeTest.equal(segmentDistances[0], 0, 'the midpoint of a 1e20 segment has zero distance');
+  expect(segmentDistances[0], 'the midpoint of a 1e20 segment has zero distance').toBe(0);
   assertClose(
-    tapeTest,
     segmentDistances[1],
     3,
     2e-6,
     'a finite off-axis distance survives overflowing projection products'
   );
   assertClose(
-    tapeTest,
     segmentDistances[2] / smallPower,
     1,
     2e-6,
@@ -632,14 +612,14 @@ test('precise planar distances scale extreme intermediate products', async tapeT
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('fixed kernels preserve vector chunks, empty chunks, and non-finite rows', async tapeTest => {
+it('fixed kernels preserve vector chunks, empty chunks, and non-finite rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -716,26 +696,28 @@ test('fixed kernels preserve vector chunks, empty chunks, and non-finite rows', 
     pointDistances.view,
     segmentDistances.view
   ]) {
-    tapeTest.deepEqual(
+    expect(
       view.data.map(chunk => chunk.length),
-      [1, 0, 3],
       `${view.id} retains source chunk boundaries`
-    );
+    ).toEqual([1, 0, 3]);
   }
   const projectionTail = await readFloat32(projection.buffers[2], 6);
-  assertClose(tapeTest, projectionTail[0], -(40_000 / 360), 0.02);
-  tapeTest.ok(!Number.isFinite(projectionTail[4]) || !Number.isFinite(projectionTail[5]));
-  tapeTest.deepEqual(await readFloat32(pointDistances.buffers[0], 1), [5]);
+  assertClose(projectionTail[0], -(40_000 / 360), 0.02);
+  expect(
+    Boolean(!Number.isFinite(projectionTail[4]) || !Number.isFinite(projectionTail[5])),
+    ''
+  ).toBe(true);
+  expect(await readFloat32(pointDistances.buffers[0], 1), '').toEqual([5]);
   const pointTail = await readFloat32(pointDistances.buffers[2], 3);
-  tapeTest.deepEqual(pointTail.slice(0, 2), [0, 5]);
-  tapeTest.ok(!Number.isFinite(pointTail[2]));
+  expect(pointTail.slice(0, 2), '').toEqual([0, 5]);
+  expect(Boolean(!Number.isFinite(pointTail[2])), '').toBe(true);
   const segmentTail = await readFloat32(segmentDistances.buffers[2], 3);
-  tapeTest.deepEqual(segmentTail.slice(0, 2), [0, 5]);
-  tapeTest.ok(!Number.isFinite(segmentTail[2]));
+  expect(segmentTail.slice(0, 2), '').toEqual([0, 5]);
+  expect(Boolean(!Number.isFinite(segmentTail[2])), '').toBe(true);
   const haversineTail = await readFloat32(haversine.buffers[2], 3);
-  tapeTest.equal(haversineTail[0], 0);
-  tapeTest.ok(haversineTail[1] > 0);
-  tapeTest.ok(!Number.isFinite(haversineTail[2]));
+  expect(haversineTail[0], '').toBe(0);
+  expect(Boolean(haversineTail[1] > 0), '').toBe(true);
+  expect(Boolean(!Number.isFinite(haversineTail[2])), '').toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -750,14 +732,14 @@ test('fixed kernels preserve vector chunks, empty chunks, and non-finite rows', 
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('f32 point distance honors naturally aligned input and output offsets', async tapeTest => {
+it('f32 point distance honors naturally aligned input and output offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -789,25 +771,25 @@ test('f32 point distance honors naturally aligned input and output offsets', asy
   device.submit(commandEncoder.finish());
 
   const floatBytes = await floatOutputBuffer.readAsync(floatOutputOffset, 4);
-  tapeTest.equal(new Float32Array(floatBytes.buffer, floatBytes.byteOffset, 1)[0], 5);
+  expect(new Float32Array(floatBytes.buffer, floatBytes.byteOffset, 1)[0], '').toBe(5);
 
   compiled.destroy();
   for (const buffer of [floatLeftBuffer, floatRightBuffer, floatOutputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('raw point distance honors naturally aligned input and output offsets', async tapeTest => {
+it('raw point distance honors naturally aligned input and output offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 planar distance shaders on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -839,7 +821,6 @@ test('raw point distance honors naturally aligned input and output offsets', asy
   const rawBytes = await rawOutputBuffer.readAsync(rawOutputOffset, 8);
   const rawDistance = new Float32Array(rawBytes.buffer, rawBytes.byteOffset, 2);
   assertRelativeClose(
-    tapeTest,
     rawDistance[0] + rawDistance[1],
     Math.abs(rawLeft[0] - rawRight[0]),
     1e-6,
@@ -850,7 +831,7 @@ test('raw point distance honors naturally aligned input and output offsets', asy
   for (const buffer of [rawLeftBuffer, rawRightBuffer, rawOutputBuffer]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
 type Point = readonly [number, number];
@@ -1006,33 +987,20 @@ function getPointSegmentDistance(point: Point, start: Point, end: Point): number
   );
 }
 
-function assertClose(
-  tapeTest: {ok(value: unknown, message?: string): void},
-  actual: number,
-  expected: number,
-  tolerance: number,
-  message?: string
-): void {
-  tapeTest.ok(
-    Math.abs(actual - expected) <= tolerance,
+function assertClose(actual: number, expected: number, tolerance: number, message?: string): void {
+  expect(
+    Boolean(Math.abs(actual - expected) <= tolerance),
     `${message ?? 'values are close'}: ${actual} versus ${expected}`
-  );
+  ).toBe(true);
 }
 
 function assertRelativeClose(
-  tapeTest: {ok(value: unknown, message?: string): void},
   actual: number,
   expected: number,
   relativeTolerance: number,
   message: string
 ): void {
-  assertClose(
-    tapeTest,
-    actual,
-    expected,
-    Math.max(1e-12, Math.abs(expected) * relativeTolerance),
-    message
-  );
+  assertClose(actual, expected, Math.max(1e-12, Math.abs(expected) * relativeTolerance), message);
 }
 
 function isSoftwareBackedDevice(device: Device): boolean {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {
   getSortedSplatIndicesByDepth,
@@ -16,40 +16,41 @@ import {
 } from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('makeGPUSplatData retains typed Gaussian columns and stable source metadata', async t => {
+it('makeGPUSplatData retains typed Gaussian columns and stable source metadata', async () => {
   const device = new NullDevice({});
   const prepared = makeGPUSplatData(device, makeSplatSource([0.25, 0.75], 4, 9));
   const rowIndices = await prepared.rowIndices.data[0].buffer.readAsync();
 
-  t.equal(prepared.length, 2, 'retains one logical source row per Gaussian');
-  t.equal(prepared.rowCount, 2, 'exposes the source row count alias');
-  t.equal(prepared.positions.format, 'float32x3', 'preserves packed Float32 XYZ positions');
-  t.equal(prepared.scales.format, 'float32x3', 'preserves packed Float32 XYZ scales');
-  t.equal(prepared.rotations.format, 'float32x4', 'preserves packed Float32 WXYZ rotations');
-  t.equal(prepared.colors.format, 'unorm8x4', 'preserves normalized Uint8 RGBA colors');
-  t.equal(prepared.opacities.format, 'float32', 'preserves decoded linear opacity');
-  t.equal(prepared.rowIndices.format, 'uint32', 'preserves stable global source row identity');
-  t.deepEqual(
+  expect(prepared.length, 'retains one logical source row per Gaussian').toBe(2);
+  expect(prepared.rowCount, 'exposes the source row count alias').toBe(2);
+  expect(prepared.positions.format, 'preserves packed Float32 XYZ positions').toBe('float32x3');
+  expect(prepared.scales.format, 'preserves packed Float32 XYZ scales').toBe('float32x3');
+  expect(prepared.rotations.format, 'preserves packed Float32 WXYZ rotations').toBe('float32x4');
+  expect(prepared.colors.format, 'preserves normalized Uint8 RGBA colors').toBe('unorm8x4');
+  expect(prepared.opacities.format, 'preserves decoded linear opacity').toBe('float32');
+  expect(prepared.rowIndices.format, 'preserves stable global source row identity').toBe('uint32');
+  expect(
     Array.from(new Uint32Array(rowIndices.buffer)),
-    [9, 10],
     'uploads global source row indices'
-  );
-  t.deepEqual(
-    prepared.sourceInfo,
-    {sourceBatchIndex: 4, sourceRowIndexOffset: 9, sourceRowCount: 2},
-    'retains source stream batch and row metadata'
-  );
-  t.equal(prepared.table.batches.length, 1, 'preserves exactly one prepared source batch');
-  t.ok(prepared.stats.byteLength > 0, 'reports owned source GPU allocations');
+  ).toEqual([9, 10]);
+  expect(prepared.sourceInfo, 'retains source stream batch and row metadata').toEqual({
+    sourceBatchIndex: 4,
+    sourceRowIndexOffset: 9,
+    sourceRowCount: 2
+  });
+  expect(prepared.table.batches.length, 'preserves exactly one prepared source batch').toBe(1);
+  expect(Boolean(prepared.stats.byteLength > 0), 'reports owned source GPU allocations').toBe(true);
 
   const sourceBuffer = prepared.positions.data[0].buffer;
   prepared.destroy();
   prepared.destroy();
-  t.ok(sourceBuffer.destroyed, 'releases owned source allocations exactly once');
-  t.end();
+  expect(Boolean(sourceBuffer.destroyed), 'releases owned source allocations exactly once').toBe(
+    true
+  );
+  void 0;
 });
 
-test('makeGPUSplatData preserves unclamped Float32 Gaussian radiance', async t => {
+it('makeGPUSplatData preserves unclamped Float32 Gaussian radiance', async () => {
   const device = new NullDevice({});
   const source = makeSplatSource([0.25, 0.75], 3, 8);
   source.colors = new Float32Array([2.5, -0.25, 0.5, 0.5, 4, 1.5, -1, 0.1]);
@@ -61,25 +62,26 @@ test('makeGPUSplatData preserves unclamped Float32 Gaussian radiance', async t =
     uploadedColorBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
   );
 
-  t.equal(prepared.colors.format, 'float32x4', 'retains linear Float32 RGBA source radiance');
-  t.deepEqual(
+  expect(prepared.colors.format, 'retains linear Float32 RGBA source radiance').toBe('float32x4');
+  expect(
     Array.from(uploadedColors),
-    Array.from(source.colors),
     'uploads highlights and negative source radiance without clipping or quantization'
-  );
-  t.equal(
+  ).toEqual(Array.from(source.colors));
+  expect(
     prepared.colors.data[0].buffer.byteLength,
-    source.colors.byteLength,
     'preserves every Float32 color channel in its owned GPU allocation'
-  );
+  ).toBe(source.colors.byteLength);
 
   const sourceColorBuffer = prepared.colors.data[0].buffer;
   prepared.destroy();
-  t.ok(sourceColorBuffer.destroyed, 'releases the caller-owned Float32 source color buffer');
-  t.end();
+  expect(
+    Boolean(sourceColorBuffer.destroyed),
+    'releases the caller-owned Float32 source color buffer'
+  ).toBe(true);
+  void 0;
 });
 
-test('SplatRenderer normalizes Float32 alpha and adapts HDR display mapping', t => {
+it('SplatRenderer normalizes Float32 alpha and adapts HDR display mapping', () => {
   const device = new NullDevice({});
   const source = makeSplatSource([0.25, 0.75]);
   source.colors = new Float32Array([3, -0.25, 0.5, 0.5, 2, 1, 0.25, 0.1]);
@@ -91,31 +93,31 @@ test('SplatRenderer normalizes Float32 alpha and adapts HDR display mapping', t 
     alphaCutoff: 0.1
   });
 
-  t.deepEqual(
+  expect(
     Array.from(renderer.getSortedIndices()),
-    [0],
     'multiplies normalized Float32 source alpha and opacity exactly once'
+  ).toEqual([0]);
+  expect(renderer.props.toneMapping, 'compresses Float32 highlights on SDR targets').toBe(
+    'reinhard'
   );
-  t.equal(renderer.props.toneMapping, 'reinhard', 'compresses Float32 highlights on SDR targets');
-  t.equal(renderer.props.exposure, 1, 'preserves unit exposure by default');
+  expect(renderer.props.exposure, 'preserves unit exposure by default').toBe(1);
 
   const sortedReferences = renderer.sortedReferences;
   renderer.setProps({exposure: 0.5, toneMapping: 'none'});
   renderer.predraw(device.commandEncoder);
-  t.equal(renderer.props.exposure, 0.5, 'updates the radiance exposure control');
-  t.equal(renderer.props.toneMapping, 'none', 'accepts an explicit display-mapping override');
-  t.equal(
+  expect(renderer.props.exposure, 'updates the radiance exposure control').toBe(0.5);
+  expect(renderer.props.toneMapping, 'accepts an explicit display-mapping override').toBe('none');
+  expect(
     renderer.sortedReferences,
-    sortedReferences,
     'updates display uniforms without rebuilding camera-dependent source ordering'
-  );
+  ).toBe(sortedReferences);
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer recomputes automatic tone mapping when replacing source radiance', t => {
+it('SplatRenderer recomputes automatic tone mapping when replacing source radiance', () => {
   const device = new NullDevice({});
   const highDynamicRangeSource = makeSplatSource([0.5]);
   highDynamicRangeSource.colors = new Float32Array([4, 2, 0.5, 1]);
@@ -123,17 +125,19 @@ test('SplatRenderer recomputes automatic tone mapping when replacing source radi
   const standardDynamicRangeBatch = makeGPUSplatData(device, makeSplatSource([0.5]));
   const renderer = new SplatRenderer(device, {data: highDynamicRangeBatch});
 
-  t.equal(renderer.props.toneMapping, 'reinhard', 'automatically compresses HDR source colors');
+  expect(renderer.props.toneMapping, 'automatically compresses HDR source colors').toBe('reinhard');
   renderer.setProps({data: standardDynamicRangeBatch});
-  t.equal(
-    renderer.props.toneMapping,
-    'none',
-    'removes automatic mapping for replacement SDR colors'
+  expect(renderer.props.toneMapping, 'removes automatic mapping for replacement SDR colors').toBe(
+    'none'
   );
   renderer.setProps({data: highDynamicRangeBatch});
-  t.equal(renderer.props.toneMapping, 'reinhard', 'restores automatic mapping for replacement HDR');
+  expect(renderer.props.toneMapping, 'restores automatic mapping for replacement HDR').toBe(
+    'reinhard'
+  );
   renderer.setProps({data: []});
-  t.equal(renderer.props.toneMapping, 'none', 'clears automatic mapping when all data is removed');
+  expect(renderer.props.toneMapping, 'clears automatic mapping when all data is removed').toBe(
+    'none'
+  );
   renderer.destroy();
 
   const explicitlyMappedRenderer = new SplatRenderer(device, {
@@ -142,25 +146,23 @@ test('SplatRenderer recomputes automatic tone mapping when replacing source radi
   });
   explicitlyMappedRenderer.setProps({data: standardDynamicRangeBatch});
   explicitlyMappedRenderer.setProps({data: highDynamicRangeBatch});
-  t.equal(
+  expect(
     explicitlyMappedRenderer.props.toneMapping,
-    'none',
     'preserves an explicit unmapped override across both source formats'
-  );
+  ).toBe('none');
   explicitlyMappedRenderer.setProps({toneMapping: 'reinhard', data: []});
-  t.equal(
+  expect(
     explicitlyMappedRenderer.props.toneMapping,
-    'reinhard',
     'preserves an explicit mapping override when retained source data is cleared'
-  );
+  ).toBe('reinhard');
 
   explicitlyMappedRenderer.destroy();
   highDynamicRangeBatch.destroy();
   standardDynamicRangeBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer preserves Float32 highlights on extended HDR presentation targets', t => {
+it('SplatRenderer preserves Float32 highlights on extended HDR presentation targets', () => {
   const device = new NullDevice({
     createCanvasContext: {colorFormat: 'rgba16float', toneMapping: 'extended'}
   });
@@ -171,46 +173,47 @@ test('SplatRenderer preserves Float32 highlights on extended HDR presentation ta
   const prepared = makeGPUSplatData(device, source);
   const renderer = new SplatRenderer(device, {data: prepared, viewportSize: [16, 16]});
 
-  t.equal(
+  expect(
     renderer.props.toneMapping,
-    'none',
     'preserves unclamped radiance when the WebGPU presentation target supports HDR'
-  );
-  t.equal(renderer.stats.visibleSplatCount, 1, 'retains normalized Float32 source alpha');
+  ).toBe('none');
+  expect(renderer.stats.visibleSplatCount, 'retains normalized Float32 source alpha').toBe(1);
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatData rejects mismatched rows and safely prepares empty sources', t => {
+it('makeGPUSplatData rejects mismatched rows and safely prepares empty sources', () => {
   const device = new NullDevice({});
   const mismatchedSource = makeSplatSource([0.5]);
   mismatchedSource.rotations = new Float32Array(8);
 
-  t.throws(
+  expect(
     () => makeGPUSplatData(device, mismatchedSource),
-    /matching Gaussian splat rows/,
     'rejects source columns with incompatible row counts'
-  );
+  ).toThrow(/matching Gaussian splat rows/);
   const empty = makeGPUSplatData(device, makeSplatSource([]));
-  t.equal(empty.length, 0, 'preserves empty source row count');
-  t.ok(empty.positions.data[0].buffer.byteLength >= 4, 'allocates WebGPU-safe nonempty buffers');
+  expect(empty.length, 'preserves empty source row count').toBe(0);
+  expect(
+    Boolean(empty.positions.data[0].buffer.byteLength >= 4),
+    'allocates WebGPU-safe nonempty buffers'
+  ).toBe(true);
   empty.destroy();
-  t.end();
+  void 0;
 });
 
-test('splat covariance handles rotation, perspective, kernel inflation and degeneracy', t => {
+it('splat covariance handles rotation, perspective, kernel inflation and degeneracy', () => {
   const axisAligned = projectSplatCovarianceToScreen({
     position: [0, 0, 0],
     scale: [2, 1, 0],
     rotation: [1, 0, 0, 0],
     viewportSize: [100, 100]
   });
-  t.ok(
-    Math.abs(Math.abs(axisAligned.axis0[0]) - 100) < 1e-6,
+  expect(
+    Boolean(Math.abs(Math.abs(axisAligned.axis0[0]) - 100) < 1e-6),
     'projects the major axis horizontally'
-  );
+  ).toBe(true);
 
   const rotated = projectSplatCovarianceToScreen({
     position: [0, 0, 0],
@@ -218,8 +221,14 @@ test('splat covariance handles rotation, perspective, kernel inflation and degen
     rotation: [Math.SQRT1_2, 0, 0, Math.SQRT1_2],
     viewportSize: [100, 100]
   });
-  t.ok(Math.abs(rotated.axis0[0]) < 1e-6, 'rotates the major axis away from screen X');
-  t.ok(Math.abs(Math.abs(rotated.axis0[1]) - 100) < 1e-6, 'rotates the major axis into screen Y');
+  expect(
+    Boolean(Math.abs(rotated.axis0[0]) < 1e-6),
+    'rotates the major axis away from screen X'
+  ).toBe(true);
+  expect(
+    Boolean(Math.abs(Math.abs(rotated.axis0[1]) - 100) < 1e-6),
+    'rotates the major axis into screen Y'
+  ).toBe(true);
 
   const inflated = projectSplatCovarianceToScreen({
     position: [0, 0, 0],
@@ -228,7 +237,9 @@ test('splat covariance handles rotation, perspective, kernel inflation and degen
     viewportSize: [100, 100],
     kernel2DSize: 0.5
   });
-  t.ok(inflated.maxAxisPixels >= 0.5, 'inflates degenerate Gaussian covariance');
+  expect(Boolean(inflated.maxAxisPixels >= 0.5), 'inflates degenerate Gaussian covariance').toBe(
+    true
+  );
 
   const clamped = projectSplatCovarianceToScreen({
     position: [0, 0, -2],
@@ -238,26 +249,31 @@ test('splat covariance handles rotation, perspective, kernel inflation and degen
     maxScreenSpaceSplatSize: 10,
     modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0]
   });
-  t.ok(Number.isFinite(clamped.axis0[0]), 'keeps perspective projection finite');
-  t.ok(clamped.maxAxisPixels <= 10, 'clamps maximum projected covariance axis');
-  t.end();
+  expect(Boolean(Number.isFinite(clamped.axis0[0])), 'keeps perspective projection finite').toBe(
+    true
+  );
+  expect(Boolean(clamped.maxAxisPixels <= 10), 'clamps maximum projected covariance axis').toBe(
+    true
+  );
+  void 0;
 });
 
-test('splat depth helpers retain stable back-to-front ordering', t => {
-  t.deepEqual(
+it('splat depth helpers retain stable back-to-front ordering', () => {
+  expect(
     Array.from(getSortedSplatIndicesByDepth(new Float32Array([1, 4, 2]))),
-    [1, 2, 0],
     'sorts farther source rows first'
-  );
-  t.ok(
-    packSplatDepthKey(10, {depthMin: 0, depthMax: 10}) <
-      packSplatDepthKey(0, {depthMin: 0, depthMax: 10}),
+  ).toEqual([1, 2, 0]);
+  expect(
+    Boolean(
+      packSplatDepthKey(10, {depthMin: 0, depthMax: 10}) <
+        packSplatDepthKey(0, {depthMin: 0, depthMax: 10})
+    ),
     'packs far depths into earlier ascending keys'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('large Gaussian depth domains retain exact stable ordering with Float32 radix keys', t => {
+it('large Gaussian depth domains retain exact stable ordering with Float32 radix keys', () => {
   const referenceCount = 9000;
   const references: SplatSortReference[] = Array.from(
     {length: referenceCount},
@@ -286,16 +302,17 @@ test('large Gaussian depth domains retain exact stable ordering with Float32 rad
     .map(reference => reference.rowIndex);
   const sortedReferences = sortSplatReferences(references, 'global');
 
-  t.equal(sortedReferences, references, 'reorders the original source-reference array in place');
-  t.deepEqual(
-    sortedReferences.map(reference => reference.rowIndex),
-    expectedRowIndices,
-    'matches exact comparator ordering for negatives, signed zero, infinities, ties, and close depths'
+  expect(sortedReferences, 'reorders the original source-reference array in place').toBe(
+    references
   );
-  t.end();
+  expect(
+    sortedReferences.map(reference => reference.rowIndex),
+    'matches exact comparator ordering for negatives, signed zero, infinities, ties, and close depths'
+  ).toEqual(expectedRowIndices);
+  void 0;
 });
 
-test('SplatRenderer preserves batches, stable cross-batch ordering, and source ownership', t => {
+it('SplatRenderer preserves batches, stable cross-batch ordering, and source ownership', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatSource([0.2, 0.8], 0, 0));
   const secondBatch = makeGPUSplatData(device, makeSplatSource([0.5], 1, 2));
@@ -308,53 +325,55 @@ test('SplatRenderer preserves batches, stable cross-batch ordering, and source o
   });
 
   renderer.appendData(secondBatch);
-  t.deepEqual(
+  expect(
     Array.from(renderer.getSortedIndices()),
-    [1, 2, 0],
     'globally sorts preserved source batches'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2, 0]);
+  expect(
     renderer.sortedReferences.map(reference => [reference.batchIndex, reference.batchRowIndex]),
-    [
-      [0, 1],
-      [1, 0],
-      [0, 0]
-    ],
     'retains stable source batch and batch-local row identities'
-  );
-  t.equal(renderer.batches.length, 2, 'retains both caller-owned prepared batches');
-  t.equal(renderer.table?.batches.length, 2, 'preserves both borrowed GPU table batches');
-  t.equal(renderer.stats.splatCount, 3, 'reports all retained source rows');
-  t.equal(renderer.stats.visibleSplatCount, 3, 'reports camera-visible source rows');
-  t.equal(renderer.stats.batchCount, 2, 'reports preserved source batch count');
-  t.equal(
+  ).toEqual([
+    [0, 1],
+    [1, 0],
+    [0, 0]
+  ]);
+  expect(renderer.batches.length, 'retains both caller-owned prepared batches').toBe(2);
+  expect(renderer.table?.batches.length, 'preserves both borrowed GPU table batches').toBe(2);
+  expect(renderer.stats.splatCount, 'reports all retained source rows').toBe(3);
+  expect(renderer.stats.visibleSplatCount, 'reports camera-visible source rows').toBe(3);
+  expect(renderer.stats.batchCount, 'reports preserved source batch count').toBe(2);
+  expect(
     renderer.table?.batches[0].gpuData['positions'].buffer,
-    firstBuffer,
     'borrows first source buffer'
-  );
-  t.equal(
+  ).toBe(firstBuffer);
+  expect(
     renderer.table?.batches[1].gpuData['positions'].buffer,
-    secondBuffer,
     'borrows second source buffer'
-  );
+  ).toBe(secondBuffer);
 
   const renderPass = device.getDefaultRenderPass();
-  t.ok(renderer.draw(renderPass), 'draws retained Gaussian batches on the attribute fallback');
+  expect(
+    Boolean(renderer.draw(renderPass)),
+    'draws retained Gaussian batches on the attribute fallback'
+  ).toBe(true);
   renderer.destroy();
   renderer.destroy();
-  t.notOk(firstBuffer.destroyed, 'renderer destruction preserves first caller-owned source buffer');
-  t.notOk(
-    secondBuffer.destroyed,
+  expect(
+    Boolean(firstBuffer.destroyed),
+    'renderer destruction preserves first caller-owned source buffer'
+  ).toBe(false);
+  expect(
+    Boolean(secondBuffer.destroyed),
     'renderer destruction preserves second caller-owned source buffer'
-  );
+  ).toBe(false);
   firstBatch.destroy();
   secondBatch.destroy();
-  t.ok(firstBuffer.destroyed, 'caller releases the first source batch');
-  t.ok(secondBuffer.destroyed, 'caller releases the second source batch');
-  t.end();
+  expect(Boolean(firstBuffer.destroyed), 'caller releases the first source batch').toBe(true);
+  expect(Boolean(secondBuffer.destroyed), 'caller releases the second source batch').toBe(true);
+  void 0;
 });
 
-test('SplatRenderer draws sorted WebGL rows and interleaved source batches exactly once', async t => {
+it('SplatRenderer draws sorted WebGL rows and interleaved source batches exactly once', async () => {
   const device = new NullDevice({});
   const firstSource = makeSplatSource([0.2, 0.8], 0, 10);
   const secondSource = makeSplatSource([0.5], 1, 20);
@@ -369,11 +388,11 @@ test('SplatRenderer draws sorted WebGL rows and interleaved source batches exact
   });
   const model = renderer.model;
   if (!model) {
-    t.fail('creates an attribute-backed Gaussian splat model');
+    expect(false, 'creates an attribute-backed Gaussian splat model').toBe(true);
     renderer.destroy();
     firstBatch.destroy();
     secondBatch.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -387,26 +406,27 @@ test('SplatRenderer draws sorted WebGL rows and interleaved source batches exact
     return originalDraw(renderPass);
   };
   const renderPass = device.getDefaultRenderPass();
-  t.ok(renderer.draw(renderPass), 'draws every globally sorted source-batch run');
+  expect(Boolean(renderer.draw(renderPass)), 'draws every globally sorted source-batch run').toBe(
+    true
+  );
 
   const drawnRows: number[] = [];
   for (const {buffer, rowCount} of drawnRowBuffers) {
     const rowBytes = await buffer.readAsync();
     drawnRows.push(...new Uint32Array(rowBytes.buffer, rowBytes.byteOffset, rowCount).values());
   }
-  t.deepEqual(drawnRows, [11, 20, 10], 'honors globally sorted cross-batch row identities');
-  t.deepEqual(
+  expect(drawnRows, 'honors globally sorted cross-batch row identities').toEqual([11, 20, 10]);
+  expect(
     drawnRowBuffers.map(({rowCount}) => rowCount),
-    [1, 1, 1],
     'draws each source row once without redrawing complete source batches'
-  );
+  ).toEqual([1, 1, 1]);
   const sortedPositionBuffer = renderer.getDrawRuns()[0]?.attributeBuffers?.positions;
   if (!(sortedPositionBuffer instanceof Buffer)) {
-    t.fail('creates an independently owned, reordered WebGL position buffer');
+    expect(false, 'creates an independently owned, reordered WebGL position buffer').toBe(true);
     renderer.destroy();
     firstBatch.destroy();
     secondBatch.destroy();
-    t.end();
+    void 0;
     return;
   }
   const sortedPositionBytes = await sortedPositionBuffer.readAsync();
@@ -415,23 +435,38 @@ test('SplatRenderer draws sorted WebGL rows and interleaved source batches exact
     sortedPositionBytes.byteOffset,
     sortedPositionBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
   );
-  t.ok(Math.abs(sortedPositions[2] - 0.8) < 1e-6, 'reorders the furthest source row first');
-  t.ok(
-    Math.abs(firstSource.positions[2] - 0.2) < 1e-6,
+  expect(
+    Boolean(Math.abs(sortedPositions[2] - 0.8) < 1e-6),
+    'reorders the furthest source row first'
+  ).toBe(true);
+  expect(
+    Boolean(Math.abs(firstSource.positions[2] - 0.2) < 1e-6),
     'preserves the caller-owned CPU source row order'
-  );
-  t.ok(renderer.stats.rendererGpuByteLength > 0, 'accounts for renderer-owned sorted attributes');
+  ).toBe(true);
+  expect(
+    Boolean(renderer.stats.rendererGpuByteLength > 0),
+    'accounts for renderer-owned sorted attributes'
+  ).toBe(true);
 
   renderer.destroy();
-  t.ok(sortedPositionBuffer.destroyed, 'releases renderer-owned sorted WebGL attributes');
-  t.notOk(firstSourceBuffer.destroyed, 'preserves the first caller-owned source GPU buffer');
-  t.notOk(secondSourceBuffer.destroyed, 'preserves the second caller-owned source GPU buffer');
+  expect(
+    Boolean(sortedPositionBuffer.destroyed),
+    'releases renderer-owned sorted WebGL attributes'
+  ).toBe(true);
+  expect(
+    Boolean(firstSourceBuffer.destroyed),
+    'preserves the first caller-owned source GPU buffer'
+  ).toBe(false);
+  expect(
+    Boolean(secondSourceBuffer.destroyed),
+    'preserves the second caller-owned source GPU buffer'
+  ).toBe(false);
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer updates sorting, camera direction and visibility thresholds', t => {
+it('SplatRenderer updates sorting, camera direction and visibility thresholds', () => {
   const device = new NullDevice({});
   const source = makeSplatSource([0.2, 0.8]);
   source.opacities[0] = 0.2;
@@ -442,31 +477,35 @@ test('SplatRenderer updates sorting, camera direction and visibility thresholds'
     sortMode: 'none'
   });
 
-  t.deepEqual(
-    Array.from(renderer.getSortedIndices()),
-    [0, 1],
-    'none sorting preserves source order'
-  );
+  expect(Array.from(renderer.getSortedIndices()), 'none sorting preserves source order').toEqual([
+    0, 1
+  ]);
   renderer.setProps({sortMode: 'global'});
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [1, 0], 'global sorting uses camera depth');
+  expect(Array.from(renderer.getSortedIndices()), 'global sorting uses camera depth').toEqual([
+    1, 0
+  ]);
   renderer.setProps({
     modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1]
   });
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [0, 1], 'camera changes update depth order');
+  expect(Array.from(renderer.getSortedIndices()), 'camera changes update depth order').toEqual([
+    0, 1
+  ]);
   renderer.setProps({opacityThreshold: 0.5});
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [1], 'opacity threshold culls dim rows');
+  expect(Array.from(renderer.getSortedIndices()), 'opacity threshold culls dim rows').toEqual([1]);
   renderer.setProps({alphaCutoff: 0, screenSizeCutoffPixels: 1000});
-  t.equal(renderer.stats.visibleSplatCount, 0, 'screen-size threshold culls small projected rows');
+  expect(renderer.stats.visibleSplatCount, 'screen-size threshold culls small projected rows').toBe(
+    0
+  );
   renderer.setProps({screenSizeCutoffPixels: 0, sortMode: 'tile', pointSize: 2});
-  t.equal(renderer.stats.visibleSplatCount, 2, 'tile sorting retains visible source rows');
-  t.equal(renderer.props.radiusScale, 2, 'point-size alias updates Gaussian support scaling');
+  expect(renderer.stats.visibleSplatCount, 'tile sorting retains visible source rows').toBe(2);
+  expect(renderer.props.radiusScale, 'point-size alias updates Gaussian support scaling').toBe(2);
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer skips projection, sorting, and uploads for unchanged camera frames', t => {
+it('SplatRenderer skips projection, sorting, and uploads for unchanged camera frames', () => {
   const device = new NullDevice({});
   configureWebGPUNullDevice(device);
   const prepared = makeGPUSplatData(device, makeSplatSource([0.2, 0.8]));
@@ -481,10 +520,10 @@ test('SplatRenderer skips projection, sorting, and uploads for unchanged camera 
 
   const sortedIndexBuffer = renderer.model?.bindings['splatSortedIndices'];
   if (!(sortedIndexBuffer instanceof Buffer)) {
-    t.fail('creates a renderer-owned WebGPU sorted-index buffer');
+    expect(false, 'creates a renderer-owned WebGPU sorted-index buffer').toBe(true);
     renderer.destroy();
     prepared.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -510,40 +549,41 @@ test('SplatRenderer skips projection, sorting, and uploads for unchanged camera 
   renderer.predraw(device.commandEncoder);
   renderer.draw(renderPass);
 
-  t.equal(
+  expect(
     renderer.sortedReferences,
-    sortedReferences,
     'does not reproject or resort equivalent camera, viewport, source, and styling values'
-  );
-  t.equal(
+  ).toBe(sortedReferences);
+  expect(
     sortedIndexBuffer.updateTimestamp,
-    uploadTimestamp,
     'does not reupload unchanged WebGPU sorted indices'
-  );
+  ).toBe(uploadTimestamp);
 
   renderer.setProps({
     modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1]
   });
   renderer.predraw(device.commandEncoder);
 
-  t.notEqual(renderer.sortedReferences, sortedReferences, 'reprojects after the camera changes');
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [0, 1], 'resorts the updated camera depth');
-  t.equal(
+  expect(renderer.sortedReferences, 'reprojects after the camera changes').not.toBe(
+    sortedReferences
+  );
+  expect(Array.from(renderer.getSortedIndices()), 'resorts the updated camera depth').toEqual([
+    0, 1
+  ]);
+  expect(
     renderer.sortedReferences.find(reference => reference.rowIndex === 0),
-    firstSourceReference,
     'reuses stable source-row reference objects across camera changes'
-  );
-  t.ok(
-    sortedIndexBuffer.updateTimestamp > uploadTimestamp,
+  ).toBe(firstSourceReference);
+  expect(
+    Boolean(sortedIndexBuffer.updateTimestamp > uploadTimestamp),
     'uploads updated WebGPU sorted indices when camera values change'
-  );
+  ).toBe(true);
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer updates visual-only uniforms without rebuilding source ordering', t => {
+it('SplatRenderer updates visual-only uniforms without rebuilding source ordering', () => {
   const device = new NullDevice({});
   configureWebGPUNullDevice(device);
   const prepared = makeGPUSplatData(device, makeSplatSource([0.2, 0.8]));
@@ -558,10 +598,10 @@ test('SplatRenderer updates visual-only uniforms without rebuilding source order
 
   const sortedIndexBuffer = renderer.model?.bindings['splatSortedIndices'];
   if (!(sortedIndexBuffer instanceof Buffer)) {
-    t.fail('creates a renderer-owned WebGPU sorted-index buffer');
+    expect(false, 'creates a renderer-owned WebGPU sorted-index buffer').toBe(true);
     renderer.destroy();
     prepared.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -576,29 +616,29 @@ test('SplatRenderer updates visual-only uniforms without rebuilding source order
   });
   renderer.predraw(device.commandEncoder);
 
-  t.equal(
+  expect(
     renderer.sortedReferences,
-    sortedReferences,
     'preserves depth ordering when only Gaussian uniforms and the global viewport change'
-  );
-  t.equal(
+  ).toBe(sortedReferences);
+  expect(
     sortedIndexBuffer.updateTimestamp,
-    uploadTimestamp,
     'does not upload sorted indices for visual-only Gaussian controls'
-  );
-  t.equal(renderer.props.radiusScale, 1.5, 'updates the Gaussian radius uniform');
-  t.equal(renderer.props.kernel2DSize, 0.5, 'updates the Gaussian kernel uniform');
+  ).toBe(uploadTimestamp);
+  expect(renderer.props.radiusScale, 'updates the Gaussian radius uniform').toBe(1.5);
+  expect(renderer.props.kernel2DSize, 'updates the Gaussian kernel uniform').toBe(0.5);
 
   renderer.setProps({screenSizeCutoffPixels: 1000});
   renderer.predraw(device.commandEncoder);
-  t.equal(renderer.stats.visibleSplatCount, 0, 'still rebuilds ordering for active size culling');
+  expect(renderer.stats.visibleSplatCount, 'still rebuilds ordering for active size culling').toBe(
+    0
+  );
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer computes screen size and tile coordinates only when required', t => {
+it('SplatRenderer computes screen size and tile coordinates only when required', () => {
   const device = new NullDevice({});
   const source = makeSplatSource([0.2, 0.8]);
   source.positions[0] = -0.75;
@@ -610,37 +650,40 @@ test('SplatRenderer computes screen size and tile coordinates only when required
     sortMode: 'global'
   });
 
-  t.ok(
-    renderer.sortedReferences.every(reference => reference.tileIndex === 0),
+  expect(
+    Boolean(renderer.sortedReferences.every(reference => reference.tileIndex === 0)),
     'does not calculate unused tile coordinates during global depth sorting'
-  );
+  ).toBe(true);
 
   renderer.setProps({sortMode: 'none'});
   renderer.predraw(device.commandEncoder);
-  t.ok(
-    renderer.sortedReferences.every(reference => reference.tileIndex === 0),
+  expect(
+    Boolean(renderer.sortedReferences.every(reference => reference.tileIndex === 0)),
     'does not calculate unused tile coordinates when source order is retained'
-  );
+  ).toBe(true);
 
   renderer.setProps({sortMode: 'tile'});
   renderer.predraw(device.commandEncoder);
-  t.notEqual(
+  expect(
     renderer.sortedReferences[0]?.tileIndex,
-    renderer.sortedReferences[1]?.tileIndex,
     'calculates distinct screen coordinates when tile sorting is enabled'
-  );
+  ).not.toBe(renderer.sortedReferences[1]?.tileIndex);
 
   renderer.setProps({sortMode: 'global', screenSizeCutoffPixels: 1000});
-  t.equal(renderer.stats.visibleSplatCount, 0, 'projects covariance for active size thresholds');
+  expect(renderer.stats.visibleSplatCount, 'projects covariance for active size thresholds').toBe(
+    0
+  );
   renderer.setProps({screenSizeCutoffPixels: 0});
-  t.equal(renderer.stats.visibleSplatCount, 2, 'restores both rows without covariance projection');
+  expect(renderer.stats.visibleSplatCount, 'restores both rows without covariance projection').toBe(
+    2
+  );
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer bounds dense interleaved draw runs while retaining global ordering', t => {
+it('SplatRenderer bounds dense interleaved draw runs while retaining global ordering', () => {
   const device = new NullDevice({});
   const firstDepths = Array.from({length: 100}, (_, rowIndex) => (rowIndex * 2) / 200);
   const secondDepths = Array.from({length: 100}, (_, rowIndex) => (rowIndex * 2 + 1) / 200);
@@ -651,31 +694,30 @@ test('SplatRenderer bounds dense interleaved draw runs while retaining global or
     viewportSize: [100, 100]
   });
 
-  t.equal(
-    renderer.sortedReferences.length,
-    200,
-    'retains globally sorted references for every row'
+  expect(renderer.sortedReferences.length, 'retains globally sorted references for every row').toBe(
+    200
   );
-  t.ok(
-    renderer.sortedReferences.every(
-      (reference, rowIndex, references) =>
-        rowIndex === 0 || references[rowIndex - 1].depth >= reference.depth
+  expect(
+    Boolean(
+      renderer.sortedReferences.every(
+        (reference, rowIndex, references) =>
+          rowIndex === 0 || references[rowIndex - 1].depth >= reference.depth
+      )
     ),
     'preserves exact globally sorted source diagnostics for dense interleaved batches'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     renderer.stats.drawCallCount,
-    64,
     'bounds dense interleaved rendering to 64 depth-sliced draw runs'
-  );
+  ).toBe(64);
 
   renderer.destroy();
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer keeps dense source-batch compositing stable across small camera changes', t => {
+it('SplatRenderer keeps dense source-batch compositing stable across small camera changes', () => {
   const device = new NullDevice({});
   configureWebGPUNullDevice(device);
   const firstSource = makeSplatSource(
@@ -698,11 +740,11 @@ test('SplatRenderer keeps dense source-batch compositing stable across small cam
   });
   const model = renderer.model;
   if (!model) {
-    t.fail('creates a Gaussian splat render model');
+    expect(false, 'creates a Gaussian splat render model').toBe(true);
     renderer.destroy();
     firstBatch.destroy();
     secondBatch.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -722,7 +764,9 @@ test('SplatRenderer keeps dense source-batch compositing stable across small cam
     modelViewProjectionMatrix: [1, 0, -0.006, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
   });
   renderer.predraw(device.commandEncoder);
-  t.equal(renderer.sortedReferences[0].batchIndex, 1, 'first view has a distant second-batch row');
+  expect(renderer.sortedReferences[0].batchIndex, 'first view has a distant second-batch row').toBe(
+    1
+  );
   renderer.draw(renderPass);
   const firstViewDrawOrder = drawBatchOrder.splice(0);
   const firstViewDrawCounts = drawInstanceCounts.splice(0);
@@ -731,29 +775,30 @@ test('SplatRenderer keeps dense source-batch compositing stable across small cam
     modelViewProjectionMatrix: [1, 0, 0.006, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
   });
   renderer.predraw(device.commandEncoder);
-  t.equal(renderer.sortedReferences[0].batchIndex, 0, 'small camera change swaps only the outlier');
+  expect(
+    renderer.sortedReferences[0].batchIndex,
+    'small camera change swaps only the outlier'
+  ).toBe(0);
   renderer.draw(renderPass);
 
-  t.deepEqual(
+  expect(
     drawBatchOrder,
-    firstViewDrawOrder,
     'retains deterministic source-batch ordering inside every globally ordered depth slab'
-  );
-  t.equal(firstViewDrawOrder.length, 64, 'bounds both views to 64 source-preserving draw runs');
-  t.equal(
+  ).toEqual(firstViewDrawOrder);
+  expect(firstViewDrawOrder.length, 'bounds both views to 64 source-preserving draw runs').toBe(64);
+  expect(
     firstViewDrawCounts.reduce((totalRows, instanceCount) => totalRows + instanceCount, 0),
-    200,
     'draws every interleaved source row exactly once'
-  );
-  t.ok(
-    firstViewDrawCounts.every(instanceCount => instanceCount < firstBatch.length),
+  ).toBe(200);
+  expect(
+    Boolean(firstViewDrawCounts.every(instanceCount => instanceCount < firstBatch.length)),
     'never swaps an entire source batch when the furthest row changes'
-  );
+  ).toBe(true);
 
   renderer.destroy();
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
 function configureWebGPUNullDevice(device: NullDevice): void {

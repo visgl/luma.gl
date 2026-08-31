@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
@@ -13,7 +13,7 @@ import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {DynamicTexture} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
-test('gltf#loading', async t => {
+it('gltf#loading', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gltf = await load('test/data/box.glb', GLTFLoader);
 
@@ -21,22 +21,34 @@ test('gltf#loading', async t => {
 
   const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
 
-  t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
-  t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
-  t.ok(result.hasOwnProperty('extensionSupport'), 'Should contain extensionSupport property');
-  t.ok(result.hasOwnProperty('sceneBounds'), 'Should contain sceneBounds property');
-  t.ok(result.hasOwnProperty('modelBounds'), 'Should contain modelBounds property');
-  t.equals(result.scenes.length, 1, 'Should contain single scene');
-  t.deepEquals(result.animator.animations, [], 'Should not contain animations');
-  t.equal(result.extensionSupport.size, 0, 'Should contain empty extension support map for Box');
-  t.deepEqual(result.sceneBounds[0].center, [0, 0, 0], 'scene bounds expose scene center');
-  t.ok(result.sceneBounds[0].recommendedOrbitDistance > 0, 'scene bounds expose camera distance');
-  t.deepEqual(result.modelBounds.center, [0, 0, 0], 'model bounds expose model center');
+  expect(Boolean(result.hasOwnProperty('scenes')), 'Should contain scenes property').toBe(true);
+  expect(Boolean(result.hasOwnProperty('animator')), 'Should contain animator property').toBe(true);
+  expect(
+    Boolean(result.hasOwnProperty('extensionSupport')),
+    'Should contain extensionSupport property'
+  ).toBe(true);
+  expect(Boolean(result.hasOwnProperty('sceneBounds')), 'Should contain sceneBounds property').toBe(
+    true
+  );
+  expect(Boolean(result.hasOwnProperty('modelBounds')), 'Should contain modelBounds property').toBe(
+    true
+  );
+  expect(result.scenes.length, 'Should contain single scene').toBe(1);
+  expect(result.animator.animations, 'Should not contain animations').toEqual([]);
+  expect(result.extensionSupport.size, 'Should contain empty extension support map for Box').toBe(
+    0
+  );
+  expect(result.sceneBounds[0].center, 'scene bounds expose scene center').toEqual([0, 0, 0]);
+  expect(
+    Boolean(result.sceneBounds[0].recommendedOrbitDistance > 0),
+    'scene bounds expose camera distance'
+  ).toBe(true);
+  expect(result.modelBounds.center, 'model bounds expose model center').toEqual([0, 0, 0]);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#animator', async t => {
+it('gltf#animator', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
@@ -47,24 +59,24 @@ test('gltf#animator', async t => {
     processedGLTF
   );
 
-  t.equals(scenes.length, 1, 'Should contain single scene');
-  t.equals(animator.animations.length, 1, 'Should contain single animation');
+  expect(scenes.length, 'Should contain single scene').toBe(1);
+  expect(animator.animations.length, 'Should contain single animation').toBe(1);
 
   const {channels} = animator.animations[0].animation;
-  t.equals(channels.length, 2, 'Should contain two animation channels');
+  expect(channels.length, 'Should contain two animation channels').toBe(2);
   const {targetNodeId} = channels[0];
   const targetNode = gltfNodeIdToNodeMap.get(targetNodeId);
-  t.ok(targetNode, 'Should contain target node');
+  expect(Boolean(targetNode), 'Should contain target node').toBe(true);
 
-  t.ok(
-    processedGLTF.nodes.every(gltfNode => !(gltfNode as any)._node),
+  expect(
+    Boolean(processedGLTF.nodes.every(gltfNode => !(gltfNode as any)._node)),
     'GLTF object is not mutated'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#environment', async t => {
+it('gltf#environment', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const environment = loadPBREnvironment(webglDevice, {
@@ -79,17 +91,23 @@ test('gltf#environment', async t => {
     environment.specularEnvSampler.ready
   ]);
 
-  t.ok(environment.brdfLutTexture instanceof DynamicTexture, 'BRDF lookup texture created');
-  t.ok(environment.diffuseEnvSampler instanceof DynamicTexture, 'Diffuse environment map created');
-  t.ok(
-    environment.specularEnvSampler instanceof DynamicTexture,
+  expect(
+    Boolean(environment.brdfLutTexture instanceof DynamicTexture),
+    'BRDF lookup texture created'
+  ).toBe(true);
+  expect(
+    Boolean(environment.diffuseEnvSampler instanceof DynamicTexture),
+    'Diffuse environment map created'
+  ).toBe(true);
+  expect(
+    Boolean(environment.specularEnvSampler instanceof DynamicTexture),
     'Specular environment map created'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer material channels', async t => {
+it('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer material channels', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gltf: GLTFPostprocessed = {
     id: 'pointer-gltf',
@@ -156,16 +174,15 @@ test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer mater
   animator.setTime(500);
 
   const uniforms = materials[0].shaderInputs.getUniformValues() as Record<string, any>;
-  t.deepEqual(
+  expect(
     uniforms.pbrMaterial.baseColorFactor,
-    [0.5, 0.5, 0, 1],
     'material pointer animation updates the real luma.gl material state'
-  );
+  ).toEqual([0.5, 0.5, 0, 1]);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_pointer channels', async t => {
+it('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_pointer channels', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gltf: GLTFPostprocessed = {
     id: 'texture-pointer-gltf',
@@ -245,11 +262,10 @@ test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_point
   animator.setTime(500);
 
   const uniforms = materials[0].shaderInputs.getUniformValues() as Record<string, any>;
-  t.deepEqual(
+  expect(
     uniforms.pbrMaterial.normalUVTransform.map((value: number) => Number(value.toFixed(6))),
-    [0.877583, 0.479426, 0, -0.479426, 0.877583, 0, 0, 0, 1],
     'texture-transform pointer animation updates the runtime UV delta matrix'
-  );
+  ).toEqual([0.877583, 0.479426, 0, -0.479426, 0.877583, 0, 0, 0, 1]);
 
-  t.end();
+  void 0;
 });

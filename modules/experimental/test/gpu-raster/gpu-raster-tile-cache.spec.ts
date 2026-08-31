@@ -18,18 +18,18 @@ import {
   type GPURasterTileSourceMetadata
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type OwnedNeighborhood = {
   values: Buffer;
   validity: Buffer;
 };
 
-test('GPURaster bounded residency safely rebinds an evicted imported WebGPU tile without recompilation', async testCase => {
+it('GPURaster bounded residency safely rebinds an evicted imported WebGPU tile without recompilation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -56,16 +56,14 @@ test('GPURaster bounded residency safely rebinds an evicted imported WebGPU tile
   encodeTile(device, firstGraph.graph, west, 'bounded-west-encoding');
   const firstFence = device.createFence();
   await Promise.all([west.releaseAfter(firstFence), firstGraph.releaseAfter(firstFence)]);
-  testCase.deepEqual(
+  expect(
     await readValues(firstOwner.values, 4),
-    [1, Number.NaN, 3, 4],
     'first native float32 tile remains GPU-resident and honors its validity mask'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, Number.NaN, 3, 4]);
+  expect(
     await readValidity(firstOwner.validity, 4),
-    [1, 0, 1, 1],
     'first decoded mask is consumed directly from resident GPU storage'
-  );
+  ).toEqual([1, 0, 1, 1]);
 
   const east = await cache.acquire({level: 0, column: 1, row: 0});
   const reused = await cache.acquireGraph(east, {
@@ -75,15 +73,24 @@ test('GPURaster bounded residency safely rebinds an evicted imported WebGPU tile
       throw new Error('Compatible east tile must reuse its existing compiled graph');
     }
   });
-  testCase.equal(reused.value, firstOwner, 'same tile shape borrows the original graph owner');
-  testCase.equal(cache.stats.graphCompilations, 1, 'west and east compile exactly one graph');
-  testCase.equal(cache.stats.graphHits, 1, 'east acquisition reuses the existing graph shape');
+  expect(reused.value, 'same tile shape borrows the original graph owner').toBe(firstOwner);
+  expect(cache.stats.graphCompilations, 'west and east compile exactly one graph').toBe(1);
+  expect(cache.stats.graphHits, 'east acquisition reuses the existing graph shape').toBe(1);
 
   cache.setBudgets({maxTiles: 1});
-  testCase.ok(westSamples.destroyed, 'deterministic LRU eviction destroys old cached samples');
-  testCase.ok(westValidity.destroyed, 'eviction destroys the old cached source-validity mask');
-  testCase.notOk(east.bands[0].buffer.destroyed, 'the active encoded replacement remains pinned');
-  testCase.equal(cache.stats.tileEvictions, 1, 'cache records the ownership-correct eviction');
+  expect(
+    Boolean(westSamples.destroyed),
+    'deterministic LRU eviction destroys old cached samples'
+  ).toBe(true);
+  expect(
+    Boolean(westValidity.destroyed),
+    'eviction destroys the old cached source-validity mask'
+  ).toBe(true);
+  expect(
+    Boolean(east.bands[0].buffer.destroyed),
+    'the active encoded replacement remains pinned'
+  ).toBe(false);
+  expect(cache.stats.tileEvictions, 'cache records the ownership-correct eviction').toBe(1);
 
   encodeTile(device, reused.graph, east, 'bounded-east-replacement-encoding');
   const secondFence = device.createFence();
@@ -93,46 +100,42 @@ test('GPURaster bounded residency safely rebinds an evicted imported WebGPU tile
   const tileReleased = east.releaseAfter(submittedCompletion);
 
   cache.destroy();
-  testCase.notOk(
-    firstOwner.values.destroyed,
+  expect(
+    Boolean(firstOwner.values.destroyed),
     'teardown retains compiled graph outputs while pinned'
-  );
-  testCase.notOk(
-    east.bands[0].buffer.destroyed,
+  ).toBe(false);
+  expect(
+    Boolean(east.bands[0].buffer.destroyed),
     'teardown retains submitted source imports while pinned'
-  );
-  testCase.deepEqual(
+  ).toBe(false);
+  expect(
     await readValues(firstOwner.values, 4),
-    [11, 12, Number.NaN, 14],
     'compiled graph resolves east replacements even after its original imports were destroyed'
-  );
-  testCase.deepEqual(
+  ).toEqual([11, 12, Number.NaN, 14]);
+  expect(
     await readValidity(firstOwner.validity, 4),
-    [1, 1, 0, 1],
     'same compiled graph rebinds the replacement tile validity independently'
-  );
+  ).toEqual([1, 1, 0, 1]);
 
   releaseGate.resolve();
   await Promise.all([graphReleased, tileReleased]);
-  testCase.ok(
-    firstOwner.values.destroyed,
+  expect(
+    Boolean(firstOwner.values.destroyed),
     'application-owned graph outputs release after completion'
-  );
-  testCase.ok(
-    firstOwner.validity.destroyed,
+  ).toBe(true);
+  expect(
+    Boolean(firstOwner.validity.destroyed),
     'all graph-owned outputs release exactly after completion'
-  );
-  testCase.ok(
-    east.bands[0].buffer.destroyed,
+  ).toBe(true);
+  expect(
+    Boolean(east.bands[0].buffer.destroyed),
     'cache-owned replacement buffers release after completion'
+  ).toBe(true);
+  expect(source.readCount, 'two distinct windows perform exactly two application-owned reads').toBe(
+    2
   );
-  testCase.equal(
-    source.readCount,
-    2,
-    'two distinct windows perform exactly two application-owned reads'
-  );
-  testCase.equal(cache.stats.gpuBytes, 0, 'all explicitly owned GPU bytes are released');
-  testCase.end();
+  expect(cache.stats.gpuBytes, 'all explicitly owned GPU bytes are released').toBe(0);
+  void 0;
 });
 
 class WebGPUTileSource implements GPURasterTileSource {

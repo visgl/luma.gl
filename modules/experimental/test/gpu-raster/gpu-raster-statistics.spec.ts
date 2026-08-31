@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -13,11 +13,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURasterStatistics publishes calibrated, nodata-aware count, sum, mean, and extent', async testCase => {
+it('GPURasterStatistics publishes calibrated, nodata-aware count, sum, mean, and extent', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -53,26 +53,29 @@ test('GPURasterStatistics publishes calibrated, nodata-aware count, sum, mean, a
 
   const compiled = graph.compile();
   const nodeOrder = compiled.stats.nodeOrder;
-  testCase.ok(
-    nodeOrder.indexOf('masked-statistics-prepare') <
-      nodeOrder.indexOf('masked-statistics-count-finalize'),
+  expect(
+    Boolean(
+      nodeOrder.indexOf('masked-statistics-prepare') <
+        nodeOrder.indexOf('masked-statistics-count-finalize')
+    ),
     'validity preparation precedes the count reduction'
-  );
-  testCase.ok(
-    nodeOrder.indexOf('masked-statistics-mean') >
-      nodeOrder.indexOf('masked-statistics-sum-finalize'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      nodeOrder.indexOf('masked-statistics-mean') >
+        nodeOrder.indexOf('masked-statistics-sum-finalize')
+    ),
     'the GPU mean reads the completed caller-owned sum'
-  );
+  ).toBe(true);
   submitGraph(device, compiled, 'statistics-offset-calibration');
 
-  testCase.equal((await readUint32(countBuffer, 2))[1], 2, 'only two finite valid pixels remain');
-  testCase.equal((await readFloat32(sumBuffer, 2))[1], 5, 'sum uses calibrated valid samples');
-  testCase.equal((await readFloat32(meanBuffer, 2))[1], 2.5, 'GPU mean divides by valid count');
-  testCase.deepEqual(
+  expect((await readUint32(countBuffer, 2))[1], 'only two finite valid pixels remain').toBe(2);
+  expect((await readFloat32(sumBuffer, 2))[1], 'sum uses calibrated valid samples').toBe(5);
+  expect((await readFloat32(meanBuffer, 2))[1], 'GPU mean divides by valid count').toBe(2.5);
+  expect(
     (await readFloat32(extentBuffer, 3)).slice(1),
-    [1.5, 3.5],
     'extent excludes nodata, nonfinite values, and masked pixels'
-  );
+  ).toEqual([1.5, 3.5]);
 
   compiled.destroy();
   for (const buffer of [
@@ -85,14 +88,14 @@ test('GPURasterStatistics publishes calibrated, nodata-aware count, sum, mean, a
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterStatistics clears all-invalid outputs and reuses one compiled reduction graph', async testCase => {
+it('GPURasterStatistics clears all-invalid outputs and reuses one compiled reduction graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -121,26 +124,26 @@ test('GPURasterStatistics clears all-invalid outputs and reuses one compiled red
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'statistics-all-invalid');
-  testCase.equal((await readUint32(countBuffer, 1))[0], 0, 'all-invalid count is zero');
-  testCase.equal((await readFloat32(sumBuffer, 1))[0], 0, 'all-invalid sum is zero');
-  testCase.equal((await readFloat32(meanBuffer, 1))[0], 0, 'all-invalid mean is zero');
-  testCase.deepEqual(await readFloat32(extentBuffer, 2), [0, 0], 'all-invalid extent is cleared');
+  expect((await readUint32(countBuffer, 1))[0], 'all-invalid count is zero').toBe(0);
+  expect((await readFloat32(sumBuffer, 1))[0], 'all-invalid sum is zero').toBe(0);
+  expect((await readFloat32(meanBuffer, 1))[0], 'all-invalid mean is zero').toBe(0);
+  expect(await readFloat32(extentBuffer, 2), 'all-invalid extent is cleared').toEqual([0, 0]);
 
   sourceBuffer.write(Float32Array.from([2, 4, 6]));
   submitGraph(device, compiled, 'statistics-updated');
-  testCase.equal((await readUint32(countBuffer, 1))[0], 2, 'updated source preserves source mask');
-  testCase.equal((await readFloat32(sumBuffer, 1))[0], 6, 'updated sum reuses compiled graph');
-  testCase.equal((await readFloat32(meanBuffer, 1))[0], 3, 'updated mean reuses compiled graph');
-  testCase.deepEqual(await readFloat32(extentBuffer, 2), [2, 4], 'updated extent ignores mask');
+  expect((await readUint32(countBuffer, 1))[0], 'updated source preserves source mask').toBe(2);
+  expect((await readFloat32(sumBuffer, 1))[0], 'updated sum reuses compiled graph').toBe(6);
+  expect((await readFloat32(meanBuffer, 1))[0], 'updated mean reuses compiled graph').toBe(3);
+  expect(await readFloat32(extentBuffer, 2), 'updated extent ignores mask').toEqual([2, 4]);
 
   validityBuffer.write(Uint32Array.from([0, 0, 0]));
   submitGraph(device, compiled, 'statistics-remasked');
-  testCase.equal((await readUint32(countBuffer, 1))[0], 0, 'updated mask clears count');
-  testCase.equal((await readFloat32(meanBuffer, 1))[0], 0, 'updated mask clears mean');
-  testCase.deepEqual(await readFloat32(extentBuffer, 2), [0, 0], 'updated mask clears extent');
+  expect((await readUint32(countBuffer, 1))[0], 'updated mask clears count').toBe(0);
+  expect((await readFloat32(meanBuffer, 1))[0], 'updated mask clears mean').toBe(0);
+  expect(await readFloat32(extentBuffer, 2), 'updated mask clears extent').toEqual([0, 0]);
 
   compiled.destroy();
-  testCase.notOk(sourceBuffer.destroyed, 'borrowed source survives graph destruction');
+  expect(Boolean(sourceBuffer.destroyed), 'borrowed source survives graph destruction').toBe(false);
   for (const buffer of [
     sourceBuffer,
     validityBuffer,
@@ -151,14 +154,14 @@ test('GPURasterStatistics clears all-invalid outputs and reuses one compiled red
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterStatistics consumes threshold masks and rejects calibration overflow', async testCase => {
+it('GPURasterStatistics consumes threshold masks and rejects calibration overflow', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -201,19 +204,14 @@ test('GPURasterStatistics consumes threshold masks and rejects calibration overf
   const compiled = graph.compile();
   submitGraph(device, compiled, 'statistics-threshold-overflow');
 
-  testCase.deepEqual(
+  expect(
     await readUint32(selectionBuffer, 4),
-    [0, 0, 1, 1],
     'overflowed calibrated sample and below-threshold samples are rejected'
-  );
-  testCase.equal((await readUint32(countBuffer, 1))[0], 2, 'downstream count uses threshold mask');
-  testCase.equal((await readFloat32(sumBuffer, 1))[0], 3, 'sum uses surviving calibrated values');
-  testCase.equal(
-    (await readFloat32(meanBuffer, 1))[0],
-    1.5,
-    'mean uses surviving calibrated values'
-  );
-  testCase.deepEqual(await readFloat32(extentBuffer, 2), [1, 2], 'extent uses the threshold mask');
+  ).toEqual([0, 0, 1, 1]);
+  expect((await readUint32(countBuffer, 1))[0], 'downstream count uses threshold mask').toBe(2);
+  expect((await readFloat32(sumBuffer, 1))[0], 'sum uses surviving calibrated values').toBe(3);
+  expect((await readFloat32(meanBuffer, 1))[0], 'mean uses surviving calibrated values').toBe(1.5);
+  expect(await readFloat32(extentBuffer, 2), 'extent uses the threshold mask').toEqual([1, 2]);
 
   compiled.destroy();
   for (const buffer of [
@@ -226,7 +224,7 @@ test('GPURasterStatistics consumes threshold masks and rejects calibration overf
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 function makeInputBuffer(device: Device, data: Float32Array | Uint32Array): Buffer {

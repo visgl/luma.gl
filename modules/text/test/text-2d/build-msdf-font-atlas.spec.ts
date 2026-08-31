@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {isBrowser} from '@probe.gl/env';
 import {
   _resolveMsdfFontPageUrl,
@@ -11,9 +11,9 @@ import {
 } from '../../src/text-2d/build-msdf-font-atlas';
 import {getTextKerningOffset} from '../../src/text-2d/atlas/text-utils';
 
-test('buildMsdfFontAtlas preserves BMFont page, offset, and kerning metadata', t => {
+it('buildMsdfFontAtlas preserves BMFont page, offset, and kerning metadata', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -56,22 +56,21 @@ test('buildMsdfFontAtlas preserves BMFont page, offset, and kerning metadata', t
     pages: [new ImageData(32, 32), new ImageData(32, 32)]
   });
 
-  t.equal(fontAtlas.renderSettings.mode, 'msdf', 'parsed font selects MSDF sampling');
-  t.equal(fontAtlas.pages.length, 2, 'parsed font retains every atlas page');
-  t.equal(fontAtlas.mapping.A?.x, 1, 'glyph mapping uses BMFont id instead of atlas index');
-  t.equal(fontAtlas.mapping.B?.atlasPage, 1, 'glyph mapping retains BMFont page ids');
-  t.deepEqual(
+  expect(fontAtlas.renderSettings.mode, 'parsed font selects MSDF sampling').toBe('msdf');
+  expect(fontAtlas.pages.length, 'parsed font retains every atlas page').toBe(2);
+  expect(fontAtlas.mapping.A?.x, 'glyph mapping uses BMFont id instead of atlas index').toBe(1);
+  expect(fontAtlas.mapping.B?.atlasPage, 'glyph mapping retains BMFont page ids').toBe(1);
+  expect(
     [fontAtlas.mapping.A?.layoutOffsetX, fontAtlas.mapping.A?.layoutOffsetY],
-    [-1, 3],
     'glyph mapping retains BMFont layout offsets'
-  );
-  t.equal(getTextKerningOffset(fontAtlas.kerning, 65, 66), -2, 'kerning is indexed');
-  t.end();
+  ).toEqual([-1, 3]);
+  expect(getTextKerningOffset(fontAtlas.kerning, 65, 66), 'kerning is indexed').toBe(-2);
+  void 0;
 });
 
-test('loadMsdfFontAtlas loads descriptor pages into the common FontAtlas format', async t => {
+it('loadMsdfFontAtlas loads descriptor pages into the common FontAtlas format', async () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -99,37 +98,34 @@ test('loadMsdfFontAtlas loads descriptor pages into the common FontAtlas format'
   )}`;
   const fontAtlas = await loadMsdfFontAtlas(descriptorUrl);
 
-  t.equal(fontAtlas.renderSettings.mode, 'msdf', 'loaded descriptor returns an MSDF atlas');
-  t.equal(fontAtlas.pages.length, 1, 'loaded descriptor retains image pages');
-  t.equal(fontAtlas.mapping.A?.advance, 1, 'loaded descriptor retains glyph metrics');
-  t.end();
+  expect(fontAtlas.renderSettings.mode, 'loaded descriptor returns an MSDF atlas').toBe('msdf');
+  expect(fontAtlas.pages.length, 'loaded descriptor retains image pages').toBe(1);
+  expect(fontAtlas.mapping.A?.advance, 'loaded descriptor retains glyph metrics').toBe(1);
+  void 0;
 });
 
-test('MSDF font pages resolve relative to root-relative descriptor URLs', t => {
+it('MSDF font pages resolve relative to root-relative descriptor URLs', () => {
   const descriptorUrl = '/example-assets/experimental/text-space-crawl/fonts/oswald-msdf.json';
   const expectedPageUrl = new URL(
     '/example-assets/experimental/text-space-crawl/fonts/oswald-msdf.png',
     globalThis.location?.href ?? 'http://localhost/'
   ).toString();
 
-  t.equal(
+  expect(
     _resolveMsdfFontPageUrl('oswald-msdf.png', descriptorUrl),
-    expectedPageUrl,
     'root-relative descriptors retain their asset directory'
-  );
-  t.end();
+  ).toBe(expectedPageUrl);
+  void 0;
 });
 
-test('root-relative MSDF font pages retain the descriptor origin', t => {
-  t.equal(
+it('root-relative MSDF font pages retain the descriptor origin', () => {
+  expect(
     _resolveMsdfFontPageUrl('/fonts/atlas.png', 'https://cdn.example.com/fonts/font.json'),
-    'https://cdn.example.com/fonts/atlas.png',
     'root-relative pages resolve against cross-origin descriptors'
-  );
-  t.equal(
+  ).toBe('https://cdn.example.com/fonts/atlas.png');
+  expect(
     _resolveMsdfFontPageUrl('data:image/png;base64,AA==', 'https://cdn.example.com/font.json'),
-    'data:image/png;base64,AA==',
     'absolute URL schemes remain unchanged'
-  );
-  t.end();
+  ).toBe('data:image/png;base64,AA==');
+  void 0;
 });

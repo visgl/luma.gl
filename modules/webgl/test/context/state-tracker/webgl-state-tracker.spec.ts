@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
@@ -28,9 +28,11 @@ const devicePromise = luma.createDevice({
   createCanvasContext: true
 }) as Promise<WebGLDevice>;
 
-test('WebGLStateTracker#imports', async t => {
-  t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
-  t.end();
+it('WebGLStateTracker#imports', async () => {
+  expect(Boolean(typeof WebGLStateTracker === 'function'), 'WebGLStateTracker imported OK').toBe(
+    true
+  );
+  void 0;
 });
 
 // test.skip('WebGLStateTracker#trackContextState', async t => {
@@ -42,7 +44,7 @@ test('WebGLStateTracker#imports', async t => {
 //   t.end();
 // });
 
-test('WebGLStateTracker#push & pop', async t => {
+it('WebGLStateTracker#push & pop', async () => {
   const device = await devicePromise;
   const {gl} = device;
 
@@ -52,11 +54,10 @@ test('WebGLStateTracker#push & pop', async t => {
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
-    t.deepEqual(
+    expect(
       value,
-      GL_PARAMETER_DEFAULTS[key],
       `default: got expected value ${stringifyTypedArray(value)} for key: ${key}`
-    );
+    ).toEqual(GL_PARAMETER_DEFAULTS[key]);
   }
 
   device.pushState();
@@ -66,11 +67,10 @@ test('WebGLStateTracker#push & pop', async t => {
   parameters = getGLParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1[key],
       `first set: got expected set value ${stringifyTypedArray(value)} for key: ${key}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1[key]);
   }
 
   device.pushState();
@@ -79,11 +79,10 @@ test('WebGLStateTracker#push & pop', async t => {
   setGLParameters(gl, ENUM_STYLE_SETTINGS_SET2);
   parameters = getGLParameters(gl);
   for (const [key, value] of Object.entries(ENUM_STYLE_SETTINGS_SET2)) {
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET2[key],
       `second set: got expected value ${stringifyTypedArray(value)} for key: ${key}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET2[key]);
   }
 
   // Pop and verify values restore to previous state
@@ -92,11 +91,10 @@ test('WebGLStateTracker#push & pop', async t => {
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1[key],
       `first pop: got expected value ${stringifyTypedArray(value)} for key: ${key}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1[key]);
   }
 
   device.popState();
@@ -104,17 +102,16 @@ test('WebGLStateTracker#push & pop', async t => {
 
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
-    t.deepEqual(
+    expect(
       value,
-      GL_PARAMETER_DEFAULTS[key],
       `second pop: got expected value ${stringifyTypedArray(value)} for key: ${key}`
-    );
+    ).toEqual(GL_PARAMETER_DEFAULTS[key]);
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLStateTracker#gl API', async t => {
+it('WebGLStateTracker#gl API', async () => {
   const device = await devicePromise;
   const {gl} = device;
 
@@ -124,10 +121,8 @@ test('WebGLStateTracker#gl API', async t => {
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
-    t.deepEqual(
-      value,
-      GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)}`
+    expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(
+      GL_PARAMETER_DEFAULTS[key]
     );
   }
 
@@ -149,10 +144,8 @@ test('WebGLStateTracker#gl API', async t => {
     if (!Number.isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
       // @ts-expect-error
       const value = getGLParameters(gl, [key])[key];
-      t.deepEqual(
-        value,
-        ENUM_STYLE_SETTINGS_SET1[key],
-        `got expected value ${stringifyTypedArray(value)}`
+      expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(
+        ENUM_STYLE_SETTINGS_SET1[key]
       );
     }
   }
@@ -161,17 +154,15 @@ test('WebGLStateTracker#gl API', async t => {
   parameters = getGLParameters(gl);
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
-    t.deepEqual(
-      value,
-      GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)}`
+    expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(
+      GL_PARAMETER_DEFAULTS[key]
     );
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLStateTracker#intercept gl calls', async t => {
+it('WebGLStateTracker#intercept gl calls', async () => {
   const device = await devicePromise;
   const {gl} = device;
 
@@ -181,22 +172,26 @@ test('WebGLStateTracker#intercept gl calls', async t => {
 
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  t.is(gl.getParameter(gl.ARRAY_BUFFER_BINDING), buffer, 'buffer is bound');
+  expect(gl.getParameter(gl.ARRAY_BUFFER_BINDING), 'buffer is bound').toBe(buffer);
 
   gl.blendEquation(gl.FUNC_SUBTRACT);
-  t.is(getGLParameters(gl, gl.BLEND_EQUATION_RGB), gl.FUNC_SUBTRACT, 'direct gl call is tracked');
+  expect(getGLParameters(gl, gl.BLEND_EQUATION_RGB), 'direct gl call is tracked').toBe(
+    gl.FUNC_SUBTRACT
+  );
 
   gl.blendFunc(gl.ONE, gl.ONE);
-  t.is(getGLParameters(gl, gl.BLEND_SRC_RGB), gl.ONE, 'direct gl call is tracked');
+  expect(getGLParameters(gl, gl.BLEND_SRC_RGB), 'direct gl call is tracked').toBe(gl.ONE);
 
   gl.stencilMask(8);
-  t.is(getGLParameters(gl, gl.STENCIL_WRITEMASK), 8, 'direct gl call is tracked');
+  expect(getGLParameters(gl, gl.STENCIL_WRITEMASK), 'direct gl call is tracked').toBe(8);
 
   gl.stencilFunc(gl.NEVER, 0, 1);
-  t.is(getGLParameters(gl, gl.STENCIL_FUNC), gl.NEVER, 'direct gl call is tracked');
+  expect(getGLParameters(gl, gl.STENCIL_FUNC), 'direct gl call is tracked').toBe(gl.NEVER);
 
   gl.stencilOp(gl.KEEP, gl.ZERO, gl.REPLACE);
-  t.is(getGLParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), gl.ZERO, 'direct gl call is tracked');
+  expect(getGLParameters(gl, gl.STENCIL_PASS_DEPTH_FAIL), 'direct gl call is tracked').toBe(
+    gl.ZERO
+  );
 
   device.popState();
   const parameters = getGLParameters(gl);
@@ -204,61 +199,55 @@ test('WebGLStateTracker#intercept gl calls', async t => {
   // Verify default values.
   for (const key in GL_PARAMETER_DEFAULTS) {
     const value = parameters[key];
-    t.deepEqual(
-      value,
-      GL_PARAMETER_DEFAULTS[key],
-      `got expected value ${stringifyTypedArray(value)}`
+    expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(
+      GL_PARAMETER_DEFAULTS[key]
     );
   }
 
   gl.deleteBuffer(buffer);
-  t.end();
+  void 0;
 });
 
-test('WebGLStateTracker#not cached parameters', async t => {
+it('WebGLStateTracker#not cached parameters', async () => {
   const device = await devicePromise;
   const {gl} = device;
 
   resetGLParameters(gl);
 
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
+  expect(gl.getParameter(gl.TEXTURE_BINDING_2D), 'no bound texture').toBe(null);
 
   const tex = device.createTexture({width: 1, height: 1});
   tex._bind();
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
+  expect(gl.getParameter(gl.TEXTURE_BINDING_2D), 'bound texture').toBe(tex.handle);
 
   gl.activeTexture(gl.TEXTURE1);
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture1');
+  expect(gl.getParameter(gl.TEXTURE_BINDING_2D), 'no binding for texture1').toBe(null);
 
   gl.activeTexture(gl.TEXTURE0);
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture at texture0');
+  expect(gl.getParameter(gl.TEXTURE_BINDING_2D), 'bound texture at texture0').toBe(tex.handle);
 
   tex._unbind();
-  t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
+  expect(gl.getParameter(gl.TEXTURE_BINDING_2D), 'no binding for texture0').toBe(null);
 
   tex.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGLStateTracker#tracks metadata on gl.lumaState', async t => {
+it('WebGLStateTracker#tracks metadata on gl.lumaState', async () => {
   const device = await devicePromise;
   const {gl} = device;
 
   const state = WebGLStateTracker.get(gl);
-  t.ok(state, 'WebGLStateTracker.get returns a state tracker');
-  t.equal(
+  expect(Boolean(state), 'WebGLStateTracker.get returns a state tracker').toBe(true);
+  expect(
     (gl as {lumaState?: WebGLStateTracker}).lumaState,
-    state,
     'tracker is stored on gl.lumaState'
-  );
+  ).toBe(state);
   // @ts-expect-error
-  t.equal((gl as {state?: unknown}).state, undefined, 'legacy gl.state metadata slot is not used');
-  t.equal(
-    // @ts-expect-error
-    typeof (gl.lumaState?.cache || null),
-    'object',
-    'lumaState has cache object'
+  expect((gl as {state?: unknown}).state, 'legacy gl.state metadata slot is not used').toBe(
+    undefined
   );
+  expect(typeof (gl.lumaState?.cache || null), 'lumaState has cache object').toBe('object');
 
-  t.end();
+  void 0;
 });

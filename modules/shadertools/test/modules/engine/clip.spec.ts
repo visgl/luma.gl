@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import type {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
@@ -12,7 +11,7 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 const WIDTH = 4;
 const HEIGHT = 4;
 
-test('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', async t => {
+it('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', async () => {
   const device = await getWebGLTestDevice();
   const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook(
@@ -47,16 +46,16 @@ void main() {
     plugins: [clipShaderPlugin]
   });
 
-  await testClipModes(t, device, model, 'WebGL2');
+  await testClipModes(device, model, 'WebGL2');
   model.destroy();
-  t.end();
+  void 0;
 });
 
-test('clipShaderPlugin#WebGPU clips instances and geometry without rebuilding', async t => {
+it('clipShaderPlugin#WebGPU clips instances and geometry without rebuilding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -104,25 +103,18 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     plugins: [clipShaderPlugin]
   });
 
-  await testClipModes(t, device, model, 'WebGPU');
+  await testClipModes(device, model, 'WebGPU');
   model.destroy();
-  t.end();
+  void 0;
 });
 
-async function testClipModes(
-  t: Test,
-  device: Device,
-  model: Model,
-  backend: string
-): Promise<void> {
+async function testClipModes(device: Device, model: Model, backend: string): Promise<void> {
   model.shaderInputs.setProps({
     clip: {enabled: true, mode: 'instance', bounds: [0, 0, 1, 1]}
   });
   const retainedPixels = await renderAndRead(device, model);
-  t.equal(
-    countRedPixels(retainedPixels),
-    WIDTH * HEIGHT,
-    `${backend} retains the complete instance`
+  expect(countRedPixels(retainedPixels), `${backend} retains the complete instance`).toBe(
+    WIDTH * HEIGHT
   );
   const pipeline = model.pipeline;
 
@@ -130,14 +122,14 @@ async function testClipModes(
     clip: {enabled: true, mode: 'instance', bounds: [0, 0, 0.25, 0.25]}
   });
   const rejectedPixels = await renderAndRead(device, model);
-  t.equal(countRedPixels(rejectedPixels), 0, `${backend} rejects the complete instance`);
+  expect(countRedPixels(rejectedPixels), `${backend} rejects the complete instance`).toBe(0);
 
   model.shaderInputs.setProps({
     clip: {enabled: true, mode: 'geometry', bounds: [0, 0, 1, 1]}
   });
   const clippedPixels = await renderAndRead(device, model);
-  t.equal(countRedPixels(clippedPixels), 4, `${backend} clips individual fragments`);
-  t.equal(model.pipeline, pipeline, `${backend} uniform updates preserve the pipeline`);
+  expect(countRedPixels(clippedPixels), `${backend} clips individual fragments`).toBe(4);
+  expect(model.pipeline, `${backend} uniform updates preserve the pipeline`).toBe(pipeline);
 }
 
 async function renderAndRead(device: Device, model: Model): Promise<Uint8Array> {

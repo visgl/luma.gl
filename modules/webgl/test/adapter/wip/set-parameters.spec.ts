@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/webgl/constants';
@@ -18,31 +18,31 @@ function stringifyTypedArray(v) {
   return JSON.stringify(v);
 }
 
-test('WebGL#set and get', t => {
+it('WebGL#set and get', () => {
   const {gl} = fixture;
   resetParameters(gl);
 
   let value = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
-  t.deepEqual(value, false, `got expected value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(false);
 
   setParameters(gl, {[GL.CULL_FACE]: true});
   value = getParameters(gl, [GL.CULL_FACE])[GL.CULL_FACE];
-  t.deepEqual(value, true, `got expected value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected value ${stringifyTypedArray(value)}`).toEqual(true);
 
   value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  t.is(value, 1, `got expected value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected value ${stringifyTypedArray(value)}`).toBe(1);
 
   setParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
   value = getParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  t.is(value, -1, `got expected value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected value ${stringifyTypedArray(value)}`).toBe(-1);
 
   // @ts-expect-error
-  t.throws(() => setParameters({}), 'throws with non WebGL context');
+  expect(() => setParameters({}), 'throws with non WebGL context').toThrow();
 
-  t.end();
+  void 0;
 });
 
-test('WebGL#composite setter', t => {
+it('WebGL#composite setter', () => {
   const {gl} = fixture;
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
 
@@ -51,10 +51,8 @@ test('WebGL#composite setter', t => {
   // Verify default values.
   for (const key of compositeStateKeys) {
     const value = getParameters(gl, [key])[key];
-    t.deepEqual(
-      value,
-      GL_PARAMETER_DEFAULTS[key],
-      `got expected default value ${stringifyTypedArray(value)}`
+    expect(value, `got expected default value ${stringifyTypedArray(value)}`).toEqual(
+      GL_PARAMETER_DEFAULTS[key]
     );
   }
 
@@ -65,20 +63,18 @@ test('WebGL#composite setter', t => {
   });
 
   let value = getParameters(gl, [GL.STENCIL_FUNC])[GL.STENCIL_FUNC];
-  t.deepEqual(value, GL.NEVER, `got expected updated value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected updated value ${stringifyTypedArray(value)}`).toEqual(GL.NEVER);
   value = getParameters(gl, [GL.STENCIL_REF])[GL.STENCIL_REF];
-  t.deepEqual(value, 0.5, `got expected updated value ${stringifyTypedArray(value)}`);
+  expect(value, `got expected updated value ${stringifyTypedArray(value)}`).toEqual(0.5);
   value = getParameters(gl, [GL.STENCIL_VALUE_MASK])[GL.STENCIL_VALUE_MASK];
-  t.deepEqual(
-    value,
-    GL_PARAMETER_DEFAULTS[GL.STENCIL_VALUE_MASK],
-    `got expected updated defuault value ${stringifyTypedArray(value)}`
+  expect(value, `got expected updated defuault value ${stringifyTypedArray(value)}`).toEqual(
+    GL_PARAMETER_DEFAULTS[GL.STENCIL_VALUE_MASK]
   );
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#get all parameters', t => {
+it('WebGLState#get all parameters', () => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -87,38 +83,35 @@ test('WebGLState#get all parameters', t => {
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameters(gl, [key])[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
       `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key]);
   }
 
   const copy = getParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = copy[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
       `got expected value ${stringifyTypedArray(value)} after getParameters for ${getKey(GL, key)}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key]);
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGL#reset', t => {
+it('WebGL#reset', () => {
   const {gl} = fixture;
 
   // Set custom values and verify.
   setParameters(gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameters(gl, [key])[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key],
       `got expected value ${stringifyTypedArray(value)} after setParameters for ${getKey(GL, key)}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1_PRIMITIVE[key]);
   }
 
   // reset
@@ -127,20 +120,19 @@ test('WebGL#reset', t => {
   // Verify default values.
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
     const value = getParameters(gl, [key])[key];
-    t.deepEqual(
+    expect(
       value,
-      GL_PARAMETER_DEFAULTS[key],
       `got expected value ${stringifyTypedArray(value)} after resetParameters for ${getKey(
         GL,
         key
       )}`
-    );
+    ).toEqual(GL_PARAMETER_DEFAULTS[key]);
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#setParameters framebuffer', t => {
+it('WebGLState#setParameters framebuffer', () => {
   const {gl} = fixture;
 
   resetParameters(gl);
@@ -153,19 +145,19 @@ test('WebGLState#setParameters framebuffer', t => {
     [GL.FRAMEBUFFER_BINDING]: framebuffer.handle
   });
   fbHandle = getParameters(gl, [gl.FRAMEBUFFER_BINDING])[gl.FRAMEBUFFER_BINDING];
-  t.equal(fbHandle, framebuffer.handle, 'setParameters should set framebuffer binding');
+  expect(fbHandle, 'setParameters should set framebuffer binding').toBe(framebuffer.handle);
 
   // verify setting null value
   setParameters(gl, {
     [GL.FRAMEBUFFER_BINDING]: null
   });
   fbHandle = getParameters(gl, [gl.FRAMEBUFFER_BINDING])[gl.FRAMEBUFFER_BINDING];
-  t.equal(fbHandle, null, 'setParameters should set framebuffer binding');
+  expect(fbHandle, 'setParameters should set framebuffer binding').toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
+it('WebGLState#setParameters read-framebuffer (WebGL2 only)', () => {
   const {gl2} = fixture;
   // const gl2 = createTestContext({webgl2: true, webgl1: false});
   if (gl2) {
@@ -181,7 +173,7 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
     });
     // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
-    t.equal(fbHandle, framebuffer.handle, 'setParameters should set read-framebuffer binding');
+    expect(fbHandle, 'setParameters should set read-framebuffer binding').toBe(framebuffer.handle);
 
     // verify setting null value
     setParameters(gl2, {
@@ -189,9 +181,9 @@ test('WebGLState#setParameters read-framebuffer (WebGL2 only)', t => {
     });
     // @ts-expect-error
     fbHandle = getParameters(gl2, [gl2.READ_FRAMEBUFFER_BINDING])[gl2.READ_FRAMEBUFFER_BINDING];
-    t.equal(fbHandle, null, 'setParameters should set read-framebuffer binding');
+    expect(fbHandle, 'setParameters should set read-framebuffer binding').toBe(null);
   } else {
-    t.comment('WebGL2 not available, skipping tests');
+    void 0;
   }
-  t.end();
+  void 0;
 });

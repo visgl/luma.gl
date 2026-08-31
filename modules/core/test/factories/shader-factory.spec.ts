@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {ShaderFactory} from '@luma.gl/core';
@@ -19,28 +19,28 @@ void main(void) {
 }
 `;
 
-test('ShaderFactory#import', async t => {
-  t.ok(ShaderFactory !== undefined, 'ShaderFactory import successful');
-  t.end();
+it('ShaderFactory#import', async () => {
+  expect(Boolean(ShaderFactory !== undefined), 'ShaderFactory import successful').toBe(true);
+  void 0;
 });
 
-test('ShaderFactory#getDefaultShaderFactory', async t => {
+it('ShaderFactory#getDefaultShaderFactory', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const factory1 = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const factory2 = ShaderFactory.getDefaultShaderFactory(webglDevice);
 
-  t.ok(factory1 instanceof ShaderFactory, 'Default pipeline manager created');
-  t.isEqual(factory1, factory2, 'Default pipeline manager cached');
+  expect(Boolean(factory1 instanceof ShaderFactory), 'Default pipeline manager created').toBe(true);
+  expect(factory1, 'Default pipeline manager cached').toBe(factory2);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderFactory#createShader', async t => {
+it('ShaderFactory#createShader', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cacheShaders) {
-    t.comment('Shader caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -49,27 +49,27 @@ test('ShaderFactory#createShader', async t => {
   const shader2 = factory.createShader({id: '2', stage: 'vertex', source: vs1});
   const shader3 = factory.createShader({id: '3', stage: 'vertex', source: vs2});
 
-  t.isEqual(shader1, shader2, 'Caches identical shaders');
-  t.notEqual(shader1, shader3, 'Does not cache non-identical shaders');
+  expect(shader1, 'Caches identical shaders').toBe(shader2);
+  expect(shader1, 'Does not cache non-identical shaders').not.toBe(shader3);
 
-  t.deepEqual(
-    [shader1.id, shader2.id, shader3.id],
-    ['1-cached', '1-cached', '3-cached'],
-    'Annotates IDs of cached shaders'
-  );
+  expect([shader1.id, shader2.id, shader3.id], 'Annotates IDs of cached shaders').toEqual([
+    '1-cached',
+    '1-cached',
+    '3-cached'
+  ]);
 
   factory.release(shader1);
   factory.release(shader2);
   factory.release(shader3);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderFactory#release', async t => {
+it('ShaderFactory#release', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cacheShaders) {
-    t.comment('Shader caching not enabled');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -80,18 +80,16 @@ test('ShaderFactory#release', async t => {
 
   factory.release(shader2);
   factory.release(shader3);
-  t.deepEqual(
+  expect(
     [shader1.destroyed, shader2.destroyed, shader3.destroyed],
-    [false, false, false],
     'Released shaders remain cached by default'
-  );
+  ).toEqual([false, false, false]);
 
   factory.release(shader1);
-  t.deepEqual(
+  expect(
     [shader1.destroyed, shader2.destroyed, shader3.destroyed],
-    [false, false, false],
     'Unused shaders remain cached by default'
-  );
+  ).toEqual([false, false, false]);
 
-  t.end();
+  void 0;
 });

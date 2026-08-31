@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {DeviceFeature, isHTMLInCanvasSupported} from '@luma.gl/core';
 
@@ -48,39 +48,47 @@ const DEVICE_LIMITS = {
 const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [];
 const WEBGL2_NEVER_FEATURES: DeviceFeature[] = [];
 
-test('Device#info (unknown)', async t => {
+it('Device#info (unknown)', async () => {
   for (const testDevice of await getTestDevices()) {
-    t.ok(testDevice.info.type);
+    expect(Boolean(testDevice.info.type), '').toBe(true);
     // TODO check all info fields
   }
-  t.end();
+  void 0;
 });
 
-test('Device#limits (WebGPU style limits)', async t => {
+it('Device#limits (WebGPU style limits)', async () => {
   for (const testDevice of await getTestDevices()) {
     for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
       const actual = testDevice.limits[limit as keyof typeof DEVICE_LIMITS];
       if (numeric) {
-        t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
+        expect(
+          Boolean(Number.isFinite(actual)),
+          `device.limits.${limit} returns a number: ${actual}`
+        ).toBe(true);
       } else {
-        t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+        expect(
+          Boolean(actual !== undefined),
+          `device.limits.${limit} returns a value: ${actual}`
+        ).toBe(true);
       }
     }
   }
-  t.end();
+  void 0;
 });
 
-test('Device#features (unknown features)', async t => {
+it('Device#features (unknown features)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   // @ts-expect-error
-  t.notOk(webglDevice.features.has('unknown'), 'features.has should return false');
+  expect(Boolean(webglDevice.features.has('unknown')), 'features.has should return false').toBe(
+    false
+  );
   // @ts-expect-error
-  t.notOk(webglDevice.features.has(''), 'features.has should return false');
-  t.end();
+  expect(Boolean(webglDevice.features.has('')), 'features.has should return false').toBe(false);
+  void 0;
 });
 
-test('isHTMLInCanvasSupported checks canvas proposal APIs', t => {
+it('isHTMLInCanvasSupported checks canvas proposal APIs', () => {
   const originalHTMLCanvasElement = globalThis.HTMLCanvasElement;
   const setHTMLCanvasElement = (HTMLCanvasElement_: typeof HTMLCanvasElement | undefined) => {
     if (HTMLCanvasElement_) {
@@ -100,24 +108,33 @@ test('isHTMLInCanvasSupported checks canvas proposal APIs', t => {
   });
 
   setHTMLCanvasElement(SupportedHTMLCanvasElement as unknown as typeof HTMLCanvasElement);
-  t.ok(isHTMLInCanvasSupported(), 'layoutSubtree and requestPaint enable HTML-in-Canvas');
+  expect(
+    Boolean(isHTMLInCanvasSupported()),
+    'layoutSubtree and requestPaint enable HTML-in-Canvas'
+  ).toBe(true);
 
   setHTMLCanvasElement(class {} as unknown as typeof HTMLCanvasElement);
-  t.notOk(isHTMLInCanvasSupported(), 'missing proposal APIs disable HTML-in-Canvas');
+  expect(Boolean(isHTMLInCanvasSupported()), 'missing proposal APIs disable HTML-in-Canvas').toBe(
+    false
+  );
 
   setHTMLCanvasElement(originalHTMLCanvasElement);
-  t.end();
+  void 0;
 });
 
-test('Device#hasFeatures (WebGL)', async t => {
+it('Device#hasFeatures (WebGL)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   for (const feature of WEBGL2_ALWAYS_FEATURES) {
-    t.equal(webglDevice.features.has(feature), true, `${feature} is always supported under WebGL`);
+    expect(webglDevice.features.has(feature), `${feature} is always supported under WebGL`).toBe(
+      true
+    );
   }
 
   for (const feature of WEBGL2_NEVER_FEATURES) {
-    t.equal(webglDevice.features.has(feature), false, `${feature} is never supported under WebGL`);
+    expect(webglDevice.features.has(feature), `${feature} is never supported under WebGL`).toBe(
+      false
+    );
   }
-  t.end();
+  void 0;
 });

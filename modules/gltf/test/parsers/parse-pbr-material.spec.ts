@@ -5,7 +5,7 @@
 import {log, type TextureFormat} from '@luma.gl/core';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
   override isTextureFormatSupported(_format: TextureFormat): boolean {
@@ -75,7 +75,7 @@ function captureWarnings(runTestCase: () => void): string[] {
   return warnings;
 }
 
-test('gltf#parsePBRMaterial enables core material maps and factors', t => {
+it('gltf#parsePBRMaterial enables core material maps and factors', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -95,42 +95,40 @@ test('gltf#parsePBRMaterial enables core material maps and factors', t => {
     {}
   );
 
-  t.equal(parsedMaterial.uniforms.baseColorMapEnabled, true, 'base color map enabled');
-  t.equal(
+  expect(parsedMaterial.uniforms.baseColorMapEnabled, 'base color map enabled').toBe(true);
+  expect(
     parsedMaterial.uniforms.metallicRoughnessMapEnabled,
-    true,
     'metallic-roughness map enabled'
-  );
-  t.equal(parsedMaterial.uniforms.normalMapEnabled, true, 'normal map enabled');
-  t.equal(parsedMaterial.uniforms.occlusionMapEnabled, true, 'occlusion map enabled');
-  t.deepEqual(
-    parsedMaterial.uniforms.baseColorFactor,
-    [0.1, 0.2, 0.3, 0.4],
-    'base color factor parsed'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(parsedMaterial.uniforms.normalMapEnabled, 'normal map enabled').toBe(true);
+  expect(parsedMaterial.uniforms.occlusionMapEnabled, 'occlusion map enabled').toBe(true);
+  expect(parsedMaterial.uniforms.baseColorFactor, 'base color factor parsed').toEqual([
+    0.1, 0.2, 0.3, 0.4
+  ]);
+  expect(
     parsedMaterial.uniforms.metallicRoughnessValues,
-    [0.6, 0.7],
     'metallic-roughness values parsed'
-  );
-  t.equal(parsedMaterial.uniforms.normalScale, 0.25, 'normal scale parsed');
-  t.equal(parsedMaterial.uniforms.occlusionStrength, 0.5, 'occlusion strength parsed');
-  t.deepEqual(
+  ).toEqual([0.6, 0.7]);
+  expect(parsedMaterial.uniforms.normalScale, 'normal scale parsed').toBe(0.25);
+  expect(parsedMaterial.uniforms.occlusionStrength, 'occlusion strength parsed').toBe(0.5);
+  expect(
     parsedMaterial.uniforms.emissiveFactor,
-    [0.2, 0.4, 0.6],
     'emissive factor is preserved without an emissive texture'
-  );
-  t.notOk(parsedMaterial.defines['ALPHA_CUTOFF'], 'opaque material leaves alpha cutoff disabled');
-  t.notOk(
-    parsedMaterial.defines['USE_MATERIAL_EXTENSIONS'],
+  ).toEqual([0.2, 0.4, 0.6]);
+  expect(
+    Boolean(parsedMaterial.defines['ALPHA_CUTOFF']),
+    'opaque material leaves alpha cutoff disabled'
+  ).toBe(false);
+  expect(
+    Boolean(parsedMaterial.defines['USE_MATERIAL_EXTENSIONS']),
     'plain metallic-roughness material keeps extension shading disabled'
-  );
+  ).toBe(false);
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial accepts normalized geometry attribute names', t => {
+it('gltf#parsePBRMaterial accepts normalized geometry attribute names', () => {
   const warnings = captureWarnings(() => {
     const parsedMaterial = parsePBRMaterial(
       device,
@@ -144,26 +142,28 @@ test('gltf#parsePBRMaterial accepts normalized geometry attribute names', t => {
       {}
     );
 
-    t.equal(parsedMaterial.defines['HAS_NORMALS'], true, 'normalized normals enable HAS_NORMALS');
-    t.equal(parsedMaterial.defines['HAS_UV'], true, 'normalized texCoords enable HAS_UV');
-    t.equal(parsedMaterial.uniforms.baseColorMapEnabled, true, 'base color map stays enabled');
+    expect(parsedMaterial.defines['HAS_NORMALS'], 'normalized normals enable HAS_NORMALS').toBe(
+      true
+    );
+    expect(parsedMaterial.defines['HAS_UV'], 'normalized texCoords enable HAS_UV').toBe(true);
+    expect(parsedMaterial.uniforms.baseColorMapEnabled, 'base color map stays enabled').toBe(true);
 
     destroyParsedTextures(parsedMaterial);
   });
 
-  t.notOk(
-    warnings.some(warning => warning.includes('missing TEXCOORD_0')),
+  expect(
+    Boolean(warnings.some(warning => warning.includes('missing TEXCOORD_0'))),
     'normalized texCoords avoid missing TEXCOORD_0 warning'
-  );
-  t.notOk(
-    warnings.some(warning => warning.includes('missing NORMAL')),
+  ).toBe(false);
+  expect(
+    Boolean(warnings.some(warning => warning.includes('missing NORMAL'))),
     'normalized normals avoid missing NORMAL warning'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial enables the optional second skin influence set', t => {
+it('gltf#parsePBRMaterial enables the optional second skin influence set', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {},
@@ -171,17 +171,18 @@ test('gltf#parsePBRMaterial enables the optional second skin influence set', t =
     {}
   );
 
-  t.equal(parsedMaterial.defines['HAS_SKIN'], true, 'first joint influence set enables skinning');
-  t.equal(
-    parsedMaterial.defines['HAS_SKIN_1'],
-    true,
-    'second joint influence set enables eight-influence skinning'
+  expect(parsedMaterial.defines['HAS_SKIN'], 'first joint influence set enables skinning').toBe(
+    true
   );
+  expect(
+    parsedMaterial.defines['HAS_SKIN_1'],
+    'second joint influence set enables eight-influence skinning'
+  ).toBe(true);
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
+it('gltf#parsePBRMaterial parses KHR_materials extensions', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -243,103 +244,146 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
     {}
   );
 
-  t.deepEqual(
-    parsedMaterial.uniforms.specularColorFactor,
-    [0.3, 0.4, 0.5],
-    'specular color factor parsed'
-  );
-  t.equal(parsedMaterial.uniforms.specularIntensityFactor, 0.9, 'specular factor parsed');
-  t.equal(parsedMaterial.uniforms.specularColorMapEnabled, true, 'specular color map enabled');
-  t.equal(
+  expect(parsedMaterial.uniforms.specularColorFactor, 'specular color factor parsed').toEqual([
+    0.3, 0.4, 0.5
+  ]);
+  expect(parsedMaterial.uniforms.specularIntensityFactor, 'specular factor parsed').toBe(0.9);
+  expect(parsedMaterial.uniforms.specularColorMapEnabled, 'specular color map enabled').toBe(true);
+  expect(
     parsedMaterial.uniforms.specularIntensityMapEnabled,
-    true,
     'specular intensity map enabled'
+  ).toBe(true);
+  expect(parsedMaterial.uniforms.ior, 'ior parsed').toBe(1.7);
+  expect(parsedMaterial.uniforms.transmissionFactor, 'transmission factor parsed').toBe(0.6);
+  expect(parsedMaterial.uniforms.dispersion, 'ratified chromatic dispersion parsed').toBe(0.65);
+  expect(parsedMaterial.uniforms.transmissionMapEnabled, 'transmission map enabled').toBe(true);
+  expect(parsedMaterial.uniforms.thicknessFactor, 'volume thickness parsed').toBe(0.4);
+  expect(Boolean(parsedMaterial.bindings.pbr_thicknessSampler), 'thickness binding created').toBe(
+    true
   );
-  t.equal(parsedMaterial.uniforms.ior, 1.7, 'ior parsed');
-  t.equal(parsedMaterial.uniforms.transmissionFactor, 0.6, 'transmission factor parsed');
-  t.equal(parsedMaterial.uniforms.dispersion, 0.65, 'ratified chromatic dispersion parsed');
-  t.equal(parsedMaterial.uniforms.transmissionMapEnabled, true, 'transmission map enabled');
-  t.equal(parsedMaterial.uniforms.thicknessFactor, 0.4, 'volume thickness parsed');
-  t.ok(parsedMaterial.bindings.pbr_thicknessSampler, 'thickness binding created');
-  t.equal(parsedMaterial.uniforms.attenuationDistance, 12, 'attenuation distance parsed');
-  t.deepEqual(
-    parsedMaterial.uniforms.attenuationColor,
-    [0.7, 0.8, 0.9],
-    'attenuation color parsed'
-  );
-  t.equal(parsedMaterial.uniforms.clearcoatFactor, 0.8, 'clearcoat factor parsed');
-  t.equal(
+  expect(parsedMaterial.uniforms.attenuationDistance, 'attenuation distance parsed').toBe(12);
+  expect(parsedMaterial.uniforms.attenuationColor, 'attenuation color parsed').toEqual([
+    0.7, 0.8, 0.9
+  ]);
+  expect(parsedMaterial.uniforms.clearcoatFactor, 'clearcoat factor parsed').toBe(0.8);
+  expect(
     parsedMaterial.uniforms.clearcoatRoughnessFactor,
-    0.2,
     'clearcoat roughness factor parsed'
-  );
-  t.equal(parsedMaterial.uniforms.clearcoatMapEnabled, true, 'clearcoat maps enabled');
-  t.equal(
+  ).toBe(0.2);
+  expect(parsedMaterial.uniforms.clearcoatMapEnabled, 'clearcoat maps enabled').toBe(true);
+  expect(
     parsedMaterial.uniforms.clearcoatRoughnessMapEnabled,
-    true,
     'clearcoat roughness map enabled'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_clearcoatNormalSampler),
+    'clearcoat normal binding created'
+  ).toBe(true);
+  expect(parsedMaterial.uniforms.sheenColorFactor, 'sheen color factor parsed').toEqual([
+    0.15, 0.25, 0.35
+  ]);
+  expect(parsedMaterial.uniforms.sheenRoughnessFactor, 'sheen roughness factor parsed').toBe(0.45);
+  expect(parsedMaterial.uniforms.sheenColorMapEnabled, 'sheen color map enabled').toBe(true);
+  expect(parsedMaterial.uniforms.sheenRoughnessMapEnabled, 'sheen roughness map enabled').toBe(
+    true
   );
-  t.ok(parsedMaterial.bindings.pbr_clearcoatNormalSampler, 'clearcoat normal binding created');
-  t.deepEqual(
-    parsedMaterial.uniforms.sheenColorFactor,
-    [0.15, 0.25, 0.35],
-    'sheen color factor parsed'
-  );
-  t.equal(parsedMaterial.uniforms.sheenRoughnessFactor, 0.45, 'sheen roughness factor parsed');
-  t.equal(parsedMaterial.uniforms.sheenColorMapEnabled, true, 'sheen color map enabled');
-  t.equal(parsedMaterial.uniforms.sheenRoughnessMapEnabled, true, 'sheen roughness map enabled');
-  t.equal(parsedMaterial.uniforms.iridescenceFactor, 0.55, 'iridescence factor parsed');
-  t.equal(parsedMaterial.uniforms.iridescenceIor, 1.4, 'iridescence ior parsed');
-  t.deepEqual(
+  expect(parsedMaterial.uniforms.iridescenceFactor, 'iridescence factor parsed').toBe(0.55);
+  expect(parsedMaterial.uniforms.iridescenceIor, 'iridescence ior parsed').toBe(1.4);
+  expect(
     parsedMaterial.uniforms.iridescenceThicknessRange,
-    [50, 350],
     'iridescence thickness range parsed'
-  );
-  t.equal(parsedMaterial.uniforms.iridescenceMapEnabled, true, 'iridescence map enabled');
-  t.ok(
-    parsedMaterial.bindings.pbr_iridescenceThicknessSampler,
+  ).toEqual([50, 350]);
+  expect(parsedMaterial.uniforms.iridescenceMapEnabled, 'iridescence map enabled').toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_iridescenceThicknessSampler),
     'iridescence thickness binding created'
-  );
-  t.equal(parsedMaterial.uniforms.anisotropyStrength, 0.65, 'anisotropy strength parsed');
-  t.equal(parsedMaterial.uniforms.anisotropyRotation, 0.75, 'anisotropy rotation parsed');
-  t.equal(parsedMaterial.uniforms.anisotropyMapEnabled, true, 'anisotropy map enabled');
-  t.equal(parsedMaterial.uniforms.emissiveStrength, 5, 'emissive strength parsed');
+  ).toBe(true);
+  expect(parsedMaterial.uniforms.anisotropyStrength, 'anisotropy strength parsed').toBe(0.65);
+  expect(parsedMaterial.uniforms.anisotropyRotation, 'anisotropy rotation parsed').toBe(0.75);
+  expect(parsedMaterial.uniforms.anisotropyMapEnabled, 'anisotropy map enabled').toBe(true);
+  expect(parsedMaterial.uniforms.emissiveStrength, 'emissive strength parsed').toBe(5);
 
-  t.ok(parsedMaterial.defines['HAS_SPECULARCOLORMAP'], 'specular color define added');
-  t.ok(parsedMaterial.defines['HAS_SPECULARINTENSITYMAP'], 'specular intensity define added');
-  t.ok(parsedMaterial.defines['HAS_TRANSMISSIONMAP'], 'transmission define added');
-  t.ok(parsedMaterial.defines['HAS_THICKNESSMAP'], 'thickness define added');
-  t.ok(parsedMaterial.defines['HAS_CLEARCOATMAP'], 'clearcoat define added');
-  t.ok(parsedMaterial.defines['HAS_CLEARCOATROUGHNESSMAP'], 'clearcoat roughness define added');
-  t.ok(parsedMaterial.defines['HAS_CLEARCOATNORMALMAP'], 'clearcoat normal define added');
-  t.ok(parsedMaterial.defines['HAS_SHEENCOLORMAP'], 'sheen define added');
-  t.ok(parsedMaterial.defines['HAS_SHEENROUGHNESSMAP'], 'sheen roughness define added');
-  t.ok(parsedMaterial.defines['HAS_IRIDESCENCEMAP'], 'iridescence define added');
-  t.ok(parsedMaterial.defines['HAS_IRIDESCENCETHICKNESSMAP'], 'iridescence thickness define added');
-  t.ok(parsedMaterial.defines['HAS_ANISOTROPYMAP'], 'anisotropy define added');
-  t.ok(
-    parsedMaterial.defines['USE_MATERIAL_EXTENSIONS'],
+  expect(
+    Boolean(parsedMaterial.defines['HAS_SPECULARCOLORMAP']),
+    'specular color define added'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.defines['HAS_SPECULARINTENSITYMAP']),
+    'specular intensity define added'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_TRANSMISSIONMAP']), 'transmission define added').toBe(
+    true
+  );
+  expect(Boolean(parsedMaterial.defines['HAS_THICKNESSMAP']), 'thickness define added').toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_CLEARCOATMAP']), 'clearcoat define added').toBe(true);
+  expect(
+    Boolean(parsedMaterial.defines['HAS_CLEARCOATROUGHNESSMAP']),
+    'clearcoat roughness define added'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.defines['HAS_CLEARCOATNORMALMAP']),
+    'clearcoat normal define added'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_SHEENCOLORMAP']), 'sheen define added').toBe(true);
+  expect(
+    Boolean(parsedMaterial.defines['HAS_SHEENROUGHNESSMAP']),
+    'sheen roughness define added'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_IRIDESCENCEMAP']), 'iridescence define added').toBe(
+    true
+  );
+  expect(
+    Boolean(parsedMaterial.defines['HAS_IRIDESCENCETHICKNESSMAP']),
+    'iridescence thickness define added'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_ANISOTROPYMAP']), 'anisotropy define added').toBe(
+    true
+  );
+  expect(
+    Boolean(parsedMaterial.defines['USE_MATERIAL_EXTENSIONS']),
     'material extension shading define added'
-  );
+  ).toBe(true);
 
-  t.ok(parsedMaterial.bindings.pbr_specularColorSampler, 'specular color binding created');
-  t.ok(parsedMaterial.bindings.pbr_specularIntensitySampler, 'specular intensity binding created');
-  t.ok(parsedMaterial.bindings.pbr_transmissionSampler, 'transmission binding created');
-  t.ok(parsedMaterial.bindings.pbr_clearcoatSampler, 'clearcoat binding created');
-  t.ok(
-    parsedMaterial.bindings.pbr_clearcoatRoughnessSampler,
-    'clearcoat roughness binding created'
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_specularColorSampler),
+    'specular color binding created'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_specularIntensitySampler),
+    'specular intensity binding created'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_transmissionSampler),
+    'transmission binding created'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.bindings.pbr_clearcoatSampler), 'clearcoat binding created').toBe(
+    true
   );
-  t.ok(parsedMaterial.bindings.pbr_sheenColorSampler, 'sheen color binding created');
-  t.ok(parsedMaterial.bindings.pbr_sheenRoughnessSampler, 'sheen roughness binding created');
-  t.ok(parsedMaterial.bindings.pbr_iridescenceSampler, 'iridescence binding created');
-  t.ok(parsedMaterial.bindings.pbr_anisotropySampler, 'anisotropy binding created');
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_clearcoatRoughnessSampler),
+    'clearcoat roughness binding created'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_sheenColorSampler),
+    'sheen color binding created'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_sheenRoughnessSampler),
+    'sheen roughness binding created'
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_iridescenceSampler),
+    'iridescence binding created'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.bindings.pbr_anisotropySampler), 'anisotropy binding created').toBe(
+    true
+  );
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial configures runtime UV selectors and baked transforms', t => {
+it('gltf#parsePBRMaterial configures runtime UV selectors and baked transforms', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -362,27 +406,24 @@ test('gltf#parsePBRMaterial configures runtime UV selectors and baked transforms
     {}
   );
 
-  t.equal(
+  expect(
     parsedMaterial.uniforms.baseColorUVSet,
-    1,
     'texture texCoord is preserved for runtime sampling'
-  );
-  t.deepEqual(
+  ).toBe(1);
+  expect(
     parsedMaterial.uniforms.baseColorUVTransform?.map(value => Number(value.toFixed(6))),
-    [1.4701, 0.298004, 0, -0.149002, 0.73505, 0, 0.25, 0.5, 1],
     'baked texture transform matrix is captured for runtime delta computation'
-  );
-  t.deepEqual(
+  ).toEqual([1.4701, 0.298004, 0, -0.149002, 0.73505, 0, 0.25, 0.5, 1]);
+  expect(
     parsedMaterial.uniforms.normalUVTransform,
-    [1, 0, 0, 0, 1, 0, 0, 0, 1],
     'textures without KHR_texture_transform keep the identity matrix'
-  );
+  ).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial skips texture slots that require unsupported TEXCOORD sets', t => {
+it('gltf#parsePBRMaterial skips texture slots that require unsupported TEXCOORD sets', () => {
   const warnings = captureWarnings(() => {
     const parsedMaterial = parsePBRMaterial(
       device,
@@ -398,27 +439,29 @@ test('gltf#parsePBRMaterial skips texture slots that require unsupported TEXCOOR
       {}
     );
 
-    t.notOk(
-      parsedMaterial.bindings.pbr_baseColorSampler,
+    expect(
+      Boolean(parsedMaterial.bindings.pbr_baseColorSampler),
       'unsupported TEXCOORD texture binding is skipped'
-    );
-    t.notOk(
-      parsedMaterial.uniforms.baseColorMapEnabled,
+    ).toBe(false);
+    expect(
+      Boolean(parsedMaterial.uniforms.baseColorMapEnabled),
       'unsupported TEXCOORD texture is not enabled'
-    );
+    ).toBe(false);
   });
 
-  t.ok(
-    warnings.some(warning =>
-      warning.includes('only TEXCOORD_0 and TEXCOORD_1 are currently available')
+  expect(
+    Boolean(
+      warnings.some(warning =>
+        warning.includes('only TEXCOORD_0 and TEXCOORD_1 are currently available')
+      )
     ),
     'unsupported TEXCOORD usage is warned'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial reads KHR_materials_unlit from material.extensions', t => {
+it('gltf#parsePBRMaterial reads KHR_materials_unlit from material.extensions', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -430,13 +473,13 @@ test('gltf#parsePBRMaterial reads KHR_materials_unlit from material.extensions',
     {}
   );
 
-  t.equal(parsedMaterial.uniforms.unlit, true, 'unlit extension enables unlit shading');
+  expect(parsedMaterial.uniforms.unlit, 'unlit extension enables unlit shading').toBe(true);
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial skips unresolved extension textures', t => {
+it('gltf#parsePBRMaterial skips unresolved extension textures', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -451,19 +494,23 @@ test('gltf#parsePBRMaterial skips unresolved extension textures', t => {
     {}
   );
 
-  t.equal(parsedMaterial.uniforms.transmissionFactor, 0.6, 'factor is preserved');
-  t.notOk(
-    parsedMaterial.bindings.pbr_transmissionSampler,
+  expect(parsedMaterial.uniforms.transmissionFactor, 'factor is preserved').toBe(0.6);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_transmissionSampler),
     'binding is skipped when image is missing'
+  ).toBe(false);
+  expect(Boolean(parsedMaterial.uniforms.transmissionMapEnabled), 'map flag stays disabled').toBe(
+    false
   );
-  t.notOk(parsedMaterial.uniforms.transmissionMapEnabled, 'map flag stays disabled');
-  t.notOk(parsedMaterial.defines['HAS_TRANSMISSIONMAP'], 'map define stays disabled');
+  expect(Boolean(parsedMaterial.defines['HAS_TRANSMISSIONMAP']), 'map define stays disabled').toBe(
+    false
+  );
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial resolves extension textures from parent gltf textures', t => {
+it('gltf#parsePBRMaterial resolves extension textures from parent gltf textures', () => {
   const parsedMaterial = parsePBRMaterial(
     device,
     {
@@ -486,31 +533,32 @@ test('gltf#parsePBRMaterial resolves extension textures from parent gltf texture
     }
   );
 
-  t.ok(
-    parsedMaterial.bindings.pbr_clearcoatSampler,
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_clearcoatSampler),
     'clearcoat binding resolved from gltf texture'
-  );
-  t.ok(
-    parsedMaterial.bindings.pbr_clearcoatRoughnessSampler,
+  ).toBe(true);
+  expect(
+    Boolean(parsedMaterial.bindings.pbr_clearcoatRoughnessSampler),
     'clearcoat roughness binding resolved from gltf texture'
-  );
-  t.equal(parsedMaterial.uniforms.clearcoatMapEnabled, true, 'clearcoat map flag enabled');
-  t.equal(
+  ).toBe(true);
+  expect(parsedMaterial.uniforms.clearcoatMapEnabled, 'clearcoat map flag enabled').toBe(true);
+  expect(
     parsedMaterial.uniforms.clearcoatRoughnessMapEnabled,
-    true,
     'clearcoat roughness map flag enabled'
+  ).toBe(true);
+  expect(Boolean(parsedMaterial.defines['HAS_CLEARCOATMAP']), 'clearcoat map define enabled').toBe(
+    true
   );
-  t.ok(parsedMaterial.defines['HAS_CLEARCOATMAP'], 'clearcoat map define enabled');
-  t.ok(
-    parsedMaterial.defines['HAS_CLEARCOATROUGHNESSMAP'],
+  expect(
+    Boolean(parsedMaterial.defines['HAS_CLEARCOATROUGHNESSMAP']),
     'clearcoat roughness map define enabled'
-  );
+  ).toBe(true);
 
   destroyParsedTextures(parsedMaterial);
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial warns when textured materials are missing TEXCOORD_0', t => {
+it('gltf#parsePBRMaterial warns when textured materials are missing TEXCOORD_0', () => {
   const warnings = captureWarnings(() => {
     const parsedMaterial = parsePBRMaterial(
       device,
@@ -525,17 +573,19 @@ test('gltf#parsePBRMaterial warns when textured materials are missing TEXCOORD_0
     destroyParsedTextures(parsedMaterial);
   });
 
-  t.ok(
-    warnings.some(
-      warning => warning.includes('missing TEXCOORD_0') && warning.includes('baseColorTexture')
+  expect(
+    Boolean(
+      warnings.some(
+        warning => warning.includes('missing TEXCOORD_0') && warning.includes('baseColorTexture')
+      )
     ),
     'missing TEXCOORD_0 warning emitted for textured material'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial warns when lit materials are missing NORMAL', t => {
+it('gltf#parsePBRMaterial warns when lit materials are missing NORMAL', () => {
   const warnings = captureWarnings(() => {
     const parsedMaterial = parsePBRMaterial(
       device,
@@ -548,18 +598,21 @@ test('gltf#parsePBRMaterial warns when lit materials are missing NORMAL', t => {
     destroyParsedTextures(parsedMaterial);
   });
 
-  t.ok(
-    warnings.some(
-      warning =>
-        warning.includes('missing NORMAL') && warning.includes('lit PBR shading with normalTexture')
+  expect(
+    Boolean(
+      warnings.some(
+        warning =>
+          warning.includes('missing NORMAL') &&
+          warning.includes('lit PBR shading with normalTexture')
+      )
     ),
     'missing NORMAL warning emitted for lit normal-mapped material'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parsePBRMaterial can suppress attribute warnings for shared material parsing', t => {
+it('gltf#parsePBRMaterial can suppress attribute warnings for shared material parsing', () => {
   const warnings = captureWarnings(() => {
     const parsedMaterial = parsePBRMaterial(
       device,
@@ -575,7 +628,7 @@ test('gltf#parsePBRMaterial can suppress attribute warnings for shared material 
     destroyParsedTextures(parsedMaterial);
   });
 
-  t.deepEqual(warnings, [], 'shared material parsing can skip primitive attribute diagnostics');
+  expect(warnings, 'shared material parsing can skip primitive attribute diagnostics').toEqual([]);
 
-  t.end();
+  void 0;
 });

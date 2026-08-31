@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   type AttributeShaderType,
   type AttributeShaderTypeInfo,
@@ -31,14 +31,13 @@ const TEST_CASES: {format: AttributeShaderType | string, result: AttributeShader
   // {format: 'bool-webgl', result: {primitiveType: 'bool-webgl', components: 1, byteLength: 1 * 4, integer: true, signed: false}}
 ];
 
-test('shadertypes#shaderTypeDecoder.getAttributeShaderTypeInfo', t => {
+it('shadertypes#shaderTypeDecoder.getAttributeShaderTypeInfo', () => {
   for (const tc of TEST_CASES) {
     const decoded = shaderTypeDecoder.getAttributeShaderTypeInfo(tc.format);
-    t.deepEqual(
+    expect(
       decoded,
-      tc.result,
       `shaderTypeDecoder.getAttributeShaderTypeInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
-    );
+    ).toEqual(tc.result);
   }
-  t.end();
+  void 0;
 });

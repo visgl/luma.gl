@@ -2,36 +2,32 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeArrowFixedSizeListVector, resolveArrowTextSourceVectors} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-test('resolveArrowTextSourceVectors maps same-name Table and RecordBatch columns', t => {
+it('resolveArrowTextSourceVectors maps same-name Table and RecordBatch columns', () => {
   const sourceVectors = makeArrowTextSourceVectors();
   const table = new arrow.Table(sourceVectors);
   const resolvedFromTable = resolveArrowTextSourceVectors({data: table});
   const resolvedFromRecordBatch = resolveArrowTextSourceVectors({data: table.batches[0]!});
 
-  t.equal(
-    resolvedFromTable.positions.length,
-    sourceVectors.positions.length,
-    'Table positions resolve'
+  expect(resolvedFromTable.positions.length, 'Table positions resolve').toBe(
+    sourceVectors.positions.length
   );
-  t.deepEqual(
-    resolvedFromTable.texts.toArray(),
-    sourceVectors.texts.toArray(),
-    'Table texts resolve'
+  expect(resolvedFromTable.texts.toArray(), 'Table texts resolve').toEqual(
+    sourceVectors.texts.toArray()
   );
-  t.equal(resolvedFromRecordBatch.texts.length, sourceVectors.texts.length, 'RecordBatch resolves');
-  t.equal(
-    resolvedFromTable.colors?.length,
-    sourceVectors.colors.length,
-    'same-name colors resolve'
+  expect(resolvedFromRecordBatch.texts.length, 'RecordBatch resolves').toBe(
+    sourceVectors.texts.length
   );
-  t.end();
+  expect(resolvedFromTable.colors?.length, 'same-name colors resolve').toBe(
+    sourceVectors.colors.length
+  );
+  void 0;
 });
 
-test('resolveArrowTextSourceVectors maps nested string selectors', t => {
+it('resolveArrowTextSourceVectors maps nested string selectors', () => {
   const sourceVectors = makeArrowTextSourceVectors();
   const table = makeNestedArrowTextTable('source', sourceVectors);
   const resolved = resolveArrowTextSourceVectors({
@@ -46,54 +42,54 @@ test('resolveArrowTextSourceVectors maps nested string selectors', t => {
     }
   });
 
-  t.equal(resolved.positions.length, sourceVectors.positions.length, 'nested positions resolve');
-  t.equal(resolved.texts.length, sourceVectors.texts.length, 'nested texts resolve');
-  t.equal(resolved.colors?.length, sourceVectors.colors.length, 'nested colors resolve');
-  t.equal(resolved.clipRects?.length, sourceVectors.clipRects.length, 'nested clipRects resolve');
-  t.equal(
-    resolved.textAnchors?.length,
-    sourceVectors.textAnchors.length,
-    'nested text anchors resolve'
+  expect(resolved.positions.length, 'nested positions resolve').toBe(
+    sourceVectors.positions.length
   );
-  t.equal(
-    resolved.alignmentBaselines?.length,
-    sourceVectors.alignmentBaselines.length,
-    'nested alignment baselines resolve'
+  expect(resolved.texts.length, 'nested texts resolve').toBe(sourceVectors.texts.length);
+  expect(resolved.colors?.length, 'nested colors resolve').toBe(sourceVectors.colors.length);
+  expect(resolved.clipRects?.length, 'nested clipRects resolve').toBe(
+    sourceVectors.clipRects.length
   );
-  t.end();
+  expect(resolved.textAnchors?.length, 'nested text anchors resolve').toBe(
+    sourceVectors.textAnchors.length
+  );
+  expect(resolved.alignmentBaselines?.length, 'nested alignment baselines resolve').toBe(
+    sourceVectors.alignmentBaselines.length
+  );
+  void 0;
 });
 
-test('resolveArrowTextSourceVectors supports direct vectors and optional disable', t => {
+it('resolveArrowTextSourceVectors supports direct vectors and optional disable', () => {
   const sourceVectors = makeArrowTextSourceVectors();
   const resolved = resolveArrowTextSourceVectors({
     selectors: {positions: sourceVectors.positions, texts: sourceVectors.texts, colors: null}
   });
 
-  t.equal(resolved.positions, sourceVectors.positions, 'direct positions do not require a Table');
-  t.equal(resolved.texts, sourceVectors.texts, 'direct texts do not require a Table');
-  t.equal(resolved.colors, undefined, 'null disables optional colors');
-  t.end();
+  expect(resolved.positions, 'direct positions do not require a Table').toBe(
+    sourceVectors.positions
+  );
+  expect(resolved.texts, 'direct texts do not require a Table').toBe(sourceVectors.texts);
+  expect(resolved.colors, 'null disables optional colors').toBe(undefined);
+  void 0;
 });
 
-test('resolveArrowTextSourceVectors skips optional columns and requires text inputs', t => {
+it('resolveArrowTextSourceVectors skips optional columns and requires text inputs', () => {
   const sourceVectors = makeArrowTextSourceVectors();
   const resolved = resolveArrowTextSourceVectors({
     data: new arrow.Table({positions: sourceVectors.positions, texts: sourceVectors.texts})
   });
 
-  t.equal(resolved.colors, undefined, 'missing optional colors are skipped');
-  t.throws(
+  expect(resolved.colors, 'missing optional colors are skipped').toBe(undefined);
+  expect(
     () => resolveArrowTextSourceVectors({data: new arrow.Table({texts: sourceVectors.texts})}),
-    /source column "positions" for "positions" is missing/,
     'missing required positions throw'
-  );
-  t.throws(
+  ).toThrow(/source column "positions" for "positions" is missing/);
+  expect(
     () =>
       resolveArrowTextSourceVectors({data: new arrow.Table({positions: sourceVectors.positions})}),
-    /source column "texts" for "texts" is missing/,
     'missing required texts throw'
-  );
-  t.end();
+  ).toThrow(/source column "texts" for "texts" is missing/);
+  void 0;
 });
 
 function makeArrowTextSourceVectors() {

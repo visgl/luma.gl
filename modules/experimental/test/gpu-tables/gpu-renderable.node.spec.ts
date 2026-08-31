@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {CommandEncoder} from '@luma.gl/core';
 import {GPURenderable} from '@luma.gl/experimental/gpu-tables';
 
@@ -19,19 +19,19 @@ class TestRenderable extends GPURenderable<[number]> {
   }
 }
 
-test('GPURenderable tracks redraw reasons and forwards drawBatches', t => {
+it('GPURenderable tracks redraw reasons and forwards drawBatches', () => {
   const renderable = new TestRenderable();
 
-  t.equal(renderable.needsRedraw(), false, 'starts without a redraw reason');
+  expect(renderable.needsRedraw(), 'starts without a redraw reason').toBe(false);
   renderable.setNeedsRedraw('first reason');
   renderable.setNeedsRedraw('second reason');
-  t.equal(renderable.needsRedraw(), 'first reason', 'keeps the first pending redraw reason');
-  t.equal(renderable.needsRedraw(), false, 'clears redraw reason when read');
+  expect(renderable.needsRedraw(), 'keeps the first pending redraw reason').toBe('first reason');
+  expect(renderable.needsRedraw(), 'clears redraw reason when read').toBe(false);
 
   renderable.predraw(null as unknown as CommandEncoder);
   renderable.drawBatches(42);
-  t.equal(renderable.predrawCallCount, 1, 'tracks concrete predraw calls');
-  t.deepEqual(renderable.drawValues, [42], 'default drawBatches forwards to draw');
+  expect(renderable.predrawCallCount, 'tracks concrete predraw calls').toBe(1);
+  expect(renderable.drawValues, 'default drawBatches forwards to draw').toEqual([42]);
 
-  t.end();
+  void 0;
 });

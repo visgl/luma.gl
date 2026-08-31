@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
@@ -14,15 +14,17 @@ import {
 } from '../src/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
 
-test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser WebGPU adapter', async t => {
+it('GPUPagedSplatRenderer executes sparse source lifecycle on every browser WebGPU adapter', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available, including software adapters');
+  expect(
+    Boolean(devices.length > 0),
+    'a browser WebGPU adapter is available, including software adapters'
+  ).toBe(true);
   const unsupportedDevice = new NullDevice({});
-  t.throws(
+  expect(
     () => new GPUPagedSplatRenderer(unsupportedDevice),
-    /requires a WebGPU device/,
     'rejects unsupported graphics backends without accessing source data'
-  );
+  ).toThrow(/requires a WebGPU device/);
 
   for (const device of devices) {
     const firstSource = makeBrowserPagedSplatSource([0.9, 0.1, 0.6, 0.3], 100, 17);
@@ -53,37 +55,66 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       lodOpacity: true
     });
 
-    t.equal(renderer.batches[0], firstPage, 'retains the first independent original source page');
-    t.equal(renderer.batches[1], secondPage, 'retains the second independent source allocation');
-    t.equal(renderer.props.toneMapping, 'reinhard', 'automatically maps Float32 source radiance');
-    t.ok(renderer.props.lodOpacity, 'enables nonlinear Spark parents with Float32 source colors');
-    t.equal(renderer.stats.activeRowCount, 5, 'retains only requested original sparse source rows');
-    t.equal(
+    expect(renderer.batches[0], 'retains the first independent original source page').toBe(
+      firstPage
+    );
+    expect(renderer.batches[1], 'retains the second independent source allocation').toBe(
+      secondPage
+    );
+    expect(renderer.props.toneMapping, 'automatically maps Float32 source radiance').toBe(
+      'reinhard'
+    );
+    expect(
+      Boolean(renderer.props.lodOpacity),
+      'enables nonlinear Spark parents with Float32 source colors'
+    ).toBe(true);
+    expect(
+      renderer.stats.activeRowCount,
+      'retains only requested original sparse source rows'
+    ).toBe(5);
+    expect(
       renderer.stats.sourceSegmentCount,
-      4,
       'retains bounded source projections while sparse row cardinality changes'
+    ).toBe(4);
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'encodes the real device command graph'
+    ).toBe(true);
+    expect(
+      Boolean(renderer.compiledGraph),
+      'compiles GPU projection, global sorting, and ordered gather'
+    ).toBe(true);
+    expect(
+      Boolean(renderer.graphStats),
+      'exposes real graph diagnostics without mapping a GPU buffer'
+    ).toBe(true);
+    expect(Boolean(renderer.lastEncoding), 'records the current sparse GPU graph encoding').toBe(
+      true
     );
-    t.ok(renderer.encode(device.commandEncoder), 'encodes the real device command graph');
-    t.ok(renderer.compiledGraph, 'compiles GPU projection, global sorting, and ordered gather');
-    t.ok(renderer.graphStats, 'exposes real graph diagnostics without mapping a GPU buffer');
-    t.ok(renderer.lastEncoding, 'records the current sparse GPU graph encoding');
-    t.ok(renderer.uniformBuffer, 'retains shared GPU camera presentation uniforms');
-    t.ok(renderer.sortedIndexBuffer, 'retains one compact global GPU source permutation');
-    t.equal(renderer.projectedRecordBuffers.length, 4, 'allocates bucketed ordered outputs');
-    t.equal(renderer.stats.segmentCount, 4, 'tracks output capacity independently of source pages');
-    t.equal(renderer.stats.globalSortCapacity, 8, 'buckets five active cross-page rows');
-    t.ok(
-      renderer.stats.rendererGpuByteLength > 0 && renderer.stats.sourceGpuByteLength > 0,
+    expect(Boolean(renderer.uniformBuffer), 'retains shared GPU camera presentation uniforms').toBe(
+      true
+    );
+    expect(
+      Boolean(renderer.sortedIndexBuffer),
+      'retains one compact global GPU source permutation'
+    ).toBe(true);
+    expect(renderer.projectedRecordBuffers.length, 'allocates bucketed ordered outputs').toBe(4);
+    expect(
+      renderer.stats.segmentCount,
+      'tracks output capacity independently of source pages'
+    ).toBe(4);
+    expect(renderer.stats.globalSortCapacity, 'buckets five active cross-page rows').toBe(8);
+    expect(
+      Boolean(renderer.stats.rendererGpuByteLength > 0 && renderer.stats.sourceGpuByteLength > 0),
       'separates owned graph storage from original caller-owned source bytes'
-    );
+    ).toBe(true);
     device.submit();
 
     const originalGraph = renderer.compiledGraph;
-    t.equal(
+    expect(
       renderer.encode(device.commandEncoder),
-      undefined,
       'avoids work when no source, camera, or sparse visibility changed'
-    );
+    ).toBe(undefined);
     const updatedMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.1, 0, 0, 1];
     renderer.setProps({
       modelViewProjectionMatrix: updatedMatrix,
@@ -102,24 +133,26 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       toneMapping: 'none',
       lodOpacity: false
     });
-    t.ok(renderer.encode(device.commandEncoder), 'updates camera, semantics, SH, and presentation');
-    t.equal(
-      renderer.compiledGraph,
-      originalGraph,
-      'reuses its existing GPU graph for style changes'
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'updates camera, semantics, SH, and presentation'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses its existing GPU graph for style changes').toBe(
+      originalGraph
     );
-    t.notOk(renderer.props.lodOpacity, 'restores ordinary splat opacity without rebuilding');
+    expect(
+      Boolean(renderer.props.lodOpacity),
+      'restores ordinary splat opacity without rebuilding'
+    ).toBe(false);
     device.submit();
 
     renderer.setProps({lodOpacity: true});
-    t.ok(
-      encodePagedHighDynamicRangeFrame(device, renderer),
+    expect(
+      Boolean(encodePagedHighDynamicRangeFrame(device, renderer)),
       'converts mixed Uint8 and RAD Float32 source colors for linear HDR presentation'
-    );
-    t.equal(
-      renderer.compiledGraph,
-      originalGraph,
-      'preserves source graph identity on HDR targets'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'preserves source graph identity on HDR targets').toBe(
+      originalGraph
     );
     device.submit();
     renderer.setProps({lodOpacity: false});
@@ -128,106 +161,136 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
       {id: 'browser-directional-page', data: firstPage, activeRows: new Uint32Array([1, 2, 3])},
       {id: 'browser-semantic-page', data: secondPage, activeRows: new Uint32Array([1, 2])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'updates compact sparse original source offsets');
-    t.equal(renderer.compiledGraph, originalGraph, 'reuses stable-cardinality source projections');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'updates compact sparse original source offsets'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses stable-cardinality source projections').toBe(
+      originalGraph
+    );
     device.submit();
 
     renderer.setFrontier([
       {id: 'browser-directional-page', data: firstPage, activeRows: new Uint32Array([2])},
       {id: 'browser-semantic-page', data: secondPage, activeRows: new Uint32Array([1, 2])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'updates a smaller sparse frontier in place');
-    t.equal(
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'updates a smaller sparse frontier in place'
+    ).toBe(true);
+    expect(
       renderer.compiledGraph,
-      originalGraph,
       'reuses the compiled graph when active cardinality stays inside its bucket'
-    );
-    t.equal(renderer.stats.activeRowCount, 3, 'reports the smaller exact sparse frontier');
-    t.equal(renderer.stats.globalSortCapacity, 8, 'retains the active sort bucket');
+    ).toBe(originalGraph);
+    expect(renderer.stats.activeRowCount, 'reports the smaller exact sparse frontier').toBe(3);
+    expect(renderer.stats.globalSortCapacity, 'retains the active sort bucket').toBe(8);
     device.submit();
 
     firstPage.updateRows(1, {opacities: new Float32Array([0.75])});
-    t.ok(renderer.encode(device.commandEncoder), 'detects in-place caller-owned source revisions');
-    t.equal(renderer.compiledGraph, originalGraph, 'reuses its graph for original source updates');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'detects in-place caller-owned source revisions'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses its graph for original source updates').toBe(
+      originalGraph
+    );
     device.submit();
 
     renderer.setProps({semanticFilter: {include: Array.from({length: 70}, (_, index) => index)}});
-    t.ok(renderer.encode(device.commandEncoder), 'grows GPU-owned semantic-selection capacity');
-    t.notEqual(
-      renderer.compiledGraph,
-      originalGraph,
-      'rebuilds only for expanded semantic storage'
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'grows GPU-owned semantic-selection capacity'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'rebuilds only for expanded semantic storage').not.toBe(
+      originalGraph
     );
     device.submit();
 
     const replacementGraph = renderer.compiledGraph;
     renderer.setFrontier([]);
-    t.ok(renderer.encode(device.commandEncoder), 'clears an empty hierarchy frontier exactly once');
-    t.equal(renderer.compiledGraph, replacementGraph, 'retains graph allocations while empty');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'clears an empty hierarchy frontier exactly once'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'retains graph allocations while empty').toBe(replacementGraph);
     device.submit();
-    t.equal(
-      renderer.encode(device.commandEncoder),
-      undefined,
-      'does not clear a clean scene twice'
+    expect(renderer.encode(device.commandEncoder), 'does not clear a clean scene twice').toBe(
+      undefined
     );
     renderer.setPages([
       {id: 'browser-directional-page', data: firstPage, activeRows: new Uint32Array([1, 2, 3])},
       {id: 'browser-semantic-page', data: secondPage, activeRows: new Uint32Array([1, 2])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'reactivates original sparse page allocations');
-    t.equal(renderer.compiledGraph, replacementGraph, 'restores the original bounded graph');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'reactivates original sparse page allocations'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'restores the original bounded graph').toBe(replacementGraph);
     device.submit();
 
     renderer.setProps({pages: [{id: 'replacement-page', data: secondPage}]});
-    t.ok(renderer.encode(device.commandEncoder), 'rebuilds for a different independent page set');
-    t.equal(renderer.stats.activeRowCount, 3, 'renders complete original replacement page rows');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'rebuilds for a different independent page set'
+    ).toBe(true);
+    expect(renderer.stats.activeRowCount, 'renders complete original replacement page rows').toBe(
+      3
+    );
     device.submit();
     renderer.setProps({data: firstPage, semanticFilter: undefined});
-    t.ok(renderer.encode(device.commandEncoder), 'supports existing graph-compatible source props');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'supports existing graph-compatible source props'
+    ).toBe(true);
     device.submit();
 
-    t.throws(
+    expect(
       () =>
         renderer.setFrontier([{id: 'invalid', data: firstPage, activeRows: new Uint32Array([4])}]),
-      /source-page-local/,
       'rejects sparse source offsets outside the original borrowed page'
-    );
-    t.throws(
+    ).toThrow(/source-page-local/);
+    expect(
       () => renderer.setProps({semanticFilter: {predicate: () => true}}),
-      /JavaScript predicates/,
       'rejects host callbacks that cannot execute inside the GPU graph'
-    );
-    t.throws(
+    ).toThrow(/JavaScript predicates/);
+    expect(
       () => renderer.setProps({semanticFilter: {include: [-1]}}),
-      /unsigned 32-bit/,
       'rejects classes incompatible with original unsigned semantic storage'
-    );
+    ).toThrow(/unsigned 32-bit/);
 
     const firstPositions = firstPage.positions.data[0].buffer;
     const secondPositions = secondPage.positions.data[0].buffer;
     const drawCommands = renderer.drawCommands.buffer;
     renderer.destroy();
     renderer.destroy();
-    t.ok(renderer.destroyed, 'makes renderer destruction safe and idempotent');
-    t.ok(drawCommands.destroyed, 'destroys renderer-owned indirect command storage');
-    t.notOk(firstPositions.destroyed, 'preserves independently borrowed first-page source storage');
-    t.notOk(
-      secondPositions.destroyed,
+    expect(Boolean(renderer.destroyed), 'makes renderer destruction safe and idempotent').toBe(
+      true
+    );
+    expect(
+      Boolean(drawCommands.destroyed),
+      'destroys renderer-owned indirect command storage'
+    ).toBe(true);
+    expect(
+      Boolean(firstPositions.destroyed),
+      'preserves independently borrowed first-page source storage'
+    ).toBe(false);
+    expect(
+      Boolean(secondPositions.destroyed),
       'preserves independently borrowed second-page source storage'
+    ).toBe(false);
+    expect(renderer.encode(device.commandEncoder), 'does not encode destroyed graphs').toBe(
+      undefined
     );
-    t.equal(renderer.encode(device.commandEncoder), undefined, 'does not encode destroyed graphs');
-    t.throws(
+    expect(
       () => renderer.setFrontier([{id: 'destroyed', data: firstPage}]),
-      /destroyed/,
       'rejects further source updates after destruction'
-    );
+    ).toThrow(/destroyed/);
 
     const compatibleRenderer = new GPUPagedSplatRenderer(device, {data: [firstPage, secondPage]});
-    t.deepEqual(
+    expect(
       compatibleRenderer.batches,
-      [firstPage, secondPage],
       'preserves graph-compatible streamed batch arrays without copying source rows'
-    );
+    ).toEqual([firstPage, secondPage]);
     compatibleRenderer.setProps({data: secondPage});
     compatibleRenderer.destroy();
     firstPage.destroy();
@@ -235,16 +298,16 @@ test('GPUPagedSplatRenderer executes sparse source lifecycle on every browser We
   }
 
   unsupportedDevice.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across bounded segments', async t => {
+it('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across bounded segments', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     if (isSoftwareBackedPagedDevice(device)) {
-      t.comment('Skipping globally ordered segmented splat readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -267,25 +330,34 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
       alphaCutoff: 0
     });
 
-    t.ok(renderer.encode(device.commandEncoder), 'encodes the globally ordered segmented graph');
-    t.equal(renderer.stats.pageCount, 2, 'preserves two independently allocated source pages');
-    t.equal(renderer.stats.sourceSegmentCount, 2, 'projects each preserved source page separately');
-    t.equal(renderer.stats.segmentCount, 2, 'gathers exact global order into two bounded outputs');
-    t.equal(
-      renderer.stats.globalSortCapacity,
-      4,
-      'sorts all active pages in one global GPU domain'
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'encodes the globally ordered segmented graph'
+    ).toBe(true);
+    expect(renderer.stats.pageCount, 'preserves two independently allocated source pages').toBe(2);
+    expect(
+      renderer.stats.sourceSegmentCount,
+      'projects each preserved source page separately'
+    ).toBe(2);
+    expect(renderer.stats.segmentCount, 'gathers exact global order into two bounded outputs').toBe(
+      2
     );
-    t.ok(
-      renderer.compiledGraph?.stats.nodeOrder.some(nodeId =>
-        nodeId.includes('paged-gaussian-global-depth-sort')
+    expect(
+      renderer.stats.globalSortCapacity,
+      'sorts all active pages in one global GPU domain'
+    ).toBe(4);
+    expect(
+      Boolean(
+        renderer.compiledGraph?.stats.nodeOrder.some(nodeId =>
+          nodeId.includes('paged-gaussian-global-depth-sort')
+        )
       ),
       'schedules a single cross-page GPU radix ordering'
-    );
-    t.ok(
-      renderer.compiledGraph?.stats.nodeOrder.includes('paged-gaussian-segmented-render'),
+    ).toBe(true);
+    expect(
+      Boolean(renderer.compiledGraph?.stats.nodeOrder.includes('paged-gaussian-segmented-render')),
       'presents ordered segments within one final render pass'
-    );
+    ).toBe(true);
     device.submit();
 
     const sortedBytes = await renderer.sortedIndexBuffer!.readAsync();
@@ -294,11 +366,10 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
       sortedBytes.byteOffset,
       sortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(sortedIndices),
-      [0, 2, 3, 1],
       'interleaves overlapping page depths in exact global far-to-near order'
-    );
+    ).toEqual([0, 2, 3, 1]);
 
     const indirectBytes = await renderer.drawCommands.buffer.readAsync();
     const indirectCommands = new Uint32Array(
@@ -306,11 +377,10 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
       indirectBytes.byteOffset,
       indirectBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(indirectCommands),
-      [4, 4, 0, 0, 4, 2, 0, 0, 4, 2, 0, 0],
       'publishes global visibility and exact GPU-driven counts for each bounded segment'
-    );
+    ).toEqual([4, 4, 0, 0, 4, 2, 0, 0, 4, 2, 0, 0]);
 
     const firstOutputBytes = await renderer.projectedRecordBuffers[0].readAsync();
     const firstOutput = new Float32Array(
@@ -324,21 +394,20 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
       secondOutputBytes.byteOffset,
       secondOutputBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       [
         Array.from(firstOutput.slice(8, 11)),
         Array.from(firstOutput.slice(20, 23)),
         Array.from(secondOutput.slice(8, 11)),
         Array.from(secondOutput.slice(20, 23))
       ],
-      [
-        [1, 0, 0],
-        [0, 1, 0],
-        [1, 1, 0],
-        [0, 0, 1]
-      ],
       'gathers only renderer-owned projected records into exact cross-page depth order'
-    );
+    ).toEqual([
+      [1, 0, 0],
+      [0, 1, 0],
+      [1, 1, 0],
+      [0, 0, 1]
+    ]);
 
     const colorTexture = device.createTexture({
       format: 'rgba8unorm',
@@ -403,11 +472,14 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
     const centerPixelOffset =
       Math.floor(textureSize / 2) * pixelLayout.bytesPerRow + Math.floor(textureSize / 2) * 4;
     const pixel = pixels.slice(centerPixelOffset, centerPixelOffset + 4);
-    t.ok(
-      pixel[2] > pixel[1] && pixel[1] > pixel[0] && pixel[0] > 60,
+    expect(
+      Boolean(pixel[2] > pixel[1] && pixel[1] > pixel[0] && pixel[0] > 60),
       `real pixel [${Array.from(pixel)}] blends red→green→yellow→blue globally across page and segment boundaries`
-    );
-    t.notOk(presentationModel.pipeline.isErrored, 'compiles the real segmented splat pipeline');
+    ).toBe(true);
+    expect(
+      Boolean(presentationModel.pipeline.isErrored),
+      'compiles the real segmented splat pipeline'
+    ).toBe(false);
 
     const originalFirstSource = firstPage.positions.data[0].buffer;
     const originalSecondSource = secondPage.positions.data[0].buffer;
@@ -416,21 +488,27 @@ test('GPUPagedSplatRenderer globally sorts overlapping real WebGPU pages across 
     framebuffer.destroy();
     colorTexture.destroy();
     renderer.destroy();
-    t.notOk(originalFirstSource.destroyed, 'preserves the first original borrowed GPU source');
-    t.notOk(originalSecondSource.destroyed, 'preserves the second original borrowed GPU source');
+    expect(
+      Boolean(originalFirstSource.destroyed),
+      'preserves the first original borrowed GPU source'
+    ).toBe(false);
+    expect(
+      Boolean(originalSecondSource.destroyed),
+      'preserves the second original borrowed GPU source'
+    ).toBe(false);
     firstPage.destroy();
     secondPage.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD parent opacity', async t => {
+it('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD parent opacity', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
     if (isSoftwareBackedPagedDevice(device)) {
-      t.comment('Skipping calibrated paged splat pixel readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -453,7 +531,10 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
       toneMapping: 'none'
     });
 
-    t.ok(renderer.encode(device.commandEncoder), 'encodes analytic perspective covariance');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'encodes analytic perspective covariance'
+    ).toBe(true);
     const originalGraph = renderer.compiledGraph;
     device.submit();
     const perspectiveRecord = await readPagedProjectedRecord(renderer);
@@ -467,29 +548,32 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
     const expectedHorizontalRadius =
       Math.sqrt(horizontalDeviation * horizontalDeviation + 0.3) * gaussianSupportRadius;
     const actualHorizontalRadius = Math.hypot(perspectiveRecord[4], perspectiveRecord[5]);
-    t.ok(
-      Math.abs(actualHorizontalRadius - expectedHorizontalRadius) < 0.03,
+    expect(
+      Boolean(Math.abs(actualHorizontalRadius - expectedHorizontalRadius) < 0.03),
       `projects the exact perspective Jacobian radius ${actualHorizontalRadius.toFixed(3)} ≈ ${expectedHorizontalRadius.toFixed(3)}`
-    );
+    ).toBe(true);
     const originalDeterminant =
       horizontalDeviation * horizontalDeviation * verticalDeviation * verticalDeviation;
     const filteredDeterminant =
       (horizontalDeviation * horizontalDeviation + 0.3) *
       (verticalDeviation * verticalDeviation + 0.3);
     const expectedFilteredOpacity = 0.8 * Math.sqrt(originalDeterminant / filteredDeterminant);
-    t.ok(
-      Math.abs(perspectiveRecord[11] - expectedFilteredOpacity) < 0.001,
+    expect(
+      Boolean(Math.abs(perspectiveRecord[11] - expectedFilteredOpacity) < 0.001),
       'preserves integrated projected opacity under Spark-compatible screen-space filtering'
-    );
+    ).toBe(true);
 
     page.updateRows(0, {scales: new Float32Array([0.002, 0.002, 0.002])});
-    t.ok(renderer.encode(device.commandEncoder), 'updates borrowed subpixel source covariance');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'updates borrowed subpixel source covariance'
+    ).toBe(true);
     device.submit();
     const subpixelRecord = await readPagedProjectedRecord(renderer);
-    t.ok(
-      subpixelRecord[11] < 0.03,
+    expect(
+      Boolean(subpixelRecord[11] < 0.03),
       `attenuates a subpixel Gaussian by its true filtered-area ratio (${subpixelRecord[11].toFixed(4)})`
-    );
+    ).toBe(true);
 
     page.updateRows(0, {
       positions: new Float32Array([0, 0, 0]),
@@ -503,13 +587,16 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
       kernel2DSize: 0,
       lodOpacity: false
     });
-    t.ok(renderer.encode(device.commandEncoder), 'preserves ordinary opacity when RAD mode is off');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'preserves ordinary opacity when RAD mode is off'
+    ).toBe(true);
     device.submit();
     const conventionalRecord = await readPagedProjectedRecord(renderer);
-    t.ok(
-      Math.abs(conventionalRecord[11] - 1.5) < 0.001,
+    expect(
+      Boolean(Math.abs(conventionalRecord[11] - 1.5) < 0.001),
       'does not reinterpret non-RAD source opacity above one'
-    );
+    ).toBe(true);
     const conventionalPixel = await readPagedSplatPixel(
       device,
       renderer,
@@ -519,22 +606,25 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
     );
 
     renderer.setProps({lodOpacity: true});
-    t.ok(renderer.encode(device.commandEncoder), 'enables decoded Spark parent opacity in place');
-    t.equal(renderer.compiledGraph, originalGraph, 'keeps the same bounded sparse GPU graph');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'enables decoded Spark parent opacity in place'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'keeps the same bounded sparse GPU graph').toBe(originalGraph);
     device.submit();
     const parentRecord = await readPagedProjectedRecord(renderer);
-    t.ok(
-      Math.abs(parentRecord[11] - 3) < 0.001,
+    expect(
+      Boolean(Math.abs(parentRecord[11] - 3) < 0.001),
       'maps decoded RAD opacity 1.5 to Spark parent opacity 3 without decoding twice'
-    );
+    ).toBe(true);
     const conventionalRadius = Math.hypot(conventionalRecord[4], conventionalRecord[5]);
     const parentRadius = Math.hypot(parentRecord[4], parentRecord[5]);
     const expectedParentRadius =
       (conventionalRadius * (gaussianSupportRadius + 0.7 * (3 - 1))) / gaussianSupportRadius;
-    t.ok(
-      Math.abs(parentRadius - expectedParentRadius) < 0.03,
+    expect(
+      Boolean(Math.abs(parentRadius - expectedParentRadius) < 0.03),
       "expands the opaque parent support by Spark's authored 0.7-per-opacity-unit rule"
-    );
+    ).toBe(true);
     const parentPixel = await readPagedSplatPixel(
       device,
       renderer,
@@ -542,35 +632,41 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
       parentTextureSize / 2 + 9,
       parentTextureSize / 2
     );
-    t.ok(
-      parentPixel[3] > 220 && conventionalPixel[3] < 100,
+    expect(
+      Boolean(parentPixel[3] > 220 && conventionalPixel[3] < 100),
       `real parent-opacity pixel ${parentPixel[3]} uses Spark\'s nonlinear falloff instead of ordinary alpha ${conventionalPixel[3]}`
-    );
+    ).toBe(true);
 
     page.updateRows(0, {scales: new Float32Array([0.3, 0.05, 0.15])});
     renderer.setProps({maxScreenSpaceSplatSize: 8});
-    t.ok(renderer.encode(device.commandEncoder), 'caps expanded parent support independently');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'caps expanded parent support independently'
+    ).toBe(true);
     device.submit();
     const cappedParentRecord = await readPagedProjectedRecord(renderer);
     const cappedMajorAxis = Math.hypot(cappedParentRecord[4], cappedParentRecord[5]);
     const cappedMinorAxis = Math.hypot(cappedParentRecord[6], cappedParentRecord[7]);
     const expectedMinorAxis =
       parentTextureSize * 0.5 * 0.05 * (gaussianSupportRadius + 0.7 * (3 - 1));
-    t.ok(
-      Math.abs(cappedMajorAxis - 8) < 0.01,
+    expect(
+      Boolean(Math.abs(cappedMajorAxis - 8) < 0.01),
       "caps the final expanded major support radius at Spark's maximum pixel size"
-    );
-    t.ok(
-      Math.abs(cappedMinorAxis - expectedMinorAxis) < 0.03,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(cappedMinorAxis - expectedMinorAxis) < 0.03),
       'does not shrink the independent minor axis when only the major support is capped'
-    );
+    ).toBe(true);
 
     page.updateRows(0, {
       positions: new Float32Array([1.2, 0, 0]),
       scales: new Float32Array([0.15, 0.15, 0.15])
     });
     renderer.setProps({lodOpacity: false, maxScreenSpaceSplatSize: 1024});
-    t.ok(renderer.encode(device.commandEncoder), 'retains a Gaussian crossing the viewport edge');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'retains a Gaussian crossing the viewport edge'
+    ).toBe(true);
     device.submit();
     let commandBytes = await renderer.drawCommands.buffer.readAsync();
     let commands = new Uint32Array(
@@ -578,9 +674,14 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
       commandBytes.byteOffset,
       commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.equal(commands[1], 1, 'keeps off-frustum centers whose calibrated support remains visible');
+    expect(commands[1], 'keeps off-frustum centers whose calibrated support remains visible').toBe(
+      1
+    );
     page.updateRows(0, {positions: new Float32Array([1.6, 0, 0])});
-    t.ok(renderer.encode(device.commandEncoder), 'rejects fully disjoint projected support');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'rejects fully disjoint projected support'
+    ).toBe(true);
     device.submit();
     commandBytes = await renderer.drawCommands.buffer.readAsync();
     commands = new Uint32Array(
@@ -588,22 +689,27 @@ test('GPUPagedSplatRenderer calibrates perspective, antialiasing, and Spark RAD 
       commandBytes.byteOffset,
       commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.equal(commands[1], 0, 'culls only splats whose complete conservative extent is offscreen');
+    expect(commands[1], 'culls only splats whose complete conservative extent is offscreen').toBe(
+      0
+    );
 
     renderer.destroy();
-    t.notOk(page.colors.data[0].buffer.destroyed, 'retains the borrowed HDR source color storage');
+    expect(
+      Boolean(page.colors.data[0].buffer.destroyed),
+      'retains the borrowed HDR source color storage'
+    ).toBe(false);
     page.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32 HDR radiance', async t => {
+it('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32 HDR radiance', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
     if (isSoftwareBackedPagedDevice(device)) {
-      t.comment('Skipping mixed-source linear HDR pixel readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -625,20 +731,24 @@ test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32
       toneMapping: 'none'
     });
 
-    t.ok(renderer.encode(device.commandEncoder), 'compiles mixed source columns on an SDR canvas');
-    t.equal(
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'compiles mixed source columns on an SDR canvas'
+    ).toBe(true);
+    expect(
       renderer.props.toneMapping,
-      'none',
       'preserves explicit Spark-like Float32 source brightness without SDR Reinhard mapping'
-    );
+    ).toBe('none');
     const originalGraph = renderer.compiledGraph;
     device.submit();
     renderer.setProps({exposure: 1.001});
-    t.ok(
-      encodePagedHighDynamicRangeFrame(device, renderer),
+    expect(
+      Boolean(encodePagedHighDynamicRangeFrame(device, renderer)),
       'encodes per-source color flags into existing 128-byte uniforms'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses one exact globally sorted source graph').toBe(
+      originalGraph
     );
-    t.equal(renderer.compiledGraph, originalGraph, 'reuses one exact globally sorted source graph');
     device.submit();
     const mixedBytes = await renderer.projectedRecordBuffers[0].readAsync();
     const mixedRecords = new Float32Array(
@@ -646,14 +756,14 @@ test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32
       mixedBytes.byteOffset,
       mixedBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(
-      Math.abs(mixedRecords[8] - (128 / 255) ** 2.2) < 0.002,
+    expect(
+      Boolean(Math.abs(mixedRecords[8] - (128 / 255) ** 2.2) < 0.002),
       'converts the far Uint8 sRGB page to linear light before global gathering'
-    );
-    t.ok(
-      Math.abs(mixedRecords[20] - 0.5) < 0.001,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(mixedRecords[20] - 0.5) < 0.001),
       'preserves already-linear near Float32 HDR radiance in the same ordered output'
-    );
+    ).toBe(true);
     const linearFloatPixel = await readPagedSplatPixel(
       device,
       renderer,
@@ -663,11 +773,11 @@ test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32
     );
 
     renderer.setProps({lodOpacity: true});
-    t.ok(
-      encodePagedHighDynamicRangeFrame(device, renderer),
+    expect(
+      Boolean(encodePagedHighDynamicRangeFrame(device, renderer)),
       'interprets opt-in RAD Float32 source coefficients as Spark sRGB-domain colors'
-    );
-    t.equal(renderer.compiledGraph, originalGraph, 'retains the same mixed-page compute graph');
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'retains the same mixed-page compute graph').toBe(originalGraph);
     device.submit();
     const radBytes = await renderer.projectedRecordBuffers[0].readAsync();
     const radRecords = new Float32Array(
@@ -675,10 +785,10 @@ test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32
       radBytes.byteOffset,
       radBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(
-      Math.abs(radRecords[20] - 0.5 ** 2.2) < 0.002,
+    expect(
+      Boolean(Math.abs(radRecords[20] - 0.5 ** 2.2) < 0.002),
       'converts actual Float32 RAD DC plus SH radiance after source feature evaluation'
-    );
+    ).toBe(true);
     const linearRadPixel = await readPagedSplatPixel(
       device,
       renderer,
@@ -686,33 +796,33 @@ test('GPUPagedSplatRenderer converts mixed sRGB pages without corrupting Float32
       textureSize / 2,
       textureSize / 2
     );
-    t.ok(
-      linearFloatPixel[0] > 110 && linearRadPixel[0] < 70,
+    expect(
+      Boolean(linearFloatPixel[0] > 110 && linearRadPixel[0] < 70),
       `real HDR-target pixels preserve generic Float32 ${linearFloatPixel[0]} but linearize RAD sRGB ${linearRadPixel[0]}`
-    );
+    ).toBe(true);
 
     renderer.destroy();
-    t.notOk(
-      floatPage.colors.data[0].buffer.destroyed,
+    expect(
+      Boolean(floatPage.colors.data[0].buffer.destroyed),
       'retains original Float32 HDR source storage'
-    );
-    t.notOk(
-      packedPage.colors.data[0].buffer.destroyed,
+    ).toBe(false);
+    expect(
+      Boolean(packedPage.colors.data[0].buffer.destroyed),
       'retains original packed sRGB page storage'
-    );
+    ).toBe(false);
     floatPage.destroy();
     packedPage.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and row-frontier updates', async t => {
+it('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and row-frontier updates', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
     if (isSoftwareBackedPagedDevice(device)) {
-      t.comment('Skipping sparse semantic paged splat readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -737,7 +847,10 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       semanticFilter: {include: [4]}
     });
 
-    t.ok(renderer.encode(device.commandEncoder), 'projects sparse original GPU row selections');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'projects sparse original GPU row selections'
+    ).toBe(true);
     device.submit();
     const originalGraph = renderer.compiledGraph;
     const originalSortedIndices = renderer.sortedIndexBuffer;
@@ -748,11 +861,10 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       initialCommandBytes.byteOffset,
       initialCommandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       [initialCommands[1], initialCommands[5], initialCommands[9]],
-      [2, 2, 0],
       'keeps only two semantically selected sparse rows in globally ordered indirect segments'
-    );
+    ).toEqual([2, 2, 0]);
 
     const initialProjectedBytes = await originalOutput.readAsync();
     const initialProjected = new Float32Array(
@@ -762,12 +874,14 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
     );
     const initialDirectionalRed = initialProjected[8];
     renderer.setProps({cameraPosition: [1, 0, 0.9], semanticFilter: {include: [4, 9]}});
-    t.ok(
-      renderer.encode(device.commandEncoder),
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
       'updates sparse semantic and directional controls'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses the same compiled cross-page graph').toBe(originalGraph);
+    expect(renderer.sortedIndexBuffer, 'reuses the global GPU permutation').toBe(
+      originalSortedIndices
     );
-    t.equal(renderer.compiledGraph, originalGraph, 'reuses the same compiled cross-page graph');
-    t.equal(renderer.sortedIndexBuffer, originalSortedIndices, 'reuses the global GPU permutation');
     device.submit();
     const updatedCommandBytes = await renderer.drawCommands.buffer.readAsync();
     const updatedCommands = new Uint32Array(
@@ -775,29 +889,35 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       updatedCommandBytes.byteOffset,
       updatedCommandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       [updatedCommands[1], updatedCommands[5], updatedCommands[9]],
-      [4, 2, 2],
       'restores all included sparse rows and splits GPU visibility over ordered output segments'
-    );
+    ).toEqual([4, 2, 2]);
     const updatedProjectedBytes = await originalOutput.readAsync();
     const updatedProjected = new Float32Array(
       updatedProjectedBytes.buffer,
       updatedProjectedBytes.byteOffset,
       updatedProjectedBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(
-      Math.abs(initialDirectionalRed - updatedProjected[8]) > 0.2,
+    expect(
+      Boolean(Math.abs(initialDirectionalRed - updatedProjected[8]) > 0.2),
       'evaluates original page-owned higher-order SH against the updated camera direction'
-    );
+    ).toBe(true);
 
     renderer.setFrontier([
       {id: 'directional-page', data: firstPage, activeRows: new Uint32Array([2, 1])},
       {id: 'semantic-page', data: secondPage, activeRows: new Uint32Array([0, 1])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'replaces sparse page-local row selections');
-    t.equal(renderer.compiledGraph, originalGraph, 'retains graph identity for stable cardinality');
-    t.equal(renderer.projectedRecordBuffers[0], originalOutput, 'retains bounded output storage');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'replaces sparse page-local row selections'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'retains graph identity for stable cardinality').toBe(
+      originalGraph
+    );
+    expect(renderer.projectedRecordBuffers[0], 'retains bounded output storage').toBe(
+      originalOutput
+    );
     device.submit();
     const frontierSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
     const frontierSorted = new Uint32Array(
@@ -805,25 +925,26 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       frontierSortedBytes.byteOffset,
       frontierSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(frontierSorted),
-      [2, 0, 3, 1],
       'resorts replaced original source offsets exactly across overlapping page depths'
-    );
+    ).toEqual([2, 0, 3, 1]);
 
     renderer.setFrontier([
       {id: 'directional-page', data: firstPage, activeRows: new Uint32Array([2])},
       {id: 'semantic-page', data: secondPage, activeRows: new Uint32Array([0, 1])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'shrinks a stable sparse frontier in place');
-    t.equal(
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'shrinks a stable sparse frontier in place'
+    ).toBe(true);
+    expect(
       renderer.compiledGraph,
-      originalGraph,
       'retains graph identity while active cardinality changes inside its sort bucket'
-    );
-    t.equal(renderer.sortedIndexBuffer, originalSortedIndices, 'retains bucketed sort storage');
-    t.equal(renderer.stats.activeRowCount, 3, 'reports the exact smaller active frontier');
-    t.equal(renderer.stats.globalSortCapacity, 4, 'does not shrink the reusable sort bucket');
+    ).toBe(originalGraph);
+    expect(renderer.sortedIndexBuffer, 'retains bucketed sort storage').toBe(originalSortedIndices);
+    expect(renderer.stats.activeRowCount, 'reports the exact smaller active frontier').toBe(3);
+    expect(renderer.stats.globalSortCapacity, 'does not shrink the reusable sort bucket').toBe(4);
     device.submit();
     const smallerFrontierSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
     const smallerFrontierSorted = new Uint32Array(
@@ -831,42 +952,53 @@ test('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and ro
       smallerFrontierSortedBytes.byteOffset,
       smallerFrontierSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(smallerFrontierSorted.slice(0, 3)),
-      [1, 0, 2],
       'keeps exact global source identities after sparse cardinality shrinks'
-    );
+    ).toEqual([1, 0, 2]);
 
     renderer.setFrontier([]);
-    t.ok(renderer.encode(device.commandEncoder), 'encodes one clear when a hierarchy empties');
-    t.equal(renderer.compiledGraph, originalGraph, 'preserves graph allocations while empty');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'encodes one clear when a hierarchy empties'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'preserves graph allocations while empty').toBe(originalGraph);
     device.submit();
     renderer.setFrontier([
       {id: 'directional-page', data: firstPage, activeRows: new Uint32Array([2, 1])},
       {id: 'semantic-page', data: secondPage, activeRows: new Uint32Array([0, 1])}
     ]);
-    t.ok(renderer.encode(device.commandEncoder), 'reactivates the preserved sparse page frontier');
-    t.equal(renderer.compiledGraph, originalGraph, 'restores the original reusable graph');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'reactivates the preserved sparse page frontier'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'restores the original reusable graph').toBe(originalGraph);
     device.submit();
 
     const sourceHarmonics = firstPage.sphericalHarmonics!.data[0].buffer;
     const sourceSemantics = secondPage.semanticIds!.data[0].buffer;
     renderer.destroy();
-    t.notOk(sourceHarmonics.destroyed, 'never destroys borrowed original higher-order SH buffers');
-    t.notOk(sourceSemantics.destroyed, 'never destroys borrowed original semantic source buffers');
+    expect(
+      Boolean(sourceHarmonics.destroyed),
+      'never destroys borrowed original higher-order SH buffers'
+    ).toBe(false);
+    expect(
+      Boolean(sourceSemantics.destroyed),
+      'never destroys borrowed original semantic source buffers'
+    ).toBe(false);
     firstPage.destroy();
     secondPage.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across sparse degree-three pages', async t => {
+it('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across sparse degree-three pages', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
     if (isSoftwareBackedPagedDevice(device)) {
-      t.comment('Skipping aligned source-range paged splat readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -920,24 +1052,22 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         toneMapping: 'none',
         semanticFilter: {include: [4, 9]}
       });
-      t.ok(
-        firstPage.sphericalHarmonics!.data[0].buffer.byteLength > forcedBindingByteLength,
+      expect(
+        Boolean(firstPage.sphericalHarmonics!.data[0].buffer.byteLength > forcedBindingByteLength),
         'retains a degree-three source allocation larger than the simulated device binding limit'
-      );
-      t.equal(
+      ).toBe(true);
+      expect(
         renderer.stats.sourceSegmentCount,
-        9,
         'projects source rows through two aligned 64-row windows and one original tail'
-      );
-      t.ok(
-        renderer.encode(device.commandEncoder),
+      ).toBe(9);
+      expect(
+        Boolean(renderer.encode(device.commandEncoder)),
         'encodes aligned original source storage ranges'
-      );
-      t.equal(
+      ).toBe(true);
+      expect(
         renderer.stats.segmentCount,
-        13,
         'splits power-of-two global output capacity into bounded segments'
-      );
+      ).toBe(13);
       device.submit();
       const completeSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
       const completeSortedIndices = new Uint32Array(
@@ -945,11 +1075,10 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         completeSortedBytes.byteOffset,
         completeSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      t.deepEqual(
+      expect(
         Array.from(completeSortedIndices.slice(0, rowCount)),
-        Array.from({length: rowCount}, (_, sortedRow) => rowCount - sortedRow - 1),
         'retains exact global ordering across every aligned source and output window'
-      );
+      ).toEqual(Array.from({length: rowCount}, (_, sortedRow) => rowCount - sortedRow - 1));
 
       renderer.setFrontier([
         {
@@ -963,20 +1092,18 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
           activeRows: new Uint32Array([0, 65, 128])
         }
       ]);
-      t.equal(
+      expect(
         renderer.stats.sourceSegmentCount,
-        18,
         'retains stable aligned source windows for both sparse pages'
-      );
-      t.equal(
+      ).toBe(18);
+      expect(
         renderer.stats.activeRowCount,
-        6,
         'dispatches only six selected original source rows'
-      );
-      t.ok(
-        renderer.encode(device.commandEncoder),
+      ).toBe(6);
+      expect(
+        Boolean(renderer.encode(device.commandEncoder)),
         'binds original Uint8 and Float32 source columns without uploading merged row buffers'
-      );
+      ).toBe(true);
       device.submit();
       const sparseSortedBytes = await renderer.sortedIndexBuffer!.readAsync();
       const sparseSortedIndices = new Uint32Array(
@@ -984,38 +1111,37 @@ test('GPUPagedSplatRenderer binds aligned real WebGPU source ranges across spars
         sparseSortedBytes.byteOffset,
         sparseSortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      t.deepEqual(
+      expect(
         Array.from(sparseSortedIndices.slice(0, 6)),
-        [3, 2, 4, 1, 0, 5],
         'globally interleaves preserved sparse page rows across three source-binding windows'
-      );
+      ).toEqual([3, 2, 4, 1, 0, 5]);
       const projectedBytes = await renderer.projectedRecordBuffers[0].readAsync();
       const projectedRecords = new Float32Array(
         projectedBytes.buffer,
         projectedBytes.byteOffset,
         projectedBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
       );
-      t.ok(
-        projectedRecords[8] > 1.5,
+      expect(
+        Boolean(projectedRecords[8] > 1.5),
         'retains unquantized Float32 page radiance while evaluating degree-three source SH'
-      );
+      ).toBe(true);
     } finally {
       renderer?.destroy();
       Object.defineProperty(device, 'limits', {configurable: true, value: originalLimits});
-      t.notOk(
-        firstPage.sphericalHarmonics!.data[0].buffer.destroyed,
+      expect(
+        Boolean(firstPage.sphericalHarmonics!.data[0].buffer.destroyed),
         'never destroys an oversized borrowed Uint8-page SH source allocation'
-      );
-      t.notOk(
-        secondPage.colors.data[0].buffer.destroyed,
+      ).toBe(false);
+      expect(
+        Boolean(secondPage.colors.data[0].buffer.destroyed),
         'never destroys an independently borrowed Float32 source color allocation'
-      );
+      ).toBe(false);
       firstPage.destroy();
       secondPage.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
 function makeBrowserPagedSplatSource(

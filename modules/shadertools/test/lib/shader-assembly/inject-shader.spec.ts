@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /* eslint-disable camelcase, no-console, no-undef */
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';
@@ -107,40 +107,40 @@ const COMBINED_INJECT = {
   'vs:#main-start': ' uNewUniform = uNewUniform2;\n'
 };
 
-test('injectShader#import', async t => {
-  t.ok(injectShader !== undefined, 'injectShader import successful');
-  t.end();
+it('injectShader#import', async () => {
+  expect(Boolean(injectShader !== undefined), 'injectShader import successful').toBe(true);
+  void 0;
 });
 
-test('injectShader#injectShader', async t => {
+it('injectShader#injectShader', async () => {
   let injectResult;
 
   injectResult = injectShader(VS_GLSL_TEMPLATE, 'vertex', injectionData(INJECT), true);
-  t.ok(
-    fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL),
+  expect(
+    Boolean(fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL)),
     'declarations correctly injected in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(injectResult, VS_GLSL_RESOLVED_MAIN),
+  ).toBe(true);
+  expect(
+    Boolean(fuzzySubstring(injectResult, VS_GLSL_RESOLVED_MAIN)),
     'main correctly injected in vertex shader'
-  );
-  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
+  ).toBe(true);
+  expect(Boolean(/#endif\s*$/.test(injectResult)), 'standard stubs injected').toBe(true);
 
   injectResult = injectShader(FS_GLSL_TEMPLATE, 'fragment', injectionData(INJECT), true);
-  t.ok(
-    fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL),
+  expect(
+    Boolean(fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL)),
     'declarations correctly injected in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(injectResult, FS_GLSL_RESOLVED_MAIN),
+  ).toBe(true);
+  expect(
+    Boolean(fuzzySubstring(injectResult, FS_GLSL_RESOLVED_MAIN)),
     'main correctly injected in vertex shader'
-  );
-  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
+  ).toBe(true);
+  expect(Boolean(/#endif\s*$/.test(injectResult)), 'standard stubs injected').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('injectShader#assembleGLSLShaderPair', async t => {
+it('injectShader#assembleGLSLShaderPair', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const assembleResult = assembleGLSLShaderPair({
@@ -150,31 +150,31 @@ test('injectShader#assembleGLSLShaderPair', async t => {
     inject: INJECT,
     prologue: false
   });
-  t.ok(
-    fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_DECL),
+  expect(
+    Boolean(fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_DECL)),
     'declarations correctly assembled in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_MAIN),
+  ).toBe(true);
+  expect(
+    Boolean(fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_MAIN)),
     'main correctly assembled in vertex shader'
-  );
+  ).toBe(true);
 
-  t.ok(
-    fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_DECL),
+  expect(
+    Boolean(fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_DECL)),
     'declarations correctly assembled in vertex shader'
-  );
+  ).toBe(true);
 
-  t.ok(
-    fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_MAIN),
+  expect(
+    Boolean(fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_MAIN)),
     'main correctly assembled in vertex shader'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('injectShader#combineInjects', async t => {
-  t.deepEqual(combineInjects([INJECT1, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
-  t.end();
+it('injectShader#combineInjects', async () => {
+  expect(combineInjects([INJECT1, INJECT2]), 'injects correctly combined').toEqual(COMBINED_INJECT);
+  void 0;
 });
 
 function injectionData(data) {

@@ -4,12 +4,12 @@
 
 import {noise} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('noise#build/uniform', t => {
+it('noise#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(noise, {}, {});
 
-  t.ok(uniforms, 'noise module build is ok');
-  t.equal(uniforms.amount, 0.5, 'noise amount uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'noise module build is ok').toBe(true);
+  expect(uniforms.amount, 'noise amount uniform is ok').toBe(0.5);
+  void 0;
 });

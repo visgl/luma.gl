@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shadertools';
@@ -47,7 +47,7 @@ class TrackingWGSLShaderAssembler extends WGSLShaderAssembler {
   }
 }
 
-test('Model preserves explicitly supplied custom WGSL shader assemblers', testCase => {
+it('Model preserves explicitly supplied custom WGSL shader assemblers', () => {
   const device = makeWebGPUDevice();
   const shaderAssembler = new TrackingWGSLShaderAssembler();
   shaderAssembler.addDefaultModule({
@@ -64,24 +64,24 @@ test('Model preserves explicitly supplied custom WGSL shader assemblers', testCa
   });
 
   try {
-    testCase.equal(shaderAssembler.assemblyCount, 1, 'the supplied custom assembler is used');
-    testCase.ok(
-      model.source.includes('CUSTOM_WGSL_MODULE_MARKER'),
+    expect(shaderAssembler.assemblyCount, 'the supplied custom assembler is used').toBe(1);
+    expect(
+      Boolean(model.source.includes('CUSTOM_WGSL_MODULE_MARKER')),
       'custom assembler default modules are preserved'
-    );
-    testCase.ok(
-      model.source.includes('fn CUSTOM_WGSL_MODEL_HOOK('),
+    ).toBe(true);
+    expect(
+      Boolean(model.source.includes('fn CUSTOM_WGSL_MODEL_HOOK(')),
       'custom assembler hooks are preserved'
-    );
+    ).toBe(true);
   } finally {
     model.destroy();
     device.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('Model preserves legacy Deck assemblers for both shader languages', testCase => {
+it('Model preserves legacy Deck assemblers for both shader languages', () => {
   const glslShaderAssembler = new GLSLShaderAssembler();
   const wgslShaderAssembler = new WGSLShaderAssembler();
   glslShaderAssembler.addDefaultModule({
@@ -103,10 +103,10 @@ test('Model preserves legacy Deck assemblers for both shader languages', testCas
     assembleGLSLShaderPair: glslShaderAssembler.assembleGLSLShaderPair.bind(glslShaderAssembler),
     assembleWGSLShader: wgslShaderAssembler.assembleWGSLShader.bind(wgslShaderAssembler)
   };
-  testCase.notOk(
-    'shaderLanguage' in legacyShaderAssembler,
+  expect(
+    Boolean('shaderLanguage' in legacyShaderAssembler),
     'the pinned Deck compatibility assembler has no language metadata'
-  );
+  ).toBe(false);
 
   const webgpuDevice = makeWebGPUDevice();
   const wgslModel = new Model(webgpuDevice, {
@@ -117,14 +117,14 @@ test('Model preserves legacy Deck assemblers for both shader languages', testCas
   });
 
   try {
-    testCase.ok(
-      wgslModel.source.includes('LEGACY_WGSL_MODULE_MARKER'),
+    expect(
+      Boolean(wgslModel.source.includes('LEGACY_WGSL_MODULE_MARKER')),
       'legacy WGSL assembler modules are preserved'
-    );
-    testCase.ok(
-      wgslModel.source.includes('fn LEGACY_DECK_HOOK('),
+    ).toBe(true);
+    expect(
+      Boolean(wgslModel.source.includes('fn LEGACY_DECK_HOOK(')),
       'legacy WGSL assembler hooks are preserved'
-    );
+    ).toBe(true);
   } finally {
     wgslModel.destroy();
     webgpuDevice.destroy();
@@ -140,23 +140,23 @@ test('Model preserves legacy Deck assemblers for both shader languages', testCas
   });
 
   try {
-    testCase.ok(
-      glslModel.vs.includes('LEGACY_GLSL_MODULE_MARKER'),
+    expect(
+      Boolean(glslModel.vs.includes('LEGACY_GLSL_MODULE_MARKER')),
       'legacy GLSL assembler modules are preserved'
-    );
-    testCase.ok(
-      glslModel.vs.includes('void LEGACY_DECK_HOOK('),
+    ).toBe(true);
+    expect(
+      Boolean(glslModel.vs.includes('void LEGACY_DECK_HOOK(')),
       'legacy GLSL assembler hooks are preserved'
-    );
+    ).toBe(true);
   } finally {
     glslModel.destroy();
     glslDevice.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('Model preserves a legacy default shader assembler override for WebGPU', testCase => {
+it('Model preserves a legacy default shader assembler override for WebGPU', () => {
   const device = makeWebGPUDevice();
   const originalDefaultShaderAssembler = Model.defaultProps.shaderAssembler;
   const glslShaderAssembler = new GLSLShaderAssembler();
@@ -186,19 +186,18 @@ test('Model preserves a legacy default shader assembler override for WebGPU', te
       vertexCount: 1
     });
 
-    testCase.equal(
+    expect(
       wgslShaderAssembler.assemblyCount,
-      1,
       'the configured legacy default is retained for WebGPU'
-    );
-    testCase.ok(
-      model.source.includes('LEGACY_DEFAULT_WGSL_MODULE_MARKER'),
+    ).toBe(1);
+    expect(
+      Boolean(model.source.includes('LEGACY_DEFAULT_WGSL_MODULE_MARKER')),
       'legacy default assembler modules are preserved'
-    );
-    testCase.ok(
-      model.source.includes('fn LEGACY_DEFAULT_WGSL_HOOK('),
+    ).toBe(true);
+    expect(
+      Boolean(model.source.includes('fn LEGACY_DEFAULT_WGSL_HOOK(')),
       'legacy default assembler hooks are preserved'
-    );
+    ).toBe(true);
   } finally {
     Model.defaultProps.shaderAssembler = originalDefaultShaderAssembler;
     try {
@@ -208,10 +207,10 @@ test('Model preserves a legacy default shader assembler override for WebGPU', te
     }
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('Model accepts compatible WGSL assemblers from another module instance', testCase => {
+it('Model accepts compatible WGSL assemblers from another module instance', () => {
   const device = makeWebGPUDevice();
   const sourceShaderAssembler = new WGSLShaderAssembler();
   sourceShaderAssembler.addDefaultModule({
@@ -229,10 +228,10 @@ test('Model accepts compatible WGSL assemblers from another module instance', te
     addShaderHook: sourceShaderAssembler.addShaderHook.bind(sourceShaderAssembler),
     assembleWGSLShader: sourceShaderAssembler.assembleWGSLShader.bind(sourceShaderAssembler)
   };
-  testCase.notOk(
-    duplicateShaderAssembler instanceof WGSLShaderAssembler,
+  expect(
+    Boolean(duplicateShaderAssembler instanceof WGSLShaderAssembler),
     'the duplicate-copy assembler has a different constructor identity'
-  );
+  ).toBe(false);
 
   const model = new Model(device, {
     id: 'duplicate-wgsl-shader-assembler',
@@ -242,27 +241,27 @@ test('Model accepts compatible WGSL assemblers from another module instance', te
   });
 
   try {
-    testCase.ok(
-      model.source.includes('DUPLICATE_WGSL_MODULE_MARKER'),
+    expect(
+      Boolean(model.source.includes('DUPLICATE_WGSL_MODULE_MARKER')),
       'duplicate-copy assembler default modules are preserved'
-    );
-    testCase.ok(
-      model.source.includes('fn DUPLICATE_WGSL_MODEL_HOOK('),
+    ).toBe(true);
+    expect(
+      Boolean(model.source.includes('fn DUPLICATE_WGSL_MODEL_HOOK(')),
       'duplicate-copy assembler hooks are preserved'
-    );
+    ).toBe(true);
   } finally {
     model.destroy();
     device.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('Model rejects an explicitly supplied assembler for the wrong shader language', testCase => {
+it('Model rejects an explicitly supplied assembler for the wrong shader language', () => {
   const webgpuDevice = makeWebGPUDevice();
 
   try {
-    testCase.throws(
+    expect(
       () =>
         new Model(webgpuDevice, {
           id: 'wrong-wgsl-shader-assembler',
@@ -271,7 +270,7 @@ test('Model rejects an explicitly supplied assembler for the wrong shader langua
           vertexCount: 1
         }),
       'WebGPU rejects an explicitly supplied GLSL assembler'
-    );
+    ).toThrow();
   } finally {
     webgpuDevice.destroy();
   }
@@ -279,7 +278,7 @@ test('Model rejects an explicitly supplied assembler for the wrong shader langua
   const glslDevice = new NullDevice({});
 
   try {
-    testCase.throws(
+    expect(
       () =>
         new Model(glslDevice, {
           id: 'wrong-glsl-shader-assembler',
@@ -289,12 +288,12 @@ test('Model rejects an explicitly supplied assembler for the wrong shader langua
           vertexCount: 1
         }),
       'GLSL rejects an explicitly supplied WGSL assembler'
-    );
+    ).toThrow();
   } finally {
     glslDevice.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 function makeWebGPUDevice(): Device {

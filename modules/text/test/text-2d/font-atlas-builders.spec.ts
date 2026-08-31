@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {isBrowser} from '@probe.gl/env';
 import {
   buildBitmapFontAtlas,
@@ -24,17 +24,17 @@ function createFontAtlasSettings(
   };
 }
 
-function assertCommonFontAtlasShape(t: any, fontAtlas: FontAtlas, label: string): void {
-  t.equal(fontAtlas.lineHeight, 16, `${label} retains line-height metadata`);
-  t.equal(fontAtlas.pages.length, 1, `${label} exposes image pages`);
-  t.equal(fontAtlas.width, fontAtlas.pages[0]?.width, `${label} reports its page width`);
-  t.equal(fontAtlas.height, fontAtlas.pages[0]?.height, `${label} reports its page height`);
-  t.deepEqual(Object.keys(fontAtlas.mapping), ['A', 'B'], `${label} maps requested glyphs`);
+function assertCommonFontAtlasShape(fontAtlas: FontAtlas, label: string): void {
+  expect(fontAtlas.lineHeight, `${label} retains line-height metadata`).toBe(16);
+  expect(fontAtlas.pages.length, `${label} exposes image pages`).toBe(1);
+  expect(fontAtlas.width, `${label} reports its page width`).toBe(fontAtlas.pages[0]?.width);
+  expect(fontAtlas.height, `${label} reports its page height`).toBe(fontAtlas.pages[0]?.height);
+  expect(Object.keys(fontAtlas.mapping), `${label} maps requested glyphs`).toEqual(['A', 'B']);
 }
 
-test('bitmap and SDF builders return the common FontAtlas format', t => {
+it('bitmap and SDF builders return the common FontAtlas format', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -43,22 +43,23 @@ test('bitmap and SDF builders return the common FontAtlas format', t => {
   );
   const sdfFontAtlas = buildSdfFontAtlas(createFontAtlasSettings('font-atlas-builder-sdf'));
 
-  assertCommonFontAtlasShape(t, bitmapFontAtlas, 'bitmap atlas');
-  assertCommonFontAtlasShape(t, sdfFontAtlas, 'SDF atlas');
-  t.equal(bitmapFontAtlas.renderSettings.mode, 'bitmap', 'bitmap mode travels with its atlas');
-  t.deepEqual(
+  assertCommonFontAtlasShape(bitmapFontAtlas, 'bitmap atlas');
+  assertCommonFontAtlasShape(sdfFontAtlas, 'SDF atlas');
+  expect(bitmapFontAtlas.renderSettings.mode, 'bitmap mode travels with its atlas').toBe('bitmap');
+  expect(
     bitmapFontAtlas.renderSettings,
-    {mode: 'bitmap', threshold: 0, smoothing: 0},
     'bitmap sampling needs no renderer-specific settings'
+  ).toEqual({mode: 'bitmap', threshold: 0, smoothing: 0});
+  expect(sdfFontAtlas.renderSettings.mode, 'SDF mode travels with its atlas').toBe('sdf');
+  expect(sdfFontAtlas.renderSettings.threshold, 'SDF cutoff becomes a sampling threshold').toBe(
+    0.75
   );
-  t.equal(sdfFontAtlas.renderSettings.mode, 'sdf', 'SDF mode travels with its atlas');
-  t.equal(sdfFontAtlas.renderSettings.threshold, 0.75, 'SDF cutoff becomes a sampling threshold');
-  t.end();
+  void 0;
 });
 
-test('browser font builders cache and incrementally extend atlases', t => {
+it('browser font builders cache and incrementally extend atlases', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -69,15 +70,15 @@ test('browser font builders cache and incrementally extend atlases', t => {
     createFontAtlasSettings(fontFamily, {characterSet: 'ABC'})
   );
 
-  t.equal(cachedAtlas.pages[0], initialAtlas.pages[0], 'equal inputs reuse the atlas page');
-  t.equal(extendedAtlas.pages[0], initialAtlas.pages[0], 'new glyphs extend the cached page');
-  t.deepEqual(Object.keys(extendedAtlas.mapping), ['A', 'B', 'C'], 'extension adds new glyphs');
-  t.end();
+  expect(cachedAtlas.pages[0], 'equal inputs reuse the atlas page').toBe(initialAtlas.pages[0]);
+  expect(extendedAtlas.pages[0], 'new glyphs extend the cached page').toBe(initialAtlas.pages[0]);
+  expect(Object.keys(extendedAtlas.mapping), 'extension adds new glyphs').toEqual(['A', 'B', 'C']);
+  void 0;
 });
 
-test('browser font builders align glyphs to a shared baseline', t => {
+it('browser font builders align glyphs to a shared baseline', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -88,11 +89,13 @@ test('browser font builders align glyphs to a shared baseline', t => {
     ],
     ['SDF', buildSdfFontAtlas(createFontAtlasSettings('descender-sdf', {characterSet: 'ag'}))]
   ] as const) {
-    t.ok(
-      (fontAtlas.mapping.g?.layoutOffsetY ?? 0) + (fontAtlas.mapping.g?.height ?? 0) >
-        (fontAtlas.mapping.a?.layoutOffsetY ?? 0) + (fontAtlas.mapping.a?.height ?? 0),
+    expect(
+      Boolean(
+        (fontAtlas.mapping.g?.layoutOffsetY ?? 0) + (fontAtlas.mapping.g?.height ?? 0) >
+          (fontAtlas.mapping.a?.layoutOffsetY ?? 0) + (fontAtlas.mapping.a?.height ?? 0)
+      ),
       `${label} g extends below the a baseline`
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });

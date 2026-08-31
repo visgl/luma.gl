@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
@@ -47,11 +47,11 @@ type TraceInteractionFixture = {
   props: GPUTraceInteractionProps;
 };
 
-test('GPUTraceInteraction reuses one graph for time, hierarchy, dependency, and scene draw policies', async t => {
+it('GPUTraceInteraction reuses one graph for time, hierarchy, dependency, and scene draw policies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -60,7 +60,7 @@ test('GPUTraceInteraction reuses one graph for time, hierarchy, dependency, and 
   interaction.addToGraph(fixture.graph);
   const compiled = fixture.graph.compile();
 
-  t.deepEqual(interaction.stats, {
+  expect(interaction.stats, '').toEqual({
     spanCount: 5,
     sceneCapacity: 5,
     processCount: 2,
@@ -71,25 +71,24 @@ test('GPUTraceInteraction reuses one graph for time, hierarchy, dependency, and 
   });
 
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 1, 2, 3, 4], 'expanded hierarchy exposes every trace span');
-  t.deepEqual(await readUint32(fixture.threadHeights.buffer), [2, 2, 2, 2]);
-  t.deepEqual(await readUint32(fixture.threadOffsets.buffer), [0, 2, 4, 6]);
-  t.deepEqual(await readUint32(fixture.projectedAncestors.buffer), [0, 1, 2, 3, 4]);
+  await assertVisible(fixture, [0, 1, 2, 3, 4], 'expanded hierarchy exposes every trace span');
+  expect(await readUint32(fixture.threadHeights.buffer), '').toEqual([2, 2, 2, 2]);
+  expect(await readUint32(fixture.threadOffsets.buffer), '').toEqual([0, 2, 4, 6]);
+  expect(await readUint32(fixture.projectedAncestors.buffer), '').toEqual([0, 1, 2, 3, 4]);
 
   fixture.window.buffer.write(Float32Array.from([4.1, 12, 0]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 2, 3], 'changing the time window needs no graph rebuild');
+  await assertVisible(fixture, [0, 2, 3], 'changing the time window needs no graph rebuild');
 
   fixture.processStates.buffer.write(Uint32Array.from([0, 1]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 3], 'a collapsed process retains one representative lane');
-  t.deepEqual(await readUint32(fixture.threadHeights.buffer), [1, 0, 2, 2]);
-  t.deepEqual(await readUint32(fixture.threadOffsets.buffer), [0, 1, 1, 3]);
-  t.deepEqual(
+  await assertVisible(fixture, [0, 3], 'a collapsed process retains one representative lane');
+  expect(await readUint32(fixture.threadHeights.buffer), '').toEqual([1, 0, 2, 2]);
+  expect(await readUint32(fixture.threadOffsets.buffer), '').toEqual([0, 1, 1, 3]);
+  expect(
     await readUint32(fixture.projectedAncestors.buffer),
-    [0, 0, 0, 3, 3],
     'hidden descendants retain their nearest visible canonical ancestor'
-  );
+  ).toEqual([0, 0, 0, 3, 3]);
 
   fixture.processStates.buffer.write(Uint32Array.from([1, 1]));
   fixture.window.buffer.write(Float32Array.from([0, 30, 0]));
@@ -98,95 +97,90 @@ test('GPUTraceInteraction reuses one graph for time, hierarchy, dependency, and 
   fixture.focusDepth.buffer.write(Uint32Array.from([1]));
   fixture.policy.buffer.write(Uint32Array.from([0, 0, 1]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 1, 3], 'bidirectional one-hop focus preserves stable rows');
-  t.deepEqual(await readUint32(fixture.reachedSpans.buffer), [1, 1, 0, 1, 0]);
-  t.deepEqual(await readUint32(fixture.projectedAncestors.buffer), [0, 1, 0, 3, 3]);
+  await assertVisible(fixture, [0, 1, 3], 'bidirectional one-hop focus preserves stable rows');
+  expect(await readUint32(fixture.reachedSpans.buffer), '').toEqual([1, 1, 0, 1, 0]);
+  expect(await readUint32(fixture.projectedAncestors.buffer), '').toEqual([0, 1, 0, 3, 3]);
 
   fixture.focusDepth.buffer.write(Uint32Array.from([2]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 1, 2, 3, 4], 'dynamic focus depth expands the same graph');
+  await assertVisible(fixture, [0, 1, 2, 3, 4], 'dynamic focus depth expands the same graph');
 
   fixture.window.buffer.write(Float32Array.from([0, 30, 3]));
   fixture.policy.buffer.write(Uint32Array.from([1, 0, 0]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 2, 3], 'duration and required classification compose');
+  await assertVisible(fixture, [0, 2, 3], 'duration and required classification compose');
 
   fixture.policy.buffer.write(Uint32Array.from([0, 1, 0]));
   fixture.window.buffer.write(Float32Array.from([0, 30, 0]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [1, 4], 'excluded classification bits remove matching spans');
+  await assertVisible(fixture, [1, 4], 'excluded classification bits remove matching spans');
 
   fixture.threadStates.buffer.write(Uint32Array.from([0, 1, 1, 1]));
   fixture.policy.buffer.write(Uint32Array.from([0, 0, 0]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [0, 2, 3, 4], 'a collapsed thread retains its first lane');
+  await assertVisible(fixture, [0, 2, 3, 4], 'a collapsed thread retains its first lane');
 
   fixture.window.buffer.write(Float32Array.from([10, 0, 0]));
   encode(device, compiled);
-  await assertVisible(t, fixture, [], 'an inverted time window clears every draw and count');
+  await assertVisible(fixture, [], 'an inverted time window clears every draw and count');
 
-  t.ok(
-    compiled.stats.nodeOrder.some(identifier => identifier === 'trace-interaction-policy'),
+  expect(
+    Boolean(compiled.stats.nodeOrder.some(identifier => identifier === 'trace-interaction-policy')),
     'the compiled graph contains one explicit trace policy pass'
-  );
-  t.ok(
-    compiled.stats.nodeOrder.some(identifier => identifier === 'trace-interaction-draws-publish'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      compiled.stats.nodeOrder.some(identifier => identifier === 'trace-interaction-draws-publish')
+    ),
     'generic scene draw generation remains downstream of the trace policy'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   destroyFixture(fixture);
-  t.end();
+  void 0;
 });
 
-test('GPUTraceInteraction validates topology, policy lengths, and nonaliasing output contracts', async t => {
+it('GPUTraceInteraction validates topology, policy lengths, and nonaliasing output contracts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const fixture = makeFixture(device);
 
-  t.throws(
+  expect(
     () => new GPUTraceInteraction({...fixture.props, threadsPerProcess: 3}),
-    /topology must be consistent/,
     'process/thread cardinality cannot silently misaddress ownership'
-  );
-  t.throws(
+  ).toThrow(/topology must be consistent/);
+  expect(
     () => new GPUTraceInteraction({...fixture.props, lanesPerThread: 0}),
-    /topology must be consistent/,
     'collapsed-lane mapping requires a positive lane width'
-  );
-  t.throws(
+  ).toThrow(/topology must be consistent/);
+  expect(
     () => new GPUTraceInteraction({...fixture.props, policy: fixture.selectedCount.view}),
-    /require three scalar values/,
     'classification and focus policy requires its complete fixed layout'
-  );
-  t.throws(
+  ).toThrow(/require three scalar values/);
+  expect(
     () => new GPUTraceInteraction({...fixture.props, reachedSpans: fixture.threadHeights.view}),
-    /source rows and scene capacity/,
     'dependency reachability must align with canonical source rows'
-  );
-  t.throws(
+  ).toThrow(/source rows and scene capacity/);
+  expect(
     () => new GPUTraceInteraction({...fixture.props, visibleSpans: fixture.visibleMask.view}),
-    /outputs cannot overlap one another/,
     'stable compacted IDs cannot overwrite their source visibility mask'
-  );
-  t.throws(
+  ).toThrow(/outputs cannot overlap one another/);
+  expect(
     () =>
       new GPUTraceInteraction({...fixture.props, projectedAncestors: fixture.props.trace.parents}),
-    /outputs cannot overlap source inputs/,
     'ancestry outputs cannot overwrite canonical parent storage'
-  );
-  t.throws(
+  ).toThrow(/outputs cannot overlap source inputs/);
+  expect(
     () => new GPUTraceInteraction({...fixture.props, maxFocusDepth: -1}),
-    /nonnegative safe integer/,
     'compiled traversal depth is explicitly bounded'
-  );
+  ).toThrow(/nonnegative safe integer/);
 
   destroyFixture(fixture);
-  t.end();
+  void 0;
 });
 
 function makeFixture(device: Device): TraceInteractionFixture {
@@ -290,7 +284,6 @@ function makeFixture(device: Device): TraceInteractionFixture {
 }
 
 async function assertVisible(
-  tapeTest: {deepEqual: (actual: unknown, expected: unknown, message?: string) => void},
   fixture: TraceInteractionFixture,
   expected: number[],
   message: string
@@ -299,20 +292,17 @@ async function assertVisible(
   const compacted = await readUint32(fixture.visibleSpans.buffer);
   const mask = await readUint32(fixture.visibleMask.buffer);
   const commands = await readUint32(fixture.commands.buffer);
-  tapeTest.deepEqual(count, [expected.length], `${message}: count`);
-  tapeTest.deepEqual(compacted.slice(0, expected.length), expected, `${message}: stable IDs`);
-  tapeTest.deepEqual(
-    mask,
-    Array.from({length: 5}, (_, index) => Number(expected.includes(index))),
-    `${message}: source mask`
+  expect(count, `${message}: count`).toEqual([expected.length]);
+  expect(compacted.slice(0, expected.length), `${message}: stable IDs`).toEqual(expected);
+  expect(mask, `${message}: source mask`).toEqual(
+    Array.from({length: 5}, (_, index) => Number(expected.includes(index)))
   );
-  tapeTest.deepEqual(
+  expect(
     Array.from({length: 5}, (_, index) => commands[index * 4 + 1]),
-    Array.from({length: 5}, (_, index) => Number(expected.includes(index))),
     `${message}: indirect draw activation`
-  );
-  tapeTest.deepEqual(await readUint32(fixture.publishedCount.buffer), [expected.length]);
-  tapeTest.deepEqual(await readUint32(fixture.drawOverflow.buffer), [0]);
+  ).toEqual(Array.from({length: 5}, (_, index) => Number(expected.includes(index))));
+  expect(await readUint32(fixture.publishedCount.buffer), '').toEqual([expected.length]);
+  expect(await readUint32(fixture.drawOverflow.buffer), '').toEqual([0]);
 }
 
 function makeUint32(

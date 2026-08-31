@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import {ShadowMapRenderer} from '../../src/shadows/shadow-map-renderer';
@@ -25,20 +25,20 @@ const CAMERA = {
   far: 100
 };
 
-test('shadow cascades use practical monotonic splits', t => {
+it('shadow cascades use practical monotonic splits', () => {
   const splits = getPracticalCascadeSplits(0.1, 100, 4, 0.5);
-  t.equal(splits.length, 4, 'creates one far split per cascade');
-  t.ok(
-    splits.every((split, index) => index === 0 || split > splits[index - 1]),
+  expect(splits.length, 'creates one far split per cascade').toBe(4);
+  expect(
+    Boolean(splits.every((split, index) => index === 0 || split > splits[index - 1])),
     'monotonic'
-  );
-  t.equal(splits[3], 100, 'last cascade reaches the requested distance');
-  t.throws(() => getPracticalCascadeSplits(0, 100, 4), /0 < near < far/, 'validates range');
-  t.throws(() => getPracticalCascadeSplits(0.1, 100, 5), /1 to 4/, 'validates count');
-  t.end();
+  ).toBe(true);
+  expect(splits[3], 'last cascade reaches the requested distance').toBe(100);
+  expect(() => getPracticalCascadeSplits(0, 100, 4), 'validates range').toThrow(/0 < near < far/);
+  expect(() => getPracticalCascadeSplits(0.1, 100, 5), 'validates count').toThrow(/1 to 4/);
+  void 0;
 });
 
-test('directional cascades are stable under sub-texel camera movement', t => {
+it('directional cascades are stable under sub-texel camera movement', () => {
   const light = {
     direction: [0.45, 0.82, 0.35] as [number, number, number],
     shadowDistance: 80,
@@ -66,16 +66,18 @@ test('directional cascades are stable under sub-texel camera movement', t => {
   for (let cascadeIndex = 0; cascadeIndex < 4; cascadeIndex++) {
     const firstMatrix = first[cascadeIndex].viewProjectionMatrix;
     const secondMatrix = second[cascadeIndex].viewProjectionMatrix;
-    t.ok(
-      Math.abs(firstMatrix[12] - secondMatrix[12]) < 1e-7 &&
-        Math.abs(firstMatrix[13] - secondMatrix[13]) < 1e-7,
+    expect(
+      Boolean(
+        Math.abs(firstMatrix[12] - secondMatrix[12]) < 1e-7 &&
+          Math.abs(firstMatrix[13] - secondMatrix[13]) < 1e-7
+      ),
       `cascade ${cascadeIndex} keeps snapped XY translation`
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('spot and point shadow cameras cover their complete light volumes', t => {
+it('spot and point shadow cameras cover their complete light volumes', () => {
   const spot = getSpotShadowView({
     position: [2, 8, 3],
     direction: [0, -1, 0],
@@ -88,7 +90,7 @@ test('spot and point shadow cameras cover their complete light volumes', t => {
     depthBiasSlopeScale: 2,
     strength: 1
   });
-  t.equal(spot.camera.far, 30, 'spot projection reaches range');
+  expect(spot.camera.far, 'spot projection reaches range').toBe(30);
 
   const pointViews = getPointShadowViews({
     position: [0, 4, 0],
@@ -100,20 +102,19 @@ test('spot and point shadow cameras cover their complete light volumes', t => {
     depthBiasSlopeScale: 2,
     strength: 1
   });
-  t.equal(pointViews.length, 6, 'point shadow has six canonical faces');
-  t.equal(
+  expect(pointViews.length, 'point shadow has six canonical faces').toBe(6);
+  expect(
     new Set(pointViews.map(view => Array.from(view.viewProjectionMatrix).join(','))).size,
-    6,
     'all face orientations are distinct'
-  );
-  t.end();
+  ).toBe(6);
+  void 0;
 });
 
-test('ShadowMapRenderer reuses, reconstructs and destroys resources', async t => {
+it('ShadowMapRenderer reuses, reconstructs and destroys resources', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU unavailable');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const renderer = new ShadowMapRenderer(device, {
@@ -146,41 +147,39 @@ test('ShadowMapRenderer reuses, reconstructs and destroys resources', async t =>
   };
   const firstProps = renderer.render(options);
   const secondProps = renderer.render(options);
-  t.equal(firstProps.directionalShadowTexture, secondProps.directionalShadowTexture, 'reuses maps');
-  t.deepEqual(
-    callbackOrder.slice(0, 10),
-    [
-      'directional-0',
-      'directional-1',
-      'directional-2',
-      'spot-0',
-      'point-+X',
-      'point--X',
-      'point-+Y',
-      'point--Y',
-      'point-+Z',
-      'point--Z'
-    ],
-    'invokes views in deterministic cascade, spot and cube-face order'
+  expect(firstProps.directionalShadowTexture, 'reuses maps').toBe(
+    secondProps.directionalShadowTexture
   );
+  expect(
+    callbackOrder.slice(0, 10),
+    'invokes views in deterministic cascade, spot and cube-face order'
+  ).toEqual([
+    'directional-0',
+    'directional-1',
+    'directional-2',
+    'spot-0',
+    'point-+X',
+    'point--X',
+    'point-+Y',
+    'point--Y',
+    'point-+Z',
+    'point--Z'
+  ]);
 
   renderer.setProps({quality: 'cinematic'});
   const rebuiltProps = renderer.render(options);
-  t.notEqual(
-    rebuiltProps.directionalShadowTexture,
-    firstProps.directionalShadowTexture,
-    'quality cascade change rebuilds maps'
+  expect(rebuiltProps.directionalShadowTexture, 'quality cascade change rebuilds maps').not.toBe(
+    firstProps.directionalShadowTexture
   );
-  t.equal(firstProps.directionalShadowTexture.destroyed, true, 'destroys replaced maps');
-  t.throws(
+  expect(firstProps.directionalShadowTexture.destroyed, 'destroys replaced maps').toBe(true);
+  expect(
     () =>
       renderer.render({...options, pointLights: [...options.pointLights, ...options.pointLights]}),
-    /exceeds configured capacity/,
     'rejects active lights above capacity'
-  );
+  ).toThrow(/exceeds configured capacity/);
   renderer.destroy();
   renderer.destroy();
-  t.equal(rebuiltProps.pointShadowTexture.destroyed, true, 'destroy is idempotent');
+  expect(rebuiltProps.pointShadowTexture.destroyed, 'destroy is idempotent').toBe(true);
   device.submit();
-  t.end();
+  void 0;
 });

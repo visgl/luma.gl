@@ -1,9 +1,9 @@
 import {ANARIDevice} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {ANARISceneAdapter, makeSceneMaterial} from '../src/anari-scene-adapter';
 
-test('ANARI material parameters translate into canonical shared PBR uniforms', testContext => {
+it('ANARI material parameters translate into canonical shared PBR uniforms', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const material = device.newMaterial('physicallyBased', {
     baseColor: [0.2, 0.4, 0.6, 0.8],
@@ -45,67 +45,61 @@ test('ANARI material parameters translate into canonical shared PBR uniforms', t
   const sceneMaterial = makeSceneMaterial(material);
   const uniforms = sceneMaterial.uniforms!;
 
-  testContext.deepEqual(uniforms.baseColorFactor, [0.2, 0.4, 0.6, 0.8], 'preserves RGBA color');
-  testContext.deepEqual(uniforms.metallicRoughnessValues, [0.7, 0.25], 'maps metal/rough factors');
-  testContext.deepEqual(uniforms.emissiveFactor, [0.1, 0.2, 0.3], 'maps emissive color');
-  testContext.equal(uniforms.emissiveStrength, 4, 'preserves separate emissive strength');
-  testContext.equal(sceneMaterial.alphaMode, 'MASK', 'normalizes masked alpha mode');
-  testContext.equal(uniforms.alphaCutoffEnabled, true, 'enables masked alpha rejection');
-  testContext.equal(uniforms.alphaCutoff, 0.35, 'preserves the alpha cutoff threshold');
-  testContext.equal(sceneMaterial.doubleSided, false, 'preserves material face culling');
-  testContext.equal(uniforms.unlit, true, 'preserves unlit shading');
-  testContext.deepEqual(uniforms.specularColorFactor, [0.7, 0.8, 0.9], 'maps specular color');
-  testContext.equal(uniforms.specularIntensityFactor, 0.65, 'maps specular intensity');
-  testContext.equal(uniforms.clearcoatFactor, 0.8, 'maps clearcoat amount');
-  testContext.equal(uniforms.clearcoatRoughnessFactor, 0.15, 'maps clearcoat roughness');
-  testContext.equal(uniforms.transmissionFactor, 0.45, 'maps transmission amount');
-  testContext.equal(uniforms.dispersion, 0.65, 'maps chromatic transmission dispersion');
-  testContext.equal(uniforms.diffuseTransmissionFactor, 0.55, 'maps diffuse transmission');
-  testContext.deepEqual(
-    uniforms.diffuseTransmissionColorFactor,
-    [0.9, 0.35, 0.2],
-    'maps the diffuse transmission color'
-  );
-  testContext.deepEqual(
-    uniforms.multiscatterColorFactor,
-    [0.7, 0.4, 0.25],
-    'maps the experimental volume-scatter color'
-  );
-  testContext.equal(uniforms.scatterAnisotropy, 0.3, 'maps the scattering phase anisotropy');
-  testContext.equal(uniforms.bumpFactor, 0.75, 'maps the experimental bump-map strength');
-  testContext.equal(uniforms.thicknessFactor, 1.2, 'maps volume thickness');
-  testContext.equal(uniforms.attenuationDistance, 3, 'maps volume attenuation distance');
-  testContext.deepEqual(uniforms.attenuationColor, [0.8, 0.6, 0.4], 'maps attenuation color');
-  testContext.equal(uniforms.ior, 1.7, 'maps index of refraction');
-  testContext.deepEqual(uniforms.sheenColorFactor, [0.3, 0.2, 0.1], 'maps sheen color');
-  testContext.equal(uniforms.sheenRoughnessFactor, 0.35, 'maps sheen roughness');
-  testContext.equal(uniforms.iridescenceFactor, 0.5, 'maps iridescence amount');
-  testContext.equal(uniforms.iridescenceIor, 1.4, 'maps iridescence refraction index');
-  testContext.deepEqual(uniforms.iridescenceThicknessRange, [120, 650], 'maps thickness range');
-  testContext.equal(uniforms.anisotropyStrength, 0.6, 'maps anisotropic strength');
-  testContext.equal(uniforms.anisotropyRotation, 0.75, 'maps anisotropic rotation');
-  testContext.deepEqual(uniforms.anisotropyDirection, [0.6, 0.8], 'maps anisotropic direction');
-  testContext.equal(uniforms.normalScale, 0.4, 'maps normal-map strength');
-  testContext.equal(uniforms.occlusionStrength, 0.7, 'maps ambient-occlusion strength');
-  testContext.deepEqual(sceneMaterial.bindings, {}, 'absent maps allocate no fallback textures');
+  expect(uniforms.baseColorFactor, 'preserves RGBA color').toEqual([0.2, 0.4, 0.6, 0.8]);
+  expect(uniforms.metallicRoughnessValues, 'maps metal/rough factors').toEqual([0.7, 0.25]);
+  expect(uniforms.emissiveFactor, 'maps emissive color').toEqual([0.1, 0.2, 0.3]);
+  expect(uniforms.emissiveStrength, 'preserves separate emissive strength').toBe(4);
+  expect(sceneMaterial.alphaMode, 'normalizes masked alpha mode').toBe('MASK');
+  expect(uniforms.alphaCutoffEnabled, 'enables masked alpha rejection').toBe(true);
+  expect(uniforms.alphaCutoff, 'preserves the alpha cutoff threshold').toBe(0.35);
+  expect(sceneMaterial.doubleSided, 'preserves material face culling').toBe(false);
+  expect(uniforms.unlit, 'preserves unlit shading').toBe(true);
+  expect(uniforms.specularColorFactor, 'maps specular color').toEqual([0.7, 0.8, 0.9]);
+  expect(uniforms.specularIntensityFactor, 'maps specular intensity').toBe(0.65);
+  expect(uniforms.clearcoatFactor, 'maps clearcoat amount').toBe(0.8);
+  expect(uniforms.clearcoatRoughnessFactor, 'maps clearcoat roughness').toBe(0.15);
+  expect(uniforms.transmissionFactor, 'maps transmission amount').toBe(0.45);
+  expect(uniforms.dispersion, 'maps chromatic transmission dispersion').toBe(0.65);
+  expect(uniforms.diffuseTransmissionFactor, 'maps diffuse transmission').toBe(0.55);
+  expect(uniforms.diffuseTransmissionColorFactor, 'maps the diffuse transmission color').toEqual([
+    0.9, 0.35, 0.2
+  ]);
+  expect(uniforms.multiscatterColorFactor, 'maps the experimental volume-scatter color').toEqual([
+    0.7, 0.4, 0.25
+  ]);
+  expect(uniforms.scatterAnisotropy, 'maps the scattering phase anisotropy').toBe(0.3);
+  expect(uniforms.bumpFactor, 'maps the experimental bump-map strength').toBe(0.75);
+  expect(uniforms.thicknessFactor, 'maps volume thickness').toBe(1.2);
+  expect(uniforms.attenuationDistance, 'maps volume attenuation distance').toBe(3);
+  expect(uniforms.attenuationColor, 'maps attenuation color').toEqual([0.8, 0.6, 0.4]);
+  expect(uniforms.ior, 'maps index of refraction').toBe(1.7);
+  expect(uniforms.sheenColorFactor, 'maps sheen color').toEqual([0.3, 0.2, 0.1]);
+  expect(uniforms.sheenRoughnessFactor, 'maps sheen roughness').toBe(0.35);
+  expect(uniforms.iridescenceFactor, 'maps iridescence amount').toBe(0.5);
+  expect(uniforms.iridescenceIor, 'maps iridescence refraction index').toBe(1.4);
+  expect(uniforms.iridescenceThicknessRange, 'maps thickness range').toEqual([120, 650]);
+  expect(uniforms.anisotropyStrength, 'maps anisotropic strength').toBe(0.6);
+  expect(uniforms.anisotropyRotation, 'maps anisotropic rotation').toBe(0.75);
+  expect(uniforms.anisotropyDirection, 'maps anisotropic direction').toEqual([0.6, 0.8]);
+  expect(uniforms.normalScale, 'maps normal-map strength').toBe(0.4);
+  expect(uniforms.occlusionStrength, 'maps ambient-occlusion strength').toBe(0.7);
+  expect(sceneMaterial.bindings, 'absent maps allocate no fallback textures').toEqual({});
 
   material.setParameter('roughness', 0.9);
-  testContext.deepEqual(
+  expect(
     makeSceneMaterial(material).uniforms?.metallicRoughnessValues,
-    [0.7, 0.25],
     'staged material changes remain invisible to the scene adapter'
-  );
+  ).toEqual([0.7, 0.25]);
   material.commitParameters();
-  testContext.deepEqual(
+  expect(
     makeSceneMaterial(material).uniforms?.metallicRoughnessValues,
-    [0.7, 0.9],
     'committed material changes reach canonical uniforms'
-  );
+  ).toEqual([0.7, 0.9]);
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI maps every advanced texture slot to canonical PBR sampler bindings', testContext => {
+it('ANARI maps every advanced texture slot to canonical PBR sampler bindings', () => {
   const graphicsDevice = new NullDevice({});
   const device = new ANARIDevice(graphicsDevice);
   const image = graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
@@ -159,49 +153,43 @@ test('ANARI maps every advanced texture slot to canonical PBR sampler bindings',
     'pbr_multiscatterColorSampler'
   ];
 
-  testContext.deepEqual(
+  expect(
     Object.keys(sceneMaterial.bindings || {}).sort(),
-    expectedBindingNames.sort(),
     'all supported texture extensions use the canonical shared sampler names'
-  );
+  ).toEqual(expectedBindingNames.sort());
   for (const binding of Object.values(sceneMaterial.bindings || {})) {
-    testContext.equal(binding, image, 'the shared sampler retains the caller-owned GPU texture');
+    expect(binding, 'the shared sampler retains the caller-owned GPU texture').toBe(image);
   }
-  testContext.equal(sceneMaterial.uniforms?.baseColorMapEnabled, true, 'enables base color map');
-  testContext.equal(sceneMaterial.uniforms?.anisotropyMapEnabled, true, 'enables anisotropy map');
-  testContext.equal(sceneMaterial.uniforms?.bumpMapEnabled, true, 'enables the bump height map');
-  testContext.equal(
+  expect(sceneMaterial.uniforms?.baseColorMapEnabled, 'enables base color map').toBe(true);
+  expect(sceneMaterial.uniforms?.anisotropyMapEnabled, 'enables anisotropy map').toBe(true);
+  expect(sceneMaterial.uniforms?.bumpMapEnabled, 'enables the bump height map').toBe(true);
+  expect(
     sceneMaterial.uniforms?.diffuseTransmissionMapEnabled,
-    true,
     'enables the diffuse-transmission factor map'
-  );
-  testContext.equal(
+  ).toBe(true);
+  expect(
     sceneMaterial.uniforms?.diffuseTransmissionColorMapEnabled,
-    true,
     'enables the diffuse-transmission color map'
-  );
-  testContext.equal(
+  ).toBe(true);
+  expect(
     sceneMaterial.uniforms?.multiscatterColorMapEnabled,
-    true,
     'enables the experimental volume-scatter color map'
-  );
-  testContext.equal(sceneMaterial.uniforms?.clearcoatRoughnessUVSet, 1, 'preserves UV set choice');
-  testContext.deepEqual(
+  ).toBe(true);
+  expect(sceneMaterial.uniforms?.clearcoatRoughnessUVSet, 'preserves UV set choice').toBe(1);
+  expect(
     sceneMaterial.uniforms?.iridescenceThicknessUVTransform,
-    transform,
     'preserves per-sampler UV transforms for every extension map'
-  );
-  testContext.deepEqual(
+  ).toEqual(transform);
+  expect(
     sceneMaterial.uniforms?.multiscatterColorUVTransform,
-    transform,
     'preserves UV transforms for draft extension textures'
-  );
+  ).toEqual(transform);
 
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI preserves optional secondary geometry texture coordinates', testContext => {
+it('ANARI preserves optional secondary geometry texture coordinates', () => {
   const graphicsDevice = new NullDevice({});
   const device = new ANARIDevice(graphicsDevice);
   const image = graphicsDevice.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
@@ -223,35 +211,31 @@ test('ANARI preserves optional secondary geometry texture coordinates', testCont
   const adapter = new ANARISceneAdapter();
   const sceneSurface = adapter.makeRenderOptions(frame)?.surfaces[0];
 
-  testContext.equal(
+  expect(
     sceneSurface?.geometry.attributes['TEXCOORD_0']?.value,
-    firstTextureCoordinates,
     'the primary texture-coordinate set preserves its canonical geometry semantic'
-  );
-  testContext.equal(
+  ).toBe(firstTextureCoordinates);
+  expect(
     sceneSurface?.geometry.attributes['TEXCOORD_1']?.value,
-    secondTextureCoordinates,
     'retained array handles expose the secondary canonical texture-coordinate set'
-  );
-  testContext.equal(
+  ).toBe(secondTextureCoordinates);
+  expect(
     sceneSurface?.material.uniforms?.baseColorUVSet,
-    1,
     'material samplers select the secondary geometry coordinates'
-  );
+  ).toBe(1);
 
   geometry.unsetParameter('vertex.attribute2').commitParameters();
-  testContext.equal(
+  expect(
     adapter.makeRenderOptions(frame)?.surfaces[0]?.geometry.attributes['TEXCOORD_1'],
-    undefined,
     'absent secondary coordinates do not allocate a placeholder or enable their shader feature'
-  );
+  ).toBe(undefined);
 
   adapter.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI forwards committed image-based-lighting resources to shared renderers', testContext => {
+it('ANARI forwards committed image-based-lighting resources to shared renderers', () => {
   const graphicsDevice = new NullDevice({});
   const device = new ANARIDevice(graphicsDevice);
   const environment = {
@@ -267,62 +251,55 @@ test('ANARI forwards committed image-based-lighting resources to shared renderer
   const frame = device.newFrame({world, camera, renderer, size: [16, 16]});
   const adapter = new ANARISceneAdapter();
 
-  testContext.equal(
+  expect(
     adapter.makeRenderOptions(frame)?.environment,
-    environment,
     'caller-owned cubemaps, lookup texture, intensity, and rotation reach the shared scene'
-  );
+  ).toBe(environment);
 
   const updatedEnvironment = {...environment, intensity: 0.75, rotation: 1.25};
   renderer.setParameter('environment', updatedEnvironment);
-  testContext.equal(
+  expect(
     adapter.makeRenderOptions(frame)?.environment,
-    environment,
     'staged environment changes remain invisible until the renderer is committed'
-  );
+  ).toBe(environment);
   renderer.commitParameters();
-  testContext.equal(
+  expect(
     adapter.makeRenderOptions(frame)?.environment,
-    updatedEnvironment,
     'committed environment changes reach shared forward and deferred renderers'
-  );
+  ).toBe(updatedEnvironment);
 
   renderer.unsetParameter('environment').commitParameters();
-  testContext.equal(
+  expect(
     adapter.makeRenderOptions(frame)?.environment,
-    undefined,
     'removing environment resources restores ordinary direct-light rendering'
-  );
+  ).toBe(undefined);
 
   adapter.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI preserves matte defaults and resolves blend versus mask modes', testContext => {
+it('ANARI preserves matte defaults and resolves blend versus mask modes', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const matte = device.newMaterial('matte', {metallic: 1, roughness: 0.1});
   const translucent = device.newMaterial('physicallyBased', {opacity: 0.4});
   const transmissive = device.newMaterial('physicallyBased', {transmission: 0.8});
   const opaque = device.newMaterial('physicallyBased', {opacity: 0.4, alphaMode: 'opaque'});
 
-  testContext.deepEqual(
+  expect(
     makeSceneMaterial(matte).uniforms?.metallicRoughnessValues,
-    [0, 0.92],
     'matte material handles remain diffuse and rough'
-  );
-  testContext.equal(makeSceneMaterial(translucent).alphaMode, 'BLEND', 'opacity enables blending');
-  testContext.equal(
+  ).toEqual([0, 0.92]);
+  expect(makeSceneMaterial(translucent).alphaMode, 'opacity enables blending').toBe('BLEND');
+  expect(
     makeSceneMaterial(transmissive).alphaMode,
-    'OPAQUE',
     'physical transmission preserves the authored opaque pipeline'
-  );
-  testContext.equal(
+  ).toBe('OPAQUE');
+  expect(
     makeSceneMaterial(opaque).alphaMode,
-    'OPAQUE',
     'an explicit opaque mode overrides automatic blend selection'
-  );
+  ).toBe('OPAQUE');
 
   device.destroy();
-  testContext.end();
+  void 0;
 });

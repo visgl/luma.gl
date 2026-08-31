@@ -6,13 +6,13 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
 import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical kernels', async testCase => {
+it('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical kernels', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -25,8 +25,8 @@ test('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical 
     guardBand: 0
   });
   if (!support.supported) {
-    testCase.comment(support.reason || 'FFT convolution is not supported');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -69,28 +69,27 @@ test('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical 
 
   try {
     const identityEncoder = device.createCommandEncoder({id: 'fft-bloom-identity-encoder'});
-    testCase.equal(
+    expect(
       renderer.encode(identityEncoder, {sourceTexture, outputTexture}),
-      outputTexture,
       'encoding returns the caller-owned HDR destination'
-    );
+    ).toBe(outputTexture);
     device.submit(identityEncoder.finish());
     const identityPixels = await readHDRPixels(outputTexture, width, height);
     const readPixel = (pixels: number[], pixelX: number, pixelY: number, channel = 0): number =>
       pixels[(pixelY * width + pixelX) * 4 + channel];
 
-    testCase.ok(
-      readPixel(identityPixels, centerX, centerY) > 14,
+    expect(
+      Boolean(readPixel(identityPixels, centerX, centerY) > 14),
       'an identity optical kernel preserves and composites the red HDR highlight'
-    );
-    testCase.ok(
-      readPixel(identityPixels, centerX, centerY, 1) > 7,
+    ).toBe(true);
+    expect(
+      Boolean(readPixel(identityPixels, centerX, centerY, 1) > 7),
       'the green channel is transformed independently'
-    );
-    testCase.ok(
-      readPixel(identityPixels, centerX + 1, centerY) < 0.02,
+    ).toBe(true);
+    expect(
+      Boolean(readPixel(identityPixels, centerX + 1, centerY) < 0.02),
       'the identity kernel does not invent neighboring diffraction'
-    );
+    ).toBe(true);
 
     const diffractionKernel = new Float32Array(width * height);
     diffractionKernel[0] = 0.5;
@@ -102,18 +101,20 @@ test('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical 
     device.submit(diffractionEncoder.finish());
     const diffractionPixels = await readHDRPixels(outputTexture, width, height);
 
-    testCase.ok(
-      readPixel(diffractionPixels, centerX - 1, centerY) > 1,
+    expect(
+      Boolean(readPixel(diffractionPixels, centerX - 1, centerY) > 1),
       'a changed point-spread function redistributes energy left of the highlight'
-    );
-    testCase.ok(
-      readPixel(diffractionPixels, centerX + 1, centerY) > 1,
+    ).toBe(true);
+    expect(
+      Boolean(readPixel(diffractionPixels, centerX + 1, centerY) > 1),
       'a changed point-spread function redistributes energy right of the highlight'
-    );
-    testCase.ok(
-      readPixel(diffractionPixels, centerX, centerY) < readPixel(identityPixels, centerX, centerY),
+    ).toBe(true);
+    expect(
+      Boolean(
+        readPixel(diffractionPixels, centerX, centerY) < readPixel(identityPixels, centerX, centerY)
+      ),
       'normalized diffraction reduces the central peak instead of duplicating energy'
-    );
+    ).toBe(true);
 
     const redKernel = new Float32Array(width * height);
     const greenKernel = new Float32Array(width * height);
@@ -127,28 +128,28 @@ test('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical 
     device.submit(spectralEncoder.finish());
     const spectralPixels = await readHDRPixels(outputTexture, width, height);
 
-    testCase.ok(
-      readPixel(spectralPixels, centerX + 1, centerY, 0) > 5,
+    expect(
+      Boolean(readPixel(spectralPixels, centerX + 1, centerY, 0) > 5),
       'the measured red point-spread function shifts red diffraction right'
-    );
-    testCase.ok(
-      readPixel(spectralPixels, centerX - 1, centerY, 2) > 1,
+    ).toBe(true);
+    expect(
+      Boolean(readPixel(spectralPixels, centerX - 1, centerY, 2) > 1),
       'the independent blue point-spread function shifts blue diffraction left'
-    );
+    ).toBe(true);
   } finally {
     renderer.destroy();
     renderer.destroy();
     sourceTexture.destroy();
     outputTexture.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPUConvolutionBloom zero-padded guard bands prevent opposite-edge diffraction', async testCase => {
+it('GPUConvolutionBloom zero-padded guard bands prevent opposite-edge diffraction', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -161,8 +162,8 @@ test('GPUConvolutionBloom zero-padded guard bands prevent opposite-edge diffract
     guardBand: 0.25
   });
   if (!support.supported || !support.stats) {
-    testCase.comment(support.reason || 'Padded FFT convolution is not supported');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -200,14 +201,19 @@ test('GPUConvolutionBloom zero-padded guard bands prevent opposite-edge diffract
     renderer.encode(encoder, {sourceTexture, outputTexture});
     device.submit(encoder.finish());
     const pixels = await readHDRPixels(outputTexture, width, height);
-    testCase.ok(pixels[(8 * width + width - 1) * 4] < 0.02, 'left-edge light cannot wrap right');
-    testCase.ok(pixels[8 * width * 4] > 8, 'the original edge highlight remains visible');
+    expect(
+      Boolean(pixels[(8 * width + width - 1) * 4] < 0.02),
+      'left-edge light cannot wrap right'
+    ).toBe(true);
+    expect(Boolean(pixels[8 * width * 4] > 8), 'the original edge highlight remains visible').toBe(
+      true
+    );
   } finally {
     renderer.destroy();
     sourceTexture.destroy();
     outputTexture.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 async function readHDRPixels(texture: Texture, width: number, height: number): Promise<number[]> {

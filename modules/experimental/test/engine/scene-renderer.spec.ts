@@ -12,9 +12,9 @@ import {
 } from '@luma.gl/experimental';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('SceneRenderer draws canonical instanced physical materials on available backends', async testCase => {
+it('SceneRenderer draws canonical instanced physical materials on available backends', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 1,
@@ -76,26 +76,26 @@ test('SceneRenderer draws canonical instanced physical materials on available ba
     try {
       const statistics = renderer.render(options);
       device.submit();
-      testCase.equal(statistics.drawCount, 1, `${device.type} executes one canonical PBR draw`);
-      testCase.equal(statistics.instanceCount, 2, `${device.type} preserves both placements`);
-      testCase.equal(statistics.triangleCount, 2, `${device.type} counts indexed instances`);
+      expect(statistics.drawCount, `${device.type} executes one canonical PBR draw`).toBe(1);
+      expect(statistics.instanceCount, `${device.type} preserves both placements`).toBe(2);
+      expect(statistics.triangleCount, `${device.type} counts indexed instances`).toBe(2);
 
       surface.material.uniforms = {...surface.material.uniforms, clearcoatFactor: 0.8};
-      testCase.equal(renderer.render(options).drawCount, 1, `${device.type} updates PBR uniforms`);
+      expect(renderer.render(options).drawCount, `${device.type} updates PBR uniforms`).toBe(1);
       device.submit();
     } finally {
       renderer.destroy();
       texture.destroy();
     }
   }
-  testCase.end();
+  void 0;
 });
 
-test('SceneRenderer refracts captured opaque color while preserving opaque transmission alpha', async testCase => {
+it('SceneRenderer refracts captured opaque color while preserving opaque transmission alpha', async () => {
   let testedDeviceCount = 0;
   for (const device of await getLiveRenderingDevices()) {
     if (isSoftwareBackedWebGLDevice(device)) {
-      testCase.comment('software WebGL cannot reliably compile scene-texture PBR variants');
+      void 0;
       continue;
     }
 
@@ -154,16 +154,19 @@ test('SceneRenderer refracts captured opaque color while preserving opaque trans
         makePhysicalRenderOptions(device, [glassSurface, backgroundSurface], framebuffer)
       );
       device.submit();
-      testCase.equal(statistics.drawCount, 2, `${device.type} counts only final scene draws`);
+      expect(statistics.drawCount, `${device.type} counts only final scene draws`).toBe(2);
 
       if (supportsPhysicalPixelReadback(device)) {
         const pixel = await readPhysicalTestPixel(colorTexture, 16, 16);
         const red = colorTexture.format.startsWith('bgra') ? pixel[2] : pixel[0];
         const green = pixel[1];
-        testCase.ok(red > green * 2, `${device.type} refracts captured red opaque scene color`);
-        testCase.equal(pixel[3], 255, `${device.type} keeps physical transmission opaque`);
+        expect(
+          Boolean(red > green * 2),
+          `${device.type} refracts captured red opaque scene color`
+        ).toBe(true);
+        expect(pixel[3], `${device.type} keeps physical transmission opaque`).toBe(255);
       } else {
-        testCase.comment('software WebGPU renders transmission without unsupported pixel readback');
+        void 0;
       }
     } finally {
       renderer.destroy();
@@ -173,15 +176,18 @@ test('SceneRenderer refracts captured opaque color while preserving opaque trans
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one hardware or WebGPU transmission backend runs');
-  testCase.end();
+  expect(
+    Boolean(testedDeviceCount > 0),
+    'at least one hardware or WebGPU transmission backend runs'
+  ).toBe(true);
+  void 0;
 });
 
-test('PBREnvironmentGenerator integrates cubemap roughness mips and renders portable IBL', async testCase => {
+it('PBREnvironmentGenerator integrates cubemap roughness mips and renders portable IBL', async () => {
   let testedDeviceCount = 0;
   for (const device of await getLiveRenderingDevices()) {
     if (isSoftwareBackedWebGLDevice(device)) {
-      testCase.comment('software WebGL cannot reliably compile environment-texture PBR variants');
+      void 0;
       continue;
     }
 
@@ -213,11 +219,7 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
       });
 
       try {
-        testCase.equal(
-          environment.specularTexture.mipLevels,
-          3,
-          `${device.type} generates all mips`
-        );
+        expect(environment.specularTexture.mipLevels, `${device.type} generates all mips`).toBe(3);
         if (supportsPhysicalPixelReadback(device)) {
           const specularPixel = await readPhysicalTestPixel(environment.specularTexture, 0, 0);
           const roughSpecularPixel = await readPhysicalTestPixel(
@@ -228,19 +230,22 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
           );
           const diffusePixel = await readPhysicalTestPixel(environment.diffuseTexture, 0, 0);
           const brdfPixel = await readPhysicalTestPixel(environment.brdfLUTTexture, 2, 2);
-          testCase.ok(
-            specularPixel[0] > specularPixel[1],
+          expect(
+            Boolean(specularPixel[0] > specularPixel[1]),
             `${device.type} filters source radiance`
-          );
-          testCase.ok(
-            Math.abs(specularPixel[1] - roughSpecularPixel[1]) > 5,
+          ).toBe(true);
+          expect(
+            Boolean(Math.abs(specularPixel[1] - roughSpecularPixel[1]) > 5),
             `${device.type} integrates different radiance at rough specular mip levels`
-          );
-          testCase.ok(
-            diffusePixel[0] > diffusePixel[1],
+          ).toBe(true);
+          expect(
+            Boolean(diffusePixel[0] > diffusePixel[1]),
             `${device.type} integrates diffuse irradiance`
-          );
-          testCase.ok(brdfPixel[0] > 0, `${device.type} integrates the split-sum BRDF lookup`);
+          ).toBe(true);
+          expect(
+            Boolean(brdfPixel[0] > 0),
+            `${device.type} integrates the split-sum BRDF lookup`
+          ).toBe(true);
         }
 
         const surface: SceneSurface = {
@@ -274,11 +279,7 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
         try {
           const options = makePhysicalRenderOptions(device, [surface], environmentFramebuffer);
           options.environment = environment;
-          testCase.equal(
-            renderer.render(options).drawCount,
-            1,
-            `${device.type} shades generated IBL`
-          );
+          expect(renderer.render(options).drawCount, `${device.type} shades generated IBL`).toBe(1);
           device.submit();
 
           if (supportsPhysicalPixelReadback(device)) {
@@ -293,20 +294,19 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
             );
 
             for (let channelIndex = 0; channelIndex < 3; channelIndex++) {
-              testCase.ok(
-                Math.abs(
-                  ordinaryEnvironmentColor[channelIndex] - manualSRGBEnvironmentColor[channelIndex]
-                ) <= 2,
+              expect(
+                Boolean(
+                  Math.abs(
+                    ordinaryEnvironmentColor[channelIndex] -
+                      manualSRGBEnvironmentColor[channelIndex]
+                  ) <= 2
+                ),
                 `${device.type} never decodes generated linear IBL channel ${channelIndex} twice`
-              );
+              ).toBe(true);
             }
           } else {
             surface.material.defines = {MANUAL_SRGB: true};
-            testCase.equal(
-              renderer.render(options).drawCount,
-              1,
-              'software WebGPU keeps IBL linear'
-            );
+            expect(renderer.render(options).drawCount, 'software WebGPU keeps IBL linear').toBe(1);
             device.submit();
           }
         } finally {
@@ -333,10 +333,10 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
               0,
               0
             );
-            testCase.ok(
-              convertedSourcePixel[0] < linearSourcePixel[0],
+            expect(
+              Boolean(convertedSourcePixel[0] < linearSourcePixel[0]),
               `${device.type} converts sRGB source radiance exactly once`
-            );
+            ).toBe(true);
           }
 
           const hardwareSRGBSource = device.createTexture({
@@ -363,10 +363,10 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
                   0,
                   0
                 );
-                testCase.ok(
-                  Math.abs(hardwareConvertedPixel[0] - convertedSourcePixel[0]) <= 2,
+                expect(
+                  Boolean(Math.abs(hardwareConvertedPixel[0] - convertedSourcePixel[0]) <= 2),
                   `${device.type} avoids double-decoding hardware sRGB environment textures`
-                );
+                ).toBe(true);
               }
             } finally {
               hardwareSRGBEnvironment.destroy();
@@ -387,8 +387,11 @@ test('PBREnvironmentGenerator integrates cubemap roughness mips and renders port
     }
   }
 
-  testCase.ok(testedDeviceCount > 0, 'at least one hardware or WebGPU environment backend runs');
-  testCase.end();
+  expect(
+    Boolean(testedDeviceCount > 0),
+    'at least one hardware or WebGPU environment backend runs'
+  ).toBe(true);
+  void 0;
 });
 
 function makePhysicalTestGeometry(): Geometry {

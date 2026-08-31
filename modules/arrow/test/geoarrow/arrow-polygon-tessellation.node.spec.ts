@@ -3,14 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {tesselateAsync, tessellateArrowPolygons} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 type Coordinate = [number, number] | [number, number, number] | [number, number, number, number];
 type Color = [number, number, number, number];
 
-test('tessellateArrowPolygons tessellates polygon holes and expands row colors', t => {
+it('tessellateArrowPolygons tessellates polygon holes and expands row colors', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -35,25 +35,23 @@ test('tessellateArrowPolygons tessellates polygon holes and expands row colors',
 
   const result = tessellateArrowPolygons({polygons, colors});
 
-  t.equal(result.vertexCount, 8, 'keeps source polygon vertices');
-  t.ok(result.triangleCount > 0, 'generates triangles');
-  t.ok(
-    Array.from(result.indices).every(index => index < result.vertexCount),
+  expect(result.vertexCount, 'keeps source polygon vertices').toBe(8);
+  expect(Boolean(result.triangleCount > 0), 'generates triangles').toBe(true);
+  expect(
+    Boolean(Array.from(result.indices).every(index => index < result.vertexCount)),
     'all triangle indices are in range'
-  );
-  t.ok(
-    getTriangleCentroids(result).every(([x, y]) => !(x > 1 && x < 3 && y > 1 && y < 3)),
+  ).toBe(true);
+  expect(
+    Boolean(getTriangleCentroids(result).every(([x, y]) => !(x > 1 && x < 3 && y > 1 && y < 3))),
     'triangles do not fill the hole'
-  );
-  t.deepEqual(
-    Array.from(result.colors.slice(0, 8)),
-    [10, 20, 30, 220, 10, 20, 30, 220],
-    'row color expands to vertex colors'
-  );
-  t.end();
+  ).toBe(true);
+  expect(Array.from(result.colors.slice(0, 8)), 'row color expands to vertex colors').toEqual([
+    10, 20, 30, 220, 10, 20, 30, 220
+  ]);
+  void 0;
 });
 
-test('tessellateArrowPolygons preserves one row id across multipolygon primitives', t => {
+it('tessellateArrowPolygons preserves one row id across multipolygon primitives', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -82,17 +80,16 @@ test('tessellateArrowPolygons preserves one row id across multipolygon primitive
 
   const result = tessellateArrowPolygons({polygons, colors});
 
-  t.equal(result.polygonCount, 2, 'counts primitive polygons inside the multipolygon');
-  t.deepEqual(Array.from(result.rowIndices), new Array(8).fill(0), 'keeps the source row id');
-  t.deepEqual(
+  expect(result.polygonCount, 'counts primitive polygons inside the multipolygon').toBe(2);
+  expect(Array.from(result.rowIndices), 'keeps the source row id').toEqual(new Array(8).fill(0));
+  expect(
     Array.from(result.colors.slice(0, 4)),
-    [30, 140, 220, 255],
     'applies row color to multipolygon vertices'
-  );
-  t.end();
+  ).toEqual([30, 140, 220, 255]);
+  void 0;
 });
 
-test('tessellateArrowPolygons accepts GeoArrow DenseUnion polygon rows', t => {
+it('tessellateArrowPolygons accepts GeoArrow DenseUnion polygon rows', () => {
   const polygons = makeDenseUnionGeometryVector(
     [
       [
@@ -136,28 +133,24 @@ test('tessellateArrowPolygons accepts GeoArrow DenseUnion polygon rows', t => {
 
   const result = tessellateArrowPolygons({polygons, colors});
 
-  t.equal(result.rowCount, 2, 'keeps the top-level DenseUnion row count');
-  t.equal(result.polygonCount, 3, 'counts Polygon plus MultiPolygon primitive polygons');
-  t.deepEqual(Array.from(result.rowIndices.slice(0, 4)), [0, 0, 0, 0], 'uses union row 0');
-  t.deepEqual(
+  expect(result.rowCount, 'keeps the top-level DenseUnion row count').toBe(2);
+  expect(result.polygonCount, 'counts Polygon plus MultiPolygon primitive polygons').toBe(3);
+  expect(Array.from(result.rowIndices.slice(0, 4)), 'uses union row 0').toEqual([0, 0, 0, 0]);
+  expect(
     Array.from(result.rowIndices.slice(4)),
-    new Array(8).fill(1),
     'uses union row 1 for all MultiPolygon vertices'
-  );
-  t.deepEqual(
-    Array.from(result.colors.slice(0, 4)),
-    [10, 20, 30, 255],
-    'applies the first union row color'
-  );
-  t.deepEqual(
+  ).toEqual(new Array(8).fill(1));
+  expect(Array.from(result.colors.slice(0, 4)), 'applies the first union row color').toEqual([
+    10, 20, 30, 255
+  ]);
+  expect(
     Array.from(result.colors.slice(16, 20)),
-    [40, 50, 60, 230],
     'applies the second union row color to MultiPolygon vertices'
-  );
-  t.end();
+  ).toEqual([40, 50, 60, 230]);
+  void 0;
 });
 
-test('tessellateArrowPolygons accepts pre-tessellated flat rows and vertex colors', t => {
+it('tessellateArrowPolygons accepts pre-tessellated flat rows and vertex colors', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -185,17 +178,15 @@ test('tessellateArrowPolygons accepts pre-tessellated flat rows and vertex color
 
   const result = tessellateArrowPolygons({polygons, colors}, {tessellated: true});
 
-  t.deepEqual(Array.from(result.indices), [0, 1, 2, 3, 4, 5], 'uses sequential indices');
-  t.equal(result.triangleCount, 2, 'draws two supplied triangles');
-  t.deepEqual(
-    Array.from(result.colors.slice(0, 8)),
-    [255, 0, 0, 255, 0, 255, 0, 255],
-    'keeps per-vertex colors'
-  );
-  t.end();
+  expect(Array.from(result.indices), 'uses sequential indices').toEqual([0, 1, 2, 3, 4, 5]);
+  expect(result.triangleCount, 'draws two supplied triangles').toBe(2);
+  expect(Array.from(result.colors.slice(0, 8)), 'keeps per-vertex colors').toEqual([
+    255, 0, 0, 255, 0, 255, 0, 255
+  ]);
+  void 0;
 });
 
-test('tesselateAsync returns tessellated polygon results', async t => {
+it('tesselateAsync returns tessellated polygon results', async () => {
   const polygons = makeNestedVector(
     [
       [
@@ -210,12 +201,12 @@ test('tesselateAsync returns tessellated polygon results', async t => {
 
   const result = await tesselateAsync({polygons}, {tessellated: true});
 
-  t.deepEqual(Array.from(result.indices), [0, 1, 2], 'returns triangle indices');
-  t.equal(result.vertexCount, 3, 'returns generated vertices');
-  t.end();
+  expect(Array.from(result.indices), 'returns triangle indices').toEqual([0, 1, 2]);
+  expect(result.vertexCount, 'returns generated vertices').toBe(3);
+  void 0;
 });
 
-test('tessellateArrowPolygons keeps rowIndexOffset separate from batch-local color rows', t => {
+it('tessellateArrowPolygons keeps rowIndexOffset separate from batch-local color rows', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -234,16 +225,14 @@ test('tessellateArrowPolygons keeps rowIndexOffset separate from batch-local col
     {tessellated: true, rowIndexOffset: 1000}
   );
 
-  t.deepEqual(Array.from(result.rowIndices), [1000, 1000, 1000], 'writes global row ids');
-  t.deepEqual(
-    Array.from(result.colors.slice(0, 4)),
-    [90, 100, 110, 220],
-    'reads colors from the local batch row'
-  );
-  t.end();
+  expect(Array.from(result.rowIndices), 'writes global row ids').toEqual([1000, 1000, 1000]);
+  expect(Array.from(result.colors.slice(0, 4)), 'reads colors from the local batch row').toEqual([
+    90, 100, 110, 220
+  ]);
+  void 0;
 });
 
-test('tessellateArrowPolygons validates tessellated row vertex counts', t => {
+it('tessellateArrowPolygons validates tessellated row vertex counts', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -257,15 +246,14 @@ test('tessellateArrowPolygons validates tessellated row vertex counts', t => {
     'float32'
   );
 
-  t.throws(
+  expect(
     () => tessellateArrowPolygons({polygons}, {tessellated: true}),
-    /multiple of 3/,
     'rejects non-triangle flat rows'
-  );
-  t.end();
+  ).toThrow(/multiple of 3/);
+  void 0;
 });
 
-test('tessellateArrowPolygons normalizes Float64 source coordinates to Float32 positions', t => {
+it('tessellateArrowPolygons normalizes Float64 source coordinates to Float32 positions', () => {
   const polygons = makeNestedVector(
     [
       [
@@ -283,76 +271,70 @@ test('tessellateArrowPolygons normalizes Float64 source coordinates to Float32 p
 
   const result = tessellateArrowPolygons({polygons});
 
-  t.ok(result.positions instanceof Float32Array, 'returns Float32 GPU positions');
-  t.equal(result.sourceDimension, 3, 'tracks source coordinate dimension');
-  t.deepEqual(
-    Array.from(result.positions.slice(0, 8)),
-    [0, 0, 1, 0, 1, 0, 2, 0],
-    'pads source XYZ positions to vec4 rows'
+  expect(Boolean(result.positions instanceof Float32Array), 'returns Float32 GPU positions').toBe(
+    true
   );
-  t.end();
+  expect(result.sourceDimension, 'tracks source coordinate dimension').toBe(3);
+  expect(
+    Array.from(result.positions.slice(0, 8)),
+    'pads source XYZ positions to vec4 rows'
+  ).toEqual([0, 0, 1, 0, 1, 0, 2, 0]);
+  void 0;
 });
 
-test('tessellateArrowPolygons normalizes separated GeoArrow polygon fixtures', t => {
+it('tessellateArrowPolygons normalizes separated GeoArrow polygon fixtures', () => {
   const separatedPolygons = getGeoArrowFixtureGeometry('example_polygon.arrows');
   const interleavedPolygons = getGeoArrowFixtureGeometry('example_polygon_interleaved.arrows');
 
   const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
   const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
 
-  t.equal(separatedResult.sourceDimension, 2, 'tracks the separated XY source dimension');
-  t.deepEqual(
-    Array.from(separatedResult.positions),
-    Array.from(interleavedResult.positions),
-    'matches interleaved polygon positions'
+  expect(separatedResult.sourceDimension, 'tracks the separated XY source dimension').toBe(2);
+  expect(Array.from(separatedResult.positions), 'matches interleaved polygon positions').toEqual(
+    Array.from(interleavedResult.positions)
   );
-  t.deepEqual(
-    Array.from(separatedResult.indices),
-    Array.from(interleavedResult.indices),
-    'matches interleaved polygon indices'
+  expect(Array.from(separatedResult.indices), 'matches interleaved polygon indices').toEqual(
+    Array.from(interleavedResult.indices)
   );
-  t.end();
+  void 0;
 });
 
-test('tessellateArrowPolygons normalizes separated GeoArrow multipolygon fixtures', t => {
+it('tessellateArrowPolygons normalizes separated GeoArrow multipolygon fixtures', () => {
   const separatedPolygons = getGeoArrowFixtureGeometry('example_multipolygon.arrows');
   const interleavedPolygons = getGeoArrowFixtureGeometry('example_multipolygon_interleaved.arrows');
 
   const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
   const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
 
-  t.equal(separatedResult.sourceDimension, 2, 'tracks the separated XY source dimension');
-  t.equal(separatedResult.polygonCount, interleavedResult.polygonCount, 'matches polygon count');
-  t.deepEqual(
+  expect(separatedResult.sourceDimension, 'tracks the separated XY source dimension').toBe(2);
+  expect(separatedResult.polygonCount, 'matches polygon count').toBe(
+    interleavedResult.polygonCount
+  );
+  expect(
     Array.from(separatedResult.positions),
-    Array.from(interleavedResult.positions),
     'matches interleaved multipolygon positions'
+  ).toEqual(Array.from(interleavedResult.positions));
+  expect(Array.from(separatedResult.indices), 'matches interleaved multipolygon indices').toEqual(
+    Array.from(interleavedResult.indices)
   );
-  t.deepEqual(
-    Array.from(separatedResult.indices),
-    Array.from(interleavedResult.indices),
-    'matches interleaved multipolygon indices'
-  );
-  t.end();
+  void 0;
 });
 
-test('tessellateArrowPolygons preserves separated GeoArrow ZM coordinates', t => {
+it('tessellateArrowPolygons preserves separated GeoArrow ZM coordinates', () => {
   const separatedPolygons = getGeoArrowFixtureGeometry('example_polygon-zm.arrows');
   const interleavedPolygons = getGeoArrowFixtureGeometry('example_polygon-zm_interleaved.arrows');
 
   const separatedResult = tessellateArrowPolygons({polygons: separatedPolygons});
   const interleavedResult = tessellateArrowPolygons({polygons: interleavedPolygons});
 
-  t.equal(separatedResult.sourceDimension, 4, 'tracks separated XYZM source dimensions');
-  t.deepEqual(
-    Array.from(separatedResult.positions),
-    Array.from(interleavedResult.positions),
-    'matches interleaved ZM polygon positions'
+  expect(separatedResult.sourceDimension, 'tracks separated XYZM source dimensions').toBe(4);
+  expect(Array.from(separatedResult.positions), 'matches interleaved ZM polygon positions').toEqual(
+    Array.from(interleavedResult.positions)
   );
-  t.end();
+  void 0;
 });
 
-test('tessellateArrowPolygons accepts separated GeoArrow DenseUnion polygon rows', t => {
+it('tessellateArrowPolygons accepts separated GeoArrow DenseUnion polygon rows', () => {
   const polygons = makeSeparatedDenseUnionGeometryVector(
     [[99, 99]],
     [
@@ -394,35 +376,37 @@ test('tessellateArrowPolygons accepts separated GeoArrow DenseUnion polygon rows
 
   const result = tessellateArrowPolygons({polygons});
 
-  t.equal(result.rowCount, 3, 'keeps the DenseUnion row count');
-  t.equal(result.polygonCount, 3, 'counts only Polygon and MultiPolygon primitive polygons');
-  t.deepEqual(Array.from(result.rowIndices.slice(0, 4)), [1, 1, 1, 1], 'skips point row 0');
-  t.deepEqual(
+  expect(result.rowCount, 'keeps the DenseUnion row count').toBe(3);
+  expect(result.polygonCount, 'counts only Polygon and MultiPolygon primitive polygons').toBe(3);
+  expect(Array.from(result.rowIndices.slice(0, 4)), 'skips point row 0').toEqual([1, 1, 1, 1]);
+  expect(
     Array.from(result.rowIndices.slice(4)),
-    new Array(8).fill(2),
     'uses union row 2 for all MultiPolygon vertices'
-  );
-  t.end();
+  ).toEqual(new Array(8).fill(2));
+  void 0;
 });
 
-test('tessellateArrowPolygons tessellates large polygons with holes', t => {
+it('tessellateArrowPolygons tessellates large polygons with holes', () => {
   const outerRing = makeCircleRing(10, 96);
   const holeRing = makeCircleRing(3, 32, true);
   const polygons = makeNestedVector([[outerRing, holeRing]], 2, 'float32');
 
   const result = tessellateArrowPolygons({polygons});
 
-  t.equal(result.vertexCount, 128, 'keeps all source vertices');
-  t.ok(result.triangleCount > 96, 'generates triangles through the indexed earcut path');
-  t.ok(
-    Array.from(result.indices).every(index => index < result.vertexCount),
+  expect(result.vertexCount, 'keeps all source vertices').toBe(128);
+  expect(
+    Boolean(result.triangleCount > 96),
+    'generates triangles through the indexed earcut path'
+  ).toBe(true);
+  expect(
+    Boolean(Array.from(result.indices).every(index => index < result.vertexCount)),
     'all triangle indices are in range'
-  );
-  t.ok(
-    getTriangleCentroids(result).every(([x, y]) => Math.hypot(x, y) >= 2.5),
+  ).toBe(true);
+  expect(
+    Boolean(getTriangleCentroids(result).every(([x, y]) => Math.hypot(x, y) >= 2.5)),
     'triangles do not fill the circular hole'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
 function getTriangleCentroids(

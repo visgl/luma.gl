@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {waterMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-export function registerWaterMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#waterMaterial', t => {
+export function registerWaterMaterialTests(test: typeof it): void {
+  test('shadertools#waterMaterial', () => {
     let uniforms = waterMaterial.getUniforms({});
-    t.deepEqual(uniforms, waterMaterial.defaultUniforms, 'default water uniforms resolve');
+    expect(uniforms, 'default water uniforms resolve').toEqual(waterMaterial.defaultUniforms);
 
     uniforms = waterMaterial.getUniforms({
       baseColor: [0, 128, 255],
@@ -19,19 +19,19 @@ export function registerWaterMaterialTests(test: TapeTestFunction): void {
       normalStrength: 0.5
     });
 
-    t.deepEqual(uniforms.baseColor, [0, 128 / 255, 1], 'baseColor is normalized from 0-255');
-    t.deepEqual(uniforms.fresnelColor, [1, 1, 1], 'fresnelColor is normalized from 0-255');
-    t.equal(uniforms.mappingMode, 1, 'mapping prop converts to world-space mode');
-    t.deepEqual(uniforms.waveADirection, [0, 1], 'wave A direction is normalized');
-    t.deepEqual(uniforms.waveBDirection, [-1, 0], 'wave B direction is normalized');
-    t.equal(uniforms.normalStrength, 0.5, 'scalar uniforms are forwarded');
+    expect(uniforms.baseColor, 'baseColor is normalized from 0-255').toEqual([0, 128 / 255, 1]);
+    expect(uniforms.fresnelColor, 'fresnelColor is normalized from 0-255').toEqual([1, 1, 1]);
+    expect(uniforms.mappingMode, 'mapping prop converts to world-space mode').toBe(1);
+    expect(uniforms.waveADirection, 'wave A direction is normalized').toEqual([0, 1]);
+    expect(uniforms.waveBDirection, 'wave B direction is normalized').toEqual([-1, 0]);
+    expect(uniforms.normalStrength, 'scalar uniforms are forwarded').toBe(0.5);
     uniforms = waterMaterial.getUniforms({mapping: 'object'});
-    t.equal(uniforms.mappingMode, 2, 'object mapping converts to object-space mode');
-    t.ok(
-      waterMaterial.defines?.LIGHTING_FRAGMENT,
+    expect(uniforms.mappingMode, 'object mapping converts to object-space mode').toBe(2);
+    expect(
+      Boolean(waterMaterial.defines?.LIGHTING_FRAGMENT),
       'waterMaterial opts into fragment lighting helpers'
-    );
+    ).toBe(true);
 
-    t.end();
+    void 0;
   });
 }

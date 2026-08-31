@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {Buffer, Texture} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -14,11 +14,11 @@ import {
   type PointModelMode
 } from '../../../../examples/arrow/arrow-points/point-model';
 
-test('Arrow points render constant styles through WebGPU attributes and storage', async t => {
+it('Arrow points render constant styles through WebGPU attributes and storage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -65,17 +65,17 @@ test('Arrow points render constant styles through WebGPU attributes and storage'
       mode
     });
     await waitForPipeline(model.pipeline);
-    t.equal(model.pipeline.linkStatus, 'success', `${mode} pipeline links`);
+    expect(model.pipeline.linkStatus, `${mode} pipeline links`).toBe('success');
 
     const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-    t.ok(model.drawBatches(renderPass), `${mode} batch draw succeeds`);
+    expect(Boolean(model.drawBatches(renderPass)), `${mode} batch draw succeeds`).toBe(true);
     renderPass.end();
     device.submit();
     const pixels = await readPixels(colorTexture, 8, 8);
-    t.ok(
-      pixels.some((value, index) => index % 4 === 3 && value > 0),
+    expect(
+      Boolean(pixels.some((value, index) => index % 4 === 3 && value > 0)),
       `${mode} renders visible point pixels`
-    );
+    ).toBe(true);
 
     model.destroy();
     framebuffer.destroy();
@@ -83,7 +83,7 @@ test('Arrow points render constant styles through WebGPU attributes and storage'
   }
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
 async function waitForPipeline(pipeline: {

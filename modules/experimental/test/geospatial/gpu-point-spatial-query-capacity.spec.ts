@@ -12,16 +12,16 @@ import {
   type GraphDataView
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GPUPointSpatialQuery, type GPUSpatialQueryOutput} from '../../src/geospatial';
 
 const STORAGE_BINDING_ALIGNMENT = 256;
 
-test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTest => {
+it('GPUPointSpatialQuery rejects every overlapping output pair', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -75,7 +75,7 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
       const firstName = outputNames[firstIndex];
       const secondName = outputNames[secondIndex];
       const output = {...baseOutput, [secondName]: baseOutput[firstName]};
-      tapeTest.throws(
+      expect(
         () =>
           new GPUPointSpatialQuery({
             id: `${firstName}-${secondName}-alias`,
@@ -84,13 +84,12 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
             query,
             output
           }),
-        /must not overlap/,
         `${firstName} and ${secondName} cannot alias`
-      );
+      ).toThrow(/must not overlap/);
     }
   }
 
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'ids-source-ids-alias',
@@ -100,11 +99,10 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
         query,
         output: {...baseOutput, ids: sourceIds}
       }),
-    /output ids and sourceIds must not overlap/,
     'a writable output cannot alias a live source-ID read'
-  );
+  ).toThrow(/output ids and sourceIds must not overlap/);
 
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'diagnostic-output-alias',
@@ -114,10 +112,9 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
         output: baseOutput,
         candidateCount: baseOutput.count
       }),
-    /output candidateCount and output count must not overlap/,
     'candidate diagnostics cannot alias compact outputs'
-  );
-  tapeTest.throws(
+  ).toThrow(/output candidateCount and output count must not overlap/);
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'diagnostic-input-alias',
@@ -128,10 +125,9 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
         output: baseOutput,
         intersectedCellCount: sourceIds
       }),
-    /intersectedCellCount.*sourceIds must not overlap/,
     'cell diagnostics cannot alias query inputs'
-  );
-  tapeTest.throws(
+  ).toThrow(/intersectedCellCount.*sourceIds must not overlap/);
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'diagnostic-pair-alias',
@@ -142,10 +138,9 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
         intersectedCellCount,
         candidateCount: intersectedCellCount
       }),
-    /output candidateCount and output intersectedCellCount must not overlap/,
     'the two diagnostics cannot alias one another'
-  );
-  tapeTest.throws(
+  ).toThrow(/output candidateCount and output intersectedCellCount must not overlap/);
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'diagnostic-not-scalar',
@@ -159,9 +154,8 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
           byteOffset: STORAGE_BINDING_ALIGNMENT * 4
         })
       }),
-    /candidateCount must be one packed uint32 scalar/,
     'diagnostics must be scalar views'
-  );
+  ).toThrow(/candidateCount must be one packed uint32 scalar/);
 
   const foreignDiagnosticBuffer = createOutputBuffer(device, 1);
   const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-diagnostic-graph'});
@@ -179,11 +173,10 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
       1
     )
   });
-  tapeTest.throws(
+  expect(
     () => foreignQuery.addToGraph(graph),
-    /views must belong to the target graph/,
     'diagnostics must belong to the target graph'
-  );
+  ).toThrow(/views must belong to the target graph/);
 
   const packedOutputBuffer = createOutputBuffer(device, 4);
   const packedOutputHandle = graph.importBuffer(
@@ -194,7 +187,7 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
     },
     packedOutputBuffer
   );
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'packed-output-binding-alias',
@@ -215,9 +208,8 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
           })
         }
       }),
-    /must not overlap/,
     'logically disjoint rows are rejected when their aligned binding ranges overlap'
-  );
+  ).toThrow(/must not overlap/);
 
   const dynamicPositionsBuffer = new DynamicBuffer(device, {
     buffer: positionsBuffer,
@@ -235,7 +227,7 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
     format: 'uint32',
     length: 0
   });
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPointSpatialQuery({
         id: 'zero-capacity-ids-positions-alias',
@@ -244,9 +236,8 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
         query,
         output: {...baseOutput, ids: zeroCapacityIds}
       }),
-    /output ids and positions must not overlap/,
     'a zero-capacity output still binds one row and detects a shared physical default buffer'
-  );
+  ).toThrow(/output ids and positions must not overlap/);
 
   new GPUPointSpatialQuery({
     id: 'aligned-output-bindings',
@@ -259,32 +250,27 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
   }).addToGraph(graph);
   const compiled = graph.compile();
   encode(device, compiled);
-  tapeTest.equal(await readUint32At(outputBuffer, 0), 0, 'aligned output IDs are writable');
-  tapeTest.equal(
+  expect(await readUint32At(outputBuffer, 0), 'aligned output IDs are writable').toBe(0);
+  expect(
     await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT),
-    1,
     'aligned output count is writable'
-  );
-  tapeTest.equal(
+  ).toBe(1);
+  expect(
     await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 2),
-    0,
     'aligned output overflow is writable'
-  );
-  tapeTest.equal(
+  ).toBe(0);
+  expect(
     await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 3),
-    1,
     'aligned output totalCount is writable'
-  );
-  tapeTest.equal(
+  ).toBe(1);
+  expect(
     await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 4),
-    0,
     'aligned intersectedCellCount is writable'
-  );
-  tapeTest.equal(
+  ).toBe(0);
+  expect(
     await readUint32At(outputBuffer, STORAGE_BINDING_ALIGNMENT * 5),
-    1,
     'aligned candidateCount is writable'
-  );
+  ).toBe(1);
 
   compiled.destroy();
   dynamicPositionsBuffer.destroy();
@@ -294,14 +280,14 @@ test('GPUPointSpatialQuery rejects every overlapping output pair', async tapeTes
   outputBuffer.destroy();
   packedOutputBuffer.destroy();
   foreignDiagnosticBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCount', async tapeTest => {
+it('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCount', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -347,25 +333,20 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
   encode(device, compiled);
   const drawCount = await readDrawCount(drawCommands);
 
-  tapeTest.equal(drawCount, 2, 'the DrawCommandBuffer instance count is clamped to ID capacity');
+  expect(drawCount, 'the DrawCommandBuffer instance count is clamped to ID capacity').toBe(2);
   const ids = await readUint32(idsBuffer, Math.min(drawCount, 2));
-  tapeTest.equal((await readUint32(totalCountBuffer, 1))[0], 6, 'totalCount remains unclamped');
-  tapeTest.equal(
+  expect((await readUint32(totalCountBuffer, 1))[0], 'totalCount remains unclamped').toBe(6);
+  expect(
     (await readUint32(intersectedCellCountBuffer, 1))[0],
-    0,
     'a scan reports zero intersected cells'
-  );
-  tapeTest.equal(
+  ).toBe(0);
+  expect(
     (await readUint32(candidateCountBuffer, 1))[0],
-    6,
     'a valid scan presents every position row to the narrow phase'
-  );
-  tapeTest.equal((await readUint32(overflowBuffer, 1))[0], 1, 'result truncation sets overflow');
-  tapeTest.equal(new Set(ids).size, 2, 'the retained rows are unique');
-  tapeTest.ok(
-    ids.every(id => id < 6),
-    'every retained ID addresses a source row'
-  );
+  ).toBe(6);
+  expect((await readUint32(overflowBuffer, 1))[0], 'result truncation sets overflow').toBe(1);
+  expect(new Set(ids).size, 'the retained rows are unique').toBe(2);
+  expect(Boolean(ids.every(id => id < 6)), 'every retained ID addresses a source row').toBe(true);
 
   compiled.destroy();
   drawCommands.destroy();
@@ -376,14 +357,14 @@ test('GPUPointSpatialQuery clamps an indirect draw count but preserves totalCoun
   totalCountBuffer.destroy();
   intersectedCellCountBuffer.destroy();
   candidateCountBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery propagates index overflow independently of result capacity', async tapeTest => {
+it('GPUPointSpatialQuery propagates index overflow independently of result capacity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -454,34 +435,27 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
   const count = (await readUint32(countBuffer, 1))[0];
   const ids = await readUint32(idsBuffer, count);
 
-  tapeTest.equal(
-    (await readUint32(indexCountBuffer, 1))[0],
-    5,
-    'index count reports required rows'
-  );
-  tapeTest.equal((await readUint32(indexOverflowBuffer, 1))[0], 1, 'the index itself overflowed');
-  tapeTest.equal(count, 2, 'only stored row indices are refined');
-  tapeTest.equal(
+  expect((await readUint32(indexCountBuffer, 1))[0], 'index count reports required rows').toBe(5);
+  expect((await readUint32(indexOverflowBuffer, 1))[0], 'the index itself overflowed').toBe(1);
+  expect(count, 'only stored row indices are refined').toBe(2);
+  expect(
     (await readUint32(totalCountBuffer, 1))[0],
-    2,
     'totalCount covers only the candidates retained by the overflowing index'
-  );
-  tapeTest.equal(
+  ).toBe(2);
+  expect(
     (await readUint32(intersectedCellCountBuffer, 1))[0],
-    1,
     'the one-cell index reports one intersected cell'
-  );
-  tapeTest.equal(
+  ).toBe(1);
+  expect(
     (await readUint32(candidateCountBuffer, 1))[0],
-    2,
     'candidateCount covers exactly the row IDs retained by the overflowing index'
-  );
-  tapeTest.equal((await readUint32(overflowBuffer, 1))[0], 1, 'query carries index overflow');
-  tapeTest.equal(new Set(ids).size, 2, 'stored row indices remain unique');
-  tapeTest.ok(
-    ids.every(id => [101, 202, 303, 404, 505].includes(id)),
+  ).toBe(2);
+  expect((await readUint32(overflowBuffer, 1))[0], 'query carries index overflow').toBe(1);
+  expect(new Set(ids).size, 'stored row indices remain unique').toBe(2);
+  expect(
+    Boolean(ids.every(id => [101, 202, 303, 404, 505].includes(id))),
     'stored row indices are dereferenced through application source IDs'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -501,14 +475,14 @@ test('GPUPointSpatialQuery propagates index overflow independently of result cap
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery reports exact indexed broad-phase work without source-sized scratch', async tapeTest => {
+it('GPUPointSpatialQuery reports exact indexed broad-phase work without source-sized scratch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -575,16 +549,14 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   const dispatchProbe = encodeWithDispatchProbe(device, compiled, 'dispatch-query-refine');
   const count = (await readUint32(countBuffer, 1))[0];
 
-  tapeTest.deepEqual(
+  expect(
     compiled.stats.nodeOrder,
-    ['dispatch-query-prepare', 'dispatch-query-refine', 'dispatch-query-finalize'],
     'source IDs are written during refinement without a capacity-sized remap pass'
-  );
-  tapeTest.equal(
+  ).toEqual(['dispatch-query-prepare', 'dispatch-query-refine', 'dispatch-query-finalize']);
+  expect(
     compiled.stats.logicalTransientBytes,
-    15 * Uint32Array.BYTES_PER_ELEMENT,
     'the query owns only its fixed 12-word dispatch state and optional three-word result state'
-  );
+  ).toBe(15 * Uint32Array.BYTES_PER_ELEMENT);
   const baselineGraph = new GPUCommandGraph(device, {id: 'spatial-query-two-word-result-state'});
   const baselinePositions = importView(
     baselineGraph,
@@ -625,56 +597,48 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
     }
   }).addToGraph(baselineGraph);
   const baselineCompiled = baselineGraph.compile();
-  tapeTest.equal(
+  expect(
     baselineCompiled.stats.logicalTransientBytes,
-    14 * Uint32Array.BYTES_PER_ELEMENT,
     'omitting candidateCount preserves the two-word result state'
-  );
+  ).toBe(14 * Uint32Array.BYTES_PER_ELEMENT);
   baselineCompiled.destroy();
-  tapeTest.equal(dispatchProbe.indirect, 1, 'indexed refinement records one indirect dispatch');
-  tapeTest.equal(
-    dispatchProbe.direct,
-    0,
-    'indexed refinement does not record a fixed full-N dispatch'
+  expect(dispatchProbe.indirect, 'indexed refinement records one indirect dispatch').toBe(1);
+  expect(dispatchProbe.direct, 'indexed refinement does not record a fixed full-N dispatch').toBe(
+    0
   );
-  tapeTest.equal(count, 1, 'indexed refinement returns one exact match');
-  tapeTest.deepEqual(
+  expect(count, 'indexed refinement returns one exact match').toBe(1);
+  expect(
     await readUint32(idsBuffer, count),
-    [700],
     'the exact match is dereferenced to its source ID during refinement'
-  );
-  tapeTest.equal(
+  ).toEqual([700]);
+  expect(
     (await readUint32(intersectedCellCountBuffer, 1))[0],
-    9,
     'the conservative three-by-three cell range is reported exactly'
-  );
-  tapeTest.equal(
+  ).toBe(9);
+  expect(
     (await readUint32(candidateCountBuffer, 1))[0],
-    5,
     'retained rows in active cells include duplicate and invalid row IDs exactly'
-  );
+  ).toBe(5);
 
   queryBuffer.write(Float32Array.from([Number.NaN, 0, 1, 1]));
   encode(device, compiled);
-  tapeTest.deepEqual(
+  expect(
     [
       (await readUint32(intersectedCellCountBuffer, 1))[0],
       (await readUint32(candidateCountBuffer, 1))[0]
     ],
-    [0, 0],
     'a mutable invalid query resets both diagnostics'
-  );
+  ).toEqual([0, 0]);
 
   queryBuffer.write(Float32Array.from([10, 10, 11, 11]));
   encode(device, compiled);
-  tapeTest.deepEqual(
+  expect(
     [
       (await readUint32(intersectedCellCountBuffer, 1))[0],
       (await readUint32(candidateCountBuffer, 1))[0]
     ],
-    [0, 0],
     'a mutable query outside the index domain resets both diagnostics'
-  );
+  ).toEqual([0, 0]);
 
   compiled.destroy();
   for (const buffer of [
@@ -694,7 +658,7 @@ test('GPUPointSpatialQuery reports exact indexed broad-phase work without source
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
 function encodeWithDispatchProbe(

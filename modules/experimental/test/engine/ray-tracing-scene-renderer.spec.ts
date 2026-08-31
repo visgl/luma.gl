@@ -10,7 +10,7 @@ import {
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {updateRayTracingAdaptiveBudget} from '../../src/engine/ray-tracing-scene-renderer';
 
 type AdaptiveBudgetState = Parameters<typeof updateRayTracingAdaptiveBudget>[0];
@@ -36,16 +36,15 @@ function makeAdaptiveBudgetState(
   };
 }
 
-test('RayTracingSceneRenderer adaptive budget stays at or below requested resolution', testCase => {
+it('RayTracingSceneRenderer adaptive budget stays at or below requested resolution', () => {
   const budget = makeAdaptiveBudgetState();
   for (let frameIndex = 1; frameIndex <= 100; frameIndex++) {
     updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
   }
-  testCase.equal(
+  expect(
     budget.resolutionScale,
-    0.5,
     'sustained spare time never promotes the default half-resolution request to 75% or 100%'
-  );
+  ).toBe(0.5);
 
   budget.resolutionScale = 0.25;
   budget.historyNeedsReset = false;
@@ -53,15 +52,14 @@ test('RayTracingSceneRenderer adaptive budget stays at or below requested resolu
     updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
     budget.historyNeedsReset = false;
   }
-  testCase.equal(
+  expect(
     budget.resolutionScale,
-    0.5,
     'recovery can return to the requested scale but cannot overshoot it'
-  );
-  testCase.end();
+  ).toBe(0.5);
+  void 0;
 });
 
-test('RayTracingSceneRenderer adaptive budget uses stable history before sparse phases', testCase => {
+it('RayTracingSceneRenderer adaptive budget uses stable history before sparse phases', () => {
   const budget = makeAdaptiveBudgetState({
     resolutionScale: 0.25,
     averageFrameTimeMilliseconds: 50,
@@ -70,64 +68,57 @@ test('RayTracingSceneRenderer adaptive budget uses stable history before sparse 
   for (let frameIndex = 1; frameIndex <= 20; frameIndex++) {
     updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
   }
-  testCase.equal(
+  expect(
     budget.phaseCount,
-    1,
     'minimum-resolution frames remain fully covered until progressive history is stable'
-  );
+  ).toBe(1);
 
   budget.accumulatedFrameCount = 8;
   updateRayTracingAdaptiveBudget(budget, 21_000);
-  testCase.equal(budget.phaseCount, 2, 'stable history permits sparse scheduling under pressure');
+  expect(budget.phaseCount, 'stable history permits sparse scheduling under pressure').toBe(2);
 
   budget.phaseIndex = 1;
   budget.historyNeedsReset = true;
   updateRayTracingAdaptiveBudget(budget, 22_000);
-  testCase.equal(budget.phaseCount, 1, 'history invalidation returns to full pixel coverage');
-  testCase.equal(budget.phaseIndex, 0, 'history invalidation restarts sparse phase rotation');
-  testCase.end();
+  expect(budget.phaseCount, 'history invalidation returns to full pixel coverage').toBe(1);
+  expect(budget.phaseIndex, 'history invalidation restarts sparse phase rotation').toBe(0);
+  void 0;
 });
 
-test('RayTracingSceneRenderer adaptive budget requires sustained pressure', testCase => {
+it('RayTracingSceneRenderer adaptive budget requires sustained pressure', () => {
   const budget = makeAdaptiveBudgetState({averageFrameTimeMilliseconds: 50});
   for (let frameIndex = 1; frameIndex <= 5; frameIndex++) {
     updateRayTracingAdaptiveBudget(budget, frameIndex * 1000);
   }
-  testCase.equal(
+  expect(
     budget.resolutionScale,
-    0.5,
     'short frame-time spikes do not immediately rebuild lower-resolution history'
-  );
+  ).toBe(0.5);
 
   updateRayTracingAdaptiveBudget(budget, 6000);
-  testCase.equal(budget.resolutionScale, 0.375, 'sustained pressure steps down one scale');
-  testCase.equal(
-    budget.historyNeedsReset,
-    true,
-    'resolution changes explicitly invalidate history'
-  );
-  testCase.end();
+  expect(budget.resolutionScale, 'sustained pressure steps down one scale').toBe(0.375);
+  expect(budget.historyNeedsReset, 'resolution changes explicitly invalidate history').toBe(true);
+  void 0;
 });
 
-test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS within WebGPU core limits', async testCase => {
+it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS within WebGPU core limits', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const supportsRawValidationErrorScopes =
     device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback;
   if (!supportsRawValidationErrorScopes) {
-    testCase.comment('software WebGPU can cancel raw validation error-scope callbacks');
+    void 0;
   }
 
-  testCase.equal(
+  expect(
     device.limits.maxStorageBuffersPerShaderStage,
-    8,
     'GPU TLAS and BLAS construction use only the default WebGPU core storage-buffer allowance'
-  );
+  ).toBe(8);
 
   const geometry = new Geometry({
     topology: 'triangle-list',
@@ -206,11 +197,10 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     device.submit();
     if (supportsRawValidationErrorScopes) {
       const initialValidationError = await device.handle.popErrorScope();
-      testCase.equal(
+      expect(
         initialValidationError,
-        null,
         'GPU Morton TLAS and BLAS construction, nearest-hit traversal, and any-hit shadows validate'
-      );
+      ).toBe(null);
     }
     const frameResources = getRayTracingFrameResources(renderer, options.id);
     const accelerationNodeOrder = frameResources.accelerationGraph.stats.nodeOrder;
@@ -229,48 +219,56 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       accelerationNodeOrder,
       'ray-tracing-bvh-fused-refit'
     );
-    testCase.ok(
-      [
-        buildBoundsIndex,
-        initializeBoundsIndex,
-        reduceBoundsIndex,
-        encodeMortonIndex,
-        sortMortonCompletionIndex,
-        gatherBoundsIndex,
-        fusedAccelerationIndex
-      ].every(index => index >= 0) &&
-        buildBoundsIndex < reduceBoundsIndex &&
-        initializeBoundsIndex < reduceBoundsIndex &&
-        reduceBoundsIndex < encodeMortonIndex &&
-        encodeMortonIndex < sortMortonCompletionIndex &&
-        sortMortonCompletionIndex < gatherBoundsIndex &&
-        gatherBoundsIndex < fusedAccelerationIndex,
+    expect(
+      Boolean(
+        [
+          buildBoundsIndex,
+          initializeBoundsIndex,
+          reduceBoundsIndex,
+          encodeMortonIndex,
+          sortMortonCompletionIndex,
+          gatherBoundsIndex,
+          fusedAccelerationIndex
+        ].every(index => index >= 0) &&
+          buildBoundsIndex < reduceBoundsIndex &&
+          initializeBoundsIndex < reduceBoundsIndex &&
+          reduceBoundsIndex < encodeMortonIndex &&
+          encodeMortonIndex < sortMortonCompletionIndex &&
+          sortMortonCompletionIndex < gatherBoundsIndex &&
+          gatherBoundsIndex < fusedAccelerationIndex
+      ),
       'the acceleration graph tightly bounds meshes, sorts leaves, and builds the TLAS in one fused workgroup'
-    );
-    testCase.ok(
-      accelerationNodeOrder.some(identifier =>
-        identifier.includes('sort-primitive-morton-keys-bitonic-local')
+    ).toBe(true);
+    expect(
+      Boolean(
+        accelerationNodeOrder.some(identifier =>
+          identifier.includes('sort-primitive-morton-keys-bitonic-local')
+        )
       ),
       'small instance permutations reuse the general single-dispatch GPU sort primitive'
-    );
-    testCase.notOk(
-      accelerationNodeOrder.some(identifier =>
-        identifier.includes('sort-primitive-morton-keys-bitonic-initialize')
+    ).toBe(true);
+    expect(
+      Boolean(
+        accelerationNodeOrder.some(identifier =>
+          identifier.includes('sort-primitive-morton-keys-bitonic-initialize')
+        )
       ),
       'small instance permutations avoid the legacy per-stage bitonic sorting network'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('sorted-primitive-ids'),
+    ).toBe(false);
+    expect(
+      Boolean(
+        getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('sorted-primitive-ids')
+      ),
       'the acceleration graph publishes an explicit sorted primitive permutation'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('blas-nodes'),
+    ).toBe(true);
+    expect(
+      Boolean(getGraphBufferIdentifiers(frameResources.accelerationGraph).includes('blas-nodes')),
       'the acceleration graph reads exact local mesh bounds from retained BLAS roots'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.traceGraph).includes('leaf-primitive-ids'),
+    ).toBe(true);
+    expect(
+      Boolean(getGraphBufferIdentifiers(frameResources.traceGraph).includes('leaf-primitive-ids')),
       'the trace graph consumes the explicit sorted primitive permutation'
-    );
+    ).toBe(true);
     const topologyNodeOrder = frameResources.topologyGraph.stats.nodeOrder;
     const triangleBoundsIndex = findNodeIndex(topologyNodeOrder, 'build-triangle-bounds');
     const initializeBlasBoundsIndex = findNodeIndex(
@@ -286,88 +284,99 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     const gatherBlasBoundsIndex = findNodeIndex(topologyNodeOrder, 'blas-0-gather-sorted-bounds');
     const fusedBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-bvh-fused-refit-4');
     const packBlasIndex = findNodeIndex(topologyNodeOrder, 'blas-0-pack-nodes');
-    testCase.ok(
-      [
-        triangleBoundsIndex,
-        initializeBlasBoundsIndex,
-        reduceBlasBoundsIndex,
-        encodeBlasMortonIndex,
-        sortBlasMortonCompletionIndex,
-        gatherBlasBoundsIndex,
-        fusedBlasIndex,
-        packBlasIndex
-      ].every(index => index >= 0) &&
-        triangleBoundsIndex < reduceBlasBoundsIndex &&
-        initializeBlasBoundsIndex < reduceBlasBoundsIndex &&
-        reduceBlasBoundsIndex < encodeBlasMortonIndex &&
-        encodeBlasMortonIndex < sortBlasMortonCompletionIndex &&
-        sortBlasMortonCompletionIndex < gatherBlasBoundsIndex &&
-        gatherBlasBoundsIndex < fusedBlasIndex &&
-        fusedBlasIndex < packBlasIndex,
+    expect(
+      Boolean(
+        [
+          triangleBoundsIndex,
+          initializeBlasBoundsIndex,
+          reduceBlasBoundsIndex,
+          encodeBlasMortonIndex,
+          sortBlasMortonCompletionIndex,
+          gatherBlasBoundsIndex,
+          fusedBlasIndex,
+          packBlasIndex
+        ].every(index => index >= 0) &&
+          triangleBoundsIndex < reduceBlasBoundsIndex &&
+          initializeBlasBoundsIndex < reduceBlasBoundsIndex &&
+          reduceBlasBoundsIndex < encodeBlasMortonIndex &&
+          encodeBlasMortonIndex < sortBlasMortonCompletionIndex &&
+          sortBlasMortonCompletionIndex < gatherBlasBoundsIndex &&
+          gatherBlasBoundsIndex < fusedBlasIndex &&
+          fusedBlasIndex < packBlasIndex
+      ),
       'the topology graph Morton-sorts mesh triangles, batches the BLAS hierarchy, and packs trace nodes'
-    );
-    testCase.ok(
-      topologyNodeOrder.some(identifier =>
-        identifier.includes('blas-sort-triangle-morton-keys-bitonic-local-4')
+    ).toBe(true);
+    expect(
+      Boolean(
+        topologyNodeOrder.some(identifier =>
+          identifier.includes('blas-sort-triangle-morton-keys-bitonic-local-4')
+        )
       ),
       'small mesh triangle permutations reuse the general segmented single-dispatch GPU sort primitive'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-nodes') &&
-        getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-triangle-ids'),
+    ).toBe(true);
+    expect(
+      Boolean(
+        getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-nodes') &&
+          getGraphBufferIdentifiers(frameResources.topologyGraph).includes('blas-triangle-ids')
+      ),
       'the topology graph publishes packed BLAS nodes and triangle permutations'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.traceGraph).includes('blas-nodes') &&
-        getGraphBufferIdentifiers(frameResources.traceGraph).includes('blas-triangle-ids'),
+    ).toBe(true);
+    expect(
+      Boolean(
+        getGraphBufferIdentifiers(frameResources.traceGraph).includes('blas-nodes') &&
+          getGraphBufferIdentifiers(frameResources.traceGraph).includes('blas-triangle-ids')
+      ),
       'the trace graph consumes packed BLAS nodes and triangle permutations'
-    );
+    ).toBe(true);
     const refitNodeOrder = frameResources.refitGraph.stats.nodeOrder;
     const refitBoundsIndex = findNodeIndex(refitNodeOrder, 'refit-primitive-bounds');
     const refitGatherIndex = findNodeIndex(refitNodeOrder, 'refit-gather-sorted-bounds');
     const fusedRefitIndex = findNodeIndex(refitNodeOrder, 'ray-tracing-refit-bvh-fused-refit');
-    testCase.ok(
-      [refitBoundsIndex, refitGatherIndex, fusedRefitIndex].every(index => index >= 0) &&
-        refitBoundsIndex < refitGatherIndex &&
-        refitGatherIndex < fusedRefitIndex,
+    expect(
+      Boolean(
+        [refitBoundsIndex, refitGatherIndex, fusedRefitIndex].every(index => index >= 0) &&
+          refitBoundsIndex < refitGatherIndex &&
+          refitGatherIndex < fusedRefitIndex
+      ),
       'the transform-only graph tightly bounds meshes and refits the retained TLAS in one fused workgroup'
-    );
-    testCase.notOk(
-      refitNodeOrder.some(
-        identifier =>
-          identifier.includes('scene-bounds') ||
-          identifier.includes('build-morton-keys') ||
-          identifier.includes('sort-primitive-morton-keys')
+    ).toBe(true);
+    expect(
+      Boolean(
+        refitNodeOrder.some(
+          identifier =>
+            identifier.includes('scene-bounds') ||
+            identifier.includes('build-morton-keys') ||
+            identifier.includes('sort-primitive-morton-keys')
+        )
       ),
       'the transform-only graph omits scene reduction, Morton encoding, and sorting'
-    );
-    testCase.notOk(
-      refitNodeOrder.some(identifier => identifier.includes('-blas-')),
+    ).toBe(false);
+    expect(
+      Boolean(refitNodeOrder.some(identifier => identifier.includes('-blas-'))),
       'the transform-only graph reuses topology-owned BLAS data'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.refitGraph).includes('sorted-primitive-ids'),
+    ).toBe(false);
+    expect(
+      Boolean(
+        getGraphBufferIdentifiers(frameResources.refitGraph).includes('sorted-primitive-ids')
+      ),
       'the refit graph reuses the retained sorted primitive permutation'
-    );
-    testCase.ok(
-      getGraphBufferIdentifiers(frameResources.refitGraph).includes('blas-nodes'),
+    ).toBe(true);
+    expect(
+      Boolean(getGraphBufferIdentifiers(frameResources.refitGraph).includes('blas-nodes')),
       'the refit graph reuses exact retained BLAS root bounds during instance animation'
-    );
-    testCase.equal(
+    ).toBe(true);
+    expect(
       frameResources.traceGraph.stats.importedBufferCount,
-      9,
       'the trace graph imports one uniform plus exactly eight storage buffers within CORE limits'
-    );
-    testCase.equal(
+    ).toBe(9);
+    expect(
       frameResources.traceGraph.stats.importedTextureCount,
-      4,
       'the trace graph borrows two rotating color textures and two rotating metadata textures'
-    );
-    testCase.equal(
+    ).toBe(4);
+    expect(
       frameResources.traceGraph.stats.logicalTransientTextureCount,
-      0,
       'retained ping-pong history avoids hidden transient presentation or metadata textures'
-    );
+    ).toBe(0);
     const historyCarryIndex = findNodeIndex(
       frameResources.traceGraph.stats.nodeOrder,
       'carry-ray-tracing-history'
@@ -377,85 +386,83 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       frameResources.traceGraph.stats.nodeOrder,
       'present-ray-tracing'
     );
-    testCase.ok(
-      historyCarryIndex >= 0 &&
-        historyCarryIndex < traceRaysIndex &&
-        traceRaysIndex < presentationIndex,
+    expect(
+      Boolean(
+        historyCarryIndex >= 0 &&
+          historyCarryIndex < traceRaysIndex &&
+          traceRaysIndex < presentationIndex
+      ),
       'sparse history carry and packed ray dispatch run before fullscreen presentation'
-    );
-    testCase.notOk(
-      frameResources.traceGraph.stats.nodeOrder.some(
-        identifier =>
-          identifier.includes('prefill-ray-tracing') || identifier.includes('remember-ray-tracing')
+    ).toBe(true);
+    expect(
+      Boolean(
+        frameResources.traceGraph.stats.nodeOrder.some(
+          identifier =>
+            identifier.includes('prefill-ray-tracing') ||
+            identifier.includes('remember-ray-tracing')
+        )
       ),
       'rotating graph texture roles eliminate all four full-frame history copies'
-    );
-    testCase.ok(
-      frameResources.traceGraph.stats.nodeOrder.some(identifier =>
-        identifier.includes('trace-rays')
+    ).toBe(false);
+    expect(
+      Boolean(
+        frameResources.traceGraph.stats.nodeOrder.some(identifier =>
+          identifier.includes('trace-rays')
+        )
       ),
       'the Morton TLAS and packed BLASes feed the ray-tracing compute node'
-    );
-    testCase.equal(
-      initialStatistics.surfaceCount,
-      2,
-      'the shared renderer preserves both surfaces'
-    );
-    testCase.equal(
+    ).toBe(true);
+    expect(initialStatistics.surfaceCount, 'the shared renderer preserves both surfaces').toBe(2);
+    expect(
       initialStatistics.instanceCount,
-      3,
       'the Morton TLAS preserves translated, rotated, and nonuniformly scaled placements'
-    );
-    testCase.equal(
+    ).toBe(3);
+    expect(
       initialStatistics.triangleCount,
-      4,
       'analytic spheres avoid expansion while the indexed mesh retains four BLAS leaves'
-    );
-    testCase.equal(initialStatistics.drawCount, 1, 'the graph uses one fullscreen presentation');
-    testCase.equal(
+    ).toBe(4);
+    expect(initialStatistics.drawCount, 'the graph uses one fullscreen presentation').toBe(1);
+    expect(
       initialStatistics.rayTracing?.internalWidth,
-      16,
       'the default ray workload traces half the display width'
-    );
-    testCase.equal(
+    ).toBe(16);
+    expect(
       initialStatistics.rayTracing?.internalHeight,
-      16,
       'the default ray workload traces half the display height'
-    );
-    testCase.equal(
+    ).toBe(16);
+    expect(
       initialStatistics.rayTracing?.sampledPixelCoverage,
-      1,
       'new history is fully initialized before sparse scheduling can begin'
-    );
-    testCase.equal(
+    ).toBe(1);
+    expect(
       initialStatistics.rayTracing?.accumulatedSamples,
-      2,
       'ray-tracing telemetry reports samples per pixel rather than encoded frames'
-    );
+    ).toBe(2);
     const initialGraphStatistics = initialStatistics.rayTracing?.graph;
-    testCase.ok(
-      initialGraphStatistics?.topology && initialGraphStatistics.acceleration,
+    expect(
+      Boolean(initialGraphStatistics?.topology && initialGraphStatistics.acceleration),
       'the initial frame reports its independently encoded topology and Morton acceleration stages'
-    );
-    testCase.notOk(
-      initialGraphStatistics?.refit,
+    ).toBe(true);
+    expect(
+      Boolean(initialGraphStatistics?.refit),
       'a full Morton acceleration build does not also report an unused refit stage'
-    );
-    testCase.equal(
+    ).toBe(false);
+    expect(
       initialGraphStatistics?.nodeCount,
+      'aggregate graph telemetry counts only stages encoded during the current frame'
+    ).toBe(
       (initialGraphStatistics?.topology?.nodeCount ?? 0) +
         (initialGraphStatistics?.acceleration?.nodeCount ?? 0) +
-        (initialGraphStatistics?.trace.nodeCount ?? 0),
-      'aggregate graph telemetry counts only stages encoded during the current frame'
+        (initialGraphStatistics?.trace.nodeCount ?? 0)
     );
-    testCase.ok(
-      (initialGraphStatistics?.coalescedComputeNodeCount ?? 0) > 0,
+    expect(
+      Boolean((initialGraphStatistics?.coalescedComputeNodeCount ?? 0) > 0),
       'graph telemetry exposes logical compute nodes coalesced into physical passes'
-    );
-    testCase.ok(
-      (initialGraphStatistics?.cpuEncodeTimeMilliseconds ?? -1) >= 0,
+    ).toBe(true);
+    expect(
+      Boolean((initialGraphStatistics?.cpuEncodeTimeMilliseconds ?? -1) >= 0),
       'graph telemetry reports synchronous CPU encoding cost without GPU readback'
-    );
+    ).toBe(true);
     const initialColorHistory = frameResources.colorHistory.previousTexture;
     const initialColorOutput = frameResources.colorHistory.currentTexture;
     const initialMetadataHistory = frameResources.metadataHistory.previousTexture;
@@ -466,86 +473,77 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     }
     const accumulatedStatistics = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       accumulatedStatistics.instanceCount,
-      3,
       'unchanged instances reuse the compiled graph and progressive history'
-    );
-    testCase.equal(
+    ).toBe(3);
+    expect(
       accumulatedStatistics.rayTracing?.accumulatedSamples,
-      4,
       'progressive telemetry accumulates the requested samples per pixel'
-    );
-    testCase.notOk(
-      accumulatedStatistics.rayTracing?.graph?.topology ||
-        accumulatedStatistics.rayTracing?.graph?.acceleration ||
-        accumulatedStatistics.rayTracing?.graph?.refit,
+    ).toBe(4);
+    expect(
+      Boolean(
+        accumulatedStatistics.rayTracing?.graph?.topology ||
+          accumulatedStatistics.rayTracing?.graph?.acceleration ||
+          accumulatedStatistics.rayTracing?.graph?.refit
+      ),
       'an unchanged frame reports only its trace/presentation graph stage'
-    );
-    testCase.equal(
+    ).toBe(false);
+    expect(
       accumulatedStatistics.rayTracing?.graph?.nodeCount,
-      accumulatedStatistics.rayTracing?.graph?.trace.nodeCount,
       'unchanged-frame aggregate counts exactly match the trace graph'
-    );
-    testCase.equal(
+    ).toBe(accumulatedStatistics.rayTracing?.graph?.trace.nodeCount);
+    expect(
       frameResources.colorHistory.previousTexture,
-      initialColorOutput,
       'successful encoding rotates the current color into the next history role'
-    );
-    testCase.equal(
+    ).toBe(initialColorOutput);
+    expect(
       frameResources.colorHistory.currentTexture,
-      initialColorHistory,
       'successful encoding reuses the previous color as the next output without copying'
-    );
-    testCase.equal(
+    ).toBe(initialColorHistory);
+    expect(
       frameResources.metadataHistory.previousTexture,
-      initialMetadataOutput,
       'surface metadata rotates in lockstep with color history'
-    );
-    testCase.equal(
+    ).toBe(initialMetadataOutput);
+    expect(
       frameResources.metadataHistory.currentTexture,
-      initialMetadataHistory,
       'surface metadata reuses its previous allocation without copying'
-    );
+    ).toBe(initialMetadataHistory);
 
     frameResources.phaseCount = 2;
     frameResources.phaseIndex = 0;
     const halfCoverageStatistics = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       halfCoverageStatistics.rayTracing?.sampledPixelCoverage,
-      0.5,
       'half-frame ray sampling preserves untouched pixels through compact history carry'
-    );
+    ).toBe(0.5);
     frameResources.phaseCount = 4;
     frameResources.phaseIndex = 0;
     const quarterCoverageStatistics = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       quarterCoverageStatistics.rayTracing?.sampledPixelCoverage,
-      0.25,
       'quarter-frame sampling carries every untouched pixel without full-frame copies'
-    );
+    ).toBe(0.25);
     frameResources.phaseCount = 1;
     frameResources.phaseIndex = 0;
 
     const nonReprojectedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
-    testCase.equal(
+    expect(
       nonReprojectedStatistics.rayTracing?.accumulatedSamples,
-      2,
       'disabling temporal reprojection starts a fresh progressive history'
-    );
+    ).toBe(2);
     const accumulatedNonReprojectedStatistics = renderer.render({
       ...options,
       temporalReprojection: false
     });
     device.submit();
-    testCase.equal(
+    expect(
       accumulatedNonReprojectedStatistics.rayTracing?.accumulatedSamples,
-      4,
       'unchanged transforms can still accumulate without temporal reprojection'
-    );
+    ).toBe(4);
 
     sphereSurface.transforms = [
       new Matrix4()
@@ -556,24 +554,25 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     ];
     const refittedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
-    testCase.equal(
+    expect(
       refittedStatistics.instanceCount,
-      3,
       'same-count transform animation preserves every Morton TLAS leaf'
-    );
-    testCase.ok(
-      getRayTracingFrameResources(renderer, options.id).refitsSinceMortonRebuild > 0,
+    ).toBe(3);
+    expect(
+      Boolean(getRayTracingFrameResources(renderer, options.id).refitsSinceMortonRebuild > 0),
       'same-count transform animation uses the retained-permutation refit path'
-    );
-    testCase.ok(
-      refittedStatistics.rayTracing?.graph?.refit &&
-        !refittedStatistics.rayTracing.graph.acceleration,
+    ).toBe(true);
+    expect(
+      Boolean(
+        refittedStatistics.rayTracing?.graph?.refit &&
+          !refittedStatistics.rayTracing.graph.acceleration
+      ),
       'transform-only telemetry reports the retained TLAS refit without a full rebuild'
-    );
-    testCase.notOk(
-      getRayTracingFrameResources(renderer, options.id).topologyNeedsUpdate,
+    ).toBe(true);
+    expect(
+      Boolean(getRayTracingFrameResources(renderer, options.id).topologyNeedsUpdate),
       'same-count transform animation reuses the topology-only BLAS graph'
-    );
+    ).toBe(false);
 
     sphereSurface.transforms = [
       new Matrix4()
@@ -583,36 +582,35 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     ];
     const reducedStatistics = renderer.render({...options, temporalReprojection: false});
     device.submit();
-    testCase.equal(
+    expect(
       reducedStatistics.instanceCount,
-      2,
       'refit invalidates inactive leaves when the instance count shrinks'
-    );
-    testCase.equal(
+    ).toBe(2);
+    expect(
       reducedStatistics.rayTracing?.accumulatedSamples,
-      2,
       'moving transforms reset history when reprojection is disabled'
-    );
-    testCase.equal(
+    ).toBe(2);
+    expect(
       getRayTracingFrameResources(renderer, options.id).refitsSinceMortonRebuild,
-      0,
       'topology-changing shrink rebuilds the Morton order before removing inactive leaves'
-    );
-    testCase.ok(
-      reducedStatistics.rayTracing?.graph?.acceleration &&
-        !reducedStatistics.rayTracing.graph.refit,
+    ).toBe(0);
+    expect(
+      Boolean(
+        reducedStatistics.rayTracing?.graph?.acceleration &&
+          !reducedStatistics.rayTracing.graph.refit
+      ),
       'topology-changing telemetry reports the rebuilt Morton acceleration stage'
-    );
-    testCase.ok(
-      getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit,
+    ).toBe(true);
+    expect(
+      Boolean(getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit),
       'topology rebuilds preserve the pending transform-history commit for retained instances'
-    );
+    ).toBe(true);
     renderer.render({...options, temporalReprojection: false});
     device.submit();
-    testCase.notOk(
-      getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit,
+    expect(
+      Boolean(getRayTracingFrameResources(renderer, options.id).previousTransformsNeedCommit),
       'the unchanged frame after a topology rebuild commits current instance transforms'
-    );
+    ).toBe(false);
 
     sphereSurface.transforms = [
       ...sphereSurface.transforms,
@@ -623,37 +621,33 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     ];
     const restoredStatistics = renderer.render({...options, shadows: false});
     device.submit();
-    testCase.equal(
+    expect(
       restoredStatistics.instanceCount,
-      3,
       'repopulated leaves reuse their stable object identities when shadows are disabled'
-    );
+    ).toBe(3);
 
     const emptyStatistics = renderer.render({...options, surfaces: []});
     device.submit();
-    testCase.equal(emptyStatistics.instanceCount, 0, 'empty scenes retain a valid padded TLAS');
-    testCase.equal(emptyStatistics.drawCount, 1, 'empty scenes still present their background');
+    expect(emptyStatistics.instanceCount, 'empty scenes retain a valid padded TLAS').toBe(0);
+    expect(emptyStatistics.drawCount, 'empty scenes still present their background').toBe(1);
 
     const repopulatedStatistics = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       repopulatedStatistics.instanceCount,
-      3,
       'nearest-hit and shadow traversal recover when a previously empty scene is repopulated'
-    );
+    ).toBe(3);
 
     const resizedStatistics = renderer.render({...options, width: 16, height: 16});
     device.submit();
-    testCase.equal(
+    expect(
       resizedStatistics.instanceCount,
-      3,
       'resizing recreates the trace graph without dropping scene instances'
-    );
-    testCase.equal(
+    ).toBe(3);
+    expect(
       resizedStatistics.rayTracing?.internalWidth,
-      8,
       'resizing preserves the default half-resolution ray workload'
-    );
+    ).toBe(8);
 
     const fullResolutionStatistics = renderer.render({
       ...options,
@@ -663,19 +657,17 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
       adaptiveResolution: false
     });
     device.submit();
-    testCase.equal(
+    expect(
       fullResolutionStatistics.rayTracing?.internalWidth,
-      16,
       'callers can opt back into full-resolution ray dispatch'
-    );
+    ).toBe(16);
 
     if (supportsRawValidationErrorScopes) {
       const updatedValidationError = await device.handle.popErrorScope();
-      testCase.equal(
+      expect(
         updatedValidationError,
-        null,
         'Morton TLAS and BLAS sorting, inactive leaves, regrowth, progressive tracing, and resizing remain core-valid'
-      );
+      ).toBe(null);
     }
 
     renderer.destroyFrame(options.id);
@@ -684,14 +676,14 @@ test('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS wit
     renderer.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('RayTracingSceneRenderer batches small mesh sorting while retaining large-mesh radix and sparse history', async testCase => {
+it('RayTracingSceneRenderer batches small mesh sorting while retaining large-mesh radix and sparse history', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -764,30 +756,28 @@ test('RayTracingSceneRenderer batches small mesh sorting while retaining large-m
     const segmentedSortNodes = resources.topologyGraph.stats.nodeOrder.filter(identifier =>
       identifier.includes('blas-sort-triangle-morton-keys-bitonic-local-')
     );
-    testCase.deepEqual(
+    expect(
       segmentedSortNodes.map(identifier => Number(identifier.split('-').at(-1))),
-      [2, 4, 8],
       'four independent mesh permutations share three width-bucketed segmented sort dispatches'
-    );
+    ).toEqual([2, 4, 8]);
     const segmentedHierarchyNodes = resources.topologyGraph.stats.nodeOrder.filter(identifier =>
       identifier.includes('blas-bvh-fused-refit-')
     );
-    testCase.deepEqual(
+    expect(
       segmentedHierarchyNodes.map(identifier => Number(identifier.split('-').at(-1))),
-      [1, 4, 8],
       'four independent small mesh hierarchies share three leaf-capacity-bucketed BVH dispatches'
-    );
-    testCase.ok(
-      resources.topologyGraph.stats.nodeOrder.some(identifier =>
-        identifier.includes('blas-4-sort-triangle-morton-keys-radix-digit-0-histogram')
+    ).toEqual([1, 4, 8]);
+    expect(
+      Boolean(
+        resources.topologyGraph.stats.nodeOrder.some(identifier =>
+          identifier.includes('blas-4-sort-triangle-morton-keys-radix-digit-0-histogram')
+        )
       ),
       'meshes exceeding one workgroup retain the independent four-bit radix fallback'
-    );
-    testCase.equal(initialStatistics.instanceCount, 5, 'all independently sorted meshes render');
-    testCase.equal(
-      initialStatistics.triangleCount,
-      270,
-      'segmented and radix sorting preserve every mesh'
+    ).toBe(true);
+    expect(initialStatistics.instanceCount, 'all independently sorted meshes render').toBe(5);
+    expect(initialStatistics.triangleCount, 'segmented and radix sorting preserve every mesh').toBe(
+      270
     );
 
     const firstColorHistory = resources.colorHistory.previousTexture;
@@ -795,43 +785,39 @@ test('RayTracingSceneRenderer batches small mesh sorting while retaining large-m
     resources.phaseIndex = 1;
     const halfCoverage = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       halfCoverage.rayTracing?.sampledPixelCoverage,
-      0.5,
       'odd-sized half-phase rendering carries the complementary retained pixels'
-    );
-    testCase.notEqual(
+    ).toBe(0.5);
+    expect(
       resources.colorHistory.previousTexture,
-      firstColorHistory,
       'half-phase output rotates into retained history without a texture copy'
-    );
+    ).not.toBe(firstColorHistory);
 
     resources.phaseCount = 4;
     resources.phaseIndex = 3;
     const quarterCoverage = renderer.render(options);
     device.submit();
-    testCase.equal(
+    expect(
       quarterCoverage.rayTracing?.sampledPixelCoverage,
-      0.25,
       'odd-sized quarter-phase rendering carries every non-selected pixel'
-    );
-    testCase.equal(
+    ).toBe(0.25);
+    expect(
       resources.colorHistory.previousTexture,
-      firstColorHistory,
       'two successful sparse encodings return to the original retained history allocation'
-    );
+    ).toBe(firstColorHistory);
   } finally {
     renderer.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('RayTracingSceneRenderer uploads only committed dirty placement transforms', async testCase => {
+it('RayTracingSceneRenderer uploads only committed dirty placement transforms', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -911,24 +897,18 @@ test('RayTracingSceneRenderer uploads only committed dirty placement transforms'
     revisions.dirtyInstanceIds = [instanceIds[3]];
     renderer.render(options);
     device.submit();
-    testCase.deepEqual(
+    expect(
       writes.map(write => [write.byteOffset, write.values.byteLength]),
-      [
-        [3 * 68 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
-        [(3 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
-      ],
       'one committed placement writes only its current/inverse matrices and previous motion matrix'
-    );
-    testCase.equal(
-      writes[0].values[12],
-      Math.fround(0.9),
-      'the current sparse transform is packed'
-    );
-    testCase.equal(
+    ).toEqual([
+      [3 * 68 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
+      [(3 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+    ]);
+    expect(writes[0].values[12], 'the current sparse transform is packed').toBe(Math.fround(0.9));
+    expect(
       writes[1].values[12],
-      Math.fround(previousThirdTranslation),
       'the previous sparse transform preserves the exact prior placement'
-    );
+    ).toBe(Math.fround(previousThirdTranslation));
 
     writes.length = 0;
     transforms[5] = new Matrix4().translate([1.25, 0, 0]);
@@ -936,21 +916,24 @@ test('RayTracingSceneRenderer uploads only committed dirty placement transforms'
     revisions.dirtyInstanceIds = [instanceIds[5]];
     renderer.render(options);
     device.submit();
-    testCase.deepEqual(
+    expect(
       writes.map(write => write.values.byteLength),
-      [16, 32, 16].map(floatCount => floatCount * Float32Array.BYTES_PER_ELEMENT),
       'the next sparse placement commits the prior row without repacking unchanged instances'
-    );
+    ).toEqual([16, 32, 16].map(floatCount => floatCount * Float32Array.BYTES_PER_ELEMENT));
 
     writes.length = 0;
     renderer.render(options);
     device.submit();
-    testCase.deepEqual(
+    expect(
       writes.map(write => [write.byteOffset, write.values.byteLength]),
-      [[(5 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]],
       'the following unchanged frame commits only the pending previous-motion matrix'
-    );
-    testCase.notOk(resources.previousTransformsNeedCommit, 'no previous transforms remain pending');
+    ).toEqual([
+      [(5 * 68 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+    ]);
+    expect(
+      Boolean(resources.previousTransformsNeedCommit),
+      'no previous transforms remain pending'
+    ).toBe(false);
 
     writes.length = 0;
     const freshSurface = {...surface, transforms: [...transforms], instanceIds: [...instanceIds]};
@@ -960,11 +943,10 @@ test('RayTracingSceneRenderer uploads only committed dirty placement transforms'
     const freshOptions = {...options, surfaces: [freshSurface]};
     renderer.render(freshOptions);
     device.submit();
-    testCase.deepEqual(
+    expect(
       writes.map(write => write.values.byteLength),
-      [8 * 68 * Float32Array.BYTES_PER_ELEMENT],
       'fresh scene descriptor arrays conservatively fall back to a complete primitive upload'
-    );
+    ).toEqual([8 * 68 * Float32Array.BYTES_PER_ELEMENT]);
 
     writes.length = 0;
     const replacementSurface = {
@@ -978,16 +960,15 @@ test('RayTracingSceneRenderer uploads only committed dirty placement transforms'
     revisions.dirtyInstanceIds = [instanceIds[2]];
     renderer.render(freshOptions);
     device.submit();
-    testCase.deepEqual(
+    expect(
       writes.map(write => write.values.byteLength),
-      [8 * 68 * Float32Array.BYTES_PER_ELEMENT],
       'in-place descriptor replacement never reuses a stale retained placement reference'
-    );
+    ).toEqual([8 * 68 * Float32Array.BYTES_PER_ELEMENT]);
   } finally {
     renderer.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 type InspectableCompiledGraph = {

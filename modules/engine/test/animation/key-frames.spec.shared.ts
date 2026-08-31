@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {KeyFrames} from '@luma.gl/engine';
 
-export function registerKeyFramesTests(test: TapeTestFunction): void {
-  test('Animation#KeyFrames', t => {
+export function registerKeyFramesTests(test: typeof it): void {
+  test('Animation#KeyFrames', () => {
     const keyFrames = new KeyFrames([
       [0, {val1: [1, 0, 1], val2: 0}],
       [500, {val1: [1, 1, 1], val2: 2}],
@@ -15,85 +15,85 @@ export function registerKeyFramesTests(test: TapeTestFunction): void {
       [1500, {val1: [1, 0, 1], val2: 5}]
     ]);
 
-    t.equals(keyFrames.startIndex, 0, 'start index set properly on initialization');
-    t.equals(keyFrames.endIndex, 1, 'end index set properly on initialization');
-    t.equals(keyFrames.factor, 0, 'factor set properly on initialization');
-    t.equals(keyFrames.getStartTime(), 0, 'start time set properly on initialization');
-    t.equals(keyFrames.getEndTime(), 500, 'end time set properly on initialization');
-    t.equals(keyFrames.getStartData().val2, 0, 'start data set properly on initialization');
-    t.equals(keyFrames.getEndData().val2, 2, 'end data set properly on initialization');
+    expect(keyFrames.startIndex, 'start index set properly on initialization').toBe(0);
+    expect(keyFrames.endIndex, 'end index set properly on initialization').toBe(1);
+    expect(keyFrames.factor, 'factor set properly on initialization').toBe(0);
+    expect(keyFrames.getStartTime(), 'start time set properly on initialization').toBe(0);
+    expect(keyFrames.getEndTime(), 'end time set properly on initialization').toBe(500);
+    expect(keyFrames.getStartData().val2, 'start data set properly on initialization').toBe(0);
+    expect(keyFrames.getEndData().val2, 'end data set properly on initialization').toBe(2);
 
     keyFrames.setTime(250);
 
-    t.equals(keyFrames.startIndex, 0, 'start index set properly after time set in first frame');
-    t.equals(keyFrames.endIndex, 1, 'end index set properly after time set in first frame');
-    t.equals(keyFrames.factor, 0.5, 'factor set properly after time set in first frame');
-    t.equals(keyFrames.getStartTime(), 0, 'start time set properly after time set in first frame');
-    t.equals(keyFrames.getEndTime(), 500, 'end time set properly after time set in first frame');
-    t.equals(
-      keyFrames.getStartData().val2,
-      0,
-      'start data set properly after time set in first frame'
+    expect(keyFrames.startIndex, 'start index set properly after time set in first frame').toBe(0);
+    expect(keyFrames.endIndex, 'end index set properly after time set in first frame').toBe(1);
+    expect(keyFrames.factor, 'factor set properly after time set in first frame').toBe(0.5);
+    expect(keyFrames.getStartTime(), 'start time set properly after time set in first frame').toBe(
+      0
     );
-    t.equals(keyFrames.getEndData().val2, 2, 'end data set properly after time set in first frame');
+    expect(keyFrames.getEndTime(), 'end time set properly after time set in first frame').toBe(500);
+    expect(
+      keyFrames.getStartData().val2,
+      'start data set properly after time set in first frame'
+    ).toBe(0);
+    expect(keyFrames.getEndData().val2, 'end data set properly after time set in first frame').toBe(
+      2
+    );
 
     keyFrames.setTime(1000);
 
-    t.equals(keyFrames.startIndex, 2, 'start index set properly after time set to interior frame');
-    t.equals(keyFrames.endIndex, 3, 'end index set properly after time set to interior frame');
-    t.equals(keyFrames.factor, 0.5, 'factor set properly after time set to interior frame');
-    t.equals(
+    expect(keyFrames.startIndex, 'start index set properly after time set to interior frame').toBe(
+      2
+    );
+    expect(keyFrames.endIndex, 'end index set properly after time set to interior frame').toBe(3);
+    expect(keyFrames.factor, 'factor set properly after time set to interior frame').toBe(0.5);
+    expect(
       keyFrames.getStartTime(),
-      800,
       'start time set properly after time set to interior frame'
+    ).toBe(800);
+    expect(keyFrames.getEndTime(), 'end time set properly after time set to interior frame').toBe(
+      1200
     );
-    t.equals(
-      keyFrames.getEndTime(),
-      1200,
-      'end time set properly after time set to interior frame'
-    );
-    t.equals(
+    expect(
       keyFrames.getStartData().val2,
-      1,
       'start data set properly after time set to interior frame'
-    );
-    t.equals(
+    ).toBe(1);
+    expect(
       keyFrames.getEndData().val2,
-      4,
       'end data set properly after time set to interior frame'
-    );
+    ).toBe(4);
 
     keyFrames.setTime(1350);
 
-    t.equals(keyFrames.startIndex, 3, 'start index set properly after time set to last');
-    t.equals(keyFrames.endIndex, 4, 'end index set properly after time set to last');
-    t.equals(keyFrames.factor, 0.5, 'factor set properly after time set to last');
-    t.equals(keyFrames.getStartTime(), 1200, 'start time set properly after time set to last');
-    t.equals(keyFrames.getEndTime(), 1500, 'end time set properly after time set to last');
-    t.equals(keyFrames.getStartData().val2, 4, 'start data set properly after time set to last');
-    t.equals(keyFrames.getEndData().val2, 5, 'end data set properly after time set to last');
+    expect(keyFrames.startIndex, 'start index set properly after time set to last').toBe(3);
+    expect(keyFrames.endIndex, 'end index set properly after time set to last').toBe(4);
+    expect(keyFrames.factor, 'factor set properly after time set to last').toBe(0.5);
+    expect(keyFrames.getStartTime(), 'start time set properly after time set to last').toBe(1200);
+    expect(keyFrames.getEndTime(), 'end time set properly after time set to last').toBe(1500);
+    expect(keyFrames.getStartData().val2, 'start data set properly after time set to last').toBe(4);
+    expect(keyFrames.getEndData().val2, 'end data set properly after time set to last').toBe(5);
 
     keyFrames.setTime(-1);
 
-    t.equals(keyFrames.startIndex, 0, 'start index clamps at 0');
-    t.equals(keyFrames.endIndex, 1, 'end index clamps at 1');
-    t.equals(keyFrames.factor, 0, 'factor set properly when clamped at 0');
+    expect(keyFrames.startIndex, 'start index clamps at 0').toBe(0);
+    expect(keyFrames.endIndex, 'end index clamps at 1').toBe(1);
+    expect(keyFrames.factor, 'factor set properly when clamped at 0').toBe(0);
 
     keyFrames.setTime(2000);
 
-    t.equals(keyFrames.startIndex, 3, 'start index clamps last frame');
-    t.equals(keyFrames.endIndex, 4, 'end index clamps at last frame');
-    t.equals(keyFrames.factor, 1, 'factor set properly when clamped at last frame');
+    expect(keyFrames.startIndex, 'start index clamps last frame').toBe(3);
+    expect(keyFrames.endIndex, 'end index clamps at last frame').toBe(4);
+    expect(keyFrames.factor, 'factor set properly when clamped at last frame').toBe(1);
 
     keyFrames.setKeyFrames([
       [0, {value: 1}],
       [10, {value: 2}]
     ]);
     keyFrames.setTime(5);
-    t.equals(keyFrames.getStartTime(), 0, 'setKeyFrames updates start times');
-    t.equals(keyFrames.getEndTime(), 10, 'setKeyFrames updates end times');
-    t.equals(keyFrames.factor, 0.5, 'factor updates after replacing key frames');
+    expect(keyFrames.getStartTime(), 'setKeyFrames updates start times').toBe(0);
+    expect(keyFrames.getEndTime(), 'setKeyFrames updates end times').toBe(10);
+    expect(keyFrames.factor, 'factor updates after replacing key frames').toBe(0.5);
 
-    t.end();
+    void 0;
   });
 }

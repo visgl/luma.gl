@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
 
@@ -245,11 +245,11 @@ TEST_CASES.push({
   }
 });
 
-test('WebGPU#getShaderLayoutFromWGSL', t => {
+it('WebGPU#getShaderLayoutFromWGSL', () => {
   for (const tc of TEST_CASES) {
     const shaderLayout = getShaderLayoutFromWGSL(tc.wgsl);
-    t.deepEqual(shaderLayout, tc.shaderLayout, `correct ShaderLayout parsed ${tc.title || ''}`);
+    expect(shaderLayout, `correct ShaderLayout parsed ${tc.title || ''}`).toEqual(tc.shaderLayout);
     // console.error(JSON.stringify(shaderLayout, null, 2));
   }
-  t.end();
+  void 0;
 });

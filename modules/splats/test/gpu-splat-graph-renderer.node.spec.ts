@@ -2,69 +2,82 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUSplatGraphRenderer rejects devices without WebGPU command graphs', t => {
+it('GPUSplatGraphRenderer rejects devices without WebGPU command graphs', () => {
   const device = new NullDevice({});
-  t.throws(
+  expect(
     () => new GPUSplatGraphRenderer(device),
-    /requires a WebGPU device/,
     'preserves the legacy renderer as the explicit WebGL2 fallback'
-  );
-  t.end();
+  ).toThrow(/requires a WebGPU device/);
+  void 0;
 });
 
-test('GPUSplatGraphRenderer retains borrowed batches without eager CPU projection or graph compilation', t => {
+it('GPUSplatGraphRenderer retains borrowed batches without eager CPU projection or graph compilation', () => {
   const device = makeWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(device, makeGraphSplatSource([0.25, 0.75], 0));
   const secondBatch = makeGPUSplatData(device, makeGraphSplatSource([0.5], 2));
   const renderer = new GPUSplatGraphRenderer(device, {data: firstBatch, viewportSize: [32, 24]});
   renderer.appendData(secondBatch);
 
-  t.equal(renderer.batches[0], firstBatch, 'retains the original first caller-owned batch');
-  t.equal(renderer.batches[1], secondBatch, 'retains the original second caller-owned batch');
-  t.equal(renderer.compiledGraph, undefined, 'defers immutable graph compilation until encoding');
-  t.equal(renderer.stats.splatCount, 3, 'aggregates source row counts without inspecting rows');
-  t.equal(renderer.stats.batchCount, 2, 'preserves independently streamed source batches');
-  t.equal(renderer.stats.drawCallCount, 1, 'plans one global indirect render draw');
-  t.equal(renderer.stats.sortMode, 'global', 'always uses a globally ordered GPU depth sort');
+  expect(renderer.batches[0], 'retains the original first caller-owned batch').toBe(firstBatch);
+  expect(renderer.batches[1], 'retains the original second caller-owned batch').toBe(secondBatch);
+  expect(renderer.compiledGraph, 'defers immutable graph compilation until encoding').toBe(
+    undefined
+  );
+  expect(renderer.stats.splatCount, 'aggregates source row counts without inspecting rows').toBe(3);
+  expect(renderer.stats.batchCount, 'preserves independently streamed source batches').toBe(2);
+  expect(renderer.stats.drawCallCount, 'plans one global indirect render draw').toBe(1);
+  expect(renderer.stats.sortMode, 'always uses a globally ordered GPU depth sort').toBe('global');
 
   const sourceBuffer = firstBatch.positions.data[0].buffer;
   const commandBuffer = renderer.drawCommands.buffer;
   renderer.destroy();
   renderer.destroy();
-  t.ok(renderer.destroyed, 'marks owned renderer resources destroyed');
-  t.ok(commandBuffer.destroyed, 'releases the renderer-owned indirect command allocation');
-  t.notOk(sourceBuffer.destroyed, 'never destroys a borrowed caller-owned source allocation');
+  expect(Boolean(renderer.destroyed), 'marks owned renderer resources destroyed').toBe(true);
+  expect(
+    Boolean(commandBuffer.destroyed),
+    'releases the renderer-owned indirect command allocation'
+  ).toBe(true);
+  expect(
+    Boolean(sourceBuffer.destroyed),
+    'never destroys a borrowed caller-owned source allocation'
+  ).toBe(false);
 
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer preserves HDR radiance and resolves display tone mapping', t => {
+it('GPUSplatGraphRenderer preserves HDR radiance and resolves display tone mapping', () => {
   const device = makeWebGPUNullDevice();
   const source = makeGraphSplatSource([0.5], 0);
   source.colors = new Float32Array([4, 2, 0.25, 1]);
   const batch = makeGPUSplatData(device, source);
   const renderer = new GPUSplatGraphRenderer(device, {data: batch});
 
-  t.equal(batch.colors.format, 'float32x4', 'retains Float32 source radiance without quantization');
-  t.equal(renderer.props.toneMapping, 'reinhard', 'tone-maps HDR highlights for SDR presentation');
+  expect(batch.colors.format, 'retains Float32 source radiance without quantization').toBe(
+    'float32x4'
+  );
+  expect(renderer.props.toneMapping, 'tone-maps HDR highlights for SDR presentation').toBe(
+    'reinhard'
+  );
   renderer.setProps({exposure: 0.5, toneMapping: 'none', opacityThreshold: 0.2, pointSize: 1.5});
-  t.equal(renderer.props.exposure, 0.5, 'updates the display exposure');
-  t.equal(renderer.props.toneMapping, 'none', 'respects an explicit display tone-mapping override');
-  t.equal(renderer.props.alphaCutoff, 0.2, 'accepts the existing opacity-threshold alias');
-  t.equal(renderer.props.radiusScale, 1.5, 'accepts the existing point-size alias');
+  expect(renderer.props.exposure, 'updates the display exposure').toBe(0.5);
+  expect(renderer.props.toneMapping, 'respects an explicit display tone-mapping override').toBe(
+    'none'
+  );
+  expect(renderer.props.alphaCutoff, 'accepts the existing opacity-threshold alias').toBe(0.2);
+  expect(renderer.props.radiusScale, 'accepts the existing point-size alias').toBe(1.5);
 
   renderer.destroy();
   batch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer validates borrowing and replacement ownership', t => {
+it('GPUSplatGraphRenderer validates borrowing and replacement ownership', () => {
   const firstDevice = makeWebGPUNullDevice();
   const secondDevice = makeWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(firstDevice, makeGraphSplatSource([0.25], 0));
@@ -72,24 +85,26 @@ test('GPUSplatGraphRenderer validates borrowing and replacement ownership', t =>
   const foreignBatch = makeGPUSplatData(secondDevice, makeGraphSplatSource([0.5], 0));
   const renderer = new GPUSplatGraphRenderer(firstDevice, {data: firstBatch});
 
-  t.throws(
+  expect(
     () => renderer.appendData(foreignBatch),
-    /live data prepared on its own device/,
     'rejects source allocations from another WebGPU device'
-  );
+  ).toThrow(/live data prepared on its own device/);
   renderer.setProps({data: replacementBatch});
-  t.equal(renderer.batches.length, 1, 'replaces the ordered source batch list');
-  t.equal(renderer.batches[0], replacementBatch, 'retains the replacement caller-owned batch');
-  t.notOk(firstBatch.destroyed, 'never destroys the previous caller-owned source batch');
+  expect(renderer.batches.length, 'replaces the ordered source batch list').toBe(1);
+  expect(renderer.batches[0], 'retains the replacement caller-owned batch').toBe(replacementBatch);
+  expect(
+    Boolean(firstBatch.destroyed),
+    'never destroys the previous caller-owned source batch'
+  ).toBe(false);
 
   renderer.destroy();
   firstBatch.destroy();
   replacementBatch.destroy();
   foreignBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer preserves GPU-native camera, harmonics, and semantic controls', t => {
+it('GPUSplatGraphRenderer preserves GPU-native camera, harmonics, and semantic controls', () => {
   const device = makeWebGPUNullDevice();
   const source = makeGraphSplatSource([0.25, 0.75], 17);
   source.semanticIds = new Uint32Array([3, 7]);
@@ -104,37 +119,45 @@ test('GPUSplatGraphRenderer preserves GPU-native camera, harmonics, and semantic
     semanticFilter: initialFilter
   });
 
-  t.deepEqual(renderer.props.cameraPosition, [1, 2, 3], 'preserves world-space camera position');
-  t.equal(renderer.props.sphericalHarmonicsDegree, 1, 'caps GPU-evaluated source SH bands');
-  t.equal(renderer.props.semanticFilter, initialFilter, 'retains included/excluded class controls');
-  t.equal(renderer.projectedRecordBuffer, undefined, 'keeps projected records lazy until encoding');
-  t.equal(renderer.uniformBuffer, undefined, 'keeps graph uniform bindings lazy until encoding');
+  expect(renderer.props.cameraPosition, 'preserves world-space camera position').toEqual([1, 2, 3]);
+  expect(renderer.props.sphericalHarmonicsDegree, 'caps GPU-evaluated source SH bands').toBe(1);
+  expect(renderer.props.semanticFilter, 'retains included/excluded class controls').toBe(
+    initialFilter
+  );
+  expect(renderer.projectedRecordBuffer, 'keeps projected records lazy until encoding').toBe(
+    undefined
+  );
+  expect(renderer.uniformBuffer, 'keeps graph uniform bindings lazy until encoding').toBe(
+    undefined
+  );
 
   renderer.setProps({
     cameraPosition: [4, 5, 6],
     sphericalHarmonicsDegree: 0,
     semanticFilter: undefined
   });
-  t.deepEqual(renderer.props.cameraPosition, [4, 5, 6], 'updates directional source lighting');
-  t.equal(renderer.props.sphericalHarmonicsDegree, 0, 'disables optional higher-order bands');
-  t.equal(renderer.props.semanticFilter, undefined, 'restores unfiltered source visibility');
-  t.equal(batch.sphericalHarmonics?.data[0].buffer.destroyed, false, 'borrows original SH storage');
-  t.equal(batch.semanticIds?.data[0].buffer.destroyed, false, 'borrows original semantic storage');
+  expect(renderer.props.cameraPosition, 'updates directional source lighting').toEqual([4, 5, 6]);
+  expect(renderer.props.sphericalHarmonicsDegree, 'disables optional higher-order bands').toBe(0);
+  expect(renderer.props.semanticFilter, 'restores unfiltered source visibility').toBe(undefined);
+  expect(batch.sphericalHarmonics?.data[0].buffer.destroyed, 'borrows original SH storage').toBe(
+    false
+  );
+  expect(batch.semanticIds?.data[0].buffer.destroyed, 'borrows original semantic storage').toBe(
+    false
+  );
 
-  t.throws(
+  expect(
     () => renderer.setProps({semanticFilter: {predicate: () => true}}),
-    /JavaScript predicates/,
     'rejects JavaScript callbacks that cannot execute in a GPU-native graph'
-  );
-  t.throws(
+  ).toThrow(/JavaScript predicates/);
+  expect(
     () => renderer.setProps({semanticFilter: {include: [-1]}}),
-    /unsigned 32-bit/,
     'rejects semantic classes that cannot be represented by source GPU identifiers'
-  );
+  ).toThrow(/unsigned 32-bit/);
 
   renderer.destroy();
   batch.destroy();
-  t.end();
+  void 0;
 });
 
 function makeWebGPUNullDevice(): NullDevice {

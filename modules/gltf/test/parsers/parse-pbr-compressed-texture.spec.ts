@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {TextureFormat} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
@@ -26,7 +26,7 @@ const BASE_OPTIONS = {
 
 // --- loaders.gl current format: data is Array, mipmaps is boolean, textureFormat is a TextureFormat ---
 
-test('gltf#createCompressedTexture - data-array single mip level', t => {
+it('gltf#createCompressedTexture - data-array single mip level', () => {
   const image: CompressedImageDataArray = {
     compressed: true,
     mipmaps: true,
@@ -42,17 +42,17 @@ test('gltf#createCompressedTexture - data-array single mip level', t => {
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.width, 256, 'width from mip level');
-  t.equals(texture.height, 256, 'height from mip level');
-  t.equals(texture.format, 'astc-4x4-unorm', 'textureFormat passed through');
-  t.equals(texture.mipLevels, 1, 'single mip level');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.width, 'width from mip level').toBe(256);
+  expect(texture.height, 'height from mip level').toBe(256);
+  expect(texture.format, 'textureFormat passed through').toBe('astc-4x4-unorm');
+  expect(texture.mipLevels, 'single mip level').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - data-array with multiple mip levels', t => {
+it('gltf#createCompressedTexture - data-array with multiple mip levels', () => {
   const image: CompressedImageDataArray = {
     compressed: true,
     mipmaps: true,
@@ -80,16 +80,16 @@ test('gltf#createCompressedTexture - data-array with multiple mip levels', t => 
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.width, 256, 'width from base level');
-  t.equals(texture.format, 'astc-4x4-unorm', 'textureFormat passed through');
-  t.equals(texture.mipLevels, 3, 'all three mip levels');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.width, 'width from base level').toBe(256);
+  expect(texture.format, 'textureFormat passed through').toBe('astc-4x4-unorm');
+  expect(texture.mipLevels, 'all three mip levels').toBe(3);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - data-array with undefined top-level dimensions', t => {
+it('gltf#createCompressedTexture - data-array with undefined top-level dimensions', () => {
   const image = {
     compressed: true,
     mipmaps: true,
@@ -107,17 +107,17 @@ test('gltf#createCompressedTexture - data-array with undefined top-level dimensi
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created despite undefined top-level dimensions');
-  t.equals(texture.width, 256, 'width from mip level');
-  t.equals(texture.format, 'etc2-rgb8unorm', 'textureFormat passed through');
+  expect(Boolean(texture), 'texture created despite undefined top-level dimensions').toBe(true);
+  expect(texture.width, 'width from mip level').toBe(256);
+  expect(texture.format, 'textureFormat passed through').toBe('etc2-rgb8unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 // --- Hypothetical mipmaps-array format (forward compatibility) ---
 
-test('gltf#createCompressedTexture - mipmaps array format single level', t => {
+it('gltf#createCompressedTexture - mipmaps array format single level', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     width: 512,
@@ -127,16 +127,16 @@ test('gltf#createCompressedTexture - mipmaps array format single level', t => {
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.width, 512, 'width matches');
-  t.equals(texture.format, 'bc7-rgba-unorm', 'format from mipmap level');
-  t.equals(texture.mipLevels, 1, 'single mip level');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.width, 'width matches').toBe(512);
+  expect(texture.format, 'format from mipmap level').toBe('bc7-rgba-unorm');
+  expect(texture.mipLevels, 'single mip level').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - mipmaps array format multiple levels', t => {
+it('gltf#createCompressedTexture - mipmaps array format multiple levels', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     mipmaps: [
@@ -148,17 +148,17 @@ test('gltf#createCompressedTexture - mipmaps array format multiple levels', t =>
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.width, 256, 'width from base level');
-  t.equals(texture.mipLevels, 3, 'all three levels');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.width, 'width from base level').toBe(256);
+  expect(texture.mipLevels, 'all three levels').toBe(3);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 // --- Validation / fallback tests ---
 
-test('gltf#createCompressedTexture - empty data array returns fallback', t => {
+it('gltf#createCompressedTexture - empty data array returns fallback', () => {
   const image: CompressedImageDataArray = {
     compressed: true,
     mipmaps: true,
@@ -167,15 +167,15 @@ test('gltf#createCompressedTexture - empty data array returns fallback', t => {
 
   const texture = createCompressedTexture(device, image as any, BASE_OPTIONS);
 
-  t.ok(texture, 'fallback texture created');
-  t.equals(texture.width, 1, 'fallback width is 1');
-  t.equals(texture.format, 'rgba8unorm', 'fallback format');
+  expect(Boolean(texture), 'fallback texture created').toBe(true);
+  expect(texture.width, 'fallback width is 1').toBe(1);
+  expect(texture.format, 'fallback format').toBe('rgba8unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - base level with zero dimensions returns fallback', t => {
+it('gltf#createCompressedTexture - base level with zero dimensions returns fallback', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     mipmaps: [
@@ -186,15 +186,15 @@ test('gltf#createCompressedTexture - base level with zero dimensions returns fal
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'fallback texture created');
-  t.equals(texture.width, 1, 'fallback width');
-  t.equals(texture.format, 'rgba8unorm', 'fallback format');
+  expect(Boolean(texture), 'fallback texture created').toBe(true);
+  expect(texture.width, 'fallback width').toBe(1);
+  expect(texture.format, 'fallback format').toBe('rgba8unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - zero base width not masked by top-level width', t => {
+it('gltf#createCompressedTexture - zero base width not masked by top-level width', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     width: 512,
@@ -204,15 +204,15 @@ test('gltf#createCompressedTexture - zero base width not masked by top-level wid
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'fallback texture created');
-  t.equals(texture.width, 1, 'fallback width despite image.width=512');
-  t.equals(texture.format, 'rgba8unorm', 'fallback format');
+  expect(Boolean(texture), 'fallback texture created').toBe(true);
+  expect(texture.width, 'fallback width despite image.width=512').toBe(1);
+  expect(texture.format, 'fallback format').toBe('rgba8unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - mismatched textureFormat values truncate chain', t => {
+it('gltf#createCompressedTexture - mismatched textureFormat values truncate chain', () => {
   const image: CompressedImageDataArray = {
     compressed: true,
     mipmaps: true,
@@ -234,15 +234,15 @@ test('gltf#createCompressedTexture - mismatched textureFormat values truncate ch
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.mipLevels, 1, 'chain truncated at format mismatch');
-  t.equals(texture.format, 'astc-4x4-unorm', 'format from valid base level');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.mipLevels, 'chain truncated at format mismatch').toBe(1);
+  expect(texture.format, 'format from valid base level').toBe('astc-4x4-unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - invalid mip level truncates chain', t => {
+it('gltf#createCompressedTexture - invalid mip level truncates chain', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     mipmaps: [
@@ -254,14 +254,14 @@ test('gltf#createCompressedTexture - invalid mip level truncates chain', t => {
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.mipLevels, 2, 'chain truncated at invalid level');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.mipLevels, 'chain truncated at invalid level').toBe(2);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - missing textureFormat returns fallback', t => {
+it('gltf#createCompressedTexture - missing textureFormat returns fallback', () => {
   const image: CompressedImageMipmapArray = {
     compressed: true,
     mipmaps: [{data: new Uint8Array(64), width: 256, height: 256}]
@@ -269,15 +269,15 @@ test('gltf#createCompressedTexture - missing textureFormat returns fallback', t 
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'fallback texture created');
-  t.equals(texture.width, 1, 'fallback width');
-  t.equals(texture.format, 'rgba8unorm', 'fallback format');
+  expect(Boolean(texture), 'fallback texture created').toBe(true);
+  expect(texture.width, 'fallback width').toBe(1);
+  expect(texture.format, 'fallback format').toBe('rgba8unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - unsupported device format returns fallback', t => {
+it('gltf#createCompressedTexture - unsupported device format returns fallback', () => {
   const unsupportedDevice = new NullDevice({});
   const image: CompressedImageDataArray = {
     compressed: true,
@@ -294,15 +294,15 @@ test('gltf#createCompressedTexture - unsupported device format returns fallback'
 
   const texture = createCompressedTexture(unsupportedDevice, image, BASE_OPTIONS);
 
-  t.equals(texture.format, 'rgba8unorm', 'unsupported compressed format uses fallback');
-  t.equals(texture.width, 1, 'fallback has deterministic dimensions');
+  expect(texture.format, 'unsupported compressed format uses fallback').toBe('rgba8unorm');
+  expect(texture.width, 'fallback has deterministic dimensions').toBe(1);
 
   texture.destroy();
   unsupportedDevice.destroy();
-  t.end();
+  void 0;
 });
 
-test('gltf#createCompressedTexture - block-size limit truncates mip chain', t => {
+it('gltf#createCompressedTexture - block-size limit truncates mip chain', () => {
   const image: CompressedImageDataArray = {
     compressed: true,
     mipmaps: true,
@@ -314,9 +314,9 @@ test('gltf#createCompressedTexture - block-size limit truncates mip chain', t =>
 
   const texture = createCompressedTexture(device, image, BASE_OPTIONS);
 
-  t.ok(texture, 'texture created');
-  t.equals(texture.mipLevels, 1, 'chain capped before mip dimensions drop below block size');
+  expect(Boolean(texture), 'texture created').toBe(true);
+  expect(texture.mipLevels, 'chain capped before mip dimensions drop below block size').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });

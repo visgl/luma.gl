@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   convertGeoArrowTableToDenseUnion,
   convertGeoArrowVectorToDenseUnion,
@@ -24,7 +24,7 @@ const GEOMETRY_FIXTURE_PAIRS = [
   ['example_multipolygon-zm_wkb.arrows', 'example_multipolygon-zm_wkt.arrows', 4]
 ] as const;
 
-test('convertGeoArrowTableToDenseUnion converts WKB/WKT mixed geometry fixtures', t => {
+it('convertGeoArrowTableToDenseUnion converts WKB/WKT mixed geometry fixtures', () => {
   for (const [wkbFixture, wktFixture, expectedDimension] of GEOMETRY_FIXTURE_PAIRS) {
     const wkbTable = loadGeoArrowFixture(wkbFixture);
     const wktTable = loadGeoArrowFixture(wktFixture);
@@ -36,26 +36,23 @@ test('convertGeoArrowTableToDenseUnion converts WKB/WKT mixed geometry fixtures'
     const convertedWKBGeometry = convertedWKBTable.getChild('geometry')!;
     const convertedWKTGeometry = convertedWKTTable.getChild('geometry')!;
 
-    t.equal(
+    expect(
       convertedWKBField.metadata.get('ARROW:extension:name'),
-      'geoarrow.geometry',
       `${wkbFixture} updates the field extension metadata`
-    );
-    t.equal(
+    ).toBe('geoarrow.geometry');
+    expect(
       getDenseUnionCoordinateDimension(convertedWKBGeometry),
-      expectedDimension,
       `${wkbFixture} preserves the coordinate dimension`
-    );
-    t.deepEqual(
+    ).toBe(expectedDimension);
+    expect(
       normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKBGeometry)),
-      normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKTGeometry)),
       `${wkbFixture} and ${wktFixture} produce equivalent dense union rows`
-    );
+    ).toEqual(normalizeDenseUnionNullTypeIds(getDenseUnionRows(convertedWKTGeometry)));
   }
-  t.end();
+  void 0;
 });
 
-test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense unions unchanged', t => {
+it('convertGeoArrowVectorToDenseUnion converts vectors and returns dense unions unchanged', () => {
   const geometry = arrow.vectorFromArray(
     [
       'POINT (30 10)',
@@ -66,46 +63,44 @@ test('convertGeoArrowVectorToDenseUnion converts vectors and returns dense union
   );
   const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {encoding: 'geoarrow.wkt'});
 
-  t.ok(
-    arrow.DataType.isDenseUnion(convertedGeometry.type),
+  expect(
+    Boolean(arrow.DataType.isDenseUnion(convertedGeometry.type)),
     'converts a WKT vector to a DenseUnion vector'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     getDenseUnionRows(convertedGeometry).slice(0, 3),
-    [
-      {typeId: 1, value: [30, 10]},
-      {
-        typeId: 5,
-        value: [
-          [30, 10],
-          [10, 30],
-          [40, 40]
-        ]
-      },
-      {
-        typeId: 9,
-        value: [
-          [
-            [30, 10],
-            [40, 40],
-            [20, 40],
-            [10, 20],
-            [30, 10]
-          ]
-        ]
-      }
-    ],
     'parses point, linestring, and polygon rows'
-  );
-  t.equal(
+  ).toEqual([
+    {typeId: 1, value: [30, 10]},
+    {
+      typeId: 5,
+      value: [
+        [30, 10],
+        [10, 30],
+        [40, 40]
+      ]
+    },
+    {
+      typeId: 9,
+      value: [
+        [
+          [30, 10],
+          [40, 40],
+          [20, 40],
+          [10, 20],
+          [30, 10]
+        ]
+      ]
+    }
+  ]);
+  expect(
     convertGeoArrowVectorToDenseUnion(convertedGeometry),
-    convertedGeometry,
     'returns an existing DenseUnion vector unchanged'
-  );
-  t.end();
+  ).toBe(convertedGeometry);
+  void 0;
 });
 
-test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
+it('convertGeoArrowVectorToDenseUnion preserves serialized null rows', () => {
   const geometry = arrow.vectorFromArray(
     ['POINT (1 2)', null, 'LINESTRING (0 0, 1 1)'],
     new arrow.Utf8()
@@ -114,11 +109,11 @@ test('convertGeoArrowVectorToDenseUnion preserves serialized null rows', t => {
     encoding: 'geoarrow.wkt'
   });
 
-  t.equal(convertedGeometry.get(1), null, 'preserves a null through the dense-union adapter');
-  t.end();
+  expect(convertedGeometry.get(1), 'preserves a null through the dense-union adapter').toBe(null);
+  void 0;
 });
 
-test('convertGeoArrowVectorToDenseUnion lets math.gl infer WKB dimensions and preserve chunks', t => {
+it('convertGeoArrowVectorToDenseUnion lets math.gl infer WKB dimensions and preserve chunks', () => {
   const sourceGeometry = loadGeoArrowFixture('example_point-z_wkb.arrows').getChild('geometry')!;
   const splitRow = 2;
   const chunkedGeometry = new arrow.Vector([
@@ -127,70 +122,62 @@ test('convertGeoArrowVectorToDenseUnion lets math.gl infer WKB dimensions and pr
   ]);
   const convertedGeometry = convertGeoArrowVectorToDenseUnion(chunkedGeometry);
 
-  t.equal(convertedGeometry.data.length, 2, 'preserves both source Arrow chunks');
-  t.equal(
+  expect(convertedGeometry.data.length, 'preserves both source Arrow chunks').toBe(2);
+  expect(
     getDenseUnionCoordinateDimension(convertedGeometry),
-    3,
     'uses the WKB headers to infer XYZ coordinates'
-  );
-  t.deepEqual(
+  ).toBe(3);
+  expect(
     getDenseUnionRows(convertedGeometry),
-    getDenseUnionRows(convertGeoArrowVectorToDenseUnion(sourceGeometry)),
     'preserves all geometry rows across chunk boundaries'
-  );
-  t.end();
+  ).toEqual(getDenseUnionRows(convertGeoArrowVectorToDenseUnion(sourceGeometry)));
+  void 0;
 });
 
-test('convertGeoArrowVectorToDenseUnion preserves EWKT dimensions and strips SRID prefixes', t => {
+it('convertGeoArrowVectorToDenseUnion preserves EWKT dimensions and strips SRID prefixes', () => {
   const geometry = arrow.vectorFromArray(['SRID=4326;POINT Z (1 2 3)'], new arrow.Utf8());
   const convertedGeometry = convertGeoArrowVectorToDenseUnion(geometry, {
     encoding: 'geoarrow.wkt'
   });
 
-  t.equal(
+  expect(
     getDenseUnionCoordinateDimension(convertedGeometry),
-    3,
     'preserves the EWKT coordinate dimension'
-  );
-  t.deepEqual(
+  ).toBe(3);
+  expect(
     getDenseUnionRows(convertedGeometry),
-    [{typeId: 2, value: [1, 2, 3]}],
     'decodes the geometry after removing the SRID prefix'
-  );
-  t.end();
+  ).toEqual([{typeId: 2, value: [1, 2, 3]}]);
+  void 0;
 });
 
-test('convertGeoArrowTableToDenseUnion converts explicitly selected WKT columns', t => {
+it('convertGeoArrowTableToDenseUnion converts explicitly selected WKT columns', () => {
   const sourceTable = new arrow.Table({
     id: arrow.vectorFromArray([7], new arrow.Int32()),
     geometry: arrow.vectorFromArray(['POINT (1 2)'], new arrow.Utf8())
   });
 
-  t.equal(
+  expect(
     convertGeoArrowTableToDenseUnion(sourceTable, {encoding: 'geoarrow.wkt'}),
-    sourceTable,
     'does not infer non-metadata table columns from encoding alone'
-  );
+  ).toBe(sourceTable);
 
   const convertedTable = convertGeoArrowTableToDenseUnion(sourceTable, {
     geometryColumn: 'geometry',
     encoding: 'geoarrow.wkt'
   });
 
-  t.equal(
-    convertedTable.getChild('id')!.type.toString(),
-    sourceTable.getChild('id')!.type.toString(),
-    'preserves non-geometry columns'
+  expect(convertedTable.getChild('id')!.type.toString(), 'preserves non-geometry columns').toBe(
+    sourceTable.getChild('id')!.type.toString()
   );
-  t.deepEqual(
+  expect(
     getDenseUnionRows(convertedTable.getChild('geometry')!),
-    [{typeId: 1, value: [1, 2]}],
     'converts the selected column'
-  );
-  t.end();
+  ).toEqual([{typeId: 1, value: [1, 2]}]);
+  void 0;
 });
 
-test('convertGeoArrowTableToDenseUnion output tessellates polygon rows', t => {
+it('convertGeoArrowTableToDenseUnion output tessellates polygon rows', () => {
   const wkbTable = convertGeoArrowTableToDenseUnion(
     loadGeoArrowFixture('example_multipolygon_wkb.arrows')
   );
@@ -200,36 +187,34 @@ test('convertGeoArrowTableToDenseUnion output tessellates polygon rows', t => {
   const wkbResult = tessellateArrowPolygons({polygons: wkbTable.getChild('geometry')!});
   const wktResult = tessellateArrowPolygons({polygons: wktTable.getChild('geometry')!});
 
-  t.equal(wkbResult.rowCount, 5, 'keeps the source geometry row count');
-  t.ok(wkbResult.polygonCount > 0, 'tessellates multipolygon rows');
-  t.deepEqual(Array.from(wkbResult.positions), Array.from(wktResult.positions), 'positions match');
-  t.deepEqual(Array.from(wkbResult.indices), Array.from(wktResult.indices), 'indices match');
-  t.deepEqual(
-    Array.from(wkbResult.rowIndices),
-    Array.from(wktResult.rowIndices),
-    'source row indices match'
+  expect(wkbResult.rowCount, 'keeps the source geometry row count').toBe(5);
+  expect(Boolean(wkbResult.polygonCount > 0), 'tessellates multipolygon rows').toBe(true);
+  expect(Array.from(wkbResult.positions), 'positions match').toEqual(
+    Array.from(wktResult.positions)
   );
-  t.end();
+  expect(Array.from(wkbResult.indices), 'indices match').toEqual(Array.from(wktResult.indices));
+  expect(Array.from(wkbResult.rowIndices), 'source row indices match').toEqual(
+    Array.from(wktResult.rowIndices)
+  );
+  void 0;
 });
 
-test('convertGeoArrowTableToDenseUnion rejects WKB/WKT GeometryCollection rows', t => {
-  t.throws(
+it('convertGeoArrowTableToDenseUnion rejects WKB/WKT GeometryCollection rows', () => {
+  expect(
     () =>
       convertGeoArrowTableToDenseUnion(
         loadGeoArrowFixture('example_geometrycollection_wkb.arrows')
       ),
-    /GeometryCollection conversion requires geoarrow\.geometrycollection output/,
     'rejects WKB GeometryCollection rows with a target-specific error'
-  );
-  t.throws(
+  ).toThrow(/GeometryCollection conversion requires geoarrow\.geometrycollection output/);
+  expect(
     () =>
       convertGeoArrowTableToDenseUnion(
         loadGeoArrowFixture('example_geometrycollection_wkt.arrows')
       ),
-    /GeometryCollection conversion requires geoarrow\.geometrycollection output/,
     'rejects WKT GeometryCollection rows with a target-specific error'
-  );
-  t.end();
+  ).toThrow(/GeometryCollection conversion requires geoarrow\.geometrycollection output/);
+  void 0;
 });
 
 function loadGeoArrowFixture(name: string): arrow.Table {

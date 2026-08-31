@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getArrowFixedSizeListValues,
   getArrowMatrixVectorInfo,
@@ -16,39 +16,37 @@ import {
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('convertArrowMatrixToGPUVector keeps canonical Float32 matrices GPU-ready', async t => {
+it('convertArrowMatrixToGPUVector keeps canonical Float32 matrices GPU-ready', async () => {
   const device = new NullDevice({});
   const source = makeArrowMatrixVector('mat4x3', new Float32Array(12));
   const prepared = await convertArrowMatrixToGPUVector(device, source);
   const result = await readArrowGPUVectorAsync(prepared.matrix);
 
-  t.deepEqual(
+  expect(
     getArrowMatrixVectorInfo(prepared.matrix),
-    {
-      shape: 'mat4x3',
-      columns: 4,
-      rows: 3,
-      order: 'column-major',
-      layout: 'wgsl-storage',
-      valueType: 'float32',
-      logicalComponentCount: 12,
-      physicalComponentCount: 16,
-      columnStride: 4,
-      byteStride: 64
-    },
     'exposes canonical Float32 WGSL-storage matrix metadata'
-  );
-  t.deepEqual(
+  ).toEqual({
+    shape: 'mat4x3',
+    columns: 4,
+    rows: 3,
+    order: 'column-major',
+    layout: 'wgsl-storage',
+    valueType: 'float32',
+    logicalComponentCount: 12,
+    physicalComponentCount: 16,
+    columnStride: 4,
+    byteStride: 64
+  });
+  expect(
     getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
-    new Float32Array(16),
     'keeps canonical matrix values directly uploadable'
-  );
+  ).toEqual(new Float32Array(16));
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('convertArrowMatrixToGPUVector normalizes packed row-major Float64 matrices', async t => {
+it('convertArrowMatrixToGPUVector normalizes packed row-major Float64 matrices', async () => {
   const device = new NullDevice({});
   const source = makeRawMatrixVector(
     new arrow.Float64(),
@@ -63,16 +61,15 @@ test('convertArrowMatrixToGPUVector normalizes packed row-major Float64 matrices
   const prepared = await convertArrowMatrixToGPUVector(device, source);
   const result = await readArrowGPUVectorAsync(prepared.matrix);
 
-  t.deepEqual(
+  expect(
     getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
-    new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]),
     'transposes, pads, and truncates Float64 values into canonical Float32 storage'
-  );
-  t.equal(prepared.sourceInfo.valueType, 'float64', 'retains Float64 source metadata');
-  t.equal(prepared.matrixInfo.valueType, 'float32', 'emits Float32 GPU matrix metadata');
+  ).toEqual(new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]));
+  expect(prepared.sourceInfo.valueType, 'retains Float64 source metadata').toBe('float64');
+  expect(prepared.matrixInfo.valueType, 'emits Float32 GPU matrix metadata').toBe('float32');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
 function makeRawMatrixVector<T extends arrow.Float32 | arrow.Float64>(

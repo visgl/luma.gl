@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   ArrowTableGeometry,
   makeArrowFixedSizeListVector,
@@ -12,90 +12,84 @@ import {
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('ArrowTableGeometry creates interleaved GPU geometry from a Mesh Arrow table', t => {
+it('ArrowTableGeometry creates interleaved GPU geometry from a Mesh Arrow table', () => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable();
   const geometry = new ArrowTableGeometry(device, {arrowMesh});
 
-  t.equal(geometry.topology, 'triangle-list', 'uses mesh topology');
-  t.equal(geometry.vertexCount, 3, 'uses Arrow row count for non-indexed geometry');
-  t.deepEqual(Object.keys(geometry.attributes), ['geometry'], 'creates one interleaved buffer');
-  t.deepEqual(
+  expect(geometry.topology, 'uses mesh topology').toBe('triangle-list');
+  expect(geometry.vertexCount, 'uses Arrow row count for non-indexed geometry').toBe(3);
+  expect(Object.keys(geometry.attributes), 'creates one interleaved buffer').toEqual(['geometry']);
+  expect(
     geometry.bufferLayout,
-    [
-      {
-        name: 'geometry',
-        stepMode: 'vertex',
-        byteStride: 36,
-        attributes: [
-          {attribute: 'positions', format: 'float32x3', byteOffset: 0},
-          {attribute: 'normals', format: 'float32x3', byteOffset: 12},
-          {attribute: 'colors', format: 'unorm8x4', byteOffset: 24},
-          {attribute: 'texCoords', format: 'float32x2', byteOffset: 28}
-        ]
-      }
-    ],
     'maps Mesh Arrow attributes into one interleaved buffer layout'
-  );
-  t.equal(geometry.attributes.geometry.byteLength, 108, 'uploads packed interleaved bytes');
+  ).toEqual([
+    {
+      name: 'geometry',
+      stepMode: 'vertex',
+      byteStride: 36,
+      attributes: [
+        {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+        {attribute: 'normals', format: 'float32x3', byteOffset: 12},
+        {attribute: 'colors', format: 'unorm8x4', byteOffset: 24},
+        {attribute: 'texCoords', format: 'float32x2', byteOffset: 28}
+      ]
+    }
+  ]);
+  expect(geometry.attributes.geometry.byteLength, 'uploads packed interleaved bytes').toBe(108);
 
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTableGeometry creates separate GPU buffers when interleaving is disabled', t => {
+it('ArrowTableGeometry creates separate GPU buffers when interleaving is disabled', () => {
   const device = new NullDevice({});
   const geometry = new ArrowTableGeometry(device, {
     arrowMesh: makeArrowMeshTable(),
     interleaved: false
   });
 
-  t.deepEqual(
+  expect(
     Object.keys(geometry.attributes),
-    ['positions', 'normals', 'colors', 'texCoords'],
     'creates one GPU buffer per Mesh Arrow attribute'
-  );
-  t.deepEqual(
-    geometry.bufferLayout,
-    [
-      {name: 'positions', stepMode: 'vertex', format: 'float32x3'},
-      {name: 'normals', stepMode: 'vertex', format: 'float32x3'},
-      {name: 'colors', stepMode: 'vertex', format: 'unorm8x4'},
-      {name: 'texCoords', stepMode: 'vertex', format: 'float32x2'}
-    ],
-    'creates one buffer layout per Mesh Arrow attribute'
-  );
+  ).toEqual(['positions', 'normals', 'colors', 'texCoords']);
+  expect(geometry.bufferLayout, 'creates one buffer layout per Mesh Arrow attribute').toEqual([
+    {name: 'positions', stepMode: 'vertex', format: 'float32x3'},
+    {name: 'normals', stepMode: 'vertex', format: 'float32x3'},
+    {name: 'colors', stepMode: 'vertex', format: 'unorm8x4'},
+    {name: 'texCoords', stepMode: 'vertex', format: 'float32x2'}
+  ]);
 
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTableGeometry reads indexed Mesh Arrow indices from row 0', t => {
+it('ArrowTableGeometry reads indexed Mesh Arrow indices from row 0', () => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable({indices: new Int32Array([0, 1, 2, 2, 1, 0])});
   const geometry = new ArrowTableGeometry(device, {arrowMesh});
 
-  t.equal(geometry.vertexCount, 6, 'uses index count for indexed geometry');
-  t.ok(geometry.indices, 'creates an index buffer');
-  t.equal(geometry.indices?.byteLength, 12, 'uploads uint16 indices when possible');
+  expect(geometry.vertexCount, 'uses index count for indexed geometry').toBe(6);
+  expect(Boolean(geometry.indices), 'creates an index buffer').toBe(true);
+  expect(geometry.indices?.byteLength, 'uploads uint16 indices when possible').toBe(12);
 
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTableGeometry accepts raw Arrow tables and reads topology metadata', t => {
+it('ArrowTableGeometry accepts raw Arrow tables and reads topology metadata', () => {
   const device = new NullDevice({});
   const table = makeArrowMeshTable().data;
   const geometry = new ArrowTableGeometry(device, {arrowMesh: table});
 
-  t.equal(geometry.topology, 'triangle-list', 'uses topology from Arrow schema metadata');
-  t.equal(geometry.vertexCount, 3, 'uses raw Arrow table row count');
+  expect(geometry.topology, 'uses topology from Arrow schema metadata').toBe('triangle-list');
+  expect(geometry.vertexCount, 'uses raw Arrow table row count').toBe(3);
 
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTableGeometry validates Mesh Arrow input', t => {
+it('ArrowTableGeometry validates Mesh Arrow input', () => {
   const device = new NullDevice({});
   const tableWithoutPosition = new arrow.Table({
     NORMAL: makeArrowFixedSizeListVector(new arrow.Float32(), 3, new Float32Array([0, 0, 1]))
@@ -117,34 +111,34 @@ test('ArrowTableGeometry validates Mesh Arrow input', t => {
     indices: arrow.makeVector(new Int32Array([0]))
   });
 
-  t.throws(
+  expect(
     () => new ArrowTableGeometry(device, {arrowMesh: tableWithoutPosition}),
-    /POSITION/,
     'requires POSITION'
-  );
-  t.throws(
+  ).toThrow(/POSITION/);
+  expect(
     () => new ArrowTableGeometry(device, {arrowMesh: invalidAttributeTable}),
-    /numeric/,
     'rejects non-numeric attribute columns'
-  );
-  t.throws(
+  ).toThrow(/numeric/);
+  expect(
     () => new ArrowTableGeometry(device, {arrowMesh: invalidIndicesTable}),
-    /indices column must be a List/,
     'rejects malformed indices columns'
-  );
+  ).toThrow(/indices column must be a List/);
 
-  t.end();
+  void 0;
 });
 
-test('Arrow geometry factory keeps the Mesh Arrow surface available', t => {
+it('Arrow geometry factory keeps the Mesh Arrow surface available', () => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable();
   const geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
 
-  t.ok(geometry instanceof ArrowTableGeometry, 'factory returns ArrowTableGeometry');
+  expect(
+    Boolean(geometry instanceof ArrowTableGeometry),
+    'factory returns ArrowTableGeometry'
+  ).toBe(true);
 
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
 function makeArrowMeshTable(options: {indices?: Int32Array} = {}): ArrowMeshTable {

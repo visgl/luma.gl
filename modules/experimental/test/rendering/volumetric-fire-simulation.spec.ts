@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {
   makeVolumetricFireSimulationUniformData,
@@ -32,7 +32,7 @@ const PASSIVE_STEP_OPTIONS = {
   reset: false
 } as const satisfies Omit<VolumetricFireSimulationStepOptions, 'deltaTime'>;
 
-test('VolumetricFireSimulation packs its fixed shader ABI', testCase => {
+it('VolumetricFireSimulation packs its fixed shader ABI', () => {
   const uniformData = makeVolumetricFireSimulationUniformData([8, 12, 10], {
     deltaTime: 1 / 60,
     time: 3.5,
@@ -48,43 +48,39 @@ test('VolumetricFireSimulation packs its fixed shader ABI', testCase => {
     }))
   });
 
-  testCase.equal(uniformData.length, 72, 'the cross-kernel ABI has a fixed byte layout');
-  testCase.ok(
-    approximatelyEqual(Array.from(uniformData.slice(0, 4)), [8, 12, 10, 1 / 60]),
+  expect(uniformData.length, 'the cross-kernel ABI has a fixed byte layout').toBe(72);
+  expect(
+    Boolean(approximatelyEqual(Array.from(uniformData.slice(0, 4)), [8, 12, 10, 1 / 60])),
     'dimensions and the deterministic time step are packed first'
+  ).toBe(true);
+  expect(uniformData[4], 'absolute simulation time is preserved').toBe(3.5);
+  expect(uniformData[6], 'source records are capped to the shader capacity').toBe(
+    MAX_VOLUMETRIC_FIRE_EMITTERS
   );
-  testCase.equal(uniformData[4], 3.5, 'absolute simulation time is preserved');
-  testCase.equal(
-    uniformData[6],
-    MAX_VOLUMETRIC_FIRE_EMITTERS,
-    'source records are capped to the shader capacity'
-  );
-  testCase.ok(
-    approximatelyEqual(Array.from(uniformData.slice(24, 28)), [-2.4, -4.8, 0, 0.64]),
+  expect(
+    Boolean(approximatelyEqual(Array.from(uniformData.slice(24, 28)), [-2.4, -4.8, 0, 0.64])),
     'normalized emitter coordinates are converted into centered grid-cell units'
-  );
-  testCase.throws(
+  ).toBe(true);
+  expect(
     () => makeVolumetricFireSimulationUniformData([8, 8, 8], {deltaTime: 0}),
-    /deltaTime/,
     'non-positive timesteps are rejected before upload'
-  );
-  testCase.throws(
+  ).toThrow(/deltaTime/);
+  expect(
     () =>
       makeVolumetricFireSimulationUniformData([8, 8, 8], {
         deltaTime: 1 / 60,
         emitters: [{position: [1.1, 0.5, 0.5], radius: 0.1}]
       }),
-    /emitter/,
     'active emitters must stay inside the normalized volume'
-  );
-  testCase.end();
+  ).toThrow(/emitter/);
+  void 0;
 });
 
-test('VolumetricFireSimulation orders steps and preserves borrowed resources', async testCase => {
+it('VolumetricFireSimulation orders steps and preserves borrowed resources', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -110,20 +106,16 @@ test('VolumetricFireSimulation orders steps and preserves borrowed resources', a
   dimensions[0] = 12;
 
   try {
-    testCase.equal(simulation.dimensions[0], 8, 'the simulation owns an immutable dimensions copy');
-    testCase.deepEqual(
-      simulation.stats.nodeOrder,
-      [
-        'advect-fire-velocity',
-        'measure-divergence-and-clear-pressure',
-        'project-pressure-1',
-        'project-pressure-2',
-        'project-fire-velocity',
-        'advect-react-and-emit',
-        'commit-combustion'
-      ],
-      'the graph exposes the complete solver sequence'
-    );
+    expect(simulation.dimensions[0], 'the simulation owns an immutable dimensions copy').toBe(8);
+    expect(simulation.stats.nodeOrder, 'the graph exposes the complete solver sequence').toEqual([
+      'advect-fire-velocity',
+      'measure-divergence-and-clear-pressure',
+      'project-pressure-1',
+      'project-pressure-2',
+      'project-fire-velocity',
+      'advect-react-and-emit',
+      'commit-combustion'
+    ]);
 
     const commandEncoder = device.createCommandEncoder({id: 'volumetric-fire-ordered-steps'});
     simulation.encode(commandEncoder, {
@@ -151,15 +143,14 @@ test('VolumetricFireSimulation orders steps and preserves borrowed resources', a
     for (let valueOffset = 0; valueOffset < combustion.length; valueOffset += 4) {
       maximumDensity = Math.max(maximumDensity, combustion[valueOffset]);
     }
-    testCase.ok(
-      maximumDensity > 0.1,
+    expect(
+      Boolean(maximumDensity > 0.1),
       'encoder-ordered uniform uploads preserve the first step before the second step advances it'
-    );
-    testCase.equal(
+    ).toBe(true);
+    expect(
       getVolumeValue(combustion, [8, 8, 8], 4, 4, 4, 0),
-      0,
       'solid voxels contain no combustion state'
-    );
+    ).toBe(0);
 
     const disabledEmitterEncoder = device.createCommandEncoder({
       id: 'volumetric-fire-disabled-emitter'
@@ -183,10 +174,10 @@ test('VolumetricFireSimulation orders steps and preserves borrowed resources', a
       simulation.velocityTexture,
       [8, 8, 8]
     );
-    testCase.ok(
-      disabledEmitterVelocity.every(value => Math.abs(value) < 0.001),
+    expect(
+      Boolean(disabledEmitterVelocity.every(value => Math.abs(value) < 0.001)),
       'a zero-rate emitter injects no momentum'
-    );
+    ).toBe(true);
 
     simulation.combustionTexture.writeData(
       makeRgba16FloatVolume([8, 8, 8], (x, y, z) =>
@@ -198,25 +189,27 @@ test('VolumetricFireSimulation orders steps and preserves borrowed resources', a
     simulation.encode(ageEncoder, {...PASSIVE_STEP_OPTIONS, deltaTime: 1});
     device.submit(ageEncoder.finish());
     const agedCombustion = await readRgba16FloatVolume(simulation.combustionTexture, [8, 8, 8]);
-    testCase.equal(
+    expect(
       getVolumeValue(agedCombustion, [8, 8, 8], 3, 3, 3, 3),
-      64,
       'combustion age saturates before half-float storage'
-    );
+    ).toBe(64);
   } finally {
     simulation.destroy();
-    testCase.notOk(obstacleTexture.destroyed, 'the caller-owned obstacle texture is borrowed');
+    expect(
+      Boolean(obstacleTexture.destroyed),
+      'the caller-owned obstacle texture is borrowed'
+    ).toBe(false);
     obstacleTexture.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('VolumetricFireSimulation pressure projection reduces divergence', async testCase => {
+it('VolumetricFireSimulation pressure projection reduces divergence', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -247,27 +240,30 @@ test('VolumetricFireSimulation pressure projection reduces divergence', async te
 
     const projectedVelocity = await readRgba16FloatVolume(simulation.velocityTexture, dimensions);
     const projectedDivergence = getBackwardDivergenceRms(projectedVelocity, dimensions);
-    testCase.ok(initialDivergence > 0.5, 'the seeded velocity field is observably divergent');
-    testCase.ok(
-      projectedDivergence / initialDivergence < 0.25,
+    expect(
+      Boolean(initialDivergence > 0.5),
+      'the seeded velocity field is observably divergent'
+    ).toBe(true);
+    expect(
+      Boolean(projectedDivergence / initialDivergence < 0.25),
       `projection reduces divergence (${projectedDivergence} from ${initialDivergence})`
-    );
-    testCase.ok(
-      projectedVelocity.every(Number.isFinite),
+    ).toBe(true);
+    expect(
+      Boolean(projectedVelocity.every(Number.isFinite)),
       'projection keeps the half-float velocity field finite'
-    );
+    ).toBe(true);
   } finally {
     simulation.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('VolumetricFireSimulation advances transport and reaction', async testCase => {
+it('VolumetricFireSimulation advances transport and reaction', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -299,15 +295,18 @@ test('VolumetricFireSimulation advances transport and reaction', async testCase 
       device.submit(commandEncoder.finish());
       const combustion = await readRgba16FloatVolume(simulation.combustionTexture, dimensions);
       const {mass, centerX} = getDensityMassAndCenter(combustion, dimensions);
-      testCase.ok(mass > 0.8 && mass < 1.2, `step ${stepIndex + 1} preserves density mass`);
-      testCase.ok(
-        centerX - previousCenterX > 0.75,
+      expect(
+        Boolean(mass > 0.8 && mass < 1.2),
+        `step ${stepIndex + 1} preserves density mass`
+      ).toBe(true);
+      expect(
+        Boolean(centerX - previousCenterX > 0.75),
         `step ${stepIndex + 1} advects density along the velocity field`
-      );
-      testCase.ok(
-        Math.abs(centerX - (stepIndex + 4)) < 0.25,
+      ).toBe(true);
+      expect(
+        Boolean(Math.abs(centerX - (stepIndex + 4)) < 0.25),
         `step ${stepIndex + 1} moves density approximately one grid cell`
-      );
+      ).toBe(true);
       previousCenterX = centerX;
     }
 
@@ -334,21 +333,21 @@ test('VolumetricFireSimulation advances transport and reaction', async testCase 
     const density = getVolumeValue(reactedCombustion, dimensions, 8, 3, 3, 0);
     const temperature = getVolumeValue(reactedCombustion, dimensions, 8, 3, 3, 1);
     const fuel = getVolumeValue(reactedCombustion, dimensions, 8, 3, 3, 2);
-    testCase.ok(fuel < 0.9, 'reaction consumes hot fuel');
-    testCase.ok(temperature > 1.1, 'reaction releases heat');
-    testCase.ok(density > 0.05, 'reaction produces smoke density');
+    expect(Boolean(fuel < 0.9), 'reaction consumes hot fuel').toBe(true);
+    expect(Boolean(temperature > 1.1), 'reaction releases heat').toBe(true);
+    expect(Boolean(density > 0.05), 'reaction produces smoke density').toBe(true);
   } finally {
     simulation.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('VolumetricFireSimulation enforces obstacle faces and blocks tunneling', async testCase => {
+it('VolumetricFireSimulation enforces obstacle faces and blocks tunneling', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -390,10 +389,10 @@ test('VolumetricFireSimulation enforces obstacle faces and blocks tunneling', as
       cornerSimulation.velocityTexture,
       cornerDimensions
     );
-    testCase.ok(
-      Math.abs(getVolumeValue(constrainedVelocity, cornerDimensions, 4, 4, 4, 0)) < 0.02,
+    expect(
+      Boolean(Math.abs(getVolumeValue(constrainedVelocity, cornerDimensions, 4, 4, 4, 0)) < 0.02),
       'a solid positive face removes normal flux regardless of its sign'
-    );
+    ).toBe(true);
   } finally {
     cornerSimulation.destroy();
     cornerObstacleTexture.destroy();
@@ -471,14 +470,20 @@ test('VolumetricFireSimulation enforces obstacle faces and blocks tunneling', as
         }
       }
     }
-    testCase.ok(totalDensity > 0.5, 'the wall fixture preserves transported combustion mass');
-    testCase.ok(farSideDensity < 0.01, 'a one-voxel wall blocks long advection backtraces');
+    expect(
+      Boolean(totalDensity > 0.5),
+      'the wall fixture preserves transported combustion mass'
+    ).toBe(true);
+    expect(
+      Boolean(farSideDensity < 0.01),
+      'a one-voxel wall blocks long advection backtraces'
+    ).toBe(true);
   } finally {
     wallSimulation.destroy();
     wallObstacleTexture.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 function approximatelyEqual(actual: number[], expected: number[], epsilon = 1e-5): boolean {

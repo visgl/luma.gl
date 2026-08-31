@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
@@ -68,121 +68,111 @@ const GLSL_PLATFORM_INFO: PlatformInfo = {
   features: new Set()
 };
 
-test('picking#defaultUniforms', t => {
-  t.deepEqual(
-    picking.defaultUniforms,
-    {
-      isActive: false,
-      isAttribute: false,
-      isHighlightActive: false,
-      useByteColors: true,
-      highlightedObjectColor: [0, 0, 0],
-      highlightColor: [0, 1, 1, 1]
-    },
-    'Legacy default uniforms remain stable'
-  );
+it('picking#defaultUniforms', () => {
+  expect(picking.defaultUniforms, 'Legacy default uniforms remain stable').toEqual({
+    isActive: false,
+    isAttribute: false,
+    isHighlightActive: false,
+    useByteColors: true,
+    highlightedObjectColor: [0, 0, 0],
+    highlightColor: [0, 1, 1, 1]
+  });
 
-  t.end();
+  void 0;
 });
 
-test('picking#getUniforms', async t => {
-  t.deepEqual(getShaderModuleUniforms(picking, {}, {}), {}, 'Empty input');
+it('picking#getUniforms', async () => {
+  expect(getShaderModuleUniforms(picking, {}, {}), 'Empty input').toEqual({});
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       isActive: true,
       highlightedObjectColor: undefined,
       highlightColor: [255, 0, 0]
     }),
-    {
-      isActive: true,
-      isAttribute: false,
-      highlightColor: [1, 0, 0, 1]
-    },
     'Undefined input (no change to highlighted object)'
-  );
+  ).toEqual({
+    isActive: true,
+    isAttribute: false,
+    highlightColor: [1, 0, 0, 1]
+  });
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       isActive: true,
       highlightedObjectColor: null,
       highlightColor: [255, 0, 0]
     }),
-    {
-      isActive: true,
-      isAttribute: false,
-      isHighlightActive: false,
-      highlightColor: [1, 0, 0, 1]
-    },
     'Null input (clear highlighted object)'
-  );
+  ).toEqual({
+    isActive: true,
+    isAttribute: false,
+    isHighlightActive: false,
+    highlightColor: [1, 0, 0, 1]
+  });
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51]
     }),
-    {
-      isHighlightActive: true,
-      highlightedObjectColor: [0, 0, 1],
-      highlightColor: [0.4, 0, 0, 0.2]
-    },
     'Picked input (set highlighted object)'
-  );
+  ).toEqual({
+    isHighlightActive: true,
+    highlightedObjectColor: [0, 0, 1],
+    highlightColor: [0.4, 0, 0, 0.2]
+  });
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51],
       useByteColors: true
     }),
-    {
-      useByteColors: true,
-      isHighlightActive: true,
-      highlightedObjectColor: [0, 0, 1],
-      highlightColor: [0.4, 0, 0, 0.2]
-    },
     'Byte highlight colors normalize when useByteColors is true'
-  );
+  ).toEqual({
+    useByteColors: true,
+    isHighlightActive: true,
+    highlightedObjectColor: [0, 0, 1],
+    highlightColor: [0.4, 0, 0, 0.2]
+  });
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [1, 0, 0, 0.5],
       useByteColors: false
     }),
-    {
-      useByteColors: false,
-      isHighlightActive: true,
-      highlightedObjectColor: [0, 0, 1],
-      highlightColor: [1, 0, 0, 0.5]
-    },
     'useByteColors=false preserves float highlight colors'
-  );
+  ).toEqual({
+    useByteColors: false,
+    isHighlightActive: true,
+    highlightedObjectColor: [0, 0, 1],
+    highlightColor: [1, 0, 0, 0.5]
+  });
 
-  t.deepEqual(
+  expect(
     picking.getUniforms({
       isActive: false,
       isAttribute: true,
       useByteColors: false
     }),
-    {
-      isActive: false,
-      isAttribute: true,
-      useByteColors: false
-    },
     'Legacy activity, attribute, and byte-color props remain unchanged'
-  );
+  ).toEqual({
+    isActive: false,
+    isAttribute: true,
+    useByteColors: false
+  });
 
-  t.end();
+  void 0;
 });
 
-test('picking#highlightedObjectColor', async t => {
+it('picking#highlightedObjectColor', async () => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -199,19 +189,19 @@ test('picking#highlightedObjectColor', async t => {
     transform.run();
 
     const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
-    t.deepEqual(Array.from(outData), testCase.isPicked, 'Vertex should correctly get picked');
+    expect(Array.from(outData), 'Vertex should correctly get picked').toEqual(testCase.isPicked);
   }
 
   transform.destroy();
-  t.end();
+  void 0;
 });
 
-test('picking#picking_setPickingColor', async t => {
+it('picking#picking_setPickingColor', async () => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const vertexColorData = TEST_DATA.vertexColorData;
@@ -226,23 +216,22 @@ test('picking#picking_setPickingColor', async t => {
   transform.run();
 
   const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
-  t.deepEqual(
+  expect(
     Array.from(outData),
-    [0, 1, 1, 1, 1, 1, 1, 1, 1],
     'Zero picking color is marked invalid and all non-zero colors are pickable'
-  );
+  ).toEqual([0, 1, 1, 1, 1, 1, 1, 1, 1]);
 
   transform.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('picking#useByteColors', async t => {
+it('picking#useByteColors', async () => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -264,11 +253,10 @@ test('picking#useByteColors', async t => {
   normalizedTransform.run();
 
   const normalizedData = await readTransformOutput(normalizedTransform, 'payload', vertexCount * 3);
-  t.deepEqual(
+  expect(
     Array.from(normalizedData).map(value => Number(value.toFixed(6))),
-    [1, 0.501961, 0.25098, 0.00098, 0.001961, 0.002941],
     'Legacy module normalizes byte colors when useByteColors is true'
-  );
+  ).toEqual([1, 0.501961, 0.25098, 0.00098, 0.001961, 0.002941]);
   normalizedTransform.destroy();
 
   const floatColorTransform = createPickingPayloadTransform(
@@ -286,22 +274,21 @@ test('picking#useByteColors', async t => {
   floatColorTransform.run();
 
   const floatColorData = await readTransformOutput(floatColorTransform, 'payload', vertexCount * 3);
-  t.deepEqual(
+  expect(
     Array.from(floatColorData).map(value => Number(value.toFixed(6))),
-    [255, 128, 64, 0.25, 0.5, 0.75],
     'Legacy module preserves float colors when useByteColors is false'
-  );
+  ).toEqual([255, 128, 64, 0.25, 0.5, 0.75]);
   floatColorTransform.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('picking#picking_setPickingAttribute', async t => {
+it('picking#picking_setPickingAttribute', async () => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -323,17 +310,15 @@ test('picking#picking_setPickingAttribute', async t => {
   transform.run();
 
   const outData = await readTransformOutput(transform, 'payload', vertexCount * 3);
-  t.deepEqual(
-    Array.from(outData),
-    [1, 2, 3, 4, 5, 6],
-    'Legacy attribute picking payload remains unchanged'
-  );
+  expect(Array.from(outData), 'Legacy attribute picking payload remains unchanged').toEqual([
+    1, 2, 3, 4, 5, 6
+  ]);
 
   transform.destroy();
-  t.end();
+  void 0;
 });
 
-test('picking#assembledGLSLContract', t => {
+it('picking#assembledGLSLContract', () => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: `\
@@ -354,44 +339,41 @@ void main(void) {
     modules: [picking]
   });
 
-  t.ok(
-    assembledShader.vs.includes('void picking_setPickingColor(vec3 pickingColor)'),
+  expect(
+    Boolean(assembledShader.vs.includes('void picking_setPickingColor(vec3 pickingColor)')),
     'Legacy picking_setPickingColor remains present in assembled vertex GLSL'
-  );
-  t.ok(
-    assembledShader.vs.includes('void picking_setPickingAttribute(vec3 value)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.vs.includes('void picking_setPickingAttribute(vec3 value)')),
     'Legacy picking_setPickingAttribute remains present in assembled vertex GLSL'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 picking_filterHighlightColor(vec4 color)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 picking_filterHighlightColor(vec4 color)')),
     'Legacy picking_filterHighlightColor remains present in assembled fragment GLSL'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 picking_filterPickingColor(vec4 color)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 picking_filterPickingColor(vec4 color)')),
     'Legacy picking_filterPickingColor remains present in assembled fragment GLSL'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 picking_filterColor(vec4 color)'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 picking_filterColor(vec4 color)')),
     'Legacy picking_filterColor remains present in assembled fragment GLSL'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembledShader.vs.includes('batchIndex') || assembledShader.fs.includes('batchIndex'),
-    false,
     'Engine batch-index payload identifiers are not injected into the legacy module'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     assembledShader.vs.includes('highlightedBatchIndex') ||
       assembledShader.fs.includes('highlightedBatchIndex'),
-    false,
     'Engine highlight batch identifiers are not injected into the legacy module'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     assembledShader.vs.includes('ivec4(') || assembledShader.fs.includes('ivec4('),
-    false,
     'Legacy GLSL module does not emit integer render-target payloads'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
 function createPickingAlphaTransform(

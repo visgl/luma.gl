@@ -3,13 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {persistenceEffect} from '@luma.gl/effects';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('persistenceEffect#bindings', t => {
-  t.deepEqual(
-    persistenceEffect.bindingLayout,
-    [{name: 'persistenceTexture', group: 0}],
-    'declares the frame-history texture binding'
-  );
-  t.end();
+it('persistenceEffect#bindings', () => {
+  expect(persistenceEffect.bindingLayout, 'declares the frame-history texture binding').toEqual([
+    {name: 'persistenceTexture', group: 0}
+  ]);
+  void 0;
 });

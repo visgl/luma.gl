@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {getTraceRow, makeDeckTraceData} from '../../examples/deck/gpu-culled-trace/trace-data';
 import {FillPattern, fillPatternShaderPlugin} from '../../examples/fill-pattern-shader-plugin';
@@ -135,28 +135,26 @@ import {
   updateTraceViewerURLPreset
 } from '../../examples/experimental/gpu-trace-viewer/trace-viewer-state';
 
-test('trace viewer URL presets are device-qualified and shareable', t => {
+it('trace viewer URL presets are device-qualified and shareable', () => {
   const supportedSpans = [250_000, 1_000_000, 4_000_000];
   const supportedDependencies = [0, ...supportedSpans];
 
-  t.deepEqual(
+  expect(
     getTraceViewerURLPreset(
       '?spans=1000000&dependencies=4000000',
       supportedSpans,
       supportedDependencies
     ),
-    {spanCapacity: 1_000_000, dependencyCapacity: 4_000_000},
     'supported preset values are restored'
-  );
-  t.deepEqual(
+  ).toEqual({spanCapacity: 1_000_000, dependencyCapacity: 4_000_000});
+  expect(
     getTraceViewerURLPreset(
       '?spans=25000000&dependencies=oops',
       supportedSpans,
       supportedDependencies
     ),
-    {spanCapacity: undefined, dependencyCapacity: undefined},
     'unsupported or malformed values cannot bypass device-qualified controls'
-  );
+  ).toEqual({spanCapacity: undefined, dependencyCapacity: undefined});
 
   let replacement = '';
   updateTraceViewerURLPreset(
@@ -168,10 +166,11 @@ test('trace viewer URL presets are device-qualified and shareable', t => {
     },
     {spanCapacity: 250_000, dependencyCapacity: 1_000_000}
   );
-  t.equal(
+  expect(
     replacement,
-    '/examples/experimental/gpu-trace-viewer?revision=test&spans=250000&dependencies=1000000#view',
     'full-page controls persist a shareable URL without dropping unrelated parameters'
+  ).toBe(
+    '/examples/experimental/gpu-trace-viewer?revision=test&spans=250000&dependencies=1000000#view'
   );
 
   replacement = '';
@@ -184,39 +183,52 @@ test('trace viewer URL presets are device-qualified and shareable', t => {
     },
     {spanCapacity: 250_000, dependencyCapacity: 250_000}
   );
-  t.equal(replacement, '', 'embedded documentation examples do not rewrite the guide URL');
-  t.end();
+  expect(replacement, 'embedded documentation examples do not rewrite the guide URL').toBe('');
+  void 0;
 });
 
-test('trace generation cancels stale work and idle views do not render', t => {
+it('trace generation cancels stale work and idle views do not render', () => {
   const generationState = new TraceGenerationState();
   const firstGeneration = generationState.begin();
   const secondGeneration = generationState.begin();
 
-  t.notOk(generationState.isCurrent(firstGeneration), 'a replacement cancels stale generation');
-  t.ok(generationState.isCurrent(secondGeneration), 'the latest generation may publish');
-  t.notOk(
-    shouldRenderTraceFrame({
-      gpuFrameInFlight: false,
-      renderSignature: 'unchanged',
-      lastRenderSignature: 'unchanged'
-    }),
+  expect(
+    Boolean(generationState.isCurrent(firstGeneration)),
+    'a replacement cancels stale generation'
+  ).toBe(false);
+  expect(
+    Boolean(generationState.isCurrent(secondGeneration)),
+    'the latest generation may publish'
+  ).toBe(true);
+  expect(
+    Boolean(
+      shouldRenderTraceFrame({
+        gpuFrameInFlight: false,
+        renderSignature: 'unchanged',
+        lastRenderSignature: 'unchanged'
+      })
+    ),
     'an unchanged idle view does not encode GPU work'
-  );
-  t.ok(
-    shouldRenderTraceFrame({
-      gpuFrameInFlight: false,
-      renderSignature: 'changed',
-      lastRenderSignature: 'unchanged'
-    }),
+  ).toBe(false);
+  expect(
+    Boolean(
+      shouldRenderTraceFrame({
+        gpuFrameInFlight: false,
+        renderSignature: 'changed',
+        lastRenderSignature: 'unchanged'
+      })
+    ),
     'an invalidated view encodes one new frame'
-  );
+  ).toBe(true);
   generationState.finalize();
-  t.notOk(generationState.isCurrent(secondGeneration), 'finalization rejects pending publication');
-  t.end();
+  expect(
+    Boolean(generationState.isCurrent(secondGeneration)),
+    'finalization rejects pending publication'
+  ).toBe(false);
+  void 0;
 });
 
-test('trace analytics cache identity includes scope and selection generation inputs', t => {
+it('trace analytics cache identity includes scope and selection generation inputs', () => {
   const base = {
     enabledMask: 7,
     statusMask: 15,
@@ -227,33 +239,44 @@ test('trace analytics cache identity includes scope and selection generation inp
   const interval = getTraceAggregationFilterSignature({...base, scope: 'interval'});
   const fullTrace = getTraceAggregationFilterSignature({...base, scope: 'trace'});
 
-  t.notEqual(viewport, interval, 'viewport and measured intervals cannot share cached output');
-  t.notEqual(viewport, fullTrace, 'viewport and full-trace paths cannot share cached output');
-  t.deepEqual(
+  expect(viewport, 'viewport and measured intervals cannot share cached output').not.toBe(interval);
+  expect(viewport, 'viewport and full-trace paths cannot share cached output').not.toBe(fullTrace);
+  expect(
     getTraceAnalysisWindow({
       scope: 'trace',
       traceDuration: 100,
       viewport: [20, 40],
       measured: [50, 60]
     }),
-    [0, 100],
     'full-trace analysis owns the complete domain'
-  );
+  ).toEqual([0, 100]);
 });
 
-test('GPU trace feature cards expose concrete GPUGraph and gpu-trace capabilities', t => {
-  t.equal(GPU_CORE_FEATURE_CARDS.length, 17, 'lists the GPU Core capability contract');
-  t.equal(GPU_TRACE_FEATURE_CARDS.length, 19, 'lists the GPU Trace capability contract');
+it('GPU trace feature cards expose concrete GPUGraph and gpu-trace capabilities', () => {
+  expect(GPU_CORE_FEATURE_CARDS.length, 'lists the GPU Core capability contract').toBe(17);
+  expect(GPU_TRACE_FEATURE_CARDS.length, 'lists the GPU Trace capability contract').toBe(19);
   const graphHtml = getTraceFeatureCardsHtml(GPU_CORE_FEATURE_CARDS, 'GPU Core');
   const traceHtml = getTraceFeatureCardsHtml(GPU_TRACE_FEATURE_CARDS, 'GPU Trace');
-  t.ok(graphHtml.includes('Conditional execution'), 'renders conditional graph work');
-  t.ok(graphHtml.includes('Aliasing validation'), 'renders compile-time alias validation');
-  t.ok(traceHtml.includes('Temporal candidates'), 'renders the temporal-index contract');
-  t.ok(traceHtml.includes('25M span capacity posture'), 'renders the scale contract');
-  t.end();
+  expect(
+    Boolean(graphHtml.includes('Conditional execution')),
+    'renders conditional graph work'
+  ).toBe(true);
+  expect(
+    Boolean(graphHtml.includes('Aliasing validation')),
+    'renders compile-time alias validation'
+  ).toBe(true);
+  expect(
+    Boolean(traceHtml.includes('Temporal candidates')),
+    'renders the temporal-index contract'
+  ).toBe(true);
+  expect(
+    Boolean(traceHtml.includes('25M span capacity posture')),
+    'renders the scale contract'
+  ).toBe(true);
+  void 0;
 });
 
-test('deck GPU trace copies complete canonical span records', t => {
+it('deck GPU trace copies complete canonical span records', () => {
   const count = 7;
   const deckData = makeDeckTraceData(count);
   const groups = makeTraceGroups(count);
@@ -267,49 +290,44 @@ test('deck GPU trace copies complete canonical span records', t => {
     );
     for (let groupRowIndex = 0; groupRowIndex < group.count; groupRowIndex++, rowIndex++) {
       const sourceWordOffset = groupRowIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
-      t.deepEqual(
+      expect(
         getTraceRow(deckData, rowIndex),
-        {
-          name: deckData.names[rowIndex],
-          group: group.name,
-          start: sourceFloats[sourceWordOffset],
-          duration: sourceFloats[sourceWordOffset + 1],
-          lane: group.data[sourceWordOffset + 2]
-        },
         `deck row ${rowIndex} preserves canonical span geometry and group identity`
-      );
+      ).toEqual({
+        name: deckData.names[rowIndex],
+        group: group.name,
+        start: sourceFloats[sourceWordOffset],
+        duration: sourceFloats[sourceWordOffset + 1],
+        lane: group.data[sourceWordOffset + 2]
+      });
     }
   }
 
-  t.equal(rowIndex, count, 'all canonical span rows are copied');
-  t.end();
+  expect(rowIndex, 'all canonical span rows are copied').toBe(count);
+  void 0;
 });
 
-test('GPU trace capacity options adapt to negotiated WebGPU buffer limits', t => {
-  t.deepEqual(
+it('GPU trace capacity options adapt to negotiated WebGPU buffer limits', () => {
+  expect(
     getTraceCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'portable limits expose twenty-five million spans through chunked source storage'
-  );
-  t.deepEqual(
+  ).toEqual([250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000]);
+  expect(
     getTraceDependencyCapacityOptions(128 * 1024 * 1024, 256 * 1024 * 1024),
-    [0, 250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'dependency chunking removes the single-binding ceiling'
-  );
-  t.deepEqual(
+  ).toEqual([0, 250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000]);
+  expect(
     getTraceCapacityOptions(256 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'chunking removes the single-binding ceiling'
-  );
-  t.deepEqual(
+  ).toEqual([250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000]);
+  expect(
     getTraceCapacityOptions(1024 * 1024 * 1024, 1024 * 1024 * 1024),
-    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'maximum adapters expose the twenty-five-million-span demonstration'
-  );
-  t.end();
+  ).toEqual([250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000]);
+  void 0;
 });
 
-test('GPU trace pixel mipmap preflight separates compact and indexed storage', t => {
+it('GPU trace pixel mipmap preflight separates compact and indexed storage', () => {
   const maximumChunkSpanCount =
     TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH /
     (TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT);
@@ -326,180 +344,177 @@ test('GPU trace pixel mipmap preflight separates compact and indexed storage', t
     1920
   );
 
-  t.equal(routine.chunkCount, 2, '4M spans retain two 64 MiB canonical source chunks');
-  t.equal(maximum.chunkCount, 12, '25M spans retain twelve independently bindable chunks');
-  t.equal(maximum.rowOrderByteLength, 100_000_000, 'compact ordering costs one word per span');
-  t.equal(
+  expect(routine.chunkCount, '4M spans retain two 64 MiB canonical source chunks').toBe(2);
+  expect(maximum.chunkCount, '25M spans retain twelve independently bindable chunks').toBe(12);
+  expect(maximum.rowOrderByteLength, 'compact ordering costs one word per span').toBe(100_000_000);
+  expect(
     maximum.rangeMaximumTreeByteLength,
-    201_326_592,
     'optional power-of-two range trees are reported separately'
-  );
-  t.equal(
+  ).toBe(201_326_592);
+  expect(
     maximum.compactPersistentByteLength,
-    123_605_296,
     'compact search includes row order, lane offsets, and bounded representatives'
-  );
-  t.equal(
+  ).toBe(123_605_296);
+  expect(
     maximum.indexedPersistentByteLength,
-    324_931_888,
     'indexed mode makes its additional memory cost explicit before allocation'
-  );
-  t.equal(
+  ).toBe(324_931_888);
+  expect(
     maximum.largestPersistentBufferByteLength,
-    16 * 1024 * 1024,
     'every added persistent binding stays far below the 64 MiB canonical chunk target'
-  );
-  t.equal(
+  ).toBe(16 * 1024 * 1024);
+  expect(
     maximum.maximumTransientBufferByteLength,
-    TRACE_LANE_COUNT * 1920 * 2 * Uint32Array.BYTES_PER_ELEMENT,
     'view-dependent scratch remains bounded by lane and viewport dimensions'
-  );
-  t.ok(
-    routine.indexedPersistentByteLength < maximum.indexedPersistentByteLength,
+  ).toBe(TRACE_LANE_COUNT * 1920 * 2 * Uint32Array.BYTES_PER_ELEMENT);
+  expect(
+    Boolean(routine.indexedPersistentByteLength < maximum.indexedPersistentByteLength),
     'the same contract records scale-dependent memory before enabling the tree'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace focus frontiers scale with reachable dependency population', t => {
-  t.equal(
+it('GPU trace focus frontiers scale with reachable dependency population', () => {
+  expect(
     getTraceFocusFrontierCapacity(100_000_000, 250_000),
-    250_001,
     'a sparse 100M-span trace allocates one frontier entry per dependency plus its seed'
-  );
-  t.equal(
+  ).toBe(250_001);
+  expect(
     getTraceFocusFrontierCapacity(100_000_000, 100_000_000),
-    TRACE_FOCUS_FRONTIER_MAXIMUM_CAPACITY,
     'a dense trace uses the bounded frontier and reports overflow separately'
-  );
-  t.equal(getTraceFocusFrontierCapacity(10, 10, 4), 4, 'tests can inject a smaller bound');
-  t.equal(
+  ).toBe(TRACE_FOCUS_FRONTIER_MAXIMUM_CAPACITY);
+  expect(getTraceFocusFrontierCapacity(10, 10, 4), 'tests can inject a smaller bound').toBe(4);
+  expect(
     getTraceFocusFrontierCapacity(0, 0),
-    1,
     'an empty trace retains one allocation-safe frontier word'
-  );
-  t.end();
+  ).toBe(1);
+  void 0;
 });
 
-test('GPU trace adjacency chunks preserve sparse CSR rows with local offsets', t => {
+it('GPU trace adjacency chunks preserve sparse CSR rows with local offsets', () => {
   const adjacency: TraceAdjacencyData = {
     nodes: Uint32Array.of(0, 2, 4, 7),
     offsets: Uint32Array.of(0, 2, 3, 6, 7),
     neighbors: Uint32Array.of(1, 3, 0, 2, 5, 6, 4)
   };
   const chunks = makeTraceAdjacencyChunks(adjacency, 5 * Uint32Array.BYTES_PER_ELEMENT);
-  t.equal(chunks.length, 2, 'the byte limit produces independently bindable partitions');
-  t.deepEqual(Array.from(chunks[0].topology), [0, 2, 0, 2, 3], 'first CSR offsets are local');
-  t.deepEqual(Array.from(chunks[1].topology), [4, 7, 0, 3, 4], 'second CSR offsets are local');
-  t.deepEqual(Array.from(chunks[0].neighbors), [1, 3, 0], 'first neighbors remain ordered');
-  t.deepEqual(Array.from(chunks[1].neighbors), [2, 5, 6, 4], 'second neighbors remain ordered');
-  t.ok(
-    chunks.every(
-      chunk =>
-        chunk.topology.byteLength <= 5 * Uint32Array.BYTES_PER_ELEMENT &&
-        chunk.neighbors.byteLength <= 5 * Uint32Array.BYTES_PER_ELEMENT
+  expect(chunks.length, 'the byte limit produces independently bindable partitions').toBe(2);
+  expect(Array.from(chunks[0].topology), 'first CSR offsets are local').toEqual([0, 2, 0, 2, 3]);
+  expect(Array.from(chunks[1].topology), 'second CSR offsets are local').toEqual([4, 7, 0, 3, 4]);
+  expect(Array.from(chunks[0].neighbors), 'first neighbors remain ordered').toEqual([1, 3, 0]);
+  expect(Array.from(chunks[1].neighbors), 'second neighbors remain ordered').toEqual([2, 5, 6, 4]);
+  expect(
+    Boolean(
+      chunks.every(
+        chunk =>
+          chunk.topology.byteLength <= 5 * Uint32Array.BYTES_PER_ELEMENT &&
+          chunk.neighbors.byteLength <= 5 * Uint32Array.BYTES_PER_ELEMENT
+      )
     ),
     'both bindings honor the same limit'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     makeTraceAdjacencyChunks({
       nodes: new Uint32Array(),
       offsets: Uint32Array.of(0),
       neighbors: new Uint32Array()
     }),
-    [],
     'empty adjacency has no GPU chunks'
-  );
-  t.throws(
+  ).toEqual([]);
+  expect(
     () => makeTraceAdjacencyChunks(adjacency, Uint32Array.BYTES_PER_ELEMENT),
-    /row exceeds/,
     'a row that cannot fit is rejected explicitly'
-  );
-  t.equal(
+  ).toThrow(/row exceeds/);
+  expect(
     TRACE_ADJACENCY_CHUNK_TARGET_BYTE_LENGTH,
-    64 * 1024 * 1024,
     'production adjacency bindings retain the conservative target'
-  );
-  t.end();
+  ).toBe(64 * 1024 * 1024);
+  void 0;
 });
 
-test('GPU trace span chunks preserve complete candidate batches and borrowed source rows', t => {
+it('GPU trace span chunks preserve complete candidate batches and borrowed source rows', () => {
   const dataset = makeTraceDataset(2048, 0);
   const chunks = makeTraceSpanChunks(
     dataset.spans,
     dataset.spanBatches,
     300 * TRACE_SPAN_RECORD_WORD_LENGTH * Uint32Array.BYTES_PER_ELEMENT
   );
-  t.ok(chunks.length > 1, 'small synthetic chunk limit creates multiple source buffers');
-  t.equal(
+  expect(
+    Boolean(chunks.length > 1),
+    'small synthetic chunk limit creates multiple source buffers'
+  ).toBe(true);
+  expect(
     chunks.reduce((count, chunk) => count + chunk.spanCount, 0),
-    dataset.spanCount,
     'chunks cover every source span exactly once'
-  );
-  t.ok(
-    chunks.every(chunk => chunk.data.buffer === dataset.spans.buffer),
+  ).toBe(dataset.spanCount);
+  expect(
+    Boolean(chunks.every(chunk => chunk.data.buffer === dataset.spans.buffer)),
     'chunk rows remain borrowed views of canonical source storage'
-  );
-  t.ok(
-    chunks.every(chunk =>
-      dataset.spanBatches
-        .slice(chunk.firstBatchIndex, chunk.firstBatchIndex + chunk.batchCount)
-        .every(
-          batch =>
-            batch.firstSpanIndex >= chunk.firstSpanIndex &&
-            batch.firstSpanIndex + batch.count <= chunk.firstSpanIndex + chunk.spanCount
-        )
+  ).toBe(true);
+  expect(
+    Boolean(
+      chunks.every(chunk =>
+        dataset.spanBatches
+          .slice(chunk.firstBatchIndex, chunk.firstBatchIndex + chunk.batchCount)
+          .every(
+            batch =>
+              batch.firstSpanIndex >= chunk.firstSpanIndex &&
+              batch.firstSpanIndex + batch.count <= chunk.firstSpanIndex + chunk.spanCount
+          )
+      )
     ),
     'no candidate batch crosses a chunk boundary'
-  );
-  t.equal(TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH, 64 * 1024 * 1024, 'target stays portable');
-  t.end();
+  ).toBe(true);
+  expect(TRACE_SPAN_CHUNK_TARGET_BYTE_LENGTH, 'target stays portable').toBe(64 * 1024 * 1024);
+  void 0;
 });
 
-test('GPU trace worker datasets transfer every owned allocation without copying shared views', t => {
+it('GPU trace worker datasets transfer every owned allocation without copying shared views', () => {
   const dataset = makeTraceDataset(2048, 128);
   const transferables = getTraceDatasetTransferables(dataset);
-  t.equal(new Set(transferables).size, transferables.length, 'each owned buffer transfers once');
-  t.ok(transferables.includes(dataset.spans.buffer), 'canonical spans transfer ownership');
-  t.ok(
-    dataset.groups.every(group => group.data.buffer === dataset.spans.buffer),
+  expect(new Set(transferables).size, 'each owned buffer transfers once').toBe(
+    transferables.length
+  );
+  expect(
+    Boolean(transferables.includes(dataset.spans.buffer)),
+    'canonical spans transfer ownership'
+  ).toBe(true);
+  expect(
+    Boolean(dataset.groups.every(group => group.data.buffer === dataset.spans.buffer)),
     'group views remain aliases of the transferred canonical span allocation'
-  );
-  t.ok(
-    dataset.spanBatches.every(batch => batch.data.buffer === dataset.spans.buffer),
+  ).toBe(true);
+  expect(
+    Boolean(dataset.spanBatches.every(batch => batch.data.buffer === dataset.spans.buffer)),
     'batch views remain aliases of the transferred canonical span allocation'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace supremacy contract exposes standard scales and interaction scenarios', t => {
-  t.deepEqual(
+it('GPU trace supremacy contract exposes standard scales and interaction scenarios', () => {
+  expect(
     TRACE_BENCHMARK_CAPACITIES,
-    [250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000],
     'capacity scales remain stable for comparable benchmark runs'
-  );
-  t.deepEqual(
+  ).toEqual([250_000, 1_000_000, 4_000_000, 10_000_000, 25_000_000]);
+  expect(
     TRACE_BENCHMARK_SCENARIOS.map(scenario => scenario.id),
-    [
-      'exact-expanded',
-      'exact-collapsed',
-      'exact-filtered',
-      'exact-focused',
-      'exact-picking',
-      'density',
-      'representative'
-    ],
     'interaction scenarios cover hierarchy, filtering, focus, picking, and adaptive LOD'
-  );
-  t.equal(
+  ).toEqual([
+    'exact-expanded',
+    'exact-collapsed',
+    'exact-filtered',
+    'exact-focused',
+    'exact-picking',
+    'density',
+    'representative'
+  ]);
+  expect(
     new Set(TRACE_BENCHMARK_SCENARIOS.map(scenario => scenario.id)).size,
-    TRACE_BENCHMARK_SCENARIOS.length,
     'scenario identifiers are unique'
-  );
-  t.end();
+  ).toBe(TRACE_BENCHMARK_SCENARIOS.length);
+  void 0;
 });
 
-test('GPU trace certification report distinguishes complete, slow, and incomplete runs', t => {
+it('GPU trace certification report distinguishes complete, slow, and incomplete runs', () => {
   const samples = TRACE_BENCHMARK_SCENARIOS.flatMap(scenario =>
     Array.from({length: 4}, (_, sampleIndex) => ({
       scenarioId: scenario.id,
@@ -536,9 +551,9 @@ test('GPU trace certification report distinguishes complete, slow, and incomplet
     pickResponseMilliseconds: [20, 30, 40]
   };
   const passing = makeTraceCertificationReport(base);
-  t.equal(passing.status, 'pass', 'a complete bounded 25M run passes');
-  t.equal(passing.scenarios.length, TRACE_BENCHMARK_SCENARIOS.length);
-  t.equal(passing.scenarios[0].frameP95Milliseconds, 13, 'scenario percentiles are retained');
+  expect(passing.status, 'a complete bounded 25M run passes').toBe('pass');
+  expect(passing.scenarios.length, '').toBe(TRACE_BENCHMARK_SCENARIOS.length);
+  expect(passing.scenarios[0].frameP95Milliseconds, 'scenario percentiles are retained').toBe(13);
 
   const slow = makeTraceCertificationReport({
     ...base,
@@ -546,8 +561,10 @@ test('GPU trace certification report distinguishes complete, slow, and incomplet
       sample.scenarioId === 'density' ? {...sample, frameTimeMilliseconds: 50} : sample
     )
   });
-  t.equal(slow.status, 'fail', 'a measured frame-time regression fails certification');
-  t.ok(slow.failures.some(failure => failure.includes('density frame p95')));
+  expect(slow.status, 'a measured frame-time regression fails certification').toBe('fail');
+  expect(Boolean(slow.failures.some(failure => failure.includes('density frame p95'))), '').toBe(
+    true
+  );
 
   const incomplete = makeTraceCertificationReport({
     ...base,
@@ -556,89 +573,86 @@ test('GPU trace certification report distinguishes complete, slow, and incomplet
     samples: samples.filter(sample => sample.scenarioId !== 'exact-picking'),
     pickResponseMilliseconds: []
   });
-  t.equal(incomplete.status, 'incomplete', 'a non-25M run cannot claim certification');
-  t.ok(incomplete.failures.some(failure => failure.includes('exactly 25M')));
+  expect(incomplete.status, 'a non-25M run cannot claim certification').toBe('incomplete');
+  expect(Boolean(incomplete.failures.some(failure => failure.includes('exactly 25M'))), '').toBe(
+    true
+  );
 
   const deviceLost = makeTraceCertificationReport({...base, deviceLost: true});
-  t.equal(deviceLost.status, 'fail', 'device loss is a hard certification failure');
-  t.end();
+  expect(deviceLost.status, 'device loss is a hard certification failure').toBe('fail');
+  void 0;
 });
 
-test('GPU trace capacity contract chunks spans and dependencies independently', t => {
+it('GPU trace capacity contract chunks spans and dependencies independently', () => {
   const portable = getTraceCapacityContract(10_000_000, 10_000_000, {
     maxStorageBufferBindingSize: 128 * 1024 * 1024,
     maxBufferSize: 256 * 1024 * 1024
   });
-  t.equal(portable.spanBufferByteLength, 320_000_000, '10M spans require a 320 MB source buffer');
-  t.equal(
+  expect(portable.spanBufferByteLength, '10M spans require a 320 MB source buffer').toBe(
+    320_000_000
+  );
+  expect(
     portable.dependencyBufferByteLength,
-    160_000_000,
     'the contract accounts for ten million actual dependency records'
+  ).toBe(160_000_000);
+  expect(portable.fitsDeviceLimits, 'portable limits reject the monolithic 10M source').toBe(false);
+  expect(portable.spanChunkCount, 'portable chunk target splits the 320 MB source five ways').toBe(
+    5
   );
-  t.equal(portable.fitsDeviceLimits, false, 'portable limits reject the monolithic 10M source');
-  t.equal(portable.spanChunkCount, 5, 'portable chunk target splits the 320 MB source five ways');
-  t.equal(
+  expect(
     portable.dependencyChunkCount,
-    3,
     'portable chunk target splits the 160 MB dependency source three ways'
-  );
-  t.equal(
+  ).toBe(3);
+  expect(
     portable.adjacencyChunkCount,
-    4,
     'the worst-case bidirectional sparse topology is independently chunked'
-  );
-  t.equal(
+  ).toBe(4);
+  expect(
     getTraceCapacityContract(10_000_000, 0, {
       maxStorageBufferBindingSize: 128 * 1024 * 1024,
       maxBufferSize: 256 * 1024 * 1024
     }).fitsChunkedDeviceLimits,
-    true,
     'portable limits admit ten million spans without dependencies'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     getTraceCapacityContract(10_000_000, 250_000, {
       maxStorageBufferBindingSize: 128 * 1024 * 1024,
       maxBufferSize: 256 * 1024 * 1024
     }).fitsChunkedDeviceLimits,
-    true,
     'chunk-resolved endpoints admit dependencies without monolithic source allocations'
-  );
+  ).toBe(true);
 
   const maximum = getTraceCapacityContract(10_000_000, 10_000_000, {
     maxStorageBufferBindingSize: 1024 * 1024 * 1024,
     maxBufferSize: 1024 * 1024 * 1024
   });
-  t.equal(maximum.fitsDeviceLimits, true, 'maximum-context limits admit the same source layout');
-  t.end();
+  expect(maximum.fitsDeviceLimits, 'maximum-context limits admit the same source layout').toBe(
+    true
+  );
+  void 0;
 });
 
-test('GPU trace dataset preflight leaves routine sizes frictionless and flags extreme work', t => {
+it('GPU trace dataset preflight leaves routine sizes frictionless and flags extreme work', () => {
   const routine = getTraceDatasetPreflight(4_000_000, 4_000_000);
   const extreme = getTraceDatasetPreflight(25_000_000, 25_000_000);
-  t.equal(
-    routine.requiresConfirmation,
-    false,
-    'the default 4M trace does not require confirmation'
+  expect(routine.requiresConfirmation, 'the default 4M trace does not require confirmation').toBe(
+    false
   );
-  t.equal(extreme.requiresConfirmation, true, 'the 25M trace requires a soft confirmation');
-  t.ok(
-    extreme.estimatedSourceByteLength > routine.estimatedSourceByteLength,
+  expect(extreme.requiresConfirmation, 'the 25M trace requires a soft confirmation').toBe(true);
+  expect(
+    Boolean(extreme.estimatedSourceByteLength > routine.estimatedSourceByteLength),
     'source topology estimates grow with trace size'
+  ).toBe(true);
+  expect(extreme.dependencyCount, 'preflight uses the requested actual dependency population').toBe(
+    25_000_000
   );
-  t.equal(
-    extreme.dependencyCount,
-    25_000_000,
-    'preflight uses the requested actual dependency population'
+  expect(extreme.minimumScanInvocationCount, 'preflight exposes the minimum full-data work').toBe(
+    50_000_000
   );
-  t.equal(
-    extreme.minimumScanInvocationCount,
-    50_000_000,
-    'preflight exposes the minimum full-data work'
-  );
-  t.end();
+  void 0;
 });
 
-test('GPU trace workload counters report persistent memory and proportional work', t => {
+it('GPU trace workload counters report persistent memory and proportional work', () => {
   const firstBuffer = {byteLength: 320};
   const allocation = getTraceAllocationStats([
     firstBuffer,
@@ -646,11 +660,11 @@ test('GPU trace workload counters report persistent memory and proportional work
     {byteLength: 160},
     {byteLength: 40}
   ]);
-  t.deepEqual(
-    allocation,
-    {bufferCount: 3, persistentByteLength: 520, largestBufferByteLength: 320},
-    'allocation accounting deduplicates shared buffer identities'
-  );
+  expect(allocation, 'allocation accounting deduplicates shared buffer identities').toEqual({
+    bufferCount: 3,
+    persistentByteLength: 520,
+    largestBufferByteLength: 320
+  });
   const counters = getTraceWorkloadCounters({
     spanCount: 1000,
     dependencyCount: 400,
@@ -671,53 +685,47 @@ test('GPU trace workload counters report persistent memory and proportional work
     pickActive: false,
     allocation
   });
-  t.equal(counters['candidate-span-percent'], 20, 'span work is reported as a candidate ratio');
-  t.equal(
+  expect(counters['candidate-span-percent'], 'span work is reported as a candidate ratio').toBe(20);
+  expect(
     counters['candidate-dependency-percent'],
-    25,
     'dependency work is reported as a candidate ratio'
+  ).toBe(25);
+  expect(counters['visible-span-percent'], 'visible output is normalized by source size').toBe(5);
+  expect(counters['candidate-span-upper-bound'], 'candidate span work is bounded').toBe(512);
+  expect(counters['candidate-dependency-upper-bound'], 'candidate dependency work is bounded').toBe(
+    256
   );
-  t.equal(counters['visible-span-percent'], 5, 'visible output is normalized by source size');
-  t.equal(counters['candidate-span-upper-bound'], 512, 'candidate span work is bounded');
-  t.equal(
-    counters['candidate-dependency-upper-bound'],
-    256,
-    'candidate dependency work is bounded'
-  );
-  t.equal(counters['actual-output-rows'], 62, 'actual visible output work stays separate');
-  t.equal(counters['persistent-bytes'], 520, 'persistent memory uses exact buffer accounting');
-  t.equal(counters['filter-active'], 1, 'interaction modes are exposed as numeric counters');
-  t.equal(counters['pick-active'], 0, 'inactive interaction modes remain explicit');
-  t.equal(counters['overview-renderer'], 2, 'representative mode has a stable scalar code');
-  t.equal(
+  expect(counters['actual-output-rows'], 'actual visible output work stays separate').toBe(62);
+  expect(counters['persistent-bytes'], 'persistent memory uses exact buffer accounting').toBe(520);
+  expect(counters['filter-active'], 'interaction modes are exposed as numeric counters').toBe(1);
+  expect(counters['pick-active'], 'inactive interaction modes remain explicit').toBe(0);
+  expect(counters['overview-renderer'], 'representative mode has a stable scalar code').toBe(2);
+  expect(
     counters['overview-output-upper-bound'],
-    TRACE_LANE_COUNT * 100,
     'representative output is bounded by lanes and pixel columns'
-  );
-  t.equal(
+  ).toBe(TRACE_LANE_COUNT * 100);
+  expect(
     counters['representative-search-cells'],
-    TRACE_LANE_COUNT * 100 * 4,
     'chunk-local representative searches remain separate from final output'
-  );
-  t.end();
+  ).toBe(TRACE_LANE_COUNT * 100 * 4);
+  void 0;
 });
 
-test('GPU trace overview frame timings retain renderer-specific percentile semantics', t => {
-  t.equal(getTraceOverviewFrameTimingSummary([]), null, 'empty histories remain explicit');
-  t.deepEqual(
+it('GPU trace overview frame timings retain renderer-specific percentile semantics', () => {
+  expect(getTraceOverviewFrameTimingSummary([]), 'empty histories remain explicit').toBe(null);
+  expect(
     getTraceOverviewFrameTimingSummary([8, 2, 5, 3, 20]),
-    {
-      sampleCount: 5,
-      latestMilliseconds: 20,
-      p50Milliseconds: 5,
-      p95Milliseconds: 20
-    },
     'nearest-rank percentiles do not mutate chronological samples'
-  );
-  t.end();
+  ).toEqual({
+    sampleCount: 5,
+    latestMilliseconds: 20,
+    p50Milliseconds: 5,
+    p95Milliseconds: 20
+  });
+  void 0;
 });
 
-test('GPU trace scan timing summary isolates and aggregates scan nodes', t => {
+it('GPU trace scan timing summary isolates and aggregates scan nodes', () => {
   const summary = getTraceScanTimingSummary(
     {
       graphs: [
@@ -742,76 +750,78 @@ test('GPU trace scan timing summary isolates and aggregates scan nodes', t => {
     },
     'trace'
   );
-  t.deepEqual(
+  expect(
     summary,
-    {nodeCount: 2, sampleCount: 7, p50Milliseconds: 0.75, p95Milliseconds: 1},
     'only scan stages contribute and the minimum common sample count is reported'
+  ).toEqual({nodeCount: 2, sampleCount: 7, p50Milliseconds: 0.75, p95Milliseconds: 1});
+  expect(getTraceScanTimingSummary({graphs: []}, 'trace'), 'missing samples return null').toBe(
+    null
   );
-  t.equal(getTraceScanTimingSummary({graphs: []}, 'trace'), null, 'missing samples return null');
-  t.end();
+  void 0;
 });
 
-test('GPU trace LOD switches at a stable trace-time-per-pixel threshold', t => {
-  t.equal(getTraceDensityBlend(0, 50, 2000), 0, 'exact rendering leads into the blend');
-  t.equal(getTraceDensityBlend(0, 80, 2000), 0.5, 'both renderers share the midpoint');
-  t.equal(getTraceDensityBlend(0, 110, 2000), 1, 'density rendering finishes the blend');
-  t.equal(getTraceDensityBlend(0, 50, 2000, false), 0, 'hard switch keeps the exact boundary');
-  t.equal(getTraceDensityBlend(0, 79, 2000, false), 0, 'hard switch stays exact below midpoint');
-  t.equal(getTraceDensityBlend(0, 80, 2000, false), 1, 'hard switch selects density at midpoint');
-  t.equal(getTraceDensityBlend(0, 81, 2000, false), 1, 'hard switch stays density above midpoint');
-  t.equal(getTraceDensityBlend(0, 110, 2000, false), 1, 'hard switch keeps density boundary');
-  t.equal(isTraceDensityMode(0, 150, 2048), true, 'wide time range remains density-dominant');
-  t.equal(isTraceDensityMode(0, 150, 1), true, 'zoomed-out viewport uses density bins');
-  t.equal(isTraceDensityMode(10, 10.01, 0), false, 'zero-width viewport remains bounded');
-  t.equal(
+it('GPU trace LOD switches at a stable trace-time-per-pixel threshold', () => {
+  expect(getTraceDensityBlend(0, 50, 2000), 'exact rendering leads into the blend').toBe(0);
+  expect(getTraceDensityBlend(0, 80, 2000), 'both renderers share the midpoint').toBe(0.5);
+  expect(getTraceDensityBlend(0, 110, 2000), 'density rendering finishes the blend').toBe(1);
+  expect(getTraceDensityBlend(0, 50, 2000, false), 'hard switch keeps the exact boundary').toBe(0);
+  expect(getTraceDensityBlend(0, 79, 2000, false), 'hard switch stays exact below midpoint').toBe(
+    0
+  );
+  expect(getTraceDensityBlend(0, 80, 2000, false), 'hard switch selects density at midpoint').toBe(
+    1
+  );
+  expect(getTraceDensityBlend(0, 81, 2000, false), 'hard switch stays density above midpoint').toBe(
+    1
+  );
+  expect(getTraceDensityBlend(0, 110, 2000, false), 'hard switch keeps density boundary').toBe(1);
+  expect(isTraceDensityMode(0, 150, 2048), 'wide time range remains density-dominant').toBe(true);
+  expect(isTraceDensityMode(0, 150, 1), 'zoomed-out viewport uses density bins').toBe(true);
+  expect(isTraceDensityMode(10, 10.01, 0), 'zero-width viewport remains bounded').toBe(false);
+  expect(
     getTraceOverviewRenderer(0, 50, 2000, 'auto', false),
-    'exact',
     'auto keeps exact spans below the hard transition'
-  );
-  t.equal(
+  ).toBe('exact');
+  expect(
     getTraceOverviewRenderer(0, 80, 2000, 'density', false),
-    'density',
     'explicit density takes over at the hard transition'
-  );
-  t.equal(
+  ).toBe('density');
+  expect(
     getTraceOverviewRenderer(0, 80, 2000, 'representative', false),
-    'representative',
     'explicit representatives take over at the hard transition'
-  );
-  t.equal(
+  ).toBe('representative');
+  expect(
     getTraceOverviewRenderer(0, 150, 2000, 'auto', false),
-    'representative',
     'auto prefers canonical representatives at moderate overview scale'
-  );
-  t.equal(
+  ).toBe('representative');
+  expect(
     getTraceOverviewRenderer(0, 1000, 2000, 'auto', false),
-    'density',
     'auto retains density bins at extreme overview scale'
-  );
-  t.notOk(
-    isTraceDependencyBundlingEnabled(0, 4, 2000, 'auto'),
+  ).toBe('density');
+  expect(
+    Boolean(isTraceDependencyBundlingEnabled(0, 4, 2000, 'auto')),
     'auto routing keeps readable close-up dependencies exact'
-  );
-  t.ok(
-    isTraceDependencyBundlingEnabled(0, 5.1, 2000, 'auto'),
+  ).toBe(false);
+  expect(
+    Boolean(isTraceDependencyBundlingEnabled(0, 5.1, 2000, 'auto')),
     'auto routing bundles dense exact views before the semantic handoff'
-  );
-  t.ok(
-    isTraceDependencyBundlingEnabled(0, 80, 2000, 'auto'),
+  ).toBe(true);
+  expect(
+    Boolean(isTraceDependencyBundlingEnabled(0, 80, 2000, 'auto')),
     'auto routing stays bundled through the semantic handoff'
-  );
-  t.notOk(
-    isTraceDependencyBundlingEnabled(0, 1000, 2000, 'exact'),
+  ).toBe(true);
+  expect(
+    Boolean(isTraceDependencyBundlingEnabled(0, 1000, 2000, 'exact')),
     'exact routing always disables bundling'
-  );
-  t.ok(
-    isTraceDependencyBundlingEnabled(0, 50, 2000, 'bundled'),
+  ).toBe(false);
+  expect(
+    Boolean(isTraceDependencyBundlingEnabled(0, 50, 2000, 'bundled')),
     'bundled routing remains available at close zoom'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace dependency density rises smoothly and monotonically with zoom', t => {
+it('GPU trace dependency density rises smoothly and monotonically with zoom', () => {
   const maximumBudget = 2048;
   const traceDuration = 1000;
   const overviewBudget = getTraceDependencyDisplayBudget(
@@ -820,11 +830,10 @@ test('GPU trace dependency density rises smoothly and monotonically with zoom', 
     traceDuration,
     traceDuration
   );
-  t.equal(
+  expect(
     overviewBudget,
-    maximumBudget * TRACE_DEPENDENCY_OVERVIEW_DENSITY_FRACTION,
     'the full-trace overview starts at a sparse fraction of the selected maximum'
-  );
+  ).toBe(maximumBudget * TRACE_DEPENDENCY_OVERVIEW_DENSITY_FRACTION);
 
   const visibleDurations = [
     1000,
@@ -837,51 +846,47 @@ test('GPU trace dependency density rises smoothly and monotonically with zoom', 
   const budgets = visibleDurations.map(visibleDuration =>
     getTraceDependencyDisplayBudget(maximumBudget, 0, visibleDuration, traceDuration)
   );
-  t.ok(
-    budgets.every((budget, index) => index === 0 || budget > budgets[index - 1]),
+  expect(
+    Boolean(budgets.every((budget, index) => index === 0 || budget > budgets[index - 1])),
     'every equal multiplicative zoom step adds dependency lines'
+  ).toBe(true);
+  expect(budgets.at(-1), 'the configured zoom ratio reaches the selected maximum density').toBe(
+    maximumBudget
   );
-  t.equal(
-    budgets.at(-1),
-    maximumBudget,
-    'the configured zoom ratio reaches the selected maximum density'
-  );
-  t.equal(
+  expect(
     getTraceDependencyDisplayBudget(maximumBudget, 400, 525, traceDuration),
-    getTraceDependencyDisplayBudget(maximumBudget, 0, 125, traceDuration),
     'panning at a fixed zoom preserves the dependency budget'
-  );
-  t.equal(
+  ).toBe(getTraceDependencyDisplayBudget(maximumBudget, 0, 125, traceDuration));
+  expect(
     getTraceDependencyDisplayBudget(0, 0, traceDuration, traceDuration),
-    0,
     'a disabled maximum remains disabled'
-  );
-  t.end();
+  ).toBe(0);
+  void 0;
 });
 
-test('GPU trace density bins stay anchored while the viewport scrolls', t => {
+it('GPU trace density bins stay anchored while the viewport scrolls', () => {
   const first = getTraceDensityBinParameters(10, 110);
   const scrolled = getTraceDensityBinParameters(10.1, 110.1);
   const crossedBoundary = getTraceDensityBinParameters(10.3, 110.3);
-  t.equal(first.duration, scrolled.duration, 'scrolling preserves the zoom-selected bin duration');
-  t.equal(first.origin, scrolled.origin, 'sub-bin scrolling preserves the absolute bin anchor');
+  expect(first.duration, 'scrolling preserves the zoom-selected bin duration').toBe(
+    scrolled.duration
+  );
+  expect(first.origin, 'sub-bin scrolling preserves the absolute bin anchor').toBe(scrolled.origin);
   const sampleTime = 50.1;
   const getSampleBinStart = ({origin, duration}: {origin: number; duration: number}): number =>
     origin + Math.floor((sampleTime - origin) / duration) * duration;
-  t.equal(
+  expect(
     getSampleBinStart(first),
-    getSampleBinStart(crossedBoundary),
     'crossing a window boundary does not change absolute bin membership'
-  );
-  t.equal(
+  ).toBe(getSampleBinStart(crossedBoundary));
+  expect(
     getTraceDensityBinParameters(10, 210).duration,
-    first.duration * 2,
     'zooming out selects the next power-of-two density level'
-  );
-  t.end();
+  ).toBe(first.duration * 2);
+  void 0;
 });
 
-test('GPU trace adaptive LOD shaders parse as WGSL', t => {
+it('GPU trace adaptive LOD shaders parse as WGSL', () => {
   const spanChunk = {
     firstSpanIndex: 0,
     spanCount: 11,
@@ -960,283 +965,248 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   ];
   for (const [shaderIndex, shader] of shaders.entries()) {
     try {
-      t.ok(new WgslReflect(shader), 'shader parses');
+      expect(Boolean(new WgslReflect(shader)), 'shader parses').toBe(true);
     } catch (error) {
       throw new Error(`shader ${shaderIndex} failed to parse`, {cause: error});
     }
   }
   for (const chunkIndex of [0, 1]) {
     const shader = getDependencyEndpointResolveShader(endpointRouting, chunkIndex);
-    t.equal(
+    expect(
       shader.match(/const CHUNK_INDEX:/g)?.length,
-      1,
       `dependency endpoint shader ${chunkIndex} declares its chunk index once`
-    );
-    t.match(
+    ).toBe(1);
+    expect(
       shader,
-      new RegExp(`const CHUNK_INDEX: u32 = ${chunkIndex}u;`),
       `dependency endpoint shader ${chunkIndex} declares the selected chunk index`
-    );
+    ).toMatch(new RegExp(`const CHUNK_INDEX: u32 = ${chunkIndex}u;`));
   }
-  t.match(
+  expect(
     getDependencyDispatchBudgetShader(TRACE_DEPENDENCY_FRAME_BATCH_BUDGET),
-    new RegExp(`BATCH_BUDGET: u32 = ${TRACE_DEPENDENCY_FRAME_BATCH_BUDGET}u`),
     'dependency dispatch budget is embedded in the GPU-side publisher'
-  );
+  ).toMatch(new RegExp(`BATCH_BUDGET: u32 = ${TRACE_DEPENDENCY_FRAME_BATCH_BUDGET}u`));
   for (const chunkIndex of [0, 1]) {
     const shader = getDependencyEndpointResolveShader(endpointRouting, chunkIndex);
-    t.equal(
+    expect(
       shader.match(/const CHUNK_INDEX:/g)?.length,
-      1,
       `dependency endpoint shader ${chunkIndex} declares its chunk index once`
-    );
-    t.match(
+    ).toBe(1);
+    expect(
       shader,
-      new RegExp(`const CHUNK_INDEX: u32 = ${chunkIndex}u;`),
       `dependency endpoint shader ${chunkIndex} declares the selected chunk index`
-    );
+    ).toMatch(new RegExp(`const CHUNK_INDEX: u32 = ${chunkIndex}u;`));
   }
-  t.match(
+  expect(
     getDependencyIntersectionVisibilityShader(128),
-    /segmentIntersectsViewport\(first, second\)/,
     'dependency visibility retains segments that cross the viewport'
-  );
-  t.match(
+  ).toMatch(/segmentIntersectsViewport\(first, second\)/);
+  expect(
     getDependencyDisplayBudgetClearShader(5),
-    /atomicStore\(&drawCommands\[DRAW_COUNT_WORD_OFFSET\], 0u\)/,
     'dependency display count is cleared before parallel selection'
-  );
-  t.match(
+  ).toMatch(/atomicStore\(&drawCommands\[DRAW_COUNT_WORD_OFFSET\], 0u\)/);
+  expect(
     getDependencyDisplayBudgetShader(128, 0, 2, 5),
-    /getChunkBudget\(viewUniforms\.dependencyDisplayBudget\)/,
     'dependency display culling applies the configured viewport budget'
-  );
-  t.match(
+  ).toMatch(/getChunkBudget\(viewUniforms\.dependencyDisplayBudget\)/);
+  expect(
     getDependencyDisplayBudgetShader(128, 0, 2, 5),
-    /stableHash\(dependencyIndex\) >> 8u/,
     'dependency display culling keeps a stable monotonic ID-based sample while zooming'
-  );
-  t.match(
+  ).toMatch(/stableHash\(dependencyIndex\) >> 8u/);
+  expect(
     getDependencyDisplayBudgetShader(128, 0, 2, 5),
-    /atomicCompareExchangeWeak/,
     'dependency display selection reserves bounded output slots in parallel'
-  );
-  t.match(
-    getDensityClearShader(),
+  ).toMatch(/atomicCompareExchangeWeak/);
+  expect(getDensityClearShader(), 'density storage includes hierarchy gap rows').toMatch(
     new RegExp(
       `DENSITY_BIN_COUNT: u32 = ${TRACE_DISPLAY_LANE_CAPACITY * TRACE_DENSITY_BIN_COUNT * TRACE_GROUPS.length}u`
-    ),
-    'density storage includes hierarchy gap rows'
+    )
   );
-  t.match(
+  expect(
     getCandidateDensityShader(spanChunk),
-    /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
     'density aggregation preserves long-span coverage across bins'
-  );
-  t.match(
+  ).toMatch(/for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/);
+  expect(
     getCandidateDensityShader(spanChunk),
-    /span\.start - viewUniforms\.densityBinOrigin/,
     'density aggregation uses scroll-stable trace-time bin membership'
-  );
-  t.match(
+  ).toMatch(/span\.start - viewUniforms\.densityBinOrigin/);
+  expect(
     getBatchVisibilityShader(3),
-    /viewUniforms\.timeMin - timePadding/,
     'coarse visibility keeps a horizontal guard band around the viewport'
-  );
-  t.match(
+  ).toMatch(/viewUniforms\.timeMin - timePadding/);
+  expect(
     getCandidateVisibilityShader(spanChunk),
-    /span\.start <= viewUniforms\.timeMax \+ timePadding/,
     'exact spans remain candidates until they clear the padded viewport edge'
-  );
-  t.match(
+  ).toMatch(/span\.start <= viewUniforms\.timeMax \+ timePadding/);
+  expect(
     getCandidatePassDispatchShader([
       {firstBatchIndex: 0, batchCount: 7},
       {firstBatchIndex: 7, batchCount: 5}
     ]),
-    /lowerBoundCandidate/,
     'density dispatch partitions the stable candidate list at span-chunk boundaries'
-  );
-  t.match(
+  ).toMatch(/lowerBoundCandidate/);
+  expect(
     getCandidateDensityShader(spanChunk),
-    /candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/,
     'density aggregation starts at its compacted chunk candidate offset'
-  );
-  t.match(
+  ).toMatch(/candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/);
+  expect(
     getCandidatePickShader(spanChunk),
-    /candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/,
     'picking consumes only the candidate rows assigned to its span chunk'
-  );
-  t.match(
+  ).toMatch(/candidateChunkOffsets\[CHUNK_INDEX\] \+ workgroupId\.y/);
+  expect(
     TRACE_DENSITY_RENDER_SHADER,
-    /traceTime - viewUniforms\.densityBinOrigin/,
     'stable density bins are projected into the moving viewport'
-  );
-  t.match(
+  ).toMatch(/traceTime - viewUniforms\.densityBinOrigin/);
+  expect(
     getCandidateDensityShader(spanChunk),
-    /!retainedExactSpan/,
     'density aggregation excludes spans retained as exact geometry'
-  );
-  t.match(
+  ).toMatch(/!retainedExactSpan/);
+  expect(
     getCandidateVisibilityShader(spanChunk),
-    /isFullExactModeActive\(\) \|\| isSpanWideEnoughForExactRendering\(span\.duration\)/,
     'wide spans remain eligible for exact compaction in density mode'
-  );
-  t.match(
+  ).toMatch(/isFullExactModeActive\(\) \|\| isSpanWideEnoughForExactRendering\(span\.duration\)/);
+  expect(
     getCandidateVisibilityShader(spanChunk),
-    /batch\.maximumDuration < getMinimumExactSpanDuration\(\)/,
     'coarse exact visibility rejects batches whose longest span is too narrow'
-  );
-  t.match(
+  ).toMatch(/batch\.maximumDuration < getMinimumExactSpanDuration\(\)/);
+  expect(
     getBatchVisibilityShader(3),
-    /batch\.maximumDuration >= getMinimumExactSpanDuration\(\)/,
     'the coarse pass creates a sparse exact batch list for wide spans'
-  );
-  t.match(
+  ).toMatch(/batch\.maximumDuration >= getMinimumExactSpanDuration\(\)/);
+  expect(
     TRACE_RENDER_SHADER,
-    /viewUniforms\.lodFadeEnabled/,
     'rendering selects the smooth or hard LOD transition from the view uniform'
-  );
-  t.match(
+  ).toMatch(/viewUniforms\.lodFadeEnabled/);
+  expect(
     TRACE_RENDER_SHADER,
-    /anomalyMask\[sourceIndex - spanChunk\.firstSpanIndex\]/,
     'exact and representative rendering consume chunk-local per-span anomaly masks'
-  );
-  t.match(
+  ).toMatch(/anomalyMask\[sourceIndex - spanChunk\.firstSpanIndex\]/);
+  expect(
     TRACE_RENDER_SHADER,
-    /verticalFraction < 0\.11/,
     'anomalous spans receive a restrained solid edge instead of a full-span color replacement'
-  );
-  t.match(
+  ).toMatch(/verticalFraction < 0\.11/);
+  expect(
     TRACE_RENDER_SHADER,
-    /select\(\s*1\.0,\s*spanReadability,\s*viewUniforms\.lodFadeEnabled != 0u\s*\)/,
     'hard-switch exact spans bypass sub-pixel readability fading'
-  );
-  t.match(
+  ).toMatch(/select\(\s*1\.0,\s*spanReadability,\s*viewUniforms\.lodFadeEnabled != 0u\s*\)/);
+  expect(
     TRACE_DENSITY_RENDER_SHADER,
-    /pluginApplyFillPattern/,
     'aggregated density bins use the shared fill-pattern ShaderPlugin'
-  );
-  t.match(
+  ).toMatch(/pluginApplyFillPattern/);
+  expect(
     TRACE_DENSITY_RENDER_SHADER,
-    /patternOffset = f32\(\(lane \* 3u\) % 10u\)/,
     'density patterns stagger their phase by lane instead of forming a screen-wide grid'
-  );
-  t.match(
+  ).toMatch(/patternOffset = f32\(\(lane \* 3u\) % 10u\)/);
+  expect(
     TRACE_DENSITY_RENDER_SHADER,
-    /array<vec2<f32>, 3>/,
     'density rendering samples its GPU bins from one full-screen triangle'
-  );
-  t.equal(FillPattern.hash45, 2, 'the default diagonal dash pattern has a stable shader value');
-  t.ok(fillPatternShaderPlugin.wgsl, 'the shared fill-pattern plugin supports WGSL');
-  t.match(
+  ).toMatch(/array<vec2<f32>, 3>/);
+  expect(FillPattern.hash45, 'the default diagonal dash pattern has a stable shader value').toBe(2);
+  expect(
+    Boolean(fillPatternShaderPlugin.wgsl),
+    'the shared fill-pattern plugin supports WGSL'
+  ).toBe(true);
+  expect(
     TRACE_RENDER_SHADER,
-    /focusEnabled = viewUniforms\.focusMode != 0u && hasSelection/,
     'ordinary picking highlights its span without dimming the complete trace'
-  );
-  t.match(
+  ).toMatch(/focusEnabled = viewUniforms\.focusMode != 0u && hasSelection/);
+  expect(
     TRACE_PICKING_RENDER_SHADER,
-    /indices = vec2<i32>\(i32\(input\.sourceIndex\), 0\)/,
     'raster span picking publishes canonical source rows in the shared integer target'
-  );
-  t.match(
+  ).toMatch(/indices = vec2<i32>\(i32\(input\.sourceIndex\), 0\)/);
+  expect(
     TRACE_DEPENDENCY_PICKING_RENDER_SHADER,
-    /indices = vec2<i32>\(i32\(input\.dependencyIndex\), 1\)/,
     'raster dependency picking uses a distinct object-kind channel'
-  );
-  t.match(
+  ).toMatch(/indices = vec2<i32>\(i32\(input\.dependencyIndex\), 1\)/);
+  expect(
     getCandidateLabelShader(spanChunk, 5),
-    /spanPixelWidth < metric\.advancePixels/,
     'label expansion rejects strings that do not fit before reserving glyph occurrences'
-  );
-  t.match(
+  ).toMatch(/spanPixelWidth < metric\.advancePixels/);
+  expect(
     TRACE_LABEL_RENDER_SHADER,
-    /isGlyphVertexClipped\(input\.glyphPixelOffset, input\.clipRect\)/,
     'label rendering retains a final span clip-rectangle guard'
-  );
-  t.match(
+  ).toMatch(/isGlyphVertexClipped\(input\.glyphPixelOffset, input\.clipRect\)/);
+  expect(
     TRACE_LABEL_RENDER_SHADER,
-    /-textDictionaryStyle\.lineHeightPixels \* 0\.5/,
     'the label line box is centered vertically around the span midpoint'
-  );
-  t.end();
+  ).toMatch(/-textDictionaryStyle\.lineHeightPixels \* 0\.5/);
+  void 0;
 });
 
-test('GPU trace focus seed exposes only resources consumed by its compute entry point', t => {
+it('GPU trace focus seed exposes only resources consumed by its compute entry point', () => {
   const reflection = new WgslReflect(getFocusFrontierSeedShader(11));
-  t.deepEqual(
+  expect(
     reflection.storage.map(resource => ({name: resource.name, location: resource.binding})),
-    [
-      {name: 'selectedSeeds', location: 0},
-      {name: 'activeSeedCount', location: 1},
-      {name: 'focusTraversalState', location: 2},
-      {name: 'reachedSpans', location: 3},
-      {name: 'frontier', location: 4},
-      {name: 'frontierCount', location: 5},
-      {name: 'dispatchCommand', location: 6}
-    ],
     'seed bindings match the native WebGPU pipeline layout without an optimized-out slot'
-  );
-  t.end();
+  ).toEqual([
+    {name: 'selectedSeeds', location: 0},
+    {name: 'activeSeedCount', location: 1},
+    {name: 'focusTraversalState', location: 2},
+    {name: 'reachedSpans', location: 3},
+    {name: 'frontier', location: 4},
+    {name: 'frontierCount', location: 5},
+    {name: 'dispatchCommand', location: 6}
+  ]);
+  void 0;
 });
 
-test('GPU trace data preserves deterministic canonical group and hierarchy identities', t => {
+it('GPU trace data preserves deterministic canonical group and hierarchy identities', () => {
   const dataset = makeTraceDataset(257);
   const repeated = makeTraceDataset(257);
-  t.equal(dataset.groups.length, TRACE_GROUPS.length, 'creates all stable draw groups');
-  t.deepEqual(
+  expect(dataset.groups.length, 'creates all stable draw groups').toBe(TRACE_GROUPS.length);
+  expect(
     dataset.groups.map(group => [group.firstSpanIndex, group.count]),
-    [
-      [0, 86],
-      [86, 86],
-      [172, 85]
-    ],
     'group ranges completely cover canonical source rows'
+  ).toEqual([
+    [0, 86],
+    [86, 86],
+    [172, 85]
+  ]);
+  expect(dataset.spans, 'source data is deterministic').toEqual(repeated.spans);
+  expect(dataset.dependencies, 'dependency data is deterministic').toEqual(repeated.dependencies);
+  expect(dataset.processCount, 'publishes stable process count').toBe(TRACE_PROCESS_COUNT);
+  expect(dataset.threadCount, 'publishes stable thread count').toBe(TRACE_THREAD_COUNT);
+  expect(dataset.parentSpans.length, 'publishes one canonical parent per span').toBe(
+    dataset.spanCount
   );
-  t.deepEqual(dataset.spans, repeated.spans, 'source data is deterministic');
-  t.deepEqual(dataset.dependencies, repeated.dependencies, 'dependency data is deterministic');
-  t.equal(dataset.processCount, TRACE_PROCESS_COUNT, 'publishes stable process count');
-  t.equal(dataset.threadCount, TRACE_THREAD_COUNT, 'publishes stable thread count');
-  t.equal(dataset.parentSpans.length, dataset.spanCount, 'publishes one canonical parent per span');
 
   for (const group of dataset.groups) {
-    t.equal(group.data.buffer, dataset.spans.buffer, 'group borrows canonical source allocation');
+    expect(group.data.buffer, 'group borrows canonical source allocation').toBe(
+      dataset.spans.buffer
+    );
     for (let rowIndex = 0; rowIndex < group.count; rowIndex++) {
       const sourceIndex = group.firstSpanIndex + rowIndex;
       const wordOffset = sourceIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
       const laneIndex = dataset.spans[wordOffset + 2];
       const threadIndex = dataset.spans[wordOffset + 5];
-      t.equal(dataset.spans[wordOffset + 3], group.groupIndex, 'row retains its draw group');
-      t.equal(dataset.spans[wordOffset + 6], sourceIndex, 'row retains its stable source identity');
-      t.equal(
-        threadIndex,
-        Math.floor(laneIndex / TRACE_LANES_PER_THREAD),
-        'lane resolves to its owning thread'
+      expect(dataset.spans[wordOffset + 3], 'row retains its draw group').toBe(group.groupIndex);
+      expect(dataset.spans[wordOffset + 6], 'row retains its stable source identity').toBe(
+        sourceIndex
       );
-      t.equal(
-        dataset.spans[wordOffset + 4],
-        Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS),
-        'thread resolves to its owning process'
+      expect(threadIndex, 'lane resolves to its owning thread').toBe(
+        Math.floor(laneIndex / TRACE_LANES_PER_THREAD)
+      );
+      expect(dataset.spans[wordOffset + 4], 'thread resolves to its owning process').toBe(
+        Math.floor(threadIndex / TRACE_THREADS_PER_PROCESS)
       );
     }
   }
-  t.deepEqual(
+  expect(
     makeTraceGroups(7).map(group => group.count),
-    [3, 2, 2],
     'the original trace-group helper remains compatible'
-  );
-  t.end();
+  ).toEqual([3, 2, 2]);
+  void 0;
 });
 
-test('GPU trace duration grows with tightly packed non-overlapping lane slots', t => {
-  t.equal(getTraceDuration(250_000), 1000, 'the baseline capacity retains a one-second trace');
-  t.ok(
-    Math.abs(getTraceDuration(1_000_000) - 4000) < 2,
+it('GPU trace duration grows with tightly packed non-overlapping lane slots', () => {
+  expect(getTraceDuration(250_000), 'the baseline capacity retains a one-second trace').toBe(1000);
+  expect(
+    Boolean(Math.abs(getTraceDuration(1_000_000) - 4000) < 2),
     'one million spans expands to about four seconds'
-  );
-  t.ok(
-    Math.abs(getTraceDuration(10_000_000) - 40_000) < 25,
+  ).toBe(true);
+  expect(
+    Boolean(Math.abs(getTraceDuration(10_000_000) - 40_000) < 25),
     'ten million spans expands to about forty seconds'
-  );
+  ).toBe(true);
 
   const dataset = makeTraceDataset(65_536, 0);
   const spanFloats = new Float32Array(dataset.spans.buffer);
@@ -1268,57 +1238,64 @@ test('GPU trace duration grows with tightly packed non-overlapping lane slots', 
     }
     focusedLaneCount += Number(Math.max(...groupCounts) / spans.length > 0.65);
     for (let spanIndex = 1; spanIndex < spans.length; spanIndex++) {
-      t.ok(
-        spans[spanIndex][0] >= spans[spanIndex - 1][1],
+      expect(
+        Boolean(spans[spanIndex][0] >= spans[spanIndex - 1][1]),
         'successive spans in one lane do not overlap'
-      );
+      ).toBe(true);
       sameGroupNeighborCount += Number(spans[spanIndex][2] === spans[spanIndex - 1][2]);
       neighborCount++;
     }
   }
-  t.ok(
-    sameGroupNeighborCount / neighborCount > 0.9,
+  expect(
+    Boolean(sameGroupNeighborCount / neighborCount > 0.9),
     'span groups form coherent lane phases instead of alternating every span'
-  );
-  t.ok(
-    focusedLaneCount / laneSpans.length > 0.9,
+  ).toBe(true);
+  expect(
+    Boolean(focusedLaneCount / laneSpans.length > 0.9),
     'most lanes spend a clear majority of their time on one span group'
-  );
+  ).toBe(true);
   const occupancy = occupiedDuration / (dataset.duration * TRACE_LANE_COUNT);
-  t.ok(
-    occupancy > 0.4 && occupancy < 0.8,
+  expect(
+    Boolean(occupancy > 0.4 && occupancy < 0.8),
     'lane packing remains dense while sparse extra-wide spans extend individual lanes'
-  );
-  t.ok(minimumDuration < 0.05, 'the trace includes very short spans');
-  t.ok(maximumDuration > 20, 'the trace includes very wide spans');
-  t.ok(maximumDuration > 100, 'the trace includes sparse spans that survive coarse density LOD');
-  t.ok(
-    maximumDuration > TRACE_DURATION_FILTER_MAXIMUM,
+  ).toBe(true);
+  expect(Boolean(minimumDuration < 0.05), 'the trace includes very short spans').toBe(true);
+  expect(Boolean(maximumDuration > 20), 'the trace includes very wide spans').toBe(true);
+  expect(
+    Boolean(maximumDuration > 100),
+    'the trace includes sparse spans that survive coarse density LOD'
+  ).toBe(true);
+  expect(
+    Boolean(maximumDuration > TRACE_DURATION_FILTER_MAXIMUM),
     'duration filter maximum retains spans from the generated upper tail'
-  );
-  t.ok(
-    dataset.groups.every(group => {
-      const groupFloats = new Float32Array(
-        group.data.buffer,
-        group.data.byteOffset,
-        group.data.length
-      );
-      return groupFloats[0] < getTraceDuration(TRACE_LANE_COUNT);
-    }),
+  ).toBe(true);
+  expect(
+    Boolean(
+      dataset.groups.every(group => {
+        const groupFloats = new Float32Array(
+          group.data.buffer,
+          group.data.byteOffset,
+          group.data.length
+        );
+        return groupFloats[0] < getTraceDuration(TRACE_LANE_COUNT);
+      })
+    ),
     'all color groups appear in the first timeline slot'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace dependency generation respects its independent capacity', t => {
+it('GPU trace dependency generation respects its independent capacity', () => {
   const dataset = makeTraceDataset(10_000, 250);
-  t.equal(dataset.spanCount, 10_000, 'span capacity remains independent');
-  t.equal(dataset.dependencyCount, 250, 'dependency generation stops at its requested capacity');
-  t.equal(makeTraceDataset(10_000, 0).dependencyCount, 0, 'zero dependencies are supported');
-  t.end();
+  expect(dataset.spanCount, 'span capacity remains independent').toBe(10_000);
+  expect(dataset.dependencyCount, 'dependency generation stops at its requested capacity').toBe(
+    250
+  );
+  expect(makeTraceDataset(10_000, 0).dependencyCount, 'zero dependencies are supported').toBe(0);
+  void 0;
 });
 
-test('GPU trace dependency chunks preserve complete candidate batches', t => {
+it('GPU trace dependency chunks preserve complete candidate batches', () => {
   const dataset = makeTraceDataset(10_000, 10_000);
   const maximumChunkByteLength = TRACE_DEPENDENCY_CHUNK_TARGET_BYTE_LENGTH / 1024;
   const chunks = makeTraceDependencyChunks(
@@ -1326,49 +1303,54 @@ test('GPU trace dependency chunks preserve complete candidate batches', t => {
     dataset.dependencyBatches,
     maximumChunkByteLength
   );
-  t.ok(chunks.length > 1, 'small test chunk target produces multiple dependency chunks');
-  t.equal(
+  expect(
+    Boolean(chunks.length > 1),
+    'small test chunk target produces multiple dependency chunks'
+  ).toBe(true);
+  expect(
     chunks.reduce((sum, chunk) => sum + chunk.dependencyCount, 0),
-    dataset.dependencyCount,
     'dependency chunks cover every canonical dependency exactly once'
-  );
-  t.ok(
-    chunks.every(
-      chunk =>
-        chunk.data.byteOffset ===
-        dataset.dependencies.byteOffset +
-          chunk.firstDependencyIndex *
-            TRACE_DEPENDENCY_RECORD_WORD_LENGTH *
-            Uint32Array.BYTES_PER_ELEMENT
+  ).toBe(dataset.dependencyCount);
+  expect(
+    Boolean(
+      chunks.every(
+        chunk =>
+          chunk.data.byteOffset ===
+          dataset.dependencies.byteOffset +
+            chunk.firstDependencyIndex *
+              TRACE_DEPENDENCY_RECORD_WORD_LENGTH *
+              Uint32Array.BYTES_PER_ELEMENT
+      )
     ),
     'dependency chunks borrow canonical storage without repacking'
-  );
-  t.ok(
-    chunks.every(
-      chunk =>
-        chunk.dependencyCount ===
-        dataset.dependencyBatches
-          .slice(chunk.firstBatchIndex, chunk.firstBatchIndex + chunk.batchCount)
-          .reduce((sum, batch) => sum + batch.count, 0)
+  ).toBe(true);
+  expect(
+    Boolean(
+      chunks.every(
+        chunk =>
+          chunk.dependencyCount ===
+          dataset.dependencyBatches
+            .slice(chunk.firstBatchIndex, chunk.firstBatchIndex + chunk.batchCount)
+            .reduce((sum, batch) => sum + batch.count, 0)
+      )
     ),
     'no dependency batch crosses a chunk boundary'
-  );
+  ).toBe(true);
   for (const chunk of chunks) {
     const localBatchIndex = makeTraceDependencyChunkBatchIndex(dataset.dependencyBatchIndex, chunk);
-    t.equal(localBatchIndex[0], 0, 'each dependency chunk starts at local row zero');
+    expect(localBatchIndex[0], 'each dependency chunk starts at local row zero').toBe(0);
     for (let localIndex = 0; localIndex < chunk.batchCount; localIndex++) {
       const wordOffset = localIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
-      t.equal(
+      expect(
         localBatchIndex[wordOffset + 5],
-        localIndex,
         'each dependency chunk publishes local stable batch IDs'
-      );
+      ).toBe(localIndex);
     }
   }
-  t.end();
+  void 0;
 });
 
-test('GPU trace dependency batches preserve identity and conservative ancestor bounds', t => {
+it('GPU trace dependency batches preserve identity and conservative ancestor bounds', () => {
   const dataset = makeTraceDataset(2048);
   const {dependencyBatches, dependencyBatchIndex} = makeTraceDependencyBatches(
     dataset.spans,
@@ -1376,125 +1358,133 @@ test('GPU trace dependency batches preserve identity and conservative ancestor b
     dataset.parentSpans,
     7
   );
-  t.equal(
+  expect(
     dependencyBatchIndex.length,
-    dependencyBatches.length * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH,
     'publishes one fixed-width GPU index record per dependency batch'
-  );
+  ).toBe(dependencyBatches.length * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH);
   const indexFloats = new Float32Array(dependencyBatchIndex.buffer);
   for (const batch of dependencyBatches) {
     const indexOffset = batch.batchIndex * TRACE_DEPENDENCY_BATCH_RECORD_WORD_LENGTH;
-    t.equal(
-      dependencyBatchIndex[indexOffset],
-      batch.firstDependencyIndex,
-      'index preserves dependency base'
+    expect(dependencyBatchIndex[indexOffset], 'index preserves dependency base').toBe(
+      batch.firstDependencyIndex
     );
-    t.equal(dependencyBatchIndex[indexOffset + 1], batch.count, 'index preserves batch length');
-    t.equal(dependencyBatchIndex[indexOffset + 4], batch.familyMask, 'index preserves families');
-    t.equal(dependencyBatchIndex[indexOffset + 5], batch.batchIndex, 'index preserves identity');
-    t.ok(
-      Math.abs(indexFloats[indexOffset + 2] - batch.timeMin) < 0.001,
+    expect(dependencyBatchIndex[indexOffset + 1], 'index preserves batch length').toBe(batch.count);
+    expect(dependencyBatchIndex[indexOffset + 4], 'index preserves families').toBe(
+      batch.familyMask
+    );
+    expect(dependencyBatchIndex[indexOffset + 5], 'index preserves identity').toBe(
+      batch.batchIndex
+    );
+    expect(
+      Boolean(Math.abs(indexFloats[indexOffset + 2] - batch.timeMin) < 0.001),
       'index preserves minimum time'
-    );
-    t.ok(
-      Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001),
       'index preserves maximum time'
-    );
+    ).toBe(true);
   }
-  t.throws(
+  expect(
     () => makeTraceDependencyBatches(dataset.spans, dataset.dependencies, dataset.parentSpans, 0),
-    /positive safe integer/,
     'invalid dependency batch capacity is rejected'
-  );
-  t.end();
+  ).toThrow(/positive safe integer/);
+  void 0;
 });
 
-test('GPU trace span batches preserve global identity and publish coarse index bounds', t => {
+it('GPU trace span batches preserve global identity and publish coarse index bounds', () => {
   const dataset = makeTraceDataset(11);
   const {spanBatches, spanBatchIndex} = makeTraceSpanBatches(dataset.spans, dataset.groups, 2);
-  t.deepEqual(
+  expect(
     spanBatches.map(batch => [batch.firstSpanIndex, batch.count, batch.groupIndex]),
-    [
-      [0, 2, 0],
-      [2, 2, 0],
-      [4, 2, 1],
-      [6, 2, 1],
-      [8, 2, 2],
-      [10, 1, 2]
-    ],
     'batches remain group aligned and completely cover source rows'
-  );
-  t.equal(
-    spanBatchIndex.length,
-    spanBatches.length * TRACE_SPAN_BATCH_RECORD_WORD_LENGTH,
-    'publishes one fixed-width GPU index record per batch'
+  ).toEqual([
+    [0, 2, 0],
+    [2, 2, 0],
+    [4, 2, 1],
+    [6, 2, 1],
+    [8, 2, 2],
+    [10, 1, 2]
+  ]);
+  expect(spanBatchIndex.length, 'publishes one fixed-width GPU index record per batch').toBe(
+    spanBatches.length * TRACE_SPAN_BATCH_RECORD_WORD_LENGTH
   );
   const spanFloats = new Float32Array(dataset.spans.buffer);
   const indexFloats = new Float32Array(spanBatchIndex.buffer);
   for (const batch of spanBatches) {
     const indexOffset = batch.batchIndex * TRACE_SPAN_BATCH_RECORD_WORD_LENGTH;
-    t.equal(spanBatchIndex[indexOffset], batch.firstSpanIndex, 'index preserves global base');
-    t.equal(spanBatchIndex[indexOffset + 1], batch.count, 'index preserves batch length');
-    t.equal(spanBatchIndex[indexOffset + 6], batch.groupIndex, 'index preserves group identity');
-    t.equal(spanBatchIndex[indexOffset + 7], batch.batchIndex, 'index preserves batch identity');
-    t.ok(
-      Math.abs(indexFloats[indexOffset + 2] - batch.timeMin) < 0.001,
+    expect(spanBatchIndex[indexOffset], 'index preserves global base').toBe(batch.firstSpanIndex);
+    expect(spanBatchIndex[indexOffset + 1], 'index preserves batch length').toBe(batch.count);
+    expect(spanBatchIndex[indexOffset + 6], 'index preserves group identity').toBe(
+      batch.groupIndex
+    );
+    expect(spanBatchIndex[indexOffset + 7], 'index preserves batch identity').toBe(
+      batch.batchIndex
+    );
+    expect(
+      Boolean(Math.abs(indexFloats[indexOffset + 2] - batch.timeMin) < 0.001),
       'index preserves minimum time'
-    );
-    t.ok(
-      Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(indexFloats[indexOffset + 3] - batch.timeMax) < 0.001),
       'index preserves maximum time'
-    );
-    t.ok(
-      Math.abs(indexFloats[indexOffset + 8] - batch.maximumDuration) < 0.001,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(indexFloats[indexOffset + 8] - batch.maximumDuration) < 0.001),
       'index preserves maximum span duration'
-    );
+    ).toBe(true);
     for (let rowIndex = 0; rowIndex < batch.count; rowIndex++) {
       const sourceIndex = batch.firstSpanIndex + rowIndex;
       const wordOffset = sourceIndex * TRACE_SPAN_RECORD_WORD_LENGTH;
       const start = spanFloats[wordOffset];
       const end = start + spanFloats[wordOffset + 1];
       const lane = dataset.spans[wordOffset + 2];
-      t.ok(start >= batch.timeMin && end <= batch.timeMax, 'batch encloses span time');
-      t.ok(lane >= batch.laneMin && lane < batch.laneMax, 'batch encloses span lane');
-      t.ok(spanFloats[wordOffset + 1] <= batch.maximumDuration, 'batch encloses span duration');
+      expect(
+        Boolean(start >= batch.timeMin && end <= batch.timeMax),
+        'batch encloses span time'
+      ).toBe(true);
+      expect(
+        Boolean(lane >= batch.laneMin && lane < batch.laneMax),
+        'batch encloses span lane'
+      ).toBe(true);
+      expect(
+        Boolean(spanFloats[wordOffset + 1] <= batch.maximumDuration),
+        'batch encloses span duration'
+      ).toBe(true);
     }
   }
   for (const group of dataset.groups) {
     const groupBatches = spanBatches.filter(batch => batch.groupIndex === group.groupIndex);
     const slotDuration = getTraceDuration(TRACE_LANE_COUNT);
     for (let batchIndex = 1; batchIndex < groupBatches.length; batchIndex++) {
-      t.ok(
-        Math.floor(groupBatches[batchIndex].timeMin / slotDuration) >=
-          Math.floor(groupBatches[batchIndex - 1].timeMin / slotDuration),
+      expect(
+        Boolean(
+          Math.floor(groupBatches[batchIndex].timeMin / slotDuration) >=
+            Math.floor(groupBatches[batchIndex - 1].timeMin / slotDuration)
+        ),
         'group batches retain increasing temporal-slot locality'
-      );
+      ).toBe(true);
     }
   }
-  t.equal(spanBatches[0].data.buffer, dataset.spans.buffer, 'batch borrows canonical storage');
-  t.throws(
+  expect(spanBatches[0].data.buffer, 'batch borrows canonical storage').toBe(dataset.spans.buffer);
+  expect(
     () => makeTraceSpanBatches(dataset.spans, dataset.groups, 0),
-    /positive safe integer/,
     'invalid batch capacity is rejected'
-  );
-  t.end();
+  ).toThrow(/positive safe integer/);
+  void 0;
 });
 
-test('GPU trace temporal index builds conservative source-ordered hierarchy levels', t => {
+it('GPU trace temporal index builds conservative source-ordered hierarchy levels', () => {
   const dataset = makeTraceDataset(96);
   const {spanBatches} = makeTraceSpanBatches(dataset.spans, dataset.groups, 2);
   const temporalIndex = makeTraceTemporalIndex(spanBatches, 2, 8);
   const floats = new Float32Array(temporalIndex.data.buffer);
-  t.deepEqual(
+  expect(
     temporalIndex.levels.map(level => level.maximumBatchCount),
-    [2, 4, 8],
     'each level doubles its bounded leaf range'
-  );
-  t.equal(
-    temporalIndex.data.length,
+  ).toEqual([2, 4, 8]);
+  expect(temporalIndex.data.length, 'packed levels cover every hierarchy node exactly once').toBe(
     temporalIndex.levels.reduce((sum, level) => sum + level.nodeCount, 0) *
-      TRACE_TEMPORAL_INDEX_RECORD_WORD_LENGTH,
-    'packed levels cover every hierarchy node exactly once'
+      TRACE_TEMPORAL_INDEX_RECORD_WORD_LENGTH
   );
   for (const level of temporalIndex.levels) {
     for (let localNodeIndex = 0; localNodeIndex < level.nodeCount; localNodeIndex++) {
@@ -1504,86 +1494,90 @@ test('GPU trace temporal index builds conservative source-ordered hierarchy leve
       const firstBatchIndex = temporalIndex.data[wordOffset + 4];
       const batchCount = temporalIndex.data[wordOffset + 5];
       const leaves = spanBatches.slice(firstBatchIndex, firstBatchIndex + batchCount);
-      t.ok(leaves.length > 0, 'node owns at least one canonical leaf batch');
-      t.ok(
-        leaves.every(batch => batch.groupIndex === groupIndex),
+      expect(Boolean(leaves.length > 0), 'node owns at least one canonical leaf batch').toBe(true);
+      expect(
+        Boolean(leaves.every(batch => batch.groupIndex === groupIndex)),
         'node never crosses a renderer-group boundary'
-      );
-      t.ok(
-        leaves.every(
-          batch =>
-            Math.fround(batch.timeMin) >= floats[wordOffset] &&
-            Math.fround(batch.timeMax) <= floats[wordOffset + 1]
+      ).toBe(true);
+      expect(
+        Boolean(
+          leaves.every(
+            batch =>
+              Math.fround(batch.timeMin) >= floats[wordOffset] &&
+              Math.fround(batch.timeMax) <= floats[wordOffset + 1]
+          )
         ),
         'node time bounds conservatively contain every owned leaf'
-      );
-      t.ok(
-        leaves.every(batch => Math.fround(batch.maximumDuration) <= floats[wordOffset + 2]),
+      ).toBe(true);
+      expect(
+        Boolean(
+          leaves.every(batch => Math.fround(batch.maximumDuration) <= floats[wordOffset + 2])
+        ),
         'node duration bound conservatively contains every owned leaf'
-      );
-      t.ok(
-        leaves.every(
-          batch =>
-            batch.laneMin >= temporalIndex.data[wordOffset + 6] &&
-            batch.laneMax <= temporalIndex.data[wordOffset + 7]
+      ).toBe(true);
+      expect(
+        Boolean(
+          leaves.every(
+            batch =>
+              batch.laneMin >= temporalIndex.data[wordOffset + 6] &&
+              batch.laneMax <= temporalIndex.data[wordOffset + 7]
+          )
         ),
         'node lane bounds conservatively contain every owned leaf'
-      );
+      ).toBe(true);
     }
   }
-  t.equal(
+  expect(
     getTraceTemporalIndexLevel(temporalIndex.levels, Number.EPSILON),
-    0,
     'a close view uses the finest hierarchy level'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     getTraceTemporalIndexLevel(temporalIndex.levels, 1e6),
-    temporalIndex.levels.length - 1,
     'a full overview uses the coarsest hierarchy level'
-  );
-  t.end();
+  ).toBe(temporalIndex.levels.length - 1);
+  void 0;
 });
 
-test('GPU trace data publishes stable forward and reverse dependency adjacency', t => {
+it('GPU trace data publishes stable forward and reverse dependency adjacency', () => {
   const dataset = makeTraceDataset(513);
-  t.ok(dataset.dependencyCount > 0, 'generates realistic sparse dependencies');
-  t.equal(
+  expect(Boolean(dataset.dependencyCount > 0), 'generates realistic sparse dependencies').toBe(
+    true
+  );
+  expect(
     dataset.outgoing.offsets.length,
-    dataset.outgoing.nodes.length + 1,
     'forward CSR owns one offset per active source plus its sentinel'
-  );
-  t.equal(
+  ).toBe(dataset.outgoing.nodes.length + 1);
+  expect(
     dataset.incoming.offsets.length,
-    dataset.incoming.nodes.length + 1,
     'reverse CSR owns one offset per active destination plus its sentinel'
-  );
-  t.equal(
+  ).toBe(dataset.incoming.nodes.length + 1);
+  expect(
     dataset.outgoing.offsets[dataset.outgoing.nodes.length],
-    dataset.dependencyCount,
     'forward sentinel equals the canonical dependency count'
-  );
-  t.equal(
+  ).toBe(dataset.dependencyCount);
+  expect(
     dataset.incoming.offsets[dataset.incoming.nodes.length],
-    dataset.dependencyCount,
     'reverse sentinel equals the canonical dependency count'
-  );
-  t.ok(
-    dataset.outgoing.nodes.length <= dataset.dependencyCount &&
-      dataset.incoming.nodes.length <= dataset.dependencyCount,
+  ).toBe(dataset.dependencyCount);
+  expect(
+    Boolean(
+      dataset.outgoing.nodes.length <= dataset.dependencyCount &&
+        dataset.incoming.nodes.length <= dataset.dependencyCount
+    ),
     'both directions allocate rows only for nodes that own edges'
-  );
+  ).toBe(true);
   for (const adjacency of [dataset.outgoing, dataset.incoming]) {
     for (let rowIndex = 0; rowIndex < adjacency.nodes.length; rowIndex++) {
       if (rowIndex > 0) {
-        t.ok(
-          adjacency.nodes[rowIndex] > adjacency.nodes[rowIndex - 1],
+        expect(
+          Boolean(adjacency.nodes[rowIndex] > adjacency.nodes[rowIndex - 1]),
           'sparse owner rows preserve strict global-ID order for GPU binary search'
-        );
+        ).toBe(true);
       }
-      t.ok(
-        adjacency.offsets[rowIndex + 1] > adjacency.offsets[rowIndex],
+      expect(
+        Boolean(adjacency.offsets[rowIndex + 1] > adjacency.offsets[rowIndex]),
         'every sparse owner row contains at least one dependency'
-      );
+      ).toBe(true);
     }
   }
   const expectedOutgoing = Array.from({length: dataset.spanCount}, () => [] as number[]);
@@ -1596,16 +1590,14 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     expectedIncoming[destination].push(source);
   }
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
-    t.deepEqual(
+    expect(
       Array.from(getTraceAdjacencyNeighbors(dataset.outgoing, spanIndex)),
-      expectedOutgoing[spanIndex],
       'forward CSR preserves canonical dependency order exactly'
-    );
-    t.deepEqual(
+    ).toEqual(expectedOutgoing[spanIndex]);
+    expect(
       Array.from(getTraceAdjacencyNeighbors(dataset.incoming, spanIndex)),
-      expectedIncoming[spanIndex],
       'reverse CSR preserves canonical dependency order exactly'
-    );
+    ).toEqual(expectedIncoming[spanIndex]);
   }
   for (let spanIndex = 0; spanIndex < dataset.spanCount; spanIndex++) {
     const parentSpanIndex = dataset.parentSpans[spanIndex];
@@ -1613,7 +1605,10 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
       continue;
     }
     const incoming = getTraceAdjacencyNeighbors(dataset.incoming, spanIndex);
-    t.ok(incoming.includes(parentSpanIndex), 'canonical ancestry is backed by a real parent edge');
+    expect(
+      Boolean(incoming.includes(parentSpanIndex)),
+      'canonical ancestry is backed by a real parent edge'
+    ).toBe(true);
   }
 
   let sameProcessCount = 0;
@@ -1626,105 +1621,117 @@ test('GPU trace data publishes stable forward and reverse dependency adjacency',
     const metadata = dataset.dependencies[wordOffset + 3];
     const outgoing = getTraceAdjacencyNeighbors(dataset.outgoing, source);
     const incoming = getTraceAdjacencyNeighbors(dataset.incoming, destination);
-    t.ok(outgoing.includes(destination), 'forward CSR contains the canonical destination');
-    t.ok(incoming.includes(source), 'reverse CSR contains the canonical source');
-    t.equal(metadata & 0xff, TRACE_PARENT_DEPENDENCY_FLAG, 'parent classification remains numeric');
+    expect(
+      Boolean(outgoing.includes(destination)),
+      'forward CSR contains the canonical destination'
+    ).toBe(true);
+    expect(Boolean(incoming.includes(source)), 'reverse CSR contains the canonical source').toBe(
+      true
+    );
+    expect(metadata & 0xff, 'parent classification remains numeric').toBe(
+      TRACE_PARENT_DEPENDENCY_FLAG
+    );
     if (family === TRACE_SAME_PROCESS_DEPENDENCY) {
       sameProcessCount++;
-      t.equal(
+      expect(
         dataset.spans[source * TRACE_SPAN_RECORD_WORD_LENGTH + 5],
-        dataset.spans[destination * TRACE_SPAN_RECORD_WORD_LENGTH + 5],
         'same-process edges preserve their source thread'
-      );
+      ).toBe(dataset.spans[destination * TRACE_SPAN_RECORD_WORD_LENGTH + 5]);
     } else if (family === TRACE_CROSS_PROCESS_DEPENDENCY) {
       crossProcessCount++;
-      t.notEqual(
+      expect(
         dataset.spans[source * TRACE_SPAN_RECORD_WORD_LENGTH + 4],
-        dataset.spans[destination * TRACE_SPAN_RECORD_WORD_LENGTH + 4],
         'cross-process edges connect distinct process owners'
-      );
+      ).not.toBe(dataset.spans[destination * TRACE_SPAN_RECORD_WORD_LENGTH + 4]);
     }
   }
-  t.ok(sameProcessCount > 0, 'includes same-thread parent dependencies');
-  t.ok(crossProcessCount > 0, 'includes cross-process parent dependencies');
-  t.equal(
+  expect(Boolean(sameProcessCount > 0), 'includes same-thread parent dependencies').toBe(true);
+  expect(Boolean(crossProcessCount > 0), 'includes cross-process parent dependencies').toBe(true);
+  expect(
     getMaximumTraceAdjacencyByteLength(250_000),
-    6_000_008,
     '250K dependencies need at most 6 MB of bidirectional sparse adjacency at any span count'
-  );
-  t.ok(
-    getMaximumTraceAdjacencyByteLength(250_000) * 100 <
-      2 * (100_000_000 + 1 + 250_000) * Uint32Array.BYTES_PER_ELEMENT,
+  ).toBe(6_000_008);
+  expect(
+    Boolean(
+      getMaximumTraceAdjacencyByteLength(250_000) * 100 <
+        2 * (100_000_000 + 1 + 250_000) * Uint32Array.BYTES_PER_ELEMENT
+    ),
     '100M spans with 250K dependencies use over 100x less adjacency storage than dense CSR'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace generation reports phases and releases uploaded CPU storage', t => {
+it('GPU trace generation reports phases and releases uploaded CPU storage', () => {
   const phases: string[] = [];
   const dataset = makeTraceDataset(513, 513, phase => phases.push(phase));
   const spanCount = dataset.spanCount;
   const dependencyCount = dataset.dependencyCount;
 
-  t.deepEqual(
-    phases,
-    ['spans', 'dependencies', 'indexes', 'adjacency', 'complete'],
-    'worker-facing progress follows the expensive generation phases'
+  expect(phases, 'worker-facing progress follows the expensive generation phases').toEqual([
+    'spans',
+    'dependencies',
+    'indexes',
+    'adjacency',
+    'complete'
+  ]);
+  expect(Boolean(dataset.spans.byteLength > 0), 'generated source storage starts populated').toBe(
+    true
   );
-  t.ok(dataset.spans.byteLength > 0, 'generated source storage starts populated');
-  t.ok(dataset.outgoing.neighbors.byteLength > 0, 'generated adjacency starts populated');
+  expect(
+    Boolean(dataset.outgoing.neighbors.byteLength > 0),
+    'generated adjacency starts populated'
+  ).toBe(true);
 
   releaseTraceDatasetStorage(dataset);
 
-  t.equal(dataset.spanCount, spanCount, 'release preserves span metadata');
-  t.equal(dataset.dependencyCount, dependencyCount, 'release preserves dependency metadata');
-  t.equal(dataset.spans.byteLength, 0, 'release drops canonical span storage');
-  t.equal(dataset.temporalIndex.data.byteLength, 0, 'release drops temporal index storage');
-  t.equal(dataset.dependencies.byteLength, 0, 'release drops canonical dependency storage');
-  t.equal(dataset.outgoing.neighbors.byteLength, 0, 'release drops outgoing adjacency storage');
-  t.equal(dataset.incoming.neighbors.byteLength, 0, 'release drops incoming adjacency storage');
-  t.ok(
-    dataset.groups.every(group => group.data.byteLength === 0),
+  expect(dataset.spanCount, 'release preserves span metadata').toBe(spanCount);
+  expect(dataset.dependencyCount, 'release preserves dependency metadata').toBe(dependencyCount);
+  expect(dataset.spans.byteLength, 'release drops canonical span storage').toBe(0);
+  expect(dataset.temporalIndex.data.byteLength, 'release drops temporal index storage').toBe(0);
+  expect(dataset.dependencies.byteLength, 'release drops canonical dependency storage').toBe(0);
+  expect(dataset.outgoing.neighbors.byteLength, 'release drops outgoing adjacency storage').toBe(0);
+  expect(dataset.incoming.neighbors.byteLength, 'release drops incoming adjacency storage').toBe(0);
+  expect(
+    Boolean(dataset.groups.every(group => group.data.byteLength === 0)),
     'release drops group views'
-  );
-  t.ok(
-    dataset.spanBatches.every(batch => batch.data.byteLength === 0),
+  ).toBe(true);
+  expect(
+    Boolean(dataset.spanBatches.every(batch => batch.data.byteLength === 0)),
     'release drops batch views'
-  );
-  t.ok(
-    dataset.dependencyChunks.every(chunk => chunk.data.byteLength === 0),
+  ).toBe(true);
+  expect(
+    Boolean(dataset.dependencyChunks.every(chunk => chunk.data.byteLength === 0)),
     'release drops dependency chunk views'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPU trace data handles empty inputs and rejects invalid capacities', t => {
+it('GPU trace data handles empty inputs and rejects invalid capacities', () => {
   const dataset = makeTraceDataset(0);
-  t.equal(dataset.spans.length, 0, 'empty traces have no span rows');
-  t.equal(dataset.dependencies.length, 0, 'empty traces have no dependency rows');
-  t.equal(dataset.parentSpans.length, 0, 'empty traces have no canonical parent rows');
-  t.equal(dataset.spanBatches.length, 0, 'empty traces have no span batches');
-  t.equal(dataset.spanBatchIndex.length, 0, 'empty traces have no batch index records');
-  t.equal(dataset.temporalIndex.data.length, 0, 'empty traces have no temporal index nodes');
-  t.equal(dataset.temporalIndex.levels.length, 0, 'empty traces have no temporal index levels');
-  t.equal(dataset.dependencyBatches.length, 0, 'empty traces have no dependency batches');
-  t.equal(
+  expect(dataset.spans.length, 'empty traces have no span rows').toBe(0);
+  expect(dataset.dependencies.length, 'empty traces have no dependency rows').toBe(0);
+  expect(dataset.parentSpans.length, 'empty traces have no canonical parent rows').toBe(0);
+  expect(dataset.spanBatches.length, 'empty traces have no span batches').toBe(0);
+  expect(dataset.spanBatchIndex.length, 'empty traces have no batch index records').toBe(0);
+  expect(dataset.temporalIndex.data.length, 'empty traces have no temporal index nodes').toBe(0);
+  expect(dataset.temporalIndex.levels.length, 'empty traces have no temporal index levels').toBe(0);
+  expect(dataset.dependencyBatches.length, 'empty traces have no dependency batches').toBe(0);
+  expect(
     dataset.dependencyBatchIndex.length,
-    0,
     'empty traces have no dependency batch index records'
+  ).toBe(0);
+  expect(Array.from(dataset.outgoing.nodes), 'empty forward CSR has no active rows').toEqual([]);
+  expect(Array.from(dataset.outgoing.offsets), 'empty forward CSR has a sentinel').toEqual([0]);
+  expect(Array.from(dataset.incoming.nodes), 'empty reverse CSR has no active rows').toEqual([]);
+  expect(Array.from(dataset.incoming.offsets), 'empty reverse CSR has a sentinel').toEqual([0]);
+  expect(() => makeTraceDataset(-1), 'negative capacity is rejected').toThrow(/nonnegative uint32/);
+  expect(() => makeTraceDataset(1.5), 'fractional capacity is rejected').toThrow(
+    /nonnegative uint32/
   );
-  t.deepEqual(Array.from(dataset.outgoing.nodes), [], 'empty forward CSR has no active rows');
-  t.deepEqual(Array.from(dataset.outgoing.offsets), [0], 'empty forward CSR has a sentinel');
-  t.deepEqual(Array.from(dataset.incoming.nodes), [], 'empty reverse CSR has no active rows');
-  t.deepEqual(Array.from(dataset.incoming.offsets), [0], 'empty reverse CSR has a sentinel');
-  t.throws(() => makeTraceDataset(-1), /nonnegative uint32/, 'negative capacity is rejected');
-  t.throws(() => makeTraceDataset(1.5), /nonnegative uint32/, 'fractional capacity is rejected');
-  t.throws(
-    () => makeTraceDataset(1, -1),
-    /dependency count must be a nonnegative uint32/,
-    'negative dependency capacity is rejected'
+  expect(() => makeTraceDataset(1, -1), 'negative dependency capacity is rejected').toThrow(
+    /dependency count must be a nonnegative uint32/
   );
-  t.end();
+  void 0;
 });
 
 function getTraceAdjacencyNeighbors(adjacency: TraceAdjacencyData, node: number): Uint32Array {

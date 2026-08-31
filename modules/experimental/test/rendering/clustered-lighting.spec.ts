@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -15,24 +15,23 @@ import {
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 
-test('clustered lighting exposes one composable fullscreen resolve', testCase => {
+it('clustered lighting exposes one composable fullscreen resolve', () => {
   const pipeline = createClusteredDeferredLightingCompositeShaderPass();
-  testCase.equal(pipeline.steps.length, 1, 'the resolve is one fullscreen pass');
-  testCase.equal(
+  expect(pipeline.steps.length, 'the resolve is one fullscreen pass').toBe(1);
+  expect(
     pipeline.steps[0].shaderPass.name,
-    'clusteredDeferredLighting',
     'the pipeline exposes the clustered-lighting pass'
-  );
-  testCase.equal(pipeline.steps[0].output, 'previous', 'lighting composes into the color chain');
-  testCase.equal(MAX_CLUSTERED_POINT_LIGHTS, 512, 'the exported cluster capacity is explicit');
-  testCase.end();
+  ).toBe('clusteredDeferredLighting');
+  expect(pipeline.steps[0].output, 'lighting composes into the color chain').toBe('previous');
+  expect(MAX_CLUSTERED_POINT_LIGHTS, 'the exported cluster capacity is explicit').toBe(512);
+  void 0;
 });
 
-test('clustered light grid conservatively bins camera-plane and orthographic lights', async testCase => {
+it('clustered light grid conservatively bins camera-plane and orthographic lights', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -69,10 +68,10 @@ test('clustered light grid conservatively bins camera-plane and orthographic lig
     const perspectiveClusterCounts = await readClusterLightCounts(
       clusteredLightGrid.clusterLightCounts
     );
-    testCase.ok(
-      perspectiveClusterCounts.every(clusterCount => clusterCount === 1),
+    expect(
+      Boolean(perspectiveClusterCounts.every(clusterCount => clusterCount === 1)),
       'a visible sphere centered behind the camera conservatively covers every screen tile'
-    );
+    ).toBe(true);
 
     pointLights.write(
       makeDeferredPointLightBufferData(
@@ -99,29 +98,27 @@ test('clustered light grid conservatively bins camera-plane and orthographic lig
     const orthographicClusterCounts = await readClusterLightCounts(
       clusteredLightGrid.clusterLightCounts
     );
-    testCase.equal(
+    expect(
       orthographicClusterCounts[2 * 4 + 3],
-      1,
       'orthographic light bounds retain their world-space radius at far depths'
-    );
-    testCase.equal(
+    ).toBe(1);
+    expect(
       orthographicClusterCounts[2 * 4 + 1],
-      0,
       'orthographic light bounds do not expand into unrelated screen tiles'
-    );
+    ).toBe(0);
   } finally {
     clusteredLightGrid.destroy();
     pointLights.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('clustered light grid bins lights and resolves materials on WebGPU', async testCase => {
+it('clustered light grid bins lights and resolves materials on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -257,22 +254,21 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
       clusterIndexBytes.byteOffset,
       clusterIndexBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    testCase.equal(
-      clusterCounts[0],
-      clusteredTestLights.length,
-      'the compute pass preserves overflow pressure for debugging'
+    expect(clusterCounts[0], 'the compute pass preserves overflow pressure for debugging').toBe(
+      clusteredTestLights.length
     );
-    testCase.deepEqual(
+    expect(
       Array.from(clusterLightIndices.slice(0, 2)),
-      [0, 1],
       'overflow compaction retains a deterministic light-index prefix'
-    );
-    testCase.equal(
+    ).toEqual([0, 1]);
+    expect(
       clusteredLightGrid.getShaderPassUniforms(0.1, 20).pointLightCount,
-      clusteredTestLights.length,
       'the fullscreen resolve receives the active point-light prefix'
-    );
-    testCase.ok(outputTexture, 'the clustered material G-buffer resolves through the pass');
+    ).toBe(clusteredTestLights.length);
+    expect(
+      Boolean(outputTexture),
+      'the clustered material G-buffer resolves through the pass'
+    ).toBe(true);
 
     if (outputTexture) {
       const originalOutput = await readTexturePixel(outputTexture);
@@ -296,11 +292,10 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
       device.submit();
 
       if (outputWithInactiveLights) {
-        testCase.deepEqual(
+        expect(
           Array.from(await readTexturePixel(outputWithInactiveLights)),
-          Array.from(originalOutput),
           'overflow fallback ignores stale light records beyond the active prefix'
-        );
+        ).toEqual(Array.from(originalOutput));
       }
     }
   } finally {
@@ -315,7 +310,7 @@ test('clustered light grid bins lights and resolves materials on WebGPU', async 
     pointLights.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 async function readClusterLightCounts(clusterLightCounts: Buffer): Promise<Uint32Array> {

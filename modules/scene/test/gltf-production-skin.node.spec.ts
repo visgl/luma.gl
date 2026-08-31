@@ -8,7 +8,7 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {ANARIDevice, ANARIGroup, type ANARIInstance, type ANARISurface} from '@luma.gl/scene';
 import {ANARISceneSchema} from '@luma.gl/scene/schemas';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
 import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
 
@@ -19,21 +19,20 @@ async function loadSimpleSkin() {
   return postProcessGLTF(await parse(asset, GLTFLoader, {gltf: {loadImages: false}}));
 }
 
-test('ANARI imports and animates authored SimpleSkin joint palettes without application setup', async testContext => {
+it('ANARI imports and animates authored SimpleSkin joint palettes without application setup', async () => {
   const source = await loadSimpleSkin();
   const description = await makeANARIJSONSceneFromGLTF(source, 'SIMPLE SKIN');
   const declaredSurface = Object.values(description.surfaces).find(surface => surface.skin);
 
-  testContext.equal(declaredSurface?.skin?.joints.length, 2, 'retains both authored joint nodes');
-  testContext.equal(
+  expect(declaredSurface?.skin?.joints.length, 'retains both authored joint nodes').toBe(2);
+  expect(
     declaredSurface?.skin?.inverseBindMatrices?.length,
-    32,
     'preserves authored inverse bind matrices'
-  );
-  testContext.ok(
-    ANARISceneSchema.safeParse(description).success,
+  ).toBe(32);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(description).success),
     'validates portable skin bindings'
-  );
+  ).toBe(true);
 
   if (description.renderer) {
     description.renderer.bloomIntensity = 0;
@@ -57,54 +56,52 @@ test('ANARI imports and animates authored SimpleSkin joint palettes without appl
     }
   }
 
-  testContext.ok(retainedSurface, 'creates a source-owned retained skin surface');
-  testContext.ok(scene.animations, 'uses the existing shared animation scene');
+  expect(Boolean(retainedSurface), 'creates a source-owned retained skin surface').toBe(true);
+  expect(Boolean(scene.animations), 'uses the existing shared animation scene').toBe(true);
   if (retainedSurface && scene.animations) {
     const originalPalette = Array.from(retainedSurface.getParameter('skin')!.jointMatrices);
     const originalVersion = retainedSurface.version;
     scene.animations.seek(0.5);
 
-    testContext.notDeepEqual(
+    expect(
       Array.from(retainedSurface.getParameter('skin')!.jointMatrices),
-      originalPalette,
       'animated source joints update the retained mesh-local palette'
-    );
-    testContext.equal(
-      retainedSurface.version,
-      originalVersion + 1,
-      'commits each surface only once'
-    );
-    testContext.ok(scene.frame.render().drawCount > 0, 'renders the existing skinned PBR model');
+    ).not.toEqual(originalPalette);
+    expect(retainedSurface.version, 'commits each surface only once').toBe(originalVersion + 1);
+    expect(
+      Boolean(scene.frame.render().drawCount > 0),
+      'renders the existing skinned PBR model'
+    ).toBe(true);
   }
 
   scene.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI skin schemas reject missing source joints and malformed inverse binds', async testContext => {
+it('ANARI skin schemas reject missing source joints and malformed inverse binds', async () => {
   const source = await loadSimpleSkin();
   const description = await makeANARIJSONSceneFromGLTF(source, 'SIMPLE SKIN');
   const skin = Object.values(description.surfaces).find(surface => surface.skin)?.skin;
   if (!skin) {
-    testContext.fail('the fixture should expose a retained skin');
-    testContext.end();
+    expect(false, 'the fixture should expose a retained skin').toBe(true);
+    void 0;
     return;
   }
 
   skin.joints = [...skin.joints, 'missing-joint'];
   const result = ANARISceneSchema.safeParse(description);
-  testContext.false(result.success, 'rejects unresolved retained joints');
+  expect(Boolean(result.success), 'rejects unresolved retained joints').toBe(false);
   if (!result.success) {
-    testContext.ok(
-      result.error.issues.some(issue => issue.path.includes('joints')),
+    expect(
+      Boolean(result.error.issues.some(issue => issue.path.includes('joints'))),
       'identifies the unresolved retained joint'
-    );
-    testContext.ok(
-      result.error.issues.some(issue => issue.path.includes('inverseBindMatrices')),
+    ).toBe(true);
+    expect(
+      Boolean(result.error.issues.some(issue => issue.path.includes('inverseBindMatrices'))),
       'rejects inverse bind palettes whose joint count no longer matches'
-    );
+    ).toBe(true);
   }
 
-  testContext.end();
+  void 0;
 });

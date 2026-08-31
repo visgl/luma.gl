@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type RenderPass} from '@luma.gl/core';
 import type {PickInfo} from '@luma.gl/engine';
 import {
@@ -24,66 +24,57 @@ import {
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
 } from '../src/gpu-splat-graph-shaders';
 
-test('graph-native Gaussian picking preserves projected, uniform, and integer identity layouts', t => {
+it('graph-native Gaussian picking preserves projected, uniform, and integer identity layouts', () => {
   const reflection = new WgslReflect(GPU_SPLAT_GRAPH_PICKING_SHADER);
   const projectedRecord = reflection.structs.find(struct => struct.name === 'ProjectedSplat');
-  t.equal(
+  expect(
     projectedRecord?.size,
-    GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH,
     'borrows the exact renderer-owned 48-byte projected Gaussian record'
-  );
-  t.deepEqual(
+  ).toBe(GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH);
+  expect(
     projectedRecord?.members.map(member => ({name: member.name, offset: member.offset})),
-    [
-      {name: 'clipCenter', offset: 0},
-      {name: 'axis0', offset: 16},
-      {name: 'axis1', offset: 24},
-      {name: 'color', offset: 32}
-    ],
     'preserves projected clip centers, anisotropic axes, and Float32 alpha'
-  );
-  t.equal(
+  ).toEqual([
+    {name: 'clipCenter', offset: 0},
+    {name: 'axis0', offset: 16},
+    {name: 'axis1', offset: 24},
+    {name: 'color', offset: 32}
+  ]);
+  expect(
     reflection.uniforms[0]?.size,
-    GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
     'borrows the graph renderer uniform allocation without rewriting or uploading it'
-  );
-  t.deepEqual(
+  ).toBe(GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH);
+  expect(
     reflection.storage.map(resource => ({name: resource.name, location: resource.binding})),
-    [
-      {name: 'projectedRecords', location: 1},
-      {name: 'sortedIds', location: 2}
-    ],
     'consumes only already projected records and globally sorted visible row identifiers'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {name: 'projectedRecords', location: 1},
+    {name: 'sortedIds', location: 2}
+  ]);
+  expect(
     reflection.entry.vertex.map(entry => entry.name),
-    ['vertexMain'],
     'provides one instanced projected Gaussian vertex entry point'
-  );
-  t.deepEqual(
+  ).toEqual(['vertexMain']);
+  expect(
     reflection.entry.fragment.map(entry => entry.name),
-    ['fragmentMain'],
     'provides one exact integer picking fragment entry point'
-  );
-  t.match(
+  ).toEqual(['fragmentMain']);
+  expect(
     GPU_SPLAT_GRAPH_PICKING_SHADER,
-    /@location\(2\)\s*@interpolate\(flat\)\s*projectedRowIndex:\s*u32/,
     'preserves packed projected source identity without interpolation or 24-bit encoding'
-  );
-  t.match(
+  ).toMatch(/@location\(2\)\s*@interpolate\(flat\)\s*projectedRowIndex:\s*u32/);
+  expect(
     GPU_SPLAT_GRAPH_PICKING_SHADER,
-    /alpha\s*<=\s*0\.0\s*\|\|\s*alpha\s*<\s*graphUniforms\.alphaCutoff/,
     'excludes transparent and cutoff-clipped Gaussian fragments from picking'
-  );
-  t.match(
+  ).toMatch(/alpha\s*<=\s*0\.0\s*\|\|\s*alpha\s*<\s*graphUniforms\.alphaCutoff/);
+  expect(
     GPU_SPLAT_GRAPH_PICKING_SHADER,
-    /pickingIndices\s*=\s*vec2<i32>\(i32\(input\.projectedRowIndex\),\s*0\)/,
     'publishes the packed projected row through an exact signed integer attachment'
-  );
-  t.end();
+  ).toMatch(/pickingIndices\s*=\s*vec2<i32>\(i32\(input\.projectedRowIndex\),\s*0\)/);
+  void 0;
 });
 
-test('resolveGPUSplatGraphPickInfo restores original streamed batches and large global rows', t => {
+it('resolveGPUSplatGraphPickInfo restores original streamed batches and large global rows', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(
     device,
@@ -103,16 +94,14 @@ test('resolveGPUSplatGraphPickInfo restores original streamed batches and large 
     })
   );
 
-  t.deepEqual(
+  expect(
     resolveGPUSplatGraphPickInfo({batchIndex: 0, objectIndex: 1}, [firstBatch, secondBatch]),
-    {batchIndex: 802, rowIndex: 16_777_225, batchRowIndex: 1, semanticId: 7},
     'restores a labeled global source row exceeding RGBA picking precision'
-  );
-  t.deepEqual(
+  ).toEqual({batchIndex: 802, rowIndex: 16_777_225, batchRowIndex: 1, semanticId: 7});
+  expect(
     resolveGPUSplatGraphPickInfo({batchIndex: 0, objectIndex: 2}, [firstBatch, secondBatch]),
-    {batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: null},
     'restores arbitrary source batches and high signed-32-bit global source identities'
-  );
+  ).toEqual({batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: null});
 
   for (const invalidPick of [
     null,
@@ -123,25 +112,23 @@ test('resolveGPUSplatGraphPickInfo restores original streamed batches and large 
     {batchIndex: 0, objectIndex: Number.NaN},
     {batchIndex: 0, objectIndex: 1.5}
   ]) {
-    t.deepEqual(
+    expect(
       resolveGPUSplatGraphPickInfo(invalidPick, [firstBatch, secondBatch]),
-      {batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null},
       'rejects missing, stale, negative, fractional, and out-of-bounds graph identities'
-    );
+    ).toEqual({batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null});
   }
 
   firstBatch.destroy();
-  t.equal(
+  expect(
     resolveGPUSplatGraphPickInfo({batchIndex: 0, objectIndex: 1}, [firstBatch, secondBatch])
       .rowIndex,
-    null,
     'rejects a projected row whose original source allocation was evicted or destroyed'
-  );
+  ).toBe(null);
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphPicker stays lazy, requires integer picking, and preserves borrowed ownership', async t => {
+it('GPUSplatGraphPicker stays lazy, requires integer picking, and preserves borrowed ownership', async () => {
   const device = makeGraphInteractionWebGPUNullDevice();
   const batch = makeGPUSplatData(
     device,
@@ -156,39 +143,39 @@ test('GPUSplatGraphPicker stays lazy, requires integer picking, and preserves bo
   const sourceBuffer = batch.positions.data[0].buffer;
   const picker = new GPUSplatGraphPicker(renderer);
 
-  t.equal(picker.mode, 'index', 'selects exact integer WebGPU picking');
-  t.equal(picker.model, undefined, 'does not allocate a picking model before the first pick');
-  t.equal(picker.manager.framebuffer, null, 'does not allocate picking attachments eagerly');
-  t.equal(renderer.compiledGraph, undefined, 'never forces graph projection at construction');
-  t.throws(
+  expect(picker.mode, 'selects exact integer WebGPU picking').toBe('index');
+  expect(picker.model, 'does not allocate a picking model before the first pick').toBe(undefined);
+  expect(picker.manager.framebuffer, 'does not allocate picking attachments eagerly').toBe(null);
+  expect(renderer.compiledGraph, 'never forces graph projection at construction').toBe(undefined);
+  expect(
     () => new GPUSplatGraphPicker(renderer, {mode: 'color'}),
-    /integer WebGPU picking/,
     'rejects lossy color picking for graph-native source identities'
-  );
-  t.deepEqual(
+  ).toThrow(/integer WebGPU picking/);
+  expect(
     await picker.pick(null),
-    {batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null},
     'clears an absent pointer without compiling or submitting GPU work'
-  );
+  ).toEqual({batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null});
 
   picker.destroy();
   picker.destroy();
-  t.ok(picker.destroyed, 'releases owned picking resources idempotently');
-  t.notOk(renderer.destroyed, 'never destroys the borrowing graph renderer');
-  t.notOk(sourceBuffer.destroyed, 'never destroys original caller-owned source buffers');
-  t.equal(await picker.pick([0, 0]), null, 'does not submit after picker destruction');
+  expect(Boolean(picker.destroyed), 'releases owned picking resources idempotently').toBe(true);
+  expect(Boolean(renderer.destroyed), 'never destroys the borrowing graph renderer').toBe(false);
+  expect(
+    Boolean(sourceBuffer.destroyed),
+    'never destroys original caller-owned source buffers'
+  ).toBe(false);
+  expect(await picker.pick([0, 0]), 'does not submit after picker destruction').toBe(null);
 
   renderer.destroy();
-  t.throws(
+  expect(
     () => new GPUSplatGraphPicker(renderer),
-    /live Gaussian splat graph renderer/,
     'rejects previously destroyed graph renderers'
-  );
+  ).toThrow(/live Gaussian splat graph renderer/);
   batch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphPicker reuses graph buffers and one GPU-visible indirect command', async t => {
+it('GPUSplatGraphPicker reuses graph buffers and one GPU-visible indirect command', async () => {
   const device = makeGraphInteractionWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(
     device,
@@ -242,7 +229,7 @@ test('GPUSplatGraphPicker reuses graph buffers and one GPU-visible indirect comm
   });
   Object.defineProperty(renderer.drawCommands, 'draw', {
     value: (_renderPass: RenderPass, commandIndex: number) => {
-      t.equal(commandIndex, 0, 'reuses the existing graph GPU-visible indirect command');
+      expect(commandIndex, 'reuses the existing graph GPU-visible indirect command').toBe(0);
       indirectDrawCount++;
     }
   });
@@ -254,47 +241,61 @@ test('GPUSplatGraphPicker reuses graph buffers and one GPU-visible indirect comm
     return {batchIndex: 0, objectIndex: pickedProjectedRowIndex};
   };
 
-  t.deepEqual(
+  expect(
     await picker.pick([0, 0]),
-    {batchIndex: 60_000, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8},
     'resolves the GPU-picked packed projected row into its large original source identity'
-  );
+  ).toEqual({batchIndex: 60_000, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8});
   const initialPickingModel = picker.model;
-  t.ok(initialPickingModel, 'creates one dedicated projected-record GPU picking model');
-  t.equal(indirectDrawCount, 1, 'issues one indirect draw across both original source batches');
-  t.equal(encodingCount, 1, 'refreshes only graph-owned projected source state');
-  t.equal(readbackCount, 1, 'reads exactly one asynchronous integer picking result');
-  t.equal(notifications.length, 1, 'notifies stable source selection once');
+  expect(
+    Boolean(initialPickingModel),
+    'creates one dedicated projected-record GPU picking model'
+  ).toBe(true);
+  expect(indirectDrawCount, 'issues one indirect draw across both original source batches').toBe(1);
+  expect(encodingCount, 'refreshes only graph-owned projected source state').toBe(1);
+  expect(readbackCount, 'reads exactly one asynchronous integer picking result').toBe(1);
+  expect(notifications.length, 'notifies stable source selection once').toBe(1);
 
   await picker.pick([0, 0]);
-  t.equal(indirectDrawCount, 1, 'does not redraw unchanged pointer positions');
-  t.equal(readbackCount, 1, 'does not repeat GPU readback for unchanged positions');
+  expect(indirectDrawCount, 'does not redraw unchanged pointer positions').toBe(1);
+  expect(readbackCount, 'does not repeat GPU readback for unchanged positions').toBe(1);
 
   pickedProjectedRowIndex = 1;
-  t.deepEqual(
+  expect(
     await picker.pick([0, 0], {force: true}),
-    {batchIndex: 50, rowIndex: 101, batchRowIndex: 1, semanticId: 4},
     'refreshes stable source identity after streamed, animated, or filtered graph updates'
+  ).toEqual({batchIndex: 50, rowIndex: 101, batchRowIndex: 1, semanticId: 4});
+  expect(picker.model, 'reuses the existing projected-record picking model').toBe(
+    initialPickingModel
   );
-  t.equal(picker.model, initialPickingModel, 'reuses the existing projected-record picking model');
-  t.equal(indirectDrawCount, 2, 'issues exactly one indirect draw for each forced graph pick');
-  t.equal(notifications.length, 2, 'publishes each changed semantic selection once');
+  expect(indirectDrawCount, 'issues exactly one indirect draw for each forced graph pick').toBe(2);
+  expect(notifications.length, 'publishes each changed semantic selection once').toBe(2);
 
   picker.clear();
-  t.deepEqual(
-    notifications[2],
-    {batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null},
-    'publishes one cleared original source selection'
-  );
+  expect(notifications[2], 'publishes one cleared original source selection').toEqual({
+    batchIndex: null,
+    rowIndex: null,
+    batchRowIndex: null,
+    semanticId: null
+  });
   picker.destroy();
-  t.notOk(projectedRecordBuffer.destroyed, 'does not destroy the borrowed projected-record buffer');
-  t.notOk(
-    sortedIndexBuffer.destroyed,
+  expect(
+    Boolean(projectedRecordBuffer.destroyed),
+    'does not destroy the borrowed projected-record buffer'
+  ).toBe(false);
+  expect(
+    Boolean(sortedIndexBuffer.destroyed),
     'does not destroy the borrowed globally sorted index buffer'
+  ).toBe(false);
+  expect(
+    Boolean(uniformBuffer.destroyed),
+    'does not destroy the borrowed graph uniform allocation'
+  ).toBe(false);
+  expect(Boolean(firstBatch.destroyed), 'does not destroy the first original source batch').toBe(
+    false
   );
-  t.notOk(uniformBuffer.destroyed, 'does not destroy the borrowed graph uniform allocation');
-  t.notOk(firstBatch.destroyed, 'does not destroy the first original source batch');
-  t.notOk(secondBatch.destroyed, 'does not destroy the second original source batch');
+  expect(Boolean(secondBatch.destroyed), 'does not destroy the second original source batch').toBe(
+    false
+  );
 
   renderer.destroy();
   projectedRecordBuffer.destroy();
@@ -302,10 +303,10 @@ test('GPUSplatGraphPicker reuses graph buffers and one GPU-visible indirect comm
   uniformBuffer.destroy();
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphPicker serializes deferred readback across independently replaced frontiers', async t => {
+it('GPUSplatGraphPicker serializes deferred readback across independently replaced frontiers', async () => {
   const device = makeGraphInteractionWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(
     device,
@@ -374,41 +375,44 @@ test('GPUSplatGraphPicker serializes deferred readback across independently repl
 
   const firstRequest = picker.pick([0, 0]);
   await Promise.resolve();
-  t.equal(readbackCount, 1, 'starts one asynchronous readback for the original source frontier');
+  expect(readbackCount, 'starts one asynchronous readback for the original source frontier').toBe(
+    1
+  );
   renderer.setProps({data: replacementBatch});
-  t.notOk(firstBatch.destroyed, 'frontier replacement preserves the original borrowed batch');
+  expect(
+    Boolean(firstBatch.destroyed),
+    'frontier replacement preserves the original borrowed batch'
+  ).toBe(false);
   const secondRequest = picker.pick([1, 0]);
   await Promise.resolve();
-  t.equal(readbackCount, 1, 'does not overlap GPU readbacks across different source frontiers');
-  t.equal(graphEncodingCount, 1, 'defers new graph projection until previous readback resolves');
-  t.equal(indirectDrawCount, 1, 'does not overwrite the first source snapshot with a new draw');
+  expect(readbackCount, 'does not overlap GPU readbacks across different source frontiers').toBe(1);
+  expect(graphEncodingCount, 'defers new graph projection until previous readback resolves').toBe(
+    1
+  );
+  expect(indirectDrawCount, 'does not overwrite the first source snapshot with a new draw').toBe(1);
 
   finishFirstReadback({batchIndex: 0, objectIndex: 0});
-  t.deepEqual(
+  expect(
     await firstRequest,
-    {batchIndex: 8, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
     'resolves the delayed GPU identity against its original prepared source snapshot'
-  );
-  t.deepEqual(
+  ).toEqual({batchIndex: 8, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
+  expect(
     await secondRequest,
-    {batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9},
     'resolves the following queued GPU identity against the replacement frontier'
-  );
-  t.equal(readbackCount, 2, 'runs exactly one serialized readback for each pointer request');
-  t.equal(
+  ).toEqual({batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9});
+  expect(readbackCount, 'runs exactly one serialized readback for each pointer request').toBe(2);
+  expect(
     graphEncodingCount,
-    2,
     'encodes the replacement graph only after its predecessor settles'
-  );
-  t.equal(indirectDrawCount, 2, 'issues one graph-native indirect draw per serialized request');
-  t.deepEqual(
+  ).toBe(2);
+  expect(indirectDrawCount, 'issues one graph-native indirect draw per serialized request').toBe(2);
+  expect(
     notifications,
-    [
-      {batchIndex: 8, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
-      {batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9}
-    ],
     'publishes correctly scoped source and semantic callbacks in request order'
-  );
+  ).toEqual([
+    {batchIndex: 8, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
+    {batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9}
+  ]);
 
   let finishStaleReadback: (pickInfo: PickInfo) => void = () => {};
   const staleReadback = new Promise<PickInfo>(resolve => {
@@ -423,37 +427,36 @@ test('GPUSplatGraphPicker serializes deferred readback across independently repl
   };
   const pendingStaleRequest = picker.pick([0, 0], {force: true});
   await Promise.resolve();
-  t.equal(readbackCount, 3, 'starts another deferred source readback before pointer leave');
-  t.deepEqual(
+  expect(readbackCount, 'starts another deferred source readback before pointer leave').toBe(3);
+  expect(
     await picker.pick(null),
-    {batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null},
     'clears a pointer immediately without waiting for stale GPU readback'
-  );
-  t.equal(notifications.length, 3, 'publishes the cleared selection exactly once');
+  ).toEqual({batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null});
+  expect(notifications.length, 'publishes the cleared selection exactly once').toBe(3);
   finishStaleReadback({batchIndex: 0, objectIndex: 0});
-  t.deepEqual(
+  expect(
     await pendingStaleRequest,
-    {batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null},
     'never restores a cleared selection from an older completed GPU frame'
-  );
-  t.equal(notifications.length, 3, 'suppresses stale source and semantic callbacks after clearing');
-  t.deepEqual(
+  ).toEqual({batchIndex: null, rowIndex: null, batchRowIndex: null, semanticId: null});
+  expect(
+    notifications.length,
+    'suppresses stale source and semantic callbacks after clearing'
+  ).toBe(3);
+  expect(
     picker.manager.pickInfo,
-    {batchIndex: null, objectIndex: null},
     'clears stale engine-level integer picking and highlight identity'
-  );
+  ).toEqual({batchIndex: null, objectIndex: null});
 
   picker.manager.updatePickInfo = async () => {
     const result = {batchIndex: 0, objectIndex: 0};
     picker.manager.props.onObjectPicked(result);
     return result;
   };
-  t.deepEqual(
+  expect(
     await picker.pick([1, 0], {force: true}),
-    {batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9},
     'accepts new pointer requests after invalidating an older in-flight picking generation'
-  );
-  t.equal(notifications.length, 4, 'resumes current-generation source notifications normally');
+  ).toEqual({batchIndex: 70_000, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 9});
+  expect(notifications.length, 'resumes current-generation source notifications normally').toBe(4);
 
   picker.destroy();
   renderer.destroy();
@@ -462,10 +465,10 @@ test('GPUSplatGraphPicker serializes deferred readback across independently repl
   uniformBuffer.destroy();
   firstBatch.destroy();
   replacementBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphMixedRenderer composites shared-depth meshes around one graph indirect draw', t => {
+it('GPUSplatGraphMixedRenderer composites shared-depth meshes around one graph indirect draw', () => {
   const device = makeGraphInteractionWebGPUNullDevice();
   const batch = makeGPUSplatData(
     device,
@@ -505,7 +508,7 @@ test('GPUSplatGraphMixedRenderer composites shared-depth meshes around one graph
   });
   Object.defineProperty(renderer.drawCommands, 'draw', {
     value: (_renderPass: RenderPass, commandIndex: number) => {
-      t.equal(commandIndex, 0, 'uses the graph-populated GPU visible-row indirect command');
+      expect(commandIndex, 'uses the graph-populated GPU visible-row indirect command').toBe(0);
       drawOrder.push('splats');
     }
   });
@@ -516,77 +519,101 @@ test('GPUSplatGraphMixedRenderer composites shared-depth meshes around one graph
     depthCompare: 'greater-equal',
     depthWriteEnabled: true
   });
-  t.equal(mixedRenderer.model, undefined, 'does not allocate a display model before preparation');
-  t.ok(
-    mixedRenderer.predraw(device.commandEncoder),
+  expect(mixedRenderer.model, 'does not allocate a display model before preparation').toBe(
+    undefined
+  );
+  expect(
+    Boolean(mixedRenderer.predraw(device.commandEncoder)),
     'updates projected graph resources before opening the caller-owned shared pass'
-  );
-  t.equal(graphEncodingCount, 1, 'prepares graph projection exactly once');
+  ).toBe(true);
+  expect(graphEncodingCount, 'prepares graph projection exactly once').toBe(1);
   const initialModel = mixedRenderer.model;
-  t.ok(initialModel, 'creates one reusable graph-projected Gaussian display model');
-  t.equal(
+  expect(Boolean(initialModel), 'creates one reusable graph-projected Gaussian display model').toBe(
+    true
+  );
+  expect(
     initialModel?.parameters.depthCompare,
-    'greater-equal',
     'supports application-owned reversed-depth scene policies'
-  );
-  t.equal(
+  ).toBe('greater-equal');
+  expect(
     initialModel?.parameters.depthWriteEnabled,
-    true,
     'supports explicitly requested Gaussian depth writes'
-  );
+  ).toBe(true);
 
   const renderPass = device.beginRenderPass({clearDepth: 0});
-  t.ok(
-    mixedRenderer.draw(renderPass, {
-      opaqueMeshes: [
-        {
-          draw(sharedPass) {
-            t.equal(sharedPass, renderPass, 'shares the caller-owned opaque mesh depth attachment');
-            drawOrder.push('opaque');
-            return true;
+  expect(
+    Boolean(
+      mixedRenderer.draw(renderPass, {
+        opaqueMeshes: [
+          {
+            draw(sharedPass) {
+              expect(sharedPass, 'shares the caller-owned opaque mesh depth attachment').toBe(
+                renderPass
+              );
+              drawOrder.push('opaque');
+              return true;
+            }
           }
-        }
-      ],
-      transparentMeshes: [
-        {
-          draw(sharedPass) {
-            t.equal(sharedPass, renderPass, 'shares the same transparent overlay render pass');
-            drawOrder.push('transparent');
+        ],
+        transparentMeshes: [
+          {
+            draw(sharedPass) {
+              expect(sharedPass, 'shares the same transparent overlay render pass').toBe(
+                renderPass
+              );
+              drawOrder.push('transparent');
+            }
           }
-        }
-      ]
-    }),
+        ]
+      })
+    ),
     'composites opaque meshes, graph-projected splats, and transparent overlays'
-  );
+  ).toBe(true);
   renderPass.end();
-  t.deepEqual(
-    drawOrder,
-    ['opaque', 'splats', 'transparent'],
-    'preserves mixed-scene depth ordering'
-  );
+  expect(drawOrder, 'preserves mixed-scene depth ordering').toEqual([
+    'opaque',
+    'splats',
+    'transparent'
+  ]);
 
-  t.ok(mixedRenderer.predraw(device.commandEncoder), 'prepares a later graph composition frame');
-  t.equal(mixedRenderer.model, initialModel, 'reuses the same projected-record display model');
+  expect(
+    Boolean(mixedRenderer.predraw(device.commandEncoder)),
+    'prepares a later graph composition frame'
+  ).toBe(true);
+  expect(mixedRenderer.model, 'reuses the same projected-record display model').toBe(initialModel);
   mixedRenderer.destroy();
   mixedRenderer.destroy();
-  t.ok(mixedRenderer.destroyed, 'releases owned composition resources idempotently');
-  t.notOk(renderer.destroyed, 'preserves the borrowed source graph renderer');
-  t.notOk(projectedRecordBuffer.destroyed, 'preserves borrowed projected Gaussian records');
-  t.notOk(sortedIndexBuffer.destroyed, 'preserves borrowed globally sorted graph indices');
-  t.notOk(uniformBuffer.destroyed, 'preserves borrowed camera and styling uniforms');
-  t.notOk(batch.destroyed, 'preserves the independently owned original Gaussian source batch');
+  expect(
+    Boolean(mixedRenderer.destroyed),
+    'releases owned composition resources idempotently'
+  ).toBe(true);
+  expect(Boolean(renderer.destroyed), 'preserves the borrowed source graph renderer').toBe(false);
+  expect(
+    Boolean(projectedRecordBuffer.destroyed),
+    'preserves borrowed projected Gaussian records'
+  ).toBe(false);
+  expect(
+    Boolean(sortedIndexBuffer.destroyed),
+    'preserves borrowed globally sorted graph indices'
+  ).toBe(false);
+  expect(Boolean(uniformBuffer.destroyed), 'preserves borrowed camera and styling uniforms').toBe(
+    false
+  );
+  expect(
+    Boolean(batch.destroyed),
+    'preserves the independently owned original Gaussian source batch'
+  ).toBe(false);
 
   renderer.destroy();
   projectedRecordBuffer.destroy();
   sortedIndexBuffer.destroy();
   uniformBuffer.destroy();
   batch.destroy();
-  t.throws(
+  expect(
     () => new GPUSplatGraphMixedRenderer(renderer),
-    /live Gaussian splat graph renderer/,
     'rejects graph renderers whose borrowed resources have already been destroyed'
-  );
-  t.end();
+  ).toThrow(/live Gaussian splat graph renderer/);
+  void 0;
 });
 
 function makeGraphInteractionWebGPUNullDevice(): NullDevice {
