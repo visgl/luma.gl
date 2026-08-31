@@ -5,7 +5,10 @@
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe, expect, test} from 'vitest';
-import FP64App from '../../examples/experimental/fp64/app';
+import FP64App, {
+  getVisualizationDefines,
+  makeFP64SettingsSchema
+} from '../../examples/experimental/fp64/app';
 
 describe('FP64 example responsive layout', () => {
   test('keeps each precision description paired with its canvas when the panes stack', () => {
@@ -31,5 +34,42 @@ describe('FP64 example responsive layout', () => {
     expect(markup).toContain('left:12px;right:12px;bottom:12px;box-sizing:border-box');
     expect(markup).toContain('max-width:calc(100% - 24px)');
     expect(markup.match(/overflow-wrap:anywhere/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  test('offers an explicit WebGL2 backend for standalone rendering', () => {
+    const settings = makeFP64SettingsSchema().sections.flatMap(section => section.settings);
+    const backendSetting = settings.find(setting => setting.name === 'selectedBackend');
+    const arithmeticSetting = settings.find(setting => setting.name === 'selectedArithmeticMode');
+
+    expect(backendSetting?.options).toContainEqual({label: 'WebGL2', value: 'webgl'});
+    expect(arithmeticSetting?.options).toEqual([
+      {label: 'Classic · fast', value: 'classic'},
+      {label: 'Hybrid · balanced', value: 'hybrid'},
+      {label: 'Integer · reliable', value: 'integer'}
+    ]);
+    expect(makeFP64SettingsSchema(false).sections[0].settings).not.toContainEqual(
+      expect.objectContaining({name: 'selectedBackend'})
+    );
+  });
+
+  test('selects explicit FP64 arithmetic modes on WebGPU', () => {
+    const appleWebGPUDevice = {info: {gpu: 'apple' as const}, type: 'webgpu' as const};
+    const otherWebGPUDevice = {info: {gpu: 'nvidia' as const}, type: 'webgpu' as const};
+    const webGLDevice = {info: {gpu: 'apple' as const}, type: 'webgl' as const};
+
+    expect(getVisualizationDefines(appleWebGPUDevice, 'fp32', 'hybrid')).toEqual({});
+    expect(getVisualizationDefines(appleWebGPUDevice, 'fp64', 'hybrid')).toEqual({
+      LUMA_FP64_HYBRID_ARITHMETIC: true,
+      LUMA_FP64_INTEGER_ARITHMETIC: false
+    });
+    expect(getVisualizationDefines(otherWebGPUDevice, 'fp64', 'classic')).toEqual({
+      LUMA_FP64_HYBRID_ARITHMETIC: false,
+      LUMA_FP64_INTEGER_ARITHMETIC: false
+    });
+    expect(getVisualizationDefines(otherWebGPUDevice, 'fp64', 'integer')).toEqual({
+      LUMA_FP64_HYBRID_ARITHMETIC: false,
+      LUMA_FP64_INTEGER_ARITHMETIC: true
+    });
+    expect(getVisualizationDefines(webGLDevice, 'fp64', 'integer')).toEqual({});
   });
 });

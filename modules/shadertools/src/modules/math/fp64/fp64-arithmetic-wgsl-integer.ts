@@ -10,7 +10,7 @@
  * This source is interpolated into fp64-arithmetic-wgsl.ts after the shared
  * integer helpers. It intentionally keeps the public vec2<f32> API unchanged.
  */
-export const fp64arithmeticWGSLInteger = /* wgsl */ `\
+export const fp64arithmeticWGSLIntegerPrimitives = /* wgsl */ `\
 struct Fp64F32Bits {
   sign: u32,
   baseExponent: i32,
@@ -290,6 +290,11 @@ fn fp64_divide_f32_integer(aValue: f32, bValue: f32) -> f32 {
 }
 #endif
 
+`;
+
+export const fp64arithmeticWGSLInteger = /* wgsl */ `\
+${fp64arithmeticWGSLIntegerPrimitives}
+
 #ifndef LUMA_FP64_PREDICATE_ONLY
 fn split(a: f32) -> vec2f {
   let aBits = bitcast<u32>(a);
@@ -363,13 +368,110 @@ fn twoProd(a: f32, b: f32) -> vec2f {
 }
 #endif
 
-fn sum_fp64(a: vec2f, b: vec2f) -> vec2f {
+struct Fp64IntegerAccumulator {
+  sign: u32,
+  magnitude: vec2u,
+};
+
+fn fp64_accumulate_f32_integer(
+  accumulator: Fp64IntegerAccumulator,
+  value: Fp64F32Bits,
+  commonBaseExponent: i32
+) -> Fp64IntegerAccumulator {
+  if (value.isZero) {
+    return accumulator;
+  }
+
+  let magnitude = fp64_u64_shift_left(
+    vec2u(0u, value.significand),
+    u32(value.baseExponent - commonBaseExponent)
+  );
+  if (fp64_u64_is_zero(accumulator.magnitude)) {
+    return Fp64IntegerAccumulator(value.sign, magnitude);
+  }
+  if (accumulator.sign == value.sign) {
+    return Fp64IntegerAccumulator(
+      accumulator.sign,
+      fp64_u64_add(accumulator.magnitude, magnitude)
+    );
+  }
+
+  let comparison = fp64_u64_compare(accumulator.magnitude, magnitude);
+  if (comparison == 0) {
+    return Fp64IntegerAccumulator(0u, vec2u(0u));
+  }
+  if (comparison > 0) {
+    return Fp64IntegerAccumulator(
+      accumulator.sign,
+      fp64_u64_sub(accumulator.magnitude, magnitude)
+    );
+  }
+  return Fp64IntegerAccumulator(
+    value.sign,
+    fp64_u64_sub(magnitude, accumulator.magnitude)
+  );
+}
+
+fn fp64_sum_integer_unfused(a: vec2f, b: vec2f) -> vec2f {
   var sum = fp64_two_sum_integer(a.x, b.x);
   let lowSum = fp64_two_sum_integer(a.y, b.y);
   sum.y = fp64_round_add_integer(sum.y, lowSum.x);
   sum = fp64_two_sum_integer(sum.x, sum.y);
   sum.y = fp64_round_add_integer(sum.y, lowSum.y);
   return fp64_two_sum_integer(sum.x, sum.y);
+}
+
+fn sum_fp64(a: vec2f, b: vec2f) -> vec2f {
+  let aHigh = fp64_decode_f32_bits(bitcast<u32>(a.x));
+  let aLow = fp64_decode_f32_bits(bitcast<u32>(a.y));
+  let bHigh = fp64_decode_f32_bits(bitcast<u32>(b.x));
+  let bLow = fp64_decode_f32_bits(bitcast<u32>(b.y));
+  if (
+    aHigh.isInf || aHigh.isNan || aLow.isInf || aLow.isNan ||
+    bHigh.isInf || bHigh.isNan || bLow.isInf || bLow.isNan
+  ) {
+    return fp64_sum_integer_unfused(a, b);
+  }
+
+  var minimumBaseExponent = 2147483647;
+  var maximumBaseExponent = -2147483647;
+  if (!aHigh.isZero) {
+    minimumBaseExponent = min(minimumBaseExponent, aHigh.baseExponent);
+    maximumBaseExponent = max(maximumBaseExponent, aHigh.baseExponent);
+  }
+  if (!aLow.isZero) {
+    minimumBaseExponent = min(minimumBaseExponent, aLow.baseExponent);
+    maximumBaseExponent = max(maximumBaseExponent, aLow.baseExponent);
+  }
+  if (!bHigh.isZero) {
+    minimumBaseExponent = min(minimumBaseExponent, bHigh.baseExponent);
+    maximumBaseExponent = max(maximumBaseExponent, bHigh.baseExponent);
+  }
+  if (!bLow.isZero) {
+    minimumBaseExponent = min(minimumBaseExponent, bLow.baseExponent);
+    maximumBaseExponent = max(maximumBaseExponent, bLow.baseExponent);
+  }
+  if (maximumBaseExponent < minimumBaseExponent) {
+    return vec2f(0.0, 0.0);
+  }
+
+  // Four 24-bit significands spanning at most 38 bits fit in the 64-bit
+  // accumulator, including the two extra carry bits needed by their sum.
+  if (maximumBaseExponent - minimumBaseExponent > 38) {
+    return fp64_sum_integer_unfused(a, b);
+  }
+
+  var accumulator = Fp64IntegerAccumulator(0u, vec2u(0u));
+  accumulator = fp64_accumulate_f32_integer(accumulator, aHigh, minimumBaseExponent);
+  accumulator = fp64_accumulate_f32_integer(accumulator, aLow, minimumBaseExponent);
+  accumulator = fp64_accumulate_f32_integer(accumulator, bHigh, minimumBaseExponent);
+  accumulator = fp64_accumulate_f32_integer(accumulator, bLow, minimumBaseExponent);
+  let resultBits = fp64_split_accumulator_bits(
+    accumulator.sign,
+    accumulator.magnitude,
+    minimumBaseExponent
+  );
+  return vec2f(bitcast<f32>(resultBits.x), bitcast<f32>(resultBits.y));
 }
 
 fn sub_fp64(a: vec2f, b: vec2f) -> vec2f {
@@ -383,11 +485,9 @@ fn sub_fp64(a: vec2f, b: vec2f) -> vec2f {
 fn mul_fp64(a: vec2f, b: vec2f) -> vec2f {
   var product = fp64_two_prod_integer(a.x, b.x);
   let crossProduct1 = fp64_round_mul_integer(a.x, b.y);
-  product.y = fp64_round_add_integer(product.y, crossProduct1);
-  product = fp64_two_sum_integer(product.x, product.y);
+  product = sum_fp64(product, vec2f(crossProduct1, 0.0));
   let crossProduct2 = fp64_round_mul_integer(a.y, b.x);
-  product.y = fp64_round_add_integer(product.y, crossProduct2);
-  return fp64_two_sum_integer(product.x, product.y);
+  return sum_fp64(product, vec2f(crossProduct2, 0.0));
 }
 
 #ifndef LUMA_FP64_PREDICATE_ONLY

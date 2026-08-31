@@ -31,14 +31,17 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
       </div>
       <div style={{marginBottom: 12}}>
         On Apple WebGPU/Metal, `fp64arithmetic` automatically selects an integer-controlled
-        double-single implementation. Other GPUs use the classic floating-point error transforms by
-        default.
+        double-single implementation. That reliable path is too expensive for an iterative
+        per-pixel Mandelbrot shader, so the live FP64 pane uses a hybrid path: integer operations
+        reconstruct the critical high-part residuals while native `f32` accumulates lower-order
+        terms. The benchmark still exercises the fully reliable path. Other GPUs use the classic
+        floating-point error transforms by default.
       </div>
       <div style={{marginBottom: 12}}>
-        The opt-in WebGPU benchmark below the canvases compares automatic selection, both explicit
-        double-single paths, and native float32 for add, multiply, divide, and square-root compute
-        workloads. It reports timing and numerical error together; the results are diagnostic and do
-        not impose performance thresholds.
+        The opt-in WebGPU benchmark below the canvases compares automatic selection, classic,
+        hybrid, fully integer-controlled, and native float32 arithmetic for add, multiply, divide,
+        and square-root compute workloads. It reports timing and numerical error together; the
+        results are diagnostic and do not impose performance thresholds.
       </div>
     </div>
   </ExampleHeader>

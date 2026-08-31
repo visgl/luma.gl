@@ -6,7 +6,7 @@ import {Buffer, type ComputeShaderLayout, type Device, type QuerySet} from '@lum
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 
-export type FP64BenchmarkMode = 'automatic' | 'classic' | 'integer' | 'float32';
+export type FP64BenchmarkMode = 'automatic' | 'classic' | 'hybrid' | 'integer' | 'float32';
 export type FP64BenchmarkOperation = 'add' | 'multiply' | 'divide' | 'square root';
 
 type FP64ComputeBenchmarkResultBase = {
@@ -40,7 +40,13 @@ const FP64_ARITHMETIC_UNIFORM_BINDING = 100;
 // without cloning the module so future metadata remains attached.
 const FP64_BENCHMARK_MODULE: ShaderModule<any, any, any> = fp64arithmetic;
 
-const BENCHMARK_MODES: FP64BenchmarkMode[] = ['automatic', 'classic', 'integer', 'float32'];
+const BENCHMARK_MODES: FP64BenchmarkMode[] = [
+  'automatic',
+  'classic',
+  'hybrid',
+  'integer',
+  'float32'
+];
 const BENCHMARK_OPERATIONS: FP64BenchmarkOperation[] = ['add', 'multiply', 'divide', 'square root'];
 
 type BenchmarkInputs = {
@@ -163,6 +169,9 @@ function makeComputation(
   const useFloat32 = mode === 'float32';
   const defines: Record<string, boolean | number> = {};
   if (mode === 'classic') {
+    defines['LUMA_FP64_INTEGER_ARITHMETIC'] = false;
+  } else if (mode === 'hybrid') {
+    defines['LUMA_FP64_HYBRID_ARITHMETIC'] = true;
     defines['LUMA_FP64_INTEGER_ARITHMETIC'] = false;
   } else if (mode === 'integer') {
     defines['LUMA_FP64_INTEGER_ARITHMETIC'] = true;

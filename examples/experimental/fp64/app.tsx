@@ -34,8 +34,13 @@ type AppState = {
   initializationError: string | null;
   isBenchmarkRunning: boolean;
   isReady: boolean;
+  selectedArithmeticMode: FP64ArithmeticMode;
+  selectedBackend: RenderingBackend;
   selectedPresetId: ZoomPresetId;
 };
+
+type RenderingBackend = 'auto' | 'webgl' | 'webgpu';
+type FP64ArithmeticMode = 'classic' | 'hybrid' | 'integer';
 
 type ZoomPresetId = 'seahorse' | 'elephant';
 
@@ -50,7 +55,6 @@ type Mandelbrot32Uniforms = {
   center: [number, number];
   pixelScale: number;
   aspectRatio: number;
-  time: number;
   iterationLimit: number;
 };
 
@@ -60,7 +64,6 @@ type Mandelbrot64Uniforms = {
   centerY: [number, number];
   pixelScale: [number, number];
   aspectRatio: number;
-  time: number;
   iterationLimit: number;
 };
 
@@ -87,7 +90,7 @@ const FIXED_ITERATION_LIMIT = 1400;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
 const MIN_PIXEL_SCALE = 1e-12;
-const ZOOM_RATE = 1.2;
+const ZOOM_RATE = 0.45;
 const ZOOM_CYCLE_DURATION = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE) / ZOOM_RATE;
 const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   seahorse: {
@@ -128,12 +131,19 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       initializationError: null,
       isBenchmarkRunning: false,
       isReady: false,
+      selectedArithmeticMode: 'hybrid',
+      selectedBackend: 'auto',
       selectedPresetId: DEFAULT_PRESET_ID
     };
+    const hasExternalDevice = Boolean(props.device || props.presentationDevice);
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'fp64-settings',
-      schema: makeFP64SettingsSchema(),
-      settings: {selectedPresetId: DEFAULT_PRESET_ID},
+      schema: makeFP64SettingsSchema(!hasExternalDevice),
+      settings: {
+        selectedArithmeticMode: 'hybrid',
+        selectedBackend: 'auto',
+        selectedPresetId: DEFAULT_PRESET_ID
+      },
       onSettingsChange: this.handleSettingsChange
     });
     this.panels = new ExamplePanelManager({
@@ -156,6 +166,20 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       previousProps.device !== this.props.device ||
       previousProps.presentationDevice !== this.props.presentationDevice
     ) {
+      await this.initialize();
+      return;
+    }
+
+    if (
+      !this.props.device &&
+      !this.props.presentationDevice &&
+      previousState.selectedBackend !== this.state.selectedBackend
+    ) {
+      await this.initialize();
+      return;
+    }
+
+    if (previousState.selectedArithmeticMode !== this.state.selectedArithmeticMode) {
       await this.initialize();
       return;
     }
@@ -192,11 +216,12 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       }
 
       const externalDevice = this.props.device || this.props.presentationDevice;
-      const device = externalDevice || (await this.createOwnedDevice());
+      const device = externalDevice || (await this.createOwnedDevice(this.state.selectedBackend));
       const renderer = new MultiCanvasRenderer(
         device,
         canvases as HTMLCanvasElement[],
         ZOOM_PRESETS[this.state.selectedPresetId],
+        this.state.selectedArithmeticMode,
         this.handleFrame
       );
 
@@ -240,10 +265,10 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       initializationError,
       isBenchmarkRunning,
       isReady,
+      selectedArithmeticMode,
       selectedPresetId
     } = this.state;
     const selectedPreset = ZOOM_PRESETS[selectedPresetId];
-    const overlayLines = getOverlayLines(selectedPreset, currentZoomLabel);
     const visualizationSpecs = getVisualizationSpecs();
 
     return (
@@ -284,7 +309,13 @@ export default class App extends React.PureComponent<AppProps, AppState> {
               <ExamplePaneCanvas
                 canvasRef={this.canvasRefs[index]}
                 isReady={isReady}
-                overlayLines={overlayLines}
+                overlayLines={getOverlayLines(
+                  selectedPreset,
+                  currentZoomLabel,
+                  visualization.kind,
+                  this.device,
+                  selectedArithmeticMode
+                )}
               />
             </div>
           ))}
@@ -314,13 +345,14 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     this.ownsDevice = false;
   }
 
-  private async createOwnedDevice(): Promise<Device> {
+  private async createOwnedDevice(selectedBackend: RenderingBackend): Promise<Device> {
     if (typeof OffscreenCanvas === 'undefined') {
       throw new Error('This example requires OffscreenCanvas support.');
     }
 
     return await luma.createDevice({
       adapters: [webgpuAdapter, webgl2Adapter],
+      type: selectedBackend === 'auto' ? 'best-available' : selectedBackend,
       createCanvasContext: {
         canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
         width: CANVAS_WIDTH,
@@ -336,8 +368,27 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     changedSettings?: SettingsChangeDescriptor[]
   ): void => {
     const selectedPresetId = getChangedSetting(changedSettings, 'selectedPresetId')?.nextValue;
-    if (isZoomPresetId(selectedPresetId)) {
-      this.setState({selectedPresetId});
+    const selectedBackend = getChangedSetting(changedSettings, 'selectedBackend')?.nextValue;
+    const selectedArithmeticMode = getChangedSetting(
+      changedSettings,
+      'selectedArithmeticMode'
+    )?.nextValue;
+    if (
+      isZoomPresetId(selectedPresetId) ||
+      isRenderingBackend(selectedBackend) ||
+      isFP64ArithmeticMode(selectedArithmeticMode)
+    ) {
+      this.setState({
+        selectedArithmeticMode: isFP64ArithmeticMode(selectedArithmeticMode)
+          ? selectedArithmeticMode
+          : this.state.selectedArithmeticMode,
+        selectedBackend: isRenderingBackend(selectedBackend)
+          ? selectedBackend
+          : this.state.selectedBackend,
+        selectedPresetId: isZoomPresetId(selectedPresetId)
+          ? selectedPresetId
+          : this.state.selectedPresetId
+      });
     }
   };
 
@@ -379,7 +430,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   };
 }
 
-function makeFP64SettingsSchema(): SettingsSchema {
+export function makeFP64SettingsSchema(includeBackend = true): SettingsSchema {
   return {
     title: 'Settings',
     sections: [
@@ -388,6 +439,35 @@ function makeFP64SettingsSchema(): SettingsSchema {
         name: 'View',
         initiallyCollapsed: false,
         settings: [
+          ...(includeBackend
+            ? [
+                {
+                  name: 'selectedBackend',
+                  label: 'Rendering backend',
+                  description: 'Recreates the example on the selected graphics API.',
+                  type: 'select' as const,
+                  persist: 'none' as const,
+                  options: [
+                    {label: 'Auto (WebGPU preferred)', value: 'auto'},
+                    {label: 'WebGPU', value: 'webgpu'},
+                    {label: 'WebGL2', value: 'webgl'}
+                  ]
+                }
+              ]
+            : []),
+          {
+            name: 'selectedArithmeticMode',
+            label: 'FP64 arithmetic',
+            description:
+              'WebGPU only. Classic is fastest, hybrid protects critical residuals, and integer is fully controlled but slow.',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'Classic · fast', value: 'classic'},
+              {label: 'Hybrid · balanced', value: 'hybrid'},
+              {label: 'Integer · reliable', value: 'integer'}
+            ]
+          },
           {
             name: 'selectedPresetId',
             label: 'Zoom target',
@@ -406,6 +486,14 @@ function makeFP64SettingsSchema(): SettingsSchema {
 
 function isZoomPresetId(value: unknown): value is ZoomPresetId {
   return value === 'seahorse' || value === 'elephant';
+}
+
+function isRenderingBackend(value: unknown): value is RenderingBackend {
+  return value === 'auto' || value === 'webgl' || value === 'webgpu';
+}
+
+function isFP64ArithmeticMode(value: unknown): value is FP64ArithmeticMode {
+  return value === 'classic' || value === 'hybrid' || value === 'integer';
 }
 
 export function renderToDOM(
@@ -434,6 +522,7 @@ class MultiCanvasRenderer {
     device: Device,
     canvases: HTMLCanvasElement[],
     zoomPreset: ZoomPreset,
+    arithmeticMode: FP64ArithmeticMode,
     onFrame?: (pixelScale: number) => void
   ) {
     this.device = device;
@@ -442,7 +531,13 @@ class MultiCanvasRenderer {
     this.fullscreenBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
     this.visualizations = getVisualizationSpecs().map((spec, index) => {
       try {
-        return createVisualizationRenderer(device, canvases[index], this.fullscreenBuffer, spec);
+        return createVisualizationRenderer(
+          device,
+          canvases[index],
+          this.fullscreenBuffer,
+          spec,
+          arithmeticMode
+        );
       } catch (error) {
         return {
           error: error instanceof Error ? error.message : String(error),
@@ -519,7 +614,8 @@ function createVisualizationRenderer(
   device: Device,
   canvas: HTMLCanvasElement,
   buffer: ReturnType<Device['createBuffer']>,
-  spec: VisualizationSpec
+  spec: VisualizationSpec,
+  arithmeticMode: FP64ArithmeticMode
 ): VisualizationRenderer {
   const presentationContext = device.createPresentationContext({
     canvas,
@@ -545,6 +641,7 @@ function createVisualizationRenderer(
     vs: FULLSCREEN_VERTEX_SHADER,
     fs: spec.fragmentShaderGLSL,
     modules: spec.kind === 'fp64' ? [fp64arithmetic] : [],
+    defines: getVisualizationDefines(device, spec.kind, arithmeticMode),
     bufferLayout: [{name: 'position', format: 'float32x2'}],
     attributes: {
       position: buffer
@@ -554,7 +651,40 @@ function createVisualizationRenderer(
     shaderInputs
   });
 
-  return {error: null, model, presentationContext, shaderInputs, spec};
+  return {
+    error: null,
+    model,
+    presentationContext,
+    shaderInputs,
+    spec
+  };
+}
+
+export function getVisualizationDefines(
+  device: {info: Pick<Device['info'], 'gpu'>; type: Device['type']},
+  kind: 'fp32' | 'fp64',
+  arithmeticMode: FP64ArithmeticMode
+): Record<string, boolean> {
+  if (kind !== 'fp64' || device.type !== 'webgpu') {
+    return {};
+  }
+  switch (arithmeticMode) {
+    case 'classic':
+      return {
+        LUMA_FP64_HYBRID_ARITHMETIC: false,
+        LUMA_FP64_INTEGER_ARITHMETIC: false
+      };
+    case 'hybrid':
+      return {
+        LUMA_FP64_HYBRID_ARITHMETIC: true,
+        LUMA_FP64_INTEGER_ARITHMETIC: false
+      };
+    case 'integer':
+      return {
+        LUMA_FP64_HYBRID_ARITHMETIC: false,
+        LUMA_FP64_INTEGER_ARITHMETIC: true
+      };
+  }
 }
 
 function renderVisualization(
@@ -588,7 +718,6 @@ function renderVisualization(
         centerY: fp64CenterY,
         pixelScale: fp64Scale,
         aspectRatio,
-        time: elapsedTime,
         iterationLimit
       }
     });
@@ -599,7 +728,6 @@ function renderVisualization(
         center: [centerX, centerY],
         pixelScale: scale,
         aspectRatio,
-        time: elapsedTime,
         iterationLimit
       }
     });
@@ -637,7 +765,16 @@ function formatZoomScale(pixelScale: number): string {
   return pixelScale.toExponential(3);
 }
 
-function getOverlayLines(zoomPreset: ZoomPreset, currentZoomLabel: string): string[] {
+function getOverlayLines(
+  zoomPreset: ZoomPreset,
+  currentZoomLabel: string,
+  kind: 'fp32' | 'fp64',
+  device: Device | null,
+  arithmeticMode: FP64ArithmeticMode
+): string[] {
+  const precisionLabel =
+    device?.type === 'webgpu' ? `fp64 ${arithmeticMode}` : 'fp64 classic (WebGL2)';
+
   return [
     'mode = mandelbrot zoom',
     `target = ${zoomPreset.label}`,
@@ -645,7 +782,7 @@ function getOverlayLines(zoomPreset: ZoomPreset, currentZoomLabel: string): stri
     `y = ${zoomPreset.centerY}`,
     `scale = ${currentZoomLabel}`,
     `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
-    'fp64 = fp64arithmetic',
+    kind === 'fp32' ? 'precision = native fp32' : `precision = ${precisionLabel}`,
     'iterations = adaptive'
   ];
 }
@@ -766,8 +903,8 @@ function FP64BenchmarkPanel(props: {
           <h3 style={{margin: '0 0 6px'}}>FP64 compute benchmark</h3>
           <p style={{margin: 0, lineHeight: 1.45}}>
             Runs dependent add, multiply, divide, and square-root recurrences across 8,192 GPU
-            lanes. Results compare native float32, automatic selection, classic double-single, and
-            the Metal-safe integer double-single path. The Mandelbrot animation pauses while the
+            lanes. Results compare native float32, automatic selection, classic, hybrid, and
+            integer-controlled double-single arithmetic. The Mandelbrot animation pauses while the
             benchmark runs.
           </p>
         </div>
@@ -881,6 +1018,8 @@ function formatBenchmarkMode(mode: FP64BenchmarkMode): string {
       return 'FP64 automatic';
     case 'classic':
       return 'FP64 classic';
+    case 'hybrid':
+      return 'FP64 hybrid';
     case 'integer':
       return 'FP64 integer';
     case 'float32':
@@ -905,7 +1044,6 @@ const mandelbrot32: ShaderModule<Mandelbrot32Uniforms> = {
     center: 'vec2<f32>',
     pixelScale: 'f32',
     aspectRatio: 'f32',
-    time: 'f32',
     iterationLimit: 'f32'
   }
 };
@@ -919,7 +1057,6 @@ const mandelbrot64: ShaderModule<Mandelbrot64Uniforms> = {
     centerY: 'vec2<f32>',
     pixelScale: 'vec2<f32>',
     aspectRatio: 'f32',
-    time: 'f32',
     iterationLimit: 'f32'
   }
 };
@@ -967,16 +1104,16 @@ layout(std140) uniform mandelbrot32Uniforms {
   vec2 center;
   float pixelScale;
   float aspectRatio;
-  float time;
   float iterationLimit;
 } mandelbrot32;
 
 const int MAX_ITERATIONS = 2048;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
+const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
 
 vec3 palette(float value) {
-  vec3 phase = vec3(0.18, 0.41, 0.73) + mandelbrot32.time * vec3(0.008, 0.012, 0.02);
+  vec3 phase = vec3(0.18, 0.41, 0.73);
   return 0.5 + 0.5 * cos(TAU * (value + phase));
 }
 
@@ -1013,9 +1150,9 @@ void main(void) {
   }
 
   float smoothIteration = escapedIteration + 1.0 - log2(log2(max(radiusSquared, 1.000001)));
-  float colorPosition = smoothIteration / mandelbrot32.iterationLimit;
+  float colorPosition = smoothIteration * COLOR_FREQUENCY;
   vec3 color = palette(colorPosition);
-  color *= 0.55 + 0.45 * smoothstep(0.0, 1.0, colorPosition);
+  color *= 0.55 + 0.45 * smoothstep(0.0, 80.0, smoothIteration);
 
   fragColor = vec4(color, 1.0);
 }
@@ -1027,7 +1164,6 @@ struct Mandelbrot32Uniforms {
   center: vec2<f32>,
   pixelScale: f32,
   aspectRatio: f32,
-  time: f32,
   iterationLimit: f32,
 };
 
@@ -1035,10 +1171,11 @@ struct Mandelbrot32Uniforms {
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
+const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
 
 fn palette32(value: f32) -> vec3<f32> {
-  let phase = vec3<f32>(0.18, 0.41, 0.73) + mandelbrot32.time * vec3<f32>(0.008, 0.012, 0.02);
+  let phase = vec3<f32>(0.18, 0.41, 0.73);
   return 0.5 + 0.5 * cos(TAU * (value + phase));
 }
 
@@ -1076,9 +1213,9 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
 
   let smoothIteration =
     escapedIteration + 1.0 - log2(log2(max(radiusSquared, 1.000001)));
-  let colorPosition = smoothIteration / mandelbrot32.iterationLimit;
+  let colorPosition = smoothIteration * COLOR_FREQUENCY;
   var color = palette32(colorPosition);
-  color = color * (0.55 + 0.45 * smoothstep(0.0, 1.0, colorPosition));
+  color = color * (0.55 + 0.45 * smoothstep(0.0, 80.0, smoothIteration));
   return vec4<f32>(color, 1.0);
 }
 `;
@@ -1096,16 +1233,16 @@ layout(std140) uniform mandelbrot64Uniforms {
   vec2 centerY;
   vec2 pixelScale;
   float aspectRatio;
-  float time;
   float iterationLimit;
 } mandelbrot64;
 
 const int MAX_ITERATIONS = 2048;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
+const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
 
 vec3 palette(float value) {
-  vec3 phase = vec3(0.18, 0.41, 0.73) + mandelbrot64.time * vec3(0.008, 0.012, 0.02);
+  vec3 phase = vec3(0.18, 0.41, 0.73);
   return 0.5 + 0.5 * cos(TAU * (value + phase));
 }
 
@@ -1154,9 +1291,9 @@ void main(void) {
   }
 
   float smoothIteration = escapedIteration + 1.0 - log2(log2(max(radiusSquared, 1.000001)));
-  float colorPosition = smoothIteration / mandelbrot64.iterationLimit;
+  float colorPosition = smoothIteration * COLOR_FREQUENCY;
   vec3 color = palette(colorPosition);
-  color *= 0.55 + 0.45 * smoothstep(0.0, 1.0, colorPosition);
+  color *= 0.55 + 0.45 * smoothstep(0.0, 80.0, smoothIteration);
 
   fragColor = vec4(color, 1.0);
 }
@@ -1169,7 +1306,6 @@ struct Mandelbrot64Uniforms {
   centerY: vec2<f32>,
   pixelScale: vec2<f32>,
   aspectRatio: f32,
-  time: f32,
   iterationLimit: f32,
 };
 
@@ -1177,10 +1313,11 @@ struct Mandelbrot64Uniforms {
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
+const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
 
 fn palette64(value: f32) -> vec3<f32> {
-  let phase = vec3<f32>(0.18, 0.41, 0.73) + mandelbrot64.time * vec3<f32>(0.008, 0.012, 0.02);
+  let phase = vec3<f32>(0.18, 0.41, 0.73);
   return 0.5 + 0.5 * cos(TAU * (value + phase));
 }
 
@@ -1229,9 +1366,9 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
 
   let smoothIteration =
     escapedIteration + 1.0 - log2(log2(max(radiusSquared, 1.000001)));
-  let colorPosition = smoothIteration / mandelbrot64.iterationLimit;
+  let colorPosition = smoothIteration * COLOR_FREQUENCY;
   var color = palette64(colorPosition);
-  color = color * (0.55 + 0.45 * smoothstep(0.0, 1.0, colorPosition));
+  color = color * (0.55 + 0.45 * smoothstep(0.0, 80.0, smoothIteration));
   return vec4<f32>(color, 1.0);
 }
 `;
@@ -1250,7 +1387,7 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.01, 0.015, 0.03, 1],
       description:
-        'FP64 Mandelbrot fragment shader using fp64arithmetic, with center and scale split into hi/lo parts before upload.',
+        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, the live zoom uses a hybrid path with integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
       fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
       kind: 'fp64',
