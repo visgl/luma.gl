@@ -39,7 +39,7 @@ describe('LuSQL immutable GPU dataframe planning', () => {
       require: './dist/gpu-sql/index.cjs'
     });
     expect(packageJson.sideEffects).toBe(false);
-    expect(packageJson.dependencies?.['@loaders.gl/sql']).toBe('~5.0.0-alpha.3');
+    expect(packageJson.dependencies?.['@loaders.gl/sql']).toBe('~5.0.0-alpha.5');
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
     expect(sqlModule.LuSQLContext).toBe(LuSQLContext);
     expect('LuSQLContext' in experimentalModule).toBe(false);

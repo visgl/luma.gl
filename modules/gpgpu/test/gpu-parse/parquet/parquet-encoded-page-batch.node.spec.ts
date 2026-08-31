@@ -8,8 +8,8 @@ import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/gpgpu/gpu-parse';
 import test from 'test/utils/vitest-tape';
 
-test('loaders.gl alpha.4 V1 and V2 pages produce mixed GPU batch plans', async testCase => {
-  testCase.equal(ParquetJSWriter.version, '5.0.0-alpha.4', 'uses the requested loaders.gl release');
+test('loaders.gl alpha.5 V1 and V2 pages produce mixed GPU batch plans', async testCase => {
+  testCase.equal(ParquetJSWriter.version, '5.0.0-alpha.5', 'uses the requested loaders.gl release');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);
