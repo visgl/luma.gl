@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBVH,
@@ -13,11 +13,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUBVHQuery traverses 2D bounds and clears reusable result masks', async t => {
+it('GPUBVHQuery traverses 2D bounds and clears reusable result masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -33,25 +31,22 @@ test('GPUBVHQuery traverses 2D bounds and clears reusable result masks', async t
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readSortedOutput(fixture), [0, 1], 'bounds query matches the CPU oracle');
-  t.deepEqual(await readUint32(fixture.outputMask, 4), [1, 1, 0, 0]);
-  t.deepEqual(await readUint32(fixture.overflow, 1), [0]);
-  t.deepEqual(await readUint32(fixture.visitedCount, 1), [5], 'the disjoint subtree is pruned');
+  expect(await readSortedOutput(fixture), 'bounds query matches the CPU oracle').toEqual([0, 1]);
+  expect(await readUint32(fixture.outputMask, 4)).toEqual([1, 1, 0, 0]);
+  expect(await readUint32(fixture.overflow, 1)).toEqual([0]);
+  expect(await readUint32(fixture.visitedCount, 1), 'the disjoint subtree is pruned').toEqual([5]);
 
   fixture.query.write(Float32Array.from([11.5, 9.5, 13.5, 11.5]));
   encode(device, fixture.compiled);
-  t.deepEqual(await readSortedOutput(fixture), [3], 'the same graph accepts a new query');
-  t.deepEqual(await readUint32(fixture.outputMask, 4), [0, 0, 0, 1], 'old mask bits clear');
+  expect(await readSortedOutput(fixture), 'the same graph accepts a new query').toEqual([3]);
+  expect(await readUint32(fixture.outputMask, 4), 'old mask bits clear').toEqual([0, 0, 0, 1]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUBVHQuery traverses 3D points and reports bounded-output overflow', async t => {
+it('GPUBVHQuery traverses 3D points and reports bounded-output overflow', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -67,37 +62,36 @@ test('GPUBVHQuery traverses 3D points and reports bounded-output overflow', asyn
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readUint32(fixture.count, 1), [2], 'count is the complete CPU-oracle result');
-  t.deepEqual(
-    await readUint32(fixture.overflow, 1),
-    [1],
-    'source or output truncation is explicit'
-  );
+  expect(await readUint32(fixture.count, 1), 'count is the complete CPU-oracle result').toEqual([
+    2
+  ]);
+  expect(await readUint32(fixture.overflow, 1), 'source or output truncation is explicit').toEqual([
+    1
+  ]);
   const storedOutput = await readUint32(fixture.output, 1);
-  t.ok(storedOutput[0] === 0 || storedOutput[0] === 1, 'one matching stable ID is stored');
+  expect(
+    Boolean(storedOutput[0] === 0 || storedOutput[0] === 1),
+    'one matching stable ID is stored'
+  ).toBe(true);
   const outputMask = await readUint32(fixture.outputMask, 4);
-  t.equal(
+  expect(
     outputMask.reduce((sum, value) => sum + value, 0),
-    1,
     'mask describes stored output'
-  );
-  t.equal(outputMask[storedOutput[0]], 1);
+  ).toBe(1);
+  expect(outputMask[storedOutput[0]]).toBe(1);
 
   fixture.query.write(Float32Array.from([Number.NaN, 0, 0]));
   encode(device, fixture.compiled);
-  t.deepEqual(await readUint32(fixture.count, 1), [0], 'non-finite queries match nothing');
-  t.deepEqual(await readUint32(fixture.overflow, 1), [1], 'source BVH overflow is propagated');
-  t.deepEqual(await readUint32(fixture.outputMask, 4), [0, 0, 0, 0]);
+  expect(await readUint32(fixture.count, 1), 'non-finite queries match nothing').toEqual([0]);
+  expect(await readUint32(fixture.overflow, 1), 'source BVH overflow is propagated').toEqual([1]);
+  expect(await readUint32(fixture.outputMask, 4)).toEqual([0, 0, 0, 0]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', async t => {
+it('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -113,11 +107,13 @@ test('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', a
     maskLength: 2
   });
   encode(device, fixture.compiled);
-  t.deepEqual(await readSortedOutput(fixture), [0xffffffff], 'the full uint32 ID range survives');
-  t.deepEqual(await readUint32(fixture.count, 1), [1], 'invalid empty leaves remain excluded');
+  expect(await readSortedOutput(fixture), 'the full uint32 ID range survives').toEqual([
+    0xffffffff
+  ]);
+  expect(await readUint32(fixture.count, 1), 'invalid empty leaves remain excluded').toEqual([1]);
 
   const query = fixture.workflow;
-  t.throws(
+  expect(
     () =>
       new GPUBVHQuery({
         bvh: query.bvh,
@@ -127,10 +123,9 @@ test('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', a
         count: query.count,
         overflow: query.overflow
       }),
-    /must not overlap query or BVH inputs/,
     'stable leaf IDs cannot alias writable output'
-  );
-  t.throws(
+  ).toThrow(/must not overlap query or BVH inputs/);
+  expect(
     () =>
       new GPUBVHQuery({
         bvh: query.bvh,
@@ -140,12 +135,10 @@ test('GPUBVHQuery preserves maximum stable IDs and rejects overlapping views', a
         count: query.count,
         overflow: query.count
       }),
-    /must not overlap one another/,
     'count and overflow require independent writable storage'
-  );
+  ).toThrow(/must not overlap one another/);
 
   destroyFixture(fixture);
-  t.end();
 });
 
 type Fixture = {

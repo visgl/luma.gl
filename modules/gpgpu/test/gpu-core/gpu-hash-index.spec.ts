@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -12,11 +12,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUHashIndex builds and queries deterministic first-row values', async t => {
+it('GPUHashIndex builds and queries deterministic first-row values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -28,65 +26,57 @@ test('GPUHashIndex builds and queries deterministic first-row values', async t =
     8
   );
 
-  t.deepEqual(
-    result.values,
-    [70, 30, 190, 110, GPU_HASH_INDEX_EMPTY_KEY, GPU_HASH_INDEX_EMPTY_KEY],
-    'lookups return the lowest-source-row value'
-  );
-  t.deepEqual(result.found, [1, 1, 1, 1, 0, 0], 'lookups publish an explicit found mask');
-  t.deepEqual(
+  expect(result.values, 'lookups return the lowest-source-row value').toEqual([
+    70,
+    30,
+    190,
+    110,
+    GPU_HASH_INDEX_EMPTY_KEY,
+    GPU_HASH_INDEX_EMPTY_KEY
+  ]);
+  expect(result.found, 'lookups publish an explicit found mask').toEqual([1, 1, 1, 1, 0, 0]);
+  expect(
     result.buildStatistics.slice(0, 4),
-    [4, 1, 0, 1],
     'build distinguishes unique, duplicate, overflow, and invalid rows'
-  );
-  t.deepEqual(result.queryStatistics.slice(0, 2), [4, 2], 'query counts found and missing keys');
-  t.ok(
-    result.probes.every(probeCount => probeCount <= 8),
+  ).toEqual([4, 1, 0, 1]);
+  expect(result.queryStatistics.slice(0, 2), 'query counts found and missing keys').toEqual([4, 2]);
+  expect(
+    Boolean(result.probes.every(probeCount => probeCount <= 8)),
     'every lookup obeys the probe bound'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     result.tableKeys.filter(key => key !== GPU_HASH_INDEX_EMPTY_KEY).length,
-    4,
     'one table slot is occupied per distinct valid key'
-  );
-  t.end();
+  ).toBe(4);
 });
 
-test('GPUHashIndex reports fixed-capacity overflow and generated row IDs', async t => {
+it('GPUHashIndex reports fixed-capacity overflow and generated row IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const keys = Uint32Array.from([1, 2, 3, 4, 5, 6]);
   const result = await runHashIndex(device, keys, undefined, keys, 4, {firstValue: 100});
 
-  t.deepEqual(
+  expect(
     result.buildStatistics.slice(0, 4),
-    [4, 0, 2, 0],
     'a full table reports the exact overflow row count'
-  );
-  t.equal(result.queryStatistics[0], 4, 'exactly the retained keys are found');
-  t.equal(result.queryStatistics[1], 2, 'overflowed keys are reported missing');
+  ).toEqual([4, 0, 2, 0]);
+  expect(result.queryStatistics[0], 'exactly the retained keys are found').toBe(4);
+  expect(result.queryStatistics[1], 'overflowed keys are reported missing').toBe(2);
   for (let row = 0; row < keys.length; row++) {
     if (result.found[row]) {
-      t.equal(
-        result.values[row],
-        100 + row,
-        `retained key ${keys[row]} maps to its generated row ID`
+      expect(result.values[row], `retained key ${keys[row]} maps to its generated row ID`).toBe(
+        100 + row
       );
     }
   }
-  t.end();
 });
 
-test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
+it('GPUHashIndex validates capacity, probe bounds, and aliasing', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -103,7 +93,7 @@ test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
   });
   const statisticsView = importView(graph, 'statistics', statistics, 6);
 
-  t.throws(
+  expect(
     () =>
       new GPUHashIndex({
         keys,
@@ -111,10 +101,9 @@ test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
         tableValues: overlappingTableValues,
         statistics: statisticsView
       }),
-    /output views must not overlap/,
     'table outputs cannot alias'
-  );
-  t.throws(
+  ).toThrow(/output views must not overlap/);
+  expect(
     () =>
       new GPUHashIndex({
         keys,
@@ -126,10 +115,9 @@ test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
         }),
         statistics: statisticsView
       }),
-    /positive power of two/,
     'capacity must be a power of two'
-  );
-  t.throws(
+  ).toThrow(/positive power of two/);
+  expect(
     () =>
       new GPUHashIndex({
         keys,
@@ -138,21 +126,17 @@ test('GPUHashIndex validates capacity, probe bounds, and aliasing', async t => {
         statistics: statisticsView,
         maxProbeCount: 5
       }),
-    /one through capacity/,
     'probe work cannot exceed capacity'
-  );
+  ).toThrow(/one through capacity/);
 
   input.destroy();
   table.destroy();
   statistics.destroy();
-  t.end();
 });
 
-test('GPUHashIndex accepts empty explicit-value views at the end of their buffers', async t => {
+it('GPUHashIndex accepts empty explicit-value views at the end of their buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -183,11 +167,10 @@ test('GPUHashIndex accepts empty explicit-value views at the end of their buffer
   device.submit(commandEncoder.finish());
 
   const tableBytes = await tableKeysBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Uint32Array(tableBytes.buffer, tableBytes.byteOffset, 4)),
-    Array.from({length: 4}, () => GPU_HASH_INDEX_EMPTY_KEY),
     'an empty rebuild clears every table slot without binding empty source values'
-  );
+  ).toEqual(Array.from({length: 4}, () => GPU_HASH_INDEX_EMPTY_KEY));
 
   compiled.destroy();
   for (const buffer of [
@@ -199,7 +182,6 @@ test('GPUHashIndex accepts empty explicit-value views at the end of their buffer
   ]) {
     buffer.destroy();
   }
-  t.end();
 });
 
 async function runHashIndex(

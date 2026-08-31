@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -8,54 +9,47 @@ import {
   GPUFiniteDifference2D,
   makeGPUFiniteDifference2DStats
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUFiniteDifference2DShaderSource} from '../../src/gpu-core/gpu-finite-difference-2d';
 
-test('GPUFiniteDifference2D plans explicit second-order numerical policies', t => {
-  t.deepEqual(
+it('GPUFiniteDifference2D plans explicit second-order numerical policies', () => {
+  expect(
     makeGPUFiniteDifference2DStats({
       width: 12,
       height: 8,
       spacing: [0.25, 0.5],
       operator: 'gradient'
-    }),
-    {
-      width: 12,
+    })
+  ).toEqual({
+    width: 12,
+    height: 8,
+    elementCount: 96,
+    spacing: [0.25, 0.5],
+    operator: 'gradient',
+    boundary: 'one-sided',
+    stencilOrder: 2,
+    inputComponentCount: 1,
+    outputComponentCount: 2
+  });
+  expect(() =>
+    makeGPUFiniteDifference2DStats({
+      width: 3,
       height: 8,
-      elementCount: 96,
-      spacing: [0.25, 0.5],
-      operator: 'gradient',
-      boundary: 'one-sided',
-      stencilOrder: 2,
-      inputComponentCount: 1,
-      outputComponentCount: 2
-    }
-  );
-  t.throws(
-    () =>
-      makeGPUFiniteDifference2DStats({
-        width: 3,
-        height: 8,
-        spacing: [1, 1],
-        operator: 'curl'
-      }),
-    /at least 4/
-  );
-  t.throws(
-    () =>
-      makeGPUFiniteDifference2DStats({
-        width: 8,
-        height: 8,
-        spacing: [0, 1],
-        operator: 'laplacian'
-      }),
-    /positive finite/
-  );
-  t.end();
+      spacing: [1, 1],
+      operator: 'curl'
+    })
+  ).toThrow(/at least 4/);
+  expect(() =>
+    makeGPUFiniteDifference2DStats({
+      width: 8,
+      height: 8,
+      spacing: [0, 1],
+      operator: 'laplacian'
+    })
+  ).toThrow(/positive finite/);
 });
 
-test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
+it('GPUFiniteDifference2D validates topology and generated WGSL', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const scalarInput = makeView(graph, 'scalar-input', 'float32', 64);
   const scalarOutput = makeView(graph, 'scalar-output', 'float32', 64);
@@ -84,21 +78,16 @@ test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
   });
   for (const operation of [gradient, curl]) {
     const source = getGPUFiniteDifference2DShaderSource(operation, {x: 1, y: 1, z: 1});
-    t.deepEqual(
-      new WgslReflect(source).entry.compute.map(entry => entry.name),
-      ['main']
-    );
+    expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
   }
-  t.match(
+  expect(
     getGPUFiniteDifference2DShaderSource(gradient, {x: 1, y: 1, z: 1}),
-    /-3\.0 \* sampleField/,
     'one-sided first derivative is explicit'
-  );
-  t.match(
+  ).toMatch(/-3\.0 \* sampleField/);
+  expect(
     getGPUFiniteDifference2DShaderSource(curl, {x: 1, y: 1, z: 1}),
-    /% i32\(WIDTH\)/,
     'periodic wrapping is explicit'
-  );
+  ).toMatch(/% i32\(WIDTH\)/);
   const offsetGradient = new GPUFiniteDifference2D({
     input: offsetScalarInput,
     output: offsetVectorOutput,
@@ -117,10 +106,10 @@ test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
   });
   for (const operation of [offsetGradient, offsetCurl]) {
     const source = getGPUFiniteDifference2DShaderSource(operation, {x: 1, y: 1, z: 1});
-    t.match(source, /INPUT_OFFSET: u32 = 1u/, 'input offset uses WGSL array elements');
-    t.match(source, /OUTPUT_OFFSET: u32 = 1u/, 'output offset uses WGSL array elements');
+    expect(source, 'input offset uses WGSL array elements').toMatch(/INPUT_OFFSET: u32 = 1u/);
+    expect(source, 'output offset uses WGSL array elements').toMatch(/OUTPUT_OFFSET: u32 = 1u/);
   }
-  t.throws(
+  expect(
     () =>
       new GPUFiniteDifference2D({
         input: scalarInput,
@@ -129,10 +118,8 @@ test('GPUFiniteDifference2D validates topology and generated WGSL', t => {
         height: 8,
         spacing: [1, 1],
         operator: 'gradient'
-      }),
-    /output/
-  );
-  t.end();
+      })
+  ).toThrow(/output/);
 });
 
 function makeView(

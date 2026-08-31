@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -15,14 +14,12 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
 
-test('GPUSort bitonic stably sorts paired uint32 values in both directions', async t => {
+it('GPUSort bitonic stably sorts paired uint32 values in both directions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const keys = Uint32Array.from([9, 4, 6, 2, 4, 1, 7, 0xffffffff, 1]);
@@ -30,23 +27,19 @@ test('GPUSort bitonic stably sorts paired uint32 values in both directions', asy
   for (const direction of ['ascending', 'descending'] as const) {
     const result = await runSort(device, keys, values, 'bitonic', direction);
     const expected = getStableSortedPairs(keys, values, direction);
-    t.deepEqual(result.keys, expected.keys, `${direction} bitonic keys match`);
-    t.deepEqual(result.values, expected.values, `${direction} bitonic values remain stable`);
-    t.equal(result.resolvedAlgorithm, 'bitonic', 'forced bitonic is reported');
-    t.deepEqual(
+    expect(result.keys, `${direction} bitonic keys match`).toEqual(expected.keys);
+    expect(result.values, `${direction} bitonic values remain stable`).toEqual(expected.values);
+    expect(result.resolvedAlgorithm, 'forced bitonic is reported').toBe('bitonic');
+    expect(
       result.nodeOrder,
-      ['sort-bitonic-local'],
       'one workgroup executes the complete stable bitonic network in a single pass'
-    );
+    ).toEqual(['sort-bitonic-local']);
   }
-  t.end();
 });
 
-test('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', async t => {
+it('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -63,44 +56,35 @@ test('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', 
         const paddedLength = 2 ** Math.ceil(Math.log2(length));
         const source = dispatchSpy.mock.instances.at(-1)?.source ?? '';
 
-        t.deepEqual(result.keys, expected.keys, `${length}-row ${direction} local keys match`);
-        t.deepEqual(
-          result.values,
-          expected.values,
-          `${length}-row ${direction} local sort is stable`
+        expect(result.keys, `${length}-row ${direction} local keys match`).toEqual(expected.keys);
+        expect(result.values, `${length}-row ${direction} local sort is stable`).toEqual(
+          expected.values
         );
-        t.deepEqual(
-          result.nodeOrder,
-          ['sort-bitonic-local'],
-          'one workgroup uses exactly one pass'
-        );
-        t.ok(
-          source.includes(`@workgroup_size(${paddedLength})`),
+        expect(result.nodeOrder, 'one workgroup uses exactly one pass').toEqual([
+          'sort-bitonic-local'
+        ]);
+        expect(
+          Boolean(source.includes(`@workgroup_size(${paddedLength})`)),
           `${length}-row workgroups contain only their ${paddedLength} padded lanes`
-        );
-        t.ok(
-          source.includes(`var<workgroup> cachedKeys: array<u32, ${paddedLength}>`),
+        ).toBe(true);
+        expect(
+          Boolean(source.includes(`var<workgroup> cachedKeys: array<u32, ${paddedLength}>`)),
           'each source key is cached in workgroup storage'
-        );
-        t.equal(
+        ).toBe(true);
+        expect(
           (source.match(/keys\[KEYS_OFFSET \+ localInvocationIndex\]/g) ?? []).length,
-          1,
           'the complete sorting network reads each source key from global storage only once'
-        );
+        ).toBe(1);
       }
     }
   } finally {
     dispatchSpy.mockRestore();
   }
-
-  t.end();
 });
 
-test('GPUSort radix stably sorts paired uint32 values in both directions', async t => {
+it('GPUSort radix stably sorts paired uint32 values in both directions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   let randomState = 0x1234abcd;
@@ -112,19 +96,19 @@ test('GPUSort radix stably sorts paired uint32 values in both directions', async
   for (const direction of ['ascending', 'descending'] as const) {
     const result = await runSort(device, keys, values, 'radix', direction);
     const expected = getStableSortedPairs(keys, values, direction);
-    t.deepEqual(result.keys, expected.keys, `${direction} radix keys match`);
-    t.deepEqual(result.values, expected.values, `${direction} radix values remain stable`);
-    t.equal(result.resolvedAlgorithm, 'radix', 'forced radix is reported');
-    t.ok(result.logicalTransientCount > result.physicalTransientCount, 'radix scratch is reused');
+    expect(result.keys, `${direction} radix keys match`).toEqual(expected.keys);
+    expect(result.values, `${direction} radix values remain stable`).toEqual(expected.values);
+    expect(result.resolvedAlgorithm, 'forced radix is reported').toBe('radix');
+    expect(
+      Boolean(result.logicalTransientCount > result.physicalTransientCount),
+      'radix scratch is reused'
+    ).toBe(true);
   }
-  t.end();
 });
 
-test('GPUSort four-bit radix preserves cross-workgroup stability on CORE WebGPU', async t => {
+it('GPUSort four-bit radix preserves cross-workgroup stability on CORE WebGPU', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -137,24 +121,20 @@ test('GPUSort four-bit radix preserves cross-workgroup stability on CORE WebGPU'
   for (const direction of ['ascending', 'descending'] as const) {
     const result = await runSort(device, keys, values, 'auto', direction);
     const expected = getStableSortedPairs(keys, values, direction);
-    t.deepEqual(result.keys, expected.keys, `${direction} four-bit radix keys match`);
-    t.deepEqual(
-      result.values,
-      expected.values,
-      `${direction} equal keys retain global input order`
+    expect(result.keys, `${direction} four-bit radix keys match`).toEqual(expected.keys);
+    expect(result.values, `${direction} equal keys retain global input order`).toEqual(
+      expected.values
     );
-    t.equal(result.resolvedAlgorithm, 'radix', 'multi-workgroup inputs choose four-bit radix');
-    t.equal(result.nodeOrder.length, 24, 'eight digits each require histogram, scan, and scatter');
+    expect(result.resolvedAlgorithm, 'multi-workgroup inputs choose four-bit radix').toBe('radix');
+    expect(result.nodeOrder.length, 'eight digits each require histogram, scan, and scatter').toBe(
+      24
+    );
   }
-
-  t.end();
 });
 
-test('GPUSort radix scans digit histograms across multiple workgroups on CORE WebGPU', async t => {
+it('GPUSort radix scans digit histograms across multiple workgroups on CORE WebGPU', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -168,27 +148,22 @@ test('GPUSort radix scans digit histograms across multiple workgroups on CORE We
     const result = await runSort(device, keys, values, 'auto', direction);
     const expected = getStableSortedPairs(keys, values, direction);
 
-    t.deepEqual(result.keys, expected.keys, `${direction} multi-workgroup histogram keys match`);
-    t.deepEqual(
+    expect(result.keys, `${direction} multi-workgroup histogram keys match`).toEqual(expected.keys);
+    expect(
       result.values,
-      expected.values,
       `${direction} equal keys retain stable order across histogram scan carries`
-    );
-    t.ok(
-      result.nodeOrder.includes('sort-radix-digit-0-scan-level-0-add-offsets'),
+    ).toEqual(expected.values);
+    expect(
+      Boolean(result.nodeOrder.includes('sort-radix-digit-0-scan-level-0-add-offsets')),
       'digit histograms larger than one scan workgroup propagate scanned block offsets'
-    );
-    t.equal(result.nodeOrder.length, 40, 'eight digits use five graph nodes each');
+    ).toBe(true);
+    expect(result.nodeOrder.length, 'eight digits use five graph nodes each').toBe(40);
   }
-
-  t.end();
 });
 
-test('GPUSort radix processes only the requested significant key bits', async t => {
+it('GPUSort radix processes only the requested significant key bits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -197,24 +172,22 @@ test('GPUSort radix processes only the requested significant key bits', async t 
   for (const keyBits of [15, 16]) {
     const result = await runSort(device, keys, values, 'radix', 'ascending', keyBits);
     const expected = getStableSortedPairs(keys, values, 'ascending');
-    t.deepEqual(result.keys, expected.keys, `${keyBits}-bit radix sorts every key`);
-    t.deepEqual(result.values, expected.values, `${keyBits}-bit radix remains stable`);
-    t.equal(
+    expect(result.keys, `${keyBits}-bit radix sorts every key`).toEqual(expected.keys);
+    expect(result.values, `${keyBits}-bit radix remains stable`).toEqual(expected.values);
+    expect(
       result.nodeOrder.filter(identifier => identifier.endsWith('-histogram')).length,
-      Math.ceil(keyBits / 4),
       `${keyBits}-bit radix emits only the required four-bit histogram passes`
-    );
-    t.notOk(result.nodeOrder.includes('sort-radix-final-copy'), 'final digits write directly');
+    ).toBe(Math.ceil(keyBits / 4));
+    expect(
+      Boolean(result.nodeOrder.includes('sort-radix-final-copy')),
+      'final digits write directly'
+    ).toBe(false);
   }
-
-  t.end();
 });
 
-test('GPUSort radix ignores insignificant bits and stably handles partial final digits', async t => {
+it('GPUSort radix ignores insignificant bits and stably handles partial final digits', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -237,32 +210,25 @@ test('GPUSort radix ignores insignificant bits and stably handles partial final 
           return comparison || left.index - right.index;
         }
       );
-      t.deepEqual(
+      expect(
         result.keys,
-        expected.map(pair => pair.key),
         `${keyBits}-bit ${direction} radix ignores insignificant high bits`
-      );
-      t.deepEqual(
+      ).toEqual(expected.map(pair => pair.key));
+      expect(
         result.values,
-        expected.map(pair => pair.value),
         `${keyBits}-bit ${direction} radix preserves equal-significant-key order`
-      );
-      t.equal(
+      ).toEqual(expected.map(pair => pair.value));
+      expect(
         result.nodeOrder.filter(identifier => identifier.endsWith('-histogram')).length,
-        Math.ceil(keyBits / 4),
         'only significant four-bit digits contribute graph work'
-      );
+      ).toBe(Math.ceil(keyBits / 4));
     }
   }
-
-  t.end();
 });
 
-test('GPUSort bounds bitonic and radix stages across all three dispatch dimensions', async t => {
+it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -281,12 +247,11 @@ test('GPUSort bounds bitonic and radix stages across all three dispatch dimensio
     try {
       const result = await runSort(device, keys, values, algorithm, direction, undefined, 2);
       const expected = getStableSortedPairs(keys, values, direction);
-      t.deepEqual(result.keys, expected.keys, `${algorithm} sorts every multidimensional key`);
-      t.deepEqual(
+      expect(result.keys, `${algorithm} sorts every multidimensional key`).toEqual(expected.keys);
+      expect(
         result.values,
-        expected.values,
         `${algorithm} preserves duplicate-key payload order across workgroups`
-      );
+      ).toEqual(expected.values);
 
       const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
         id: (computation as Computation).id,
@@ -308,11 +273,10 @@ test('GPUSort bounds bitonic and radix stages across all three dispatch dimensio
             ];
 
       for (const [identifier, expectedDimensions] of expectedPasses) {
-        t.deepEqual(
+        expect(
           dispatches.find(dispatch => dispatch.id === identifier)?.dimensions,
-          expectedDimensions,
           `${identifier} respects the synthetic per-dimension dispatch limit`
-        );
+        ).toEqual(expectedDimensions);
       }
     } finally {
       dispatchSpy.mockRestore();
@@ -324,29 +288,26 @@ test('GPUSort bounds bitonic and radix stages across all three dispatch dimensio
   try {
     const result = await runSort(device, limitedKeys, values, 'radix', 'ascending', 15, 2);
     const expected = getStableSortedPairs(limitedKeys, values, 'ascending');
-    t.deepEqual(result.keys, expected.keys, 'odd-width multidimensional radix keys match');
-    t.deepEqual(result.values, expected.values, 'odd-width multidimensional radix remains stable');
+    expect(result.keys, 'odd-width multidimensional radix keys match').toEqual(expected.keys);
+    expect(result.values, 'odd-width multidimensional radix remains stable').toEqual(
+      expected.values
+    );
 
     const finalScatterDispatchIndex = dispatchSpy.mock.instances.findIndex(
       computation => (computation as Computation).id === 'sort-radix-digit-12-scatter'
     );
-    t.deepEqual(
+    expect(
       dispatchSpy.mock.calls[finalScatterDispatchIndex]?.slice(1),
-      [2, 2, 2],
       'partial final radix digits respect the synthetic per-dimension dispatch limit'
-    );
+    ).toEqual([2, 2, 2]);
   } finally {
     dispatchSpy.mockRestore();
   }
-
-  t.end();
 });
 
-test('GPUSort honors offset storage views for local bitonic and multi-workgroup radix', async t => {
+it('GPUSort honors offset storage views for local bitonic and multi-workgroup radix', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -408,17 +369,15 @@ test('GPUSort honors offset storage views for local bitonic and multi-workgroup 
       const words = Array.from(
         new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4)
       );
-      t.deepEqual(
+      expect(
         words.slice(0, output.paddingLength),
-        Array.from({length: output.paddingLength}, () => paddingValue),
         `${algorithm} preserves ${label} prefix padding`
-      );
-      t.deepEqual(
+      ).toEqual(Array.from({length: output.paddingLength}, () => paddingValue));
+      expect(
         words.slice(output.paddingLength, output.paddingLength + length),
-        expectedValues,
         `${algorithm} sorts ${label} through its offset view`
-      );
-      t.equal(words.at(-1), paddingValue, `${algorithm} preserves ${label} suffix padding`);
+      ).toEqual(expectedValues);
+      expect(words.at(-1), `${algorithm} preserves ${label} suffix padding`).toBe(paddingValue);
     }
 
     compiled.destroy();
@@ -426,21 +385,17 @@ test('GPUSort honors offset storage views for local bitonic and multi-workgroup 
       buffer.destroy();
     }
   }
-
-  t.end();
 });
 
-test('GPUSort handles empty and single-row inputs', async t => {
+it('GPUSort handles empty and single-row inputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const empty = await runSort(device, new Uint32Array(0), new Uint32Array(0), 'auto', 'ascending');
-  t.deepEqual(empty.keys, [], 'empty sort has no keys');
-  t.deepEqual(empty.values, [], 'empty sort has no values');
-  t.deepEqual(empty.nodeOrder, [], 'empty sort records no graph nodes');
+  expect(empty.keys, 'empty sort has no keys').toEqual([]);
+  expect(empty.values, 'empty sort has no values').toEqual([]);
+  expect(empty.nodeOrder, 'empty sort records no graph nodes').toEqual([]);
 
   const single = await runSort(
     device,
@@ -449,17 +404,14 @@ test('GPUSort handles empty and single-row inputs', async t => {
     'auto',
     'descending'
   );
-  t.deepEqual(single.keys, [42], 'single key is copied');
-  t.deepEqual(single.values, [99], 'single value is copied');
-  t.deepEqual(single.nodeOrder, ['sort-copy-pair'], 'single row uses one copy pass');
-  t.end();
+  expect(single.keys, 'single key is copied').toEqual([42]);
+  expect(single.values, 'single value is copied').toEqual([99]);
+  expect(single.nodeOrder, 'single row uses one copy pass').toEqual(['sort-copy-pair']);
 });
 
-test('GPUBatchSort stably sorts each vector chunk without changing boundaries', async t => {
+it('GPUBatchSort stably sorts each vector chunk without changing boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const keyChunks = [
@@ -480,38 +432,32 @@ test('GPUBatchSort stably sorts each vector chunk without changing boundaries', 
     const expected = keyChunks.map((keys, chunkIndex) =>
       getStableSortedPairs(keys, valueChunks[chunkIndex], direction)
     );
-    t.deepEqual(
-      result.keyChunks,
-      expected.map(chunk => chunk.keys),
-      `${direction} keys remain in their source chunks`
+    expect(result.keyChunks, `${direction} keys remain in their source chunks`).toEqual(
+      expected.map(chunk => chunk.keys)
     );
-    t.deepEqual(
-      result.valueChunks,
-      expected.map(chunk => chunk.values),
-      `${direction} payloads remain stable within each chunk`
+    expect(result.valueChunks, `${direction} payloads remain stable within each chunk`).toEqual(
+      expected.map(chunk => chunk.values)
     );
-    t.deepEqual(
-      result.resolvedAlgorithms,
-      ['bitonic', 'bitonic', 'bitonic', 'bitonic'],
-      'auto selection is reported in chunk order'
-    );
-    t.ok(
-      result.nodeOrder.some(id => id === 'batch-sort-chunk-2-copy-pair'),
+    expect(result.resolvedAlgorithms, 'auto selection is reported in chunk order').toEqual([
+      'bitonic',
+      'bitonic',
+      'bitonic',
+      'bitonic'
+    ]);
+    expect(
+      Boolean(result.nodeOrder.some(id => id === 'batch-sort-chunk-2-copy-pair')),
       'single-row chunks retain the copy fast path'
-    );
-    t.notOk(
-      result.nodeOrder.some(id => id.startsWith('batch-sort-chunk-1-')),
+    ).toBe(true);
+    expect(
+      Boolean(result.nodeOrder.some(id => id.startsWith('batch-sort-chunk-1-'))),
       'empty chunks add no graph nodes'
-    );
+    ).toBe(false);
   }
-  t.end();
 });
 
-test('GPUBatchSort resolves algorithms per chunk and validates vector topology', async t => {
+it('GPUBatchSort resolves algorithms per chunk and validates vector topology', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'batch-sort-validation'});
@@ -520,13 +466,12 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
   const outputKeys = makeGraphVector(graph, 'output-keys', [256, 257]);
   const outputValues = makeGraphVector(graph, 'output-values', [256, 257]);
   const sort = new GPUBatchSort({keys, values, outputKeys, outputValues});
-  t.deepEqual(
-    sort.resolvedAlgorithms,
-    ['bitonic', 'radix'],
-    'auto chooses independently from each chunk length'
-  );
+  expect(sort.resolvedAlgorithms, 'auto chooses independently from each chunk length').toEqual([
+    'bitonic',
+    'radix'
+  ]);
 
-  t.throws(
+  expect(
     () =>
       new GPUBatchSort({
         keys,
@@ -534,14 +479,12 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
         outputKeys,
         outputValues
       }),
-    /same chunk topology/,
     'aligned inputs must preserve every chunk length'
-  );
-  t.throws(
+  ).toThrow(/same chunk topology/);
+  expect(
     () => new GPUBatchSort({keys, values, outputKeys: keys, outputValues}),
-    /separate buffers/,
     'outputs cannot alias any input chunk'
-  );
+  ).toThrow(/separate buffers/);
   const sharedOutputBuffer = graph.createTransientBuffer({
     id: 'shared-output-keys',
     byteLength: 16,
@@ -569,7 +512,7 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
   const twoChunkKeys = makeGraphVector(graph, 'two-chunk-keys', [2, 2]);
   const twoChunkValues = makeGraphVector(graph, 'two-chunk-values', [2, 2]);
   const twoChunkOutputValues = makeGraphVector(graph, 'two-chunk-output-values', [2, 2]);
-  t.throws(
+  expect(
     () =>
       new GPUBatchSort({
         keys: twoChunkKeys,
@@ -577,10 +520,9 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
         outputKeys: makeSharedOutputKeys(4),
         outputValues: twoChunkOutputValues
       }),
-    /output keys chunks must not overlap/,
     'writable chunks cannot overlap within one output vector'
-  );
-  t.doesNotThrow(
+  ).toThrow(/output keys chunks must not overlap/);
+  expect(
     () =>
       new GPUBatchSort({
         keys: twoChunkKeys,
@@ -589,8 +531,8 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
         outputValues: twoChunkOutputValues
       }),
     'disjoint output chunks may share one logical buffer'
-  );
-  t.throws(
+  ).not.toThrow();
+  expect(
     () =>
       new GPUBatchSort({
         keys: makeGraphVector(graph, 'empty-keys', []),
@@ -599,34 +541,29 @@ test('GPUBatchSort resolves algorithms per chunk and validates vector topology',
         outputValues: makeGraphVector(graph, 'empty-output-values', []),
         algorithm: 'merge' as never
       }),
-    /algorithm must be/,
     'empty vector sorts still validate options'
-  );
-  t.end();
+  ).toThrow(/algorithm must be/);
 });
 
-test('GPUSort auto selection switches beyond one 256-row workgroup', async t => {
+it('GPUSort auto selection switches beyond one 256-row workgroup', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
-  t.equal(makeUncompiledSort(device, 256).resolvedAlgorithm, 'bitonic', 'one workgroup is bitonic');
-  t.equal(makeUncompiledSort(device, 257).resolvedAlgorithm, 'radix', 'above threshold is radix');
-  t.equal(
-    makeUncompiledSort(device, 3, 'radix').resolvedAlgorithm,
-    'radix',
-    'explicit override wins'
+  expect(makeUncompiledSort(device, 256).resolvedAlgorithm, 'one workgroup is bitonic').toBe(
+    'bitonic'
   );
-  t.end();
+  expect(makeUncompiledSort(device, 257).resolvedAlgorithm, 'above threshold is radix').toBe(
+    'radix'
+  );
+  expect(makeUncompiledSort(device, 3, 'radix').resolvedAlgorithm, 'explicit override wins').toBe(
+    'radix'
+  );
 });
 
-test('GPUSort validates layouts, lengths, graph ownership, and output buffers', async t => {
+it('GPUSort validates layouts, lengths, graph ownership, and output buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'sort-validation'});
@@ -655,7 +592,7 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
   const outputKeys = graph.createDataView(outputKeysHandle, {format: 'uint32', length: 4});
   const outputValues = graph.createDataView(outputValuesHandle, {format: 'uint32', length: 4});
 
-  t.throws(
+  expect(
     () =>
       new GPUSort({
         keys,
@@ -663,43 +600,36 @@ test('GPUSort validates layouts, lengths, graph ownership, and output buffers', 
         outputKeys,
         outputValues
       }),
-    /lengths must match/,
     'length mismatch is rejected'
-  );
-  t.throws(
+  ).toThrow(/lengths must match/);
+  expect(
     () => new GPUSort({keys, values, outputKeys: keys, outputValues}),
-    /separate buffers/,
     'input/output alias is rejected'
-  );
+  ).toThrow(/separate buffers/);
   for (const keyBits of [0, 33, 1.5, Number.NaN]) {
-    t.throws(
+    expect(
       () => new GPUSort({keys, values, outputKeys, outputValues, keyBits}),
-      /keyBits must be an integer from 1 to 32/,
       `invalid key width ${keyBits} is rejected`
-    );
+    ).toThrow(/keyBits must be an integer from 1 to 32/);
   }
   const unaligned = graph.createDataView(outputKeysHandle, {
     format: 'uint32',
     length: 1,
     byteOffset: 2
   });
-  t.throws(
+  expect(
     () => new GPUSort({keys: unaligned, values, outputKeys, outputValues}),
-    /uint32-aligned/,
     'unaligned keys are rejected'
-  );
+  ).toThrow(/uint32-aligned/);
 
   const otherGraph = new GPUCommandGraph(device, {id: 'other-sort-graph'});
   const sort = new GPUSort({keys, values, outputKeys, outputValues});
-  t.throws(() => sort.addToGraph(otherGraph), /target graph/, 'foreign graph is rejected');
-  t.end();
+  expect(() => sort.addToGraph(otherGraph), 'foreign graph is rejected').toThrow(/target graph/);
 });
 
-test('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async t => {
+it('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -728,17 +658,15 @@ test('GPUSort rejects borrowed physical-buffer aliases before encoding either al
     const compiled = graph.compile();
     const rejectedEncoder = device.createCommandEncoder({id: `${algorithm}-rejected-alias`});
 
-    t.throws(
+    expect(
       () => compiled.encode(rejectedEncoder, {parameters: undefined}),
-      /keys.*output-keys.*same physical buffer/i,
       `${algorithm} rejects distinct borrowed wrappers resolving to one physical GPUBuffer`
-    );
+    ).toThrow(/keys.*output-keys.*same physical buffer/i);
     rejectedEncoder.destroy();
-    t.deepEqual(
+    expect(
       await readUint32SortBuffer(keysBuffer, 4),
-      [4, 1, 3, 2],
       `${algorithm} leaves caller-owned input unchanged`
-    );
+    ).toEqual([4, 1, 3, 2]);
 
     const validEncoder = device.createCommandEncoder({id: `${algorithm}-valid-sort`});
     compiled.encode(validEncoder, {
@@ -750,8 +678,10 @@ test('GPUSort rejects borrowed physical-buffer aliases before encoding either al
       readUint32SortBuffer(outputKeysBuffer, 4),
       readUint32SortBuffer(outputValuesBuffer, 4)
     ]);
-    t.deepEqual(sortedKeys, [1, 2, 3, 4], `${algorithm} accepts a later distinct output override`);
-    t.deepEqual(sortedValues, [10, 20, 30, 40], `${algorithm} preserves paired payload values`);
+    expect(sortedKeys, `${algorithm} accepts a later distinct output override`).toEqual([
+      1, 2, 3, 4
+    ]);
+    expect(sortedValues, `${algorithm} preserves paired payload values`).toEqual([10, 20, 30, 40]);
 
     compiled.destroy();
     const importedBuffers = [
@@ -763,24 +693,19 @@ test('GPUSort rejects borrowed physical-buffer aliases before encoding either al
     ];
     tAssertImportedBuffersAlive(importedBuffers);
     borrowedKeysBuffer.destroy();
-    t.deepEqual(
+    expect(
       await readUint32SortBuffer(keysBuffer, 4),
-      [4, 1, 3, 2],
       `${algorithm} borrowed-wrapper destruction leaves the physical GPUBuffer intact`
-    );
+    ).toEqual([4, 1, 3, 2]);
     for (const buffer of [keysBuffer, valuesBuffer, outputKeysBuffer, outputValuesBuffer]) {
       buffer.destroy();
     }
   }
-
-  t.end();
 });
 
-test('GPUBatchSort rejects physically aliased output overrides before encoding', async t => {
+it('GPUBatchSort rejects physically aliased output overrides before encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -800,21 +725,19 @@ test('GPUBatchSort rejects physically aliased output overrides before encoding',
   const compiled = graph.compile();
   const rejectedEncoder = device.createCommandEncoder({id: 'batch-sort-rejected-alias'});
 
-  t.throws(
+  expect(
     () =>
       compiled.encode(rejectedEncoder, {
         parameters: undefined,
         buffers: {'batch-output-keys': keysBuffer}
       }),
-    /batch-keys.*batch-output-keys.*same physical buffer/i,
     'rejects an encoding-time output override that aliases an active input chunk'
-  );
+  ).toThrow(/batch-keys.*batch-output-keys.*same physical buffer/i);
   rejectedEncoder.destroy();
-  t.deepEqual(
+  expect(
     await readUint32SortBuffer(keysBuffer, 3),
-    [3, 1, 2],
     'rejected batch encoding leaves its caller-owned input chunk unchanged'
-  );
+  ).toEqual([3, 1, 2]);
 
   const validEncoder = device.createCommandEncoder({id: 'batch-sort-valid-encoding'});
   compiled.encode(validEncoder, {parameters: undefined});
@@ -823,14 +746,13 @@ test('GPUBatchSort rejects physically aliased output overrides before encoding',
     readUint32SortBuffer(outputKeysBuffer, 3),
     readUint32SortBuffer(outputValuesBuffer, 3)
   ]);
-  t.deepEqual(sortedKeys, [1, 2, 3], 'batch graph accepts its original distinct output buffer');
-  t.deepEqual(sortedValues, [10, 20, 30], 'batch retry preserves paired chunk payload values');
+  expect(sortedKeys, 'batch graph accepts its original distinct output buffer').toEqual([1, 2, 3]);
+  expect(sortedValues, 'batch retry preserves paired chunk payload values').toEqual([10, 20, 30]);
 
   compiled.destroy();
   const importedBuffers = [keysBuffer, valuesBuffer, outputKeysBuffer, outputValuesBuffer];
   tAssertImportedBuffersAlive(importedBuffers);
   for (const buffer of importedBuffers) buffer.destroy();
-  t.end();
 });
 
 type SortResult = {

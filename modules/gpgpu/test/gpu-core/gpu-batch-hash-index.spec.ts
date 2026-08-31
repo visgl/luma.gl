@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBatchHashIndex,
@@ -14,11 +14,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUBatchHashIndex preserves nullable batches, earliest duplicates, and source offsets', async testCase => {
+it('GPUBatchHashIndex preserves nullable batches, earliest duplicates, and source offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -31,33 +29,39 @@ test('GPUBatchHashIndex preserves nullable batches, earliest duplicates, and sou
     encodingCount: 2
   });
 
-  testCase.deepEqual(
+  expect(
     result.values,
-    [40, 41, GPU_HASH_INDEX_EMPTY_KEY, 503, GPU_HASH_INDEX_EMPTY_KEY, GPU_HASH_INDEX_EMPTY_KEY],
     'generated values retain discontinuous batch offsets and globally earliest duplicates'
-  );
-  testCase.deepEqual(result.found, [1, 1, 0, 1, 0, 0], 'nullable keys are excluded from lookups');
-  testCase.deepEqual(
+  ).toEqual([
+    40,
+    41,
+    GPU_HASH_INDEX_EMPTY_KEY,
+    503,
+    GPU_HASH_INDEX_EMPTY_KEY,
+    GPU_HASH_INDEX_EMPTY_KEY
+  ]);
+  expect(result.found, 'nullable keys are excluded from lookups').toEqual([1, 1, 0, 1, 0, 0]);
+  expect(
     result.buildStatistics.slice(0, 4),
-    [3, 1, 0, 1],
     'counts valid duplicates and reserved keys while silently skipping invalid/null rows'
-  );
-  testCase.equal(
+  ).toEqual([3, 1, 0, 1]);
+  expect(
     result.tableKeys.filter(key => key !== GPU_HASH_INDEX_EMPTY_KEY).length,
-    3,
     'one shared table slot is retained per distinct valid key'
+  ).toBe(3);
+  expect(
+    Boolean(result.buildStatistics[4] >= 4),
+    'cumulative probes include every non-null valid row'
+  ).toBe(true);
+  expect(Boolean(result.buildStatistics[5] <= 8), 'all chunks obey the common probe bound').toBe(
+    true
   );
-  testCase.ok(result.buildStatistics[4] >= 4, 'cumulative probes include every non-null valid row');
-  testCase.ok(result.buildStatistics[5] <= 8, 'all chunks obey the common probe bound');
-  testCase.deepEqual(result.queryStatistics.slice(0, 2), [3, 3], 're-encoding resets diagnostics');
-  testCase.end();
+  expect(result.queryStatistics.slice(0, 2), 're-encoding resets diagnostics').toEqual([3, 3]);
 });
 
-test('GPUBatchHashIndex resolves explicit payloads across offset chunk views', async testCase => {
+it('GPUBatchHashIndex resolves explicit payloads across offset chunk views', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -69,25 +73,17 @@ test('GPUBatchHashIndex resolves explicit payloads across offset chunk views', a
     sourceByteOffset: 8
   });
 
-  testCase.deepEqual(
+  expect(
     result.values,
-    [500, 800, 1300, 2100],
     'later duplicate chunks cannot overwrite the globally first explicit payload'
-  );
-  testCase.deepEqual(result.found, [1, 1, 1, 1], 'finds keys originating in distinct GPU buffers');
-  testCase.deepEqual(
-    result.buildStatistics.slice(0, 4),
-    [4, 1, 0, 0],
-    'accumulates chunk statistics'
-  );
-  testCase.end();
+  ).toEqual([500, 800, 1300, 2100]);
+  expect(result.found, 'finds keys originating in distinct GPU buffers').toEqual([1, 1, 1, 1]);
+  expect(result.buildStatistics.slice(0, 4), 'accumulates chunk statistics').toEqual([4, 1, 0, 0]);
 });
 
-test('GPUBatchHashIndex accumulates bounded overflow without resetting between chunks', async testCase => {
+it('GPUBatchHashIndex accumulates bounded overflow without resetting between chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -98,48 +94,36 @@ test('GPUBatchHashIndex accumulates bounded overflow without resetting between c
     capacity: 2
   });
 
-  testCase.deepEqual(
+  expect(
     result.buildStatistics.slice(0, 4),
-    [2, 0, 2, 0],
     'later distinct keys report fixed-capacity overflow without clearing earlier rows'
-  );
-  testCase.deepEqual(result.found, [1, 1, 0, 0], 'only first-batch keys remain available');
-  testCase.deepEqual(
-    result.values,
-    [10, 11, GPU_HASH_INDEX_EMPTY_KEY, GPU_HASH_INDEX_EMPTY_KEY],
-    'surviving keys preserve original first-source offsets'
-  );
-  testCase.end();
+  ).toEqual([2, 0, 2, 0]);
+  expect(result.found, 'only first-batch keys remain available').toEqual([1, 1, 0, 0]);
+  expect(result.values, 'surviving keys preserve original first-source offsets').toEqual([
+    10,
+    11,
+    GPU_HASH_INDEX_EMPTY_KEY,
+    GPU_HASH_INDEX_EMPTY_KEY
+  ]);
 });
 
-test('GPUBatchHashIndex clears zero-chunk and empty-chunk index topologies', async testCase => {
+it('GPUBatchHashIndex clears zero-chunk and empty-chunk index topologies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
   for (const keys of [[], [[], []]] as readonly (readonly number[])[][]) {
     const result = await runBatchHashIndex(device, {keys, queryKeys: [1], capacity: 4});
-    testCase.deepEqual(
-      result.tableKeys,
-      [
-        GPU_HASH_INDEX_EMPTY_KEY,
-        GPU_HASH_INDEX_EMPTY_KEY,
-        GPU_HASH_INDEX_EMPTY_KEY,
-        GPU_HASH_INDEX_EMPTY_KEY
-      ],
-      'empty source topologies initialize every shared table slot'
-    );
-    testCase.deepEqual(
-      result.buildStatistics,
-      [0, 0, 0, 0, 0, 0],
-      'empty chunks add no statistics'
-    );
-    testCase.deepEqual(result.found, [0], 'empty tables do not publish matches');
+    expect(result.tableKeys, 'empty source topologies initialize every shared table slot').toEqual([
+      GPU_HASH_INDEX_EMPTY_KEY,
+      GPU_HASH_INDEX_EMPTY_KEY,
+      GPU_HASH_INDEX_EMPTY_KEY,
+      GPU_HASH_INDEX_EMPTY_KEY
+    ]);
+    expect(result.buildStatistics, 'empty chunks add no statistics').toEqual([0, 0, 0, 0, 0, 0]);
+    expect(result.found, 'empty tables do not publish matches').toEqual([0]);
   }
-  testCase.end();
 });
 
 type BatchHashIndexFixture = {

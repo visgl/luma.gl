@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -12,11 +12,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUHashJoin stably publishes sparse row pairs', async t => {
+it('GPUHashJoin stably publishes sparse row pairs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -28,36 +26,25 @@ test('GPUHashJoin stably publishes sparse row pairs', async t => {
     outputCapacity: 6
   });
 
-  t.deepEqual(
-    result.leftRows.slice(0, 4),
-    [100, 102, 103, 105],
-    'matching left rows retain source order'
-  );
-  t.deepEqual(
-    result.rightRows.slice(0, 4),
-    [700, 200, 700, 400],
-    'right rows align with stable left rows'
-  );
-  t.equal(result.count, 4, 'count reports all inner-join matches');
-  t.equal(result.overflow, 0, 'sufficient output capacity does not overflow');
-  t.deepEqual(
-    result.found,
-    [1, 0, 1, 1, 0, 1],
-    'optional found mask exposes aligned left-join semantics'
-  );
-  t.deepEqual(
-    result.statistics.slice(0, 2),
-    [4, 2],
-    'lookup statistics report found and missing rows'
-  );
-  t.end();
+  expect(result.leftRows.slice(0, 4), 'matching left rows retain source order').toEqual([
+    100, 102, 103, 105
+  ]);
+  expect(result.rightRows.slice(0, 4), 'right rows align with stable left rows').toEqual([
+    700, 200, 700, 400
+  ]);
+  expect(result.count, 'count reports all inner-join matches').toBe(4);
+  expect(result.overflow, 'sufficient output capacity does not overflow').toBe(0);
+  expect(result.found, 'optional found mask exposes aligned left-join semantics').toEqual([
+    1, 0, 1, 1, 0, 1
+  ]);
+  expect(result.statistics.slice(0, 2), 'lookup statistics report found and missing rows').toEqual([
+    4, 2
+  ]);
 });
 
-test('GPUHashJoin preserves explicit left IDs and reports required capacity', async t => {
+it('GPUHashJoin preserves explicit left IDs and reports required capacity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -69,22 +56,17 @@ test('GPUHashJoin preserves explicit left IDs and reports required capacity', as
     outputCapacity: 2
   });
 
-  t.deepEqual(
-    result.leftRows,
-    [500, 502],
-    'bounded publication retains the stable matching prefix'
-  );
-  t.deepEqual(result.rightRows, [700, 200], 'truncated right rows remain pair-aligned');
-  t.equal(result.count, 4, 'count reports required rather than stored capacity');
-  t.equal(result.overflow, 1, 'truncation is explicit');
-  t.end();
+  expect(result.leftRows, 'bounded publication retains the stable matching prefix').toEqual([
+    500, 502
+  ]);
+  expect(result.rightRows, 'truncated right rows remain pair-aligned').toEqual([700, 200]);
+  expect(result.count, 'count reports required rather than stored capacity').toBe(4);
+  expect(result.overflow, 'truncation is explicit').toBe(1);
 });
 
-test('GPUHashJoin clears empty results and validates output ownership', async t => {
+it('GPUHashJoin clears empty results and validates output ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -94,9 +76,9 @@ test('GPUHashJoin clears empty results and validates output ownership', async t 
     leftKeys: new Uint32Array(0),
     outputCapacity: 1
   });
-  t.equal(empty.count, 0, 'empty input writes a zero required count');
-  t.equal(empty.overflow, 0, 'empty input clears overflow');
-  t.deepEqual(empty.statistics, [0, 0, 0, 0], 'empty lookup clears query statistics');
+  expect(empty.count, 'empty input writes a zero required count').toBe(0);
+  expect(empty.overflow, 'empty input clears overflow').toBe(0);
+  expect(empty.statistics, 'empty lookup clears query statistics').toEqual([0, 0, 0, 0]);
 
   const sourceOverflow = await runHashJoin(device, {
     rightKeys: Uint32Array.from([1, 2, 3]),
@@ -105,7 +87,7 @@ test('GPUHashJoin clears empty results and validates output ownership', async t 
     tableCapacity: 2,
     outputCapacity: 1
   });
-  t.equal(sourceOverflow.overflow, 1, 'an incomplete source index propagates overflow');
+  expect(sourceOverflow.overflow, 'an incomplete source index propagates overflow').toBe(1);
 
   const graph = new GPUCommandGraph(device);
   const tableKeysBuffer = createOutputBuffer(device, 4);
@@ -123,7 +105,7 @@ test('GPUHashJoin clears empty results and validates output ownership', async t 
     {id: 'scalars', byteLength: scalarBuffer.byteLength, usage: scalarBuffer.usage},
     scalarBuffer
   );
-  t.throws(
+  expect(
     () =>
       new GPUHashJoin({
         index,
@@ -142,16 +124,14 @@ test('GPUHashJoin clears empty results and validates output ownership', async t 
           byteOffset: 8
         })
       }),
-    /output views must not overlap/,
     'join outputs cannot alias'
-  );
+  ).toThrow(/output views must not overlap/);
 
   tableKeysBuffer.destroy();
   tableValuesBuffer.destroy();
   keysBuffer.destroy();
   sharedOutputBuffer.destroy();
   scalarBuffer.destroy();
-  t.end();
 });
 
 type JoinFixtureProps = {

@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   Buffer,
   ExternalTexture,
@@ -41,15 +41,13 @@ class TestExternalTexture extends ExternalTexture {
   }
 }
 
-test('GPUCommandGraph validates texture descriptors, views, and imports', async t => {
+it('GPUCommandGraph validates texture descriptors, views, and imports', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'texture-validation'});
-  t.throws(
+  expect(
     () =>
       graph.createTransientTexture({
         id: 'invalid-size',
@@ -58,9 +56,8 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
         height: 4,
         usage: Texture.RENDER
       }),
-    /positive safe integer/,
     'zero texture extent is rejected'
-  );
+  ).toThrow(/positive safe integer/);
   const mipTexture = graph.createTransientTexture({
     id: 'mips',
     format: 'rgba8unorm',
@@ -73,23 +70,21 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
     baseMipLevel: 2,
     mipLevelCount: 1
   });
-  t.equal(mipTwo.width, 2, 'view width reflects base mip');
-  t.equal(mipTwo.height, 2, 'view height reflects base mip');
-  t.throws(
+  expect(mipTwo.width, 'view width reflects base mip').toBe(2);
+  expect(mipTwo.height, 'view height reflects base mip').toBe(2);
+  expect(
     () => graph.createTextureView(mipTexture, {baseMipLevel: 4, mipLevelCount: 1}),
-    /exceeds.*mip levels/,
     'view outside mip range is rejected'
-  );
-  t.throws(
+  ).toThrow(/exceeds.*mip levels/);
+  expect(
     () =>
       graph.addComputePass({
         id: 'wrong-usage',
         resources: [{texture: mipTwo, usage: 'render-attachment'}],
         compile: () => ({encode: () => {}})
       }),
-    /does not declare usage/,
     'node texture role must be declared by the descriptor'
-  );
+  ).toThrow(/does not declare usage/);
 
   const importedTexture = device.createTexture({
     id: 'imported-texture',
@@ -119,23 +114,22 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
     })
   });
   const compiled = importGraph.compile();
-  t.equal(compiled.stats.importedTextureCount, 1, 'imported texture count is reported');
-  t.equal(compiled.stats.importedTextureBytes, 64, 'imported texture bytes are estimated');
-  t.equal(compiled.stats.logicalTextureCount, 1, 'logical texture count includes imports');
-  t.equal(compiled.stats.logicalTextureBytes, 64, 'logical texture bytes include imports');
-  t.equal(compiled.stats.logicalResourceBytes, 64, 'logical resource bytes include textures');
-  t.equal(
+  expect(compiled.stats.importedTextureCount, 'imported texture count is reported').toBe(1);
+  expect(compiled.stats.importedTextureBytes, 'imported texture bytes are estimated').toBe(64);
+  expect(compiled.stats.logicalTextureCount, 'logical texture count includes imports').toBe(1);
+  expect(compiled.stats.logicalTextureBytes, 'logical texture bytes include imports').toBe(64);
+  expect(compiled.stats.logicalResourceBytes, 'logical resource bytes include textures').toBe(64);
+  expect(
     compiled.stats.physicalTransientResourceBytes,
-    0,
     'imported textures are excluded from owned transient memory'
-  );
+  ).toBe(0);
   compiled.encode(device.createCommandEncoder({id: 'texture-import-first'}), {
     parameters: undefined
   });
   compiled.encode(device.createCommandEncoder({id: 'texture-import-second'}), {
     parameters: undefined
   });
-  t.equal(resolvedViews[0], resolvedViews[1], 'concrete texture view is cached across encodes');
+  expect(resolvedViews[0], 'concrete texture view is cached across encodes').toBe(resolvedViews[1]);
   const replacement = device.createTexture({
     id: 'replacement-texture',
     width: 4,
@@ -147,7 +141,9 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
     parameters: undefined,
     textures: {imported: replacement}
   });
-  t.notEqual(resolvedViews[1], resolvedViews[2], 'replacement texture resolves a distinct view');
+  expect(resolvedViews[1], 'replacement texture resolves a distinct view').not.toBe(
+    resolvedViews[2]
+  );
   const wrongSize = device.createTexture({
     id: 'wrong-size-texture',
     width: 8,
@@ -155,28 +151,26 @@ test('GPUCommandGraph validates texture descriptors, views, and imports', async 
     format: 'rgba8unorm',
     usage: Texture.SAMPLE
   });
-  t.throws(
+  expect(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'texture-import-invalid'}), {
         parameters: undefined,
         textures: {imported: wrongSize}
       }),
-    /incompatible width/,
     'fixed-size import rejects resized replacement'
-  );
+  ).toThrow(/incompatible width/);
   compiled.destroy();
-  t.notOk(importedTexture.destroyed, 'compiled graph leaves imported texture alive');
+  expect(Boolean(importedTexture.destroyed), 'compiled graph leaves imported texture alive').toBe(
+    false
+  );
   importedTexture.destroy();
   replacement.destroy();
   wrongSize.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph resolves multisampled color attachments', async t => {
+it('GPUCommandGraph resolves multisampled color attachments', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const resolvedTexture = device.createTexture({
@@ -221,12 +215,12 @@ test('GPUCommandGraph resolves multisampled color attachments', async t => {
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
   const pixels = await readPixels(resolvedTexture, 4, 4);
-  t.ok(
-    pixels[0] > 240 && pixels[1] < 10 && pixels[2] < 10,
+  expect(
+    Boolean(pixels[0] > 240 && pixels[1] < 10 && pixels[2] < 10),
     'multisampled clear resolves into the declared single-sample target'
-  );
+  ).toBe(true);
   compiled.destroy();
-  t.notOk(resolvedTexture.destroyed, 'resolve target remains caller-owned');
+  expect(Boolean(resolvedTexture.destroyed), 'resolve target remains caller-owned').toBe(false);
   resolvedTexture.destroy();
 
   const invalidGraph = new GPUCommandGraph(device, {id: 'invalid-resolve'});
@@ -244,7 +238,7 @@ test('GPUCommandGraph resolves multisampled color attachments', async t => {
     height: 4,
     usage: Texture.RENDER
   });
-  t.throws(
+  expect(
     () =>
       invalidGraph.addRenderPass({
         id: 'invalid-resolve-pass',
@@ -254,17 +248,13 @@ test('GPUCommandGraph resolves multisampled color attachments', async t => {
         },
         compile: () => ({encode: () => {}})
       }),
-    /match a multisampled source and be single-sampled/,
     'single-sample sources cannot declare resolve targets'
-  );
-  t.end();
+  ).toThrow(/match a multisampled source and be single-sampled/);
 });
 
-test('GPUCommandGraph redirects reusable render passes to caller-owned framebuffers', async t => {
+it('GPUCommandGraph redirects reusable render passes to caller-owned framebuffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -332,18 +322,16 @@ test('GPUCommandGraph redirects reusable render passes to caller-owned framebuff
   });
   device.submit(secondEncoder.finish());
 
-  t.deepEqual(
+  expect(
     Array.from((await readPixels(firstTexture, 4, 4)).subarray(0, 4)),
-    [255, 0, 0, 255],
     'the first offscreen framebuffer receives only its own render pass'
-  );
-  t.deepEqual(
+  ).toEqual([255, 0, 0, 255]);
+  expect(
     Array.from((await readPixels(secondTexture, 4, 4)).subarray(0, 4)),
-    [0, 255, 0, 255],
     'the next encoding can target a different caller-owned framebuffer'
-  );
-  t.equal(compilationCount, 1, 'changing the target does not recompile the render executable');
-  t.equal(encodingCount, 2, 'the same compiled render executable records both frames');
+  ).toEqual([0, 255, 0, 255]);
+  expect(compilationCount, 'changing the target does not recompile the render executable').toBe(1);
+  expect(encodingCount, 'the same compiled render executable records both frames').toBe(2);
 
   const conflictingGraph = new GPUCommandGraph(device, {id: 'conflicting-framebuffer'});
   const managedColor = conflictingGraph.importTexture(
@@ -365,33 +353,40 @@ test('GPUCommandGraph redirects reusable render passes to caller-owned framebuff
     })
   });
   const conflictingCompiled = conflictingGraph.compile();
-  t.throws(
+  expect(
     () =>
       conflictingCompiled.encode(device.createCommandEncoder({id: 'conflicting-encoding'}), {
         parameters: undefined
       }),
-    /cannot supply framebuffer with graph attachments/,
     'graph-managed attachments cannot be replaced by a callback-supplied framebuffer'
-  );
+  ).toThrow(/cannot supply framebuffer with graph attachments/);
 
   conflictingCompiled.destroy();
   compiled.destroy();
-  t.notOk(firstFramebuffer.destroyed, 'the first framebuffer remains caller-owned');
-  t.notOk(secondFramebuffer.destroyed, 'the replacement framebuffer remains caller-owned');
-  t.notOk(firstTexture.destroyed, 'the first framebuffer texture remains caller-owned');
-  t.notOk(secondTexture.destroyed, 'the replacement framebuffer texture remains caller-owned');
+  expect(Boolean(firstFramebuffer.destroyed), 'the first framebuffer remains caller-owned').toBe(
+    false
+  );
+  expect(
+    Boolean(secondFramebuffer.destroyed),
+    'the replacement framebuffer remains caller-owned'
+  ).toBe(false);
+  expect(
+    Boolean(firstTexture.destroyed),
+    'the first framebuffer texture remains caller-owned'
+  ).toBe(false);
+  expect(
+    Boolean(secondTexture.destroyed),
+    'the replacement framebuffer texture remains caller-owned'
+  ).toBe(false);
   firstFramebuffer.destroy();
   secondFramebuffer.destroy();
   firstTexture.destroy();
   secondTexture.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
+it('GPUCommandGraph enforces frame-scoped texture bindings', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const firstTexture = device.createTexture({
@@ -450,14 +445,13 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
   const resourceStats = device.statsManager.getStats('Resource Counts');
   const baselineFramebufferCount = resourceStats.get('Framebuffers Active').count;
   const baselineTextureViewCount = resourceStats.get('TextureViews Active').count;
-  t.throws(
+  expect(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'missing-frame'}), {
         parameters: undefined
       }),
-    /frame texture "frame-color" is required/,
     'frame-scoped imports have no persistent default'
-  );
+  ).toThrow(/frame texture "frame-color" is required/);
   const firstEncoder = device.createCommandEncoder({id: 'frame-0'});
   compiled.encode(firstEncoder, {
     parameters: undefined,
@@ -467,17 +461,15 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     }
   });
   device.submit(firstEncoder.finish());
-  t.equal(
+  expect(
     resourceStats.get('Framebuffers Active').count,
-    baselineFramebufferCount + 1,
     'the first frame owns one cached framebuffer'
-  );
-  t.equal(
+  ).toBe(baselineFramebufferCount + 1);
+  expect(
     resourceStats.get('TextureViews Active').count,
-    baselineTextureViewCount + 1,
     'the first frame owns one non-default attachment view'
-  );
-  t.throws(
+  ).toBe(baselineTextureViewCount + 1);
+  expect(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'stale-frame'}), {
         parameters: undefined,
@@ -486,10 +478,9 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
           ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 0}
         }
       }),
-    /frameId 0 is stale/,
     'a consumed frame ID cannot be reused'
-  );
-  t.throws(
+  ).toThrow(/frameId 0 is stale/);
+  expect(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'mixed-frame'}), {
         parameters: undefined,
@@ -498,9 +489,8 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
           ['frame-auxiliary']: {texture: auxiliaryTexture, frameId: 2}
         }
       }),
-    /must share one frameId/,
     'all frame-scoped imports in one encoding share a coherent frame ID'
-  );
+  ).toThrow(/must share one frameId/);
   const secondEncoder = device.createCommandEncoder({id: 'frame-1'});
   compiled.encode(secondEncoder, {
     parameters: undefined,
@@ -510,35 +500,31 @@ test('GPUCommandGraph enforces frame-scoped texture bindings', async t => {
     }
   });
   device.submit(secondEncoder.finish());
-  t.equal(
+  expect(
     resourceStats.get('Framebuffers Active').count,
-    baselineFramebufferCount + 1,
     'refreshing a frame view retires its stale framebuffer'
-  );
-  t.equal(
+  ).toBe(baselineFramebufferCount + 1);
+  expect(
     resourceStats.get('TextureViews Active').count,
-    baselineTextureViewCount + 1,
     'refreshing a frame view retires its stale texture view'
-  );
+  ).toBe(baselineTextureViewCount + 1);
   compiled.destroy();
-  t.equal(
+  expect(
     resourceStats.get('Framebuffers Active').count,
-    baselineFramebufferCount,
     'destroy releases the final cached framebuffer'
+  ).toBe(baselineFramebufferCount);
+  expect(Boolean(firstTexture.destroyed), 'first frame texture remains caller-owned').toBe(false);
+  expect(Boolean(secondTexture.destroyed), 'replacement frame texture remains caller-owned').toBe(
+    false
   );
-  t.notOk(firstTexture.destroyed, 'first frame texture remains caller-owned');
-  t.notOk(secondTexture.destroyed, 'replacement frame texture remains caller-owned');
   firstTexture.destroy();
   secondTexture.destroy();
   auxiliaryTexture.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph enforces sampled-only external texture frames', async t => {
+it('GPUCommandGraph enforces sampled-only external texture frames', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const externalTextureSampler = device.createSampler({id: 'external-texture-test-sampler'});
@@ -556,11 +542,10 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     usage: Texture.RENDER
   });
   const graph = new GPUCommandGraph(device, {id: 'external-texture'});
-  t.throws(
+  expect(
     () => graph.importExternalTexture({id: 'invalid-video', width: 0, height: 4}),
-    /positive safe integer/,
     'external texture descriptors require positive fixed dimensions'
-  );
+  ).toThrow(/positive safe integer/);
   const externalTexture = graph.importExternalTexture({id: 'video', width: 4, height: 4});
   const frameTextureHandle = graph.importFrameTexture({
     id: 'color',
@@ -571,16 +556,15 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
   });
   const frameTextureView = graph.createTextureView(frameTextureHandle);
   const resolvedExternalTextures: unknown[] = [];
-  t.throws(
+  expect(
     () =>
       graph.addComputePass({
         id: 'invalid-external-compute',
         resources: [{externalTexture, usage: 'sampled'}],
         compile: () => ({encode: () => {}})
       }),
-    /only by render nodes/,
     'external texture bindings cannot leak into incompatible pass types'
-  );
+  ).toThrow(/only by render nodes/);
   graph.addRenderPass({
     id: 'sample-video',
     attachments: {colorAttachments: [frameTextureView]},
@@ -592,27 +576,25 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
   });
   const compiled = graph.compile();
   const missingFrameEncoder = device.createCommandEncoder({id: 'missing-external-frame'});
-  t.throws(
+  expect(
     () =>
       compiled.encode(missingFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 0}}
       }),
-    /external texture "video" is required/,
     'external texture imports have no persistent default'
-  );
+  ).toThrow(/external texture "video" is required/);
   missingFrameEncoder.destroy();
   const wrongSizeEncoder = device.createCommandEncoder({id: 'wrong-size-external-frame'});
-  t.throws(
+  expect(
     () =>
       compiled.encode(wrongSizeEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 0}},
         externalTextures: {video: {texture: wrongSizeExternalTexture, frameId: 0}}
       }),
-    /incompatible dimensions/,
     'external frame dimensions must match the compiled contract'
-  );
+  ).toThrow(/incompatible dimensions/);
   wrongSizeEncoder.destroy();
   const firstFrameEncoder = device.createCommandEncoder({id: 'external-frame-0'});
   compiled.encode(firstFrameEncoder, {
@@ -621,30 +603,30 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     externalTextures: {video: {texture: firstExternalTexture, frameId: 0}}
   });
   firstFrameEncoder.destroy();
-  t.equal(resolvedExternalTextures[0], firstExternalTexture, 'first frame resolves its snapshot');
+  expect(resolvedExternalTextures[0], 'first frame resolves its snapshot').toBe(
+    firstExternalTexture
+  );
   const reusedFrameEncoder = device.createCommandEncoder({id: 'reused-external-frame'});
-  t.throws(
+  expect(
     () =>
       compiled.encode(reusedFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 1}},
         externalTextures: {video: {texture: firstExternalTexture, frameId: 1}}
       }),
-    /requires a fresh binding/,
     'the same opaque external binding cannot cross frame boundaries'
-  );
+  ).toThrow(/requires a fresh binding/);
   reusedFrameEncoder.destroy();
   const mixedFrameEncoder = device.createCommandEncoder({id: 'mixed-external-frame'});
-  t.throws(
+  expect(
     () =>
       compiled.encode(mixedFrameEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 1}},
         externalTextures: {video: {texture: secondExternalTexture, frameId: 2}}
       }),
-    /must share one frameId/,
     'ordinary and external frame imports share one coherent frame ID'
-  );
+  ).toThrow(/must share one frameId/);
   mixedFrameEncoder.destroy();
   const secondFrameEncoder = device.createCommandEncoder({id: 'external-frame-1'});
   compiled.encode(secondFrameEncoder, {
@@ -653,41 +635,41 @@ test('GPUCommandGraph enforces sampled-only external texture frames', async t =>
     externalTextures: {video: {texture: secondExternalTexture, frameId: 1}}
   });
   secondFrameEncoder.destroy();
-  t.equal(
-    resolvedExternalTextures[1],
-    secondExternalTexture,
-    'the next frame resolves a fresh binding'
+  expect(resolvedExternalTextures[1], 'the next frame resolves a fresh binding').toBe(
+    secondExternalTexture
   );
   const nonconsecutiveReuseEncoder = device.createCommandEncoder({
     id: 'nonconsecutive-reused-external-frame'
   });
-  t.throws(
+  expect(
     () =>
       compiled.encode(nonconsecutiveReuseEncoder, {
         parameters: undefined,
         frameTextures: {color: {texture: frameTexture, frameId: 2}},
         externalTextures: {video: {texture: firstExternalTexture, frameId: 2}}
       }),
-    /requires a fresh binding/,
     'an expired binding cannot be reused after an intervening frame'
-  );
+  ).toThrow(/requires a fresh binding/);
   nonconsecutiveReuseEncoder.destroy();
   compiled.destroy();
-  t.notOk(firstExternalTexture.destroyed, 'compiled graph leaves external bindings caller-owned');
-  t.notOk(secondExternalTexture.destroyed, 'replacement external binding remains caller-owned');
+  expect(
+    Boolean(firstExternalTexture.destroyed),
+    'compiled graph leaves external bindings caller-owned'
+  ).toBe(false);
+  expect(
+    Boolean(secondExternalTexture.destroyed),
+    'replacement external binding remains caller-owned'
+  ).toBe(false);
   firstExternalTexture.destroy();
   secondExternalTexture.destroy();
   wrongSizeExternalTexture.destroy();
   frameTexture.destroy();
   externalTextureSampler.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph tracks texture subresources and reuses compatible transients', async t => {
+it('GPUCommandGraph tracks texture subresources and reuses compatible transients', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const disjointGraph = new GPUCommandGraph(device, {id: 'disjoint-subresources'});
@@ -719,11 +701,10 @@ test('GPUCommandGraph tracks texture subresources and reuses compatible transien
     compile: () => ({encode: () => {}})
   });
   const disjointCompiled = disjointGraph.compile();
-  t.deepEqual(
+  expect(
     disjointCompiled.stats.nodeOrder,
-    ['write-mip-zero', 'read-mip-one'],
     'disjoint subresources do not create a reverse hazard cycle'
-  );
+  ).toEqual(['write-mip-zero', 'read-mip-one']);
   disjointCompiled.destroy();
 
   const overlapGraph = new GPUCommandGraph(device, {id: 'overlap-subresources'});
@@ -750,7 +731,9 @@ test('GPUCommandGraph tracks texture subresources and reuses compatible transien
     resources: [{texture: overlapMip, usage: 'storage-write'}],
     compile: () => ({encode: () => {}})
   });
-  t.throws(() => overlapGraph.compile(), /dependency cycle/, 'overlapping view hazard is detected');
+  expect(() => overlapGraph.compile(), 'overlapping view hazard is detected').toThrow(
+    /dependency cycle/
+  );
 
   const reuseGraph = new GPUCommandGraph(device, {id: 'texture-reuse'});
   const first = reuseGraph.createTransientTexture({
@@ -789,25 +772,28 @@ test('GPUCommandGraph tracks texture subresources and reuses compatible transien
     compile: () => ({encode: () => {}})
   });
   const reused = reuseGraph.compile();
-  t.equal(reused.stats.logicalTransientTextureCount, 2, 'two logical textures are tracked');
-  t.equal(reused.stats.physicalTransientTextureCount, 1, 'compatible lifetimes share texture');
-  t.equal(reused.stats.logicalTextureCount, 2, 'logical texture count includes both transients');
-  t.equal(reused.stats.logicalTextureBytes, 512, 'logical texture bytes include both transients');
-  t.equal(
-    reused.stats.physicalTransientResourceBytes,
-    256,
-    'owned transient memory reflects physical texture reuse'
+  expect(reused.stats.logicalTransientTextureCount, 'two logical textures are tracked').toBe(2);
+  expect(reused.stats.physicalTransientTextureCount, 'compatible lifetimes share texture').toBe(1);
+  expect(reused.stats.logicalTextureCount, 'logical texture count includes both transients').toBe(
+    2
   );
-  t.ok(reused.stats.reusedTransientTextureBytes > 0, 'texture reuse reports saved bytes');
+  expect(reused.stats.logicalTextureBytes, 'logical texture bytes include both transients').toBe(
+    512
+  );
+  expect(
+    reused.stats.physicalTransientResourceBytes,
+    'owned transient memory reflects physical texture reuse'
+  ).toBe(256);
+  expect(
+    Boolean(reused.stats.reusedTransientTextureBytes > 0),
+    'texture reuse reports saved bytes'
+  ).toBe(true);
   reused.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph composes storage texture output with sampled rendering', async t => {
+it('GPUCommandGraph composes storage texture output with sampled rendering', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'storage-sampled'});
@@ -913,18 +899,20 @@ test('GPUCommandGraph composes storage texture output with sampled rendering', a
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
   const pixels = await readPixels(outputTexture, 4, 4);
-  t.ok(pixels[0] > 240 && pixels[1] > 50, 'sampled render observes storage texture writes');
+  expect(
+    Boolean(pixels[0] > 240 && pixels[1] > 50),
+    'sampled render observes storage texture writes'
+  ).toBe(true);
   compiled.destroy();
-  t.notOk(outputTexture.destroyed, 'imported output texture remains caller-owned');
+  expect(Boolean(outputTexture.destroyed), 'imported output texture remains caller-owned').toBe(
+    false
+  );
   outputTexture.destroy();
-  t.end();
 });
 
-test('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels', async t => {
+it('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const defaultReadback = makePickingReadbackBuffer(device, 'picking-readback-default');
@@ -975,46 +963,42 @@ test('GPUIndexPickingTarget renders stable integer IDs and copies dynamic pixels
   target.addReadbackPass({after: 'pick-render', getPixel: parameters => parameters.pixel});
   const compiled = graph.compile();
   await encodePick(device, compiled, [0, 0]);
-  t.deepEqual(
+  expect(
     decodeGPUIndexPickInfo(await defaultReadback.readAsync(0, 8)),
-    {objectIndex: 7, batchIndex: null},
     'left pixel preserves a stable object without a batch ID'
-  );
+  ).toEqual({objectIndex: 7, batchIndex: null});
   const replacementReadback = makePickingReadbackBuffer(device, 'picking-readback-replacement');
   await encodePick(device, compiled, [3, 0], replacementReadback, target.readback.id);
-  t.deepEqual(
+  expect(
     decodeGPUIndexPickInfo(await replacementReadback.readAsync(0, 8)),
-    {objectIndex: 9, batchIndex: 3},
     'per-encoding staging override returns second stable ID'
-  );
+  ).toEqual({objectIndex: 9, batchIndex: 3});
   const backgroundReadback = makePickingReadbackBuffer(device, 'picking-readback-background');
   await encodePick(device, compiled, [1, 3], backgroundReadback, target.readback.id);
-  t.deepEqual(
+  expect(
     decodeGPUIndexPickInfo(await backgroundReadback.readAsync(0, 8)),
-    {objectIndex: null, batchIndex: null},
     'cleared background decodes to no pick'
-  );
-  t.throws(
+  ).toEqual({objectIndex: null, batchIndex: null});
+  expect(
     () =>
       compiled.encode(device.createCommandEncoder({id: 'picking-out-of-range'}), {
         parameters: {pixel: [4, 0]}
       }),
-    /outside 4x4 target/,
     'out-of-range dynamic pixel is rejected'
-  );
+  ).toThrow(/outside 4x4 target/);
   compiled.destroy();
-  t.notOk(defaultReadback.destroyed, 'compiled graph preserves caller-owned staging buffer');
+  expect(
+    Boolean(defaultReadback.destroyed),
+    'compiled graph preserves caller-owned staging buffer'
+  ).toBe(false);
   defaultReadback.destroy();
   replacementReadback.destroy();
   backgroundReadback.destroy();
-  t.end();
 });
 
-test('GPUIndexPickingTarget reduces regions through a reusable readback ring', async t => {
+it('GPUIndexPickingTarget reduces regions through a reusable readback ring', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const capacity = 6;
@@ -1095,12 +1079,15 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
 
   const firstTicket = ring.tryAcquire();
   const reservedTicket = ring.tryAcquire();
-  t.ok(firstTicket && reservedTicket, 'all configured staging slots can be reserved');
-  t.equal(ring.tryAcquire(), null, 'tryAcquire exposes drop-on-pressure policy');
+  expect(
+    Boolean(firstTicket && reservedTicket),
+    'all configured staging slots can be reserved'
+  ).toBe(true);
+  expect(ring.tryAcquire(), 'tryAcquire exposes drop-on-pressure policy').toBe(null);
   const waitingTicketPromise = ring.acquire();
   reservedTicket?.cancel();
   const waitingTicket = await waitingTicketPromise;
-  t.ok(waitingTicket, 'acquire waits for the next released slot');
+  expect(Boolean(waitingTicket), 'acquire waits for the next released slot').toBe(true);
   waitingTicket.cancel();
 
   const firstEncoder = device.createCommandEncoder({id: 'pick-region-first'});
@@ -1108,17 +1095,19 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   firstTicket?.copyFrom(firstEncoder, resultBuffer);
   device.submit(firstEncoder.finish());
   const firstResult = decodeGPUIndexPickRegion(await firstTicket!.read());
-  t.equal(firstResult.count, 12, 'count includes every non-background covered pixel');
-  t.equal(firstResult.picks.length, capacity, 'stored pairs stop at caller capacity');
-  t.ok(firstResult.overflow, 'overflow reports truncated results');
-  t.ok(
-    firstResult.picks.every(
-      pick =>
-        (pick.objectIndex === 7 && pick.batchIndex === null) ||
-        (pick.objectIndex === 9 && pick.batchIndex === 3)
+  expect(firstResult.count, 'count includes every non-background covered pixel').toBe(12);
+  expect(firstResult.picks.length, 'stored pairs stop at caller capacity').toBe(capacity);
+  expect(Boolean(firstResult.overflow), 'overflow reports truncated results').toBe(true);
+  expect(
+    Boolean(
+      firstResult.picks.every(
+        pick =>
+          (pick.objectIndex === 7 && pick.batchIndex === null) ||
+          (pick.objectIndex === 9 && pick.batchIndex === 3)
+      )
     ),
     'stable object IDs survive collection with optional batch IDs'
-  );
+  ).toBe(true);
 
   regionBuffer.write(new Uint32Array([0, 0, 2, 3]));
   const exactTicket = ring.tryAcquire();
@@ -1127,9 +1116,9 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   exactTicket?.copyFrom(exactEncoder, resultBuffer);
   device.submit(exactEncoder.finish());
   const exactResult = decodeGPUIndexPickRegion(await exactTicket!.read());
-  t.equal(exactResult.count, capacity, 'exact-capacity selection reports the complete count');
-  t.equal(exactResult.picks.length, capacity, 'exact-capacity selection stores every pair');
-  t.notOk(exactResult.overflow, 'exact capacity does not report overflow');
+  expect(exactResult.count, 'exact-capacity selection reports the complete count').toBe(capacity);
+  expect(exactResult.picks.length, 'exact-capacity selection stores every pair').toBe(capacity);
+  expect(Boolean(exactResult.overflow), 'exact capacity does not report overflow').toBe(false);
 
   regionBuffer.write(new Uint32Array([0, 0, 0, 3]));
   const emptyTicket = ring.tryAcquire();
@@ -1137,24 +1126,22 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
   compiled.encode(emptyEncoder, {parameters: undefined});
   emptyTicket?.copyFrom(emptyEncoder, resultBuffer);
   device.submit(emptyEncoder.finish());
-  t.deepEqual(
+  expect(
     decodeGPUIndexPickRegion(await emptyTicket!.read()),
-    {picks: [], count: 0, overflow: false},
     'empty rectangles clear prior results'
-  );
+  ).toEqual({picks: [], count: 0, overflow: false});
 
   regionBuffer.write(new Uint32Array([0, 0, 1, 1]));
   const secondTicket = ring.tryAcquire();
-  t.ok(secondTicket, 'mapped slot is reusable after read completion');
+  expect(Boolean(secondTicket), 'mapped slot is reusable after read completion').toBe(true);
   const secondEncoder = device.createCommandEncoder({id: 'pick-region-second'});
   compiled.encode(secondEncoder, {parameters: undefined});
   secondTicket?.copyFrom(secondEncoder, resultBuffer);
   device.submit(secondEncoder.finish());
-  t.deepEqual(
+  expect(
     decodeGPUIndexPickRegion(await secondTicket!.read()),
-    {picks: [{objectIndex: 7, batchIndex: null}], count: 1, overflow: false},
     'GPU-resident rectangle updates produce exact results without rebuilding the graph'
-  );
+  ).toEqual({picks: [{objectIndex: 7, batchIndex: null}], count: 1, overflow: false});
 
   const heldTicket = ring.tryAcquire();
   const cancelledTicket = ring.tryAcquire();
@@ -1167,18 +1154,15 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
     error => String(error)
   );
   cancelledTicket?.cancel();
-  t.match(
-    await cancelledRead,
-    /cancelled/,
-    'in-progress cancellation drains and discards its slot'
+  expect(await cancelledRead, 'in-progress cancellation drains and discards its slot').toMatch(
+    /cancelled/
   );
-  t.equal(
+  expect(
     ring.availableSlotCount,
-    1,
     'a later ticket can complete while an earlier encoded ticket remains reserved'
-  );
+  ).toBe(1);
   await heldTicket?.read();
-  t.equal(ring.availableSlotCount, 2, 'out-of-order completion eventually releases every slot');
+  expect(ring.availableSlotCount, 'out-of-order completion eventually releases every slot').toBe(2);
 
   const pendingTicket = ring.tryAcquire();
   const secondPendingTicket = ring.tryAcquire();
@@ -1188,13 +1172,14 @@ test('GPUIndexPickingTarget reduces regions through a reusable readback ring', a
     error => String(error)
   );
   ring.destroy();
-  t.match(await rejectionMessage, /destroyed/, 'destroy rejects pending backpressure waiters');
+  expect(await rejectionMessage, 'destroy rejects pending backpressure waiters').toMatch(
+    /destroyed/
+  );
   pendingTicket?.cancel();
   secondPendingTicket?.cancel();
   compiled.destroy();
   regionBuffer.destroy();
   resultBuffer.destroy();
-  t.end();
 });
 
 function makePickingReadbackBuffer(device: Device, id: string): Buffer {
@@ -1246,11 +1231,9 @@ async function readPixels(texture: Texture, width: number, height: number): Prom
   }
 }
 
-test('GPUCommandGraph rejects texture imports from another device', async t => {
+it('GPUCommandGraph rejects texture imports from another device', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const nullDevice = await getNullTestDevice();
@@ -1261,7 +1244,7 @@ test('GPUCommandGraph rejects texture imports from another device', async t => {
     usage: Texture.SAMPLE
   });
   const graph = new GPUCommandGraph(device);
-  t.throws(
+  expect(
     () =>
       graph.importTexture(
         {
@@ -1273,9 +1256,7 @@ test('GPUCommandGraph rejects texture imports from another device', async t => {
         },
         wrongDeviceTexture
       ),
-    /another device/,
     'wrong-device texture import is rejected'
-  );
+  ).toThrow(/another device/);
   wrongDeviceTexture.destroy();
-  t.end();
 });

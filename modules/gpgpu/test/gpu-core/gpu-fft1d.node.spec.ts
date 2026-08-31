@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -12,13 +13,12 @@ import {
   GPU_FFT1D_MIN_LENGTH,
   makeGPUFFT1DStats
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUFFT1DShaderSource} from '../../src/gpu-core/gpu-fft1d';
 import {GPU_FFT2D_SHADER} from '../../src/gpu-core/gpu-fft2d-shaders';
 
-test('GPUFFT1D publishes bounded batched radix-2 plans', testCase => {
-  testCase.deepEqual(makeGPUFFT1DStats(8, 3), {
+it('GPUFFT1D publishes bounded batched radix-2 plans', () => {
+  expect(makeGPUFFT1DStats(8, 3)).toEqual({
     length: 8,
     batchCount: 3,
     elementCount: 24,
@@ -29,53 +29,49 @@ test('GPUFFT1D publishes bounded batched radix-2 plans', testCase => {
     scratchBufferByteLength: 192,
     workgroupSize: 256
   });
-  testCase.equal(GPU_FFT1D_MIN_LENGTH, 2, 'minimum length is explicit');
-  testCase.equal(GPU_FFT1D_MAX_LENGTH, 2048, 'maximum length is explicit');
-  testCase.equal(makeGPUFFT1DStats(2).passCount, 2, 'minimum plan has one butterfly');
-  testCase.equal(makeGPUFFT1DStats(2048).passCount, 12, 'maximum plan has eleven butterflies');
-  testCase.throws(() => makeGPUFFT1DStats(1), /from 2 through 2048/);
-  testCase.throws(() => makeGPUFFT1DStats(12), /power of two/);
-  testCase.throws(() => makeGPUFFT1DStats(8, 0), /positive integer/);
-  testCase.end();
+  expect(GPU_FFT1D_MIN_LENGTH, 'minimum length is explicit').toBe(2);
+  expect(GPU_FFT1D_MAX_LENGTH, 'maximum length is explicit').toBe(2048);
+  expect(makeGPUFFT1DStats(2).passCount, 'minimum plan has one butterfly').toBe(2);
+  expect(makeGPUFFT1DStats(2048).passCount, 'maximum plan has eleven butterflies').toBe(12);
+  expect(() => makeGPUFFT1DStats(1)).toThrow(/from 2 through 2048/);
+  expect(() => makeGPUFFT1DStats(12)).toThrow(/power of two/);
+  expect(() => makeGPUFFT1DStats(8, 0)).toThrow(/positive integer/);
 });
 
-test('GPUFFT1D support selects portable and subgroup strategies explicitly', testCase => {
+it('GPUFFT1D support selects portable and subgroup strategies explicitly', () => {
   const portableDevice = makeSupportDevice();
   const portableSupport = getGPUFFT1DSupport(portableDevice, {length: 256, batchCount: 4});
-  testCase.equal(portableSupport.supported, true);
-  testCase.equal(portableSupport.strategy, 'portable');
-  testCase.equal(portableSupport.subgroupStageCount, 0);
+  expect(portableSupport.supported).toBe(true);
+  expect(portableSupport.strategy).toBe('portable');
+  expect(portableSupport.subgroupStageCount).toBe(0);
 
   const subgroupDevice = makeSupportDevice({subgroups: true, subgroupMinSize: 32});
   const subgroupSupport = getGPUFFT1DSupport(subgroupDevice, {
     length: 256,
     batchCount: 4
   });
-  testCase.equal(subgroupSupport.strategy, 'subgroups');
-  testCase.equal(subgroupSupport.subgroupStageCount, 5, 'spans through 32 use subgroup shuffles');
-  testCase.equal(
+  expect(subgroupSupport.strategy).toBe('subgroups');
+  expect(subgroupSupport.subgroupStageCount, 'spans through 32 use subgroup shuffles').toBe(5);
+  expect(
     getGPUFFT1DStrategy(subgroupDevice, 'portable'),
-    'portable',
     'portable can be forced for benchmarking'
-  );
-  testCase.throws(() => getGPUFFT1DStrategy(portableDevice, 'subgroups'), /not supported/);
+  ).toBe('portable');
+  expect(() => getGPUFFT1DStrategy(portableDevice, 'subgroups')).toThrow(/not supported/);
 
   const smallStorageDevice = makeSupportDevice({maxStorageBufferBindingSize: 1024});
   const smallStorageSupport = getGPUFFT1DSupport(smallStorageDevice, {
     length: 256,
     batchCount: 1
   });
-  testCase.equal(smallStorageSupport.supported, false);
-  testCase.match(smallStorageSupport.reason || '', /maxStorageBufferBindingSize/);
-  testCase.equal(
+  expect(smallStorageSupport.supported).toBe(false);
+  expect(smallStorageSupport.reason || '').toMatch(/maxStorageBufferBindingSize/);
+  expect(
     getGPUFFT1DSupport(portableDevice, {length: 7}).stats,
-    undefined,
     'invalid radix-2 lengths do not publish a plan'
-  );
-  testCase.end();
+  ).toBe(undefined);
 });
 
-test('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership', testCase => {
+it('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -89,13 +85,12 @@ test('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership
   });
   const input = graph.createDataView(inputHandle, {format: 'float32x2', length: 8});
   const output = graph.createDataView(outputHandle, {format: 'float32x2', length: 8});
-  testCase.doesNotThrow(
+  expect(
     () => new GPUFFT1D({input, output, length: 4, batchCount: 2}),
     'packed batched views are accepted'
-  );
+  ).not.toThrow();
   const shortOutput = graph.createDataView(outputHandle, {format: 'float32x2', length: 7});
-  testCase.throws(
-    () => new GPUFFT1D({input, output: shortOutput, length: 4, batchCount: 2}),
+  expect(() => new GPUFFT1D({input, output: shortOutput, length: 4, batchCount: 2})).toThrow(
     /output must contain at least/
   );
   const stridedInput = graph.createDataView(inputHandle, {
@@ -103,12 +98,9 @@ test('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership
     length: 4,
     byteStride: 16
   });
-  testCase.throws(() => new GPUFFT1D({input: stridedInput, output, length: 4}), /must be packed/);
+  expect(() => new GPUFFT1D({input: stridedInput, output, length: 4})).toThrow(/must be packed/);
   const aliasedOutput = graph.createDataView(inputHandle, {format: 'float32x2', length: 8});
-  testCase.throws(
-    () => new GPUFFT1D({input, output: aliasedOutput, length: 8}),
-    /separate buffers/
-  );
+  expect(() => new GPUFFT1D({input, output: aliasedOutput, length: 8})).toThrow(/separate buffers/);
 
   const otherGraph = new GPUCommandGraph(makeSupportDevice());
   const otherHandle = otherGraph.importBuffer({
@@ -117,14 +109,12 @@ test('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership
     usage: Buffer.STORAGE
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32x2', length: 8});
-  testCase.throws(
-    () => new GPUFFT1D({input, output: otherOutput, length: 8}).addToGraph(graph),
+  expect(() => new GPUFFT1D({input, output: otherOutput, length: 8}).addToGraph(graph)).toThrow(
     /different GPUCommandGraph/
   );
-  testCase.end();
 });
 
-test('GPUFFT1D shaders share FFT helpers and expose portable and subgroup butterflies', testCase => {
+it('GPUFFT1D shaders share FFT helpers and expose portable and subgroup butterflies', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -156,16 +146,12 @@ test('GPUFFT1D shaders share FFT helpers and expose portable and subgroup butter
     {...baseProps, pass: {kind: 'butterfly', stage: 2}, useSubgroups: true},
     {x: 1, y: 1, z: 1}
   );
-  testCase.deepEqual(
-    new WgslReflect(portableSource).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(portableSource, /multiplyComplex/, 'portable shader uses shared complex math');
-  testCase.match(subgroupSource, /enable subgroups/, 'subgroup extension is capability-gated');
-  testCase.match(subgroupSource, /subgroupShuffleXor/, 'eligible butterflies shuffle partners');
-  testCase.match(subgroupSource, /subgroupMappingMatches/, 'unexpected lane mappings fall back');
-  testCase.match(GPU_FFT2D_SHADER, /GPU_FFT_PI/, 'GPUFFT2D consumes the same shared helpers');
-  testCase.end();
+  expect(new WgslReflect(portableSource).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(portableSource, 'portable shader uses shared complex math').toMatch(/multiplyComplex/);
+  expect(subgroupSource, 'subgroup extension is capability-gated').toMatch(/enable subgroups/);
+  expect(subgroupSource, 'eligible butterflies shuffle partners').toMatch(/subgroupShuffleXor/);
+  expect(subgroupSource, 'unexpected lane mappings fall back').toMatch(/subgroupMappingMatches/);
+  expect(GPU_FFT2D_SHADER, 'GPUFFT2D consumes the same shared helpers').toMatch(/GPU_FFT_PI/);
 });
 
 function makeSupportDevice(
