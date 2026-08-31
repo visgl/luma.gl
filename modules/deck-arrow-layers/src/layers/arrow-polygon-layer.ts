@@ -14,7 +14,6 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowPolygonRenderer,
-  readArrowGPUVectorAsync,
   type ArrowColorType,
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
@@ -36,13 +35,13 @@ import {POLYGON_STORAGE_SHADER_LAYOUT} from '@luma.gl/experimental/models';
 import {Vector} from 'apache-arrow';
 import {
   assertArrowLayerColorGPUVector,
-  convertArrowLayerColorGPUVector,
   convertArrowLayerColorVector,
   getArrowLayerInputNullValue,
   getArrowLayerInputSource,
   inspectArrowLayerColumn,
   isArrowLayerColor,
   isArrowLayerGPUVector,
+  readArrowLayerGPUVector,
   type ArrowLayerInput
 } from './arrow-layer-input';
 
@@ -426,20 +425,7 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
       props.polygons && typeof props.polygons !== 'string' ? props.polygons.length : undefined;
     assertArrowLayerColorGPUVector('ArrowPolygonLayer color', colorSource, polygonRowCount);
     renderer.setProps({data: null});
-    void (async () => {
-      const normalized = await convertArrowLayerColorGPUVector(
-        this.context.device,
-        colorSource,
-        `${this.id}-colors`
-      );
-      try {
-        return await readArrowGPUVectorAsync(normalized.vector);
-      } finally {
-        if (normalized.converted) {
-          normalized.vector.destroy();
-        }
-      }
-    })()
+    void readArrowLayerGPUVector(this.context.device, colorSource, `${this.id}-colors`, true)
       .then(colorVector => {
         if (
           this.getRendererOrNull() === renderer &&

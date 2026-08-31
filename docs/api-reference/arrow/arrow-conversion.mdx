@@ -101,6 +101,30 @@ Reusable storage state can be built separately with `createArrowPathStorageState
 storage path surface by reading prepared `List<Float32>` timestamps aligned with
 path vertices.
 
+## Color Columns
+
+`canConvertColors()`, `convertColors()`, and `convertArrowColors()` normalize
+fixed-width RGB and RGBA rows into the canonical
+`GPUVector<'unorm8x4'>` representation used by renderers. Supported Arrow
+sources are `FixedSizeList<Uint8 | Float16 | Float32, 3 | 4>`; equivalent
+fixed-width GPU vectors can enter through `convertColors()` without an Arrow
+round trip.
+
+Uint8 channels are preserved, while Float16 and Float32 channels are clamped to
+`[0, 1]`, scaled to `[0, 255]`, and rounded. Three-channel inputs receive an
+opaque alpha channel. This is a normalized display/style-color conversion, not
+a lossless scene-linear or HDR conversion for values outside `[0, 1]`.
+
+Conversion preserves source chunk boundaries and nullable row validity. The
+returned vector owns distinct output buffers; caller-owned input buffers remain
+borrowed. WebGPU performs the conversion with compute, while WebGL devices use
+the equivalent CPU/readback fallback.
+
+Arrow path, polygon, and text layers apply this normalization automatically to
+fixed-width per-row colors. Specialized nested per-vertex or per-character
+`vertex-list<unorm8x4>` inputs already satisfy the renderer contract and pass
+through without fixed-width normalization.
+
 ## Matrix Columns
 
 Matrix Arrow columns can carry explicit vis.gl matrix shape, order, and physical

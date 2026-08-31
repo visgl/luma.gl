@@ -110,6 +110,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/arrow** NEW MODULE
 
+- **Normalized Arrow color conversion** - `convertArrowColors()` and `convertColors()` lower chunked Uint8, Float16, and Float32 RGB/RGBA rows into canonical `unorm8x4` GPU vectors with opaque RGB expansion, preserved nullable-row metadata, caller-owned input lifetime, and WebGPU compute plus WebGL fallback. Arrow path, polygon, and text layers consume the same conversion boundary.
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
 - **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
 - **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
