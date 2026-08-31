@@ -7,8 +7,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {decodeGPUIndexPickInfo, INDEX_PICKING_READBACK_BYTE_LENGTH} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import GPUGraphExplorerAnimationLoopTemplate from '../../../../examples/experimental/gpu-graph-explorer/app';
 import {
   GRAPH_EXPLORER_VERTEX_COUNTS,
@@ -45,11 +44,9 @@ type ExplorerDashboardBindings = {
   writeViewUniforms(width: number, height: number): void;
 };
 
-test('GPU Graph explorer constructs actual GPU models and computes source-aligned graph analytics', async tapeTest => {
+it('GPU Graph explorer constructs actual GPU models and computes source-aligned graph analytics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -57,48 +54,41 @@ test('GPU Graph explorer constructs actual GPU models and computes source-aligne
   let explorer: GPUGraphExplorerAnimationLoopTemplate | undefined;
   try {
     explorer = createExplorer(device);
-    tapeTest.equal(submitSpy.mock.calls.length, 0, 'construction never submits hidden GPU work');
+    expect(submitSpy.mock.calls.length, 'construction never submits hidden GPU work').toBe(0);
     submitSpy.mockRestore();
 
     const dataset = makeGraphExplorerDataset();
-    tapeTest.equal(
-      explorer.graph.vertexCount,
-      dataset.vertexCount,
-      'source vertex identities stay stable'
+    expect(explorer.graph.vertexCount, 'source vertex identities stay stable').toBe(
+      dataset.vertexCount
     );
-    tapeTest.deepEqual(
+    expect(
       explorer.graph.sourceVertices.data.map(chunk => chunk.length),
-      dataset.sourceChunks.map(chunk => chunk.length),
       'source edge vectors retain original nonempty, empty, and nonempty batches'
-    );
-    tapeTest.deepEqual(
+    ).toEqual(dataset.sourceChunks.map(chunk => chunk.length));
+    expect(
       explorer.edgeModels.map(model => model.chunkIndex),
-      [0, 2],
       'each nonempty original edge batch has its own directly bound edge model'
-    );
-    tapeTest.ok(
-      explorer.nodeModel.pipeline,
+    ).toEqual([0, 2]);
+    expect(
+      Boolean(explorer.nodeModel.pipeline),
       'actual WebGPU node shader and vertex pipeline compile'
-    );
-    tapeTest.ok(
-      explorer.pickingModel.pipeline,
+    ).toBe(true);
+    expect(
+      Boolean(explorer.pickingModel.pipeline),
       'actual integer picking shader and pipeline compile'
-    );
-    tapeTest.equal(
+    ).toBe(true);
+    expect(
       explorer.nodeModel.bindings['degrees'],
-      explorer.degree.output.data[0].buffer,
       'node color and sizing consume the actual GPU-computed degree buffer'
-    );
-    tapeTest.equal(
+    ).toBe(explorer.degree.output.data[0].buffer);
+    expect(
       explorer.pickingModel.bindings['degrees'],
-      explorer.degree.output.data[0].buffer,
       'integer picking uses the same degree-dependent radius as visible nodes'
-    );
-    tapeTest.equal(
+    ).toBe(explorer.degree.output.data[0].buffer);
+    expect(
       explorer.layout.positions.data[0].buffer.usage & (Buffer.STORAGE | Buffer.VERTEX),
-      Buffer.STORAGE | Buffer.VERTEX,
       'progressive layout coordinates are the same physical render vertex allocation'
-    );
+    ).toBe(Buffer.STORAGE | Buffer.VERTEX);
 
     executeAnalysis(device, explorer);
     const [
@@ -121,73 +111,51 @@ test('GPU Graph explorer constructs actual GPU models and computes source-aligne
       readUint32Vector(explorer.topology.forward.overflow)
     ]);
 
-    tapeTest.equal(
-      forwardCount[0],
-      explorer.graph.edgeCount,
-      'GPU builds every original directed edge'
+    expect(forwardCount[0], 'GPU builds every original directed edge').toBe(
+      explorer.graph.edgeCount
     );
-    tapeTest.equal(reverseCount[0], explorer.graph.edgeCount, 'GPU builds full reverse adjacency');
-    tapeTest.equal(invalid[0], 0, 'deterministic dataset contains no invalid source identifiers');
-    tapeTest.equal(overflow[0], 0, 'caller-owned graph adjacency has adequate explicit capacity');
-    tapeTest.equal(
+    expect(reverseCount[0], 'GPU builds full reverse adjacency').toBe(explorer.graph.edgeCount);
+    expect(invalid[0], 'deterministic dataset contains no invalid source identifiers').toBe(0);
+    expect(overflow[0], 'caller-owned graph adjacency has adequate explicit capacity').toBe(0);
+    expect(
       degrees.reduce((sum, degree) => sum + degree, 0),
-      explorer.graph.edgeCount,
       'GPU degree outputs exactly account for all original source edges'
-    );
-    tapeTest.equal(degrees[dataset.vertexCount - 1], 0, 'final isolated vertex has degree zero');
-    tapeTest.equal(
-      componentLabels[0],
-      0,
-      'first community retains minimum stable source identifier'
-    );
-    tapeTest.equal(
-      componentLabels[32],
-      0,
-      'one actual bridge joins the first two weak communities'
-    );
-    tapeTest.equal(communityLabels[0], 0, 'GPU label propagation preserves the first community');
-    tapeTest.equal(
+    ).toBe(explorer.graph.edgeCount);
+    expect(degrees[dataset.vertexCount - 1], 'final isolated vertex has degree zero').toBe(0);
+    expect(componentLabels[0], 'first community retains minimum stable source identifier').toBe(0);
+    expect(componentLabels[32], 'one actual bridge joins the first two weak communities').toBe(0);
+    expect(communityLabels[0], 'GPU label propagation preserves the first community').toBe(0);
+    expect(
       communityLabels[32],
-      32,
       'the same bridge leaves the second majority-vote community visibly distinct'
-    );
-    tapeTest.notEqual(
+    ).toBe(32);
+    expect(
       communityLabels[32],
-      componentLabels[32],
       'true GPU community coloring is not a relabeled weak-component result'
-    );
-    tapeTest.equal(componentLabels[64], 64, 'third disconnected community keeps its own component');
-    tapeTest.equal(
-      componentLabels[96],
-      96,
-      'fourth disconnected community keeps its own component'
-    );
-    tapeTest.equal(
+    ).not.toBe(componentLabels[32]);
+    expect(componentLabels[64], 'third disconnected community keeps its own component').toBe(64);
+    expect(componentLabels[96], 'fourth disconnected community keeps its own component').toBe(96);
+    expect(
       componentLabels[dataset.vertexCount - 1],
-      dataset.vertexCount - 1,
       'isolated node retains its own stable component identifier'
-    );
-    tapeTest.ok(
-      importance.every(score => Number.isFinite(score) && score > 0),
+    ).toBe(dataset.vertexCount - 1);
+    expect(
+      Boolean(importance.every(score => Number.isFinite(score) && score > 0)),
       'real dangling-aware PageRank supplies positive node sizing values'
-    );
-    tapeTest.ok(
-      Math.abs(importance.reduce((sum, score) => sum + score, 0) - 1) < 5e-5,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(importance.reduce((sum, score) => sum + score, 0) - 1) < 5e-5),
       'GPU node importance remains correctly normalized'
-    );
+    ).toBe(true);
   } finally {
     submitSpy.mockRestore();
     explorer?.onFinalize();
   }
-
-  tapeTest.end();
 });
 
-test('GPU Graph explorer renders original GPU chunks, highlights neighborhoods, pins, and picks stable nodes', async tapeTest => {
+it('GPU Graph explorer renders original GPU chunks, highlights neighborhoods, pins, and picks stable nodes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -201,11 +169,10 @@ test('GPU Graph explorer renders original GPU chunks, highlights neighborhoods, 
   try {
     explorer = createExplorer(device);
     const bindings = explorer as unknown as ExplorerGraphBindings;
-    tapeTest.deepEqual(
+    expect(
       [bindings.frameWidth, bindings.frameHeight],
-      [320, 240],
       'GPU picking uses real centered device pixels rather than assuming a one-pixel test canvas'
-    );
+    ).toEqual([320, 240]);
     color = device.createTexture({
       id: 'gpu-graph-explorer-test-color',
       format: device.preferredColorFormat,
@@ -255,23 +222,18 @@ test('GPU Graph explorer renders original GPU chunks, highlights neighborhoods, 
     ]);
     const pick = decodeGPUIndexPickInfo(bytes);
 
-    tapeTest.equal(distances[0], 0, 'selected root is highlighted at GPU hop distance zero');
-    tapeTest.ok(
-      distances.some(distance => distance === 1 || distance === 2),
+    expect(distances[0], 'selected root is highlighted at GPU hop distance zero').toBe(0);
+    expect(
+      Boolean(distances.some(distance => distance === 1 || distance === 2)),
       'GPU traversal publishes a bounded multi-hop neighborhood'
-    );
-    tapeTest.equal(mask[0], 1, 'node shader receives the source-aligned GPU selection mask');
-    tapeTest.equal(
+    ).toBe(true);
+    expect(mask[0], 'node shader receives the source-aligned GPU selection mask').toBe(1);
+    expect(
       mask[explorer.graph.vertexCount - 1],
-      0,
       'disconnected isolated nodes remain outside the highlighted component'
-    );
-    tapeTest.equal(pin[0], 1, 'dragged node remains pinned through force integration');
-    tapeTest.equal(
-      pick.objectIndex,
-      0,
-      'integer GPU picking recovers the original stable vertex ID'
-    );
+    ).toBe(0);
+    expect(pin[0], 'dragged node remains pinned through force integration').toBe(1);
+    expect(pick.objectIndex, 'integer GPU picking recovers the original stable vertex ID').toBe(0);
   } finally {
     devicePixelSizeSpy.mockRestore();
     pickingReadback?.destroy();
@@ -279,15 +241,11 @@ test('GPU Graph explorer renders original GPU chunks, highlights neighborhoods, 
     color?.destroy();
     explorer?.onFinalize();
   }
-
-  tapeTest.end();
 });
 
-test('GPU Graph explorer exposes genuine GPU analytics and only expands its own graph inspector', async tapeTest => {
+it('GPU Graph explorer exposes genuine GPU analytics and only expands its own graph inspector', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -317,106 +275,109 @@ test('GPU Graph explorer exposes genuine GPU analytics and only expands its own 
   try {
     explorer = createExplorer(device);
     const dashboard = explorer as unknown as ExplorerDashboardBindings;
-    tapeTest.equal(graphExpansion.mock.calls.length, 1, 'the graph inspector opens exactly once');
-    tapeTest.equal(
+    expect(graphExpansion.mock.calls.length, 'the graph inspector opens exactly once').toBe(1);
+    expect(
       unrelatedExpansion.mock.calls.length,
-      0,
       'unrelated collapsed example inspectors are never opened'
-    );
+    ).toBe(0);
 
     const color = host.querySelector<HTMLSelectElement>('[data-color-mode]');
     const size = host.querySelector<HTMLSelectElement>('[data-node-size]');
     const pause = host.querySelector<HTMLButtonElement>('[data-pause]');
     const edges = host.querySelector<HTMLButtonElement>('[data-edge-toggle]');
     const depth = host.querySelector<HTMLInputElement>('[data-depth]');
-    tapeTest.deepEqual(
+    expect(
       Array.from(color!.options, option => option.value),
-      ['community', 'component', 'degree', 'pagerank', 'distance'],
       'all five available GPU analytics are selectable as node colors'
-    );
-    tapeTest.deepEqual(
+    ).toEqual(['community', 'component', 'degree', 'pagerank', 'distance']);
+    expect(
       Array.from(size!.options, option => option.value),
-      ['pagerank', 'degree', 'uniform'],
       'importance, degree, and uniform node sizing are independently selectable'
-    );
+    ).toEqual(['pagerank', 'degree', 'uniform']);
 
     color!.value = 'degree';
     color!.dispatchEvent(new Event('change', {bubbles: true}));
     size!.value = 'degree';
     size!.dispatchEvent(new Event('change', {bubbles: true}));
-    tapeTest.equal(dashboard.colorMode, 'degree', 'degree coloring updates the real render state');
-    tapeTest.equal(dashboard.nodeSizeMode, 'degree', 'degree sizing updates the real render state');
-    tapeTest.ok(
-      host.querySelector('[data-graph-legend]')?.textContent?.includes('vertex degree'),
+    expect(dashboard.colorMode, 'degree coloring updates the real render state').toBe('degree');
+    expect(dashboard.nodeSizeMode, 'degree sizing updates the real render state').toBe('degree');
+    expect(
+      Boolean(host.querySelector('[data-graph-legend]')?.textContent?.includes('vertex degree')),
       'the visible legend describes the active GPU-computed color metric'
-    );
+    ).toBe(true);
 
     const uniformWrite = vi.spyOn(dashboard.viewUniforms, 'write');
     dashboard.writeViewUniforms(320, 240);
     const uniformBytes = uniformWrite.mock.calls[0][0] as Uint8Array;
-    tapeTest.equal(
+    expect(
       new DataView(uniformBytes.buffer, uniformBytes.byteOffset, uniformBytes.byteLength).getUint32(
         28,
         true
       ),
-      (2 << 1) | (1 << 4),
       'the shared node and picking uniform packs the selected genuine GPU metric modes'
-    );
+    ).toBe((2 << 1) | (1 << 4));
     uniformWrite.mockRestore();
 
     depth!.value = '4';
     depth!.dispatchEvent(new Event('input', {bubbles: true}));
-    tapeTest.equal(
+    expect(
       (await readUint32Vector(explorer.search.activeDepth!))[0],
-      4,
       'the depth slider writes the existing GPU traversal control'
-    );
+    ).toBe(4);
 
     const layoutNode = 'gpu-graph-explorer-layout-initialize';
-    tapeTest.ok(explorer.frameGraph.stats.nodeOrder.includes(layoutNode), 'layout starts active');
+    expect(
+      Boolean(explorer.frameGraph.stats.nodeOrder.includes(layoutNode)),
+      'layout starts active'
+    ).toBe(true);
     pause!.click();
-    tapeTest.equal(dashboard.paused, true, 'pausing changes actual graph execution state');
-    tapeTest.equal(pause!.getAttribute('aria-pressed'), 'true', 'pause state remains accessible');
-    tapeTest.equal(
+    expect(dashboard.paused, 'pausing changes actual graph execution state').toBe(true);
+    expect(pause!.getAttribute('aria-pressed'), 'pause state remains accessible').toBe('true');
+    expect(
       explorer.frameGraph.stats.nodeOrder.includes(layoutNode),
-      false,
       'pausing removes actual force-layout compute from the compiled frame graph'
-    );
-    tapeTest.ok(
-      explorer.frameGraph.stats.nodeOrder.includes('gpu-graph-explorer-neighborhood-initialize'),
+    ).toBe(false);
+    expect(
+      Boolean(
+        explorer.frameGraph.stats.nodeOrder.includes('gpu-graph-explorer-neighborhood-initialize')
+      ),
       'selection and neighborhood traversal remain active while layout is paused'
-    );
+    ).toBe(true);
     pause!.click();
-    tapeTest.ok(
-      explorer.frameGraph.stats.nodeOrder.includes(layoutNode),
+    expect(
+      Boolean(explorer.frameGraph.stats.nodeOrder.includes(layoutNode)),
       'resuming restores real force-layout compute'
-    );
+    ).toBe(true);
 
     edges!.click();
-    tapeTest.equal(dashboard.edgesVisible, false, 'edge visibility changes actual rendering state');
-    tapeTest.equal(edges!.getAttribute('aria-pressed'), 'false', 'edge state remains accessible');
-    tapeTest.ok(host.querySelector('[data-status]')?.textContent?.includes('depth 4'));
-    tapeTest.ok(host.querySelector('[data-graph-adapter]')?.textContent?.includes('GPU adapter:'));
-    tapeTest.ok(host.querySelector('[data-graph-memory]')?.textContent?.includes('KiB resident'));
-    tapeTest.ok(
-      host.querySelector('[data-graph-fps]')?.textContent?.includes('CPU command encoding'),
-      'telemetry identifies CPU encoding honestly instead of inventing GPU execution timings'
+    expect(dashboard.edgesVisible, 'edge visibility changes actual rendering state').toBe(false);
+    expect(edges!.getAttribute('aria-pressed'), 'edge state remains accessible').toBe('false');
+    expect(Boolean(host.querySelector('[data-status]')?.textContent?.includes('depth 4'))).toBe(
+      true
     );
-    tapeTest.equal(graphExpansion.mock.calls.length, 1, 'interaction never reopens the inspector');
+    expect(
+      Boolean(host.querySelector('[data-graph-adapter]')?.textContent?.includes('GPU adapter:'))
+    ).toBe(true);
+    expect(
+      Boolean(host.querySelector('[data-graph-memory]')?.textContent?.includes('KiB resident'))
+    ).toBe(true);
+    expect(
+      Boolean(
+        host.querySelector('[data-graph-fps]')?.textContent?.includes('CPU command encoding')
+      ),
+      'telemetry identifies CPU encoding honestly instead of inventing GPU execution timings'
+    ).toBe(true);
+    expect(graphExpansion.mock.calls.length, 'interaction never reopens the inspector').toBe(1);
   } finally {
     explorer?.onFinalize();
     graphInfoBox.remove();
     unrelatedInfoBox.remove();
   }
-
-  tapeTest.end();
 });
 
-test('GPU Graph native showcase renders every real GPU point while sampling only forces and visible original edges', async tapeTest => {
+it('GPU Graph native showcase renders every real GPU point while sampling only forces and visible original edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -430,55 +391,35 @@ test('GPU Graph native showcase renders every real GPU point while sampling only
     .mockReturnValue([65, 49]);
   try {
     explorer = createExplorer(device, 32, 'sampled', {pointMode: true, maxVisibleEdges: 4});
-    tapeTest.equal(
-      explorer.activeLayoutMode,
-      'sampled',
-      'the actual four-sample force path is used'
-    );
-    tapeTest.equal(
+    expect(explorer.activeLayoutMode, 'the actual four-sample force path is used').toBe('sampled');
+    expect(
       explorer.layout.repulsion,
-      0.0015,
       'four-sample repulsion remains positive and independent of population size'
-    );
-    tapeTest.equal(
+    ).toBe(0.0015);
+    expect(
       explorer.layout.gravity,
-      0.005,
       'bounded sampled gravity preserves visible source communities'
-    );
-    tapeTest.equal(explorer.pointMode, true, 'full-population point rendering is enabled');
-    tapeTest.equal(explorer.renderedVertexCount, 32, 'every actual original vertex stays rendered');
-    tapeTest.equal(explorer.renderedEdgeCount, 4, 'only displayed original edges are decimated');
-    tapeTest.ok(explorer.graph.edgeCount > 4, 'full GPU adjacency retains all original edge rows');
-    tapeTest.equal(
-      explorer.spatialLayout,
-      null,
-      'sampled forces do not misrepresent a spatial grid'
-    );
-    tapeTest.deepEqual(
+    ).toBe(0.005);
+    expect(explorer.pointMode, 'full-population point rendering is enabled').toBe(true);
+    expect(explorer.renderedVertexCount, 'every actual original vertex stays rendered').toBe(32);
+    expect(explorer.renderedEdgeCount, 'only displayed original edges are decimated').toBe(4);
+    expect(
+      Boolean(explorer.graph.edgeCount > 4),
+      'full GPU adjacency retains all original edge rows'
+    ).toBe(true);
+    expect(explorer.spatialLayout, 'sampled forces do not misrepresent a spatial grid').toBe(null);
+    expect(
       explorer.edgeModels.map(({model}) => model.instanceCount),
-      [2, 2],
       'edge-only detail remains source-aligned across both nonempty original batches'
+    ).toEqual([2, 2]);
+    expect(explorer.nodeModel.topology, 'nodes use a real GPU point pipeline').toBe('point-list');
+    expect(explorer.nodeModel.vertexCount, 'each source vertex produces one GPU point').toBe(1);
+    expect(explorer.nodeModel.instanceCount, 'point instances cover every graph vertex').toBe(32);
+    expect(explorer.pickingModel.topology, 'integer picking consumes real points').toBe(
+      'point-list'
     );
-    tapeTest.equal(
-      explorer.nodeModel.topology,
-      'point-list',
-      'nodes use a real GPU point pipeline'
-    );
-    tapeTest.equal(explorer.nodeModel.vertexCount, 1, 'each source vertex produces one GPU point');
-    tapeTest.equal(
-      explorer.nodeModel.instanceCount,
-      32,
-      'point instances cover every graph vertex'
-    );
-    tapeTest.equal(
-      explorer.pickingModel.topology,
-      'point-list',
-      'integer picking consumes real points'
-    );
-    tapeTest.equal(
-      explorer.pickingModel.instanceCount,
-      32,
-      'picking preserves every stable source ID'
+    expect(explorer.pickingModel.instanceCount, 'picking preserves every stable source ID').toBe(
+      32
     );
 
     const bindings = explorer as unknown as ExplorerGraphBindings;
@@ -536,24 +477,22 @@ test('GPU Graph native showcase renders every real GPU point while sampling only
         readFloat32Vector(explorer.pageRank.output),
         pickingReadback.readAsync(0, INDEX_PICKING_READBACK_BYTE_LENGTH)
       ]);
-    tapeTest.equal(forward[0], explorer.graph.edgeCount, 'GPU retains every original forward edge');
-    tapeTest.equal(reverse[0], explorer.graph.edgeCount, 'GPU retains every original reverse edge');
-    tapeTest.equal(
+    expect(forward[0], 'GPU retains every original forward edge').toBe(explorer.graph.edgeCount);
+    expect(reverse[0], 'GPU retains every original reverse edge').toBe(explorer.graph.edgeCount);
+    expect(
       degrees.reduce((sum, degree) => sum + degree, 0),
-      explorer.graph.edgeCount,
       'GPU degrees use the complete edge graph instead of its displayed subset'
-    );
-    tapeTest.equal(components[8], 0, 'actual weak components still span the source bridge');
-    tapeTest.equal(communities[8], 8, 'GPU majority-vote communities remain distinct');
-    tapeTest.ok(
-      Math.abs(importance.reduce((sum, score) => sum + score, 0) - 1) < 5e-5,
+    ).toBe(explorer.graph.edgeCount);
+    expect(components[8], 'actual weak components still span the source bridge').toBe(0);
+    expect(communities[8], 'GPU majority-vote communities remain distinct').toBe(8);
+    expect(
+      Boolean(Math.abs(importance.reduce((sum, score) => sum + score, 0) - 1) < 5e-5),
       'full-graph GPU PageRank remains normalized in sampled-force mode'
-    );
-    tapeTest.equal(
+    ).toBe(true);
+    expect(
       decodeGPUIndexPickInfo(bytes).objectIndex,
-      0,
       'actual integer GPU point picking returns the stable original source vertex'
-    );
+    ).toBe(0);
   } finally {
     devicePixelSizeSpy.mockRestore();
     pickingReadback?.destroy();
@@ -561,15 +500,11 @@ test('GPU Graph native showcase renders every real GPU point while sampling only
     color?.destroy();
     explorer?.onFinalize();
   }
-
-  tapeTest.end();
 });
 
-test('GPU Graph explorer waits for the current asynchronous GPU pick before dragging a different node', async tapeTest => {
+it('GPU Graph explorer waits for the current asynchronous GPU pick before dragging a different node', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -634,17 +569,15 @@ test('GPU Graph explorer waits for the current asynchronous GPU pick before drag
       new PointerEvent('pointermove', {pointerId: 11, clientX: 190, clientY: 135})
     );
 
-    tapeTest.equal(pinWriteSpy.mock.calls.length, 0, 'the previously selected node is not pinned');
-    tapeTest.equal(
+    expect(pinWriteSpy.mock.calls.length, 'the previously selected node is not pinned').toBe(0);
+    expect(
       positionWriteSpy.mock.calls.length,
-      0,
       'the previously selected node coordinates are not changed before GPU picking resolves'
-    );
-    tapeTest.equal(
+    ).toBe(0);
+    expect(
       velocityWriteSpy.mock.calls.length,
-      0,
       'the previously selected node velocity is not cleared while picking remains asynchronous'
-    );
+    ).toBe(0);
 
     resolveCurrentPick!(new Uint8Array(Int32Array.of(7, 0).buffer));
     await currentReadback;
@@ -652,25 +585,22 @@ test('GPU Graph explorer waits for the current asynchronous GPU pick before drag
       new PointerEvent('pointermove', {pointerId: 11, clientX: 205, clientY: 145})
     );
 
-    tapeTest.equal(pinWriteSpy.mock.calls.length, 1, 'the resolved current node is pinned once');
-    tapeTest.equal(
+    expect(pinWriteSpy.mock.calls.length, 'the resolved current node is pinned once').toBe(1);
+    expect(
       pinWriteSpy.mock.calls[0][1],
-      7 * Uint32Array.BYTES_PER_ELEMENT,
       'pinning targets the newly picked stable vertex, never the stale selected node'
-    );
-    tapeTest.equal(
+    ).toBe(7 * Uint32Array.BYTES_PER_ELEMENT);
+    expect(
       positionWriteSpy.mock.calls[0][1],
-      7 * 2 * Float32Array.BYTES_PER_ELEMENT,
       'position writes target only the newly picked vertex row'
-    );
-    tapeTest.equal(
+    ).toBe(7 * 2 * Float32Array.BYTES_PER_ELEMENT);
+    expect(
       velocityWriteSpy.mock.calls[0][1],
-      7 * 2 * Float32Array.BYTES_PER_ELEMENT,
       'velocity writes target only the newly picked vertex row'
-    );
+    ).toBe(7 * 2 * Float32Array.BYTES_PER_ELEMENT);
     const pinValues = await readUint32Vector(explorer.layout.pinned!);
-    tapeTest.equal(pinValues[0], 0, 'the old selected vertex remains unpinned on the actual GPU');
-    tapeTest.equal(pinValues[7], 1, 'the resolved drag target is pinned on the actual GPU');
+    expect(pinValues[0], 'the old selected vertex remains unpinned on the actual GPU').toBe(0);
+    expect(pinValues[7], 'the resolved drag target is pinned on the actual GPU').toBe(1);
 
     canvas.dispatchEvent(new PointerEvent('pointerup', {pointerId: 11}));
     canvas.dispatchEvent(
@@ -688,31 +618,22 @@ test('GPU Graph explorer waits for the current asynchronous GPU pick before drag
       new PointerEvent('pointermove', {pointerId: 12, clientX: 235, clientY: 170})
     );
 
-    tapeTest.equal(
+    expect(
       pinWriteSpy.mock.calls.length,
-      1,
       'a GPU pick resolving after pointer release never resurrects a stale drag'
-    );
-    tapeTest.equal(positionWriteSpy.mock.calls.length, 1, 'released pointers never move a node');
-    tapeTest.equal(
-      velocityWriteSpy.mock.calls.length,
-      1,
-      'released pointers never clear velocities'
-    );
+    ).toBe(1);
+    expect(positionWriteSpy.mock.calls.length, 'released pointers never move a node').toBe(1);
+    expect(velocityWriteSpy.mock.calls.length, 'released pointers never clear velocities').toBe(1);
   } finally {
     for (const restore of cleanup.reverse()) restore();
     explorer?.onFinalize();
     canvas.remove();
   }
-
-  tapeTest.end();
 });
 
-test('GPU Graph showcase rebuilds an accessible graph slider with real spatial indexing and community colors', async tapeTest => {
+it('GPU Graph showcase rebuilds an accessible graph slider with real spatial indexing and community colors', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -753,25 +674,25 @@ test('GPU Graph showcase rebuilds an accessible graph slider with real spatial i
   let depth: Texture | undefined;
   try {
     explorer = createExplorer(device, 32, 'spatial');
-    tapeTest.equal(explorer.graph.vertexCount, 32, 'the tiny real-GPU fixture remains injectable');
-    tapeTest.ok(explorer.spatialLayout, 'explicit spatial mode creates a real caller-owned index');
+    expect(explorer.graph.vertexCount, 'the tiny real-GPU fixture remains injectable').toBe(32);
+    expect(
+      Boolean(explorer.spatialLayout),
+      'explicit spatial mode creates a real caller-owned index'
+    ).toBe(true);
     if (!explorer.spatialLayout) throw new Error('The showcase did not create its spatial layout');
-    tapeTest.equal(
+    expect(
       ownExpandSpy.mock.calls.length,
-      1,
       'the native showcase opens its own collapsed graph-inspector controls once'
-    );
-    tapeTest.equal(
+    ).toBe(1);
+    expect(
       expandInfoBox.getAttribute('aria-expanded'),
-      'true',
       'the actual accessible website InfoBox becomes visible immediately'
-    );
-    tapeTest.equal(host.hidden, false, 'the graph-size slider is visible without a hidden InfoBox');
-    tapeTest.equal(
+    ).toBe('true');
+    expect(host.hidden, 'the graph-size slider is visible without a hidden InfoBox').toBe(false);
+    expect(
       unrelatedExpandSpy.mock.calls.length,
-      0,
       'other unrelated website InfoBox controls are never opened'
-    );
+    ).toBe(0);
 
     const slider = host.querySelector<HTMLInputElement>('[data-graph-size]');
     const layoutMode = host.querySelector<HTMLSelectElement>('[data-layout-mode]');
@@ -782,53 +703,62 @@ test('GPU Graph showcase rebuilds an accessible graph slider with real spatial i
     const adapter = host.querySelector<HTMLElement>('[data-graph-adapter]');
     const memory = host.querySelector<HTMLElement>('[data-graph-memory]');
     const status = host.querySelector<HTMLElement>('[role="status"]');
-    tapeTest.ok(slider, 'the native showcase publishes a keyboard-accessible graph-size slider');
-    tapeTest.equal(slider?.type, 'range', 'graph scale is an actual accessible range control');
-    tapeTest.equal(slider?.min, '0', 'the first slider step maps to 128 resident vertices');
-    tapeTest.equal(
+    expect(
+      Boolean(slider),
+      'the native showcase publishes a keyboard-accessible graph-size slider'
+    ).toBe(true);
+    expect(slider?.type, 'graph scale is an actual accessible range control').toBe('range');
+    expect(slider?.min, 'the first slider step maps to 128 resident vertices').toBe('0');
+    expect(
       slider?.max,
-      String(GRAPH_EXPLORER_VERTEX_COUNTS.length - 1),
       'the fourteenth slider step maps to the actual 1,048,576-vertex graph'
-    );
-    tapeTest.equal(
+    ).toBe(String(GRAPH_EXPLORER_VERTEX_COUNTS.length - 1));
+    expect(
       GRAPH_EXPLORER_VERTEX_COUNTS.at(-1),
-      1_048_576,
       'the final scale represents actual original resident vertices'
-    );
-    tapeTest.ok(layoutMode, 'exact, automatic, spatial, and four-sample modes are user-visible');
-    tapeTest.ok(colorMode, 'actual analytic color choices are user-visible');
-    tapeTest.ok(sizeMode, 'GPU PageRank, degree, and uniform sizes are selectable');
-    tapeTest.deepEqual(
+    ).toBe(1_048_576);
+    expect(
+      Boolean(layoutMode),
+      'exact, automatic, spatial, and four-sample modes are user-visible'
+    ).toBe(true);
+    expect(Boolean(colorMode), 'actual analytic color choices are user-visible').toBe(true);
+    expect(Boolean(sizeMode), 'GPU PageRank, degree, and uniform sizes are selectable').toBe(true);
+    expect(
       Array.from(layoutMode?.options ?? [], option => option.value),
-      ['auto', 'exact', 'spatial', 'sampled'],
       'layout choices select real exact, flat-grid, and linear-work GPU contributors'
-    );
-    tapeTest.deepEqual(
+    ).toEqual(['auto', 'exact', 'spatial', 'sampled']);
+    expect(
       Array.from(colorMode?.options ?? [], option => option.value),
-      ['community', 'component', 'degree', 'pagerank', 'distance'],
       'all advertised node colors correspond to real GPU analytics'
-    );
-    tapeTest.deepEqual(
+    ).toEqual(['community', 'component', 'degree', 'pagerank', 'distance']);
+    expect(
       Array.from(sizeMode?.options ?? [], option => option.value),
-      ['pagerank', 'degree', 'uniform'],
       'all advertised node sizes use real resident metrics or a uniform radius'
+    ).toEqual(['pagerank', 'degree', 'uniform']);
+    expect(Boolean(edgeVisibility), 'original source-chunk edges can be hidden accessibly').toBe(
+      true
     );
-    tapeTest.ok(edgeVisibility, 'original source-chunk edges can be hidden accessibly');
-    tapeTest.ok(legend, 'a visible accessible legend describes actual GPU analytic colors');
-    tapeTest.ok(
-      legend?.getAttribute('aria-label'),
+    expect(
+      Boolean(legend),
+      'a visible accessible legend describes actual GPU analytic colors'
+    ).toBe(true);
+    expect(
+      Boolean(legend?.getAttribute('aria-label')),
       'color meaning remains screen-reader accessible'
-    );
-    tapeTest.ok(adapter?.textContent, 'the graph inspector reports real adapter information');
-    tapeTest.ok(
-      memory?.textContent,
+    ).toBe(true);
+    expect(
+      Boolean(adapter?.textContent),
+      'the graph inspector reports real adapter information'
+    ).toBe(true);
+    expect(
+      Boolean(memory?.textContent),
       'the graph inspector reports actual GPU allocation accounting'
-    );
-    tapeTest.ok(
-      /resident|transient/i.test(memory?.textContent ?? ''),
+    ).toBe(true);
+    expect(
+      Boolean(/resident|transient/i.test(memory?.textContent ?? '')),
       'GPU memory statistics distinguish owned graph and transient allocations'
-    );
-    tapeTest.equal(status?.getAttribute('aria-live'), 'polite', 'graph changes announce politely');
+    ).toBe(true);
+    expect(status?.getAttribute('aria-live'), 'graph changes announce politely').toBe('polite');
 
     const firstBindings = explorer as unknown as ExplorerGraphBindings;
     color = device.createTexture({
@@ -853,34 +783,34 @@ test('GPU Graph showcase rebuilds an accessible graph slider with real spatial i
       readUint32Vector(explorer.communities.output),
       readUint32Vector(explorer.components.output)
     ]);
-    tapeTest.equal(initialCount[0], 32, 'the actual GPU grid accepts every original vertex');
-    tapeTest.equal(initialOverflow[0], 0, 'caller-owned vertex-ID capacity does not overflow');
-    tapeTest.equal(initialComponents[8], 0, 'one bridge joins the first two weak components');
-    tapeTest.equal(initialCommunity[8], 8, 'actual majority votes retain a separate community');
+    expect(initialCount[0], 'the actual GPU grid accepts every original vertex').toBe(32);
+    expect(initialOverflow[0], 'caller-owned vertex-ID capacity does not overflow').toBe(0);
+    expect(initialComponents[8], 'one bridge joins the first two weak components').toBe(0);
+    expect(initialCommunity[8], 'actual majority votes retain a separate community').toBe(8);
 
     const previousPositions = explorer.layout.positions.data[0].buffer;
     const previousAnalysis = explorer.analysisGraph;
     if (!slider) throw new Error('The native graph-size control was not mounted');
     slider.value = '0';
     slider.dispatchEvent(new Event('change', {bubbles: true}));
-    tapeTest.equal(explorer.graph.vertexCount, 128, 'a real slider change rebuilds the GPU graph');
-    tapeTest.equal(
+    expect(explorer.graph.vertexCount, 'a real slider change rebuilds the GPU graph').toBe(128);
+    expect(
       ownExpandSpy.mock.calls.length,
-      1,
       'resizing never repeatedly reopens a user-controlled website InfoBox'
-    );
-    tapeTest.notEqual(
+    ).toBe(1);
+    expect(
       explorer.layout.positions.data[0].buffer,
-      previousPositions,
       'new vertex attributes use fresh caller-owned physical storage'
-    );
-    tapeTest.notEqual(explorer.analysisGraph, previousAnalysis, 'analytics graphs are rebuilt');
-    tapeTest.deepEqual(
+    ).not.toBe(previousPositions);
+    expect(explorer.analysisGraph, 'analytics graphs are rebuilt').not.toBe(previousAnalysis);
+    expect(
       explorer.graph.sourceVertices.data.map(chunk => chunk.length === 0),
-      [false, true, false],
       'graph resizing still preserves the original empty source batch'
-    );
-    tapeTest.ok(explorer.spatialLayout, 'the selected spatial mode survives graph resizing');
+    ).toEqual([false, true, false]);
+    expect(
+      Boolean(explorer.spatialLayout),
+      'the selected spatial mode survives graph resizing'
+    ).toBe(true);
     if (!explorer.spatialLayout) throw new Error('The rebuilt showcase lost its spatial layout');
 
     executeShowcaseFrame(device, explorer, color, depth);
@@ -891,14 +821,14 @@ test('GPU Graph showcase rebuilds an accessible graph slider with real spatial i
         readUint32Vector(explorer.communities.output),
         readUint32Vector(explorer.components.output)
       ]);
-    tapeTest.equal(resizedCount[0], 128, 'rebuilt spatial passes index all resized vertices');
-    tapeTest.equal(resizedOverflow[0], 0, 'rebuilt explicit index buffers remain large enough');
-    tapeTest.equal(resizedComponents[32], 0, 'resized weak components still cross the bridge');
-    tapeTest.equal(resizedCommunities[32], 32, 'resized GPU community labels remain distinct');
-    tapeTest.ok(
-      !/GPU\s+(?:frame|execution|duration)\s*[:=]\s*\d/i.test(status?.textContent ?? ''),
+    expect(resizedCount[0], 'rebuilt spatial passes index all resized vertices').toBe(128);
+    expect(resizedOverflow[0], 'rebuilt explicit index buffers remain large enough').toBe(0);
+    expect(resizedComponents[32], 'resized weak components still cross the bridge').toBe(0);
+    expect(resizedCommunities[32], 'resized GPU community labels remain distinct').toBe(32);
+    expect(
+      Boolean(!/GPU\s+(?:frame|execution|duration)\s*[:=]\s*\d/i.test(status?.textContent ?? '')),
       'the live inspector never fabricates GPU execution timings'
-    );
+    ).toBe(true);
   } finally {
     devicePixelSizeSpy.mockRestore();
     ownExpandSpy.mockRestore();
@@ -911,8 +841,6 @@ test('GPU Graph showcase rebuilds an accessible graph slider with real spatial i
     infoBox.remove();
     unrelatedInfoBox.remove();
   }
-
-  tapeTest.end();
 });
 
 function createExplorer(

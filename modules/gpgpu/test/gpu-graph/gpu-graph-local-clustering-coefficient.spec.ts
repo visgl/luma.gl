@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUGraphLocalClusteringCoefficientToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-local-clustering-coefficient-internals';
 
 const INVALID_TRIANGLE_COUNT = 0xffffffff;
@@ -193,11 +192,9 @@ const clusteringScenarios: ClusteringScenario[] = [
 ];
 
 for (const scenario of clusteringScenarios) {
-  test(`GPUGraphLocalClusteringCoefficient GPU: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphLocalClusteringCoefficient GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -206,40 +203,34 @@ for (const scenario of clusteringScenarios) {
     try {
       compileClustering(fixture, scenario.maximumWorkgroups);
       executeClustering(fixture);
-      await assertClustering(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertClustering(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'clustering preserves every original source chunk and its physical allocation'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.expectedCoefficients) {
         for (const [vertexIndex, coefficient] of scenario.expectedCoefficients.entries()) {
-          tapeTest.ok(
-            Math.abs(expected.coefficients[vertexIndex] - coefficient) < 1e-7,
+          expect(
+            Boolean(Math.abs(expected.coefficients[vertexIndex] - coefficient) < 1e-7),
             `independent CPU oracle matches the explicit Graphalytics coefficient at vertex ${vertexIndex}`
-          );
+          ).toBe(true);
         }
       }
       if (scenario.expectedTriangles) {
-        tapeTest.deepEqual(
+        expect(
           expected.triangles,
-          scenario.expectedTriangles,
           'independent oracle matches explicit directed closures or undirected incident triangles'
-        );
+        ).toEqual(scenario.expectedTriangles);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphLocalClusteringCoefficient rebuilds exact triangles after source updates', async tapeTest => {
+it('GPUGraphLocalClusteringCoefficient rebuilds exact triangles after source updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -258,34 +249,28 @@ test('GPUGraphLocalClusteringCoefficient rebuilds exact triangles after source u
 
   try {
     compileClustering(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'construction and compilation never submit work'
-    );
-    tapeTest.ok(
-      readbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'construction and compilation never submit work').toBe(0);
+    expect(
+      Boolean(readbackSpies.every(spy => spy.mock.calls.length === 0)),
       'exact local clustering never reads graph source buffers back'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const readbackSpy of readbackSpies) readbackSpy.mockRestore();
 
     executeClustering(fixture);
-    await assertClustering(tapeTest, fixture, calculateExpectedClustering(original));
+    await assertClustering(fixture, calculateExpectedClustering(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([3, 1]));
     const updated = {...original, sourceChunks: [[3, 1], [], [2]]};
     executeClustering(fixture);
-    await assertClustering(tapeTest, fixture, calculateExpectedClustering(updated));
-    tapeTest.equal(sourceBuffer, fixture.graph.sourceVertices.data[0].buffer);
+    await assertClustering(fixture, calculateExpectedClustering(updated));
+    expect(sourceBuffer).toBe(fixture.graph.sourceVertices.data[0].buffer);
   } finally {
     submitSpy.mockRestore();
     for (const readbackSpy of readbackSpies) readbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Independently applies the official weak-neighbor, directed-edge Graphalytics definition. */
@@ -565,7 +550,6 @@ function executeClustering(fixture: ClusteringExecutionFixture): void {
 }
 
 async function assertClustering(
-  tapeTest: Test,
   fixture: ClusteringExecutionFixture,
   expected: ExpectedClustering
 ): Promise<void> {
@@ -582,26 +566,26 @@ async function assertClustering(
         : Promise.resolve(undefined)
     ]);
 
-  tapeTest.equal(coefficients.length, expected.coefficients.length);
+  expect(coefficients.length).toBe(expected.coefficients.length);
   for (const [vertexIndex, coefficient] of coefficients.entries()) {
-    tapeTest.ok(
-      Math.abs(coefficient - expected.coefficients[vertexIndex]) < 1e-6,
+    expect(
+      Boolean(Math.abs(coefficient - expected.coefficients[vertexIndex]) < 1e-6),
       `vertex ${vertexIndex} coefficient matches the independent Graphalytics directed-edge oracle`
-    );
+    ).toBe(true);
   }
   if (triangles) {
-    tapeTest.deepEqual(
+    expect(
       triangles,
-      expected.triangles,
       'unsigned counts distinguish directed closures from undirected incident triangles'
-    );
+    ).toEqual(expected.triangles);
   }
-  tapeTest.equal(invalidEdgeCount[0], expected.invalidEdgeCount);
-  tapeTest.equal(forwardOverflow[0], Number(expected.forwardOverflow));
-  if (reverseOverflow) tapeTest.equal(reverseOverflow[0], Number(expected.reverseOverflow));
+  expect(invalidEdgeCount[0]).toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0]).toBe(Number(expected.forwardOverflow));
+  if (reverseOverflow) expect(reverseOverflow[0]).toBe(Number(expected.reverseOverflow));
   if (expected.forwardOverflow || expected.reverseOverflow) {
-    tapeTest.ok(coefficients.every(coefficient => coefficient === 0));
-    if (triangles) tapeTest.ok(triangles.every(count => count === INVALID_TRIANGLE_COUNT));
+    expect(Boolean(coefficients.every(coefficient => coefficient === 0))).toBe(true);
+    if (triangles)
+      expect(Boolean(triangles.every(count => count === INVALID_TRIANGLE_COUNT))).toBe(true);
   }
 }
 
@@ -625,12 +609,12 @@ async function readFloat32Vector(vector: GPUVector<'float32'>): Promise<number[]
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: ClusteringExecutionFixture): void {
+function destroyExecutionFixture(fixture: ClusteringExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'compiled clustering graphs and borrowed vectors never destroy caller-owned buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }
