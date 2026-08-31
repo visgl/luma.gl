@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {ScenegraphNode} from '@luma.gl/engine';
 import {Matrix4, Vector3} from '@math.gl/core';
+import {expect, it} from 'vitest';
 
 const PROPS = {
   display: true,
@@ -14,101 +14,90 @@ const PROPS = {
   matrix: new Matrix4().scale(4)
 };
 
-test('ScenegraphNode#constructor', t => {
+it('ScenegraphNode#constructor', () => {
   const sgNode = new ScenegraphNode(PROPS);
-  t.ok(sgNode instanceof ScenegraphNode, 'should construct the object');
+  expect(sgNode instanceof ScenegraphNode, 'should construct the object').toBe(true);
   for (const key in PROPS) {
-    t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
-    t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
+    expect(sgNode.props[key], `prop: ${key} should get set on the object.props`).toEqual(
+      PROPS[key]
+    );
+    expect(sgNode[key], `prop: ${key} should get set on the object`).toEqual(PROPS[key]);
   }
-  t.end();
 });
 
-test('ScenegraphNode#delete', t => {
+it('ScenegraphNode#delete', () => {
   const sgNode = new ScenegraphNode();
-  t.doesNotThrow(() => sgNode.destroy(), 'delete should work');
-
-  t.end();
+  expect(() => sgNode.destroy(), 'delete should work').not.toThrow();
 });
 
-test('ScenegraphNode#setProps', t => {
+it('ScenegraphNode#setProps', () => {
   const sgNode = new ScenegraphNode();
   sgNode.setProps(PROPS);
   for (const key in PROPS) {
-    t.deepEqual(sgNode.props[key], PROPS[key], `prop: ${key} should get set on the object.props`);
-    t.deepEqual(sgNode[key], PROPS[key], `prop: ${key} should get set on the object`);
+    expect(sgNode.props[key], `prop: ${key} should get set on the object.props`).toEqual(
+      PROPS[key]
+    );
+    expect(sgNode[key], `prop: ${key} should get set on the object`).toEqual(PROPS[key]);
   }
-  t.end();
 });
 
-test('ScenegraphNode#toString', t => {
+it('ScenegraphNode#toString', () => {
   const sgNode = new ScenegraphNode();
-  t.doesNotThrow(() => sgNode.toString(), 'delete should work');
-
-  t.end();
+  expect(() => sgNode.toString(), 'delete should work').not.toThrow();
 });
 
-test('ScenegraphNode#setMatrix', t => {
+it('ScenegraphNode#setMatrix', () => {
   const sgNode = new ScenegraphNode();
   const matrix = new Matrix4().scale(1.5);
 
   sgNode.setMatrix(matrix);
-  t.deepEqual(sgNode.matrix, matrix, 'should copy the matrix');
+  expect(sgNode.matrix, 'should copy the matrix').toEqual(matrix);
 
   sgNode.setMatrix(matrix, false);
-  t.equal(sgNode.matrix, matrix, 'should asign the matrix');
-
-  t.end();
+  expect(sgNode.matrix, 'should asign the matrix').toBe(matrix);
 });
 
-test('ScenegraphNode#setMatrixComponents', t => {
+it('ScenegraphNode#setMatrixComponents', () => {
   const sgNode = new ScenegraphNode();
   const position = new Vector3(1, 1, 1);
   const rotation = new Vector3(2, 2, 2);
   const scale = new Vector3(3, 3, 3);
 
   sgNode.setMatrixComponents({update: false});
-  t.deepEqual(sgNode.matrix, new Matrix4(), 'should not update the matrix');
+  expect(sgNode.matrix, 'should not update the matrix').toEqual(new Matrix4());
 
   sgNode.setMatrixComponents({position, rotation, scale});
-  t.deepEqual(
-    sgNode.matrix,
-    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale),
-    'should update the matrix'
+  expect(sgNode.matrix, 'should update the matrix').toEqual(
+    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale)
   );
-
-  t.end();
 });
 
-test('ScenegraphNode#update', t => {
+it('ScenegraphNode#update', () => {
   const sgNode = new ScenegraphNode();
   const position = new Vector3(1, 1, 1);
   const rotation = new Vector3(2, 2, 2);
   const scale = new Vector3(3, 3, 3);
 
   sgNode.update();
-  t.deepEqual(sgNode.matrix, new Matrix4(), 'should update the matrix');
+  expect(sgNode.matrix, 'should update the matrix').toEqual(new Matrix4());
 
   sgNode.update({position, rotation, scale});
-  t.deepEqual(
-    sgNode.matrix,
-    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale),
-    'should update the matrix'
+  expect(sgNode.matrix, 'should update the matrix').toEqual(
+    new Matrix4().translate(position).rotateXYZ(rotation).scale(scale)
   );
-
-  t.end();
 });
 
-test('ScenegraphNode#getCoordinateUniforms', t => {
+it('ScenegraphNode#getCoordinateUniforms', () => {
   const sgNode = new ScenegraphNode();
 
   const uniforms = sgNode.getCoordinateUniforms(new Matrix4());
-  t.ok(uniforms.viewMatrix, 'should return viewMatrix');
-  t.ok(uniforms.modelMatrix, 'should return modelMatrix');
-  t.ok(uniforms.objectMatrix, 'should return objectMatrix');
-  t.ok(uniforms.worldMatrix, 'should return worldMatrix');
-  t.ok(uniforms.worldInverseMatrix, 'should return worldInverseMatrix');
-  t.ok(uniforms.worldInverseTransposeMatrix, 'should return worldInverseTransposeMatrix');
-
-  t.end();
+  expect(uniforms.viewMatrix, 'should return viewMatrix').toBeTruthy();
+  expect(uniforms.modelMatrix, 'should return modelMatrix').toBeTruthy();
+  expect(uniforms.objectMatrix, 'should return objectMatrix').toBeTruthy();
+  expect(uniforms.worldMatrix, 'should return worldMatrix').toBeTruthy();
+  expect(uniforms.worldInverseMatrix, 'should return worldInverseMatrix').toBeTruthy();
+  expect(
+    uniforms.worldInverseTransposeMatrix,
+    'should return worldInverseTransposeMatrix'
+  ).toBeTruthy();
 });

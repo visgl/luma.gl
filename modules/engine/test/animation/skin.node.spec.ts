@@ -4,9 +4,9 @@
 
 import {GroupNode, updateSkinJointMatrices} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('Animation#updateSkinJointMatrices evaluates shared joints in mesh-local space', testContext => {
+it('Animation#updateSkinJointMatrices evaluates shared joints in mesh-local space', () => {
   const meshNode = new GroupNode({id: 'mesh'});
   const firstJoint = new GroupNode({id: 'first-joint'});
   const secondJoint = new GroupNode({id: 'second-joint'});
@@ -29,9 +29,9 @@ test('Animation#updateSkinJointMatrices evaluates shared joints in mesh-local sp
     target
   });
 
-  testContext.equal(jointMatrices, target, 'reuses adapter-owned output storage');
-  testContext.equal(jointMatrices[12], 1, 'evaluates the first joint relative to the skinned mesh');
-  testContext.equal(jointMatrices[16 + 13], 2, 'applies authored inverse bind transforms');
+  expect(jointMatrices, 'reuses adapter-owned output storage').toBe(target);
+  expect(jointMatrices[12], 'evaluates the first joint relative to the skinned mesh').toBe(1);
+  expect(jointMatrices[16 + 13], 'applies authored inverse bind transforms').toBe(2);
 
   worldMatrices.set(secondJoint, new Matrix4().translate([10, 7, 0]));
   updateSkinJointMatrices({
@@ -42,18 +42,16 @@ test('Animation#updateSkinJointMatrices evaluates shared joints in mesh-local sp
     target
   });
 
-  testContext.equal(jointMatrices[16 + 13], 5, 'updates animated joints without reallocating');
-  testContext.end();
+  expect(jointMatrices[16 + 13], 'updates animated joints without reallocating').toBe(5);
 });
 
-test('Animation#updateSkinJointMatrices defaults missing inverse bind matrices', testContext => {
+it('Animation#updateSkinJointMatrices defaults missing inverse bind matrices', () => {
   const joint = new GroupNode({id: 'joint', position: [0, 3, 0]});
   const matrices = updateSkinJointMatrices({
     joints: [joint],
     worldMatrices: new Map([[joint, new Matrix4().translate([0, 3, 0])]])
   });
 
-  testContext.equal(matrices.length, 16, 'allocates only the authored joint palette');
-  testContext.equal(matrices[13], 3, 'uses an identity inverse bind transform by default');
-  testContext.end();
+  expect(matrices.length, 'allocates only the authored joint palette').toBe(16);
+  expect(matrices[13], 'uses an identity inverse bind transform by default').toBe(3);
 });
