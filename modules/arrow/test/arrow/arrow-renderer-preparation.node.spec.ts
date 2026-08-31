@@ -9,10 +9,14 @@ import {
   createArrowTextGPUTable,
   makeArrowFixedSizeListVector,
   prepareArrowPolygonInput,
+  prepareArrowTextInputFromData,
+  readArrowGPUVectorAsync,
   resolveArrowPickInfo
 } from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
+import {backendRegistry} from '@luma.gl/gpgpu';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
@@ -26,6 +30,8 @@ import {
 } from '../../../../examples/arrow/arrow-points/arrow-point-renderer';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
+
+backendRegistry.add('null', cpuBackend);
 
 test('prepareArrowPointInput preserves rows, batch layout, row offsets, and ownership', async t => {
   const device = new NullDevice({});
@@ -173,6 +179,53 @@ test('prepareArrowPolygonInput preserves rows, batch layout, row offsets, and ow
   prepared.destroy();
   t.ok(positionsBuffer.destroyed, 'destroy releases owned polygon attribute buffers');
   t.ok(indexBuffer.destroyed, 'destroy releases the polygon index buffer');
+  t.end();
+});
+
+test('Arrow polygon and text preparation normalize named Float32 color columns', async t => {
+  const device = new NullDevice({});
+  const floatColors = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    3,
+    new Float32Array([0.25, 0.5, 0.75])
+  );
+  const polygons = makePathVector(new Int32Array([0, 3]), new Float32Array([0, 0, 1, 0, 0, 1]));
+  const polygonPrepared = await prepareArrowPolygonInput(device, {
+    data: new arrow.Table({polygons, displayColors: floatColors}),
+    polygons: 'polygons',
+    colors: 'displayColors',
+    tessellated: true
+  });
+
+  t.deepEqual(
+    Array.from(polygonPrepared.tessellation.colors),
+    [64, 128, 191, 255, 64, 128, 191, 255, 64, 128, 191, 255],
+    'polygon preparation resolves and normalizes the selected color column'
+  );
+
+  const textPrepared = await prepareArrowTextInputFromData(device, {
+    data: new arrow.Table({
+      positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0])),
+      texts: arrow.vectorFromArray(['A'], new arrow.Utf8()),
+      displayColors: floatColors
+    }),
+    positions: 'positions',
+    texts: 'texts',
+    colors: 'displayColors'
+  });
+  const textColors = textPrepared.colors
+    ? await readArrowGPUVectorAsync(textPrepared.colors)
+    : null;
+
+  t.deepEqual(
+    textColors ? Array.from(textColors.get(0) as Iterable<number>) : null,
+    [64, 128, 191, 255],
+    'text preparation resolves and normalizes the selected color column'
+  );
+
+  polygonPrepared.destroy();
+  textPrepared.destroy();
+  device.destroy();
   t.end();
 });
 

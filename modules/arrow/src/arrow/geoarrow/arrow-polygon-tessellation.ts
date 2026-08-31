@@ -19,6 +19,7 @@ import {
   inferGeoArrowDimensionFromArrowType,
   makeGeoArrowColumnFromArrowVector
 } from './arrow-geoarrow-adapter';
+import type {ArrowColorType} from '../arrow-colors';
 
 export type ArrowPolygonCoordinateType = FixedSizeList<Float32> | FixedSizeList<Float64>;
 export type ArrowSeparatedPolygonCoordinateType = Struct;
@@ -40,7 +41,7 @@ export type ArrowTessellatedPolygonVertexColorType = List<ArrowPolygonRowColorTy
 export type ArrowPolygonVertexColorType = List<List<ArrowPolygonRowColorType>>;
 export type ArrowMultiPolygonVertexColorType = List<List<List<ArrowPolygonRowColorType>>>;
 export type ArrowPolygonColorType =
-  | ArrowPolygonRowColorType
+  | ArrowColorType
   | ArrowTessellatedPolygonVertexColorType
   | ArrowPolygonVertexColorType
   | ArrowMultiPolygonVertexColorType;

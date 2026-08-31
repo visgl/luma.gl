@@ -11,7 +11,7 @@ import {
 } from '@luma.gl/gpgpu';
 import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
 import {DataType, Field, FixedSizeList, Float16, Float32, Uint8, Vector} from 'apache-arrow';
-import {makeGPUVectorFromArrow} from './gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from './gpu/arrow-gpu-table-adapters';
 import type {GPUDataReadbackMetadata} from './gpu/arrow-gpu-data';
 
 export type ArrowColorType = FixedSizeList<Uint8> | FixedSizeList<Float16> | FixedSizeList<Float32>;
@@ -139,6 +139,20 @@ export async function convertArrowColors(
     });
   } finally {
     source.destroy();
+  }
+}
+
+/** Normalizes Arrow RGB/RGBA rows and reads the canonical Uint8 RGBA rows back to Arrow. */
+export async function convertArrowColorsToArrow(
+  device: Device,
+  colors: Vector<ArrowColorType>,
+  props: ConvertArrowColorsProps = {}
+): Promise<Vector<ArrowUint8ColorType>> {
+  const converted = await convertArrowColors(device, colors, props);
+  try {
+    return await readArrowGPUVectorAsync<ArrowUint8ColorType>(converted);
+  } finally {
+    converted.destroy();
   }
 }
 
