@@ -81,7 +81,7 @@ it('Arrow deck layers preserve alpha blending defaults', () => {
   void 0;
 });
 
-test('Arrow layer conversion preserves nested per-vertex color vectors', async t => {
+it('Arrow layer conversion preserves nested per-vertex color vectors', async () => {
   const device = new NullDevice({});
   const rowColorType = new arrow.FixedSizeList(
     4,
@@ -100,12 +100,12 @@ test('Arrow layer conversion preserves nested per-vertex color vectors', async t
 
   const converted = await convertArrowLayerColorVector(device, colors, 'nested-colors');
 
-  t.equal(converted, colors, 'specialized nested colors bypass fixed-width row normalization');
+  expect(converted, 'specialized nested colors bypass fixed-width row normalization').toBe(colors);
   device.destroy();
-  t.end();
+  void 0;
 });
 
-test('Arrow path scalar GPU width vectors bypass color normalization', async t => {
+it('Arrow path scalar GPU width vectors bypass color normalization', async () => {
   const device = new NullDevice({});
   const widths = makeGPUVectorFromArrow(
     device,
@@ -115,12 +115,10 @@ test('Arrow path scalar GPU width vectors bypass color normalization', async t =
 
   const roundTrip = await readArrowLayerGPUVector(device, widths, 'widths', false);
 
-  t.deepEqual(
-    Array.from(roundTrip.toArray()),
-    [1, 2],
-    'reads scalar widths without color conversion'
-  );
+  expect(Array.from(roundTrip.toArray()), 'reads scalar widths without color conversion').toEqual([
+    1, 2
+  ]);
   widths.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });
