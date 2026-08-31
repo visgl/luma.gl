@@ -181,7 +181,8 @@ export type GPUTableFromArrowTableProps = ArrowVertexFormatOptions & {
 };
 
 /** Returns the GPUVector memory format implied by an Arrow data type. */
-function getGPUVectorFormatFromArrowDataType(type: DataType): GPUVectorFormat {
+/** Returns the canonical direct-upload GPU memory format for one supported Arrow data type. */
+export function getGPUVectorFormatFromArrowDataType(type: DataType): GPUVectorFormat {
   const isVertexList = DataType.isList(type);
   const elementType = isVertexList ? type.children[0].type : type;
   const scalarType = DataType.isFixedSizeList(elementType)

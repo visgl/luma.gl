@@ -405,15 +405,21 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
         'readArrowGPUDataAsync() requires variable-length attribute readback metadata'
       );
     }
+    const readByteLength =
+      data.valueLength === 0 ? 0 : (data.valueLength - 1) * data.byteStride + data.rowByteLength;
     const bytes =
-      metadata.valueByteLength === 0
+      readByteLength === 0
         ? new Uint8Array(0)
-        : await data.buffer.readAsync(data.byteOffset, metadata.valueByteLength);
+        : await data.buffer.readAsync(data.byteOffset, readByteLength);
+    const packedBytes =
+      data.byteStride === data.rowByteLength
+        ? bytes
+        : compactStridedRows(bytes, data.valueLength, data.byteStride, data.rowByteLength);
     return makeArrowVariableLengthAttributeDataFromPackedBytes(
       dataType,
       data.length,
       metadata,
-      bytes
+      packedBytes
     ) as unknown as Data<T>;
   }
 

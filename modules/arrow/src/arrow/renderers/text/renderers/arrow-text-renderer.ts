@@ -10,18 +10,16 @@ import {
 import {getArrowVectorByteLength} from '../../../vectors/arrow-vector-utils';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
-  makeGPUTableFromArrowTable
+  makeGPUTableFromArrowTable,
+  readArrowGPUVectorAsync
 } from '../../../gpu/arrow-gpu-table-adapters';
+import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
 import {type ModelProps} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
-import {
-  canConvertColors,
-  convertArrowColorsToArrow,
-  type ArrowColorType
-} from '../../../arrow-colors';
+import {canConvertColors} from '../../../arrow-colors';
 import {
   TextAttributeModel,
   TextDictionaryModel,
@@ -1460,13 +1458,20 @@ async function normalizeConvertibleArrowTextColors(
   if (!needsArrowTextColorConversion(sourceVectors.colors)) {
     return sourceVectors;
   }
+  const preparedColors = await convertArrowToGPUVector(device, sourceVectors.colors!, {
+    name: 'arrow-text-colors',
+    semantic: 'color',
+    format: 'unorm8x4'
+  });
+  let normalizedColors: Vector;
+  try {
+    normalizedColors = await readArrowGPUVectorAsync(preparedColors.vector);
+  } finally {
+    preparedColors.destroy();
+  }
   return {
     ...sourceVectors,
-    colors: await convertArrowColorsToArrow(
-      device,
-      sourceVectors.colors as Vector<ArrowColorType>,
-      {name: 'arrow-text-colors'}
-    )
+    colors: normalizedColors as ArrowTextRendererPrepareDataProps['colors']
   };
 }
 

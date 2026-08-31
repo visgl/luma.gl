@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {arithmetic} from './arithmetic';
+import {castData} from './cast-data';
 import {convertColors} from './convert-colors';
 import {extent} from './extent';
 import {fround} from './fround';
@@ -19,6 +20,7 @@ import {swizzle} from './swizzle';
 /** CPU fallback backend for built-in GPGPU operations. Registered by default. */
 export {
   arithmetic,
+  castData,
   convertColors,
   dot,
   equalAll,
