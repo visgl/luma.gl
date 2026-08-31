@@ -4,13 +4,13 @@
 
 import {hexagonalPixelate} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('hexagonalPixelate#build/uniform', t => {
+it('hexagonalPixelate#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(hexagonalPixelate, {}, {});
 
-  t.ok(uniforms, 'hexagonalPixelate module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'hexagonalPixelate center uniform is ok');
-  t.equal(uniforms.scale, 10, 'hexagonalPixelate strength uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'hexagonalPixelate module build is ok').toBe(true);
+  expect(uniforms.center, 'hexagonalPixelate center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.scale, 'hexagonalPixelate strength uniform is ok').toBe(10);
+  void 0;
 });

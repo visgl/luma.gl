@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -14,11 +14,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURaster contrast and threshold controls change actual GPU histogram bins and scalar statistics', async testCase => {
+it('GPURaster contrast and threshold controls change actual GPU histogram bins and scalar statistics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -122,29 +122,24 @@ test('GPURaster contrast and threshold controls change actual GPU histogram bins
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
 
-  testCase.deepEqual(
+  expect(
     await readUint32(originalHistogramBuffer),
-    [2, 0, 1, 2],
     'contrast changes actual source values before GPU binning'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 0, 1, 2]);
+  expect(
     await readUint32(selectedValidityBuffer),
-    [0, 0, 0, 1, 1, 0],
     'thresholding publishes a real nodata-aware selection mask'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0, 0, 1, 1, 0]);
+  expect(
     await readUint32(selectedHistogramBuffer),
-    [0, 0, 0, 2],
     'thresholding removes rejected samples from the GPU histogram'
-  );
-  testCase.deepEqual(await readUint32(selectedCountBuffer), [2], 'valid count reflects selection');
-  testCase.deepEqual(await readFloat32(selectedSumBuffer), [2], 'valid sum reflects selection');
-  testCase.deepEqual(await readFloat32(selectedMeanBuffer), [1], 'valid mean reflects selection');
-  testCase.deepEqual(
-    await readFloat32(selectedExtentBuffer),
-    [1, 1],
-    'valid extent reflects selection'
-  );
+  ).toEqual([0, 0, 0, 2]);
+  expect(await readUint32(selectedCountBuffer), 'valid count reflects selection').toEqual([2]);
+  expect(await readFloat32(selectedSumBuffer), 'valid sum reflects selection').toEqual([2]);
+  expect(await readFloat32(selectedMeanBuffer), 'valid mean reflects selection').toEqual([1]);
+  expect(await readFloat32(selectedExtentBuffer), 'valid extent reflects selection').toEqual([
+    1, 1
+  ]);
 
   compiled.destroy();
   for (const buffer of [
@@ -160,10 +155,13 @@ test('GPURaster contrast and threshold controls change actual GPU histogram bins
     selectedMeanBuffer,
     selectedExtentBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'the graph does not own caller-provided analysis storage');
+    expect(
+      Boolean(buffer.destroyed),
+      'the graph does not own caller-provided analysis storage'
+    ).toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 function createInputBuffer(device: Device, values: Float32Array | Uint32Array): Buffer {

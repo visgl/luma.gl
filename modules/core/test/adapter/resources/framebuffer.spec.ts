@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /* eslint-disable max-len */
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 
@@ -69,26 +69,32 @@ const TEST_CASES = [
   // }
 ];
 
-test('WebGLDevice.createFramebuffer()', async t => {
+it('WebGLDevice.createFramebuffer()', async () => {
   for (const testDevice of await getTestDevices()) {
-    t.throws(() => testDevice.createFramebuffer({}), 'Framebuffer without attachment fails');
+    expect(
+      () => testDevice.createFramebuffer({}),
+      'Framebuffer without attachment fails'
+    ).toThrow();
 
     const framebuffer = testDevice.createFramebuffer({
       colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth16unorm'
     });
-    t.ok(framebuffer instanceof Framebuffer, 'Framebuffer with attachment');
+    expect(Boolean(framebuffer instanceof Framebuffer), 'Framebuffer with attachment').toBe(true);
 
     framebuffer.destroy();
-    t.ok(framebuffer instanceof Framebuffer, 'Framebuffer delete successful');
+    expect(Boolean(framebuffer instanceof Framebuffer), 'Framebuffer delete successful').toBe(true);
 
     framebuffer.destroy();
-    t.ok(framebuffer instanceof Framebuffer, 'Framebuffer repeated delete successful');
+    expect(
+      Boolean(framebuffer instanceof Framebuffer),
+      'Framebuffer repeated delete successful'
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('Framebuffer#clone overrides size', async t => {
+it('Framebuffer#clone overrides size', async () => {
   for (const device of await getTestDevices()) {
     const framebuffer = device.createFramebuffer({
       width: 2,
@@ -99,74 +105,71 @@ test('Framebuffer#clone overrides size', async t => {
 
     const cloned = framebuffer.clone({width: 4, height: 4});
 
-    t.notEqual(cloned, framebuffer, `${device.type}: clone returns new framebuffer`);
-    t.equal(cloned.width, 4, `${device.type}: cloned width is overridden`);
-    t.equal(cloned.height, 4, `${device.type}: cloned height is overridden`);
-    t.equal(
+    expect(cloned, `${device.type}: clone returns new framebuffer`).not.toBe(framebuffer);
+    expect(cloned.width, `${device.type}: cloned width is overridden`).toBe(4);
+    expect(cloned.height, `${device.type}: cloned height is overridden`).toBe(4);
+    expect(
       cloned.colorAttachments[0].texture.width,
-      4,
       `${device.type}: cloned color attachment width overridden`
-    );
-    t.equal(
+    ).toBe(4);
+    expect(
       cloned.colorAttachments[0].texture.height,
-      4,
       `${device.type}: cloned color attachment height overridden`
-    );
-    t.notEqual(
+    ).toBe(4);
+    expect(
       cloned.colorAttachments[0].texture,
-      framebuffer.colorAttachments[0].texture,
       `${device.type}: cloned color attachment is new texture`
-    );
+    ).not.toBe(framebuffer.colorAttachments[0].texture);
 
-    t.equal(framebuffer.width, 2, `${device.type}: original width unchanged`);
-    t.equal(framebuffer.height, 2, `${device.type}: original height unchanged`);
+    expect(framebuffer.width, `${device.type}: original width unchanged`).toBe(2);
+    expect(framebuffer.height, `${device.type}: original height unchanged`).toBe(2);
 
     framebuffer.destroy();
     cloned.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('WebGLFramebuffer create and resize attachments', async t => {
+it('WebGLFramebuffer create and resize attachments', async () => {
   for (const testDevice of await getTestDevices()) {
     for (const tc of TEST_CASES) {
       let props;
 
-      t.doesNotThrow(() => {
+      expect(() => {
         props = tc.getOpts(testDevice);
-      }, `Framebuffer options constructed for "${tc.title}"`);
+      }, `Framebuffer options constructed for "${tc.title}"`).not.toThrow();
 
       const testFramebufferOpts = () => {
         const framebuffer = testDevice.createFramebuffer(props);
 
         framebuffer.resize({width: 1000, height: 1000});
-        t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
-        t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
+        expect(framebuffer.width, 'Framebuffer width updated correctly on resize').toBe(1000);
+        expect(framebuffer.height, 'Framebuffer height updated correctly on resize').toBe(1000);
 
         framebuffer.resize({width: 100, height: 100});
-        t.equals(framebuffer.width, 100, 'Framebuffer width updated correctly on resize');
-        t.equals(framebuffer.height, 100, 'Framebuffer height updated correctly on resize');
+        expect(framebuffer.width, 'Framebuffer width updated correctly on resize').toBe(100);
+        expect(framebuffer.height, 'Framebuffer height updated correctly on resize').toBe(100);
 
         framebuffer.destroy(); // {recursive: true}
       };
 
       if (tc.pass) {
-        t.doesNotThrow(
+        expect(
           testFramebufferOpts,
           `${testDevice.id}.createFramebuffer() success as expected for "${tc.title}"`
-        );
+        ).not.toThrow();
       } else {
-        t.throws(
+        expect(
           testFramebufferOpts,
           `${testDevice.id}.createFramebuffer() failure as expected for "${tc.title}"`
-        );
+        ).toThrow();
       }
     }
   }
-  t.end();
+  void 0;
 });
 
-test('WebGLFramebuffer resize', async t => {
+it('WebGLFramebuffer resize', async () => {
   for (const testDevice of await getTestDevices()) {
     const framebuffer = testDevice.createFramebuffer({
       colorAttachments: ['rgba8unorm'],
@@ -174,15 +177,15 @@ test('WebGLFramebuffer resize', async t => {
     });
 
     framebuffer.resize({width: 2, height: 2});
-    t.equals(framebuffer.width, 2, 'Framebuffer width updated correctly on resize');
-    t.equals(framebuffer.height, 2, 'Framebuffer height updated correctly on resize');
+    expect(framebuffer.width, 'Framebuffer width updated correctly on resize').toBe(2);
+    expect(framebuffer.height, 'Framebuffer height updated correctly on resize').toBe(2);
     framebuffer.delete();
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLFramebuffer contents', async t => {
+it('WebGLFramebuffer contents', async () => {
   for (const testDevice of await getTestDevices()) {
     const framebuffer = testDevice.createFramebuffer({
       colorAttachments: ['rgba8unorm'],
@@ -193,50 +196,49 @@ test('WebGLFramebuffer contents', async t => {
 
     if (testDevice.type === 'webgl') {
       try {
-        t.comment('starting renderpass');
+        void 0;
         const renderPass = testDevice.beginRenderPass({
           framebuffer,
           clearColor: [1, 0, 0, 1],
           clearDepth: 1
         });
-        t.comment('ending renderpass');
+        void 0;
         renderPass.end();
-      } catch (error) {
-        t.comment(`beginRenderPass() failed ${(error as Error).message}`);
+      } catch (_error) {
+        void 0;
       }
 
-      t.comment('reading from framebuffer');
+      void 0;
       const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
-      t.comment('finished reading from framebuffer');
-      t.deepEqual(
-        pixels,
-        // biome-ignore format: preserve layout
-        [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
-        'Framebuffer pixel colors are set correctly'
-      );
+      void 0;
+      expect(Array.from(pixels), 'Framebuffer pixel colors are set correctly').toEqual([
+        255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255
+      ]);
     }
     framebuffer.delete();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Framebuffer#getDefaultFramebuffer', async t => {
+it('Framebuffer#getDefaultFramebuffer', async () => {
   for (const testDevice of await getTestDevices()) {
     if (testDevice.type === 'webgl') {
       const framebuffer = testDevice.getDefaultCanvasContext().getCurrentFramebuffer();
-      t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
+      expect(Boolean(framebuffer instanceof Framebuffer), 'getDefaultFramebuffer successful').toBe(
+        true
+      );
 
-      t.doesNotThrow(
+      expect(
         () => framebuffer.resize({width: 1000, height: 1000}),
         'defaultFramebuffer.resize({width, height}) updates size'
-      );
-      t.equal(framebuffer.width, 1000, 'defaultFramebuffer width updates');
-      t.equal(framebuffer.height, 1000, 'defaultFramebuffer height updates');
+      ).not.toThrow();
+      expect(framebuffer.width, 'defaultFramebuffer width updates').toBe(1000);
+      expect(framebuffer.height, 'defaultFramebuffer height updates').toBe(1000);
     }
   }
 
-  t.end();
+  void 0;
 });
 
 /*

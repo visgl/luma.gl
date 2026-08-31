@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -14,11 +14,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURasterThreshold evaluates inclusive and exclusive above, below, and range policies', async testCase => {
+it('GPURasterThreshold evaluates inclusive and exclusive above, below, and range policies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -46,20 +46,19 @@ test('GPURasterThreshold evaluates inclusive and exclusive above, below, and ran
       operation: options.operation,
       inclusive: options.inclusive
     });
-    testCase.deepEqual(
+    expect(
       values,
-      options.expected,
       `${options.inclusive ? 'inclusive' : 'exclusive'} ${options.operation} classification`
-    );
+    ).toEqual(options.expected);
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterThreshold intersects offset-aligned validity, nodata, finite samples, and calibration', async testCase => {
+it('GPURasterThreshold intersects offset-aligned validity, nodata, finite samples, and calibration', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -88,23 +87,22 @@ test('GPURasterThreshold intersects offset-aligned validity, nodata, finite samp
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'threshold-offset-validity');
-  testCase.deepEqual(
+  expect(
     (await readUint32(outputBuffer, 9)).slice(1),
-    [0, 0, 0, 0, 1, 0, 0, 1],
     'offset masks, finite nodata, NaN/infinity, and calibrated comparisons intersect'
-  );
+  ).toEqual([0, 0, 0, 0, 1, 0, 0, 1]);
   compiled.destroy();
   sourceBuffer.destroy();
   validityBuffer.destroy();
   outputBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterThreshold retains native signed and unsigned nodata sentinels', async testCase => {
+it('GPURasterThreshold retains native signed and unsigned nodata sentinels', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -125,16 +123,16 @@ test('GPURasterThreshold retains native signed and unsigned nodata sentinels', a
     threshold: 1
   });
 
-  testCase.deepEqual(signed, [0, 0, 1, 1], 'signed minimum nodata is rejected in raw i32');
-  testCase.deepEqual(unsigned, [0, 0, 1, 1], 'unsigned maximum nodata is rejected in raw u32');
-  testCase.end();
+  expect(signed, 'signed minimum nodata is rejected in raw i32').toEqual([0, 0, 1, 1]);
+  expect(unsigned, 'unsigned maximum nodata is rejected in raw u32').toEqual([0, 0, 1, 1]);
+  void 0;
 });
 
-test('GPURasterThreshold reuses an offset GPU range and rejects invalid dynamic boundaries', async testCase => {
+it('GPURasterThreshold reuses an offset GPU range and rejects invalid dynamic boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -159,45 +157,43 @@ test('GPURasterThreshold reuses an offset GPU range and rejects invalid dynamic 
   const compiled = graph.compile();
 
   submitGraph(device, compiled, 'threshold-first-range');
-  testCase.deepEqual(await readUint32(outputBuffer, 4), [0, 1, 0, 0], 'initial GPU range applies');
+  expect(await readUint32(outputBuffer, 4), 'initial GPU range applies').toEqual([0, 1, 0, 0]);
 
   thresholdBuffer.write(Float32Array.from([99, 0.25, 0.75]));
   submitGraph(device, compiled, 'threshold-updated-range');
-  testCase.deepEqual(
+  expect(
     await readUint32(outputBuffer, 4),
-    [0, 0, 1, 0],
     'GPU range updates without recompiling the graph'
-  );
+  ).toEqual([0, 0, 1, 0]);
 
   thresholdBuffer.write(Float32Array.from([99, Number.NaN, 0.75]));
   submitGraph(device, compiled, 'threshold-nonfinite-range');
-  testCase.deepEqual(
-    await readUint32(outputBuffer, 4),
-    [0, 0, 0, 0],
-    'nonfinite GPU threshold rejects every sample'
+  expect(await readUint32(outputBuffer, 4), 'nonfinite GPU threshold rejects every sample').toEqual(
+    [0, 0, 0, 0]
   );
 
   thresholdBuffer.write(Float32Array.from([99, 1, 0]));
   submitGraph(device, compiled, 'threshold-reversed-range');
-  testCase.deepEqual(
-    await readUint32(outputBuffer, 4),
-    [0, 0, 0, 0],
-    'reversed GPU boundaries reject every sample'
-  );
+  expect(await readUint32(outputBuffer, 4), 'reversed GPU boundaries reject every sample').toEqual([
+    0, 0, 0, 0
+  ]);
 
   compiled.destroy();
-  testCase.notOk(sourceBuffer.destroyed, 'borrowed source survives compiled graph destruction');
+  expect(
+    Boolean(sourceBuffer.destroyed),
+    'borrowed source survives compiled graph destruction'
+  ).toBe(false);
   sourceBuffer.destroy();
   thresholdBuffer.destroy();
   outputBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterOtsuThreshold preserves uint32 minority counts and feeds a GPU threshold mask', async testCase => {
+it('GPURasterOtsuThreshold preserves uint32 minority counts and feeds a GPU threshold mask', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -229,31 +225,30 @@ test('GPURasterOtsuThreshold preserves uint32 minority counts and feeds a GPU th
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.ok(
-    compiled.stats.nodeOrder.indexOf('otsu-analysis') <
-      compiled.stats.nodeOrder.indexOf('otsu-selection'),
+  expect(
+    Boolean(
+      compiled.stats.nodeOrder.indexOf('otsu-analysis') <
+        compiled.stats.nodeOrder.indexOf('otsu-selection')
+    ),
     'GPU threshold dependency orders Otsu analysis before classification'
-  );
+  ).toBe(true);
   submitGraph(device, compiled, 'threshold-otsu-minority');
-  testCase.equal(
+  expect(
     (await readFloat32(thresholdBuffer, 2))[1],
-    0.5,
     'exact uint32 class counts retain a one-pixel minority above float32 precision'
-  );
-  testCase.deepEqual(
+  ).toBe(0.5);
+  expect(
     await readUint32(outputBuffer, 4),
-    [0, 0, 1, 1],
     'Otsu GPU scalar feeds the downstream threshold without CPU synchronization'
-  );
+  ).toEqual([0, 0, 1, 1]);
 
   histogramBuffer.write(Uint32Array.from([77, 0, 0]));
   submitGraph(device, compiled, 'threshold-otsu-empty');
-  testCase.equal((await readFloat32(thresholdBuffer, 2))[1], 0, 'empty histogram publishes zero');
-  testCase.deepEqual(
+  expect((await readFloat32(thresholdBuffer, 2))[1], 'empty histogram publishes zero').toBe(0);
+  expect(
     await readUint32(outputBuffer, 4),
-    [1, 1, 1, 1],
     'reused compiled graph consumes the newly published zero threshold'
-  );
+  ).toEqual([1, 1, 1, 1]);
 
   compiled.destroy();
   histogramBuffer.destroy();
@@ -261,14 +256,14 @@ test('GPURasterOtsuThreshold preserves uint32 minority counts and feeds a GPU th
   thresholdBuffer.destroy();
   sourceBuffer.destroy();
   outputBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterOtsuThreshold chooses the lowest tied sample boundary deterministically', async testCase => {
+it('GPURasterOtsuThreshold chooses the lowest tied sample boundary deterministically', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -283,11 +278,11 @@ test('GPURasterOtsuThreshold chooses the lowest tied sample boundary determinist
   const compiled = graph.compile();
   submitGraph(device, compiled, 'threshold-otsu-tie');
 
-  testCase.equal((await readFloat32(outputBuffer, 1))[0], 0.25, 'lowest tied boundary wins');
+  expect((await readFloat32(outputBuffer, 1))[0], 'lowest tied boundary wins').toBe(0.25);
   compiled.destroy();
   histogramBuffer.destroy();
   outputBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function runThreshold<Format extends GPURasterScalarFormat>(options: {

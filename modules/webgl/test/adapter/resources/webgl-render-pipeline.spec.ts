@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
@@ -101,7 +101,7 @@ async function waitForLinkStatus(renderPipeline: {
   return renderPipeline.linkStatus;
 }
 
-test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct argument position', async t => {
+it('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct argument position', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
 
@@ -110,13 +110,13 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   const linkStatus = await waitForLinkStatus(renderPipeline);
-  t.equal(linkStatus, 'success', 'render pipeline linked successfully');
+  expect(linkStatus, 'render pipeline linked successfully').toBe('success');
   if (linkStatus !== 'success') {
     renderPipeline.destroy();
     vs.destroy();
     fs.destroy();
     device.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -126,9 +126,9 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
     BlockC: gl.getUniformBlockIndex(renderPipeline.handle, 'BlockC')
   };
 
-  t.notEqual(blockIndexByName.BlockA, GL.INVALID_INDEX, `BlockA has valid index`);
-  t.notEqual(blockIndexByName.BlockB, GL.INVALID_INDEX, `BlockB has valid index`);
-  t.notEqual(blockIndexByName.BlockC, GL.INVALID_INDEX, `BlockC has valid index`);
+  expect(blockIndexByName.BlockA, `BlockA has valid index`).not.toBe(GL.INVALID_INDEX);
+  expect(blockIndexByName.BlockB, `BlockB has valid index`).not.toBe(GL.INVALID_INDEX);
+  expect(blockIndexByName.BlockC, `BlockC has valid index`).not.toBe(GL.INVALID_INDEX);
 
   // Reorder bindings to a 3-cycle so swapped uniformBlockBinding arguments produce different results.
   renderPipeline.shaderLayout.bindings = [
@@ -159,7 +159,7 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   const renderPass = new WEBGLRenderPass(device, {});
 
   const didDraw = renderPipeline.draw({renderPass, vertexArray, vertexCount: 3});
-  t.ok(didDraw, 'draw triggers binding application');
+  expect(Boolean(didDraw), 'draw triggers binding application').toBe(true);
 
   const expectedBindingPointByName = {
     BlockB: 0,
@@ -173,28 +173,26 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
       blockIndexByName[blockName],
       GL.UNIFORM_BLOCK_BINDING
     );
-    t.equal(
+    expect(
       reportedBinding,
-      expectedBindingPointByName[blockName],
       `${blockName} is bound to point ${expectedBindingPointByName[blockName]}`
-    );
+    ).toBe(expectedBindingPointByName[blockName]);
   }
 
   renderPass.end();
 
   const canonicalRenderPass = new WEBGLRenderPass(device, {});
-  t.throws(
+  expect(
     () => canonicalRenderPass.setBindings({BlockA: bufferA}),
-    /setPipeline.*must be called before setBindings/,
     'pass bindings require an active pipeline'
-  );
+  ).toThrow(/setPipeline.*must be called before setBindings/);
   canonicalRenderPass.setPipeline(renderPipeline);
   canonicalRenderPass.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
   canonicalRenderPass.setVertexArray(vertexArray);
-  t.ok(
-    canonicalRenderPass.draw({vertexCount: 3}),
+  expect(
+    Boolean(canonicalRenderPass.draw({vertexCount: 3})),
     'render pass owns WebGL pipeline, bindings, vertex array, and draw state'
-  );
+  ).toBe(true);
   canonicalRenderPass.end();
 
   vertexArray.destroy();
@@ -205,10 +203,10 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   vs.destroy();
   fs.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });
 
-test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation', async t => {
+it('WEBGLRenderPipeline initializes mixed sampler uniforms before validation', async () => {
   const device = await getWebGLTestDevice();
 
   const vs = device.createShader({stage: 'vertex', source: VS_MIXED_SAMPLERS});
@@ -216,20 +214,18 @@ test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation',
   const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   const linkStatus = await waitForLinkStatus(renderPipeline);
-  t.equal(
-    linkStatus,
-    'success',
-    'render pipeline with sampler2D and samplerCube links successfully'
+  expect(linkStatus, 'render pipeline with sampler2D and samplerCube links successfully').toBe(
+    'success'
   );
 
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });
 
-test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
+it('WEBGLRenderPipeline uses indexCount for indexed draws', async () => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
   const vs = device.createShader({stage: 'vertex', source: VS_INDEXED_DRAW});
@@ -237,13 +233,13 @@ test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
   const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
   const linkStatus = await waitForLinkStatus(renderPipeline);
-  t.equal(linkStatus, 'success', 'indexed render pipeline linked successfully');
+  expect(linkStatus, 'indexed render pipeline linked successfully').toBe('success');
   if (linkStatus !== 'success') {
     renderPipeline.destroy();
     vs.destroy();
     fs.destroy();
     device.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -285,8 +281,8 @@ test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
     gl.drawElementsInstanced = drawElementsInstanced;
   }
 
-  t.deepEqual(indexedDrawCounts, [2], 'non-instanced indexed draw uses indexCount');
-  t.deepEqual(indexedInstancedDrawCounts, [2], 'instanced indexed draw uses indexCount');
+  expect(indexedDrawCounts, 'non-instanced indexed draw uses indexCount').toEqual([2]);
+  expect(indexedInstancedDrawCounts, 'instanced indexed draw uses indexCount').toEqual([2]);
 
   renderPass.end();
   vertexArray.destroy();
@@ -295,5 +291,5 @@ test('WEBGLRenderPipeline uses indexCount for indexed draws', async t => {
   vs.destroy();
   fs.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });

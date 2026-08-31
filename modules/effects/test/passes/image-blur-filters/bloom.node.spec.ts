@@ -4,9 +4,9 @@
 
 import {createBloomShaderPassPipeline} from '@luma.gl/effects';
 import {WgslReflect} from 'wgsl_reflect';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', testCase => {
+it('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', () => {
   const qualityLevels = [
     {quality: 'low', levelCount: 2},
     {quality: 'medium', levelCount: 3},
@@ -18,50 +18,47 @@ test('HDR bloom fuses every selected pyramid level into one WebGPU dispatch', te
     const pipeline = createBloomShaderPassPipeline({quality, downsample: 'auto'});
     const optimization = pipeline.compute;
 
-    testCase.ok(optimization, `${quality} includes a portable fused-compute optimization`);
+    expect(Boolean(optimization), `${quality} includes a portable fused-compute optimization`).toBe(
+      true
+    );
     if (!optimization) {
       continue;
     }
     const reflection = new WgslReflect(optimization.source);
-    testCase.equal(reflection.entry.compute.length, 1, `${quality} uses exactly one dispatch`);
-    testCase.equal(
+    expect(reflection.entry.compute.length, `${quality} uses exactly one dispatch`).toBe(1);
+    expect(
       Object.keys(optimization.outputs).length,
-      levelCount,
       `${quality} writes each of its ${levelCount} pyramid levels`
-    );
-    testCase.deepEqual(
+    ).toBe(levelCount);
+    expect(
       optimization.replacedPasses,
-      ['bloomExtract', 'bloomDownsample'],
       `${quality} preserves its original extraction passes as the portable fallback`
+    ).toEqual(['bloomExtract', 'bloomDownsample']);
+    expect(optimization.source, 'reduction reuses shared memory').toMatch(
+      /var<workgroup> bloomTile/
     );
-    testCase.match(
-      optimization.source,
-      /var<workgroup> bloomTile/,
-      'reduction reuses shared memory'
+    expect(optimization.source, 'reduction synchronizes tile writes').toMatch(
+      /workgroupBarrier\(\)/
     );
-    testCase.match(
-      optimization.source,
-      /workgroupBarrier\(\)/,
-      'reduction synchronizes tile writes'
-    );
-    testCase.ok(
-      Object.values(optimization.outputs).every(
-        targetName => pipeline.renderTargets?.[targetName].storage
+    expect(
+      Boolean(
+        Object.values(optimization.outputs).every(
+          targetName => pipeline.renderTargets?.[targetName].storage
+        )
       ),
       `${quality} explicitly enables storage only on writable extraction targets`
-    );
+    ).toBe(true);
   }
 
   const portablePipeline = createBloomShaderPassPipeline({downsample: 'render'});
-  testCase.equal(portablePipeline.compute, undefined, 'render-only mode omits the compute stage');
-  testCase.ok(
-    Object.values(portablePipeline.renderTargets || {}).every(target => !target.storage),
+  expect(portablePipeline.compute, 'render-only mode omits the compute stage').toBe(undefined);
+  expect(
+    Boolean(Object.values(portablePipeline.renderTargets || {}).every(target => !target.storage)),
     'render-only mode avoids unnecessary storage texture usage'
-  );
-  testCase.end();
+  ).toBe(true);
 });
 
-test('HDR bloom shares expired targets without overwriting live lens highlights', testCase => {
+it('HDR bloom shares expired targets without overwriting live lens highlights', () => {
   const reusedPipeline = createBloomShaderPassPipeline({quality: 'ultra'});
   const dedicatedPipeline = createBloomShaderPassPipeline({
     quality: 'ultra',
@@ -73,31 +70,26 @@ test('HDR bloom shares expired targets without overwriting live lens highlights'
   });
 
   for (const levelName of ['Half', 'Quarter', 'Eighth', 'Sixteenth']) {
-    testCase.equal(
+    expect(
       reusedPipeline.renderTargets?.[`upsample${levelName}`].aliasFor,
-      `extract${levelName}`,
       `${levelName} reconstruction reuses its expired extraction allocation`
-    );
-    testCase.equal(
+    ).toBe(`extract${levelName}`);
+    expect(
       dedicatedPipeline.renderTargets?.[`upsample${levelName}`].aliasFor,
-      undefined,
       `${levelName} can retain a dedicated target when diagnostics require it`
-    );
+    ).toBe(undefined);
   }
-  testCase.equal(
+  expect(
     opticalPipeline.renderTargets?.upsampleHalf.aliasFor,
-    undefined,
     'half-resolution highlights remain available to the later lens pass'
-  );
-  testCase.equal(
+  ).toBe(undefined);
+  expect(
     opticalPipeline.renderTargets?.upsampleQuarter.aliasFor,
-    'extractQuarter',
     'optical artifacts do not prevent reuse at coarser expired levels'
-  );
-  testCase.end();
+  ).toBe('extractQuarter');
 });
 
-test('HDR bloom supports exposure-aware extraction and four-fetch bicubic reconstruction', testCase => {
+it('HDR bloom supports exposure-aware extraction and four-fetch bicubic reconstruction', () => {
   const pipeline = createBloomShaderPassPipeline({
     threshold: 1.5,
     exposure: 2,
@@ -107,62 +99,59 @@ test('HDR bloom supports exposure-aware extraction and four-fetch bicubic recons
   const extract = pipeline.steps.find(step => step.shaderPass.name === 'bloomExtract');
   const upsample = pipeline.steps.filter(step => step.shaderPass.name === 'bloomUpsample');
 
-  testCase.equal(extract?.uniforms?.threshold, 1.5, 'the original scene threshold is retained');
-  testCase.equal(extract?.uniforms?.exposure, 2, 'adapted camera exposure reaches extraction');
-  testCase.equal(
+  expect(extract?.uniforms?.threshold, 'the original scene threshold is retained').toBe(1.5);
+  expect(extract?.uniforms?.exposure, 'adapted camera exposure reaches extraction').toBe(2);
+  expect(
     extract?.uniforms?.exposureCompensation,
-    -1,
     'photographic stop compensation reaches extraction'
-  );
-  testCase.deepEqual(
+  ).toBe(-1);
+  expect(
     pipeline.compute?.uniforms,
-    {threshold: 1.5, softKnee: 0.5, fireflyReduction: 0, exposure: 2, exposureCompensation: -1},
     'fragment and fused compute paths receive the same exposure-aware defaults'
-  );
-  testCase.ok(
-    upsample.every(step => step.uniforms?.reconstruction === 1),
+  ).toEqual({
+    threshold: 1.5,
+    softKnee: 0.5,
+    fireflyReduction: 0,
+    exposure: 2,
+    exposureCompensation: -1
+  });
+  expect(
+    Boolean(upsample.every(step => step.uniforms?.reconstruction === 1)),
     'bicubic reconstruction is selected at every pyramid level'
-  );
-  testCase.match(
+  ).toBe(true);
+  expect(
     upsample[0]?.shaderPass.source || '',
-    /bloomUpsample_sampleBicubicGlow/,
     'WGSL contains the normalized bicubic reconstruction path'
+  ).toMatch(/bloomUpsample_sampleBicubicGlow/);
+  expect(upsample[0]?.shaderPass.fs || '', 'WebGL retains an equivalent bicubic fallback').toMatch(
+    /bloomUpsample_sampleBicubicGlow/
   );
-  testCase.match(
-    upsample[0]?.shaderPass.fs || '',
-    /bloomUpsample_sampleBicubicGlow/,
-    'WebGL retains an equivalent bicubic fallback'
-  );
-  testCase.end();
 });
 
-test('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid', testCase => {
+it('HDR bloom can remove separable passes with a normalized dual-Kawase pyramid', () => {
   const gaussian = createBloomShaderPassPipeline({quality: 'ultra'});
   const dualKawase = createBloomShaderPassPipeline({
     quality: 'ultra',
     blurAlgorithm: 'dual-kawase'
   });
 
-  testCase.equal(gaussian.steps.length, 20, 'the compatible Gaussian path keeps its original cost');
-  testCase.equal(dualKawase.steps.length, 10, 'portable dual-Kawase removes ten separable passes');
-  testCase.equal(
+  expect(gaussian.steps.length, 'the compatible Gaussian path keeps its original cost').toBe(20);
+  expect(dualKawase.steps.length, 'portable dual-Kawase removes ten separable passes').toBe(10);
+  expect(
     dualKawase.steps.filter(step => step.shaderPass.name === 'bloomBlur').length,
-    0,
     'the reconstruction-only path does not allocate or execute Gaussian kernels'
-  );
-  testCase.ok(
-    Object.keys(dualKawase.renderTargets || {}).every(name => !name.startsWith('blur')),
+  ).toBe(0);
+  expect(
+    Boolean(Object.keys(dualKawase.renderTargets || {}).every(name => !name.startsWith('blur'))),
     'dual-Kawase avoids all separable intermediate textures'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     dualKawase.steps.length - (dualKawase.compute?.replacedPasses ? 5 : 0),
-    5,
     'WebGPU needs five render passes and one compute dispatch at ultra quality'
-  );
-  testCase.end();
+  ).toBe(5);
 });
 
-test('HDR bloom reprojects depth-validated history without another history target', testCase => {
+it('HDR bloom reprojects depth-validated history without another history target', () => {
   const pipeline = createBloomShaderPassPipeline({
     temporalStability: 0.8,
     temporalReprojection: true,
@@ -173,31 +162,26 @@ test('HDR bloom reprojects depth-validated history without another history targe
   const temporal = pipeline.steps.find(step => step.shaderPass.name === 'bloomTemporal');
   const reflection = new WgslReflect(temporal?.shaderPass.source || '');
 
-  testCase.deepEqual(
+  expect(
     temporal?.shaderPass.bindingLayout?.map(binding => binding.name),
-    ['historyTexture', 'velocityTexture', 'depthTexture'],
     'motion-aware history consumes existing scene velocity and depth bindings'
-  );
-  testCase.deepEqual(
+  ).toEqual(['historyTexture', 'velocityTexture', 'depthTexture']);
+  expect(
     temporal?.uniforms,
-    {stability: 0.8, depthThreshold: 0.025, exposureScale: 4},
     'history combines exposure correction with a configurable disocclusion threshold'
-  );
-  testCase.equal(reflection.textures.length, 3, 'WGSL exposes history, velocity, and scene depth');
-  testCase.match(
+  ).toEqual({stability: 0.8, depthThreshold: 0.025, exposureScale: 4});
+  expect(reflection.textures.length, 'WGSL exposes history, velocity, and scene depth').toBe(3);
+  expect(
     temporal?.shaderPass.source || '',
-    /history\.a - 1\.0\) - currentDepth/,
     'the glow history alpha carries previous scene depth without another target'
-  );
-  testCase.match(
+  ).toMatch(/history\.a - 1\.0\) - currentDepth/);
+  expect(
     temporal?.shaderPass.fs || '',
-    /texCoord - textureLod\(velocityTexture/,
     'the WebGL fallback uses the same motion-vector reprojection'
-  );
-  testCase.end();
+  ).toMatch(/texCoord - textureLod\(velocityTexture/);
 });
 
-test('HDR bloom can scatter every source pixel without additive energy duplication', testCase => {
+it('HDR bloom can scatter every source pixel without additive energy duplication', () => {
   const pipeline = createBloomShaderPassPipeline({
     threshold: 3,
     intensity: 0.4,
@@ -206,17 +190,11 @@ test('HDR bloom can scatter every source pixel without additive energy duplicati
   const extraction = pipeline.steps.find(step => step.shaderPass.name === 'bloomExtract');
   const composite = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
 
-  testCase.equal(
-    extraction?.uniforms?.threshold,
-    0,
-    'physical bloom cannot discard dim scene light'
-  );
-  testCase.equal(pipeline.compute?.uniforms.threshold, 0, 'fused extraction remains thresholdless');
-  testCase.equal(composite?.uniforms?.energyConserving, 1, 'composition selects normalized mixing');
-  testCase.match(
+  expect(extraction?.uniforms?.threshold, 'physical bloom cannot discard dim scene light').toBe(0);
+  expect(pipeline.compute?.uniforms.threshold, 'fused extraction remains thresholdless').toBe(0);
+  expect(composite?.uniforms?.energyConserving, 'composition selects normalized mixing').toBe(1);
+  expect(
     composite?.shaderPass.source || '',
-    /mix\(\s*sourceColor\.rgb,\s*glowColor \* bloomComposite\.tint/,
     'physical composition redistributes source energy instead of adding another copy'
-  );
-  testCase.end();
+  ).toMatch(/mix\(\s*sourceColor\.rgb,\s*glowColor \* bloomComposite\.tint/);
 });

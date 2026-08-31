@@ -6,7 +6,7 @@ import {Device} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
-import type {Test} from 'test/utils/vitest-tape';
+import {expect} from 'vitest';
 
 const {fp64ify} = fp64;
 
@@ -122,21 +122,17 @@ export async function runArithmeticCases(
     binary,
     operation,
     testCases,
-    tapeTest,
     caseKind,
     includeScalarOutputs = false
   }: ArithmeticTransformOptions & {
-    tapeTest: Test;
     caseKind: 'must-pass' | 'diagnostic';
   }
 ): Promise<ArithmeticResult[]> {
   if (!BufferTransform.isSupported(device)) {
-    tapeTest.comment('Transform not supported, skipping fp64 transform tests');
     return [];
   }
 
   if (testCases.length === 0) {
-    tapeTest.comment(`${operationName}: no ${caseKind} cases for this platform`);
     return [];
   }
 
@@ -156,14 +152,14 @@ export async function runArithmeticCases(
     const assertionLabel = `${operationName}(${argumentList}) ${caseKind}`;
 
     if (caseKind === 'must-pass') {
-      tapeTest.ok(arithmeticResult.isEqual, `${assertionLabel} within tolerance`);
+      expect(arithmeticResult.isEqual, `${assertionLabel} within tolerance`).toBe(true);
       if (!arithmeticResult.isEqual) {
-        logArithmeticResult(tapeTest, arithmeticResult);
+        logArithmeticResult(arithmeticResult);
       }
     } else {
-      tapeTest.pass(`${assertionLabel} executed`);
+      expect(true, `${assertionLabel} executed`).toBe(true);
       if (!arithmeticResult.isEqual) {
-        logArithmeticResult(tapeTest, arithmeticResult);
+        logArithmeticResult(arithmeticResult);
       }
     }
   }
@@ -173,22 +169,13 @@ export async function runArithmeticCases(
 
 export async function runHelperDiagnostics(
   device: Device,
-  {
-    operationName,
-    binary,
-    testCases,
-    tapeTest
-  }: HelperTransformOptions & {
-    tapeTest: Test;
-  }
+  {operationName, binary, testCases}: HelperTransformOptions & {}
 ): Promise<HelperDiagnosticResult[]> {
   if (!BufferTransform.isSupported(device)) {
-    tapeTest.comment('Transform not supported, skipping fp64 helper diagnostics');
     return [];
   }
 
   if (testCases.length === 0) {
-    tapeTest.comment(`${operationName}: no helper diagnostic cases configured`);
     return [];
   }
 
@@ -204,9 +191,9 @@ export async function runHelperDiagnostics(
       ? `${formatNumber(testCase.inputA)}, ${formatNumber(testCase.inputB ?? 0)}`
       : `${formatNumber(testCase.inputA)}`;
 
-    tapeTest.pass(`${operationName}(${argumentList}) diagnostic executed`);
+    expect(true, `${operationName}(${argumentList}) diagnostic executed`).toBe(true);
     if (!helperResult.isEqual) {
-      logHelperResult(tapeTest, operationName, helperResult);
+      logHelperResult(operationName, helperResult);
     }
   }
 
@@ -467,46 +454,21 @@ async function readFloat32Array(
   );
 }
 
-function logArithmeticResult(tapeTest: Test, arithmeticResult: ArithmeticResult): void {
+function logArithmeticResult(arithmeticResult: ArithmeticResult): void {
   const {testCase} = arithmeticResult;
-  tapeTest.comment(`  case: ${testCase.label}`);
-  if (testCase.reason) {
-    tapeTest.comment(`  note: ${testCase.reason}`);
-  }
-  tapeTest.comment(
-    `  reference64=${arithmeticResult.reference64} result64=${arithmeticResult.result64}`
+  console.warn(
+    `  ${testCase.label}: reference=${arithmeticResult.reference64} result=${arithmeticResult.result64}`
   );
-  tapeTest.comment(
-    `  absoluteError=${arithmeticResult.absoluteError} relativeError=${arithmeticResult.relativeError}`
-  );
-  tapeTest.comment(
-    `  expectedHiLo=[${arithmeticResult.expectedHigh}, ${arithmeticResult.expectedLow}] resultHiLo=[${arithmeticResult.resultHigh}, ${arithmeticResult.resultLow}]`
-  );
-  if (arithmeticResult.scalarHigh !== undefined && arithmeticResult.scalarLow !== undefined) {
-    tapeTest.comment(
-      `  scalarResultHiLo=[${arithmeticResult.scalarHigh}, ${arithmeticResult.scalarLow}]`
-    );
-  }
 }
 
 function logHelperResult(
-  tapeTest: Test,
   operationName: HelperOperationName,
   helperResult: HelperDiagnosticResult
 ): void {
   const {testCase} = helperResult;
-  tapeTest.comment(`  helper: ${operationName} case=${testCase.label}`);
-  if (testCase.reason) {
-    tapeTest.comment(`  note: ${testCase.reason}`);
-  }
-  tapeTest.comment(`  reference64=${helperResult.reference64} result64=${helperResult.result64}`);
-  tapeTest.comment(
-    `  absoluteError=${helperResult.absoluteError} relativeError=${helperResult.relativeError}`
+  console.warn(
+    `  ${operationName} ${testCase.label}: reference=${helperResult.reference64} result=${helperResult.result64}`
   );
-  tapeTest.comment(
-    `  expectedHiLo=[${helperResult.expectedHigh}, ${helperResult.expectedLow}] resultHiLo=[${helperResult.resultHigh}, ${helperResult.resultLow}]`
-  );
-  tapeTest.comment(`  scalarResultHiLo=[${helperResult.scalarHigh}, ${helperResult.scalarLow}]`);
 }
 
 function getRelativeError(reference64: number, result64: number): number {

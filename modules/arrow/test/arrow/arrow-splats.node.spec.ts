@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   makeArrowFixedSizeListVector,
   makeGPUSplatDataFromArrow,
@@ -35,7 +35,7 @@ type SplatRecordBatchOptions = {
   omit?: readonly string[];
 };
 
-test('makeGPUSplatDataFromArrow decodes default GraphDECO Gaussian splat encodings', t => {
+it('makeGPUSplatDataFromArrow decodes default GraphDECO Gaussian splat encodings', () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({
     positions: [1, 2, 3, 4, 5, 6],
@@ -47,43 +47,49 @@ test('makeGPUSplatDataFromArrow decodes default GraphDECO Gaussian splat encodin
   const batches = makeGPUSplatDataFromArrow(device, recordBatch);
   const batch = batches[0];
 
-  t.equal(batches.length, 1, 'creates one independently owned GPU batch');
-  t.equal(batch?.rowCount, 2, 'preserves the source row count');
-  t.equal(batch?.positions.format, 'float32x3', 'declares XYZ position storage');
-  t.equal(batch?.scales.format, 'float32x3', 'declares XYZ scale storage');
-  t.equal(batch?.rotations.format, 'float32x4', 'declares quaternion storage');
-  t.equal(batch?.colors.format, 'float32x4', 'declares linear floating-point RGBA storage');
-  t.equal(batch?.opacities.format, 'float32', 'declares separate linear opacity storage');
-  t.equal(batch?.rowIndices.format, 'uint32', 'declares stable global source-row indices');
-  t.deepEqual(Array.from(batch?.source.positions ?? []), [1, 2, 3, 4, 5, 6], 'retains XYZ centers');
-  assertApproximatelyEqual(t, batch?.source.scales, [2, 3, 4, 5, 6, 7], 'decodes log scales');
-  t.deepEqual(
+  expect(batches.length, 'creates one independently owned GPU batch').toBe(1);
+  expect(batch?.rowCount, 'preserves the source row count').toBe(2);
+  expect(batch?.positions.format, 'declares XYZ position storage').toBe('float32x3');
+  expect(batch?.scales.format, 'declares XYZ scale storage').toBe('float32x3');
+  expect(batch?.rotations.format, 'declares quaternion storage').toBe('float32x4');
+  expect(batch?.colors.format, 'declares linear floating-point RGBA storage').toBe('float32x4');
+  expect(batch?.opacities.format, 'declares separate linear opacity storage').toBe('float32');
+  expect(batch?.rowIndices.format, 'declares stable global source-row indices').toBe('uint32');
+  expect(Array.from(batch?.source.positions ?? []), 'retains XYZ centers').toEqual([
+    1, 2, 3, 4, 5, 6
+  ]);
+  assertApproximatelyEqual(batch?.source.scales, [2, 3, 4, 5, 6, 7], 'decodes log scales');
+  expect(
     Array.from(batch?.source.rotations ?? []),
-    [1, 0, 0, 0, 0, 0, 1, 0],
     'preserves [w, x, y, z] quaternion ordering'
-  );
-  assertApproximatelyEqual(t, batch?.source.opacities, [0.5, 0.75], 'decodes logit opacity');
-  t.ok(batch?.source.colors instanceof Float32Array, 'retains linear floating-point source colors');
+  ).toEqual([1, 0, 0, 0, 0, 0, 1, 0]);
+  assertApproximatelyEqual(batch?.source.opacities, [0.5, 0.75], 'decodes logit opacity');
+  expect(
+    Boolean(batch?.source.colors instanceof Float32Array),
+    'retains linear floating-point source colors'
+  ).toBe(true);
   assertApproximatelyEqual(
-    t,
     batch?.source.colors,
     [1, 0, 128 / 255, 1, 10 / 255, 20 / 255, 30 / 255, 1],
     'decodes SH DC RGB without quantization or duplicating opacity into color alpha'
   );
-  t.deepEqual(
-    batch?.sourceInfo,
-    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-    'records stable source metadata'
-  );
+  expect(batch?.sourceInfo, 'records stable source metadata').toEqual({
+    sourceBatchIndex: 0,
+    sourceRowIndexOffset: 0,
+    sourceRowCount: 2
+  });
 
   const positionBuffer = batch?.positions.data[0]?.buffer;
   batch?.destroy();
   batch?.destroy();
-  t.ok(positionBuffer?.destroyed, 'caller-owned GPU buffer destruction is idempotent');
-  t.end();
+  expect(
+    Boolean(positionBuffer?.destroyed),
+    'caller-owned GPU buffer destruction is idempotent'
+  ).toBe(true);
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow preserves real GraphDECO Train HDR and negative SH DC radiance', async t => {
+it('makeGPUSplatDataFromArrow preserves real GraphDECO Train HDR and negative SH DC radiance', async () => {
   const device = new NullDevice({});
   // Unmodified f_dc coefficients from rows 6 and 8 of the Voxel51 Train PLY fixture.
   const sphericalHarmonicCoefficients = [
@@ -100,9 +106,8 @@ test('makeGPUSplatDataFromArrow preserves real GraphDECO Train HDR and negative 
   });
   const batch = makeGPUSplatDataFromArrow(device, recordBatch)[0]!;
 
-  t.equal(batch.colors.format, 'float32x4', 'retains HDR-compatible GPU color storage');
+  expect(batch.colors.format, 'retains HDR-compatible GPU color storage').toBe('float32x4');
   assertApproximatelyEqual(
-    t,
     batch.source.colors,
     expectedColors,
     'preserves highlights above one and negative reconstructed linear radiance'
@@ -112,17 +117,16 @@ test('makeGPUSplatDataFromArrow preserves real GraphDECO Train HDR and negative 
   const bytes = await gpuData.buffer.readAsync(gpuData.byteOffset, gpuData.byteLength);
   const uploadedColors = new Float32Array(bytes.buffer, bytes.byteOffset, batch.rowCount * 4);
   assertApproximatelyEqual(
-    t,
     uploadedColors,
     expectedColors,
     'uploads unquantized SH DC radiance without clamping or losing precision'
   );
 
   batch.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow preserves higher spherical harmonics and semantic source rows', async t => {
+it('makeGPUSplatDataFromArrow preserves higher spherical harmonics and semantic source rows', async () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({
     positions: [0, 0, 0, 1, 1, 1],
@@ -136,25 +140,23 @@ test('makeGPUSplatDataFromArrow preserves higher spherical harmonics and semanti
     1, 10, 100, 2, 20, 200, 3, 30, 300, -1, -10, -100, -2, -20, -200, -3, -30, -300
   ];
 
-  t.equal(prepared.sphericalHarmonicsDegree, 1, 'infers complete first-order spherical harmonics');
-  t.equal(
-    prepared.sphericalHarmonics?.format,
-    'float32',
-    'retains independently owned coefficients'
+  expect(prepared.sphericalHarmonicsDegree, 'infers complete first-order spherical harmonics').toBe(
+    1
   );
-  t.deepEqual(
+  expect(prepared.sphericalHarmonics?.format, 'retains independently owned coefficients').toBe(
+    'float32'
+  );
+  expect(
     Array.from(prepared.source.sphericalHarmonics ?? []),
-    expectedCoefficients,
     'reorders channel-major GraphDECO columns into basis-major RGB source rows'
-  );
-  t.deepEqual(
+  ).toEqual(expectedCoefficients);
+  expect(
     Array.from(prepared.source.semanticIds ?? []),
-    [7, 42],
     'preserves compact semantic class identifiers'
-  );
+  ).toEqual([7, 42]);
   const coefficientBytes = await prepared.sphericalHarmonics?.data[0].buffer.readAsync();
   if (coefficientBytes) {
-    t.deepEqual(
+    expect(
       Array.from(
         new Float32Array(
           coefficientBytes.buffer,
@@ -162,16 +164,15 @@ test('makeGPUSplatDataFromArrow preserves higher spherical harmonics and semanti
           coefficientBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
         )
       ),
-      expectedCoefficients,
       'uploads directional radiance without collapsing Arrow source boundaries'
-    );
+    ).toEqual(expectedCoefficients);
   }
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow caps higher-order bands and honors explicit semantic columns', t => {
+it('makeGPUSplatDataFromArrow caps higher-order bands and honors explicit semantic columns', () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({
     positions: [0, 0, 0],
@@ -187,30 +188,33 @@ test('makeGPUSplatDataFromArrow caps higher-order bands and honors explicit sema
     semanticColumn: 'custom_category'
   })[0]!;
 
-  t.equal(prepared.sphericalHarmonicsDegree, 1, 'caps second-order source coefficients on upload');
-  t.deepEqual(
+  expect(prepared.sphericalHarmonicsDegree, 'caps second-order source coefficients on upload').toBe(
+    1
+  );
+  expect(
     Array.from(prepared.source.sphericalHarmonics ?? []),
-    [1, 9, 17, 2, 10, 18, 3, 11, 19],
     'retains first-order RGB basis triples from each original channel block'
-  );
-  t.deepEqual(
+  ).toEqual([1, 9, 17, 2, 10, 18, 3, 11, 19]);
+  expect(
     Array.from(prepared.source.semanticIds ?? []),
-    [13],
     'reads an explicitly named semantic class column'
-  );
+  ).toEqual([13]);
 
   const dcOnly = makeGPUSplatDataFromArrow(device, recordBatch, {
     maxSphericalHarmonicsDegree: 0
   })[0]!;
-  t.equal(dcOnly.sphericalHarmonicsDegree, 0, 'supports an explicit DC-only memory budget');
-  t.notOk(dcOnly.sphericalHarmonics, 'avoids allocating excluded higher-order coefficients');
+  expect(dcOnly.sphericalHarmonicsDegree, 'supports an explicit DC-only memory budget').toBe(0);
+  expect(
+    Boolean(dcOnly.sphericalHarmonics),
+    'avoids allocating excluded higher-order coefficients'
+  ).toBe(false);
 
   prepared.destroy();
   dcOnly.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow preserves basis-major RGB coefficients from RAD and SPZ', t => {
+it('makeGPUSplatDataFromArrow preserves basis-major RGB coefficients from RAD and SPZ', () => {
   const device = new NullDevice({});
   const sourceCoefficients = [
     1, 10, 100, 2, 20, 200, 3, 30, 300, 4, 40, 400, 5, 50, 500, 6, 60, 600, 7, 70, 700, 8, 80, 800
@@ -227,23 +231,21 @@ test('makeGPUSplatDataFromArrow preserves basis-major RGB coefficients from RAD 
       maxSphericalHarmonicsDegree: 1
     })[0]!;
 
-    t.deepEqual(
+    expect(
       Array.from(prepared.source.sphericalHarmonics!),
-      sourceCoefficients,
       `preserves native basis-major RGB ordering for ${sourceFormat.toUpperCase()} sources`
-    );
-    t.deepEqual(
+    ).toEqual(sourceCoefficients);
+    expect(
       Array.from(firstDegree.source.sphericalHarmonics!),
-      sourceCoefficients.slice(0, 9),
       `caps ${sourceFormat.toUpperCase()} bands without scrambling the retained RGB triplets`
-    );
+    ).toEqual(sourceCoefficients.slice(0, 9));
     prepared.destroy();
     firstDegree.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow safely caps valid degree-four SPZ coefficients', t => {
+it('makeGPUSplatDataFromArrow safely caps valid degree-four SPZ coefficients', () => {
   const device = new NullDevice({});
   const sourceCoefficients = Array.from(
     {length: 72},
@@ -260,25 +262,29 @@ test('makeGPUSplatDataFromArrow safely caps valid degree-four SPZ coefficients',
     maxSphericalHarmonicsDegree: 2
   })[0]!;
 
-  t.equal(supportedBands.sphericalHarmonicsDegree, 3, 'caps valid degree-four SPZ at degree three');
-  t.deepEqual(
+  expect(
+    supportedBands.sphericalHarmonicsDegree,
+    'caps valid degree-four SPZ at degree three'
+  ).toBe(3);
+  expect(
     Array.from(supportedBands.source.sphericalHarmonics!),
-    sourceCoefficients.slice(0, 45),
     'retains all supported RGB basis coefficients without scrambling the native source layout'
-  );
-  t.equal(requestedBands.sphericalHarmonicsDegree, 2, 'honors a narrower caller-selected band cap');
-  t.deepEqual(
+  ).toEqual(sourceCoefficients.slice(0, 45));
+  expect(
+    requestedBands.sphericalHarmonicsDegree,
+    'honors a narrower caller-selected band cap'
+  ).toBe(2);
+  expect(
     Array.from(requestedBands.source.sphericalHarmonics!),
-    sourceCoefficients.slice(0, 24),
     'drops unsupported and unrequested higher-order SPZ coefficients'
-  );
+  ).toEqual(sourceCoefficients.slice(0, 24));
 
   supportedBands.destroy();
   requestedBands.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow normalizes band-major KSPLAT spherical harmonics', t => {
+it('makeGPUSplatDataFromArrow normalizes band-major KSPLAT spherical harmonics', () => {
   const device = new NullDevice({});
   const sourceCoefficients = [
     1, 2, 3, 10, 20, 30, 100, 200, 300, 4, 5, 6, 7, 8, 40, 50, 60, 70, 80, 400, 500, 600, 700, 800
@@ -297,24 +303,22 @@ test('makeGPUSplatDataFromArrow normalizes band-major KSPLAT spherical harmonics
     maxSphericalHarmonicsDegree: 1
   })[0]!;
 
-  t.equal(prepared.sphericalHarmonicsDegree, 2, 'preserves both authored KSPLAT bands');
-  t.deepEqual(
+  expect(prepared.sphericalHarmonicsDegree, 'preserves both authored KSPLAT bands').toBe(2);
+  expect(
     Array.from(prepared.source.sphericalHarmonics!),
-    expectedCoefficients,
     'reorders each source band from channel-major components into RGB basis triplets'
-  );
-  t.deepEqual(
+  ).toEqual(expectedCoefficients);
+  expect(
     Array.from(firstDegree.source.sphericalHarmonics!),
-    expectedCoefficients.slice(0, 9),
     'caps the source without interpreting its first band as global channel-major coefficients'
-  );
+  ).toEqual(expectedCoefficients.slice(0, 9));
 
   prepared.destroy();
   firstDegree.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow rejects nullable semantic identifiers', t => {
+it('makeGPUSplatDataFromArrow rejects nullable semantic identifiers', () => {
   const device = new NullDevice({});
   const source = makeSplatRecordBatch({
     positions: [0, 0, 0, 1, 1, 1],
@@ -328,15 +332,14 @@ test('makeGPUSplatDataFromArrow rejects nullable semantic identifiers', t => {
       columnName === 'semantic_id' ? semanticIds : source.getChild(columnName)
   };
 
-  t.throws(
+  expect(
     () => makeGPUSplatDataFromArrow(device, recordBatch),
-    /semantic identifiers cannot be null/,
     'never fabricates class zero for an unlabeled Arrow source row'
-  );
-  t.end();
+  ).toThrow(/semantic identifiers cannot be null/);
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', t => {
+it('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', () => {
   const device = new NullDevice({});
   const source = makeSplatRecordBatch({positions: [0, 0, 0]});
 
@@ -356,11 +359,10 @@ test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', 
         columnName === 'custom_category' ? semanticIds : source.getChild(columnName)
     };
 
-    t.throws(
+    expect(
       () => makeGPUSplatDataFromArrow(device, recordBatch, {semanticColumn: 'custom_category'}),
-      /semantic identifiers must be unsigned 32-bit integers/,
       `rejects invalid numeric semantic identifier ${String(semanticId)}`
-    );
+    ).toThrow(/semantic identifiers must be unsigned 32-bit integers/);
   }
 
   for (const semanticId of ['building', '7']) {
@@ -371,11 +373,10 @@ test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', 
       getChild: columnName => (columnName === 'label' ? semanticIds : source.getChild(columnName))
     };
 
-    t.throws(
+    expect(
       () => makeGPUSplatDataFromArrow(device, recordBatch),
-      /semantic identifiers must be unsigned 32-bit integers/,
       `never coerces automatically detected string label ${semanticId} into a class identifier`
-    );
+    ).toThrow(/semantic identifiers must be unsigned 32-bit integers/);
   }
 
   for (const {semanticId, semanticIds} of [
@@ -392,11 +393,10 @@ test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', 
         columnName === 'semantic_id' ? semanticIds : source.getChild(columnName)
     };
 
-    t.throws(
+    expect(
       () => makeGPUSplatDataFromArrow(device, recordBatch),
-      /semantic identifiers must be unsigned 32-bit integers/,
       `rejects out-of-range 64-bit semantic identifier ${String(semanticId)}`
-    );
+    ).toThrow(/semantic identifiers must be unsigned 32-bit integers/);
   }
 
   const validSource = makeSplatRecordBatch({positions: [0, 0, 0, 1, 1, 1]});
@@ -409,16 +409,15 @@ test('makeGPUSplatDataFromArrow rejects invalid unsigned semantic identifiers', 
   };
   const prepared = makeGPUSplatDataFromArrow(device, validRecordBatch)[0]!;
 
-  t.deepEqual(
+  expect(
     Array.from(prepared.source.semanticIds ?? []),
-    [0, 0xffff_ffff],
     'preserves both unsigned 32-bit bounds from numeric Arrow columns'
-  );
+  ).toEqual([0, 0xffff_ffff]);
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow honors linear field metadata and independent scale encodings', t => {
+it('makeGPUSplatDataFromArrow honors linear field metadata and independent scale encodings', () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({
     positions: [3, 4, 5],
@@ -431,24 +430,18 @@ test('makeGPUSplatDataFromArrow honors linear field metadata and independent sca
   });
   const batch = makeGPUSplatDataFromArrow(device, {data: recordBatch})[0];
 
-  assertApproximatelyEqual(t, batch?.source.scales, [0, 8, 3], 'decodes each scale field metadata');
-  assertApproximatelyEqual(
-    t,
-    batch?.source.opacities,
-    [1.5],
-    'preserves linear LoD opacity above 1'
-  );
-  t.deepEqual(
+  assertApproximatelyEqual(batch?.source.scales, [0, 8, 3], 'decodes each scale field metadata');
+  assertApproximatelyEqual(batch?.source.opacities, [1.5], 'preserves linear LoD opacity above 1');
+  expect(
     Array.from(batch?.source.rotations ?? []),
-    [0.5, 0.25, 0.125, 0.75],
     'does not reorder or overwrite the quaternion'
-  );
+  ).toEqual([0.5, 0.25, 0.125, 0.75]);
 
   batch?.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow uses fallback RGBA and full opacity for missing optional columns', t => {
+it('makeGPUSplatDataFromArrow uses fallback RGBA and full opacity for missing optional columns', () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({
     positions: [1, 2, 3],
@@ -465,29 +458,26 @@ test('makeGPUSplatDataFromArrow uses fallback RGBA and full opacity for missing 
   )[0];
 
   assertApproximatelyEqual(
-    t,
     defaultBatch?.source.colors,
     [1, 1, 1, 1],
     'uses linear opaque white when color coefficients are absent'
   );
   assertApproximatelyEqual(
-    t,
     customBatch?.source.colors,
     [12 / 255, 34 / 255, 56 / 255, 128 / 255],
     'normalizes caller-provided RGBA fallback color bytes into linear floats'
   );
-  t.deepEqual(
+  expect(
     Array.from(customBatch?.source.opacities ?? []),
-    [1],
     'does not sigmoid or duplicate fallback alpha when opacity is absent'
-  );
+  ).toEqual([1]);
 
   defaultBatch?.destroy();
   customBatch?.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow preserves Arrow record batches, global rows, and ownership', async t => {
+it('makeGPUSplatDataFromArrow preserves Arrow record batches, global rows, and ownership', async () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
     positions: [0, 0, 0, 1, 1, 1],
@@ -505,50 +495,47 @@ test('makeGPUSplatDataFromArrow preserves Arrow record batches, global rows, and
     {sourceBatchIndex: 3, rowIndexBase: 11}
   );
 
-  t.equal(batches.length, 2, 'retains each Arrow record batch independently');
-  t.deepEqual(
+  expect(batches.length, 'retains each Arrow record batch independently').toBe(2);
+  expect(
     batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [3, 11, 2],
-      [4, 13, 1]
-    ],
     'preserves stable source batch indices and global row offsets'
-  );
-  t.deepEqual(
+  ).toEqual([
+    [3, 11, 2],
+    [4, 13, 1]
+  ]);
+  expect(
     batches.map(batch => batch.table.batches.length),
-    [1, 1],
     'never combines source batches into one GPU table'
-  );
+  ).toEqual([1, 1]);
 
   const firstPositionBuffer = batches[0]?.positions.data[0]?.buffer;
   const secondPositionBuffer = batches[1]?.positions.data[0]?.buffer;
-  t.notEqual(
-    firstPositionBuffer,
-    secondPositionBuffer,
-    'allocates independent batch-local buffers'
+  expect(firstPositionBuffer, 'allocates independent batch-local buffers').not.toBe(
+    secondPositionBuffer
   );
-  t.deepEqual(
+  expect(
     Array.from(await readUint32GPUVector(batches[0]!)),
-    [11, 12],
     'uploads stable global indices for the first record batch'
-  );
-  t.deepEqual(
+  ).toEqual([11, 12]);
+  expect(
     Array.from(await readUint32GPUVector(batches[1]!)),
-    [13],
     'continues source indices across record batch boundaries'
-  );
+  ).toEqual([13]);
 
   batches[0]?.destroy();
-  t.ok(firstPositionBuffer?.destroyed, 'destroying a prepared batch releases its owned buffer');
-  t.notOk(
-    secondPositionBuffer?.destroyed,
+  expect(
+    Boolean(firstPositionBuffer?.destroyed),
+    'destroying a prepared batch releases its owned buffer'
+  ).toBe(true);
+  expect(
+    Boolean(secondPositionBuffer?.destroyed),
     'destroying one batch preserves other caller-owned data'
-  );
+  ).toBe(false);
   batches[1]?.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow accepts structural Arrow tables and batches from another realm', t => {
+it('makeGPUSplatDataFromArrow accepts structural Arrow tables and batches from another realm', () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
     positions: [0, 1, 2, 3, 4, 5],
@@ -562,8 +549,11 @@ test('makeGPUSplatDataFromArrow accepts structural Arrow tables and batches from
   const foreignRecordBatch = makeForeignArrowRecordBatch(firstRecordBatch);
   const foreignTable = makeForeignArrowTable([firstRecordBatch, secondRecordBatch]);
 
-  t.notOk(foreignRecordBatch instanceof arrow.RecordBatch, 'record batch has a foreign prototype');
-  t.notOk(foreignTable instanceof arrow.Table, 'table has a foreign prototype');
+  expect(
+    Boolean(foreignRecordBatch instanceof arrow.RecordBatch),
+    'record batch has a foreign prototype'
+  ).toBe(false);
+  expect(Boolean(foreignTable instanceof arrow.Table), 'table has a foreign prototype').toBe(false);
 
   const directRecordBatch = makeGPUSplatDataFromArrow(device, foreignRecordBatch);
   const wrappedRecordBatch = makeGPUSplatDataFromArrow(device, {data: foreignRecordBatch});
@@ -573,34 +563,29 @@ test('makeGPUSplatDataFromArrow accepts structural Arrow tables and batches from
     data: foreignTable
   });
 
-  t.deepEqual(
+  expect(
     directRecordBatch.map(batch => batch.rowCount),
-    [2],
     'accepts a direct foreign Arrow record batch'
-  );
-  t.deepEqual(
+  ).toEqual([2]);
+  expect(
     wrappedRecordBatch.map(batch => batch.rowCount),
-    [2],
     'accepts a wrapped foreign Arrow record batch'
-  );
-  t.deepEqual(
+  ).toEqual([2]);
+  expect(
     directTable.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [0, 0, 2],
-      [1, 2, 1]
-    ],
     'preserves the independent record batches of a direct foreign Arrow table'
-  );
-  t.deepEqual(
+  ).toEqual([
+    [0, 0, 2],
+    [1, 2, 1]
+  ]);
+  expect(
     wrappedTable.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [0, 0, 2],
-      [1, 2, 1]
-    ],
     'preserves the independent record batches of a wrapped foreign Arrow table'
-  );
+  ).toEqual([
+    [0, 0, 2],
+    [1, 2, 1]
+  ]);
   assertApproximatelyEqual(
-    t,
     directRecordBatch[0]?.source.colors.subarray(0, 4),
     [1.2251226155007027, 1.2418937311081395, 1.2109765937867287, 1],
     'preserves HDR spherical-harmonic color from a foreign Arrow record batch'
@@ -614,10 +599,10 @@ test('makeGPUSplatDataFromArrow accepts structural Arrow tables and batches from
   ]) {
     batch.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrowStream preserves mixed sources and progressive source offsets', async t => {
+it('makeGPUSplatDataFromArrowStream preserves mixed sources and progressive source offsets', async () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
     positions: [0, 0, 0, 1, 1, 1],
@@ -647,29 +632,27 @@ test('makeGPUSplatDataFromArrowStream preserves mixed sources and progressive so
     batches.push(batch);
   }
 
-  t.equal(batches.length, 3, 'yields each nonempty Arrow record batch exactly once');
-  t.deepEqual(
+  expect(batches.length, 'yields each nonempty Arrow record batch exactly once').toBe(3);
+  expect(
     batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [5, 20, 2],
-      [6, 22, 1],
-      [8, 23, 1]
-    ],
     'preserves batch identity across nested tables, empty batches, and wrappers'
-  );
-  t.deepEqual(
+  ).toEqual([
+    [5, 20, 2],
+    [6, 22, 1],
+    [8, 23, 1]
+  ]);
+  expect(
     batches.map(batch => batch.sourceInfo.sourceRowCount),
-    [2, 1, 1],
     'retains source row metadata on independently prepared streaming batches'
-  );
+  ).toEqual([2, 1, 1]);
 
   for (const batch of batches) {
     batch.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Arrow Gaussian paging preserves authored RAD identities across out-of-order chunks', async t => {
+it('Arrow Gaussian paging preserves authored RAD identities across out-of-order chunks', async () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
     positions: [0, 0, 0, 1, 1, 1],
@@ -692,48 +675,45 @@ test('Arrow Gaussian paging preserves authored RAD identities across out-of-orde
     batches.push(batch);
   }
 
-  t.deepEqual(
+  expect(
     batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [28, 1_512, 2],
-      [21, 1_012, 1]
-    ],
     'retains authored chunk/global-row identity independently of page request order'
-  );
-  t.deepEqual(
+  ).toEqual([
+    [28, 1_512, 2],
+    [21, 1_012, 1]
+  ]);
+  expect(
     Array.from(await readUint32GPUVector(batches[0]!)),
-    [1_512, 1_513],
     'uploads source-global RAD row IDs instead of sequential admission-order rows'
-  );
+  ).toEqual([1_512, 1_513]);
 
   const eagerBatch = makeGPUSplatDataFromArrow(device, sources[1]!, {
     sourceBatchIndex: 2,
     rowIndexBase: 100
   })[0]!;
-  t.equal(eagerBatch.sourceBatchIndex, 3, 'preserves eager source chunk identity');
-  t.equal(eagerBatch.rowIndexBase, 112, 'preserves eager source-global RAD row identity');
+  expect(eagerBatch.sourceBatchIndex, 'preserves eager source chunk identity').toBe(3);
+  expect(eagerBatch.rowIndexBase, 'preserves eager source-global RAD row identity').toBe(112);
 
   for (const batch of [...batches, eagerBatch]) {
     batch.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Arrow Gaussian paging rejects malformed loader-owned source identities', t => {
+it('Arrow Gaussian paging rejects malformed loader-owned source identities', () => {
   const device = new NullDevice({});
   const recordBatch = makeSplatRecordBatch({positions: [0, 0, 0], scaleEncoding: 'linear'});
 
   for (const loaderData of [{base: -1}, {base: Number.NaN}, {chunkIndex: -1}]) {
-    t.throws(
+    expect(
       () => makeGPUSplatDataFromArrow(device, {data: recordBatch, loaderData}),
-      /nonnegative safe integers/,
       'rejects invalid stable paged Gaussian source identities'
-    );
+    ).toThrow(/nonnegative safe integers/);
   }
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrowStream allocates record batches lazily and honors early cancellation', async t => {
+it('makeGPUSplatDataFromArrowStream allocates record batches lazily and honors early cancellation', async () => {
   const device = new NullDevice({});
   const allocatedBuffers: Array<ReturnType<typeof device.createBuffer>> = [];
   const createBuffer = device.createBuffer.bind(device);
@@ -761,26 +741,27 @@ test('makeGPUSplatDataFromArrowStream allocates record batches lazily and honors
     break;
   }
 
-  t.equal(yieldedBatches.length, 1, 'cancels the stream after transferring one caller-owned batch');
-  t.deepEqual(
+  expect(
+    yieldedBatches.length,
+    'cancels the stream after transferring one caller-owned batch'
+  ).toBe(1);
+  expect(
     [yieldedBatches[0]?.sourceBatchIndex, yieldedBatches[0]?.rowIndexBase],
-    [6, 12],
     'preserves source identity before the consumer cancels'
-  );
-  t.equal(
+  ).toEqual([6, 12]);
+  expect(
     allocatedBuffers.length,
-    Object.keys(yieldedBatches[0]?.table.batches[0].gpuData ?? {}).length,
     'does not allocate unrequested record-batch GPU buffers before yielding'
-  );
+  ).toBe(Object.keys(yieldedBatches[0]?.table.batches[0].gpuData ?? {}).length);
   yieldedBatches[0]?.destroy();
-  t.ok(
-    allocatedBuffers.every(buffer => buffer.destroyed),
+  expect(
+    Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'early cancellation leaves no inaccessible or leaked prepared-batch allocations'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrowStream preserves structural cross-realm Arrow batch boundaries', async t => {
+it('makeGPUSplatDataFromArrowStream preserves structural cross-realm Arrow batch boundaries', async () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeSplatRecordBatch({
     positions: [0, 1, 2, 3, 4, 5],
@@ -807,23 +788,22 @@ test('makeGPUSplatDataFromArrowStream preserves structural cross-realm Arrow bat
     batches.push(batch);
   }
 
-  t.deepEqual(
+  expect(
     batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.rowCount]),
-    [
-      [2, 7, 2],
-      [3, 9, 1],
-      [4, 10, 1]
-    ],
     'recognizes streamed foreign tables and batches without collapsing source boundaries'
-  );
+  ).toEqual([
+    [2, 7, 2],
+    [3, 9, 1],
+    [4, 10, 1]
+  ]);
 
   for (const batch of batches) {
     batch.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow rejects missing required position, scale, and rotation columns', t => {
+it('makeGPUSplatDataFromArrow rejects missing required position, scale, and rotation columns', () => {
   const device = new NullDevice({});
   for (const columnName of ['POSITION', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_3']) {
     const recordBatch = makeSplatRecordBatch({
@@ -831,16 +811,15 @@ test('makeGPUSplatDataFromArrow rejects missing required position, scale, and ro
       scaleEncoding: 'linear',
       omit: [columnName]
     });
-    t.throws(
+    expect(
       () => makeGPUSplatDataFromArrow(device, recordBatch),
-      new RegExp(columnName),
       `rejects a missing ${columnName} column`
-    );
+    ).toThrow(new RegExp(columnName));
   }
-  t.end();
+  void 0;
 });
 
-test('makeGPUSplatDataFromArrow honors sliced FixedSizeList position offsets', t => {
+it('makeGPUSplatDataFromArrow honors sliced FixedSizeList position offsets', () => {
   const device = new NullDevice({});
   const source = makeSplatRecordBatch({
     positions: [0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -848,15 +827,14 @@ test('makeGPUSplatDataFromArrow honors sliced FixedSizeList position offsets', t
   }).slice(1, 3);
   const batch = makeGPUSplatDataFromArrow(device, source)[0];
 
-  t.equal(batch?.rowCount, 2, 'retains the sliced record-batch row count');
-  t.deepEqual(
+  expect(batch?.rowCount, 'retains the sliced record-batch row count').toBe(2);
+  expect(
     Array.from(batch?.source.positions ?? []),
-    [3, 4, 5, 6, 7, 8],
     'uploads exactly the sliced FixedSizeList position rows'
-  );
+  ).toEqual([3, 4, 5, 6, 7, 8]);
 
   batch?.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSplatRecordBatch(options: SplatRecordBatchOptions): arrow.RecordBatch {
@@ -981,19 +959,16 @@ async function readUint32GPUVector(data: GPUSplatData): Promise<Uint32Array> {
 }
 
 function assertApproximatelyEqual(
-  assertion: {
-    ok: (value: boolean, description: string) => void;
-  },
   actual: ArrayLike<number> | undefined,
   expected: readonly number[],
   description: string
 ): void {
-  assertion.ok(
+  expect(
     Boolean(
       actual &&
         actual.length === expected.length &&
         expected.every((value, valueIndex) => Math.abs(actual[valueIndex]! - value) < 0.00001)
     ),
     description
-  );
+  ).toBe(true);
 }

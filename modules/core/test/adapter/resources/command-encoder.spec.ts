@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   Buffer,
   CommandBuffer,
@@ -122,7 +122,7 @@ class TestCommandEncoder extends CommandEncoder {
   }
 }
 
-test('Transient command resources release core stats', async t => {
+it('Transient command resources release core stats', async () => {
   for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
     const framebuffer =
       device.type === 'webgpu'
@@ -136,191 +136,168 @@ test('Transient command resources release core stats', async t => {
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0], framebuffer});
     const duringRenderPassStats = getResourceStats(device);
-    t.equal(
+    expect(
       duringRenderPassStats.renderPasssActive - beforeStats.renderPasssActive,
-      1,
       `${device.type} beginRenderPass increments RenderPasss Active`
-    );
+    ).toBe(1);
 
     renderPass.end();
 
     const afterRenderPassStats = getResourceStats(device);
-    t.equal(
+    expect(
       afterRenderPassStats.renderPasssActive,
-      beforeStats.renderPasssActive,
       `${device.type} RenderPass.end restores RenderPasss Active`
-    );
+    ).toBe(beforeStats.renderPasssActive);
 
     const commandEncoder = device.createCommandEncoder();
     const afterCommandEncoderStats = getResourceStats(device);
-    t.equal(
+    expect(
       afterCommandEncoderStats.commandEncodersActive - afterRenderPassStats.commandEncodersActive,
-      1,
       `${device.type} createCommandEncoder increments CommandEncoders Active`
-    );
+    ).toBe(1);
 
     const commandBuffer = commandEncoder.finish();
-    t.equal(
-      commandBuffer.id,
-      commandEncoder.id,
-      `${device.type} command buffer inherits the encoder id`
+    expect(commandBuffer.id, `${device.type} command buffer inherits the encoder id`).toBe(
+      commandEncoder.id
     );
-    t.equal(
+    expect(
       commandBuffer.userData,
-      commandEncoder.userData,
       `${device.type} command buffer inherits the encoder userData`
-    );
+    ).toBe(commandEncoder.userData);
     const afterFinishStats = getResourceStats(device);
-    t.equal(
+    expect(
       afterFinishStats.commandEncodersActive,
-      afterRenderPassStats.commandEncodersActive,
       `${device.type} CommandEncoder.finish restores CommandEncoders Active`
-    );
-    t.equal(
+    ).toBe(afterRenderPassStats.commandEncodersActive);
+    expect(
       afterFinishStats.commandBuffersActive - afterRenderPassStats.commandBuffersActive,
-      1,
       `${device.type} CommandEncoder.finish increments CommandBuffers Active`
-    );
+    ).toBe(1);
 
     device.submit(commandBuffer);
 
     const afterSubmitStats = getResourceStats(device);
-    t.equal(
+    expect(
       afterSubmitStats.commandBuffersActive,
-      afterRenderPassStats.commandBuffersActive,
       `${device.type} Device.submit restores CommandBuffers Active`
-    );
-    t.equal(
+    ).toBe(afterRenderPassStats.commandBuffersActive);
+    expect(
       afterSubmitStats.resourcesActive,
-      beforeStats.resourcesActive,
       `${device.type} transient command resources restore total Resources Active`
-    );
+    ).toBe(beforeStats.resourcesActive);
 
     framebuffer?.destroy();
   }
 
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const beforeStats = getResourceStats(webgpuDevice);
   const computePass = webgpuDevice.beginComputePass({});
   const duringComputePassStats = getResourceStats(webgpuDevice);
-  t.equal(
+  expect(
     duringComputePassStats.computePasssActive - beforeStats.computePasssActive,
-    1,
     'webgpu beginComputePass increments ComputePasss Active'
-  );
+  ).toBe(1);
 
   computePass.end();
 
   const afterComputePassStats = getResourceStats(webgpuDevice);
-  t.equal(
+  expect(
     afterComputePassStats.computePasssActive,
-    beforeStats.computePasssActive,
     'webgpu ComputePass.end restores ComputePasss Active'
-  );
+  ).toBe(beforeStats.computePasssActive);
 
   const beforeCanvasStats = getResourceStats(webgpuDevice);
   const firstDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
     clearColor: [0, 0, 0, 1]
   });
   const duringFirstCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
+  expect(
     duringFirstCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
-    0,
     'webgpu default render pass reuses the shared default sampler wrapper'
-  );
+  ).toBe(0);
 
   firstDefaultFramebufferRenderPass.end();
   webgpuDevice.submit();
 
   const afterFirstCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
+  expect(
     afterFirstCanvasStats.framebuffersActive,
-    duringFirstCanvasStats.framebuffersActive,
     'webgpu cached framebuffer wrapper remains active after submit'
-  );
-  t.equal(
+  ).toBe(duringFirstCanvasStats.framebuffersActive);
+  expect(
     afterFirstCanvasStats.texturesActive,
-    duringFirstCanvasStats.texturesActive,
     'webgpu cached swapchain texture wrapper remains active after submit'
-  );
-  t.equal(
+  ).toBe(duringFirstCanvasStats.texturesActive);
+  expect(
     afterFirstCanvasStats.samplersActive,
-    duringFirstCanvasStats.samplersActive,
     'webgpu cached default framebuffer path does not add sampler wrappers after submit'
-  );
-  t.equal(
+  ).toBe(duringFirstCanvasStats.samplersActive);
+  expect(
     afterFirstCanvasStats.textureViewsActive,
-    duringFirstCanvasStats.textureViewsActive,
     'webgpu cached texture view wrapper remains active after submit'
-  );
+  ).toBe(duringFirstCanvasStats.textureViewsActive);
 
   const secondDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
     clearColor: [0, 0, 0, 1]
   });
   const duringSecondCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
+  expect(
     duringSecondCanvasStats.framebuffersActive,
-    afterFirstCanvasStats.framebuffersActive,
     'webgpu second default render pass reuses cached framebuffer wrapper'
-  );
-  t.equal(
+  ).toBe(afterFirstCanvasStats.framebuffersActive);
+  expect(
     duringSecondCanvasStats.texturesActive,
-    afterFirstCanvasStats.texturesActive,
     'webgpu second default render pass reuses cached texture wrapper'
-  );
-  t.equal(
+  ).toBe(afterFirstCanvasStats.texturesActive);
+  expect(
     duringSecondCanvasStats.textureViewsActive,
-    afterFirstCanvasStats.textureViewsActive,
     'webgpu second default render pass reuses cached texture view wrapper'
-  );
+  ).toBe(afterFirstCanvasStats.textureViewsActive);
 
   secondDefaultFramebufferRenderPass.end();
   webgpuDevice.submit();
 
-  t.end();
+  void 0;
 });
 
-test('CommandEncoder resolves time profiling with a single bulk query read', async t => {
+it('CommandEncoder resolves time profiling with a single bulk query read', async () => {
   const device = await getNullTestDevice();
   const querySet = new TestQuerySet(device, {type: 'timestamp', count: 4});
   const commandEncoder = new TestCommandEncoder(device, querySet);
 
   await commandEncoder.resolveTimeProfilingQuerySet();
 
-  t.equal(
+  expect(
     querySet.readResultsCallCount,
-    1,
     'resolveTimeProfilingQuerySet uses one bulk readResults call'
-  );
-  t.equal(
+  ).toBe(1);
+  expect(
     querySet.readTimestampDurationCallCount,
-    0,
     'resolveTimeProfilingQuerySet does not call readTimestampDuration per pair'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     commandEncoder._gpuTimeMs,
-    0.00004,
     'resolveTimeProfilingQuerySet sums durations from bulk results'
-  );
+  ).toBe(0.00004);
 
   commandEncoder.destroy();
   querySet.destroy();
-  t.end();
+  void 0;
 });
 
-test('CommandEncoder default submit rolls over to a fresh default encoder', async t => {
+it('CommandEncoder default submit rolls over to a fresh default encoder', async () => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
     if (device.type === 'webgpu') {
-      t.comment('Skipping WebGPU default encoder rollover test due to flaky device-loss behavior');
+      void 0;
       continue;
     }
     if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
-      t.comment('Skipping WebGL default encoder rollover test on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -343,11 +320,10 @@ test('CommandEncoder default submit rolls over to a fresh default encoder', asyn
     device.submit();
 
     let receivedData = await readAsyncF32(destinationBuffer);
-    t.deepEqual(
+    expect(
       Array.from(receivedData),
-      [1, 2, 3],
       `${device.type} default encoder submits recorded commands`
-    );
+    ).toEqual([1, 2, 3]);
 
     sourceBuffer.write(new Float32Array([4, 5, 6]));
     device.commandEncoder.copyBufferToBuffer({
@@ -358,21 +334,20 @@ test('CommandEncoder default submit rolls over to a fresh default encoder', asyn
     device.submit();
 
     receivedData = await readAsyncF32(destinationBuffer);
-    t.deepEqual(
+    expect(
       Array.from(receivedData),
-      [4, 5, 6],
       `${device.type} default encoder is replaced and remains usable after submit`
-    );
+    ).toEqual([4, 5, 6]);
   }
 
-  t.end();
+  void 0;
 });
 
-test.skip('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and retires staging buffers', async t => {
+it.skip('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and retires staging buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -404,16 +379,15 @@ test.skip('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and
   });
 
   const encodedBufferCount = stats.get('Buffers Active').count;
-  t.equal(
+  expect(
     encodedBufferCount - beforeBufferCount,
-    4,
     'webgpu encoder uploads allocate transient staging buffers before submit'
-  );
+  ).toBe(4);
 
   device.submit(commandEncoder.finish());
 
   const receivedData = await destinationBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(
       new Uint32Array(
         receivedData.buffer,
@@ -421,29 +395,27 @@ test.skip('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and
         receivedData.byteLength / Uint32Array.BYTES_PER_ELEMENT
       )
     ),
-    [1, 2],
     'webgpu encoder uploads stay ordered with subsequent buffer copies'
-  );
+  ).toEqual([1, 2]);
 
   const fence = device.createFence();
   await fence.signaled;
   fence.destroy();
-  t.equal(
+  expect(
     stats.get('Buffers Active').count - beforeBufferCount,
-    2,
     'webgpu staging buffers are released after submitted work completes'
-  );
+  ).toBe(2);
 
   sourceBuffer.destroy();
   destinationBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Abandoned WebGPU command buffers release transient upload buffers on destroy', async t => {
+it('Abandoned WebGPU command buffers release transient upload buffers on destroy', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -458,29 +430,27 @@ test('Abandoned WebGPU command buffers release transient upload buffers on destr
   device.writeBufferViaCommandEncoder(commandEncoder, destinationBuffer, new Uint32Array([7]));
   const commandBuffer = commandEncoder.finish();
 
-  t.equal(
+  expect(
     stats.get('Buffers Active').count - beforeBufferCount,
-    2,
     'webgpu abandoned command buffer retains destination and transient staging buffer'
-  );
+  ).toBe(2);
 
   commandBuffer.destroy();
 
-  t.equal(
+  expect(
     stats.get('Buffers Active').count - beforeBufferCount,
-    1,
     'webgpu command buffer destroy releases transient staging buffer when never submitted'
-  );
+  ).toBe(1);
 
   destinationBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('CommandBuffer#copyBufferToBuffer', async t => {
+it('CommandBuffer#copyBufferToBuffer', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL buffer copy test on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -491,7 +461,7 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
 
   let receivedData = await readAsyncF32(destinationBuffer);
   let expectedData = new Float32Array([4, 5, 6]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
+  expect(receivedData, 'copyBufferToBuffer: default parameters successful').toEqual(expectedData);
 
   let commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
@@ -504,7 +474,7 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
+  expect(receivedData, 'copyBufferToBuffer: with size successful').toEqual(expectedData);
 
   commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
@@ -519,9 +489,11 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
+  expect(receivedData, 'copyBufferToBuffer: with size and offsets successful').toEqual(
+    expectedData
+  );
 
-  t.end();
+  void 0;
 });
 
 type CopyTextureToBufferFixture = {
@@ -586,36 +558,34 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
   }
 ];
 
-test('CommandBuffer#copyTextureToBuffer', async t => {
+it('CommandBuffer#copyTextureToBuffer', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL texture-to-buffer copy test on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
-    await testCopyTextureToBuffer(t, device, {...fixture});
-    await testCopyTextureToBuffer(t, device, {
+    await testCopyTextureToBuffer(device, {...fixture});
+    await testCopyTextureToBuffer(device, {
       ...fixture,
       useFramebuffer: true,
       title: `${fixture.title} + framebuffer`
     });
   }
 
-  t.end();
+  void 0;
 });
 
-test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across backends', async t => {
+it('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across backends', async () => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
     if (device.type === 'webgpu') {
-      t.comment(
-        'Skipping WebGPU texture-to-buffer origin/offset test due to flaky device-loss behavior'
-      );
+      void 0;
       continue;
     }
     if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
-      t.comment('Skipping WebGL origin/byteOffset texture copy test on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -646,17 +616,16 @@ test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across bac
     device.submit(commandBuffer);
 
     const color = await readAsyncU8(destinationBuffer);
-    t.deepEqual(
+    expect(
       Array.from(color.slice(0, 8)),
-      [0, 0, 0, 0, 5, 6, 7, 8],
       `${device.type} copyTextureToBuffer uses canonical origin/byteOffset semantics`
-    );
+    ).toEqual([0, 0, 0, 0, 5, 6, 7, 8]);
   }
 
-  t.end();
+  void 0;
 });
 
-test.skip('WebGPU custom CommandEncoder render pass records on the owning encoder', async t => {
+it.skip('WebGPU custom CommandEncoder render pass records on the owning encoder', async () => {
   const device = await getWebGPUTestDevice();
 
   const colorTexture = device.createTexture({
@@ -693,18 +662,17 @@ test.skip('WebGPU custom CommandEncoder render pass records on the owning encode
   device.submit(commandBuffer);
 
   const pixelData = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength));
-  t.deepEqual(
+  expect(
     Array.from(pixelData.slice(0, 4)),
-    [255, 0, 0, 255],
     'custom WebGPU encoder owns the render pass it creates'
-  );
+  ).toEqual([255, 0, 0, 255]);
 
   readBuffer.destroy();
   framebuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test.skip('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/submit', async t => {
+it.skip('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/submit', async () => {
   const device = await getWebGPUTestDevice();
 
   const sourceTexture = device.createTexture({
@@ -730,27 +698,24 @@ test.skip('WebGPU CommandEncoder#copyTextureToBuffer does not submit before fini
   });
 
   const preSubmitData = await readAsyncU8(destinationBuffer);
-  t.deepEqual(
+  expect(
     Array.from(preSubmitData.slice(0, 4)),
-    [0, 0, 0, 0],
     'copyTextureToBuffer leaves the destination buffer unchanged until submit'
-  );
+  ).toEqual([0, 0, 0, 0]);
 
   const commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
 
   const postSubmitData = await readAsyncU8(destinationBuffer);
-  t.deepEqual(
+  expect(
     Array.from(postSubmitData.slice(0, 4)),
-    [9, 8, 7, 6],
     'copyTextureToBuffer writes into the destination buffer after submit'
-  );
+  ).toEqual([9, 8, 7, 6]);
 
-  t.end();
+  void 0;
 });
 
 async function testCopyTextureToBuffer(
-  t: Test,
   device_: Device,
   options: CopyTextureToBufferFixture & {useFramebuffer?: boolean}
 ) {
@@ -796,10 +761,22 @@ async function testCopyTextureToBuffer(
       ? await readAsyncU8(destinationBuffer)
       : await readAsyncF32(destinationBuffer);
 
-  t.ok(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON, `reads "R" channel (${title})`);
-  t.ok(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON, `reads "G" channel (${title})`);
-  t.ok(abs(dstPixel[2] - color[2 + dstOffset]) < EPSILON, `reads "B" channel (${title})`);
-  t.ok(abs(dstPixel[3] - color[3 + dstOffset]) < EPSILON, `reads "A" channel (${title})`);
+  expect(
+    Boolean(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON),
+    `reads "R" channel (${title})`
+  ).toBe(true);
+  expect(
+    Boolean(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON),
+    `reads "G" channel (${title})`
+  ).toBe(true);
+  expect(
+    Boolean(abs(dstPixel[2] - color[2 + dstOffset]) < EPSILON),
+    `reads "B" channel (${title})`
+  ).toBe(true);
+  expect(
+    Boolean(abs(dstPixel[3] - color[3 + dstOffset]) < EPSILON),
+    `reads "A" channel (${title})`
+  ).toBe(true);
 }
 
 async function readAsyncU8(source: Buffer): Promise<Uint8Array> {
@@ -811,16 +788,16 @@ async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }
 
-test('CommandEncoder#copyTextureToTexture', async t => {
+it('CommandEncoder#copyTextureToTexture', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL texture-to-texture copy test on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   // for (const device of await getTestDevices()) {
-  testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
+  testCopyToTexture(device, {isSubCopy: false, sourceIsFramebuffer: false});
   // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
   // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
   // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
@@ -828,7 +805,6 @@ test('CommandEncoder#copyTextureToTexture', async t => {
 });
 
 function testCopyToTexture(
-  t: Test,
   device_: Device,
   options: {isSubCopy: boolean; sourceIsFramebuffer: boolean}
 ): void {
@@ -851,7 +827,7 @@ function testCopyToTexture(
   // Read data form destination texture
   const color = device_.readPixelsToArrayWebGL(destinationTexture);
 
-  t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
+  expect(Array.from(color), 'copyTextureToTexture() successful').toEqual(sourceColor);
 
   // const opts = {width: 1, height: 1};
   // if (options.isSubCopy) {
@@ -889,7 +865,7 @@ function testCopyToTexture(
   //   } as source, isSubCopy=${options.isSubCopy}`
   // );
 
-  t.end();
+  void 0;
 }
 
 function isSoftwareBackedDevice(device: Device): boolean {

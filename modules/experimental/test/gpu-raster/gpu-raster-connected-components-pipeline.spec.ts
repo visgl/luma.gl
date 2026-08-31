@@ -13,7 +13,7 @@ import {
   type GPURasterConnectivity
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ComponentFixture = {
   id: string;
@@ -53,11 +53,11 @@ type BinarySamples = {
 
 const GUARD_VALUE = 4000000001;
 
-test('GPURaster connected components preserve exact 4/8 connectivity, sparse roots, and independent nodata', async testCase => {
+it('GPURaster connected components preserve exact 4/8 connectivity, sparse roots, and independent nodata', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -92,47 +92,49 @@ test('GPURaster connected components preserve exact 4/8 connectivity, sparse roo
       noDataValue: 0xffffffff
     });
 
-    testCase.deepEqual(
+    expect(
       result.labels,
-      Array.from(expected.values),
       `${connectivity}-connected foreground uses its minimum row-major representative plus one`
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.values));
+    expect(
       result.validity,
-      Array.from(expected.validity),
       'valid background remains distinct from missing masks and exact unsigned nodata'
+    ).toEqual(Array.from(expected.validity));
+    expect(result.converged, 'bounded GPU rounds publish a converged scalar').toBe(1);
+    expect(Boolean(result.iterations > 0), 'the actual GPU iteration count is caller-visible').toBe(
+      true
     );
-    testCase.equal(result.converged, 1, 'bounded GPU rounds publish a converged scalar');
-    testCase.ok(result.iterations > 0, 'the actual GPU iteration count is caller-visible');
-    testCase.ok(result.iterations <= 24, 'published iterations never exceed the explicit budget');
+    expect(
+      Boolean(result.iterations <= 24),
+      'published iterations never exceed the explicit budget'
+    ).toBe(true);
 
     const foregroundLabels = new Set(result.labels.filter(label => label !== 0));
     if (connectivity === 4) {
-      testCase.ok(
-        foregroundLabels.size > 20,
+      expect(
+        Boolean(foregroundLabels.size > 20),
         'diagonally adjacent checkerboard observations remain separate under four connectivity'
-      );
+      ).toBe(true);
     } else {
-      testCase.equal(
+      expect(
         foregroundLabels.size,
-        1,
         'diagonal neighbors form one deterministic region under eight connectivity'
-      );
+      ).toBe(1);
     }
-    testCase.equal(result.validity[20], 0, 'native uint32 nodata remains invalid');
-    testCase.equal(result.validity[40], 0, 'an independently masked observation remains invalid');
-    testCase.equal(result.labels[1], 0, 'known background keeps its zero label');
-    testCase.equal(result.validity[1], 1, 'known background remains analytically valid');
+    expect(result.validity[20], 'native uint32 nodata remains invalid').toBe(0);
+    expect(result.validity[40], 'an independently masked observation remains invalid').toBe(0);
+    expect(result.labels[1], 'known background keeps its zero label').toBe(0);
+    expect(result.validity[1], 'known background remains analytically valid').toBe(1);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster threshold, binary closing, and deterministic component roots re-encode as one GPU pipeline', async testCase => {
+it('GPURaster threshold, binary closing, and deterministic component roots re-encode as one GPU pipeline', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -258,45 +260,43 @@ test('GPURaster threshold, binary closing, and deterministic component roots re-
       connectivity: 8
     });
 
-    testCase.deepEqual(
+    expect(
       await readLogical(labelsBuffer, pixelCount, 2),
-      Array.from(expected.values),
       'threshold and two-pass binary closing feed deterministic sparse GPU component labels'
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.values));
+    expect(
       await readLogical(outputValidityBuffer, pixelCount, 1),
-      Array.from(expected.validity),
       'nodata barriers survive thresholding, binary closing, and component output'
-    );
-    testCase.equal(
+    ).toEqual(Array.from(expected.validity));
+    expect(
       (await readLogical(convergenceBuffer, 1, 1))[0],
-      1,
       'each graph re-encoding resets and republishes true convergence'
-    );
-    testCase.ok(
-      (await readLogical(iterationBuffer, 1, 2))[0]! > 0,
+    ).toBe(1);
+    expect(
+      Boolean((await readLogical(iterationBuffer, 1, 2))[0]! > 0),
       'actual GPU convergence work is published on each execution'
-    );
-    testCase.deepEqual(
+    ).toBe(true);
+    expect(
       (await readUnsigned(labelsBuffer)).slice(0, 2),
-      [GUARD_VALUE, GUARD_VALUE],
       'offset-backed output preserves caller-owned prefix guards'
-    );
+    ).toEqual([GUARD_VALUE, GUARD_VALUE]);
   }
 
   compiled.destroy();
   for (const buffer of ownedBuffers) {
-    testCase.notOk(buffer.destroyed, 'graph teardown preserves borrowed application buffers');
+    expect(Boolean(buffer.destroyed), 'graph teardown preserves borrowed application buffers').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster insufficient component rounds clear all dependent labels, validity, and histogram bins', async testCase => {
+it('GPURaster insufficient component rounds clear all dependent labels, validity, and histogram bins', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -315,21 +315,20 @@ test('GPURaster insufficient component rounds clear all dependent labels, validi
     connectivity: 4,
     maximumIterations: 1
   });
-  testCase.equal(unresolved.converged, 0, 'one union round cannot prove final convergence');
-  testCase.equal(unresolved.iterations, 1, 'the exhausted fixed iteration budget is explicit');
-  testCase.ok(
-    unresolved.labels.every(label => label === 0),
+  expect(unresolved.converged, 'one union round cannot prove final convergence').toBe(0);
+  expect(unresolved.iterations, 'the exhausted fixed iteration budget is explicit').toBe(1);
+  expect(
+    Boolean(unresolved.labels.every(label => label === 0)),
     'a nonconverged graph publishes no plausible partial component labels'
-  );
-  testCase.ok(
-    unresolved.validity.every(flag => flag === 0),
+  ).toBe(true);
+  expect(
+    Boolean(unresolved.validity.every(flag => flag === 0)),
     'every dependent observation is invalidated rather than exposing valid-looking background'
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     unresolved.histogram,
-    [0, 0, 0, 0, 0, 0, 0, 0],
     'downstream histogram work cannot consume incomplete component labels'
-  );
+  ).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
 
   const resolved = await runDirectComponents(device, {
     id: 'sufficient-round-budget',
@@ -341,24 +340,19 @@ test('GPURaster insufficient component rounds clear all dependent labels, validi
     maximumIterations: 32
   });
   const expected = makeReferenceComponents({width, height, values, validity, connectivity: 4});
-  testCase.equal(resolved.converged, 1, 'a sufficient bounded GPU budget proves convergence');
-  testCase.deepEqual(
-    resolved.labels,
-    Array.from(expected.values),
-    'workgroup boundaries retain roots'
-  );
-  testCase.deepEqual(
+  expect(resolved.converged, 'a sufficient bounded GPU budget proves convergence').toBe(1);
+  expect(resolved.labels, 'workgroup boundaries retain roots').toEqual(Array.from(expected.values));
+  expect(
     resolved.validity,
-    Array.from(expected.validity),
     'the explicit nodata barrier splits the long foreground component'
-  );
-  testCase.equal(resolved.labels[0], 1, 'the first sparse region uses its row-major root');
-  testCase.equal(resolved.labels[65], 66, 'the second sparse region uses its own minimum root');
-  testCase.ok(
-    resolved.histogram.some(count => count !== 0),
+  ).toEqual(Array.from(expected.validity));
+  expect(resolved.labels[0], 'the first sparse region uses its row-major root').toBe(1);
+  expect(resolved.labels[65], 'the second sparse region uses its own minimum root').toBe(66);
+  expect(
+    Boolean(resolved.histogram.some(count => count !== 0)),
     'dependent distributions become visible only after actual convergence'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
 async function runDirectComponents(

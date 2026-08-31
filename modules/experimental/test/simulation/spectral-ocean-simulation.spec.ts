@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {SpectralOceanSimulation} from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('SpectralOceanSimulation produces finite evolving displacements and unit normals', async testCase => {
+it('SpectralOceanSimulation produces finite evolving displacements and unit normals', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -37,16 +37,18 @@ test('SpectralOceanSimulation produces finite evolving displacements and unit no
     });
     device.submit(firstEncoder.finish());
 
-    testCase.equal(firstOutputs, simulation.outputs, 'encode returns stable output references');
-    testCase.ok(Object.isFrozen(firstOutputs), 'the output reference set is immutable');
-    testCase.ok(
-      firstOutputs.displacementBuffer.usage & Buffer.VERTEX,
+    expect(firstOutputs, 'encode returns stable output references').toBe(simulation.outputs);
+    expect(Boolean(Object.isFrozen(firstOutputs)), 'the output reference set is immutable').toBe(
+      true
+    );
+    expect(
+      Boolean(firstOutputs.displacementBuffer.usage & Buffer.VERTEX),
       'displacements are vertex-readable'
-    );
-    testCase.ok(
-      firstOutputs.normalFoamBuffer.usage & Buffer.STORAGE,
+    ).toBe(true);
+    expect(
+      Boolean(firstOutputs.normalFoamBuffer.usage & Buffer.STORAGE),
       'normal/foam is storage-readable'
-    );
+    ).toBe(true);
 
     const firstDisplacements = await readFloat32(
       firstOutputs.displacementBuffer,
@@ -56,22 +58,27 @@ test('SpectralOceanSimulation produces finite evolving displacements and unit no
       firstOutputs.normalFoamBuffer,
       simulation.stats.elementCount * 4
     );
-    testCase.ok(
-      firstDisplacements.every(Number.isFinite),
+    expect(
+      Boolean(firstDisplacements.every(Number.isFinite)),
       'every displacement component is finite'
-    );
-    testCase.ok(firstNormalFoam.every(Number.isFinite), 'every normal/foam component is finite');
+    ).toBe(true);
+    expect(
+      Boolean(firstNormalFoam.every(Number.isFinite)),
+      'every normal/foam component is finite'
+    ).toBe(true);
 
     const heights = getRecordComponent(firstDisplacements, 1);
     const horizontalDisplacements = [
       ...getRecordComponent(firstDisplacements, 0),
       ...getRecordComponent(firstDisplacements, 2)
     ];
-    testCase.ok(getRange(heights) > 0.001, 'height output has non-flat spatial variation');
-    testCase.ok(
-      getRange(horizontalDisplacements) > 0.001,
-      'horizontal displacement has non-flat spatial variation'
+    expect(Boolean(getRange(heights) > 0.001), 'height output has non-flat spatial variation').toBe(
+      true
     );
+    expect(
+      Boolean(getRange(horizontalDisplacements) > 0.001),
+      'horizontal displacement has non-flat spatial variation'
+    ).toBe(true);
 
     let minimumNormalLength = Infinity;
     let maximumNormalLength = -Infinity;
@@ -89,10 +96,10 @@ test('SpectralOceanSimulation produces finite evolving displacements and unit no
       minimumFoam = Math.min(minimumFoam, firstNormalFoam[offset + 3]);
       maximumFoam = Math.max(maximumFoam, firstNormalFoam[offset + 3]);
     }
-    testCase.ok(minimumNormalLength > 0.995, 'all normals stay near unit length');
-    testCase.ok(maximumNormalLength < 1.005, 'normal normalization remains bounded');
-    testCase.ok(minimumFoam >= 0, 'foam never goes negative');
-    testCase.ok(maximumFoam <= 1, 'foam never exceeds one');
+    expect(Boolean(minimumNormalLength > 0.995), 'all normals stay near unit length').toBe(true);
+    expect(Boolean(maximumNormalLength < 1.005), 'normal normalization remains bounded').toBe(true);
+    expect(Boolean(minimumFoam >= 0), 'foam never goes negative').toBe(true);
+    expect(Boolean(maximumFoam <= 1), 'foam never exceeds one').toBe(true);
 
     const secondEncoder = device.createCommandEncoder({id: 'spectral-ocean-second-step'});
     simulation.encode(secondEncoder, {time: 1.25, deltaTime: 0.1});
@@ -105,10 +112,10 @@ test('SpectralOceanSimulation produces finite evolving displacements and unit no
       simulation.outputs.normalFoamBuffer,
       simulation.stats.elementCount * 4
     );
-    testCase.ok(
-      getMaximumDifference(firstDisplacements, secondDisplacements) > 0.001,
+    expect(
+      Boolean(getMaximumDifference(firstDisplacements, secondDisplacements) > 0.001),
       'absolute time evolves the field'
-    );
+    ).toBe(true);
 
     const resetEncoder = device.createCommandEncoder({id: 'spectral-ocean-reset-foam'});
     simulation.encode(resetEncoder, {
@@ -121,22 +128,22 @@ test('SpectralOceanSimulation produces finite evolving displacements and unit no
       simulation.outputs.normalFoamBuffer,
       simulation.stats.elementCount * 4
     );
-    testCase.ok(
-      getMaximumRecordComponentDifference(retainedNormalFoam, resetNormalFoam, 3) > 0.0001,
+    expect(
+      Boolean(getMaximumRecordComponentDifference(retainedNormalFoam, resetNormalFoam, 3) > 0.0001),
       'ordinary steps retain prior foam while reset discards history at the same wave time'
-    );
+    ).toBe(true);
   } finally {
     simulation.destroy();
     simulation.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('SpectralOceanSimulation preserves ordered time uniforms in one command encoder', async testCase => {
+it('SpectralOceanSimulation preserves ordered time uniforms in one command encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -169,53 +176,56 @@ test('SpectralOceanSimulation preserves ordered time uniforms in one command enc
       simulation.outputs.displacementBuffer,
       simulation.stats.elementCount * 4
     );
-    testCase.ok(
-      getMaximumDifference(firstStep, secondStep) > 0.001,
+    expect(
+      Boolean(getMaximumDifference(firstStep, secondStep) > 0.001),
       'encoder-ordered staging preserves each step time rather than the final CPU write'
-    );
+    ).toBe(true);
   } finally {
     firstStepCopy.destroy();
     simulation.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('SpectralOceanSimulation validates encodes and destroys outputs idempotently', async testCase => {
+it('SpectralOceanSimulation validates encodes and destroys outputs idempotently', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const simulation = new SpectralOceanSimulation(device, {resolution: 8});
-  testCase.throws(
+  expect(
     () => simulation.encode(device.commandEncoder, {time: Number.NaN}),
-    /time must be finite/,
     'non-finite time is rejected'
-  );
-  testCase.throws(
+  ).toThrow(/time must be finite/);
+  expect(
     () => simulation.encode(device.commandEncoder, {time: 0, deltaTime: -0.1}),
-    /deltaTime must be non-negative and finite/,
     'negative history time is rejected'
-  );
+  ).toThrow(/deltaTime must be non-negative and finite/);
   simulation.destroy();
   simulation.destroy();
-  testCase.ok(simulation.outputs.displacementBuffer.destroyed, 'displacement output is destroyed');
-  testCase.ok(simulation.outputs.normalFoamBuffer.destroyed, 'normal/foam output is destroyed');
-  testCase.throws(
+  expect(
+    Boolean(simulation.outputs.displacementBuffer.destroyed),
+    'displacement output is destroyed'
+  ).toBe(true);
+  expect(
+    Boolean(simulation.outputs.normalFoamBuffer.destroyed),
+    'normal/foam output is destroyed'
+  ).toBe(true);
+  expect(
     () => simulation.encode(device.commandEncoder, {time: 0}),
-    /has been destroyed/,
     'destroyed simulations reject new work'
-  );
-  testCase.end();
+  ).toThrow(/has been destroyed/);
+  void 0;
 });
 
-test('SpectralOceanSimulation construction unwinds partial allocations', async testCase => {
+it('SpectralOceanSimulation construction unwinds partial allocations', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -243,32 +253,29 @@ test('SpectralOceanSimulation construction unwinds partial allocations', async t
   };
 
   try {
-    testCase.throws(
+    expect(
       () => new SpectralOceanSimulation(device, {id, resolution: 8}),
-      /injected SpectralOceanSimulation allocation failure/,
       'the original construction error is preserved'
-    );
+    ).toThrow(/injected SpectralOceanSimulation allocation failure/);
   } finally {
     device.createBuffer = originalCreateBuffer;
     Computation.prototype.destroy = originalComputationDestroy;
   }
 
-  testCase.ok(allocatedBuffers.length > 10, 'simulation and FFT allocations were observed');
-  testCase.ok(
-    allocatedBuffers.every(buffer => buffer.destroyed),
+  expect(
+    Boolean(allocatedBuffers.length > 10),
+    'simulation and FFT allocations were observed'
+  ).toBe(true);
+  expect(
+    Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'every buffer allocated before the failure is destroyed'
-  );
-  testCase.equal(
-    computationDestroyCount,
-    3,
-    'both simulation computations and the FFT are unwound'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(computationDestroyCount, 'both simulation computations and the FFT are unwound').toBe(3);
+  expect(
     getResourceCount(device, 'Buffers'),
-    activeBufferCount,
     'active buffer accounting returns to its baseline'
-  );
-  testCase.end();
+  ).toBe(activeBufferCount);
+  void 0;
 });
 
 async function readFloat32(buffer: Buffer, length: number): Promise<number[]> {

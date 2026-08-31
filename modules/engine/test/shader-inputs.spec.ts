@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Texture} from '../../core/src/index';
 import {
   floatColors,
@@ -18,26 +18,26 @@ import type {
 } from '../../shadertools/src/index';
 import {ShaderInputs} from '../src/shader-inputs';
 
-test('ShaderInputs#picking', t => {
+it('ShaderInputs#picking', () => {
   const shaderInputsUntyped = new ShaderInputs({picking});
   // Add
   shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
-  t.ok(shaderInputsUntyped, 'untyped');
+  expect(Boolean(shaderInputsUntyped), 'untyped').toBe(true);
 
   // @ts-expect-error
   shaderInputsUntyped.setProps({picking: {invalidKey: 1}});
 
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
-  t.ok(shaderInputs, 'typed access');
+  expect(Boolean(shaderInputs), 'typed access').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#picking', t => {
+it('ShaderInputs#picking', () => {
   const shaderInputsUntyped = new ShaderInputs({picking});
   shaderInputsUntyped.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
-  t.ok(shaderInputsUntyped, 'untyped');
+  expect(Boolean(shaderInputsUntyped), 'untyped').toBe(true);
 
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
@@ -45,36 +45,35 @@ test('ShaderInputs#picking', t => {
   // @ts-expect-error - if this stops generating an error, we have should trigger a typescript error here
   shaderInputs.setProps({picking: {invalidKey: true}});
 
-  t.ok(shaderInputs, 'typed access');
+  expect(Boolean(shaderInputs), 'typed access').toBe(true);
 
   // t.comment(JSON.stringify(shaderInputs.getUniformBufferValues(), null, 2));
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#picking prop merge', t => {
+it('ShaderInputs#picking prop merge', () => {
   const shaderInputs = new ShaderInputs<{picking: typeof picking.props}>({picking});
   const expected = {...picking.defaultUniforms} as typeof picking.uniforms;
-  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'defaults set');
+  expect(shaderInputs.moduleUniforms.picking, 'defaults set').toEqual(expected);
 
   shaderInputs.setProps({picking: {highlightColor: [255, 0, 255]}});
   expected.highlightColor = [1, 0, 1, 1]; // Color normalized and alpha added
-  t.deepEqual(shaderInputs.moduleUniforms.picking, expected, 'Only highlight color updated');
+  expect(shaderInputs.moduleUniforms.picking, 'Only highlight color updated').toEqual(expected);
 
   // Setting the highlighted object also enables highlight
   shaderInputs.setProps({picking: {highlightedObjectColor: [255, 255, 255]}});
   expected.highlightedObjectColor = [255, 255, 255];
   expected.isHighlightActive = true;
-  t.deepEqual(
+  expect(
     shaderInputs.moduleUniforms.picking,
-    expected,
     'Only highlight object and highlight active updated'
-  );
+  ).toEqual(expected);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#dependencies', t => {
+it('ShaderInputs#dependencies', () => {
   type CustomProps = {color: number[]};
   const custom: ShaderModule<CustomProps> = {
     name: 'custom',
@@ -87,41 +86,40 @@ test('ShaderInputs#dependencies', t => {
     custom: CustomProps;
     picking: typeof picking.props;
   }>({custom});
-  t.deepEqual(Object.keys(shaderInputs.modules), ['custom', 'picking']);
+  expect(Object.keys(shaderInputs.modules), '').toEqual(['custom', 'picking']);
 
   shaderInputs.setProps({
     custom: {color: [255, 0, 0]},
     picking: {highlightedObjectColor: [1, 2, 3]}
   });
-  t.deepEqual(shaderInputs.moduleUniforms.custom['color'], [255, 0, 0], 'custom color updated');
-  t.deepEqual(
+  expect(shaderInputs.moduleUniforms.custom['color'], 'custom color updated').toEqual([255, 0, 0]);
+  expect(
     shaderInputs.moduleUniforms.picking['highlightedObjectColor'],
-    [1, 2, 3],
     'highlight object color updated'
-  );
+  ).toEqual([1, 2, 3]);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#addModules', t => {
+it('ShaderInputs#addModules', () => {
   const dependency: ShaderModule = {name: 'dependency'};
   const module: ShaderModule = {name: 'module', dependencies: [dependency]};
   const shaderInputs = new ShaderInputs({});
 
   shaderInputs.addModules([module]);
 
-  t.ok(
-    shaderInputs.getModules().some(shaderModule => shaderModule.name === module.name),
+  expect(
+    Boolean(shaderInputs.getModules().some(shaderModule => shaderModule.name === module.name)),
     'added module participates in shader inputs'
-  );
-  t.ok(
-    shaderInputs.getModules().some(shaderModule => shaderModule.name === dependency.name),
+  ).toBe(true);
+  expect(
+    Boolean(shaderInputs.getModules().some(shaderModule => shaderModule.name === dependency.name)),
     'added module dependencies participate in shader inputs'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ShaderInputs#floatColors dependency props', t => {
+it('ShaderInputs#floatColors dependency props', () => {
   const shaderInputs = new ShaderInputs<{
     phongMaterial: PhongMaterialProps;
     floatColors: FloatColorsProps;
@@ -134,23 +132,21 @@ test('ShaderInputs#floatColors dependency props', t => {
     floatColors: {useByteColors: false}
   });
 
-  t.deepEqual(
+  expect(
     shaderInputs.moduleUniforms.phongMaterial.specularColor,
-    [2, 1, 0.5],
     'phong material uniform updated without CPU normalization'
-  );
-  t.equal(
+  ).toEqual([2, 1, 0.5]);
+  expect(
     shaderInputs.moduleUniforms.floatColors.useByteColors,
-    false,
     'useByteColors configured directly on floatColors dependency'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#bindings', t => {
+it('ShaderInputs#bindings', () => {
   [true, false].map(callback => {
-    t.comment(`custom module created ${callback ? 'with' : 'without'} getUniforms()`);
+    void 0;
     type CustomProps = {color: [number, number, number]; colorTexture: Texture};
     const custom: ShaderModule<CustomProps> = {
       name: 'custom',
@@ -171,45 +167,41 @@ test('ShaderInputs#bindings', t => {
     shaderInputs.setProps({
       custom: {color: [255, 0, 0], colorTexture: MOCK_TEXTURE}
     });
-    t.deepEqual(shaderInputs.moduleUniforms.custom['color'], [255, 0, 0], 'custom color updated');
-    t.equal(
-      shaderInputs.moduleBindings.custom['colorTexture'],
-      MOCK_TEXTURE,
-      'colorTexture updated'
+    expect(shaderInputs.moduleUniforms.custom['color'], 'custom color updated').toEqual([
+      255, 0, 0
+    ]);
+    expect(shaderInputs.moduleBindings.custom['colorTexture'], 'colorTexture updated').toBe(
+      MOCK_TEXTURE
     );
 
     const uniformValues = shaderInputs.getUniformValues();
     const bindings = shaderInputs.getBindingValues();
-    t.deepEqual(uniformValues, {custom: {color: [255, 0, 0]}}, 'uniformValues correct');
-    t.deepEqual(bindings, {colorTexture: 'MOCK_TEXTURE'}, 'bindings correct');
+    expect(uniformValues, 'uniformValues correct').toEqual({custom: {color: [255, 0, 0]}});
+    expect(bindings, 'bindings correct').toEqual({colorTexture: 'MOCK_TEXTURE'});
 
-    t.end();
+    void 0;
   });
 });
 
-test('ShaderInputs#direct bindings', t => {
+it('ShaderInputs#direct bindings', () => {
   const shaderInputs = new ShaderInputs({});
   const cameraTexture = 'CAMERA_TEXTURE' as unknown as Texture;
   const nextCameraTexture = 'NEXT_CAMERA_TEXTURE' as unknown as Texture;
 
   shaderInputs.setProps({bindings: {cameraTexture}});
-  t.deepEqual(
-    shaderInputs.getBindingValues(),
-    {cameraTexture: 'CAMERA_TEXTURE'},
-    'direct binding is available to the model'
-  );
+  expect(shaderInputs.getBindingValues(), 'direct binding is available to the model').toEqual({
+    cameraTexture: 'CAMERA_TEXTURE'
+  });
 
   shaderInputs.setProps({bindings: {cameraTexture: nextCameraTexture}});
-  t.deepEqual(
-    shaderInputs.getBindingValues(),
-    {cameraTexture: 'NEXT_CAMERA_TEXTURE'},
-    'direct binding can be updated'
-  );
+  expect(shaderInputs.getBindingValues(), 'direct binding can be updated').toEqual({
+    cameraTexture: 'NEXT_CAMERA_TEXTURE'
+  });
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#getModuleBindingValues', t => {
+it('ShaderInputs#getModuleBindingValues', () => {
   type FirstModuleProps = {firstTexture: Texture};
   type SecondModuleProps = {secondTexture: Texture};
 
@@ -232,31 +224,27 @@ test('ShaderInputs#getModuleBindingValues', t => {
     secondModule: {secondTexture}
   });
 
-  t.deepEqual(
+  expect(
     shaderInputs.getModuleBindingValues('firstModule'),
-    {firstTexture},
     'returns only bindings for the requested module'
-  );
-  t.deepEqual(
+  ).toEqual({firstTexture});
+  expect(
     shaderInputs.getModuleBindingValues('secondModule'),
-    {secondTexture},
     'returns bindings for a different module independently'
-  );
-  t.deepEqual(
+  ).toEqual({secondTexture});
+  expect(
     shaderInputs.getModuleBindingValues('missingModule'),
-    {},
     'returns an empty object for unknown modules'
-  );
-  t.deepEqual(
-    shaderInputs.getBindingValues(),
-    {firstTexture, secondTexture},
-    'flattened binding lookup remains unchanged'
-  );
+  ).toEqual({});
+  expect(shaderInputs.getBindingValues(), 'flattened binding lookup remains unchanged').toEqual({
+    firstTexture,
+    secondTexture
+  });
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#composite uniforms', t => {
+it('ShaderInputs#composite uniforms', () => {
   type CompositeUniforms = {
     light: {
       transform: {
@@ -330,42 +318,36 @@ test('ShaderInputs#composite uniforms', t => {
     }
   });
 
-  t.deepEqual(
+  expect(
     shaderInputs.moduleUniforms.composite['light'],
-    {
-      transform: {
-        position: [1, 2, 3],
-        range: 10
-      },
-      intensity: 0.8
-    },
     'nested uniforms are merged by schema'
-  );
-  t.equal(
-    shaderInputs.moduleBindings.composite['lightTexture'],
-    MOCK_TEXTURE,
-    'bindings still split from composite uniforms'
-  );
-  t.deepEqual(
-    shaderInputs.getUniformValues(),
-    {
-      composite: {
-        light: {
-          transform: {
-            position: [1, 2, 3],
-            range: 10
-          },
-          intensity: 0.8
-        }
-      }
+  ).toEqual({
+    transform: {
+      position: [1, 2, 3],
+      range: 10
     },
-    'getUniformValues keeps nested shape'
-  );
+    intensity: 0.8
+  });
+  expect(
+    shaderInputs.moduleBindings.composite['lightTexture'],
+    'bindings still split from composite uniforms'
+  ).toBe(MOCK_TEXTURE);
+  expect(shaderInputs.getUniformValues(), 'getUniformValues keeps nested shape').toEqual({
+    composite: {
+      light: {
+        transform: {
+          position: [1, 2, 3],
+          range: 10
+        },
+        intensity: 0.8
+      }
+    }
+  });
 
-  t.end();
+  void 0;
 });
 
-test('ShaderInputs#lighting array-of-struct uniforms', t => {
+it('ShaderInputs#lighting array-of-struct uniforms', () => {
   const shaderInputs = new ShaderInputs<{lighting: LightingProps}>({lighting});
 
   shaderInputs.setProps({
@@ -395,64 +377,64 @@ test('ShaderInputs#lighting array-of-struct uniforms', t => {
     }
   });
 
-  t.equal(
+  expect(
     shaderInputs.moduleUniforms.lighting['pointLightCount'],
-    1,
     'point light count preserved'
+  ).toBe(1);
+  expect(shaderInputs.moduleUniforms.lighting['spotLightCount'], 'spot light count preserved').toBe(
+    1
   );
-  t.equal(shaderInputs.moduleUniforms.lighting['spotLightCount'], 1, 'spot light count preserved');
-  t.equal(
+  expect(
     shaderInputs.moduleUniforms.lighting['directionalLightCount'],
-    1,
     'directional light count preserved'
-  );
-  t.deepEqual(
+  ).toBe(1);
+  expect(
     shaderInputs.moduleUniforms.lighting['lights'],
-    [
-      {
-        color: [1, 0, 0],
-        position: [1, 2, 3],
-        direction: [1, 1, 1],
-        attenuation: [1, 0.25, 0.125],
-        coneCos: [1, 0]
-      },
-      {
-        color: [1, 1, 0],
-        position: [0, 3, 2],
-        direction: [0, -1, 0],
-        attenuation: [1, 0, 0],
-        coneCos: [Math.cos(0.25), Math.cos(0.75)]
-      },
-      {
-        color: [0, 1, 0],
-        position: [1, 1, 2],
-        direction: [0, 1, 0],
-        attenuation: [1, 0, 0],
-        coneCos: [1, 0]
-      },
-      {
-        color: [1, 1, 1],
-        position: [1, 1, 2],
-        direction: [1, 1, 1],
-        attenuation: [1, 0, 0],
-        coneCos: [1, 0]
-      },
-      {
-        color: [1, 1, 1],
-        position: [1, 1, 2],
-        direction: [1, 1, 1],
-        attenuation: [1, 0, 0],
-        coneCos: [1, 0]
-      }
-    ],
     'lighting module keeps nested light structs'
+  ).toEqual([
+    {
+      color: [1, 0, 0],
+      position: [1, 2, 3],
+      direction: [1, 1, 1],
+      attenuation: [1, 0.25, 0.125],
+      coneCos: [1, 0]
+    },
+    {
+      color: [1, 1, 0],
+      position: [0, 3, 2],
+      direction: [0, -1, 0],
+      attenuation: [1, 0, 0],
+      coneCos: [Math.cos(0.25), Math.cos(0.75)]
+    },
+    {
+      color: [0, 1, 0],
+      position: [1, 1, 2],
+      direction: [0, 1, 0],
+      attenuation: [1, 0, 0],
+      coneCos: [1, 0]
+    },
+    {
+      color: [1, 1, 1],
+      position: [1, 1, 2],
+      direction: [1, 1, 1],
+      attenuation: [1, 0, 0],
+      coneCos: [1, 0]
+    },
+    {
+      color: [1, 1, 1],
+      position: [1, 1, 2],
+      direction: [1, 1, 1],
+      attenuation: [1, 0, 0],
+      coneCos: [1, 0]
+    }
+  ]);
+  expect(shaderInputs.moduleBindings.lighting, 'lighting module does not emit bindings').toEqual(
+    {}
   );
-  t.deepEqual(shaderInputs.moduleBindings.lighting, {}, 'lighting module does not emit bindings');
-  t.deepEqual(
+  expect(
     shaderInputs.getUniformValues(),
-    {lighting: shaderInputs.moduleUniforms.lighting},
     'uniform values remain nested for composite arrays'
-  );
+  ).toEqual({lighting: shaderInputs.moduleUniforms.lighting});
 
-  t.end();
+  void 0;
 });

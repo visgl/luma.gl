@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('deferred lighting packs fixed-size point-light records', testCase => {
+it('deferred lighting packs fixed-size point-light records', () => {
   const data = makeDeferredPointLightBufferData(
     [
       {
@@ -27,72 +27,59 @@ test('deferred lighting packs fixed-size point-light records', testCase => {
     2
   );
 
-  testCase.equal(data.length, 16, 'the array reserves two vec4 values per light slot');
-  testCase.deepEqual(
+  expect(data.length, 'the array reserves two vec4 values per light slot').toBe(16);
+  expect(
     Array.from(data.slice(0, 8)),
-    [1, 2, 3, 4, 0.25, 0.5, 0.75, 6],
     'position/range and color/intensity use the shader record layout'
+  ).toEqual([1, 2, 3, 4, 0.25, 0.5, 0.75, 6]);
+  expect(Array.from(data.slice(8)), 'unused fixed-capacity light slots stay zeroed').toEqual(
+    new Array(8).fill(0)
   );
-  testCase.deepEqual(
-    Array.from(data.slice(8)),
-    new Array(8).fill(0),
-    'unused fixed-capacity light slots stay zeroed'
+  expect(() => makeDeferredPointLightBufferData([], 0), 'invalid capacities are rejected').toThrow(
+    /positive safe integer/
   );
-  testCase.throws(
-    () => makeDeferredPointLightBufferData([], 0),
-    /positive safe integer/,
-    'invalid capacities are rejected'
-  );
-  testCase.throws(
+  expect(
     () =>
       makeDeferredPointLightBufferData(
         [{position: [0, 0, 0], range: 0, color: [1, 1, 1], intensity: 1}],
         1
       ),
-    /range/,
     'invalid light ranges are rejected'
-  );
-  testCase.end();
+  ).toThrow(/range/);
 });
 
-test('deferred lighting exposes one composable fullscreen resolve', testCase => {
+it('deferred lighting exposes one composable fullscreen resolve', () => {
   const pipeline = createDeferredLightingShaderPassPipeline();
-  testCase.equal(pipeline.steps.length, 1, 'the resolve is one fullscreen pass');
-  testCase.equal(
-    pipeline.steps[0].shaderPass.name,
-    'deferredLighting',
-    'the pipeline exposes the deferred-lighting pass'
+  expect(pipeline.steps.length, 'the resolve is one fullscreen pass').toBe(1);
+  expect(pipeline.steps[0].shaderPass.name, 'the pipeline exposes the deferred-lighting pass').toBe(
+    'deferredLighting'
   );
-  testCase.equal(pipeline.steps[0].output, 'previous', 'lighting composes into the color chain');
-  testCase.equal(MAX_DEFERRED_POINT_LIGHTS, 64, 'the exported capacity matches the WGSL loop');
-  testCase.end();
+  expect(pipeline.steps[0].output, 'lighting composes into the color chain').toBe('previous');
+  expect(MAX_DEFERRED_POINT_LIGHTS, 'the exported capacity matches the WGSL loop').toBe(64);
 });
 
-test('deferred ambient lighting isolates the material ambient contribution', testCase => {
+it('deferred ambient lighting isolates the material ambient contribution', () => {
   const pipeline = createDeferredAmbientLightingShaderPassPipeline();
-  testCase.equal(pipeline.steps.length, 1, 'ambient extraction remains one composable pass');
-  testCase.equal(
+  expect(pipeline.steps.length, 'ambient extraction remains one composable pass').toBe(1);
+  expect(
     pipeline.steps[0].shaderPass,
-    deferredAmbientLighting,
     'the pipeline exposes the reusable deferred ambient-light shader'
-  );
-  testCase.equal(
+  ).toBe(deferredAmbientLighting);
+  expect(
     deferredAmbientLighting.uniformTypes.ambientColor,
-    'vec3<f32>',
     'ambient extraction uses the same linear ambient color as the lighting resolve'
-  );
-  testCase.ok(
-    deferredAmbientLighting.source.includes('baseColor * deferredAmbientLighting.ambientColor'),
+  ).toBe('vec3<f32>');
+  expect(
+    Boolean(
+      deferredAmbientLighting.source.includes('baseColor * deferredAmbientLighting.ambientColor')
+    ),
     'ambient extraction excludes direct lighting and emissive radiance'
-  );
-  testCase.end();
+  ).toBe(true);
 });
 
-test('deferred lighting resolves G-buffer material attachments on WebGPU', async testCase => {
+it('deferred lighting resolves G-buffer material attachments on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -197,7 +184,9 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'the material G-buffer resolves through the pass renderer');
+    expect(Boolean(outputTexture), 'the material G-buffer resolves through the pass renderer').toBe(
+      true
+    );
   } finally {
     renderer.destroy();
     pointLights.destroy();
@@ -208,6 +197,4 @@ test('deferred lighting resolves G-buffer material attachments on WebGPU', async
     emissiveOcclusionTexture.destroy();
     depthTexture.destroy();
   }
-
-  testCase.end();
 });

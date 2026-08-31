@@ -11,27 +11,26 @@ import {
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGPU core limits', async testCase => {
+it('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGPU core limits', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const supportsRawValidationErrorScopes =
     device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback;
   if (!supportsRawValidationErrorScopes) {
-    testCase.comment('software WebGPU can cancel raw validation error-scope callbacks');
+    void 0;
   }
 
-  testCase.equal(
+  expect(
     device.limits.maxColorAttachmentBytesPerSample,
-    32,
     'the deferred renderer uses the default 32-byte WebGPU core attachment limit'
-  );
+  ).toBe(32);
   const renderer = new DeferredSceneRenderer(device);
   const surface: SceneSurface = {
     id: 'deferred-surface',
@@ -91,25 +90,20 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
       device.handle.pushErrorScope('validation');
     }
     const deferredStatistics = renderer.render(options);
-    testCase.ok(
-      renderer.getLastDepthTexture(options.id),
+    expect(
+      Boolean(renderer.getLastDepthTexture(options.id)),
       'compatible deferred frames expose their sampleable G-buffer depth'
-    );
+    ).toBe(true);
     device.submit();
     if (supportsRawValidationErrorScopes) {
       const deferredValidationError = await device.handle.popErrorScope();
-      testCase.equal(
+      expect(
         deferredValidationError,
-        null,
         'compact HDR deferred capture and submission avoid WebGPU validation errors'
-      );
+      ).toBe(null);
     }
-    testCase.equal(
-      deferredStatistics.drawCount,
-      1,
-      'deferred capture preserves one instanced draw'
-    );
-    testCase.equal(deferredStatistics.instanceCount, 2, 'deferred capture preserves placements');
+    expect(deferredStatistics.drawCount, 'deferred capture preserves one instanced draw').toBe(1);
+    expect(deferredStatistics.instanceCount, 'deferred capture preserves placements').toBe(2);
 
     const offscreenStatistics = renderer.render({
       ...options,
@@ -117,7 +111,7 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
       framebuffer: offscreenFramebuffer
     });
     device.submit();
-    testCase.equal(offscreenStatistics.drawCount, 1, 'deferred resolve honors caller framebuffer');
+    expect(offscreenStatistics.drawCount, 'deferred resolve honors caller framebuffer').toBe(1);
 
     if (device.info.gpu !== 'software' && device.info.gpuType !== 'cpu' && !device.info.fallback) {
       const layout = offscreenTexture.computeMemoryLayout({width: 1, height: 1});
@@ -128,37 +122,30 @@ test('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGP
       try {
         offscreenTexture.readBuffer({x: 16, y: 16, width: 1, height: 1}, readback);
         const pixel = await readback.readAsync(0, layout.byteLength);
-        testCase.ok(
-          pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0,
+        expect(
+          Boolean(pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0),
           'deferred lighting writes visible color into the supplied offscreen target'
-        );
+        ).toBe(true);
       } finally {
         readback.destroy();
       }
     } else {
-      testCase.comment(
-        'software WebGPU resolves the offscreen target without unsupported MAP_READ'
-      );
+      void 0;
     }
 
     surface.material.uniforms = {...surface.material.uniforms, transmissionFactor: 0.4};
     const forwardStatistics = renderer.render(options);
-    testCase.equal(
+    expect(
       renderer.getLastDepthTexture(options.id),
-      null,
       'forward fallback does not expose stale deferred depth'
-    );
+    ).toBe(null);
     device.submit();
-    testCase.equal(
-      forwardStatistics.drawCount,
-      1,
-      'advanced materials use shared forward fallback'
-    );
-    testCase.equal(forwardStatistics.instanceCount, 2, 'forward fallback preserves placements');
+    expect(forwardStatistics.drawCount, 'advanced materials use shared forward fallback').toBe(1);
+    expect(forwardStatistics.instanceCount, 'forward fallback preserves placements').toBe(2);
   } finally {
     renderer.destroy();
     offscreenFramebuffer.destroy();
     offscreenTexture.destroy();
   }
-  testCase.end();
+  void 0;
 });

@@ -1,8 +1,8 @@
 import {uid} from '@luma.gl/core/utils/uid';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('Utils#uid', t => {
-  t.ok(typeof uid() === 'string', 'Type of uid() is correct');
-  t.equal(uid('prefix').indexOf('prefix'), 0, 'uid("prefix") starts with prefix');
-  t.end();
+it('Utils#uid', () => {
+  expect(Boolean(typeof uid() === 'string'), 'Type of uid() is correct').toBe(true);
+  expect(uid('prefix').indexOf('prefix'), 'uid("prefix") starts with prefix').toBe(0);
+  void 0;
 });

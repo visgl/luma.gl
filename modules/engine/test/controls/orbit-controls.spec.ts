@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {OrbitControls, type OrbitPosition} from '@luma.gl/engine';
 
-test('OrbitControls initializes a bounded orbit around an independently owned target', t => {
+it('OrbitControls initializes a bounded orbit around an independently owned target', () => {
   const canvas = makeTestCanvas();
   const target: OrbitPosition = [1, 2, 3];
   const controls = new OrbitControls(canvas, {
@@ -18,23 +18,25 @@ test('OrbitControls initializes a bounded orbit around an independently owned ta
 
   target[0] = 100;
 
-  t.deepEqual(controls.props.target, [1, 2, 3], 'copies the caller-owned orbit target');
-  t.equal(controls.distance, 5, 'clamps the initial distance to the configured maximum');
+  expect(controls.props.target, 'copies the caller-owned orbit target').toEqual([1, 2, 3]);
+  expect(controls.distance, 'clamps the initial distance to the configured maximum').toBe(5);
   const eyePosition = controls.getEyePosition();
-  t.ok(
-    eyePosition.every((coordinate, coordinateIndex) => {
-      return Math.abs(coordinate - [6, 2, 3][coordinateIndex]) < 1e-12;
-    }),
+  expect(
+    Boolean(
+      eyePosition.every((coordinate, coordinateIndex) => {
+        return Math.abs(coordinate - [6, 2, 3][coordinateIndex]) < 1e-12;
+      })
+    ),
     'converts orbit state into a world-space eye'
-  );
-  t.equal(canvas.style.cursor, 'grab', 'shows the idle orbit cursor');
-  t.equal(canvas.style.touchAction, 'none', 'reserves pointer gestures for orbit interactions');
+  ).toBe(true);
+  expect(canvas.style.cursor, 'shows the idle orbit cursor').toBe('grab');
+  expect(canvas.style.touchAction, 'reserves pointer gestures for orbit interactions').toBe('none');
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls advances and bounds automatic rotation using millisecond timestamps', t => {
+it('OrbitControls advances and bounds automatic rotation using millisecond timestamps', () => {
   const controls = new OrbitControls(makeTestCanvas(), {
     yaw: 0,
     autoRotate: true,
@@ -42,30 +44,42 @@ test('OrbitControls advances and bounds automatic rotation using millisecond tim
   });
 
   controls.update(1000);
-  t.equal(controls.yaw, 0, 'the first timestamp establishes the animation baseline');
+  expect(controls.yaw, 'the first timestamp establishes the animation baseline').toBe(0);
 
   controls.update(1050);
-  t.equal(controls.yaw, 0.1, 'converts elapsed milliseconds to seconds');
+  expect(controls.yaw, 'converts elapsed milliseconds to seconds').toBe(0.1);
 
   controls.update(2050);
-  t.ok(Math.abs(controls.yaw - 0.3) < 1e-12, 'limits a stalled frame to 100 milliseconds');
+  expect(
+    Boolean(Math.abs(controls.yaw - 0.3) < 1e-12),
+    'limits a stalled frame to 100 milliseconds'
+  ).toBe(true);
 
   controls.update(2000);
-  t.ok(Math.abs(controls.yaw - 0.3) < 1e-12, 'ignores timestamps that move backward');
+  expect(
+    Boolean(Math.abs(controls.yaw - 0.3) < 1e-12),
+    'ignores timestamps that move backward'
+  ).toBe(true);
 
   controls.setAutoRotate(false);
   controls.update(2100);
-  t.ok(Math.abs(controls.yaw - 0.3) < 1e-12, 'pauses rotation without resetting the orbit');
+  expect(
+    Boolean(Math.abs(controls.yaw - 0.3) < 1e-12),
+    'pauses rotation without resetting the orbit'
+  ).toBe(true);
 
   controls.setAutoRotate(true);
   controls.update(2150);
-  t.ok(Math.abs(controls.yaw - 0.4) < 1e-12, 'resumes rotation from the current camera angle');
+  expect(
+    Boolean(Math.abs(controls.yaw - 0.4) < 1e-12),
+    'resumes rotation from the current camera angle'
+  ).toBe(true);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls captures pointer drags, clamps pitch, and ignores unrelated pointers', t => {
+it('OrbitControls captures pointer drags, clamps pitch, and ignores unrelated pointers', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
   const controls = new OrbitControls(canvas, {
@@ -85,7 +99,7 @@ test('OrbitControls captures pointer drags, clamps pitch, and ignores unrelated 
     clientX: 10,
     clientY: 20
   });
-  t.equal(interactionCount, 0, 'ignores non-primary mouse buttons');
+  expect(interactionCount, 'ignores non-primary mouse buttons').toBe(0);
 
   controls.update(1000);
   canvas.dispatchTestEvent('pointerdown', {
@@ -95,35 +109,35 @@ test('OrbitControls captures pointer drags, clamps pitch, and ignores unrelated 
     clientY: 20
   });
 
-  t.equal(interactionCount, 1, 'notifies once when the drag begins');
-  t.equal(canvas.hasPointerCapture(7), true, 'captures the active pointer');
-  t.equal(canvas.style.cursor, 'grabbing', 'shows the active drag cursor');
+  expect(interactionCount, 'notifies once when the drag begins').toBe(1);
+  expect(canvas.hasPointerCapture(7), 'captures the active pointer').toBe(true);
+  expect(canvas.style.cursor, 'shows the active drag cursor').toBe('grabbing');
 
   canvas.dispatchTestEvent('pointermove', {pointerId: 9, clientX: 200, clientY: 200});
-  t.equal(controls.yaw, 1, 'ignores moves from another pointer');
+  expect(controls.yaw, 'ignores moves from another pointer').toBe(1);
 
   canvas.dispatchTestEvent('pointermove', {pointerId: 7, clientX: 15, clientY: 23});
-  t.equal(controls.yaw, 0.95, 'applies horizontal pointer movement');
-  t.equal(controls.pitch, 0.25, 'applies independent pitch speed and its configured limit');
+  expect(controls.yaw, 'applies horizontal pointer movement').toBe(0.95);
+  expect(controls.pitch, 'applies independent pitch speed and its configured limit').toBe(0.25);
 
   controls.update(1100);
-  t.equal(controls.yaw, 0.95, 'pauses automatic rotation while dragging');
+  expect(controls.yaw, 'pauses automatic rotation while dragging').toBe(0.95);
 
   canvas.dispatchTestEvent('pointerup', {pointerId: 9});
-  t.equal(canvas.hasPointerCapture(7), true, 'ignores pointer-up events for another pointer');
+  expect(canvas.hasPointerCapture(7), 'ignores pointer-up events for another pointer').toBe(true);
 
   canvas.dispatchTestEvent('pointercancel', {pointerId: 7});
-  t.equal(canvas.hasPointerCapture(7), false, 'releases pointer capture when the drag ends');
-  t.equal(canvas.style.cursor, 'grab', 'restores the idle orbit cursor');
+  expect(canvas.hasPointerCapture(7), 'releases pointer capture when the drag ends').toBe(false);
+  expect(canvas.style.cursor, 'restores the idle orbit cursor').toBe('grab');
 
   controls.update(1200);
-  t.equal(controls.yaw, 1.05, 'resumes automatic rotation after the drag ends');
+  expect(controls.yaw, 'resumes automatic rotation after the drag ends').toBe(1.05);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls consumes wheel gestures and keeps zoom inside configured bounds', t => {
+it('OrbitControls consumes wheel gestures and keeps zoom inside configured bounds', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
   let preventedWheelCount = 0;
@@ -139,21 +153,21 @@ test('OrbitControls consumes wheel gestures and keeps zoom inside configured bou
     deltaY: 1000,
     preventDefault: () => preventedWheelCount++
   });
-  t.equal(controls.distance, 12, 'clamps wheel zoom to the maximum distance');
+  expect(controls.distance, 'clamps wheel zoom to the maximum distance').toBe(12);
 
   canvas.dispatchTestEvent('wheel', {
     deltaY: -1000,
     preventDefault: () => preventedWheelCount++
   });
-  t.equal(controls.distance, 5, 'clamps wheel zoom to the minimum distance');
-  t.equal(interactionCount, 2, 'notifies for both camera interactions');
-  t.equal(preventedWheelCount, 2, 'prevents the browser from scrolling the canvas');
+  expect(controls.distance, 'clamps wheel zoom to the minimum distance').toBe(5);
+  expect(interactionCount, 'notifies for both camera interactions').toBe(2);
+  expect(preventedWheelCount, 'prevents the browser from scrolling the canvas').toBe(2);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls optionally pans its target while shift-dragging', t => {
+it('OrbitControls optionally pans its target while shift-dragging', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas, {
     target: [1, 2, 3],
@@ -177,14 +191,14 @@ test('OrbitControls optionally pans its target while shift-dragging', t => {
     shiftKey: true
   });
 
-  t.deepEqual(controls.props.target, [0.8, 2.3, 3], 'pans the target in camera space');
-  t.equal(controls.yaw, 0, 'does not rotate while panning');
+  expect(controls.props.target, 'pans the target in camera space').toEqual([0.8, 2.3, 3]);
+  expect(controls.yaw, 'does not rotate while panning').toBe(0);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls pinch zooms with two touch pointers inside configured bounds', t => {
+it('OrbitControls pinch zooms with two touch pointers inside configured bounds', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
   const controls = new OrbitControls(canvas, {
@@ -209,23 +223,25 @@ test('OrbitControls pinch zooms with two touch pointers inside configured bounds
     clientY: 20
   });
 
-  t.equal(interactionCount, 1, 'a second finger continues the existing camera interaction');
-  t.equal(canvas.hasPointerCapture(1), true, 'captures the first touch pointer');
-  t.equal(canvas.hasPointerCapture(2), true, 'captures the second touch pointer');
+  expect(interactionCount, 'a second finger continues the existing camera interaction').toBe(1);
+  expect(canvas.hasPointerCapture(1), 'captures the first touch pointer').toBe(true);
+  expect(canvas.hasPointerCapture(2), 'captures the second touch pointer').toBe(true);
 
   canvas.dispatchTestEvent('pointermove', {pointerId: 2, clientX: 250, clientY: 20});
-  t.equal(controls.distance, 5, 'spreading touch points zooms in to the minimum distance');
+  expect(controls.distance, 'spreading touch points zooms in to the minimum distance').toBe(5);
 
   canvas.dispatchTestEvent('pointermove', {pointerId: 2, clientX: 50, clientY: 20});
-  t.equal(controls.distance, 15, 'bringing touch points together respects the maximum distance');
+  expect(controls.distance, 'bringing touch points together respects the maximum distance').toBe(
+    15
+  );
 
   controls.destroy();
-  t.equal(canvas.hasPointerCapture(1), false, 'disposal releases the first touch pointer');
-  t.equal(canvas.hasPointerCapture(2), false, 'disposal releases the second touch pointer');
-  t.end();
+  expect(canvas.hasPointerCapture(1), 'disposal releases the first touch pointer').toBe(false);
+  expect(canvas.hasPointerCapture(2), 'disposal releases the second touch pointer').toBe(false);
+  void 0;
 });
 
-test('OrbitControls pans with the center of a two-finger touch gesture', t => {
+it('OrbitControls pans with the center of a two-finger touch gesture', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas, {
     target: [0, 0, 0],
@@ -254,22 +270,25 @@ test('OrbitControls pans with the center of a two-finger touch gesture', t => {
   canvas.dispatchTestEvent('pointermove', {pointerId: 3, clientX: 10, clientY: 20});
   canvas.dispatchTestEvent('pointermove', {pointerId: 4, clientX: 110, clientY: 20});
 
-  t.deepEqual(controls.props.target, [-1, 2, 0], 'moves the target with the touch midpoint');
-  t.equal(controls.distance, 10, 'respects independently disabled touch zoom');
-  t.equal(controls.yaw, 0, 'does not rotate while two touch pointers are active');
+  expect(controls.props.target, 'moves the target with the touch midpoint').toEqual([-1, 2, 0]);
+  expect(controls.distance, 'respects independently disabled touch zoom').toBe(10);
+  expect(controls.yaw, 'does not rotate while two touch pointers are active').toBe(0);
 
   canvas.dispatchTestEvent('pointerup', {pointerId: 4});
-  t.equal(canvas.hasPointerCapture(4), false, 'releases the lifted touch pointer');
-  t.equal(canvas.hasPointerCapture(3), true, 'keeps the remaining touch pointer active');
+  expect(canvas.hasPointerCapture(4), 'releases the lifted touch pointer').toBe(false);
+  expect(canvas.hasPointerCapture(3), 'keeps the remaining touch pointer active').toBe(true);
 
   canvas.dispatchTestEvent('pointermove', {pointerId: 3, clientX: 20, clientY: 20});
-  t.ok(controls.yaw < 0, 'continues one-finger orbiting without a pointer-position jump');
+  expect(
+    Boolean(controls.yaw < 0),
+    'continues one-finger orbiting without a pointer-position jump'
+  ).toBe(true);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls releases every touch pointer when interactions are disabled', t => {
+it('OrbitControls releases every touch pointer when interactions are disabled', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas);
 
@@ -285,15 +304,15 @@ test('OrbitControls releases every touch pointer when interactions are disabled'
 
   controls.setProps({enabled: false});
 
-  t.equal(canvas.hasPointerCapture(5), false, 'releases the first active touch pointer');
-  t.equal(canvas.hasPointerCapture(6), false, 'releases the second active touch pointer');
-  t.equal(canvas.style.cursor, 'grab', 'restores the idle cursor after cancelling the gesture');
+  expect(canvas.hasPointerCapture(5), 'releases the first active touch pointer').toBe(false);
+  expect(canvas.hasPointerCapture(6), 'releases the second active touch pointer').toBe(false);
+  expect(canvas.style.cursor, 'restores the idle cursor after cancelling the gesture').toBe('grab');
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls disables camera interactions and wheel zoom independently', t => {
+it('OrbitControls disables camera interactions and wheel zoom independently', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
   let preventedWheelCount = 0;
@@ -320,29 +339,29 @@ test('OrbitControls disables camera interactions and wheel zoom independently', 
   });
   canvas.dispatchTestEvent('wheel', wheelEvent);
 
-  t.equal(controls.yaw, 0, 'disabled controls do not auto-rotate');
-  t.equal(canvas.hasPointerCapture(9), false, 'disabled controls do not capture pointers');
-  t.equal(preventedWheelCount, 0, 'disabled controls do not consume wheel events');
-  t.equal(interactionCount, 0, 'disabled controls do not notify interactions');
+  expect(controls.yaw, 'disabled controls do not auto-rotate').toBe(0);
+  expect(canvas.hasPointerCapture(9), 'disabled controls do not capture pointers').toBe(false);
+  expect(preventedWheelCount, 'disabled controls do not consume wheel events').toBe(0);
+  expect(interactionCount, 'disabled controls do not notify interactions').toBe(0);
 
   controls.setProps({enabled: true, enableZoom: false});
   canvas.dispatchTestEvent('wheel', wheelEvent);
-  t.equal(preventedWheelCount, 0, 'disabled zoom does not consume wheel events');
+  expect(preventedWheelCount, 'disabled zoom does not consume wheel events').toBe(0);
 
   controls.setProps({enableZoom: true});
   canvas.dispatchTestEvent('wheel', wheelEvent);
-  t.equal(preventedWheelCount, 1, 'enabled zoom consumes wheel events');
-  t.equal(interactionCount, 1, 'enabled zoom notifies the interaction');
-  t.ok(controls.distance > 10, 'enabled zoom changes the camera distance');
+  expect(preventedWheelCount, 'enabled zoom consumes wheel events').toBe(1);
+  expect(interactionCount, 'enabled zoom notifies the interaction').toBe(1);
+  expect(Boolean(controls.distance > 10), 'enabled zoom changes the camera distance').toBe(true);
 
   controls.update(1200);
-  t.equal(controls.yaw, 0.008, 're-enabled controls resume auto-rotation');
+  expect(controls.yaw, 're-enabled controls resume auto-rotation').toBe(0.008);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls cancels active pointer capture when disabled', t => {
+it('OrbitControls cancels active pointer capture when disabled', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas, {
     yaw: 0,
@@ -357,12 +376,12 @@ test('OrbitControls cancels active pointer capture when disabled', t => {
     clientX: 10,
     clientY: 20
   });
-  t.equal(canvas.hasPointerCapture(12), true, 'captures the active pointer');
-  t.equal(canvas.style.cursor, 'grabbing', 'shows the active drag cursor');
+  expect(canvas.hasPointerCapture(12), 'captures the active pointer').toBe(true);
+  expect(canvas.style.cursor, 'shows the active drag cursor').toBe('grabbing');
 
   controls.setProps({enabled: false});
-  t.equal(canvas.hasPointerCapture(12), false, 'releases pointer capture while disabling');
-  t.equal(canvas.style.cursor, 'grab', 'restores the idle orbit cursor');
+  expect(canvas.hasPointerCapture(12), 'releases pointer capture while disabling').toBe(false);
+  expect(canvas.style.cursor, 'restores the idle orbit cursor').toBe('grab');
 
   canvas.dispatchTestEvent('pointermove', {
     pointerId: 12,
@@ -370,17 +389,17 @@ test('OrbitControls cancels active pointer capture when disabled', t => {
     clientY: 40
   });
   controls.update(1100);
-  t.equal(controls.yaw, 0, 'disabled controls ignore movement and auto-rotation');
+  expect(controls.yaw, 'disabled controls ignore movement and auto-rotation').toBe(0);
 
   controls.setProps({enabled: true});
   controls.update(1200);
-  t.equal(controls.yaw, 0.1, 're-enabled controls resume without a stale drag');
+  expect(controls.yaw, 're-enabled controls resume without a stale drag').toBe(0.1);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls updates camera configuration, preserves live state, and resets fitted poses', t => {
+it('OrbitControls updates camera configuration, preserves live state, and resets fitted poses', () => {
   const controls = new OrbitControls(makeTestCanvas(), {
     yaw: 0.1,
     pitch: 0.2,
@@ -399,28 +418,28 @@ test('OrbitControls updates camera configuration, preserves live state, and rese
   });
   target[0] = 100;
 
-  t.deepEqual(controls.props.target, [3, 4, 5], 'copies dynamically updated orbit targets');
-  t.equal(controls.yaw, 0.7, 'applies the updated yaw immediately');
-  t.equal(controls.pitch, 0.5, 'clamps pitch against its updated limit');
-  t.equal(controls.distance, 15, 'clamps distance against its updated limit');
+  expect(controls.props.target, 'copies dynamically updated orbit targets').toEqual([3, 4, 5]);
+  expect(controls.yaw, 'applies the updated yaw immediately').toBe(0.7);
+  expect(controls.pitch, 'clamps pitch against its updated limit').toBe(0.5);
+  expect(controls.distance, 'clamps distance against its updated limit').toBe(15);
 
   controls.setProps({minDistance: 2});
-  t.equal(controls.distance, 15, 'preserves the live distance when only its limits change');
+  expect(controls.distance, 'preserves the live distance when only its limits change').toBe(15);
 
   controls.yaw = 0;
   controls.pitch = 0;
   controls.distance = 4;
   controls.reset();
 
-  t.equal(controls.yaw, 0.7, 'resets to the latest configured yaw');
-  t.equal(controls.pitch, 0.5, 'resets to the latest bounded pitch');
-  t.equal(controls.distance, 15, 'resets to the latest bounded distance');
+  expect(controls.yaw, 'resets to the latest configured yaw').toBe(0.7);
+  expect(controls.pitch, 'resets to the latest bounded pitch').toBe(0.5);
+  expect(controls.distance, 'resets to the latest bounded distance').toBe(15);
 
   controls.destroy();
-  t.end();
+  void 0;
 });
 
-test('OrbitControls destroys listeners, restores canvas styles, and releases active capture', t => {
+it('OrbitControls destroys listeners, restores canvas styles, and releases active capture', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas);
 
@@ -430,16 +449,16 @@ test('OrbitControls destroys listeners, restores canvas styles, and releases act
     clientX: 0,
     clientY: 0
   });
-  t.equal(canvas.listenerCount(), 5, 'registers pointer and wheel listeners');
-  t.equal(canvas.hasPointerCapture(4), true, 'captures the active pointer');
+  expect(canvas.listenerCount(), 'registers pointer and wheel listeners').toBe(5);
+  expect(canvas.hasPointerCapture(4), 'captures the active pointer').toBe(true);
 
   controls.destroy();
 
-  t.equal(canvas.listenerCount(), 0, 'removes every registered pointer and wheel listener');
-  t.equal(canvas.hasPointerCapture(4), false, 'releases an active pointer before disposal');
-  t.equal(canvas.style.cursor, 'crosshair', 'restores the previous canvas cursor');
-  t.equal(canvas.style.touchAction, 'pan-x', 'restores the previous touch-action policy');
-  t.end();
+  expect(canvas.listenerCount(), 'removes every registered pointer and wheel listener').toBe(0);
+  expect(canvas.hasPointerCapture(4), 'releases an active pointer before disposal').toBe(false);
+  expect(canvas.style.cursor, 'restores the previous canvas cursor').toBe('crosshair');
+  expect(canvas.style.touchAction, 'restores the previous touch-action policy').toBe('pan-x');
+  void 0;
 });
 
 type TestCanvas = HTMLCanvasElement & {

@@ -2,26 +2,32 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type RenderPassProps} from '@luma.gl/core';
 import {WebGPURenderBundleEncoder} from '../../../src/adapter/resources/webgpu-render-bundle';
 import {WebGPURenderPass} from '../../../src/adapter/resources/webgpu-render-pass';
 
-test('WebGPURenderPass omits depth operations for read-only depth attachments', t => {
+it('WebGPURenderPass omits depth operations for read-only depth attachments', () => {
   const renderPass = makeRenderPass({clearDepth: false, depthReadOnly: true});
 
   const renderPassDescriptor = renderPass.getRenderPassDescriptor(makeFramebuffer());
   const depthStencilAttachment = renderPassDescriptor.depthStencilAttachment;
 
-  t.equal(depthStencilAttachment?.depthReadOnly, true, 'depth attachment is read only');
-  t.notOk(depthStencilAttachment?.depthLoadOp, 'depth load operation is omitted');
-  t.notOk(depthStencilAttachment?.depthStoreOp, 'depth store operation is omitted');
-  t.notOk(depthStencilAttachment?.depthClearValue, 'depth clear value is omitted');
+  expect(depthStencilAttachment?.depthReadOnly, 'depth attachment is read only').toBe(true);
+  expect(Boolean(depthStencilAttachment?.depthLoadOp), 'depth load operation is omitted').toBe(
+    false
+  );
+  expect(Boolean(depthStencilAttachment?.depthStoreOp), 'depth store operation is omitted').toBe(
+    false
+  );
+  expect(Boolean(depthStencilAttachment?.depthClearValue), 'depth clear value is omitted').toBe(
+    false
+  );
 
-  t.end();
+  void 0;
 });
 
-test('WebGPU indirect draw methods forward native buffers and byte offsets', t => {
+it('WebGPU indirect draw methods forward native buffers and byte offsets', () => {
   const device = {};
   const nativeBuffer = {};
   const indirectBuffer = {
@@ -57,34 +63,26 @@ test('WebGPU indirect draw methods forward native buffers and byte offsets', t =
   renderBundleEncoder.drawIndirect(indirectBuffer, 12);
   renderBundleEncoder.drawIndexedIndirect(indirectBuffer, 28);
 
-  t.deepEqual(
-    calls,
-    [
-      {method: 'drawIndirect', buffer: nativeBuffer, byteOffset: 8},
-      {method: 'drawIndexedIndirect', buffer: nativeBuffer, byteOffset: 20},
-      {method: 'drawIndirect', buffer: nativeBuffer, byteOffset: 12},
-      {method: 'drawIndexedIndirect', buffer: nativeBuffer, byteOffset: 28}
-    ],
-    'both encoders forward the native buffer and exact offset'
-  );
-  t.deepEqual(
-    vertexArrayCalls,
-    [
-      'pass-bind',
-      'pass-unbind',
-      'pass-bind',
-      'pass-unbind',
-      'bundle-bind',
-      'bundle-unbind',
-      'bundle-bind',
-      'bundle-unbind'
-    ],
-    'indirect draws bind and unbind the selected vertex array'
-  );
-  t.end();
+  expect(calls, 'both encoders forward the native buffer and exact offset').toEqual([
+    {method: 'drawIndirect', buffer: nativeBuffer, byteOffset: 8},
+    {method: 'drawIndexedIndirect', buffer: nativeBuffer, byteOffset: 20},
+    {method: 'drawIndirect', buffer: nativeBuffer, byteOffset: 12},
+    {method: 'drawIndexedIndirect', buffer: nativeBuffer, byteOffset: 28}
+  ]);
+  expect(vertexArrayCalls, 'indirect draws bind and unbind the selected vertex array').toEqual([
+    'pass-bind',
+    'pass-unbind',
+    'pass-bind',
+    'pass-unbind',
+    'bundle-bind',
+    'bundle-unbind',
+    'bundle-bind',
+    'bundle-unbind'
+  ]);
+  void 0;
 });
 
-test('WebGPU non-indexed draws forward firstVertex', t => {
+it('WebGPU non-indexed draws forward firstVertex', () => {
   const calls: unknown[][] = [];
   const handle = {
     draw: (...args: unknown[]) => calls.push(args)
@@ -99,8 +97,8 @@ test('WebGPU non-indexed draws forward firstVertex', t => {
 
   renderPass.draw({vertexCount: 12, instanceCount: 3, firstVertex: 7, firstIndex: 19});
 
-  t.deepEqual(calls, [[12, 3, 7, undefined]], 'draw() uses firstVertex for non-indexed draws');
-  t.end();
+  expect(calls, 'draw() uses firstVertex for non-indexed draws').toEqual([[12, 3, 7, undefined]]);
+  void 0;
 });
 
 function makeRenderPass(props: RenderPassProps): {

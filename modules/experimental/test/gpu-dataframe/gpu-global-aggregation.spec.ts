@@ -14,7 +14,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 type GPUAnalyticsSourceSchema = {
@@ -28,11 +28,11 @@ type GPUAnalyticsFixture = {
   sourceBuffers: Buffer[];
 };
 
-test('GPUDataFrame reduces nullable scalar GPU vectors without flattening source batches', async testContext => {
+it('GPUDataFrame reduces nullable scalar GPU vectors without flattening source batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -53,16 +53,14 @@ test('GPUDataFrame reduces nullable scalar GPU vectors without flattening source
     averageCategory: {mean: 'category'}
   });
 
-  testContext.equal(
+  expect(
     createBufferSpy.mock.calls.length,
-    0,
     'immutable global-aggregation planning allocates no GPU storage'
-  );
-  testContext.equal(
+  ).toBe(0);
+  expect(
     submitSpy.mock.calls.length,
-    0,
     'immutable global-aggregation planning submits no GPU commands'
-  );
+  ).toBe(0);
 
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
     id: 'gpu-dataframe-global-nullable-aggregation'
@@ -70,106 +68,94 @@ test('GPUDataFrame reduces nullable scalar GPU vectors without flattening source
   const compiled = query.compile(graph);
 
   try {
-    testContext.deepEqual(
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [1],
       'global GPU reductions publish exactly one owned result row'
-    );
-    testContext.deepEqual(
+    ).toEqual([1]);
+    expect(
       compiled.table.schema.fields.map(field => ({name: field.name, format: field.format})),
-      [
-        {name: 'rowCount', format: 'uint32'},
-        {name: 'totalFare', format: 'float32'},
-        {name: 'minimumFare', format: 'float32'},
-        {name: 'maximumFare', format: 'float32'},
-        {name: 'averageFare', format: 'float32'},
-        {name: 'totalDistance', format: 'sint32'},
-        {name: 'minimumDistance', format: 'sint32'},
-        {name: 'averageDistance', format: 'float32'},
-        {name: 'maximumCategory', format: 'uint32'},
-        {name: 'totalCategory', format: 'uint32'},
-        {name: 'averageCategory', format: 'float32'}
-      ],
       'sum/min/max preserve scalar formats while means and counts use float32 and uint32'
-    );
-    testContext.deepEqual(
+    ).toEqual([
+      {name: 'rowCount', format: 'uint32'},
+      {name: 'totalFare', format: 'float32'},
+      {name: 'minimumFare', format: 'float32'},
+      {name: 'maximumFare', format: 'float32'},
+      {name: 'averageFare', format: 'float32'},
+      {name: 'totalDistance', format: 'sint32'},
+      {name: 'minimumDistance', format: 'sint32'},
+      {name: 'averageDistance', format: 'float32'},
+      {name: 'maximumCategory', format: 'uint32'},
+      {name: 'totalCategory', format: 'uint32'},
+      {name: 'averageCategory', format: 'float32'}
+    ]);
+    expect(
       compiled.selectionMask.data.map(chunk => chunk.length),
-      [2, 0, 3],
       'global reductions retain independent source selection batches'
-    );
+    ).toEqual([2, 0, 3]);
 
     fixture.frame.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => !buffer.destroyed)),
       'global reductions retain their original owned source lease'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({
       id: 'gpu-dataframe-global-reduction-encode'
     });
     compiled.encode(commandEncoder);
-    testContext.equal(
+    expect(
       submitSpy.mock.calls.length,
-      0,
       'global aggregation only records work into a caller-owned command encoder'
-    );
+    ).toBe(0);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(
+    expect(
       await readUint32Scalar(compiled.table.gpuVectors.rowCount),
-      5,
       'global count includes every selected source row, independent of column nulls'
-    );
-    testContext.equal(
+    ).toBe(5);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.totalFare),
-      159,
       'floating-point sums exclude explicit nullable rows across preserved batches'
-    );
-    testContext.equal(
+    ).toBe(159);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.minimumFare),
-      10,
       'floating-point minimums exclude explicit null rows'
-    );
-    testContext.equal(
+    ).toBe(10);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.maximumFare),
-      99,
       'global maximums include valid rows regardless of other columns nullability'
-    );
-    testContext.equal(
+    ).toBe(99);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.averageFare),
-      39.75,
       'floating-point means divide only accepted non-null contributions'
-    );
-    testContext.equal(
+    ).toBe(39.75);
+    expect(
       await readSignedScalar(compiled.table.gpuVectors.totalDistance),
-      12,
       'signed integer sums preserve native 32-bit output formats'
-    );
-    testContext.equal(
+    ).toBe(12);
+    expect(
       await readSignedScalar(compiled.table.gpuVectors.minimumDistance),
-      -2,
       'signed minimums preserve negative input values'
-    );
-    testContext.ok(
-      Math.abs((await readFloat32Scalar(compiled.table.gpuVectors.averageDistance)) - 2.4) <
-        0.000001,
+    ).toBe(-2);
+    expect(
+      Boolean(
+        Math.abs((await readFloat32Scalar(compiled.table.gpuVectors.averageDistance)) - 2.4) <
+          0.000001
+      ),
       'signed scalar means convert contributions to float32 before averaging'
-    );
-    testContext.equal(
+    ).toBe(true);
+    expect(
       await readUint32Scalar(compiled.table.gpuVectors.maximumCategory),
-      1,
       'unsigned maximums reject null category values'
-    );
-    testContext.equal(
+    ).toBe(1);
+    expect(
       await readUint32Scalar(compiled.table.gpuVectors.totalCategory),
-      2,
       'unsigned sums exclude the nullable category sidecar'
-    );
-    testContext.equal(
+    ).toBe(2);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.averageCategory),
-      0.5,
       'unsigned nullable scalar means divide only accepted categorical values'
-    );
+    ).toBe(0.5);
     for (const metric of [
       'totalFare',
       'minimumFare',
@@ -186,22 +172,22 @@ test('GPUDataFrame reduces nullable scalar GPU vectors without flattening source
       if (!validity) {
         throw new Error(`Expected explicit global validity for ${metric}`);
       }
-      testContext.equal(await readUint32Scalar(validity), 1, `${metric} has valid contributions`);
+      expect(await readUint32Scalar(validity), `${metric} has valid contributions`).toBe(1);
     }
-    testContext.equal(compiled.validity.rowCount, undefined, 'global row counts are nonnullable');
+    expect(compiled.validity.rowCount, 'global row counts are nonnullable').toBe(undefined);
 
     const outputBuffers = Object.values(compiled.table.gpuVectors).flatMap(vector =>
       vector.data.map(getGPUAnalyticsBuffer)
     );
     compiled.destroy();
-    testContext.ok(
-      outputBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(outputBuffers.every(buffer => buffer.destroyed)),
       'compiled global reductions release their owned scalar result buffers'
-    );
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => buffer.destroyed),
+    ).toBe(true);
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => buffer.destroyed)),
       'owned source resources release only after their final aggregation lease'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
@@ -209,14 +195,14 @@ test('GPUDataFrame reduces nullable scalar GPU vectors without flattening source
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame updates filtered and derived global statistics within one command encoder', async testContext => {
+it('GPUDataFrame updates filtered and derived global statistics within one command encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -261,31 +247,24 @@ test('GPUDataFrame updates filtered and derived global statistics within one com
     compiled.encode(commandEncoder, {minimumFare: 40});
     device.submit(commandEncoder.finish());
 
-    testContext.equal(
-      (await readGPUUint32Buffer(firstCount, 1))[0],
-      3,
-      'first filter accepts three rows'
+    expect((await readGPUUint32Buffer(firstCount, 1))[0], 'first filter accepts three rows').toBe(
+      3
     );
-    testContext.equal(
-      (await readGPUFloat32Buffer(firstSum, 1))[0],
-      164,
-      'first derived sum is 25 + 35 + 104'
+    expect((await readGPUFloat32Buffer(firstSum, 1))[0], 'first derived sum is 25 + 35 + 104').toBe(
+      164
     );
-    testContext.equal(
+    expect(
       await readUint32Scalar(compiled.table.gpuVectors.rowCount),
-      1,
       'the second encoder state accepts only the valid fare above forty'
-    );
-    testContext.equal(
+    ).toBe(1);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.totalFare),
-      104,
       'global reductions observe encoder-ordered derived parameter updates'
-    );
-    testContext.equal(
+    ).toBe(104);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.averageFare),
-      104,
       'global mean follows the second filtered contribution count'
-    );
+    ).toBe(104);
   } finally {
     firstCount.destroy();
     firstSum.destroy();
@@ -293,14 +272,14 @@ test('GPUDataFrame updates filtered and derived global statistics within one com
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame drops NaN and infinity from scalar statistics without dropping row counts', async testContext => {
+it('GPUDataFrame drops NaN and infinity from scalar statistics without dropping row counts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -323,45 +302,38 @@ test('GPUDataFrame drops NaN and infinity from scalar statistics without droppin
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(
+    expect(
       await readUint32Scalar(compiled.table.gpuVectors.rowCount),
-      5,
       'NaN rows remain counted'
-    );
-    testContext.equal(
+    ).toBe(5);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.totalFare),
-      109,
       'NaN and infinity do not poison floating sums'
-    );
-    testContext.equal(
+    ).toBe(109);
+    expect(
       await readFloat32Scalar(compiled.table.gpuVectors.averageFare),
-      54.5,
       'means count finite 10 and 99 only'
-    );
+    ).toBe(54.5);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame builds nullable, filtered numeric histograms with literal domains and edges', async testContext => {
+it('GPUDataFrame builds nullable, filtered numeric histograms with literal domains and edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
   const fixture = createGPUAnalyticsFixture(device);
   const createBufferSpy = vi.spyOn(device, 'createBuffer');
   const domainQuery = fixture.frame.histogram('fare', {bins: 4, domain: [0, 80]});
-  testContext.equal(
-    createBufferSpy.mock.calls.length,
-    0,
-    'histogram planning does not allocate buffers'
-  );
+  expect(createBufferSpy.mock.calls.length, 'histogram planning does not allocate buffers').toBe(0);
   createBufferSpy.mockRestore();
 
   const domainGraph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
@@ -389,38 +361,31 @@ test('GPUDataFrame builds nullable, filtered numeric histograms with literal dom
     filteredHistogram.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(domainHistogram.binCount, 4, 'equal-width histogram exposes its bin count');
-    testContext.deepEqual(domainHistogram.domain, [0, 80], 'equal-width domain remains explicit');
-    testContext.deepEqual(
-      edgeHistogram.edges,
-      [0, 15, 25, 40, 100],
-      'irregular boundaries remain explicit'
-    );
-    testContext.deepEqual(
+    expect(domainHistogram.binCount, 'equal-width histogram exposes its bin count').toBe(4);
+    expect(domainHistogram.domain, 'equal-width domain remains explicit').toEqual([0, 80]);
+    expect(edgeHistogram.edges, 'irregular boundaries remain explicit').toEqual([
+      0, 15, 25, 40, 100
+    ]);
+    expect(
       await readUint32Vector(domainHistogram.table.gpuVectors.bin),
-      [0, 1, 2, 3],
       'histogram output publishes dense GPU-written bin identities'
-    );
-    testContext.deepEqual(
+    ).toEqual([0, 1, 2, 3]);
+    expect(
       await readUint32Vector(domainHistogram.table.gpuVectors.count),
-      [1, 2, 0, 0],
       'equal-width histogram excludes null and out-of-domain values'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 2, 0, 0]);
+    expect(
       await readUint32Vector(edgeHistogram.table.gpuVectors.count),
-      [1, 1, 1, 1],
       'irregular histogram bins retain explicit nullable semantics'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 1, 1, 1]);
+    expect(
       await readUint32Vector(filteredHistogram.table.gpuVectors.count),
-      [1, 2, 0, 0],
       'histogram selection masks combine filters with independent value validity'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 2, 0, 0]);
+    expect(
       filteredHistogram.selectionMask.data.map(chunk => chunk.length),
-      [2, 0, 3],
       'histogram source masks retain every original batch boundary'
-    );
+    ).toEqual([2, 0, 3]);
   } finally {
     domainHistogram.destroy();
     edgeHistogram.destroy();
@@ -428,14 +393,14 @@ test('GPUDataFrame builds nullable, filtered numeric histograms with literal dom
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame retains explicit invalid scalar outputs and zero histograms for empty inputs', async testContext => {
+it('GPUDataFrame retains explicit invalid scalar outputs and zero histograms for empty inputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -483,65 +448,59 @@ test('GPUDataFrame retains explicit invalid scalar outputs and zero histograms f
     histogram.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(
+    expect(
       await readUint32Scalar(reductions.table.gpuVectors.rowCount),
-      0,
       'empty count remains nonnullable zero'
-    );
-    testContext.equal(
+    ).toBe(0);
+    expect(
       await readFloat32Scalar(reductions.table.gpuVectors.totalFare),
-      0,
       'empty floating sums retain zero payloads'
-    );
-    testContext.ok(
-      Number.isNaN(await readFloat32Scalar(reductions.table.gpuVectors.minimumFare)),
+    ).toBe(0);
+    expect(
+      Boolean(Number.isNaN(await readFloat32Scalar(reductions.table.gpuVectors.minimumFare))),
       'empty floating minimum uses a NaN payload'
-    );
-    testContext.ok(
-      Number.isNaN(await readFloat32Scalar(reductions.table.gpuVectors.averageFare)),
+    ).toBe(true);
+    expect(
+      Boolean(Number.isNaN(await readFloat32Scalar(reductions.table.gpuVectors.averageFare))),
       'empty floating mean uses a NaN payload'
-    );
-    testContext.equal(
+    ).toBe(true);
+    expect(
       await readSignedScalar(reductions.table.gpuVectors.minimumDistance),
-      0,
       'empty signed minimum uses zero payload'
-    );
+    ).toBe(0);
     for (const name of ['totalFare', 'minimumFare', 'averageFare', 'minimumDistance'] as const) {
       const validity = reductions.validity[name];
       if (!validity) {
         throw new Error(`Expected empty reduction validity for ${name}`);
       }
-      testContext.equal(await readUint32Scalar(validity), 0, `${name} is explicitly invalid`);
+      expect(await readUint32Scalar(validity), `${name} is explicitly invalid`).toBe(0);
     }
-    testContext.deepEqual(
+    expect(
       await readUint32Vector(histogram.table.gpuVectors.count),
-      [0, 0, 0],
       'empty source tables still publish deterministic zero-valued histogram bins'
-    );
-    testContext.deepEqual(
+    ).toEqual([0, 0, 0]);
+    expect(
       histogram.selectedCounts.data,
-      [],
       'empty sources retain no synthetic source batches'
-    );
-    testContext.equal(
+    ).toEqual([]);
+    expect(
       reductions.table.schema.metadata.get('dataset'),
-      'empty-analytics',
       'scalar output schemas preserve original source metadata'
-    );
+    ).toBe('empty-analytics');
   } finally {
     reductions.destroy();
     histogram.destroy();
     frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame bins signed, unsigned, and derived scalar values using typed GPU domains', async testContext => {
+it('GPUDataFrame bins signed, unsigned, and derived scalar values using typed GPU domains', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -573,21 +532,18 @@ test('GPUDataFrame bins signed, unsigned, and derived scalar values using typed 
     derived.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readUint32Vector(signed.table.gpuVectors.count),
-      [2, 0, 1, 1, 1],
       'signed histograms retain negative values and include the upper domain endpoint'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 1, 1, 1]);
+    expect(
       await readUint32Vector(unsigned.table.gpuVectors.count),
-      [2, 2],
       'unsigned irregular histograms exclude explicit categorical nulls'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 2]);
+    expect(
       await readUint32Vector(derived.table.gpuVectors.count),
-      [2, 1, 0, 1],
       'histograms consume nullable derived floating-point vectors directly from the graph'
-    );
+    ).toEqual([2, 1, 0, 1]);
   } finally {
     signed.destroy();
     unsigned.destroy();
@@ -595,7 +551,7 @@ test('GPUDataFrame bins signed, unsigned, and derived scalar values using typed 
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUAnalyticsFixture(device: Device): GPUAnalyticsFixture {

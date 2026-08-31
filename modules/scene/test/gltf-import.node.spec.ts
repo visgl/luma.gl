@@ -7,10 +7,10 @@ import {ANARISceneSchema} from '@luma.gl/scene/schemas';
 import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
 
-test('glTF importer translates indexed meshes into retained ANARI scenes', async testContext => {
+it('glTF importer translates indexed meshes into retained ANARI scenes', async () => {
   const assetData = await readFile(new URL('../../../test/data/box.glb', import.meta.url));
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const scene = await makeANARIJSONSceneFromGLTF(postProcessGLTF(asset), 'TEST BOX');
@@ -18,110 +18,119 @@ test('glTF importer translates indexed meshes into retained ANARI scenes', async
     geometry => geometry['@@type'] === 'triangle'
   );
 
-  testContext.equal(scene.name, 'TEST BOX', 'the imported scene retains its selected title');
-  testContext.ok(sourceGeometries.length > 0, 'glTF mesh primitives become triangle geometries');
-  testContext.ok(
-    sourceGeometries.some(geometry => (geometry['primitive.index']?.length || 0) > 0),
+  expect(scene.name, 'the imported scene retains its selected title').toBe('TEST BOX');
+  expect(
+    Boolean(sourceGeometries.length > 0),
+    'glTF mesh primitives become triangle geometries'
+  ).toBe(true);
+  expect(
+    Boolean(sourceGeometries.some(geometry => (geometry['primitive.index']?.length || 0) > 0)),
     'indexed meshes preserve their source index buffers'
-  );
-  testContext.ok((scene.instances?.length || 0) > 1, 'mesh placements and studio emitters coexist');
-  testContext.equal(
+  ).toBe(true);
+  expect(
+    Boolean((scene.instances?.length || 0) > 1),
+    'mesh placements and studio emitters coexist'
+  ).toBe(true);
+  expect(
     (scene.lights || []).filter(light => light.animation?.['@@type'] === 'follow').length,
-    2,
     'studio point lights follow visible HDR emitter instances'
-  );
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  ).toBe(2);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'imported scenes satisfy the JSON schema'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer handles detailed bundled CC0 production assets', async testContext => {
+it('glTF importer handles detailed bundled CC0 production assets', async () => {
   const assetData = await readFile(
     new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
   );
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const scene = await makeANARIJSONSceneFromGLTF(postProcessGLTF(asset), 'BRASS LANTERN');
 
-  testContext.ok(
-    Object.keys(scene.geometries).length > 3,
+  expect(
+    Boolean(Object.keys(scene.geometries).length > 3),
     'multiple production meshes are retained'
-  );
-  testContext.ok(Object.keys(scene.materials).length > 2, 'source and studio materials coexist');
-  testContext.equal(
-    Object.keys(scene.textures || {}).length,
-    4,
-    'all Lantern PBR maps are retained'
-  );
-  testContext.ok(
-    Object.values(scene.materials).some(
-      material =>
-        material.baseColorTexture &&
-        material.normalTexture &&
-        material.metallicRoughnessTexture &&
-        material.emissiveTexture &&
-        material.emissiveStrength === 1
+  ).toBe(true);
+  expect(
+    Boolean(Object.keys(scene.materials).length > 2),
+    'source and studio materials coexist'
+  ).toBe(true);
+  expect(Object.keys(scene.textures || {}).length, 'all Lantern PBR maps are retained').toBe(4);
+  expect(
+    Boolean(
+      Object.values(scene.materials).some(
+        material =>
+          material.baseColorTexture &&
+          material.normalTexture &&
+          material.metallicRoughnessTexture &&
+          material.emissiveTexture &&
+          material.emissiveStrength === 1
+      )
     ),
     'Lantern material retains PBR maps and its authored glTF emissive-strength default'
-  );
-  testContext.ok(
-    Object.values(scene.geometries).some(
-      geometry => (geometry['vertex.attribute1']?.length || 0) > 0
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.values(scene.geometries).some(
+        geometry => (geometry['vertex.attribute1']?.length || 0) > 0
+      )
     ),
     'glTF texture coordinates remain editable retained geometry data'
-  );
-  testContext.ok(
-    Object.values(scene.geometries).some(
-      geometry => (geometry['primitive.index']?.length || 0) > 1000
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.values(scene.geometries).some(
+        geometry => (geometry['primitive.index']?.length || 0) > 1000
+      )
     ),
     'detailed indexed production geometry remains intact'
-  );
-  testContext.ok(
-    Math.hypot(...(scene.camera.position || [0, 0, 0])) < 30,
+  ).toBe(true);
+  expect(
+    Boolean(Math.hypot(...(scene.camera.position || [0, 0, 0])) < 30),
     'large or tiny source assets are normalized into the studio presentation'
-  );
-  testContext.ok(ANARISceneSchema.safeParse(scene).success, 'production scenes remain editor-safe');
-  testContext.end();
+  ).toBe(true);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
+    'production scenes remain editor-safe'
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer preserves animated node hierarchy and source-faithful materials', async testContext => {
+it('glTF importer preserves animated node hierarchy and source-faithful materials', async () => {
   const assetData = await readFile(new URL('../../../test/data/BoxAnimated.glb', import.meta.url));
   const asset = await parse(assetData, GLTFLoader, {gltf: {loadImages: false}});
   const source = postProcessGLTF(asset);
   const scene = await makeANARIJSONSceneFromGLTF(source, 'ANIMATED BOX');
 
-  testContext.equal(
-    scene.clips?.length,
-    1,
-    'the authored glTF animation becomes one retained clip'
-  );
-  testContext.equal(scene.clips?.[0]?.tracks.length, 2, 'both authored transform channels survive');
-  testContext.equal(scene.playback?.clip, scene.clips?.[0]?.name, 'the imported clip is selected');
-  testContext.ok(
-    scene.clips?.[0]?.tracks.every(track => track.target.type === 'node'),
+  expect(scene.clips?.length, 'the authored glTF animation becomes one retained clip').toBe(1);
+  expect(scene.clips?.[0]?.tracks.length, 'both authored transform channels survive').toBe(2);
+  expect(scene.playback?.clip, 'the imported clip is selected').toBe(scene.clips?.[0]?.name);
+  expect(
+    Boolean(scene.clips?.[0]?.tracks.every(track => track.target.type === 'node')),
     'transform channels retain stable source-node identity'
-  );
-  testContext.ok(
-    Object.values(scene.nodes || {}).some(node => !node.instances?.length),
+  ).toBe(true);
+  expect(
+    Boolean(Object.values(scene.nodes || {}).some(node => !node.instances?.length)),
     'meshless parent nodes remain in the retained hierarchy'
-  );
-  testContext.ok(
-    Object.values(scene.nodes || {}).some(node => node.instances?.length),
+  ).toBe(true);
+  expect(
+    Boolean(Object.values(scene.nodes || {}).some(node => node.instances?.length)),
     'mesh nodes reference existing retained surface instances'
-  );
-  testContext.ok(
-    Object.values(scene.nodes || {}).some(node => node.matrix && !node.parent),
+  ).toBe(true);
+  expect(
+    Boolean(Object.values(scene.nodes || {}).some(node => node.matrix && !node.parent)),
     'studio normalization remains an explicit animation-hierarchy root'
-  );
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  ).toBe(true);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'animated retained scenes round-trip through the existing JSON schema'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer retains real KHR_animation_pointer material channels', async testContext => {
+it('glTF importer retains real KHR_animation_pointer material channels', async () => {
   // Khronos glTF-Sample-Assets AnimatedColorsCube by Ed Mackey, dedicated CC0-1.0.
   const assetData = await readFile(
     new URL('../../../examples/showcase/scene/public/gltf/AnimatedColorsCube.glb', import.meta.url)
@@ -132,31 +141,25 @@ test('glTF importer retains real KHR_animation_pointer material channels', async
   const clip = scene.clips?.[0];
   const colorTrack = clip?.tracks.find(track => track.target.type === 'material');
 
-  testContext.equal(clip?.name, 'Cube Animation', 'the authored animated sample retains its name');
-  testContext.equal(clip?.tracks.length, 3, 'translation, rotation, and material channels survive');
-  testContext.equal(
-    colorTrack?.target.path,
-    'baseColor',
-    'the JSON pointer targets retained color'
-  );
-  testContext.equal(colorTrack?.times.length, 151, 'all authored material keyframes are retained');
-  testContext.equal(colorTrack?.values[0].length, 4, 'animated color remains a linear RGBA value');
-  testContext.ok(
-    clip?.tracks.every(track => track.target.path !== 'opacity'),
+  expect(clip?.name, 'the authored animated sample retains its name').toBe('Cube Animation');
+  expect(clip?.tracks.length, 'translation, rotation, and material channels survive').toBe(3);
+  expect(colorTrack?.target.path, 'the JSON pointer targets retained color').toBe('baseColor');
+  expect(colorTrack?.times.length, 'all authored material keyframes are retained').toBe(151);
+  expect(colorTrack?.values[0].length, 'animated color remains a linear RGBA value').toBe(4);
+  expect(
+    Boolean(clip?.tracks.every(track => track.target.path !== 'opacity')),
     'opaque source materials do not acquire animated blend opacity'
-  );
+  ).toBe(true);
   if (colorTrack) {
     const materialDescription = scene.materials[colorTrack.target.identifier];
-    testContext.equal(
+    expect(
       materialDescription.alphaMode,
-      'opaque',
       'the imported material preserves its authored opaque alpha mode'
-    );
-    testContext.equal(
+    ).toBe('opaque');
+    expect(
       materialDescription.doubleSided,
-      false,
       'materials preserve the glTF default of one-sided rendering'
-    );
+    ).toBe(false);
     const device = new ANARIDevice(new NullDevice({}));
     const material = device.newMaterial(materialDescription['@@type'], {
       baseColor: materialDescription.baseColor,
@@ -167,27 +170,25 @@ test('glTF importer retains real KHR_animation_pointer material channels', async
       materials: new Map([[colorTrack.target.identifier, material]])
     });
     playback.seek(2.75);
-    testContext.deepEqual(
+    expect(
       material.getParameter('baseColor'),
-      colorTrack.values.at(-1),
       'short material samplers clamp while the longer node animation continues'
-    );
+    ).toEqual(colorTrack.values.at(-1));
     playback.seek(3);
-    testContext.deepEqual(
+    expect(
       material.getParameter('baseColor'),
-      colorTrack.values[0],
       'the shared action loops once at the complete clip boundary'
-    );
+    ).toEqual(colorTrack.values[0]);
     device.destroy();
   }
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'material-pointer scenes remain editable, serializable retained JSON'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer retains secondary texture coordinates and transform UV overrides', async testContext => {
+it('glTF importer retains secondary texture coordinates and transform UV overrides', async () => {
   const assetData = await readFile(
     new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
   );
@@ -198,7 +199,9 @@ test('glTF importer retains secondary texture coordinates and transform UV overr
     .find(candidate => candidate.attributes['TEXCOORD_0'] && candidate.material);
   const textureInfo = primitive?.material?.pbrMetallicRoughness?.baseColorTexture;
   if (!primitive || !textureInfo) {
-    testContext.fail('the bundled Lantern should provide editable textured mesh primitives');
+    expect(false, 'the bundled Lantern should provide editable textured mesh primitives').toBe(
+      true
+    );
     return;
   }
   primitive.attributes['TEXCOORD_1'] = primitive.attributes['TEXCOORD_0'];
@@ -217,36 +220,39 @@ test('glTF importer retains secondary texture coordinates and transform UV overr
     return textureIdentifier && scene.textures?.[textureIdentifier]?.textureCoordinateSet === 1;
   });
 
-  testContext.ok(
-    Object.values(scene.geometries).some(
-      geometry => (geometry['vertex.attribute2']?.length || 0) > 0
+  expect(
+    Boolean(
+      Object.values(scene.geometries).some(
+        geometry => (geometry['vertex.attribute2']?.length || 0) > 0
+      )
     ),
     'TEXCOORD_1 accessors survive as editable retained geometry'
-  );
-  testContext.ok(
-    secondaryUVMaterial,
+  ).toBe(true);
+  expect(
+    Boolean(secondaryUVMaterial),
     'KHR_texture_transform texCoord overrides the original textureInfo UV set'
-  );
+  ).toBe(true);
   if (secondaryUVMaterial?.baseColorTexture) {
     const texture = scene.textures?.[secondaryUVMaterial.baseColorTexture];
-    testContext.equal(texture?.textureCoordinateSet, 1, 'the sampler retains its selected UV set');
-    testContext.ok(texture?.transform, 'the authored texture transform remains attached');
-    testContext.equal(secondaryUVMaterial.alphaMode, 'mask', 'the authored alpha mode is retained');
-    testContext.equal(
-      secondaryUVMaterial.alphaCutoff,
-      0.35,
-      'the authored alpha cutoff is retained'
+    expect(texture?.textureCoordinateSet, 'the sampler retains its selected UV set').toBe(1);
+    expect(Boolean(texture?.transform), 'the authored texture transform remains attached').toBe(
+      true
     );
-    testContext.ok(secondaryUVMaterial.doubleSided, 'authored double-sided rendering is retained');
+    expect(secondaryUVMaterial.alphaMode, 'the authored alpha mode is retained').toBe('mask');
+    expect(secondaryUVMaterial.alphaCutoff, 'the authored alpha cutoff is retained').toBe(0.35);
+    expect(
+      Boolean(secondaryUVMaterial.doubleSided),
+      'authored double-sided rendering is retained'
+    ).toBe(true);
   }
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'secondary-UV glTF scenes remain valid retained JSON'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer retains all canonical PBR textures, factors, color spaces, and authored samplers', async testContext => {
+it('glTF importer retains all canonical PBR textures, factors, color spaces, and authored samplers', async () => {
   const assetData = await readFile(
     new URL('../../../examples/showcase/scene/public/gltf/Lantern.glb', import.meta.url)
   );
@@ -255,7 +261,9 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
     .flatMap(mesh => mesh.primitives)
     .find(candidate => candidate.attributes['TEXCOORD_0'] && candidate.material);
   if (!primitive?.material) {
-    testContext.fail('the bundled Lantern should expose an editable physically based material');
+    expect(false, 'the bundled Lantern should expose an editable physically based material').toBe(
+      true
+    );
     return;
   }
 
@@ -375,123 +383,99 @@ test('glTF importer retains all canonical PBR textures, factors, color spaces, a
     candidate => candidate.anisotropyStrength === 0.63
   );
   if (!importedMaterial) {
-    testContext.fail('the authored advanced material should survive glTF translation');
+    expect(false, 'the authored advanced material should survive glTF translation').toBe(true);
     return;
   }
 
   for (const {slot, colorSpace} of getTextureTransformSlotDefinitions()) {
     const textureIdentifier = importedMaterial[`${slot}Texture`];
-    testContext.ok(textureIdentifier, `${slot} preserves its canonical material texture`);
+    expect(Boolean(textureIdentifier), `${slot} preserves its canonical material texture`).toBe(
+      true
+    );
     if (textureIdentifier) {
-      testContext.equal(
+      expect(
         scene.textures?.[textureIdentifier]?.colorSpace,
-        colorSpace,
         `${slot} uses the canonical glTF color-space contract`
-      );
+      ).toBe(colorSpace);
     }
   }
 
   const clampedSampler = scene.textures?.[importedMaterial.normalTexture!]?.sampler;
-  testContext.deepEqual(
+  expect(
     clampedSampler,
-    {
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'mirror-repeat',
-      magFilter: 'nearest',
-      minFilter: 'nearest',
-      mipmapFilter: 'linear'
-    },
     'postprocessed numeric sampler enums preserve wrap, minification, magnification, and mipmaps'
-  );
-  testContext.notEqual(
+  ).toEqual({
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'mirror-repeat',
+    magFilter: 'nearest',
+    minFilter: 'nearest',
+    mipmapFilter: 'linear'
+  });
+  expect(
     importedMaterial.normalTexture,
-    importedMaterial.metallicRoughnessTexture,
     'the same image with different authored samplers is not incorrectly deduplicated'
-  );
-  testContext.equal(
+  ).not.toBe(importedMaterial.metallicRoughnessTexture);
+  expect(
     scene.textures?.[importedMaterial.iridescenceThicknessTexture!]?.textureCoordinateSet,
-    1,
     'advanced extension maps preserve KHR_texture_transform UV overrides'
-  );
-  testContext.equal(
+  ).toBe(1);
+  expect(
     scene.clips?.[0]?.tracks[0]?.target.identifier,
-    importedMaterial.iridescenceThicknessTexture,
     'KHR_animation_pointer resolves the imported sampler for every advanced texture slot'
-  );
-  testContext.equal(
+  ).toBe(importedMaterial.iridescenceThicknessTexture);
+  expect(
     scene.clips?.[0]?.tracks[0]?.target.path,
-    'rotation',
     'advanced extension texture transforms remain animated through the shared mixer'
-  );
-  testContext.deepEqual(importedMaterial.specularColor, [0.3, 0.4, 0.5], 'specular RGB survives');
-  testContext.equal(importedMaterial.specularIntensity, 0.42, 'specular intensity survives');
-  testContext.equal(importedMaterial.indexOfRefraction, 1.7, 'index of refraction survives');
-  testContext.equal(importedMaterial.transmission, 0.56, 'transmission factor survives');
-  testContext.equal(
+  ).toBe('rotation');
+  expect(importedMaterial.specularColor, 'specular RGB survives').toEqual([0.3, 0.4, 0.5]);
+  expect(importedMaterial.specularIntensity, 'specular intensity survives').toBe(0.42);
+  expect(importedMaterial.indexOfRefraction, 'index of refraction survives').toBe(1.7);
+  expect(importedMaterial.transmission, 'transmission factor survives').toBe(0.56);
+  expect(
     importedMaterial.diffuseTransmission,
-    0.77,
     'release-candidate diffuse-transmission factor survives'
-  );
-  testContext.deepEqual(
+  ).toBe(0.77);
+  expect(
     importedMaterial.diffuseTransmissionColor,
-    [0.9, 0.45, 0.2],
     'authored diffuse-transmission color survives'
-  );
-  testContext.equal(importedMaterial.dispersion, 2.4, 'ratified chromatic dispersion survives');
-  testContext.equal(importedMaterial.thickness, 0.6, 'volume thickness survives');
-  testContext.equal(
-    importedMaterial.attenuationDistance,
-    2.5,
-    'volume attenuation distance survives'
-  );
-  testContext.deepEqual(
-    importedMaterial.attenuationColor,
-    [0.7, 0.8, 0.9],
-    'volume color survives'
-  );
-  testContext.deepEqual(
+  ).toEqual([0.9, 0.45, 0.2]);
+  expect(importedMaterial.dispersion, 'ratified chromatic dispersion survives').toBe(2.4);
+  expect(importedMaterial.thickness, 'volume thickness survives').toBe(0.6);
+  expect(importedMaterial.attenuationDistance, 'volume attenuation distance survives').toBe(2.5);
+  expect(importedMaterial.attenuationColor, 'volume color survives').toEqual([0.7, 0.8, 0.9]);
+  expect(
     importedMaterial.multiscatterColor,
-    [0.8, 0.35, 0.15],
     'active-draft scattering color survives alongside its required volume'
-  );
-  testContext.equal(
+  ).toEqual([0.8, 0.35, 0.15]);
+  expect(
     importedMaterial.scatterAnisotropy,
-    0.42,
     'authored volume-scattering phase anisotropy survives'
-  );
-  testContext.equal(importedMaterial.clearcoat, 0.7, 'clearcoat factor survives');
-  testContext.equal(importedMaterial.clearcoatRoughness, 0.23, 'clearcoat roughness survives');
-  testContext.deepEqual(importedMaterial.sheenColor, [0.11, 0.22, 0.33], 'sheen color survives');
-  testContext.equal(importedMaterial.sheenRoughness, 0.44, 'sheen roughness survives');
-  testContext.equal(importedMaterial.iridescence, 0.55, 'iridescence factor survives');
-  testContext.equal(importedMaterial.iridescenceIndexOfRefraction, 1.45, 'thin-film IOR survives');
-  testContext.equal(
-    importedMaterial.iridescenceThicknessMinimum,
-    65,
-    'minimum film thickness survives'
-  );
-  testContext.equal(
-    importedMaterial.iridescenceThicknessMaximum,
-    375,
-    'maximum film thickness survives'
-  );
-  testContext.equal(importedMaterial.anisotropyRotation, 0.72, 'anisotropy direction survives');
-  testContext.equal(importedMaterial.emissiveStrength, 3.5, 'emissive strength survives');
-  testContext.equal(importedMaterial.bumpFactor, 0.68, 'experimental bump strength survives');
-  testContext.equal(importedMaterial.normalScale, 0.35, 'normal-map scale survives');
-  testContext.equal(importedMaterial.occlusionStrength, 0.65, 'occlusion strength survives');
-  testContext.equal(importedMaterial.unlit, true, 'unlit material semantics survive');
-  testContext.equal(importedMaterial.alphaMode, 'mask', 'masked material semantics survive');
-  testContext.equal(importedMaterial.alphaCutoff, 0.35, 'authored alpha cutoff survives');
-  testContext.equal(importedMaterial.doubleSided, true, 'authored material sidedness survives');
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  ).toBe(0.42);
+  expect(importedMaterial.clearcoat, 'clearcoat factor survives').toBe(0.7);
+  expect(importedMaterial.clearcoatRoughness, 'clearcoat roughness survives').toBe(0.23);
+  expect(importedMaterial.sheenColor, 'sheen color survives').toEqual([0.11, 0.22, 0.33]);
+  expect(importedMaterial.sheenRoughness, 'sheen roughness survives').toBe(0.44);
+  expect(importedMaterial.iridescence, 'iridescence factor survives').toBe(0.55);
+  expect(importedMaterial.iridescenceIndexOfRefraction, 'thin-film IOR survives').toBe(1.45);
+  expect(importedMaterial.iridescenceThicknessMinimum, 'minimum film thickness survives').toBe(65);
+  expect(importedMaterial.iridescenceThicknessMaximum, 'maximum film thickness survives').toBe(375);
+  expect(importedMaterial.anisotropyRotation, 'anisotropy direction survives').toBe(0.72);
+  expect(importedMaterial.emissiveStrength, 'emissive strength survives').toBe(3.5);
+  expect(importedMaterial.bumpFactor, 'experimental bump strength survives').toBe(0.68);
+  expect(importedMaterial.normalScale, 'normal-map scale survives').toBe(0.35);
+  expect(importedMaterial.occlusionStrength, 'occlusion strength survives').toBe(0.65);
+  expect(importedMaterial.unlit, 'unlit material semantics survive').toBe(true);
+  expect(importedMaterial.alphaMode, 'masked material semantics survive').toBe('mask');
+  expect(importedMaterial.alphaCutoff, 'authored alpha cutoff survives').toBe(0.35);
+  expect(importedMaterial.doubleSided, 'authored material sidedness survives').toBe(true);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'all advanced declarations remain valid JSON'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF importer preserves authored punctual-light colors, transforms, and cone angles', async testContext => {
+it('glTF importer preserves authored punctual-light colors, transforms, and cone angles', async () => {
   const assetData = await readFile(new URL('../../../test/data/box.glb', import.meta.url));
   const source = postProcessGLTF(await parse(assetData, GLTFLoader, {gltf: {loadImages: false}}));
   const sourceWithLights = source as typeof source & {lights?: Array<Record<string, unknown>>};
@@ -518,17 +502,17 @@ test('glTF importer preserves authored punctual-light colors, transforms, and co
 
   const scene = await makeANARIJSONSceneFromGLTF(source, 'AUTHOR-LIT BOX');
   const importedLights = (scene.lights || []).filter(light => light['@@id'].startsWith('source-'));
-  testContext.equal(importedLights.length, 3, 'every source punctual-light type is imported');
+  expect(importedLights.length, 'every source punctual-light type is imported').toBe(3);
 
   const directional = importedLights.find(light => light['@@type'] === 'directional');
-  testContext.deepEqual(directional?.color, [0.2, 0.3, 0.4], 'linear light colors stay normalized');
-  testContext.equal(directional?.intensity, 3, 'directional-light intensity survives');
+  expect(directional?.color, 'linear light colors stay normalized').toEqual([0.2, 0.3, 0.4]);
+  expect(directional?.intensity, 'directional-light intensity survives').toBe(3);
 
   const spot = importedLights.find(light => light['@@type'] === 'spot');
-  testContext.deepEqual(spot?.color, [0.5, 0.6, 0.7], 'spotlight color remains source-faithful');
-  testContext.equal(spot?.intensity, 5, 'spotlight intensity survives');
-  testContext.equal(spot?.openingAngle, 0.6, 'outer cone angle survives');
-  testContext.equal(spot?.falloffAngle, 0.2, 'inner cone angle survives');
+  expect(spot?.color, 'spotlight color remains source-faithful').toEqual([0.5, 0.6, 0.7]);
+  expect(spot?.intensity, 'spotlight intensity survives').toBe(5);
+  expect(spot?.openingAngle, 'outer cone angle survives').toBe(0.6);
+  expect(spot?.falloffAngle, 'inner cone angle survives').toBe(0.2);
 
   const point = importedLights.find(light => light['@@type'] === 'point');
   const sourcePoint = authoredLights.find(light => light.type === 'point');
@@ -539,17 +523,18 @@ test('glTF importer preserves authored punctual-light colors, transforms, and co
     const normalizedPosition = new Matrix4(presentationRoot.matrix).transformAsPoint(
       sourcePoint.position
     );
-    testContext.deepEqual(
+    expect(
       point.position,
-      [normalizedPosition[0], normalizedPosition[1], normalizedPosition[2]],
       'source light transforms follow the same imported-scene normalization as meshes'
-    );
+    ).toEqual([normalizedPosition[0], normalizedPosition[1], normalizedPosition[2]]);
   } else {
-    testContext.fail('authored point light and normalization root should both survive import');
+    expect(false, 'authored point light and normalization root should both survive import').toBe(
+      true
+    );
   }
-  testContext.ok(
-    ANARISceneSchema.safeParse(scene).success,
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
     'authored punctual lights remain editable'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });

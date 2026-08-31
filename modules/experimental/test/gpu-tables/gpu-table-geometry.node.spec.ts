@@ -2,35 +2,33 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable, GPUTableGeometry} from '@luma.gl/experimental/gpu-tables';
 
-test('GPUTableGeometry exposes one static table batch as geometry', t => {
+it('GPUTableGeometry exposes one static table batch as geometry', () => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 3);
   const geometry = new GPUTableGeometry({table, topology: 'triangle-list'});
 
-  t.equal(geometry.vertexCount, 3, 'defaults non-indexed draw count to table rows');
-  t.deepEqual(Object.keys(geometry.attributes), ['positions'], 'uses layout-named buffers');
-  t.equal(
-    geometry.attributes['positions'],
-    table.gpuVectors['positions'].data[0].buffer,
-    'borrows the static table buffer'
+  expect(geometry.vertexCount, 'defaults non-indexed draw count to table rows').toBe(3);
+  expect(Object.keys(geometry.attributes), 'uses layout-named buffers').toEqual(['positions']);
+  expect(geometry.attributes['positions'], 'borrows the static table buffer').toBe(
+    table.gpuVectors['positions'].data[0].buffer
   );
 
   geometry.destroy();
-  t.notOk(
-    table.gpuVectors['positions'].data[0].buffer.destroyed,
+  expect(
+    Boolean(table.gpuVectors['positions'].data[0].buffer.destroyed),
     'borrowed table storage survives geometry destruction'
-  );
+  ).toBe(false);
   table.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableGeometry validates indexed and multi-batch geometry contracts', t => {
+it('GPUTableGeometry validates indexed and multi-batch geometry contracts', () => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 3);
   const indices = device.createBuffer({
@@ -45,24 +43,22 @@ test('GPUTableGeometry validates indexed and multi-batch geometry contracts', t 
     batches
   });
 
-  t.throws(
+  expect(
     () => new GPUTableGeometry({table, topology: 'triangle-list', indices}),
-    /explicit vertexCount/,
     'indexed geometry requires an explicit draw count'
-  );
-  t.throws(
+  ).toThrow(/explicit vertexCount/);
+  expect(
     () => new GPUTableGeometry({table: batchedTable, topology: 'triangle-list'}),
-    /single-batch or packed/,
     'multi-batch tables must be packed before geometry conversion'
-  );
+  ).toThrow(/single-batch or packed/);
 
   indices.destroy();
   table.destroy();
   batchedTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable creates an empty inferred-schema table from vectors without GPUData', t => {
+it('GPUTable creates an empty inferred-schema table from vectors without GPUData', () => {
   const device = new NullDevice({});
   const positions = new GPUVector({
     type: 'appendable',
@@ -74,63 +70,57 @@ test('GPUTable creates an empty inferred-schema table from vectors without GPUDa
   });
   const table = new GPUTable({vectors: {positions}});
 
-  t.equal(table.numRows, 0, 'empty vectors create a zero-row table');
-  t.equal(table.batches.length, 0, 'empty vectors do not synthesize a batch');
-  t.equal(table.schema.fields[0]?.name, 'positions', 'infers the schema field');
-  t.deepEqual(
-    table.bufferLayout,
-    [{name: 'positions', byteStride: 8, format: 'float32x2'}],
-    'retains inferred layout metadata'
-  );
+  expect(table.numRows, 'empty vectors create a zero-row table').toBe(0);
+  expect(table.batches.length, 'empty vectors do not synthesize a batch').toBe(0);
+  expect(table.schema.fields[0]?.name, 'infers the schema field').toBe('positions');
+  expect(table.bufferLayout, 'retains inferred layout metadata').toEqual([
+    {name: 'positions', byteStride: 8, format: 'float32x2'}
+  ]);
 
   table.destroy();
   positions.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable preserves compatible GPUVector chunk boundaries as batches', t => {
+it('GPUTable preserves compatible GPUVector chunk boundaries as batches', () => {
   const device = new NullDevice({});
   const positions = makeChunkedVector(device, 'positions', 'float32x2', [1, 2]);
   const weights = makeChunkedVector(device, 'weights', 'float32', [1, 2]);
   const table = new GPUTable({vectors: {positions, weights}});
 
-  t.equal(table.batches.length, 2, 'creates one table batch per aligned vector chunk');
-  t.equal(table.batches[0].numRows, 1, 'preserves first chunk row count');
-  t.equal(table.batches[1].numRows, 2, 'preserves second chunk row count');
-  t.equal(
-    table.batches[1].gpuData.positions,
-    positions.data[1],
-    'preserves the original batch-local GPUData'
+  expect(table.batches.length, 'creates one table batch per aligned vector chunk').toBe(2);
+  expect(table.batches[0].numRows, 'preserves first chunk row count').toBe(1);
+  expect(table.batches[1].numRows, 'preserves second chunk row count').toBe(2);
+  expect(table.batches[1].gpuData.positions, 'preserves the original batch-local GPUData').toBe(
+    positions.data[1]
   );
 
   table.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable rejects incompatible GPUVector chunk structures', t => {
+it('GPUTable rejects incompatible GPUVector chunk structures', () => {
   const device = new NullDevice({});
   const positions = makeChunkedVector(device, 'positions', 'float32x2', [1, 2]);
   const shortWeights = makeChunkedVector(device, 'weights', 'float32', [1]);
   const mismatchedWeights = makeChunkedVector(device, 'weights', 'float32', [1, 3]);
 
-  t.throws(
+  expect(
     () => new GPUTable({vectors: {positions, weights: shortWeights}}),
-    /matching GPUData chunk counts/,
     'requires the same number of chunks for every vector'
-  );
-  t.throws(
+  ).toThrow(/matching GPUData chunk counts/);
+  expect(
     () => new GPUTable({vectors: {positions, weights: mismatchedWeights}}),
-    /matching row counts in batch 1/,
     'requires row-aligned chunks'
-  );
+  ).toThrow(/matching row counts in batch 1/);
 
   positions.destroy();
   shortWeights.destroy();
   mismatchedWeights.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTable infers batch metadata and supports typed empty tables', t => {
+it('GPUTable infers batch metadata and supports typed empty tables', () => {
   const device = new NullDevice({});
   const batch = new GPURecordBatch({
     gpuData: {positions: makePositionsVector(device, 2).data[0]}
@@ -138,24 +128,23 @@ test('GPUTable infers batch metadata and supports typed empty tables', t => {
   const table = new GPUTable({batches: [batch]});
   const emptyTable = new GPUTable({schema: batch.schema});
 
-  t.equal(table.schema, batch.schema, 'infers the table schema from the first batch');
-  t.deepEqual(table.bufferLayout, batch.bufferLayout, 'infers the first batch layout');
-  t.throws(
+  expect(table.schema, 'infers the table schema from the first batch').toBe(batch.schema);
+  expect(table.bufferLayout, 'infers the first batch layout').toEqual(batch.bufferLayout);
+  expect(
     () => new GPUTable({batches: []}),
-    /requires at least one GPURecordBatch/,
     'requires schema-only construction for empty tables'
-  );
+  ).toThrow(/requires at least one GPURecordBatch/);
 
   emptyTable.addBatch(batch);
-  t.deepEqual(emptyTable.bufferLayout, batch.bufferLayout, 'adopts the first batch layout');
-  t.equal(emptyTable.numRows, 2, 'adopts the first batch rows');
+  expect(emptyTable.bufferLayout, 'adopts the first batch layout').toEqual(batch.bufferLayout);
+  expect(emptyTable.numRows, 'adopts the first batch rows').toBe(2);
 
   table.destroy();
   emptyTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableGeometry can take ownership of backing table storage', t => {
+it('GPUTableGeometry can take ownership of backing table storage', () => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 2);
   const positionsBuffer = table.gpuVectors['positions'].data[0].buffer;
@@ -166,8 +155,10 @@ test('GPUTableGeometry can take ownership of backing table storage', t => {
   });
 
   geometry.destroy();
-  t.ok(positionsBuffer.destroyed, 'owned table storage is destroyed with geometry');
-  t.end();
+  expect(Boolean(positionsBuffer.destroyed), 'owned table storage is destroyed with geometry').toBe(
+    true
+  );
+  void 0;
 });
 
 function makePositionsTable(device: NullDevice, rowCount: number): GPUTable {

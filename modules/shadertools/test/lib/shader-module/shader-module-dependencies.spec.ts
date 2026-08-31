@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   initializeShaderModules,
   _resolveModules,
@@ -29,24 +29,25 @@ const project64 = {
   uniformTypes: {}
 };
 
-test('ShaderModules#import', t => {
-  t.ok(_resolveModules !== undefined, '_resolveModules import successful');
-  t.ok(getDependencyGraph !== undefined, 'getDependencyGraph import successful');
-  t.end();
-});
-
-test('ShaderModules#getShaderDependencies', t => {
-  const result = _resolveModules([project64, project]);
-  t.deepEqual(
-    result.map(module => module.name),
-    [fp32.name, project.name, fp64.name, project64.name],
-    'Module order is correct'
+it('ShaderModules#import', () => {
+  expect(Boolean(_resolveModules !== undefined), '_resolveModules import successful').toBe(true);
+  expect(Boolean(getDependencyGraph !== undefined), 'getDependencyGraph import successful').toBe(
+    true
   );
-
-  t.end();
+  void 0;
 });
 
-test('ShaderModules#getDependencyGraph', t => {
+it('ShaderModules#getShaderDependencies', () => {
+  const result = _resolveModules([project64, project]);
+  expect(
+    result.map(module => module.name),
+    'Module order is correct'
+  ).toEqual([fp32.name, project.name, fp64.name, project64.name]);
+
+  void 0;
+});
+
+it('ShaderModules#getDependencyGraph', () => {
   const moduleDepth = {};
   const modules = [project64, project];
   initializeShaderModules(modules);
@@ -56,15 +57,11 @@ test('ShaderModules#getDependencyGraph', t => {
     moduleMap: {},
     moduleDepth
   });
-  t.deepEqual(
-    moduleDepth,
-    {
-      [fp32.name]: 2,
-      [project.name]: 1,
-      [fp64.name]: 1,
-      [project64.name]: 0
-    },
-    'Module dependency is correct'
-  );
-  t.end();
+  expect(moduleDepth, 'Module dependency is correct').toEqual({
+    [fp32.name]: 2,
+    [project.name]: 1,
+    [fp64.name]: 1,
+    [project64.name]: 0
+  });
+  void 0;
 });

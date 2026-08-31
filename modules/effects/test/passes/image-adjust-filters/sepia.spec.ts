@@ -4,12 +4,12 @@
 
 import {sepia} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('sepia#build/uniform', t => {
+it('sepia#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(sepia, {}, {});
 
-  t.ok(uniforms, 'sepia module build is ok');
-  t.equal(uniforms.amount, 0.5, 'sepia amount uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'sepia module build is ok').toBe(true);
+  expect(uniforms.amount, 'sepia amount uniform is ok').toBe(0.5);
+  void 0;
 });

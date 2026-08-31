@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -30,18 +30,17 @@ type ConvolutionFixture = {
   normalize?: boolean;
 };
 
-test('GPURasterConvolution preserves signed impulse responses and rectangular ramp derivatives', async testCase => {
+it('GPURasterConvolution preserves signed impulse responses and rectangular ramp derivatives', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const impulse = new Float32Array(25);
   impulse[12] = 1;
   await assertOperatorMatchesOracle(
-    testCase,
     device,
     'signed-impulse',
     {
@@ -59,7 +58,6 @@ test('GPURasterConvolution preserves signed impulse responses and rectangular ra
     Array.from({length: 9 * 7}, (_, index) => (index % 9) * 3 + Math.floor(index / 9))
   );
   await assertOperatorMatchesOracle(
-    testCase,
     device,
     'rectangular-ramp-derivative',
     {
@@ -72,14 +70,14 @@ test('GPURasterConvolution preserves signed impulse responses and rectangular ra
     },
     'convolution'
   );
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterGaussianBlur matches the full normalized outer-product CPU reference', async testCase => {
+it('GPURasterGaussianBlur matches the full normalized outer-product CPU reference', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -117,31 +115,24 @@ test('GPURasterGaussianBlur matches the full normalized outer-product CPU refere
     'gaussian',
     sigma
   );
-  assertResultsMatch(
-    testCase,
-    execution,
-    calculateConvolutionOracle(fixture),
-    'Gaussian separability'
-  );
-  testCase.deepEqual(
+  assertResultsMatch(execution, calculateConvolutionOracle(fixture), 'Gaussian separability');
+  expect(
     execution.stats.nodeOrder,
-    ['gaussian-separability-horizontal', 'gaussian-separability-vertical'],
     'separable Gaussian contributes two dependency-ordered passes'
-  );
-  testCase.equal(execution.stats.logicalTransientBufferCount, 2, 'sample and validity scratch');
-  testCase.equal(
+  ).toEqual(['gaussian-separability-horizontal', 'gaussian-separability-vertical']);
+  expect(execution.stats.logicalTransientBufferCount, 'sample and validity scratch').toBe(2);
+  expect(
     execution.stats.logicalTransientBytes,
-    width * height * 8,
     'scratch stores one float32 sample and one uint32 validity per pixel'
-  );
-  testCase.end();
+  ).toBe(width * height * 8);
+  void 0;
 });
 
-test('GPURasterBoxBlur preserves constant scenes and matches odd-size bordered ramp averages', async testCase => {
+it('GPURasterBoxBlur preserves constant scenes and matches odd-size bordered ramp averages', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -154,13 +145,7 @@ test('GPURasterBoxBlur preserves constant scenes and matches odd-size bordered r
     borderMode: 'clamp',
     normalize: true
   };
-  await assertOperatorMatchesOracle(
-    testCase,
-    device,
-    'box-constant-odd-size',
-    constantFixture,
-    'box'
-  );
+  await assertOperatorMatchesOracle(device, 'box-constant-odd-size', constantFixture, 'box');
 
   const rampFixture: ConvolutionFixture = {
     width: 9,
@@ -174,21 +159,15 @@ test('GPURasterBoxBlur preserves constant scenes and matches odd-size bordered r
     borderValue: 4,
     normalize: true
   };
-  await assertOperatorMatchesOracle(
-    testCase,
-    device,
-    'box-constant-border-ramp',
-    rampFixture,
-    'box'
-  );
-  testCase.end();
+  await assertOperatorMatchesOracle(device, 'box-constant-border-ramp', rampFixture, 'box');
+  void 0;
 });
 
-test('GPURaster separable smoothing propagates or renormalizes nodata without reviving invalid centers', async testCase => {
+it('GPURaster separable smoothing propagates or renormalizes nodata without reviving invalid centers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -224,23 +203,19 @@ test('GPURaster separable smoothing propagates or renormalizes nodata without re
       kernel: [1, 1, 1]
     });
     const execution = await executeOperator(device, `box-nodata-${noDataPolicy}`, fixture, 'box');
-    assertResultsMatch(testCase, execution, vertical, `${noDataPolicy} per-axis smoothing`);
+    assertResultsMatch(execution, vertical, `${noDataPolicy} per-axis smoothing`);
     for (const invalidCenter of [9, 17, 24]) {
-      testCase.equal(
-        execution.validity[invalidCenter],
-        0,
-        `${noDataPolicy}: center remains invalid`
-      );
+      expect(execution.validity[invalidCenter], `${noDataPolicy}: center remains invalid`).toBe(0);
     }
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster smoothing reuses graph-planned scratch across chained reusable operators', async testCase => {
+it('GPURaster smoothing reuses graph-planned scratch across chained reusable operators', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -283,39 +258,26 @@ test('GPURaster smoothing reuses graph-planned scratch across chained reusable o
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.deepEqual(
+  expect(
     compiled.stats.nodeOrder,
-    ['box-horizontal', 'box-vertical', 'gaussian-horizontal', 'gaussian-vertical'],
     'all four pass dependencies remain visible to the graph scheduler'
-  );
-  testCase.equal(
-    compiled.stats.logicalTransientBufferCount,
-    4,
-    'two logical scratch buffers/filter'
-  );
-  testCase.equal(
-    compiled.stats.physicalTransientBufferCount,
-    2,
-    'graph reuses two physical buffers'
-  );
-  testCase.equal(
-    compiled.stats.reusedTransientBytes,
-    72,
-    'scratch reuse avoids 72 duplicate bytes'
-  );
+  ).toEqual(['box-horizontal', 'box-vertical', 'gaussian-horizontal', 'gaussian-vertical']);
+  expect(compiled.stats.logicalTransientBufferCount, 'two logical scratch buffers/filter').toBe(4);
+  expect(compiled.stats.physicalTransientBufferCount, 'graph reuses two physical buffers').toBe(2);
+  expect(compiled.stats.reusedTransientBytes, 'scratch reuse avoids 72 duplicate bytes').toBe(72);
   submitGraph(device, compiled, 'smoothing-first-encoding');
   const firstValues = await readFloat32(gaussianBuffer, 9);
   sourceBuffer.write(Float32Array.from(Array.from({length: 9}, () => 4)));
   submitGraph(device, compiled, 'smoothing-second-encoding');
   const secondValues = await readFloat32(gaussianBuffer, 9);
-  testCase.ok(
-    firstValues.some(value => Math.abs(value - 4) > 0.01),
+  expect(
+    Boolean(firstValues.some(value => Math.abs(value - 4) > 0.01)),
     'first scene is nonconstant'
-  );
-  testCase.ok(
-    secondValues.every(value => Math.abs(value - 4) < 0.00001),
+  ).toBe(true);
+  expect(
+    Boolean(secondValues.every(value => Math.abs(value - 4) < 0.00001)),
     'compiled graph recomputes the replacement scene without rebuilding scratch'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -325,21 +287,20 @@ test('GPURaster smoothing reuses graph-planned scratch across chained reusable o
     gaussianBuffer,
     gaussianValidityBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'imported storage remains caller-owned');
+    expect(Boolean(buffer.destroyed), 'imported storage remains caller-owned').toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 async function assertOperatorMatchesOracle(
-  testCase: Test,
   device: Device,
   id: string,
   fixture: ConvolutionFixture,
   operator: 'convolution' | 'box' | 'gaussian'
 ): Promise<void> {
   const execution = await executeOperator(device, id, fixture, operator);
-  assertResultsMatch(testCase, execution, calculateConvolutionOracle(fixture), id);
+  assertResultsMatch(execution, calculateConvolutionOracle(fixture), id);
 }
 
 async function executeOperator(
@@ -436,20 +397,22 @@ async function executeOperator(
 }
 
 function assertResultsMatch(
-  testCase: Test,
   actual: {values: number[]; validity: number[]},
   expected: {values: number[]; validity: number[]},
   label: string
 ): void {
-  testCase.deepEqual(actual.validity, expected.validity, `${label}: validity matches CPU`);
+  expect(actual.validity, `${label}: validity matches CPU`).toEqual(expected.validity);
   for (const [index, expectedValue] of expected.values.entries()) {
     if (Number.isNaN(expectedValue)) {
-      testCase.ok(Number.isNaN(actual.values[index]), `${label}: invalid pixel ${index} is NaN`);
+      expect(
+        Boolean(Number.isNaN(actual.values[index])),
+        `${label}: invalid pixel ${index} is NaN`
+      ).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(actual.values[index] - expectedValue) <= 0.00003,
+      expect(
+        Boolean(Math.abs(actual.values[index] - expectedValue) <= 0.00003),
         `${label}: pixel ${index} matches CPU (${actual.values[index]} versus ${expectedValue})`
-      );
+      ).toBe(true);
     }
   }
 }

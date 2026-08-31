@@ -2,56 +2,63 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUSplatData preserves optional semantic and spherical-harmonic GPU storage', async t => {
+it('GPUSplatData preserves optional semantic and spherical-harmonic GPU storage', async () => {
   const device = new NullDevice({});
   const source = makeDynamicSplatSource();
   source.semanticIds = new Uint32Array([4, 9]);
   source.sphericalHarmonics = Float32Array.from({length: 18}, (_, index) => index / 10);
   const prepared = makeGPUSplatData(device, source);
 
-  t.equal(prepared.sphericalHarmonicsDegree, 1, 'infers the first non-DC spherical-harmonic band');
-  t.equal(prepared.semanticIds?.format, 'uint32', 'retains compact GPU semantic identifiers');
-  t.equal(prepared.sphericalHarmonics?.format, 'float32', 'retains flattened Float32 coefficients');
-  t.equal(prepared.sphericalHarmonics?.length, 18, 'preserves every source coefficient');
-  t.notOk(
-    prepared.table.gpuVectors['semanticIds'],
+  expect(prepared.sphericalHarmonicsDegree, 'infers the first non-DC spherical-harmonic band').toBe(
+    1
+  );
+  expect(prepared.semanticIds?.format, 'retains compact GPU semantic identifiers').toBe('uint32');
+  expect(prepared.sphericalHarmonics?.format, 'retains flattened Float32 coefficients').toBe(
+    'float32'
+  );
+  expect(prepared.sphericalHarmonics?.length, 'preserves every source coefficient').toBe(18);
+  expect(
+    Boolean(prepared.table.gpuVectors['semanticIds']),
     'keeps optional semantic storage outside the fixed source-batch render schema'
-  );
-  t.notOk(
-    prepared.table.gpuVectors['sphericalHarmonics'],
+  ).toBe(false);
+  expect(
+    Boolean(prepared.table.gpuVectors['sphericalHarmonics']),
     'keeps flattened spherical harmonics outside the fixed-row source table'
-  );
+  ).toBe(false);
 
   const tableByteLength = Object.values(prepared.table.batches[0].gpuData).reduce(
     (byteLength, data) => byteLength + data.buffer.byteLength,
     0
   );
-  t.equal(
+  expect(
     prepared.byteLength,
-    tableByteLength + source.semanticIds.byteLength + source.sphericalHarmonics.byteLength,
     'includes independently owned optional GPU storage in residency accounting'
-  );
+  ).toBe(tableByteLength + source.semanticIds.byteLength + source.sphericalHarmonics.byteLength);
 
   const semanticBuffer = prepared.semanticIds!.data[0].buffer;
   const sphericalHarmonicsBuffer = prepared.sphericalHarmonics!.data[0].buffer;
   const semanticBytes = await semanticBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Uint32Array(semanticBytes.buffer)),
-    [4, 9],
     'uploads stable source semantic identifiers'
-  );
+  ).toEqual([4, 9]);
 
   prepared.destroy();
-  t.ok(semanticBuffer.destroyed, 'releases independently owned semantic GPU data');
-  t.ok(sphericalHarmonicsBuffer.destroyed, 'releases independently owned spherical harmonics');
-  t.end();
+  expect(Boolean(semanticBuffer.destroyed), 'releases independently owned semantic GPU data').toBe(
+    true
+  );
+  expect(
+    Boolean(sphericalHarmonicsBuffer.destroyed),
+    'releases independently owned spherical harmonics'
+  ).toBe(true);
+  void 0;
 });
 
-test('GPUSplatData updates source rows and GPU buffers in place', async t => {
+it('GPUSplatData updates source rows and GPU buffers in place', async () => {
   const device = new NullDevice({});
   const source = makeDynamicSplatSource();
   source.semanticIds = new Uint32Array([4, 9]);
@@ -69,96 +76,90 @@ test('GPUSplatData updates source rows and GPU buffers in place', async t => {
     sphericalHarmonics: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
   });
 
-  t.equal(prepared.revision, 1, 'increments the source revision once per atomic row update');
-  t.equal(prepared.positions.data[0].buffer, positionBuffer, 'preserves existing GPU allocations');
-  t.deepEqual(
-    Array.from(source.positions),
-    [0, 0, 0.20000000298023224, 3, 4, 0.8999999761581421],
-    'updates only the selected packed CPU source rows'
+  expect(prepared.revision, 'increments the source revision once per atomic row update').toBe(1);
+  expect(prepared.positions.data[0].buffer, 'preserves existing GPU allocations').toBe(
+    positionBuffer
   );
-  t.deepEqual(Array.from(source.semanticIds), [4, 17], 'updates source semantic class metadata');
-  t.deepEqual(
+  expect(Array.from(source.positions), 'updates only the selected packed CPU source rows').toEqual([
+    0, 0, 0.20000000298023224, 3, 4, 0.8999999761581421
+  ]);
+  expect(Array.from(source.semanticIds), 'updates source semantic class metadata').toEqual([4, 17]);
+  expect(
     Array.from(source.sphericalHarmonics.subarray(9)),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
     'updates complete per-row spherical-harmonic coefficient sets'
-  );
+  ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
   const positionBytes = await positionBuffer.readAsync();
   const semanticBytes = await semanticBuffer.readAsync();
   const sphericalHarmonicsBytes = await sphericalHarmonicsBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Float32Array(positionBytes.buffer)),
-    Array.from(source.positions),
     'uploads changed source positions to their original GPU byte offsets'
-  );
-  t.deepEqual(
+  ).toEqual(Array.from(source.positions));
+  expect(
     Array.from(new Uint32Array(semanticBytes.buffer)),
-    [4, 17],
     'updates semantic GPU storage without reallocating it'
-  );
-  t.deepEqual(
+  ).toEqual([4, 17]);
+  expect(
     Array.from(new Float32Array(sphericalHarmonicsBytes.buffer).subarray(9)),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
     'updates flattened coefficient GPU storage at the selected row boundary'
-  );
+  ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
   prepared.update({opacities: new Float32Array([0.75, 0.5])});
-  t.equal(prepared.revision, 2, 'accepts full-column updates without an explicit row offset');
+  expect(prepared.revision, 'accepts full-column updates without an explicit row offset').toBe(2);
   prepared.update({rowOffset: 1});
-  t.equal(prepared.revision, 2, 'does not invalidate renderers for an empty update');
+  expect(prepared.revision, 'does not invalidate renderers for an empty update').toBe(2);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatData validates dynamic updates before changing source rows', t => {
+it('GPUSplatData validates dynamic updates before changing source rows', () => {
   const device = new NullDevice({});
   const source = makeDynamicSplatSource();
   const prepared = makeGPUSplatData(device, source);
   const originalPositions = source.positions.slice();
 
-  t.throws(
+  expect(
     () => prepared.updateRows(1, {positions: new Float32Array([1, 2])}),
-    /complete rows/,
     'rejects incomplete packed row updates'
-  );
-  t.throws(
+  ).toThrow(/complete rows/);
+  expect(
     () =>
       prepared.update({
         positions: new Float32Array([1, 2, 3]),
         opacities: new Float32Array([1, 0.5])
       }),
-    /matching row counts/,
     'requires all updated source columns to target the same rows'
-  );
-  t.throws(
+  ).toThrow(/matching row counts/);
+  expect(
     () => prepared.updateRows(2, {opacities: new Float32Array([1])}),
-    /exceed/,
     'rejects writes beyond the existing source batch'
-  );
-  t.throws(
+  ).toThrow(/exceed/);
+  expect(
     () => prepared.update({colors: new Float32Array([1, 1, 1, 1])}),
-    /source column types/,
     'retains the original normalized or Float32 source color format'
-  );
-  t.throws(
+  ).toThrow(/source column types/);
+  expect(
     () => prepared.update({semanticIds: new Uint32Array([1])}),
-    /existing prepared source column/,
     'rejects updates for optional columns that were never allocated'
+  ).toThrow(/existing prepared source column/);
+  expect(Array.from(source.positions), 'preserves failed rows').toEqual(
+    Array.from(originalPositions)
   );
-  t.deepEqual(Array.from(source.positions), Array.from(originalPositions), 'preserves failed rows');
-  t.equal(prepared.revision, 0, 'does not invalidate borrowing renderers after a failed update');
+  expect(prepared.revision, 'does not invalidate borrowing renderers after a failed update').toBe(
+    0
+  );
 
   prepared.destroy();
-  t.throws(
+  expect(
     () => prepared.update({opacities: new Float32Array([1])}),
-    /destroyed/,
     'rejects changes after releasing owned GPU resources'
-  );
-  t.end();
+  ).toThrow(/destroyed/);
+  void 0;
 });
 
-test('GPUSplatData keeps overlapping source-backed updates consistent on the CPU and GPU', async t => {
+it('GPUSplatData keeps overlapping source-backed updates consistent on the CPU and GPU', async () => {
   const device = new NullDevice({});
   const source: SplatSource = {
     ...makeDynamicSplatSource(),
@@ -173,105 +174,95 @@ test('GPUSplatData keeps overlapping source-backed updates consistent on the CPU
   prepared.updateRows(1, {positions: source.positions.subarray(0, 6)});
   const uploadedPositions = await prepared.positions.data[0].buffer.readAsync();
 
-  t.deepEqual(
+  expect(
     Array.from(source.positions),
-    [1, 2, 3, 1, 2, 3, 4, 5, 6],
     'copies overlapping source rows with typed-array copy semantics'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2, 3, 1, 2, 3, 4, 5, 6]);
+  expect(
     Array.from(new Float32Array(uploadedPositions.buffer)),
-    Array.from(source.positions),
     'uploads the original overlapping values before the source-backed view changes'
-  );
+  ).toEqual(Array.from(source.positions));
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatData validates optional semantic and spherical-harmonic source rows', t => {
+it('GPUSplatData validates optional semantic and spherical-harmonic source rows', () => {
   const device = new NullDevice({});
 
-  t.throws(
+  expect(
     () => makeGPUSplatData(device, {...makeDynamicSplatSource(), semanticIds: new Uint32Array(1)}),
-    /matching Gaussian splat rows/,
     'requires semantic identifiers for every source row'
-  );
-  t.throws(
+  ).toThrow(/matching Gaussian splat rows/);
+  expect(
     () =>
       makeGPUSplatData(device, {
         ...makeDynamicSplatSource(),
         sphericalHarmonics: new Float32Array(16)
       }),
-    /coefficient count/,
     'rejects partial or unsupported spherical-harmonic coefficient bands'
-  );
-  t.throws(
+  ).toThrow(/coefficient count/);
+  expect(
     () =>
       makeGPUSplatData(device, {
         ...makeDynamicSplatSource(),
         sphericalHarmonics: new Float32Array(18),
         sphericalHarmonicsDegree: 2
       }),
-    /degree/,
     'rejects coefficient counts that disagree with the explicit source degree'
-  );
-  t.throws(
+  ).toThrow(/degree/);
+  expect(
     () => makeGPUSplatData(device, {...makeDynamicSplatSource(), sphericalHarmonicsDegree: 1}),
-    /coefficient data/,
     'requires coefficients when a non-DC source degree is declared'
-  );
-  t.end();
+  ).toThrow(/coefficient data/);
+  void 0;
 });
 
-test('GPUSplatData rejects global rows outside the GPU picking index range', t => {
+it('GPUSplatData rejects global rows outside the GPU picking index range', () => {
   const device = new NullDevice({});
 
   for (const rowIndexBase of [-1, Number.NaN, 2_147_483_647, 4_294_967_296]) {
-    t.throws(
+    expect(
       () => makeGPUSplatData(device, {...makeDynamicSplatSource(), rowIndexBase}),
-      /signed 32-bit GPU indices/,
       `rejects an unsupported stable source-row base of ${rowIndexBase}`
-    );
+    ).toThrow(/signed 32-bit GPU indices/);
   }
 
   const prepared = makeGPUSplatData(device, {
     ...makeDynamicSplatSource(),
     rowIndexBase: 2_147_483_646
   });
-  t.equal(
+  expect(
     prepared.rowIndexBase,
-    2_147_483_646,
     'accepts a source batch ending at the largest signed GPU picking index'
-  );
+  ).toBe(2_147_483_646);
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatRenderer refreshes visibility and depth ordering after dynamic source updates', t => {
+it('SplatRenderer refreshes visibility and depth ordering after dynamic source updates', () => {
   const device = new NullDevice({});
   const prepared = makeGPUSplatData(device, makeDynamicSplatSource());
   const renderer = new SplatRenderer(device, {data: prepared, viewportSize: [100, 100]});
 
-  t.deepEqual(Array.from(renderer.getSortedIndices()), [6, 5], 'sorts original source rows');
+  expect(Array.from(renderer.getSortedIndices()), 'sorts original source rows').toEqual([6, 5]);
   prepared.updateRows(0, {positions: new Float32Array([0, 0, 0.95])});
-  t.deepEqual(
+  expect(
     Array.from(renderer.getSortedIndices()),
-    [5, 6],
     'refreshes camera-dependent ordering after source positions move'
-  );
+  ).toEqual([5, 6]);
 
   prepared.updateRows(0, {opacities: new Float32Array([0])});
-  t.deepEqual(
+  expect(
     Array.from(renderer.getSortedIndices()),
-    [6],
     'refreshes source opacity visibility without replacing existing GPU batches'
-  );
-  t.equal(renderer.table?.batches.length, 1, 'preserves the original source-batch boundary');
+  ).toEqual([6]);
+  expect(renderer.table?.batches.length, 'preserves the original source-batch boundary').toBe(1);
 
   renderer.destroy();
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
 function makeDynamicSplatSource(): SplatSource {

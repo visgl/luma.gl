@@ -14,7 +14,7 @@ import {
   type GPURasterConnectivity
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type BinarySamples = {
   values: Uint32Array;
@@ -66,11 +66,11 @@ type OwnedDenseGraph = {
 const GUARD_VALUE = 4000000001;
 const HISTOGRAM_BIN_COUNT = 16;
 
-test('GPURaster dense components scan hierarchical checkerboards into deterministic 4/8-connected IDs', async testCase => {
+it('GPURaster dense components scan hierarchical checkerboards into deterministic 4/8-connected IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -104,64 +104,51 @@ test('GPURaster dense components scan hierarchical checkerboards into determinis
     const sparse = makeReferenceComponents(fixture);
     const expected = makeReferenceDense(sparse, pixelCount, true);
 
-    testCase.deepEqual(
+    expect(
       result.sparseLabels,
-      Array.from(sparse.values),
       `${connectivity}-connected sparse labels retain deterministic minimum row-major roots`
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(sparse.values));
+    expect(
       result.denseLabels,
-      Array.from(expected.values),
       `${connectivity}-connected sparse roots become contiguous deterministic ascending IDs`
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.values));
+    expect(
       result.validity,
-      Array.from(expected.validity),
       'exact unsigned nodata and independent masks remain distinct from valid background'
-    );
-    testCase.equal(result.converged, 1, 'dense publication observes real GPU convergence');
-    testCase.equal(
-      result.requiredCount,
-      expected.requiredCount,
-      'exact root population is published'
-    );
-    testCase.equal(result.componentCount, expected.componentCount, 'the bounded count is exact');
-    testCase.equal(result.overflow, 0, 'sufficient capacity does not publish overflow');
+    ).toEqual(Array.from(expected.validity));
+    expect(result.converged, 'dense publication observes real GPU convergence').toBe(1);
+    expect(result.requiredCount, 'exact root population is published').toBe(expected.requiredCount);
+    expect(result.componentCount, 'the bounded count is exact').toBe(expected.componentCount);
+    expect(result.overflow, 'sufficient capacity does not publish overflow').toBe(0);
 
     const denseIdentifiers = [...new Set(result.denseLabels.filter(label => label !== 0))].sort(
       (left, right) => left - right
     );
-    testCase.deepEqual(
-      denseIdentifiers,
-      Array.from({length: expected.requiredCount}, (_, index) => index + 1),
-      'published foreground IDs contain no sparse gaps'
+    expect(denseIdentifiers, 'published foreground IDs contain no sparse gaps').toEqual(
+      Array.from({length: expected.requiredCount}, (_, index) => index + 1)
     );
     if (connectivity === 4) {
-      testCase.ok(
-        expected.requiredCount > 256,
+      expect(
+        Boolean(expected.requiredCount > 256),
         'the checkerboard exercises hierarchical GPUScan across multiple workgroups'
-      );
+      ).toBe(true);
     } else {
-      testCase.equal(
-        expected.requiredCount,
-        1,
-        'diagonal checkerboard foreground forms one region'
-      );
+      expect(expected.requiredCount, 'diagonal checkerboard foreground forms one region').toBe(1);
     }
-    testCase.equal(result.denseLabels[1], 0, 'valid background retains zero');
-    testCase.equal(result.validity[1], 1, 'valid zero remains analytically valid');
-    testCase.equal(result.validity[74], 0, 'exact uint32 nodata never becomes background');
-    testCase.equal(result.validity[370], 0, 'an independent missing observation remains invalid');
+    expect(result.denseLabels[1], 'valid background retains zero').toBe(0);
+    expect(result.validity[1], 'valid zero remains analytically valid').toBe(1);
+    expect(result.validity[74], 'exact uint32 nodata never becomes background').toBe(0);
+    expect(result.validity[370], 'an independent missing observation remains invalid').toBe(0);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster dense component capacity explicitly handles zero, overflow, exact counts, and dependent histograms', async testCase => {
+it('GPURaster dense component capacity explicitly handles zero, overflow, exact counts, and dependent histograms', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -193,24 +180,21 @@ test('GPURaster dense component capacity explicitly handles zero, overflow, exac
     const result = await runConnectedDenseGraph(device, fixture);
     const expected = makeReferenceDense(sparse, capacity, true);
 
-    testCase.deepEqual(
+    expect(
       result.denseLabels,
-      Array.from(expected.values),
       `capacity ${capacity} retains only the deterministic first dense representatives`
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.values));
+    expect(
       result.validity,
-      Array.from(expected.validity),
       'overflowed foreground is invalid while observed background remains valid'
-    );
-    testCase.equal(result.requiredCount, expected.requiredCount, 'the unclamped total stays exact');
-    testCase.equal(result.componentCount, expected.componentCount, 'the bounded count clamps');
-    testCase.equal(result.overflow, expected.overflow, 'overflow is caller-visible and exact');
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.validity));
+    expect(result.requiredCount, 'the unclamped total stays exact').toBe(expected.requiredCount);
+    expect(result.componentCount, 'the bounded count clamps').toBe(expected.componentCount);
+    expect(result.overflow, 'overflow is caller-visible and exact').toBe(expected.overflow);
+    expect(
       result.histogram,
-      makeReferenceHistogram(expected, pixelCount),
       'dependent GPU histograms never consume dropped over-capacity foreground'
-    );
+    ).toEqual(makeReferenceHistogram(expected, pixelCount));
   }
 
   const emptyResult = await runConnectedDenseGraph(device, {
@@ -223,17 +207,17 @@ test('GPURaster dense component capacity explicitly handles zero, overflow, exac
     maximumIterations: 4,
     capacity: 0
   });
-  testCase.equal(emptyResult.requiredCount, 0, 'an empty mask requires no component slots');
-  testCase.equal(emptyResult.componentCount, 0, 'zero capacity accepts an empty mask');
-  testCase.equal(emptyResult.overflow, 0, 'zero capacity is not overflow when no regions exist');
-  testCase.end();
+  expect(emptyResult.requiredCount, 'an empty mask requires no component slots').toBe(0);
+  expect(emptyResult.componentCount, 'zero capacity accepts an empty mask').toBe(0);
+  expect(emptyResult.overflow, 'zero capacity is not overflow when no regions exist').toBe(0);
+  void 0;
 });
 
-test('GPURaster threshold, binary closing, connected roots, and dense IDs compose and re-encode on GPU', async testCase => {
+it('GPURaster threshold, binary closing, connected roots, and dense IDs compose and re-encode on GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -374,39 +358,39 @@ test('GPURaster threshold, binary closing, connected roots, and dense IDs compos
     });
     const expected = makeReferenceDense(sparseReference, capacity, true);
 
-    testCase.deepEqual(
+    expect(
       await readLogical(denseBuffer, pixelCount, 3),
-      Array.from(expected.values),
       'one GPU graph composes threshold, closing, sparse labeling, hierarchical scan, and dense IDs'
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.values));
+    expect(
       await readLogical(denseValidityBuffer, pixelCount, 1),
-      Array.from(expected.validity),
       'overflowed regions and missing samples never become valid background'
-    );
-    testCase.equal((await readLogical(countBuffer, 1, 2))[0], expected.componentCount);
-    testCase.equal((await readLogical(requiredBuffer, 1, 1))[0], expected.requiredCount);
-    testCase.equal((await readLogical(overflowBuffer, 1, 2))[0], expected.overflow);
-    testCase.deepEqual(
+    ).toEqual(Array.from(expected.validity));
+    expect((await readLogical(countBuffer, 1, 2))[0], '').toBe(expected.componentCount);
+    expect((await readLogical(requiredBuffer, 1, 1))[0], '').toBe(expected.requiredCount);
+    expect((await readLogical(overflowBuffer, 1, 2))[0], '').toBe(expected.overflow);
+    expect(
       (await readUnsigned(denseBuffer)).slice(0, 3),
-      [GUARD_VALUE, GUARD_VALUE, GUARD_VALUE],
       'dense output respects caller-owned nonzero view offsets and prefix guards'
-    );
+    ).toEqual([GUARD_VALUE, GUARD_VALUE, GUARD_VALUE]);
   }
 
   compiled.destroy();
   for (const buffer of ownedBuffers) {
-    testCase.notOk(buffer.destroyed, 'graph teardown never destroys borrowed application buffers');
+    expect(
+      Boolean(buffer.destroyed),
+      'graph teardown never destroys borrowed application buffers'
+    ).toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster dense replay rejects malformed roots and clears all labels/counts when convergence is lost', async testCase => {
+it('GPURaster dense replay rejects malformed roots and clears all labels/counts when convergence is lost', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -459,40 +443,29 @@ test('GPURaster dense replay rejects malformed roots and clears all labels/count
     capacity,
     true
   );
-  testCase.deepEqual(await readLogical(denseBuffer, width, 2), Array.from(expected.values));
-  testCase.deepEqual(
-    await readLogical(outputValidityBuffer, width, 1),
+  expect(await readLogical(denseBuffer, width, 2), '').toEqual(Array.from(expected.values));
+  expect(await readLogical(outputValidityBuffer, width, 1), '').toEqual(
     Array.from(expected.validity)
   );
-  testCase.equal((await readLogical(requiredBuffer, 1, 1))[0], 3, 'only actual roots are counted');
-  testCase.equal(
-    (await readLogical(countBuffer, 1, 1))[0],
-    2,
-    'component count clamps to capacity'
-  );
-  testCase.equal((await readLogical(overflowBuffer, 1, 2))[0], 1, 'overflow remains explicit');
-  testCase.equal(expected.validity[2], 0, 'a root pointing at missing data is invalid');
-  testCase.equal(expected.validity[6], 0, 'an out-of-bounds unsigned root is invalid');
+  expect((await readLogical(requiredBuffer, 1, 1))[0], 'only actual roots are counted').toBe(3);
+  expect((await readLogical(countBuffer, 1, 1))[0], 'component count clamps to capacity').toBe(2);
+  expect((await readLogical(overflowBuffer, 1, 2))[0], 'overflow remains explicit').toBe(1);
+  expect(expected.validity[2], 'a root pointing at missing data is invalid').toBe(0);
+  expect(expected.validity[6], 'an out-of-bounds unsigned root is invalid').toBe(0);
 
   convergenceBuffer.write(new Uint32Array([0]), Uint32Array.BYTES_PER_ELEMENT);
   submitGraph(device, compiled, 'manual-unconverged');
-  testCase.deepEqual(
+  expect(
     await readLogical(denseBuffer, width, 2),
-    Array.from(new Uint32Array(width)),
     'lost convergence clears every previously published dense label'
-  );
-  testCase.deepEqual(
+  ).toEqual(Array.from(new Uint32Array(width)));
+  expect(
     await readLogical(outputValidityBuffer, width, 1),
-    Array.from(new Uint32Array(width)),
     'lost convergence clears all foreground, background, and missing output validity'
-  );
-  testCase.equal((await readLogical(requiredBuffer, 1, 1))[0], 0, 'unclamped counts fail closed');
-  testCase.equal((await readLogical(countBuffer, 1, 1))[0], 0, 'bounded counts fail closed');
-  testCase.equal(
-    (await readLogical(overflowBuffer, 1, 2))[0],
-    0,
-    'stale overflow does not survive'
-  );
+  ).toEqual(Array.from(new Uint32Array(width)));
+  expect((await readLogical(requiredBuffer, 1, 1))[0], 'unclamped counts fail closed').toBe(0);
+  expect((await readLogical(countBuffer, 1, 1))[0], 'bounded counts fail closed').toBe(0);
+  expect((await readLogical(overflowBuffer, 1, 2))[0], 'stale overflow does not survive').toBe(0);
 
   sparseValues.set([1, 1, 3, 3, 0, 0, 7, 7, 0]);
   sparseValidity.fill(1);
@@ -501,27 +474,24 @@ test('GPURaster dense replay rejects malformed roots and clears all labels/count
   convergenceBuffer.write(new Uint32Array([1]), Uint32Array.BYTES_PER_ELEMENT);
   submitGraph(device, compiled, 'manual-recovered');
   expected = makeReferenceDense({values: sparseValues, validity: sparseValidity}, capacity, true);
-  testCase.deepEqual(
+  expect(
     await readLogical(denseBuffer, width, 2),
-    Array.from(expected.values),
     'the same compiled graph deterministically rebuilds fresh sparse-to-dense mappings'
-  );
-  testCase.deepEqual(
-    await readLogical(outputValidityBuffer, width, 1),
+  ).toEqual(Array.from(expected.values));
+  expect(await readLogical(outputValidityBuffer, width, 1), '').toEqual(
     Array.from(expected.validity)
   );
-  testCase.equal((await readLogical(requiredBuffer, 1, 1))[0], expected.requiredCount);
-  testCase.equal((await readLogical(countBuffer, 1, 1))[0], expected.componentCount);
-  testCase.equal((await readLogical(overflowBuffer, 1, 2))[0], expected.overflow);
-  testCase.deepEqual(
+  expect((await readLogical(requiredBuffer, 1, 1))[0], '').toBe(expected.requiredCount);
+  expect((await readLogical(countBuffer, 1, 1))[0], '').toBe(expected.componentCount);
+  expect((await readLogical(overflowBuffer, 1, 2))[0], '').toBe(expected.overflow);
+  expect(
     (await readUnsigned(overflowBuffer)).slice(0, 2),
-    [GUARD_VALUE, GUARD_VALUE],
     'scalar writes preserve nonzero caller-owned guard offsets'
-  );
+  ).toEqual([GUARD_VALUE, GUARD_VALUE]);
 
   compiled.destroy();
   for (const buffer of ownedBuffers) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function runConnectedDenseGraph(device: Device, fixture: DenseFixture): Promise<DenseResult> {

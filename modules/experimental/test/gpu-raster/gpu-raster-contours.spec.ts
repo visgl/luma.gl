@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {DrawCommandBuffer, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -15,11 +15,11 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 type ContourFormat = GPURasterScalarFormat | 'float32x2';
 
-test('GPURaster contour classification covers every marching-squares case and deterministic saddle ties', async testCase => {
+it('GPURaster contour classification covers every marching-squares case and deterministic saddle ties', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -50,8 +50,8 @@ test('GPURaster contour classification covers every marching-squares case and de
     const expectedCase = caseIndex === 5 ? caseIndex | 16 : caseIndex;
     const expectedCount =
       caseIndex === 0 || caseIndex === 15 ? 0 : caseIndex === 5 || caseIndex === 10 ? 2 : 1;
-    testCase.equal((await readUint32(casesBuffer, 1))[0], expectedCase, `case ${caseIndex}`);
-    testCase.equal((await readUint32(countBuffer, 1))[0], expectedCount, `segments ${caseIndex}`);
+    expect((await readUint32(casesBuffer, 1))[0], `case ${caseIndex}`).toBe(expectedCase);
+    expect((await readUint32(countBuffer, 1))[0], `segments ${caseIndex}`).toBe(expectedCount);
   }
 
   const saddles = [
@@ -63,22 +63,24 @@ test('GPURaster contour classification covers every marching-squares case and de
   for (const saddle of saddles) {
     sourceBuffer.write(Float32Array.from(saddle.values.map(value => value - saddle.level + 0.5)));
     submitGraph(device, compiled, saddle.label);
-    testCase.equal((await readUint32(casesBuffer, 1))[0], saddle.expected, saddle.label);
+    expect((await readUint32(casesBuffer, 1))[0], saddle.label).toBe(saddle.expected);
   }
 
   compiled.destroy();
-  testCase.notOk(sourceBuffer.destroyed, 'the graph never takes ownership of source samples');
+  expect(Boolean(sourceBuffer.destroyed), 'the graph never takes ownership of source samples').toBe(
+    false
+  );
   sourceBuffer.destroy();
   casesBuffer.destroy();
   countBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster contours scatter stable affine-local geometry and update a GPU-only indirect draw', async testCase => {
+it('GPURaster contours scatter stable affine-local geometry and update a GPU-only indirect draw', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -122,44 +124,42 @@ test('GPURaster contours scatter stable affine-local geometry and update a GPU-o
 
   const compiled = graph.compile();
   const execution = submitGraph(device, compiled, 'contour-indirect-first');
-  testCase.ok(
-    execution.stats.nodeOrder.indexOf('checkerboard-lines-classify') <
-      execution.stats.nodeOrder.indexOf('checkerboard-lines-scatter'),
+  expect(
+    Boolean(
+      execution.stats.nodeOrder.indexOf('checkerboard-lines-classify') <
+        execution.stats.nodeOrder.indexOf('checkerboard-lines-scatter')
+    ),
     'declared graph hazards order classification and geometry scatter'
-  );
-  testCase.deepEqual(await readUint32(segmentCountBuffer, 2), [0, 4], 'offset segment count');
-  testCase.deepEqual(await readUint32(overflowBuffer, 2), [0, 0], 'no overflow');
-  testCase.deepEqual(await readUint32(requiredBuffer, 2), [0, 4], 'offset required count');
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(await readUint32(segmentCountBuffer, 2), 'offset segment count').toEqual([0, 4]);
+  expect(await readUint32(overflowBuffer, 2), 'no overflow').toEqual([0, 0]);
+  expect(await readUint32(requiredBuffer, 2), 'offset required count').toEqual([0, 4]);
+  expect(
     (await readFloat32(verticesBuffer, 22)).slice(2, 18),
-    [0.5, 1, 1, 0.5, 1.5, 1, 1, 1.5, 2, 0.5, 2.5, 1, 2, 1.5, 1.5, 1],
     'row-major exclusive scan writes both deterministic saddle segments per cell'
-  );
-  testCase.deepEqual(
+  ).toEqual([0.5, 1, 1, 0.5, 1.5, 1, 1, 1.5, 2, 0.5, 2.5, 1, 2, 1.5, 1.5, 1]);
+  expect(
     await readUint32(drawCommands.buffer, 8),
-    [5, 7, 3, 9, 2, 4, 0, 0],
     'GPU resets the entire selected indirect record while preserving adjacent commands'
-  );
+  ).toEqual([5, 7, 3, 9, 2, 4, 0, 0]);
 
   levelBuffer.write(Float32Array.from([99, 2]));
   submitGraph(device, compiled, 'contour-indirect-reuse');
-  testCase.deepEqual(
-    await readUint32(segmentCountBuffer, 2),
-    [0, 0],
-    'dynamic GPU level reuses graph'
-  );
-  testCase.deepEqual(
+  expect(await readUint32(segmentCountBuffer, 2), 'dynamic GPU level reuses graph').toEqual([0, 0]);
+  expect(
     await readUint32(drawCommands.buffer, 8),
-    [5, 7, 3, 9, 2, 0, 0, 0],
     'empty contours reset the entire selected indirect command without CPU polling'
-  );
+  ).toEqual([5, 7, 3, 9, 2, 0, 0, 0]);
 
   compiled.destroy();
-  testCase.notOk(verticesBuffer.destroyed, 'caller-owned geometry survives graph destruction');
-  testCase.notOk(
-    drawCommands.buffer.destroyed,
+  expect(
+    Boolean(verticesBuffer.destroyed),
+    'caller-owned geometry survives graph destruction'
+  ).toBe(false);
+  expect(
+    Boolean(drawCommands.buffer.destroyed),
     'caller-owned indirect records survive graph destruction'
-  );
+  ).toBe(false);
   sourceBuffer.destroy();
   levelBuffer.destroy();
   verticesBuffer.destroy();
@@ -167,14 +167,14 @@ test('GPURaster contours scatter stable affine-local geometry and update a GPU-o
   overflowBuffer.destroy();
   requiredBuffer.destroy();
   drawCommands.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster contours clamp every capacity boundary and preserve guarded vertex storage', async testCase => {
+it('GPURaster contours clamp every capacity boundary and preserve guarded vertex storage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -203,20 +203,16 @@ test('GPURaster contours clamp every capacity boundary and preserve guarded vert
     const compiled = graph.compile();
     submitGraph(device, compiled, `contour-capacity-${capacity}`);
 
-    testCase.equal(
-      (await readUint32(countBuffer, 1))[0],
-      Math.min(capacity, 4),
-      `capacity ${capacity}`
+    expect((await readUint32(countBuffer, 1))[0], `capacity ${capacity}`).toBe(
+      Math.min(capacity, 4)
     );
-    testCase.equal(
-      (await readUint32(overflowBuffer, 1))[0],
-      Number(capacity < 4),
-      `overflow ${capacity}`
+    expect((await readUint32(overflowBuffer, 1))[0], `overflow ${capacity}`).toBe(
+      Number(capacity < 4)
     );
-    testCase.equal((await readUint32(requiredBuffer, 1))[0], 4, `required ${capacity}`);
+    expect((await readUint32(requiredBuffer, 1))[0], `required ${capacity}`).toBe(4);
     const vertexScalars = await readFloat32(verticesBuffer, vertexScalarCount);
-    testCase.equal(vertexScalars[0], 12345, `prefix guard ${capacity}`);
-    testCase.equal(vertexScalars[vertexScalars.length - 1], 12345, `suffix guard ${capacity}`);
+    expect(vertexScalars[0], `prefix guard ${capacity}`).toBe(12345);
+    expect(vertexScalars[vertexScalars.length - 1], `suffix guard ${capacity}`).toBe(12345);
 
     compiled.destroy();
     sourceBuffer.destroy();
@@ -225,14 +221,14 @@ test('GPURaster contours clamp every capacity boundary and preserve guarded vert
     overflowBuffer.destroy();
     requiredBuffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster empty cell grids publish zero counts and clear indirect instances without allocating scratch', async testCase => {
+it('GPURaster empty cell grids publish zero counts and clear indirect instances without allocating scratch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -261,26 +257,20 @@ test('GPURaster empty cell grids publish zero counts and clear indirect instance
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.deepEqual(
+  expect(
     compiled.stats.nodeOrder,
-    ['gpu-raster-contours-publish'],
     'empty grids contribute only one scalar publication pass'
-  );
-  testCase.equal(
-    compiled.stats.physicalTransientBytes,
-    0,
-    'unused empty scratch has no allocation'
-  );
+  ).toEqual(['gpu-raster-contours-publish']);
+  expect(compiled.stats.physicalTransientBytes, 'unused empty scratch has no allocation').toBe(0);
   submitGraph(device, compiled, 'contour-empty-cell-grid');
 
-  testCase.deepEqual(await readUint32(segmentCountBuffer, 1), [0], 'stale segment count cleared');
-  testCase.deepEqual(await readUint32(overflowBuffer, 1), [0], 'stale overflow cleared');
-  testCase.deepEqual(await readUint32(requiredBuffer, 1), [0], 'stale required count cleared');
-  testCase.deepEqual(
+  expect(await readUint32(segmentCountBuffer, 1), 'stale segment count cleared').toEqual([0]);
+  expect(await readUint32(overflowBuffer, 1), 'stale overflow cleared').toEqual([0]);
+  expect(await readUint32(requiredBuffer, 1), 'stale required count cleared').toEqual([0]);
+  expect(
     await readUint32(drawCommands.buffer, 4),
-    [2, 0, 0, 0],
     'indirect instances are cleared without classification or readback'
-  );
+  ).toEqual([2, 0, 0, 0]);
 
   compiled.destroy();
   sourceBuffer.destroy();
@@ -289,14 +279,14 @@ test('GPURaster empty cell grids publish zero counts and clear indirect instance
   overflowBuffer.destroy();
   requiredBuffer.destroy();
   drawCommands.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster contours reject masked corners, exact nodata, nonfinite samples, and invalid GPU levels', async testCase => {
+it('GPURaster contours reject masked corners, exact nodata, nonfinite samples, and invalid GPU levels', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -321,11 +311,7 @@ test('GPURaster contours reject masked corners, exact nodata, nonfinite samples,
   }).addToGraph(graph);
   const compiled = graph.compile();
   submitGraph(device, compiled, 'contour-valid-calibration');
-  testCase.deepEqual(
-    await readUint32(casesBuffer, 2),
-    [0, 6],
-    'calibrated samples respect offsets'
-  );
+  expect(await readUint32(casesBuffer, 2), 'calibrated samples respect offsets').toEqual([0, 6]);
 
   const invalidCases = [
     {source: [0, Number.NaN, 0, 1], label: 'NaN corner'},
@@ -335,27 +321,19 @@ test('GPURaster contours reject masked corners, exact nodata, nonfinite samples,
   for (const invalid of invalidCases) {
     sourceBuffer.write(Float32Array.from([77, ...invalid.source]));
     submitGraph(device, compiled, invalid.label);
-    testCase.deepEqual(await readUint32(casesBuffer, 2), [0, 0], invalid.label);
-    testCase.deepEqual(await readUint32(countsBuffer, 2), [0, 0], `${invalid.label} emits no line`);
+    expect(await readUint32(casesBuffer, 2), invalid.label).toEqual([0, 0]);
+    expect(await readUint32(countsBuffer, 2), `${invalid.label} emits no line`).toEqual([0, 0]);
   }
 
   sourceBuffer.write(Float32Array.from([77, 0, 1, 0, 1]));
   validityBuffer.write(Uint32Array.from([77, 1, 0, 1, 1]));
   submitGraph(device, compiled, 'contour-masked-corner');
-  testCase.deepEqual(
-    await readUint32(casesBuffer, 2),
-    [0, 0],
-    'one invalid mask rejects whole cell'
-  );
+  expect(await readUint32(casesBuffer, 2), 'one invalid mask rejects whole cell').toEqual([0, 0]);
 
   validityBuffer.write(Uint32Array.from([77, 1, 1, 1, 1]));
   levelBuffer.write(Float32Array.from([77, Number.NaN]));
   submitGraph(device, compiled, 'contour-nonfinite-level');
-  testCase.deepEqual(
-    await readUint32(casesBuffer, 2),
-    [0, 0],
-    'invalid GPU contour level clears cell'
-  );
+  expect(await readUint32(casesBuffer, 2), 'invalid GPU contour level clears cell').toEqual([0, 0]);
 
   compiled.destroy();
   sourceBuffer.destroy();
@@ -363,14 +341,14 @@ test('GPURaster contours reject masked corners, exact nodata, nonfinite samples,
   levelBuffer.destroy();
   casesBuffer.destroy();
   countsBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster contours classify exact-threshold ties and native signed or unsigned nodata', async testCase => {
+it('GPURaster contours classify exact-threshold ties and native signed or unsigned nodata', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -396,22 +374,18 @@ test('GPURaster contours classify exact-threshold ties and native signed or unsi
     4294967295
   );
 
-  testCase.deepEqual(tie, [1, 1], 'an exactly equal corner belongs to the high side');
-  testCase.deepEqual(flat, [15, 0], 'a flat exactly equal cell has no line');
-  testCase.deepEqual(signed, [0, 0], 'native signed minimum nodata never converts through float');
-  testCase.deepEqual(
-    unsigned,
-    [0, 0],
-    'native unsigned maximum nodata never converts through float'
-  );
-  testCase.end();
+  expect(tie, 'an exactly equal corner belongs to the high side').toEqual([1, 1]);
+  expect(flat, 'a flat exactly equal cell has no line').toEqual([15, 0]);
+  expect(signed, 'native signed minimum nodata never converts through float').toEqual([0, 0]);
+  expect(unsigned, 'native unsigned maximum nodata never converts through float').toEqual([0, 0]);
+  void 0;
 });
 
-test('GPURaster point pixels retain unshifted local coordinates and precise edge interpolation', async testCase => {
+it('GPURaster point pixels retain unshifted local coordinates and precise edge interpolation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -438,19 +412,17 @@ test('GPURaster point pixels retain unshifted local coordinates and precise edge
   const compiled = graph.compile();
   submitGraph(device, compiled, 'contour-point-interpolation');
 
-  testCase.deepEqual(
-    await readFloat32(verticesBuffer, 4),
-    [0.25, 0, 0.25, 1],
-    'local point-pixel edge positions'
-  );
-  testCase.deepEqual(await readUint32(countBuffer, 1), [1], 'one interpolated segment');
+  expect(await readFloat32(verticesBuffer, 4), 'local point-pixel edge positions').toEqual([
+    0.25, 0, 0.25, 1
+  ]);
+  expect(await readUint32(countBuffer, 1), 'one interpolated segment').toEqual([1]);
 
   compiled.destroy();
   sourceBuffer.destroy();
   verticesBuffer.destroy();
   countBuffer.destroy();
   overflowBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function runClassification<Format extends GPURasterScalarFormat>(

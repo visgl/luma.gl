@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {
   TextAttributeModel,
@@ -17,8 +17,8 @@ import {
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('2D text models declare flat source-mappable GPU inputs', t => {
-  t.deepEqual(TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA, [
+it('2D text models declare flat source-mappable GPU inputs', () => {
+  expect(TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA, '').toEqual([
     {
       columnName: 'positions',
       kind: 'positions',
@@ -62,7 +62,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       formats: ['float32x4']
     }
   ]);
-  t.deepEqual(TEXT_STORAGE_GPU_INPUT_SCHEMA, [
+  expect(TEXT_STORAGE_GPU_INPUT_SCHEMA, '').toEqual([
     {
       columnName: 'positions',
       kind: 'positions',
@@ -118,7 +118,7 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
       formats: ['float32x4']
     }
   ]);
-  t.deepEqual(TEXT_DICTIONARY_GPU_INPUT_SCHEMA, [
+  expect(TEXT_DICTIONARY_GPU_INPUT_SCHEMA, '').toEqual([
     {
       columnName: 'positions',
       kind: 'positions',
@@ -133,39 +133,40 @@ test('2D text models declare flat source-mappable GPU inputs', t => {
     },
     ...TEXT_STORAGE_GPU_INPUT_SCHEMA.slice(2)
   ]);
-  t.equal(TextAttributeModel.gpuInputSchema, TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA);
-  t.equal(TextStorageModel.gpuInputSchema, TEXT_STORAGE_GPU_INPUT_SCHEMA);
-  t.equal(TextRowIndexedStorageModel.gpuInputSchema, TEXT_STORAGE_GPU_INPUT_SCHEMA);
-  t.equal(TextDictionaryModel.gpuInputSchema, TEXT_DICTIONARY_GPU_INPUT_SCHEMA);
-  t.end();
+  expect(TextAttributeModel.gpuInputSchema, '').toBe(TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA);
+  expect(TextStorageModel.gpuInputSchema, '').toBe(TEXT_STORAGE_GPU_INPUT_SCHEMA);
+  expect(TextRowIndexedStorageModel.gpuInputSchema, '').toBe(TEXT_STORAGE_GPU_INPUT_SCHEMA);
+  expect(TextDictionaryModel.gpuInputSchema, '').toBe(TEXT_DICTIONARY_GPU_INPUT_SCHEMA);
+  void 0;
 });
 
-test('storage text prepared input validation uses GPUVector.format', t => {
+it('storage text prepared input validation uses GPUVector.format', () => {
   const device = new NullDevice({});
   const positions = makeGPUVector(device, 'positions', 'float32x2', new Float32Array([0, 0]));
   const texts = makeGPUVector(device, 'texts', 'value-list<uint8>', new Uint8Array([65]));
   const textDictionaries = makeGPUVector(device, 'texts', 'sint32', new Int32Array([0]));
   const invalidTexts = makeGPUVector(device, 'texts', 'float32', new Float32Array([65]));
 
-  t.doesNotThrow(
+  expect(
     () => assertTextStorageGPUVectorInputs({positions, texts}),
     'accepts value-list UTF-8 bytes'
-  );
-  t.doesNotThrow(
+  ).not.toThrow();
+  expect(
     () => assertTextStorageGPUVectorInputs({positions, texts: textDictionaries}),
     'accepts dictionary row keys'
-  );
-  t.throws(
+  ).not.toThrow();
+  expect(
     () => assertTextStorageGPUVectorInputs({positions, texts: invalidTexts as never}),
-    /texts GPUVector\.format "float32" must be one of value-list<uint8>, sint8, sint16, sint32, uint8, uint16, uint32/,
     'rejects non-text GPU bytes even when adapter metadata could look similar'
+  ).toThrow(
+    /texts GPUVector\.format "float32" must be one of value-list<uint8>, sint8, sint16, sint32, uint8, uint16, uint32/
   );
 
   positions.destroy();
   texts.destroy();
   textDictionaries.destroy();
   invalidTexts.destroy();
-  t.end();
+  void 0;
 });
 
 function makeGPUVector(

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -32,11 +32,9 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 }
 `;
 
-test('aBufferPlugin applies fragment-only storage visibility to WebGPU models', async t => {
+it('aBufferPlugin applies fragment-only storage visibility to WebGPU models', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -55,54 +53,43 @@ test('aBufferPlugin applies fragment-only storage visibility to WebGPU models', 
       binding => binding.name === bindingName
     );
 
-    t.equal(
+    expect(
       modelBinding?.visibility,
-      SHADER_STAGE_FRAGMENT,
       `${bindingName} is fragment-only in the assembled model layout`
-    );
-    t.equal(
+    ).toBe(SHADER_STAGE_FRAGMENT);
+    expect(
       pipelineBinding?.visibility,
-      SHADER_STAGE_FRAGMENT,
       `${bindingName} remains fragment-only in the pipeline layout`
-    );
+    ).toBe(SHADER_STAGE_FRAGMENT);
   }
 
   model.destroy();
-  t.end();
 });
 
-test('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async t => {
+it('A-buffer resolve ShaderPassPipeline compiles on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const renderer = new ShaderPassRenderer(device, {
     shaderPasses: [createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 12})]
   });
-  t.equal(
+  expect(
     renderer.passRenderers[0].passDefinition.name,
-    'aBufferResolveShaderPassPipeline',
     'resolve pipeline creates a WebGPU fullscreen model'
-  );
+  ).toBe('aBufferResolveShaderPassPipeline');
   renderer.destroy();
-  t.end();
 });
 
-test('ABufferRenderer preserves HDR translucent fragments in rgba16float outputs', async t => {
+it('ABufferRenderer preserves HDR translucent fragments in rgba16float outputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const capabilities = device.getTextureFormatCapabilities('rgba16float');
   if (!capabilities.render || !capabilities.filter) {
-    t.comment('Renderable, filterable rgba16float textures are not available');
-    t.end();
     return;
   }
 
@@ -155,21 +142,25 @@ test('ABufferRenderer preserves HDR translucent fragments in rgba16float outputs
   device.submit();
   const outputColor = await readHalfFloatColor(outputTexture);
 
-  t.equal(outputTexture.format, 'rgba16float', 'resolved output retains the requested HDR format');
-  t.ok(outputColor[0] > 2, 'translucent HDR red survives capture and resolve without clipping');
-  t.ok(
-    outputColor[1] > 0.3 && outputColor[1] < 0.4,
+  expect(outputTexture.format, 'resolved output retains the requested HDR format').toBe(
+    'rgba16float'
+  );
+  expect(
+    Boolean(outputColor[0] > 2),
+    'translucent HDR red survives capture and resolve without clipping'
+  ).toBe(true);
+  expect(
+    Boolean(outputColor[1] > 0.3 && outputColor[1] < 0.4),
     'lower-intensity translucent channels retain their original proportions'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     renderer.props,
-    {
-      averageFragmentsPerPixel: 4,
-      maxFragmentsPerPixel: 12,
-      maxBufferByteLength: Number.MAX_SAFE_INTEGER
-    },
     'optional output format does not alter existing resolved capture properties'
-  );
+  ).toEqual({
+    averageFragmentsPerPixel: 4,
+    maxFragmentsPerPixel: 12,
+    maxBufferByteLength: Number.MAX_SAFE_INTEGER
+  });
 
   model.destroy();
   shaderInputs.destroy();
@@ -177,7 +168,6 @@ test('ABufferRenderer preserves HDR translucent fragments in rgba16float outputs
   framebuffer.destroy();
   sourceTexture.destroy();
   opaqueDepthTexture.destroy();
-  t.end();
 });
 
 async function readHalfFloatColor(texture: Texture): Promise<number[]> {

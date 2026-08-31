@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   addArrowTextGPUTableBatch,
   createArrowTextGPUTable,
@@ -24,7 +24,7 @@ import {
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
-test('prepareArrowPointInput preserves rows, batch layout, row offsets, and ownership', async t => {
+it('prepareArrowPointInput preserves rows, batch layout, row offsets, and ownership', async () => {
   const device = new NullDevice({});
   const positions = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -39,26 +39,37 @@ test('prepareArrowPointInput preserves rows, batch layout, row offsets, and owne
   const rowIndices = await readGPUDataAsUint32Array(prepared.table.gpuVectors.rowIndices.data[0]);
   const positionsBuffer = prepared.table.gpuVectors.positions.data[0].buffer;
 
-  t.equal(prepared.rowCount, 2, 'keeps one point row per source row');
-  t.equal(prepared.table.batches.length, 1, 'prepares one GPU table batch');
-  t.equal(prepared.table.gpuConstants.colors?.byteLength, 4, 'keeps one constant color payload');
-  t.equal(prepared.table.gpuConstants.radii?.byteLength, 4, 'keeps one constant radius payload');
-  t.notOk(prepared.table.gpuVectors.colors, 'does not materialize repeated constant colors');
-  t.notOk(prepared.table.gpuVectors.radii, 'does not materialize repeated constant radii');
-  t.equal(prepared.stylingGpuByteLength, 0, 'defers constant GPU allocation to shader bindings');
-  t.deepEqual(
-    prepared.table.batches[0].sourceInfo,
-    {sourceBatchIndex: 3, sourceRowIndexOffset: 5, sourceRowCount: 2},
-    'records point source row metadata'
+  expect(prepared.rowCount, 'keeps one point row per source row').toBe(2);
+  expect(prepared.table.batches.length, 'prepares one GPU table batch').toBe(1);
+  expect(prepared.table.gpuConstants.colors?.byteLength, 'keeps one constant color payload').toBe(
+    4
   );
-  t.deepEqual(Array.from(rowIndices), [5, 6], 'applies the row index offset');
+  expect(prepared.table.gpuConstants.radii?.byteLength, 'keeps one constant radius payload').toBe(
+    4
+  );
+  expect(
+    Boolean(prepared.table.gpuVectors.colors),
+    'does not materialize repeated constant colors'
+  ).toBe(false);
+  expect(
+    Boolean(prepared.table.gpuVectors.radii),
+    'does not materialize repeated constant radii'
+  ).toBe(false);
+  expect(prepared.stylingGpuByteLength, 'defers constant GPU allocation to shader bindings').toBe(
+    0
+  );
+  expect(prepared.table.batches[0].sourceInfo, 'records point source row metadata').toEqual({
+    sourceBatchIndex: 3,
+    sourceRowIndexOffset: 5,
+    sourceRowCount: 2
+  });
+  expect(Array.from(rowIndices), 'applies the row index offset').toEqual([5, 6]);
 
   prepared.destroy();
-  t.ok(positionsBuffer.destroyed, 'destroy releases owned point buffers');
-  t.end();
+  expect(Boolean(positionsBuffer.destroyed), 'destroy releases owned point buffers').toBe(true);
 });
 
-test('ArrowPointRenderer streaming uses one model over retained GPU batches', async t => {
+it('ArrowPointRenderer streaming uses one model over retained GPU batches', async () => {
   const device = new NullDevice({});
   const renderer = new ArrowPointRenderer(device, {
     positions: 'positions',
@@ -82,53 +93,56 @@ test('ArrowPointRenderer streaming uses one model over retained GPU batches', as
   const firstRowIndices = renderer.preparedBatches[0]?.table.gpuVectors.rowIndices.data[0];
   const secondRowIndices = renderer.preparedBatches[1]?.table.gpuVectors.rowIndices.data[0];
 
-  t.equal(renderer.preparedBatches.length, 2, 'retains both streamed point batches');
-  t.equal(renderer.model?.table?.batches.length, 2, 'uses one render model over both batches');
-  t.equal(
+  expect(renderer.preparedBatches.length, 'retains both streamed point batches').toBe(2);
+  expect(renderer.model?.table?.batches.length, 'uses one render model over both batches').toBe(2);
+  expect(
     renderer.pickingModel?.table?.batches.length,
-    2,
     'uses one picking model over both batches'
-  );
-  t.equal(renderer.getMetrics().rowCount, 3, 'tracks aggregate point rows');
+  ).toBe(2);
+  expect(renderer.getMetrics().rowCount, 'tracks aggregate point rows').toBe(3);
   if (!firstPositionsBuffer || !secondPositionsBuffer || !firstRowIndices || !secondRowIndices) {
     renderer.destroy();
-    t.fail('expected retained point GPU buffers');
-    t.end();
-    return;
+    throw new Error('expected retained point GPU buffers');
   }
-  t.deepEqual(
+  expect(
     Array.from(await readGPUDataAsUint32Array(firstRowIndices)),
-    [0, 1],
     'first batch row indices start at zero'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1]);
+  expect(
     Array.from(await readGPUDataAsUint32Array(secondRowIndices)),
-    [2],
     'second batch row indices preserve the global row offset'
-  );
-  t.deepEqual(
+  ).toEqual([2]);
+  expect(
     renderer.model?.table?.batches.map(batch => batch.sourceInfo),
-    [
-      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
-    ],
     'retains point streaming source metadata on render batches'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+    {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
+  ]);
+  expect(
     resolveArrowPickInfo({batchIndex: 1, objectIndex: 2}, renderer.model?.table),
-    {batchIndex: 1, rowIndex: 2, batchRowIndex: 0},
     'resolves point pick info to a source batch row'
+  ).toEqual({batchIndex: 1, rowIndex: 2, batchRowIndex: 0});
+  expect(Boolean(firstPositionsBuffer.destroyed), 'first retained point batch remains alive').toBe(
+    false
   );
-  t.notOk(firstPositionsBuffer.destroyed, 'first retained point batch remains alive');
-  t.notOk(secondPositionsBuffer.destroyed, 'second retained point batch remains alive');
+  expect(
+    Boolean(secondPositionsBuffer.destroyed),
+    'second retained point batch remains alive'
+  ).toBe(false);
 
   renderer.destroy();
-  t.ok(firstPositionsBuffer.destroyed, 'destroy releases the first retained point batch');
-  t.ok(secondPositionsBuffer.destroyed, 'destroy releases the second retained point batch');
-  t.end();
+  expect(
+    Boolean(firstPositionsBuffer.destroyed),
+    'destroy releases the first retained point batch'
+  ).toBe(true);
+  expect(
+    Boolean(secondPositionsBuffer.destroyed),
+    'destroy releases the second retained point batch'
+  ).toBe(true);
 });
 
-test('ArrowTextRenderer streaming GPU table retains pick source metadata', t => {
+it('ArrowTextRenderer streaming GPU table retains pick source metadata', () => {
   const device = new NullDevice({});
   const firstRecordBatch = makeTextRecordBatch(new Float32Array([0, 0, 1, 1]), ['alpha', 'beta']);
   const secondRecordBatch = makeTextRecordBatch(new Float32Array([2, 2]), ['gamma']);
@@ -136,25 +150,22 @@ test('ArrowTextRenderer streaming GPU table retains pick source metadata', t => 
 
   addArrowTextGPUTableBatch(device, gpuTable, secondRecordBatch);
 
-  t.deepEqual(
+  expect(
     gpuTable.batches.map(batch => batch.sourceInfo),
-    [
-      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
-    ],
     'retains text streaming source metadata on GPU batches'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+    {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 1}
+  ]);
+  expect(
     resolveArrowPickInfo({batchIndex: 1, objectIndex: 2}, gpuTable),
-    {batchIndex: 1, rowIndex: 2, batchRowIndex: 0},
     'resolves text pick info to a source batch row'
-  );
+  ).toEqual({batchIndex: 1, rowIndex: 2, batchRowIndex: 0});
 
   gpuTable.destroy();
-  t.end();
 });
 
-test('ArrowTextRenderer GPU table maps nested source selectors into text input names', t => {
+it('ArrowTextRenderer GPU table maps nested source selectors into text input names', () => {
   const device = new NullDevice({});
   const sourceVectors = makeTextSourceVectors();
   const recordBatch = makeNestedTextRecordBatch('source', sourceVectors);
@@ -166,21 +177,18 @@ test('ArrowTextRenderer GPU table maps nested source selectors into text input n
     alignmentBaselines: 'source.alignmentBaselines'
   });
 
-  t.equal(gpuTable.gpuVectors.positions?.format, 'float32x2', 'maps nested positions');
-  t.equal(gpuTable.gpuVectors.texts?.format, 'value-list<uint8>', 'maps nested texts');
-  t.equal(gpuTable.gpuVectors.pixelOffsets?.format, 'float32x2', 'maps nested pixel offsets');
-  t.equal(gpuTable.gpuVectors.textAnchors?.format, 'uint8', 'maps nested text anchors');
-  t.equal(
-    gpuTable.gpuVectors.alignmentBaselines?.format,
-    'uint8',
-    'maps nested alignment baselines'
+  expect(gpuTable.gpuVectors.positions?.format, 'maps nested positions').toBe('float32x2');
+  expect(gpuTable.gpuVectors.texts?.format, 'maps nested texts').toBe('value-list<uint8>');
+  expect(gpuTable.gpuVectors.pixelOffsets?.format, 'maps nested pixel offsets').toBe('float32x2');
+  expect(gpuTable.gpuVectors.textAnchors?.format, 'maps nested text anchors').toBe('uint8');
+  expect(gpuTable.gpuVectors.alignmentBaselines?.format, 'maps nested alignment baselines').toBe(
+    'uint8'
   );
 
   gpuTable.destroy();
-  t.end();
 });
 
-test('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and ownership', async t => {
+it('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and ownership', async () => {
   const device = new NullDevice({});
   const recordBatches = [
     makeLineRecordBatch(
@@ -198,34 +206,32 @@ test('prepareArrowLineInputFromRecordBatches preserves chunks, row offsets, and 
     rowIndexOffset: 20,
     id: 'line-conversion-test'
   });
-  t.equal(prepared.model, 'attribute', 'prepares data for the selected renderer model');
+  expect(prepared.model, 'prepares data for the selected renderer model').toBe('attribute');
   if (prepared.model !== 'attribute') {
     prepared.destroy();
-    t.fail('expected attribute-prepared line data');
-    t.end();
-    return;
+    throw new Error('expected attribute-prepared line data');
   }
   const rowIndices = prepared.pathState.segmentTable.table.getChild('rowIndices');
   const pathBuffer = prepared.paths.data[0].buffer;
   const generatedPathBuffer = prepared.pathState.expandedPathVertexData;
 
-  t.equal(prepared.paths.length, 3, 'keeps one path row per source row');
-  t.equal(prepared.paths.data.length, 2, 'preserves source record-batch path chunks');
-  t.equal(prepared.widths.data.length, 2, 'preserves source record-batch width chunks');
-  t.equal(prepared.rowIndexOffset, 20, 'reports the applied row offset');
-  t.deepEqual(
+  expect(prepared.paths.length, 'keeps one path row per source row').toBe(3);
+  expect(prepared.paths.data.length, 'preserves source record-batch path chunks').toBe(2);
+  expect(prepared.widths.data.length, 'preserves source record-batch width chunks').toBe(2);
+  expect(prepared.rowIndexOffset, 'reports the applied row offset').toBe(20);
+  expect(
     Array.from(rowIndices?.data[0]?.values as Uint32Array),
-    [20, 21, 22],
     'applies the row index offset to generated path segments'
-  );
+  ).toEqual([20, 21, 22]);
 
   prepared.destroy();
-  t.ok(pathBuffer.destroyed, 'destroy releases owned line path buffers');
-  t.ok(generatedPathBuffer.destroyed, 'destroy releases generated line buffers');
-  t.end();
+  expect(Boolean(pathBuffer.destroyed), 'destroy releases owned line path buffers').toBe(true);
+  expect(Boolean(generatedPathBuffer.destroyed), 'destroy releases generated line buffers').toBe(
+    true
+  );
 });
 
-test('ArrowLineRenderer streaming keeps one active model and retains same-model batches', async t => {
+it('ArrowLineRenderer streaming keeps one active model and retains same-model batches', async () => {
   const device = new NullDevice({});
   const initialInput = await prepareArrowLineInputFromRecordBatches(
     device,
@@ -264,9 +270,7 @@ test('ArrowLineRenderer streaming keeps one active model and retains same-model 
   if (!firstInput || !secondInput) {
     renderer.destroy();
     initialInput.destroy();
-    t.fail('expected two streamed line updates');
-    t.end();
-    return;
+    throw new Error('expected two streamed line updates');
   }
   const firstPathBuffer = firstInput.paths.data[0].buffer;
   const secondPathBuffer = secondInput.paths.data[0].buffer;
@@ -274,35 +278,46 @@ test('ArrowLineRenderer streaming keeps one active model and retains same-model 
   if (!thirdPathBuffer || secondInput.model !== 'attribute') {
     renderer.destroy();
     initialInput.destroy();
-    t.fail('expected an aggregate attribute line update with two path chunks');
-    t.end();
-    return;
+    throw new Error('expected an aggregate attribute line update with two path chunks');
   }
   const rowIndices = secondInput.pathState.segmentTable.table.getChild('rowIndices');
 
-  t.equal(updates.length, 2, 'loads both streamed record batches');
-  t.equal(firstInput.rowIndexOffset, 0, 'first batch starts at row zero');
-  t.equal(secondInput.rowIndexOffset, 0, 'retained input keeps the stream row offset');
-  t.equal(secondInput.paths.length, 3, 'retains rows from all streamed batches');
-  t.equal(secondInput.paths.data.length, 2, 'retains source batch GPU chunks');
-  t.deepEqual(
+  expect(updates.length, 'loads both streamed record batches').toBe(2);
+  expect(firstInput.rowIndexOffset, 'first batch starts at row zero').toBe(0);
+  expect(secondInput.rowIndexOffset, 'retained input keeps the stream row offset').toBe(0);
+  expect(secondInput.paths.length, 'retains rows from all streamed batches').toBe(3);
+  expect(secondInput.paths.data.length, 'retains source batch GPU chunks').toBe(2);
+  expect(
     readArrowVectorValues(rowIndices),
-    [0, 1, 2],
     'preserves global row indices across retained batches'
-  );
-  t.ok(renderer.model, 'keeps one active model after streaming');
-  t.notOk(firstPathBuffer.destroyed, 'same-model streaming retains the previous input');
-  t.notOk(secondPathBuffer.destroyed, 'retained aggregate keeps the first path chunk active');
-  t.notOk(thirdPathBuffer.destroyed, 'retained aggregate keeps the second path chunk active');
+  ).toEqual([0, 1, 2]);
+  expect(Boolean(renderer.model), 'keeps one active model after streaming').toBe(true);
+  expect(
+    Boolean(firstPathBuffer.destroyed),
+    'same-model streaming retains the previous input'
+  ).toBe(false);
+  expect(
+    Boolean(secondPathBuffer.destroyed),
+    'retained aggregate keeps the first path chunk active'
+  ).toBe(false);
+  expect(
+    Boolean(thirdPathBuffer.destroyed),
+    'retained aggregate keeps the second path chunk active'
+  ).toBe(false);
 
   renderer.destroy();
   initialInput.destroy();
-  t.ok(firstPathBuffer.destroyed, 'destroy releases the first retained streamed input');
-  t.ok(thirdPathBuffer.destroyed, 'destroy releases the second retained streamed input');
-  t.end();
+  expect(
+    Boolean(firstPathBuffer.destroyed),
+    'destroy releases the first retained streamed input'
+  ).toBe(true);
+  expect(
+    Boolean(thirdPathBuffer.destroyed),
+    'destroy releases the second retained streamed input'
+  ).toBe(true);
 });
 
-test('ArrowLineRenderer model switch clears active prepared streaming input', async t => {
+it('ArrowLineRenderer model switch clears active prepared streaming input', async () => {
   const device = new NullDevice({});
   const initialInput = await prepareArrowLineInputFromRecordBatches(
     device,
@@ -336,20 +351,24 @@ test('ArrowLineRenderer model switch clears active prepared streaming input', as
   if (!streamedInput) {
     renderer.destroy();
     initialInput.destroy();
-    t.fail('expected a streamed line update');
-    t.end();
-    return;
+    throw new Error('expected a streamed line update');
   }
   const streamedPathBuffer = streamedInput.paths.data[0].buffer;
   const setPropsResult = renderer.setProps({model: 'storage'});
 
-  t.ok(setPropsResult.modelChanged, 'model selection reports a renderer update');
-  t.equal(renderer.model, null, 'model switch leaves the renderer empty until new data arrives');
-  t.ok(streamedPathBuffer.destroyed, 'model switch destroys active prepared streaming input');
+  expect(Boolean(setPropsResult.modelChanged), 'model selection reports a renderer update').toBe(
+    true
+  );
+  expect(renderer.model, 'model switch leaves the renderer empty until new data arrives').toBe(
+    null
+  );
+  expect(
+    Boolean(streamedPathBuffer.destroyed),
+    'model switch destroys active prepared streaming input'
+  ).toBe(true);
 
   renderer.destroy();
   initialInput.destroy();
-  t.end();
 });
 
 function makePathVector(

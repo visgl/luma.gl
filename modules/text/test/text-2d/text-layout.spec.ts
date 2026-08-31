@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   buildTextGlyphLayout,
   measureFontAtlasText,
@@ -56,7 +56,7 @@ const FONT_ATLAS: FontAtlas = {
   height: 16
 };
 
-test('text layout helpers own atlas offsets, pages, kerning, and GPU definitions', t => {
+it('text layout helpers own atlas offsets, pages, kerning, and GPU definitions', () => {
   const source = makeTextCodePointSource([
     [65, 66],
     [66, 65]
@@ -68,31 +68,29 @@ test('text layout helpers own atlas offsets, pages, kerning, and GPU definitions
     fontAtlas: FONT_ATLAS
   });
 
-  t.deepEqual(layout.startIndices, [0, 2, 4], 'row glyph starts are source-independent');
-  t.deepEqual(
-    Array.from(layout.glyphOffsets),
-    [-1, 9, 5, 10, 2, 10, 6, 9],
-    'layout applies atlas offsets and pair kerning'
-  );
-  t.deepEqual(Array.from(layout.glyphPages), [1, 2, 2, 1], 'layout retains atlas pages');
-  t.deepEqual(Array.from(layout.rowAdvances), [10, 12], 'layout retains row advances');
-  t.deepEqual(
-    Array.from(layout.rowBounds),
-    [-1, 9, 9, 16, 2, 9, 10, 16],
-    'layout retains canonical row ink bounds'
-  );
-  t.deepEqual(Array.from(stream.glyphPages), [0, 1, 2], 'GPU definitions retain atlas pages');
-  t.deepEqual(Array.from(stream.glyphKernings), [1, 2, -2, 0], 'GPU stream uses glyph kerning');
-  t.deepEqual(
+  expect(layout.startIndices, 'row glyph starts are source-independent').toEqual([0, 2, 4]);
+  expect(Array.from(layout.glyphOffsets), 'layout applies atlas offsets and pair kerning').toEqual([
+    -1, 9, 5, 10, 2, 10, 6, 9
+  ]);
+  expect(Array.from(layout.glyphPages), 'layout retains atlas pages').toEqual([1, 2, 2, 1]);
+  expect(Array.from(layout.rowAdvances), 'layout retains row advances').toEqual([10, 12]);
+  expect(Array.from(layout.rowBounds), 'layout retains canonical row ink bounds').toEqual([
+    -1, 9, 9, 16, 2, 9, 10, 16
+  ]);
+  expect(Array.from(stream.glyphPages), 'GPU definitions retain atlas pages').toEqual([0, 1, 2]);
+  expect(Array.from(stream.glyphKernings), 'GPU stream uses glyph kerning').toEqual([1, 2, -2, 0]);
+  expect(
     Array.from(definitions.glyphLookup),
-    [65, 1, 66, 2],
     'direct UTF-8 lookup uses the same glyph ids'
-  );
-  t.ok(characterSet.has('A') && characterSet.has('B'), 'layout collects encountered characters');
-  t.end();
+  ).toEqual([65, 1, 66, 2]);
+  expect(
+    Boolean(characterSet.has('A') && characterSet.has('B')),
+    'layout collects encountered characters'
+  ).toBe(true);
+  void 0;
 });
 
-test('text layout and measurement share anchor and baseline semantics', t => {
+it('text layout and measurement share anchor and baseline semantics', () => {
   const source = makeTextCodePointSource([[65, 66]]);
   const layout = buildTextGlyphLayout(source, {
     fontAtlas: FONT_ATLAS,
@@ -104,28 +102,25 @@ test('text layout and measurement share anchor and baseline semantics', t => {
     alignmentBaseline: 'top'
   });
 
-  t.deepEqual(
+  expect(
     Array.from(layout.glyphOffsets),
-    [-6, 14, 0, 15],
     'layout applies centered advance and top baseline offsets'
-  );
-  t.equal(metrics.advance, 10, 'measurement applies pair kerning to the final advance');
-  t.equal(layout.rowAdvances[0], metrics.advance, 'layout and measurement share row advance');
-  t.deepEqual(
-    Array.from(layout.rowBounds),
-    [...metrics.bounds.min, ...metrics.bounds.max],
-    'layout and measurement share row bounds'
-  );
-  t.deepEqual(metrics.bounds, {min: [-6, 14], max: [4, 21]}, 'measurement returns ink bounds');
-  t.deepEqual(
-    measureFontAtlasText('', FONT_ATLAS).bounds,
-    {min: [0, 0], max: [0, 0]},
-    'empty text returns finite bounds'
-  );
-  t.end();
+  ).toEqual([-6, 14, 0, 15]);
+  expect(metrics.advance, 'measurement applies pair kerning to the final advance').toBe(10);
+  expect(layout.rowAdvances[0], 'layout and measurement share row advance').toBe(metrics.advance);
+  expect(Array.from(layout.rowBounds), 'layout and measurement share row bounds').toEqual([
+    ...metrics.bounds.min,
+    ...metrics.bounds.max
+  ]);
+  expect(metrics.bounds, 'measurement returns ink bounds').toEqual({min: [-6, 14], max: [4, 21]});
+  expect(measureFontAtlasText('', FONT_ATLAS).bounds, 'empty text returns finite bounds').toEqual({
+    min: [0, 0],
+    max: [0, 0]
+  });
+  void 0;
 });
 
-test('dictionary text layout is independent of dictionary storage format', t => {
+it('dictionary text layout is independent of dictionary storage format', () => {
   const dictionaryValues = [[65, 66], [65]];
   const rowDictionaryIndices = [0, 1, 0, -1];
   const source: TextDictionaryCodePointSource = {
@@ -140,30 +135,27 @@ test('dictionary text layout is independent of dictionary storage format', t => 
   };
   const stream = buildTextGpuDictionaryCompressedStream(source, {fontAtlas: FONT_ATLAS});
 
-  t.deepEqual(stream.startIndices, [0, 2, 3, 5, 5], 'rows reference shared dictionary runs');
-  t.deepEqual(
+  expect(stream.startIndices, 'rows reference shared dictionary runs').toEqual([0, 2, 3, 5, 5]);
+  expect(
     Array.from(stream.rowDictionaryIndices),
-    [0, 1, 0, 0xffffffff],
     'empty rows use the invalid dictionary sentinel'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 0, 0xffffffff]);
+  expect(
     Array.from(stream.dictionaryGlyphRanges),
-    [0, 2, 2, 3],
     'each dictionary value owns one glyph run'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 2, 3]);
+  expect(
     Array.from(stream.dictionaryGlyphRecords),
-    [
-      packSignedInt16Pair(-1, 9),
-      packGlyphPageAndId(1, 1),
-      packSignedInt16Pair(5, 10),
-      packGlyphPageAndId(2, 2),
-      packSignedInt16Pair(-1, 9),
-      packGlyphPageAndId(1, 1)
-    ],
     'shared records use common text layout and page packing'
-  );
-  t.end();
+  ).toEqual([
+    packSignedInt16Pair(-1, 9),
+    packGlyphPageAndId(1, 1),
+    packSignedInt16Pair(5, 10),
+    packGlyphPageAndId(2, 2),
+    packSignedInt16Pair(-1, 9),
+    packGlyphPageAndId(1, 1)
+  ]);
+  void 0;
 });
 
 function makeTextCodePointSource(rows: readonly (readonly number[])[]): TextCodePointSource {

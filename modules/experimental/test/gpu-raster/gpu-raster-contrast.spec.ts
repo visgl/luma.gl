@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -13,11 +13,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURasterContrast preserves calibrated domains, validity, and offset-aligned GPU ranges', async testCase => {
+it('GPURasterContrast preserves calibrated domains, validity, and offset-aligned GPU ranges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -82,13 +82,9 @@ test('GPURasterContrast preserves calibrated domains, validity, and offset-align
 
   const stretched = await readFloat32(stretchedBuffer, 9);
   const stretchedFlags = await readUint32(stretchedValidityBuffer, 9);
-  testCase.equal(stretched[0], 0, 'nonzero output byte offsets preserve the untouched prefix');
-  testCase.equal(
-    stretchedFlags[0],
-    0,
-    'nonzero validity byte offsets preserve the untouched prefix'
-  );
-  assertApproximateValues(testCase, stretched.slice(1), [
+  expect(stretched[0], 'nonzero output byte offsets preserve the untouched prefix').toBe(0);
+  expect(stretchedFlags[0], 'nonzero validity byte offsets preserve the untouched prefix').toBe(0);
+  assertApproximateValues(stretched.slice(1), [
     -1,
     -1,
     0,
@@ -98,12 +94,11 @@ test('GPURasterContrast preserves calibrated domains, validity, and offset-align
     Number.NaN,
     Number.NaN
   ]);
-  testCase.deepEqual(
+  expect(
     stretchedFlags.slice(1),
-    [1, 1, 1, 1, 1, 0, 0, 0],
     'raw finite nodata, nonfinite samples, and source validity stay separate from values'
-  );
-  assertApproximateValues(testCase, (await readFloat32(gammaBuffer, 9)).slice(1), [
+  ).toEqual([1, 1, 1, 1, 1, 0, 0, 0]);
+  assertApproximateValues((await readFloat32(gammaBuffer, 9)).slice(1), [
     -1,
     0,
     Math.SQRT2 - 1,
@@ -113,15 +108,14 @@ test('GPURasterContrast preserves calibrated domains, validity, and offset-align
     Number.NaN,
     Number.NaN
   ]);
-  testCase.deepEqual(
+  expect(
     (await readUint32(gammaValidityBuffer, 9)).slice(1),
-    [1, 1, 1, 1, 1, 0, 0, 0],
     'gamma correction preserves caller-visible validity flags'
-  );
+  ).toEqual([1, 1, 1, 1, 1, 0, 0, 0]);
 
   domainBuffer.write(Float32Array.from([55, -2, 2]));
   submitGraph(device, compiled, 'second-contrast-transform');
-  assertApproximateValues(testCase, (await readFloat32(stretchedBuffer, 9)).slice(1), [
+  assertApproximateValues((await readFloat32(stretchedBuffer, 9)).slice(1), [
     -2,
     -1,
     0,
@@ -134,11 +128,10 @@ test('GPURasterContrast preserves calibrated domains, validity, and offset-align
 
   domainBuffer.write(Float32Array.from([55, 1, -1]));
   submitGraph(device, compiled, 'invalid-gpu-contrast-domain');
-  testCase.deepEqual(
+  expect(
     (await readUint32(stretchedValidityBuffer, 9)).slice(1),
-    [0, 0, 0, 0, 0, 0, 0, 0],
     'runtime-inverted GPU domains reject every sample without CPU validation or readback'
-  );
+  ).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
 
   compiled.destroy();
   for (const buffer of [
@@ -150,17 +143,19 @@ test('GPURasterContrast preserves calibrated domains, validity, and offset-align
     gammaBuffer,
     gammaValidityBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'compiled graphs never own imported transform buffers');
+    expect(Boolean(buffer.destroyed), 'compiled graphs never own imported transform buffers').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterContrast applies gamma only when gamma mode is explicitly selected', async testCase => {
+it('GPURasterContrast applies gamma only when gamma mode is explicitly selected', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -206,15 +201,8 @@ test('GPURasterContrast applies gamma only when gamma mode is explicitly selecte
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'explicit-gamma-mode');
-  assertApproximateValues(testCase, await readFloat32(linearOutput, 6), [
-    -1,
-    -0.75,
-    0,
-    0.75,
-    1,
-    Number.NaN
-  ]);
-  assertApproximateValues(testCase, await readFloat32(gammaOutput, 6), [
+  assertApproximateValues(await readFloat32(linearOutput, 6), [-1, -0.75, 0, 0.75, 1, Number.NaN]);
+  assertApproximateValues(await readFloat32(gammaOutput, 6), [
     -1,
     2 * Math.sqrt(0.125) - 1,
     Math.SQRT2 - 1,
@@ -222,21 +210,21 @@ test('GPURasterContrast applies gamma only when gamma mode is explicitly selecte
     1,
     Number.NaN
   ]);
-  testCase.deepEqual(await readUint32(linearValidity, 6), [1, 1, 1, 1, 1, 0]);
-  testCase.deepEqual(await readUint32(gammaValidity, 6), [1, 1, 1, 1, 1, 0]);
+  expect(await readUint32(linearValidity, 6), '').toEqual([1, 1, 1, 1, 1, 0]);
+  expect(await readUint32(gammaValidity, 6), '').toEqual([1, 1, 1, 1, 1, 0]);
 
   compiled.destroy();
   for (const buffer of [sourceBuffer, linearOutput, linearValidity, gammaOutput, gammaValidity]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterContrast compares native signed and unsigned nodata before float32 calibration', async testCase => {
+it('GPURasterContrast compares native signed and unsigned nodata before float32 calibration', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -292,18 +280,16 @@ test('GPURasterContrast compares native signed and unsigned nodata before float3
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'native-raster-contrast');
-  assertApproximateValues(testCase, await readFloat32(unsignedOutput, 4), [0, 0.5, 1, Number.NaN]);
-  testCase.deepEqual(
+  assertApproximateValues(await readFloat32(unsignedOutput, 4), [0, 0.5, 1, Number.NaN]);
+  expect(
     await readUint32(unsignedValidity, 4),
-    [1, 1, 1, 0],
     'maximum uint32 nodata is rejected before precision-losing float32 conversion'
-  );
-  assertApproximateValues(testCase, await readFloat32(signedOutput, 4), [Number.NaN, 0, 0.5, 1]);
-  testCase.deepEqual(
+  ).toEqual([1, 1, 1, 0]);
+  assertApproximateValues(await readFloat32(signedOutput, 4), [Number.NaN, 0, 0.5, 1]);
+  expect(
     await readUint32(signedValidity, 4),
-    [0, 1, 1, 1],
     'minimum sint32 nodata is rejected before independent scale and offset calibration'
-  );
+  ).toEqual([0, 1, 1, 1]);
 
   compiled.destroy();
   for (const buffer of [
@@ -316,14 +302,14 @@ test('GPURasterContrast compares native signed and unsigned nodata before float3
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterContrast composes histogram equalization, inclusive CDF, and downstream counts', async testCase => {
+it('GPURasterContrast composes histogram equalization, inclusive CDF, and downstream counts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -397,60 +383,47 @@ test('GPURasterContrast composes histogram equalization, inclusive CDF, and down
   const summaryIndex = compiled.stats.nodeOrder.indexOf('equalized-contrast-histogram-summary');
   const contrastIndex = compiled.stats.nodeOrder.indexOf('equalized-contrast');
   const outputIndex = compiled.stats.nodeOrder.indexOf('output-distribution-bins-local');
-  testCase.ok(
-    inputIndex !== -1 &&
-      cumulativeIndex > inputIndex &&
-      summaryIndex > cumulativeIndex &&
-      contrastIndex > summaryIndex &&
-      outputIndex > contrastIndex,
+  expect(
+    Boolean(
+      inputIndex !== -1 &&
+        cumulativeIndex > inputIndex &&
+        summaryIndex > cumulativeIndex &&
+        contrastIndex > summaryIndex &&
+        outputIndex > contrastIndex
+    ),
     'graph hazards order histogram, inclusive CDF, first nonzero CDF, transform, and output bins'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiled, 'first-histogram-equalization');
-  testCase.deepEqual(
+  expect(
     await readUint32(inputHistogramBuffer, 5),
-    [0, 3, 1, 0, 1],
     'source histogram retains leading empty bins'
-  );
-  assertApproximateValues(testCase, await readFloat32(equalizedBuffer, 6), [
-    0,
-    0,
-    0,
-    0.5,
-    1,
-    Number.NaN
-  ]);
-  testCase.deepEqual(await readUint32(equalizedValidityBuffer, 6), [1, 1, 1, 1, 1, 0]);
-  testCase.deepEqual(
+  ).toEqual([0, 3, 1, 0, 1]);
+  assertApproximateValues(await readFloat32(equalizedBuffer, 6), [0, 0, 0, 0.5, 1, Number.NaN]);
+  expect(await readUint32(equalizedValidityBuffer, 6), '').toEqual([1, 1, 1, 1, 1, 0]);
+  expect(
     await readUint32(outputHistogramBuffer, 5),
-    [3, 0, 1, 0, 1],
     'equalized values actually reshape downstream GPU histogram counts'
-  );
+  ).toEqual([3, 0, 1, 0, 1]);
 
   sourceBuffer.write(
     Float32Array.from([Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN, Number.NaN])
   );
   submitGraph(device, compiled, 'all-invalid-histogram-equalization');
-  testCase.deepEqual(await readUint32(inputHistogramBuffer, 5), [0, 0, 0, 0, 0]);
-  testCase.deepEqual(await readUint32(equalizedValidityBuffer, 6), [0, 0, 0, 0, 0, 0]);
-  testCase.deepEqual(
+  expect(await readUint32(inputHistogramBuffer, 5), '').toEqual([0, 0, 0, 0, 0]);
+  expect(await readUint32(equalizedValidityBuffer, 6), '').toEqual([0, 0, 0, 0, 0, 0]);
+  expect(
     await readUint32(outputHistogramBuffer, 5),
-    [0, 0, 0, 0, 0],
     'all-invalid inputs clear both histograms without CPU fallback'
-  );
+  ).toEqual([0, 0, 0, 0, 0]);
 
   sourceBuffer.write(Float32Array.from([0.2, 0.2, 0.2, 0.2, 0.2, 0.2]));
   submitGraph(device, compiled, 'constant-histogram-equalization');
-  assertApproximateValues(
-    testCase,
-    await readFloat32(equalizedBuffer, 6),
-    [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
-  );
-  testCase.deepEqual(
+  assertApproximateValues(await readFloat32(equalizedBuffer, 6), [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]);
+  expect(
     await readUint32(outputHistogramBuffer, 5),
-    [0, 6, 0, 0, 0],
     'constant distributions remain unchanged instead of dividing by a zero CDF range'
-  );
+  ).toEqual([0, 6, 0, 0, 0]);
 
   compiled.destroy();
   for (const buffer of [
@@ -463,7 +436,7 @@ test('GPURasterContrast composes histogram equalization, inclusive CDF, and down
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 function makeInputBuffer(device: Device, data: Float32Array | Uint32Array): Buffer {
@@ -502,16 +475,16 @@ function submitGraph(
   device.submit(commandEncoder.finish());
 }
 
-function assertApproximateValues(testCase: Test, actual: number[], expected: number[]): void {
-  testCase.equal(actual.length, expected.length);
+function assertApproximateValues(actual: number[], expected: number[]): void {
+  expect(actual.length, '').toBe(expected.length);
   for (let index = 0; index < expected.length; index++) {
     if (Number.isNaN(expected[index])) {
-      testCase.ok(Number.isNaN(actual[index]), `sample ${index} is invalid`);
+      expect(Boolean(Number.isNaN(actual[index])), `sample ${index} is invalid`).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(actual[index] - expected[index]) < 0.0001,
+      expect(
+        Boolean(Math.abs(actual[index] - expected[index]) < 0.0001),
         `sample ${index} is ${expected[index]}`
-      );
+      ).toBe(true);
     }
   }
 }

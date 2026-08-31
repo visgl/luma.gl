@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -14,11 +14,11 @@ import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUCrossfilter coordinates linked views across reusable GPU-resident selections', async t => {
+it('GPUCrossfilter coordinates linked views across reusable GPU-resident selections', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -106,25 +106,24 @@ test('GPUCrossfilter coordinates linked views across reusable GPU-resident selec
     outputMask: globalMask
   });
 
-  t.equal(filter.mask, globalMask, 'the caller-owned global mask remains the public selection');
-  t.throws(
+  expect(filter.mask, 'the caller-owned global mask remains the public selection').toBe(globalMask);
+  expect(
     () => filter.getViewMask('distribution'),
-    /after addToGraph/,
     'view masks are unavailable before graph nodes are registered'
-  );
+  ).toThrow(/after addToGraph/);
 
   filter.addToGraph(graph);
-  t.equal(filter.getViewMask('render-mask'), renderMask, 'mask views expose their exact output');
-  t.equal(
+  expect(filter.getViewMask('render-mask'), 'mask views expose their exact output').toBe(
+    renderMask
+  );
+  expect(
     filter.getViewMask('selected-distribution'),
-    globalMask,
     'includeOwnSelection uses the complete composed selection'
-  );
-  t.notEqual(
+  ).toBe(globalMask);
+  expect(
     filter.getViewMask('distribution'),
-    globalMask,
     'linked histograms exclude their own range from their effective mask'
-  );
+  ).not.toBe(globalMask);
 
   const compiled = graph.compile();
   const initialNodeOrder = [...compiled.stats.nodeOrder];
@@ -141,128 +140,121 @@ test('GPUCrossfilter coordinates linked views across reusable GPU-resident selec
 
   try {
     submitGraph(device, compiled, 'gpu-crossfilter-initial');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [2, 2, 2, 2],
-        selectedHistogram: [2, 2, 2, 2],
-        groups: [4, 4],
-        globalMask: [1, 1, 1, 1, 1, 1, 1, 1],
-        renderMask: [1, 1, 1, 1, 1, 1, 1, 1],
-        visibleSourceIds: [0, 1, 2, 3, 4, 5, 6, 7],
-        visibleCount: 8
-      },
       'inactive dimensions initially include every source row'
-    );
+    ).toEqual({
+      histogram: [2, 2, 2, 2],
+      selectedHistogram: [2, 2, 2, 2],
+      groups: [4, 4],
+      globalMask: [1, 1, 1, 1, 1, 1, 1, 1],
+      renderMask: [1, 1, 1, 1, 1, 1, 1, 1],
+      visibleSourceIds: [0, 1, 2, 3, 4, 5, 6, 7],
+      visibleCount: 8
+    });
 
-    t.equal(
+    expect(
       filter.setBounds('map', [0, 2, 4, 6]),
-      filter,
       'map brush updates preserve the controller for chaining'
-    );
+    ).toBe(filter);
     submitGraph(device, compiled, 'gpu-crossfilter-map-brush');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [0, 2, 2, 1],
-        selectedHistogram: [0, 2, 2, 1],
-        groups: [3, 2],
-        globalMask: [0, 0, 1, 1, 1, 1, 1, 0],
-        renderMask: [0, 0, 1, 1, 1, 1, 1, 0],
-        visibleSourceIds: [2, 3, 4, 5, 6],
-        visibleCount: 5
-      },
       'a map brush updates histogram, groups, masks, and stable scatterplot indices'
-    );
+    ).toEqual({
+      histogram: [0, 2, 2, 1],
+      selectedHistogram: [0, 2, 2, 1],
+      groups: [3, 2],
+      globalMask: [0, 0, 1, 1, 1, 1, 1, 0],
+      renderMask: [0, 0, 1, 1, 1, 1, 1, 0],
+      visibleSourceIds: [2, 3, 4, 5, 6],
+      visibleCount: 5
+    });
 
-    t.equal(
+    expect(
       filter.setRange('value', [30, 55]),
-      filter,
       'histogram brush updates preserve the controller for chaining'
-    );
+    ).toBe(filter);
     submitGraph(device, compiled, 'gpu-crossfilter-map-and-range');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [0, 2, 2, 1],
-        selectedHistogram: [0, 1, 2, 0],
-        groups: [1, 2],
-        globalMask: [0, 0, 0, 1, 1, 1, 0, 0],
-        renderMask: [0, 0, 0, 1, 1, 1, 0, 0],
-        visibleSourceIds: [3, 4, 5],
-        visibleCount: 3
-      },
       'the histogram excludes its own brush while every other view sees both dimensions'
-    );
+    ).toEqual({
+      histogram: [0, 2, 2, 1],
+      selectedHistogram: [0, 1, 2, 0],
+      groups: [1, 2],
+      globalMask: [0, 0, 0, 1, 1, 1, 0, 0],
+      renderMask: [0, 0, 0, 1, 1, 1, 0, 0],
+      visibleSourceIds: [3, 4, 5],
+      visibleCount: 3
+    });
 
-    t.equal(filter.clear('value'), filter, 'clearing one dimension supports chaining');
+    expect(filter.clear('value'), 'clearing one dimension supports chaining').toBe(filter);
     submitGraph(device, compiled, 'gpu-crossfilter-clear-range');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [0, 2, 2, 1],
-        selectedHistogram: [0, 2, 2, 1],
-        groups: [3, 2],
-        globalMask: [0, 0, 1, 1, 1, 1, 1, 0],
-        renderMask: [0, 0, 1, 1, 1, 1, 1, 0],
-        visibleSourceIds: [2, 3, 4, 5, 6],
-        visibleCount: 5
-      },
       'clearing the histogram restores the active map-only selection'
-    );
+    ).toEqual({
+      histogram: [0, 2, 2, 1],
+      selectedHistogram: [0, 2, 2, 1],
+      groups: [3, 2],
+      globalMask: [0, 0, 1, 1, 1, 1, 1, 0],
+      renderMask: [0, 0, 1, 1, 1, 1, 1, 0],
+      visibleSourceIds: [2, 3, 4, 5, 6],
+      visibleCount: 5
+    });
 
     filter.setRange('value', [60, 75]);
     filter.clear('map');
     submitGraph(device, compiled, 'gpu-crossfilter-clear-map');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [2, 2, 2, 2],
-        selectedHistogram: [0, 0, 0, 2],
-        groups: [1, 1],
-        globalMask: [0, 0, 0, 0, 0, 0, 1, 1],
-        renderMask: [0, 0, 0, 0, 0, 0, 1, 1],
-        visibleSourceIds: [6, 7],
-        visibleCount: 2
-      },
       'clearing the map restores the full self-excluding distribution while retaining its range'
-    );
+    ).toEqual({
+      histogram: [2, 2, 2, 2],
+      selectedHistogram: [0, 0, 0, 2],
+      groups: [1, 1],
+      globalMask: [0, 0, 0, 0, 0, 0, 1, 1],
+      renderMask: [0, 0, 0, 0, 0, 0, 1, 1],
+      visibleSourceIds: [6, 7],
+      visibleCount: 2
+    });
 
-    t.equal(filter.clearAll(), filter, 'clearing every dimension supports chaining');
+    expect(filter.clearAll(), 'clearing every dimension supports chaining').toBe(filter);
     submitGraph(device, compiled, 'gpu-crossfilter-clear-all');
-    t.deepEqual(
+    expect(
       await readDashboardOutputs(outputs),
-      {
-        histogram: [2, 2, 2, 2],
-        selectedHistogram: [2, 2, 2, 2],
-        groups: [4, 4],
-        globalMask: [1, 1, 1, 1, 1, 1, 1, 1],
-        renderMask: [1, 1, 1, 1, 1, 1, 1, 1],
-        visibleSourceIds: [0, 1, 2, 3, 4, 5, 6, 7],
-        visibleCount: 8
-      },
       'clearAll restores every linked view without rebuilding its command graph'
-    );
-    t.deepEqual(
+    ).toEqual({
+      histogram: [2, 2, 2, 2],
+      selectedHistogram: [2, 2, 2, 2],
+      groups: [4, 4],
+      globalMask: [1, 1, 1, 1, 1, 1, 1, 1],
+      renderMask: [1, 1, 1, 1, 1, 1, 1, 1],
+      visibleSourceIds: [0, 1, 2, 3, 4, 5, 6, 7],
+      visibleCount: 8
+    });
+    expect(
       compiled.stats.nodeOrder,
-      initialNodeOrder,
       'every interaction reuses the original compiled node topology'
+    ).toEqual(initialNodeOrder);
+    expect(() => graph.compile(), 'the graph was compiled only once').toThrow(
+      /already been compiled/
     );
-    t.throws(() => graph.compile(), /already been compiled/, 'the graph was compiled only once');
   } finally {
     compiled.destroy();
     filter.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUCrossfilter preserves chunked source topology and ignores empty source chunks', async t => {
+it('GPUCrossfilter preserves chunked source topology and ignores empty source chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -351,34 +343,37 @@ test('GPUCrossfilter preserves chunked source topology and ignores empty source 
 
   const mapMask = filter.getDimensionMask('map');
   const valueMask = filter.getDimensionMask('value');
-  t.ok(mapMask instanceof GraphVectorView, 'bounds selections retain their vector source kind');
-  t.ok(valueMask instanceof GraphVectorView, 'range selections retain their vector source kind');
+  expect(
+    Boolean(mapMask instanceof GraphVectorView),
+    'bounds selections retain their vector source kind'
+  ).toBe(true);
+  expect(
+    Boolean(valueMask instanceof GraphVectorView),
+    'range selections retain their vector source kind'
+  ).toBe(true);
   if (!(mapMask instanceof GraphVectorView) || !(valueMask instanceof GraphVectorView)) {
     throw new Error('Expected chunked selection masks');
   }
-  t.deepEqual(
+  expect(
     mapMask.data.map(chunk => chunk.length),
-    [3, 0, 2],
     'the map predicate preserves the original empty middle chunk'
-  );
-  t.deepEqual(
+  ).toEqual([3, 0, 2]);
+  expect(
     valueMask.data.map(chunk => chunk.length),
-    [3, 0, 2],
     'the range predicate preserves every ordered source chunk'
-  );
+  ).toEqual([3, 0, 2]);
 
   filter.addToGraph(graph);
   const distributionMask = filter.getViewMask('distribution');
-  t.ok(
-    distributionMask instanceof GraphVectorView,
+  expect(
+    Boolean(distributionMask instanceof GraphVectorView),
     'self-excluding histogram masks retain the original vector kind'
-  );
+  ).toBe(true);
   if (distributionMask instanceof GraphVectorView) {
-    t.deepEqual(
+    expect(
       distributionMask.data.map(chunk => chunk.length),
-      [3, 0, 2],
       'linked distributions preserve empty source chunks'
-    );
+    ).toEqual([3, 0, 2]);
   }
 
   const compiled = graph.compile();
@@ -387,54 +382,47 @@ test('GPUCrossfilter preserves chunked source topology and ignores empty source 
     filter.setRange('value', [40, 80]);
     submitGraph(device, compiled, 'chunked-gpu-crossfilter-selection');
 
-    t.deepEqual(
+    expect(
       await readVectorFixture(globalMask),
-      [[0, 0, 1], [], [1, 0]],
       'the global GPU mask follows the source-aligned chunk layout'
-    );
-    t.deepEqual(
+    ).toEqual([[0, 0, 1], [], [1, 0]]);
+    expect(
       await readVectorFixture(renderMask),
-      [[0, 0, 1], [], [1, 0]],
       'custom mask views retain chunk boundaries without repacking'
-    );
-    t.deepEqual(
+    ).toEqual([[0, 0, 1], [], [1, 0]]);
+    expect(
       await readUint32(histogramBuffer, 5),
-      [0, 1, 1, 1, 0],
       'a self-excluding histogram accumulates selected map rows across nonempty chunks'
-    );
-    t.deepEqual(
+    ).toEqual([0, 1, 1, 1, 0]);
+    expect(
       await readUint32(groupBuffer, 2),
-      [1, 1],
       'grouped counts consume the globally selected rows across source chunks'
-    );
+    ).toEqual([1, 1]);
     const selectedCount = (await readUint32(visibleCountBuffer, 1))[0];
-    t.equal(selectedCount, 2, 'stable cross-chunk compaction publishes the selected count');
-    t.deepEqual(
+    expect(selectedCount, 'stable cross-chunk compaction publishes the selected count').toBe(2);
+    expect(
       (await readVectorFixture(visibleSourceIds)).flat().slice(0, selectedCount),
-      [2, 3],
       'cross-chunk visibility retains original, globally stable source indices'
-    );
-    t.notOk(
-      compiled.stats.nodeOrder.includes('chunked-dashboard-map-chunk-1'),
+    ).toEqual([2, 3]);
+    expect(
+      Boolean(compiled.stats.nodeOrder.includes('chunked-dashboard-map-chunk-1')),
       'empty map chunks do not produce predicate dispatches'
-    );
-    t.notOk(
-      compiled.stats.nodeOrder.includes('chunked-dashboard-value-chunk-1'),
+    ).toBe(false);
+    expect(
+      Boolean(compiled.stats.nodeOrder.includes('chunked-dashboard-value-chunk-1')),
       'empty value chunks do not produce predicate dispatches'
-    );
+    ).toBe(false);
 
     filter.clearAll();
     submitGraph(device, compiled, 'chunked-gpu-crossfilter-clear');
-    t.deepEqual(
+    expect(
       await readVectorFixture(globalMask),
-      [[1, 1, 1], [], [1, 1]],
       'clearing all dimensions updates existing chunks without changing their topology'
-    );
-    t.deepEqual(
+    ).toEqual([[1, 1, 1], [], [1, 1]]);
+    expect(
       await readVectorFixture(visibleSourceIds),
-      [[0, 1, 2], [], [3, 4]],
       'all visible source indices are distributed into the original output chunks'
-    );
+    ).toEqual([[0, 1, 2], [], [3, 4]]);
   } finally {
     compiled.destroy();
     filter.destroy();
@@ -454,14 +442,14 @@ test('GPUCrossfilter preserves chunked source topology and ignores empty source 
     visibleCountBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUCrossfilter excludes a single dimension from histogram and group distributions', async t => {
+it('GPUCrossfilter excludes a single dimension from histogram and group distributions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -539,66 +527,58 @@ test('GPUCrossfilter excludes a single dimension from histogram and group distri
     ]
   });
   filter.addToGraph(graph);
-  t.equal(
+  expect(
     filter.getViewMask('distribution'),
-    undefined,
     'a single self-excluding dimension leaves the histogram unmasked'
-  );
-  t.equal(
+  ).toBe(undefined);
+  expect(
     filter.getViewMask('groups'),
-    undefined,
     'a single self-excluding dimension leaves grouped counts unmasked'
-  );
-  t.equal(
+  ).toBe(undefined);
+  expect(
     filter.getViewMask('all-rows-mask'),
-    allRowsMask,
     'an explicitly self-excluding mask publishes an all-rows predicate'
-  );
+  ).toBe(allRowsMask);
 
   const compiled = graph.compile();
   try {
     filter.setRange('value', [15, 30]);
     submitGraph(device, compiled, 'single-dimension-gpu-crossfilter-selection');
 
-    t.deepEqual(
+    expect(
       await readUint32(distributionBuffer, 3),
-      [2, 1, 2],
       'an irregular histogram excludes its only dimension and shows every available row'
-    );
-    t.deepEqual(
+    ).toEqual([2, 1, 2]);
+    expect(
       await readUint32(selectedDistributionBuffer, 3),
-      [0, 1, 1],
       'includeOwnSelection limits irregular histogram bins to the inclusive range'
-    );
-    t.deepEqual(
+    ).toEqual([0, 1, 1]);
+    expect(
       await readUint32(groupBuffer, 2),
-      [3, 2],
       'group distributions exclude their own dimension by default'
-    );
-    t.deepEqual(
+    ).toEqual([3, 2]);
+    expect(
       await readUint32(selectedGroupBuffer, 2),
-      [1, 1],
       'group views can explicitly include their own range selection'
-    );
-    t.deepEqual(
+    ).toEqual([1, 1]);
+    expect(
       await readUint32(allRowsMaskBuffer, rowCount),
-      [1, 1, 1, 1, 1],
       'an explicitly self-excluding mask creates a canonical all-rows GPU predicate'
-    );
+    ).toEqual([1, 1, 1, 1, 1]);
   } finally {
     compiled.destroy();
     filter.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUCrossfilter computes grouped floating statistics and preserves custom visibility IDs', async t => {
+it('GPUCrossfilter computes grouped floating statistics and preserves custom visibility IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -714,86 +694,80 @@ test('GPUCrossfilter computes grouped floating statistics and preserves custom v
     outputMask: globalMask
   });
   filter.addToGraph(graph);
-  t.equal(
+  expect(
     filter.getViewMask('custom-scatterplot'),
-    globalMask,
     'custom-source visibility consumes the shared composed selection'
-  );
-  t.equal(
+  ).toBe(globalMask);
+  expect(
     filter.getViewMask('offset-scatterplot'),
-    globalMask,
     'offset-generated visibility consumes the shared composed selection'
-  );
+  ).toBe(globalMask);
 
   const compiled = graph.compile();
   try {
     filter.setRange('value', [15, 45]);
     submitGraph(device, compiled, 'gpu-crossfilter-weighted-selection');
 
-    t.deepEqual(
+    expect(
       await readFloat32(groupSumBuffer, 2),
-      [9, 6],
       'grouped floating-point sums include only rows selected on the GPU'
-    );
-    t.deepEqual(
+    ).toEqual([9, 6]);
+    expect(
       await readFloat32(groupMeanBuffer, 2),
-      [4.5, 3],
       'grouped floating-point means reuse the same source-aligned selection'
-    );
-    t.deepEqual(
+    ).toEqual([4.5, 3]);
+    expect(
       await readUint32(globalMaskBuffer, rowCount),
-      [0, 1, 1, 1, 1, 0],
       'the controller publishes its global source-aligned selection'
-    );
-    t.deepEqual(
+    ).toEqual([0, 1, 1, 1, 1, 0]);
+    expect(
       await readUint32(visibilityMaskBuffer, rowCount),
-      [0, 1, 1, 1, 1, 0],
       'a visibility view publishes its own caller-owned output mask'
-    );
+    ).toEqual([0, 1, 1, 1, 1, 0]);
 
     const customCount = (await readUint32(customVisibleCountBuffer, 1))[0];
     const offsetCount = (await readUint32(offsetVisibleCountBuffer, 1))[0];
-    t.equal(customCount, 4, 'explicit source IDs publish their selected count');
-    t.equal(offsetCount, 4, 'generated offset IDs publish the same selected count');
-    t.deepEqual(
+    expect(customCount, 'explicit source IDs publish their selected count').toBe(4);
+    expect(offsetCount, 'generated offset IDs publish the same selected count').toBe(4);
+    expect(
       (await readUint32(customVisibleIdsBuffer, rowCount)).slice(0, customCount),
-      [70, 50, 30, 10],
       'explicit source IDs retain their stable input ordering during compaction'
-    );
-    t.deepEqual(
+    ).toEqual([70, 50, 30, 10]);
+    expect(
       (await readUint32(offsetVisibleIdsBuffer, rowCount)).slice(0, offsetCount),
-      [1001, 1002, 1003, 1004],
       'generated visibility IDs honor a caller-provided first source offset'
-    );
+    ).toEqual([1001, 1002, 1003, 1004]);
 
     filter.clearAll();
     submitGraph(device, compiled, 'gpu-crossfilter-weighted-clear');
-    t.deepEqual(await readFloat32(groupSumBuffer, 2), [10.5, 12], 'clearing recomputes group sums');
-    t.deepEqual(await readFloat32(groupMeanBuffer, 2), [3.5, 4], 'clearing recomputes group means');
-    t.deepEqual(
+    expect(await readFloat32(groupSumBuffer, 2), 'clearing recomputes group sums').toEqual([
+      10.5, 12
+    ]);
+    expect(await readFloat32(groupMeanBuffer, 2), 'clearing recomputes group means').toEqual([
+      3.5, 4
+    ]);
+    expect(
       await readUint32(customVisibleIdsBuffer, rowCount),
-      [90, 70, 50, 30, 10, 5],
       'clearing restores every original custom source ID'
-    );
-    t.deepEqual(
+    ).toEqual([90, 70, 50, 30, 10, 5]);
+    expect(
       await readUint32(offsetVisibleIdsBuffer, rowCount),
-      [1000, 1001, 1002, 1003, 1004, 1005],
       'clearing restores the complete offset-generated source sequence'
-    );
+    ).toEqual([1000, 1001, 1002, 1003, 1004, 1005]);
   } finally {
     compiled.destroy();
     filter.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUCrossfilter rejects overflowing float32 endpoints without selecting infinite source rows', async t => {
+it('GPUCrossfilter rejects overflowing float32 endpoints without selecting infinite source rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -841,49 +815,42 @@ test('GPUCrossfilter rejects overflowing float32 endpoints without selecting inf
   try {
     filter.setRange('value', [-maximumFiniteFloat32, maximumFiniteFloat32]);
     submitGraph(device, compiled, 'gpu-crossfilter-finite-range');
-    t.deepEqual(
+    expect(
       await readUint32(outputBuffer, rowCount),
-      [0, 1, 1, 1, 1, 1, 0],
       'the largest representable float32 endpoints select finite values without either infinity'
-    );
+    ).toEqual([0, 1, 1, 1, 1, 1, 0]);
 
-    t.throws(
+    expect(
       () => filter.setRange('value', [Number.MAX_VALUE, Number.MAX_VALUE]),
-      /input scalar format/,
       'positive float32 overflow cannot silently select positive-infinity source rows'
-    );
-    t.throws(
+    ).toThrow(/input scalar format/);
+    expect(
       () => filter.setRange('value', [-Number.MAX_VALUE, -Number.MAX_VALUE]),
-      /input scalar format/,
       'negative float32 overflow cannot silently select negative-infinity source rows'
-    );
+    ).toThrow(/input scalar format/);
     submitGraph(device, compiled, 'gpu-crossfilter-rejected-range');
-    t.deepEqual(
+    expect(
       await readUint32(outputBuffer, rowCount),
-      [0, 1, 1, 1, 1, 1, 0],
       'rejected range updates preserve the previous GPU-resident selection'
-    );
+    ).toEqual([0, 1, 1, 1, 1, 1, 0]);
 
     filter.clear('value');
     filter.setBounds('position', [-maximumFiniteFloat32, 1, maximumFiniteFloat32, 5]);
     submitGraph(device, compiled, 'gpu-crossfilter-finite-bounds');
-    t.deepEqual(
+    expect(
       await readUint32(outputBuffer, rowCount),
-      [0, 1, 1, 1, 1, 1, 0],
       'representable rectangular bounds exclude infinite horizontal source values'
-    );
+    ).toEqual([0, 1, 1, 1, 1, 1, 0]);
 
-    t.throws(
+    expect(
       () => filter.setBounds('position', [-Number.MAX_VALUE, 1, maximumFiniteFloat32, 5]),
-      /input scalar format/,
       'horizontal minimum endpoints cannot overflow float32'
-    );
-    t.throws(
+    ).toThrow(/input scalar format/);
+    expect(
       () => filter.setBounds('position', [-maximumFiniteFloat32, 1, Number.MAX_VALUE, 5]),
-      /input scalar format/,
       'horizontal maximum endpoints cannot overflow float32'
-    );
-    t.throws(
+    ).toThrow(/input scalar format/);
+    expect(
       () =>
         filter.setBounds('position', [
           -maximumFiniteFloat32,
@@ -891,10 +858,9 @@ test('GPUCrossfilter rejects overflowing float32 endpoints without selecting inf
           maximumFiniteFloat32,
           5
         ]),
-      /input scalar format/,
       'vertical minimum endpoints cannot overflow float32'
-    );
-    t.throws(
+    ).toThrow(/input scalar format/);
+    expect(
       () =>
         filter.setBounds('position', [
           -maximumFiniteFloat32,
@@ -902,29 +868,27 @@ test('GPUCrossfilter rejects overflowing float32 endpoints without selecting inf
           maximumFiniteFloat32,
           Number.MAX_VALUE
         ]),
-      /input scalar format/,
       'vertical maximum endpoints cannot overflow float32'
-    );
+    ).toThrow(/input scalar format/);
     submitGraph(device, compiled, 'gpu-crossfilter-rejected-bounds');
-    t.deepEqual(
+    expect(
       await readUint32(outputBuffer, rowCount),
-      [0, 1, 1, 1, 1, 1, 0],
       'rejected rectangular bounds preserve the previous GPU-resident selection'
-    );
+    ).toEqual([0, 1, 1, 1, 1, 1, 0]);
   } finally {
     compiled.destroy();
     filter.destroy();
     for (const buffer of buffers) buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUCrossfilter validates dimensions, linked views, interaction updates, and lifecycle', async t => {
+it('GPUCrossfilter validates dimensions, linked views, interaction updates, and lifecycle', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -943,12 +907,11 @@ test('GPUCrossfilter validates dimensions, linked views, interaction updates, an
   const shortValues = graph.createDataView(inputHandle, {format: 'float32', length: 2});
   const output = graph.createDataView(outputHandle, {format: 'uint32', length: 4});
 
-  t.throws(
+  expect(
     () => new GPUCrossfilter(graph, {id: 'missing-dimensions', dimensions: []}),
-    /at least one selection dimension/,
     'controllers require at least one dimension'
-  );
-  t.throws(
+  ).toThrow(/at least one selection dimension/);
+  expect(
     () =>
       new GPUCrossfilter(graph, {
         id: 'duplicate-dimensions',
@@ -957,19 +920,17 @@ test('GPUCrossfilter validates dimensions, linked views, interaction updates, an
           {id: 'value', kind: 'range', input: values}
         ]
       }),
-    /unique identifiers/,
     'dimension identifiers must be unique'
-  );
-  t.throws(
+  ).toThrow(/unique identifiers/);
+  expect(
     () =>
       new GPUCrossfilter(graph, {
         id: 'mismatched-bounds',
         dimensions: [{id: 'map', kind: 'bounds', x: values, y: shortValues}]
       }),
-    /same chunk topology/,
     'map bounds require source-aligned coordinate rows'
-  );
-  t.throws(
+  ).toThrow(/same chunk topology/);
+  expect(
     () =>
       new GPUCrossfilter(graph, {
         id: 'duplicate-views',
@@ -979,87 +940,71 @@ test('GPUCrossfilter validates dimensions, linked views, interaction updates, an
           {id: 'selection', kind: 'mask', output}
         ]
       }),
-    /unique identifiers/,
     'linked view identifiers must be unique'
-  );
-  t.throws(
+  ).toThrow(/unique identifiers/);
+  expect(
     () =>
       new GPUCrossfilter(graph, {
         id: 'unknown-view-dimension',
         dimensions: [{id: 'value', kind: 'range', input: values}],
         views: [{id: 'selection', kind: 'mask', dimension: 'missing', output}]
       }),
-    /unknown dimension/,
     'linked views cannot refer to unregistered dimensions'
-  );
+  ).toThrow(/unknown dimension/);
 
   const filter = new GPUCrossfilter(graph, {
     id: 'valid-controller',
     dimensions: [{id: 'value', kind: 'range', input: values}],
     views: [{id: 'selection', kind: 'mask', output}]
   });
-  t.throws(
+  expect(
     () => filter.getDimensionMask('missing'),
-    /does not contain selection dimension/,
     'unknown dimensions cannot expose a selection mask'
+  ).toThrow(/does not contain selection dimension/);
+  expect(() => filter.setRange('missing', [0, 1]), 'unknown dimensions cannot be updated').toThrow(
+    /does not contain selection dimension/
   );
-  t.throws(
-    () => filter.setRange('missing', [0, 1]),
-    /does not contain selection dimension/,
-    'unknown dimensions cannot be updated'
-  );
-  t.throws(
+  expect(
     () => filter.setBounds('value', [0, 0, 1, 1]),
-    /does not support two-dimensional bounds/,
     'range dimensions reject bounds interactions'
-  );
-  t.throws(
+  ).toThrow(/does not support two-dimensional bounds/);
+  expect(
     () => filter.setRange('value', [2, 1]),
-    /ordered finite endpoints/,
     'descending ranges are rejected before any GPU update'
-  );
-  t.throws(
+  ).toThrow(/ordered finite endpoints/);
+  expect(
     () => filter.setRange('value', [0, Number.POSITIVE_INFINITY]),
-    /ordered finite endpoints/,
     'non-finite range endpoints are rejected'
+  ).toThrow(/ordered finite endpoints/);
+  expect(() => filter.getViewMask('missing'), 'unknown linked views are rejected').toThrow(
+    /does not contain view/
   );
-  t.throws(
-    () => filter.getViewMask('missing'),
-    /does not contain view/,
-    'unknown linked views are rejected'
-  );
-  t.throws(
+  expect(
     () => filter.getViewMask('selection'),
-    /after addToGraph/,
     'registered views cannot expose masks before graph registration'
-  );
+  ).toThrow(/after addToGraph/);
 
   const otherGraph = new GPUCommandGraph(device, {id: 'other-gpu-crossfilter-graph'});
-  t.throws(
+  expect(
     () => filter.addToGraph(otherGraph),
-    /owning graph/,
     'controllers cannot add selection work to a different graph'
-  );
+  ).toThrow(/owning graph/);
   filter.addToGraph(graph);
-  t.throws(
+  expect(
     () => filter.addToGraph(graph),
-    /only be added.*once/,
     'the same controller cannot add duplicate command-graph nodes'
-  );
+  ).toThrow(/only be added.*once/);
   filter.destroy();
-  t.doesNotThrow(() => filter.destroy(), 'controller destruction is idempotent');
-  t.throws(
+  expect(() => filter.destroy(), 'controller destruction is idempotent').not.toThrow();
+  expect(
     () => filter.setRange('value', [0, 1]),
-    /has been destroyed/,
     'destroyed controllers reject new interactions'
-  );
-  t.throws(
-    () => filter.clearAll(),
-    /has been destroyed/,
-    'destroyed controllers reject bulk selection changes'
+  ).toThrow(/has been destroyed/);
+  expect(() => filter.clearAll(), 'destroyed controllers reject bulk selection changes').toThrow(
+    /has been destroyed/
   );
 
-  t.end();
+  void 0;
 });
 
 type ScalarFormat = 'float32' | 'sint32' | 'uint32';

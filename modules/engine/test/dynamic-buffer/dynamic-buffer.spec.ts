@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {DynamicBuffer} from '../../src';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
-test('DynamicBuffer JSON debug output stays compact', async t => {
+it('DynamicBuffer JSON debug output stays compact', async () => {
   for (const device of await getTestDevices(['null'])) {
     const dynamicBuffer = new DynamicBuffer(device, {
       id: 'compact-json-dynamic-buffer',
@@ -17,19 +17,17 @@ test('DynamicBuffer JSON debug output stays compact', async t => {
       usage: Buffer.VERTEX
     });
 
-    t.equal(
-      JSON.stringify(dynamicBuffer),
-      JSON.stringify(dynamicBuffer.toString()),
-      'dynamic buffer JSON uses toString()'
+    expect(JSON.stringify(dynamicBuffer), 'dynamic buffer JSON uses toString()').toBe(
+      JSON.stringify(dynamicBuffer.toString())
     );
 
     dynamicBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicBuffer#write/read/debugData', async t => {
+it('DynamicBuffer#write/read/debugData', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const dynamicBuffer = new DynamicBuffer(device, {
       byteLength: 4,
@@ -41,24 +39,23 @@ test('DynamicBuffer#write/read/debugData', async t => {
     dynamicBuffer.write(new Uint8Array([1, 2, 3, 4]));
 
     const result = await dynamicBuffer.readAsync();
-    t.deepEqual(Array.from(result), [1, 2, 3, 4], `${device.type} write/read round-trips data`);
-    t.deepEqual(
+    expect(Array.from(result), `${device.type} write/read round-trips data`).toEqual([1, 2, 3, 4]);
+    expect(
       Array.from(new Uint8Array(dynamicBuffer.debugData)),
-      [1, 2, 3, 4],
       `${device.type} debugData mirrors writes`
-    );
-    t.ok(
-      dynamicBuffer.updateTimestamp > initialTimestamp,
+    ).toEqual([1, 2, 3, 4]);
+    expect(
+      Boolean(dynamicBuffer.updateTimestamp > initialTimestamp),
       `${device.type} write bumps update timestamp`
-    );
+    ).toBe(true);
 
     dynamicBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicBuffer#resize without preserveData replaces the backing buffer', async t => {
+it('DynamicBuffer#resize without preserveData replaces the backing buffer', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const dynamicBuffer = new DynamicBuffer(device, {
       data: new Uint8Array([1, 2, 3, 4, 5, 6]),
@@ -70,32 +67,36 @@ test('DynamicBuffer#resize without preserveData replaces the backing buffer', as
     const initialBuffer = dynamicBuffer.buffer;
     const initialTimestamp = dynamicBuffer.updateTimestamp;
 
-    t.ok(dynamicBuffer.resize({byteLength: 4}), `${device.type} resize reports change`);
-    t.equal(dynamicBuffer.byteLength, 4, `${device.type} resize updates byteLength`);
-    t.ok(dynamicBuffer.buffer !== initialBuffer, `${device.type} resize replaces buffer handle`);
-    t.equal(dynamicBuffer.generation, 1, `${device.type} resize increments generation`);
-    t.ok(
-      dynamicBuffer.updateTimestamp > initialTimestamp,
+    expect(
+      Boolean(dynamicBuffer.resize({byteLength: 4})),
+      `${device.type} resize reports change`
+    ).toBe(true);
+    expect(dynamicBuffer.byteLength, `${device.type} resize updates byteLength`).toBe(4);
+    expect(
+      Boolean(dynamicBuffer.buffer !== initialBuffer),
+      `${device.type} resize replaces buffer handle`
+    ).toBe(true);
+    expect(dynamicBuffer.generation, `${device.type} resize increments generation`).toBe(1);
+    expect(
+      Boolean(dynamicBuffer.updateTimestamp > initialTimestamp),
       `${device.type} resize bumps update timestamp`
-    );
-    t.equal(
+    ).toBe(true);
+    expect(
       dynamicBuffer.ensureSize(4),
-      false,
       `${device.type} ensureSize is a no-op when current buffer is large enough`
-    );
-    t.deepEqual(
+    ).toBe(false);
+    expect(
       Array.from(new Uint8Array(dynamicBuffer.debugData)),
-      [0, 0, 0, 0],
       `${device.type} resize without preserveData does not retain constructor upload data`
-    );
+    ).toEqual([0, 0, 0, 0]);
 
     dynamicBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicBuffer#resize preserveData keeps bytes on WebGL and WebGPU', async t => {
+it('DynamicBuffer#resize preserveData keeps bytes on WebGL and WebGPU', async () => {
   for (const device of await getTestDevices(['webgpu', 'webgl'])) {
     const dynamicBuffer = new DynamicBuffer(device, {
       data: new Uint8Array([9, 8, 7, 6]),
@@ -104,29 +105,27 @@ test('DynamicBuffer#resize preserveData keeps bytes on WebGL and WebGPU', async 
     });
 
     const initialBuffer = dynamicBuffer.buffer;
-    t.ok(
-      dynamicBuffer.resize({byteLength: 8, preserveData: true}),
+    expect(
+      Boolean(dynamicBuffer.resize({byteLength: 8, preserveData: true})),
       `${device.type} preserve resize reports change`
-    );
+    ).toBe(true);
 
     const result = await dynamicBuffer.readAsync(0, 4);
-    t.deepEqual(
-      Array.from(result),
-      [9, 8, 7, 6],
-      `${device.type} preserve resize copies previous contents`
-    );
-    t.ok(
-      dynamicBuffer.buffer !== initialBuffer,
+    expect(Array.from(result), `${device.type} preserve resize copies previous contents`).toEqual([
+      9, 8, 7, 6
+    ]);
+    expect(
+      Boolean(dynamicBuffer.buffer !== initialBuffer),
       `${device.type} preserve resize still replaces the backing buffer`
-    );
+    ).toBe(true);
 
     dynamicBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicBuffer#resize preserveData keeps unaligned byte counts on WebGL and WebGPU', async t => {
+it('DynamicBuffer#resize preserveData keeps unaligned byte counts on WebGL and WebGPU', async () => {
   for (const device of await getTestDevices(['webgpu', 'webgl'])) {
     const dynamicBuffer = new DynamicBuffer(device, {
       data: new Uint8Array([9, 8, 7]),
@@ -134,20 +133,19 @@ test('DynamicBuffer#resize preserveData keeps unaligned byte counts on WebGL and
       debugData: true
     });
 
-    t.ok(
-      dynamicBuffer.resize({byteLength: 7, preserveData: true}),
+    expect(
+      Boolean(dynamicBuffer.resize({byteLength: 7, preserveData: true})),
       `${device.type} unaligned preserve resize reports change`
-    );
+    ).toBe(true);
 
     const result = await dynamicBuffer.readAsync(0, 3);
-    t.deepEqual(
+    expect(
       Array.from(result),
-      [9, 8, 7],
       `${device.type} unaligned preserve resize copies previous contents`
-    );
+    ).toEqual([9, 8, 7]);
 
     dynamicBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });

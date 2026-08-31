@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   getGeneratedBufferBatchByteLimit,
   planGeneratedBufferBatches
 } from '@luma.gl/experimental/gpu-tables';
 
-test('planGeneratedBufferBatches splits row-preserving generated buffers', t => {
+it('planGeneratedBufferBatches splits row-preserving generated buffers', () => {
   const device = makeLimitedDevice(64);
   const byteLimit = getGeneratedBufferBatchByteLimit(device, 12);
   const batches = planGeneratedBufferBatches({
@@ -19,16 +19,14 @@ test('planGeneratedBufferBatches splits row-preserving generated buffers', t => 
     resourceLabel: 'test generated buffer'
   });
 
-  t.equal(byteLimit, 60, '95% headroom aligns down to the record stride');
-  t.deepEqual(
-    batches,
-    [{rowStart: 0, rowEnd: 4, recordStart: 0, recordEnd: 5, recordCount: 5, byteLength: 60}],
-    'exact-fit rows and zero-output rows stay in one batch'
-  );
-  t.end();
+  expect(byteLimit, '95% headroom aligns down to the record stride').toBe(60);
+  expect(batches, 'exact-fit rows and zero-output rows stay in one batch').toEqual([
+    {rowStart: 0, rowEnd: 4, recordStart: 0, recordEnd: 5, recordCount: 5, byteLength: 60}
+  ]);
+  void 0;
 });
 
-test('planGeneratedBufferBatches emits multiple contiguous row batches', t => {
+it('planGeneratedBufferBatches emits multiple contiguous row batches', () => {
   const device = makeLimitedDevice(64);
   const batches = planGeneratedBufferBatches({
     device,
@@ -36,18 +34,14 @@ test('planGeneratedBufferBatches emits multiple contiguous row batches', t => {
     recordByteStride: 12
   });
 
-  t.deepEqual(
-    batches,
-    [
-      {rowStart: 0, rowEnd: 2, recordStart: 0, recordEnd: 5, recordCount: 5, byteLength: 60},
-      {rowStart: 2, rowEnd: 3, recordStart: 5, recordEnd: 6, recordCount: 1, byteLength: 12}
-    ],
-    'batch boundaries are chosen between source rows'
-  );
-  t.end();
+  expect(batches, 'batch boundaries are chosen between source rows').toEqual([
+    {rowStart: 0, rowEnd: 2, recordStart: 0, recordEnd: 5, recordCount: 5, byteLength: 60},
+    {rowStart: 2, rowEnd: 3, recordStart: 5, recordEnd: 6, recordCount: 1, byteLength: 12}
+  ]);
+  void 0;
 });
 
-test('planGeneratedBufferBatches honors stricter generated-buffer byte ceilings', t => {
+it('planGeneratedBufferBatches honors stricter generated-buffer byte ceilings', () => {
   const device = makeLimitedDevice(256);
   const byteLimit = getGeneratedBufferBatchByteLimit(device, 12, 48);
   const batches = planGeneratedBufferBatches({
@@ -57,22 +51,18 @@ test('planGeneratedBufferBatches honors stricter generated-buffer byte ceilings'
     maxBatchByteLength: 48
   });
 
-  t.equal(byteLimit, 36, 'the stricter byte ceiling gets headroom and stride alignment');
-  t.deepEqual(
-    batches,
-    [
-      {rowStart: 0, rowEnd: 1, recordStart: 0, recordEnd: 3, recordCount: 3, byteLength: 36},
-      {rowStart: 1, rowEnd: 2, recordStart: 3, recordEnd: 4, recordCount: 1, byteLength: 12}
-    ],
-    'batching follows the stricter generated-output cap'
-  );
-  t.end();
+  expect(byteLimit, 'the stricter byte ceiling gets headroom and stride alignment').toBe(36);
+  expect(batches, 'batching follows the stricter generated-output cap').toEqual([
+    {rowStart: 0, rowEnd: 1, recordStart: 0, recordEnd: 3, recordCount: 3, byteLength: 36},
+    {rowStart: 1, rowEnd: 2, recordStart: 3, recordEnd: 4, recordCount: 1, byteLength: 12}
+  ]);
+  void 0;
 });
 
-test('planGeneratedBufferBatches rejects one oversize source row', t => {
+it('planGeneratedBufferBatches rejects one oversize source row', () => {
   const device = makeLimitedDevice(64);
 
-  t.throws(
+  expect(
     () =>
       planGeneratedBufferBatches({
         device,
@@ -80,10 +70,9 @@ test('planGeneratedBufferBatches rejects one oversize source row', t => {
         recordByteStride: 12,
         resourceLabel: 'oversize glyph data'
       }),
-    /oversize glyph data row 0 requires 72 bytes/,
     'one unsplittable row reports a clear buffer-limit error'
-  );
-  t.end();
+  ).toThrow(/oversize glyph data row 0 requires 72 bytes/);
+  void 0;
 });
 
 function makeLimitedDevice(maxBufferSize: number): NullDevice {

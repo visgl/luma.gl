@@ -13,7 +13,7 @@ import {
 } from '@luma.gl/shadertools';
 import {getWebGLTestDevice, getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 const GLSL_PLATFORM_INFO: PlatformInfo = {
   type: 'webgl',
@@ -31,21 +31,18 @@ const WGSL_PLATFORM_INFO: PlatformInfo = {
   features: new Set()
 };
 
-test('shadertools#skin returns empty uniforms without a glTF skin', t => {
-  t.deepEqual(
+it('shadertools#skin returns empty uniforms without a glTF skin', () => {
+  expect(
     skin.getUniforms({
       scenegraphsFromGLTF: {
         gltf: {}
       }
     }),
-    {jointMatrix: []},
     'Returns an empty joint matrix when no skin data is available'
-  );
-
-  t.end();
+  ).toEqual({jointMatrix: []});
 });
 
-test('shadertools#skin packs joint matrices from the scenegraph', t => {
+it('shadertools#skin packs joint matrices from the scenegraph', () => {
   const skeletonRootNode = new GroupNode({id: 'skeleton-root', position: [1, 0, 0]});
   const jointNode = new GroupNode({id: 'joint-0', position: [0, 2, 0]});
   skeletonRootNode.add(jointNode);
@@ -71,22 +68,21 @@ test('shadertools#skin packs joint matrices from the scenegraph', t => {
     }
   });
 
-  t.ok(uniforms.jointMatrix instanceof Float32Array, 'Returns a packed joint matrix buffer');
-  t.deepEqual(
+  expect(
+    Boolean(uniforms.jointMatrix instanceof Float32Array),
+    'Returns a packed joint matrix buffer'
+  ).toBe(true);
+  expect(
     Array.from(uniforms.jointMatrix!.slice(0, 16)),
-    Array.from(expectedJointMatrix),
     'Writes the world matrix for the first joint'
-  );
-  t.deepEqual(
+  ).toEqual(Array.from(expectedJointMatrix));
+  expect(
     Array.from(uniforms.jointMatrix!.slice(16, 32)),
-    Array.from(new Float32Array(16)),
     'Leaves unused joint matrix slots zeroed'
-  );
-
-  t.end();
+  ).toEqual(Array.from(new Float32Array(16)));
 });
 
-test('shadertools#skin supports Fox-sized skeletons beyond the previous 20-joint limit', t => {
+it('shadertools#skin supports Fox-sized skeletons beyond the previous 20-joint limit', () => {
   const skeletonRoot = new GroupNode({id: 'skeleton-root'});
   const nodes = new Map<number, GroupNode>([[0, skeletonRoot]]);
   const joints: number[] = [];
@@ -105,12 +101,15 @@ test('shadertools#skin supports Fox-sized skeletons beyond the previous 20-joint
     }
   });
 
-  t.equal(uniforms.jointMatrix?.length, SKIN_MAX_JOINTS * 16, 'allocates a portable joint palette');
-  t.equal(uniforms.jointMatrix?.[23 * 16 + 12], 24, 'retains the final Fox-sized skeleton joint');
-  t.end();
+  expect(uniforms.jointMatrix?.length, 'allocates a portable joint palette').toBe(
+    SKIN_MAX_JOINTS * 16
+  );
+  expect(uniforms.jointMatrix?.[23 * 16 + 12], 'retains the final Fox-sized skeleton joint').toBe(
+    24
+  );
 });
 
-test('shadertools#skin selects independent skins and defaults missing bind matrices', t => {
+it('shadertools#skin selects independent skins and defaults missing bind matrices', () => {
   const firstRoot = new GroupNode({id: 'first-root', position: [3, 0, 0]});
   const firstJoint = new GroupNode({id: 'first-joint', position: [1, 0, 0]});
   firstRoot.add(firstJoint);
@@ -133,20 +132,18 @@ test('shadertools#skin selects independent skins and defaults missing bind matri
     }
   });
 
-  t.equal(uniforms.jointMatrix?.[12], 2, 'selects the requested skin in mesh-local space');
-  t.end();
+  expect(uniforms.jointMatrix?.[12], 'selects the requested skin in mesh-local space').toBe(2);
 });
 
-test('shadertools#skin accepts a format-independent precomputed joint palette', t => {
+it('shadertools#skin accepts a format-independent precomputed joint palette', () => {
   const jointMatrices = new Float32Array(new Matrix4().translate([7, 0, 0]));
   const uniforms = skin.getUniforms({jointMatrices});
 
-  t.equal(uniforms.jointMatrix?.[12], 7, 'preserves precomputed joint transforms');
-  t.equal(uniforms.jointMatrix?.length, SKIN_MAX_JOINTS * 16, 'pads the uniform palette');
-  t.end();
+  expect(uniforms.jointMatrix?.[12], 'preserves precomputed joint transforms').toBe(7);
+  expect(uniforms.jointMatrix?.length, 'pads the uniform palette').toBe(SKIN_MAX_JOINTS * 16);
 });
 
-test('shadertools#skin keeps instance palettes feature-specialized in WGSL', async t => {
+it('shadertools#skin keeps instance palettes feature-specialized in WGSL', async () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const source = /* wgsl */ `
 @vertex
@@ -171,33 +168,34 @@ fn vertexMain(@builtin(instance_index) instanceIndex: u32) -> @builtin(position)
     defines: {HAS_INSTANCED_SKIN: true}
   });
 
-  t.notOk(
-    uninstancedShader.bindingTable.some(binding => binding.name === 'skinJointMatrices'),
+  expect(
+    Boolean(uninstancedShader.bindingTable.some(binding => binding.name === 'skinJointMatrices')),
     'ordinary skinning requires no crowd storage binding'
-  );
-  t.notOk(
-    uninstancedShader.source.includes('getInstancedSkinMatrix'),
+  ).toBe(false);
+  expect(
+    Boolean(uninstancedShader.source.includes('getInstancedSkinMatrix')),
     'ordinary shaders exclude crowd skinning helpers'
-  );
-  t.ok(
-    instancedShader.bindingTable.some(
-      binding => binding.name === 'skinJointMatrices' && binding.kind === 'read-only-storage'
+  ).toBe(false);
+  expect(
+    Boolean(
+      instancedShader.bindingTable.some(
+        binding => binding.name === 'skinJointMatrices' && binding.kind === 'read-only-storage'
+      )
     ),
     'instanced WebGPU skinning uses read-only packed matrix storage'
-  );
-  t.ok(
-    instancedShader.source.includes('instanceIndex * jointsPerInstance'),
+  ).toBe(true);
+  expect(
+    Boolean(instancedShader.source.includes('instanceIndex * jointsPerInstance')),
     'each drawn instance indexes its own contiguous joint palette'
-  );
-  t.ok(
-    instancedShader.bindingTable.some(binding => binding.name === 'skin'),
+  ).toBe(true);
+  expect(
+    Boolean(instancedShader.bindingTable.some(binding => binding.name === 'skin')),
     'the existing compatible skin uniform remains available'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     skin.bindingLayout.find(binding => binding.name === 'skinJointMatrices')?.visibility,
-    1,
     'packed palettes bind to the vertex stage only'
-  );
+  ).toBe(1);
 
   if (typeof document !== 'undefined') {
     const device = await getWebGPUTestDevice();
@@ -210,23 +208,20 @@ fn vertexMain(@builtin(instance_index) instanceIndex: u32) -> @builtin(position)
         const errors = (await shader.getCompilationInfo()).filter(
           message => message.type === 'error'
         );
-        t.equal(
+        expect(
           errors.length,
-          0,
           `the actual WebGPU backend compiles indexed storage skinning${
             errors.length ? `: ${errors.map(error => error.message).join('; ')}` : ''
           }`
-        );
+        ).toBe(0);
       } finally {
         shader.destroy();
       }
     }
   }
-
-  t.end();
 });
 
-test('shadertools#skin assembles portable float-texture instance palettes for WebGL', async t => {
+it('shadertools#skin assembles portable float-texture instance palettes for WebGL', async () => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: /* glsl */ `#version 300 es
@@ -246,16 +241,22 @@ void main(void) {
     defines: {HAS_INSTANCED_SKIN: true}
   });
 
-  t.ok(
-    assembledShader.vs.includes('uniform highp sampler2D skinJointMatrices'),
+  expect(
+    Boolean(assembledShader.vs.includes('uniform highp sampler2D skinJointMatrices')),
     'WebGL binds instance palettes as a vertex-sampled float texture'
-  );
-  t.ok(
-    assembledShader.vs.includes('texelFetch(skinJointMatrices'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.vs.includes('texelFetch(skinJointMatrices')),
     'joint matrices use exact unfiltered float texels'
-  );
-  t.ok(assembledShader.vs.includes('uint(gl_InstanceID)'), 'WebGL indexes the drawn instance');
-  t.notOk(assembledShader.vs.includes('var<storage'), 'WebGL does not require storage buffers');
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.vs.includes('uint(gl_InstanceID)')),
+    'WebGL indexes the drawn instance'
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.vs.includes('var<storage')),
+    'WebGL does not require storage buffers'
+  ).toBe(false);
 
   if (typeof document !== 'undefined') {
     const device = await getWebGLTestDevice();
@@ -268,22 +269,19 @@ void main(void) {
       const errors = (await shader.getCompilationInfo()).filter(
         message => message.type === 'error'
       );
-      t.equal(
+      expect(
         errors.length,
-        0,
         `the actual WebGL backend compiles indexed float-texture skinning${
           errors.length ? `: ${errors.map(error => error.message).join('; ')}` : ''
         }`
-      );
+      ).toBe(0);
     } finally {
       shader.destroy();
     }
   }
-
-  t.end();
 });
 
-test('shadertools#skin preserves uniforms while forwarding backend-native palette resources', t => {
+it('shadertools#skin preserves uniforms while forwarding backend-native palette resources', () => {
   const device = new NullDevice({});
   const jointMatrices = new Float32Array(new Matrix4().translate([9, 0, 0]));
   const paletteBuffer = device.createBuffer({
@@ -302,24 +300,20 @@ test('shadertools#skin preserves uniforms while forwarding backend-native palett
     const shaderInputs = new ShaderInputs({skin});
     shaderInputs.setProps({skin: {jointMatrices, skinJointMatrices: paletteBuffer}});
 
-    t.equal(storageUniforms.jointMatrix?.[12], 9, 'retains the existing uniform palette');
-    t.equal(storageUniforms.skinJointMatrices, paletteBuffer, 'forwards WebGPU matrix storage');
-    t.equal(textureUniforms.skinJointMatrices, paletteTexture, 'forwards WebGL float textures');
-    t.equal(
+    expect(storageUniforms.jointMatrix?.[12], 'retains the existing uniform palette').toBe(9);
+    expect(storageUniforms.skinJointMatrices, 'forwards WebGPU matrix storage').toBe(paletteBuffer);
+    expect(textureUniforms.skinJointMatrices, 'forwards WebGL float textures').toBe(paletteTexture);
+    expect(
       shaderInputs.getBindingValues().skinJointMatrices,
-      paletteBuffer,
       'ShaderInputs recognizes the optional palette as a binding'
-    );
-    t.equal(
+    ).toBe(paletteBuffer);
+    expect(
       shaderInputs.getUniformValues().skin?.jointMatrix?.[12],
-      9,
       'ShaderInputs retains the compatible padded uniform values'
-    );
+    ).toBe(9);
   } finally {
     paletteBuffer.destroy();
     paletteTexture.destroy();
     device.destroy();
   }
-
-  t.end();
 });

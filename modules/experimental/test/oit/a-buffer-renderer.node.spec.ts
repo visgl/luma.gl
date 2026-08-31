@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {
@@ -15,67 +15,57 @@ import {
 } from '@luma.gl/experimental';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('aBuffer plugin exposes the WGSL module only', t => {
-  t.equal(aBufferPlugin.name, 'aBuffer', 'plugin has stable name');
-  t.deepEqual(aBufferPlugin.wgsl?.modules, [aBuffer], 'plugin adds A-buffer WGSL module');
-  t.equal(aBufferPlugin.glsl, undefined, 'plugin does not advertise GLSL support');
-  t.match(
-    aBuffer.source,
-    /A_BUFFER_EMPTY_FRAGMENT_POINTER: u32 = 0u/,
-    'zero-initialized head pointers represent empty pixels'
+it('aBuffer plugin exposes the WGSL module only', () => {
+  expect(aBufferPlugin.name, 'plugin has stable name').toBe('aBuffer');
+  expect(aBufferPlugin.wgsl?.modules, 'plugin adds A-buffer WGSL module').toEqual([aBuffer]);
+  expect(aBufferPlugin.glsl, 'plugin does not advertise GLSL support').toBe(undefined);
+  expect(aBuffer.source, 'zero-initialized head pointers represent empty pixels').toMatch(
+    /A_BUFFER_EMPTY_FRAGMENT_POINTER: u32 = 0u/
   );
-  t.match(
-    aBuffer.source,
-    /let fragmentPointer = fragmentIndex \+ 1u/,
-    'stored fragment pointers are one-based'
+  expect(aBuffer.source, 'stored fragment pointers are one-based').toMatch(
+    /let fragmentPointer = fragmentIndex \+ 1u/
   );
-  t.match(
-    aBuffer.source,
-    /textureLoad\(opaqueDepthTexture, fragmentCoordinates, 0\)/,
-    'capture explicitly tests opaque depth before storing fragments'
+  expect(aBuffer.source, 'capture explicitly tests opaque depth before storing fragments').toMatch(
+    /textureLoad\(opaqueDepthTexture, fragmentCoordinates, 0\)/
   );
-  t.match(
+  expect(
     aBuffer.source,
-    /pack2x16float\(packedColor\.rg\)/,
     'capture preserves HDR red and green channels in packed half floats'
-  );
-  t.match(
+  ).toMatch(/pack2x16float\(packedColor\.rg\)/);
+  expect(
     aBuffer.source,
-    /pack2x16float\(packedColor\.ba\)/,
     'capture preserves HDR blue and alpha channels in packed half floats'
-  );
-  t.notOk(/pack4x8unorm/.test(aBuffer.source), 'capture does not clamp HDR color to RGBA8');
-  t.end();
+  ).toMatch(/pack2x16float\(packedColor\.ba\)/);
+  expect(
+    Boolean(/pack4x8unorm/.test(aBuffer.source)),
+    'capture does not clamp HDR color to RGBA8'
+  ).toBe(false);
 });
 
-test('A-buffer resolve is packaged as a ShaderPassPipeline', t => {
+it('A-buffer resolve is packaged as a ShaderPassPipeline', () => {
   const pipeline = createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 8});
-  t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
-  t.equal(pipeline.steps[0].shaderPass.name, 'aBufferResolve', 'pipeline uses the resolve pass');
-  t.deepEqual(
-    pipeline.steps[0].inputs,
-    {sourceTexture: 'previous'},
-    'resolve composites over the previous color'
+  expect(pipeline.steps.length, 'resolve pipeline has one fullscreen step').toBe(1);
+  expect(pipeline.steps[0].shaderPass.name, 'pipeline uses the resolve pass').toBe(
+    'aBufferResolve'
   );
-  t.match(
+  expect(pipeline.steps[0].inputs, 'resolve composites over the previous color').toEqual({
+    sourceTexture: 'previous'
+  });
+  expect(
     pipeline.steps[0].shaderPass.source,
-    /unpack2x16float\(capturedFragment\.colorRedGreen\)/,
     'resolve restores HDR red and green channels'
-  );
-  t.match(
+  ).toMatch(/unpack2x16float\(capturedFragment\.colorRedGreen\)/);
+  expect(
     pipeline.steps[0].shaderPass.source,
-    /unpack2x16float\(capturedFragment\.colorBlueAlpha\)/,
     'resolve restores HDR blue and alpha channels'
-  );
-  t.throws(
+  ).toMatch(/unpack2x16float\(capturedFragment\.colorBlueAlpha\)/);
+  expect(
     () => createABufferResolveShaderPassPipeline({maxFragmentsPerPixel: 0}),
-    /at least 1/,
     'invalid fragment limits are rejected'
-  );
-  t.end();
+  ).toThrow(/at least 1/);
 });
 
-test('getABufferSlicePlan fits fragments inside storage limits', t => {
+it('getABufferSlicePlan fits fragments inside storage limits', () => {
   const slicePlan = getABufferSlicePlan({
     width: 100,
     height: 50,
@@ -84,25 +74,20 @@ test('getABufferSlicePlan fits fragments inside storage limits', t => {
     maxBufferSize: 24_000
   });
 
-  t.deepEqual(
-    slicePlan,
-    {
-      width: 100,
-      height: 50,
-      sliceHeight: 3,
-      sliceCount: 17,
-      maxSlicePixelCount: 300,
-      fragmentCapacity: 1200,
-      headPointerByteLength: 1208,
-      fragmentByteLength: 19_200
-    },
-    'slice plan budgets fragment storage and scanline slices'
-  );
-  t.end();
+  expect(slicePlan, 'slice plan budgets fragment storage and scanline slices').toEqual({
+    width: 100,
+    height: 50,
+    sliceHeight: 3,
+    sliceCount: 17,
+    maxSlicePixelCount: 300,
+    fragmentCapacity: 1200,
+    headPointerByteLength: 1208,
+    fragmentByteLength: 19_200
+  });
 });
 
-test('getABufferSlicePlan rejects impossible scanlines', t => {
-  t.throws(
+it('getABufferSlicePlan rejects impossible scanlines', () => {
+  expect(
     () =>
       getABufferSlicePlan({
         width: 100,
@@ -111,31 +96,27 @@ test('getABufferSlicePlan rejects impossible scanlines', t => {
         maxStorageBufferBindingSize: 1000,
         maxBufferSize: 1000
       }),
-    /cannot fit one scanline/,
     'one scanline must fit inside the storage budget'
-  );
-  t.end();
+  ).toThrow(/cannot fit one scanline/);
 });
 
-test('getABufferSupport reports WebGPU-only support', async t => {
+it('getABufferSupport reports WebGPU-only support', async () => {
   const devices = await getTestDevices();
 
   for (const device of devices) {
     const support = getABufferSupport(device);
     if (device.type === 'webgpu') {
-      t.equal(support.supported, true, 'WebGPU device supports A-buffer setup');
+      expect(support.supported, 'WebGPU device supports A-buffer setup').toBe(true);
     } else {
-      t.equal(support.supported, false, `${device.type} device is rejected`);
-      t.match(support.reason || '', /WebGPU/, 'unsupported reason mentions WebGPU');
+      expect(support.supported, `${device.type} device is rejected`).toBe(false);
+      expect(support.reason || '', 'unsupported reason mentions WebGPU').toMatch(/WebGPU/);
     }
   }
 });
 
-test('ABufferRenderer composites instanced translucent fragments independent of instance order', async t => {
+it('ABufferRenderer composites instanced translucent fragments independent of instance order', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -144,21 +125,18 @@ test('ABufferRenderer composites instanced translucent fragments independent of 
   const forwardColor = await renderInstancedTransparency(device, renderer, framebuffer, false);
   const reverseColor = await renderInstancedTransparency(device, renderer, framebuffer, true);
 
-  t.deepEqual(reverseColor, forwardColor, 'reversing instance order preserves the OIT result');
-  t.deepEqual(forwardColor, [128, 0, 64, 191], 'premultiplied red over blue composites');
+  expect(reverseColor, 'reversing instance order preserves the OIT result').toEqual(forwardColor);
+  expect(forwardColor, 'premultiplied red over blue composites').toEqual([128, 0, 64, 191]);
 
   renderer.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   depthTexture.destroy();
-  t.end();
 });
 
-test('ABufferRenderer composites bounded-memory slices', async t => {
+it('ABufferRenderer composites bounded-memory slices', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -181,26 +159,24 @@ test('ABufferRenderer composites bounded-memory slices', async t => {
     true
   );
 
-  t.deepEqual(
+  expect(
     pixels,
-    referencePixels,
     'bounded horizontal slices match a single-slice resolve for row-varying colors'
+  ).toEqual(referencePixels);
+  expect(pixels.slice(0, 4), 'test data distinguishes output rows').not.toEqual(
+    pixels.slice(8, 12)
   );
-  t.notDeepEqual(pixels.slice(0, 4), pixels.slice(8, 12), 'test data distinguishes output rows');
 
   renderer.destroy();
   referenceRenderer.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   depthTexture.destroy();
-  t.end();
 });
 
-test('ABufferRenderer rejects translucent fragments behind opaque depth', async t => {
+it('ABufferRenderer rejects translucent fragments behind opaque depth', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -208,13 +184,12 @@ test('ABufferRenderer rejects translucent fragments behind opaque depth', async 
   const renderer = new ABufferRenderer(device);
   const pixel = await renderOpaqueOcclusion(device, renderer, framebuffer);
 
-  t.deepEqual(pixel, [0, 255, 0, 255], 'opaque surface occludes translucent storage writes');
+  expect(pixel, 'opaque surface occludes translucent storage writes').toEqual([0, 255, 0, 255]);
 
   renderer.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   depthTexture.destroy();
-  t.end();
 });
 
 async function renderInstancedTransparency(

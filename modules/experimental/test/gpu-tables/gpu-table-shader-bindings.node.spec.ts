@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
@@ -44,7 +44,7 @@ const SHADER_LAYOUT = {
   ]
 } satisfies ShaderLayout;
 
-test('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', t => {
+it('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', () => {
   const device = new NullDevice({});
   const firstBatch = makeBatch(device, 2);
   const secondBatch = makeBatch(device, 3);
@@ -58,38 +58,33 @@ test('GPUTableShaderBindings resolves draw-ready buffers per preserved batch', t
     shaderLayout: SHADER_LAYOUT
   });
 
-  t.deepEqual(
+  expect(
     shaderBindings.bufferLayout.map(layout => layout.name),
-    ['positions'],
     'returns only shader attribute layouts'
-  );
-  t.equal(shaderBindings.batches.length, 2, 'preserves table batch boundaries');
-  t.deepEqual(
+  ).toEqual(['positions']);
+  expect(shaderBindings.batches.length, 'preserves table batch boundaries').toBe(2);
+  expect(
     shaderBindings.batches[0].attributeBuffers,
-    [firstBatch.gpuData.positions.buffer],
     'orders attribute buffers like the returned layout'
-  );
-  t.equal(
+  ).toEqual([firstBatch.gpuData.positions.buffer]);
+  expect(
     shaderBindings.batches[1].attributes.positions,
-    secondBatch.gpuData.positions.buffer,
     'returns Model-ready named attributes for each batch'
-  );
-  t.deepEqual(
+  ).toBe(secondBatch.gpuData.positions.buffer);
+  expect(
     shaderBindings.batches[0].bindings.polygonWeights,
-    {
-      buffer: firstBatch.gpuData.weights.buffer,
-      offset: Float32Array.BYTES_PER_ELEMENT,
-      size: firstBatch.gpuData.weights.valueLength * firstBatch.gpuData.weights.byteStride
-    },
     'returns Model-ready storage binding ranges'
-  );
+  ).toEqual({
+    buffer: firstBatch.gpuData.weights.buffer,
+    offset: Float32Array.BYTES_PER_ELEMENT,
+    size: firstBatch.gpuData.weights.valueLength * firstBatch.gpuData.weights.byteStride
+  });
 
   shaderBindings.destroy();
   table.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings validates schema formats', t => {
+it('GPUTableShaderBindings validates schema formats', () => {
   const device = new NullDevice({});
   const table = new GPUTable({
     vectors: {
@@ -106,21 +101,19 @@ test('GPUTableShaderBindings validates schema formats', t => {
       formats: ['float32x3']
     }
   ] as const satisfies GPUInputSchema;
-  t.throws(
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table,
         gpuInputSchema: incompatibleSchema,
         shaderLayout: SHADER_LAYOUT
       }),
-    /must be one of float32x3/,
     'rejects a table vector with an incompatible input format'
-  );
+  ).toThrow(/must be one of float32x3/);
   table.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings can bind one input as an attribute and storage', t => {
+it('GPUTableShaderBindings can bind one input as an attribute and storage', () => {
   const device = new NullDevice({});
   const table = new GPUTable({
     vectors: {
@@ -144,29 +137,21 @@ test('GPUTableShaderBindings can bind one input as an attribute and storage', t 
     gpuInputSchema: GPU_INPUT_SCHEMA.slice(0, 1),
     shaderLayout: sharedShaderLayout
   });
-  t.equal(
-    shaderBindings.batches[0].attributes.positions,
-    table.batches[0].gpuData.positions.buffer,
-    'returns the attribute resource'
+  expect(shaderBindings.batches[0].attributes.positions, 'returns the attribute resource').toBe(
+    table.batches[0].gpuData.positions.buffer
   );
-  t.deepEqual(
-    shaderBindings.batches[0].bindings.positions,
-    {
-      buffer: table.batches[0].gpuData.positions.buffer,
-      offset: 0,
-      size:
-        table.batches[0].gpuData.positions.valueLength *
-        table.batches[0].gpuData.positions.byteStride
-    },
-    'returns the storage resource'
-  );
+  expect(shaderBindings.batches[0].bindings.positions, 'returns the storage resource').toEqual({
+    buffer: table.batches[0].gpuData.positions.buffer,
+    offset: 0,
+    size:
+      table.batches[0].gpuData.positions.valueLength * table.batches[0].gpuData.positions.byteStride
+  });
 
   shaderBindings.destroy();
   table.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings maps one composite input to attributes or storage', t => {
+it('GPUTableShaderBindings maps one composite input to attributes or storage', () => {
   const device = new NullDevice({});
   const matrix = makeMatrixVector(device, 2);
   const table = new GPUTable({vectors: {matrix}});
@@ -195,27 +180,25 @@ test('GPUTableShaderBindings maps one composite input to attributes or storage',
     shaderLayout: attributeShaderLayout
   });
 
-  t.equal(attributeBindings.bufferLayout.length, 1, 'binds one physical matrix buffer');
-  t.deepEqual(
+  expect(attributeBindings.bufferLayout.length, 'binds one physical matrix buffer').toBe(1);
+  expect(
     attributeBindings.bufferLayout[0],
-    {
-      name: 'matrix',
-      stepMode: 'instance',
-      byteStride: 64,
-      attributes: [
-        {attribute: 'matrixColumn0', format: 'float32x4', byteOffset: 0},
-        {attribute: 'matrixColumn1', format: 'float32x4', byteOffset: 16},
-        {attribute: 'matrixColumn2', format: 'float32x4', byteOffset: 32},
-        {attribute: 'matrixColumn3', format: 'float32x4', byteOffset: 48}
-      ]
-    },
     'orders projected attributes by shader location'
-  );
-  t.deepEqual(
+  ).toEqual({
+    name: 'matrix',
+    stepMode: 'instance',
+    byteStride: 64,
+    attributes: [
+      {attribute: 'matrixColumn0', format: 'float32x4', byteOffset: 0},
+      {attribute: 'matrixColumn1', format: 'float32x4', byteOffset: 16},
+      {attribute: 'matrixColumn2', format: 'float32x4', byteOffset: 32},
+      {attribute: 'matrixColumn3', format: 'float32x4', byteOffset: 48}
+    ]
+  });
+  expect(
     attributeBindings.batches[0].attributeBuffers,
-    [matrix.data[0].buffer],
     'binds the shared physical buffer once'
-  );
+  ).toEqual([matrix.data[0].buffer]);
 
   const storageBindings = new GPUTableShaderBindings(device, {
     table,
@@ -225,20 +208,19 @@ test('GPUTableShaderBindings maps one composite input to attributes or storage',
       bindings: [{name: 'matrix', type: 'read-only-storage', group: 0, location: 0}]
     }
   });
-  t.equal(storageBindings.bufferLayout.length, 0, 'omits inactive attribute projections');
-  t.deepEqual(
-    storageBindings.batches[0].bindings.matrix,
-    {buffer: matrix.data[0].buffer, offset: 0, size: 128},
-    'binds the same column as storage'
-  );
+  expect(storageBindings.bufferLayout.length, 'omits inactive attribute projections').toBe(0);
+  expect(storageBindings.batches[0].bindings.matrix, 'binds the same column as storage').toEqual({
+    buffer: matrix.data[0].buffer,
+    offset: 0,
+    size: 128
+  });
 
   attributeBindings.destroy();
   storageBindings.destroy();
   table.destroy();
-  t.end();
 });
 
-test('composite GPU input validation rejects malformed declarations and constants', t => {
+it('composite GPU input validation rejects malformed declarations and constants', () => {
   const validInput = {
     columnName: 'matrix',
     attributeNames: ['matrixColumn0', 'matrixColumn1'],
@@ -246,35 +228,33 @@ test('composite GPU input validation rejects malformed declarations and constant
     required: true,
     formats: ['float32x4']
   } as const satisfies GPUInputSchema[number];
-  t.deepEqual(
-    getGPUInputAttributeNames(validInput),
-    ['matrixColumn0', 'matrixColumn1'],
-    'returns composite attribute names'
-  );
-  t.deepEqual(
+  expect(getGPUInputAttributeNames(validInput), 'returns composite attribute names').toEqual([
+    'matrixColumn0',
+    'matrixColumn1'
+  ]);
+  expect(
     getGPUInputAttributeNames({
       ...validInput,
       attributeName: 'matrixColumn0'
     } as unknown as GPUInputSchema[number]),
-    ['matrixColumn0', 'matrixColumn1'],
     'prefers composite names in unchecked JavaScript input'
-  );
-  t.throws(
+  ).toEqual(['matrixColumn0', 'matrixColumn1']);
+  expect(
     () =>
       getGPUInputAttributeNames({
         ...validInput,
         attributeNames: ['matrixColumn0']
       } as unknown as GPUInputSchema[number]),
     'rejects a singular name in the composite field'
-  );
-  t.throws(
+  ).toThrow();
+  expect(
     () =>
       getGPUInputAttributeNames({
         ...validInput,
         attributeNames: ['matrixColumn0', 'matrixColumn0']
       }),
     'rejects duplicate composite mappings'
-  );
+  ).toThrow();
 
   const device = new NullDevice({});
   const table = new GPUTable({
@@ -283,7 +263,7 @@ test('composite GPU input validation rejects malformed declarations and constant
     },
     numRows: 2
   });
-  t.throws(
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table,
@@ -297,8 +277,8 @@ test('composite GPU input validation rejects malformed declarations and constant
         }
       }),
     'rejects composite constant attributes'
-  );
-  t.throws(
+  ).toThrow();
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table,
@@ -316,12 +296,11 @@ test('composite GPU input validation rejects malformed declarations and constant
         }
       }),
     'rejects composite constants when only their storage binding is active'
-  );
+  ).toThrow();
   table.destroy();
-  t.end();
 });
 
-test('composite GPU inputs require matching table attribute views', t => {
+it('composite GPU inputs require matching table attribute views', () => {
   const device = new NullDevice({});
   const shaderLayout = {
     attributes: [
@@ -342,7 +321,7 @@ test('composite GPU inputs require matching table attribute views', t => {
   const packedTable = new GPUTable({
     vectors: {matrix: makeVector(device, 'matrix', 'float32x4', 2)}
   });
-  t.throws(
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table: packedTable,
@@ -350,14 +329,14 @@ test('composite GPU inputs require matching table attribute views', t => {
         shaderLayout
       }),
     'rejects a composite input backed by a flat layout'
-  );
+  ).toThrow();
   packedTable.destroy();
 
   const matrixTable = new GPUTable({vectors: {matrix: makeMatrixVector(device, 2)}});
   const missingViewSchema = [
     {...schema[0], attributeNames: ['matrixColumn0', 'missingMatrixColumn']}
   ] as const satisfies GPUInputSchema;
-  t.throws(
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table: matrixTable,
@@ -371,12 +350,11 @@ test('composite GPU inputs require matching table attribute views', t => {
         }
       }),
     'rejects a composite name missing from the table layout'
-  );
+  ).toThrow();
   matrixTable.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings prepares zero-stride attribute and one-row storage constants', t => {
+it('GPUTableShaderBindings prepares zero-stride attribute and one-row storage constants', () => {
   const device = new NullDevice({});
   const colors = new GPUConstant({
     format: 'unorm8x4',
@@ -410,41 +388,45 @@ test('GPUTableShaderBindings prepares zero-stride attribute and one-row storage 
     shaderLayout
   });
 
-  t.equal(shaderBindings.bufferLayout[0].byteStride, 0, 'preserves explicit zero stride');
-  t.equal(shaderBindings.batches.length, 1, 'retains the data-less logical batch');
-  t.ok(shaderBindings.batches[0].bindings.weights, 'binds a one-row storage buffer');
-  t.ok(shaderBindings.batches[0].bindings.gpuTableColumns, 'binds row multipliers');
-  t.match(
-    shaderBindings.shaderModule?.source ?? '',
-    /weightsRowMultiplier/,
-    'generates the named storage multiplier'
+  expect(shaderBindings.bufferLayout[0].byteStride, 'preserves explicit zero stride').toBe(0);
+  expect(shaderBindings.batches.length, 'retains the data-less logical batch').toBe(1);
+  expect(
+    Boolean(shaderBindings.batches[0].bindings.weights),
+    'binds a one-row storage buffer'
+  ).toBe(true);
+  expect(Boolean(shaderBindings.batches[0].bindings.gpuTableColumns), 'binds row multipliers').toBe(
+    true
   );
-  t.ok(shaderBindings.ownedByteLength >= 12, 'accounts for owned constant resources');
+  expect(
+    shaderBindings.shaderModule?.source ?? '',
+    'generates the named storage multiplier'
+  ).toMatch(/weightsRowMultiplier/);
+  expect(
+    Boolean(shaderBindings.ownedByteLength >= 12),
+    'accounts for owned constant resources'
+  ).toBe(true);
 
   shaderBindings.destroy();
   table.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings rejects constants for required inputs', t => {
+it('GPUTableShaderBindings rejects constants for required inputs', () => {
   const device = new NullDevice({});
   const positions = new GPUConstant({format: 'float32x2', value: new Float32Array([0, 0])});
   const table = new GPUTable({columns: {positions}, numRows: 2});
-  t.throws(
+  expect(
     () =>
       new GPUTableShaderBindings(device, {
         table,
         gpuInputSchema: GPU_INPUT_SCHEMA.slice(0, 1),
         shaderLayout: SHADER_LAYOUT
       }),
-    /required inputs cannot be constant/,
     'required schema declarations stay varying'
-  );
+  ).toThrow(/required inputs cannot be constant/);
   table.destroy();
-  t.end();
 });
 
-test('GPUTableShaderBindings reuses compatible owned buffers and destroys them', t => {
+it('GPUTableShaderBindings reuses compatible owned buffers and destroys them', () => {
   const device = new NullDevice({});
   const schema = [
     {
@@ -479,17 +461,17 @@ test('GPUTableShaderBindings reuses compatible owned buffers and destroys them',
   const firstBuffer = shaderBindings.batches[0].attributeBuffers[0];
 
   shaderBindings.updateBindings(secondTable);
-  t.equal(shaderBindings.batches[0].attributeBuffers[0], firstBuffer, 'reuses equal-size buffers');
-  shaderBindings.destroy();
-  t.ok(firstBuffer.destroyed, 'destroy releases the reused owned buffer');
-  t.throws(
-    () => shaderBindings.updateBindings(firstTable),
-    /has been destroyed/,
-    'destroyed bindings cannot be updated'
+  expect(shaderBindings.batches[0].attributeBuffers[0], 'reuses equal-size buffers').toBe(
+    firstBuffer
   );
+  shaderBindings.destroy();
+  expect(Boolean(firstBuffer.destroyed), 'destroy releases the reused owned buffer').toBe(true);
+  expect(
+    () => shaderBindings.updateBindings(firstTable),
+    'destroyed bindings cannot be updated'
+  ).toThrow(/has been destroyed/);
   firstTable.destroy();
   secondTable.destroy();
-  t.end();
 });
 
 function makeBatch(device: NullDevice, rowCount: number): GPURecordBatch {

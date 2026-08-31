@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
 import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
@@ -64,7 +64,7 @@ class TestPresentationContext extends PresentationContext {
   }
 }
 
-test('CanvasContext preserves HDR presentation options', testContext => {
+it('CanvasContext preserves HDR presentation options', () => {
   const canvasContext = new TestCanvasContext(
     {
       colorFormat: 'rgba16float',
@@ -74,12 +74,12 @@ test('CanvasContext preserves HDR presentation options', testContext => {
     false
   );
 
-  testContext.equal(canvasContext.props.colorFormat, 'rgba16float', 'preserves floating format');
-  testContext.equal(canvasContext.props.colorSpace, 'display-p3', 'preserves wide color gamut');
-  testContext.equal(canvasContext.props.toneMapping, 'extended', 'preserves extended luminance');
+  expect(canvasContext.props.colorFormat, 'preserves floating format').toBe('rgba16float');
+  expect(canvasContext.props.colorSpace, 'preserves wide color gamut').toBe('display-p3');
+  expect(canvasContext.props.toneMapping, 'preserves extended luminance').toBe('extended');
 
   canvasContext.destroy();
-  testContext.end();
+  void 0;
 });
 
 function createCanvasContextSpyDevice() {
@@ -106,9 +106,9 @@ function createContextSuite(
   label: string,
   createContext: () => CanvasContext | PresentationContext
 ) {
-  test(`${label}#_handleIntersection does not call callbacks when destroyed`, t => {
+  it(`${label}#_handleIntersection does not call callbacks when destroyed`, () => {
     if (!isBrowser()) {
-      t.end();
+      void 0;
       return;
     }
 
@@ -121,7 +121,9 @@ function createContextSuite(
       {target: canvasContext.canvas, isIntersecting: false}
     ]);
 
-    t.equal(calls.onVisibilityChange, 1, 'visibility change is observed when context is active');
+    expect(calls.onVisibilityChange, 'visibility change is observed when context is active').toBe(
+      1
+    );
 
     calls.onVisibilityChange = 0;
     // @ts-expect-error read only
@@ -129,14 +131,14 @@ function createContextSuite(
     (canvasContext as any)._handleIntersection([
       {target: canvasContext.canvas, isIntersecting: true}
     ]);
-    t.equal(calls.onVisibilityChange, 0, 'destroyed context does not emit visibility events');
+    expect(calls.onVisibilityChange, 'destroyed context does not emit visibility events').toBe(0);
 
-    t.end();
+    void 0;
   });
 
-  test(`${label}#_handleResize does not call callbacks when destroyed`, t => {
+  it(`${label}#_handleResize does not call callbacks when destroyed`, () => {
     if (!isBrowser()) {
-      t.end();
+      void 0;
       return;
     }
 
@@ -152,7 +154,7 @@ function createContextSuite(
       }
     ]);
 
-    t.equal(calls.onResize, 1, 'resize is observed when context is active');
+    expect(calls.onResize, 'resize is observed when context is active').toBe(1);
 
     calls.onResize = 0;
     // @ts-expect-error read only
@@ -163,14 +165,14 @@ function createContextSuite(
         contentBoxSize: [{inlineSize: 20, blockSize: 40}]
       }
     ]);
-    t.equal(calls.onResize, 0, 'destroyed context does not emit resize events');
+    expect(calls.onResize, 'destroyed context does not emit resize events').toBe(0);
 
-    t.end();
+    void 0;
   });
 
-  test(`${label}#destroy is idempotent`, t => {
+  it(`${label}#destroy is idempotent`, () => {
     if (!isBrowser()) {
-      t.end();
+      void 0;
       return;
     }
 
@@ -185,19 +187,19 @@ function createContextSuite(
       started: true
     };
 
-    t.doesNotThrow(() => {
+    expect(() => {
       canvasContext.destroy();
       canvasContext.destroy();
-    }, 'destroying twice should be safe');
+    }, 'destroying twice should be safe').not.toThrow();
 
-    t.equal(calls.stop, 1, 'canvas observer stopped exactly once');
+    expect(calls.stop, 'canvas observer stopped exactly once').toBe(1);
 
-    t.end();
+    void 0;
   });
 
-  test(`${label}#destroy cancels deferred DPR timer`, t => {
+  it(`${label}#destroy cancels deferred DPR timer`, () => {
     if (!isBrowser()) {
-      t.end();
+      void 0;
       return;
     }
 
@@ -216,53 +218,56 @@ function createContextSuite(
     };
     globalScope.clearTimeout = (id: ReturnType<typeof setTimeout>) => {
       clearTimeoutCalls++;
-      t.equal(id, capturedTimeoutId, 'clearTimeout called with deferred DPR timer id');
+      expect(id, 'clearTimeout called with deferred DPR timer id').toBe(capturedTimeoutId);
     };
 
     try {
       const canvasContext = createContext();
       canvasContext.destroy();
 
-      t.equal(clearTimeoutCalls, 1, 'deferred DPR timer is canceled on destroy');
+      expect(clearTimeoutCalls, 'deferred DPR timer is canceled on destroy').toBe(1);
       if (capturedCallback) {
-        t.doesNotThrow(() => capturedCallback(), 'DPR callback after destroy should not crash');
+        expect(
+          () => capturedCallback(),
+          'DPR callback after destroy should not crash'
+        ).not.toThrow();
       } else {
-        t.fail('DPR callback should be scheduled by constructor');
+        expect(false, 'DPR callback should be scheduled by constructor').toBe(true);
       }
 
-      t.doesNotThrow(() => {
+      expect(() => {
         canvasContext.destroy();
-      }, 'destroy can still be called after callback has been handled');
+      }, 'destroy can still be called after callback has been handled').not.toThrow();
     } finally {
       globalScope.setTimeout = originalSetTimeout;
       globalScope.clearTimeout = originalClearTimeout;
     }
 
-    t.end();
+    void 0;
   });
 }
 
-test('CanvasContext#defined', t => {
-  t.ok(CanvasContext, 'CanvasContext defined');
+it('CanvasContext#defined', () => {
+  expect(Boolean(CanvasContext), 'CanvasContext defined').toBe(true);
   // t.ok(new WEBGLCanvasContext()), 'Context creation ok');
-  t.end();
+  void 0;
 });
 
-test('CanvasContext', t => {
+it('CanvasContext', () => {
   if (isBrowser()) {
     let canvasContext = new TestCanvasContext();
-    t.ok(canvasContext);
+    expect(Boolean(canvasContext), '').toBe(true);
 
     canvasContext = new TestCanvasContext({useDevicePixels: false});
-    t.ok(canvasContext);
-    t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600]);
+    expect(Boolean(canvasContext), '').toBe(true);
+    expect(canvasContext.getDevicePixelSize(), '').toEqual([800, 600]);
   }
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_handleResize prefers exact device pixel size by default', t => {
+it('CanvasContext#_handleResize prefers exact device pixel size by default', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -276,18 +281,17 @@ test('CanvasContext#_handleResize prefers exact device pixel size by default', t
     }
   ]);
 
-  t.deepEqual(canvasContext.getDevicePixelSize(), [150, 75], 'exact pixel size is tracked');
-  t.deepEqual(
+  expect(canvasContext.getDevicePixelSize(), 'exact pixel size is tracked').toEqual([150, 75]);
+  expect(
     canvasContext.getDrawingBufferSize(),
-    [150, 75],
     'drawing buffer follows exact pixel size when useDevicePixels=true'
-  );
-  t.end();
+  ).toEqual([150, 75]);
+  void 0;
 });
 
-test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
+it('CanvasContext#_handleResize supports css-dpr compatibility sizing', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -304,26 +308,24 @@ test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
       }
     ]);
 
-    t.deepEqual(
+    expect(
       canvasContext.getDevicePixelSize(),
-      [150, 75],
       'css-dpr mode floors css size times DPR and ignores exact observer size'
-    );
-    t.deepEqual(
+    ).toEqual([150, 75]);
+    expect(
       canvasContext.getDrawingBufferSize(),
-      [150, 75],
       'drawing buffer follows compatibility device pixel size when useDevicePixels=true'
-    );
+    ).toEqual([150, 75]);
   } finally {
     canvasContext.getDevicePixelRatio = originalGetDevicePixelRatio;
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_handleResize keeps numeric useDevicePixels override across pixel size modes', t => {
+it('CanvasContext#_handleResize keeps numeric useDevicePixels override across pixel size modes', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -343,26 +345,23 @@ test('CanvasContext#_handleResize keeps numeric useDevicePixels override across 
       }
     ]);
 
-    t.deepEqual(
-      canvasContext.getDevicePixelSize(),
-      [150, 75],
-      'compatibility pixel size is tracked'
-    );
-    t.deepEqual(
+    expect(canvasContext.getDevicePixelSize(), 'compatibility pixel size is tracked').toEqual([
+      150, 75
+    ]);
+    expect(
       canvasContext.getDrawingBufferSize(),
-      [200, 100],
       'numeric useDevicePixels still controls drawing buffer size'
-    );
+    ).toEqual([200, 100]);
   } finally {
     canvasContext.getDevicePixelRatio = originalGetDevicePixelRatio;
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-dpr mode', t => {
+it('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-dpr mode', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -389,7 +388,7 @@ test('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-
       contentBoxSize: [{inlineSize: 400, blockSize: 300}]
     }
   ]);
-  t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600], 'initial size at DPR 2');
+  expect(canvasContext.getDevicePixelSize(), 'initial size at DPR 2').toEqual([800, 600]);
 
   // Simulate a DPR change to 1.5 (browser zoom)
   resizeCalls = 0;
@@ -410,20 +409,19 @@ test('CanvasContext#_observeDevicePixelRatio recalculates drawing buffer in css-
   (canvasContext as any)._canvasObserver = {started: true};
   (canvasContext as any)._observeDevicePixelRatio();
 
-  t.deepEqual(
+  expect(
     canvasContext.getDevicePixelSize(),
-    [600, 450],
     'DPR change recalculates device pixel size using Math.floor(css * newDpr)'
-  );
-  t.equal(resizeCalls, 1, 'onResize is called when DPR changes in css-dpr mode');
-  t.deepEqual(lastOldPixelSize, [800, 600], 'onResize receives the previous pixel size');
+  ).toEqual([600, 450]);
+  expect(resizeCalls, 'onResize is called when DPR changes in css-dpr mode').toBe(1);
+  expect(lastOldPixelSize, 'onResize receives the previous pixel size').toEqual([800, 600]);
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_observeDevicePixelRatio clamps to max texture size in css-dpr mode', t => {
+it('CanvasContext#_observeDevicePixelRatio clamps to max texture size in css-dpr mode', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -447,29 +445,26 @@ test('CanvasContext#_observeDevicePixelRatio clamps to max texture size in css-d
       contentBoxSize: [{inlineSize: 1500, blockSize: 1200}]
     }
   ]);
-  t.deepEqual(
-    canvasContext.getDevicePixelSize(),
-    [2048, 2048],
-    'initial size clamped by _handleResize'
-  );
+  expect(canvasContext.getDevicePixelSize(), 'initial size clamped by _handleResize').toEqual([
+    2048, 2048
+  ]);
 
   // Now simulate a DPR change to 3 (4500x3600 unclamped)
   canvasContext.getDevicePixelRatio = () => 3;
   (canvasContext as any)._canvasObserver = {started: true};
   (canvasContext as any)._observeDevicePixelRatio();
 
-  t.deepEqual(
+  expect(
     canvasContext.getDevicePixelSize(),
-    [2048, 2048],
     'DPR change clamps pixel size to maxTextureDimension2D'
-  );
+  ).toEqual([2048, 2048]);
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_startObservers defers DOM observation until explicitly started', t => {
+it('CanvasContext#_startObservers defers DOM observation until explicitly started', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -497,21 +492,24 @@ test('CanvasContext#_startObservers defers DOM observation until explicitly star
   try {
     const canvasContext = new TestCanvasContext({}, false);
 
-    t.equal(calls.resizeObserverObserve, 0, 'resize observer is not started during construction');
-    t.equal(
-      calls.intersectionObserverObserve,
-      0,
-      'intersection observer is not started during construction'
+    expect(calls.resizeObserverObserve, 'resize observer is not started during construction').toBe(
+      0
     );
+    expect(
+      calls.intersectionObserverObserve,
+      'intersection observer is not started during construction'
+    ).toBe(0);
 
     canvasContext._startObservers();
 
-    t.equal(calls.resizeObserverObserve, 1, 'resize observer starts after explicit initialization');
-    t.equal(
+    expect(
+      calls.resizeObserverObserve,
+      'resize observer starts after explicit initialization'
+    ).toBe(1);
+    expect(
       calls.intersectionObserverObserve,
-      1,
       'intersection observer starts after explicit initialization'
-    );
+    ).toBe(1);
 
     canvasContext.destroy();
   } finally {
@@ -519,12 +517,12 @@ test('CanvasContext#_startObservers defers DOM observation until explicitly star
     globalScope.IntersectionObserver = originalIntersectionObserver;
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#_startObservers is idempotent', t => {
+it('CanvasContext#_startObservers is idempotent', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -563,9 +561,9 @@ test('CanvasContext#_startObservers is idempotent', t => {
     canvasContext._startObservers();
     canvasContext._startObservers();
 
-    t.equal(calls.resizeObserverObserve, 1, 'resize observer only starts once');
-    t.equal(calls.intersectionObserverObserve, 1, 'intersection observer only starts once');
-    t.equal(calls.setTimeout, 1, 'deferred DPR observation is only scheduled once');
+    expect(calls.resizeObserverObserve, 'resize observer only starts once').toBe(1);
+    expect(calls.intersectionObserverObserve, 'intersection observer only starts once').toBe(1);
+    expect(calls.setTimeout, 'deferred DPR observation is only scheduled once').toBe(1);
 
     canvasContext.destroy();
   } finally {
@@ -574,12 +572,12 @@ test('CanvasContext#_startObservers is idempotent', t => {
     globalScope.setTimeout = originalSetTimeout;
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasContext#trackPosition polling stops on destroy', t => {
+it('CanvasContext#trackPosition polling stops on destroy', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -619,15 +617,15 @@ test('CanvasContext#trackPosition polling stops on destroy', t => {
 
     canvasContext._startObservers();
 
-    t.ok(intervalCallback, 'position polling interval is scheduled');
+    expect(Boolean(intervalCallback), 'position polling interval is scheduled').toBe(true);
     intervalCallback?.();
-    t.equal(updatePositionCalls, 1, 'position polling calls updatePosition while active');
+    expect(updatePositionCalls, 'position polling calls updatePosition while active').toBe(1);
 
     canvasContext.destroy();
-    t.equal(clearIntervalCalls, 1, 'position polling interval is cleared on destroy');
+    expect(clearIntervalCalls, 'position polling interval is cleared on destroy').toBe(1);
 
     intervalCallback?.();
-    t.equal(updatePositionCalls, 1, 'position polling no longer updates after destroy');
+    expect(updatePositionCalls, 'position polling no longer updates after destroy').toBe(1);
   } finally {
     globalScope.ResizeObserver = originalResizeObserver;
     globalScope.IntersectionObserver = originalIntersectionObserver;
@@ -635,31 +633,31 @@ test('CanvasContext#trackPosition polling stops on destroy', t => {
     globalScope.clearInterval = originalClearInterval;
   }
 
-  t.end();
+  void 0;
 });
 
-test('PresentationContext#defined', t => {
-  t.ok(PresentationContext, 'PresentationContext defined');
-  t.end();
+it('PresentationContext#defined', () => {
+  expect(Boolean(PresentationContext), 'PresentationContext defined').toBe(true);
+  void 0;
 });
 
 createContextSuite('CanvasContext', () => new TestCanvasContext());
 createContextSuite('PresentationContext', () => new TestPresentationContext());
 
-test('CanvasContext#destroy nulls device to catch later access', t => {
+it('CanvasContext#destroy nulls device to catch later access', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
   const canvasContext = new TestCanvasContext();
   canvasContext.destroy();
   // @ts-expect-error
-  t.equal(canvasContext.device, null, 'destroyed context device should be null');
-  t.end();
+  expect(canvasContext.device, 'destroyed context device should be null').toBe(null);
+  void 0;
 });
 
-test('CanvasContext#getDevicePixelRatio', async t => {
+it('CanvasContext#getDevicePixelRatio', async () => {
   const windowPixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const TEST_CASES = [
     {
@@ -698,10 +696,10 @@ test('CanvasContext#getDevicePixelRatio', async t => {
   for (const device of await getTestDevices()) {
     TEST_CASES.forEach(tc => {
       const result = device.getDefaultCanvasContext().getDevicePixelRatio(tc.useDevicePixels);
-      t.equal(result, tc.expected, tc.name);
+      expect(result, tc.name).toBe(tc.expected);
     });
   }
-  t.end();
+  void 0;
 });
 
 // TODO - can these tests be moved up into canvas-context.spec?
@@ -1012,7 +1010,7 @@ function configureCanvasContext(
   };
 }
 
-test('WebGLCanvasContext#cssToDevicePixels', async t => {
+it('WebGLCanvasContext#cssToDevicePixels', async () => {
   // Create a fresh device since are going to modify it
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
@@ -1023,28 +1021,26 @@ test('WebGLCanvasContext#cssToDevicePixels', async t => {
       try {
         tc.windowPositions.forEach((wPos, i) => {
           // by default yInvert is true
-          t.deepEqual(
+          expect(
             canvasContext?.cssToDevicePixels(tc.windowPositions[i]),
-            tc.devicePositionsInverted[i],
             `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(
               tc.devicePositionsInverted[i]
             )} for window position ${tc.windowPositions[i]}`
-          );
-          t.deepEqual(
+          ).toEqual(tc.devicePositionsInverted[i]);
+          expect(
             canvasContext?.cssToDevicePixels(tc.windowPositions[i], false),
-            tc.devicePositions[i],
             `${tc.name}(yInvert=false): device pixel should match`
-          );
+          ).toEqual(tc.devicePositions[i]);
         });
       } finally {
         restoreCanvasContext();
       }
     }
   });
-  t.end();
+  void 0;
 });
 
-test('WebGLCanvasContext#cssToDeviceRatio', async t => {
+it('WebGLCanvasContext#cssToDeviceRatio', async () => {
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
 
@@ -1052,16 +1048,15 @@ test('WebGLCanvasContext#cssToDeviceRatio', async t => {
     if (canvasContext) {
       const restoreCanvasContext = configureCanvasContext(canvasContext, tc);
       try {
-        t.equal(
+        expect(
           canvasContext?.cssToDeviceRatio(),
-          tc.ratio,
           'cssToDeviceRatio should return correct value'
-        );
+        ).toBe(tc.ratio);
       } finally {
         restoreCanvasContext();
       }
     }
   });
 
-  t.end();
+  void 0;
 });

@@ -6,20 +6,19 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {bloom, bloomShaderPassPipeline, createBloomShaderPassPipeline} from '@luma.gl/effects';
 import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('bloom#build/uniform', t => {
+it('bloom#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(bloom, {}, {});
 
-  t.ok(uniforms, 'bloom module build is ok');
-  t.equal(uniforms.radius, 4, 'bloom radius uniform is ok');
-  t.equal(uniforms.threshold, 0.8, 'bloom threshold uniform is ok');
-  t.equal(uniforms.intensity, 1, 'bloom intensity uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'bloom module build is ok').toBe(true);
+  expect(uniforms.radius, 'bloom radius uniform is ok').toBe(4);
+  expect(uniforms.threshold, 'bloom threshold uniform is ok').toBe(0.8);
+  expect(uniforms.intensity, 'bloom intensity uniform is ok').toBe(1);
 });
 
-test('bloomShaderPassPipeline#routing', t => {
+it('bloomShaderPassPipeline#routing', () => {
   const extractionSteps = bloomShaderPassPipeline.steps.filter(
     step => step.shaderPass.name === 'bloomExtract'
   );
@@ -27,53 +26,41 @@ test('bloomShaderPassPipeline#routing', t => {
     step => step.shaderPass.name === 'bloomDownsample'
   );
 
-  t.equal(extractionSteps.length, 1, 'pipeline thresholds HDR radiance once');
-  t.equal(
+  expect(extractionSteps.length, 'pipeline thresholds HDR radiance once').toBe(1);
+  expect(
     extractionSteps[0]?.inputs.sourceTexture,
-    'previous',
     'bloom extraction consumes the preceding effect output'
-  );
-  t.equal(downsampleSteps.length, 2, 'pipeline low-passes the remaining bloom scales');
-  t.deepEqual(
+  ).toBe('previous');
+  expect(downsampleSteps.length, 'pipeline low-passes the remaining bloom scales').toBe(2);
+  expect(
     downsampleSteps.map(step => step.inputs.sourceTexture),
-    ['extractHalf', 'extractQuarter'],
     'quarter and eighth levels form a successive low-pass pyramid'
-  );
+  ).toEqual(['extractHalf', 'extractQuarter']);
   const extractionPass = extractionSteps[0]?.shaderPass;
   const downsamplePass = downsampleSteps[0]?.shaderPass;
-  t.match(
-    extractionPass?.source || '',
-    /textureLoad\(sourceTexture/,
-    'WGSL extraction explicitly covers source texels'
+  expect(extractionPass?.source || '', 'WGSL extraction explicitly covers source texels').toMatch(
+    /textureLoad\(sourceTexture/
   );
-  t.match(
-    extractionPass?.fs || '',
-    /texelFetch\(sourceTexture/,
-    'GLSL extraction explicitly covers source texels'
+  expect(extractionPass?.fs || '', 'GLSL extraction explicitly covers source texels').toMatch(
+    /texelFetch\(sourceTexture/
   );
-  t.match(
+  expect(
     downsamplePass?.source || '',
-    /abs\(dpdx\(texCoord\)\) \+ abs\(dpdy\(texCoord\)\)/,
     'WGSL downsampling derives its tent footprint from the actual target size'
-  );
-  t.match(
+  ).toMatch(/abs\(dpdx\(texCoord\)\) \+ abs\(dpdy\(texCoord\)\)/);
+  expect(
     downsamplePass?.fs || '',
-    /abs\(dFdx\(texCoord\)\) \+ abs\(dFdy\(texCoord\)\)/,
     'GLSL downsampling derives the same scale-aware tent footprint'
+  ).toMatch(/abs\(dFdx\(texCoord\)\) \+ abs\(dFdy\(texCoord\)\)/);
+  expect(extractionPass?.source || '', 'WGSL extraction normalizes its dynamic footprint').toMatch(
+    /return color \/ max\(totalWeight, 0\.00001\)/
   );
-  t.match(
-    extractionPass?.source || '',
-    /return color \/ max\(totalWeight, 0\.00001\)/,
-    'WGSL extraction normalizes its dynamic footprint'
-  );
-  t.match(
-    extractionPass?.fs || '',
-    /return color \/ max\(totalWeight, 0\.00001\)/,
-    'GLSL extraction normalizes its dynamic footprint'
+  expect(extractionPass?.fs || '', 'GLSL extraction normalizes its dynamic footprint').toMatch(
+    /return color \/ max\(totalWeight, 0\.00001\)/
   );
   for (const target of Object.values(bloomShaderPassPipeline.renderTargets)) {
-    t.equal(target.sampler.minFilter, 'linear', 'bloom intermediates use linear minification');
-    t.equal(target.sampler.magFilter, 'linear', 'bloom intermediates use linear magnification');
+    expect(target.sampler.minFilter, 'bloom intermediates use linear minification').toBe('linear');
+    expect(target.sampler.magFilter, 'bloom intermediates use linear magnification').toBe('linear');
   }
   const configurablePipeline = createBloomShaderPassPipeline({
     resolutionScale: 0.5,
@@ -83,80 +70,72 @@ test('bloomShaderPassPipeline#routing', t => {
     intensity: 1.75
   });
   const configurableTargets = configurablePipeline.renderTargets;
-  t.ok(configurableTargets, 'configurable bloom declares intermediate targets');
+  expect(Boolean(configurableTargets), 'configurable bloom declares intermediate targets').toBe(
+    true
+  );
   if (configurableTargets) {
-    t.deepEqual(
-      configurableTargets.extractHalf.scale,
-      [0.25, 0.25],
-      'configurable bloom scales its pyramid'
-    );
+    expect(configurableTargets.extractHalf.scale, 'configurable bloom scales its pyramid').toEqual([
+      0.25, 0.25
+    ]);
     for (const target of Object.values(configurableTargets)) {
-      t.equal(target.format, 'rgba8unorm', 'configurable bloom applies the requested format');
-      t.equal(
-        target.sampler?.minFilter,
-        'linear',
-        'configurable bloom preserves linear minification'
+      expect(target.format, 'configurable bloom applies the requested format').toBe('rgba8unorm');
+      expect(target.sampler?.minFilter, 'configurable bloom preserves linear minification').toBe(
+        'linear'
       );
-      t.equal(
-        target.sampler?.magFilter,
-        'linear',
-        'configurable bloom preserves linear magnification'
+      expect(target.sampler?.magFilter, 'configurable bloom preserves linear magnification').toBe(
+        'linear'
       );
     }
   }
-  t.equal(
+  expect(
     configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomExtract')?.uniforms?.[
       'threshold'
     ],
-    0.55,
     'configurable bloom applies the requested threshold'
-  );
-  t.equal(
+  ).toBe(0.55);
+  expect(
     configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomBlur')?.uniforms?.[
       'radius'
     ],
-    12,
     'configurable bloom applies the requested blur radius'
-  );
-  t.equal(
+  ).toBe(12);
+  expect(
     configurablePipeline.steps.find(step => step.shaderPass.name === 'bloomComposite')?.uniforms?.[
       'intensity'
     ],
-    1.75,
     'configurable bloom applies the requested intensity'
-  );
+  ).toBe(1.75);
   const blurPass = bloomShaderPassPipeline.steps.find(
     step => step.shaderPass.name === 'bloomBlur'
   )?.shaderPass;
-  t.ok(blurPass, 'multiscale bloom includes a separable blur');
-  t.match(blurPass?.source || '', /return color \/ totalWeight/, 'blur preserves smooth falloff');
-  t.notOk(
-    /unpremultipliedRgb/.test(blurPass?.source || ''),
-    'blur does not amplify tiny alpha into square halos'
+  expect(Boolean(blurPass), 'multiscale bloom includes a separable blur').toBe(true);
+  expect(blurPass?.source || '', 'blur preserves smooth falloff').toMatch(
+    /return color \/ totalWeight/
   );
+  expect(
+    Boolean(/unpremultipliedRgb/.test(blurPass?.source || '')),
+    'blur does not amplify tiny alpha into square halos'
+  ).toBe(false);
 
   const compositePass = bloomShaderPassPipeline.steps.find(
     step => step.shaderPass.name === 'bloomComposite'
   )?.shaderPass;
-  t.ok(compositePass, 'multiscale bloom includes a glow composite');
-  t.match(
+  expect(Boolean(compositePass), 'multiscale bloom includes a glow composite').toBe(true);
+  expect(
     compositePass?.source || '',
-    /textureSample\(glowHalf, glowHalfSampler, texCoord\)/,
     'WGSL composites glow in the same orientation as the scene'
-  );
-  t.match(
+  ).toMatch(/textureSample\(glowHalf, glowHalfSampler, texCoord\)/);
+  expect(
     compositePass?.fs || '',
-    /texture\(glowHalf, texCoord\)/,
     'GLSL composites glow in the same orientation as the scene'
-  );
-  t.notOk(
-    /shaderPassRenderer_getRenderTargetUV/.test(compositePass?.fs || ''),
+  ).toMatch(/texture\(glowHalf, texCoord\)/);
+  expect(
+    Boolean(/shaderPassRenderer_getRenderTargetUV/.test(compositePass?.fs || '')),
     'GLSL does not vertically mirror named bloom targets'
-  );
-  t.end();
+  ).toBe(false);
 });
 
-test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase => {
+it('createBloomShaderPassPipeline#adaptive pyramid reconstruction', () => {
   const qualityLevels = [
     {quality: 'low', levelCount: 2, coarsestLevel: 'Quarter'},
     {quality: 'medium', levelCount: 3, coarsestLevel: 'Eighth'},
@@ -174,42 +153,34 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
     const upsampleSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomUpsample');
     const compositeStep = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
 
-    testCase.equal(extractionSteps.length, 1, `${quality} quality thresholds highlights once`);
-    testCase.equal(
+    expect(extractionSteps.length, `${quality} quality thresholds highlights once`).toBe(1);
+    expect(
       downsampleSteps.length,
-      levelCount - 1,
       `${quality} quality builds ${levelCount} successive pyramid levels`
+    ).toBe(levelCount - 1);
+    expect(blurSteps.length, `${quality} quality uses separable blur at every pyramid level`).toBe(
+      levelCount * 2
     );
-    testCase.equal(
-      blurSteps.length,
-      levelCount * 2,
-      `${quality} quality uses separable blur at every pyramid level`
-    );
-    testCase.equal(
+    expect(
       upsampleSteps.length,
-      levelCount - 1,
       `${quality} quality progressively reconstructs the complete pyramid`
-    );
-    testCase.equal(
+    ).toBe(levelCount - 1);
+    expect(
       Object.keys(pipeline.renderTargets || {}).length,
-      levelCount * 4 - 1,
       `${quality} quality allocates only its required pyramid and reconstruction targets`
-    );
-    testCase.equal(
+    ).toBe(levelCount * 4 - 1);
+    expect(
       upsampleSteps[0]?.inputs?.sourceTexture,
-      `blur${coarsestLevel}`,
       `${quality} reconstruction starts at its coarsest blurred level`
-    );
-    testCase.equal(
+    ).toBe(`blur${coarsestLevel}`);
+    expect(
       upsampleSteps[upsampleSteps.length - 1]?.output,
-      'upsampleHalf',
       `${quality} reconstruction finishes at half resolution`
-    );
-    testCase.equal(
+    ).toBe('upsampleHalf');
+    expect(
       compositeStep?.inputs?.glowTexture,
-      'upsampleHalf',
       `${quality} composition consumes one normalized reconstructed glow texture`
-    );
+    ).toBe('upsampleHalf');
   }
 
   const pipeline = createBloomShaderPassPipeline({
@@ -226,65 +197,50 @@ test('createBloomShaderPassPipeline#adaptive pyramid reconstruction', testCase =
   const upsampleSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomUpsample');
   const compositeStep = pipeline.steps.find(step => step.shaderPass.name === 'bloomComposite');
 
-  testCase.equal(extractionStep?.uniforms?.softKnee, 0.35, 'configures the soft highlight knee');
-  testCase.equal(
+  expect(extractionStep?.uniforms?.softKnee, 'configures the soft highlight knee').toBe(0.35);
+  expect(
     extractionStep?.uniforms?.fireflyReduction,
-    0.4,
     'configures luminance-weighted firefly suppression'
-  );
-  testCase.equal(blurSteps[0]?.uniforms?.radius, 15, 'positive anamorphism widens horizontal blur');
-  testCase.equal(
-    blurSteps[1]?.uniforms?.radius,
-    10,
-    'positive anamorphism preserves vertical blur'
-  );
-  testCase.ok(
-    upsampleSteps.every(step => step.uniforms?.scatter === 0.7),
+  ).toBe(0.4);
+  expect(blurSteps[0]?.uniforms?.radius, 'positive anamorphism widens horizontal blur').toBe(15);
+  expect(blurSteps[1]?.uniforms?.radius, 'positive anamorphism preserves vertical blur').toBe(10);
+  expect(
+    Boolean(upsampleSteps.every(step => step.uniforms?.scatter === 0.7)),
     'applies the same normalized scatter to every reconstruction level'
-  );
-  testCase.deepEqual(compositeStep?.uniforms?.tint, [0.8, 1, 0.65], 'applies the requested tint');
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(compositeStep?.uniforms?.tint, 'applies the requested tint').toEqual([0.8, 1, 0.65]);
+  expect(
     pipeline.renderTargets?.extractThirtySecond.scale,
-    [0.03125, 0.03125],
     'ultra quality reaches the thirty-second-resolution pyramid level'
-  );
+  ).toEqual([0.03125, 0.03125]);
 
   const upsamplePass = upsampleSteps[0]?.shaderPass;
-  testCase.match(
+  expect(
     upsamplePass?.source || '',
-    /\(center \+ edges \+ corners\) \/ 16\.0/,
     'WGSL reconstruction normalizes its nine-tap tent filter'
-  );
-  testCase.match(
+  ).toMatch(/\(center \+ edges \+ corners\) \/ 16\.0/);
+  expect(
     upsamplePass?.fs || '',
-    /\(center \+ edges \+ corners\) \/ 16\.0/,
     'GLSL reconstruction uses the matching normalized tent filter'
-  );
-  testCase.match(
+  ).toMatch(/\(center \+ edges \+ corners\) \/ 16\.0/);
+  expect(
     upsamplePass?.source || '',
-    /mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/,
     'WGSL mixes pyramid levels without duplicating highlight energy'
-  );
-  testCase.match(
+  ).toMatch(/mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/);
+  expect(
     upsamplePass?.fs || '',
-    /mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/,
     'GLSL mixes pyramid levels without duplicating highlight energy'
-  );
+  ).toMatch(/mix\(higherGlow, lowerGlow, clamp\(bloomUpsample\.scatter, 0\.0, 1\.0\)\)/);
 
   const verticalPipeline = createBloomShaderPassPipeline({radius: 10, anamorphicRatio: -0.5});
   const verticalBlurSteps = verticalPipeline.steps.filter(
     step => step.shaderPass.name === 'bloomBlur'
   );
-  testCase.equal(
-    verticalBlurSteps[0]?.uniforms?.radius,
-    10,
-    'negative anamorphism preserves width'
-  );
-  testCase.equal(verticalBlurSteps[1]?.uniforms?.radius, 15, 'negative anamorphism widens height');
-  testCase.end();
+  expect(verticalBlurSteps[0]?.uniforms?.radius, 'negative anamorphism preserves width').toBe(10);
+  expect(verticalBlurSteps[1]?.uniforms?.radius, 'negative anamorphism widens height').toBe(15);
 });
 
-test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kernel', testCase => {
+it('createBloomShaderPassPipeline#anamorphic radii stay within the shader kernel', () => {
   const anamorphicCases = [
     {radius: 12, anamorphicRatio: 1, horizontalRadius: 24, verticalRadius: 12},
     {radius: 18, anamorphicRatio: 0.5, horizontalRadius: 24, verticalRadius: 16},
@@ -298,19 +254,18 @@ test('createBloomShaderPassPipeline#anamorphic radii stay within the shader kern
     const pipeline = createBloomShaderPassPipeline({radius, anamorphicRatio});
     const blurSteps = pipeline.steps.filter(step => step.shaderPass.name === 'bloomBlur');
 
-    testCase.deepEqual(
+    expect(
       blurSteps.map(step => step.uniforms?.radius),
+      `radius ${radius} preserves anamorphic ratio ${anamorphicRatio} within every shader kernel`
+    ).toEqual(
       Array.from({length: blurSteps.length}, (_, stepIndex) =>
         stepIndex % 2 === 0 ? horizontalRadius : verticalRadius
-      ),
-      `radius ${radius} preserves anamorphic ratio ${anamorphicRatio} within every shader kernel`
+      )
     );
   }
-
-  testCase.end();
 });
 
-test('createBloomShaderPassPipeline#optional cinematic lens effects', testCase => {
+it('createBloomShaderPassPipeline#optional cinematic lens effects', () => {
   const defaultPipeline = createBloomShaderPassPipeline();
   const dirtOnlyPipeline = createBloomShaderPassPipeline({lens: {dirtIntensity: 0.8}});
   const cinematicPipeline = createBloomShaderPassPipeline({
@@ -341,114 +296,78 @@ test('createBloomShaderPassPipeline#optional cinematic lens effects', testCase =
     step => step.shaderPass.name === 'bloomComposite'
   );
 
-  testCase.equal(
-    defaultPipeline.steps.length,
-    16,
-    'default high-quality bloom keeps its 16 passes'
-  );
-  testCase.equal(
+  expect(defaultPipeline.steps.length, 'default high-quality bloom keeps its 16 passes').toBe(16);
+  expect(
     dirtOnlyPipeline.steps.length,
-    defaultPipeline.steps.length,
     'lens dirt reuses the existing composite without adding a render pass'
-  );
-  testCase.equal(
+  ).toBe(defaultPipeline.steps.length);
+  expect(
     Object.keys(dirtOnlyPipeline.renderTargets || {}).length,
-    Object.keys(defaultPipeline.renderTargets || {}).length,
     'lens dirt does not allocate another intermediate texture'
-  );
-  testCase.deepEqual(
+  ).toBe(Object.keys(defaultPipeline.renderTargets || {}).length);
+  expect(
     dirtOnlyComposite?.shaderPass.bindingLayout?.map(binding => binding.name),
-    ['glowTexture', 'lensDirtTexture'],
     'dirt-only composition requires only the glow and external dirt mask'
-  );
-  testCase.equal(
+  ).toEqual(['glowTexture', 'lensDirtTexture']);
+  expect(
     cinematicPipeline.steps.length,
-    defaultPipeline.steps.length + 2,
     'all lens artifacts share one half-resolution pass and stabilization adds one history pass'
-  );
-  testCase.deepEqual(
+  ).toBe(defaultPipeline.steps.length + 2);
+  expect(
     cinematicPipeline.renderTargets?.['bloomLensArtifacts'].scale,
-    [0.5, 0.5],
     'photographic artifacts render at half resolution'
-  );
-  testCase.equal(
+  ).toEqual([0.5, 0.5]);
+  expect(
     cinematicPipeline.renderTargets?.['bloomGlowHistory'].lifetime,
-    'history',
     'temporal stabilization owns persistent glow history'
-  );
-  testCase.deepEqual(
+  ).toBe('history');
+  expect(
     cinematicPipeline.renderTargets?.['bloomGlowHistory'].initialize,
-    {clearColor: [0, 0, 0, 0]},
     'an invalid history marker prevents first-frame darkening'
-  );
-  testCase.deepEqual(
+  ).toEqual({clearColor: [0, 0, 0, 0]});
+  expect(
     temporalStep?.inputs,
-    {sourceTexture: 'upsampleHalf', historyTexture: 'bloomGlowHistory'},
     'temporal stabilization clamps reconstructed glow against its previous frame'
-  );
-  testCase.equal(temporalStep?.uniforms?.stability, 0.7, 'configures temporal history blending');
-  testCase.deepEqual(
+  ).toEqual({sourceTexture: 'upsampleHalf', historyTexture: 'bloomGlowHistory'});
+  expect(temporalStep?.uniforms?.stability, 'configures temporal history blending').toBe(0.7);
+  expect(
     lensStep?.inputs,
-    {sourceTexture: 'extractHalf', glowTexture: 'bloomGlowHistory'},
     'lens artifacts combine sharp HDR highlights with stabilized glow'
-  );
-  testCase.equal(
-    lensStep?.uniforms?.starburstSpikes,
-    8,
-    'rounds diffraction rays to an even count'
-  );
-  testCase.equal(
-    lensStep?.uniforms?.ghostCount,
-    6,
-    'caps ghost reflections at their shader budget'
-  );
-  testCase.equal(
-    lensStep?.uniforms?.chromaticAberration,
-    0.6,
-    'configures spectral lens separation'
-  );
-  testCase.match(
+  ).toEqual({sourceTexture: 'extractHalf', glowTexture: 'bloomGlowHistory'});
+  expect(lensStep?.uniforms?.starburstSpikes, 'rounds diffraction rays to an even count').toBe(8);
+  expect(lensStep?.uniforms?.ghostCount, 'caps ghost reflections at their shader budget').toBe(6);
+  expect(lensStep?.uniforms?.chromaticAberration, 'configures spectral lens separation').toBe(0.6);
+  expect(
     lensStep?.shaderPass.source || '',
-    /textureSampleLevel\(sourceTexture/,
     'WGSL lens reflections use explicit levels inside nonuniform screen-space branches'
-  );
-  testCase.match(
+  ).toMatch(/textureSampleLevel\(sourceTexture/);
+  expect(
     lensStep?.shaderPass.fs || '',
-    /textureLod\(sourceTexture/,
     'GLSL lens reflections match the explicit sampling behavior'
-  );
-  testCase.deepEqual(
+  ).toMatch(/textureLod\(sourceTexture/);
+  expect(
     compositeStep?.shaderPass.bindingLayout?.map(binding => binding.name),
-    ['glowTexture', 'lensTexture', 'lensDirtTexture'],
     'composition binds dirt and lens artifacts only when they are enabled'
-  );
-  testCase.equal(compositeStep?.uniforms?.dirtIntensity, 0.35, 'configures the dirt-mask strength');
+  ).toEqual(['glowTexture', 'lensTexture', 'lensDirtTexture']);
+  expect(compositeStep?.uniforms?.dirtIntensity, 'configures the dirt-mask strength').toBe(0.35);
 
   const clampedPipeline = createBloomShaderPassPipeline({
     temporalStability: 4,
     lens: {starburstIntensity: 1, starburstSpikes: 1, starburstLength: 500}
   });
   const clampedLensStep = clampedPipeline.steps.find(step => step.shaderPass.name === 'bloomLens');
-  testCase.equal(
+  expect(
     clampedPipeline.steps.find(step => step.shaderPass.name === 'bloomTemporal')?.uniforms
       ?.stability,
-    0.95,
     'limits history contribution to preserve responsiveness'
-  );
-  testCase.equal(
-    clampedLensStep?.uniforms?.starburstSpikes,
-    2,
-    'keeps at least two diffraction rays'
-  );
-  testCase.equal(clampedLensStep?.uniforms?.starburstLength, 256, 'limits the diffraction radius');
-  testCase.end();
+  ).toBe(0.95);
+  expect(clampedLensStep?.uniforms?.starburstSpikes, 'keeps at least two diffraction rays').toBe(2);
+  expect(clampedLensStep?.uniforms?.starburstLength, 'limits the diffraction radius').toBe(256);
 });
 
-test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU dispatch', async testCase => {
+it('HDR bloom replaces fragment extraction with one exposure-aware WebGPU dispatch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -459,8 +378,6 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
     !capabilities.store ||
     device.limits.maxStorageTexturesPerShaderStage < 3
   ) {
-    testCase.comment('Fused floating-point storage textures are unavailable');
-    testCase.end();
     return;
   }
 
@@ -556,27 +473,26 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
   };
 
   try {
-    testCase.ok(
-      renderer.passRenderers[0].computeRenderer,
+    expect(
+      Boolean(renderer.passRenderers[0].computeRenderer),
       'the supported backend selects fused compute'
-    );
+    ).toBe(true);
     const lowExposure = await renderWithExposure(0.2);
     const highExposure = await renderWithExposure(2);
 
-    testCase.equal(highExposure.computePasses, 1, 'all pyramid levels share one compute dispatch');
-    testCase.equal(
+    expect(highExposure.computePasses, 'all pyramid levels share one compute dispatch').toBe(1);
+    expect(
       highExposure.renderPasses,
-      10,
       'medium quality uses nine effect render passes plus one source-seeding pass'
-    );
-    testCase.ok(
-      highExposure.highlight > 4,
+    ).toBe(10);
+    expect(
+      Boolean(highExposure.highlight > 4),
       'HDR extraction contributes glow above the source peak'
-    );
-    testCase.ok(
-      highExposure.neighbor > lowExposure.neighbor,
+    ).toBe(true);
+    expect(
+      Boolean(highExposure.neighbor > lowExposure.neighbor),
       'runtime camera exposure changes the effective threshold without rebuilding the renderer'
-    );
+    ).toBe(true);
 
     const flippedComputeRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
@@ -608,13 +524,12 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
     try {
       const flippedCompute = await renderWithExposure(2, flippedComputeRenderer);
       const flippedFragment = await renderWithExposure(2, flippedFragmentRenderer);
-      testCase.equal(flippedCompute.computePasses, 1, 'flipped WebGPU extraction stays fused');
-      testCase.equal(flippedFragment.computePasses, 0, 'explicit fragment mode disables compute');
-      testCase.equal(
+      expect(flippedCompute.computePasses, 'flipped WebGPU extraction stays fused').toBe(1);
+      expect(flippedFragment.computePasses, 'explicit fragment mode disables compute').toBe(0);
+      expect(
         Math.sign(flippedCompute.neighbor - flippedCompute.reflectedNeighbor),
-        Math.sign(flippedFragment.neighbor - flippedFragment.reflectedNeighbor),
         'fused extraction preserves the fragment fallback texture orientation'
-      );
+      ).toBe(Math.sign(flippedFragment.neighbor - flippedFragment.reflectedNeighbor));
     } finally {
       flippedComputeRenderer.destroy();
       flippedFragmentRenderer.destroy();
@@ -623,21 +538,16 @@ test('HDR bloom replaces fragment extraction with one exposure-aware WebGPU disp
     renderer.destroy();
     sourceTexture.destroy();
   }
-  testCase.end();
 });
 
-test('HDR bloom covers source texels at quarter pyramid resolution', async testCase => {
+it('HDR bloom covers source texels at quarter pyramid resolution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping reduced-resolution bloom regression');
-    testCase.end();
     return;
   }
 
   const capabilities = device.getTextureFormatCapabilities('rgba16float');
   if (!capabilities.render || !capabilities.filter) {
-    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
-    testCase.end();
     return;
   }
 
@@ -686,7 +596,7 @@ test('HDR bloom covers source texels at quarter pyramid resolution', async testC
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'reduced-resolution bloom renders');
+    expect(Boolean(outputTexture), 'reduced-resolution bloom renders').toBe(true);
     if (outputTexture) {
       const memoryLayout = outputTexture.computeMemoryLayout({width, height});
       const readbackBuffer = device.createBuffer({
@@ -701,14 +611,14 @@ test('HDR bloom covers source texels at quarter pyramid resolution', async testC
         const readRed = (pixelX: number, pixelY: number): number =>
           fromHalfFloat(pixelView.getUint16(pixelY * memoryLayout.bytesPerRow + pixelX * 8, true));
 
-        testCase.ok(
-          readRed(highlightX, highlightY) > sourceRadiance,
+        expect(
+          Boolean(readRed(highlightX, highlightY) > sourceRadiance),
           'a highlight in a former fixed-kernel sampling gap contributes bloom'
-        );
-        testCase.ok(
-          readRed(highlightX + 2, highlightY) > 0,
+        ).toBe(true);
+        expect(
+          Boolean(readRed(highlightX + 2, highlightY) > 0),
           'the captured highlight contributes glow to neighboring source pixels'
-        );
+        ).toBe(true);
       } finally {
         readbackBuffer.destroy();
       }
@@ -717,22 +627,16 @@ test('HDR bloom covers source texels at quarter pyramid resolution', async testC
     renderer.destroy();
     sourceTexture.destroy();
   }
-
-  testCase.end();
 });
 
-test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', async testCase => {
+it('HDR bloom preserves radiance with symmetric, energy-bounded falloff', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping HDR bloom image regression');
-    testCase.end();
     return;
   }
 
   const capabilities = device.getTextureFormatCapabilities('rgba16float');
   if (!capabilities.render || !capabilities.filter) {
-    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
-    testCase.end();
     return;
   }
 
@@ -784,7 +688,7 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'isolated HDR bloom highlight renders');
+    expect(Boolean(outputTexture), 'isolated HDR bloom highlight renders').toBe(true);
     if (outputTexture) {
       const memoryLayout = outputTexture.computeMemoryLayout({width, height});
       const readbackBuffer = device.createBuffer({
@@ -827,29 +731,35 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
         ]);
         const symmetryTolerance = Math.max(middleGlow * 0.06, 0.015);
 
-        testCase.ok(
-          centerRadiance > sourceRadiance,
+        expect(
+          Boolean(centerRadiance > sourceRadiance),
           'bloom composites onto a true HDR source without clipping it to display range'
+        ).toBe(true);
+        expect(Boolean(nearGlow > middleGlow), 'glow falls off outside the source highlight').toBe(
+          true
         );
-        testCase.ok(nearGlow > middleGlow, 'glow falls off outside the source highlight');
-        testCase.ok(middleGlow > distantGlow, 'glow continues falling off at wider radii');
-        testCase.ok(
-          Math.abs(leftGlow - rightGlow) <= symmetryTolerance,
+        expect(Boolean(middleGlow > distantGlow), 'glow continues falling off at wider radii').toBe(
+          true
+        );
+        expect(
+          Boolean(Math.abs(leftGlow - rightGlow) <= symmetryTolerance),
           'horizontal bloom is symmetric around the highlight'
-        );
-        testCase.ok(
-          Math.abs(topGlow - bottomGlow) <= symmetryTolerance,
+        ).toBe(true);
+        expect(
+          Boolean(Math.abs(topGlow - bottomGlow) <= symmetryTolerance),
           'vertical bloom is symmetric around the highlight'
-        );
-        testCase.ok(
-          Math.abs(average([leftGlow, rightGlow]) - average([topGlow, bottomGlow])) <=
-            symmetryTolerance,
+        ).toBe(true);
+        expect(
+          Boolean(
+            Math.abs(average([leftGlow, rightGlow]) - average([topGlow, bottomGlow])) <=
+              symmetryTolerance
+          ),
           'horizontal and vertical falloff have matching energy'
-        );
-        testCase.ok(
-          diagonalGlow < middleGlow,
+        ).toBe(true);
+        expect(
+          Boolean(diagonalGlow < middleGlow),
           'diagonal support decays instead of forming a square plateau'
-        );
+        ).toBe(true);
 
         let addedBloomEnergy = 0;
         for (let pixelY = 0; pixelY < height; pixelY++) {
@@ -860,14 +770,14 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
           }
         }
         const sourceEnergy = sourceRadiance * 4;
-        testCase.ok(
-          addedBloomEnergy > sourceEnergy * 0.4,
+        expect(
+          Boolean(addedBloomEnergy > sourceEnergy * 0.4),
           'normalized downsampling retains useful HDR highlight energy'
-        );
-        testCase.ok(
-          addedBloomEnergy < sourceEnergy * 1.6,
+        ).toBe(true);
+        expect(
+          Boolean(addedBloomEnergy < sourceEnergy * 1.6),
           'the multiscale pyramid does not duplicate unbounded highlight energy'
-        );
+        ).toBe(true);
       } finally {
         readbackBuffer.destroy();
       }
@@ -876,22 +786,16 @@ test('HDR bloom preserves radiance with symmetric, energy-bounded falloff', asyn
     renderer.destroy();
     sourceTexture.destroy();
   }
-
-  testCase.end();
 });
 
-test('HDR bloom suppresses fireflies and applies its cinematic tint', async testCase => {
+it('HDR bloom suppresses fireflies and applies its cinematic tint', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping cinematic bloom image regression');
-    testCase.end();
     return;
   }
 
   const capabilities = device.getTextureFormatCapabilities('rgba16float');
   if (!capabilities.render || !capabilities.filter) {
-    testCase.comment('Renderable, filterable rgba16float textures are unavailable');
-    testCase.end();
     return;
   }
 
@@ -940,10 +844,10 @@ test('HDR bloom suppresses fireflies and applies its cinematic tint', async test
     });
     device.submit();
 
-    testCase.ok(
-      outputTexture,
+    expect(
+      Boolean(outputTexture),
       `cinematic bloom renders with firefly reduction ${fireflyReduction}`
-    );
+    ).toBe(true);
     if (!outputTexture) {
       return [0, 0, 0];
     }
@@ -974,23 +878,24 @@ test('HDR bloom suppresses fireflies and applies its cinematic tint', async test
     const unfilteredGlow = await readGlow(0);
     const filteredGlow = await readGlow(1);
 
-    testCase.ok(unfilteredGlow[0] > 0, 'an isolated HDR highlight contributes visible bloom');
-    testCase.ok(
-      Math.abs(unfilteredGlow[1] / unfilteredGlow[0] - 0.5) < 0.02,
+    expect(
+      Boolean(unfilteredGlow[0] > 0),
+      'an isolated HDR highlight contributes visible bloom'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(unfilteredGlow[1] / unfilteredGlow[0] - 0.5) < 0.02),
       'the green bloom channel respects the configured tint'
-    );
-    testCase.ok(
-      Math.abs(unfilteredGlow[2] / unfilteredGlow[0] - 0.25) < 0.02,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(unfilteredGlow[2] / unfilteredGlow[0] - 0.25) < 0.02),
       'the blue bloom channel respects the configured tint'
-    );
-    testCase.ok(
-      filteredGlow[0] < unfilteredGlow[0] * 0.2,
+    ).toBe(true);
+    expect(
+      Boolean(filteredGlow[0] < unfilteredGlow[0] * 0.2),
       'luminance-weighted extraction suppresses an isolated HDR firefly'
-    );
+    ).toBe(true);
   } finally {
     renderer.destroy();
     sourceTexture.destroy();
   }
-
-  testCase.end();
 });

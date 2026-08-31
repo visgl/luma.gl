@@ -4,7 +4,7 @@
 
 /* eslint-disable no-continue */
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';
@@ -55,24 +55,26 @@ function getLegacyResourceStats(device: Device) {
   };
 }
 
-test('Buffer#constructor/delete', async t => {
+it('Buffer#constructor/delete', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const buffer = device.createBuffer({usage: Buffer.VERTEX});
     // @ts-ignore handle
-    t.ok(buffer.handle, `${device.type} Buffer construction successful`);
+    expect(Boolean(buffer.handle), `${device.type} Buffer construction successful`).toBe(true);
 
     buffer.destroy();
     // @ts-ignore handle
-    t.ok(!buffer.handle, `${device.type} Buffer.destroy() successful`);
+    expect(Boolean(!buffer.handle), `${device.type} Buffer.destroy() successful`).toBe(true);
 
     buffer.destroy();
     // @ts-ignore handle
-    t.ok(!buffer.handle, `${device.type} repeated Buffer.destroy() successful`);
+    expect(Boolean(!buffer.handle), `${device.type} repeated Buffer.destroy() successful`).toBe(
+      true
+    );
   }
-  t.end();
+  void 0;
 });
 
-test('Buffer#constructor offset and size', async t => {
+it('Buffer#constructor offset and size', async () => {
   const data = new Float32Array([1, 2, 3]);
 
   for (const device of await getTestDevices(DEVICE_TYPES)) {
@@ -81,56 +83,47 @@ test('Buffer#constructor offset and size', async t => {
     }
     let buffer = device.createBuffer({data, byteOffset: 8});
     let expectedData = new Float32Array([0, 0, 1, 2, 3]);
-    t.equal(
-      buffer.byteLength,
-      expectedData.byteLength,
-      `${device.type} Buffer byteLength set properly`
+    expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
+      expectedData.byteLength
     );
 
     let receivedData = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       new Float32Array(receivedData.buffer),
-      expectedData,
       `${device.type} Buffer constructor offsets data`
-    );
+    ).toEqual(expectedData);
     buffer.destroy();
 
     buffer = device.createBuffer({data, byteLength: data.byteLength + 12});
     expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
-    t.equal(
-      buffer.byteLength,
-      expectedData.byteLength,
-      `${device.type} Buffer byteLength set properly`
+    expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
+      expectedData.byteLength
     );
 
     receivedData = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       new Float32Array(receivedData.buffer),
-      expectedData,
       `${device.type} Buffer constructor sets buffer data`
-    );
+    ).toEqual(expectedData);
     buffer.destroy();
 
     buffer = device.createBuffer({data, byteOffset: 8, byteLength: data.byteLength + 12});
     expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
-    t.equal(
-      buffer.byteLength,
-      expectedData.byteLength,
-      `${device.type} Buffer byteLength set properly`
+    expect(buffer.byteLength, `${device.type} Buffer byteLength set properly`).toBe(
+      expectedData.byteLength
     );
 
     receivedData = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       new Float32Array(receivedData.buffer),
-      expectedData,
       `${device.type} Buffer constructor sets buffer byteLength and offsets data`
-    );
+    ).toEqual(expectedData);
     buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Buffer#write', async t => {
+it('Buffer#write', async () => {
   const expectedData = new Float32Array([1, 2, 3]);
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const buffer = device.createBuffer({
@@ -139,57 +132,52 @@ test('Buffer#write', async t => {
     });
     buffer.write(expectedData);
     const receivedData = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       new Float32Array(receivedData.buffer),
-      expectedData,
       `${device.type} Buffer.write(ARRAY_BUFFER) stores correct bytes`
-    );
+    ).toEqual(expectedData);
     buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Buffer tracks GPU memory stats', async t => {
+it('Buffer tracks GPU memory stats', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const beforeStats = getMemoryStats(device);
     const buffer = device.createBuffer({byteLength: 6, usage: Buffer.VERTEX});
     const expectedAllocation = device.type === 'webgpu' ? 8 : 6;
     const afterCreateStats = getMemoryStats(device);
 
-    t.equal(
+    expect(
       afterCreateStats.gpuMemory - beforeStats.gpuMemory,
-      expectedAllocation,
       `${device.type} Buffer updates total GPU Memory`
-    );
-    t.equal(
+    ).toBe(expectedAllocation);
+    expect(
       afterCreateStats.bufferMemory - beforeStats.bufferMemory,
-      expectedAllocation,
       `${device.type} Buffer updates Buffer Memory`
-    );
+    ).toBe(expectedAllocation);
 
     buffer.destroy();
 
     const afterDestroyStats = getMemoryStats(device);
-    t.equal(
+    expect(
       afterDestroyStats.gpuMemory,
-      beforeStats.gpuMemory,
       `${device.type} Buffer destroy restores total GPU Memory`
-    );
-    t.equal(
+    ).toBe(beforeStats.gpuMemory);
+    expect(
       afterDestroyStats.bufferMemory,
-      beforeStats.bufferMemory,
       `${device.type} Buffer destroy restores Buffer Memory`
-    );
+    ).toBe(beforeStats.bufferMemory);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Handle-backed Buffer tracks external memory stats', async t => {
+it('Handle-backed Buffer tracks external memory stats', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const beforeStats = getMemoryStats(device);
@@ -205,41 +193,36 @@ test('Handle-backed Buffer tracks external memory stats', async t => {
   });
   const afterCreateStats = getMemoryStats(device);
 
-  t.equal(
+  expect(
     afterCreateStats.gpuMemory - beforeStats.gpuMemory,
-    12,
     'webgpu handle-backed Buffer updates total GPU Memory'
-  );
-  t.equal(
+  ).toBe(12);
+  expect(
     afterCreateStats.bufferMemory - beforeStats.bufferMemory,
-    0,
     'webgpu handle-backed Buffer does not update owned Buffer Memory'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     afterCreateStats.externalBufferMemory - beforeStats.externalBufferMemory,
-    12,
     'webgpu handle-backed Buffer updates External Buffer Memory'
-  );
+  ).toBe(12);
 
   buffer.destroy();
 
   const afterDestroyStats = getMemoryStats(device);
-  t.equal(
+  expect(
     afterDestroyStats.gpuMemory,
-    beforeStats.gpuMemory,
     'webgpu handle-backed Buffer destroy restores total GPU Memory'
-  );
-  t.equal(
+  ).toBe(beforeStats.gpuMemory);
+  expect(
     afterDestroyStats.externalBufferMemory,
-    beforeStats.externalBufferMemory,
     'webgpu handle-backed Buffer destroy restores External Buffer Memory'
-  );
+  ).toBe(beforeStats.externalBufferMemory);
 
   handle.destroy();
-  t.end();
+  void 0;
 });
 
-test('Buffer tracks resource counts in core stats', async t => {
+it('Buffer tracks resource counts in core stats', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const beforeStats = getResourceStats(device);
     const beforeLegacyStats = getLegacyResourceStats(device);
@@ -247,148 +230,130 @@ test('Buffer tracks resource counts in core stats', async t => {
     const afterCreateStats = getResourceStats(device);
     const afterCreateLegacyStats = getLegacyResourceStats(device);
 
-    t.equal(
+    expect(
       afterCreateStats.resourcesCreated - beforeStats.resourcesCreated,
-      1,
       `${device.type} Buffer increments total resources created`
-    );
-    t.equal(
+    ).toBe(1);
+    expect(
       afterCreateStats.resourcesActive - beforeStats.resourcesActive,
-      1,
       `${device.type} Buffer increments total resources active`
-    );
-    t.equal(
+    ).toBe(1);
+    expect(
       afterCreateStats.buffersCreated - beforeStats.buffersCreated,
-      1,
       `${device.type} Buffer increments Buffers Created`
-    );
-    t.equal(
+    ).toBe(1);
+    expect(
       afterCreateStats.buffersActive - beforeStats.buffersActive,
-      1,
       `${device.type} Buffer increments Buffers Active`
-    );
-    t.equal(
+    ).toBe(1);
+    expect(
       afterCreateStats.resourcesCreated - beforeStats.resourcesCreated,
-      afterCreateLegacyStats.resourcesCreated - beforeLegacyStats.resourcesCreated,
       `${device.type} Resource Created counter matches legacy bucket`
-    );
-    t.equal(
+    ).toBe(afterCreateLegacyStats.resourcesCreated - beforeLegacyStats.resourcesCreated);
+    expect(
       afterCreateStats.resourcesActive - beforeStats.resourcesActive,
-      afterCreateLegacyStats.resourcesActive - beforeLegacyStats.resourcesActive,
       `${device.type} Resource Active counter matches legacy bucket`
-    );
-    t.equal(
+    ).toBe(afterCreateLegacyStats.resourcesActive - beforeLegacyStats.resourcesActive);
+    expect(
       afterCreateStats.buffersCreated - beforeStats.buffersCreated,
-      afterCreateLegacyStats.buffersCreated - beforeLegacyStats.buffersCreated,
       `${device.type} Buffer Created counter matches legacy bucket`
-    );
-    t.equal(
+    ).toBe(afterCreateLegacyStats.buffersCreated - beforeLegacyStats.buffersCreated);
+    expect(
       afterCreateStats.buffersActive - beforeStats.buffersActive,
-      afterCreateLegacyStats.buffersActive - beforeLegacyStats.buffersActive,
       `${device.type} Buffer Active counter matches legacy bucket`
-    );
+    ).toBe(afterCreateLegacyStats.buffersActive - beforeLegacyStats.buffersActive);
 
     buffer.destroy();
 
     const afterDestroyStats = getResourceStats(device);
     const afterDestroyLegacyStats = getLegacyResourceStats(device);
-    t.equal(
+    expect(
       afterDestroyStats.resourcesCreated,
-      afterCreateStats.resourcesCreated,
       `${device.type} Buffer destroy does not change total resources created`
-    );
-    t.equal(
+    ).toBe(afterCreateStats.resourcesCreated);
+    expect(
       afterDestroyStats.resourcesActive,
-      beforeStats.resourcesActive,
       `${device.type} Buffer destroy restores total resources active`
-    );
-    t.equal(
+    ).toBe(beforeStats.resourcesActive);
+    expect(
       afterDestroyStats.buffersCreated,
-      afterCreateStats.buffersCreated,
       `${device.type} Buffer destroy does not change Buffers Created`
-    );
-    t.equal(
+    ).toBe(afterCreateStats.buffersCreated);
+    expect(
       afterDestroyStats.resourcesCreated,
-      afterDestroyLegacyStats.resourcesCreated,
       `${device.type} Legacy and new buckets match on Resources Created`
-    );
-    t.equal(
+    ).toBe(afterDestroyLegacyStats.resourcesCreated);
+    expect(
       afterDestroyStats.buffersActive,
-      beforeStats.buffersActive,
       `${device.type} Buffer destroy restores Buffers Active`
-    );
-    t.equal(
+    ).toBe(beforeStats.buffersActive);
+    expect(
       afterDestroyStats.resourcesActive,
-      afterDestroyLegacyStats.resourcesActive,
       `${device.type} Legacy and new buckets match on Resources Active`
-    );
-    t.equal(
+    ).toBe(afterDestroyLegacyStats.resourcesActive);
+    expect(
       afterDestroyStats.buffersCreated,
-      afterDestroyLegacyStats.buffersCreated,
       `${device.type} Legacy and new buckets match on Buffers Created`
-    );
-    t.equal(
+    ).toBe(afterDestroyLegacyStats.buffersCreated);
+    expect(
       afterDestroyStats.buffersActive,
-      afterDestroyLegacyStats.buffersActive,
       `${device.type} Legacy and new buckets match on Buffers Active`
-    );
+    ).toBe(afterDestroyLegacyStats.buffersActive);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Core stats use canonical resource ordering', async t => {
+it('Core stats use canonical resource ordering', async () => {
   for (const device of await getTestDevices(['null'])) {
     const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
 
-    t.deepEqual(
+    expect(
       getStatNames(device, 'Resource Counts').slice(0, 14),
-      [
-        'Resources Created',
-        'Resources Active',
-        'Buffers Created',
-        'Buffers Active',
-        'Textures Created',
-        'Textures Active',
-        'Samplers Created',
-        'Samplers Active',
-        'TextureViews Created',
-        'TextureViews Active',
-        'Framebuffers Created',
-        'Framebuffers Active',
-        'QuerySets Created',
-        'QuerySets Active'
-      ],
       'core Resource Counts stats use canonical ordering'
-    );
+    ).toEqual([
+      'Resources Created',
+      'Resources Active',
+      'Buffers Created',
+      'Buffers Active',
+      'Textures Created',
+      'Textures Active',
+      'Samplers Created',
+      'Samplers Active',
+      'TextureViews Created',
+      'TextureViews Active',
+      'Framebuffers Created',
+      'Framebuffers Active',
+      'QuerySets Created',
+      'QuerySets Active'
+    ]);
 
-    t.deepEqual(
+    expect(
       getStatNames(device, 'GPU Time and Memory').slice(0, 14),
-      [
-        'Adapter',
-        'GPU',
-        'GPU Type',
-        'GPU Backend',
-        'Frame Rate',
-        'CPU Time',
-        'GPU Time',
-        'GPU Memory',
-        'Buffer Memory',
-        'Texture Memory',
-        'External Buffer Memory',
-        'External Texture Memory',
-        'Swap Chain Texture'
-      ],
       'GPU Time and Memory stats use canonical ordering'
-    );
+    ).toEqual([
+      'Adapter',
+      'GPU',
+      'GPU Type',
+      'GPU Backend',
+      'Frame Rate',
+      'CPU Time',
+      'GPU Time',
+      'GPU Memory',
+      'Buffer Memory',
+      'Texture Memory',
+      'External Buffer Memory',
+      'External Texture Memory',
+      'Swap Chain Texture'
+    ]);
 
     buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Buffer#readAsync', async t => {
+it('Buffer#readAsync', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     let data: TypedArray = new Float32Array([1, 2, 3, 4]);
 
@@ -398,53 +363,49 @@ test('Buffer#readAsync', async t => {
     let receivedData = await buffer.readAsync();
     let f32Data = new Float32Array(receivedData.buffer);
     let expectedData = new Float32Array([1, 2, 3, 4]);
-    t.deepEqual(
-      f32Data,
-      expectedData,
-      `${device.type} Buffer.readAsync: default parameters successful`
+    expect(f32Data, `${device.type} Buffer.readAsync: default parameters successful`).toEqual(
+      expectedData
     );
 
     // Read with byteOffset (skip 1 float = 4 bytes)
     receivedData = await buffer.readAsync(8);
     f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([3, 4]);
-    t.deepEqual(
-      f32Data,
-      expectedData,
-      `${device.type} Buffer.readAsync: with byteOffset successful`
+    expect(f32Data, `${device.type} Buffer.readAsync: with byteOffset successful`).toEqual(
+      expectedData
     );
 
     // Read with byteOffset and byteLength (read 2 floats = 8 bytes starting from offset 4)
     receivedData = await buffer.readAsync(8, 8);
     f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([3, 4]);
-    t.deepEqual(
+    expect(
       f32Data,
-      expectedData,
       `${device.type} Buffer.readAsync: with byteOffset + byteLength successful`
-    );
+    ).toEqual(expectedData);
 
     // Read 1 float starting at third float (offset 8)
     receivedData = await buffer.readAsync(8, 4);
     f32Data = new Float32Array(receivedData.buffer);
     expectedData = new Float32Array([3]);
-    t.deepEqual(f32Data, expectedData, `${device.type} Buffer.readAsync: partial range successful`);
+    expect(f32Data, `${device.type} Buffer.readAsync: partial range successful`).toEqual(
+      expectedData
+    );
 
     // Uint8Array test
     data = new Uint8Array([128, 255, 1, 0]);
     buffer = device.createBuffer({data, usage: Buffer.COPY_SRC | Buffer.COPY_DST});
     receivedData = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       receivedData,
-      data,
       `${device.type} Buffer.readAsync: Uint8Array input works correctly`
-    );
+    ).toEqual(data);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Buffer#mapAndWriteAsync (full and partial)', async t => {
+it('Buffer#mapAndWriteAsync (full and partial)', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const isWebGPU = device.type === 'webgpu';
     const mapped = isWebGPU ? 'mapped' : 'copied';
@@ -453,30 +414,28 @@ test('Buffer#mapAndWriteAsync (full and partial)', async t => {
     const buffer = device.createBuffer({byteLength: 16, usage: Buffer.COPY_DST | Buffer.COPY_SRC});
 
     await buffer.mapAndWriteAsync((arrayBuffer, lifetime) => {
-      t.ok(
-        arrayBuffer instanceof ArrayBuffer,
+      expect(
+        Boolean(arrayBuffer instanceof ArrayBuffer),
         `${device.type} mapAndWriteAsync calls with ArrayBuffer`
-      );
-      t.equal(
+      ).toBe(true);
+      expect(
         arrayBuffer.byteLength,
-        16,
         `${device.type} mapAndWriteAsync calls with correct byteLength`
-      );
-      t.equal(lifetime, mapped, `${device.type} mapAndWriteAsync calls with correct lifetime`);
+      ).toBe(16);
+      expect(lifetime, `${device.type} mapAndWriteAsync calls with correct lifetime`).toBe(mapped);
       new Float32Array(arrayBuffer).set([1, 2, 3, 4]);
     });
 
     const result = await buffer.readAsync(0, 16);
-    t.deepEqual(
+    expect(
       new Float32Array(result.buffer),
-      new Float32Array([1, 2, 3, 4]),
       `${device.type} full mapAndWriteAsync writes correct data`
-    );
+    ).toEqual(new Float32Array([1, 2, 3, 4]));
 
     // Partial write test (8 bytes = two floats)
     await buffer.mapAndWriteAsync(
       (arrayBuffer, lifetime) => {
-        t.equal(arrayBuffer.byteLength, 8, `${device.type} partial buffer is correct size`);
+        expect(arrayBuffer.byteLength, `${device.type} partial buffer is correct size`).toBe(8);
         new Float32Array(arrayBuffer).set([9, 10]);
       },
       8,
@@ -484,19 +443,18 @@ test('Buffer#mapAndWriteAsync (full and partial)', async t => {
     );
 
     const partial = await buffer.readAsync();
-    t.deepEqual(
+    expect(
       new Float32Array(partial.buffer),
-      new Float32Array([1, 2, 9, 10]),
       `${device.type} partial mapAndWriteAsync writes correct slice`
-    );
+    ).toEqual(new Float32Array([1, 2, 9, 10]));
 
     buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Buffer#mapAndReadAsync (full and partial)', async t => {
+it('Buffer#mapAndReadAsync (full and partial)', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const isWebGPU = device.type === 'webgpu';
     const initialData = new Float32Array([10, 20, 30, 40]);
@@ -507,18 +465,16 @@ test('Buffer#mapAndReadAsync (full and partial)', async t => {
 
     // Test full map
     const fullResult = await buffer.mapAndReadAsync((arrayBuffer, lifetime) => {
-      t.ok(
-        arrayBuffer instanceof ArrayBuffer,
+      expect(
+        Boolean(arrayBuffer instanceof ArrayBuffer),
         `${device.type} full mapAndReadAsync returns ArrayBuffer`
-      );
-      t.equal(
-        lifetime,
-        isWebGPU ? 'mapped' : 'copied',
-        `${device.type} full mapAndReadAsync returns correct lifetime`
+      ).toBe(true);
+      expect(lifetime, `${device.type} full mapAndReadAsync returns correct lifetime`).toBe(
+        isWebGPU ? 'mapped' : 'copied'
       );
       return new Float32Array(arrayBuffer.slice());
     });
-    t.deepEqual(fullResult, initialData, `${device.type} full mapAndReadAsync correct`);
+    expect(fullResult, `${device.type} full mapAndReadAsync correct`).toEqual(initialData);
 
     // Test partial map (byteOffset: 8 bytes, byteLength: 8 bytes = [20, 30])
     const expected = new Float32Array([30, 40]);
@@ -527,20 +483,20 @@ test('Buffer#mapAndReadAsync (full and partial)', async t => {
       8,
       8
     );
-    t.deepEqual(result, expected, `${device.type} partial mapAndReadAsync correct`);
+    expect(result, `${device.type} partial mapAndReadAsync correct`).toEqual(expected);
 
     buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async t => {
+it('Buffer#mapAndReadAsync (WebGPU alignment cases)', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU test device unavailable');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -575,39 +531,35 @@ test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async t => {
     );
     const result = await buffer.mapAndReadAsync(
       (arrayBuffer, lifetime) => {
-        t.equal(
-          arrayBuffer.byteLength,
-          alignmentCase.byteLength,
-          'callback receives requested byte range'
+        expect(arrayBuffer.byteLength, 'callback receives requested byte range').toBe(
+          alignmentCase.byteLength
         );
-        t.equal(
+        expect(
           lifetime,
-          alignmentCase.expectedLifetime,
           `lifetime is ${alignmentCase.expectedLifetime} for offset ${alignmentCase.byteOffset}, length ${alignmentCase.byteLength}`
-        );
+        ).toBe(alignmentCase.expectedLifetime);
         return new Uint8Array(arrayBuffer.slice());
       },
       alignmentCase.byteOffset,
       alignmentCase.byteLength
     );
 
-    t.deepEqual(
+    expect(
       result,
-      expected,
       `WebGPU buffer mapAndReadAsync returns exact slice (${alignmentCase.byteOffset}, ${alignmentCase.byteLength})`
-    );
+    ).toEqual(expected);
   }
 
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Buffer#mapAndReadAsync (WebGPU invalid range)', async t => {
+it('Buffer#mapAndReadAsync (WebGPU invalid range)', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU test device unavailable');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -621,20 +573,20 @@ test('Buffer#mapAndReadAsync (WebGPU invalid range)', async t => {
     await buffer.mapAndReadAsync(() => new Uint8Array(0), 2, 8);
   } catch (error) {
     threw = true;
-    t.match(String(error), /exceeds buffer size/, 'out-of-range map request throws');
+    expect(String(error), 'out-of-range map request throws').toMatch(/exceeds buffer size/);
   }
 
-  t.ok(threw, 'invalid range throws');
+  expect(Boolean(threw), 'invalid range throws').toBe(true);
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPUBuffer#paddedByteLength', async t => {
+it('WebGPUBuffer#paddedByteLength', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU test device unavailable');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -643,46 +595,46 @@ test('WebGPUBuffer#paddedByteLength', async t => {
     usage: Buffer.COPY_DST | Buffer.COPY_SRC
   });
 
-  t.equal(
+  expect(
     (buffer as unknown as {paddedByteLength: number}).paddedByteLength,
-    16,
     'WebGPUBuffer paddedByteLength is 4-byte aligned'
-  );
-  t.equal(buffer.byteLength, 13, 'webgpu buffer byteLength remains user requested');
+  ).toBe(16);
+  expect(buffer.byteLength, 'webgpu buffer byteLength remains user requested').toBe(13);
 
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Buffer#debugData', async t => {
+it('Buffer#debugData', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     // TODO - debugData not updated on WebGPU
     if (device.type !== 'webgl') {
       continue;
     }
     const buffer = device.createBuffer({usage: Buffer.VERTEX, byteLength: 24});
-    t.equal(
+    expect(
       buffer.debugData.byteLength,
-      24,
       `${device.type} Buffer.debugData is not null before write`
-    );
+    ).toBe(24);
 
     const expectedData = new Float32Array([0, 0, 1, 2, 3]);
     buffer.write(expectedData);
     const f32Data = new Float32Array(buffer.debugData);
-    t.deepEqual(f32Data, expectedData, `${device.type} Buffer.debugData is null after write`);
+    expect(f32Data, `${device.type} Buffer.debugData is null after write`).toEqual(expectedData);
 
     // TODO - not a very useful test, should test that debugData is updated after read
     await buffer.readAsync();
-    t.equal(buffer.debugData.byteLength, 24, `${device.type} Buffer.debugData is valid after read`);
+    expect(buffer.debugData.byteLength, `${device.type} Buffer.debugData is valid after read`).toBe(
+      24
+    );
 
     buffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('WEBGLBuffer#debugData is disabled when device debugging is disabled', async t => {
+it('WEBGLBuffer#debugData is disabled when device debugging is disabled', async () => {
   const device = await webgl2Adapter.create({
     createCanvasContext: {width: 1, height: 1},
     debug: false
@@ -693,51 +645,51 @@ test('WEBGLBuffer#debugData is disabled when device debugging is disabled', asyn
   });
   const emptyDebugData = buffer.debugData;
 
-  t.equal(buffer.debugData.byteLength, 0, 'Buffer.debugData is empty after construction');
+  expect(buffer.debugData.byteLength, 'Buffer.debugData is empty after construction').toBe(0);
 
   buffer.write(new Float32Array([4, 5, 6]));
-  t.equal(buffer.debugData, emptyDebugData, 'Buffer.write() does not replace Buffer.debugData');
+  expect(buffer.debugData, 'Buffer.write() does not replace Buffer.debugData').toBe(emptyDebugData);
 
   const data = await buffer.readAsync();
-  t.deepEqual(
-    new Float32Array(data.buffer),
-    new Float32Array([4, 5, 6]),
-    'Buffer contents are unaffected'
+  expect(new Float32Array(data.buffer), 'Buffer contents are unaffected').toEqual(
+    new Float32Array([4, 5, 6])
   );
-  t.equal(buffer.debugData, emptyDebugData, 'Buffer.readAsync() does not replace Buffer.debugData');
+  expect(buffer.debugData, 'Buffer.readAsync() does not replace Buffer.debugData').toBe(
+    emptyDebugData
+  );
 
   buffer.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });
 
 // WEBGL specific tests
 
-test('WEBGLBuffer#construction', async t => {
+it('WEBGLBuffer#construction', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   let buffer;
 
   buffer = webglDevice.createBuffer({usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3])});
-  t.ok(
-    buffer.glTarget === GL.ARRAY_BUFFER,
+  expect(
+    Boolean(buffer.glTarget === GL.ARRAY_BUFFER),
     `${webglDevice.info.type} Buffer(ARRAY_BUFFER) successful`
-  );
+  ).toBe(true);
   buffer.destroy();
 
   // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
   buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Uint32Array([1, 2, 3])});
-  t.ok(
-    buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER,
+  expect(
+    Boolean(buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER),
     `${webglDevice.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`
-  );
+  ).toBe(true);
 
   buffer.destroy();
 
-  t.end();
+  void 0;
 });
 
-test('Buffer#uint8 index buffer conversion', async t => {
+it('Buffer#uint8 index buffer conversion', async () => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const uint8Indices = new Uint8Array([0, 1, 2, 3, 255]);
     const buffer = device.createBuffer({
@@ -745,17 +697,16 @@ test('Buffer#uint8 index buffer conversion', async t => {
       data: uint8Indices
     });
 
-    t.equal(buffer.indexType, 'uint16', `${device.type} uint8 indices converted to uint16`);
+    expect(buffer.indexType, `${device.type} uint8 indices converted to uint16`).toBe('uint16');
 
     // Verify the data was correctly converted
     const readData = await buffer.readAsync();
     const uint16View = new Uint16Array(readData.buffer);
-    t.deepEqual(
+    expect(
       Array.from(uint16View),
-      [0, 1, 2, 3, 255],
       `${device.type} uint8 data correctly converted to uint16`
-    );
+    ).toEqual([0, 1, 2, 3, 255]);
     buffer.destroy();
   }
-  t.end();
+  void 0;
 });

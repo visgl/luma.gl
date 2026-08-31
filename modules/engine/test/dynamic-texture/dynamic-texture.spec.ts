@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer, Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
@@ -20,7 +20,7 @@ function createTestLabel(
   return `[${method}][${format}][${dimension}] ${detail}`;
 }
 
-test('DynamicTexture#readAsync', async t => {
+it('DynamicTexture#readAsync', async () => {
   const device = await getWebGLTestDevice();
   const data = new Uint8Array([1, 2, 3, 4]);
 
@@ -35,13 +35,13 @@ test('DynamicTexture#readAsync', async t => {
   await texture.ready;
   const resultBuffer = await texture.readAsync();
   const result = new Uint8Array(resultBuffer);
-  t.deepEqual(result, data, 'read back expected texture data');
+  expect(result, 'read back expected texture data').toEqual(data);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
+it('DynamicTexture accepts bare typed-array 2d payloads', async () => {
   const device = await getWebGLTestDevice();
   const data = new Uint8Array([9, 8, 7, 6]);
 
@@ -53,14 +53,14 @@ test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
   });
 
   await texture.ready;
-  t.equal(texture.texture.width, 1, 'typed-array payload initializes width');
-  t.equal(texture.texture.height, 1, 'typed-array payload initializes height');
+  expect(texture.texture.width, 'typed-array payload initializes width').toBe(1);
+  expect(texture.texture.height, 'typed-array payload initializes height').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture tracks update timestamps and resource generations', async t => {
+it('DynamicTexture tracks update timestamps and resource generations', async () => {
   const device = await getNullTestDevice();
   const texture = new DynamicTexture(device, {
     data: {data: new Uint8Array([1, 2, 3, 4]), width: 1, height: 1},
@@ -72,28 +72,34 @@ test('DynamicTexture tracks update timestamps and resource generations', async t
 
   await texture.ready;
 
-  t.equal(texture.generation, 1, 'initial texture creation increments generation');
-  t.ok(texture.updateTimestamp > initialTimestamp, 'initial texture creation updates timestamp');
+  expect(texture.generation, 'initial texture creation increments generation').toBe(1);
+  expect(
+    Boolean(texture.updateTimestamp > initialTimestamp),
+    'initial texture creation updates timestamp'
+  ).toBe(true);
 
   const readyGeneration = texture.generation;
   const readyTimestamp = texture.updateTimestamp;
 
   texture.setTexture2DData({data: new Uint8Array([5, 6, 7, 8]), width: 1, height: 1});
 
-  t.equal(texture.generation, readyGeneration, 'texture data upload preserves generation');
-  t.ok(texture.updateTimestamp > readyTimestamp, 'texture data upload updates timestamp');
+  expect(texture.generation, 'texture data upload preserves generation').toBe(readyGeneration);
+  expect(
+    Boolean(texture.updateTimestamp > readyTimestamp),
+    'texture data upload updates timestamp'
+  ).toBe(true);
 
   const uploadTimestamp = texture.updateTimestamp;
   texture.resize({width: 2, height: 2});
 
-  t.equal(texture.generation, readyGeneration + 1, 'resize increments generation');
-  t.ok(texture.updateTimestamp > uploadTimestamp, 'resize updates timestamp');
+  expect(texture.generation, 'resize increments generation').toBe(readyGeneration + 1);
+  expect(Boolean(texture.updateTimestamp > uploadTimestamp), 'resize updates timestamp').toBe(true);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture marks destroyed textures as not ready', async t => {
+it('DynamicTexture marks destroyed textures as not ready', async () => {
   const device = await getNullTestDevice();
   const texture = new DynamicTexture(device, {
     data: {data: new Uint8Array([1, 2, 3, 4]), width: 1, height: 1},
@@ -103,19 +109,19 @@ test('DynamicTexture marks destroyed textures as not ready', async t => {
   });
 
   await texture.ready;
-  t.true(texture.isReady, 'texture reports ready after initialization');
+  expect(Boolean(texture.isReady), 'texture reports ready after initialization').toBe(true);
 
   texture.destroy();
-  t.false(texture.isReady, 'destroyed texture no longer reports ready');
+  expect(Boolean(texture.isReady), 'destroyed texture no longer reports ready').toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -159,57 +165,52 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     width: 2,
     height: 2
   });
-  t.deepEqual(
+  expect(
     Array.from(manualBytes.slice(0, 4)),
-    [0, 0, 0, 255],
     createTestLabel(
       'render',
       RENDER_MIPMAP_TEST_FORMAT,
       '2d',
       'manual generate mip level 1: quadrant 1'
     )
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 255]);
+  expect(
     Array.from(manualBytes.slice(4, 8)),
-    [4, 0, 0, 255],
     createTestLabel(
       'render',
       RENDER_MIPMAP_TEST_FORMAT,
       '2d',
       'manual generate mip level 1: quadrant 2'
     )
-  );
-  t.deepEqual(
+  ).toEqual([4, 0, 0, 255]);
+  expect(
     Array.from(manualBytes.slice(8, 12)),
-    [8, 0, 0, 255],
     createTestLabel(
       'render',
       RENDER_MIPMAP_TEST_FORMAT,
       '2d',
       'manual generate mip level 1: quadrant 3'
     )
-  );
-  t.deepEqual(
+  ).toEqual([8, 0, 0, 255]);
+  expect(
     Array.from(manualBytes.slice(12, 16)),
-    [12, 0, 0, 255],
     createTestLabel(
       'render',
       RENDER_MIPMAP_TEST_FORMAT,
       '2d',
       'manual generate mip level 1: quadrant 4'
     )
-  );
+  ).toEqual([12, 0, 0, 255]);
 
   const manualBytesLevel2 = await readTextureBytes(manualTexture.texture, {
     mipLevel: 2,
     width: 1,
     height: 1
   });
-  t.deepEqual(
+  expect(
     Array.from(manualBytesLevel2.slice(0, 4)),
-    [6, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'manual generate mip level 2')
-  );
+  ).toEqual([6, 0, 0, 255]);
   manualTexture.destroy();
 
   const bytes = await readTextureBytes(texture.texture, {
@@ -217,47 +218,42 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     width: 2,
     height: 2
   });
-  t.deepEqual(
+  expect(
     Array.from(bytes.slice(0, 4)),
-    [0, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 1')
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 255]);
+  expect(
     Array.from(bytes.slice(4, 8)),
-    [4, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 2')
-  );
-  t.deepEqual(
+  ).toEqual([4, 0, 0, 255]);
+  expect(
     Array.from(bytes.slice(8, 12)),
-    [8, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 3')
-  );
-  t.deepEqual(
+  ).toEqual([8, 0, 0, 255]);
+  expect(
     Array.from(bytes.slice(12, 16)),
-    [12, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 4')
-  );
+  ).toEqual([12, 0, 0, 255]);
 
   const bytesLevel2 = await readTextureBytes(texture.texture, {
     mipLevel: 2,
     width: 1,
     height: 1
   });
-  t.deepEqual(
+  expect(
     Array.from(bytesLevel2.slice(0, 4)),
-    [6, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 2')
-  );
+  ).toEqual([6, 0, 0, 255]);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] 2d-array mipmaps', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] 2d-array mipmaps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -279,26 +275,24 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d-array mipmaps', async t => {
     height: 1,
     depthOrArrayLayers: 2
   });
-  t.deepEqual(
+  expect(
     Array.from(bytes.slice(0, 4)),
-    [255, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d-array', 'layer 0 mip level 1')
-  );
-  t.deepEqual(
+  ).toEqual([255, 0, 0, 255]);
+  expect(
     Array.from(bytes.slice(4, 8)),
-    [0, 255, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d-array', 'layer 1 mip level 1')
-  );
+  ).toEqual([0, 255, 0, 255]);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] cube mipmaps', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] cube mipmaps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -336,22 +330,21 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube mipmaps', async t => {
     [0, 255, 255, 255]
   ];
   cubeExpected.forEach((expectedValues, layer) => {
-    t.deepEqual(
+    expect(
       Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
-      expectedValues,
       createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, 'cube', `layer ${layer} mip level 1`)
-    );
+    ).toEqual(expectedValues);
   });
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] cube-array mipmaps', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] cube-array mipmaps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -393,39 +386,37 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube-array mipmaps', async t =>
   });
 
   for (let layer = 0; layer < 6; ++layer) {
-    t.deepEqual(
+    expect(
       Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
-      [255, 0, 0, 255],
       createTestLabel(
         'render',
         RENDER_MIPMAP_TEST_FORMAT,
         'cube-array',
         `cube[0] layer ${layer} mip level 1`
       )
-    );
+    ).toEqual([255, 0, 0, 255]);
   }
   for (let layer = 6; layer < 12; ++layer) {
-    t.deepEqual(
+    expect(
       Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
-      [0, 255, 0, 255],
       createTestLabel(
         'render',
         RENDER_MIPMAP_TEST_FORMAT,
         'cube-array',
         `cube[1] layer ${layer} mip level 1`
       )
-    );
+    ).toEqual([0, 255, 0, 255]);
   }
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [compute][rgba8unorm] 3d mipmaps', async t => {
+it('DynamicTexture WebGPU [compute][rgba8unorm] 3d mipmaps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -470,16 +461,14 @@ test('DynamicTexture WebGPU [compute][rgba8unorm] 3d mipmaps', async t => {
     height: 2,
     depthOrArrayLayers: 2
   });
-  t.deepEqual(
+  expect(
     Array.from(bytes.slice(0, 4)),
-    [127, 0, 0, 255],
     createTestLabel('compute', COMPUTE_MIPMAP_TEST_FORMAT, '3d', 'mip level 1: first voxel')
-  );
-  t.deepEqual(
+  ).toEqual([127, 0, 0, 255]);
+  expect(
     Array.from(bytes.slice(16, 20)),
-    [127, 0, 0, 255],
     createTestLabel('compute', COMPUTE_MIPMAP_TEST_FORMAT, '3d', 'mip level 1: cross-layer voxel')
-  );
+  ).toEqual([127, 0, 0, 255]);
 
   const bytesLevel2 = await readTextureBytes(texture.texture, {
     mipLevel: 2,
@@ -487,21 +476,20 @@ test('DynamicTexture WebGPU [compute][rgba8unorm] 3d mipmaps', async t => {
     height: 1,
     depthOrArrayLayers: 1
   });
-  t.deepEqual(
+  expect(
     Array.from(bytesLevel2.slice(0, 4)),
-    [127, 0, 0, 255],
     createTestLabel('compute', COMPUTE_MIPMAP_TEST_FORMAT, '3d', 'mip level 2')
-  );
+  ).toEqual([127, 0, 0, 255]);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] throws for unsupported 3d render format on cube', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] throws for unsupported 3d render format on cube', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -535,30 +523,32 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws for unsupported 3d rende
 
   try {
     const error = captureError(() => texture.generateMipmaps());
-    t.ok(error && /Cannot run render mipmap generation/.test(error.message), 'should throw');
-    t.equal(
+    expect(
+      Boolean(error && /Cannot run render mipmap generation/.test(error.message)),
+      'should throw'
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes(`format "${RENDER_MIPMAP_TEST_FORMAT}"`),
-      true,
       createTestLabel(
         'render',
         RENDER_MIPMAP_TEST_FORMAT,
         'cube',
         'throws for render path capability mismatch'
       )
-    );
+    ).toBe(true);
   } finally {
     (device as any).getTextureFormatCapabilities = originalGetTextureFormatCapabilities;
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rg16uint] throws for unsupported render format capabilities', async t => {
+it('DynamicTexture WebGPU [render][rg16uint] throws for unsupported render format capabilities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -576,39 +566,40 @@ test('DynamicTexture WebGPU [render][rg16uint] throws for unsupported render for
 
   try {
     const error = captureError(() => texture.generateMipmaps());
-    t.ok(error && /Cannot run render mipmap generation/.test(error.message), 'should throw');
-    t.equal(
+    expect(
+      Boolean(error && /Cannot run render mipmap generation/.test(error.message)),
+      'should throw'
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes(`format "${NON_COLOR_RENDER_TEST_FORMAT}"`),
-      true,
       createTestLabel(
         'render',
         NON_COLOR_RENDER_TEST_FORMAT,
         '2d',
         'throws for non-color format check'
       )
-    );
-    t.equal(
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes('Required capabilities'),
-      true,
       createTestLabel(
         'render',
         NON_COLOR_RENDER_TEST_FORMAT,
         '2d',
         'throws with required capability list'
       )
-    );
+    ).toBe(true);
   } finally {
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [compute][rgba8unorm] throws for unsupported compute format capabilities', async t => {
+it('DynamicTexture WebGPU [compute][rgba8unorm] throws for unsupported compute format capabilities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -636,30 +627,32 @@ test('DynamicTexture WebGPU [compute][rgba8unorm] throws for unsupported compute
 
   try {
     const error = captureError(() => texture.generateMipmaps());
-    t.ok(error && /Cannot run compute mipmap generation/.test(error.message), 'should throw');
-    t.equal(
+    expect(
+      Boolean(error && /Cannot run compute mipmap generation/.test(error.message)),
+      'should throw'
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes(`format "${COMPUTE_MIPMAP_TEST_FORMAT}"`),
-      true,
       createTestLabel(
         'compute',
         COMPUTE_MIPMAP_TEST_FORMAT,
         '3d',
         'throws for compute capability mismatch'
       )
-    );
+    ).toBe(true);
   } finally {
     (device as any).getTextureFormatCapabilities = originalGetTextureFormatCapabilities;
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [compute][rg16uint] throws for unsupported compute format capabilities', async t => {
+it('DynamicTexture WebGPU [compute][rg16uint] throws for unsupported compute format capabilities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -678,39 +671,40 @@ test('DynamicTexture WebGPU [compute][rg16uint] throws for unsupported compute f
 
   try {
     const error = captureError(() => texture.generateMipmaps());
-    t.ok(error && /Cannot run compute mipmap generation/.test(error.message), 'should throw');
-    t.equal(
+    expect(
+      Boolean(error && /Cannot run compute mipmap generation/.test(error.message)),
+      'should throw'
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes(`format "${NON_COLOR_RENDER_TEST_FORMAT}"`),
-      true,
       createTestLabel(
         'compute',
         NON_COLOR_RENDER_TEST_FORMAT,
         '3d',
         'throws for non-color format check'
       )
-    );
-    t.equal(
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes('Required capabilities'),
-      true,
       createTestLabel(
         'compute',
         NON_COLOR_RENDER_TEST_FORMAT,
         '3d',
         'throws with required capability list'
       )
-    );
+    ).toBe(true);
   } finally {
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities unsupported', async t => {
+it('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities unsupported', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -741,26 +735,28 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities
 
   try {
     const error = captureError(() => texture.generateMipmaps());
-    t.ok(error && /Cannot run render mipmap generation/.test(error.message), 'should throw');
-    t.equal(
+    expect(
+      Boolean(error && /Cannot run render mipmap generation/.test(error.message)),
+      'should throw'
+    ).toBe(true);
+    expect(
       String(error?.message || '').includes(`format "${RENDER_MIPMAP_TEST_FORMAT}"`),
-      true,
       createTestLabel(
         'render',
         RENDER_MIPMAP_TEST_FORMAT,
         '2d',
         'throws for unsupported render capabilities'
       )
-    );
+    ).toBe(true);
   } finally {
     (device as any).getTextureFormatCapabilities = originalGetTextureFormatCapabilities;
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice accepts compressed mip arrays via textureFormat', async t => {
+it('DynamicTexture NullDevice accepts compressed mip arrays via textureFormat', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -774,19 +770,20 @@ test('DynamicTexture NullDevice accepts compressed mip arrays via textureFormat'
   });
   await texture.ready;
 
-  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from textureFormat');
-  t.equal(texture.texture.mipLevels, 3, 'all provided mip levels are allocated');
-  t.equal(
-    texture.texture.props.usage,
-    Texture.SAMPLE | Texture.COPY_DST,
-    'compressed textures do not inherit render attachment usage by default'
+  expect(texture.texture.format, 'texture format resolved from textureFormat').toBe(
+    'bc7-rgba-unorm'
   );
+  expect(texture.texture.mipLevels, 'all provided mip levels are allocated').toBe(3);
+  expect(
+    texture.texture.props.usage,
+    'compressed textures do not inherit render attachment usage by default'
+  ).toBe(Texture.SAMPLE | Texture.COPY_DST);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice accepts compressed mip arrays via format alias', async t => {
+it('DynamicTexture NullDevice accepts compressed mip arrays via format alias', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -798,14 +795,16 @@ test('DynamicTexture NullDevice accepts compressed mip arrays via format alias',
   });
   await texture.ready;
 
-  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from format alias');
-  t.equal(texture.texture.mipLevels, 2, 'format alias mip chain is preserved');
+  expect(texture.texture.format, 'texture format resolved from format alias').toBe(
+    'bc7-rgba-unorm'
+  );
+  expect(texture.texture.mipLevels, 'format alias mip chain is preserved').toBe(2);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice accepts equal format and textureFormat fields', async t => {
+it('DynamicTexture NullDevice accepts equal format and textureFormat fields', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -822,13 +821,13 @@ test('DynamicTexture NullDevice accepts equal format and textureFormat fields', 
   });
   await texture.ready;
 
-  t.equal(texture.texture.format, 'bc4-r-unorm', 'matching fields are accepted');
+  expect(texture.texture.format, 'matching fields are accepted').toBe('bc4-r-unorm');
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice rejects conflicting format and textureFormat fields', async t => {
+it('DynamicTexture NullDevice rejects conflicting format and textureFormat fields', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -846,16 +845,18 @@ test('DynamicTexture NullDevice rejects conflicting format and textureFormat fie
 
   try {
     await texture.ready;
-    t.fail('expected texture.ready to reject');
+    expect(false, 'expected texture.ready to reject').toBe(true);
   } catch (error) {
-    t.match(String(error), /Conflicting texture formats/, 'rejects conflicting mip-level fields');
+    expect(String(error), 'rejects conflicting mip-level fields').toMatch(
+      /Conflicting texture formats/
+    );
   }
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice truncates mismatched per-level formats', async t => {
+it('DynamicTexture NullDevice truncates mismatched per-level formats', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -864,14 +865,14 @@ test('DynamicTexture NullDevice truncates mismatched per-level formats', async t
   });
   await texture.ready;
 
-  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'base level format wins');
-  t.equal(texture.texture.mipLevels, 1, 'chain truncates at mismatched level format');
+  expect(texture.texture.format, 'base level format wins').toBe('bc7-rgba-unorm');
+  expect(texture.texture.mipLevels, 'chain truncates at mismatched level format').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice truncates invalid mip dimensions', async t => {
+it('DynamicTexture NullDevice truncates invalid mip dimensions', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -880,17 +881,16 @@ test('DynamicTexture NullDevice truncates invalid mip dimensions', async t => {
   });
   await texture.ready;
 
-  t.equal(
+  expect(
     texture.texture.mipLevels,
-    1,
     'chain truncates when mip dimensions do not halve correctly'
-  );
+  ).toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('DynamicTexture NullDevice caps compressed mip arrays at one block', async t => {
+it('DynamicTexture NullDevice caps compressed mip arrays at one block', async () => {
   const device = await getNullTestDevice();
 
   const texture = new DynamicTexture(device, {
@@ -899,11 +899,11 @@ test('DynamicTexture NullDevice caps compressed mip arrays at one block', async 
   });
   await texture.ready;
 
-  t.equal(texture.texture.format, 'astc-10x10-unorm', 'compressed format is preserved');
-  t.equal(texture.texture.mipLevels, 1, 'mip levels below one block are ignored');
+  expect(texture.texture.format, 'compressed format is preserved').toBe('astc-10x10-unorm');
+  expect(texture.texture.mipLevels, 'mip levels below one block are ignored').toBe(1);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSolidMipData(

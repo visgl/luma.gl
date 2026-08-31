@@ -4,15 +4,15 @@ import {
   ANARISceneSchema,
   ANARITextureSchema
 } from '@luma.gl/scene/schemas';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
 import type {ANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
 
-test('ANARI animation schemas preserve optional node hierarchies and keyframe clips', testContext => {
+it('ANARI animation schemas preserve optional node hierarchies and keyframe clips', () => {
   const scene: ANARIJSONScene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const instanceIdentifier = scene.instances?.[0]?.['@@id'];
   if (!instanceIdentifier) {
-    testContext.fail('the showcase preset should expose retained instances');
+    expect(false, 'the showcase preset should expose retained instances').toBe(true);
     return;
   }
   scene.nodes = {
@@ -36,50 +36,58 @@ test('ANARI animation schemas preserve optional node hierarchies and keyframe cl
   ];
   scene.playback = {clip: 'Scene animation', playing: true, loop: 'ping-pong', speed: -0.5};
 
-  testContext.ok(ANARISceneSchema.safeParse(scene).success, 'animated JSON remains schema-valid');
-  testContext.deepEqual(
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
+    'animated JSON remains schema-valid'
+  ).toBe(true);
+  expect(
     ANARISceneSchema.parse(JSON.parse(JSON.stringify(scene))).clips,
-    scene.clips,
     'animation declarations survive JSON serialization'
-  );
+  ).toEqual(scene.clips);
 
   scene.nodes.child.parent = 'missing-parent';
   const invalidParent = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(invalidParent.success, 'unknown animated parent nodes are rejected');
+  expect(Boolean(invalidParent.success), 'unknown animated parent nodes are rejected').toBe(false);
   if (!invalidParent.success) {
-    testContext.ok(
-      invalidParent.error.issues.some(issue => issue.path.join('.') === 'nodes.child.parent'),
+    expect(
+      Boolean(
+        invalidParent.error.issues.some(issue => issue.path.join('.') === 'nodes.child.parent')
+      ),
       'invalid parent errors identify the source JSON property'
-    );
+    ).toBe(true);
   }
 
   scene.nodes.child.parent = 'parent';
   scene.nodes.parent.parent = 'child';
   const cyclicHierarchy = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(cyclicHierarchy.success, 'multi-node animated parent cycles are rejected');
+  expect(Boolean(cyclicHierarchy.success), 'multi-node animated parent cycles are rejected').toBe(
+    false
+  );
   if (!cyclicHierarchy.success) {
-    testContext.ok(
-      cyclicHierarchy.error.issues.some(issue => issue.message.includes('parent cycles')),
+    expect(
+      Boolean(cyclicHierarchy.error.issues.some(issue => issue.message.includes('parent cycles'))),
       'hierarchy cycle errors identify the invalid graph'
-    );
+    ).toBe(true);
   }
 
   delete scene.nodes.parent.parent;
   scene.clips[0].tracks[0].target.identifier = 'missing-target';
   const invalidTarget = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(invalidTarget.success, 'unknown animated scene objects are rejected');
+  expect(Boolean(invalidTarget.success), 'unknown animated scene objects are rejected').toBe(false);
   if (!invalidTarget.success) {
-    testContext.ok(
-      invalidTarget.error.issues.some(
-        issue => issue.path.join('.') === 'clips.0.tracks.0.target.identifier'
+    expect(
+      Boolean(
+        invalidTarget.error.issues.some(
+          issue => issue.path.join('.') === 'clips.0.tracks.0.target.identifier'
+        )
       ),
       'invalid track errors identify the target JSON property'
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI animation schemas validate keyframe ordering and cubic tangent counts', testContext => {
+it('ANARI animation schemas validate keyframe ordering and cubic tangent counts', () => {
   const target = {type: 'node' as const, identifier: 'node', path: 'translation'};
   const duplicateTime = ANARIAnimationTrackSchema.safeParse({
     target,
@@ -99,15 +107,15 @@ test('ANARI animation schemas validate keyframe ordering and cubic tangent count
     ]
   });
 
-  testContext.notOk(duplicateTime.success, 'duplicate keyframe times are rejected');
-  testContext.notOk(
-    missingCubicTangent.success,
+  expect(Boolean(duplicateTime.success), 'duplicate keyframe times are rejected').toBe(false);
+  expect(
+    Boolean(missingCubicTangent.success),
     'cubic keyframes require input and output tangents'
-  );
-  testContext.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('ANARI animation schemas preserve second texture coordinate sets', testContext => {
+it('ANARI animation schemas preserve second texture coordinate sets', () => {
   const geometry = ANARIGeometrySchema.safeParse({
     '@@type': 'triangle',
     'vertex.position': [0, 0, 0, 1, 0, 0, 0, 1, 0],
@@ -123,8 +131,12 @@ test('ANARI animation schemas preserve second texture coordinate sets', testCont
     textureCoordinateSet: 2
   });
 
-  testContext.ok(geometry.success, 'editable triangle geometry retains TEXCOORD_1');
-  testContext.ok(texture.success, 'retained image samplers can select the second UV set');
-  testContext.notOk(invalidTexture.success, 'unsupported texture coordinate sets are rejected');
-  testContext.end();
+  expect(Boolean(geometry.success), 'editable triangle geometry retains TEXCOORD_1').toBe(true);
+  expect(Boolean(texture.success), 'retained image samplers can select the second UV set').toBe(
+    true
+  );
+  expect(Boolean(invalidTexture.success), 'unsupported texture coordinate sets are rejected').toBe(
+    false
+  );
+  void 0;
 });

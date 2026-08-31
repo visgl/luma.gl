@@ -11,13 +11,13 @@ import {
   GPUVolumeThreshold
 } from '@luma.gl/experimental/lucim';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('LuCIM composes threshold, morphology, 3D components, and region bounds without readback', async testCase => {
+it('LuCIM composes threshold, morphology, 3D components, and region bounds without readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -134,45 +134,41 @@ test('LuCIM composes threshold, morphology, 3D components, and region bounds wit
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  testCase.deepEqual(
+  expect(
     await readUint32(thresholdMask, voxelCount),
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     'threshold publishes two canonical seed voxels'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+  expect(
     await readUint32(dilatedMask, voxelCount),
-    [1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1],
     'octahedral dilation expands each corner through face neighbors'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1]);
+  expect(
     await readUint32(labels, voxelCount),
-    [1, 1, 0, 1, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 9, 0, 9, 9],
     'six-connectivity publishes deterministic sparse minimum-root labels'
-  );
-  testCase.equal((await readUint32(converged, 1))[0], 1, 'component rounds converge');
-  testCase.ok(
-    (await readUint32(iterationCount, 1))[0]! <= 8,
+  ).toEqual([1, 1, 0, 1, 0, 0, 0, 0, 9, 1, 0, 0, 0, 0, 9, 0, 9, 9]);
+  expect((await readUint32(converged, 1))[0], 'component rounds converge').toBe(1);
+  expect(
+    Boolean((await readUint32(iterationCount, 1))[0]! <= 8),
     'component rounds stay within the explicit budget'
-  );
+  ).toBe(true);
 
   const counts = await readUint32(voxelCounts, voxelCount);
-  testCase.equal(counts[0], 4, 'first sparse root owns four voxels');
-  testCase.equal(counts[8], 4, 'second sparse root owns four voxels');
-  testCase.equal(
+  expect(counts[0], 'first sparse root owns four voxels').toBe(4);
+  expect(counts[8], 'second sparse root owns four voxels').toBe(4);
+  expect(
     counts.reduce((sum, count) => sum + count, 0),
-    8,
     'background and empty sparse slots do not contribute'
-  );
+  ).toBe(8);
   const minimums = await readUint32(minimumCoordinates, voxelCount * 3);
   const maximums = await readUint32(maximumCoordinates, voxelCount * 3);
-  testCase.deepEqual(minimums.slice(0, 3), [0, 0, 0], 'first component minimum is exact');
-  testCase.deepEqual(maximums.slice(0, 3), [2, 2, 2], 'first exclusive maximum is exact');
-  testCase.deepEqual(minimums.slice(8 * 3, 9 * 3), [1, 1, 0], 'second minimum is exact');
-  testCase.deepEqual(maximums.slice(8 * 3, 9 * 3), [3, 3, 2], 'second maximum is exact');
-  testCase.equal((await readUint32(overflow, 1))[0], 0, 'measurement capacity is sufficient');
+  expect(minimums.slice(0, 3), 'first component minimum is exact').toEqual([0, 0, 0]);
+  expect(maximums.slice(0, 3), 'first exclusive maximum is exact').toEqual([2, 2, 2]);
+  expect(minimums.slice(8 * 3, 9 * 3), 'second minimum is exact').toEqual([1, 1, 0]);
+  expect(maximums.slice(8 * 3, 9 * 3), 'second maximum is exact').toEqual([3, 3, 2]);
+  expect((await readUint32(overflow, 1))[0], 'measurement capacity is sufficient').toBe(0);
 
   compiled.destroy();
-  testCase.notOk(source.destroyed, 'compiled graph borrows the source volume');
+  expect(Boolean(source.destroyed), 'compiled graph borrows the source volume').toBe(false);
   for (const buffer of [
     source,
     thresholdMask,
@@ -189,7 +185,7 @@ test('LuCIM composes threshold, morphology, 3D components, and region bounds wit
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 function makeBuffer(device: Device, dataOrLength: Float32Array | number): Buffer {
