@@ -4,7 +4,14 @@
 
 import test from 'test/utils/vitest-tape';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {Model} from '@luma.gl/engine';
+import {NullDevice} from '@luma.gl/test-utils';
+import * as arrow from 'apache-arrow';
+import {
+  convertArrowLayerColorVector,
+  readArrowLayerGPUVector
+} from '../../src/layers/arrow-layer-input';
 
 test('Arrow deck layers do not use AttributeManager for Arrow GPU vectors', t => {
   const layers = [
@@ -73,5 +80,49 @@ test('Arrow deck layers preserve alpha blending defaults', t => {
       `${layer.id} uses source alpha`
     );
   }
+  t.end();
+});
+
+test('Arrow layer conversion preserves nested per-vertex color vectors', async t => {
+  const device = new NullDevice({});
+  const rowColorType = new arrow.FixedSizeList(
+    4,
+    new arrow.Field('channel', new arrow.Uint8(), false)
+  );
+  const vertexColorType = new arrow.List(new arrow.Field('color', rowColorType, false));
+  const colors = arrow.vectorFromArray(
+    [
+      [
+        [255, 0, 0, 255],
+        [0, 255, 0, 255]
+      ]
+    ],
+    vertexColorType
+  );
+
+  const converted = await convertArrowLayerColorVector(device, colors, 'nested-colors');
+
+  t.equal(converted, colors, 'specialized nested colors bypass fixed-width row normalization');
+  device.destroy();
+  t.end();
+});
+
+test('Arrow path scalar GPU width vectors bypass color normalization', async t => {
+  const device = new NullDevice({});
+  const widths = makeGPUVectorFromArrow(
+    device,
+    arrow.vectorFromArray(new Float32Array([1, 2]), new arrow.Float32()),
+    {name: 'widths', format: 'float32'}
+  );
+
+  const roundTrip = await readArrowLayerGPUVector(device, widths, 'widths', false);
+
+  t.deepEqual(
+    Array.from(roundTrip.toArray()),
+    [1, 2],
+    'reads scalar widths without color conversion'
+  );
+  widths.destroy();
+  device.destroy();
   t.end();
 });

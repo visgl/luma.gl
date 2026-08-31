@@ -78,6 +78,11 @@ v10 execution model.
   `@luma.gl/experimental/models`.
 - **Arrow and text stay close to their data** - `@luma.gl/arrow` preserves source batches and type
   metadata. `@luma.gl/text` supports streamed GPU text and shared font resources.
+- **Normalized Arrow color conversion** - `convertArrowColors()` and `convertColors()` lower
+  chunked Uint8, Float16, and Float32 RGB/RGBA rows into canonical `unorm8x4` GPU vectors with
+  opaque RGB expansion, preserved nullable-row metadata, caller-owned input lifetime, and WebGPU
+  compute plus WebGL fallback. Arrow path, polygon, and text layers consume the same conversion
+  boundary.
 - **DGGS indexes decode where they are consumed** - Experimental `@luma.gl/gpgpu/gpu-dggs`,
   `gpu-h3`, and `gpu-a5` command-graph passes project packed cell indexes to longitude/latitude or
   unit-vector centers without CPU readback. A live, correctness-gated browser benchmark reports

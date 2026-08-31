@@ -6,8 +6,10 @@ import test from 'test/utils/vitest-tape';
 import {
   canConvertColors,
   convertArrowColors,
+  convertColors,
   getArrowFixedSizeListValues,
   makeArrowFixedSizeListVector,
+  makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {backendRegistry} from '@luma.gl/gpgpu';
@@ -103,6 +105,51 @@ test('convertArrowColors decodes Float16 RGB rows and returns a Uint8 RGBA GPUVe
   );
 
   result.destroy();
+  device.destroy();
+  t.end();
+});
+
+test('convertArrowColors preserves chunk boundaries and nullable row validity', async t => {
+  const device = new NullDevice({});
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('value', new arrow.Float32(), true));
+  const firstChunk = arrow.vectorFromArray([[1, 0.5, 0, 1], null], colorType);
+  const secondChunk = arrow.vectorFromArray([[0.25, 0.75, 1, 0.1]], colorType);
+  const colors = new arrow.Vector([firstChunk.data[0], secondChunk.data[0]]);
+
+  const result = await convertArrowColors(device, colors);
+  const roundTrip = await readArrowGPUVectorAsync(result);
+
+  t.equal(result.data.length, 2, 'preserves Arrow chunk boundaries');
+  t.equal(roundTrip.data.length, 2, 'preserves chunks through GPU readback');
+  t.deepEqual(Array.from(roundTrip.get(0) as Iterable<number>), [255, 128, 0, 255]);
+  t.equal(roundTrip.get(1), null, 'preserves nullable parent rows');
+  t.deepEqual(Array.from(roundTrip.get(2) as Iterable<number>), [64, 191, 255, 26]);
+
+  result.destroy();
+  device.destroy();
+  t.end();
+});
+
+test('convertColors borrows sources and transfers output buffers to the returned vector', async t => {
+  const device = new NullDevice({});
+  const source = makeGPUVectorFromArrow(
+    device,
+    makeArrowFixedSizeListVector(new arrow.Float32(), 4, new Float32Array([1, 0.5, 0, 1])),
+    {format: 'float32x4'}
+  );
+  const sourceBuffer = source.data[0].buffer;
+  const result = await convertColors(device, source);
+  const resultBuffer = result.data[0].buffer;
+
+  t.notEqual(resultBuffer, sourceBuffer, 'materializes converted bytes in a distinct allocation');
+  t.notOk(sourceBuffer.destroyed, 'does not destroy the caller-owned source buffer');
+  t.ok(result.data[0].ownsBuffer, 'returned GPUData is the sole owner of its output buffer');
+
+  result.destroy();
+  t.ok(resultBuffer.destroyed, 'destroying the result releases the converted output');
+  t.notOk(sourceBuffer.destroyed, 'result destruction leaves the source alive');
+  source.destroy();
+  t.ok(sourceBuffer.destroyed, 'the source owner can release its buffer independently');
   device.destroy();
   t.end();
 });
