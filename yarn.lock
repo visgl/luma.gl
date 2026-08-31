@@ -4787,6 +4787,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@loaders.gl/schema-utils@patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch":
+  version: 5.0.0-alpha.5
+  resolution: "@loaders.gl/schema-utils@patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch::version=5.0.0-alpha.5&hash=2747dc"
+  dependencies:
+    "@loaders.gl/schema": "npm:5.0.0-alpha.5"
+    "@math.gl/types": "npm:5.0.0-alpha.4"
+    "@types/geojson": "npm:^7946.0.7"
+    apache-arrow: "npm:>= 17.0.0"
+  peerDependencies:
+    "@loaders.gl/core": ~5.0.0-alpha.0
+  checksum: 10c0/7edddf4a543edb561d9f0b56b606ecc27c1bf3794746b0bb7254c7aadbf7bc28d04409cfbe4589d325203c1d8f6e96ac03b8808c123ed92ba4934fc5ad5d7983
+  languageName: node
+  linkType: hard
+
 "@loaders.gl/schema@npm:4.4.3":
   version: 4.4.3
   resolution: "@loaders.gl/schema@npm:4.4.3"

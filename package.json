@@ -90,7 +90,8 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*"
+    "@luma.gl/webgl": "workspace:*",
+    "@loaders.gl/schema-utils@npm:5.0.0-alpha.5": "patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@~5.0.0-alpha.5": {
