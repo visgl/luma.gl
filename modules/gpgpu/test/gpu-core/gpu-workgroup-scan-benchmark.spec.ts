@@ -1,34 +1,30 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('summarizeGPUWorkgroupScanBenchmarkSamples reports nearest-rank distributions', t => {
-  t.deepEqual(summarizeGPUWorkgroupScanBenchmarkSamples([4, 1, 3, 2]), {
+it('summarizeGPUWorkgroupScanBenchmarkSamples reports nearest-rank distributions', () => {
+  expect(summarizeGPUWorkgroupScanBenchmarkSamples([4, 1, 3, 2])).toEqual({
     minimum: 1,
     median: 2,
     percentile95: 4,
     maximum: 4
   });
-  t.throws(
+  expect(
     () => summarizeGPUWorkgroupScanBenchmarkSamples([1, Number.NaN]),
-    /finite and non-negative/,
     'invalid samples cannot produce misleading reports'
-  );
-  t.end();
+  ).toThrow(/finite and non-negative/);
 });
 
-test('runGPUWorkgroupScanBenchmark compares graph-owned scan computations', async t => {
+it('runGPUWorkgroupScanBenchmark compares graph-owned scan computations', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -39,25 +35,23 @@ test('runGPUWorkgroupScanBenchmark compares graph-owned scan computations', asyn
     warmupIterations: 1,
     measuredIterations: 2
   });
-  t.equal(report.paths[0].strategy, 'portable', 'portable path is always measured');
-  t.equal(
+  expect(report.paths[0].strategy, 'portable path is always measured').toBe('portable');
+  expect(
     report.paths.length,
-    report.subgroupAvailable ? 2 : 1,
     'subgroup path is measured only when both required capabilities are available'
-  );
-  t.ok(
-    report.paths.every(path => path.checksum === report.paths[0].checksum),
+  ).toBe(report.subgroupAvailable ? 2 : 1);
+  expect(
+    Boolean(report.paths.every(path => path.checksum === report.paths[0].checksum)),
     'every measured path passes the shared checksum oracle'
-  );
-  t.ok(
-    report.paths.every(path => path.cpuEncodeTimeMilliseconds.minimum >= 0),
+  ).toBe(true);
+  expect(
+    Boolean(report.paths.every(path => path.cpuEncodeTimeMilliseconds.minimum >= 0)),
     'per-dispatch CPU encoding distributions are reported'
-  );
+  ).toBe(true);
   if (report.timestampQueries) {
-    t.ok(
-      report.paths.every(path => path.gpuTimeMilliseconds?.minimum !== undefined),
+    expect(
+      Boolean(report.paths.every(path => path.gpuTimeMilliseconds?.minimum !== undefined)),
       'per-dispatch GPU timing distributions are reported'
-    );
+    ).toBe(true);
   }
-  t.end();
 });

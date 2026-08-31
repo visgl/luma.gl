@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -24,11 +24,9 @@ type VectorFixture<T extends ScalarFormat> = {
   buffers: Buffer[];
 };
 
-test('GPUHistogram filters equal-width bins with reusable GPU-resident masks', async testCase => {
+it('GPUHistogram filters equal-width bins with reusable GPU-resident masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -41,21 +39,17 @@ test('GPUHistogram filters equal-width bins with reusable GPU-resident masks', a
     binCount: 4,
     options: {domain: [0, 4]}
   });
-  testCase.deepEqual(
-    local.counts,
-    [1, 0, 1, 2],
-    'the local atomic path accepts every nonzero in-range mask row'
-  );
-  testCase.deepEqual(
+  expect(local.counts, 'the local atomic path accepts every nonzero in-range mask row').toEqual([
+    1, 0, 1, 2
+  ]);
+  expect(
     local.updatedCounts,
-    [0, 1, 0, 1],
     'rewriting the mask updates counts without recompiling the graph'
-  );
-  testCase.deepEqual(
-    local.nodeOrder,
-    ['gpu-histogram-clear', 'gpu-histogram-local'],
-    'masking does not introduce extra dispatches'
-  );
+  ).toEqual([0, 1, 0, 1]);
+  expect(local.nodeOrder, 'masking does not introduce extra dispatches').toEqual([
+    'gpu-histogram-clear',
+    'gpu-histogram-local'
+  ]);
 
   const globalValues = Uint32Array.from({length: 301}, (_, index) => index);
   const globalMask = Uint32Array.from(globalValues, value => Number(value % 2 === 0));
@@ -67,10 +61,8 @@ test('GPUHistogram filters equal-width bins with reusable GPU-resident masks', a
     binCount: 300,
     options: {domain: [0, 299]}
   });
-  testCase.deepEqual(
-    global.counts,
-    Array.from({length: 300}, (_, index) => Number(index % 2 === 0)),
-    'the global atomic path ignores rejected and out-of-domain rows'
+  expect(global.counts, 'the global atomic path ignores rejected and out-of-domain rows').toEqual(
+    Array.from({length: 300}, (_, index) => Number(index % 2 === 0))
   );
 
   const automatic = await runMaskedHistogram({
@@ -81,19 +73,14 @@ test('GPUHistogram filters equal-width bins with reusable GPU-resident masks', a
     binCount: 2,
     options: {domain: 'auto'}
   });
-  testCase.deepEqual(
-    automatic.counts,
-    [0, 1],
-    'automatic domains retain the full unfiltered input extent'
-  );
-  testCase.end();
+  expect(automatic.counts, 'automatic domains retain the full unfiltered input extent').toEqual([
+    0, 1
+  ]);
 });
 
-test('GPUHistogram filters irregular literal and GPU-resident edges', async testCase => {
+it('GPUHistogram filters irregular literal and GPU-resident edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -105,11 +92,9 @@ test('GPUHistogram filters irregular literal and GPU-resident edges', async test
     binCount: 3,
     options: {edges: [0, 1, 10, 100]}
   });
-  testCase.deepEqual(
-    local.counts,
-    [1, 1, 2],
-    'literal-edge local accumulation applies the source-aligned mask'
-  );
+  expect(local.counts, 'literal-edge local accumulation applies the source-aligned mask').toEqual([
+    1, 1, 2
+  ]);
 
   const globalValues = Uint32Array.from({length: 301}, (_, index) => index);
   const global = await runMaskedHistogram({
@@ -123,24 +108,19 @@ test('GPUHistogram filters irregular literal and GPU-resident edges', async test
       gpuEdges: true
     }
   });
-  testCase.deepEqual(
+  expect(
     global.counts,
-    Array.from({length: 300}, (_, index) => Number(index % 3 === 0 || index === 299)),
     'GPU-edge global accumulation includes only selected rows and the exact final edge'
-  );
-  testCase.deepEqual(
+  ).toEqual(Array.from({length: 300}, (_, index) => Number(index % 3 === 0 || index === 299)));
+  expect(
     global.nodeOrder,
-    ['gpu-histogram-validate-edges', 'gpu-histogram-clear', 'gpu-histogram-edges-global'],
     'GPU edge validation remains upstream of masked global accumulation'
-  );
-  testCase.end();
+  ).toEqual(['gpu-histogram-validate-edges', 'gpu-histogram-clear', 'gpu-histogram-edges-global']);
 });
 
-test('GPUHistogram preserves source-aligned masked vector chunks', async testCase => {
+it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -161,30 +141,26 @@ test('GPUHistogram preserves source-aligned masked vector chunks', async testCas
   const compiled = graph.compile();
 
   submitGraph(device, compiled, 'masked-vector-histogram-initial');
-  testCase.deepEqual(
+  expect(
     await readUint32(outputBuffer, 4),
-    [1, 0, 0, 2],
     'each nonempty source chunk uses its matching mask chunk'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 0, 0, 2]);
+  expect(
     compiled.stats.nodeOrder,
-    ['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local'],
     'empty aligned chunks retain their index without a dispatch'
-  );
-  testCase.equal(
+  ).toEqual(['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local']);
+  expect(
     compiled.stats.logicalTransientBufferCount,
-    0,
     'masked vector accumulation does not concatenate chunks or allocate scratch buffers'
-  );
+  ).toBe(0);
 
   masks.buffers[0].write(Uint32Array.from([0, 1]));
   masks.buffers[2].write(Uint32Array.from([1, 0, 0]));
   submitGraph(device, compiled, 'masked-vector-histogram-updated');
-  testCase.deepEqual(
+  expect(
     await readUint32(outputBuffer, 4),
-    [0, 1, 1, 0],
     'updating individual mask chunks changes one reusable graph encoding'
-  );
+  ).toEqual([0, 1, 1, 0]);
 
   compiled.destroy();
 
@@ -200,33 +176,28 @@ test('GPUHistogram preserves source-aligned masked vector chunks', async testCas
   }).addToGraph(irregularGraph);
   const irregularCompiled = irregularGraph.compile();
   submitGraph(device, irregularCompiled, 'masked-irregular-vector-histogram');
-  testCase.deepEqual(
+  expect(
     await readUint32(outputBuffer, 3),
-    [0, 2, 0],
     'irregular-edge accumulation preserves the same updated mask chunk boundaries'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 2, 0]);
+  expect(
     irregularCompiled.stats.nodeOrder,
-    [
-      'gpu-histogram-clear',
-      'gpu-histogram-chunk-0-edges-local',
-      'gpu-histogram-chunk-2-edges-local'
-    ],
     'irregular-edge vector passes skip empty aligned chunks'
-  );
+  ).toEqual([
+    'gpu-histogram-clear',
+    'gpu-histogram-chunk-0-edges-local',
+    'gpu-histogram-chunk-2-edges-local'
+  ]);
   irregularCompiled.destroy();
 
   destroyVectorFixture(values);
   destroyVectorFixture(masks);
   outputBuffer.destroy();
-  testCase.end();
 });
 
-test('GPUHistogram shares offset selection views across independently binned outputs', async testCase => {
+it('GPUHistogram shares offset selection views across independently binned outputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -265,30 +236,25 @@ test('GPUHistogram shares offset selection views across independently binned out
   const compiled = graph.compile();
   submitGraph(device, compiled, 'offset-masked-histograms');
 
-  testCase.deepEqual(
+  expect(
     await readUint32(regularOutputBuffer, 4),
-    [0, 1, 0, 1],
     'equal-width accumulation reads from the logical selection byte offset'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 1, 0, 1]);
+  expect(
     await readUint32(irregularOutputBuffer, 3),
-    [0, 1, 1],
     'irregular accumulation reuses the same offset GPU selection without readback'
-  );
+  ).toEqual([0, 1, 1]);
 
   compiled.destroy();
   inputBuffer.destroy();
   maskBuffer.destroy();
   regularOutputBuffer.destroy();
   irregularOutputBuffer.destroy();
-  testCase.end();
 });
 
-test('GPUHistogram validates mask layout, topology, ownership, and aliases', async testCase => {
+it('GPUHistogram validates mask layout, topology, ownership, and aliases', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -311,26 +277,22 @@ test('GPUHistogram validates mask layout, topology, ownership, and aliases', asy
   });
   const shortInput = graph.createDataView(input.buffer, {format: 'float32', length: 2});
 
-  testCase.throws(
+  expect(
     () => new GPUHistogram({input, mask: shortMask, output, domain: [0, 3]}),
-    /input and mask lengths must match/,
     'atomic masks require one selection row per input value'
-  );
-  testCase.throws(
+  ).toThrow(/input and mask lengths must match/);
+  expect(
     () => new GPUHistogram({input, mask: floatMask as never, output, domain: [0, 3]}),
-    /must be packed, uint32-aligned uint32 GPU data/,
     'mask rows must use packed uint32 storage'
-  );
-  testCase.throws(
+  ).toThrow(/must be packed, uint32-aligned uint32 GPU data/);
+  expect(
     () => new GPUHistogram({input: shortInput, mask: stridedMask, output, domain: [0, 3]}),
-    /must be packed, uint32-aligned uint32 GPU data/,
     'interleaved selection rows cannot be consumed as packed histogram masks'
-  );
-  testCase.throws(
+  ).toThrow(/must be packed, uint32-aligned uint32 GPU data/);
+  expect(
     () => new GPUHistogram({input, mask: output, output, domain: [0, 3]}),
-    /mask and output must use separate buffers/,
     'selection masks cannot alias histogram counts'
-  );
+  ).toThrow(/mask and output must use separate buffers/);
 
   const vectorValues = createVectorFixture(device, 'vector-values', 'float32', [
     Float32Array.from([0, 1]),
@@ -342,31 +304,27 @@ test('GPUHistogram validates mask layout, topology, ownership, and aliases', asy
   ]);
   const vectorInput = graph.importGPUVector('vector-values', vectorValues.vector);
   const vectorMask = graph.importGPUVector('vector-masks', vectorMasks.vector);
-  testCase.throws(
+  expect(
     () => new GPUHistogram({input: vectorInput, mask: shortMask, output, domain: [0, 3]}),
-    /same view kind/,
     'vector input cannot use a single atomic mask view'
-  );
-  testCase.throws(
+  ).toThrow(/same view kind/);
+  expect(
     () => new GPUHistogram({input: vectorInput, mask: vectorMask, output, domain: [0, 3]}),
-    /same chunk topology/,
     'vector masks must preserve every source chunk boundary'
-  );
+  ).toThrow(/same chunk topology/);
 
   const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-histogram-mask'});
   const foreignMask = importView(foreignGraph, 'foreign-mask', maskBuffer, 'uint32', 4);
-  testCase.throws(
+  expect(
     () => new GPUHistogram({input, mask: foreignMask, output, domain: [0, 3]}).addToGraph(graph),
-    /views must belong to the target graph/,
     'mask storage must belong to the encoded command graph'
-  );
+  ).toThrow(/views must belong to the target graph/);
 
   destroyVectorFixture(vectorValues);
   destroyVectorFixture(vectorMasks);
   inputBuffer.destroy();
   maskBuffer.destroy();
   outputBuffer.destroy();
-  testCase.end();
 });
 
 async function runMaskedHistogram(props: {

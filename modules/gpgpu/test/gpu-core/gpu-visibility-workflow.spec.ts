@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -13,14 +12,12 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUVisibilityWorkflowToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
 
-test('GPUVisibilityWorkflow composes predicates and publishes indirect-ready results', async t => {
+it('GPUVisibilityWorkflow composes predicates and publishes indirect-ready results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -104,48 +101,49 @@ test('GPUVisibilityWorkflow composes predicates and publishes indirect-ready res
   const compiled = graph.compile();
 
   await encodeAndSubmit(device, compiled, 'visibility-first');
-  t.deepEqual(await readUint32(outputBuffer, 2), [42, 45], 'stable generated IDs preserve order');
-  t.deepEqual(
+  expect(await readUint32(outputBuffer, 2), 'stable generated IDs preserve order').toEqual([
+    42, 45
+  ]);
+  expect(
     await readUint32(outputMaskBuffer, predicateValues.timeRange.length),
-    [0, 0, 1, 0, 0, 1, 0, 0],
     'fused nonzero predicates publish one canonical mask'
+  ).toEqual([0, 0, 1, 0, 0, 1, 0, 0]);
+  expect(await readDrawCount(drawCommands), 'visible count writes the indirect command slot').toBe(
+    2
   );
-  t.equal(await readDrawCount(drawCommands), 2, 'visible count writes the indirect command slot');
 
   predicateBuffers.selection.write(Uint32Array.from({length: 8}, () => 1));
   await encodeAndSubmit(device, compiled, 'visibility-updated');
-  t.deepEqual(
+  expect(
     await readUint32(outputBuffer, 4),
-    [40, 42, 45, 46],
     'predicate data updates without graph recompilation'
+  ).toEqual([40, 42, 45, 46]);
+  expect(await readDrawCount(drawCommands), 'the indirect count updates with the predicates').toBe(
+    4
   );
-  t.equal(await readDrawCount(drawCommands), 4, 'the indirect count updates with the predicates');
-  t.ok(
-    compiled.stats.nodeOrder.some(id => id === 'objects-identity'),
+  expect(
+    Boolean(compiled.stats.nodeOrder.some(id => id === 'objects-identity')),
     'workflow owns stable identity generation'
-  );
-  t.ok(
-    compiled.stats.nodeOrder.some(id => id === 'objects-compose'),
+  ).toBe(true);
+  expect(
+    Boolean(compiled.stats.nodeOrder.some(id => id === 'objects-compose')),
     'workflow owns predicate composition'
-  );
-  t.ok(
-    compiled.stats.nodeOrder.some(id => id.startsWith('objects-compact')),
+  ).toBe(true);
+  expect(
+    Boolean(compiled.stats.nodeOrder.some(id => id.startsWith('objects-compact'))),
     'workflow owns scan and stable compaction'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of Object.values(predicateBuffers)) buffer.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
   drawCommands.destroy();
-  t.end();
 });
 
-test('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bounded 3D dispatches', async t => {
+it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bounded 3D dispatches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -209,21 +207,18 @@ test('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bou
   try {
     await encodeAndSubmit(device, compiled, 'bounded-visibility-encoding');
 
-    t.deepEqual(
+    expect(
       await readUint32(outputMaskBuffer, rowCount),
-      expectedMask,
       'multidimensional mask composition visits each source row exactly once'
-    );
-    t.deepEqual(
+    ).toEqual(expectedMask);
+    expect(
       await readUint32(outputBuffer, expectedSourceIds.length),
-      expectedSourceIds,
       'bounded identity generation and scatter preserve stable source-row order'
-    );
-    t.deepEqual(
+    ).toEqual(expectedSourceIds);
+    expect(
       await readUint32(countBuffer, 1),
-      [expectedSourceIds.length],
       'padded multidimensional workgroups never inflate the selected count'
-    );
+    ).toEqual([expectedSourceIds.length]);
 
     const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
       id: (computation as Computation).id,
@@ -236,11 +231,10 @@ test('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bou
       'bounded-visibility-compact-scan-level-0-add-offsets',
       'bounded-visibility-compact-scatter'
     ]) {
-      t.deepEqual(
+      expect(
         dispatches.find(dispatch => dispatch.id === passId)?.dimensions,
-        [2, 2, 2],
         `${passId} inherits the same bounded three-dimensional dispatch limit`
-      );
+      ).toEqual([2, 2, 2]);
     }
   } finally {
     dispatchSpy.mockRestore();
@@ -251,15 +245,11 @@ test('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bou
     outputBuffer.destroy();
     countBuffer.destroy();
   }
-
-  t.end();
 });
 
-test('GPUVisibilityWorkflow preserves chunk topology while generating global IDs', async t => {
+it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -293,35 +283,29 @@ test('GPUVisibilityWorkflow preserves chunk topology while generating global IDs
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled, 'chunked-visibility');
 
-  t.deepEqual(
+  expect(
     await readVectorFixture(outputFixture),
-    [[0, 2, 3], [], [4, 0xffffffff]],
     'identity generation and compaction preserve global order across chunks'
-  );
-  t.deepEqual(await readUint32(countBuffer, 1), [4], 'one count spans the complete vector');
-  t.deepEqual(
+  ).toEqual([[0, 2, 3], [], [4, 0xffffffff]]);
+  expect(await readUint32(countBuffer, 1), 'one count spans the complete vector').toEqual([4]);
+  expect(
     compiled.stats.nodeOrder.filter(id => id.includes('compose')),
-    ['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-2'],
     'one noncanonical predicate is normalized before compaction'
-  );
-  t.deepEqual(
+  ).toEqual(['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-2']);
+  expect(
     compiled.stats.nodeOrder.filter(id => id.includes('identity')),
-    ['gpu-visibility-identity-chunk-0', 'gpu-visibility-identity-chunk-2'],
     'empty chunks retain topology without an unnecessary dispatch'
-  );
+  ).toEqual(['gpu-visibility-identity-chunk-0', 'gpu-visibility-identity-chunk-2']);
 
   compiled.destroy();
   destroyVectorFixture(maskFixture);
   destroyVectorFixture(outputFixture);
   countBuffer.destroy();
-  t.end();
 });
 
-test('GPUVisibilityWorkflow rejects incompatible contracts', async t => {
+it('GPUVisibilityWorkflow rejects incompatible contracts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -341,12 +325,11 @@ test('GPUVisibilityWorkflow rejects incompatible contracts', async t => {
   const output = graph.createDataView(secondBuffer, {format: 'uint32', length: 4});
   const count = graph.createDataView(firstBuffer, {format: 'uint32', length: 1});
 
-  t.throws(
+  expect(
     () => new GPUVisibilityWorkflow({predicates: [], output, count}),
-    /at least one visibility predicate/,
     'at least one fixed-contract predicate is required'
-  );
-  t.throws(
+  ).toThrow(/at least one visibility predicate/);
+  expect(
     () =>
       new GPUVisibilityWorkflow({
         predicates: [
@@ -356,10 +339,9 @@ test('GPUVisibilityWorkflow rejects incompatible contracts', async t => {
         output,
         count
       }),
-    /length must match/,
     'predicate masks remain source aligned'
-  );
-  t.throws(
+  ).toThrow(/length must match/);
+  expect(
     () =>
       new GPUVisibilityWorkflow({
         predicates: [{kind: 'bounds', mask: first}],
@@ -367,10 +349,9 @@ test('GPUVisibilityWorkflow rejects incompatible contracts', async t => {
         count,
         firstSourceIndex: 0xffffffff
       }),
-    /exceed uint32 range/,
     'generated identities cannot overflow uint32'
-  );
-  t.throws(
+  ).toThrow(/exceed uint32 range/);
+  expect(
     () =>
       new GPUVisibilityWorkflow({
         predicates: [{kind: 'bounds', mask: first}],
@@ -379,10 +360,8 @@ test('GPUVisibilityWorkflow rejects incompatible contracts', async t => {
         sourceIds: first,
         firstSourceIndex: 1
       }),
-    /cannot be used with explicit source IDs/,
     'explicit source IDs and generated offsets are mutually exclusive'
-  );
-  t.end();
+  ).toThrow(/cannot be used with explicit source IDs/);
 });
 
 async function encodeAndSubmit(

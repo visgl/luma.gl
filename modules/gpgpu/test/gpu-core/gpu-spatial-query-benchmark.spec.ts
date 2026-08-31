@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   GPUCommandGraph,
   runGPUSpatialQueryBenchmark,
@@ -13,26 +13,22 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('summarizeGPUSpatialBenchmarkSamples reports nearest-rank distributions', t => {
-  t.deepEqual(summarizeGPUSpatialBenchmarkSamples([4, 1, 3, 2]), {
+it('summarizeGPUSpatialBenchmarkSamples reports nearest-rank distributions', () => {
+  expect(summarizeGPUSpatialBenchmarkSamples([4, 1, 3, 2])).toEqual({
     minimum: 1,
     median: 2,
     percentile95: 4,
     maximum: 4
   });
-  t.throws(
+  expect(
     () => summarizeGPUSpatialBenchmarkSamples([1, Number.NaN]),
-    /finite non-negative/,
     'invalid samples cannot produce misleading reports'
-  );
-  t.end();
+  ).toThrow(/finite non-negative/);
 });
 
-test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH paths', async t => {
+it('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const compiledGraphs: CompiledGPUCommandGraph<void>[] = [];
@@ -65,12 +61,14 @@ test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH path
     reuseCounts: [1, 4]
   });
 
-  t.equal(report.expectedResultCount, 2);
-  t.equal(report.paths.length, 3);
-  t.equal(report.paths[1].candidateCount, 4, 'grid candidate work is retained');
-  t.equal(report.paths[2].visitedCount, 7, 'BVH traversal work is retained');
-  t.deepEqual(report.paths[0].amortizedGPUTime, [], 'GPU costs require timestamped phases');
-  t.ok(report.paths.every(path => path.cpuEncodeTimeMilliseconds.minimum >= 0));
+  expect(report.expectedResultCount).toBe(2);
+  expect(report.paths.length).toBe(3);
+  expect(report.paths[1].candidateCount, 'grid candidate work is retained').toBe(4);
+  expect(report.paths[2].visitedCount, 'BVH traversal work is retained').toBe(7);
+  expect(report.paths[0].amortizedGPUTime, 'GPU costs require timestamped phases').toEqual([]);
+  expect(Boolean(report.paths.every(path => path.cpuEncodeTimeMilliseconds.minimum >= 0))).toBe(
+    true
+  );
 
   let mismatchError: unknown;
   try {
@@ -83,7 +81,9 @@ test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH path
   } catch (error) {
     mismatchError = error;
   }
-  t.match(String(mismatchError), /shared CPU oracle/, 'incorrect paths cannot report timings');
+  expect(String(mismatchError), 'incorrect paths cannot report timings').toMatch(
+    /shared CPU oracle/
+  );
 
   const resourceCounts = device.statsManager.getStats('Resource Counts');
   const activeCommandEncodersBeforeFailure = resourceCounts.get('CommandEncoders Active').count;
@@ -113,13 +113,11 @@ test('runGPUSpatialQueryBenchmark applies one oracle to scan, grid, and BVH path
   } catch (error) {
     encodingError = error;
   }
-  t.match(String(encodingError), /intentional measured encoding failure/);
-  t.equal(
+  expect(String(encodingError)).toMatch(/intentional measured encoding failure/);
+  expect(
     resourceCounts.get('CommandEncoders Active').count,
-    activeCommandEncodersBeforeFailure,
     'a failed measured encoding releases its command encoder'
-  );
+  ).toBe(activeCommandEncodersBeforeFailure);
 
   for (const compiled of compiledGraphs) compiled.destroy();
-  t.end();
 });

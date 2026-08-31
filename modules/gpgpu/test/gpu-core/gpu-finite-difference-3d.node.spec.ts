@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -8,47 +9,42 @@ import {
   GPUFiniteDifference3D,
   makeGPUFiniteDifference3DStats
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUFiniteDifference3DShaderSource} from '../../src/gpu-core/gpu-finite-difference-3d';
 
-test('GPUFiniteDifference3D plans explicit volumetric numerical policies', t => {
-  t.deepEqual(
+it('GPUFiniteDifference3D plans explicit volumetric numerical policies', () => {
+  expect(
     makeGPUFiniteDifference3DStats({
       width: 8,
       height: 7,
       depth: 6,
       spacing: [0.25, 0.5, 0.75],
       operator: 'curl'
-    }),
-    {
+    })
+  ).toEqual({
+    width: 8,
+    height: 7,
+    depth: 6,
+    elementCount: 336,
+    spacing: [0.25, 0.5, 0.75],
+    operator: 'curl',
+    boundary: 'one-sided',
+    stencilOrder: 2,
+    inputComponentCount: 4,
+    outputComponentCount: 4
+  });
+  expect(() =>
+    makeGPUFiniteDifference3DStats({
       width: 8,
-      height: 7,
+      height: 3,
       depth: 6,
-      elementCount: 336,
-      spacing: [0.25, 0.5, 0.75],
-      operator: 'curl',
-      boundary: 'one-sided',
-      stencilOrder: 2,
-      inputComponentCount: 4,
-      outputComponentCount: 4
-    }
-  );
-  t.throws(
-    () =>
-      makeGPUFiniteDifference3DStats({
-        width: 8,
-        height: 3,
-        depth: 6,
-        spacing: [1, 1, 1],
-        operator: 'gradient'
-      }),
-    /at least 4/
-  );
-  t.end();
+      spacing: [1, 1, 1],
+      operator: 'gradient'
+    })
+  ).toThrow(/at least 4/);
 });
 
-test('GPUFiniteDifference3D generates valid scalar and vector kernels', t => {
+it('GPUFiniteDifference3D generates valid scalar and vector kernels', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const scalar = makeView(graph, 'scalar', 'float32', 64);
   const vector = makeView(graph, 'vector', 'float32x4', 64);
@@ -73,16 +69,11 @@ test('GPUFiniteDifference3D generates valid scalar and vector kernels', t => {
   });
   for (const operation of [gradient, curl]) {
     const source = getGPUFiniteDifference3DShaderSource(operation, {x: 1, y: 1, z: 1});
-    t.deepEqual(
-      new WgslReflect(source).entry.compute.map(entry => entry.name),
-      ['main']
-    );
+    expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
   }
-  t.match(
-    getGPUFiniteDifference3DShaderSource(curl, {x: 1, y: 1, z: 1}),
+  expect(getGPUFiniteDifference3DShaderSource(curl, {x: 1, y: 1, z: 1})).toMatch(
     /OUTPUT_OFFSET: u32 = 1u/
   );
-  t.end();
 });
 
 function makeView(

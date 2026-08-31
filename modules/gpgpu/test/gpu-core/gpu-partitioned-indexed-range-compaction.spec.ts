@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -10,13 +11,10 @@ import {
   type GraphDataView
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks', async t => {
+it('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -61,26 +59,22 @@ test('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks',
 
   try {
     await encodeAndSubmit(device, compiled, 'partitioned-range-compaction-all');
-    t.deepEqual(await readUint32(output.buffers[0], 4), [0, 2, 4, 5], 'first output chunk');
-    t.deepEqual(await readUint32(output.buffers[1], 3), [7, 8, 10], 'second output chunk');
-    t.deepEqual(await readUint32(count.buffer, 1), [7], 'total selected count');
+    expect(await readUint32(output.buffers[0], 4), 'first output chunk').toEqual([0, 2, 4, 5]);
+    expect(await readUint32(output.buffers[1], 3), 'second output chunk').toEqual([7, 8, 10]);
+    expect(await readUint32(count.buffer, 1), 'total selected count').toEqual([7]);
 
     activeRangeIdsResource.buffer.write(Uint32Array.from([1, 3, 2, 0]));
     activeRangeDispatch.buffer.write(Uint32Array.from([1, 2, 1]));
     await encodeAndSubmit(device, compiled, 'partitioned-range-compaction-subset');
-    t.deepEqual(await readUint32(output.buffers[0], 2), [4, 5], 'first candidate partition');
-    t.deepEqual(await readUint32(output.buffers[1], 2), [8, 10], 'second candidate partition');
-    t.deepEqual(
-      await readUint32(count.buffer, 1),
-      [4],
-      'GPU candidate changes avoid recompilation'
-    );
+    expect(await readUint32(output.buffers[0], 2), 'first candidate partition').toEqual([4, 5]);
+    expect(await readUint32(output.buffers[1], 2), 'second candidate partition').toEqual([8, 10]);
+    expect(await readUint32(count.buffer, 1), 'GPU candidate changes avoid recompilation').toEqual([
+      4
+    ]);
   } finally {
     compiled.destroy();
     for (const resource of resources) resource.destroy();
   }
-
-  t.end();
 });
 
 function createImportedVector(

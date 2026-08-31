@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -14,21 +13,22 @@ import {
   type GPUSortSegment
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUSegmentedSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 
 const UNSORTED_GAP = 0xcafef00d;
 const OUTPUT_GAP = 0xdeadbeef;
 
-test('GPUSegmentedSort stably sorts mixed packed domains and preserves every gap on CORE WebGPU', async t => {
+it('GPUSegmentedSort stably sorts mixed packed domains and preserves every gap on CORE WebGPU', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.equal(device.limits.maxStorageBuffersPerShaderStage, 8, 'uses the standard CORE storage limit');
+  expect(
+    device.limits.maxStorageBuffersPerShaderStage,
+    'uses the standard CORE storage limit'
+  ).toBe(8);
   const lengths = [0, 1, 2, 3, 5, 9, 17, 33, 65, 129, 255, 256];
 
   for (const direction of ['ascending', 'descending'] as const) {
@@ -39,49 +39,39 @@ test('GPUSegmentedSort stably sorts mixed packed domains and preserves every gap
       encodeFixture(device, compiled);
       const [keys, values, outputKeys, outputValues] = await readFixtureBuffers(fixture);
 
-      t.deepEqual(
-        keys,
-        Array.from(fixture.keyData),
-        `${direction} source key storage is unchanged`
+      expect(keys, `${direction} source key storage is unchanged`).toEqual(
+        Array.from(fixture.keyData)
       );
-      t.deepEqual(
-        values,
-        Array.from(fixture.valueData),
-        `${direction} source payload storage is unchanged`
+      expect(values, `${direction} source payload storage is unchanged`).toEqual(
+        Array.from(fixture.valueData)
       );
-      t.deepEqual(
+      expect(
         outputKeys,
-        Array.from(fixture.expectedOutputKeys),
         `${direction} sorted keys preserve padding, parent offsets, and every gap`
-      );
-      t.deepEqual(
+      ).toEqual(Array.from(fixture.expectedOutputKeys));
+      expect(
         outputValues,
-        Array.from(fixture.expectedOutputValues),
         `${direction} equal-key payloads retain independent source order`
-      );
-      t.deepEqual(
+      ).toEqual(Array.from(fixture.expectedOutputValues));
+      expect(
         compiled.stats.nodeOrder,
-        [2, 4, 8, 16, 32, 64, 128, 256].map(width => `segmented-sort-bitonic-local-${width}`),
         `${direction} independent domains need only one graph node per workgroup width`
+      ).toEqual(
+        [2, 4, 8, 16, 32, 64, 128, 256].map(width => `segmented-sort-bitonic-local-${width}`)
       );
-      t.equal(
+      expect(
         compiled.stats.logicalTransientBufferCount,
-        0,
         'segment descriptors and workgroup-local sorting allocate no GPU scratch buffers'
-      );
+      ).toBe(0);
     } finally {
       destroyFixture(fixture, compiled);
     }
   }
-
-  t.end();
 });
 
-test('GPUSegmentedSort batches many workgroups into one four-binding CORE dispatch', async t => {
+it('GPUSegmentedSort batches many workgroups into one four-binding CORE dispatch', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -98,46 +88,41 @@ test('GPUSegmentedSort batches many workgroups into one four-binding CORE dispat
     const [, , outputKeys, outputValues] = await readFixtureBuffers(fixture);
     const source = dispatch.mock.instances.at(-1)?.source ?? '';
 
-    t.deepEqual(
-      outputKeys,
-      Array.from(fixture.expectedOutputKeys),
-      'all 96 sort domains are correct'
+    expect(outputKeys, 'all 96 sort domains are correct').toEqual(
+      Array.from(fixture.expectedOutputKeys)
     );
-    t.deepEqual(
-      outputValues,
-      Array.from(fixture.expectedOutputValues),
-      'all 96 domains preserve paired values and stable equal keys'
+    expect(outputValues, 'all 96 domains preserve paired values and stable equal keys').toEqual(
+      Array.from(fixture.expectedOutputValues)
     );
-    t.deepEqual(
+    expect(
       compiled.stats.nodeOrder,
-      ['segmented-sort-bitonic-local-4'],
       '96 independent three-row sorts require one graph node'
-    );
-    t.equal(dispatch.mock.calls.length, 1, 'the graph encodes exactly one GPU dispatch');
-    t.deepEqual(dispatch.mock.calls[0].slice(1), [96, 1, 1], 'one workgroup handles each domain');
-    t.ok(source.includes('@workgroup_size(4)'), 'only four lanes wake for each three-row domain');
-    t.ok(
-      source.includes('var<workgroup> cachedKeys: array<u32, 4>'),
+    ).toEqual(['segmented-sort-bitonic-local-4']);
+    expect(dispatch.mock.calls.length, 'the graph encodes exactly one GPU dispatch').toBe(1);
+    expect(dispatch.mock.calls[0].slice(1), 'one workgroup handles each domain').toEqual([
+      96, 1, 1
+    ]);
+    expect(
+      Boolean(source.includes('@workgroup_size(4)')),
+      'only four lanes wake for each three-row domain'
+    ).toBe(true);
+    expect(
+      Boolean(source.includes('var<workgroup> cachedKeys: array<u32, 4>')),
       'source keys are cached once in workgroup storage'
-    );
-    t.equal(
+    ).toBe(true);
+    expect(
       (source.match(/@group\(0\) @binding\(/g) ?? []).length,
-      4,
       'the portable batched shader uses exactly four storage bindings'
-    );
+    ).toBe(4);
   } finally {
     dispatch.mockRestore();
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
-test('GPUSegmentedSort bounds segment workgroups across all three dispatch dimensions', async t => {
+it('GPUSegmentedSort bounds segment workgroups across all three dispatch dimensions', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -150,34 +135,33 @@ test('GPUSegmentedSort bounds segment workgroups across all three dispatch dimen
     encodeFixture(device, compiled);
     const [, , outputKeys, outputValues] = await readFixtureBuffers(fixture);
 
-    t.deepEqual(
-      outputKeys,
-      Array.from(fixture.expectedOutputKeys),
-      'all bounded workgroups sort keys'
+    expect(outputKeys, 'all bounded workgroups sort keys').toEqual(
+      Array.from(fixture.expectedOutputKeys)
     );
-    t.deepEqual(
+    expect(
       outputValues,
-      Array.from(fixture.expectedOutputValues),
       'out-of-range padded workgroups leave caller-owned gaps untouched'
-    );
-    t.deepEqual(dispatch.mock.calls[0].slice(1), [2, 2, 2], 'workgroups span all three dimensions');
-    t.ok(
-      (dispatch.mock.instances.at(-1)?.source ?? '').includes('if (segmentIndex >= SEGMENT_COUNT)'),
+    ).toEqual(Array.from(fixture.expectedOutputValues));
+    expect(dispatch.mock.calls[0].slice(1), 'workgroups span all three dimensions').toEqual([
+      2, 2, 2
+    ]);
+    expect(
+      Boolean(
+        (dispatch.mock.instances.at(-1)?.source ?? '').includes(
+          'if (segmentIndex >= SEGMENT_COUNT)'
+        )
+      ),
       'surplus multidimensional workgroups are rejected before descriptor access'
-    );
+    ).toBe(true);
   } finally {
     dispatch.mockRestore();
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
-test('GPUSegmentedSort reuses one compiled graph after caller-owned source data changes', async t => {
+it('GPUSegmentedSort reuses one compiled graph after caller-owned source data changes', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -187,10 +171,8 @@ test('GPUSegmentedSort reuses one compiled graph after caller-owned source data 
   try {
     encodeFixture(device, compiled);
     const firstOutput = await readBuffer(fixture.outputKeysBuffer);
-    t.deepEqual(
-      firstOutput,
-      Array.from(fixture.expectedOutputKeys),
-      'initial graph encoding sorts'
+    expect(firstOutput, 'initial graph encoding sorts').toEqual(
+      Array.from(fixture.expectedOutputKeys)
     );
 
     const firstSegment = fixture.segments[0];
@@ -201,21 +183,15 @@ test('GPUSegmentedSort reuses one compiled graph after caller-owned source data 
 
     encodeFixture(device, compiled);
     const [, , outputKeys, outputValues] = await readFixtureBuffers(fixture);
-    t.deepEqual(
-      outputKeys,
-      Array.from(fixture.expectedOutputKeys),
-      're-encoding sees updated keys'
+    expect(outputKeys, 're-encoding sees updated keys').toEqual(
+      Array.from(fixture.expectedOutputKeys)
     );
-    t.deepEqual(
-      outputValues,
-      Array.from(fixture.expectedOutputValues),
-      're-encoding preserves stable duplicate payloads'
+    expect(outputValues, 're-encoding preserves stable duplicate payloads').toEqual(
+      Array.from(fixture.expectedOutputValues)
     );
   } finally {
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
 type SegmentedSortFixture = {

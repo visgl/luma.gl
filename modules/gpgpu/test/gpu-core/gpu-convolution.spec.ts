@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -11,13 +12,10 @@ import {
   type GPUConvolutionStrategy
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUConvolution direct path matches CPU convolution for zero and wrap boundaries', async testCase => {
+it('GPUConvolution direct path matches CPU convolution for zero and wrap boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const width = 7;
@@ -47,17 +45,14 @@ test('GPUConvolution direct path matches CPU convolution for zero and wrap bound
       kernelHeight,
       boundary
     );
-    assertClose(testCase, result.values, expected, 0.00001, `direct ${boundary}`);
-    testCase.equal(result.logicalTransientBufferCount, 0, `${boundary} direct path has no scratch`);
+    assertClose(result.values, expected, 0.00001, `direct ${boundary}`);
+    expect(result.logicalTransientBufferCount, `${boundary} direct path has no scratch`).toBe(0);
   }
-  testCase.end();
 });
 
-test('GPUConvolution FFT path agrees with direct and CPU results', async testCase => {
+it('GPUConvolution FFT path agrees with direct and CPU results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   for (const dimensions of [
@@ -102,22 +97,19 @@ test('GPUConvolution FFT path agrees with direct and CPU results', async testCas
       kernelHeight,
       dimensions.boundary
     );
-    assertClose(testCase, fft.values, direct.values, 0.001, `FFT/direct ${dimensions.boundary}`);
-    assertClose(testCase, fft.values, expected, 0.001, `FFT/CPU ${dimensions.boundary}`);
-    testCase.equal(fft.logicalTransientBufferCount, 9, 'FFT scratch is explicit in graph stats');
-    testCase.ok(
-      fft.physicalTransientBufferCount < fft.logicalTransientBufferCount,
+    assertClose(fft.values, direct.values, 0.001, `FFT/direct ${dimensions.boundary}`);
+    assertClose(fft.values, expected, 0.001, `FFT/CPU ${dimensions.boundary}`);
+    expect(fft.logicalTransientBufferCount, 'FFT scratch is explicit in graph stats').toBe(9);
+    expect(
+      Boolean(fft.physicalTransientBufferCount < fft.logicalTransientBufferCount),
       'non-overlapping FFT fields alias physical scratch'
-    );
+    ).toBe(true);
   }
-  testCase.end();
 });
 
-test('GPUConvolution benchmark compares available direct and FFT paths', async testCase => {
+it('GPUConvolution benchmark compares available direct and FFT paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const report = await runGPUConvolutionBenchmark(device, {
@@ -130,21 +122,21 @@ test('GPUConvolution benchmark compares available direct and FFT paths', async t
     warmupIterations: 1,
     measuredIterations: 2
   });
-  testCase.equal(report.cases.length, 2);
-  testCase.deepEqual(
-    report.cases.map(benchmarkCase => benchmarkCase.paths.map(path => path.strategy)),
+  expect(report.cases.length).toBe(2);
+  expect(report.cases.map(benchmarkCase => benchmarkCase.paths.map(path => path.strategy))).toEqual(
     [
       ['direct', 'fft'],
       ['direct', 'fft']
     ]
   );
-  testCase.ok(
-    report.cases.every(benchmarkCase =>
-      benchmarkCase.paths.every(path => Number.isFinite(path.cpuEncodeTimeMilliseconds.median))
+  expect(
+    Boolean(
+      report.cases.every(benchmarkCase =>
+        benchmarkCase.paths.every(path => Number.isFinite(path.cpuEncodeTimeMilliseconds.median))
+      )
     ),
     'each strategy reports a finite timing distribution'
-  );
-  testCase.end();
+  ).toBe(true);
 });
 
 async function runGPUConvolution(
@@ -253,17 +245,16 @@ function makeCPUConvolution(
 }
 
 function assertClose(
-  testCase: {ok: (value: unknown, message?: string) => void},
   actual: readonly number[],
   expected: readonly number[],
   tolerance: number,
   label: string
 ): void {
-  testCase.ok(actual.length === expected.length, `${label} length matches`);
+  expect(Boolean(actual.length === expected.length), `${label} length matches`).toBe(true);
   for (let index = 0; index < actual.length; index++) {
-    testCase.ok(
-      Math.abs(actual[index] - expected[index]) <= tolerance,
+    expect(
+      Boolean(Math.abs(actual[index] - expected[index]) <= tolerance),
       `${label} value ${index}: ${actual[index]} ~= ${expected[index]}`
-    );
+    ).toBe(true);
   }
 }
