@@ -405,8 +405,13 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
         'readArrowGPUDataAsync() requires variable-length attribute readback metadata'
       );
     }
+    const metadataValueLength = metadata.valueByteLength / data.rowByteLength;
+    if (!Number.isSafeInteger(metadataValueLength) || metadataValueLength < 0) {
+      throw new Error('readArrowGPUDataAsync() variable-length byte metadata is misaligned');
+    }
+    const valueLength = metadataValueLength;
     const readByteLength =
-      data.valueLength === 0 ? 0 : (data.valueLength - 1) * data.byteStride + data.rowByteLength;
+      valueLength === 0 ? 0 : (valueLength - 1) * data.byteStride + data.rowByteLength;
     const bytes =
       readByteLength === 0
         ? new Uint8Array(0)
@@ -414,7 +419,7 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
     const packedBytes =
       data.byteStride === data.rowByteLength
         ? bytes
-        : compactStridedRows(bytes, data.valueLength, data.byteStride, data.rowByteLength);
+        : compactStridedRows(bytes, valueLength, data.byteStride, data.rowByteLength);
     return makeArrowVariableLengthAttributeDataFromPackedBytes(
       dataType,
       data.length,
