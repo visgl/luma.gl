@@ -157,10 +157,135 @@ float tan_fp32(float a) {
 }
 `;
 
+const fp32WGSL = /* wgsl */ `\
+#ifdef LUMA_FP32_TAN_PRECISION_WORKAROUND
+const FP32_TWO_PI: f32 = 6.2831854820251465;
+const FP32_PI_2: f32 = 1.5707963705062866;
+const FP32_PI_16: f32 = 0.1963495463132858;
+
+const FP32_SIN_TABLE_0: f32 = 0.19509032368659973;
+const FP32_SIN_TABLE_1: f32 = 0.3826834261417389;
+const FP32_SIN_TABLE_2: f32 = 0.5555702447891235;
+const FP32_SIN_TABLE_3: f32 = 0.7071067690849304;
+
+const FP32_COS_TABLE_0: f32 = 0.9807852506637573;
+const FP32_COS_TABLE_1: f32 = 0.9238795042037964;
+const FP32_COS_TABLE_2: f32 = 0.8314695954322815;
+const FP32_COS_TABLE_3: f32 = 0.7071067690849304;
+
+const FP32_INVERSE_FACTORIAL_3: f32 = 1.666666716337204e-01;
+const FP32_INVERSE_FACTORIAL_5: f32 = 8.333333767950535e-03;
+const FP32_INVERSE_FACTORIAL_7: f32 = 1.9841270113829523e-04;
+const FP32_INVERSE_FACTORIAL_9: f32 = 2.75573188446287533e-06;
+const FP32_OVERFLOW: f32 = 3.402823466e+38;
+
+fn sin_taylor_fp32(a: f32) -> f32 {
+  if (a == 0.0) {
+    return 0.0;
+  }
+
+  let x = -a * a;
+  var sum = a;
+  var term = a;
+
+  term = term * x;
+  sum = sum + term * FP32_INVERSE_FACTORIAL_3;
+  term = term * x;
+  sum = sum + term * FP32_INVERSE_FACTORIAL_5;
+  term = term * x;
+  sum = sum + term * FP32_INVERSE_FACTORIAL_7;
+  term = term * x;
+  sum = sum + term * FP32_INVERSE_FACTORIAL_9;
+
+  return sum;
+}
+
+fn tan_taylor_fp32(a: f32) -> f32 {
+  if (a == 0.0) {
+    return 0.0;
+  }
+
+  let z = floor(a / FP32_TWO_PI);
+  let reduced = a - FP32_TWO_PI * z;
+
+  var quadrantValue = floor(reduced / FP32_PI_2 + 0.5);
+  let quadrant = i32(quadrantValue);
+  if (quadrant < -2 || quadrant > 2) {
+    return FP32_OVERFLOW;
+  }
+
+  var angle = reduced - FP32_PI_2 * quadrantValue;
+  quadrantValue = floor(angle / FP32_PI_16 + 0.5);
+  let tableIndex = i32(quadrantValue);
+  let absoluteTableIndex = abs(tableIndex);
+  if (absoluteTableIndex > 4) {
+    return FP32_OVERFLOW;
+  }
+
+  angle = angle - FP32_PI_16 * quadrantValue;
+  let sinAngle = sin_taylor_fp32(angle);
+  let cosAngle = sqrt(1.0 - sinAngle * sinAngle);
+
+  var tableCos = 0.0;
+  var tableSin = 0.0;
+  if (absoluteTableIndex == 1) {
+    tableCos = FP32_COS_TABLE_0;
+    tableSin = FP32_SIN_TABLE_0;
+  } else if (absoluteTableIndex == 2) {
+    tableCos = FP32_COS_TABLE_1;
+    tableSin = FP32_SIN_TABLE_1;
+  } else if (absoluteTableIndex == 3) {
+    tableCos = FP32_COS_TABLE_2;
+    tableSin = FP32_SIN_TABLE_2;
+  } else if (absoluteTableIndex == 4) {
+    tableCos = FP32_COS_TABLE_3;
+    tableSin = FP32_SIN_TABLE_3;
+  }
+
+  var sinReduced = sinAngle;
+  var cosReduced = cosAngle;
+  if (tableIndex > 0) {
+    sinReduced = tableCos * sinAngle + tableSin * cosAngle;
+    cosReduced = tableCos * cosAngle - tableSin * sinAngle;
+  } else if (tableIndex < 0) {
+    sinReduced = tableCos * sinAngle - tableSin * cosAngle;
+    cosReduced = tableCos * cosAngle + tableSin * sinAngle;
+  }
+
+  var sinValue = 0.0;
+  var cosValue = 0.0;
+  if (quadrant == 0) {
+    sinValue = sinReduced;
+    cosValue = cosReduced;
+  } else if (quadrant == 1) {
+    sinValue = cosReduced;
+    cosValue = -sinReduced;
+  } else if (quadrant == -1) {
+    sinValue = -cosReduced;
+    cosValue = sinReduced;
+  } else {
+    sinValue = -sinReduced;
+    cosValue = -cosReduced;
+  }
+
+  return sinValue / cosValue;
+}
+
+fn tan_fp32(a: f32) -> f32 {
+  return tan_taylor_fp32(a);
+}
+#else
+fn tan_fp32(a: f32) -> f32 {
+  return tan(a);
+}
+#endif
+`;
+
 /**
  * 32 bit math library (fixups for GPUs)
  */
 export const fp32 = {
   name: 'fp32',
+  source: fp32WGSL,
   vs: fp32shader
 };

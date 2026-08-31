@@ -5,8 +5,9 @@
 import test from 'test/utils/vitest-tape';
 import {
   convertGeoArrowTableToInterleavedAsync,
-  convertGeoArrowVectorToInterleaved
-} from '@math.gl/geoarrow';
+  convertGeoArrowVectorToInterleaved,
+  makeGeoArrowColumnFromArrowVector
+} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 test('convertGeoArrowTableToInterleavedAsync converts separated coordinates', async t => {
@@ -50,6 +51,44 @@ test('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate 
     [null, [4, 5, 6], [7, 8, 9]],
     'preserves sliced validity and coordinate rows'
   );
+  t.end();
+});
+
+test('convertGeoArrowVectorToInterleaved preserves validity after a byte-aligned slice', t => {
+  const coordinates = Array.from({length: 12}, (_, index) => [index, index + 100, index + 200]);
+  const validRows = Array.from({length: 12}, () => true);
+  validRows[0] = false;
+  validRows[9] = false;
+  const convertedVector = convertGeoArrowVectorToInterleaved(
+    makeSeparatedPointVector(coordinates, validRows).slice(8, 11)
+  );
+
+  t.deepEqual(
+    getVectorRows(convertedVector),
+    [coordinates[8], null, coordinates[10]],
+    'uses the full Arrow validity bitmap offset'
+  );
+  t.end();
+});
+
+test('makeGeoArrowColumnFromArrowVector borrows Arrow coordinate buffers', t => {
+  const vector = makeSeparatedPointVector([
+    [1, 2, 3],
+    [4, 5, 6]
+  ]);
+  const column = makeGeoArrowColumnFromArrowVector(vector, {encoding: 'geoarrow.point'});
+  const chunk = column.chunks[0];
+
+  t.equal(column.dimension, 'xyz', 'infers the semantic dimension');
+  t.equal(column.coordinateLayout, 'separated', 'infers the coordinate layout');
+  t.ok(chunk.kind === 'struct', 'adapts separated coordinates as a struct descriptor');
+  if (chunk.kind === 'struct' && chunk.children.x.kind === 'primitive') {
+    t.equal(
+      chunk.children.x.values,
+      vector.data[0].children[0].values,
+      'borrows the Arrow typed-array view without copying'
+    );
+  }
   t.end();
 });
 

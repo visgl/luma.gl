@@ -6,7 +6,7 @@ import test from 'test/utils/vitest-tape';
 import {tesselateAsync, tessellateArrowPolygons} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-test('@luma.gl/arrow re-exports tessellateArrowPolygons from @math.gl/geoarrow', t => {
+test('@luma.gl/arrow tessellateArrowPolygons delegates geometry work to math.gl', t => {
   const coordinateData = makeFixedSizeListData(
     new arrow.Float32(),
     2,
@@ -21,7 +21,7 @@ test('@luma.gl/arrow re-exports tessellateArrowPolygons from @math.gl/geoarrow',
   t.end();
 });
 
-test('@luma.gl/arrow re-exports tesselateAsync from @math.gl/geoarrow', async t => {
+test('@luma.gl/arrow tesselateAsync preserves the compatibility entrypoint', async t => {
   const coordinateData = makeFixedSizeListData(
     new arrow.Float32(),
     2,

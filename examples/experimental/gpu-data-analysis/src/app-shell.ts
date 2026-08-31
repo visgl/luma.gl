@@ -68,12 +68,12 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       <article><span>GPU / CPU VALIDATION</span><strong data-validation>—</strong></article>
     </section>
 
-    <section class="dataframe-lab" aria-label="Interactive luDF derived-column lab">
+    <section class="dataframe-lab" aria-label="Interactive loaders.gl SQL GPU dataframe lab">
       <div class="lab-heading">
         <div>
-          <p class="eyebrow">GPU DATAFRAME / DERIVED COLUMN LAB</p>
-          <h2>Run an expression and watch your data move.</h2>
-          <p>Transform and filter the exact GPU buffers already driving the charts above.</p>
+          <p class="eyebrow">LOADERS.GL SQL / GPU DATAFRAME LAB</p>
+          <h2>Plan on the CPU. Filter on the GPU.</h2>
+          <p>Use the loaders.gl 5.0 query syntax against the GPU buffers driving the charts above.</p>
         </div>
         <span class="lab-badge">ZERO ROW COPIES</span>
       </div>
@@ -81,39 +81,28 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       <div class="expression-editor">
         <div class="editor-titlebar">
           <span class="editor-dots"><i></i><i></i><i></i></span>
-          <span>derived-query.ts</span>
+          <span>loaders-sql-query.ts</span>
           <span>GPU-RESIDENT</span>
         </div>
         <div class="expression-code">
-          <p><span>01</span> <i>const</i> query = frame</p>
-          <p><span>02</span>   .<b>withColumn</b>(<em>'adjustedValue'</em>, expression)</p>
-          <p><span>03</span>   .<b>filter</b>(adjustedValue.greaterThan(threshold));</p>
+          <p><span>01</span> <i>const</i> predicate = <b>parseSQLPredicate</b>(<em>'value &gt; :threshold'</em>, {preserveParameters: true});</p>
+          <p><span>02</span> <i>const</i> query = <b>planGPUDataFrameQuery</b>(frame, {</p>
+          <p><span>03</span>   predicate, columns: [<em>'category'</em>, <em>'value'</em>] });</p>
         </div>
         <div class="live-expression">
           <span>LIVE EXPRESSION</span>
-          <strong data-gpu-dataframe-expression>value × 2 + 1 > 1</strong>
+          <strong data-gpu-dataframe-expression>value &gt; :threshold · threshold = 1</strong>
         </div>
       </div>
 
       <div class="expression-controls">
-        <label>Multiplier
-          <select data-gpu-dataframe-multiplier>
-            <option value="0.5">0.5×</option>
-            <option value="1">1×</option>
-            <option value="2" selected>2×</option>
-            <option value="4">4×</option>
-          </select>
-        </label>
-        <label>Adjustment
-          <input data-gpu-dataframe-adjustment type="number" value="1" step="0.25">
-        </label>
-        <label>Threshold
+        <label>SQL parameter :threshold
           <input data-gpu-dataframe-threshold type="number" value="1" step="0.25">
         </label>
-        <button class="query-button" data-gpu-dataframe-run>Execute GPU query <span>→</span></button>
+        <button class="query-button" data-gpu-dataframe-run>Execute loaders.gl query <span>→</span></button>
       </div>
 
-      <div class="query-metrics" aria-label="Derived-query results">
+      <div class="query-metrics" aria-label="Loaders SQL GPU query results">
         <article><span>SELECTED ROWS</span><strong data-gpu-dataframe-selected>—</strong></article>
         <article><span>SELECTION RATE</span><strong data-gpu-dataframe-rate>—</strong></article>
         <article><span>QUERY + READBACK</span><strong data-gpu-dataframe-execution>—</strong></article>
@@ -121,7 +110,7 @@ export const GPU_DATA_ANALYSIS_TEMPLATE = `
       </div>
 
       <p class="query-status" data-gpu-dataframe-result role="status" aria-live="polite">
-        Derive and filter existing Arrow-backed GPU columns without copying rows.
+        Parse a portable loaders.gl predicate and filter Arrow-backed GPU columns without copying rows.
       </p>
     </section>
 

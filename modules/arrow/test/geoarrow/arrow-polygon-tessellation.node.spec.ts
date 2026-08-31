@@ -4,9 +4,8 @@
 
 import {readFileSync} from 'node:fs';
 import test from 'test/utils/vitest-tape';
-import {tesselateAsync, tessellateArrowPolygons} from '@math.gl/geoarrow';
+import {tesselateAsync, tessellateArrowPolygons} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
-import {dehydrateArrowTable, hydrateArrowTable} from '../../src/arrow-table-transport';
 
 type Coordinate = [number, number] | [number, number, number] | [number, number, number, number];
 type Color = [number, number, number, number];
@@ -192,84 +191,6 @@ test('tessellateArrowPolygons accepts pre-tessellated flat rows and vertex color
     Array.from(result.colors.slice(0, 8)),
     [255, 0, 0, 255, 0, 255, 0, 255],
     'keeps per-vertex colors'
-  );
-  t.end();
-});
-
-test('Arrow polygon worker transport hydrates row and vertex colors without IPC', t => {
-  const rowColorPolygons = makeNestedVector(
-    [
-      [
-        [
-          [0, 0],
-          [2, 0],
-          [2, 2],
-          [0, 2]
-        ]
-      ]
-    ],
-    2,
-    'float32'
-  );
-  const rowColors = makeRowColorVector([[12, 34, 210, 255]]);
-  const rowColorTable = hydrateArrowTable(
-    structuredClone(
-      dehydrateArrowTable(new arrow.Table({polygons: rowColorPolygons, colors: rowColors}))
-    )
-  );
-  const rowColorType = rowColorTable.getChild('colors')?.type as arrow.FixedSizeList;
-
-  t.ok(
-    rowColorType.children[0].type instanceof arrow.Uint8,
-    'hydrates row color child type as Uint8'
-  );
-
-  const rowColorResult = tessellateArrowPolygons({
-    polygons: rowColorTable.getChild('polygons')!,
-    colors: rowColorTable.getChild('colors')!
-  });
-
-  t.deepEqual(
-    Array.from(rowColorResult.colors.slice(0, 4)),
-    [12, 34, 210, 255],
-    'accepts FixedSizeList<Uint8, 4> row colors after worker hydration'
-  );
-
-  const vertexColorPolygons = makeNestedVector(
-    [
-      [
-        [0, 0],
-        [1, 0],
-        [1, 1]
-      ]
-    ],
-    1,
-    'float32'
-  );
-  const vertexColors = makeNestedColorVector([
-    [
-      [255, 0, 0, 255],
-      [0, 128, 255, 255],
-      [180, 0, 255, 255]
-    ]
-  ]);
-  const vertexColorTable = hydrateArrowTable(
-    structuredClone(
-      dehydrateArrowTable(new arrow.Table({polygons: vertexColorPolygons, colors: vertexColors}))
-    )
-  );
-  const vertexColorResult = tessellateArrowPolygons(
-    {
-      polygons: vertexColorTable.getChild('polygons')!,
-      colors: vertexColorTable.getChild('colors')!
-    },
-    {tessellated: true}
-  );
-
-  t.deepEqual(
-    Array.from(vertexColorResult.colors.slice(0, 8)),
-    [255, 0, 0, 255, 0, 128, 255, 255],
-    'accepts nested FixedSizeList<Uint8, 4> vertex colors after worker hydration'
   );
   t.end();
 });
