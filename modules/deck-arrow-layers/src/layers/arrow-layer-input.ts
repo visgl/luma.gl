@@ -4,7 +4,7 @@
 
 import {
   canConvertColors,
-  convertArrowColors,
+  convertArrowColorsToArrow,
   convertColors,
   getArrowPaths,
   getArrowRecordBatchAsyncIterator,
@@ -127,12 +127,7 @@ export async function convertArrowLayerColorVector(
   if (!canConvertColors(vector)) {
     return vector;
   }
-  const converted = await convertArrowColors(device, vector as Vector<ArrowColorType>, {name});
-  try {
-    return await readArrowGPUVectorAsync(converted);
-  } finally {
-    converted.destroy();
-  }
+  return await convertArrowColorsToArrow(device, vector as Vector<ArrowColorType>, {name});
 }
 
 function hasNullRows(nullBitmap: Uint8Array, length: number): boolean {

@@ -103,12 +103,16 @@ path vertices.
 
 ## Color Columns
 
-`canConvertColors()`, `convertColors()`, and `convertArrowColors()` normalize
+`canConvertColors()`, `convertColors()`, `convertArrowColors()`, and
+`convertArrowColorsToArrow()` normalize
 fixed-width RGB and RGBA rows into the canonical
 `GPUVector<'unorm8x4'>` representation used by renderers. Supported Arrow
 sources are `FixedSizeList<Uint8 | Float16 | Float32, 3 | 4>`; equivalent
 fixed-width GPU vectors can enter through `convertColors()` without an Arrow
 round trip.
+
+`convertArrowColorsToArrow()` performs the same lowering and returns canonical
+Arrow Uint8 RGBA rows for CPU-side conversion pipelines.
 
 Uint8 channels are preserved, while Float16 and Float32 channels are clamped to
 `[0, 1]`, scaled to `[0, 255]`, and rounded. Three-channel inputs receive an

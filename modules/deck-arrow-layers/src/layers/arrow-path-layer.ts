@@ -662,17 +662,16 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
             recordBatch?.numRows,
             false
           );
-    let sourceVectors = fillNullablePathStyleVectors(
-      resolveArrowPathSourceVectors(model === 'storage' ? PathStorageModel : PathAttributeModel, {
+    let sourceVectors = resolveArrowPathSourceVectors(
+      model === 'storage' ? PathStorageModel : PathAttributeModel,
+      {
         data: recordBatch,
         selectors: {
           paths: props.paths,
           colors: (colorSelector ?? null) as ArrowPathSourceVectorSelectors['colors'],
           widths: widthSelector ?? null
         }
-      }),
-      colorNullValue,
-      widthNullValue
+      }
     );
     if (sourceVectors.colors && !DataType.isList(sourceVectors.colors.type)) {
       sourceVectors = {
@@ -684,6 +683,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
         )) as NonNullable<ArrowPathSourceVectors['colors']>
       };
     }
+    sourceVectors = fillNullablePathStyleVectors(sourceVectors, colorNullValue, widthNullValue);
     const prepared = await ArrowPathRenderer.convertToGPUVectors(
       this.context.device,
       sourceVectors,

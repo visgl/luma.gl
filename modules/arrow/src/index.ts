@@ -49,6 +49,7 @@ export {
   canConvertColors,
   convertColors,
   convertArrowColors,
+  convertArrowColorsToArrow,
   type ArrowColorType
 } from './arrow/arrow-colors';
 export {

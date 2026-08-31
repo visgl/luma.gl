@@ -11,7 +11,15 @@ import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Float32, Table, Vector, vectorFromArray, type RecordBatch} from 'apache-arrow';
+import {
+  Field,
+  FixedSizeList,
+  Float32,
+  Table,
+  Vector,
+  vectorFromArray,
+  type RecordBatch
+} from 'apache-arrow';
 import {afterAll, vi} from 'vitest';
 import {
   makeArrowLineRecordBatches,
@@ -63,9 +71,9 @@ it('Arrow deck layers return source row indices from Deck picking', async () => 
   });
   const nullablePathColors = vectorFromArray(
     Array.from({length: pathSource.sourceVectors.paths.length}, (_, rowIndex) =>
-      rowIndex % 2 === 0 ? [20, 120, 240, 255] : null
+      rowIndex % 2 === 0 ? [20 / 255, 120 / 255, 240 / 255, 1] : null
     ),
-    pathSource.sourceVectors.colors!.type
+    new FixedSizeList(4, new Field('value', new Float32(), false))
   );
   let nullablePathDataError: unknown;
   const nullablePathLayer = new ArrowPathLayer({
