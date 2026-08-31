@@ -9,9 +9,9 @@ import {ModelNode} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('glTF renders official EXT_mesh_gpu_instancing through one real draw on available backends', async testCase => {
+it('glTF renders official EXT_mesh_gpu_instancing through one real draw on available backends', async () => {
   const source = postProcessGLTF(
     await load(new URL('../data/SimpleInstancing.glb', import.meta.url).href, GLTFLoader, {
       gltf: {loadImages: false}
@@ -47,7 +47,7 @@ test('glTF renders official EXT_mesh_gpu_instancing through one real draw on ava
         }
       });
 
-      testCase.ok(modelNode, `${device.type} creates one instanced primitive`);
+      expect(modelNode, `${device.type} creates one instanced primitive`).toBeTruthy();
       if (modelNode) {
         const identity = Array.from(new Matrix4());
         modelNode.model.shaderInputs.setProps({
@@ -63,15 +63,18 @@ test('glTF renders official EXT_mesh_gpu_instancing through one real draw on ava
           clearColor: [0, 0, 0, 0],
           clearDepth: 1
         });
-        testCase.ok(modelNode.model.draw(renderPass), `${device.type} executes an instanced draw`);
+        expect(
+          modelNode.model.draw(renderPass),
+          `${device.type} executes an instanced draw`
+        ).toBeTruthy();
         renderPass.end();
         device.submit();
 
-        testCase.ok(modelNode.model.isInstanced, `${device.type} enables GPU instancing`);
-        testCase.ok(
+        expect(modelNode.model.isInstanced, `${device.type} enables GPU instancing`).toBeTruthy();
+        expect(
           modelNode.model.instanceCount > 1,
           `${device.type} submits every authored source instance`
-        );
+        ).toBe(true);
       }
     } finally {
       for (const scene of scenegraphs.scenes) {
@@ -82,6 +85,4 @@ test('glTF renders official EXT_mesh_gpu_instancing through one real draw on ava
       depthTexture.destroy();
     }
   }
-
-  testCase.end();
 });

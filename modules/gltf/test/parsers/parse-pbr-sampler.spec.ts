@@ -5,9 +5,9 @@
 import {Buffer} from '@luma.gl/core';
 import {createGLTFTexture} from '@luma.gl/gltf';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('gltf#createGLTFTexture generates authored mipmaps on WebGL and WebGPU', async testContext => {
+it('gltf#createGLTFTexture generates authored mipmaps on WebGL and WebGPU', async () => {
   const image = await createImageBitmap(
     new ImageData(
       new Uint8ClampedArray([0, 0, 0, 255, 4, 0, 0, 255, 8, 0, 0, 255, 12, 0, 0, 255]),
@@ -40,17 +40,15 @@ test('gltf#createGLTFTexture generates authored mipmaps on WebGL and WebGPU', as
       });
 
       try {
-        testContext.equal(texture.mipLevels, 2, `${device.type} allocates the full mip chain`);
-        testContext.equal(
-          texture.format,
-          colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm',
-          `${device.type} decodes ${colorSpace} textures exactly once`
+        expect(texture.mipLevels, `${device.type} allocates the full mip chain`).toBe(2);
+        expect(texture.format, `${device.type} decodes ${colorSpace} textures exactly once`).toBe(
+          colorSpace === 'srgb' ? 'rgba8unorm-srgb' : 'rgba8unorm'
         );
 
         texture.readBuffer({mipLevel: 1, width: 1, height: 1}, buffer);
         const mipLevel = new Uint8Array(await buffer.readAsync(0, layout.byteLength));
-        testContext.ok(mipLevel[0] > 0, `${device.type} generates ${colorSpace} mip texels`);
-        testContext.equal(mipLevel[3], 255, `${device.type} preserves authored mip opacity`);
+        expect(mipLevel[0] > 0, `${device.type} generates ${colorSpace} mip texels`).toBe(true);
+        expect(mipLevel[3], `${device.type} preserves authored mip opacity`).toBe(255);
       } finally {
         buffer.destroy();
         texture.destroy();
@@ -59,5 +57,4 @@ test('gltf#createGLTFTexture generates authored mipmaps on WebGL and WebGPU', as
   }
 
   image.close();
-  testContext.end();
 });

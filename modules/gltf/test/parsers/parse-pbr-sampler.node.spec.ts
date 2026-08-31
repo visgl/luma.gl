@@ -1,8 +1,8 @@
 import {parsePBRMaterial} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('glTF PBR parser preserves authored postprocessed sampler parameters', testContext => {
+it('glTF PBR parser preserves authored postprocessed sampler parameters', () => {
   const device = new NullDevice({});
   const parsedMaterial = parsePBRMaterial(
     device,
@@ -42,15 +42,14 @@ test('glTF PBR parser preserves authored postprocessed sampler parameters', test
   );
 
   const sampler = parsedMaterial.bindings.pbr_baseColorSampler?.sampler.props;
-  testContext.equal(sampler?.addressModeU, 'clamp-to-edge', 'horizontal wrapping remains authored');
-  testContext.equal(sampler?.addressModeV, 'mirror-repeat', 'vertical wrapping remains authored');
-  testContext.equal(sampler?.magFilter, 'nearest', 'magnification filtering remains authored');
-  testContext.equal(sampler?.minFilter, 'nearest', 'minification filtering remains authored');
-  testContext.equal(sampler?.mipmapFilter, 'linear', 'mipmap filtering remains authored');
+  expect(sampler?.addressModeU, 'horizontal wrapping remains authored').toBe('clamp-to-edge');
+  expect(sampler?.addressModeV, 'vertical wrapping remains authored').toBe('mirror-repeat');
+  expect(sampler?.magFilter, 'magnification filtering remains authored').toBe('nearest');
+  expect(sampler?.minFilter, 'minification filtering remains authored').toBe('nearest');
+  expect(sampler?.mipmapFilter, 'mipmap filtering remains authored').toBe('linear');
 
   for (const texture of parsedMaterial.generatedTextures) {
     texture.destroy();
   }
   device.destroy();
-  testContext.end();
 });

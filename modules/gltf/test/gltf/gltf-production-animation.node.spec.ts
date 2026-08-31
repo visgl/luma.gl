@@ -13,7 +13,7 @@ import {
   GLTFSkinController
 } from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 async function loadSimpleSkin() {
   const asset = await readFile(
@@ -22,43 +22,44 @@ async function loadSimpleSkin() {
   return postProcessGLTF(await parse(asset, GLTFLoader, {gltf: {loadImages: false}}));
 }
 
-test('glTF SimpleSkin automatically binds and animates existing primitive joint palettes', async testContext => {
+it('glTF SimpleSkin automatically binds and animates existing primitive joint palettes', async () => {
   const source = await loadSimpleSkin();
   const device = new NullDevice({});
   const scenegraphs = createScenegraphsFromGLTF(device, source);
   const binding = scenegraphs.skins.getBinding(0);
 
-  testContext.ok(scenegraphs.skins instanceof GLTFSkinController, 'exposes source-owned skins');
-  testContext.equal(scenegraphs.skins.bindings.length, 1, 'binds the authored skinned node');
-  testContext.equal(binding?.skinIndex, 0, 'resolves a postprocessed source skin');
-  testContext.equal(binding?.joints.length, 2, 'preserves both authored joints');
-  testContext.equal(binding?.models.length, 1, 'binds the existing primitive model');
-  testContext.equal(binding?.jointMatrices.length, 32, 'allocates only authored joint matrices');
+  expect(scenegraphs.skins instanceof GLTFSkinController, 'exposes source-owned skins').toBe(true);
+  expect(scenegraphs.skins.bindings.length, 'binds the authored skinned node').toBe(1);
+  expect(binding?.skinIndex, 'resolves a postprocessed source skin').toBe(0);
+  expect(binding?.joints.length, 'preserves both authored joints').toBe(2);
+  expect(binding?.models.length, 'binds the existing primitive model').toBe(1);
+  expect(binding?.jointMatrices.length, 'allocates only authored joint matrices').toBe(32);
 
   if (binding) {
     const startingPalette = Array.from(binding.jointMatrices);
     const storage = binding.jointMatrices;
     scenegraphs.animator.setTime(500);
 
-    testContext.equal(binding.jointMatrices, storage, 'reuses the same palette every frame');
-    testContext.notDeepEqual(
+    expect(binding.jointMatrices, 'reuses the same palette every frame').toBe(storage);
+    expect(
       Array.from(binding.jointMatrices),
-      startingPalette,
       'the existing imported clip updates its joint transforms'
-    );
+    ).not.toEqual(startingPalette);
 
     const uniforms = binding.models[0].model.shaderInputs.getUniformValues();
-    testContext.ok(uniforms['skin'], 'the existing skin shader receives the automatic palette');
+    expect(
+      uniforms['skin'],
+      'the existing skin shader receives the automatic palette'
+    ).toBeTruthy();
   }
 
   for (const scene of scenegraphs.scenes) {
     scene.destroy();
   }
   device.destroy();
-  testContext.end();
 });
 
-test('GLTFSkinController preserves independent skins and mesh-local transforms', testContext => {
+it('GLTFSkinController preserves independent skins and mesh-local transforms', () => {
   const firstMeshNode = new GroupNode({id: 'mesh-node-a', position: [10, 0, 0]});
   const secondMeshNode = new GroupNode({id: 'mesh-node-b', position: [20, 0, 0]});
   const firstJoint = new GroupNode({id: 'joint-a', position: [12, 0, 0]});
@@ -92,25 +93,19 @@ test('GLTFSkinController preserves independent skins and mesh-local transforms',
     ])
   });
 
-  testContext.equal(controller.bindings.length, 2, 'keeps both authored skins independent');
-  testContext.equal(controller.getBinding(0)?.jointMatrices[12], 2, 'localizes the first skin');
-  testContext.equal(
+  expect(controller.bindings.length, 'keeps both authored skins independent').toBe(2);
+  expect(controller.getBinding(0)?.jointMatrices[12], 'localizes the first skin').toBe(2);
+  expect(
     controller.getBinding(secondMeshNode)?.jointMatrices[12],
-    5,
     'localizes the second skin'
-  );
+  ).toBe(5);
 
   secondJoint.setPosition([28, 0, 0]).updateMatrix();
   controller.update();
-  testContext.equal(
-    controller.getBinding(1)?.jointMatrices[12],
-    8,
-    'updates only authored transforms'
-  );
-  testContext.end();
+  expect(controller.getBinding(1)?.jointMatrices[12], 'updates only authored transforms').toBe(8);
 });
 
-test('GLTFAnimator advances wall-clock crossfades and supports explicit clip selection', testContext => {
+it('GLTFAnimator advances wall-clock crossfades and supports explicit clip selection', () => {
   const node = new GroupNode({id: 'animated'});
   let updateCount = 0;
   const makeAnimation = (name: string, position: number): GLTFAnimation => ({
@@ -138,23 +133,18 @@ test('GLTFAnimator advances wall-clock crossfades and supports explicit clip sel
     onUpdate: () => updateCount++
   });
 
-  testContext.equal(animator.activeClip, 'walk', 'initially selects the first authored clip');
-  testContext.false(animator.clips[1].action.playing, 'does not blend unrelated authored clips');
+  expect(animator.activeClip, 'initially selects the first authored clip').toBe('walk');
+  expect(animator.clips[1].action.playing, 'does not blend unrelated authored clips').toBe(false);
   animator.setTime(0);
   animator.selectClip('run', {crossFadeDuration: 1});
   animator.setTime(500);
 
-  testContext.equal(animator.activeClip, 'run', 'exposes the newly selected authored clip');
-  testContext.equal(
-    node.position[0],
-    5,
-    'legacy millisecond playback advances both crossfade weights'
-  );
-  testContext.equal(updateCount, 2, 'runs dependent skin updates once per animation frame');
+  expect(animator.activeClip, 'exposes the newly selected authored clip').toBe('run');
+  expect(node.position[0], 'legacy millisecond playback advances both crossfade weights').toBe(5);
+  expect(updateCount, 'runs dependent skin updates once per animation frame').toBe(2);
 
   animator.setTime(1000);
-  testContext.equal(node.position[0], 10, 'crossfades finish at the incoming clip');
-  testContext.equal(updateCount, 3, 'does not evaluate dependent skins twice');
-  testContext.throws(() => animator.selectClip('missing'), 'unknown clip names remain explicit');
-  testContext.end();
+  expect(node.position[0], 'crossfades finish at the incoming clip').toBe(10);
+  expect(updateCount, 'does not evaluate dependent skins twice').toBe(3);
+  expect(() => animator.selectClip('missing'), 'unknown clip names remain explicit').toThrow();
 });

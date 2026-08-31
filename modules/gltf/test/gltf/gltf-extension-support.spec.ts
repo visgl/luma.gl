@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import type {TextureFormat} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
+import {expect, it} from 'vitest';
 
 import {
   assertSupportedGLTFExtensions,
@@ -26,7 +26,7 @@ type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   lights?: unknown[];
 };
 
-test('gltf#getGLTFExtensionSupport collects and annotates used extensions', t => {
+it('gltf#getGLTFExtensionSupport collects and annotates used extensions', () => {
   const gltf: GLTFPostprocessedWithRemovedExtensions = {
     id: 'test-gltf',
     extensionsUsed: ['KHR_texture_transform', 'KHR_materials_specular', 'CUSTOM_unknown_extension'],
@@ -51,44 +51,37 @@ test('gltf#getGLTFExtensionSupport collects and annotates used extensions', t =>
 
   const extensionSupport = getGLTFExtensionSupport(gltf);
 
-  t.deepEqual(
+  expect(
     Array.from(extensionSupport.keys()),
-    [
-      'CUSTOM_unknown_extension',
-      'KHR_animation_pointer',
-      'KHR_draco_mesh_compression',
-      'KHR_lights_punctual',
-      'KHR_materials_specular',
-      'KHR_materials_unlit',
-      'KHR_texture_transform'
-    ],
     'used, required, removed, and inferred extensions are included'
-  );
-  t.equal(
+  ).toEqual([
+    'CUSTOM_unknown_extension',
+    'KHR_animation_pointer',
+    'KHR_draco_mesh_compression',
+    'KHR_lights_punctual',
+    'KHR_materials_specular',
+    'KHR_materials_unlit',
+    'KHR_texture_transform'
+  ]);
+  expect(
     extensionSupport.get('KHR_draco_mesh_compression')?.supported,
-    true,
     'built-in extension is marked as supported'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     extensionSupport.get('KHR_animation_pointer')?.supported,
-    true,
     'parsed-and-wired extension is marked as supported'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     extensionSupport.get('KHR_materials_specular')?.supported,
-    true,
     'stock-shader material extensions are reported as built-in support'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     extensionSupport.get('CUSTOM_unknown_extension')?.comment,
-    'Not currently listed in the luma.gl glTF extension support registry.',
     'unknown extensions get a fallback note'
-  );
-
-  t.end();
+  ).toBe('Not currently listed in the luma.gl glTF extension support registry.');
 });
 
-test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations', t => {
+it('gltf#getGLTFExtensionSupport distinguishes actual loader implementations', () => {
   const extensionNames = [
     'EXT_mesh_features',
     'EXT_meshopt_compression',
@@ -104,41 +97,33 @@ test('gltf#getGLTFExtensionSupport distinguishes actual loader implementations',
   } as GLTFPostprocessed;
   const support = getGLTFExtensionSupport(gltf);
 
-  t.equal(
+  expect(
     support.get('EXT_meshopt_compression')?.supportLevel,
-    'built-in',
     'the installed loaders.gl decoder handles EXT meshopt buffer views'
-  );
-  t.equal(
+  ).toBe('built-in');
+  expect(
     support.get('KHR_meshopt_compression')?.supportLevel,
-    'none',
     'the newer KHR meshopt spelling is not silently reported as implemented'
-  );
-  t.equal(
+  ).toBe('none');
+  expect(
     support.get('EXT_mesh_features')?.supportLevel,
-    'loader-only',
     'feature identifiers are decoded but have no automatic luma.gl runtime'
-  );
-  t.equal(
+  ).toBe('loader-only');
+  expect(
     support.get('EXT_structural_metadata')?.supportLevel,
-    'loader-only',
     'structural metadata is decoded but remains application-owned'
-  );
-  t.equal(
+  ).toBe('loader-only');
+  expect(
     support.get('EXT_texture_webp')?.supportLevel,
-    'loader-only',
     'WebP source selection is conditional on browser image support'
-  );
-  t.equal(
+  ).toBe('loader-only');
+  expect(
     support.get('EXT_texture_avif')?.supportLevel,
-    'none',
     'generic AVIF image decoding does not imply glTF extension source selection'
-  );
-
-  t.end();
+  ).toBe('none');
 });
 
-test('gltf#getGLTFExtensionSupport applies BasisU device format capabilities', t => {
+it('gltf#getGLTFExtensionSupport applies BasisU device format capabilities', () => {
   const gltf = {
     extensionsUsed: ['KHR_texture_basisu'],
     extensionsRequired: ['KHR_texture_basisu'],
@@ -168,68 +153,59 @@ test('gltf#getGLTFExtensionSupport applies BasisU device format capabilities', t
   const unsupported = getGLTFExtensionSupport(gltf, unsupportedDevice).get('KHR_texture_basisu');
   const supported = getGLTFExtensionSupport(gltf, supportedDevice).get('KHR_texture_basisu');
 
-  t.equal(unsupported?.supported, false, 'unsupported transcode format is reported truthfully');
-  t.equal(unsupported?.supportLevel, 'none', 'device gap fails strict extension support');
-  t.match(unsupported?.comment || '', /does not support.*bc7-rgba-unorm/);
-  t.equal(supported?.supported, true, 'supported transcode format retains built-in support');
-  t.throws(
+  expect(unsupported?.supported, 'unsupported transcode format is reported truthfully').toBe(false);
+  expect(unsupported?.supportLevel, 'device gap fails strict extension support').toBe('none');
+  expect(unsupported?.comment || '').toMatch(/does not support.*bc7-rgba-unorm/);
+  expect(supported?.supported, 'supported transcode format retains built-in support').toBe(true);
+  expect(
     () => assertSupportedGLTFExtensions(gltf, unsupportedDevice),
-    /KHR_texture_basisu/,
     'required BasisU rejects an unsupported selected GPU format'
-  );
-  t.throws(
+  ).toThrow(/KHR_texture_basisu/);
+  expect(
     () => createScenegraphsFromGLTF(unsupportedDevice, gltf, {strictExtensions: true}),
-    /KHR_texture_basisu/,
     'strict scenegraph creation checks the active device before allocating resources'
-  );
-  t.doesNotThrow(
+  ).toThrow(/KHR_texture_basisu/);
+  expect(
     () => assertSupportedGLTFExtensions(gltf, supportedDevice),
     'required BasisU accepts a selected GPU format supported by the device'
-  );
+  ).not.toThrow();
 
   unsupportedDevice.destroy();
   supportedDevice.destroy();
-  t.end();
 });
 
-test('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summaries', t => {
+it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summaries', () => {
   const extensions = getRegisteredGLTFExtensions();
   const summary = getGLTFExtensionSupportSummary();
 
-  t.deepEqual(
+  expect(
     extensions.map(extension => extension.extensionName),
-    [...extensions.map(extension => extension.extensionName)].sort(),
     'registry entries are returned in stable extension-name order'
-  );
-  t.deepEqual(
+  ).toEqual([...extensions.map(extension => extension.extensionName)].sort());
+  expect(
     summary,
-    {
-      total: 35,
-      supported: 25,
-      bySupportLevel: {'built-in': 19, 'parsed-and-wired': 6, 'loader-only': 4, none: 6},
-      byStandardStatus: {
-        ratified: 26,
-        'release-candidate': 2,
-        'multi-vendor': 2,
-        vendor: 1,
-        draft: 2,
-        archived: 2,
-        unknown: 0
-      }
-    },
     'summary is derived from the registry rather than copied into documentation'
-  );
-  t.equal(
+  ).toEqual({
+    total: 35,
+    supported: 25,
+    bySupportLevel: {'built-in': 19, 'parsed-and-wired': 6, 'loader-only': 4, none: 6},
+    byStandardStatus: {
+      ratified: 26,
+      'release-candidate': 2,
+      'multi-vendor': 2,
+      vendor: 1,
+      draft: 2,
+      archived: 2,
+      unknown: 0
+    }
+  });
+  expect(
     extensions.find(extension => extension.extensionName === 'KHR_meshopt_compression')
       ?.standardStatus,
-    'release-candidate',
     'a KHR prefix does not imply ratification'
-  );
-  t.equal(
+  ).toBe('release-candidate');
+  expect(
     extensions.find(extension => extension.extensionName === 'MSFT_lod')?.standardStatus,
-    'vendor',
     'vendor extensions retain their source maturity'
-  );
-
-  t.end();
+  ).toBe('vendor');
 });
