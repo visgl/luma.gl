@@ -30,12 +30,13 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
         `@luma.gl/shadertools`.
       </div>
       <div style={{marginBottom: 12}}>
-        On Apple WebGPU/Metal, `fp64arithmetic` automatically selects an integer-controlled
+        On Apple WebGPU/Metal, automatic arithmetic selection uses an integer-controlled
         double-single implementation. That reliable path is too expensive for an iterative
-        per-pixel Mandelbrot shader, so the live FP64 pane uses a hybrid path: integer operations
-        reconstruct the critical high-part residuals while native `f32` accumulates lower-order
-        terms. The benchmark still exercises the fully reliable path. Other GPUs use the classic
-        floating-point error transforms by default.
+        per-pixel Mandelbrot shader, so the live FP64 pane defaults to a hybrid path on every
+        WebGPU backend: integer operations reconstruct the critical high-part residuals while
+        native `f32` accumulates lower-order terms. The benchmark still exercises the fully
+        reliable path, and its automatic mode uses classic floating-point error transforms on
+        non-Apple GPUs.
       </div>
       <div style={{marginBottom: 12}}>
         The opt-in WebGPU benchmark below the canvases compares automatic selection, classic,

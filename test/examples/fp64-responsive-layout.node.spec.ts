@@ -10,6 +10,7 @@ import FP64App, {
   getVisualizationDefines,
   makeFP64SettingsSchema
 } from '../../examples/experimental/fp64/app';
+import {requiresFP64ArithmeticUniform} from '../../examples/experimental/fp64/fp64-compute-benchmark';
 
 describe('FP64 example responsive layout', () => {
   test('keeps each precision description paired with its canvas when the panes stack', () => {
@@ -69,6 +70,14 @@ describe('FP64 example responsive layout', () => {
     expect(formatFP64RenderTiming({milliseconds: 0.25, source: 'CPU encode'})).toBe(
       'fp64 CPU encode = 0.250 ms · 4000.0 FPS-equivalent'
     );
+  });
+
+  test('binds the fp64 module uniform for every benchmark path that reads it', () => {
+    expect(requiresFP64ArithmeticUniform('hybrid', 'divide', 'apple')).toBe(true);
+    expect(requiresFP64ArithmeticUniform('hybrid', 'multiply', 'apple')).toBe(false);
+    expect(requiresFP64ArithmeticUniform('automatic', 'divide', 'apple')).toBe(false);
+    expect(requiresFP64ArithmeticUniform('automatic', 'divide', 'nvidia')).toBe(true);
+    expect(requiresFP64ArithmeticUniform('classic', 'add', 'nvidia')).toBe(false);
   });
 
   test('selects explicit FP64 arithmetic modes on WebGPU', () => {
