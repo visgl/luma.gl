@@ -15,7 +15,6 @@ import {
 import {
   ArrowPathRenderer,
   getArrowRecordBatchAsyncIterator,
-  readArrowGPUVectorAsync,
   resolveArrowPathSourceVectors,
   type ArrowColorType,
   type ArrowPathSourceVectors,
@@ -63,6 +62,7 @@ import {
   isArrowLayerColor,
   isArrowLayerGPUVector,
   isArrowLayerScalar,
+  readArrowLayerGPUVector,
   type ArrowLayerColumnSource,
   type ArrowLayerInput
 } from './arrow-layer-input';
@@ -849,22 +849,12 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const cache = this.getLayerState().gpuVectorSourceCache;
     let arrowVectorPromise = cache.get(source);
     if (!arrowVectorPromise) {
-      arrowVectorPromise = normalizeColor
-        ? (async () => {
-            const normalized = await convertArrowLayerColorGPUVector(
-              this.context.device,
-              source,
-              `${this.id}-colors`
-            );
-            try {
-              return await readArrowGPUVectorAsync(normalized.vector);
-            } finally {
-              if (normalized.converted) {
-                normalized.vector.destroy();
-              }
-            }
-          })()
-        : readArrowGPUVectorAsync(source);
+      arrowVectorPromise = readArrowLayerGPUVector(
+        this.context.device,
+        source,
+        `${this.id}-${normalizeColor ? 'colors' : 'values'}`,
+        normalizeColor
+      );
       cache.set(source, arrowVectorPromise);
     }
     const arrowVector = await arrowVectorPromise;

@@ -98,6 +98,26 @@ export async function convertArrowLayerColorGPUVector(
   return {vector: await convertColors(device, vector, {name}), converted: true};
 }
 
+/** Reads one borrowed GPU vector, optionally normalizing fixed-width colors before readback. */
+export async function readArrowLayerGPUVector(
+  device: Device,
+  vector: GPUVector,
+  name: string,
+  normalizeColor: boolean
+): Promise<Vector> {
+  if (!normalizeColor) {
+    return await readArrowGPUVectorAsync(vector);
+  }
+  const normalized = await convertArrowLayerColorGPUVector(device, vector, name);
+  try {
+    return await readArrowGPUVectorAsync(normalized.vector);
+  } finally {
+    if (normalized.converted) {
+      normalized.vector.destroy();
+    }
+  }
+}
+
 /** Normalizes convertible fixed-width Arrow colors and preserves specialized nested vectors. */
 export async function convertArrowLayerColorVector(
   device: Device,

@@ -70,9 +70,11 @@ Implementation notes:
 
 - Float16 RGBA is the compact scene-linear/HDR form when bandwidth and memory
   matter more than Float32 precision.
-- RGB source colors are planned but not currently supported by the semantic color
-  adapters. Intended expansion is RGB to RGBA with alpha `255` for `Uint8` and
-  alpha `1.0` for `Float16` and `Float32`.
+- `convertArrowColors()` and `convertColors()` accept normalized Uint8, Float16,
+  and Float32 RGB/RGBA sources and materialize normalized Uint8 RGBA. RGB
+  receives alpha `255`; floating-point channels are clamped to `[0, 1]`, scaled,
+  and rounded. Use the original Float16 or Float32 RGBA representation instead
+  when scene-linear or HDR values outside `[0, 1]` must be preserved.
 
 ### Scalars
 

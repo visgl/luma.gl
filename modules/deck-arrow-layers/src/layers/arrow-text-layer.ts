@@ -14,7 +14,6 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowTextRenderer,
-  readArrowGPUVectorAsync,
   type ArrowColorType,
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
@@ -52,13 +51,13 @@ import {
 } from './arrow-text-storage-shaders';
 import {
   assertArrowLayerColorGPUVector,
-  convertArrowLayerColorGPUVector,
   convertArrowLayerColorVector,
   getArrowLayerInputNullValue,
   getArrowLayerInputSource,
   inspectArrowLayerColumn,
   isArrowLayerColor,
   isArrowLayerGPUVector,
+  readArrowLayerGPUVector,
   type ArrowLayerInput
 } from './arrow-layer-input';
 
@@ -701,20 +700,12 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
     const cache = this.getLayerState().gpuVectorSourceCache;
     let arrowVectorPromise = cache.get(source);
     if (!arrowVectorPromise) {
-      arrowVectorPromise = (async () => {
-        const normalized = await convertArrowLayerColorGPUVector(
-          this.context.device,
-          source,
-          `${this.id}-colors`
-        );
-        try {
-          return await readArrowGPUVectorAsync(normalized.vector);
-        } finally {
-          if (normalized.converted) {
-            normalized.vector.destroy();
-          }
-        }
-      })();
+      arrowVectorPromise = readArrowLayerGPUVector(
+        this.context.device,
+        source,
+        `${this.id}-colors`,
+        true
+      );
       cache.set(source, arrowVectorPromise);
     }
     return (await arrowVectorPromise) as Exclude<ArrowTextColorSource, GPUVector>;
