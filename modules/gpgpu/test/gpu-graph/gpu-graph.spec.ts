@@ -6,14 +6,11 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
-test('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU work', async tapeTest => {
+it('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU work', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -52,42 +49,41 @@ test('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU 
       directed: false
     });
 
-    tapeTest.equal(graph.vertexCount, 9, 'explicit vertex counts retain isolated vertices');
-    tapeTest.equal(graph.edgeCount, 5, 'undirected metadata does not symmetrize source edges');
-    tapeTest.equal(graph.directed, false, 'caller-selected directedness remains explicit');
-    tapeTest.equal(graph.sourceVertices, sourceVertices, 'source vector identity is preserved');
-    tapeTest.equal(graph.targetVertices, targetVertices, 'target vector identity is preserved');
-    tapeTest.equal(graph.edgeWeights, edgeWeights, 'float32 weight vector identity is preserved');
-    tapeTest.equal(graph.edgeIds, edgeIds, 'stable uint32 edge ID vector identity is preserved');
+    expect(graph.vertexCount, 'explicit vertex counts retain isolated vertices').toBe(9);
+    expect(graph.edgeCount, 'undirected metadata does not symmetrize source edges').toBe(5);
+    expect(graph.directed, 'caller-selected directedness remains explicit').toBe(false);
+    expect(graph.sourceVertices, 'source vector identity is preserved').toBe(sourceVertices);
+    expect(graph.targetVertices, 'target vector identity is preserved').toBe(targetVertices);
+    expect(graph.edgeWeights, 'float32 weight vector identity is preserved').toBe(edgeWeights);
+    expect(graph.edgeIds, 'stable uint32 edge ID vector identity is preserved').toBe(edgeIds);
 
     for (const vector of [sourceVertices, targetVertices, edgeWeights, edgeIds]) {
-      tapeTest.deepEqual(
+      expect(
         vector.data.map(chunk => chunk.length),
-        [2, 0, 3],
         `${vector.name} retains its empty middle GPUData chunk`
-      );
+      ).toEqual([2, 0, 3]);
       for (const chunk of vector.data) {
-        tapeTest.ok(
-          buffers.some(buffer => buffer === chunk.buffer),
+        expect(
+          Boolean(buffers.some(buffer => buffer === chunk.buffer)),
           `${vector.name} borrows its original buffer`
-        );
+        ).toBe(true);
       }
     }
 
-    tapeTest.equal(createBufferSpy.mock.calls.length, 0, 'construction allocates no GPU buffers');
-    tapeTest.equal(submitSpy.mock.calls.length, 0, 'construction submits no GPU commands');
-    tapeTest.ok(
-      readbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(createBufferSpy.mock.calls.length, 'construction allocates no GPU buffers').toBe(0);
+    expect(submitSpy.mock.calls.length, 'construction submits no GPU commands').toBe(0);
+    expect(
+      Boolean(readbackSpies.every(spy => spy.mock.calls.length === 0)),
       'construction never reads source buffers back to the CPU'
-    );
+    ).toBe(true);
 
     for (const vector of [sourceVertices, targetVertices, edgeWeights, edgeIds]) {
       vector.destroy();
     }
-    tapeTest.ok(
-      buffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(buffers.every(buffer => !buffer.destroyed)),
       'destroying borrowed vectors leaves every WebGPU buffer under caller ownership'
-    );
+    ).toBe(true);
   } finally {
     createBufferSpy.mockRestore();
     submitSpy.mockRestore();
@@ -101,8 +97,6 @@ test('GPUGraph preserves caller-owned WebGPU graph chunks without executing GPU 
       buffer.destroy();
     }
   }
-
-  tapeTest.end();
 });
 
 /** Creates borrowed scalar GPU vectors without changing empty source chunk boundaries. */

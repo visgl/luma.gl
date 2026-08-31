@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphConnectedComponentsToGraphWithDispatchLimit,
   getGPUGraphConnectedComponentsDispatchLayout
@@ -199,21 +198,18 @@ const componentsScenarios: ComponentsScenario[] = [
   }
 ];
 
-test('GPUGraphConnectedComponents plans bounded three-dimensional vertex dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphConnectedComponentsDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphConnectedComponentsDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphConnectedComponentsDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphConnectedComponentsDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphConnectedComponentsDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphConnectedComponents plans bounded three-dimensional vertex dispatch', () => {
+  expect(getGPUGraphConnectedComponentsDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphConnectedComponentsDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphConnectedComponentsDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphConnectedComponentsDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphConnectedComponentsDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of componentsScenarios) {
-  test(`GPUGraphConnectedComponents GPU labeling: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphConnectedComponents GPU labeling: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -222,32 +218,26 @@ for (const scenario of componentsScenarios) {
     try {
       compileComponents(fixture, scenario.maximumWorkgroups);
       executeComponents(fixture);
-      await assertComponents(tapeTest, fixture, scenario, expected);
-      tapeTest.deepEqual(
+      await assertComponents(fixture, scenario, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'weak-component evaluation preserves every original source chunk'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.assertNoScratch) {
-        tapeTest.equal(
+        expect(
           fixture.compiled?.stats.logicalTransientBufferCount,
-          3,
           'weak-component hooking allocates no scratch beyond CSR topology construction'
-        );
+        ).toBe(3);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphConnectedComponents rebuilds weak labels after source updates without hidden execution', async tapeTest => {
+it('GPUGraphConnectedComponents rebuilds weak labels after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -267,38 +257,31 @@ test('GPUGraphConnectedComponents rebuilds weak labels after source updates with
 
   try {
     compileComponents(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'construction and compilation never submit work'
-    );
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'construction and compilation never submit work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'weak connectivity never reads graph source buffers back'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executeComponents(fixture);
-    await assertComponents(tapeTest, fixture, original, calculateExpectedComponents(original));
+    await assertComponents(fixture, original, calculateExpectedComponents(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 1]));
     const updated = {...original, sourceChunks: [[9, 1], [], [3, 4]]};
     executeComponents(fixture);
-    await assertComponents(tapeTest, fixture, updated, calculateExpectedComponents(updated));
-    tapeTest.equal(
+    await assertComponents(fixture, updated, calculateExpectedComponents(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'source updates retain exact caller-owned chunk identity'
-    );
+    ).toBe(sourceBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Computes weak connected components with minimum stable vertex IDs using CPU union-find. */
@@ -569,7 +552,6 @@ function executeComponents(fixture: ComponentsExecutionFixture): void {
 }
 
 async function assertComponents(
-  tapeTest: Test,
   fixture: ComponentsExecutionFixture,
   scenario: ComponentsScenario,
   expected: ExpectedComponents
@@ -588,47 +570,40 @@ async function assertComponents(
     ]);
 
   if (scenario.allowPartialLabels && !expected.forwardOverflow) {
-    tapeTest.ok(
-      labels.every(
-        (label, vertexIndex) =>
-          label <= vertexIndex && expected.labels[label] === expected.labels[vertexIndex]
+    expect(
+      Boolean(
+        labels.every(
+          (label, vertexIndex) =>
+            label <= vertexIndex && expected.labels[label] === expected.labels[vertexIndex]
+        )
       ),
       'bounded iterations preserve monotone labels inside each true weak component'
-    );
+    ).toBe(true);
   } else {
-    tapeTest.deepEqual(labels, expected.labels, 'component IDs equal each weak component minimum');
+    expect(labels, 'component IDs equal each weak component minimum').toEqual(expected.labels);
   }
 
   if (convergence) {
     const expectedConvergence = Number(!expected.forwardOverflow && !scenario.incomplete);
-    tapeTest.equal(
+    expect(
       convergence[0],
-      expectedConvergence,
       'convergence is proven only when the final iteration makes no changes'
-    );
+    ).toBe(expectedConvergence);
   }
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid source edges stay excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward adjacency overflow remains explicit'
+  expect(invalidEdgeCount[0], 'invalid source edges stay excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'forward adjacency overflow remains explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'unused reverse overflow does not invalidate weak components'
+    expect(reverseOverflow[0], 'unused reverse overflow does not invalidate weak components').toBe(
+      Number(expected.reverseOverflow)
     );
   }
   if (expected.forwardOverflow) {
-    tapeTest.ok(
-      labels.every(label => label === INVALID_COMPONENT),
+    expect(
+      Boolean(labels.every(label => label === INVALID_COMPONENT)),
       'truncated forward adjacency publishes no misleading partial labels'
-    );
+    ).toBe(true);
   }
 }
 
@@ -642,12 +617,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: ComponentsExecutionFixture): void {
+function destroyExecutionFixture(fixture: ComponentsExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'compiled component graphs and borrowed vectors never destroy caller-owned buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

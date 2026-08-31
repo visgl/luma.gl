@@ -13,8 +13,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphBreadthFirstSearchToGraphWithDispatchLimit,
   getGPUGraphBreadthFirstSearchDispatchLayout
@@ -291,21 +290,18 @@ const searchScenarios: SearchScenario[] = [
   }
 ];
 
-test('GPUGraphBreadthFirstSearch plans bounded three-dimensional seed and vertex dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphBreadthFirstSearchDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphBreadthFirstSearchDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphBreadthFirstSearchDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphBreadthFirstSearchDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphBreadthFirstSearchDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphBreadthFirstSearch plans bounded three-dimensional seed and vertex dispatch', () => {
+  expect(getGPUGraphBreadthFirstSearchDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphBreadthFirstSearchDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphBreadthFirstSearchDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphBreadthFirstSearchDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphBreadthFirstSearchDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of searchScenarios) {
-  test(`GPUGraphBreadthFirstSearch GPU traversal: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphBreadthFirstSearch GPU traversal: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -314,32 +310,26 @@ for (const scenario of searchScenarios) {
     try {
       compileSearch(fixture, scenario.maximumWorkgroups);
       executeSearch(fixture);
-      await assertSearch(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertSearch(fixture, expected);
+      expect(
         fixture.search.seeds.data.map(chunk => chunk.length),
-        scenario.seedChunks.map(chunk => chunk.length),
         'traversal preserves ordered seed chunks and empty seed batches'
-      );
+      ).toEqual(scenario.seedChunks.map(chunk => chunk.length));
       if (scenario.assertNoScratch) {
-        tapeTest.equal(
+        expect(
           fixture.compiled?.stats.logicalTransientBufferCount,
-          3,
           'shortest-path traversal adds no frontier or scratch buffers beyond CSR construction'
-        );
+        ).toBe(3);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphBreadthFirstSearch rereads dynamic seeds, depth, and sources on every encoding', async tapeTest => {
+it('GPUGraphBreadthFirstSearch rereads dynamic seeds, depth, and sources on every encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -365,40 +355,37 @@ test('GPUGraphBreadthFirstSearch rereads dynamic seeds, depth, and sources on ev
 
   try {
     compileSearch(fixture);
-    tapeTest.equal(submitSpy.mock.calls.length, 0, 'topology and search construction never submit');
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'topology and search construction never submit').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'graph construction and compilation never read source or seed buffers'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executeSearch(fixture);
-    await assertSearch(tapeTest, fixture, calculateExpectedSearch(original));
+    await assertSearch(fixture, calculateExpectedSearch(original));
 
     (fixture.search.seedCount!.data[0].buffer as Buffer).write(Uint32Array.from([2]));
     (fixture.search.activeDepth!.data[0].buffer as Buffer).write(Uint32Array.from([3]));
     const expanded = {...original, activeSeedCount: 2, activeDepth: 3};
     executeSearch(fixture);
-    await assertSearch(tapeTest, fixture, calculateExpectedSearch(expanded));
+    await assertSearch(fixture, calculateExpectedSearch(expanded));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 1]));
     const updated = {...expanded, sourceChunks: [[9, 1], [], [2, 4]]};
     executeSearch(fixture);
-    await assertSearch(tapeTest, fixture, calculateExpectedSearch(updated));
-    tapeTest.equal(
+    await assertSearch(fixture, calculateExpectedSearch(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'source updates retain the original caller-owned GPUData chunk'
-    );
+    ).toBe(sourceBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Builds complete CPU adjacency before applying deterministic multi-source shortest-hop search. */
@@ -757,7 +744,6 @@ function executeSearch(fixture: SearchExecutionFixture): void {
 }
 
 async function assertSearch(
-  tapeTest: Test,
   fixture: SearchExecutionFixture,
   expected: ExpectedSearch
 ): Promise<void> {
@@ -773,38 +759,33 @@ async function assertSearch(
         : Promise.resolve(undefined)
     ]);
 
-  tapeTest.deepEqual(distances, expected.distances, 'shortest-hop distances match the CPU oracle');
-  tapeTest.deepEqual(
+  expect(distances, 'shortest-hop distances match the CPU oracle').toEqual(expected.distances);
+  expect(
     predecessors,
-    expected.predecessors,
     'equal-length paths choose the deterministic lowest stable predecessor ID'
-  );
+  ).toEqual(expected.predecessors);
   if (mask) {
-    tapeTest.deepEqual(mask, expected.mask, 'optional reachability masks stay source aligned');
+    expect(mask, 'optional reachability masks stay source aligned').toEqual(expected.mask);
   }
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid graph edges remain excluded'
+  expect(invalidEdgeCount[0], 'invalid graph edges remain excluded').toBe(
+    expected.invalidEdgeCount
   );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward overflow remains explicit'
+  expect(forwardOverflow[0], 'forward overflow remains explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse overflow remains explicit'
+    expect(reverseOverflow[0], 'reverse overflow remains explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
   if (expected.requiredOverflow) {
-    tapeTest.ok(
-      distances.every(distance => distance === UNREACHABLE_VERTEX) &&
-        predecessors.every(predecessor => predecessor === UNREACHABLE_VERTEX),
+    expect(
+      Boolean(
+        distances.every(distance => distance === UNREACHABLE_VERTEX) &&
+          predecessors.every(predecessor => predecessor === UNREACHABLE_VERTEX)
+      ),
       'required adjacency overflow fails closed without exposing misleading partial paths'
-    );
+    ).toBe(true);
   }
 }
 
@@ -818,12 +799,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: SearchExecutionFixture): void {
+function destroyExecutionFixture(fixture: SearchExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying a compiled traversal and borrowed vectors preserves every caller-owned buffer'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }
