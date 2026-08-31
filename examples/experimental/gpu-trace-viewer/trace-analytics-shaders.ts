@@ -213,7 +213,9 @@ fn main(
       u32(max(floor((lastTime - windowMinimum) / bucketDuration), 0.0)),
       TIME_BUCKET_COUNT - 1u
     );
-    for (var bucketIndex = firstBucket; bucketIndex <= lastBucket; bucketIndex++) {
+    // Keep the storage-writing loop structurally bounded. If a malformed floating-point endpoint
+    // converts to u32 unexpectedly, an inclusive computed bound could wrap and monopolize the GPU.
+    for (var bucketIndex = firstBucket; bucketIndex < TIME_BUCKET_COUNT; bucketIndex++) {
       let bucketStart = windowMinimum + f32(bucketIndex) * bucketDuration;
       let bucketEnd = bucketStart + bucketDuration;
       let overlap = max(0.0, min(spanEnd, bucketEnd) - max(span.start, bucketStart));
@@ -221,6 +223,7 @@ fn main(
         atomicAdd(&results[TIME_BUCKET_COUNTS_OFFSET + bucketIndex], 1u);
         atomicAddFloat(&results[TIME_BUCKET_DURATIONS_OFFSET + bucketIndex], overlap);
       }
+      if (bucketIndex >= lastBucket) { break; }
     }
   }
 }`;

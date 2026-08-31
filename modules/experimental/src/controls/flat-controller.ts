@@ -114,8 +114,25 @@ export class FlatController {
     const rectangle = this.canvas.getBoundingClientRect();
     const view = this.props.getView();
     const bounds = this.props.getBounds();
+    // Never publish non-finite view state. Timeline consumers commonly upload these values to GPU
+    // uniforms, where NaN-to-u32 conversions can invalidate storage indices or loop bounds.
+    if (
+      !Number.isFinite(horizontalMovement) ||
+      !Number.isFinite(verticalMovement) ||
+      !isFiniteFlatViewState(view) ||
+      !isFiniteFlatViewState(bounds)
+    ) {
+      this.lastPointer = [event.clientX, event.clientY];
+      return;
+    }
     const xRange = view.xMax - view.xMin;
     const yRange = view.yMax - view.yMin;
+    // Finite endpoints are not sufficient: subtracting two very large values can overflow to
+    // Infinity, which would contaminate the derived view state and eventually reach the GPU.
+    if (!Number.isFinite(xRange) || !Number.isFinite(yRange) || xRange <= 0 || yRange <= 0) {
+      this.lastPointer = [event.clientX, event.clientY];
+      return;
+    }
     const xMin = clamp(
       view.xMin - (horizontalMovement / Math.max(rectangle.width, 1)) * xRange,
       bounds.xMin,
@@ -126,7 +143,18 @@ export class FlatController {
       bounds.yMin,
       Math.max(bounds.yMin, bounds.yMax - yRange)
     );
-    this.props.onViewChange({xMin, xMax: xMin + xRange, yMin, yMax: yMin + yRange});
+    const xMax = xMin + xRange;
+    const yMax = yMin + yRange;
+    if (
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(yMax)
+    ) {
+      this.lastPointer = [event.clientX, event.clientY];
+      return;
+    }
+    this.props.onViewChange({xMin, xMax, yMin, yMax});
     this.lastPointer = [event.clientX, event.clientY];
   };
 
@@ -149,16 +177,36 @@ export class FlatController {
 
   private readonly handleWheel = (event: WheelEvent): void => {
     event.preventDefault();
+    const view = this.props.getView();
+    const bounds = this.props.getBounds();
+    // A malformed wheel event or stale view must stop here. Once uploaded, a non-finite zoom range
+    // can turn a bounded GPU aggregation into an effectively unbounded storage-access workload.
+    if (
+      !Number.isFinite(event.clientX) ||
+      !Number.isFinite(event.deltaY) ||
+      !isFiniteFlatViewState(view) ||
+      !isFiniteFlatViewState(bounds)
+    ) {
+      return;
+    }
     const rectangle = this.canvas.getBoundingClientRect();
     const horizontalFraction = clamp(
       (event.clientX - rectangle.left) / Math.max(rectangle.width, 1),
       0,
       1
     );
-    const view = this.props.getView();
-    const bounds = this.props.getBounds();
     const previousRange = view.xMax - view.xMin;
     const maximumRange = bounds.xMax - bounds.xMin;
+    // Validate the arithmetic as well as its inputs because finite endpoints can still produce an
+    // infinite range. Continuing with that range can turn later Infinity - Infinity math into NaN.
+    if (
+      !Number.isFinite(previousRange) ||
+      !Number.isFinite(maximumRange) ||
+      previousRange <= 0 ||
+      maximumRange <= 0
+    ) {
+      return;
+    }
     const rangeTolerance = Math.max(maximumRange, 1) * Number.EPSILON * 8;
     if (event.deltaY > 0 && previousRange >= maximumRange - rangeTolerance) {
       return;
@@ -172,6 +220,9 @@ export class FlatController {
     const requestedXMin = anchor - nextRange * horizontalFraction;
     const xMin = clamp(requestedXMin, bounds.xMin, Math.max(bounds.xMin, bounds.xMax - nextRange));
     const xMax = xMin + nextRange;
+    if (!Number.isFinite(xMin) || !Number.isFinite(xMax)) {
+      return;
+    }
     if (xMin === view.xMin && xMax === view.xMax) {
       return;
     }
@@ -192,6 +243,9 @@ export class FlatController {
       1
     );
     const view = this.props.getView();
+    if (!isFiniteFlatViewState(view)) {
+      return;
+    }
     this.props.onPick?.({
       x: view.xMin + horizontalFraction * (view.xMax - view.xMin),
       y: view.yMin + verticalFraction * (view.yMax - view.yMin),
@@ -333,6 +387,15 @@ export class RectangleSelectController {
     if (pointerId !== null) this.canvas.style.cursor = this.previousCursor;
     this.props.onSelectionChange?.(null);
   }
+}
+
+function isFiniteFlatViewState(view: FlatViewState): boolean {
+  return (
+    Number.isFinite(view.xMin) &&
+    Number.isFinite(view.xMax) &&
+    Number.isFinite(view.yMin) &&
+    Number.isFinite(view.yMax)
+  );
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

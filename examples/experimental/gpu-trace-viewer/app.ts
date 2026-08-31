@@ -6738,6 +6738,11 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   }
 
   private setViewTimeRange(timeMin: number, timeMax: number): void {
+    // This is the final CPU boundary before the range is encoded into f32 GPU uniforms. Keeping the
+    // last valid view is safer than allowing NaN or infinity to influence shader indices.
+    if (!Number.isFinite(timeMin) || !Number.isFinite(timeMax) || timeMax <= timeMin) {
+      return;
+    }
     const range = clamp(timeMax - timeMin, 0.5, this.traceDuration);
     const maximumTimeMin = Math.max(0, this.traceDuration - range);
     this.view.timeMin = clamp(timeMin, 0, maximumTimeMin);
