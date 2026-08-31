@@ -19,6 +19,7 @@ afterEach(() => {
 describe('XR-compatible WebGPU adapter requests', () => {
   test('preserves ordinary adapter requests unless XR compatibility is enabled', () => {
     expect(Device.defaultProps.xrCompatible).toBe(false);
+    expect(Device.defaultProps.powerPreference).toBe('default');
     expect(getWebGPURequestAdapterOptions({})).toEqual({featureLevel: 'core'});
     expect(getWebGPURequestAdapterOptions({xrCompatible: false})).toEqual({
       featureLevel: 'core'

@@ -75,7 +75,25 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.depthStencilAttachment = null;
     }
 
-    const requestedColorFormat = this.colorFormat || this.device.preferredColorFormat;
+    let requestedColorFormat = this.colorFormat || this.device.preferredColorFormat;
+    let requestedToneMapping = this.toneMapping || this.props.toneMapping;
+    const getConfiguration =
+      typeof this.handle.getConfiguration === 'function'
+        ? () => this.handle.getConfiguration()
+        : null;
+    const requestedHighDynamicRange =
+      requestedColorFormat === 'rgba16float' || requestedToneMapping === 'extended';
+
+    // Older Chromium-derived browsers expose WebGPU without getConfiguration(). They cannot
+    // verify HDR acceptance, so preserve device creation and use a portable SDR canvas.
+    if (requestedHighDynamicRange && !getConfiguration) {
+      log.warn('HDR canvas verification is unavailable; using standard presentation')();
+      requestedColorFormat = navigator.gpu.getPreferredCanvasFormat() as
+        | 'rgba8unorm'
+        | 'bgra8unorm';
+      requestedToneMapping = 'standard';
+    }
+
     const requestedConfiguration: GPUCanvasConfiguration = {
       device: this.device.handle,
       format: requestedColorFormat,
@@ -83,40 +101,62 @@ export class WebGPUCanvasContext extends CanvasContext {
       // viewFormats: [...]
       colorSpace: this.colorSpace || this.props.colorSpace,
       alphaMode: this.props.alphaMode,
-      toneMapping: {mode: this.toneMapping || this.props.toneMapping},
+      ...(requestedToneMapping === 'extended' ? {toneMapping: {mode: requestedToneMapping}} : {}),
       usage:
         requestedColorFormat === 'rgba16float'
           ? Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
           : Texture.RENDER_ATTACHMENT
     };
 
-    // Reconfigure the canvas size.
-    this.handle.configure(requestedConfiguration);
-
     let configuredConfiguration = requestedConfiguration;
-    let acceptedConfiguration = this.handle.getConfiguration();
+    let acceptedConfiguration: GPUCanvasConfigurationOut | null = null;
+    const standardConfiguration: GPUCanvasConfiguration = {
+      device: this.device.handle,
+      format: navigator.gpu.getPreferredCanvasFormat(),
+      colorSpace: 'srgb',
+      alphaMode: this.props.alphaMode,
+      usage: Texture.RENDER_ATTACHMENT
+    };
+
+    try {
+      this.handle.configure(requestedConfiguration);
+      if (requestedConfiguration.toneMapping?.mode === 'extended') {
+        try {
+          acceptedConfiguration = getConfiguration?.() || null;
+        } catch (error) {
+          log.warn(
+            'Unable to verify HDR canvas configuration; using standard presentation',
+            error
+          )();
+        }
+      }
+    } catch (error) {
+      if (requestedConfiguration.toneMapping?.mode !== 'extended') {
+        throw error;
+      }
+      log.warn('HDR canvas configuration was rejected; using standard presentation', error)();
+      configuredConfiguration = standardConfiguration;
+      this.handle.configure(standardConfiguration);
+    }
+
     if (
       requestedConfiguration.toneMapping?.mode === 'extended' &&
-      !isHighDynamicRangeCanvasConfiguration(acceptedConfiguration)
+      !isHighDynamicRangeCanvasConfiguration(acceptedConfiguration) &&
+      configuredConfiguration !== standardConfiguration
     ) {
-      const standardConfiguration: GPUCanvasConfiguration = {
-        device: this.device.handle,
-        format: navigator.gpu.getPreferredCanvasFormat(),
-        colorSpace: 'srgb',
-        alphaMode: this.props.alphaMode,
-        toneMapping: {mode: 'standard'},
-        usage: Texture.RENDER_ATTACHMENT
-      };
+      log.warn('HDR canvas configuration was not accepted; using standard presentation')();
       this.handle.configure(standardConfiguration);
       configuredConfiguration = standardConfiguration;
-      acceptedConfiguration = this.handle.getConfiguration();
+      acceptedConfiguration = null;
     }
 
     this.colorFormat = (acceptedConfiguration?.format ||
       configuredConfiguration.format) as typeof this.colorFormat;
     this.colorSpace = acceptedConfiguration?.colorSpace || configuredConfiguration.colorSpace;
     this.toneMapping =
-      acceptedConfiguration?.toneMapping?.mode || configuredConfiguration.toneMapping?.mode;
+      acceptedConfiguration?.toneMapping?.mode ||
+      configuredConfiguration.toneMapping?.mode ||
+      'standard';
 
     this._createDepthStencilAttachment(this.device.preferredDepthFormat);
   }
