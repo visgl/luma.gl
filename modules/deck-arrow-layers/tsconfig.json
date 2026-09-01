@@ -8,6 +8,7 @@
     "outDir": "dist"
   },
   "references": [
+    {"path": "../deck-gpu-layers"},
     {"path": "../arrow"},
     {"path": "../core"},
     {"path": "../engine"},
