@@ -13,6 +13,7 @@ import {
   Vector,
   makeVector,
   vectorFromArray,
+  type Data,
   type FixedSizeList,
   type Uint8
 } from 'apache-arrow';
@@ -221,7 +222,7 @@ function makeChunkedFixedSizeListVector(
   values: Float32Array,
   listSize: 2 | 4
 ): Vector<FixedSizeList<Float32>> {
-  const chunks = [];
+  const chunks: Data<FixedSizeList<Float32>>[] = [];
   let rowOffset = 0;
   for (const sourceChunk of source.data) {
     const valueStart = rowOffset * listSize;
@@ -235,11 +236,11 @@ function makeChunkedFixedSizeListVector(
     );
     rowOffset += sourceChunk.length;
   }
-  return makeVector(chunks) as Vector<FixedSizeList<Float32>>;
+  return makeVector(chunks);
 }
 
 function makeChunkedScalarVector(source: Vector, values: Float32Array): Vector<Float32> {
-  const chunks = [];
+  const chunks: Data<Float32>[] = [];
   let rowOffset = 0;
   for (const sourceChunk of source.data) {
     chunks.push(
@@ -250,7 +251,7 @@ function makeChunkedScalarVector(source: Vector, values: Float32Array): Vector<F
     );
     rowOffset += sourceChunk.length;
   }
-  return makeVector(chunks) as Vector<Float32>;
+  return makeVector(chunks);
 }
 
 function getPositionFormat(
