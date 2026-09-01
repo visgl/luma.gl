@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -14,12 +13,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -37,19 +37,11 @@ export type GPUArcLayerProps = Omit<LayerProps, 'data'> & {
   numSegments?: number;
 };
 
-type GPUArcBatchProps = Omit<GPUArcLayerProps, 'getSourcePosition' | 'getTargetPosition'> & {
-  sourcePositions: GPUData<'float32x2'>;
-  targetPositions: GPUData<'float32x2'>;
-  sourceColors?: GPUData<'unorm8x4'>;
-  targetColors?: GPUData<'unorm8x4'>;
-  widths?: GPUData<'float32'>;
-  heights?: GPUData<'float32'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
+type GPUArcLayerState = {
+  model: GPUVectorModel | null;
+  styleBuffer: Buffer | null;
+  defaults: Buffer[];
 };
-
-type GPUArcBatchState = {model: Model | null; styleBuffer: Buffer | null; defaults: Buffer[]};
 
 const GPU_ARC_SHADER = /* wgsl */ `
 struct ArcStyle {
@@ -138,8 +130,9 @@ fn getArcPosition(sourcePosition: vec2<f32>, targetPosition: vec2<f32>, progress
   return vec4<f32>(input.color.rgb, input.color.a * layer.opacity);
 }`;
 
-class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
-  static override layerName = 'GPUArcBatchLayer';
+/** Chunk-preserving GPUVector curved-arc layer. */
+export class GPUArcLayer extends Layer<GPUArcLayerProps> {
+  static override layerName = 'GPUArcLayer';
 
   override getAttributeManager() {
     return null;
@@ -147,6 +140,37 @@ class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUArcLayer requires WebGPU');
+    const sourceColors = isGPUVector(this.props.getSourceColor)
+      ? this.props.getSourceColor
+      : undefined;
+    const targetColors = isGPUVector(this.props.getTargetColor)
+      ? this.props.getTargetColor
+      : undefined;
+    const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
+    const heights = isGPUVector(this.props.getHeight) ? this.props.getHeight : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {
+        sourcePositions: this.props.getSourcePosition,
+        targetPositions: this.props.getTargetPosition,
+        sourceColors,
+        targetColors,
+        widths,
+        heights
+      },
+      {
+        sourcePositions: ['float32x2'],
+        targetPositions: ['float32x2'],
+        sourceColors: ['unorm8x4'],
+        targetColors: ['unorm8x4'],
+        widths: ['float32'],
+        heights: ['float32']
+      }
+    );
+    if (this.props.getSourcePosition.data.length === 0) {
+      this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPUArcLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 80,
@@ -158,73 +182,71 @@ class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
       device.createBuffer({data: new Float32Array([1])}),
       device.createBuffer({data: new Float32Array([1])})
     ];
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_ARC_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: Math.max(1, this.props.numSegments ?? 32) * 6,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes: {
-        sourcePositions: getGPUDataBuffer(this.props.sourcePositions),
-        targetPositions: getGPUDataBuffer(this.props.targetPositions),
-        sourceColors: this.props.sourceColors
-          ? getGPUDataBuffer(this.props.sourceColors)
-          : defaults[0]!,
-        targetColors: this.props.targetColors
-          ? getGPUDataBuffer(this.props.targetColors)
-          : defaults[1]!,
-        widths: this.props.widths ? getGPUDataBuffer(this.props.widths) : defaults[2]!,
-        heights: this.props.heights ? getGPUDataBuffer(this.props.heights) : defaults[3]!
+        sourcePositions: getGPUVectorBuffer(this.props.getSourcePosition),
+        targetPositions: getGPUVectorBuffer(this.props.getTargetPosition),
+        sourceColors: sourceColors ? getGPUVectorBuffer(sourceColors) : defaults[0]!,
+        targetColors: targetColors ? getGPUVectorBuffer(targetColors) : defaults[1]!,
+        widths: widths ? getGPUVectorBuffer(widths) : defaults[2]!,
+        heights: heights ? getGPUVectorBuffer(heights) : defaults[3]!
       },
       bufferLayout: [
-        makeGPUDataBufferLayout(this.props.sourcePositions, 'sourcePositions'),
-        makeGPUDataBufferLayout(this.props.targetPositions, 'targetPositions'),
-        this.props.sourceColors
-          ? makeGPUDataBufferLayout(this.props.sourceColors, 'sourceColors')
+        makeGPUVectorBufferLayout(this.props.getSourcePosition, 'sourcePositions'),
+        makeGPUVectorBufferLayout(this.props.getTargetPosition, 'targetPositions'),
+        sourceColors
+          ? makeGPUVectorBufferLayout(sourceColors, 'sourceColors')
           : makeConstantLayout('sourceColors', 'unorm8x4'),
-        this.props.targetColors
-          ? makeGPUDataBufferLayout(this.props.targetColors, 'targetColors')
+        targetColors
+          ? makeGPUVectorBufferLayout(targetColors, 'targetColors')
           : makeConstantLayout('targetColors', 'unorm8x4'),
-        this.props.widths
-          ? makeGPUDataBufferLayout(this.props.widths, 'widths')
+        widths
+          ? makeGPUVectorBufferLayout(widths, 'widths')
           : makeConstantLayout('widths', 'float32'),
-        this.props.heights
-          ? makeGPUDataBufferLayout(this.props.heights, 'heights')
+        heights
+          ? makeGPUVectorBufferLayout(heights, 'heights')
           : makeConstantLayout('heights', 'float32')
       ],
       bindings: {arcStyle: styleBuffer}
     });
     model.userData['boundInputs'] = [
-      this.props.sourcePositions,
-      this.props.targetPositions,
-      this.props.sourceColors,
-      this.props.targetColors,
-      this.props.widths,
-      this.props.heights,
-      this.props.numSegments,
-      this.props.rowCount
+      this.props.getSourcePosition,
+      this.props.getTargetPosition,
+      sourceColors,
+      targetColors,
+      widths,
+      heights,
+      this.props.numSegments
     ];
-    this.setState({model, styleBuffer, defaults} satisfies GPUArcBatchState);
+    this.setState({model, styleBuffer, defaults} satisfies GPUArcLayerState);
   }
 
   override getModels(): Model[] {
-    const model = (this.state as GPUArcBatchState).model;
+    const model = (this.state as GPUArcLayerState).model;
     return model ? [model] : [];
   }
 
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPUArcBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPUArcLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const sourceColors = isGPUVector(props.getSourceColor) ? props.getSourceColor : undefined;
+    const targetColors = isGPUVector(props.getTargetColor) ? props.getTargetColor : undefined;
+    const widths = isGPUVector(props.getWidth) ? props.getWidth : undefined;
+    const heights = isGPUVector(props.getHeight) ? props.getHeight : undefined;
     if (
-      props.sourcePositions !== boundInputs[0] ||
-      props.targetPositions !== boundInputs[1] ||
-      props.sourceColors !== boundInputs[2] ||
-      props.targetColors !== boundInputs[3] ||
-      props.widths !== boundInputs[4] ||
-      props.heights !== boundInputs[5] ||
-      props.numSegments !== boundInputs[6] ||
-      props.rowCount !== boundInputs[7]
+      props.getSourcePosition !== boundInputs[0] ||
+      props.getTargetPosition !== boundInputs[1] ||
+      sourceColors !== boundInputs[2] ||
+      targetColors !== boundInputs[3] ||
+      widths !== boundInputs[4] ||
+      heights !== boundInputs[5] ||
+      props.numSegments !== boundInputs[6]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
@@ -232,8 +254,16 @@ class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUArcBatchState;
+    const {model, styleBuffer} = this.state as GPUArcLayerState;
     if (!model || !styleBuffer) return;
+    const sourceColors = isGPUVector(this.props.getSourceColor)
+      ? this.props.getSourceColor
+      : undefined;
+    const targetColors = isGPUVector(this.props.getTargetColor)
+      ? this.props.getTargetColor
+      : undefined;
+    const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
+    const heights = isGPUVector(this.props.getHeight) ? this.props.getHeight : undefined;
     const defaultColor: Color = [0, 0, 0, 255];
     const sourceColor = isColor(this.props.getSourceColor)
       ? this.props.getSourceColor
@@ -259,25 +289,33 @@ class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
     uints.set(
       [
         Math.max(1, this.props.numSegments ?? 32),
-        this.props.sourceColors ? 1 : 0,
-        this.props.targetColors ? 1 : 0,
-        this.props.widths ? 1 : 0,
-        this.props.heights ? 1 : 0,
-        this.props.rowIndexOffset
+        sourceColors ? 1 : 0,
+        targetColors ? 1 : 0,
+        widths ? 1 : 0,
+        heights ? 1 : 0,
+        0
       ],
       13
     );
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    model.drawBatches(renderPass, {
+      vectors: {
+        sourcePositions: this.props.getSourcePosition,
+        targetPositions: this.props.getTargetPosition,
+        sourceColors,
+        targetColors,
+        widths,
+        heights
+      },
+      onBatch: batch => {
+        uints[18] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
 
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     const result = info as GPUVectorLayerPickingInfo;
-    result.gpuVector = {
-      rowIndex: result.index,
-      batchIndex: this.props.batchIndex,
-      batchRowIndex: result.index - this.props.rowIndexOffset
-    };
+    result.gpuVector = getGPUVectorPickingProvenance(this.props.getSourcePosition, result.index);
     return result;
   }
 
@@ -287,66 +325,11 @@ class GPUArcBatchLayer extends Layer<GPUArcBatchProps> {
   }
 
   private destroyResources(): void {
-    const state = this.state as GPUArcBatchState;
+    const state = this.state as GPUArcLayerState;
     state.model?.destroy();
     state.styleBuffer?.destroy();
     state.defaults.forEach(buffer => buffer.destroy());
     this.setState({model: null, styleBuffer: null, defaults: []});
-  }
-}
-
-/** Chunk-preserving GPUVector curved-arc composite. */
-export class GPUArcLayer extends CompositeLayer<GPUArcLayerProps> {
-  static override layerName = 'GPUArcLayer';
-
-  override renderLayers(): GPUArcBatchLayer[] {
-    const {
-      getSourcePosition,
-      getTargetPosition,
-      getSourceColor,
-      getTargetColor,
-      getWidth,
-      getHeight,
-      ...props
-    } = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        sourcePositions: getSourcePosition,
-        targetPositions: getTargetPosition,
-        sourceColors: isGPUVector(getSourceColor) ? getSourceColor : undefined,
-        targetColors: isGPUVector(getTargetColor) ? getTargetColor : undefined,
-        widths: isGPUVector(getWidth) ? getWidth : undefined,
-        heights: isGPUVector(getHeight) ? getHeight : undefined
-      },
-      {
-        sourcePositions: ['float32x2'],
-        targetPositions: ['float32x2'],
-        sourceColors: ['unorm8x4'],
-        targetColors: ['unorm8x4'],
-        widths: ['float32'],
-        heights: ['float32']
-      }
-    ).map(
-      batch =>
-        new GPUArcBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getSourceColor,
-          getTargetColor,
-          getWidth,
-          getHeight,
-          sourcePositions: batch.data['sourcePositions'] as GPUData<'float32x2'>,
-          targetPositions: batch.data['targetPositions'] as GPUData<'float32x2'>,
-          sourceColors: batch.data['sourceColors'] as GPUData<'unorm8x4'> | undefined,
-          targetColors: batch.data['targetColors'] as GPUData<'unorm8x4'> | undefined,
-          widths: batch.data['widths'] as GPUData<'float32'> | undefined,
-          heights: batch.data['heights'] as GPUData<'float32'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 

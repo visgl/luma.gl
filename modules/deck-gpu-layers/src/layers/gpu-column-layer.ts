@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -14,12 +13,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -35,17 +35,11 @@ export type GPUColumnLayerProps = Omit<LayerProps, 'data'> & {
   angle?: number;
 };
 
-type GPUColumnBatchProps = Omit<GPUColumnLayerProps, 'getPosition'> & {
-  positions: GPUData<'float32x2'>;
-  colors?: GPUData<'unorm8x4'>;
-  radii?: GPUData<'float32'>;
-  elevations?: GPUData<'float32'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
+type GPUColumnLayerState = {
+  model: GPUVectorModel | null;
+  styleBuffer: Buffer | null;
+  defaults: Buffer[];
 };
-
-type GPUColumnBatchState = {model: Model | null; styleBuffer: Buffer | null; defaults: Buffer[]};
 
 const GPU_COLUMN_SHADER = /* wgsl */ `
 struct ColumnStyle {
@@ -137,8 +131,9 @@ fn sideHeightSelector(vertexIndex: u32) -> f32 {
   return vec4<f32>(input.color.rgb * input.shade, input.color.a * layer.opacity);
 }`;
 
-class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
-  static override layerName = 'GPUColumnBatchLayer';
+/** Chunk-preserving GPUVector extruded-column layer. */
+export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
+  static override layerName = 'GPUColumnLayer';
 
   override getAttributeManager() {
     return null;
@@ -146,6 +141,23 @@ class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUColumnLayer requires WebGPU');
+    const colors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
+    const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
+    const elevations = isGPUVector(this.props.getElevation) ? this.props.getElevation : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {positions: this.props.getPosition, colors, radii, elevations},
+      {
+        positions: ['float32x2'],
+        colors: ['unorm8x4'],
+        radii: ['float32'],
+        elevations: ['float32']
+      }
+    );
+    if (this.props.getPosition.data.length === 0) {
+      this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPUColumnLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 64,
@@ -157,59 +169,58 @@ class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
       device.createBuffer({data: new Float32Array([1])})
     ];
     const diskResolution = normalizeDiskResolution(this.props.diskResolution);
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_COLUMN_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: diskResolution * 9,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes: {
-        positions: getGPUDataBuffer(this.props.positions),
-        colors: this.props.colors ? getGPUDataBuffer(this.props.colors) : defaults[0]!,
-        radii: this.props.radii ? getGPUDataBuffer(this.props.radii) : defaults[1]!,
-        elevations: this.props.elevations ? getGPUDataBuffer(this.props.elevations) : defaults[2]!
+        positions: getGPUVectorBuffer(this.props.getPosition),
+        colors: colors ? getGPUVectorBuffer(colors) : defaults[0]!,
+        radii: radii ? getGPUVectorBuffer(radii) : defaults[1]!,
+        elevations: elevations ? getGPUVectorBuffer(elevations) : defaults[2]!
       },
       bufferLayout: [
-        makeGPUDataBufferLayout(this.props.positions, 'positions'),
-        this.props.colors
-          ? makeGPUDataBufferLayout(this.props.colors, 'colors')
+        makeGPUVectorBufferLayout(this.props.getPosition, 'positions'),
+        colors
+          ? makeGPUVectorBufferLayout(colors, 'colors')
           : makeConstantLayout('colors', 'unorm8x4'),
-        this.props.radii
-          ? makeGPUDataBufferLayout(this.props.radii, 'radii')
-          : makeConstantLayout('radii', 'float32'),
-        this.props.elevations
-          ? makeGPUDataBufferLayout(this.props.elevations, 'elevations')
+        radii ? makeGPUVectorBufferLayout(radii, 'radii') : makeConstantLayout('radii', 'float32'),
+        elevations
+          ? makeGPUVectorBufferLayout(elevations, 'elevations')
           : makeConstantLayout('elevations', 'float32')
       ],
       bindings: {columnStyle: styleBuffer}
     });
     model.userData['boundInputs'] = [
-      this.props.positions,
-      this.props.colors,
-      this.props.radii,
-      this.props.elevations,
-      this.props.diskResolution,
-      this.props.rowCount
+      this.props.getPosition,
+      colors,
+      radii,
+      elevations,
+      this.props.diskResolution
     ];
-    this.setState({model, styleBuffer, defaults} satisfies GPUColumnBatchState);
+    this.setState({model, styleBuffer, defaults} satisfies GPUColumnLayerState);
   }
 
   override getModels(): Model[] {
-    const model = (this.state as GPUColumnBatchState).model;
+    const model = (this.state as GPUColumnLayerState).model;
     return model ? [model] : [];
   }
 
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPUColumnBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPUColumnLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const colors = isGPUVector(props.getFillColor) ? props.getFillColor : undefined;
+    const radii = isGPUVector(props.getRadius) ? props.getRadius : undefined;
+    const elevations = isGPUVector(props.getElevation) ? props.getElevation : undefined;
     if (
-      props.positions !== boundInputs[0] ||
-      props.colors !== boundInputs[1] ||
-      props.radii !== boundInputs[2] ||
-      props.elevations !== boundInputs[3] ||
-      props.diskResolution !== boundInputs[4] ||
-      props.rowCount !== boundInputs[5]
+      props.getPosition !== boundInputs[0] ||
+      colors !== boundInputs[1] ||
+      radii !== boundInputs[2] ||
+      elevations !== boundInputs[3] ||
+      props.diskResolution !== boundInputs[4]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
@@ -217,8 +228,11 @@ class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUColumnBatchState;
+    const {model, styleBuffer} = this.state as GPUColumnLayerState;
     if (!model || !styleBuffer) return;
+    const colors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
+    const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
+    const elevations = isGPUVector(this.props.getElevation) ? this.props.getElevation : undefined;
     const defaultColor: Color = [0, 0, 0, 255];
     const color = isColor(this.props.getFillColor) ? this.props.getFillColor : defaultColor;
     const bytes = new ArrayBuffer(64);
@@ -237,25 +251,26 @@ class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
     uints.set(
       [
         normalizeDiskResolution(this.props.diskResolution),
-        this.props.colors ? 1 : 0,
-        this.props.radii ? 1 : 0,
-        this.props.elevations ? 1 : 0,
-        this.props.rowIndexOffset
+        colors ? 1 : 0,
+        radii ? 1 : 0,
+        elevations ? 1 : 0,
+        0
       ],
       8
     );
     floats[13] = this.props.angle ?? 0;
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    model.drawBatches(renderPass, {
+      vectors: {positions: this.props.getPosition, colors, radii, elevations},
+      onBatch: batch => {
+        uints[12] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
 
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     const result = info as GPUVectorLayerPickingInfo;
-    result.gpuVector = {
-      rowIndex: result.index,
-      batchIndex: this.props.batchIndex,
-      batchRowIndex: result.index - this.props.rowIndexOffset
-    };
+    result.gpuVector = getGPUVectorPickingProvenance(this.props.getPosition, result.index);
     return result;
   }
 
@@ -265,51 +280,11 @@ class GPUColumnBatchLayer extends Layer<GPUColumnBatchProps> {
   }
 
   private destroyResources(): void {
-    const state = this.state as GPUColumnBatchState;
+    const state = this.state as GPUColumnLayerState;
     state.model?.destroy();
     state.styleBuffer?.destroy();
     state.defaults.forEach(buffer => buffer.destroy());
     this.setState({model: null, styleBuffer: null, defaults: []});
-  }
-}
-
-/** Chunk-preserving GPUVector extruded-column composite. */
-export class GPUColumnLayer extends CompositeLayer<GPUColumnLayerProps> {
-  static override layerName = 'GPUColumnLayer';
-
-  override renderLayers(): GPUColumnBatchLayer[] {
-    const {getPosition, getFillColor, getRadius, getElevation, ...props} = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        positions: getPosition,
-        colors: isGPUVector(getFillColor) ? getFillColor : undefined,
-        radii: isGPUVector(getRadius) ? getRadius : undefined,
-        elevations: isGPUVector(getElevation) ? getElevation : undefined
-      },
-      {
-        positions: ['float32x2'],
-        colors: ['unorm8x4'],
-        radii: ['float32'],
-        elevations: ['float32']
-      }
-    ).map(
-      batch =>
-        new GPUColumnBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getFillColor,
-          getRadius,
-          getElevation,
-          positions: batch.data['positions'] as GPUData<'float32x2'>,
-          colors: batch.data['colors'] as GPUData<'unorm8x4'> | undefined,
-          radii: batch.data['radii'] as GPUData<'float32'> | undefined,
-          elevations: batch.data['elevations'] as GPUData<'float32'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 

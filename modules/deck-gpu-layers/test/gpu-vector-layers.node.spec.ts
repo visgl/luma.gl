@@ -7,14 +7,16 @@ import {
   GPUArcLayer,
   GPUColumnLayer,
   GPUGridCellLayer,
+  GPUIconLayer,
   GPULineLayer,
   GPUPointCloudLayer,
   GPUScatterplotLayer,
   type GPUVectorLayerPickingInfo
 } from '@deck.gl-community/gpu-layers';
-import type {Buffer} from '@luma.gl/core';
+import type {Buffer, RenderPass, Texture} from '@luma.gl/core';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {describe, expect, test, vi} from 'vitest';
+import {getGPUVectorLayerBatches} from '../src/layers/gpu-vector-layer-utils';
 
 describe('GPUVector deck layers', () => {
   test('preserve physical chunks and global picking provenance', () => {
@@ -26,9 +28,13 @@ describe('GPUVector deck layers', () => {
       getRadius: radii
     });
 
-    const children = layer.renderLayers();
-    expect(children.map(child => child.props['rowCount'])).toEqual([2, 3]);
-    const secondInfo = children[1]!.getPickingInfo({
+    const batches = getGPUVectorLayerBatches(
+      layer.id,
+      {positions, radii},
+      {positions: ['float32x2'], radii: ['float32']}
+    );
+    expect(batches.map(batch => batch.rowCount)).toEqual([2, 3]);
+    const secondInfo = layer.getPickingInfo({
       info: {index: 3} as PickingInfo
     } as never) as GPUVectorLayerPickingInfo;
     expect(secondInfo.index).toBe(3);
@@ -38,30 +44,30 @@ describe('GPUVector deck layers', () => {
   test('rejects misaligned semantic vector chunks', () => {
     const sourcePositions = makeChunkedVector('source', 'float32x2', [2, 3]);
     const targetPositions = makeChunkedVector('target', 'float32x2', [1, 4]);
-    const layer = new GPULineLayer({
-      id: 'gpu-lines',
-      getSourcePosition: sourcePositions,
-      getTargetPosition: targetPositions
-    });
-
-    expect(() => layer.renderLayers()).toThrow('chunk 0 row counts must align');
+    expect(() =>
+      getGPUVectorLayerBatches(
+        'gpu-lines',
+        {sourcePositions, targetPositions},
+        {sourcePositions: ['float32x2'], targetPositions: ['float32x2']}
+      )
+    ).toThrow('chunk 0 row counts must align');
   });
 
   test('borrows GPUVector buffers without taking ownership', () => {
     const destroy = vi.fn();
     const positions = makeChunkedVector('positions', 'float32x2', [2], destroy);
-    const layer = new GPUScatterplotLayer({id: 'borrowed', getPosition: positions});
-
-    layer.renderLayers();
-    layer.finalizeState({} as never);
+    getGPUVectorLayerBatches('borrowed', {positions}, {positions: ['float32x2']});
 
     expect(destroy).not.toHaveBeenCalled();
   });
 
-  test('preserves batches across the complete fixed-width primitive family', () => {
+  test('uses one GPUVectorModel-backed layer across every fixed-width primitive batch', () => {
     const positions2 = makeChunkedVector('positions2', 'float32x2', [2, 3]);
     const positions3 = makeChunkedVector('positions3', 'float32x3', [2, 3]);
     const targets = makeChunkedVector('targets', 'float32x2', [2, 3]);
+    const offsets = makeChunkedVector('offsets', 'float32x2', [2, 3]);
+    const frames = makeChunkedVector('frames', 'float32x4', [2, 3]);
+    const colorModes = makeChunkedVector('colorModes', 'float32', [2, 3]);
     const layers = [
       new GPUArcLayer({
         id: 'arcs',
@@ -69,14 +75,57 @@ describe('GPUVector deck layers', () => {
         getTargetPosition: targets
       }),
       new GPUColumnLayer({id: 'columns', getPosition: positions2}),
-      new GPUGridCellLayer({id: 'cells', getPosition: positions2}),
-      new GPUPointCloudLayer({id: 'point-cloud', getPosition: positions3})
+      new GPUIconLayer({
+        id: 'icons',
+        iconAtlas: {} as Texture,
+        getPosition: positions2,
+        iconOffsets: offsets,
+        iconFrames: frames,
+        iconColorModes: colorModes
+      }),
+      new GPULineLayer({
+        id: 'lines',
+        getSourcePosition: positions2,
+        getTargetPosition: targets
+      }),
+      new GPUPointCloudLayer({id: 'point-cloud', getPosition: positions3}),
+      new GPUScatterplotLayer({id: 'scatterplot', getPosition: positions2})
     ];
 
-    expect(layers[0]!.renderLayers()).toHaveLength(2);
-    expect(layers[1]!.renderLayers()).toHaveLength(2);
-    expect(layers[2]!.renderLayers()).toBeInstanceOf(GPUColumnLayer);
-    expect(layers[3]!.renderLayers()).toHaveLength(2);
+    for (const layer of layers) {
+      expect('renderLayers' in layer).toBe(false);
+    }
+
+    const gridCellLayer = new GPUGridCellLayer({id: 'cells', getPosition: positions2});
+    const columnLayer = gridCellLayer.renderLayers();
+    expect(columnLayer).toBeInstanceOf(GPUColumnLayer);
+    expect('renderLayers' in columnLayer).toBe(false);
+  });
+
+  test('delegates physical chunks to one GPUVectorModel draw', () => {
+    const positions = makeChunkedVector('positions', 'float32x2', [2, 3]);
+    const radii = makeChunkedVector('radii', 'float32', [2, 3]);
+    const layer = new GPUScatterplotLayer({
+      id: 'gpu-scatterplot-model',
+      getPosition: positions,
+      getRadius: radii
+    });
+    const rowIndexOffsets: number[] = [];
+    const write = vi.fn((data: Uint8Array) => {
+      rowIndexOffsets.push(new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4)[10]!);
+    });
+    const drawBatches = vi.fn((_renderPass, options) => {
+      options.onBatch?.({batchIndex: 0, rowIndexOffset: 0, rowCount: 2, data: {}});
+      options.onBatch?.({batchIndex: 1, rowIndexOffset: 2, rowCount: 3, data: {}});
+      return true;
+    });
+    layer.state = {model: {drawBatches}, styleBuffer: {write}} as never;
+
+    layer.draw({renderPass: {} as RenderPass});
+
+    expect(drawBatches).toHaveBeenCalledOnce();
+    expect(drawBatches.mock.calls[0]![1].vectors).toEqual({positions, radii});
+    expect(rowIndexOffsets).toEqual([0, 2]);
   });
 });
 
@@ -86,7 +135,13 @@ function makeChunkedVector<FormatT extends GPUVectorFormat>(
   chunkLengths: number[],
   destroy = vi.fn()
 ): GPUVector<FormatT> {
-  const components = format.endsWith('x2') ? 2 : format.endsWith('x3') ? 3 : 1;
+  const components = format.endsWith('x2')
+    ? 2
+    : format.endsWith('x3')
+      ? 3
+      : format.endsWith('x4')
+        ? 4
+        : 1;
   const bytesPerRow = components * Float32Array.BYTES_PER_ELEMENT;
   const data = chunkLengths.map(
     length =>

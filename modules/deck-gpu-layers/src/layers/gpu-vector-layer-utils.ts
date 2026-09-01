@@ -5,10 +5,10 @@
 import type {PickingInfo} from '@deck.gl/core';
 import type {Buffer, BufferLayout, VertexFormat} from '@luma.gl/core';
 import type {GPUData, GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUVectorFormatInfo} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorFormatInfo, getGPUVectorModelBatches} from '@luma.gl/gpgpu/gpu-data';
 import {DynamicBuffer} from '@luma.gl/engine';
 
-/** One physical, row-aligned set of GPUVector chunks rendered as a deck child layer. */
+/** One physical, row-aligned set of GPUVector chunks rendered as a model draw batch. */
 export type GPUVectorLayerBatch = {
   batchIndex: number;
   rowIndexOffset: number;
@@ -46,7 +46,6 @@ export function getGPUVectorLayerBatches(
     Boolean(entry[1])
   );
   if (entries.length === 0) return [];
-  const [primaryName, primaryVector] = entries[0];
   for (const [name, vector] of entries) {
     const acceptedFormats = formats[name];
     if (!vector.format || !acceptedFormats?.includes(vector.format)) {
@@ -54,40 +53,20 @@ export function getGPUVectorLayerBatches(
         `${ownerName} ${name} GPUVector.format "${vector.format ?? 'undefined'}" must be one of ${acceptedFormats?.join(', ') ?? 'the declared formats'}`
       );
     }
-    if (vector.length !== primaryVector.length) {
-      throw new Error(
-        `${ownerName} ${name} rows must match ${primaryName} rows (${vector.length} !== ${primaryVector.length})`
-      );
-    }
-    if (vector.data.length !== primaryVector.data.length) {
-      throw new Error(`${ownerName} GPUVector chunk counts must align`);
-    }
   }
-
-  let rowIndexOffset = 0;
-  return primaryVector.data.map((primaryData, batchIndex) => {
-    const data: Record<string, GPUData> = {};
-    for (const [name, vector] of entries) {
-      const chunk = vector.data[batchIndex];
-      if (!chunk || chunk.length !== primaryData.length) {
-        throw new Error(`${ownerName} GPUVector chunk ${batchIndex} row counts must align`);
-      }
-      data[name] = chunk;
-    }
-    const batch = {
-      batchIndex,
-      rowIndexOffset,
-      rowCount: primaryData.length,
-      data
-    };
-    rowIndexOffset += primaryData.length;
-    return batch;
-  });
+  return getGPUVectorModelBatches(ownerName, Object.fromEntries(entries));
 }
 
 /** Returns the luma buffer behind a fixed-width GPUData chunk. */
 export function getGPUDataBuffer(data: GPUData): Buffer {
   return data.buffer instanceof DynamicBuffer ? data.buffer.buffer : data.buffer;
+}
+
+/** Returns the first physical buffer used to initialize a GPUVectorModel attribute. */
+export function getGPUVectorBuffer(vector: GPUVector): Buffer {
+  const data = vector.data[0];
+  if (!data) throw new Error('GPU deck layers require a non-empty GPUVector');
+  return getGPUDataBuffer(data);
 }
 
 /** Describes one borrowed GPUData chunk as a model vertex buffer. */
@@ -111,4 +90,11 @@ export function makeGPUDataBufferLayout(data: GPUData, name: string): BufferLayo
       }
     ]
   };
+}
+
+/** Describes a fixed-width GPUVector as a GPUVectorModel vertex buffer. */
+export function makeGPUVectorBufferLayout(vector: GPUVector, name: string): BufferLayout {
+  const data = vector.data[0];
+  if (!data) throw new Error('GPU deck layers require a non-empty GPUVector');
+  return makeGPUDataBufferLayout(data, name);
 }

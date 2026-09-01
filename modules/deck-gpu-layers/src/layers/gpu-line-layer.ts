@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -14,12 +13,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -34,16 +34,11 @@ export type GPULineLayerProps = Omit<LayerProps, 'data'> & {
   widthMaxPixels?: number;
 };
 
-type GPULineBatchProps = Omit<GPULineLayerProps, 'getSourcePosition' | 'getTargetPosition'> & {
-  sourcePositions: GPUData<'float32x2'>;
-  targetPositions: GPUData<'float32x2'>;
-  colors?: GPUData<'unorm8x4'>;
-  widths?: GPUData<'float32'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
+type GPULineLayerState = {
+  model: GPUVectorModel | null;
+  styleBuffer: Buffer | null;
+  defaults: Buffer[];
 };
-type GPULineBatchState = {model: Model | null; styleBuffer: Buffer | null; defaults: Buffer[]};
 
 const GPU_LINE_SHADER = /* wgsl */ `
 struct LineStyle {
@@ -99,14 +94,36 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
 @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> { if (picking.isActive > 0.5) { return vec4<f32>(input.pickingColor, 1.0); } return vec4<f32>(input.color.rgb, input.color.a * layer.opacity); }
 `;
 
-class GPULineBatchLayer extends Layer<GPULineBatchProps> {
-  static override layerName = 'GPULineBatchLayer';
+/** Chunk-preserving GPUVector straight-line layer. */
+export class GPULineLayer extends Layer<GPULineLayerProps> {
+  static override layerName = 'GPULineLayer';
   override getAttributeManager() {
     return null;
   }
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPULineLayer requires WebGPU');
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
+    const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {
+        sourcePositions: this.props.getSourcePosition,
+        targetPositions: this.props.getTargetPosition,
+        colors,
+        widths
+      },
+      {
+        sourcePositions: ['float32x2'],
+        targetPositions: ['float32x2'],
+        colors: ['unorm8x4'],
+        widths: ['float32']
+      }
+    );
+    if (this.props.getSourcePosition.data.length === 0) {
+      this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPULineLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 48,
@@ -120,32 +137,32 @@ class GPULineBatchLayer extends Layer<GPULineBatchProps> {
       id: `${this.id}-default-width`,
       data: new Float32Array([1])
     });
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_LINE_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes: {
-        sourcePositions: getGPUDataBuffer(this.props.sourcePositions),
-        targetPositions: getGPUDataBuffer(this.props.targetPositions),
-        colors: this.props.colors ? getGPUDataBuffer(this.props.colors) : defaultColor,
-        widths: this.props.widths ? getGPUDataBuffer(this.props.widths) : defaultWidth
+        sourcePositions: getGPUVectorBuffer(this.props.getSourcePosition),
+        targetPositions: getGPUVectorBuffer(this.props.getTargetPosition),
+        colors: colors ? getGPUVectorBuffer(colors) : defaultColor,
+        widths: widths ? getGPUVectorBuffer(widths) : defaultWidth
       },
       bufferLayout: [
-        makeGPUDataBufferLayout(this.props.sourcePositions, 'sourcePositions'),
-        makeGPUDataBufferLayout(this.props.targetPositions, 'targetPositions'),
-        this.props.colors
-          ? makeGPUDataBufferLayout(this.props.colors, 'colors')
+        makeGPUVectorBufferLayout(this.props.getSourcePosition, 'sourcePositions'),
+        makeGPUVectorBufferLayout(this.props.getTargetPosition, 'targetPositions'),
+        colors
+          ? makeGPUVectorBufferLayout(colors, 'colors')
           : {
               name: 'colors',
               byteStride: 0,
               stepMode: 'instance',
               attributes: [{attribute: 'colors', format: 'unorm8x4'}]
             },
-        this.props.widths
-          ? makeGPUDataBufferLayout(this.props.widths, 'widths')
+        widths
+          ? makeGPUVectorBufferLayout(widths, 'widths')
           : {
               name: 'widths',
               byteStride: 0,
@@ -156,40 +173,42 @@ class GPULineBatchLayer extends Layer<GPULineBatchProps> {
       bindings: {lineStyle: styleBuffer}
     });
     model.userData['boundInputs'] = [
-      this.props.sourcePositions,
-      this.props.targetPositions,
-      this.props.colors,
-      this.props.widths,
-      this.props.rowCount
+      this.props.getSourcePosition,
+      this.props.getTargetPosition,
+      colors,
+      widths
     ];
     this.setState({
       model,
       styleBuffer,
       defaults: [defaultColor, defaultWidth]
-    } satisfies GPULineBatchState);
+    } satisfies GPULineLayerState);
   }
 
   override getModels(): Model[] {
-    const model = (this.state as GPULineBatchState).model;
+    const model = (this.state as GPULineLayerState).model;
     return model ? [model] : [];
   }
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPULineBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPULineLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const colors = isGPUVector(props.getColor) ? props.getColor : undefined;
+    const widths = isGPUVector(props.getWidth) ? props.getWidth : undefined;
     if (
-      props.sourcePositions !== boundInputs[0] ||
-      props.targetPositions !== boundInputs[1] ||
-      props.colors !== boundInputs[2] ||
-      props.widths !== boundInputs[3] ||
-      props.rowCount !== boundInputs[4]
+      props.getSourcePosition !== boundInputs[0] ||
+      props.getTargetPosition !== boundInputs[1] ||
+      colors !== boundInputs[2] ||
+      widths !== boundInputs[3]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
     }
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPULineBatchState;
+    const {model, styleBuffer} = this.state as GPULineLayerState;
     if (!model || !styleBuffer) return;
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
+    const widths = isGPUVector(this.props.getWidth) ? this.props.getWidth : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getColor)
       ? this.props.getColor
       : [0, 0, 0, 255];
@@ -206,20 +225,26 @@ class GPULineBatchLayer extends Layer<GPULineBatchProps> {
       this.props.widthMinPixels ?? 0,
       this.props.widthMaxPixels ?? 1e9
     ]);
-    uints.set(
-      [this.props.colors ? 1 : 0, this.props.widths ? 1 : 0, this.props.rowIndexOffset, 0],
-      8
-    );
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    uints.set([colors ? 1 : 0, widths ? 1 : 0, 0, 0], 8);
+    model.drawBatches(renderPass, {
+      vectors: {
+        sourcePositions: this.props.getSourcePosition,
+        targetPositions: this.props.getTargetPosition,
+        colors,
+        widths
+      },
+      onBatch: batch => {
+        uints[10] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     const pickingInfo = info as GPUVectorLayerPickingInfo;
-    pickingInfo.gpuVector = {
-      rowIndex: pickingInfo.index,
-      batchIndex: this.props.batchIndex,
-      batchRowIndex: pickingInfo.index - this.props.rowIndexOffset
-    };
+    pickingInfo.gpuVector = getGPUVectorPickingProvenance(
+      this.props.getSourcePosition,
+      pickingInfo.index
+    );
     return pickingInfo;
   }
   override finalizeState(context: LayerContext): void {
@@ -227,49 +252,11 @@ class GPULineBatchLayer extends Layer<GPULineBatchProps> {
     super.finalizeState(context);
   }
   private destroyResources(): void {
-    const state = this.state as GPULineBatchState;
+    const state = this.state as GPULineLayerState;
     state.model?.destroy();
     state.styleBuffer?.destroy();
     state.defaults.forEach(buffer => buffer.destroy());
     this.setState({model: null, styleBuffer: null, defaults: []});
-  }
-}
-
-/** Chunk-preserving GPUVector straight-line composite. */
-export class GPULineLayer extends CompositeLayer<GPULineLayerProps> {
-  static override layerName = 'GPULineLayer';
-  override renderLayers(): GPULineBatchLayer[] {
-    const {getSourcePosition, getTargetPosition, getColor, getWidth, ...props} = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        sourcePositions: getSourcePosition,
-        targetPositions: getTargetPosition,
-        colors: isGPUVector(getColor) ? getColor : undefined,
-        widths: isGPUVector(getWidth) ? getWidth : undefined
-      },
-      {
-        sourcePositions: ['float32x2'],
-        targetPositions: ['float32x2'],
-        colors: ['unorm8x4'],
-        widths: ['float32']
-      }
-    ).map(
-      batch =>
-        new GPULineBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getColor,
-          getWidth,
-          sourcePositions: batch.data['sourcePositions'] as GPUData<'float32x2'>,
-          targetPositions: batch.data['targetPositions'] as GPUData<'float32x2'>,
-          colors: batch.data['colors'] as GPUData<'unorm8x4'> | undefined,
-          widths: batch.data['widths'] as GPUData<'float32'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 

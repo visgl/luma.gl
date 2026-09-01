@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -14,12 +13,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -31,17 +31,8 @@ export type GPUPointCloudLayerProps = Omit<LayerProps, 'data'> & {
   pointSize?: number;
 };
 
-type GPUPointCloudBatchProps = Omit<GPUPointCloudLayerProps, 'getPosition' | 'getNormal'> & {
-  positions: GPUData<'float32x3'>;
-  normals?: GPUData<'float32x3'>;
-  colors?: GPUData<'unorm8x4'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
-};
-
-type GPUPointCloudBatchState = {
-  model: Model | null;
+type GPUPointCloudLayerState = {
+  model: GPUVectorModel | null;
   styleBuffer: Buffer | null;
   defaults: Buffer[];
 };
@@ -105,8 +96,9 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   return vec4<f32>(input.color.rgb * input.lighting, input.color.a * layer.opacity);
 }`;
 
-class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
-  static override layerName = 'GPUPointCloudBatchLayer';
+/** Chunk-preserving GPUVector point-cloud layer. */
+export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
+  static override layerName = 'GPUPointCloudLayer';
 
   override getAttributeManager() {
     return null;
@@ -114,6 +106,20 @@ class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUPointCloudLayer requires WebGPU');
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {positions: this.props.getPosition, normals: this.props.getNormal, colors},
+      {positions: ['float32x3'], normals: ['float32x3'], colors: ['unorm8x4']}
+    );
+    if (this.props.getPosition.data.length === 0) {
+      this.setState({
+        model: null,
+        styleBuffer: null,
+        defaults: []
+      } satisfies GPUPointCloudLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 32,
@@ -121,52 +127,47 @@ class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
     });
     const defaultNormal = device.createBuffer({data: new Float32Array([0, 0, 1])});
     const defaultColor = device.createBuffer({data: new Uint8Array([0, 0, 0, 255])});
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_POINT_CLOUD_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes: {
-        positions: getGPUDataBuffer(this.props.positions),
-        normals: this.props.normals ? getGPUDataBuffer(this.props.normals) : defaultNormal,
-        colors: this.props.colors ? getGPUDataBuffer(this.props.colors) : defaultColor
+        positions: getGPUVectorBuffer(this.props.getPosition),
+        normals: this.props.getNormal ? getGPUVectorBuffer(this.props.getNormal) : defaultNormal,
+        colors: colors ? getGPUVectorBuffer(colors) : defaultColor
       },
       bufferLayout: [
-        makeGPUDataBufferLayout(this.props.positions, 'positions'),
-        this.props.normals
-          ? makeGPUDataBufferLayout(this.props.normals, 'normals')
+        makeGPUVectorBufferLayout(this.props.getPosition, 'positions'),
+        this.props.getNormal
+          ? makeGPUVectorBufferLayout(this.props.getNormal, 'normals')
           : makeConstantLayout('normals', 'float32x3'),
-        this.props.colors
-          ? makeGPUDataBufferLayout(this.props.colors, 'colors')
+        colors
+          ? makeGPUVectorBufferLayout(colors, 'colors')
           : makeConstantLayout('colors', 'unorm8x4')
       ],
       bindings: {pointCloudStyle: styleBuffer}
     });
-    model.userData['boundInputs'] = [
-      this.props.positions,
-      this.props.normals,
-      this.props.colors,
-      this.props.rowCount
-    ];
+    model.userData['boundInputs'] = [this.props.getPosition, this.props.getNormal, colors];
     this.setState({model, styleBuffer, defaults: [defaultNormal, defaultColor]});
   }
 
   override getModels(): Model[] {
-    return (this.state as GPUPointCloudBatchState).model
-      ? [(this.state as GPUPointCloudBatchState).model!]
+    return (this.state as GPUPointCloudLayerState).model
+      ? [(this.state as GPUPointCloudLayerState).model!]
       : [];
   }
 
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPUPointCloudBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPUPointCloudLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const colors = isGPUVector(props.getColor) ? props.getColor : undefined;
     if (
-      props.positions !== boundInputs[0] ||
-      props.normals !== boundInputs[1] ||
-      props.colors !== boundInputs[2] ||
-      props.rowCount !== boundInputs[3]
+      props.getPosition !== boundInputs[0] ||
+      props.getNormal !== boundInputs[1] ||
+      colors !== boundInputs[2]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
@@ -174,8 +175,9 @@ class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUPointCloudBatchState;
+    const {model, styleBuffer} = this.state as GPUPointCloudLayerState;
     if (!model || !styleBuffer) return;
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getColor)
       ? this.props.getColor
       : [0, 0, 0, 255];
@@ -183,21 +185,19 @@ class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
     const floats = new Float32Array(bytes);
     const uints = new Uint32Array(bytes);
     floats.set([red / 255, green / 255, blue / 255, alpha / 255, this.props.pointSize ?? 1]);
-    uints.set(
-      [this.props.colors ? 1 : 0, this.props.normals ? 1 : 0, this.props.rowIndexOffset],
-      5
-    );
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    uints.set([colors ? 1 : 0, this.props.getNormal ? 1 : 0, 0], 5);
+    model.drawBatches(renderPass, {
+      vectors: {positions: this.props.getPosition, normals: this.props.getNormal, colors},
+      onBatch: batch => {
+        uints[7] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
 
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     const result = info as GPUVectorLayerPickingInfo;
-    result.gpuVector = {
-      rowIndex: result.index,
-      batchIndex: this.props.batchIndex,
-      batchRowIndex: result.index - this.props.rowIndexOffset
-    };
+    result.gpuVector = getGPUVectorPickingProvenance(this.props.getPosition, result.index);
     return result;
   }
 
@@ -207,42 +207,11 @@ class GPUPointCloudBatchLayer extends Layer<GPUPointCloudBatchProps> {
   }
 
   private destroyResources(): void {
-    const state = this.state as GPUPointCloudBatchState;
+    const state = this.state as GPUPointCloudLayerState;
     state.model?.destroy();
     state.styleBuffer?.destroy();
     state.defaults.forEach(buffer => buffer.destroy());
     this.setState({model: null, styleBuffer: null, defaults: []});
-  }
-}
-
-/** Chunk-preserving GPUVector point-cloud composite. */
-export class GPUPointCloudLayer extends CompositeLayer<GPUPointCloudLayerProps> {
-  static override layerName = 'GPUPointCloudLayer';
-
-  override renderLayers(): GPUPointCloudBatchLayer[] {
-    const {getPosition, getNormal, getColor, ...props} = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        positions: getPosition,
-        normals: getNormal,
-        colors: isGPUVector(getColor) ? getColor : undefined
-      },
-      {positions: ['float32x3'], normals: ['float32x3'], colors: ['unorm8x4']}
-    ).map(
-      batch =>
-        new GPUPointCloudBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getColor,
-          positions: batch.data['positions'] as GPUData<'float32x3'>,
-          normals: batch.data['normals'] as GPUData<'float32x3'> | undefined,
-          colors: batch.data['colors'] as GPUData<'unorm8x4'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 

@@ -10,7 +10,8 @@ vectors.
 
 The fixed-width primitives are `GPUArcLayer`, `GPUColumnLayer`, `GPUGridCellLayer`, `GPUIconLayer`,
 `GPULineLayer`, `GPUPointCloudLayer`, and `GPUScatterplotLayer`. They consume row-aligned
-`GPUVector` objects and preserve every physical chunk as a separate draw batch. `GPUBitmapLayer`
+`GPUVector` objects. Each layer owns one `GPUVectorModel`, which preserves every physical chunk as
+a separate draw call without creating a model or deck child layer per chunk. `GPUBitmapLayer`
 accepts an already loaded `Texture`; a bitmap has no tabular column to convert.
 
 ```ts

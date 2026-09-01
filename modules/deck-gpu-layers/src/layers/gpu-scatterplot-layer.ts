@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -15,12 +14,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -34,16 +34,7 @@ export type GPUScatterplotLayerProps = Omit<LayerProps, 'data'> & {
   radiusMaxPixels?: number;
 };
 
-type GPUScatterplotBatchLayerProps = Omit<GPUScatterplotLayerProps, 'getPosition'> & {
-  positions: GPUData<'float32x2'>;
-  radii?: GPUData<'float32'>;
-  fillColors?: GPUData<'unorm8x4'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
-};
-
-type GPUScatterplotBatchState = {model: Model | null; styleBuffer: Buffer | null};
+type GPUScatterplotLayerState = {model: GPUVectorModel | null; styleBuffer: Buffer | null};
 
 const GPU_SCATTERPLOT_SHADER = /* wgsl */ `
 struct ScatterStyle {
@@ -109,8 +100,9 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> {
   return vec4<f32>(input.color.rgb, input.color.a * layer.opacity * coverage);
 }`;
 
-class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
-  static override layerName = 'GPUScatterplotBatchLayer';
+/** Chunk-preserving GPUVector scatterplot layer. */
+export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
+  static override layerName = 'GPUScatterplotLayer';
 
   override getAttributeManager() {
     return null;
@@ -118,6 +110,17 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
 
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUScatterplotLayer requires WebGPU');
+    const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
+    const fillColors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {positions: this.props.getPosition, radii, fillColors},
+      {positions: ['float32x2'], radii: ['float32'], fillColors: ['unorm8x4']}
+    );
+    if (this.props.getPosition.data.length === 0) {
+      this.setState({model: null, styleBuffer: null} satisfies GPUScatterplotLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 48,
@@ -131,30 +134,30 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
       id: `${this.id}-default-color`,
       data: new Uint8Array([0, 0, 0, 255])
     });
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_SCATTERPLOT_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes: {
-        positions: getGPUDataBuffer(this.props.positions),
-        radii: this.props.radii ? getGPUDataBuffer(this.props.radii) : defaultRadius,
-        fillColors: this.props.fillColors ? getGPUDataBuffer(this.props.fillColors) : defaultColor
+        positions: getGPUVectorBuffer(this.props.getPosition),
+        radii: radii ? getGPUVectorBuffer(radii) : defaultRadius,
+        fillColors: fillColors ? getGPUVectorBuffer(fillColors) : defaultColor
       },
       bufferLayout: [
-        makeGPUDataBufferLayout(this.props.positions, 'positions'),
-        this.props.radii
-          ? makeGPUDataBufferLayout(this.props.radii, 'radii')
+        makeGPUVectorBufferLayout(this.props.getPosition, 'positions'),
+        radii
+          ? makeGPUVectorBufferLayout(radii, 'radii')
           : {
               name: 'radii',
               byteStride: 0,
               stepMode: 'instance',
               attributes: [{attribute: 'radii', format: 'float32'}]
             },
-        this.props.fillColors
-          ? makeGPUDataBufferLayout(this.props.fillColors, 'fillColors')
+        fillColors
+          ? makeGPUVectorBufferLayout(fillColors, 'fillColors')
           : {
               name: 'fillColors',
               byteStride: 0,
@@ -165,28 +168,24 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
       bindings: {scatterStyle: styleBuffer}
     });
     model.userData['ownedDefaultBuffers'] = [defaultRadius, defaultColor];
-    model.userData['boundInputs'] = [
-      this.props.positions,
-      this.props.radii,
-      this.props.fillColors,
-      this.props.rowCount
-    ];
-    this.setState({model, styleBuffer} satisfies GPUScatterplotBatchState);
+    model.userData['boundInputs'] = [this.props.getPosition, radii, fillColors];
+    this.setState({model, styleBuffer} satisfies GPUScatterplotLayerState);
   }
 
   override getModels(): Model[] {
-    const model = (this.state as GPUScatterplotBatchState).model;
+    const model = (this.state as GPUScatterplotLayerState).model;
     return model ? [model] : [];
   }
 
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPUScatterplotBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPUScatterplotLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const radii = isGPUVector(props.getRadius) ? props.getRadius : undefined;
+    const fillColors = isGPUVector(props.getFillColor) ? props.getFillColor : undefined;
     if (
-      props.positions !== boundInputs[0] ||
-      props.radii !== boundInputs[1] ||
-      props.fillColors !== boundInputs[2] ||
-      props.rowCount !== boundInputs[3]
+      props.getPosition !== boundInputs[0] ||
+      radii !== boundInputs[1] ||
+      fillColors !== boundInputs[2]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
@@ -194,8 +193,10 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
   }
 
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUScatterplotBatchState;
+    const {model, styleBuffer} = this.state as GPUScatterplotLayerState;
     if (!model || !styleBuffer) return;
+    const radii = isGPUVector(this.props.getRadius) ? this.props.getRadius : undefined;
+    const fillColors = isGPUVector(this.props.getFillColor) ? this.props.getFillColor : undefined;
     const [red, green, blue, alpha = 255] = isColor(this.props.getFillColor)
       ? this.props.getFillColor
       : [0, 0, 0, 255];
@@ -212,18 +213,19 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
       this.props.radiusMinPixels ?? 0,
       this.props.radiusMaxPixels ?? 1e9
     ]);
-    uints.set(
-      [this.props.radii ? 1 : 0, this.props.fillColors ? 1 : 0, this.props.rowIndexOffset, 0],
-      8
-    );
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    uints.set([radii ? 1 : 0, fillColors ? 1 : 0, 0, 0], 8);
+    model.drawBatches(renderPass, {
+      vectors: {positions: this.props.getPosition, radii, fillColors},
+      onBatch: batch => {
+        uints[10] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
 
   override getPickingInfo(params: GetPickingInfoParams): PickingInfo {
     const info = params.info as GPUVectorLayerPickingInfo;
-    const batchRowIndex = info.index - this.props.rowIndexOffset;
-    info.gpuVector = {rowIndex: info.index, batchIndex: this.props.batchIndex, batchRowIndex};
+    info.gpuVector = getGPUVectorPickingProvenance(this.props.getPosition, info.index);
     return info;
   }
 
@@ -233,44 +235,12 @@ class GPUScatterplotBatchLayer extends Layer<GPUScatterplotBatchLayerProps> {
   }
 
   private destroyResources(): void {
-    const state = this.state as GPUScatterplotBatchState;
+    const state = this.state as GPUScatterplotLayerState;
     const owned = state.model?.userData['ownedDefaultBuffers'] as Buffer[] | undefined;
     state.model?.destroy();
     owned?.forEach(buffer => buffer.destroy());
     state.styleBuffer?.destroy();
     this.setState({model: null, styleBuffer: null});
-  }
-}
-
-/** Chunk-preserving GPUVector scatterplot composite. */
-export class GPUScatterplotLayer extends CompositeLayer<GPUScatterplotLayerProps> {
-  static override layerName = 'GPUScatterplotLayer';
-
-  override renderLayers(): GPUScatterplotBatchLayer[] {
-    const {getPosition, getRadius, getFillColor, ...props} = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        positions: getPosition,
-        radii: isGPUVector(getRadius) ? getRadius : undefined,
-        fillColors: isGPUVector(getFillColor) ? getFillColor : undefined
-      },
-      {positions: ['float32x2'], radii: ['float32'], fillColors: ['unorm8x4']}
-    ).map(
-      batch =>
-        new GPUScatterplotBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getRadius,
-          getFillColor,
-          positions: batch.data['positions'] as GPUData<'float32x2'>,
-          radii: batch.data['radii'] as GPUData<'float32'> | undefined,
-          fillColors: batch.data['fillColors'] as GPUData<'unorm8x4'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 

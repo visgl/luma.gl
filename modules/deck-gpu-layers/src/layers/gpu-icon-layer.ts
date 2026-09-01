@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  CompositeLayer,
   Layer,
   picking,
   project32,
@@ -14,12 +13,13 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {Buffer, type RenderPass, type Texture} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {Model} from '@luma.gl/engine';
+import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
-  getGPUDataBuffer,
+  getGPUVectorBuffer,
   getGPUVectorLayerBatches,
-  makeGPUDataBufferLayout,
+  getGPUVectorPickingProvenance,
+  makeGPUVectorBufferLayout,
   type GPUVectorLayerPickingInfo
 } from './gpu-vector-layer-utils';
 
@@ -38,23 +38,11 @@ export type GPUIconLayerProps = Omit<LayerProps, 'data'> & {
   alphaCutoff?: number;
 };
 
-type GPUIconBatchProps = Omit<
-  GPUIconLayerProps,
-  'getPosition' | 'iconOffsets' | 'iconFrames' | 'iconColorModes'
-> & {
-  positions: GPUData<'float32x2'>;
-  offsets: GPUData<'float32x2'>;
-  frames: GPUData<'float32x4'>;
-  colorModes: GPUData<'float32'>;
-  colors?: GPUData<'unorm8x4'>;
-  sizes?: GPUData<'float32'>;
-  angles?: GPUData<'float32'>;
-  pixelOffsets?: GPUData<'float32x2'>;
-  rowCount: number;
-  batchIndex: number;
-  rowIndexOffset: number;
+type GPUIconLayerState = {
+  model: GPUVectorModel | null;
+  styleBuffer: Buffer | null;
+  defaults: Buffer[];
 };
-type GPUIconBatchState = {model: Model | null; styleBuffer: Buffer | null; defaults: Buffer[]};
 
 const GPU_ICON_SHADER = /* wgsl */ `
 struct IconStyle { textureSize: vec2<f32>, color: vec4<f32>, size: f32, sizeScale: f32, alphaCutoff: f32, angle: f32, useColors: u32, useSizes: u32, useAngles: u32, rowIndexOffset: u32 };
@@ -75,13 +63,44 @@ fn getCorner(vertexIndex: u32) -> vec2<f32> { let corners = array<vec2<f32>, 6>(
 @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> { let sample = textureSample(iconTexture, iconTextureSampler, input.uv); if (sample.a < iconStyle.alphaCutoff) { discard; } if (picking.isActive > 0.5) { return vec4<f32>(input.pickingColor,1.0); } let rgb = select(sample.rgb, input.color.rgb, input.colorMode > 0.5); return vec4<f32>(rgb, sample.a * input.color.a * layer.opacity); }
 `;
 
-class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
-  static override layerName = 'GPUIconBatchLayer';
+/** Chunk-preserving GPUVector icon layer. */
+export class GPUIconLayer extends Layer<GPUIconLayerProps> {
+  static override layerName = 'GPUIconLayer';
   override getAttributeManager() {
     return null;
   }
   override initializeState({device}: LayerContext): void {
     if (device.type !== 'webgpu') throw new Error('GPUIconLayer requires WebGPU');
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
+    const sizes = isGPUVector(this.props.getSize) ? this.props.getSize : undefined;
+    const angles = isGPUVector(this.props.getAngle) ? this.props.getAngle : undefined;
+    getGPUVectorLayerBatches(
+      this.id,
+      {
+        positions: this.props.getPosition,
+        offsets: this.props.iconOffsets,
+        frames: this.props.iconFrames,
+        colorModes: this.props.iconColorModes,
+        colors,
+        sizes,
+        angles,
+        pixelOffsets: this.props.getPixelOffset
+      },
+      {
+        positions: ['float32x2'],
+        offsets: ['float32x2'],
+        frames: ['float32x4'],
+        colorModes: ['float32'],
+        colors: ['unorm8x4'],
+        sizes: ['float32'],
+        angles: ['float32'],
+        pixelOffsets: ['float32x2']
+      }
+    );
+    if (this.props.getPosition.data.length === 0) {
+      this.setState({model: null, styleBuffer: null, defaults: []} satisfies GPUIconLayerState);
+      return;
+    }
     const styleBuffer = device.createBuffer({
       id: `${this.id}-style`,
       byteLength: 64,
@@ -93,31 +112,26 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
       device.createBuffer({data: new Float32Array([0])}),
       device.createBuffer({data: new Float32Array([0, 0])})
     ];
-    const optional = [
-      this.props.colors,
-      this.props.sizes,
-      this.props.angles,
-      this.props.pixelOffsets
-    ] as const;
+    const optional = [colors, sizes, angles, this.props.getPixelOffset] as const;
     const names = ['colors', 'sizes', 'angles', 'pixelOffsets'];
     const formats = ['unorm8x4', 'float32', 'float32', 'float32x2'] as const;
     const attributes: Record<string, Buffer> = {
-      positions: getGPUDataBuffer(this.props.positions),
-      offsets: getGPUDataBuffer(this.props.offsets),
-      frames: getGPUDataBuffer(this.props.frames),
-      colorModes: getGPUDataBuffer(this.props.colorModes)
+      positions: getGPUVectorBuffer(this.props.getPosition),
+      offsets: getGPUVectorBuffer(this.props.iconOffsets),
+      frames: getGPUVectorBuffer(this.props.iconFrames),
+      colorModes: getGPUVectorBuffer(this.props.iconColorModes)
     };
     const layouts = [
-      makeGPUDataBufferLayout(this.props.positions, 'positions'),
-      makeGPUDataBufferLayout(this.props.offsets, 'offsets'),
-      makeGPUDataBufferLayout(this.props.frames, 'frames'),
-      makeGPUDataBufferLayout(this.props.colorModes, 'colorModes')
+      makeGPUVectorBufferLayout(this.props.getPosition, 'positions'),
+      makeGPUVectorBufferLayout(this.props.iconOffsets, 'offsets'),
+      makeGPUVectorBufferLayout(this.props.iconFrames, 'frames'),
+      makeGPUVectorBufferLayout(this.props.iconColorModes, 'colorModes')
     ];
-    optional.forEach((data, index) => {
-      attributes[names[index]!] = data ? getGPUDataBuffer(data) : defaults[index]!;
+    optional.forEach((vector, index) => {
+      attributes[names[index]!] = vector ? getGPUVectorBuffer(vector) : defaults[index]!;
       layouts.push(
-        data
-          ? makeGPUDataBufferLayout(data, names[index]!)
+        vector
+          ? makeGPUVectorBufferLayout(vector, names[index]!)
           : {
               name: names[index]!,
               byteStride: 0,
@@ -126,13 +140,13 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
             }
       );
     });
-    const model = new Model(device, {
+    const model = new GPUVectorModel(device, {
       ...this.getShaders({modules: [project32, picking], source: GPU_ICON_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: this.props.rowCount,
+      instanceCount: 0,
       attributes,
       bufferLayout: layouts,
       bindings: {
@@ -142,45 +156,49 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
       }
     });
     model.userData['boundInputs'] = [
-      this.props.positions,
-      this.props.offsets,
-      this.props.frames,
-      this.props.colorModes,
-      this.props.colors,
-      this.props.sizes,
-      this.props.angles,
-      this.props.pixelOffsets,
-      this.props.iconAtlas,
-      this.props.rowCount
+      this.props.getPosition,
+      this.props.iconOffsets,
+      this.props.iconFrames,
+      this.props.iconColorModes,
+      colors,
+      sizes,
+      angles,
+      this.props.getPixelOffset,
+      this.props.iconAtlas
     ];
-    this.setState({model, styleBuffer, defaults} satisfies GPUIconBatchState);
+    this.setState({model, styleBuffer, defaults} satisfies GPUIconLayerState);
   }
   override getModels(): Model[] {
-    const model = (this.state as GPUIconBatchState).model;
+    const model = (this.state as GPUIconLayerState).model;
     return model ? [model] : [];
   }
   override updateState({props}: UpdateParameters<this>): void {
-    const boundInputs = ((this.state as GPUIconBatchState).model?.userData['boundInputs'] ??
+    const boundInputs = ((this.state as GPUIconLayerState).model?.userData['boundInputs'] ??
       []) as unknown[];
+    const colors = isGPUVector(props.getColor) ? props.getColor : undefined;
+    const sizes = isGPUVector(props.getSize) ? props.getSize : undefined;
+    const angles = isGPUVector(props.getAngle) ? props.getAngle : undefined;
     if (
-      props.positions !== boundInputs[0] ||
-      props.offsets !== boundInputs[1] ||
-      props.frames !== boundInputs[2] ||
-      props.colorModes !== boundInputs[3] ||
-      props.colors !== boundInputs[4] ||
-      props.sizes !== boundInputs[5] ||
-      props.angles !== boundInputs[6] ||
-      props.pixelOffsets !== boundInputs[7] ||
-      props.iconAtlas !== boundInputs[8] ||
-      props.rowCount !== boundInputs[9]
+      props.getPosition !== boundInputs[0] ||
+      props.iconOffsets !== boundInputs[1] ||
+      props.iconFrames !== boundInputs[2] ||
+      props.iconColorModes !== boundInputs[3] ||
+      colors !== boundInputs[4] ||
+      sizes !== boundInputs[5] ||
+      angles !== boundInputs[6] ||
+      props.getPixelOffset !== boundInputs[7] ||
+      props.iconAtlas !== boundInputs[8]
     ) {
       this.destroyResources();
       this.initializeState(this.context);
     }
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    const {model, styleBuffer} = this.state as GPUIconBatchState;
+    const {model, styleBuffer} = this.state as GPUIconLayerState;
     if (!model || !styleBuffer) return;
+    const colors = isGPUVector(this.props.getColor) ? this.props.getColor : undefined;
+    const sizes = isGPUVector(this.props.getSize) ? this.props.getSize : undefined;
+    const angles = isGPUVector(this.props.getAngle) ? this.props.getAngle : undefined;
     const [r, g, b, a = 255] = isColor(this.props.getColor) ? this.props.getColor : [0, 0, 0, 255];
     const bytes = new ArrayBuffer(64);
     const floats = new Float32Array(bytes);
@@ -196,25 +214,27 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
       ],
       8
     );
-    uints.set(
-      [
-        this.props.colors ? 1 : 0,
-        this.props.sizes ? 1 : 0,
-        this.props.angles ? 1 : 0,
-        this.props.rowIndexOffset
-      ],
-      12
-    );
-    styleBuffer.write(new Uint8Array(bytes));
-    model.draw(renderPass);
+    uints.set([colors ? 1 : 0, sizes ? 1 : 0, angles ? 1 : 0, 0], 12);
+    model.drawBatches(renderPass, {
+      vectors: {
+        positions: this.props.getPosition,
+        offsets: this.props.iconOffsets,
+        frames: this.props.iconFrames,
+        colorModes: this.props.iconColorModes,
+        colors,
+        sizes,
+        angles,
+        pixelOffsets: this.props.getPixelOffset
+      },
+      onBatch: batch => {
+        uints[15] = batch.rowIndexOffset;
+        styleBuffer.write(new Uint8Array(bytes));
+      }
+    });
   }
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     const result = info as GPUVectorLayerPickingInfo;
-    result.gpuVector = {
-      rowIndex: result.index,
-      batchIndex: this.props.batchIndex,
-      batchRowIndex: result.index - this.props.rowIndexOffset
-    };
+    result.gpuVector = getGPUVectorPickingProvenance(this.props.getPosition, result.index);
     return result;
   }
   override finalizeState(context: LayerContext): void {
@@ -222,72 +242,11 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
     super.finalizeState(context);
   }
   private destroyResources(): void {
-    const state = this.state as GPUIconBatchState;
+    const state = this.state as GPUIconLayerState;
     state.model?.destroy();
     state.styleBuffer?.destroy();
     state.defaults.forEach(buffer => buffer.destroy());
     this.setState({model: null, styleBuffer: null, defaults: []});
-  }
-}
-
-/** Chunk-preserving GPUVector icon composite. */
-export class GPUIconLayer extends CompositeLayer<GPUIconLayerProps> {
-  static override layerName = 'GPUIconLayer';
-  override renderLayers(): GPUIconBatchLayer[] {
-    const {
-      getPosition,
-      iconOffsets,
-      iconFrames,
-      iconColorModes,
-      getColor,
-      getSize,
-      getAngle,
-      getPixelOffset,
-      ...props
-    } = this.props;
-    return getGPUVectorLayerBatches(
-      this.id,
-      {
-        positions: getPosition,
-        offsets: iconOffsets,
-        frames: iconFrames,
-        colorModes: iconColorModes,
-        colors: isGPUVector(getColor) ? getColor : undefined,
-        sizes: isGPUVector(getSize) ? getSize : undefined,
-        angles: isGPUVector(getAngle) ? getAngle : undefined,
-        pixelOffsets: getPixelOffset
-      },
-      {
-        positions: ['float32x2'],
-        offsets: ['float32x2'],
-        frames: ['float32x4'],
-        colorModes: ['float32'],
-        colors: ['unorm8x4'],
-        sizes: ['float32'],
-        angles: ['float32'],
-        pixelOffsets: ['float32x2']
-      }
-    ).map(
-      batch =>
-        new GPUIconBatchLayer({
-          ...props,
-          id: `${this.props.id}-batch-${batch.batchIndex}`,
-          getColor,
-          getSize,
-          getAngle,
-          positions: batch.data['positions'] as GPUData<'float32x2'>,
-          offsets: batch.data['offsets'] as GPUData<'float32x2'>,
-          frames: batch.data['frames'] as GPUData<'float32x4'>,
-          colorModes: batch.data['colorModes'] as GPUData<'float32'>,
-          colors: batch.data['colors'] as GPUData<'unorm8x4'> | undefined,
-          sizes: batch.data['sizes'] as GPUData<'float32'> | undefined,
-          angles: batch.data['angles'] as GPUData<'float32'> | undefined,
-          pixelOffsets: batch.data['pixelOffsets'] as GPUData<'float32x2'> | undefined,
-          rowCount: batch.rowCount,
-          batchIndex: batch.batchIndex,
-          rowIndexOffset: batch.rowIndexOffset
-        })
-    );
   }
 }
 function isGPUVector(value: unknown): value is GPUVector {
