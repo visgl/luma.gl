@@ -334,7 +334,6 @@ type PathStorageDefaultBindings = {
   colorsBinding: Binding;
   vertexColorsBinding: Binding;
   widthsBinding: Binding;
-  visibilityBinding: Binding;
   viewOriginsBinding: Binding;
   byteLength: number;
   ownedResources: PathStorageOwnedResource[];
@@ -803,12 +802,6 @@ function createPathStorageDefaultBindings(
     'float32',
     new Float32Array([props.width ?? DEFAULT_PATH_STORAGE_WIDTH])
   );
-  const visibilityVector = createPathStorageOwnedGpuVector(
-    device,
-    `${id}-default-row-visibility`,
-    'uint32',
-    new Uint32Array([1])
-  );
   const viewOriginsVector = createPathStorageOwnedGpuVector(
     device,
     `${id}-default-view-origins`,
@@ -819,14 +812,12 @@ function createPathStorageDefaultBindings(
     colorsBinding: getPathStorageGpuVectorBinding(colorsVector),
     vertexColorsBinding: getPathStorageGpuVectorBinding(colorsVector),
     widthsBinding: getPathStorageGpuVectorBinding(widthsVector),
-    visibilityBinding: getPathStorageGpuVectorBinding(visibilityVector),
     viewOriginsBinding: getPathStorageGpuVectorBinding(viewOriginsVector),
     byteLength:
       Uint8Array.BYTES_PER_ELEMENT * 4 +
       Float32Array.BYTES_PER_ELEMENT +
-      Uint32Array.BYTES_PER_ELEMENT +
       Float32Array.BYTES_PER_ELEMENT * 4,
-    ownedResources: [colorsVector, widthsVector, visibilityVector, viewOriginsVector]
+    ownedResources: [colorsVector, widthsVector, viewOriginsVector]
   };
 }
 
@@ -846,6 +837,15 @@ function createPathStorageBatchRowState(
     usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: styleConfigData
   });
+  const defaultVisibilityVector = batchInput.visibilityBinding
+    ? null
+    : createPathStorageOwnedGpuVector(
+        device,
+        `${props.id || 'path-storage-model'}-default-row-visibility-${batchInput.batchRowIndexBase}`,
+        'uint32',
+        new Uint32Array(batchInput.rowCount).fill(1),
+        batchInput.rowCount
+      );
   return {
     pathViewOriginsBinding: batchInput.viewOriginsBinding ?? defaultBindings.viewOriginsBinding,
     rowColorsBinding:
@@ -857,10 +857,16 @@ function createPathStorageBatchRowState(
         ? batchInput.colorsBinding
         : defaultBindings.vertexColorsBinding,
     rowWidthsBinding: batchInput.widthsBinding ?? defaultBindings.widthsBinding,
-    rowVisibilityBinding: batchInput.visibilityBinding ?? defaultBindings.visibilityBinding,
+    rowVisibilityBinding:
+      batchInput.visibilityBinding ?? getPathStorageGpuVectorBinding(defaultVisibilityVector!),
     styleConfigBuffer,
-    ownedResources: [styleConfigBuffer],
-    ownedByteLength: styleConfigData.byteLength
+    ownedResources: [
+      styleConfigBuffer,
+      ...(defaultVisibilityVector ? [defaultVisibilityVector] : [])
+    ],
+    ownedByteLength:
+      styleConfigData.byteLength +
+      (defaultVisibilityVector ? batchInput.rowCount * Uint32Array.BYTES_PER_ELEMENT : 0)
   };
 }
 
@@ -868,7 +874,8 @@ function createPathStorageOwnedGpuVector<FormatT extends GPUVectorFormat>(
   device: Device,
   name: string,
   format: FormatT,
-  data: Uint8Array | Uint32Array | Float32Array
+  data: Uint8Array | Uint32Array | Float32Array,
+  length: number = 1
 ): GPUVector<FormatT> {
   return new GPUVector({
     type: 'buffer',
@@ -879,7 +886,7 @@ function createPathStorageOwnedGpuVector<FormatT extends GPUVectorFormat>(
       data
     }),
     format,
-    length: 1,
+    length,
     ownsBuffer: true
   });
 }
