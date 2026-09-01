@@ -65,6 +65,13 @@ it('Arrow path-family models declare prepared GPU input schemas', () => {
     [
       ...PathAttributeModel.gpuInputSchema.slice(0, 3),
       {
+        columnName: 'visibility',
+        kind: 'scalars',
+        required: false,
+        formats: ['uint32'],
+        internal: true
+      },
+      {
         columnName: 'timestamps',
         kind: 'time',
         required: false,
@@ -78,6 +85,13 @@ it('Arrow path-family models declare prepared GPU input schemas', () => {
     'Trips storage paths require prepared timestamps'
   ).toEqual([
     ...PathAttributeModel.gpuInputSchema.slice(0, 3),
+    {
+      columnName: 'visibility',
+      kind: 'scalars',
+      required: false,
+      formats: ['uint32'],
+      internal: true
+    },
     {
       columnName: 'timestamps',
       kind: 'time',
@@ -1066,7 +1080,7 @@ it('PathStorageModel uses a shared zero origin when view origins are absent', as
   });
 
   expect(model.rowStorageByteLength, 'default row storage does not allocate origins per row').toBe(
-    72
+    76
   );
   expect(model.pathRangeByteLength, 'path ranges account for per-row storage separately').toBe(32);
 

@@ -9,6 +9,52 @@ The layers intentionally do not use deck.gl `AttributeManager` for Arrow columns
 Arrow data is converted once into `GPUVector`/`GPUTable` inputs and bound directly
 to luma.gl models.
 
+## GPU-compiled Arrow accessors (POC)
+
+On WebGPU, `ArrowPathLayer` can consume a derived `float32` width vector and the canonical
+`uint32` selection mask from a compiled `GPUDataFrame` query. Re-encoding the query with new
+parameters rewrites the same GPU output allocations: Arrow source columns remain resident, path
+geometry is not expanded again, and no JavaScript accessor loop or CPU readback is required.
+
+```ts
+import {ArrowPathLayer} from '@deck.gl-community/arrow-layers';
+import {makeGPUDataFrameFromArrowTable} from '@luma.gl/arrow';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {
+  column,
+  parameter,
+  type GPUDataFrameQueryParameters
+} from '@luma.gl/experimental/gpu-dataframe';
+
+const frame = makeGPUDataFrameFromArrowTable(device, arrowTable, {columns: ['width']});
+const accessors = frame
+  .withColumn('renderWidth', column('width').multiply(parameter('widthScale', 1)), {
+    format: 'float32'
+  })
+  .filter(column('renderWidth').greaterThan(parameter('minimumWidth', 0)))
+  .select(['renderWidth'])
+  .compile(new GPUCommandGraph<GPUDataFrameQueryParameters>(device));
+
+frame.destroy(); // The compiled query retains its source lease.
+
+const commandEncoder = device.createCommandEncoder();
+accessors.encode(commandEncoder, {widthScale: 2, minimumWidth: 0.5});
+device.submit(commandEncoder.finish());
+
+const layer = new ArrowPathLayer({
+  id: 'gpu-accessor-paths',
+  data: arrowTable,
+  paths: 'path',
+  model: 'storage',
+  width: accessors.table.gpuVectors.renderWidth,
+  visibility: accessors.selectionMask
+});
+```
+
+The layer borrows the query outputs. Destroy `accessors` only after the layer stops using them.
+`visibility` is intentionally a WebGPU storage-model input; zero hides the row while retaining its
+stable source index for picking and optional deferred CPU row resolution.
+
 ## When to use graph layers
 
 Use the graph adapters when a deck.gl application already owns GPU-resident relationship data and

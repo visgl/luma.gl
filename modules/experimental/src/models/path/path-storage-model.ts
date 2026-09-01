@@ -67,6 +67,13 @@ export const PATH_STORAGE_GPU_INPUT_SCHEMA = [
     formats: ['float32']
   },
   {
+    columnName: 'visibility',
+    kind: 'scalars',
+    required: false,
+    formats: ['uint32'],
+    internal: true
+  },
+  {
     columnName: 'timestamps',
     kind: 'time',
     required: false,
@@ -103,6 +110,7 @@ const DEFAULT_PATH_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathVertexColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
+  @group(0) @binding(auto) var<storage, read> pathRowVisibility : array<u32>;
 
 struct PathStorageStyleConfig {
   constantColor : vec4<f32>,
@@ -128,6 +136,7 @@ struct VertexInputs {
 struct FragmentInputs {
   @builtin(position) position : vec4<f32>,
   @location(0) color : vec4<f32>,
+  @location(1) @interpolate(flat) visible : f32,
 };
 
 fn unpackPathColor(colorWord: u32) -> vec4<f32> {
@@ -187,6 +196,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     1.0
   );
   outputs.color = pathStorageStyleConfig.constantColor;
+  outputs.visible = f32(pathRowVisibility[rowIndex] != 0u);
   if (pathStorageStyleConfig.useVertexColors != 0u) {
     outputs.color = mix(
       unpackPathColor(pathVertexColors[inputs.segmentStartPointIndices]),
@@ -201,6 +211,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  if (inputs.visible < 0.5) { discard; }
   return inputs.color;
 }
 `;
@@ -213,6 +224,8 @@ export type PathStorageInputProps = Omit<ModelProps, 'instanceCount'> & {
   colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
   /** Optional per-path widths, one GPU row per path. */
   widths?: GPUVector<'float32'>;
+  /** Optional source-row visibility flags; zero hides a path without compacting or readback. */
+  visibility?: GPUVector<'uint32'>;
   /** Optional per-path Float32 temporal stream aligned with path vertices. */
   timestamps?: GPUVector<VertexList<'float32'>>;
   /** Optional per-path view-space origins, one GPU row per path. */
@@ -227,7 +240,7 @@ export type PathStorageInputProps = Omit<ModelProps, 'instanceCount'> & {
 
 type PathStorageRenderProps = Omit<
   PathStorageInputProps,
-  'paths' | 'colors' | 'widths' | 'viewOrigins' | 'color' | 'width'
+  'paths' | 'colors' | 'widths' | 'visibility' | 'viewOrigins' | 'color' | 'width'
 >;
 
 /** Per-source-batch storage bindings retained by {@link PathStorageState}. */
@@ -250,6 +263,8 @@ export type PathStorageBatchState = {
   vertexColorsBinding: Binding;
   /** Read-only storage binding for Float32 path widths. */
   rowWidthsBinding: Binding;
+  /** Read-only storage binding for source-row visibility flags. */
+  rowVisibilityBinding: Binding;
   /** Optional read-only storage binding for prepared Float32 path timestamps. */
   pathTimestampsBinding?: Binding;
   /** Uniform buffer selecting row style bindings and path component count. */
@@ -300,6 +315,8 @@ export type PathStorageState = {
   vertexColorsBinding: Binding;
   /** First batch Float32 path width binding. */
   rowWidthsBinding: Binding;
+  /** First batch source-row visibility binding. */
+  rowVisibilityBinding: Binding;
   /** First batch path style config uniform buffer. */
   styleConfigBuffer: DynamicBuffer;
   /** First generated compact or legacy path segment vertex buffer. */
@@ -317,6 +334,7 @@ type PathStorageDefaultBindings = {
   colorsBinding: Binding;
   vertexColorsBinding: Binding;
   widthsBinding: Binding;
+  visibilityBinding: Binding;
   viewOriginsBinding: Binding;
   byteLength: number;
   ownedResources: PathStorageOwnedResource[];
@@ -327,6 +345,7 @@ type PathStorageBatchRowState = {
   rowColorsBinding: Binding;
   vertexColorsBinding: Binding;
   rowWidthsBinding: Binding;
+  rowVisibilityBinding: Binding;
   styleConfigBuffer: DynamicBuffer;
   ownedResources: PathStorageOwnedResource[];
   ownedByteLength: number;
@@ -366,6 +385,8 @@ export class PathStorageModel extends Model {
   vertexColorsBinding!: Binding;
   /** First batch Float32 path width binding. */
   rowWidthsBinding!: Binding;
+  /** First batch source-row visibility binding. */
+  rowVisibilityBinding!: Binding;
   /** First batch path style config uniform buffer. */
   styleConfigBuffer!: DynamicBuffer;
   /** First generated compact or legacy path segment vertex buffer. */
@@ -406,6 +427,7 @@ export class PathStorageModel extends Model {
       !nextUsesExternalState &&
       (pathProps.colors !== undefined ||
         pathProps.widths !== undefined ||
+        pathProps.visibility !== undefined ||
         pathProps.timestamps !== undefined ||
         pathProps.viewOrigins !== undefined ||
         pathProps.color !== undefined ||
@@ -492,6 +514,7 @@ export class PathStorageModel extends Model {
     this.rowColorsBinding = storageState.rowColorsBinding;
     this.vertexColorsBinding = storageState.vertexColorsBinding;
     this.rowWidthsBinding = storageState.rowWidthsBinding;
+    this.rowVisibilityBinding = storageState.rowVisibilityBinding;
     this.styleConfigBuffer = storageState.styleConfigBuffer;
     this.compactPathVertexData = storageState.compactPathVertexData;
   }
@@ -636,6 +659,7 @@ export function createPathStorageState(
     rowColorsBinding: firstBatch.rowColorsBinding,
     vertexColorsBinding: firstBatch.vertexColorsBinding,
     rowWidthsBinding: firstBatch.rowWidthsBinding,
+    rowVisibilityBinding: firstBatch.rowVisibilityBinding,
     styleConfigBuffer: firstBatch.styleConfigBuffer,
     compactPathVertexData: firstRenderBatch.compactPathVertexData,
     destroy: () => {
@@ -690,6 +714,7 @@ function createPathStorageBindings(
     pathRowColors: batch.rowColorsBinding,
     pathVertexColors: batch.vertexColorsBinding,
     pathRowWidths: batch.rowWidthsBinding,
+    pathRowVisibility: batch.rowVisibilityBinding,
     ...(batch.pathTimestampsBinding ? {pathTimestamps: batch.pathTimestampsBinding} : {}),
     pathStorageStyleConfig: batch.styleConfigBuffer
   };
@@ -778,6 +803,12 @@ function createPathStorageDefaultBindings(
     'float32',
     new Float32Array([props.width ?? DEFAULT_PATH_STORAGE_WIDTH])
   );
+  const visibilityVector = createPathStorageOwnedGpuVector(
+    device,
+    `${id}-default-row-visibility`,
+    'uint32',
+    new Uint32Array([1])
+  );
   const viewOriginsVector = createPathStorageOwnedGpuVector(
     device,
     `${id}-default-view-origins`,
@@ -788,12 +819,14 @@ function createPathStorageDefaultBindings(
     colorsBinding: getPathStorageGpuVectorBinding(colorsVector),
     vertexColorsBinding: getPathStorageGpuVectorBinding(colorsVector),
     widthsBinding: getPathStorageGpuVectorBinding(widthsVector),
+    visibilityBinding: getPathStorageGpuVectorBinding(visibilityVector),
     viewOriginsBinding: getPathStorageGpuVectorBinding(viewOriginsVector),
     byteLength:
       Uint8Array.BYTES_PER_ELEMENT * 4 +
       Float32Array.BYTES_PER_ELEMENT +
+      Uint32Array.BYTES_PER_ELEMENT +
       Float32Array.BYTES_PER_ELEMENT * 4,
-    ownedResources: [colorsVector, widthsVector, viewOriginsVector]
+    ownedResources: [colorsVector, widthsVector, visibilityVector, viewOriginsVector]
   };
 }
 
@@ -824,6 +857,7 @@ function createPathStorageBatchRowState(
         ? batchInput.colorsBinding
         : defaultBindings.vertexColorsBinding,
     rowWidthsBinding: batchInput.widthsBinding ?? defaultBindings.widthsBinding,
+    rowVisibilityBinding: batchInput.visibilityBinding ?? defaultBindings.visibilityBinding,
     styleConfigBuffer,
     ownedResources: [styleConfigBuffer],
     ownedByteLength: styleConfigData.byteLength
@@ -834,7 +868,7 @@ function createPathStorageOwnedGpuVector<FormatT extends GPUVectorFormat>(
   device: Device,
   name: string,
   format: FormatT,
-  data: Uint8Array | Float32Array
+  data: Uint8Array | Uint32Array | Float32Array
 ): GPUVector<FormatT> {
   return new GPUVector({
     type: 'buffer',
@@ -958,6 +992,7 @@ function syncPathStorageStateFirstBatch(storageState: PathStorageState): void {
   storageState.rowColorsBinding = firstBatch.rowColorsBinding;
   storageState.vertexColorsBinding = firstBatch.vertexColorsBinding;
   storageState.rowWidthsBinding = firstBatch.rowWidthsBinding;
+  storageState.rowVisibilityBinding = firstBatch.rowVisibilityBinding;
   storageState.styleConfigBuffer = firstBatch.styleConfigBuffer;
   storageState.compactPathVertexData = firstRenderBatch.compactPathVertexData;
 }
