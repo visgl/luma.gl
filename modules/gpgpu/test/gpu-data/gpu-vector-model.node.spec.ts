@@ -62,6 +62,9 @@ it('GPUVectorModel draws aligned borrowed chunks without taking buffer ownership
     isInstanced: true,
     vertexCount: 1
   });
+  const previousBuffer = device.createBuffer({data: new Float32Array([9, 9])});
+  model.setAttributes({positions: previousBuffer});
+  model.setInstanceCount(7);
   const renderPass = device.getDefaultRenderPass();
   const drawCalls: Array<{instanceCount?: number; buffer?: Buffer}> = [];
   const draw = renderPass.draw.bind(renderPass);
@@ -86,15 +89,57 @@ it('GPUVectorModel draws aligned borrowed chunks without taking buffer ownership
     {batchIndex: 0, rowIndexOffset: 0},
     {batchIndex: 1, rowIndexOffset: 2}
   ]);
+  expect(model.instanceCount).toBe(7);
+  expect(renderPass.vertexArray?.attributes[0]).toBe(previousBuffer);
 
   model.destroy();
   expect(firstBuffer.destroyed).toBe(false);
   expect(secondBuffer.destroyed).toBe(false);
+  previousBuffer.destroy();
   positions.destroy();
   expect(firstBuffer.destroyed).toBe(true);
   expect(secondBuffer.destroyed).toBe(true);
   renderPass.destroy();
   void 0;
+});
+
+it('GPUVectorModel rejects layouts that cannot represent vector format or chunk offset', () => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 24});
+  const positions = new GPUVector<'float32x2'>({
+    type: 'data',
+    name: 'positions',
+    format: 'float32x2',
+    data: [new GPUData({buffer, byteOffset: 8, format: 'float32x2', length: 2})]
+  });
+  const model = new GPUVectorModel(device, {
+    id: 'gpu-vector-layout-test',
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    shaderLayout: SHADER_LAYOUT,
+    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
+    attributes: {positions: buffer},
+    isInstanced: true,
+    vertexCount: 1
+  });
+  const renderPass = device.getDefaultRenderPass();
+
+  expect(() => model.drawBatches(renderPass, {vectors: {positions}})).toThrow(
+    'chunk byte offsets must match its Model buffer layout'
+  );
+  const colors = new GPUVector<'unorm8x4'>({
+    type: 'data',
+    name: 'positions',
+    format: 'unorm8x4',
+    data: [new GPUData({buffer, format: 'unorm8x4', length: 2})]
+  });
+  expect(() => model.drawBatches(renderPass, {vectors: {positions: colors}})).toThrow(
+    'must match its Model buffer layout'
+  );
+
+  model.destroy();
+  renderPass.destroy();
+  buffer.destroy();
 });
 
 it('getGPUVectorModelBatches validates aligned fixed-width chunks', () => {

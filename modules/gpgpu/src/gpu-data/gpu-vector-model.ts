@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, RenderPass} from '@luma.gl/core';
+import type {BufferLayout, Device, RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
 import type {GPUData} from './gpu-data';
 import type {GPUVector} from './gpu-vector';
@@ -40,19 +40,22 @@ export type GPUVectorModelDrawBatchesOptions = {
  */
 export class GPUVectorModel extends Model {
   private readonly gpuVectorCount: GPUVectorModelCount;
-  private readonly explicitAttributes: NonNullable<ModelProps['attributes']>;
-  private readonly explicitBindings: NonNullable<ModelProps['bindings']>;
-  private readonly explicitInstanceCount: number;
-  private readonly explicitVertexCount: number;
+  private currentAttributes!: NonNullable<ModelProps['attributes']>;
 
   constructor(device: Device, props: GPUVectorModelProps) {
     const {gpuVectorCount = 'instance', ...modelProps} = props;
     super(device, modelProps);
     this.gpuVectorCount = gpuVectorCount;
-    this.explicitAttributes = {...(modelProps.attributes ?? {})};
-    this.explicitBindings = {...(modelProps.bindings ?? {})};
-    this.explicitInstanceCount = this.instanceCount;
-    this.explicitVertexCount = this.vertexCount;
+    this.currentAttributes = {...(modelProps.attributes ?? {})};
+  }
+
+  /** Tracks the live attribute state so batched draws can restore inherited Model mutations. */
+  override setAttributes(
+    attributes: NonNullable<ModelProps['attributes']>,
+    options?: {disableWarnings?: boolean}
+  ): void {
+    this.currentAttributes = Object.assign(this.currentAttributes ?? {}, attributes);
+    super.setAttributes(attributes, options);
   }
 
   /** Draws each aligned physical chunk without retaining or taking ownership of input vectors. */
@@ -61,6 +64,11 @@ export class GPUVectorModel extends Model {
     {vectors, onBatch}: GPUVectorModelDrawBatchesOptions
   ): boolean {
     const batches = getGPUVectorModelBatches(this.id, vectors);
+    validateGPUVectorModelLayouts(this.id, vectors, this.bufferLayout, this.currentAttributes);
+    const previousAttributes = {...this.currentAttributes};
+    const previousBindings = {...this.bindings};
+    const previousInstanceCount = this.instanceCount;
+    const previousVertexCount = this.vertexCount;
     let drawSuccess = true;
     try {
       for (const batch of batches) {
@@ -72,10 +80,13 @@ export class GPUVectorModel extends Model {
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
     } finally {
-      this.setAttributes(this.explicitAttributes);
-      this.setBindings(this.explicitBindings);
-      this.setInstanceCount(this.explicitInstanceCount);
-      this.setVertexCount(this.explicitVertexCount);
+      this.setAttributes(previousAttributes);
+      for (const name of Object.keys(this.bindings)) {
+        if (!(name in previousBindings)) delete this.bindings[name];
+      }
+      this.setBindings(previousBindings);
+      this.setInstanceCount(previousInstanceCount);
+      this.setVertexCount(previousVertexCount);
     }
     return drawSuccess;
   }
@@ -85,6 +96,50 @@ export class GPUVectorModel extends Model {
       this.setInstanceCount(rowCount);
     } else if (this.gpuVectorCount === 'vertex') {
       this.setVertexCount(rowCount);
+    }
+  }
+}
+
+function validateGPUVectorModelLayouts(
+  ownerName: string,
+  vectors: Record<string, GPUVector | undefined>,
+  bufferLayouts: BufferLayout[],
+  attributes: NonNullable<ModelProps['attributes']>
+): void {
+  for (const [name, vector] of Object.entries(vectors)) {
+    if (!vector) continue;
+    if (!vector.format) {
+      throw new Error(`${ownerName} GPUVector "${name}" requires a format`);
+    }
+    if (!attributes[name]) {
+      throw new Error(`${ownerName} GPUVector "${name}" requires an existing Model attribute`);
+    }
+    const bufferLayout = bufferLayouts.find(layout => layout.name === name);
+    if (!bufferLayout) {
+      throw new Error(`${ownerName} GPUVector "${name}" requires a Model buffer layout`);
+    }
+    const attributeLayouts = bufferLayout.attributes ?? [];
+    if (attributeLayouts.length > 1) {
+      throw new Error(`${ownerName} GPUVector "${name}" does not support interleaved layouts`);
+    }
+    const attributeLayout = attributeLayouts[0];
+    const format = bufferLayout.format ?? attributeLayout?.format;
+    const byteOffset = attributeLayout?.byteOffset ?? 0;
+    const formatInfo = getGPUVectorFormatInfo(vector.format);
+    const byteStride = bufferLayout.byteStride ?? formatInfo.byteLength;
+    if (
+      format !== vector.format ||
+      byteStride !== vector.byteStride ||
+      vector.rowByteLength !== formatInfo.byteLength
+    ) {
+      throw new Error(`${ownerName} GPUVector "${name}" must match its Model buffer layout`);
+    }
+    for (const chunk of vector.data) {
+      if (chunk.byteOffset !== byteOffset) {
+        throw new Error(
+          `${ownerName} GPUVector "${name}" chunk byte offsets must match its Model buffer layout`
+        );
+      }
     }
   }
 }
