@@ -57,7 +57,7 @@ type GPUIconBatchProps = Omit<
 type GPUIconBatchState = {model: Model | null; styleBuffer: Buffer | null; defaults: Buffer[]};
 
 const GPU_ICON_SHADER = /* wgsl */ `
-struct IconStyle { textureSize: vec2<f32>, color: vec4<f32>, size: f32, sizeScale: f32, alphaCutoff: f32, useColors: u32, useSizes: u32, rowIndexOffset: u32, _padding: u32 };
+struct IconStyle { textureSize: vec2<f32>, color: vec4<f32>, size: f32, sizeScale: f32, alphaCutoff: f32, angle: f32, useColors: u32, useSizes: u32, useAngles: u32, rowIndexOffset: u32 };
 @group(0) @binding(auto) var<uniform> iconStyle: IconStyle;
 @group(0) @binding(auto) var iconTexture: texture_2d<f32>;
 @group(0) @binding(auto) var iconTextureSampler: sampler;
@@ -66,7 +66,7 @@ fn encodePickingColor(rowIndex: u32) -> vec3<f32> { let value = rowIndex + 1u; r
 fn getCorner(vertexIndex: u32) -> vec2<f32> { let corners = array<vec2<f32>, 6>(vec2<f32>(-1.0,-1.0),vec2<f32>(1.0,-1.0),vec2<f32>(-1.0,1.0),vec2<f32>(-1.0,1.0),vec2<f32>(1.0,-1.0),vec2<f32>(1.0,1.0)); return corners[vertexIndex]; }
 @vertex fn vertexMain(@location(0) positions: vec2<f32>, @location(1) offsets: vec2<f32>, @location(2) frames: vec4<f32>, @location(3) colorModes: f32, @location(4) colors: vec4<f32>, @location(5) sizes: f32, @location(6) angles: f32, @location(7) pixelOffsets: vec2<f32>, @builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> VertexOutput {
   let corner = getCorner(vertexIndex); let size = select(iconStyle.size, sizes, iconStyle.useSizes != 0u) * iconStyle.sizeScale;
-  let radians = angles * 0.01745329252; let rotation = mat2x2<f32>(cos(radians), sin(radians), -sin(radians), cos(radians));
+  let angle = select(iconStyle.angle, angles, iconStyle.useAngles != 0u); let radians = angle * 0.01745329252; let rotation = mat2x2<f32>(cos(radians), sin(radians), -sin(radians), cos(radians));
   let pixel = rotation * ((corner * frames.zw * 0.5 + offsets) * size) + pixelOffsets;
   let pickingColor = encodePickingColor(instanceIndex + iconStyle.rowIndexOffset); geometry.worldPosition = vec3<f32>(positions, 0.0); geometry.pickingColor = pickingColor;
   var clip = project_position_to_clipspace(vec3<f32>(positions,0.0),vec3<f32>(0.0),vec3<f32>(0.0)); clip = vec4<f32>(clip.xy + project_pixel_size_to_clipspace(pixel) * clip.w, clip.z, clip.w);
@@ -191,13 +191,19 @@ class GPUIconBatchLayer extends Layer<GPUIconBatchProps> {
       [
         typeof this.props.getSize === 'number' ? this.props.getSize : 1,
         this.props.sizeScale ?? 1,
-        this.props.alphaCutoff ?? 0.05
+        this.props.alphaCutoff ?? 0.05,
+        typeof this.props.getAngle === 'number' ? this.props.getAngle : 0
       ],
       8
     );
     uints.set(
-      [this.props.colors ? 1 : 0, this.props.sizes ? 1 : 0, this.props.rowIndexOffset, 0],
-      11
+      [
+        this.props.colors ? 1 : 0,
+        this.props.sizes ? 1 : 0,
+        this.props.angles ? 1 : 0,
+        this.props.rowIndexOffset
+      ],
+      12
     );
     styleBuffer.write(new Uint8Array(bytes));
     model.draw(renderPass);
