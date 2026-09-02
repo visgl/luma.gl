@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ComputeShaderLayout, ShaderLayout} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ComputeShaderLayout, ShaderLayout, UniformBlockLayout} from '@luma.gl/core';
+import {
+  getGLSLUniformBlocks,
+  getShaderModuleUniformBlockName,
+  type ShaderModule
+} from '@luma.gl/shadertools';
 
 type AnyShaderLayout = ShaderLayout | ComputeShaderLayout;
 
@@ -71,6 +75,25 @@ export function mergeInferredShaderLayout(
 
 export function shaderModuleHasUniforms(module: ShaderModule): boolean {
   return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
+}
+
+/** Returns deterministic std140 metadata for GLSL uniform blocks owned by shader modules. */
+export function getShaderModuleUniformBlockLayouts(modules: ShaderModule[]): UniformBlockLayout[] {
+  const uniformBlockLayouts: UniformBlockLayout[] = [];
+  for (const module of modules) {
+    const uniformBlockName = getShaderModuleUniformBlockName(module);
+    const hasStd140Block = [module.vs, module.fs].some(shaderSource =>
+      shaderSource
+        ? getGLSLUniformBlocks(shaderSource).some(
+            block => block.blockName === uniformBlockName && block.isStd140
+          )
+        : false
+    );
+    if (shaderModuleHasUniforms(module) && hasStd140Block) {
+      uniformBlockLayouts.push({name: uniformBlockName, uniformTypes: module.uniformTypes!});
+    }
+  }
+  return uniformBlockLayouts;
 }
 
 export function mergeShaderModules(

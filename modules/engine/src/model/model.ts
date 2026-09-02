@@ -61,6 +61,7 @@ import {deepEqual} from '../utils/deep-equal';
 import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {
+  getShaderModuleUniformBlockLayouts,
   mergeInferredShaderLayout,
   mergeShaderModules,
   mergeShaderModuleBindingsIntoLayout,
@@ -359,6 +360,10 @@ export class Model {
     // Setup shader assembler
     const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
     const defines = {...resolvedPlugins.defines, ...this.props.defines};
+
+    if (this.device.type === 'webgl') {
+      this.props._uniformBlockLayouts = getShaderModuleUniformBlockLayouts(modules);
+    }
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
