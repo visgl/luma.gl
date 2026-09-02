@@ -9,6 +9,7 @@ export type OrbitControlsProps = {
   distance?: number;
   yaw?: number;
   pitch?: number;
+  roll?: number;
   minDistance?: number;
   maxDistance?: number;
   minPitch?: number;
@@ -17,6 +18,7 @@ export type OrbitControlsProps = {
   pitchSpeed?: number;
   zoomSpeed?: number;
   enabled?: boolean;
+  enableRotate?: boolean;
   enableZoom?: boolean;
   enablePan?: boolean;
   panSpeed?: number;
@@ -35,6 +37,7 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
   distance: 10,
   yaw: 0,
   pitch: 0.25,
+  roll: 0,
   minDistance: 1,
   maxDistance: 100,
   minPitch: -Math.PI / 2 + 0.01,
@@ -42,6 +45,7 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
   rotateSpeed: 0.006,
   zoomSpeed: 0.001,
   enabled: true,
+  enableRotate: false,
   enableZoom: true,
   enablePan: false,
   panSpeed: 0.0018,
@@ -50,7 +54,7 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
 };
 
 /**
- * Pointer orbit, wheel and pinch zoom, and optional automatic rotation controls for a canvas.
+ * Pointer orbit, optional pinch roll, wheel and pinch zoom, and automatic rotation controls.
  *
  * Call {@link update} once per frame with an animation-loop timestamp in milliseconds before
  * reading {@link getEyePosition}. Manual dragging temporarily pauses automatic rotation and
@@ -61,12 +65,14 @@ export class OrbitControls {
   readonly props: ResolvedOrbitControlsProps;
   yaw: number;
   pitch: number;
+  roll: number;
   distance: number;
 
   private dragging = false;
   private readonly activePointers = new Map<number, [number, number]>();
   private lastPointer: [number, number] = [0, 0];
   private previousPinchDistance: number | null = null;
+  private previousPinchAngle: number | null = null;
   private previousTimeMilliseconds: number | null = null;
   private readonly previousCursor: string;
   private readonly previousTouchAction: string;
@@ -77,6 +83,7 @@ export class OrbitControls {
     this.props.target = [...this.props.target];
     this.yaw = this.props.yaw;
     this.pitch = clampNumber(this.props.pitch, this.props.minPitch, this.props.maxPitch);
+    this.roll = this.props.roll;
     this.distance = clampNumber(
       this.props.distance,
       this.props.minDistance,
@@ -120,6 +127,34 @@ export class OrbitControls {
     ];
   }
 
+  /** Returns the camera up direction after applying pitch and optional two-finger roll. */
+  getUpDirection(): OrbitPosition {
+    return this.getCameraFrame().up;
+  }
+
+  private getCameraFrame(): {right: OrbitPosition; up: OrbitPosition} {
+    const sineYaw = Math.sin(this.yaw);
+    const cosineYaw = Math.cos(this.yaw);
+    const sinePitch = Math.sin(this.pitch);
+    const cosinePitch = Math.cos(this.pitch);
+    const sineRoll = Math.sin(this.roll);
+    const cosineRoll = Math.cos(this.roll);
+    const right: OrbitPosition = [cosineYaw, 0, -sineYaw];
+    const up: OrbitPosition = [-sinePitch * sineYaw, cosinePitch, -sinePitch * cosineYaw];
+    return {
+      right: [
+        right[0] * cosineRoll - up[0] * sineRoll,
+        right[1] * cosineRoll - up[1] * sineRoll,
+        right[2] * cosineRoll - up[2] * sineRoll
+      ],
+      up: [
+        up[0] * cosineRoll + right[0] * sineRoll,
+        up[1] * cosineRoll + right[1] * sineRoll,
+        up[2] * cosineRoll + right[2] * sineRoll
+      ]
+    };
+  }
+
   /** Enables or pauses automatic rotation without losing the current manual angle. */
   setAutoRotate(autoRotate: boolean): void {
     this.props.autoRotate = autoRotate;
@@ -140,6 +175,9 @@ export class OrbitControls {
     if (props.pitch !== undefined || props.minPitch !== undefined || props.maxPitch !== undefined) {
       this.pitch = clampNumber(props.pitch ?? this.pitch, this.props.minPitch, this.props.maxPitch);
     }
+    if (props.roll !== undefined) {
+      this.roll = props.roll;
+    }
     if (
       props.distance !== undefined ||
       props.minDistance !== undefined ||
@@ -153,10 +191,11 @@ export class OrbitControls {
     }
   }
 
-  /** Restores the configured starting angle and zoom. */
+  /** Restores the configured starting orbit, roll, and zoom. */
   reset(): void {
     this.yaw = this.props.yaw;
     this.pitch = clampNumber(this.props.pitch, this.props.minPitch, this.props.maxPitch);
+    this.roll = this.props.roll;
     this.distance = clampNumber(
       this.props.distance,
       this.props.minDistance,
@@ -193,9 +232,10 @@ export class OrbitControls {
     if (this.activePointers.size === 1) {
       this.lastPointer = [event.clientX, event.clientY];
     } else {
-      const {center, distance} = this.getMultiPointerState();
+      const {center, distance, angle} = this.getMultiPointerState();
       this.lastPointer = center;
       this.previousPinchDistance = distance;
+      this.previousPinchAngle = distance > 0 ? angle : null;
     }
     this.canvas.setPointerCapture(event.pointerId);
     this.canvas.style.cursor = 'grabbing';
@@ -208,7 +248,7 @@ export class OrbitControls {
 
     this.activePointers.set(event.pointerId, [event.clientX, event.clientY]);
     if (this.activePointers.size > 1) {
-      const {center, distance} = this.getMultiPointerState();
+      const {center, distance, angle} = this.getMultiPointerState();
       if (this.props.enablePan) {
         this.panTarget(center[0] - this.lastPointer[0], center[1] - this.lastPointer[1]);
       }
@@ -219,8 +259,12 @@ export class OrbitControls {
           this.props.maxDistance
         );
       }
+      if (this.props.enableRotate && this.previousPinchAngle !== null && distance > 0) {
+        this.roll += normalizeAngleDelta(angle - this.previousPinchAngle);
+      }
       this.lastPointer = center;
       this.previousPinchDistance = distance;
+      this.previousPinchAngle = distance > 0 ? angle : null;
       return;
     }
 
@@ -249,6 +293,7 @@ export class OrbitControls {
     }
     this.activePointers.delete(event.pointerId);
     this.previousPinchDistance = null;
+    this.previousPinchAngle = null;
 
     const remainingPointer = this.activePointers.entries().next().value;
     if (remainingPointer) {
@@ -267,25 +312,28 @@ export class OrbitControls {
     }
     this.activePointers.clear();
     this.previousPinchDistance = null;
+    this.previousPinchAngle = null;
     this.canvas.style.cursor = 'grab';
   }
 
-  private getMultiPointerState(): {center: [number, number]; distance: number} {
+  private getMultiPointerState(): {center: [number, number]; distance: number; angle: number} {
     const [firstPointer, secondPointer] = this.activePointers.values();
     const deltaX = secondPointer[0] - firstPointer[0];
     const deltaY = secondPointer[1] - firstPointer[1];
     return {
       center: [(firstPointer[0] + secondPointer[0]) / 2, (firstPointer[1] + secondPointer[1]) / 2],
-      distance: Math.hypot(deltaX, deltaY)
+      distance: Math.hypot(deltaX, deltaY),
+      angle: Math.atan2(deltaY, deltaX)
     };
   }
 
   private panTarget(deltaX: number, deltaY: number): void {
     const panScale = this.distance * this.props.panSpeed;
+    const {right, up} = this.getCameraFrame();
     this.props.target = [
-      this.props.target[0] - Math.cos(this.yaw) * deltaX * panScale,
-      this.props.target[1] + deltaY * panScale,
-      this.props.target[2] + Math.sin(this.yaw) * deltaX * panScale
+      this.props.target[0] + (-right[0] * deltaX + up[0] * deltaY) * panScale,
+      this.props.target[1] + (-right[1] * deltaX + up[1] * deltaY) * panScale,
+      this.props.target[2] + (-right[2] * deltaX + up[2] * deltaY) * panScale
     ];
   }
 
@@ -306,4 +354,8 @@ export class OrbitControls {
 
 function clampNumber(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
+}
+
+function normalizeAngleDelta(angle: number): number {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
 }

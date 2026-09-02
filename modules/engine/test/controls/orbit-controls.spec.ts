@@ -79,6 +79,27 @@ it('OrbitControls advances and bounds automatic rotation using millisecond times
   void 0;
 });
 
+it('OrbitControls derives its camera up direction from orbit pitch and roll', () => {
+  const controls = new OrbitControls(makeTestCanvas(), {
+    yaw: Math.PI / 2,
+    pitch: 0,
+    roll: Math.PI / 2
+  });
+
+  const upDirection = controls.getUpDirection();
+  expect(
+    Boolean(Math.abs(upDirection[0]) < 1e-12),
+    'rolls around the current viewing direction'
+  ).toBe(true);
+  expect(Boolean(Math.abs(upDirection[1]) < 1e-12), 'removes the original vertical component').toBe(
+    true
+  );
+  expect(upDirection[2], 'returns the rolled camera up axis').toBe(-1);
+
+  controls.destroy();
+  void 0;
+});
+
 it('OrbitControls captures pointer drags, clamps pitch, and ignores unrelated pointers', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
@@ -198,6 +219,44 @@ it('OrbitControls optionally pans its target while shift-dragging', () => {
   void 0;
 });
 
+it('OrbitControls pans in the rolled camera screen axes', () => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    target: [0, 0, 0],
+    yaw: 0,
+    pitch: 0,
+    roll: Math.PI / 2,
+    distance: 10,
+    enablePan: true,
+    panSpeed: 0.1
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 5,
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {
+    pointerId: 5,
+    clientX: 2,
+    clientY: 3,
+    shiftKey: true
+  });
+
+  const target = controls.props.target;
+  expect(Math.abs(target[0] - 3), 'maps vertical input along the rolled up axis').toBeLessThan(
+    1e-12
+  );
+  expect(Math.abs(target[1] - 2), 'maps horizontal input along the rolled right axis').toBeLessThan(
+    1e-12
+  );
+  expect(Math.abs(target[2]), 'keeps the pan inside the rolled screen plane').toBeLessThan(1e-12);
+
+  controls.destroy();
+  void 0;
+});
+
 it('OrbitControls pinch zooms with two touch pointers inside configured bounds', () => {
   const canvas = makeTestCanvas();
   let interactionCount = 0;
@@ -241,6 +300,61 @@ it('OrbitControls pinch zooms with two touch pointers inside configured bounds',
   void 0;
 });
 
+it('OrbitControls rolls its up direction with a two-finger twist across the angle boundary', () => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    yaw: 1,
+    roll: 0.5,
+    distance: 10,
+    enableRotate: true,
+    enableZoom: false
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 1,
+    pointerType: 'touch',
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 2,
+    pointerType: 'touch',
+    clientX: -100,
+    clientY: 1
+  });
+  canvas.dispatchTestEvent('pointermove', {
+    pointerId: 2,
+    clientX: -100,
+    clientY: -1
+  });
+
+  const expectedRoll = 0.5 + 2 * Math.atan2(1, 100);
+  expect(
+    Boolean(Math.abs(controls.roll - expectedRoll) < 1e-12),
+    'uses the shortest roll across -pi'
+  ).toBe(true);
+  expect(controls.yaw, 'leaves the orbit yaw unchanged').toBe(1);
+  expect(controls.distance, 'rotates independently of disabled pinch zoom').toBe(10);
+
+  canvas.dispatchTestEvent('pointerup', {pointerId: 2});
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 3,
+    pointerType: 'touch',
+    clientX: 100,
+    clientY: 0
+  });
+  expect(
+    Boolean(Math.abs(controls.roll - expectedRoll) < 1e-12),
+    'starts a new twist without reusing the previous pinch angle'
+  ).toBe(true);
+
+  controls.destroy();
+  void 0;
+});
+
 it('OrbitControls pans with the center of a two-finger touch gesture', () => {
   const canvas = makeTestCanvas();
   const controls = new OrbitControls(canvas, {
@@ -248,6 +362,7 @@ it('OrbitControls pans with the center of a two-finger touch gesture', () => {
     yaw: 0,
     pitch: 0,
     distance: 10,
+    enableRotate: false,
     enablePan: true,
     enableZoom: false,
     panSpeed: 0.01
@@ -272,7 +387,7 @@ it('OrbitControls pans with the center of a two-finger touch gesture', () => {
 
   expect(controls.props.target, 'moves the target with the touch midpoint').toEqual([-1, 2, 0]);
   expect(controls.distance, 'respects independently disabled touch zoom').toBe(10);
-  expect(controls.yaw, 'does not rotate while two touch pointers are active').toBe(0);
+  expect(controls.roll, 'respects independently disabled up-axis rotation').toBe(0);
 
   canvas.dispatchTestEvent('pointerup', {pointerId: 4});
   expect(canvas.hasPointerCapture(4), 'releases the lifted touch pointer').toBe(false);
@@ -283,6 +398,40 @@ it('OrbitControls pans with the center of a two-finger touch gesture', () => {
     Boolean(controls.yaw < 0),
     'continues one-finger orbiting without a pointer-position jump'
   ).toBe(true);
+
+  controls.destroy();
+  void 0;
+});
+
+it('OrbitControls disables up-axis rotation without disabling orbit or zoom', () => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    yaw: 0,
+    distance: 10,
+    enableRotate: false
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 7,
+    pointerType: 'touch',
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {pointerId: 7, clientX: 20, clientY: 0});
+  expect(controls.yaw, 'continues one-finger orbiting').toBe(-0.12);
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 8,
+    pointerType: 'touch',
+    clientX: 120,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {pointerId: 8, clientX: 20, clientY: 200});
+
+  expect(controls.roll, 'ignores two-finger up-axis rotation').toBe(0);
+  expect(Boolean(controls.distance < 10), 'continues to apply pinch zoom').toBe(true);
 
   controls.destroy();
   void 0;
@@ -403,6 +552,7 @@ it('OrbitControls updates camera configuration, preserves live state, and resets
   const controls = new OrbitControls(makeTestCanvas(), {
     yaw: 0.1,
     pitch: 0.2,
+    roll: 0.3,
     distance: 8,
     maxDistance: 20
   });
@@ -412,6 +562,7 @@ it('OrbitControls updates camera configuration, preserves live state, and resets
     target,
     yaw: 0.7,
     pitch: 1,
+    roll: 0.6,
     maxPitch: 0.5,
     distance: 25,
     maxDistance: 15
@@ -421,6 +572,7 @@ it('OrbitControls updates camera configuration, preserves live state, and resets
   expect(controls.props.target, 'copies dynamically updated orbit targets').toEqual([3, 4, 5]);
   expect(controls.yaw, 'applies the updated yaw immediately').toBe(0.7);
   expect(controls.pitch, 'clamps pitch against its updated limit').toBe(0.5);
+  expect(controls.roll, 'applies the updated roll immediately').toBe(0.6);
   expect(controls.distance, 'clamps distance against its updated limit').toBe(15);
 
   controls.setProps({minDistance: 2});
@@ -428,11 +580,13 @@ it('OrbitControls updates camera configuration, preserves live state, and resets
 
   controls.yaw = 0;
   controls.pitch = 0;
+  controls.roll = 0;
   controls.distance = 4;
   controls.reset();
 
   expect(controls.yaw, 'resets to the latest configured yaw').toBe(0.7);
   expect(controls.pitch, 'resets to the latest bounded pitch').toBe(0.5);
+  expect(controls.roll, 'resets to the latest configured roll').toBe(0.6);
   expect(controls.distance, 'resets to the latest bounded distance').toBe(15);
 
   controls.destroy();
