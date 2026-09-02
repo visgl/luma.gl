@@ -1,6 +1,6 @@
 # WebGPU Geospatial Kernels
 
-<!-- -->
+[Projection](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)[Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)[DGGS](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)[H3](https://luma.gl/next/docs/api-reference/experimental/gpu-h3.md)[A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md)
 
 The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output projection and distance kernels plus a flat grid index and point-query workflow:
 

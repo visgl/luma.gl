@@ -42,7 +42,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 
 import {
 
-  createDeferredLightingShaderPassPipeline,
+  createDeferredLightingCompositeShaderPass,
 
   GBuffer,
 
@@ -86,7 +86,7 @@ const pointLights = device.createBuffer({
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createDeferredLightingShaderPassPipeline()]
+  shaderPasses: [createDeferredLightingCompositeShaderPass()]
 
 });
 
@@ -149,7 +149,7 @@ The exported `ShaderPass` descriptor. It samples:
 
 Its uniforms are `inverseProjectionMatrix`, `ambientColor`, `directionalLightDirectionView`, `directionalLightColor`, `directionalLightIntensity`, and `pointLightCount`.
 
-### `createDeferredLightingShaderPassPipeline(): ShaderPassPipeline`[​](#createdeferredlightingshaderpasspipeline-shaderpasspipeline "Direct link to createdeferredlightingshaderpasspipeline-shaderpasspipeline")
+### `createDeferredLightingCompositeShaderPass(): CompositeShaderPass`[​](#createdeferredlightingcompositeshaderpass-compositeshaderpass "Direct link to createdeferredlightingcompositeshaderpass-compositeshaderpass")
 
 Returns a one-step pipeline that reads the current `previous` color and writes the lighting result back into `previous`. Put it before SSAO, reflections, temporal accumulation, bloom, and tone mapping unless a deliberate stylized ordering needs otherwise.
 

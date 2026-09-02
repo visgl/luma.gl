@@ -49,23 +49,23 @@ When the input starts as Apache Arrow, prefer [`makeGPUVectorFromArrow()`](https
 
 ## Properties[​](#properties "Direct link to Properties")
 
-| Property             | Type                           | Meaning                                                                         |
-| -------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
-| `name`               | `string`                       | Stable vector/table column name.                                                |
-| `format`             | `GPUVectorFormat \| undefined` | Canonical memory-layout descriptor for uploaded bytes.                          |
-| `type`               | `unknown`                      | Deprecated adapter-owned logical metadata.                                      |
-| `dataType`           | `unknown`                      | Deprecated adapter-owned logical metadata.                                      |
-| `length`             | `number`                       | Aggregate logical row count.                                                    |
-| `valueLength`        | `number`                       | Aggregate fixed-row or flattened vertex-list element count.                     |
-| `stride`             | `number`                       | Number of scalar values represented by one fixed row or flattened element.      |
-| `byteOffset`         | `number`                       | Compatibility metadata for the first row when this vector has one chunk.        |
-| `byteStride`         | `number`                       | Bytes between adjacent fixed rows or flattened elements.                        |
-| `rowByteLength`      | `number`                       | Bytes occupied by one fixed row or flattened element payload.                   |
-| `bufferLayout`       | `BufferLayout \| undefined`    | Interleaved buffer layout, when this vector describes multiple attribute views. |
-| `data`               | `GPUData[]`                    | Ordered chunks that define the logical column. Each chunk has its own buffer.   |
-| `ownsBuffer`         | `boolean`                      | Whether destroying this vector releases retained GPU storage.                   |
-| `capacityRows`       | `number \| undefined`          | Current logical rows for appendable vectors.                                    |
-| `appendedByteLength` | `number`                       | Adapter-reported bytes occupied by appended chunks.                             |
+| Property             | Type                           | Meaning                                                                                      |
+| -------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| `name`               | `string`                       | Stable vector/table column name.                                                             |
+| `format`             | `GPUVectorFormat \| undefined` | Canonical memory-layout descriptor for uploaded bytes.                                       |
+| `type`               | `unknown`                      | Deprecated adapter-owned logical metadata.                                                   |
+| `dataType`           | `unknown`                      | Deprecated adapter-owned logical metadata.                                                   |
+| `length`             | `number`                       | Aggregate logical row count.                                                                 |
+| `valueLength`        | `number`                       | Aggregate scalar-row count, flattened variable-list count, or fixed-size-list element count. |
+| `stride`             | `number`                       | Number of scalar values represented by one fixed row or flattened element.                   |
+| `byteOffset`         | `number`                       | Compatibility metadata for the first row when this vector has one chunk.                     |
+| `byteStride`         | `number`                       | Bytes between adjacent fixed rows or flattened elements.                                     |
+| `rowByteLength`      | `number`                       | Bytes occupied by one fixed row or flattened element payload.                                |
+| `bufferLayout`       | `BufferLayout \| undefined`    | Interleaved buffer layout, when this vector describes multiple attribute views.              |
+| `data`               | `GPUData[]`                    | Ordered chunks that define the logical column. Each chunk has its own buffer.                |
+| `ownsBuffer`         | `boolean`                      | Whether destroying this vector releases retained GPU storage.                                |
+| `capacityRows`       | `number \| undefined`          | Current logical rows for appendable vectors.                                                 |
+| `appendedByteLength` | `number`                       | Adapter-reported bytes occupied by appended chunks.                                          |
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -94,3 +94,33 @@ Destroys owned `GPUData` chunks and retained detached vectors. Borrowed storage 
 Use `data[]` for binding, copying, batching, and ownership. A single-buffer consumer should explicitly require `vector.data.length === 1` and then bind `vector.data[0].buffer`.
 
 For `vertex-list<...>` vectors, `length` remains the source row count and `valueLength` is the flattened element count. `byteStride` and `rowByteLength` describe one flattened element, not one source row. Offsets and other variable-length metadata are adapter-owned.
+
+For `fixed-size-list<float32,768>` vectors, `length` remains the number of table rows while `valueLength` is `length * 768`. Each `GPUData` chunk stores one complete fixed-size-list row per `byteStride`; `rowByteLength` describes its meaningful payload and may be smaller than a padded physical stride. These columns are storage-only unless an application explicitly expands them into shader-compatible attributes. When binding a packed column through generic WebGPU table shader/computation helpers, its `byteOffset` must satisfy the device's `minStorageBufferOffsetAlignment`; consumers that align bindings internally may support additional suballocation offsets.
+
+```
+import {GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
+
+
+
+const embeddings = new GPUVector<FixedSizeList<'float32', 768>>({
+
+  type: 'buffer',
+
+  name: 'embedding',
+
+  buffer: embeddingBuffer,
+
+  format: 'fixed-size-list<float32,768>',
+
+  length: rowCount
+
+});
+
+
+
+embeddings.length; // Logical source rows.
+
+embeddings.valueLength; // Flattened Float32 embedding coordinates.
+
+embeddings.data; // Original caller-owned GPUData batch chunks.
+```

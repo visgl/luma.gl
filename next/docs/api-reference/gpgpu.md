@@ -21,6 +21,7 @@ The experimental `@luma.gl/gpgpu/gpu-data` subpath provides Arrow-independent GP
 * [`GPUVector`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md) preserves an ordered list of `GPUData` chunks.
 * [`GPUConstant`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-constant.md) represents one fixed-width value shared across logical rows.
 * [`GPUVectorFormat`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md) describes stored bytes independently from shader-facing value types.
+* [`GPU Vector Search`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-search.md) performs exact, bounded similarity search over borrowed fixed-size GPU rows.
 
 Each `GPUData` owns or borrows exactly one buffer. A `GPUVector` does not own a separate raw buffer; it preserves its ordered `GPUData` chunks and their source batch boundaries. Packing and repacking are explicit higher-level operations, never side effects of append or streaming.
 

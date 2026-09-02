@@ -1,6 +1,6 @@
 # Clustered Volumetric Lighting
 
-Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingShaderPassPipeline` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
+Integrate participating-media illumination from the same directional and clustered point lights used by scene shading. `createClusteredVolumetricLightingCompositeShaderPass` combines height fog, anisotropic scattering, depth-occluded light shafts, temporal reprojection, bilateral denoising, and Beer-Lambert extinction.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -18,7 +18,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property                  | Value                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------- |
-| Export                    | `createClusteredVolumetricLightingShaderPassPipeline`                                   |
+| Export                    | `createClusteredVolumetricLightingCompositeShaderPass`                                  |
 | Backend                   | WebGPU                                                                                  |
 | Render passes             | Six: integration, temporal resolve, depth history, two bilateral filters, and composite |
 | Required scene inputs     | Depth, velocity, camera transforms, directional lighting, and point-light storage       |
@@ -30,7 +30,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createClusteredVolumetricLightingShaderPassPipeline} from '@luma.gl/effects';
+import {createClusteredVolumetricLightingCompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -56,7 +56,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createClusteredVolumetricLightingShaderPassPipeline({resolutionScale: 0.5})
+    createClusteredVolumetricLightingCompositeShaderPass({resolutionScale: 0.5})
 
   ]
 

@@ -1,6 +1,6 @@
 # Interface: TextureFormatDecoder
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L43)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L44)
 
 Class that helps applications work with texture formats
 
@@ -10,7 +10,7 @@ Class that helps applications work with texture formats
 
 > **computeMemoryLayout**(`opts`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:70](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L70)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L80)
 
 Computes the memory layout for a texture, in particular including row byte alignment
 
@@ -30,7 +30,7 @@ Computes the memory layout for a texture, in particular including row byte align
 
 > **getCapabilities**(`format`): [`TextureFormatCapabilities`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormatCapabilities.md)
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L65)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L66)
 
 "static" capabilities of a texture format.
 
@@ -54,7 +54,7 @@ Needs to be adjusted against current device
 
 > **getInfo**(`format`): [`TextureFormatInfo`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormatInfo.md)
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L60)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L61)
 
 Returns information about a texture format, e.g. attachment type, components, byte length and flags (integer, signed, normalized)
 
@@ -70,13 +70,13 @@ Returns information about a texture format, e.g. attachment type, components, by
 
 ***
 
-### isColor()[​](#iscolor "Direct link to isColor()")
+### getWebGPUCapabilities()[​](#getwebgpucapabilities "Direct link to getWebGPUCapabilities()")
 
-> **isColor**(`format`): `format is TextureFormatColor`
+> **getWebGPUCapabilities**(`format`): `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L45)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L71)
 
-Checks if a texture format is color
+Returns the compact WebGPU capability mask stored in the canonical format table.
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -86,17 +86,17 @@ Checks if a texture format is color
 
 #### Returns[​](#returns-3 "Direct link to Returns")
 
-`format is TextureFormatColor`
+`number`
 
 ***
 
-### isCompressed()[​](#iscompressed "Direct link to isCompressed()")
+### isColor()[​](#iscolor "Direct link to isColor()")
 
-> **isCompressed**(`format`): `format is TextureFormatCompressed`
+> **isColor**(`format`): `format is TextureFormatColor`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L55)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L46)
 
-Checks if a texture format is compressed
+Checks if a texture format is color
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -106,17 +106,17 @@ Checks if a texture format is compressed
 
 #### Returns[​](#returns-4 "Direct link to Returns")
 
-`format is TextureFormatCompressed`
+`format is TextureFormatColor`
 
 ***
 
-### isDepthStencil()[​](#isdepthstencil "Direct link to isDepthStencil()")
+### isCompressed()[​](#iscompressed "Direct link to isCompressed()")
 
-> **isDepthStencil**(`format`): `format is TextureFormatDepthStencil`
+> **isCompressed**(`format`): `format is TextureFormatCompressed`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L50)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L56)
 
-Checks if a texture format is depth or stencil
+Checks if a texture format is compressed
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -125,5 +125,25 @@ Checks if a texture format is depth or stencil
 [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
 #### Returns[​](#returns-5 "Direct link to Returns")
+
+`format is TextureFormatCompressed`
+
+***
+
+### isDepthStencil()[​](#isdepthstencil "Direct link to isDepthStencil()")
+
+> **isDepthStencil**(`format`): `format is TextureFormatDepthStencil`
+
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L51)
+
+Checks if a texture format is depth or stencil
+
+#### Parameters[​](#parameters-6 "Direct link to Parameters")
+
+##### format[​](#format-5 "Direct link to format")
+
+[`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
+
+#### Returns[​](#returns-6 "Direct link to Returns")
 
 `format is TextureFormatDepthStencil`

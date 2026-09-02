@@ -1,6 +1,6 @@
 # Temporal Antialiasing
 
-Accumulate jittered samples from successive frames while following scene motion and rejecting invalid history. `createTAAShaderPassPipeline` combines velocity reprojection, depth validation, and neighborhood clamping to reduce spatial aliasing and temporal shimmer.
+Accumulate jittered samples from successive frames while following scene motion and rejecting invalid history. `createTAACompositeShaderPass` combines velocity reprojection, depth validation, and neighborhood clamping to reduce spatial aliasing and temporal shimmer.
 
 ### Advanced Effects: Visualization City
 
@@ -18,7 +18,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property          | Value                                                                |
 | ----------------- | -------------------------------------------------------------------- |
-| Export            | `createTAAShaderPassPipeline`                                        |
+| Export            | `createTAACompositeShaderPass`                                       |
 | Backend           | WebGPU                                                               |
 | Render passes     | Three: temporal resolve, resolved-color copy, and depth-history copy |
 | Required bindings | `depthTexture` and `velocityTexture`                                 |
@@ -29,7 +29,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createTAAShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createTAACompositeShaderPass, toneMapping} from '@luma.gl/effects';
 
 
 
@@ -37,7 +37,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createTAAShaderPassPipeline(), toneMapping]
+  shaderPasses: [createTAACompositeShaderPass(), toneMapping]
 
 });
 

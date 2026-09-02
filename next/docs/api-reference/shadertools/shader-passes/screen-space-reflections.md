@@ -1,6 +1,6 @@
 # Screen-Space Reflections
 
-Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `createSSRShaderPassPipeline` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
+Reflect visible scene lighting from glossy and rough surfaces using depth, surface normals, roughness, and temporal reprojection. `createSSRCompositeShaderPass` traces reflection rays through the current frame and resolves them into a stabilized specular contribution.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -18,7 +18,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property            | Value                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------ |
-| Export              | `createSSRShaderPassPipeline`                                                              |
+| Export              | `createSSRCompositeShaderPass`                                                             |
 | Backend             | WebGPU                                                                                     |
 | Render passes       | Six: reflection trace, temporal resolve, depth history, two spatial filters, and composite |
 | Required bindings   | `depthTexture`, `normalTexture`, and `velocityTexture`                                     |
@@ -30,7 +30,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createSSGIShaderPassPipeline, createSSRShaderPassPipeline} from '@luma.gl/effects';
+import {createSSGICompositeShaderPass, createSSRCompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -40,9 +40,9 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createSSGIShaderPassPipeline({resolutionScale: 0.5}),
+    createSSGICompositeShaderPass({resolutionScale: 0.5}),
 
-    createSSRShaderPassPipeline({resolutionScale: 0.5})
+    createSSRCompositeShaderPass({resolutionScale: 0.5})
 
   ]
 

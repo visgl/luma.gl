@@ -6,11 +6,11 @@
 
 The `fp64arithmetic` shader module provides the low-level double-single arithmetic used by [`fp64`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md). Use it directly when you only need the arithmetic primitives and want to avoid including the full `fp64` function library.
 
-See [GPU Floating-Point Precision Techniques](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md) for the numerical guarantees and tradeoffs of classic and integer-assisted double-single, native and software binary64, fixed point, and exact deltas. The [Mandelbrot and compute benchmark](https://luma.gl/next/examples/experimental/fp64) runs these paths on the active GPU.
+See [GPU Floating-Point Precision Techniques](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md) for the numerical guarantees and tradeoffs of classic, hybrid, and integer-assisted double-single, native and software binary64, fixed point, and exact deltas. The [Mandelbrot and compute benchmark](https://luma.gl/next/examples/experimental/fp64) runs these paths on the active GPU.
 
 ## Live WebGPU benchmark[​](#live-webgpu-benchmark "Direct link to Live WebGPU benchmark")
 
-The Mandelbrot views below compare native `f32` and double-single precision on your current device. Select **Run WebGPU benchmark** to measure native `f32`, automatic selection, classic double-single, and integer-controlled double-single across add, multiply, divide, and square-root workloads. Each result reports its measured GPU timestamp or queue-completion timing alongside numerical error; the benchmark runs only when requested.
+The Mandelbrot views below compare native `f32` and double-single precision. On Apple WebGPU, the live FP64 pane uses a hybrid path that reconstructs critical high-part residuals with integer operations while accumulating lower-order terms with native `f32`. Select **Run WebGPU benchmark** to measure native `f32`, automatic selection, classic, hybrid, and integer-controlled double-single across add, multiply, divide, and square-root workloads. Each result reports its measured GPU timestamp or queue-completion timing alongside numerical error; the benchmark runs only when requested.
 
 Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;ompare Mandelbrot rendering and compute precision when you are ready to use your GPU.Launch precision benchmark →
 
@@ -42,7 +42,7 @@ const modules = [fp64arithmetic];
 
 On Apple WebGPU adapters, shadertools automatically selects an optimizer-independent implementation of the double-single arithmetic helpers. It decodes each `f32` limb into integer sign, exponent, and significand fields, performs the exact `twoSum` and `twoProd` transforms with integer operations, and rounds each result back to the existing `vec2f` representation. This avoids depending on floating-point expressions that Metal may reassociate or contract.
 
-The selection is a shader define, so it can also be forced on for another adapter or disabled on Apple:
+The selection is a shader define, so it can also be forced on for another adapter, replaced with the hybrid path, or disabled on Apple:
 
 ```
 const computation = new Computation(device, {
@@ -53,12 +53,16 @@ const computation = new Computation(device, {
 
   defines: {
 
-    LUMA_FP64_INTEGER_ARITHMETIC: true // false overrides the Apple default
+    LUMA_FP64_INTEGER_ARITHMETIC: false, // overrides the Apple default
+
+    LUMA_FP64_HYBRID_ARITHMETIC: true
 
   }
 
 });
 ```
+
+Hybrid arithmetic reconstructs the high-high `twoSum` and `twoProd` residuals with integer operations, then accumulates the lower limbs and multiplication cross terms with native `f32`. It uses fewer integer decode, alignment, and rounding passes than the fully controlled path. It is intended as a throughput and precision compromise, not as an optimizer-independent correctness mode.
 
 The integer path favors correctness over throughput. It preserves the public double-single API and provides approximately 48 significand bits while both limbs are normal, but it is not an IEEE-754 binary64 implementation: the exponent range remains that of `f32`. For result magnitudes between roughly `2^-126` and `2^-102`, the low limb is subnormal, so available precision gradually tapers from about 48 toward 24 bits as the result approaches `f32` underflow.
 
@@ -84,7 +88,7 @@ The `to_fp64` variants first round the exact difference to binary64, matching a 
 
 The returned double-single value provides up to approximately 48 significand bits, but retains the `f32` exponent range. A finite binary64 result whose magnitude is above that range maps to an infinity high limb and zero low limb; a result below the `f32` subnormal range maps to canonical positive zero limbs. Callers that require a finite result must establish that the expected delta is representable in the `f32` exponent range. Terrestrial longitude/latitude, projected metre coordinates, and their local deltas are comfortably inside that range; this helper is not a general replacement for binary64 arithmetic.
 
-A full bitwise drop-in implementation of `fp64f32` arithmetic is intentionally not exposed. That approach is too expensive for iterative fragment shaders and can stress some GPU drivers.
+A full bitwise IEEE binary64 drop-in is intentionally not exposed. That approach is substantially more expensive than the double-single paths and can stress some GPU drivers.
 
 `aBits` and `bBits` use canonical high/low word order:
 

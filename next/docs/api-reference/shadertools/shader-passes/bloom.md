@@ -16,18 +16,18 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
-| Implementation          | Export                                                  | Backends          | Suitable for                                                                        |
-| ----------------------- | ------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
-| Compact bloom           | `bloom` from `@luma.gl/effects`                         | WebGPU and WebGL2 | A single inexpensive highlight-glow pass.                                           |
-| Multiscale HDR bloom    | `createBloomShaderPassPipeline` from `@luma.gl/effects` | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
-| FFT optical convolution | `GPUConvolutionBloom` from `@luma.gl/experimental`      | WebGPU            | Full-image generated or measured RGB lens-response kernels.                         |
+| Implementation          | Export                                                   | Backends          | Suitable for                                                                        |
+| ----------------------- | -------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Compact bloom           | `bloom` from `@luma.gl/effects`                          | WebGPU and WebGL2 | A single inexpensive highlight-glow pass.                                           |
+| Multiscale HDR bloom    | `createBloomCompositeShaderPass` from `@luma.gl/effects` | WebGPU and WebGL2 | Configurable HDR scattering, temporal stabilization, and photographic lens effects. |
+| FFT optical convolution | `GPUConvolutionBloom` from `@luma.gl/experimental`       | WebGPU            | Full-image generated or measured RGB lens-response kernels.                         |
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 
 
 
@@ -37,7 +37,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createBloomShaderPassPipeline({
+    createBloomCompositeShaderPass({
 
       quality: 'high',
 
@@ -136,7 +136,7 @@ Changing the optical kernel requires 21 additional initialization dispatches for
 
 Keep bloom in linear floating-point scene color after lighting and adaptive exposure, but before [Tone Mapping](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/tone-mapping.md). A typical HDR order is temporal reconstruction, auto exposure, bloom, and then the display transform.
 
-deck.gl's existing `PostProcessEffect` can execute the compact `bloom` shader-pass descriptor. It does not execute named-target `ShaderPassPipeline` graphs or the separate WebGPU FFT renderer, and its default intermediate format is `rgba8unorm`; retaining unclamped HDR highlights therefore requires an integration that arranges floating-point scene and postprocessing targets.
+deck.gl's existing `PostProcessEffect` can execute the compact `bloom` shader-pass descriptor. It does not execute named-target `CompositeShaderPass` graphs or the separate WebGPU FFT renderer, and its default intermediate format is `rgba8unorm`; retaining unclamped HDR highlights therefore requires an integration that arranges floating-point scene and postprocessing targets.
 
 ## Technical References[​](#technical-references "Direct link to Technical References")
 

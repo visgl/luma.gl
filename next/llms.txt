@@ -283,7 +283,7 @@ Render models with geometry and shader inputs, manage redraw and interaction, an
 - [loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md): A simple small utility to load images from URLs. The loaded ImageBitmaps can be used to create textures.
 - [Model](https://luma.gl/next/docs/api-reference/engine/model.md): Model is the main engine-level rendering class in luma.gl.
 - [OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, wheel and pinch zoom, optional panning, automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
-- [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md): ShaderPassRenderer applies one or more ShaderPass or ShaderPassPipeline definitions to a source texture and either renders the result back to a texture or draws it to the screen.
+- [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md): ShaderPassRenderer applies one or more ShaderPass or CompositeShaderPass definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 - [PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md): PickingManager manages an offscreen picking framebuffer and the shader-input updates needed for luma.gl's engine picking modules.
 - [GroupNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md): GroupNode extends ScenegraphNode with child-node management and traversal helpers.
 - [ModelNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/model-node.md): ModelNode extends ScenegraphNode with a Model and optional bounds / managed resources.
@@ -304,6 +304,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md): GBuffer is an experimental WebGPU-only owner for the multiple render targets (MRTs) used by
 - [WebGPU Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md): The @luma.gl/experimental/geospatial entry point provides small, side-effect-free WebGPU
 - [Glass Material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md): glassMaterial is an experimental cross-backend shader module for refractive translucent surfaces.
+- [GPU A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md): @luma.gl/gpgpu/gpu-a5 brings the same GPU-resident cell-center workflow to A5 indexes. Its API is
 - [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md): From v10
 - [GPU Core Execution and Composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md): Overview
 - [DrawCommandBuffer](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md): Overview
@@ -355,6 +356,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPU Dataframe indexes and joins](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-indexes-joins.md): Build bounded unique-key lookups and share GPU outputs with filtering and rendering.
 - [GPU Dataframe operations reference](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-operations.md): Index of GPU Dataframe expression, filtering, grouping, aggregation, sorting, top-K, index, and join operations.
 - [GPU Dataframe sorting and top-K](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-sorting.md): Stable per-batch and explicit global ordering with bounded top-K selection.
+- [GPU DGGS](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md): Discrete global grid indexes are compact, stable identifiers. Rendering and spatial analysis need
 - [GPU Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md): Overview
 - [GPU Graph connectivity and communities](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-connectivity.md): Connected components, label propagation, modularity optimization, and community scoring.
 - [GPU Graph layouts](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-layouts.md): Exact and spatially approximated progressive graph layouts with composable GPU outputs.
@@ -362,6 +364,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPU Graph operations reference](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md): Index of GPU Graph topology, traversal, connectivity, community, metrics, ranking, and layout operations.
 - [GPU Graph topology](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-topology.md): Describe GPU-resident edges, build reusable adjacency, and count vertex relationships.
 - [GPU Graph traversal and pathfinding](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md): Breadth-first neighborhoods and nonnegative weighted shortest paths on GPU-resident graphs.
+- [GPU H3](https://luma.gl/next/docs/api-reference/experimental/gpu-h3.md): @luma.gl/gpgpu/gpu-h3 decodes GPU-resident H3 cell indexes into center coordinates. It covers
 - [GPU Project](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md): Overview
 - [GPU Raster](https://luma.gl/next/docs/api-reference/experimental/gpu-raster.md): Overview
 - [GPURaster Concepts and Execution Model](https://luma.gl/next/docs/api-reference/experimental/gpu-raster/concepts.md): A satellite image, microscope slide, terrain model, and weather grid can all be represented as
@@ -416,7 +419,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in500
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in502
 - [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in248
 - [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in96
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
@@ -475,7 +478,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Function: setTextureImageData()](https://luma.gl/next/docs/api-reference/generated/core/functions/setTextureImageData.md): setTextureImageData\(arrayBuffer, memoryLayout, format, data, image?): void
 - [Function: writePixel()](https://luma.gl/next/docs/api-reference/generated/core/functions/writePixel.md): writePixel(dataView, bitOffset, bitsPerChannel, pixel): void
 - [Interface: StatsManager](https://luma.gl/next/docs/api-reference/generated/core/interfaces/StatsManager.md): Defined in32
-- [Interface: TextureFormatDecoder](https://luma.gl/next/docs/api-reference/generated/core/interfaces/TextureFormatDecoder.md): Defined in43
+- [Interface: TextureFormatDecoder](https://luma.gl/next/docs/api-reference/generated/core/interfaces/TextureFormatDecoder.md): Defined in44
 - [Type Alias: ArrayShaderType](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ArrayShaderType.md): ArrayShaderType = readonly \[CompositeShaderType, number\]
 - [Type Alias: AttachDeviceProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/AttachDeviceProps.md): AttachDeviceProps = object & DeviceProps
 - [Type Alias: AttributeBinding](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/AttributeBinding.md): AttributeBinding = object
@@ -601,7 +604,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: VertexArrayProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md): VertexArrayProps = ResourceProps & object
 - [Type Alias: VertexFormat](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormat.md): VertexFormat = "uint8" \| "uint8x2" \| "uint8x3-webgl" \| "uint8x4" \| "sint8" \| "sint8x2" \| "sint8x3-webgl" \| "sint8x4" \| "unorm8" \| "unorm8x2" \| "unorm8x3-webgl" \| "unorm8x4" \| "unorm8x4-bgra" \| "unorm10-10-10-2" \| "snorm8" \| "snorm8x2" \| "snorm8x3-webgl" \| "snorm8x4" \| "uint16" \| "sint16" \| "unorm16" \| "snorm16" \| "uint16x2" \| "uint16x3-webgl" \| "uint16x4" \| "sint16x2" \| "sint16x3-webgl" \| "sint16x4" \| "unorm16x2" \| "unorm16x3-webgl" \| "unorm16x4" \| "snorm16x2" \| "snorm16x3-webgl" \| "snorm16x4" \| "uint32" \| "uint32x2" \| "uint32x3" \| "uint32x4" \| "sint32" \| "sint32x2" \| "sint32x3" \| "sint32x4" \| "float16" \| "float16x2" \| "float16x4" \| "float32" \| "float32x2" \| "float32x3" \| "float32x4"
 - [Type Alias: VertexFormatDataTypeT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VertexFormatDataTypeT.md): VertexFormatDataTypeT\ = T extends VertexFormatUint8 ? "uint8" T extends VertexFormatUnorm8 ? "unorm8" T extends VertexFormatUint16 ? "uint16" T extends VertexFormatUnorm16 ? "unorm16" T extends VertexFormatUint32 ? "uint32" ... extends ... ? ... : ...
-- [Type Alias: WebGPUDeviceFeature](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
+- [Type Alias: WebGPUDeviceFeature](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "texture-formats-tier1" \| "texture-formats-tier2" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
 - [Type Alias: WebGPUDeviceFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md): WebGPUDeviceFeatureLevel = Exclude\
 - [Type Alias: WebGPUFeatureLevel](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/WebGPUFeatureLevel.md): WebGPUFeatureLevel = "core" \| "max" \| "compatibility" \| "best-available"
 - [Variable: dataTypeDecoder](https://luma.gl/next/docs/api-reference/generated/core/variables/dataTypeDecoder.md): const dataTypeDecoder: DataTypeDecoder
@@ -640,6 +643,7 @@ Evaluate portable GPU data operations and compose vectors, custom operations, an
 - [GPUDataView](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data-view.md): From v9.4
 - [GPUVector](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md): From v9.4
 - [GPUVectorFormat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md): From v9.4
+- [GPU Vector Search: Similarity, Clustering, and IVF-flat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-search.md): Overview
 - [Operations](https://luma.gl/next/docs/api-reference/gpgpu/operations.md): This page is the top-level API reference for the lazy operations exported by @luma.gl/gpgpu.
 
 #### scene

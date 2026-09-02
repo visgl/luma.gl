@@ -1,6 +1,6 @@
 # Depth-Aware Blur
 
-Smooth noisy screen-space results without bleeding across foreground/background boundaries. `depthAwareBlurShaderPassPipeline` combines Gaussian spatial weights with scene-depth similarity in two separable bilateral-filter passes.
+Smooth noisy screen-space results without bleeding across foreground/background boundaries. `depthAwareBlurCompositeShaderPass` combines Gaussian spatial weights with scene-depth similarity in two separable bilateral-filter passes.
 
 ### Advanced Effects: Visualization City
 
@@ -16,26 +16,26 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
-| Property             | Value                                                   |
-| -------------------- | ------------------------------------------------------- |
-| Exports              | `depthAwareBlur` and `depthAwareBlurShaderPassPipeline` |
-| Backend              | WebGPU                                                  |
-| Render passes        | Two separable bilateral-filter passes                   |
-| Required binding     | `depthTexture`                                          |
-| Intermediate storage | One renderer-owned scratch texture                      |
+| Property             | Value                                                    |
+| -------------------- | -------------------------------------------------------- |
+| Exports              | `depthAwareBlur` and `depthAwareBlurCompositeShaderPass` |
+| Backend              | WebGPU                                                   |
+| Render passes        | Two separable bilateral-filter passes                    |
+| Required binding     | `depthTexture`                                           |
+| Intermediate storage | One renderer-owned scratch texture                       |
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {depthAwareBlurShaderPassPipeline} from '@luma.gl/effects';
+import {depthAwareBlurCompositeShaderPass} from '@luma.gl/effects';
 
 
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [depthAwareBlurShaderPassPipeline]
+  shaderPasses: [depthAwareBlurCompositeShaderPass]
 
 });
 

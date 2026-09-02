@@ -100,7 +100,7 @@ Use `getBufferLayoutFromGPUDataStructFormat(name, format, options?)` to lower a 
 | `format`           | `GPUVectorFormat \| GPUDataStructFields` | `undefined`           | A scalar/list format string or an inline record of named fixed-width field formats.                                           |
 | `layout`           | `wgsl-storage \| packed`                 | `wgsl-storage`        | Physical packing rules for an inline struct format. Invalid with a scalar/list format.                                        |
 | `length`           | `number`                                 | Required              | Number of logical rows in this chunk.                                                                                         |
-| `valueLength`      | `number`                                 | `length`              | Number of fixed rows or flattened vertex-list element values.                                                                 |
+| `valueLength`      | `number`                                 | Derived from `format` | Number of fixed rows, or flattened variable-list/fixed-size-list element values.                                              |
 | `stride`           | `number`                                 | Derived from `format` | Number of scalar values represented by one fixed row or flattened element.                                                    |
 | `byteOffset`       | `number`                                 | `0`                   | Byte offset of the first logical row in this chunk's buffer. Most adapters use `0` because chunks own their uploaded buffers. |
 | `byteStride`       | `number`                                 | Derived from `format` | Bytes between adjacent fixed rows or flattened elements.                                                                      |
@@ -111,20 +111,46 @@ Use `getBufferLayoutFromGPUDataStructFormat(name, format, options?)` to lower a 
 
 ## Properties[​](#properties "Direct link to Properties")
 
-| Property           | Type                         | Meaning                                                                       |
-| ------------------ | ---------------------------- | ----------------------------------------------------------------------------- |
-| `buffer`           | `Buffer \| DynamicBuffer`    | GPU buffer containing this chunk's bytes.                                     |
-| `format`           | `GPUDataFormat \| undefined` | Canonical memory-layout descriptor when this chunk has a typed physical view. |
-| `type`             | `unknown`                    | Deprecated adapter-owned logical metadata.                                    |
-| `dataType`         | `unknown`                    | Deprecated adapter-owned logical metadata.                                    |
-| `length`           | `number`                     | Number of logical rows in this chunk.                                         |
-| `valueLength`      | `number`                     | Number of fixed rows or flattened vertex-list element values.                 |
-| `stride`           | `number`                     | Number of scalar values represented by one fixed row or flattened element.    |
-| `byteOffset`       | `number`                     | Byte offset of the first logical row.                                         |
-| `byteStride`       | `number`                     | Bytes between adjacent fixed rows or flattened elements.                      |
-| `rowByteLength`    | `number`                     | Bytes occupied by one fixed row or flattened element payload.                 |
-| `readbackMetadata` | `unknown`                    | Optional producer-owned metadata.                                             |
-| `ownsBuffer`       | `boolean`                    | Whether this data range currently owns its backing buffer.                    |
+| Property           | Type                         | Meaning                                                                          |
+| ------------------ | ---------------------------- | -------------------------------------------------------------------------------- |
+| `buffer`           | `Buffer \| DynamicBuffer`    | GPU buffer containing this chunk's bytes.                                        |
+| `format`           | `GPUDataFormat \| undefined` | Canonical memory-layout descriptor when this chunk has a typed physical view.    |
+| `type`             | `unknown`                    | Deprecated adapter-owned logical metadata.                                       |
+| `dataType`         | `unknown`                    | Deprecated adapter-owned logical metadata.                                       |
+| `length`           | `number`                     | Number of logical rows in this chunk.                                            |
+| `valueLength`      | `number`                     | Number of fixed rows, or flattened variable-list/fixed-size-list element values. |
+| `stride`           | `number`                     | Number of scalar values represented by one fixed row or flattened element.       |
+| `byteOffset`       | `number`                     | Byte offset of the first logical row.                                            |
+| `byteStride`       | `number`                     | Bytes between adjacent fixed rows or flattened elements.                         |
+| `rowByteLength`    | `number`                     | Bytes occupied by one fixed row or flattened element payload.                    |
+| `readbackMetadata` | `unknown`                    | Optional producer-owned metadata.                                                |
+| `ownsBuffer`       | `boolean`                    | Whether this data range currently owns its backing buffer.                       |
+
+Fixed-size storage lists preserve table rows independently from flattened scalar coordinates:
+
+```
+const embeddings = new GPUData({
+
+  buffer,
+
+  format: 'fixed-size-list<float32,768>',
+
+  length: 1000,
+
+  ownsBuffer: true
+
+});
+
+
+
+embeddings.length; // 1000 logical table rows
+
+embeddings.valueLength; // 768000 Float32 elements
+
+embeddings.rowByteLength; // 3072 bytes
+
+embeddings.byteStride; // 3072 bytes, unless rows are explicitly padded
+```
 
 ## Methods[​](#methods "Direct link to Methods")
 

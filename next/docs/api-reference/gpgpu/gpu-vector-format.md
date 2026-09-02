@@ -21,7 +21,23 @@ export type VertexList<Format extends VertexFormat = VertexFormat> =
 
 
 
-export type GPUVectorFormat = VertexFormat | VertexList;
+export type ValueList<Format extends VertexFormat = VertexFormat> =
+
+  `value-list<${Format}>`;
+
+
+
+export type FixedSizeList<
+
+  Format extends VertexFormat = VertexFormat,
+
+  Size extends number = number
+
+> = `fixed-size-list<${Format},${Size}>`;
+
+
+
+export type GPUVectorFormat = VertexFormat | VertexList | ValueList | FixedSizeList;
 
 
 
@@ -54,7 +70,21 @@ Variable-length vertex-aligned vectors wrap a fixed element format:
 
 `vertex-list<format>` means each logical row owns a variable-length sequence of per-vertex element values. The format inside the angle brackets describes one flattened element. Offset buffers, row ranges, closed-path flags, text glyph maps, and similar topology metadata are adapter-owned.
 
-Generic `list<format>` is intentionally reserved for a possible future non-vertex offset-list type.
+Variable-length non-vertex values use `value-list<format>`. For example, `value-list<uint8>` stores flattened UTF-8 bytes with producer-owned row offsets.
+
+Fixed-size storage values keep their logical row width in the format itself:
+
+```
+'fixed-size-list<float32,384>'
+
+'fixed-size-list<float32,768>'
+
+'fixed-size-list<float32,1536>'
+```
+
+`fixed-size-list<float32,768>` describes 768 stored Float32 values in each table row. It does **not** describe a vertex attribute, a WGSL `vec768<f32>`, or a new Arrow-owned GPU type. `GPUData.length` and `GPUVector.length` remain logical row counts; `valueLength` counts the flattened elements. The default row `byteStride` and `rowByteLength` are `768 * 4`, while an explicit larger `byteStride` preserves physical row padding.
+
+Generic `list<format>` remains intentionally reserved.
 
 `GPUDataStructFormat` is an object rather than another format string because it contains named field formats, offsets, and row-stride metadata. It remains a physical memory description; shader value types stay separate. Struct formats currently apply to `GPUData`, while `GPUVectorFormat` remains the scalar or list format of one logical vector.
 
@@ -62,7 +92,7 @@ Generic `list<format>` is intentionally reserved for a possible future non-verte
 
 ### `getGPUVectorFormatInfo(format): GPUVectorFormatInfo`[​](#getgpuvectorformatinfoformat-gpuvectorformatinfo "Direct link to getgpuvectorformatinfoformat-gpuvectorformatinfo")
 
-Decodes a fixed or `vertex-list<...>` format string.
+Decodes fixed scalar/vector, variable-list, or fixed-size-list storage formats.
 
 ```
 const info = getGPUVectorFormatInfo('vertex-list<float32x3>');
@@ -78,15 +108,39 @@ info.components; // 3
 info.byteLength; // 12
 
 info.primitiveType; // 'f32'
+
+
+
+const embedding = getGPUVectorFormatInfo('fixed-size-list<float32,768>');
+
+
+
+embedding.elementFormat; // 'float32'
+
+embedding.fixedSizeList; // true
+
+embedding.listSize; // 768
+
+embedding.elementByteLength; // 4
+
+embedding.byteLength; // 3072 bytes per logical row
 ```
 
 ### `getGPUVectorElementFormat(format): VertexFormat`[​](#getgpuvectorelementformatformat-vertexformat "Direct link to getgpuvectorelementformatformat-vertexformat")
 
-Returns the fixed element format. For fixed vectors this is the input format; for vertex lists this is the format inside `vertex-list<...>`.
+Returns the fixed element format. For scalar/vector formats this is the input; for variable and fixed-size lists it is the element format inside the brackets.
 
 ### `isVertexListGPUVectorFormat(format): boolean`[​](#isvertexlistgpuvectorformatformat-boolean "Direct link to isvertexlistgpuvectorformatformat-boolean")
 
 Returns true for `vertex-list<...>` formats.
+
+### `isValueListGPUVectorFormat(format): boolean`[​](#isvaluelistgpuvectorformatformat-boolean "Direct link to isvaluelistgpuvectorformatformat-boolean")
+
+Returns true for variable-length non-vertex `value-list<...>` formats.
+
+### `isFixedSizeListGPUVectorFormat(format): boolean`[​](#isfixedsizelistgpuvectorformatformat-boolean "Direct link to isfixedsizelistgpuvectorformatformat-boolean")
+
+Returns true for canonical `fixed-size-list<format,size>` formats. Sizes are positive integers; whitespace, leading zeros, missing sizes, and unsupported element formats are rejected.
 
 ### `isGPUVectorFormatCompatibleWithShaderType(format, shaderType): boolean`[​](#isgpuvectorformatcompatiblewithshadertypeformat-shadertype-boolean "Direct link to isgpuvectorformatcompatiblewithshadertypeformat-shadertype-boolean")
 
@@ -94,13 +148,14 @@ Checks whether the memory format can feed one shader attribute type.
 
 Examples:
 
-| GPU format  | Shader type | Compatible | Reason                                         |
-| ----------- | ----------- | ---------- | ---------------------------------------------- |
-| `float32x3` | `vec3<f32>` | yes        | Same component count and float primitive type. |
-| `unorm8x4`  | `vec4<f32>` | yes        | Normalized bytes become floats.                |
-| `uint32x2`  | `vec2<u32>` | yes        | Unsigned integer primitive type matches.       |
-| `sint32x2`  | `vec2<u32>` | no         | Signedness mismatch.                           |
-| `float32x3` | `vec4<f32>` | no         | Component count mismatch.                      |
+| GPU format                     | Shader type | Compatible | Reason                                                       |
+| ------------------------------ | ----------- | ---------- | ------------------------------------------------------------ |
+| `float32x3`                    | `vec3<f32>` | yes        | Same component count and float primitive type.               |
+| `unorm8x4`                     | `vec4<f32>` | yes        | Normalized bytes become floats.                              |
+| `uint32x2`                     | `vec2<u32>` | yes        | Unsigned integer primitive type matches.                     |
+| `sint32x2`                     | `vec2<u32>` | no         | Signedness mismatch.                                         |
+| `float32x3`                    | `vec4<f32>` | no         | Component count mismatch.                                    |
+| `fixed-size-list<float32,768>` | `vec4<f32>` | no         | Fixed-size lists are storage columns, not vertex attributes. |
 
 ## Buffer Layouts[​](#buffer-layouts "Direct link to Buffer Layouts")
 
@@ -150,17 +205,22 @@ const positions = new GPUVector({
 });
 ```
 
-`vertex-list<...>` vectors do not synthesize generic vertex-buffer layouts. Path, text, polygon, and geometry adapters must either expand them into renderable fixed vectors or bind them through an explicit storage/offset path.
+`vertex-list<...>`, `value-list<...>`, and `fixed-size-list<...>` vectors do not synthesize generic vertex-buffer layouts. Path, text, polygon, geometry, and embedding adapters must either expand compatible values into renderable fixed vectors or bind them explicitly through storage.
 
 ## Arrow Mapping[​](#arrow-mapping "Direct link to Arrow Mapping")
 
 `@luma.gl/arrow` maps supported Arrow types into these formats:
 
-| Arrow type                                         | GPUVector format         |
-| -------------------------------------------------- | ------------------------ |
-| `FixedSizeList<Float32, 3>`                        | `float32x3`              |
-| `FixedSizeList<Uint8, 4>` as normalized color      | `unorm8x4`               |
-| `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>` |
-| `List<FixedSizeList<Uint8, 4>>` vertex colors      | `vertex-list<unorm8x4>`  |
+| Arrow type                                         | GPUVector format                |
+| -------------------------------------------------- | ------------------------------- |
+| `FixedSizeList<Float32, 3>`                        | `float32x3`                     |
+| `FixedSizeList<Uint8, 4>` as normalized color      | `unorm8x4`                      |
+| `FixedSizeList<Float32, 384>` embedding            | `fixed-size-list<float32,384>`  |
+| `FixedSizeList<Float32, 768>` embedding            | `fixed-size-list<float32,768>`  |
+| `FixedSizeList<Float32, 1536>` embedding           | `fixed-size-list<float32,1536>` |
+| `List<FixedSizeList<Float32, 3>>` path coordinates | `vertex-list<float32x3>`        |
+| `List<FixedSizeList<Uint8, 4>>` vertex colors      | `vertex-list<unorm8x4>`         |
+
+Short fixed-size lists preserve their existing vertex-attribute mappings. Wide fixed-size lists become ordinary row-aligned storage columns without inventing unsupported formats such as `float32x768`.
 
 Arrow data types remain adapter/readback metadata. Table core uses `GPUVectorFormat`.

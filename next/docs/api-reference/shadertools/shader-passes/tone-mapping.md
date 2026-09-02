@@ -28,7 +28,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 
 
 
@@ -36,7 +36,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createBloomShaderPassPipeline(), toneMapping]
+  shaderPasses: [createBloomCompositeShaderPass(), toneMapping]
 
 });
 

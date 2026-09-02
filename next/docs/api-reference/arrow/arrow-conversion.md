@@ -4,6 +4,40 @@
 
 ## Arrow Vector Factories[​](#arrow-vector-factories "Direct link to Arrow Vector Factories")
 
+## Fixed-Size-List Storage Columns[​](#fixed-size-list-storage-columns "Direct link to Fixed-Size-List Storage Columns")
+
+`makeGPUVectorFromArrow()` and `makeGPUTableFromArrowTable()` upload numeric Arrow `FixedSizeList` columns wider than four elements as ordinary `GPUVector<'fixed-size-list<format,size>'>` values. The vector remains aligned with its containing table: `length` counts source rows, `valueLength` counts flattened elements, and original Arrow record batches remain separate GPU record batches.
+
+When calling `makeGPUVectorFromArrow()` directly, provide `{format: 'fixed-size-list<float32,768>'}` to retain that exact fixed-list generic in TypeScript; Arrow's runtime `FixedSizeList` type cannot otherwise encode the numeric width in its compile-time type.
+
+```
+import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+
+
+
+const table = makeGPUTableFromArrowTable(device, arrowTable, {
+
+  shaderLayout: {
+
+    attributes: [],
+
+    bindings: [
+
+      {name: 'embedding', type: 'read-only-storage', group: 0, location: 0},
+
+      {name: 'sourceIds', type: 'read-only-storage', group: 0, location: 1}
+
+    ]
+
+  },
+
+  validityColumns: {embedding: 'embeddingValidity'}
+
+});
+```
+
+The optional `validityColumns` mapping materializes a named, table-owned Uint32 column that combines nullable parent rows and nullable child values. Stable row identifiers remain ordinary non-null sibling columns. Use `fixedSizeListColumns: ['embedding']` when a short one-to-four-element column should intentionally retain fixed-size-list storage semantics instead of its default vertex format. For physically padded rows, specify `validityColumns: {embedding: {name: 'embeddingValidity', dimensions: 3}}` to ignore nullable padding after the three meaningful coordinates.
+
 ## List Columns[​](#list-columns "Direct link to List Columns")
 
 Arrow vector factories also support variable-length Arrow list columns whose nested elements contain one to four numeric components. This covers scalar lists plus tuple-style data such as XY, XYZ, and XYZM coordinates, while copying only compact list-offset metadata needed for readback instead of retaining the uploaded Arrow value arrays.

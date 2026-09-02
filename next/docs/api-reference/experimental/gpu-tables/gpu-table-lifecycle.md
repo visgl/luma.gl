@@ -36,7 +36,7 @@ gpuTable.packBatches();
 gpuTable.packBatches({minBatchSize: 50_000});
 ```
 
-Packing mutates the table in place. It rebuilds `batches[]` and table-level `gpuVectors`, then destroys only superseded GPU buffers that were owned by the removed batches. Borrowed external buffers are not destroyed. Indexed tables are rejected because packed index buffers would need their batch-local vertex indices rebased.
+Packing mutates the table in place. It rebuilds `batches[]` and table-level `gpuVectors`, then destroys only superseded GPU buffers that were owned by the removed batches. Borrowed external buffers are not destroyed. Indexed tables are rejected because packed index buffers would need their batch-local vertex indices rebased. Nullable chunks and chunks carrying producer-owned readback metadata are also rejected rather than silently losing source validity or adapter reconstruction information. Non-null fixed-size-list columns can still be packed explicitly.
 
 ### Ownership Rules[​](#ownership-rules "Direct link to Ownership Rules")
 

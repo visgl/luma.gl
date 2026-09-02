@@ -15,7 +15,7 @@ For the required and optional `GPUVector` inputs accepted by a model, see [`GPUI
 ```
 import type {VertexFormat} from '@luma.gl/core';
 
-import type {GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
 
 
 
@@ -27,7 +27,7 @@ export type GPUField<
 
   Name extends string = string,
 
-  Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
+  Format extends GPUVectorFormat = GPUVectorFormat
 
 > = {
 
@@ -90,6 +90,22 @@ type PathTable = {
 };
 ```
 
+Fixed-size storage values retain their row cardinality in the column format:
+
+```
+type EmbeddingTable = {
+
+  embedding: FixedSizeList<'float32', 768>;
+
+  sourceId: 'uint32';
+
+  embeddingValidity: 'uint32';
+
+};
+```
+
+Every column has the same logical table row count. The embedding allocation contains 768 Float32 elements per row; its source IDs and optional GPU-validity mask remain independently owned, ordinary row-aligned Uint32 columns.
+
 ## Semantics[​](#semantics "Direct link to Semantics")
 
 `GPUSchema` describes selected GPU-facing columns, not necessarily every source column. A table adapter may read many source columns and publish only the ones that match a `ShaderLayout`, generated geometry plan, or model-specific storage path.
@@ -98,6 +114,8 @@ type PathTable = {
 
 * fixed vectors use core `VertexFormat` strings such as `float32x3`;
 * variable-length vertex lists use `vertex-list<format>`;
+* variable-length non-vertex values use `value-list<format>`;
+* fixed-size storage values use `fixed-size-list<format,size>`;
 * shader values remain in `ShaderLayout`, such as `vec3<f32>` or `vec4<f32>`.
 
 Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md).

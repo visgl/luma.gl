@@ -100,7 +100,7 @@ This means `table.schema.fields` may contain names absent from `table.batches[n]
 
 ### `packBatches(options?): this`[​](#packbatchesoptions-this "Direct link to packbatchesoptions-this")
 
-Explicitly merges adjacent physical batches. Constants survive unchanged and do not participate in copies. Indexed and variable-length restrictions still apply to the varying data being packed.
+Explicitly merges adjacent physical batches. Constants survive unchanged and do not participate in copies. Indexed and variable-length restrictions still apply to the varying data being packed. Columns carrying null bitmaps or producer-owned readback metadata are rejected until a metadata-preserving packing contract is available; ordinary non-null fixed-size-list storage columns remain packable.
 
 ### `addBatch(batch): this`[​](#addbatchbatch-this "Direct link to addbatchbatch-this")
 

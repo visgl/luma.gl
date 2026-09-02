@@ -160,7 +160,7 @@ For analytic shapes such as circles, lines, and signed-distance-field text, shad
 
 FXAA is a single-frame screen-space pass. It is cheap, works after a resolved color image, and helps high-contrast jagged edges, but it can soften details and cannot recover information that was never rasterized.
 
-TAA accumulates samples over time. It is better at subpixel motion and shimmer, but it requires a jittered projection, history buffers, velocity, and depth rejection to avoid ghosting. luma.gl exports [`fxaa`](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) for WebGL and WebGPU shader-pass chains and `createTAAShaderPassPipeline()` for the WebGPU-oriented advanced-effects path. See the [Advanced Effects example](https://luma.gl/next/examples/experimental/advanced-effects) for TAA combined with depth, velocity, SSAO, SSR, and motion blur.
+TAA accumulates samples over time. It is better at subpixel motion and shimmer, but it requires a jittered projection, history buffers, velocity, and depth rejection to avoid ghosting. luma.gl exports [`fxaa`](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) for WebGL and WebGPU shader-pass chains and `createTAACompositeShaderPass()` for the WebGPU-oriented advanced-effects path. See the [Advanced Effects example](https://luma.gl/next/examples/experimental/advanced-effects) for TAA combined with depth, velocity, SSAO, SSR, and motion blur.
 
 When combining techniques, resolve MSAA before a normal texture-sampling postprocess. Apply FXAA near the end of the color chain. Apply TAA where its history, depth, and velocity represent the same jittered scene.
 

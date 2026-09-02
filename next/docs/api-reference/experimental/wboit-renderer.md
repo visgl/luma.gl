@@ -2,7 +2,7 @@
 
 [Spectral Caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md)[Glass](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)[Reflective](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)[A-Buffer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)[WBOIT](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)
 
-`WBOITRenderer` implements weighted blended order-independent transparency on WebGPU and WebGL2. It owns floating-point accumulation and revealage targets, records geometry capture passes, and resolves the captured transparency over an application-owned opaque color texture through a `ShaderPassPipeline`.
+`WBOITRenderer` implements weighted blended order-independent transparency on WebGPU and WebGL2. It owns floating-point accumulation and revealage targets, records geometry capture passes, and resolves the captured transparency over an application-owned opaque color texture through a `CompositeShaderPass`.
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -13,7 +13,7 @@ import {
 
   WBOITRenderer,
 
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
 
   wboit,
 
@@ -88,7 +88,7 @@ fragColor = wboit_captureStraightColor(color, gl_FragCoord);
 
 Use `wboit_capturePremultipliedColor` when RGB is already multiplied by alpha.
 
-`render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects stack, call `capture()` and pass its bindings to a `ShaderPassRenderer` containing `createWBOITResolveShaderPassPipeline()`:
+`render()` returns the resolved texture. To compose WBOIT directly into a larger advanced-effects stack, call `capture()` and pass its bindings to a `ShaderPassRenderer` containing `createWBOITResolveCompositeShaderPass()`:
 
 ```
 const capture = renderer.capture({
@@ -107,7 +107,7 @@ const capture = renderer.capture({
 
 const effects = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createWBOITResolveShaderPassPipeline(), bloomShaderPassPipeline]
+  shaderPasses: [createWBOITResolveCompositeShaderPass(), bloomCompositeShaderPass]
 
 });
 
@@ -121,7 +121,7 @@ For each frame the renderer:
 1. Draws opaque depth into an internal depth target shared by both capture passes.
 2. Accumulates weighted premultiplied color and weighted alpha into `rgba16float`.
 3. Accumulates multiplicative revealage into a second `rgba16float` target.
-4. Runs `createWBOITResolveShaderPassPipeline()` to composite the normalized weighted color and revealage over `sourceTexture`.
+4. Runs `createWBOITResolveCompositeShaderPass()` to composite the normalized weighted color and revealage over `sourceTexture`.
 
 `prepareTranslucent` and `drawTranslucent` are called twice, once with `pass: 'accumulation'` and once with `pass: 'revealage'`.
 

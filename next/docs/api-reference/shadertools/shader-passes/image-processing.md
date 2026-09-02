@@ -28,12 +28,12 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Usage[​](#usage "Direct link to Usage")
 
-Individual [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md) descriptors and complete [`ShaderPassPipeline`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md#shaderpasspipeline) graphs can share one ordered [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md):
+Individual [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md) descriptors and complete [`CompositeShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md#compositeshaderpass) graphs can share one ordered [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md):
 
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createBloomShaderPassPipeline, toneMapping, vignette} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping, vignette} from '@luma.gl/effects';
 
 
 
@@ -43,7 +43,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createBloomShaderPassPipeline({quality: 'high', blurAlgorithm: 'dual-kawase'}),
+    createBloomCompositeShaderPass({quality: 'high', blurAlgorithm: 'dual-kawase'}),
 
     toneMapping,
 
@@ -86,7 +86,7 @@ The image-only adjustments, blur filters, stylization passes, warps, FXAA, and d
 
 info
 
-deck.gl's existing [`PostProcessEffect`](https://deck.gl/docs/api-reference/core/post-process-effect) accepts individual shader-pass modules. Named-target `ShaderPassPipeline` graphs and the separate WebGPU FFT bloom renderer require an integration that explicitly executes those rendering paths.
+deck.gl's existing [`PostProcessEffect`](https://deck.gl/docs/api-reference/core/post-process-effect) accepts individual shader-pass modules. Named-target `CompositeShaderPass` graphs and the separate WebGPU FFT bloom renderer require an integration that explicitly executes those rendering paths.
 
 ## Related Guides[​](#related-guides "Direct link to Related Guides")
 

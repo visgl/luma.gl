@@ -1,6 +1,6 @@
 # Screen-Space Ambient Occlusion
 
-Darken tight creases and nearby surface contacts using the current scene depth buffer. `createSSAOShaderPassPipeline` evaluates screen-space ambient visibility, smooths it with a depth-aware bilateral blur, and composites the result into scene color.
+Darken tight creases and nearby surface contacts using the current scene depth buffer. `createSSAOCompositeShaderPass` evaluates screen-space ambient visibility, smooths it with a depth-aware bilateral blur, and composites the result into scene color.
 
 ### Advanced Effects: Visualization City
 
@@ -18,7 +18,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 | Property         | Value                                                         |
 | ---------------- | ------------------------------------------------------------- |
-| Export           | `createSSAOShaderPassPipeline`                                |
+| Export           | `createSSAOCompositeShaderPass`                               |
 | Backend          | WebGPU                                                        |
 | Render passes    | Four: evaluate, horizontal blur, vertical blur, and composite |
 | Required binding | `depthTexture`                                                |
@@ -30,7 +30,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createSSAOShaderPassPipeline} from '@luma.gl/effects';
+import {createSSAOCompositeShaderPass} from '@luma.gl/effects';
 
 
 
@@ -38,7 +38,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createSSAOShaderPassPipeline({
+    createSSAOCompositeShaderPass({
 
       normalSource: 'normal-texture',
 
