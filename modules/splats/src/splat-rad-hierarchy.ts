@@ -141,7 +141,7 @@ export type SplatRADHierarchyManagerProps = {
   ) => void;
   /** Requests a missing source page; transport, decoding, workers, and upload remain external. */
   onPageRequest?: (request: SplatRADHierarchyRequest) => void;
-  /** Cancels a previously requested page after it leaves the selected camera frontier. */
+  /** Cancels a requested page once traversal proves it cannot contribute to the camera frontier. */
   onPageCancel?: (request: SplatRADHierarchyRequest) => void;
 };
 
@@ -167,6 +167,7 @@ type SplatRADTraversalState = {
   requestedPages: Map<number, SplatRADHierarchyRequest>;
   allocatedRowCount: number;
   refinedRows: Set<number>;
+  retainedCapacityRows: Set<number>;
 };
 
 type SplatRADFrontierCandidate = {
@@ -176,6 +177,9 @@ type SplatRADFrontierCandidate = {
   node: SplatHierarchyNode;
   priority: number;
   isFallback: boolean;
+  isCapacityLimited: boolean;
+  isVisible: boolean;
+  children?: SplatRADFrontierCandidate[];
   parent?: SplatRADFrontierCandidate;
 };
 
@@ -185,13 +189,26 @@ type SplatRADRefinementProgress = {
   childCandidates: SplatRADFrontierCandidate[];
 };
 
-/** One resumable best-first traversal for an unchanged camera and source-page set. */
+type SplatRADRetargetProgress = {
+  nextChildOffset: number;
+};
+
+/** One resumable best-first traversal whose retained tree can be retargeted to a changed camera. */
 type SplatRADIncrementalTraversal = {
   state: SplatRADTraversalState;
+  rootCandidates: SplatRADFrontierCandidate[];
   selectedRows: Map<number, SplatRADFrontierCandidate>;
   refinementQueue: SplatRADPriorityQueue;
   refinementProgress: Map<number, SplatRADRefinementProgress>;
+  retargetQueue: SplatRADPriorityQueue;
+  retargetProgress: Map<number, SplatRADRetargetProgress>;
+  preferRefinementNext: boolean;
 };
+
+type SplatRADFrontierSelection = Pick<
+  SplatRADIncrementalTraversal,
+  'state' | 'selectedRows' | 'refinementQueue'
+>;
 
 /**
  * Selects a coherent row-level frontier from independently resident Gaussian source pages.
@@ -234,6 +251,7 @@ export class SplatRADHierarchyManager {
   private culledRowCount = 0;
   private fallbackRowCount = 0;
   private requiresRefresh = true;
+  private requiresRetarget = false;
   private incrementalTraversal?: SplatRADIncrementalTraversal;
   private isDestroyed = false;
 
@@ -316,7 +334,10 @@ export class SplatRADHierarchyManager {
   get hasPendingTraversal(): boolean {
     return Boolean(
       this.currentView &&
-        (this.requiresRefresh || (this.incrementalTraversal?.refinementQueue.length ?? 0) > 0)
+        (this.requiresRefresh ||
+          this.requiresRetarget ||
+          (this.incrementalTraversal?.retargetQueue.length ?? 0) > 0 ||
+          (this.incrementalTraversal?.refinementQueue.length ?? 0) > 0)
     );
   }
 
@@ -427,10 +448,22 @@ export class SplatRADHierarchyManager {
       (firstPage, secondPage) =>
         firstPage.page.data.rowIndexBase - secondPage.page.data.rowIndexBase
     );
-    this.pruneEvictedPages();
+    const removedResidentPage = this.pruneEvictedPages();
     this.pendingRequests.delete(Math.floor(page.data.rowIndexBase / this.pageSize));
-    this.invalidateIncrementalTraversal();
-    this.requiresRefresh = true;
+    const registersMissingRoot = this.rootRows.some(
+      rootRow =>
+        rootRow >= page.data.rowIndexBase &&
+        rootRow < page.data.rowIndexBase + page.data.length &&
+        !this.incrementalTraversal?.rootCandidates.some(
+          candidate => candidate.globalRowIndex === rootRow
+        )
+    );
+    if (removedResidentPage || !this.incrementalTraversal || registersMissingRoot) {
+      this.invalidateIncrementalTraversal();
+      this.requiresRefresh = true;
+    } else {
+      this.requiresRetarget = true;
+    }
     return true;
   }
 
@@ -455,28 +488,46 @@ export class SplatRADHierarchyManager {
 
   /** Allows an externally cancelled or failed source-page request to be retried by the view. */
   clearRequestedPage(pageIndex: number): void {
+    const clearedRequest = this.pendingRequests.get(pageIndex);
     this.pendingRequests.delete(pageIndex);
-    this.invalidateIncrementalTraversal();
-    this.requiresRefresh = true;
+    if (this.incrementalTraversal && clearedRequest?.parentRowIndex !== undefined) {
+      this.requiresRetarget = true;
+    } else {
+      this.invalidateIncrementalTraversal();
+      this.requiresRefresh = true;
+    }
   }
 
-  /** Computes coherent camera-selected original source rows without copying source page buffers. */
+  /**
+   * Computes coherent camera-selected original source rows without copying source page buffers.
+   * Camera changes retarget the retained hierarchy tree instead of restarting from its roots.
+   * Resolved visible detail remains selected until visibility or active capacity requires a change.
+   */
   update(view: SplatHierarchyView): readonly SplatRADHierarchyFrontierEntry[] {
     this.assertLive();
+    const removedResidentPage = this.pruneEvictedPages();
     const sourceRowsChanged = this.haveSourceRowsChanged();
+    const viewChanged = !this.currentView || !areSplatRADViewsEqual(this.currentView, view);
     if (
       this.currentView &&
       !this.requiresRefresh &&
+      !this.requiresRetarget &&
+      !removedResidentPage &&
       areSplatRADViewsEqual(this.currentView, view) &&
       !sourceRowsChanged
     ) {
       return this.currentFrontier;
     }
-    if (!this.currentView || !areSplatRADViewsEqual(this.currentView, view) || sourceRowsChanged) {
+    if (removedResidentPage || sourceRowsChanged) {
       this.invalidateIncrementalTraversal();
+      this.requiresRefresh = true;
     }
     this.currentView = view;
-    this.refresh();
+    if (this.requiresRefresh || !this.incrementalTraversal) {
+      this.refresh();
+    } else if (viewChanged || this.requiresRetarget) {
+      this.retarget(this.maxTraversalRows);
+    }
     return this.currentFrontier;
   }
 
@@ -501,6 +552,10 @@ export class SplatRADHierarchyManager {
     }
     if (this.requiresRefresh) {
       this.refresh(maxTraversalRows);
+      return this.currentFrontier;
+    }
+    if (this.requiresRetarget) {
+      this.retarget(maxTraversalRows);
       return this.currentFrontier;
     }
     const traversal = this.incrementalTraversal;
@@ -548,6 +603,38 @@ export class SplatRADHierarchyManager {
     this.publishTraversal(traversal);
   }
 
+  /** Retargets the retained coherent tree before refining it for a changed camera. */
+  private retarget(maxTraversalRows: number): void {
+    const traversal = this.incrementalTraversal;
+    if (!traversal || !this.currentView) {
+      this.refresh(maxTraversalRows);
+      return;
+    }
+
+    this.visibleRowCount = 0;
+    this.culledRowCount = 0;
+    this.fallbackRowCount = 0;
+    if (traversal.retargetQueue.length > 0 || traversal.refinementQueue.length > 0) {
+      this.requiresRetarget = true;
+      this.advanceTraversal(traversal, maxTraversalRows, false);
+      this.publishTraversal(traversal);
+      return;
+    }
+    traversal.state.protectedPageIds.clear();
+    traversal.state.requestedPages.clear();
+    traversal.refinementQueue = new SplatRADPriorityQueue();
+    traversal.refinementProgress.clear();
+    traversal.retargetQueue = this.makeRetargetQueue(traversal.selectedRows);
+    traversal.retargetProgress.clear();
+    for (const rootCandidate of traversal.rootCandidates) {
+      this.updateFrontierCandidate(rootCandidate, traversal, false);
+      traversal.retargetQueue.push(rootCandidate);
+    }
+    this.requiresRetarget = false;
+    this.advanceTraversal(traversal, maxTraversalRows, false);
+    this.publishTraversal(traversal);
+  }
+
   /** Starts one deterministic best-first queue from the current roots and resident pages. */
   private makeIncrementalTraversal(): SplatRADIncrementalTraversal {
     const rootRows = this.rootRows.slice(0, this.maximumActiveRows);
@@ -556,11 +643,15 @@ export class SplatRADHierarchyManager {
       protectedPageIds: new Set(),
       requestedPages: new Map(),
       allocatedRowCount: 0,
-      refinedRows: new Set()
+      refinedRows: new Set(),
+      retainedCapacityRows: new Set()
     };
     const selectedRows = new Map<number, SplatRADFrontierCandidate>();
+    const rootCandidates: SplatRADFrontierCandidate[] = [];
     const refinementQueue = new SplatRADPriorityQueue();
     const refinementProgress = new Map<number, SplatRADRefinementProgress>();
+    const retargetQueue = this.makeRetargetQueue(selectedRows);
+    const retargetProgress = new Map<number, SplatRADRetargetProgress>();
 
     for (const rootRow of rootRows) {
       const rootPage = this.getRegisteredPageForRow(rootRow);
@@ -570,12 +661,22 @@ export class SplatRADHierarchyManager {
       }
       const candidate = this.makeFrontierCandidate(rootPage, rootRow);
       if (candidate) {
-        state.allocatedRowCount++;
+        rootCandidates.push(candidate);
+        state.allocatedRowCount += candidate.isVisible ? 1 : 0;
         this.addFrontierCandidate(candidate, selectedRows, refinementQueue);
       }
     }
 
-    return {state, selectedRows, refinementQueue, refinementProgress};
+    return {
+      state,
+      rootCandidates,
+      selectedRows,
+      refinementQueue,
+      refinementProgress,
+      retargetQueue,
+      retargetProgress,
+      preferRefinementNext: false
+    };
   }
 
   /** Spends one row-evaluation slice while retaining the queue for the next settled frame. */
@@ -585,6 +686,63 @@ export class SplatRADHierarchyManager {
     countExistingRows: boolean
   ): void {
     const rowCountAtSliceStart = countExistingRows ? 0 : this.visibleRowCount + this.culledRowCount;
+    const {refinementQueue, retargetQueue} = traversal;
+    if (maxTraversalRows === 1) {
+      if (refinementQueue.length > 0 && retargetQueue.length > 0) {
+        if (traversal.preferRefinementNext) {
+          this.advanceRefinementTraversal(traversal, 1, rowCountAtSliceStart);
+        } else {
+          this.advanceRetargetTraversal(traversal, 1, rowCountAtSliceStart);
+        }
+        traversal.preferRefinementNext = !traversal.preferRefinementNext;
+        return;
+      }
+      if (retargetQueue.length > 0) {
+        this.advanceRetargetTraversal(traversal, 1, rowCountAtSliceStart);
+        traversal.preferRefinementNext = refinementQueue.length > 0 && retargetQueue.length > 0;
+        return;
+      }
+      this.advanceRefinementTraversal(traversal, 1, rowCountAtSliceStart);
+      return;
+    }
+    const refinementReservation =
+      maxTraversalRows === Number.POSITIVE_INFINITY || retargetQueue.length === 0
+        ? 0
+        : Math.max(1, Math.floor(maxTraversalRows / 2));
+
+    if (refinementQueue.length > 0 && refinementReservation > 0) {
+      this.advanceRefinementTraversal(traversal, refinementReservation, rowCountAtSliceStart);
+      this.advanceRetargetTraversal(traversal, maxTraversalRows, rowCountAtSliceStart);
+      return;
+    }
+
+    if (refinementReservation > 0) {
+      const initialRetargetLimit = maxTraversalRows - refinementReservation;
+      this.advanceRetargetTraversal(traversal, initialRetargetLimit, rowCountAtSliceStart);
+      if (
+        refinementQueue.length === 0 &&
+        retargetQueue.length > 0 &&
+        initialRetargetLimit < maxTraversalRows - 1
+      ) {
+        this.advanceRetargetTraversal(traversal, maxTraversalRows - 1, rowCountAtSliceStart);
+      }
+      this.advanceRefinementTraversal(traversal, maxTraversalRows, rowCountAtSliceStart);
+      if (refinementQueue.length === 0) {
+        this.advanceRetargetTraversal(traversal, maxTraversalRows, rowCountAtSliceStart);
+      }
+      return;
+    }
+
+    this.advanceRetargetTraversal(traversal, maxTraversalRows, rowCountAtSliceStart);
+    this.advanceRefinementTraversal(traversal, maxTraversalRows, rowCountAtSliceStart);
+  }
+
+  /** Reserves bounded work for current-view refinement while retained-tree retargeting continues. */
+  private advanceRefinementTraversal(
+    traversal: SplatRADIncrementalTraversal,
+    maxTraversalRows: number,
+    rowCountAtSliceStart: number
+  ): void {
     const {selectedRows, refinementQueue, refinementProgress, state} = traversal;
     while (refinementQueue.length > 0) {
       const evaluatedRowCount = this.visibleRowCount + this.culledRowCount - rowCountAtSliceStart;
@@ -609,12 +767,501 @@ export class SplatRADHierarchyManager {
     }
   }
 
+  /** Reprioritizes the retained tree from its roots without replacing its selected leaves. */
+  private advanceRetargetTraversal(
+    traversal: SplatRADIncrementalTraversal,
+    maxTraversalRows: number,
+    rowCountAtSliceStart: number
+  ): void {
+    const {retargetProgress, retargetQueue, refinementQueue, selectedRows} = traversal;
+    while (retargetQueue.length > 0) {
+      const evaluatedRowCount = this.visibleRowCount + this.culledRowCount - rowCountAtSliceStart;
+      if (evaluatedRowCount >= maxTraversalRows) {
+        break;
+      }
+      const candidate = retargetQueue.pop()!;
+      if (this.hasSelectedFrontierAncestor(candidate, selectedRows)) {
+        retargetProgress.delete(candidate.globalRowIndex);
+        continue;
+      }
+      let progress = retargetProgress.get(candidate.globalRowIndex);
+      if (!progress) {
+        this.updateFrontierCandidate(candidate, traversal, true);
+        if (traversal.state.allocatedRowCount > this.maximumActiveRows) {
+          this.collapseFrontierForCapacity(candidate, traversal);
+          continue;
+        }
+        if (!candidate.children) {
+          const childCount =
+            candidate.registeredPage.page.childCounts?.[candidate.localRowIndex] ?? 0;
+          if (
+            selectedRows.get(candidate.globalRowIndex) === candidate &&
+            childCount > 0 &&
+            (!candidate.isVisible || candidate.priority > this.getRefinementThreshold(candidate))
+          ) {
+            refinementQueue.push(candidate);
+          }
+          continue;
+        }
+        progress = {nextChildOffset: 0};
+      }
+
+      const children = candidate.children;
+      if (!children) {
+        retargetProgress.delete(candidate.globalRowIndex);
+        continue;
+      }
+      const remainingTraversalRows =
+        maxTraversalRows - (this.visibleRowCount + this.culledRowCount - rowCountAtSliceStart);
+      const childOffsetLimit = Math.min(
+        children.length,
+        progress.nextChildOffset + remainingTraversalRows
+      );
+      for (; progress.nextChildOffset < childOffsetLimit; progress.nextChildOffset++) {
+        const child = children[progress.nextChildOffset];
+        this.updateFrontierCandidate(child, traversal, true);
+        if (traversal.state.allocatedRowCount > this.maximumActiveRows) {
+          this.collapseFrontierForCapacity(child, traversal);
+        }
+        const childCount = child.registeredPage.page.childCounts?.[child.localRowIndex] ?? 0;
+        if (child.isVisible || child.children || childCount > 0) {
+          retargetQueue.push(child);
+        }
+      }
+      if (progress.nextChildOffset < children.length) {
+        retargetProgress.set(candidate.globalRowIndex, progress);
+        retargetQueue.push(candidate);
+        break;
+      }
+      retargetProgress.delete(candidate.globalRowIndex);
+      if (selectedRows.get(candidate.globalRowIndex) === candidate) {
+        this.activateFrontierCandidateChildren(candidate, traversal);
+      } else if (candidate.isCapacityLimited) {
+        this.selectCapacityLimitedChildren(candidate, traversal);
+      }
+    }
+  }
+
+  /** Recomputes one retained source row for the current camera without changing tree topology. */
+  private updateFrontierCandidate(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADIncrementalTraversal,
+    countDiagnosticRow: boolean
+  ): void {
+    const view = this.currentView;
+    if (!view) {
+      return;
+    }
+    const wasVisible = candidate.isVisible;
+    const node = this.makeRowNode(candidate.registeredPage, candidate.localRowIndex);
+    const isVisible = isSplatHierarchyNodeVisible(node, view.modelViewProjectionMatrix);
+    if (countDiagnosticRow) {
+      if (isVisible) {
+        this.visibleRowCount++;
+      } else {
+        this.culledRowCount++;
+      }
+    }
+    const screenSpaceError = getSplatRADScreenSpaceError(node, view);
+    candidate.node = node;
+    candidate.isVisible = isVisible;
+    candidate.priority = isVisible
+      ? getSplatHierarchyFoveatedPriority(
+          node,
+          view,
+          view.foveation ?? this.foveation,
+          screenSpaceError
+        ) *
+        this.getAngularFoveation(node, view) *
+        this.lodSplatScale
+      : 0;
+    this.clearResolvedFallback(candidate);
+    if (
+      wasVisible !== isVisible &&
+      traversal.selectedRows.get(candidate.globalRowIndex) === candidate
+    ) {
+      traversal.state.allocatedRowCount += isVisible ? 1 : -1;
+    }
+    if (wasVisible !== isVisible) {
+      const capacityLimitedAncestor = this.getCapacityLimitedAncestor(candidate);
+      if (capacityLimitedAncestor) {
+        this.selectCapacityLimitedChildren(capacityLimitedAncestor, traversal);
+      }
+    }
+  }
+
+  /** Clears missing-page diagnostics once every authored direct child is resident. */
+  private clearResolvedFallback(candidate: SplatRADFrontierCandidate): void {
+    if (!candidate.isFallback) {
+      return;
+    }
+    const page = candidate.registeredPage.page;
+    const childCount = page.childCounts?.[candidate.localRowIndex] ?? 0;
+    const childStart = page.childStarts?.[candidate.localRowIndex] ?? 0;
+    if (
+      childCount === 0 ||
+      !Number.isSafeInteger(childStart + childCount) ||
+      childStart + childCount > 0x8000_0000
+    ) {
+      candidate.isFallback = false;
+      return;
+    }
+    for (let childOffset = 0; childOffset < childCount; childOffset++) {
+      if (!this.getRegisteredPageForRow(childStart + childOffset)) {
+        return;
+      }
+    }
+    candidate.isFallback = false;
+  }
+
+  /** Coarsens one retained branch only when active-row capacity requires fewer visible leaves. */
+  private collapseFrontierCandidate(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADIncrementalTraversal
+  ): void {
+    const wasSelected = traversal.selectedRows.get(candidate.globalRowIndex) === candidate;
+    for (const child of candidate.children ?? []) {
+      this.removeSelectedCandidateBranch(child, traversal.selectedRows, traversal.state);
+    }
+    candidate.isFallback = false;
+    candidate.isCapacityLimited = false;
+    traversal.state.refinedRows.delete(candidate.globalRowIndex);
+    traversal.selectedRows.set(candidate.globalRowIndex, candidate);
+    if (!wasSelected) {
+      traversal.state.allocatedRowCount += candidate.isVisible ? 1 : 0;
+    }
+  }
+
+  /** Reactivates retained direct children as one coherent parent replacement. */
+  private activateFrontierCandidateChildren(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADIncrementalTraversal
+  ): boolean {
+    const children = candidate.children;
+    if (!children) {
+      return false;
+    }
+    const visibleChildCount = children.reduce(
+      (visibleRowCount, child) => visibleRowCount + (child.isVisible ? 1 : 0),
+      0
+    );
+    const nextAllocatedRowCount =
+      traversal.state.allocatedRowCount - (candidate.isVisible ? 1 : 0) + visibleChildCount;
+    if (nextAllocatedRowCount > this.maximumActiveRows) {
+      if (!candidate.isVisible) {
+        return this.selectCapacityLimitedChildren(candidate, traversal);
+      }
+      return false;
+    }
+    candidate.isCapacityLimited = false;
+    traversal.selectedRows.delete(candidate.globalRowIndex);
+    traversal.state.allocatedRowCount = nextAllocatedRowCount;
+    traversal.state.refinedRows.add(candidate.globalRowIndex);
+    for (const child of children) {
+      traversal.selectedRows.set(child.globalRowIndex, child);
+    }
+    return true;
+  }
+
+  /** Coarsens the lowest retained branch needed to keep newly visible rows inside capacity. */
+  private collapseFrontierForCapacity(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADIncrementalTraversal
+  ): void {
+    let highestOffscreenAncestor: SplatRADFrontierCandidate | undefined;
+    for (let ancestor = candidate.parent; ancestor; ancestor = ancestor.parent) {
+      if (!ancestor.isVisible && ancestor.children) {
+        highestOffscreenAncestor = ancestor;
+      }
+    }
+    if (highestOffscreenAncestor) {
+      this.selectCapacityLimitedChildren(highestOffscreenAncestor, traversal, candidate);
+      if (traversal.state.allocatedRowCount <= this.maximumActiveRows) {
+        return;
+      }
+    }
+    let ancestor = candidate.parent;
+    while (ancestor && traversal.state.allocatedRowCount > this.maximumActiveRows) {
+      if (!ancestor.isVisible && ancestor.children) {
+        this.selectCapacityLimitedChildren(ancestor, traversal);
+      } else {
+        this.collapseFrontierCandidate(ancestor, traversal);
+      }
+      ancestor = ancestor.parent;
+    }
+  }
+
+  /** Keeps the highest-priority visible descendants when their offscreen parent cannot cover them. */
+  private selectCapacityLimitedChildren(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADFrontierSelection,
+    preferredDescendant?: SplatRADFrontierCandidate
+  ): boolean {
+    const {selectedRows, refinementQueue, state} = traversal;
+    const children = candidate.children;
+    if (!children) {
+      return false;
+    }
+    if (selectedRows.delete(candidate.globalRowIndex)) {
+      state.allocatedRowCount -= candidate.isVisible ? 1 : 0;
+    }
+    const selectedBranchVisibleRowCount = this.getSelectedBranchCounts(
+      candidate,
+      selectedRows
+    ).visible;
+    let remainingVisibleCapacity = Math.max(
+      this.maximumActiveRows - (state.allocatedRowCount - selectedBranchVisibleRowCount),
+      0
+    );
+    const orderedChildren = [...children].sort(
+      (left, right) =>
+        Number(this.isCandidateInBranch(right, preferredDescendant)) -
+          Number(this.isCandidateInBranch(left, preferredDescendant)) ||
+        Number(left.isVisible) - Number(right.isVisible) ||
+        right.priority - left.priority ||
+        left.globalRowIndex - right.globalRowIndex
+    );
+    let omittedVisibleChildCount = 0;
+    for (const child of orderedChildren) {
+      const currentSelection = this.getSelectedBranchCounts(child, selectedRows);
+      const currentVisibleRowCount = currentSelection.visible;
+      const hasCurrentSelection = currentSelection.total > 0;
+      const shouldKeepVisibleBranch = !child.isVisible || remainingVisibleCapacity > 0;
+      if (
+        hasCurrentSelection &&
+        shouldKeepVisibleBranch &&
+        currentVisibleRowCount <= remainingVisibleCapacity &&
+        (!child.isVisible || currentVisibleRowCount > 0)
+      ) {
+        remainingVisibleCapacity -= currentVisibleRowCount;
+        continue;
+      }
+      if (hasCurrentSelection) {
+        this.rememberCapacitySelectedBranch(child, selectedRows, state);
+        this.removeSelectedCandidateBranch(child, selectedRows, state);
+      }
+      if (!shouldKeepVisibleBranch) {
+        omittedVisibleChildCount++;
+        continue;
+      }
+      const restoredVisibleRowCount = this.restoreCapacitySelectedBranch(
+        child,
+        traversal,
+        remainingVisibleCapacity
+      );
+      if (restoredVisibleRowCount !== undefined) {
+        remainingVisibleCapacity -= restoredVisibleRowCount;
+        continue;
+      }
+      this.addFrontierCandidate(child, selectedRows, refinementQueue);
+      state.allocatedRowCount += child.isVisible ? 1 : 0;
+      remainingVisibleCapacity -= child.isVisible ? 1 : 0;
+    }
+    state.refinedRows.add(candidate.globalRowIndex);
+    candidate.isCapacityLimited ||= omittedVisibleChildCount > 0;
+    return true;
+  }
+
+  private isCandidateInBranch(
+    branch: SplatRADFrontierCandidate,
+    candidate?: SplatRADFrontierCandidate
+  ): boolean {
+    while (candidate) {
+      if (candidate === branch) {
+        return true;
+      }
+      candidate = candidate.parent;
+    }
+    return false;
+  }
+
+  /** Retargets dormant retained branches before touching the leaf currently carrying continuity. */
+  private makeRetargetQueue(
+    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
+  ): SplatRADPriorityQueue {
+    const visibleSelectedBranches = new Set<number>();
+    for (const candidate of selectedRows.values()) {
+      if (!candidate.isVisible) {
+        continue;
+      }
+      let ancestor: SplatRADFrontierCandidate | undefined = candidate;
+      while (ancestor) {
+        visibleSelectedBranches.add(ancestor.globalRowIndex);
+        ancestor = ancestor.parent;
+      }
+    }
+    return new SplatRADPriorityQueue((first, second) => {
+      const firstHasVisibleSelection = visibleSelectedBranches.has(first.globalRowIndex);
+      const secondHasVisibleSelection = visibleSelectedBranches.has(second.globalRowIndex);
+      return (
+        Number(secondHasVisibleSelection) - Number(firstHasVisibleSelection) ||
+        compareSplatRADCandidates(first, second)
+      );
+    });
+  }
+
+  private getCapacityLimitedAncestor(
+    candidate: SplatRADFrontierCandidate
+  ): SplatRADFrontierCandidate | undefined {
+    let ancestor = candidate.parent;
+    while (ancestor) {
+      if (ancestor.isCapacityLimited) {
+        return ancestor;
+      }
+      ancestor = ancestor.parent;
+    }
+    return undefined;
+  }
+
+  private rememberCapacitySelectedBranch(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>,
+    state: SplatRADTraversalState
+  ): void {
+    this.clearCapacityRetainedBranch(candidate, state.retainedCapacityRows);
+    this.captureSelectedBranch(candidate, selectedRows, state.retainedCapacityRows);
+  }
+
+  private clearCapacityRetainedBranch(
+    candidate: SplatRADFrontierCandidate,
+    retainedRows: Set<number>
+  ): void {
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      retainedRows.delete(branchCandidate.globalRowIndex);
+    });
+  }
+
+  private captureSelectedBranch(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>,
+    retainedRows: Set<number>
+  ): void {
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.get(branchCandidate.globalRowIndex) === branchCandidate) {
+        retainedRows.add(branchCandidate.globalRowIndex);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /** Restores a previously resolved dormant branch without republishing its coarse direct row. */
+  private restoreCapacitySelectedBranch(
+    candidate: SplatRADFrontierCandidate,
+    traversal: SplatRADFrontierSelection,
+    maximumVisibleRows: number
+  ): number | undefined {
+    const retainedCandidates: SplatRADFrontierCandidate[] = [];
+    this.collectCapacityRetainedCandidates(
+      candidate,
+      traversal.state.retainedCapacityRows,
+      retainedCandidates
+    );
+    const visibleRowCount = retainedCandidates.reduce(
+      (count, retainedCandidate) => count + (retainedCandidate.isVisible ? 1 : 0),
+      0
+    );
+    if (
+      retainedCandidates.length === 0 ||
+      visibleRowCount > maximumVisibleRows ||
+      (candidate.isVisible && visibleRowCount === 0)
+    ) {
+      return undefined;
+    }
+    for (const retainedCandidate of retainedCandidates) {
+      this.addFrontierCandidate(
+        retainedCandidate,
+        traversal.selectedRows,
+        traversal.refinementQueue
+      );
+    }
+    traversal.state.allocatedRowCount += visibleRowCount;
+    return visibleRowCount;
+  }
+
+  private collectCapacityRetainedCandidates(
+    candidate: SplatRADFrontierCandidate,
+    retainedRows: ReadonlySet<number>,
+    retainedCandidates: SplatRADFrontierCandidate[]
+  ): void {
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (retainedRows.has(branchCandidate.globalRowIndex)) {
+        retainedCandidates.push(branchCandidate);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private removeSelectedCandidateBranch(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: Map<number, SplatRADFrontierCandidate>,
+    state: SplatRADTraversalState
+  ): void {
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.delete(branchCandidate.globalRowIndex)) {
+        state.allocatedRowCount -= branchCandidate.isVisible ? 1 : 0;
+      }
+      state.refinedRows.delete(branchCandidate.globalRowIndex);
+    });
+  }
+
+  private getSelectedBranchCounts(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
+  ): {total: number; visible: number} {
+    let total = 0;
+    let visible = 0;
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.get(branchCandidate.globalRowIndex) === branchCandidate) {
+        total++;
+        visible += branchCandidate.isVisible ? 1 : 0;
+      }
+    });
+    return {total, visible};
+  }
+
+  private visitCandidateBranch(
+    candidate: SplatRADFrontierCandidate,
+    visit: (candidate: SplatRADFrontierCandidate) => boolean | void
+  ): void {
+    const candidates = [candidate];
+    while (candidates.length > 0) {
+      const branchCandidate = candidates.pop()!;
+      if (visit(branchCandidate) === false) {
+        continue;
+      }
+      const children = branchCandidate.children ?? [];
+      for (let childIndex = children.length - 1; childIndex >= 0; childIndex--) {
+        candidates.push(children[childIndex]);
+      }
+    }
+  }
+
+  /** Returns whether a queued retained row is now covered by a coherently selected ancestor. */
+  private hasSelectedFrontierAncestor(
+    candidate: SplatRADFrontierCandidate,
+    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
+  ): boolean {
+    let ancestor = candidate.parent;
+    while (ancestor) {
+      if (selectedRows.get(ancestor.globalRowIndex) === ancestor) {
+        return true;
+      }
+      ancestor = ancestor.parent;
+    }
+    return false;
+  }
+
   /** Publishes one coherent partial or complete frontier without changing source ownership. */
   private publishTraversal(traversal: SplatRADIncrementalTraversal): void {
-    const {selectedRows, refinementQueue, state} = traversal;
+    const {selectedRows, state} = traversal;
     state.selectedPages.clear();
     this.fallbackRowCount = 0;
     for (const candidate of selectedRows.values()) {
+      if (!candidate.isVisible) {
+        continue;
+      }
       this.selectRow(
         candidate.registeredPage,
         candidate.localRowIndex,
@@ -627,9 +1274,14 @@ export class SplatRADHierarchyManager {
 
     this.previouslyRefinedRows = new Set(state.refinedRows);
     const selectedFrontier = this.makeFrontier(state);
+    const hasPendingTraversal =
+      this.requiresRetarget ||
+      traversal.retargetQueue.length > 0 ||
+      traversal.refinementQueue.length > 0;
     const activePageIds = new Set([
       ...state.protectedPageIds,
-      ...selectedFrontier.map(entry => entry.id)
+      ...selectedFrontier.map(entry => entry.id),
+      ...(hasPendingTraversal ? this.ownedPinnedIds : [])
     ]);
     for (const entry of selectedFrontier) {
       const chunk = this.residencyManager.getChunk(entry.id);
@@ -639,15 +1291,16 @@ export class SplatRADHierarchyManager {
       }
     }
     this.releaseInactivePins(activePageIds);
+    this.requiresRefresh = false;
     this.updateFrontier(selectedFrontier);
-    this.synchronizeRequests(state.requestedPages);
+    if (hasPendingTraversal) {
+      this.synchronizeRequests(new Map([...this.pendingRequests, ...state.requestedPages]));
+    } else {
+      this.synchronizeRequests(state.requestedPages);
+    }
     for (const page of this.sortedPages) {
       page.lastDataRevision = page.page.data.revision;
     }
-    if (refinementQueue.length === 0) {
-      this.incrementalTraversal = undefined;
-    }
-    this.requiresRefresh = false;
   }
 
   private makeFrontierCandidate(
@@ -658,26 +1311,27 @@ export class SplatRADHierarchyManager {
     const page = registeredPage.page;
     const localRowIndex = globalRowIndex - page.data.rowIndexBase;
     const node = this.makeRowNode(registeredPage, localRowIndex);
-    if (!isSplatHierarchyNodeVisible(node, this.currentView?.modelViewProjectionMatrix)) {
-      this.culledRowCount++;
-      return undefined;
-    }
-    this.visibleRowCount++;
-
     const view = this.currentView;
     if (!view) {
       return undefined;
     }
+    const isVisible = isSplatHierarchyNodeVisible(node, view.modelViewProjectionMatrix);
+    if (isVisible) {
+      this.visibleRowCount++;
+    } else {
+      this.culledRowCount++;
+    }
     const screenSpaceError = getSplatRADScreenSpaceError(node, view);
-    const priority =
-      getSplatHierarchyFoveatedPriority(
-        node,
-        view,
-        view.foveation ?? this.foveation,
-        screenSpaceError
-      ) *
-      this.getAngularFoveation(node, view) *
-      this.lodSplatScale;
+    const priority = isVisible
+      ? getSplatHierarchyFoveatedPriority(
+          node,
+          view,
+          view.foveation ?? this.foveation,
+          screenSpaceError
+        ) *
+        this.getAngularFoveation(node, view) *
+        this.lodSplatScale
+      : 0;
     return {
       registeredPage,
       globalRowIndex,
@@ -685,6 +1339,8 @@ export class SplatRADHierarchyManager {
       node,
       priority,
       isFallback: false,
+      isCapacityLimited: false,
+      isVisible,
       ...(parent ? {parent} : {})
     };
   }
@@ -696,7 +1352,10 @@ export class SplatRADHierarchyManager {
   ): void {
     selectedRows.set(candidate.globalRowIndex, candidate);
     const childCount = candidate.registeredPage.page.childCounts?.[candidate.localRowIndex] ?? 0;
-    if (childCount > 0 && candidate.priority > this.getRefinementThreshold(candidate)) {
+    if (
+      childCount > 0 &&
+      (!candidate.isVisible || candidate.priority > this.getRefinementThreshold(candidate))
+    ) {
       refinementQueue.push(candidate);
     }
   }
@@ -713,11 +1372,12 @@ export class SplatRADHierarchyManager {
     const page = registeredPage.page;
     const childCount = page.childCounts?.[localRowIndex] ?? 0;
     const childStart = page.childStarts?.[localRowIndex] ?? 0;
+    const hasValidChildRange =
+      Number.isSafeInteger(childStart + childCount) && childStart + childCount <= 0x8000_0000;
     if (
       childCount === 0 ||
-      priority <= this.getRefinementThreshold(candidate) ||
-      !Number.isSafeInteger(childStart + childCount) ||
-      childStart + childCount > 0x8000_0000
+      (candidate.isVisible && priority <= this.getRefinementThreshold(candidate)) ||
+      !hasValidChildRange
     ) {
       refinementProgress.delete(globalRowIndex);
       return false;
@@ -744,14 +1404,23 @@ export class SplatRADHierarchyManager {
         continue;
       }
       progress.residentChildCount++;
-      if (childPage.page.id !== page.id) {
+      const child = this.makeFrontierCandidate(childPage, childStart + childOffset, candidate);
+      const childHierarchyCount =
+        childPage.page.childCounts?.[childStart + childOffset - childPage.page.data.rowIndexBase] ??
+        0;
+      const needsPublishedFallbackProtection = candidate.isVisible || Boolean(child?.isVisible);
+      if (
+        childPage.page.id !== page.id &&
+        (needsPublishedFallbackProtection || childHierarchyCount > 0)
+      ) {
         const chunk = this.residencyManager.getChunk(childPage.page.id);
         if (chunk) {
           this.protectChunk(chunk);
-          state.protectedPageIds.add(chunk.id);
+          if (needsPublishedFallbackProtection) {
+            state.protectedPageIds.add(chunk.id);
+          }
         }
       }
-      const child = this.makeFrontierCandidate(childPage, childStart + childOffset, candidate);
       if (child) {
         progress.childCandidates.push(child);
       }
@@ -768,16 +1437,27 @@ export class SplatRADHierarchyManager {
     }
 
     const {childCandidates} = progress;
-    if (
-      childCandidates.length === 0 ||
-      state.allocatedRowCount + childCandidates.length - 1 > this.maximumActiveRows
-    ) {
+    const visibleChildCount = childCandidates.reduce(
+      (visibleRowCount, child) => visibleRowCount + (child.isVisible ? 1 : 0),
+      0
+    );
+    const nextAllocatedRowCount =
+      state.allocatedRowCount - (candidate.isVisible ? 1 : 0) + visibleChildCount;
+    if (childCandidates.length === 0) {
+      return false;
+    }
+    candidate.children = childCandidates;
+    if (nextAllocatedRowCount > this.maximumActiveRows) {
+      if (!candidate.isVisible) {
+        this.selectCapacityLimitedChildren(candidate, {selectedRows, refinementQueue, state});
+      }
       return false;
     }
 
     selectedRows.delete(globalRowIndex);
-    state.allocatedRowCount += childCandidates.length - 1;
+    state.allocatedRowCount = nextAllocatedRowCount;
     state.refinedRows.add(globalRowIndex);
+    candidate.isCapacityLimited = false;
     for (const child of childCandidates) {
       this.addFrontierCandidate(child, selectedRows, refinementQueue);
     }
@@ -1039,7 +1719,7 @@ export class SplatRADHierarchyManager {
     }
   }
 
-  private pruneEvictedPages(): void {
+  private pruneEvictedPages(): boolean {
     let removedPage = false;
     for (const [pageId, registeredPage] of this.pagesById) {
       if (registeredPage.page.data.destroyed || !this.residencyManager.has(pageId)) {
@@ -1051,6 +1731,7 @@ export class SplatRADHierarchyManager {
     if (removedPage) {
       this.sortedPages = this.sortedPages.filter(page => this.pagesById.has(page.page.id));
     }
+    return removedPage;
   }
 
   private haveSourceRowsChanged(): boolean {
@@ -1059,6 +1740,7 @@ export class SplatRADHierarchyManager {
 
   private invalidateIncrementalTraversal(): void {
     this.incrementalTraversal = undefined;
+    this.requiresRetarget = false;
   }
 
   private validateRootRows(rootRows: readonly number[]): void {
@@ -1106,6 +1788,13 @@ export class SplatRADHierarchyManager {
 class SplatRADPriorityQueue {
   private readonly candidates: SplatRADFrontierCandidate[] = [];
 
+  constructor(
+    private readonly compareCandidates: (
+      first: SplatRADFrontierCandidate,
+      second: SplatRADFrontierCandidate
+    ) => number = compareSplatRADCandidates
+  ) {}
+
   get length(): number {
     return this.candidates.length;
   }
@@ -1114,7 +1803,7 @@ class SplatRADPriorityQueue {
     let index = this.candidates.push(candidate) - 1;
     while (index > 0) {
       const parentIndex = Math.floor((index - 1) / 2);
-      if (compareSplatRADCandidates(this.candidates[parentIndex], candidate) >= 0) {
+      if (this.compareCandidates(this.candidates[parentIndex], candidate) >= 0) {
         break;
       }
       this.candidates[index] = this.candidates[parentIndex];
@@ -1139,13 +1828,13 @@ class SplatRADPriorityQueue {
       const secondChildIndex = firstChildIndex + 1;
       const largestChildIndex =
         secondChildIndex < this.candidates.length &&
-        compareSplatRADCandidates(
+        this.compareCandidates(
           this.candidates[secondChildIndex],
           this.candidates[firstChildIndex]
         ) > 0
           ? secondChildIndex
           : firstChildIndex;
-      if (compareSplatRADCandidates(last, this.candidates[largestChildIndex]) >= 0) {
+      if (this.compareCandidates(last, this.candidates[largestChildIndex]) >= 0) {
         break;
       }
       this.candidates[index] = this.candidates[largestChildIndex];

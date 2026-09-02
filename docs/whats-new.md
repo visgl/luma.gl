@@ -142,6 +142,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/splats** NEW MODULE
 
 - **Gaussian splat rendering** - `SplatRenderer` draws caller-owned prepared GPU splat batches through reusable luma.gl rendering models on WebGPU and WebGL2.
+- **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
 - **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
 - **Incremental splat streaming** - New prepared batches append without concatenating source data, rebuilding previous batches, or transferring ownership to the renderer.
 - **Layered adapters** - File parsing stays in loaders.gl, Apache Arrow conversion stays in `@luma.gl/arrow`, and deck.gl integration stays in downstream applications.

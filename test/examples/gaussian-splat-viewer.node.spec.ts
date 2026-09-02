@@ -30,6 +30,7 @@ import {
   type LocalGaussianSplatLoadersConfiguration
 } from '../../examples/showcase/gaussian-splats/local-loaders';
 import {GaussianSplatRADSceneController} from '../../examples/showcase/gaussian-splats/rad-scene';
+import {makeGaussianSplatRenderProfile} from '../../examples/showcase/gaussian-splats/render-profile';
 import {
   GAUSSIAN_SPLAT_RAD_DECODER_WORKER_SOURCE,
   createGaussianSplatRADWorkerDecoder
@@ -46,6 +47,23 @@ afterEach(() => {
 });
 
 describe('published Gaussian splat viewer', () => {
+  test('uses conservative RAD budgets on coarse-pointer mobile devices', () => {
+    expect(makeGaussianSplatRenderProfile({coarsePointer: true, maxTouchPoints: 5})).toEqual({
+      isMobile: true,
+      maxConcurrentPageLoads: 2,
+      maxDecodeWorkers: 1,
+      maxResidentSplatCount: 250_000,
+      maxTraversalRows: 2047
+    });
+    expect(makeGaussianSplatRenderProfile({coarsePointer: false, maxTouchPoints: 5})).toEqual({
+      isMobile: false,
+      maxConcurrentPageLoads: 4,
+      maxDecodeWorkers: 2,
+      maxResidentSplatCount: 1_000_000,
+      maxTraversalRows: 8191
+    });
+  });
+
   test('defaults WebGPU to graph execution while preserving explicit CPU and WebGL fallbacks', () => {
     expect(getGaussianSplatExecutionMode('webgpu')).toBe('graph');
     expect(getGaussianSplatExecutionMode('webgpu', '?scene=truck')).toBe('graph');
@@ -219,7 +237,7 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
     expect(viewerPanel).toContain('data-gaussian-splats-rad-diagnostics');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
-    expect(viewerSource).toContain('continueTraversal(RAD_TRAVERSAL_SLICE_ROWS)');
+    expect(viewerSource).toContain('continueTraversal(this.renderProfile.maxTraversalRows)');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.maxResidentSplatCount');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.expectedSplatCount');
     expect(viewerSource).not.toContain('this.activateGraphRenderer()');
@@ -325,7 +343,17 @@ describe('published Gaussian splat viewer', () => {
       expectedSplatCount: 50_937_127,
       maxResidentSplatCount: 1_000_000
     });
+    expect(getLocalGaussianSplatLoadersConfiguration('coit', 250_000)).toMatchObject({
+      sceneId: 'coit',
+      maxResidentSplatCount: 250_000
+    });
     expect(getLocalGaussianSplatLoadersConfiguration()?.sceneId).toBe('train');
+
+    installViewerWindow('?residentSplats=500000');
+    expect(getLocalGaussianSplatLoadersConfiguration('coit', 250_000)).toMatchObject({
+      sceneId: 'coit',
+      maxResidentSplatCount: 500_000
+    });
 
     installViewerWindow('?scene=truck');
     expect(getLocalGaussianSplatLoadersConfiguration('coit')).toMatchObject({
@@ -1086,7 +1114,7 @@ describe('published Gaussian splat viewer', () => {
     device.destroy();
   });
 
-  test('cancels obsolete RAD hierarchy requests and restores demand after camera return', async () => {
+  test('preserves unknown RAD hierarchy demand behind an offscreen parent', async () => {
     const source = makeGaussianRADFixture(1, {
       chunkSize: 10,
       includeLoDTree: true
@@ -1116,13 +1144,12 @@ describe('published Gaussian splat viewer', () => {
       ...visibleView,
       modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -100, 0, 0, 1]
     });
-    await scene.waitForIdle();
-    expect(requestedPageSignals[1]?.aborted).toBe(true);
+    expect(requestedPageSignals[1]?.aborted).toBe(false);
     expect(scene.hierarchy.frontier).toHaveLength(0);
 
     scene.update(visibleView);
-    await vi.waitFor(() => expect(pendingPageResponses).toHaveLength(3));
-    pendingPageResponses[2]?.();
+    expect(pendingPageResponses).toHaveLength(2);
+    pendingPageResponses[1]?.();
     await scene.waitForIdle();
 
     expect(scene.hierarchy.frontier.map(entry => entry.data.rowIndexBase)).toEqual([10]);
@@ -1134,7 +1161,7 @@ describe('published Gaussian splat viewer', () => {
     device.destroy();
   });
 
-  test('restarts canceled RAD page demand when the camera returns before request cleanup', async () => {
+  test('reuses in-flight RAD page demand when the camera returns before cleanup', async () => {
     const source = makeGaussianRADFixture(1, {
       chunkSize: 10,
       includeLoDTree: true
@@ -1162,11 +1189,11 @@ describe('published Gaussian splat viewer', () => {
       modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -100, 0, 0, 1]
     });
     scene.update(visibleView);
-    expect(requestedPageSignals[1]?.aborted).toBe(true);
+    expect(requestedPageSignals[1]?.aborted).toBe(false);
     expect(scene.hierarchy.stats.fallbackRowCount).toBe(1);
 
-    await vi.waitFor(() => expect(pendingPageResponses).toHaveLength(3));
-    pendingPageResponses[2]?.();
+    expect(pendingPageResponses).toHaveLength(2);
+    pendingPageResponses[1]?.();
     await scene.waitForIdle();
 
     expect(scene.hierarchy.frontier.map(entry => entry.data.rowIndexBase)).toEqual([10]);
