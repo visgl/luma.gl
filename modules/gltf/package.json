@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltf",
-  "version": "9.4.0-beta.4",
+  "version": "9.4.0-beta.5",
   "description": "Standards-first glTF rendering, physical materials, animation, and lossless asset interchange",
   "type": "module",
   "license": "MIT",

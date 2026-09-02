@@ -2,6 +2,12 @@
 
 ## v9.4
 
+
+### v9.4.0-beta.5
+
+- fix(webgl): UBO reflection fallback for Firefox/AMD (#3172)
+- fix(webgpu): report texture capabilities accurately (#3139)
+
 ### v9.4.0-beta.4
 
 - feat(shadertools): WebGPU implementation of tan_fp32 (#3156)
