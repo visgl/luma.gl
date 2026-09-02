@@ -4,6 +4,7 @@
 
 import {type TextureFormat} from '../../shadertypes/texture-types/texture-formats';
 import {
+  type CompositeShaderType,
   type VariableShaderType,
   type AttributeShaderType
 } from '../../shadertypes/shader-types/shader-types';
@@ -90,6 +91,14 @@ export type UniformBufferBindingLayout = {
   minBindingSize?: number;
   /** The uniforms in this uniform buffer */
   uniforms?: UniformInfo[];
+};
+
+/** Host-side std140 metadata for a named GLSL uniform block. */
+export type UniformBlockLayout = {
+  /** GLSL uniform block name. */
+  name: string;
+  /** Ordered member types used to derive the std140 layout. */
+  uniformTypes: Readonly<Record<string, CompositeShaderType>>;
 };
 
 export type UniformInfo = {
