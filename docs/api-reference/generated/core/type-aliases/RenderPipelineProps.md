@@ -2,7 +2,7 @@
 
 > **RenderPipelineProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L20)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L25)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 

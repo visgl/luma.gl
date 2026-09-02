@@ -2,7 +2,7 @@
 
 > **ShaderLayout** = `object`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L38)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L39)
 
 Describes all shader binding points for a `RenderPipeline` or `ComputePipeline` A ShaderLayout describes the static structure of a shader pipeline. It also allows the numeric locations in the shader to accessed with the same variable names used in the shader.
 
@@ -40,7 +40,7 @@ A ShaderLayout needs to be complemented by a BufferLayout that describes the act
 
 > **attributes**: [`AttributeDeclaration`](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeDeclaration.md)\[]
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L40)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L41)
 
 All attributes, their locations, and basic type information. Also an auto-deduced step mode
 
@@ -50,7 +50,7 @@ All attributes, their locations, and basic type information. Also an auto-deduce
 
 > **bindings**: [`BindingDeclaration`](https://luma.gl/docs/api-reference/generated/core/type-aliases/BindingDeclaration.md)\[]
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L42)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L43)
 
 All binding points (textures, samplers, uniform buffers) with their locations and type
 
@@ -60,7 +60,7 @@ All binding points (textures, samplers, uniform buffers) with their locations an
 
 > `optional` **uniforms?**: `any`\[]
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L44)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L45)
 
 WebGL only (WebGPU use bindings and uniform buffers)
 
@@ -70,6 +70,6 @@ WebGL only (WebGPU use bindings and uniform buffers)
 
 > `optional` **varyings?**: [`VaryingBinding`](https://luma.gl/docs/api-reference/generated/core/type-aliases/VaryingBinding.md)\[]
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L46)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L47)
 
 WebGL2 only (WebGPU use compute shaders)

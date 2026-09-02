@@ -2,7 +2,7 @@
 
 > **\_getTextureFormatDefinition**(`format`): `TextureFormatDefinition`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-format-table.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-table.ts#L59)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-format-table.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-table.ts#L83)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

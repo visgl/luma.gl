@@ -42,7 +42,7 @@ Defined in: [modules/core/src/portable/uniform-block.ts:30](https://github.com/v
 
 ### bindingLayout[​](#bindinglayout "Direct link to bindingLayout")
 
-> `readonly` **bindingLayout**: `Record`<`string`, `UniformInfo`> = `{}`
+> `readonly` **bindingLayout**: `Record`<`string`, [`UniformInfo`](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformInfo.md)> = `{}`
 
 Defined in: [modules/core/src/portable/uniform-block.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/portable/uniform-block.ts#L27)
 

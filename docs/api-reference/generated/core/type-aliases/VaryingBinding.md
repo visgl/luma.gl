@@ -2,7 +2,7 @@
 
 > **VaryingBinding** = `object`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:197](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L197)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:206](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L206)
 
 Describes a varying binding for a program
 
@@ -16,7 +16,7 @@ Varyings are WebGL-only
 
 > **location**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:198](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L198)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L207)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:198](https://github
 
 > **name**: `string`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:199](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L199)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:208](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L208)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:199](https://github
 
 > **size**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:201](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L201)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:210](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L210)
 
 ***
 
@@ -40,4 +40,4 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:201](https://github
 
 > **type**: [`AttributeShaderType`](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeShaderType.md)
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L200)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:209](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L209)

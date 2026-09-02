@@ -353,7 +353,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: CommandEncoder](https://luma.gl/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/docs/api-reference/generated/core/classes/Device.md): Defined in500
+- [Abstract Class: Device](https://luma.gl/docs/api-reference/generated/core/classes/Device.md): Defined in502
 - [Class: DeviceFeatures](https://luma.gl/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in248
 - [Abstract Class: DeviceLimits](https://luma.gl/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in96
 - [Abstract Class: ExternalTexture](https://luma.gl/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
@@ -366,7 +366,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: RenderBundle](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundle.md): Defined in53
 - [Abstract Class: RenderBundleEncoder](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundleEncoder.md): Defined in75
 - [Abstract Class: RenderPass](https://luma.gl/docs/api-reference/generated/core/classes/RenderPass.md): Defined in102
-- [Abstract Class: RenderPipeline](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in74
+- [Abstract Class: RenderPipeline](https://luma.gl/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in82
 - [Abstract Class: Resource<Props>](https://luma.gl/docs/api-reference/generated/core/classes/Resource.md): Defined in97
 - [Abstract Class: Sampler](https://luma.gl/docs/api-reference/generated/core/classes/Sampler.md): Defined in47
 - [Abstract Class: Shader](https://luma.gl/docs/api-reference/generated/core/classes/Shader.md): Defined in34
@@ -412,7 +412,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Function: setTextureImageData()](https://luma.gl/docs/api-reference/generated/core/functions/setTextureImageData.md): setTextureImageData\(arrayBuffer, memoryLayout, format, data, image?): void
 - [Function: writePixel()](https://luma.gl/docs/api-reference/generated/core/functions/writePixel.md): writePixel(dataView, bitOffset, bitsPerChannel, pixel): void
 - [Interface: StatsManager](https://luma.gl/docs/api-reference/generated/core/interfaces/StatsManager.md): Defined in32
-- [Interface: TextureFormatDecoder](https://luma.gl/docs/api-reference/generated/core/interfaces/TextureFormatDecoder.md): Defined in43
+- [Interface: TextureFormatDecoder](https://luma.gl/docs/api-reference/generated/core/interfaces/TextureFormatDecoder.md): Defined in44
 - [Type Alias: ArrayShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/ArrayShaderType.md): ArrayShaderType = readonly \[CompositeShaderType, number\]
 - [Type Alias: AttachDeviceProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttachDeviceProps.md): AttachDeviceProps = object & DeviceProps
 - [Type Alias: AttributeBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeBinding.md): AttributeBinding = object
@@ -530,7 +530,9 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: TypedArrayConstructorT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArrayConstructorT.md): TypedArrayConstructorT\ = T extends "uint8" ? Uint8ArrayConstructor T extends "unorm8" ? Uint8ArrayConstructor T extends "uint16" ? Uint16ArrayConstructor T extends "unorm16" ? Uint16ArrayConstructor T extends "uint32" ? Uint32ArrayConstructor ... extends ... ? ... : ...
 - [Type Alias: UniformBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBinding.md): UniformBinding = object
 - [Type Alias: UniformBlockBinding](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBlockBinding.md): UniformBlockBinding = object
+- [Type Alias: UniformBlockLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBlockLayout.md): UniformBlockLayout = object
 - [Type Alias: UniformBufferBindingLayout](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformBufferBindingLayout.md): UniformBufferBindingLayout = object
+- [Type Alias: UniformInfo](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformInfo.md): UniformInfo = object
 - [Type Alias: UniformValue](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformValue.md): UniformValue = number \| boolean \| Readonly\
 - [Type Alias: VariableShaderType](https://luma.gl/docs/api-reference/generated/core/type-aliases/VariableShaderType.md): VariableShaderType = "i32" \| "u32" \| "f32" \| "f16" \| ` vec2  \|  vec3  \|  vec4  \|  mat2x2  \|  mat2x3  \|  mat2x4  \|  mat3x2  \|  mat3x3  \|  mat3x4  \|  mat4x2  \|  mat4x3  \|  mat4x4 `
 - [Type Alias: VariableShaderTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/VariableShaderTypeT.md): VariableShaderTypeT\ = T extends VariableShaderTypeAlias ? VariableShaderTypeAliasMap\[T\] : T
@@ -538,7 +540,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: VertexArrayProps](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md): VertexArrayProps = ResourceProps & object
 - [Type Alias: VertexFormat](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexFormat.md): VertexFormat = "uint8" \| "uint8x2" \| "uint8x3-webgl" \| "uint8x4" \| "sint8" \| "sint8x2" \| "sint8x3-webgl" \| "sint8x4" \| "unorm8" \| "unorm8x2" \| "unorm8x3-webgl" \| "unorm8x4" \| "unorm8x4-bgra" \| "unorm10-10-10-2" \| "snorm8" \| "snorm8x2" \| "snorm8x3-webgl" \| "snorm8x4" \| "uint16" \| "sint16" \| "unorm16" \| "snorm16" \| "uint16x2" \| "uint16x3-webgl" \| "uint16x4" \| "sint16x2" \| "sint16x3-webgl" \| "sint16x4" \| "unorm16x2" \| "unorm16x3-webgl" \| "unorm16x4" \| "snorm16x2" \| "snorm16x3-webgl" \| "snorm16x4" \| "uint32" \| "uint32x2" \| "uint32x3" \| "uint32x4" \| "sint32" \| "sint32x2" \| "sint32x3" \| "sint32x4" \| "float16" \| "float16x2" \| "float16x4" \| "float32" \| "float32x2" \| "float32x3" \| "float32x4"
 - [Type Alias: VertexFormatDataTypeT<T>](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexFormatDataTypeT.md): VertexFormatDataTypeT\ = T extends VertexFormatUint8 ? "uint8" T extends VertexFormatUnorm8 ? "unorm8" T extends VertexFormatUint16 ? "uint16" T extends VertexFormatUnorm16 ? "unorm16" T extends VertexFormatUint32 ? "uint32" ... extends ... ? ... : ...
-- [Type Alias: WebGPUDeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
+- [Type Alias: WebGPUDeviceFeature](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeature.md): WebGPUDeviceFeature = "core-features-and-limits" \| "depth-clip-control" \| "depth32float-stencil8" \| "texture-compression-bc" \| "texture-compression-bc-sliced-3d" \| "texture-compression-etc2" \| "texture-compression-astc" \| "texture-compression-astc-sliced-3d" \| "timestamp-query" \| "indirect-first-instance" \| "shader-f16" \| "rg11b10ufloat-renderable" \| "bgra8unorm-storage" \| "float32-filterable" \| "float32-blendable" \| "texture-formats-tier1" \| "texture-formats-tier2" \| "clip-distances" \| "dual-source-blending" \| "subgroups"
 - [Type Alias: WebGPUDeviceFeatureLevel](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUDeviceFeatureLevel.md): WebGPUDeviceFeatureLevel = Exclude\
 - [Type Alias: WebGPUFeatureLevel](https://luma.gl/docs/api-reference/generated/core/type-aliases/WebGPUFeatureLevel.md): WebGPUFeatureLevel = "core" \| "max" \| "compatibility" \| "best-available"
 - [Variable: dataTypeDecoder](https://luma.gl/docs/api-reference/generated/core/variables/dataTypeDecoder.md): const dataTypeDecoder: DataTypeDecoder

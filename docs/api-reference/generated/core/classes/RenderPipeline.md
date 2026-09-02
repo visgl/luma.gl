@@ -1,6 +1,6 @@
 # Abstract Class: RenderPipeline
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L74)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L82)
 
 A compiled and linked shader program
 
@@ -14,7 +14,7 @@ A compiled and linked shader program
 
 > **new RenderPipeline**(`device`, `props`): `RenderPipeline`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L111)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:119](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L119)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -40,7 +40,7 @@ Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:111](https://
 
 > `readonly` **bufferLayout**: [`BufferLayout`](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferLayout.md)\[]
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L85)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L93)
 
 Buffer map describing buffer interleaving etc
 
@@ -78,7 +78,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **fs**: [`Shader`](https://luma.gl/docs/api-reference/generated/core/classes/Shader.md) | `null`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L80)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L88)
 
 ***
 
@@ -100,7 +100,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **hash**: `string` = `''`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:89](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L89)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L97)
 
 The hash of the pipeline
 
@@ -124,7 +124,7 @@ props.id, for debugging.
 
 > **linkStatus**: `"error"` | `"pending"` | `"success"` = `'pending'`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L87)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L95)
 
 The linking status of the pipeline. 'pending' if linking is asynchronous, and on production
 
@@ -148,7 +148,7 @@ The props that this resource was created with
 
 > **shaderLayout**: [`ShaderLayout`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ShaderLayout.md)
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L83)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L91)
 
 The merged layout
 
@@ -158,7 +158,7 @@ The merged layout
 
 > **sharedRenderPipeline**: [`SharedRenderPipeline`](https://luma.gl/docs/api-reference/generated/core/classes/SharedRenderPipeline.md) | `null` = `null`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L91)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L99)
 
 Optional shared backend implementation
 
@@ -182,7 +182,7 @@ User data object, reserved for the application
 
 > `abstract` `readonly` **vs**: [`Shader`](https://luma.gl/docs/api-reference/generated/core/classes/Shader.md)
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L79)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L87)
 
 ***
 
@@ -190,7 +190,7 @@ Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:79](https://g
 
 > `static` **defaultProps**: `Required`<[`RenderPipelineProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPipelineProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L158)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L166)
 
 Default properties for resource
 
@@ -206,7 +206,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L75)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L83)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -224,7 +224,7 @@ Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:75](https://g
 
 > **get** **isErrored**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L103)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L111)
 
 Whether shader or pipeline compilation/linking has failed
 
@@ -260,7 +260,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **isPending**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:94](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L94)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L102)
 
 Whether shader or pipeline compilation/linking is still in progress
 
@@ -422,7 +422,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **draw**(`options`): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L122)
+Defined in: [modules/core/src/adapter/resources/render-pipeline.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pipeline.ts#L130)
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
