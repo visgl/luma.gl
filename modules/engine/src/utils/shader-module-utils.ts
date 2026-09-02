@@ -81,15 +81,23 @@ export function shaderModuleHasUniforms(module: ShaderModule): boolean {
 export function getShaderModuleUniformBlockLayouts(modules: ShaderModule[]): UniformBlockLayout[] {
   const uniformBlockLayouts: UniformBlockLayout[] = [];
   for (const module of modules) {
-    const uniformBlockName = getShaderModuleUniformBlockName(module);
-    const hasStd140Block = [module.vs, module.fs].some(shaderSource =>
-      shaderSource
-        ? getGLSLUniformBlocks(shaderSource).some(
-            block => block.blockName === uniformBlockName && block.isStd140
-          )
-        : false
+    const defaultUniformBlockName = getShaderModuleUniformBlockName(module);
+    const std140BlockNames = new Set(
+      [module.vs, module.fs].flatMap(shaderSource =>
+        shaderSource
+          ? getGLSLUniformBlocks(shaderSource)
+              .filter(block => block.isStd140)
+              .map(block => block.blockName)
+          : []
+      )
     );
-    if (shaderModuleHasUniforms(module) && hasStd140Block) {
+    const uniformBlockName = std140BlockNames.has(defaultUniformBlockName)
+      ? defaultUniformBlockName
+      : std140BlockNames.size === 1
+        ? std140BlockNames.values().next().value
+        : undefined;
+
+    if (shaderModuleHasUniforms(module) && uniformBlockName) {
       uniformBlockLayouts.push({name: uniformBlockName, uniformTypes: module.uniformTypes!});
     }
   }
