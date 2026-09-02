@@ -190,7 +190,7 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   ]
 };
 
-test('ShaderPassRenderer compute optimization requires storage-capable output formats', t => {
+it('ShaderPassRenderer compute optimization requires storage-capable output formats', () => {
   const pipeline: ShaderPassPipeline<'output'> = {
     name: 'storage-capability-gate',
     renderTargets: {output: {format: 'bgra8unorm', storage: true}},
@@ -228,18 +228,15 @@ test('ShaderPassRenderer compute optimization requires storage-capable output fo
     })
   } as unknown as Device;
 
-  t.equal(
+  expect(
     supportsComputeOptimization(device, pipeline),
-    false,
     'unsupported storage format selects the render-pass fallback'
-  );
+  ).toBe(false);
   supportsStorage = true;
-  t.equal(
+  expect(
     supportsComputeOptimization(device, pipeline),
-    true,
     'storage-capable format enables the compute optimization'
-  );
-  t.end();
+  ).toBe(true);
 });
 
 const tintPipeline: ShaderPassPipeline<'scratch'> = {
