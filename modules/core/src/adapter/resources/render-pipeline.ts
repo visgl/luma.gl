@@ -4,7 +4,12 @@
 
 import type {Device} from '../device';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
-import type {ShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';
+import type {
+  ShaderLayout,
+  Bindings,
+  BindingsByGroup,
+  UniformBlockLayout
+} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 import type {
   TextureFormatColor,
@@ -61,6 +66,9 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Internal hook for backend-specific shared pipeline implementations. */
   _sharedRenderPipeline?: SharedRenderPipeline;
+
+  /** @internal Host-side layouts for shader-module GLSL uniform blocks. */
+  _uniformBlockLayouts?: UniformBlockLayout[];
 
   /** @deprecated Set bindings on RenderPass instead. Will be removed in the next major release. */
   bindings?: Bindings;
@@ -178,6 +186,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     bufferMode: undefined!,
     disableWarnings: false,
     _sharedRenderPipeline: undefined!,
+    _uniformBlockLayouts: [],
     bindings: undefined!,
     bindGroups: undefined!
   };

@@ -438,8 +438,32 @@ it('PipelineFactory#caching with shaderLayout on webgl', async () => {
     'Reuses the underlying WebGLProgram across shader layout variants'
   ).toBe(overrideLayoutPipeline.handle);
 
+  const firstUniformLayoutPipeline = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    _uniformBlockLayouts: [{name: 'firstUniforms', uniformTypes: {value: 'f32'}}]
+  });
+  const secondUniformLayoutPipeline = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    _uniformBlockLayouts: [{name: 'secondUniforms', uniformTypes: {value: 'vec4<f32>'}}]
+  });
+
+  expect(
+    firstUniformLayoutPipeline,
+    'Does not cache wrappers across incompatible module uniform layouts'
+  ).not.toBe(secondUniformLayoutPipeline);
+  expect(
+    firstUniformLayoutPipeline.handle,
+    'Keeps module uniform metadata out of the shared WebGLProgram cache key'
+  ).toBe(secondUniformLayoutPipeline.handle);
+
   pipelineFactory.release(defaultPipeline);
   pipelineFactory.release(overrideLayoutPipeline);
+  pipelineFactory.release(firstUniformLayoutPipeline);
+  pipelineFactory.release(secondUniformLayoutPipeline);
 
   void 0;
 });
