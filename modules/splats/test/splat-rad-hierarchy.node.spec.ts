@@ -1278,6 +1278,46 @@ it('SplatRADHierarchyManager retargets a resolved frontier without collapsing ca
   void 0;
 });
 
+it('SplatRADHierarchyManager retargets deep retained branches without recursive tree scans', () => {
+  const device = new NullDevice({});
+  const rowCount = 20_000;
+  const childCounts = new Array(rowCount).fill(0);
+  const childStarts = new Array(rowCount).fill(0);
+  childCounts[0] = 2;
+  childStarts[0] = 1;
+  childCounts[1] = 1;
+  childStarts[1] = 3;
+  for (let rowIndex = 3; rowIndex < rowCount - 1; rowIndex++) {
+    childCounts[rowIndex] = 1;
+    childStarts[rowIndex] = rowIndex + 1;
+  }
+  const page = makeRADPage(device, {
+    id: 'deep-retained-branch',
+    rowIndexBase: 0,
+    positions: new Array(rowCount * 3).fill(0),
+    childCounts,
+    childStarts
+  });
+  const manager = new SplatRADHierarchyManager({
+    pages: [page],
+    maximumScreenSpaceError: 0,
+    maximumActiveRows: 2
+  });
+
+  manager.update(makeRADView());
+  expect(manager.stats.activeRowCount, 'resolves both deep-tree leaves').toBe(2);
+  expect(
+    () => manager.update({...makeRADView(), cameraPosition: [0.01, 0, 2]}),
+    'retargets without overflowing the JavaScript call stack'
+  ).not.toThrow();
+  expect(manager.stats.activeRowCount, 'retains both visible leaves after retargeting').toBe(2);
+
+  manager.destroy();
+  page.data.destroy();
+  device.destroy();
+  void 0;
+});
+
 it('SplatRADHierarchyManager preserves overlap while retargeting newly visible branches', () => {
   const device = new NullDevice({});
   const page = makeRADPage(device, {

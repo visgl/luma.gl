@@ -38,6 +38,7 @@ import {
   type LocalGaussianSplatLoadersConfiguration
 } from './local-loaders';
 import {GaussianSplatRADSceneController} from './rad-scene';
+import {makeGaussianSplatRenderProfile, type GaussianSplatRenderProfile} from './render-profile';
 import {
   createGaussianSplatRADWorkerDecoder,
   type GaussianSplatRADWorkerDecoder
@@ -59,8 +60,6 @@ const SPARK_RAD_CAMERA_FIELD_OF_VIEW = (75 * Math.PI) / 180;
 const SPARK_RAD_GAUSSIAN_SUPPORT_RADIUS = Math.sqrt(8);
 const SPARK_RAD_KERNEL_SIZE = Math.sqrt(0.3);
 const SPARK_RAD_LEVEL_OF_DETAIL_SCALE = 1.5;
-const MAXIMUM_RAD_DECODE_WORKERS = 2;
-const RAD_TRAVERSAL_SLICE_ROWS = 8191;
 const RAD_CAMERA_SETTLE_DELAY_MILLISECONDS = 220;
 const MAXIMUM_CAMERA_BOUND_SAMPLES = 8192;
 const SPLAT_SORT_OPTIONS: readonly PanelSelectOption[] = [
@@ -178,6 +177,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
   private readonly executionMode: GaussianSplatExecutionMode;
   private readonly graphInspector: GPUCommandGraphInspector | undefined;
+  private readonly renderProfile: GaussianSplatRenderProfile;
   private inspectedGraph: GPUCommandGraphInspectorGraph | undefined;
   private readonly graphInspectorPanels: GPUCommandGraphInspectorPanel[] = [];
   private graphFallbackReason: string | undefined;
@@ -224,6 +224,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   }: AnimationProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}) {
     super();
     this.device = device;
+    this.renderProfile = makeGaussianSplatRenderProfile({
+      coarsePointer:
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches,
+      maxTouchPoints: typeof navigator === 'undefined' ? 0 : navigator.maxTouchPoints
+    });
     this.executionMode = getGaussianSplatExecutionMode(
       device.type,
       typeof window === 'undefined' ? '' : window.location.search
@@ -239,7 +246,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
             }
           })
         : undefined;
-    this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration(defaultScene);
+    this.localLoadersConfiguration = getLocalGaussianSplatLoadersConfiguration(
+      defaultScene,
+      this.renderProfile.maxResidentSplatCount
+    );
     const isRADScene = this.localLoadersConfiguration?.sourceFormat === 'RAD';
     this.clearColor =
       this.localLoadersConfiguration?.sceneId === 'coit' ? COIT_CLEAR_COLOR : CLEAR_COLOR;
@@ -562,12 +572,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
 
     const workerDecoder = createGaussianSplatRADWorkerDecoder(configuration, {
-      maxWorkers: MAXIMUM_RAD_DECODE_WORKERS
+      maxWorkers: this.renderProfile.maxDecodeWorkers
     });
     this.radWorkerDecoder = workerDecoder;
     const pageSource = await openLocalGaussianSplatRADPageSource(configuration, {
       signal: loadAbortController.signal,
-      maxConcurrentLoads: 4,
+      maxConcurrentLoads: this.renderProfile.maxConcurrentPageLoads,
       ...(workerDecoder
         ? {
             decodePage: context => workerDecoder.decodePage(context),
@@ -613,7 +623,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       lodRenderScale: SPARK_RAD_LEVEL_OF_DETAIL_SCALE,
       coneFov0: 70,
       refinementHysteresis: 0.15,
-      maxTraversalRows: RAD_TRAVERSAL_SLICE_ROWS,
+      maxTraversalRows: this.renderProfile.maxTraversalRows,
       onFrontierChange: (frontier, stats) => {
         if (this.isFinalized || !(this.renderer instanceof GPUPagedSplatRenderer)) {
           return;
@@ -785,7 +795,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       return;
     }
     if (sceneController.hasPendingTraversal) {
-      sceneController.continueTraversal(RAD_TRAVERSAL_SLICE_ROWS);
+      sceneController.continueTraversal(this.renderProfile.maxTraversalRows);
       this.requestRedraw();
     }
     if (!sceneController.hasPendingTraversal && sceneController.pendingPageCount === 0) {

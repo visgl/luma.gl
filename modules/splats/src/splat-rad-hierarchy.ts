@@ -1005,7 +1005,10 @@ export class SplatRADHierarchyManager {
     if (selectedRows.delete(candidate.globalRowIndex)) {
       state.allocatedRowCount -= candidate.isVisible ? 1 : 0;
     }
-    const selectedBranchVisibleRowCount = this.countVisibleSelectedBranch(candidate, selectedRows);
+    const selectedBranchVisibleRowCount = this.getSelectedBranchCounts(
+      candidate,
+      selectedRows
+    ).visible;
     let remainingVisibleCapacity = Math.max(
       this.maximumActiveRows - (state.allocatedRowCount - selectedBranchVisibleRowCount),
       0
@@ -1020,8 +1023,9 @@ export class SplatRADHierarchyManager {
     );
     let omittedVisibleChildCount = 0;
     for (const child of orderedChildren) {
-      const currentVisibleRowCount = this.countVisibleSelectedBranch(child, selectedRows);
-      const hasCurrentSelection = this.hasSelectedBranch(child, selectedRows);
+      const currentSelection = this.getSelectedBranchCounts(child, selectedRows);
+      const currentVisibleRowCount = currentSelection.visible;
+      const hasCurrentSelection = currentSelection.total > 0;
       const shouldKeepVisibleBranch = !child.isVisible || remainingVisibleCapacity > 0;
       if (
         hasCurrentSelection &&
@@ -1075,9 +1079,20 @@ export class SplatRADHierarchyManager {
   private makeRetargetQueue(
     selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
   ): SplatRADPriorityQueue {
+    const visibleSelectedBranches = new Set<number>();
+    for (const candidate of selectedRows.values()) {
+      if (!candidate.isVisible) {
+        continue;
+      }
+      let ancestor: SplatRADFrontierCandidate | undefined = candidate;
+      while (ancestor) {
+        visibleSelectedBranches.add(ancestor.globalRowIndex);
+        ancestor = ancestor.parent;
+      }
+    }
     return new SplatRADPriorityQueue((first, second) => {
-      const firstHasVisibleSelection = this.countVisibleSelectedBranch(first, selectedRows) > 0;
-      const secondHasVisibleSelection = this.countVisibleSelectedBranch(second, selectedRows) > 0;
+      const firstHasVisibleSelection = visibleSelectedBranches.has(first.globalRowIndex);
+      const secondHasVisibleSelection = visibleSelectedBranches.has(second.globalRowIndex);
       return (
         Number(secondHasVisibleSelection) - Number(firstHasVisibleSelection) ||
         compareSplatRADCandidates(first, second)
@@ -1098,16 +1113,6 @@ export class SplatRADHierarchyManager {
     return undefined;
   }
 
-  private hasSelectedBranch(
-    candidate: SplatRADFrontierCandidate,
-    selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
-  ): boolean {
-    if (selectedRows.get(candidate.globalRowIndex) === candidate) {
-      return true;
-    }
-    return (candidate.children ?? []).some(child => this.hasSelectedBranch(child, selectedRows));
-  }
-
   private rememberCapacitySelectedBranch(
     candidate: SplatRADFrontierCandidate,
     selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>,
@@ -1121,10 +1126,9 @@ export class SplatRADHierarchyManager {
     candidate: SplatRADFrontierCandidate,
     retainedRows: Set<number>
   ): void {
-    retainedRows.delete(candidate.globalRowIndex);
-    for (const child of candidate.children ?? []) {
-      this.clearCapacityRetainedBranch(child, retainedRows);
-    }
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      retainedRows.delete(branchCandidate.globalRowIndex);
+    });
   }
 
   private captureSelectedBranch(
@@ -1132,13 +1136,13 @@ export class SplatRADHierarchyManager {
     selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>,
     retainedRows: Set<number>
   ): void {
-    if (selectedRows.get(candidate.globalRowIndex) === candidate) {
-      retainedRows.add(candidate.globalRowIndex);
-      return;
-    }
-    for (const child of candidate.children ?? []) {
-      this.captureSelectedBranch(child, selectedRows, retainedRows);
-    }
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.get(branchCandidate.globalRowIndex) === branchCandidate) {
+        retainedRows.add(branchCandidate.globalRowIndex);
+        return false;
+      }
+      return true;
+    });
   }
 
   /** Restores a previously resolved dormant branch without republishing its coarse direct row. */
@@ -1180,13 +1184,13 @@ export class SplatRADHierarchyManager {
     retainedRows: ReadonlySet<number>,
     retainedCandidates: SplatRADFrontierCandidate[]
   ): void {
-    if (retainedRows.has(candidate.globalRowIndex)) {
-      retainedCandidates.push(candidate);
-      return;
-    }
-    for (const child of candidate.children ?? []) {
-      this.collectCapacityRetainedCandidates(child, retainedRows, retainedCandidates);
-    }
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (retainedRows.has(branchCandidate.globalRowIndex)) {
+        retainedCandidates.push(branchCandidate);
+        return false;
+      }
+      return true;
+    });
   }
 
   private removeSelectedCandidateBranch(
@@ -1194,25 +1198,44 @@ export class SplatRADHierarchyManager {
     selectedRows: Map<number, SplatRADFrontierCandidate>,
     state: SplatRADTraversalState
   ): void {
-    if (selectedRows.delete(candidate.globalRowIndex)) {
-      state.allocatedRowCount -= candidate.isVisible ? 1 : 0;
-    }
-    state.refinedRows.delete(candidate.globalRowIndex);
-    for (const child of candidate.children ?? []) {
-      this.removeSelectedCandidateBranch(child, selectedRows, state);
-    }
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.delete(branchCandidate.globalRowIndex)) {
+        state.allocatedRowCount -= branchCandidate.isVisible ? 1 : 0;
+      }
+      state.refinedRows.delete(branchCandidate.globalRowIndex);
+    });
   }
 
-  private countVisibleSelectedBranch(
+  private getSelectedBranchCounts(
     candidate: SplatRADFrontierCandidate,
     selectedRows: ReadonlyMap<number, SplatRADFrontierCandidate>
-  ): number {
-    let visibleRowCount =
-      candidate.isVisible && selectedRows.get(candidate.globalRowIndex) === candidate ? 1 : 0;
-    for (const child of candidate.children ?? []) {
-      visibleRowCount += this.countVisibleSelectedBranch(child, selectedRows);
+  ): {total: number; visible: number} {
+    let total = 0;
+    let visible = 0;
+    this.visitCandidateBranch(candidate, branchCandidate => {
+      if (selectedRows.get(branchCandidate.globalRowIndex) === branchCandidate) {
+        total++;
+        visible += branchCandidate.isVisible ? 1 : 0;
+      }
+    });
+    return {total, visible};
+  }
+
+  private visitCandidateBranch(
+    candidate: SplatRADFrontierCandidate,
+    visit: (candidate: SplatRADFrontierCandidate) => boolean | void
+  ): void {
+    const candidates = [candidate];
+    while (candidates.length > 0) {
+      const branchCandidate = candidates.pop()!;
+      if (visit(branchCandidate) === false) {
+        continue;
+      }
+      const children = branchCandidate.children ?? [];
+      for (let childIndex = children.length - 1; childIndex >= 0; childIndex--) {
+        candidates.push(children[childIndex]);
+      }
     }
-    return visibleRowCount;
   }
 
   /** Returns whether a queued retained row is now covered by a coherently selected ancestor. */

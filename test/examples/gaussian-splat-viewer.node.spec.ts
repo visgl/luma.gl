@@ -30,6 +30,7 @@ import {
   type LocalGaussianSplatLoadersConfiguration
 } from '../../examples/showcase/gaussian-splats/local-loaders';
 import {GaussianSplatRADSceneController} from '../../examples/showcase/gaussian-splats/rad-scene';
+import {makeGaussianSplatRenderProfile} from '../../examples/showcase/gaussian-splats/render-profile';
 import {
   GAUSSIAN_SPLAT_RAD_DECODER_WORKER_SOURCE,
   createGaussianSplatRADWorkerDecoder
@@ -46,6 +47,23 @@ afterEach(() => {
 });
 
 describe('published Gaussian splat viewer', () => {
+  test('uses conservative RAD budgets on coarse-pointer mobile devices', () => {
+    expect(makeGaussianSplatRenderProfile({coarsePointer: true, maxTouchPoints: 5})).toEqual({
+      isMobile: true,
+      maxConcurrentPageLoads: 2,
+      maxDecodeWorkers: 1,
+      maxResidentSplatCount: 250_000,
+      maxTraversalRows: 2047
+    });
+    expect(makeGaussianSplatRenderProfile({coarsePointer: false, maxTouchPoints: 5})).toEqual({
+      isMobile: false,
+      maxConcurrentPageLoads: 4,
+      maxDecodeWorkers: 2,
+      maxResidentSplatCount: 1_000_000,
+      maxTraversalRows: 8191
+    });
+  });
+
   test('defaults WebGPU to graph execution while preserving explicit CPU and WebGL fallbacks', () => {
     expect(getGaussianSplatExecutionMode('webgpu')).toBe('graph');
     expect(getGaussianSplatExecutionMode('webgpu', '?scene=truck')).toBe('graph');
@@ -219,7 +237,7 @@ describe('published Gaussian splat viewer', () => {
     expect(viewerPanel).toContain('data-gaussian-splats-graph-inspector');
     expect(viewerPanel).toContain('data-gaussian-splats-rad-diagnostics');
     expect(viewerSource).toContain('activeRenderer.encode(device.commandEncoder)');
-    expect(viewerSource).toContain('continueTraversal(RAD_TRAVERSAL_SLICE_ROWS)');
+    expect(viewerSource).toContain('continueTraversal(this.renderProfile.maxTraversalRows)');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.maxResidentSplatCount');
     expect(viewerSource).toContain('this.localLoadersConfiguration?.expectedSplatCount');
     expect(viewerSource).not.toContain('this.activateGraphRenderer()');
@@ -325,7 +343,17 @@ describe('published Gaussian splat viewer', () => {
       expectedSplatCount: 50_937_127,
       maxResidentSplatCount: 1_000_000
     });
+    expect(getLocalGaussianSplatLoadersConfiguration('coit', 250_000)).toMatchObject({
+      sceneId: 'coit',
+      maxResidentSplatCount: 250_000
+    });
     expect(getLocalGaussianSplatLoadersConfiguration()?.sceneId).toBe('train');
+
+    installViewerWindow('?residentSplats=500000');
+    expect(getLocalGaussianSplatLoadersConfiguration('coit', 250_000)).toMatchObject({
+      sceneId: 'coit',
+      maxResidentSplatCount: 500_000
+    });
 
     installViewerWindow('?scene=truck');
     expect(getLocalGaussianSplatLoadersConfiguration('coit')).toMatchObject({
