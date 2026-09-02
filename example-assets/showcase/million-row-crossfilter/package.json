@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-showcase-million-row-crossfilter",
-  "version": "9.4.0-beta.5",
+  "version": "9.4.0-beta.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,11 +10,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0-beta.5",
-    "@luma.gl/engine": "9.4.0-beta.5",
-    "@luma.gl/experimental": "9.4.0-beta.5",
-    "@luma.gl/gpgpu": "9.4.0-beta.5",
-    "@luma.gl/webgpu": "9.4.0-beta.5"
+    "@luma.gl/core": "9.4.0-beta.6",
+    "@luma.gl/engine": "9.4.0-beta.6",
+    "@luma.gl/experimental": "9.4.0-beta.6",
+    "@luma.gl/gpgpu": "9.4.0-beta.6",
+    "@luma.gl/webgpu": "9.4.0-beta.6"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
