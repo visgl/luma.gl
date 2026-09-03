@@ -28,6 +28,8 @@ const config = getDocusaurusConfig({
   exampleTableOfContents: require('./content/examples/table-of-contents.json'),
 
   search: 'local',
+  // TODO: Remove after @vis.gl/docusaurus-website handles an omitted webpack resolve config.
+  webpackConfig: {resolve: {}},
   customCss: ['./src/custom.css'],
   navbarItems: [
     {

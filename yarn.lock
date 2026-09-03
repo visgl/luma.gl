@@ -7783,9 +7783,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vis.gl/dev-tools@npm:^2.0.0-alpha.4":
-  version: 2.0.0-alpha.4
-  resolution: "@vis.gl/dev-tools@npm:2.0.0-alpha.4"
+"@vis.gl/dev-tools@npm:^2.0.0-beta.1":
+  version: 2.0.0-beta.1
+  resolution: "@vis.gl/dev-tools@npm:2.0.0-beta.1"
   dependencies:
     "@biomejs/biome": "npm:^2.4.8"
     "@vitest/browser": "npm:^4.0.18"
@@ -7818,18 +7818,19 @@ __metadata:
     ocular-metrics: scripts/metrics.js
     ocular-publish: scripts/publish.js
     ocular-test: scripts/test.js
-  checksum: 10c0/4140b0fef304fa5cff018fd71dab2a886a0fb13f874aaeb911d8b530b4f5db3f9cfe04c7279a4677f0d662d158d335aaa905f17142718f7e6dd172313dde1349
+  checksum: 10c0/660b510a168b72f9b924a5cc04de44892b38f1dc15d825dcd0817b6ebff361dc331940ee8d7bc433cf915db813da72298a612293a56ec3d6320ad0c58162a032
   languageName: node
   linkType: hard
 
-"@vis.gl/docusaurus-website@npm:1.0.0-alpha.21":
-  version: 1.0.0-alpha.21
-  resolution: "@vis.gl/docusaurus-website@npm:1.0.0-alpha.21"
+"@vis.gl/docusaurus-website@npm:2.0.0-beta.1":
+  version: 2.0.0-beta.1
+  resolution: "@vis.gl/docusaurus-website@npm:2.0.0-beta.1"
   dependencies:
-    "@cmfcmf/docusaurus-search-local": "npm:^1.0.0"
-    "@docusaurus/plugin-client-redirects": "npm:^3.0.0"
-    "@docusaurus/plugin-content-docs": "npm:^3.0.0"
-    "@docusaurus/preset-classic": "npm:^3.0.0"
+    "@cmfcmf/docusaurus-search-local": "npm:^2.0.0"
+    "@docusaurus/faster": "npm:^3.10.2"
+    "@docusaurus/plugin-client-redirects": "npm:^3.10.2"
+    "@docusaurus/plugin-content-docs": "npm:^3.10.2"
+    "@docusaurus/preset-classic": "npm:^3.10.2"
     "@mdx-js/react": "npm:^3.0.0"
     babel-plugin-styled-components: "npm:^2.0.0"
     cheerio: "npm:1.0.0-rc.9"
@@ -7838,24 +7839,24 @@ __metadata:
     prism-react-renderer: "npm:^2.3.0"
     styled-components: "npm:^5.3.3"
   peerDependencies:
-    "@docusaurus/core": ^3.0.0
+    "@docusaurus/core": ^3.10.2
     react: "*"
     react-dom: "*"
   bin:
     ocular-doc-headers: scripts/doc-headers.js
-  checksum: 10c0/d9d8e2ec77e309e24cfe7a3eff2acb575e1b5e720b862e903d0402601f15372b3e06658a32a84d5f01a879cb1841936e8434039adfd42659b66c06b904da77dc
+  checksum: 10c0/0b3bf18abbd7e2575f8cca76e05375f53c527688a192ad17ce26682cc2b46134121c6723c9b2edffadf557deb4f13cbfa37e5a4c582dc0a9a59ea81b9af997d6
   languageName: node
   linkType: hard
 
-"@vis.gl/ts-plugins@npm:^2.0.0-alpha.4":
-  version: 2.0.0-alpha.4
-  resolution: "@vis.gl/ts-plugins@npm:2.0.0-alpha.4"
+"@vis.gl/ts-plugins@npm:^2.0.0-beta.1":
+  version: 2.0.0-beta.1
+  resolution: "@vis.gl/ts-plugins@npm:2.0.0-beta.1"
   dependencies:
     "@luma.gl/constants": "npm:^9.0.0"
     minimatch: "npm:^3.0.0"
     ts-patch: "npm:^4.0.1"
     typescript: "npm:^6.0.3"
-  checksum: 10c0/1b16cf6c863408c2d981ba77a3af2bb3b478638f538b95e52a0ea6fb874a2bc7f0f89cb8a5941f3cf5c491bca26f208a3e0c57787f16ec0aa3dd21bcd8cf4f9c
+  checksum: 10c0/c5759c9846bb937b5993f5f560231f9f594c50924687bf603c00dc56ba9ae70eb2560a4d61a8bc5b76cced3f48c385d80fb3fc3613f65e0fff7c1103cc218605
   languageName: node
   linkType: hard
 
@@ -15898,8 +15899,8 @@ __metadata:
     "@probe.gl/test-utils": "npm:^4.1.1"
     "@types/node": "npm:22.15.2"
     "@types/offscreencanvas": "npm:^2019.7.3"
-    "@vis.gl/dev-tools": "npm:^2.0.0-alpha.4"
-    "@vis.gl/ts-plugins": "npm:^2.0.0-alpha.4"
+    "@vis.gl/dev-tools": "npm:^2.0.0-beta.1"
+    "@vis.gl/ts-plugins": "npm:^2.0.0-beta.1"
     "@vitest/coverage-istanbul": "npm:4.1.0"
     a5-js: "npm:^0.8.0"
     esbuild: "npm:^0.28.1"
@@ -23149,7 +23150,7 @@ __metadata:
     "@probe.gl/stats-widget": "npm:^4.1.1"
     "@signalwire/docusaurus-plugin-llms-txt": "npm:^1.2.2"
     "@stackblitz/sdk": "npm:^1.11.0"
-    "@vis.gl/docusaurus-website": "npm:1.0.0-alpha.21"
+    "@vis.gl/docusaurus-website": "npm:2.0.0-beta.1"
     clsx: "npm:^1.1.1"
     docusaurus-mdx-checker: "npm:^3.0.0"
     docusaurus-plugin-typedoc: "npm:^1.4.2"
