@@ -2,6 +2,10 @@
 
 ## v9.4
 
+### v9.4.0-beta.7
+
+- chore: fix cjs build (#3175)
+
 ### v9.4.0-beta.6
 
 - fix: add repository metadata to package manifests
