@@ -37,6 +37,14 @@ export {
   tan
 } from './operations/arithmetic';
 export {extent} from './operations/extent';
+export {convertColorData} from './operations/convert-colors';
+export type {
+  ColorInputFormat,
+  ConvertColorsInputs,
+  ConvertColorsProps
+} from './operations/convert-colors';
+export {castData} from './operations/cast-data';
+export type {CastDataInputs, CastDataProps} from './operations/cast-data';
 export {dot} from './operations/dot';
 export {equalAll} from './operations/equal-all';
 export {interleave} from './operations/interleave';

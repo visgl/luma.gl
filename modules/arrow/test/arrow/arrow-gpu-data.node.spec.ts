@@ -8,6 +8,7 @@ import {
   makeGPUDataFromArrowData,
   readArrowGPUDataAsync
 } from '@luma.gl/arrow';
+import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -124,6 +125,41 @@ it('makeGPUDataFromArrowData uploads variable-length attribute Arrow Data chunks
   ]);
 
   gpuData.destroy();
+  void 0;
+});
+
+it('readArrowGPUDataAsync derives legacy variable-length value counts from byte metadata', async () => {
+  const device = new NullDevice({});
+  const source = makeTupleNestedAttributeVector(
+    2,
+    new Int32Array([0, 2, 3]),
+    new Float32Array([0, 0, 1, 1, 2, 2])
+  );
+  const uploadedGPUData = makeGPUDataFromArrowData(device, source.data[0], {
+    format: 'vertex-list<float32x2>'
+  });
+  const legacyGPUData = new GPUData({
+    buffer: uploadedGPUData.buffer,
+    dataType: uploadedGPUData.dataType,
+    format: 'vertex-list<float32x2>',
+    length: uploadedGPUData.length,
+    stride: uploadedGPUData.stride,
+    byteOffset: uploadedGPUData.byteOffset,
+    byteStride: uploadedGPUData.byteStride,
+    rowByteLength: uploadedGPUData.rowByteLength,
+    readbackMetadata: uploadedGPUData.readbackMetadata
+  });
+  const result = await readArrowGPUDataAsync<TupleNestedAttributeType>(legacyGPUData);
+  const tupleData = result.children[0] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
+  const numericData = tupleData.children[0] as arrow.Data<arrow.Float32>;
+
+  expect(legacyGPUData.valueLength, 'reproduces the legacy outer-row default').toBe(2);
+  expect(
+    Array.from(numericData.values as Float32Array),
+    'uses authoritative byte metadata to read every flattened value'
+  ).toEqual([0, 0, 1, 1, 2, 2]);
+
+  uploadedGPUData.destroy();
   void 0;
 });
 

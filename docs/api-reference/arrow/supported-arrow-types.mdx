@@ -84,15 +84,16 @@ schema fields with `nullCount: 0`.
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
 | `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ✅ | Scalar `GPUVector` or selected `GPUTable` columns preserve normalized null bitmaps and nullable Arrow readback. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility; consumers must explicitly honor validity. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths; stable source-ID consumers reject actual null identifiers. |
-| `Float64` | 🟡 | ❌ | Raw values can be copied into a `GPUVector`, but generic render paths should repack them to `Float32`, origin-relative `Float32`, or `u32` word pairs at conversion boundaries. | No generic `f64` vertex attribute or WGSL scalar path; use prepared Float32 values or custom word-pair helpers. | Matrix columns truncate to Float32; Float64 paths become per-row Float32 deltas plus retained origins. |
+| `Float64` | 🟡 | ✅ | `convertArrowToGPUVector()` lowers to chunk-preserving nullable `Float32` by default and reports precision loss in its plan. WebGPU uploads binary64 bytes unchanged and runs one `fround()` pass; the prepared result exposes zero-copy high and residual-low Float32 views. Other devices use CPU fallback. Semantic paths may instead use origin-relative values or raw word pairs. | No generic `f64` vertex attribute or WGSL scalar path; use the high view for ordinary Float32 consumers, high/low views for fp64-style arithmetic, or custom word-pair helpers. | Generic planned conversion, matrix truncation, and per-row Float32 path deltas plus retained origins. |
+| `Int64 \| Uint64` | 🟡 | ✅ | `convertArrowToGPUVector()` lowers generic values to nullable `Float32` by default or to an explicitly requested compatible numeric shape, with a precision warning. | Use prepared 32-bit values unless an application-specific word-pair shader preserves integer precision. | Generic planned conversion; DGGS uses the specialized exact Uint64 path below. |
 | `Uint64` carrying DGGS cell keys | 🟡 | ❌ | DGGS WebGPU helpers retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `convertDggsCellKeysToGPUPaths()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
-| `Bool` | ❌ | ❌ | Arrow Bool values are bit-packed, so they are not a directly uploadable scalar buffer. Repack to `Uint8` or `Uint32` when shaders need flags. | Use as integer 0/1 flags after repacking; otherwise keep on CPU as row metadata. | `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU input; a future adapter could publish repacked flag columns. |
+| `Bool` | 🟡 | ✅ | Arrow Bool values are bit-packed; `convertArrowToGPUVector()` repacks them to chunk-preserving nullable `Uint8` rows. | Integer 0/1 attributes or storage values after planned repacking. | Universal planned conversion and `closeArrowPaths()` CPU closed-path flags. |
 
 ### Vector-valued Columns
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ✅ | Fixed-width GPU rows preserve parent and child validity for Arrow readback; optional `validityColumns` publishes explicit GPU row masks.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; consuming models must explicitly honor validity, and 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ✅ | Directly supported 8/16/32-bit rows preserve parent and child validity. The universal planner lowers 64-bit leaves to the requested 32-bit shape while preserving chunks and nulls; Float64 uses GPU high/low splitting on WebGPU.<br/>Semantic color conversion normalizes `Uint8`, `Float16`, and `Float32` RGB/RGBA rows into RGBA8. | Vector attributes or storage rows; consuming models must explicitly honor validity, and 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded or normalized through the color adapter. | Positions, point rows, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
 | `FixedSizeList<numeric,`<br/>`5 \| 384 \| 768 \| 1536 \| ...>` | ✅ | ✅ | Row-aligned `fixed-size-list<format,size>` GPU table storage; optional `validityColumns` publishes explicit parent/child row masks. | WebGPU storage and compute; never synthesized into a generic vertex attribute. | High-dimensional embeddings, fixed-width feature vectors, and caller-owned table-based compute. |
 | `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`PathAttributeModel` expands to segment attributes; `PathStorageModel` keeps values in storage. | `ArrowPathRenderer.convertToGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `PathAttributeModel` and `PathStorageModel`. |
 | `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path conversion emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths convert deltas on CPU; WebGPU storage paths convert them on GPU before rendering. | `ArrowPathRenderer.convertToGPUVectors()` and `convertArrowPathToGPUVectors()` convert attribute paths.<br/>`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` converts storage paths. |
@@ -201,12 +202,11 @@ accepted by the GPU.
 | `FixedSizeList<Uint8, 4>` | `unorm8x4` | — |
 
 Semantic RGB color columns use three source components, but most luma.gl color
-shader interfaces consume RGBA. Current semantic color adapters treat RGB source
-forms as unsupported until expansion is implemented. The intended expansion is
-`FixedSizeList<Uint8, 3>` to RGBA with alpha `255`, and
-`FixedSizeList<Float16 | Float32, 3>` to RGBA with alpha `1.0`, before buffer
-layout generation. Alpha values above `1.0` have no portable meaning unless a
-layer explicitly defines application-specific semantics.
+shader interfaces consume RGBA. The semantic color planner expands
+`FixedSizeList<Uint8, 3>` with alpha `255` and
+`FixedSizeList<Float16 | Float32, 3>` with alpha `1.0`, then materializes
+canonical `unorm8x4` bytes. Alpha values above `1.0` have no portable meaning
+unless a layer explicitly defines application-specific semantics.
 
 ## Creating a BufferLayout
 
