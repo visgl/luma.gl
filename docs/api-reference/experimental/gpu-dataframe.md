@@ -66,7 +66,7 @@ const compiledGraph = graph.compile();
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/examples/experimental/gpu-data-analysis?panel=graph)
+[Open full page](https://luma.gl/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/examples/experimental/gpu-data-analysis?panel=graph)
 
 Scroll page · Ctrl/⌘ + scroll to interact
 

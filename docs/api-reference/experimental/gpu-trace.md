@@ -68,7 +68,7 @@ The trace viewer below is the primary interactive tour. It combines the GPU-resi
 
   Desktop MAX WebGPU; 25M is an explicit hardware-qualified preset
 
-[Open full page](https://luma.gl/examples/experimental/gpu-trace-viewer)[View source](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-trace-viewer)[Inspect graph](https://luma.gl/examples/experimental/gpu-trace-viewer?panel=graph)[Small](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=250000\&dependencies=250000)[Representative](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=4000000\&dependencies=4000000)[Stress](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=25000000\&dependencies=25000000)
+[Open full page](https://luma.gl/examples/experimental/gpu-trace-viewer)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/experimental/gpu-trace-viewer)[Inspect graph](https://luma.gl/examples/experimental/gpu-trace-viewer?panel=graph)[Small](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=250000\&dependencies=250000)[Representative](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=4000000\&dependencies=4000000)[Stress](https://luma.gl/examples/experimental/gpu-trace-viewer?spans=25000000\&dependencies=25000000)
 
 Loading interactive example…
 

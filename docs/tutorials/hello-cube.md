@@ -22,7 +22,7 @@ The model-view-projection matrix changes every frame as the cube rotates. `Unifo
 
 Depth writes and `less-equal` comparison ensure the cube's hidden faces do not overwrite nearer surfaces.
 
-**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-cube)
+**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-cube)
 
 ```
 // Loading canonical example source…

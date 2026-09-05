@@ -32,7 +32,7 @@ The example is intentionally dormant until activated. It selects the best availa
 
   The example destroys both Model and Buffer
 
-[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry)
+[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry)
 
 Loading interactive example…
 

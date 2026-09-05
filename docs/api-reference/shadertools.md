@@ -30,7 +30,7 @@ Toggle the module behavior in the running example and compare the reusable modul
 
   Assembly happens before pipeline creation; steady-state draws reuse the result
 
-[Open full page](https://luma.gl/examples/tutorials/shader-modules)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/shader-modules)
+[Open full page](https://luma.gl/examples/tutorials/shader-modules)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/shader-modules)
 
 \[x]Include lighting module
 

@@ -21,7 +21,7 @@ The model sets `vertexCount: 3` and `instanceCount: 4`. The resulting draw proce
 
 The example includes both WGSL and GLSL. The portable application constructs identical buffers and bindings for either backend.
 
-**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-instancing)
+**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-instancing)
 
 ```
 // Loading canonical example source…

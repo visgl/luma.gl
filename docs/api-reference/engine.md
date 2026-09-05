@@ -30,7 +30,7 @@ This portable example maps the Engine objects to the Core work they manage.
 
   Create once, draw on demand, destroy on finalize
 
-[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry)
+[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry)
 
 Loading interactive example…
 

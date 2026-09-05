@@ -40,7 +40,7 @@ The embedded [Million-Row Crossfilter Explorer](https://luma.gl/examples/showcas
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/master/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
+[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
 
 Optional interactive WebGPU explorer**Explore one million linked GPU-resident rows.**&#x42;rush a map, scatterplot, or histogram and watch every linked view update together.Launch interactive explorer →
 

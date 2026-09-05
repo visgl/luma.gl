@@ -24,7 +24,7 @@ This first model does not need a vertex buffer. Both shaders use the built-in ve
 4. `model.draw(renderPass)` records the draw.
 5. Ending the pass allows the device to submit and present the frame.
 
-**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle)
+**Runnable source**[View on GitHub](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle)
 
 ```
 // Loading canonical example source…

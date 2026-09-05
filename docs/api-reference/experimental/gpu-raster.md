@@ -68,7 +68,7 @@ Read [GPU Raster concepts](https://luma.gl/docs/api-reference/experimental/gpu-r
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/showcase/raster-lab)[View source](https://github.com/visgl/luma.gl/tree/master/examples/showcase/raster-lab)[Inspect graph](https://luma.gl/examples/showcase/raster-lab?panel=graph)
+[Open full page](https://luma.gl/examples/showcase/raster-lab)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/raster-lab)[Inspect graph](https://luma.gl/examples/showcase/raster-lab?panel=graph)
 
 Preparing GPU experience**GPURaster: Satellite Raster Lab**Loading synthetic satellite bands and the GPU-native raster-analysis graph.
 
