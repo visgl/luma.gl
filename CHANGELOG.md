@@ -2,6 +2,13 @@
 
 ## v9.4
 
+### v9.4.0
+
+Version 9.4 expands luma.gl with portable GPU data processing and a broad experimental stack for
+analysis, text, splats, physical scenes, simulation, and immersive rendering.
+
+See [what's new](https://luma.gl/docs/whats-new) for detailed list of new features.
+
 ### v9.4.0-beta.7
 
 - chore: fix cjs build (#3175)
