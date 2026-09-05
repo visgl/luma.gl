@@ -76,6 +76,8 @@ type ArrowPathWidthSource = ArrowLayerColumnSource<Float32, 'float32'>;
 export type ArrowPathColorInput = ArrowLayerInput<ArrowPathColor, ArrowPathColorSource>;
 /** Constant, Arrow column, or GPU column accepted by ArrowPathLayer.width. */
 export type ArrowPathWidthInput = ArrowLayerInput<number, ArrowPathWidthSource>;
+/** GPU-resident source-row visibility flags accepted by ArrowPathLayer on WebGPU. */
+export type ArrowPathVisibilityInput = GPUVector<'uint32'>;
 
 const DEFAULT_PATH_COLOR: ArrowPathColor = [199, 219, 245, 255];
 const DEFAULT_PATH_WIDTH = 0.0035;
@@ -287,6 +289,7 @@ ${DECK_ARROW_WGSL_COLOR_UTILS}
 @group(0) @binding(auto) var<storage, read> pathRowColors: array<u32>;
 @group(0) @binding(auto) var<storage, read> pathVertexColors: array<u32>;
 @group(0) @binding(auto) var<storage, read> pathRowWidths: array<f32>;
+@group(0) @binding(auto) var<storage, read> pathRowVisibility: array<u32>;
 
 struct PathStorageStyleConfig {
   constantColor: vec4<f32>,
@@ -398,8 +401,9 @@ fn vertexMain(
   outputs.visible = select(
     0.0,
     1.0,
-    inputs.temporalEnabled < 0.5 ||
-      (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+    pathRowVisibility[localRowIndex] != 0u &&
+      (inputs.temporalEnabled < 0.5 ||
+        (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime))
   );
   return outputs;
 }
@@ -432,6 +436,8 @@ export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
     color?: ArrowPathColorInput;
     /** Constant width, width source, or width source with an explicit null replacement. */
     width?: ArrowPathWidthInput;
+    /** GPU-resident source-row visibility mask; zero hides a path without CPU filtering. */
+    visibility?: ArrowPathVisibilityInput;
     /** Current path measure used by temporal trail filtering. */
     currentTime?: number;
     /** Visible temporal trail length in path measure units. */
@@ -494,7 +500,9 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       props.paths !== oldProps.paths ||
       props.model !== oldProps.model ||
       props.color !== oldProps.color ||
-      props.width !== oldProps.width;
+      props.width !== oldProps.width ||
+      props.visibility !== oldProps.visibility;
+
     if (sourceChanged) {
       state.sourceInitialized = true;
       void this.loadSource(props);
@@ -643,6 +651,12 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     if (isArrowLayerGPUVector(widthSource)) {
       assertArrowLayerGPUVector('ArrowPathLayer width', widthSource, ['float32']);
     }
+    if (props.visibility) {
+      if (model !== 'storage') {
+        throw new Error('ArrowPathLayer GPU visibility requires the WebGPU storage model');
+      }
+      assertArrowLayerGPUVector('ArrowPathLayer visibility', props.visibility, ['uint32']);
+    }
     const colorSelector =
       model === 'storage' && isArrowLayerGPUVector(colorSource)
         ? undefined
@@ -685,6 +699,9 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       model === 'storage' && isArrowLayerGPUVector(widthSource)
         ? getPathStorageGPUVectorBatch(widthSource, batchIndex, sourceVectors.paths.length)
         : prepared.widths;
+    const preparedVisibilityColumn = props.visibility
+      ? getPathStorageGPUVectorBatch(props.visibility, batchIndex, sourceVectors.paths.length)
+      : undefined;
     const colorColumn =
       preparedColorColumn ??
       new GPUConstant({format: 'unorm8x4', value: new Uint8Array(colorNullValue)});
@@ -718,6 +735,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
           attributes: constantStyle.attributes,
           ...(colorColumn instanceof GPUVector ? {colors: colorColumn} : {color: colorNullValue}),
           ...(widthColumn instanceof GPUVector ? {widths: widthColumn} : {width: widthNullValue}),
+          ...(preparedVisibilityColumn ? {visibility: preparedVisibilityColumn} : {}),
           topology: 'triangle-list',
           vertexCount: 6
         });
@@ -901,7 +919,7 @@ function hasArrowDataNulls(data: Data): boolean {
 }
 
 function getPathStorageGPUVectorBatch<
-  Format extends 'unorm8x4' | VertexList<'unorm8x4'> | 'float32'
+  Format extends 'unorm8x4' | VertexList<'unorm8x4'> | 'float32' | 'uint32'
 >(vector: GPUVector<Format>, batchIndex: number, expectedRowCount: number): GPUVector<Format> {
   const useWholeVector =
     vector.data.length === 1 && batchIndex === 0 && vector.length === expectedRowCount;

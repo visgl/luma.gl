@@ -47,6 +47,13 @@ export const PATH_TRIPS_STORAGE_GPU_INPUT_SCHEMA = [
     formats: ['float32']
   },
   {
+    columnName: 'visibility',
+    kind: 'scalars',
+    required: false,
+    formats: ['uint32'],
+    internal: true
+  },
+  {
     columnName: 'timestamps',
     kind: 'time',
     required: true,
@@ -68,6 +75,7 @@ const DEFAULT_PATH_TRIPS_STORAGE_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathVertexColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
+  @group(0) @binding(auto) var<storage, read> pathRowVisibility : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathTimestamps : array<f32>;
 
 struct PathStorageStyleConfig {
@@ -103,6 +111,7 @@ struct FragmentInputs {
   @builtin(position) position : vec4<f32>,
   @location(0) color : vec4<f32>,
   @location(1) time : f32,
+  @location(2) @interpolate(flat) visible : f32,
 };
 
 fn unpackPathColor(colorWord: u32) -> vec4<f32> {
@@ -177,12 +186,14 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     pathTimestamps[segmentEndPointIndex],
     useSegmentEnd
   );
+  outputs.visible = f32(pathRowVisibility[rowIndex] != 0u);
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   if (
+    inputs.visible < 0.5 ||
     inputs.time > tripPathConfig.currentTime ||
     (tripPathConfig.fadeTrail != 0u &&
       inputs.time < tripPathConfig.currentTime - tripPathConfig.trailLength)
@@ -212,6 +223,7 @@ export class PathTripsStorageModel extends PathStorageModel {
         paths: props.paths,
         colors: props.colors,
         widths: props.widths,
+        visibility: props.visibility,
         timestamps: props.timestamps,
         viewOrigins: props.viewOrigins
       });

@@ -32,6 +32,8 @@ export type PathStorageBatchInputs = {
   colorsBinding?: Binding;
   /** Optional read-only storage binding for Float32 path widths. */
   widthsBinding?: Binding;
+  /** Optional read-only storage binding for source-row visibility flags. */
+  visibilityBinding?: Binding;
   /** Optional read-only storage binding for prepared Float32 path timestamps. */
   timestampsBinding?: Binding;
 };
@@ -60,6 +62,7 @@ export function resolvePathStorageInputs(
     const segmentCount = recordOffsets[recordOffsets.length - 1] ?? 0;
     const colorData = props.colors?.data[batchIndex];
     const widthData = props.widths?.data[batchIndex];
+    const visibilityData = props.visibility?.data[batchIndex];
     const timestampData = props.timestamps?.data[batchIndex];
     const viewOriginData = props.viewOrigins?.data[batchIndex];
     batches.push({
@@ -88,6 +91,12 @@ export function resolvePathStorageInputs(
       widthsBinding: widthData
         ? getStorageGPUDataBinding(widthData, widthData.length * props.widths!.byteStride)
         : undefined,
+      visibilityBinding: visibilityData
+        ? getStorageGPUDataBinding(
+            visibilityData,
+            visibilityData.length * props.visibility!.byteStride
+          )
+        : undefined,
       timestampsBinding: timestampData
         ? getStorageGPUDataBinding(
             timestampData,
@@ -109,6 +118,7 @@ function assertPathStorageVectorTypes(
     paths: props.paths,
     colors: props.colors,
     widths: props.widths,
+    visibility: props.visibility,
     timestamps: props.timestamps,
     viewOrigins: props.viewOrigins
   });
@@ -119,6 +129,7 @@ function assertPathStorageVectorRowAlignment(props: PathStorageInputProps): void
     ['paths', props.paths],
     ['colors', props.colors],
     ['widths', props.widths],
+    ['visibility', props.visibility],
     ['timestamps', props.timestamps],
     ['viewOrigins', props.viewOrigins]
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector]>;

@@ -4,10 +4,17 @@
 
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUDataFrameFromArrowTable, makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {
+  column,
+  parameter,
+  type GPUDataFrameQueryParameters
+} from '@luma.gl/experimental/gpu-dataframe';
 import {expect, it} from 'vitest';
-import type {Device} from '@luma.gl/core';
+import {Buffer, type Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -26,6 +33,19 @@ const TEST_MODEL_TIMEOUT_MILLISECONDS = 10_000;
 const TEXT_FONT_ATLAS = buildBitmapFontAtlas({
   characterSet: ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-'
 });
+
+async function readGPUUint32Vector(vector: GPUVector<'uint32'>): Promise<number[][]> {
+  return Promise.all(
+    vector.data.map(async data => {
+      const buffer = data.buffer instanceof Buffer ? data.buffer : data.buffer.buffer;
+      const bytes = await buffer.readAsync(
+        data.byteOffset,
+        data.length * Uint32Array.BYTES_PER_ELEMENT
+      );
+      return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, data.length));
+    })
+  );
+}
 let sharedStorageDeck: {deck: Deck; parent: HTMLDivElement} | null = null;
 let restoreLegacyDeckShaderAssembler: (() => void) | null = null;
 
@@ -405,6 +425,101 @@ it('ArrowPathLayer storage draws streamed batches incrementally and preserves pi
       ).toBe(false);
     }
     callerColorVector.destroy();
+  }
+  void 0;
+});
+
+it('ArrowPathLayer consumes GPU-compiled Arrow width and visibility without rebuilding paths', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device || isSoftwareBackedDevice(device)) {
+    void 0;
+    void 0;
+    return;
+  }
+  const source = makeArrowLineSourceData(
+    {pathCount: 12, pointCount: 8, label: 'GPU accessor paths'},
+    'lines',
+    'float32',
+    'row-colors',
+    'none',
+    6
+  );
+  const sourceTable = new Table(source.sourceVectors);
+  const frame = makeGPUDataFrameFromArrowTable(device, sourceTable, {columns: ['widths']});
+  const compiled = frame
+    .withColumn('gpuWidth', column('widths').multiply(parameter('widthScale', 1)), {
+      format: 'float32'
+    })
+    .filter(column('gpuWidth').greaterThan(parameter('minimumWidth', 0)))
+    .select(['gpuWidth'])
+    .compile(
+      new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
+        id: 'arrow-path-gpu-accessors'
+      })
+    );
+  frame.destroy();
+
+  const encode = (minimumWidth: number): void => {
+    const commandEncoder = device.createCommandEncoder({id: 'arrow-path-gpu-accessors-encode'});
+    compiled.encode(commandEncoder, {widthScale: 2, minimumWidth});
+    device.submit(commandEncoder.finish());
+  };
+  encode(0);
+
+  let dataError: unknown;
+  const layer = new ArrowPathLayer({
+    id: 'arrow-path-gpu-accessors-test',
+    pickable: true,
+    data: sourceTable,
+    paths: 'paths',
+    color: 'colors',
+    width: compiled.table.gpuVectors.gpuWidth,
+    visibility: compiled.selectionMask,
+    model: 'storage',
+    onDataError: error => {
+      dataError = error;
+    }
+  });
+  const {deck} = getSharedStorageDeck(device);
+
+  try {
+    await waitForDeckInitialization(deck);
+    deck.setProps({layers: [layer]});
+    await waitForModelCount(layer, 2, () => dataError);
+    const models = layer.getModels();
+    const generatedPathBuffers = models.map(
+      model => (model as Model & {compactPathVertexData: unknown}).compactPathVertexData
+    );
+
+    expect(
+      await readGPUUint32Vector(compiled.selectionMask),
+      'the first compiled parameter set keeps every source row visible'
+    ).toEqual([
+      [1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1]
+    ]);
+    expect(
+      models.every(model => Boolean((model as any)._getBindings().pathRowVisibility)),
+      'each preserved Arrow batch binds its GPU selection mask directly for rendering'
+    ).toBe(true);
+
+    encode(100);
+    expect(
+      await readGPUUint32Vector(compiled.selectionMask),
+      'parameter updates rewrite the resident selection mask without CPU filtering'
+    ).toEqual([
+      [0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0]
+    ]);
+    expect(
+      layer
+        .getModels()
+        .map(model => (model as Model & {compactPathVertexData: unknown}).compactPathVertexData),
+      'GPU style changes retain the compute-expanded path geometry'
+    ).toEqual(generatedPathBuffers);
+  } finally {
+    deck.setProps({layers: []});
+    compiled.destroy();
   }
   void 0;
 });
