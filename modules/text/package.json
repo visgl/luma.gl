@@ -51,7 +51,7 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
-    "@luma.gl/engine": "~9.4.0-alpha.1"
+    "@luma.gl/engine": "~9.4.0"
   },
   "dependencies": {
     "@luma.gl/core": "9.4.0",
