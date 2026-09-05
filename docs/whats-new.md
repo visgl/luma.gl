@@ -82,7 +82,7 @@ Target Release Date: Q3, 2026
 
 ## Version 9.4
 
-Target Release Date: TBD
+Release Date: September 5, 2026
 
 Version 9.4 expands luma.gl with portable GPU data processing and a broad experimental stack for
 analysis, text, splats, physical scenes, simulation, and immersive rendering.
