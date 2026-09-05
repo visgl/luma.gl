@@ -10,12 +10,6 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v9.4[​](#upgrading-to-v94 "Direct link to Upgrading to v9.4")
 
-**GPU compute and table imports**
-
-* `@luma.gl/tables` has been removed without compatibility re-exports. Import primitive GPU data APIs (`GPUData`, `GPUDataView`, `GPUVector`, `GPUVectorFormat`, `GPUConstant`, formats, and basic helpers) from `@luma.gl/gpgpu/gpu-data`.
-* Import `GPURecordBatch`, `GPUTable`, schemas, table bindings, table computations, and generic table planners from `@luma.gl/experimental/gpu-tables`.
-* Import path and polygon models, their GPU input helpers, and model-specific planners from `@luma.gl/experimental/models`.
-
 **@luma.gl/core**
 
 * WebGPU device creation now defaults to the portable `DeviceProps.featureLevel: 'core'`. Applications that relied on luma.gl requesting every adapter feature and supported limit should pass `featureLevel: 'max'`.
@@ -35,6 +29,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 **@luma.gl/webgpu**
 
 * `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
+
+**@luma.gl/shadertools**
+
+* `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or `new WGSLShaderAssembler()` for WGSL.
+* `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language. Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')` or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+* `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or `instanceof WGSLShaderAssembler` before assembling shader source.
 
 ## Upgrading to v9.3[​](#upgrading-to-v93 "Direct link to Upgrading to v9.3")
 
