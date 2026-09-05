@@ -40,7 +40,7 @@ This portable example maps the Engine objects to the Core work they manage.
     {label: 'Lifecycle', value: 'Create once, draw on demand, destroy on finalize'}
   ]}
   fullPageHref="/examples/tutorials/hello-triangle-geometry"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry"
 />
 
 <ClientOnlyLiveExample

@@ -50,7 +50,7 @@ const compiledGraph = graph.compile();
   execution="Compiled queries re-encode against changed controls"
   compatibility="WebGPU"
   fullPageHref="/examples/experimental/gpu-data-analysis"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-data-analysis"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/experimental/gpu-data-analysis"
   inspectorHref="/examples/experimental/gpu-data-analysis?panel=graph"
 />
 

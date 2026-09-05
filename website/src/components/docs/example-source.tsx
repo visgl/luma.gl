@@ -63,7 +63,7 @@ export function ExampleSource({
     <section className="docs-example-source" aria-label={title}>
       <div className="docs-example-source__header">
         <strong>{title}</strong>
-        <a href={`https://github.com/visgl/luma.gl/tree/master/examples/${example}`}>
+        <a href={`https://github.com/visgl/luma.gl/tree/9.4-release/examples/${example}`}>
           View on GitHub
         </a>
       </div>

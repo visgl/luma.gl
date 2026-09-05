@@ -45,7 +45,7 @@ and releases its resources when unmounted.
     {label: 'Ownership', value: 'The example destroys both Model and Buffer'}
   ]}
   fullPageHref="/examples/tutorials/hello-triangle-geometry"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry"
 />
 
 <ClientOnlyLiveExample

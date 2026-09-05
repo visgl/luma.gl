@@ -37,7 +37,7 @@ to this documentation do not import the example registry or initialize the dashb
   execution="Deferred startup and invalidation-driven updates"
   compatibility="WebGPU"
   fullPageHref="/examples/showcase/million-row-crossfilter"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/showcase/million-row-crossfilter"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/million-row-crossfilter"
   inspectorHref="/examples/showcase/million-row-crossfilter?panel=graph"
 />
 

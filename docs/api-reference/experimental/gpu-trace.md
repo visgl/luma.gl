@@ -47,7 +47,7 @@ hold Ctrl or ⌘ while scrolling over the example to zoom its timeline.
   execution="Invalidation-driven rendering with resumable global analysis"
   compatibility="Desktop MAX WebGPU; 25M is an explicit hardware-qualified preset"
   fullPageHref="/examples/experimental/gpu-trace-viewer"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-trace-viewer"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/experimental/gpu-trace-viewer"
   inspectorHref="/examples/experimental/gpu-trace-viewer?panel=graph"
   presets={[
     {label: 'Small', href: '/examples/experimental/gpu-trace-viewer?spans=250000&dependencies=250000'},

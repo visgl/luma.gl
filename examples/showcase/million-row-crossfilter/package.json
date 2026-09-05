@@ -10,11 +10,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.4.0",
-    "@luma.gl/engine": "9.4.0",
-    "@luma.gl/experimental": "9.4.0",
-    "@luma.gl/gpgpu": "9.4.0",
-    "@luma.gl/webgpu": "9.4.0"
+    "@luma.gl/core": "^9.4.0",
+    "@luma.gl/engine": "^9.4.0",
+    "@luma.gl/experimental": "^9.4.0",
+    "@luma.gl/gpgpu": "^9.4.0",
+    "@luma.gl/webgpu": "^9.4.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

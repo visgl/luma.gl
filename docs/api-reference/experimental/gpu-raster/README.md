@@ -54,7 +54,7 @@ residency in detail.
   execution="Graph-driven analysis recomputed on control changes"
   compatibility="WebGPU"
   fullPageHref="/examples/showcase/raster-lab"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/showcase/raster-lab"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/raster-lab"
   inspectorHref="/examples/showcase/raster-lab?panel=graph"
 />
 

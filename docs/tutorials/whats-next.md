@@ -6,9 +6,9 @@ features, including instanced drawing, shader modules and composition, and
 transform feedback.
 
 To dig deeper into the current API, browse the
-[`examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials),
-[`examples/api`](https://github.com/visgl/luma.gl/tree/master/examples/api), and
-[`examples/integrations`](https://github.com/visgl/luma.gl/tree/master/examples/integrations)
+[`examples/tutorials`](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials),
+[`examples/api`](https://github.com/visgl/luma.gl/tree/9.4-release/examples/api), and
+[`examples/integrations`](https://github.com/visgl/luma.gl/tree/9.4-release/examples/integrations)
 directories in the repository. The same examples are also available on the
 [website](https://luma.gl/examples).
 

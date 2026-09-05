@@ -40,7 +40,7 @@ the assembled WGSL/GLSL application that Engine submits.
     {label: 'Cost', value: 'Assembly happens before pipeline creation; steady-state draws reuse the result'}
   ]}
   fullPageHref="/examples/tutorials/shader-modules"
-  sourceHref="https://github.com/visgl/luma.gl/tree/master/examples/tutorials/shader-modules"
+  sourceHref="https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/shader-modules"
 />
 
 <ShaderAssemblyInspector />

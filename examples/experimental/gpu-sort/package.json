@@ -9,13 +9,13 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/arrow": "9.4.0",
-    "@luma.gl/core": "9.4.0",
-    "@luma.gl/engine": "9.4.0",
-    "@luma.gl/experimental": "9.4.0",
-    "@luma.gl/gpgpu": "9.4.0",
-    "@luma.gl/shadertools": "9.4.0",
-    "@luma.gl/webgpu": "9.4.0",
+    "@luma.gl/arrow": "^9.4.0",
+    "@luma.gl/core": "^9.4.0",
+    "@luma.gl/engine": "^9.4.0",
+    "@luma.gl/experimental": "^9.4.0",
+    "@luma.gl/gpgpu": "^9.4.0",
+    "@luma.gl/shadertools": "^9.4.0",
+    "@luma.gl/webgpu": "^9.4.0",
     "apache-arrow": "^17.0.0"
   },
   "devDependencies": {
