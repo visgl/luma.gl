@@ -2684,6 +2684,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@deck.gl-community/arrow-layers@workspace:modules/deck-arrow-layers"
   dependencies:
+    "@deck.gl-community/gpu-layers": "npm:9.4.0-alpha.4"
     "@deck.gl/core": "npm:9.3.4"
     "@luma.gl/arrow": "npm:9.4.0-alpha.4"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
@@ -2695,7 +2696,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@deck.gl-community/gpu-layers@workspace:*, @deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers":
+"@deck.gl-community/gpu-layers@npm:9.4.0-alpha.4, @deck.gl-community/gpu-layers@workspace:*, @deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers":
   version: 0.0.0-use.local
   resolution: "@deck.gl-community/gpu-layers@workspace:modules/deck-gpu-layers"
   dependencies:
@@ -2703,7 +2704,9 @@ __metadata:
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/experimental": "npm:9.4.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
     "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
+    "@luma.gl/text": "npm:9.4.0-alpha.4"
   languageName: unknown
   linkType: soft
 
