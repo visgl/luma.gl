@@ -26,6 +26,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
+    "@deck.gl-community/gpu-layers": "9.4.0-alpha.4",
     "@deck.gl/core": "9.3.4",
     "@luma.gl/arrow": "9.4.0-alpha.4",
     "@luma.gl/core": "9.4.0-alpha.4",

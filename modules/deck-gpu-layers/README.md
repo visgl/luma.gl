@@ -2,6 +2,48 @@
 
 Reusable deck.gl layers for GPU-selected spatial data.
 
+## GPUVector layer core
+
+The GPU layer family defines the rendering ABI below Arrow, classic JavaScript, and classic binary
+inputs. It consumes caller-owned GPU data, does not import Apache Arrow, and never destroys input
+vectors.
+
+The fixed-width primitives are `GPUArcLayer`, `GPUColumnLayer`, `GPUGridCellLayer`, `GPUIconLayer`,
+`GPULineLayer`, `GPUPointCloudLayer`, and `GPUScatterplotLayer`. They consume row-aligned
+`GPUVector` objects. Each layer owns one `GPUVectorModel`, which preserves every physical chunk as
+a separate draw call without creating a model or deck child layer per chunk. `GPUBitmapLayer`
+accepts an already loaded `Texture`; a bitmap has no tabular column to convert.
+
+```ts
+import {GPUScatterplotLayer} from '@deck.gl-community/gpu-layers';
+
+const layer = new GPUScatterplotLayer({
+  id: 'points',
+  getPosition: positions, // GPUVector<'float32x2'>
+  getRadius: radii, // number or GPUVector<'float32'>
+  getFillColor: colors // Color or GPUVector<'unorm8x4'>
+});
+```
+
+All non-constant vectors must have identical row counts and physical chunk boundaries. This makes
+streaming and ownership deterministic: adapters append batches explicitly, while the renderer
+neither combines nor repacks them. Picking uses global row indices and attaches physical batch
+provenance as `PickingInfo.gpuVector`.
+
+Variable geometry stays GPU-native as well:
+
+- `GPUPathLayer` consumes `GPUVector<'vertex-list<float32xN>'>` and expands segments on the GPU.
+- `GPUSolidPolygonLayer` consumes tessellated position, row-index, color, and triangle-index
+  GPUVectors prepared by an adapter.
+- `GPUPolygonLayer` composes the solid fill and path outline cores without copying either input.
+- `GPUTextLayer` consumes caller-owned `GPUTextData`, whose chosen strategy owns glyph GPUVectors
+  and atlas metadata.
+
+GeoJSON and GeoArrow are source formats rather than rendering primitives. Their adapters split
+features into these GPU cores. The same rule applies to future classic JavaScript and classic
+binary compatibility: each input family converts or borrows GPUVectors and delegates to the same
+renderer.
+
 `LuSpatialPointLayer` binds caller-owned position and point-ID buffers directly and replays a
 caller-owned `DrawCommandBuffer`. The layer owns only its render model and style-uniform buffer;
 query results, indirect commands, and source positions remain owned by the application.
@@ -90,3 +132,9 @@ are sampled asynchronously and never gate the GPU-driven render path. Readbacks 
 `onStats` is supplied, or explicitly with `enableDiagnostics`. The effect owns every buffer and
 graph it creates; Deck calls `cleanup`, while applications may call `destroy` when an effect is
 constructed but never adopted.
+
+## Tiled sources
+
+Tiled GPUVector and Arrow adapters are intentionally outside this layer core. They should integrate
+with deck.gl's proposed shared tile layer so cache ownership, refinement, cancellation, and request
+deduplication remain common infrastructure rather than being reimplemented in this package.

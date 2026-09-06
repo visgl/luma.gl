@@ -273,7 +273,8 @@ const DECK_PATH_STORAGE_SHADER_LAYOUT: ShaderLayout = {
     {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'},
     {name: 'currentTime', location: 3, type: 'f32', stepMode: 'instance'},
     {name: 'trailLength', location: 4, type: 'f32', stepMode: 'instance'},
-    {name: 'temporalEnabled', location: 5, type: 'f32', stepMode: 'instance'}
+    {name: 'temporalEnabled', location: 5, type: 'f32', stepMode: 'instance'},
+    {name: 'fadeTrail', location: 6, type: 'f32', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -287,6 +288,7 @@ ${DECK_ARROW_WGSL_COLOR_UTILS}
 @group(0) @binding(auto) var<storage, read> pathRowColors: array<u32>;
 @group(0) @binding(auto) var<storage, read> pathVertexColors: array<u32>;
 @group(0) @binding(auto) var<storage, read> pathRowWidths: array<f32>;
+@group(0) @binding(auto) var<storage, read> pathTimestamps: array<f32>;
 
 struct PathStorageStyleConfig {
   constantColor: vec4<f32>,
@@ -309,6 +311,7 @@ struct PathStorageVertexInputs {
   @location(3) currentTime: f32,
   @location(4) trailLength: f32,
   @location(5) temporalEnabled: f32,
+  @location(6) fadeTrail: f32,
 };
 
 struct PathStorageVertexOutputs {
@@ -316,6 +319,7 @@ struct PathStorageVertexOutputs {
   @location(0) color: vec4<f32>,
   @location(1) @interpolate(flat) pickingColor: vec3<f32>,
   @location(2) @interpolate(flat) visible: f32,
+  @location(3) trailOpacity: f32,
 };
 
 fn unpackStoragePathColor(colorWord: u32) -> vec4<f32> {
@@ -393,13 +397,28 @@ fn vertexMain(
     outputs.color = unpackStoragePathColor(pathRowColors[localRowIndex]);
   }
   outputs.pickingColor = deck_encodePickingColor(inputs.rowIndex);
-  let startMeasure = startPosition.w;
-  let endMeasure = endPosition.w;
+  let usesTimestampColumn = inputs.temporalEnabled > 1.5;
+  let startMeasure = select(
+    startPosition.w,
+    pathTimestamps[inputs.segmentStartPointIndex],
+    usesTimestampColumn
+  );
+  let endMeasure = select(
+    endPosition.w,
+    pathTimestamps[segmentEndPointIndex],
+    usesTimestampColumn
+  );
   outputs.visible = select(
     0.0,
     1.0,
     inputs.temporalEnabled < 0.5 ||
       (endMeasure >= inputs.currentTime - inputs.trailLength && startMeasure <= inputs.currentTime)
+  );
+  let vertexMeasure = mix(startMeasure, endMeasure, corner.x);
+  outputs.trailOpacity = select(
+    1.0,
+    clamp((vertexMeasure - (inputs.currentTime - inputs.trailLength)) / max(inputs.trailLength, 0.000001), 0.0, 1.0),
+    usesTimestampColumn && inputs.fadeTrail > 0.5
   );
   return outputs;
 }
@@ -407,7 +426,9 @@ fn vertexMain(
 @fragment
 fn fragmentMain(inputs: PathStorageVertexOutputs) -> @location(0) vec4<f32> {
   if (inputs.visible < 0.5) { discard; }
-  return deck_filterColor(inputs.color, inputs.pickingColor);
+  var color = deck_filterColor(inputs.color, inputs.pickingColor);
+  color.a *= inputs.trailOpacity;
+  return color;
 }
 `;
 
@@ -419,11 +440,12 @@ type ArrowPathLayerBatch = {
   rowIndexOffset: number;
   rowCount: number;
   temporalBuffer: Buffer | null;
+  timestampColumnEnabled: boolean;
 };
 
 /** Deck-facing props for an Arrow-backed path layer. */
 export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
-  Omit<ArrowPathSourceVectorSelectors, 'timestamps' | 'colors' | 'widths'> & {
+  Omit<ArrowPathSourceVectorSelectors, 'colors' | 'widths'> & {
     /** Arrow table or preserved record-batch source. */
     data?: ArrowRecordBatchSource | null;
     /** GPU path model. Storage is available on WebGPU; auto selects it when supported. */
@@ -438,6 +460,8 @@ export type ArrowPathLayerProps = Omit<LayerProps, 'data'> &
     trailLength?: number;
     /** Enables temporal filtering against the fourth coordinate component. */
     temporalEnabled?: boolean;
+    /** Fades timestamp-backed trip segments across the visible trail. */
+    fadeTrail?: boolean;
     /** Called after one streamed record batch has been prepared and appended. */
     onDataBatch?: (update: {
       loadedBatchCount: number;
@@ -495,7 +519,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       props.model !== oldProps.model ||
       props.color !== oldProps.color ||
       props.width !== oldProps.width;
-    if (sourceChanged) {
+    const timestampSourceChanged = props.timestamps !== oldProps.timestamps;
+    if (sourceChanged || timestampSourceChanged) {
       state.sourceInitialized = true;
       void this.loadSource(props);
       return;
@@ -503,7 +528,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     if (
       props.currentTime !== oldProps.currentTime ||
       props.trailLength !== oldProps.trailLength ||
-      props.temporalEnabled !== oldProps.temporalEnabled
+      props.temporalEnabled !== oldProps.temporalEnabled ||
+      props.fadeTrail !== oldProps.fadeTrail
     ) {
       for (const batch of state.batches) {
         updateDeckPathTemporalStyle(batch, props);
@@ -657,7 +683,10 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
         selectors: {
           paths: props.paths,
           colors: colorSelector ?? null,
-          widths: widthSelector ?? null
+          widths: widthSelector ?? null,
+          ...(model === 'storage' && props.timestamps !== undefined
+            ? {timestamps: props.timestamps}
+            : {})
         }
       }),
       colorNullValue,
@@ -700,7 +729,9 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       width: widthNullValue,
       currentTime: props.currentTime ?? 0,
       trailLength: props.trailLength ?? 0,
-      temporalEnabled: props.temporalEnabled ?? false
+      temporalEnabled: props.temporalEnabled ?? false,
+      timestampColumnEnabled: Boolean(sourceVectors.timestamps),
+      fadeTrail: props.fadeTrail ?? false
     });
     let renderModel: Model;
     try {
@@ -716,6 +747,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
           shaderLayout: DECK_PATH_STORAGE_SHADER_LAYOUT,
           bufferLayout: constantStyle.bufferLayout,
           attributes: constantStyle.attributes,
+          bindings: {pathTimestamps: constantStyle.defaultTimestampBuffer},
           ...(colorColumn instanceof GPUVector ? {colors: colorColumn} : {color: colorNullValue}),
           ...(widthColumn instanceof GPUVector ? {widths: widthColumn} : {width: widthNullValue}),
           topology: 'triangle-list',
@@ -761,7 +793,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       batchIndex,
       rowIndexOffset,
       rowCount,
-      temporalBuffer: constantStyle.temporalBuffer
+      temporalBuffer: constantStyle.temporalBuffer,
+      timestampColumnEnabled: Boolean(sourceVectors.timestamps)
     };
     const batches = [...this.getLayerState().batches, batch];
     this.setState({batches, loadVersion, sourceInitialized: true});
@@ -933,7 +966,9 @@ function createDeckPathConstantStyle(
     width,
     currentTime,
     trailLength,
-    temporalEnabled
+    temporalEnabled,
+    timestampColumnEnabled,
+    fadeTrail
   }: {
     id: string;
     hasColors: boolean;
@@ -943,6 +978,8 @@ function createDeckPathConstantStyle(
     currentTime: number;
     trailLength: number;
     temporalEnabled: boolean;
+    timestampColumnEnabled: boolean;
+    fadeTrail: boolean;
   }
 ): {
   bufferLayout: BufferLayout[];
@@ -950,12 +987,14 @@ function createDeckPathConstantStyle(
   constantAttributes: Record<string, TypedArray>;
   buffers: Buffer[];
   temporalBuffer: Buffer | null;
+  defaultTimestampBuffer: Buffer | null;
 } {
   const bufferLayout: BufferLayout[] = [];
   const attributes: Record<string, Buffer> = {};
   const constantAttributes: Record<string, TypedArray> = {};
   const buffers: Buffer[] = [];
   let temporalBuffer: Buffer | null = null;
+  let defaultTimestampBuffer: Buffer | null = null;
 
   if (!hasColors) {
     // WebGL sets integer constant attributes through vertexAttribI4uiv, so retain four lanes.
@@ -997,7 +1036,13 @@ function createDeckPathConstantStyle(
     }
   }
 
-  const temporalValues = makeDeckPathTemporalValues({currentTime, trailLength, temporalEnabled});
+  const temporalValues = makeDeckPathTemporalValues({
+    currentTime,
+    trailLength,
+    temporalEnabled,
+    timestampColumnEnabled,
+    fadeTrail
+  });
   bufferLayout.push({
     name: CONSTANT_PATH_TEMPORAL_BUFFER,
     byteStride: 0,
@@ -1005,33 +1050,51 @@ function createDeckPathConstantStyle(
     attributes: [
       {attribute: 'currentTime', format: 'float32', byteOffset: 0},
       {attribute: 'trailLength', format: 'float32', byteOffset: 4},
-      {attribute: 'temporalEnabled', format: 'float32', byteOffset: 8}
+      {attribute: 'temporalEnabled', format: 'float32', byteOffset: 8},
+      {attribute: 'fadeTrail', format: 'float32', byteOffset: 12}
     ]
   });
   if (device.type === 'webgl') {
     constantAttributes['currentTime'] = temporalValues.subarray(0, 1);
     constantAttributes['trailLength'] = temporalValues.subarray(1, 2);
     constantAttributes['temporalEnabled'] = temporalValues.subarray(2, 3);
+    constantAttributes['fadeTrail'] = temporalValues.subarray(3, 4);
   } else {
     temporalBuffer = device.createBuffer({id: `${id}-constant-temporal`, data: temporalValues});
     attributes[CONSTANT_PATH_TEMPORAL_BUFFER] = temporalBuffer;
     buffers.push(temporalBuffer);
+    defaultTimestampBuffer = device.createBuffer({
+      id: `${id}-default-timestamp`,
+      data: new Float32Array([0]),
+      usage: Buffer.STORAGE
+    });
+    buffers.push(defaultTimestampBuffer);
   }
 
-  return {bufferLayout, attributes, constantAttributes, buffers, temporalBuffer};
+  return {
+    bufferLayout,
+    attributes,
+    constantAttributes,
+    buffers,
+    temporalBuffer,
+    defaultTimestampBuffer
+  };
 }
 
 function updateDeckPathTemporalStyle(batch: ArrowPathLayerBatch, props: ArrowPathLayerProps): void {
   const temporalValues = makeDeckPathTemporalValues({
     currentTime: props.currentTime ?? 0,
     trailLength: props.trailLength ?? 0,
-    temporalEnabled: props.temporalEnabled ?? false
+    temporalEnabled: props.temporalEnabled ?? false,
+    timestampColumnEnabled: batch.timestampColumnEnabled,
+    fadeTrail: props.fadeTrail ?? false
   });
   if (batch.model.device.type === 'webgl') {
     batch.model.setConstantAttributes({
       currentTime: temporalValues.subarray(0, 1),
       trailLength: temporalValues.subarray(1, 2),
-      temporalEnabled: temporalValues.subarray(2, 3)
+      temporalEnabled: temporalValues.subarray(2, 3),
+      fadeTrail: temporalValues.subarray(3, 4)
     });
   } else {
     batch.temporalBuffer?.write(temporalValues);
@@ -1041,13 +1104,18 @@ function updateDeckPathTemporalStyle(batch: ArrowPathLayerBatch, props: ArrowPat
 function makeDeckPathTemporalValues({
   currentTime,
   trailLength,
-  temporalEnabled
+  temporalEnabled,
+  timestampColumnEnabled,
+  fadeTrail
 }: {
   currentTime: number;
   trailLength: number;
   temporalEnabled: boolean;
+  timestampColumnEnabled: boolean;
+  fadeTrail: boolean;
 }): Float32Array {
-  return new Float32Array([currentTime, trailLength, temporalEnabled ? 1 : 0]);
+  const temporalMode = timestampColumnEnabled ? 2 : temporalEnabled ? 1 : 0;
+  return new Float32Array([currentTime, trailLength, temporalMode, fadeTrail ? 1 : 0]);
 }
 
 function resolveDeckPathModel(
