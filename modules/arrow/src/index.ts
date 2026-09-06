@@ -227,6 +227,7 @@ export {
   type PrepareArrowInputProps
 } from './arrow/gpu/arrow-input-schema';
 export {
+  makeGPUDataFrameFromArrowTable,
   makeGPUAnalyticsTableFromArrowTable,
   type GPUAnalyticsDictionary,
   type GPUAnalyticsTableFromArrowTableProps,

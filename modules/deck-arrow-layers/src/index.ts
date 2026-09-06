@@ -12,6 +12,7 @@ export {
   ArrowPathLayer,
   type ArrowPathColorInput,
   type ArrowPathLayerProps,
+  type ArrowPathVisibilityInput,
   type ArrowPathWidthInput
 } from './layers/arrow-path-layer';
 export {

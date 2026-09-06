@@ -4,6 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
+import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
 import {
   GPURecordBatch,
   GPUTable,
@@ -100,6 +101,14 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends TypeMap>(
   options?: GPUAnalyticsTableFromArrowTableProps<GPUAnalyticsTypeMapForArrow<T>>
 ): GPUAnalyticsTableFromArrowTableResult<GPUAnalyticsTypeMapForArrow<T>>;
 export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTypeMap>(
+  device: Device,
+  table: Table,
+  options: GPUAnalyticsTableFromArrowTableProps<T> = {}
+): GPUAnalyticsTableFromArrowTableResult<T> {
+  return makeGPUAnalyticsTableFromArrowTableImpl(device, table, options);
+}
+
+function makeGPUAnalyticsTableFromArrowTableImpl<T extends GPUTypeMap = GPUTypeMap>(
   device: Device,
   table: Table,
   options: GPUAnalyticsTableFromArrowTableProps<T> = {}
@@ -206,6 +215,34 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
     }
     for (const data of allocatedValidityData) {
       data.destroy();
+    }
+    throw error;
+  }
+}
+
+/**
+ * Uploads selected Arrow columns into an owned GPUDataFrame ready for compiled GPU expressions.
+ *
+ * The returned dataframe owns the uploaded values and validity vectors. Immutable query views keep
+ * those resources alive, so applications can destroy the source dataframe after compilation.
+ */
+export function makeGPUDataFrameFromArrowTable<T extends TypeMap>(
+  device: Device,
+  table: Table<T>,
+  options?: GPUAnalyticsTableFromArrowTableProps<GPUAnalyticsTypeMapForArrow<T>>
+): GPUDataFrame<GPUAnalyticsTypeMapForArrow<T>>;
+export function makeGPUDataFrameFromArrowTable<T extends GPUTypeMap = GPUTypeMap>(
+  device: Device,
+  table: Table,
+  options: GPUAnalyticsTableFromArrowTableProps<T> = {}
+): GPUDataFrame<T> {
+  const uploaded = makeGPUAnalyticsTableFromArrowTableImpl<T>(device, table, options);
+  try {
+    return new GPUDataFrame<T>({...uploaded, ownership: 'owned'});
+  } catch (error) {
+    uploaded.table.destroy();
+    for (const validity of Object.values(uploaded.validity)) {
+      validity?.destroy();
     }
     throw error;
   }

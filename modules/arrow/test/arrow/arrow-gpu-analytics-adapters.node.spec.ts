@@ -6,9 +6,11 @@ import {readFileSync} from 'node:fs';
 
 import {
   makeArrowTableFromGPUAnalyticsTable,
-  makeGPUAnalyticsTableFromArrowTable
+  makeGPUAnalyticsTableFromArrowTable,
+  makeGPUDataFrameFromArrowTable
 } from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
+import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -38,6 +40,30 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
     expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();
+  });
+});
+
+describe('makeGPUDataFrameFromArrowTable GPU accessor source', () => {
+  test('creates an owned dataframe without submitting GPU work or changing Arrow batches', () => {
+    const device = new NullDevice({id: 'arrow-gpu-dataframe-source'});
+    const submit = vi.spyOn(device, 'submit');
+    const frame = makeGPUDataFrameFromArrowTable(device, createAnalyticsTable(), {
+      columns: ['fare', 'zone']
+    });
+
+    expect(frame).toBeInstanceOf(GPUDataFrame);
+    expect(frame.ownership).toBe('owned');
+    expect(frame.columnNames).toEqual(['fare', 'zone']);
+    expect(frame.batches.map(batch => batch.numRows)).toEqual([2, 0, 3]);
+    expect(frame.sourceInfo).toEqual([
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 0},
+      {sourceBatchIndex: 2, sourceRowIndexOffset: 2, sourceRowCount: 3}
+    ]);
+    expect(submit).not.toHaveBeenCalled();
+
+    frame.destroy();
+    submit.mockRestore();
   });
 });
 
