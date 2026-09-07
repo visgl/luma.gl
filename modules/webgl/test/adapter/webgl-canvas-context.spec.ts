@@ -15,6 +15,40 @@ it('WebGLDevice#canvas context creation', async () => {
   ).toBe(true);
 });
 
+it('WebGLCanvasContext#default framebuffer tracks externally resized canvas', async () => {
+  const webGLTestDevice = await getWebGLTestDevice();
+  const canvasContext = webGLTestDevice.getDefaultCanvasContext();
+  const {canvas} = canvasContext;
+  const originalWidth = canvas.width;
+  const originalHeight = canvas.height;
+  const originalDrawingBufferSize = canvasContext.getDrawingBufferSize();
+
+  try {
+    const framebuffer = canvasContext.getCurrentFramebuffer();
+
+    // Simulate an external owner of canvas sizing, e.g. a base map in deck.gl's interleaved mode
+    canvas.width = originalWidth + 64;
+    canvas.height = originalHeight + 32;
+
+    const resizedFramebuffer = canvasContext.getCurrentFramebuffer();
+
+    expect(resizedFramebuffer, 'canvas context reuses its framebuffer wrapper').toBe(framebuffer);
+    expect(
+      [resizedFramebuffer.width, resizedFramebuffer.height],
+      'default framebuffer wrapper follows an externally resized canvas'
+    ).toEqual([canvas.width, canvas.height]);
+    expect(
+      canvasContext.getDrawingBufferSize(),
+      'tracked drawing buffer size follows an externally resized canvas'
+    ).toEqual([canvas.width, canvas.height]);
+  } finally {
+    canvas.width = originalWidth;
+    canvas.height = originalHeight;
+    canvasContext.setDrawingBufferSize(...originalDrawingBufferSize);
+    canvasContext.getCurrentFramebuffer();
+  }
+});
+
 it('WebGPU default canvas context reuses framebuffer wrappers', async () => {
   const webGPUDevice = await getWebGPUTestDevice();
   if (!webGPUDevice) {

@@ -441,9 +441,29 @@ export abstract class CanvasSurface {
       if (sizeChanged) {
         this.canvas.width = this.drawingBufferWidth;
         this.canvas.height = this.drawingBufferHeight;
-        this._configureDevice();
       }
+      // Reconfigure even when the canvas already had the requested size. An external owner of
+      // canvas sizing (e.g. a base map in deck.gl's interleaved mode) resizes the canvas itself
+      // and then reports the new size via setDrawingBufferSize(), so the canvas never needs to be
+      // written here. Backend resources derived from the drawing buffer size still need to be
+      // reconciled, so a requested resize must not be dropped just because the canvas agrees.
+      this._configureDevice();
+      return;
     }
+    // No resize was requested, but the canvas may still have been resized behind luma.gl's back:
+    // an owner that changes only the backing store (e.g. a host pixel ratio change) does not move
+    // the content box, so the ResizeObserver never fires and no size is ever reported.
+    this._adoptExternalDrawingBufferSize();
+  }
+
+  protected _adoptExternalDrawingBufferSize(): void {
+    const {width, height} = this.canvas;
+    if (this.drawingBufferWidth === width && this.drawingBufferHeight === height) {
+      return;
+    }
+    this.drawingBufferWidth = width;
+    this.drawingBufferHeight = height;
+    this._configureDevice();
   }
 
   _observeDevicePixelRatio() {

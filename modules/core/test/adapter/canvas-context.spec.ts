@@ -462,6 +462,111 @@ it('CanvasContext#_observeDevicePixelRatio clamps to max texture size in css-dpr
   void 0;
 });
 
+it('CanvasContext#_resizeDrawingBufferIfNeeded reconfigures when a reported size already matches the canvas', () => {
+  if (!isBrowser()) {
+    void 0;
+    return;
+  }
+
+  // An external owner of canvas sizing resizes the canvas and then reports the new size, so the
+  // canvas already agrees by the time luma.gl flushes. The requested reconfigure must still run,
+  // otherwise backend resources sized from the drawing buffer keep their previous size.
+  const canvasContext = new TestCanvasContext({autoResize: false, width: 400, height: 300}, false);
+  let configureDeviceCalls = 0;
+  (canvasContext as any)._configureDevice = () => {
+    configureDeviceCalls++;
+  };
+
+  canvasContext._resizeDrawingBufferIfNeeded();
+  configureDeviceCalls = 0;
+
+  canvasContext.canvas.width = 800;
+  canvasContext.canvas.height = 600;
+  canvasContext.setDrawingBufferSize(800, 600);
+  canvasContext._resizeDrawingBufferIfNeeded();
+
+  expect(
+    configureDeviceCalls,
+    'a reported resize reconfigures the device even when the canvas needs no write'
+  ).toBe(1);
+  expect(
+    [canvasContext.canvas.width, canvasContext.canvas.height],
+    'the externally owned canvas size is left untouched'
+  ).toEqual([800, 600]);
+
+  canvasContext.destroy();
+  void 0;
+});
+
+it('CanvasContext#_resizeDrawingBufferIfNeeded adopts externally driven canvas resizes', () => {
+  if (!isBrowser()) {
+    void 0;
+    return;
+  }
+
+  // autoResize: false means an external owner (e.g. a base map in deck.gl's interleaved mode)
+  // assigns canvas.width/height. luma.gl never observes those assignments, so the tracked
+  // drawing buffer size has to be reconciled from the canvas on read.
+  const canvasContext = new TestCanvasContext({autoResize: false, width: 400, height: 300}, false);
+  let configureDeviceCalls = 0;
+  (canvasContext as any)._configureDevice = () => {
+    configureDeviceCalls++;
+  };
+
+  // Clear the initial pending resize the constructor sets up
+  canvasContext._resizeDrawingBufferIfNeeded();
+  configureDeviceCalls = 0;
+
+  canvasContext.canvas.width = 800;
+  canvasContext.canvas.height = 600;
+  canvasContext._resizeDrawingBufferIfNeeded();
+
+  expect(
+    canvasContext.getDrawingBufferSize(),
+    'tracked drawing buffer size follows an externally resized canvas'
+  ).toEqual([800, 600]);
+  expect(configureDeviceCalls, 'device is reconfigured for the new canvas size').toBe(1);
+
+  // A second read with no further canvas change must not reconfigure again
+  canvasContext._resizeDrawingBufferIfNeeded();
+  expect(configureDeviceCalls, 'unchanged canvas size does not reconfigure the device').toBe(1);
+
+  canvasContext.destroy();
+  void 0;
+});
+
+it('CanvasContext#_resizeDrawingBufferIfNeeded still pushes luma.gl driven resizes to the canvas', () => {
+  if (!isBrowser()) {
+    void 0;
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({width: 400, height: 300}, false);
+  let configureDeviceCalls = 0;
+  (canvasContext as any)._configureDevice = () => {
+    configureDeviceCalls++;
+  };
+
+  canvasContext._resizeDrawingBufferIfNeeded();
+  configureDeviceCalls = 0;
+
+  canvasContext.setDrawingBufferSize(1000, 500);
+  canvasContext._resizeDrawingBufferIfNeeded();
+
+  expect(
+    [canvasContext.canvas.width, canvasContext.canvas.height],
+    'a pending luma.gl driven resize is written to the canvas'
+  ).toEqual([1000, 500]);
+  expect(
+    canvasContext.getDrawingBufferSize(),
+    'the requested drawing buffer size is not overwritten by the canvas'
+  ).toEqual([1000, 500]);
+  expect(configureDeviceCalls, 'device is reconfigured once for the luma.gl driven resize').toBe(1);
+
+  canvasContext.destroy();
+  void 0;
+});
+
 it('CanvasContext#_startObservers defers DOM observation until explicitly started', () => {
   if (!isBrowser()) {
     void 0;
