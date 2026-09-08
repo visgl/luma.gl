@@ -6,10 +6,15 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
+import {getExampleSupportDefinition} from '../../examples/example-support-registry';
 
 const APPLICATION_PATH = path.join(
   process.cwd(),
   'examples/experimental/webxr-kaleidoscope/app.ts'
+);
+const APPLICATION_UI_PATH = path.join(
+  process.cwd(),
+  'examples/experimental/webxr-kaleidoscope/app-ui.ts'
 );
 const STANDALONE_PATH = path.join(
   process.cwd(),
@@ -355,7 +360,7 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
   });
 
   test('keeps standalone launch, sidebar, and backend metadata accurate', () => {
-    const applicationSource = readFileSync(APPLICATION_PATH, 'utf8');
+    const applicationUiSource = readFileSync(APPLICATION_UI_PATH, 'utf8');
     const standaloneSource = readFileSync(STANDALONE_PATH, 'utf8');
     const metadataSource = readFileSync(EXAMPLE_METADATA_PATH, 'utf8');
     const packageSource = JSON.parse(readFileSync(PACKAGE_PATH, 'utf8')) as {
@@ -372,10 +377,12 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
     expect(standaloneSource).toContain("toggleSession('immersive-vr')");
     expect(standaloneSource).toContain("toggleSession('immersive-ar')");
     expect(standaloneSource).toContain('switch-backend');
-    expect(applicationSource).toContain(
+    expect(applicationUiSource).toContain(
       'https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1'
     );
-    expect(metadataSource).toContain('backends: [webgpu, webgl2]');
+    expect(
+      getExampleSupportDefinition('experimental/webxr-kaleidoscope')?.requirements?.backends
+    ).toEqual(['webgpu', 'webgl2']);
     expect(metadataSource).toContain('Immersive Prism Portal');
     expect(packageSource.dependencies).toHaveProperty('@luma.gl/webgpu');
     expect(packageSource.dependencies).toHaveProperty('@luma.gl/webgl');

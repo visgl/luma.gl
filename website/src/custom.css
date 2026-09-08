@@ -2888,7 +2888,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
     gap: 6px !important;
     padding: calc(8px + env(safe-area-inset-top, 0px))
       calc(8px + env(safe-area-inset-right, 0px)) 0
-      calc(50px + env(safe-area-inset-left, 0px)) !important;
+      calc(60px + env(safe-area-inset-left, 0px)) !important;
   }
 
   .luma-example-page [data-luma-example-fullscreen-toggle] {
@@ -2897,8 +2897,8 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
     left: calc(8px + env(safe-area-inset-left, 0px));
     z-index: 25;
     display: grid;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     place-items: center;
     border: 1px solid rgba(148, 163, 184, 0.24);
     border-radius: 7px;
@@ -2935,6 +2935,9 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
     width: auto !important;
     max-width: none !important;
     max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .luma-example-page [data-luma-example-info-header] {
@@ -2958,7 +2961,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
   }
 
   .luma-example-page [data-luma-example-source-link] {
-    min-height: 24px !important;
+    min-height: 44px !important;
     padding: 0 5px !important;
   }
 
@@ -2967,8 +2970,8 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
   }
 
   .luma-example-page [data-luma-example-info-toggle] {
-    min-width: 36px !important;
-    height: 24px !important;
+    min-width: 44px !important;
+    height: 44px !important;
     padding: 0 6px !important;
     font-size: 10px !important;
   }
@@ -2985,7 +2988,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
   .luma-example-page [data-luma-device-menu] {
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
+    min-height: 44px;
     gap: 5px;
     margin: 0;
     border: 1px solid var(--luma-example-border, rgba(148, 163, 184, 0.24));
@@ -3026,6 +3029,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
     font-size: 10px;
     font-weight: 650;
     -webkit-appearance: none;
+    min-height: 44px;
   }
 
   .luma-example-page [data-luma-device-select] option {
@@ -3068,6 +3072,18 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
     right: calc(8px + env(safe-area-inset-right, 0px)) !important;
     width: calc(100% - 16px) !important;
     max-height: calc(100dvh - 76px - env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .luma-example-page button,
+  .luma-example-page select,
+  .luma-example-page [role="button"] {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .markdown .luma-live-benchmark button,
+  .markdown .luma-live-benchmark select {
+    min-height: 44px;
   }
 }
 

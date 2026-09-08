@@ -697,6 +697,7 @@ export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState={errorMessage ? 'failed' : 'running'}
       style={{background: '#f7f8fb', overflow: 'hidden', ...props.style}}
     >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
@@ -794,6 +795,7 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState={errorMessage ? 'failed' : 'running'}
       style={{background: '#f7f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-sort-app" />
@@ -838,6 +840,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState={errorMessage ? 'failed' : 'running'}
       style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-data-analysis-app" />
@@ -1453,8 +1456,11 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
 
   if (presentationDeviceError || errorMessage) {
     return (
-      <ExamplePage {...exampleDisplayProps}>
-        <div>{presentationDeviceError || errorMessage}</div>
+      <ExamplePage
+        {...exampleDisplayProps}
+        runtimeState={presentationDeviceError ? 'unsupported' : 'failed'}
+      >
+        <div role="alert">{presentationDeviceError || errorMessage}</div>
       </ExamplePage>
     );
   }
@@ -1467,8 +1473,8 @@ export const MultiCanvasExample: React.FC<WebsiteExampleProps> = props => {
       {...exampleDisplayProps}
     />
   ) : (
-    <ExamplePage {...exampleDisplayProps}>
-      <div>Initializing device...</div>
+    <ExamplePage {...exampleDisplayProps} runtimeState="loading">
+      <div role="status">Initializing device...</div>
     </ExamplePage>
   );
 };
@@ -1548,7 +1554,15 @@ export const FP64Example: React.FC<WebsiteExampleProps> = ({
   }
 
   if (presentationDeviceError) {
-    return <div>{presentationDeviceError}</div>;
+    return (
+      <ExamplePage
+        {...props}
+        embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+        runtimeState="unsupported"
+      >
+        <div role="alert">{presentationDeviceError}</div>
+      </ExamplePage>
+    );
   }
 
   if (errorMessage || !module) {
@@ -1576,6 +1590,7 @@ export const FP64Example: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
+      runtimeState="loading"
     >
       <div>Initializing device...</div>
     </ExamplePage>
@@ -1623,6 +1638,9 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
         (props.embedded ? 'docs-embedded-example docs-embedded-example--content' : undefined)
       }
       embeddedHeight={embeddedHeight ?? (props.embedded ? 'auto' : undefined)}
+      runtimeState={
+        presentationDeviceError ? 'unsupported' : errorMessage ? 'failed' : TextureTesterApp ? 'running' : 'loading'
+      }
       style={{
         width: '100%',
         height: props.embedded ? 'auto' : '100%',
@@ -1644,7 +1662,7 @@ export const TextureTesterExample: React.FC<WebsiteExampleProps> = ({
         </div>
       ) : null}
       {presentationDeviceError || errorMessage ? (
-        <div>{presentationDeviceError || errorMessage}</div>
+        <div role="alert">{presentationDeviceError || errorMessage}</div>
       ) : deviceType && presentationDevice && TextureTesterApp ? (
         <TextureTesterApp
           compact={props.embedded}
@@ -1709,14 +1727,18 @@ export const ExternalContextExample: React.FC = () => {
   }, []);
 
   return (
-    <ExamplePage style={{minHeight: '640px'}}>
+    <ExamplePage runtimeState={error ? 'failed' : 'running'} style={{minHeight: '640px'}}>
       <div
         className="integration-example-page"
         style={{position: 'relative', width: '100%', minHeight: '640px'}}
       >
         <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       </div>
-      {error ? <p style={{color: '#b00020', marginTop: 12}}>{error}</p> : null}
+      {error ? (
+        <p role="alert" style={{color: '#b00020', marginTop: 12}}>
+          {error}
+        </p>
+      ) : null}
     </ExamplePage>
   );
 };
@@ -1737,7 +1759,10 @@ export const ReactStrictModeExample: React.FC = () => {
   };
 
   return (
-    <ExamplePage style={{minHeight: '640px'}}>
+    <ExamplePage
+      runtimeState={errorMessage ? 'failed' : HelloReactApp ? 'running' : 'loading'}
+      style={{minHeight: '640px'}}
+    >
       <ExampleHeader
         title="React Strict Mode"
         sourcePath="examples/integrations/hello-react"

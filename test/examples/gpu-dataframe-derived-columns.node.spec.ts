@@ -11,6 +11,10 @@ const EXAMPLE_SOURCE = readFileSync(
   fileURLToPath(new URL('examples/experimental/gpu-data-analysis/src/app.ts', REPOSITORY_ROOT)),
   'utf8'
 );
+const EXAMPLE_UI_SOURCE = readFileSync(
+  fileURLToPath(new URL('examples/experimental/gpu-data-analysis/src/app-ui.ts', REPOSITORY_ROOT)),
+  'utf8'
+);
 const EXAMPLE_SHELL = readFileSync(
   fileURLToPath(
     new URL('examples/experimental/gpu-data-analysis/src/app-shell.ts', REPOSITORY_ROOT)
@@ -27,7 +31,7 @@ describe('GPU data-analysis luDF derived-column demo', () => {
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-run');
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-result');
     expect(EXAMPLE_SHELL).toContain('data-gpu-dataframe-preview');
-    expect(EXAMPLE_SOURCE).toContain('GPU_DATA_ANALYSIS_TEMPLATE');
+    expect(EXAMPLE_UI_SOURCE).toContain('GPU_DATA_ANALYSIS_TEMPLATE');
     expect(EXAMPLE_SOURCE).not.toContain('const EXAMPLE_HTML');
     expect(EXAMPLE_SOURCE).toContain("addEventListener('click', this.handleGPUDataFrameRun)");
     expect(EXAMPLE_SOURCE).toContain("removeEventListener('click', this.handleGPUDataFrameRun)");
