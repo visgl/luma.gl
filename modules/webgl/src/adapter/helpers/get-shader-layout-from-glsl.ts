@@ -276,26 +276,75 @@ function validateReflectedUniformBlock(
   knownUniformBlock: UniformBlockBinding
 ): void {
   for (const reflectedUniform of reflectedUniformBlock.uniforms) {
-    const knownUniform = knownUniformBlock.uniforms.find(
-      uniform =>
-        reflectedUniform.name === uniform.name || reflectedUniform.name.endsWith(`.${uniform.name}`)
-    );
+    const knownUniform =
+      knownUniformBlock.uniforms.find(uniform => reflectedUniform.name === uniform.name) ||
+      knownUniformBlock.uniforms.find(
+        uniform => getStructArrayElementIndex(reflectedUniform.name, uniform.name) !== null
+      ) ||
+      knownUniformBlock.uniforms.find(uniform =>
+        reflectedUniform.name.endsWith(`.${uniform.name}`)
+      );
     if (!knownUniform) {
       throw new Error(
         `Failed to validate WebGL uniform block "${knownUniformBlock.name}": reflected unexpected member "${reflectedUniform.name}"`
       );
     }
-    if (
+    const layoutsDiffer =
       reflectedUniform.format !== knownUniform.format ||
       reflectedUniform.arrayLength !== knownUniform.arrayLength ||
       reflectedUniform.byteOffset !== knownUniform.byteOffset ||
-      reflectedUniform.byteStride !== knownUniform.byteStride
-    ) {
+      reflectedUniform.byteStride !== knownUniform.byteStride;
+    const structArrayElementIndex = getStructArrayElementIndex(
+      reflectedUniform.name,
+      knownUniform.name
+    );
+    const expandedStructArrayLayoutsMatch =
+      structArrayElementIndex !== null &&
+      structArrayElementIndex < knownUniform.arrayLength &&
+      reflectedUniform.format === knownUniform.format &&
+      reflectedUniform.arrayLength === 1 &&
+      reflectedUniform.byteOffset ===
+        knownUniform.byteOffset + structArrayElementIndex * knownUniform.byteStride &&
+      reflectedUniform.byteStride === 0;
+    if (layoutsDiffer && !expandedStructArrayLayoutsMatch) {
       throw new Error(
         `Failed to validate WebGL uniform block "${knownUniformBlock.name}": reflected layout for "${reflectedUniform.name}" does not match supplied std140 metadata`
       );
     }
   }
+}
+
+function matchesUniformName(reflectedName: string, knownName: string): boolean {
+  return reflectedName === knownName || reflectedName.endsWith(`.${knownName}`);
+}
+
+/** Returns the reflected element index when a compact struct-array member name matches. */
+function getStructArrayElementIndex(reflectedName: string, knownName: string): number | null {
+  const firstElementMarker = '[0].';
+  const firstElementMarkerIndex = knownName.indexOf(firstElementMarker);
+  if (firstElementMarkerIndex < 0) {
+    return null;
+  }
+
+  const knownArrayName = knownName.slice(0, firstElementMarkerIndex);
+  const knownMemberSuffix = knownName.slice(firstElementMarkerIndex + '[0]'.length);
+  if (!reflectedName.endsWith(knownMemberSuffix)) {
+    return null;
+  }
+
+  const reflectedArrayElementName = reflectedName.slice(0, -knownMemberSuffix.length);
+  const arrayElementMatch = reflectedArrayElementName.match(/^(.*)\[(\d+)\]$/);
+  const reflectedArrayName = arrayElementMatch?.[1];
+  const arrayElementIndex = arrayElementMatch?.[2];
+  if (
+    !reflectedArrayName ||
+    !arrayElementIndex ||
+    !matchesUniformName(reflectedArrayName, knownArrayName)
+  ) {
+    return null;
+  }
+
+  return Number(arrayElementIndex);
 }
 
 /** Resolves supplied module and application metadata against active linked blocks by name. */

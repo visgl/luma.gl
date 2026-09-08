@@ -2,19 +2,25 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it, vi} from 'vitest';
+import {afterEach, expect, it, vi} from 'vitest';
 
+import {log} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import {getShaderLayoutFromGLSL} from '@luma.gl/webgl';
 
 type ReflectionOptions = {
   activeBlockCount?: number;
   activeUniformInfo?: WebGLActiveInfo | null;
+  activeUniformInfos?: (WebGLActiveInfo | null)[];
   blockIndexByName?: Record<string, number>;
+  blockByteLength?: number;
   blockName?: string | null;
   nullBlockParameter?: number;
+  uniformArrayLengths?: number[];
   uniformBlockIndex?: number;
   uniformIndices?: number[] | null;
+  uniformOffsets?: number[];
+  uniformStrides?: number[];
   uniformTypes?: number[] | null;
 };
 
@@ -26,6 +32,9 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
   const blockName = options.blockName === undefined ? 'rawUniforms' : options.blockName;
   const uniformIndices = options.uniformIndices === undefined ? [4] : options.uniformIndices;
   const uniformTypes = options.uniformTypes === undefined ? [GL.FLOAT] : options.uniformTypes;
+  const uniformArrayLengths = options.uniformArrayLengths ?? uniformTypes?.map(() => 1);
+  const uniformOffsets = options.uniformOffsets ?? uniformTypes?.map((_value, index) => index * 16);
+  const uniformStrides = options.uniformStrides ?? uniformTypes?.map(() => 0);
   const activeUniformInfo =
     options.activeUniformInfo === undefined
       ? ({name: 'raw.value', size: 1, type: GL.FLOAT} as WebGLActiveInfo)
@@ -38,13 +47,13 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
         case GL.UNIFORM_TYPE:
           return uniformTypes;
         case GL.UNIFORM_SIZE:
-          return uniformTypes && uniformTypes.map(() => 1);
+          return uniformArrayLengths;
         case GL.UNIFORM_BLOCK_INDEX:
           return uniformTypes && uniformTypes.map(() => uniformBlockIndex);
         case GL.UNIFORM_OFFSET:
-          return uniformTypes && uniformTypes.map((_value, index) => index * 16);
+          return uniformOffsets;
         case GL.UNIFORM_ARRAY_STRIDE:
-          return uniformTypes && uniformTypes.map(() => 0);
+          return uniformStrides;
         default:
           throw new Error(`Unexpected active uniform parameter ${parameter}`);
       }
@@ -80,7 +89,7 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
         case GL.UNIFORM_BLOCK_BINDING:
           return 3;
         case GL.UNIFORM_BLOCK_DATA_SIZE:
-          return 16;
+          return options.blockByteLength ?? 16;
         case GL.UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER:
           return true;
         case GL.UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER:
@@ -94,13 +103,22 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
       }
     },
     getActiveUniforms,
-    getActiveUniform: () => activeUniformInfo
+    getActiveUniform: (_program: WebGLProgram, uniformIndex: number) => {
+      if (!options.activeUniformInfos || !uniformIndices) {
+        return activeUniformInfo;
+      }
+      return options.activeUniformInfos[uniformIndices.indexOf(uniformIndex)] ?? null;
+    }
   } as unknown as WebGL2RenderingContext;
 
   return {gl, getActiveUniforms};
 }
 
 const program = {} as WebGLProgram;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 it('getShaderLayoutFromGLSL uses module std140 metadata when getActiveUniforms returns null', () => {
   const {gl, getActiveUniforms} = makeReflectionContext({
@@ -194,6 +212,108 @@ it('getShaderLayoutFromGLSL keeps module metadata when driver indices name anoth
       {name: 'coordinateSystem', format: 'i32', byteOffset: 4}
     ]
   });
+});
+
+it('getShaderLayoutFromGLSL validates GLSL bools against integer module metadata', () => {
+  const logOnce = vi.spyOn(log, 'once').mockReturnValue(() => {});
+  const {gl} = makeReflectionContext({
+    activeUniformInfo: {name: 'moduleUniforms.enabled', size: 1, type: GL.BOOL},
+    blockIndexByName: {moduleUniforms: 0},
+    uniformTypes: [GL.BOOL]
+  });
+
+  const shaderLayout = getShaderLayoutFromGLSL(gl, program, {
+    uniformBlockLayouts: [{name: 'moduleUniforms', uniformTypes: {enabled: 'i32'}}]
+  });
+
+  expect(logOnce).not.toHaveBeenCalled();
+  expect(shaderLayout.bindings[0]).toMatchObject({
+    name: 'moduleUniforms',
+    uniforms: [{name: 'enabled', format: 'i32', byteOffset: 0}]
+  });
+});
+
+it('getShaderLayoutFromGLSL validates expanded array-of-struct reflection', () => {
+  const logOnce = vi.spyOn(log, 'once').mockReturnValue(() => {});
+  const uniformIndices = [4, 5, 6, 7];
+  const uniformTypes = uniformIndices.map(() => GL.FLOAT_VEC3);
+  const {gl} = makeReflectionContext({
+    activeUniformInfos: [
+      {name: 'lightingUniforms.lights[0].color', size: 1, type: GL.FLOAT_VEC3},
+      {name: 'lightingUniforms.lights[0].position', size: 1, type: GL.FLOAT_VEC3},
+      {name: 'lightingUniforms.lights[1].color', size: 1, type: GL.FLOAT_VEC3},
+      {name: 'lightingUniforms.lights[1].position', size: 1, type: GL.FLOAT_VEC3}
+    ],
+    blockByteLength: 64,
+    blockIndexByName: {lightingUniforms: 0},
+    uniformIndices,
+    uniformOffsets: [0, 16, 32, 48],
+    uniformTypes
+  });
+
+  const shaderLayout = getShaderLayoutFromGLSL(gl, program, {
+    uniformBlockLayouts: [
+      {
+        name: 'lightingUniforms',
+        uniformTypes: {
+          lights: [{color: 'vec3<f32>', position: 'vec3<f32>'}, 2]
+        }
+      }
+    ]
+  });
+
+  expect(logOnce).not.toHaveBeenCalled();
+  expect(shaderLayout.bindings[0]).toMatchObject({
+    name: 'lightingUniforms',
+    minBindingSize: 64,
+    uniforms: [
+      {
+        name: 'lights[0].color',
+        format: 'vec3<f32>',
+        arrayLength: 2,
+        byteOffset: 0,
+        byteStride: 32
+      },
+      {
+        name: 'lights[0].position',
+        format: 'vec3<f32>',
+        arrayLength: 2,
+        byteOffset: 16,
+        byteStride: 32
+      }
+    ]
+  });
+});
+
+it('getShaderLayoutFromGLSL rejects an invalid expanded array-of-struct offset', () => {
+  const logOnce = vi.spyOn(log, 'once').mockReturnValue(() => {});
+  const {gl} = makeReflectionContext({
+    activeUniformInfo: {
+      name: 'lightingUniforms.lights[1].color',
+      size: 1,
+      type: GL.FLOAT_VEC3
+    },
+    blockByteLength: 64,
+    blockIndexByName: {lightingUniforms: 0},
+    uniformOffsets: [36],
+    uniformTypes: [GL.FLOAT_VEC3]
+  });
+
+  getShaderLayoutFromGLSL(gl, program, {
+    uniformBlockLayouts: [
+      {
+        name: 'lightingUniforms',
+        uniformTypes: {
+          lights: [{color: 'vec3<f32>', position: 'vec3<f32>'}, 2]
+        }
+      }
+    ]
+  });
+
+  expect(logOnce).toHaveBeenCalledWith(
+    0,
+    expect.stringMatching(/lights\[1\]\.color.*does not match supplied std140 metadata/)
+  );
 });
 
 it('getShaderLayoutFromGLSL omits module blocks optimized out by the linker', () => {
