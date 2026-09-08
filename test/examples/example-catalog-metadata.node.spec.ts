@@ -192,7 +192,7 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(83);
+    expect(standaloneFiles).toHaveLength(85);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'
