@@ -6,6 +6,13 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="effects" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <!-- /luma-example-support -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -337,12 +344,9 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="./assets/showcase-CLxT06cK.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/chunk-BRNzzbbm.js">
-    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-nWFcKNmA.js">
-    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-BajvVC89.js">
-    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-39HtRWEL.js">
-    <link rel="modulepreload" crossorigin href="./assets/usd-samples-DqKjumBN.js">
+    <script type="module" crossorigin src="./assets/showcase-D5GHTI42.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/example-support-BU3ToPZC.js">
+    <link rel="modulepreload" crossorigin href="./assets/preload-helper-Chd9yIcd.js">
   </head>
   <body>
     <div class="veil" aria-hidden="true"></div>

@@ -5,14 +5,19 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="large-data" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -275,8 +280,11 @@
       <div id="table-status" class="status">Generating Arrow table...</div>
     </section>
   </main>
-  <script type="module">
-    import {initializeGPGPUShowcase} from './src/app.ts';
-    initializeGPGPUShowcase();
+  <script type="module" data-luma-example-application>
+    const exampleSupport = await window.lumaExampleSupportPromise;
+    if (exampleSupport.supported) {
+      const {initializeGPGPUShowcase} = await import('./src/app.ts');
+      initializeGPGPUShowcase();
+    }
   </script>
 </body>

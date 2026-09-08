@@ -6,14 +6,19 @@
   <meta name="luma-example-backends" content="webgpu" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="simulation" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
   <meta charset="UTF-8" />
@@ -50,24 +55,27 @@
     <div data-field-panel-label class="panel-label">Flow topology</div>
     <div data-field-probe class="field-probe"></div>
   </div>
-  <script type="module">
-    const status = document.querySelector('#vector-field-status');
-    try {
-      const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] = await Promise.all([
-        import('@luma.gl/core'), import('@luma.gl/engine'), import('@luma.gl/webgpu'), import('./app.ts')
-      ]);
-      const device = await luma.createDevice({
-        id:'vector-field-lab', adapters:[webgpuAdapter], featureLevel:'best-available',
-        powerPreference:'high-performance', waitForPageLoad:false, createCanvasContext:true
-      });
-      if (device.info.featureLevel !== 'core') throw new Error('Vector Field Lab requires core WebGPU.');
-      const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
-      await animationLoop.start();
-      status.remove();
-    } catch (error) {
-      console.error(error);
-      status.textContent = error instanceof Error ? error.stack || error.message : String(error);
-      status.style.cssText = 'position:fixed;inset:24px;color:#fff;background:#630;padding:16px;white-space:pre-wrap;font:13px/1.45 monospace;z-index:10';
+  <script type="module" data-luma-example-application>
+    const exampleSupport = await window.lumaExampleSupportPromise;
+    if (exampleSupport.supported) {
+      const status = document.querySelector('#vector-field-status');
+      try {
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] = await Promise.all([
+          import('@luma.gl/core'), import('@luma.gl/engine'), import('@luma.gl/webgpu'), import('./app.ts')
+        ]);
+        const device = await luma.createDevice({
+          id:'vector-field-lab', adapters:[webgpuAdapter], featureLevel:'best-available',
+          powerPreference:'high-performance', waitForPageLoad:false, createCanvasContext:true
+        });
+        if (device.info.featureLevel !== 'core') throw new Error('Vector Field Lab requires core WebGPU.');
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device});
+        await animationLoop.start();
+        status.remove();
+      } catch (error) {
+        console.error(error);
+        status.textContent = error instanceof Error ? error.stack || error.message : String(error);
+        status.style.cssText = 'position:fixed;inset:24px;color:#fff;background:#630;padding:16px;white-space:pre-wrap;font:13px/1.45 monospace;z-index:10';
+      }
     }
   </script>
 </body>

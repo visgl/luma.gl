@@ -5,14 +5,19 @@
   <meta name="luma-example-backends" content="webgpu" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="effects" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,18 +27,21 @@
     canvas { display: block; width: 100vw !important; height: 100vh !important; }
   </style>
 </head>
-<script type="module">
-  import {luma} from '@luma.gl/core';
-  import {makeAnimationLoop} from '@luma.gl/engine';
-  import {webgpuAdapter} from '@luma.gl/webgpu';
-  import AnimationLoopTemplate from './app.ts';
+<script type="module" data-luma-example-application>
+  const exampleSupport = await window.lumaExampleSupportPromise;
+  if (exampleSupport.supported) {
+    const {luma} = await import('@luma.gl/core');
+    const {makeAnimationLoop} = await import('@luma.gl/engine');
+    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {default: AnimationLoopTemplate} = await import('./app.ts');
 
-  const device = luma.createDevice({
-    id: 'advanced-effects',
-    adapters: [webgpuAdapter],
-    createCanvasContext: true,
-    featureLevel: 'max'
-  });
-  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+    const device = luma.createDevice({
+      id: 'advanced-effects',
+      adapters: [webgpuAdapter],
+      createCanvasContext: true,
+      featureLevel: 'max'
+    });
+    makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+  }
 </script>
 <body></body>
