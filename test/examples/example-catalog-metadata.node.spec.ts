@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
+import {EXAMPLE_SUPPORT_REGISTRY} from '../../examples/example-support-registry';
 
 type ExampleSidebarEntry =
   | string
@@ -170,8 +171,25 @@ describe('live example catalog metadata', () => {
       path.join(process.cwd(), 'examples/example-support.ts'),
       'utf8'
     );
+    const supportRegistry = readFileSync(
+      path.join(process.cwd(), 'examples/example-support-registry.ts'),
+      'utf8'
+    );
     expect(supportPolicy).not.toMatch(/(?:import|export).*\/app['"]/);
     expect(supportPolicy).not.toContain('website/src/examples');
+    expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
+
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(86);
+    for (const example of LIVE_EXAMPLES) {
+      expect(
+        EXAMPLE_SUPPORT_REGISTRY[example.id],
+        `${example.id} requires a sidecar`
+      ).toBeDefined();
+      expect(
+        existsSync(path.join(process.cwd(), 'examples', example.id, 'mobile-support.ts')),
+        `${example.id} requires a local mobile-support.ts sidecar`
+      ).toBe(true);
+    }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
     expect(standaloneFiles).toHaveLength(84);
@@ -333,5 +351,16 @@ function readLiveExample(id: string, categories: string[]): LiveExample {
   }
 
   const metadata = parse(frontmatter[1]) as {sidebar_custom_props?: ExampleCatalogMetadata};
-  return {id, categories, metadata: metadata.sidebar_custom_props};
+  const supportDefinition = EXAMPLE_SUPPORT_REGISTRY[id];
+  return {
+    id,
+    categories,
+    metadata: {
+      ...metadata.sidebar_custom_props,
+      backends: supportDefinition?.requirements?.backends.slice(),
+      mobile: supportDefinition?.mobileMode,
+      mobileProfile: supportDefinition?.mobileProfile,
+      mobileUnsupportedReason: supportDefinition?.unsupportedReason
+    }
+  };
 }

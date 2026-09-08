@@ -30,6 +30,7 @@ import {
   type ExampleRuntimeEnvironment,
   type ExampleSupportDefinition
 } from '../../../../examples/example-support';
+import {getExampleSupportDefinition} from '../../../../examples/example-support-registry';
 import {useExampleSupportDefinition} from '../example-support-context';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {
@@ -886,12 +887,14 @@ function useResolvedExampleSupportDefinition(
   >
 ): ExampleSupportDefinition {
   const pageDefinition = useExampleSupportDefinition();
+  const registryDefinition = getExampleSupportDefinition(props.exampleId || pageDefinition?.id || '');
+  const baseDefinition = pageDefinition || registryDefinition;
   return {
-    id: props.exampleId || pageDefinition?.id || '',
-    mobileMode: props.mobileMode || pageDefinition?.mobileMode || 'reduced',
-    mobileProfile: props.mobileProfile || pageDefinition?.mobileProfile || 'standard',
-    unsupportedReason: props.mobileUnsupportedReason || pageDefinition?.unsupportedReason,
-    requirements: pageDefinition?.requirements
+    id: props.exampleId || baseDefinition?.id || '',
+    mobileMode: props.mobileMode || baseDefinition?.mobileMode || 'reduced',
+    mobileProfile: props.mobileProfile || baseDefinition?.mobileProfile || 'standard',
+    unsupportedReason: props.mobileUnsupportedReason || baseDefinition?.unsupportedReason,
+    requirements: baseDefinition?.requirements
   };
 }
 

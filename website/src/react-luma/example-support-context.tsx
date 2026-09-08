@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import React, {createContext, useContext, type ReactNode} from 'react';
+import {getExampleSupportDefinition} from '../../../examples/example-support-registry';
 import type {
   ExampleBackend,
   ExampleMobileMode,
@@ -30,13 +31,22 @@ export function ExampleSupportProvider({
   mobileProfile,
   unsupportedReason
 }: ExampleSupportProviderProps): React.JSX.Element {
-  const definition: ExampleSupportDefinition = {
-    id,
-    mobileMode: mobileMode ?? 'full',
-    mobileProfile: mobileProfile ?? 'standard',
-    unsupportedReason,
-    requirements: backends ? {backends} : undefined
-  };
+  const registryDefinition = getExampleSupportDefinition(id);
+  const definition: ExampleSupportDefinition = registryDefinition
+    ? {
+        ...registryDefinition,
+        ...(mobileMode ? {mobileMode} : {}),
+        ...(mobileProfile ? {mobileProfile} : {}),
+        ...(unsupportedReason ? {unsupportedReason} : {}),
+        ...(backends ? {requirements: {backends}} : {})
+      }
+    : {
+        id,
+        mobileMode: mobileMode ?? 'full',
+        mobileProfile: mobileProfile ?? 'standard',
+        unsupportedReason,
+        requirements: backends ? {backends} : undefined
+      };
   return (
     <ExampleSupportContext.Provider value={definition}>{children}</ExampleSupportContext.Provider>
   );

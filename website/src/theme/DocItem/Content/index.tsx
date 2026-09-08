@@ -7,11 +7,7 @@ import Heading from '@theme/Heading';
 import MDXComponents from '@theme/MDXComponents';
 import {MarkdownTable} from '../../../components/docs/markdown-table';
 import {ExampleSupportProvider} from '../../../react-luma/example-support-context';
-import type {
-  ExampleBackend,
-  ExampleMobileMode,
-  ExampleMobileQualityProfile
-} from '../../../../../examples/example-support';
+import {getExampleSupportDefinition} from '../../../../../examples/example-support-registry';
 
 type DocItemContentProps = {
   children: ReactNode;
@@ -46,18 +42,9 @@ function DocsMDXContent({children}: DocItemContentProps): ReactNode {
  * Renders doc markdown with luma.gl docs presentation components.
  */
 export default function DocItemContent({children}: DocItemContentProps): ReactNode {
-  const {metadata, frontMatter} = useDoc();
+  const {metadata} = useDoc();
   const syntheticTitle = useSyntheticTitle();
-  const customProperties = (
-    frontMatter as typeof frontMatter & {
-      sidebar_custom_props?: {
-        backends?: ExampleBackend[];
-        mobile?: ExampleMobileMode;
-        mobileProfile?: ExampleMobileQualityProfile;
-        mobileUnsupportedReason?: string;
-      };
-    }
-  ).sidebar_custom_props;
+  const supportDefinition = getExampleSupportDefinition(metadata.id);
   const content = <DocsMDXContent>{children}</DocsMDXContent>;
 
   return (
@@ -67,16 +54,8 @@ export default function DocItemContent({children}: DocItemContentProps): ReactNo
           <Heading as="h1">{syntheticTitle}</Heading>
         </header>
       )}
-      {customProperties?.mobile ? (
-        <ExampleSupportProvider
-          id={metadata.id}
-          backends={customProperties.backends}
-          mobileMode={customProperties.mobile}
-          mobileProfile={customProperties.mobileProfile}
-          unsupportedReason={customProperties.mobileUnsupportedReason}
-        >
-          {content}
-        </ExampleSupportProvider>
+      {supportDefinition ? (
+        <ExampleSupportProvider id={metadata.id}>{content}</ExampleSupportProvider>
       ) : (
         content
       )}

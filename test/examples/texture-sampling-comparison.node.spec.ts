@@ -5,6 +5,7 @@
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
+import {getExampleSupportDefinition} from '../../examples/example-support-registry';
 
 const REPOSITORY_ROOT = process.cwd();
 const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples/api/texture-sampling');
@@ -138,7 +139,10 @@ describe('interactive texture sampler comparisons', () => {
       'utf8'
     );
 
-    expect(documentation).toMatch(/backends:\s*\[webgpu,\s*webgl2\]/);
+    expect(getExampleSupportDefinition('api/texture-sampling')?.requirements?.backends).toEqual([
+      'webgpu',
+      'webgl2'
+    ]);
     expect(documentation).toMatch(
       /drag(?:gable|ging)?\s+(?:the\s+)?(?:comparison\s+)?(?:divider|splitter)/i
     );

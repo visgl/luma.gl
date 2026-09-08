@@ -7,7 +7,6 @@ import path from 'node:path';
 
 const REPOSITORY_ROOT = process.cwd();
 const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
-const CATALOG_DIRECTORY = path.join(REPOSITORY_ROOT, 'website/content/examples');
 const SUPPORT_BLOCK_PATTERN = /\n?\s*<!-- luma-example-support -->[\s\S]*?<!-- \/luma-example-support -->\n?/;
 const CATALOG_ALIASES = new Map([
   ['arrow/arrow-instancing', 'showcase/instancing'],
@@ -16,21 +15,6 @@ const CATALOG_ALIASES = new Map([
   ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
   ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
 ]);
-const STANDALONE_ONLY_DEFINITIONS = new Map([
-  [
-    'api/texture-compressed',
-    {backends: ['webgpu', 'webgl2'], mobile: 'full', mobileProfile: 'standard'}
-  ],
-  [
-    'integrations/hello-react',
-    {backends: ['webgpu', 'webgl2'], mobile: 'full', mobileProfile: 'standard'}
-  ],
-  [
-    'showcase/algebraic-varieties',
-    {backends: ['webgpu', 'webgl2'], mobile: 'reduced', mobileProfile: 'simulation'}
-  ]
-]);
-
 const htmlFiles = findStandaloneHtmlFiles(EXAMPLE_DIRECTORY).sort();
 
 for (const relativeHtmlFile of htmlFiles) {
@@ -59,27 +43,21 @@ for (const relativeHtmlFile of htmlFiles) {
 console.log(`Synchronized mobile support metadata for ${htmlFiles.length} standalone pages.`);
 
 function readSupportDefinition(catalogId, standaloneId) {
-  const catalogFile = path.join(CATALOG_DIRECTORY, `${catalogId}.mdx`);
+  const sidecarFile = path.join(EXAMPLE_DIRECTORY, catalogId, 'mobile-support.ts');
   try {
-    const source = readFileSync(catalogFile, 'utf8');
-    const frontmatter = source.match(/^---\n([\s\S]*?)\n---/)?.[1] || '';
-    const readValue = name => frontmatter.match(new RegExp(`^\\s*${name}:\\s*(.+)$`, 'm'))?.[1];
-    const backends = (readValue('backends') || '')
-      .replace(/^\[|\]$/g, '')
-      .split(',')
-      .map(value => value.trim())
+    const source = readFileSync(sidecarFile, 'utf8');
+    const backends = source
+      .match(/backends:\s*\[([^\]]*)\]/)?.[1]
+      ?.split(',')
+      .map(value => value.trim().replaceAll(/["']/g, ''))
       .filter(Boolean);
     return {
-      backends,
-      mobile: readValue('mobile'),
-      mobileProfile: readValue('mobileProfile'),
-      unsupportedReason: readValue('mobileUnsupportedReason')
+      backends: backends || [],
+      mobile: source.match(/mobileMode:\s*['"]([^'"]+)['"]/)?.[1],
+      mobileProfile: source.match(/mobileProfile:\s*['"]([^'"]+)['"]/)?.[1],
+      unsupportedReason: source.match(/unsupportedReason:\s*['"]([^'"]+)['"]/)?.[1]
     };
   } catch (error) {
-    const standaloneDefinition = STANDALONE_ONLY_DEFINITIONS.get(standaloneId);
-    if (standaloneDefinition) {
-      return standaloneDefinition;
-    }
     throw new Error(`No mobile support declaration exists for ${standaloneId}`, {cause: error});
   }
 }
