@@ -163,15 +163,16 @@ An all-null page has zero physical values and therefore a known empty result. Th
   Parquet definition/repetition levels into binary flags, then composes `GPUSegmentedLayout`.
 - Use `GPUParquetNestedColumnLayout` when one column has multiple requested schema depths or page
   chunks must remain explicit. It accepts matching definition/repetition `GraphVectorView`s, scans
-  leaf validity once per page, and composes `GPUFlagOffsets` plus `GPUSegmentOffsets` per depth.
+  leaf validity across the vector, and composes chunk-aware `GPUFlagOffsets` plus
+  `GPUSegmentOffsets` per depth.
   Required, optional, list, and nested-list layouts differ only in their schema-derived definition
-  and repetition thresholds. Returned vectors retain page-local offsets and can feed later graph
-  nodes without readback.
+  and repetition thresholds. Slot-aligned vectors retain page topology, while dense indices and one
+  global list-offset stream carry through page boundaries so a repeated row is never split.
 
 The nested operation allocates public results as graph transients with storage and copy-source
 usage. Keep them transient when the consumer is in the same graph. If results must outlive the
 compiled graph, copy selected chunks to imported caller-owned buffers and wrap those buffers as
-`GPUData`/`GPUVector` in the adapter; do not concatenate page terminals implicitly.
+`GPUData`/`GPUVector` in the adapter. The global list-offset stream already contains its terminal.
 
 ### Compression
 

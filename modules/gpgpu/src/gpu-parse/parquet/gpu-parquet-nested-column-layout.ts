@@ -61,9 +61,9 @@ export type GPUParquetNestedColumnDepthLayout = Readonly<{
   rowStartFlags: GraphVectorView<'uint32'>;
   rowIndices: GraphVectorView<'uint32'>;
   listOffsets: GraphVectorView<'uint32'>;
-  /** One scalar count chunk per source page. */
+  /** One scalar count for the complete chunked column. */
   elementCounts: GraphVectorView<'uint32'>;
-  /** One scalar count chunk per source page. */
+  /** One scalar count for the complete chunked column. */
   rowCounts: GraphVectorView<'uint32'>;
 }>;
 
@@ -73,7 +73,7 @@ export type GPUParquetNestedColumnLayoutResult = Readonly<{
   validity: GraphVectorView<'uint32'>;
   /** Exclusive dense physical-value indices aligned with encoded level slots. */
   valueOffsets: GraphVectorView<'uint32'>;
-  /** One non-null value count per source page. */
+  /** One non-null value count for the complete chunked column. */
   nonNullValueCounts: GraphVectorView<'uint32'>;
   /** One result for every requested schema depth, in input order. */
   depths: readonly GPUParquetNestedColumnDepthLayout[];
@@ -82,11 +82,11 @@ export type GPUParquetNestedColumnLayoutResult = Readonly<{
 /**
  * Materializes a required, optional, list, or nested-list Parquet column without CPU readback.
  *
- * The operation preserves the input `GraphVectorView` page topology. Leaf validity is classified
- * and scanned once per page, while each requested schema depth receives its own logical-element
- * and segment offsets. Returned transient views can be connected directly to later graph nodes;
- * adapters that require durable `GPUData`/`GPUVector` objects should copy chosen views into
- * caller-owned buffers and retain the same chunk order.
+ * The operation preserves the input `GraphVectorView` page topology for slot-aligned streams while
+ * scans carry offsets across page boundaries. Each requested schema depth receives one global
+ * list-offset stream, so a repeated row that begins on one page and continues on the next remains
+ * one row. Returned transient views can be connected directly to later graph nodes; adapters that
+ * require durable `GPUData`/`GPUVector` objects should copy chosen views into caller-owned buffers.
  *
  * Compile the completed command graph once and rebind imported input buffers for later batches
  * with the same page sizes. The operation performs no allocation, parsing, submission, or mapping
@@ -102,20 +102,51 @@ export class GPUParquetNestedColumnLayout {
     validateConfiguration(this.props);
   }
 
-  /** Adds page-local classifiers and generic offset operations, then returns composable views. */
+  /** Adds page classifiers and chunk-spanning generic offset operations. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): GPUParquetNestedColumnLayoutResult {
     const {definitionLevels, repetitionLevels} = this.props;
-    const validityChunks: GraphDataView<'uint32'>[] = [];
-    const valueOffsetChunks: GraphDataView<'uint32'>[] = [];
-    const nonNullValueCountChunks: GraphDataView<'uint32'>[] = [];
-    const depthChunks = this.props.depths.map(() => ({
-      elementFlags: [] as GraphDataView<'uint32'>[],
-      elementOffsets: [] as GraphDataView<'uint32'>[],
-      rowStartFlags: [] as GraphDataView<'uint32'>[],
-      rowIndices: [] as GraphDataView<'uint32'>[],
-      listOffsets: [] as GraphDataView<'uint32'>[],
-      elementCounts: [] as GraphDataView<'uint32'>[],
-      rowCounts: [] as GraphDataView<'uint32'>[]
+    const validity = createOutputVector(graph, `${this.id}-validity`, definitionLevels);
+    const valueOffsets = createOutputVector(graph, `${this.id}-value-offsets`, definitionLevels);
+    const nonNullValueCount = createTransientView(
+      graph,
+      `${this.id}-non-null-value-count`,
+      'uint32',
+      1
+    );
+    const depthOutputs = this.props.depths.map(depth => ({
+      elementFlags: createOutputVector(
+        graph,
+        `${this.id}-${depth.name}-element-flags`,
+        definitionLevels
+      ),
+      elementOffsets: createOutputVector(
+        graph,
+        `${this.id}-${depth.name}-element-offsets`,
+        definitionLevels
+      ),
+      rowStartFlags: createOutputVector(
+        graph,
+        `${this.id}-${depth.name}-row-start-flags`,
+        definitionLevels
+      ),
+      rowIndices: createOutputVector(
+        graph,
+        `${this.id}-${depth.name}-row-indices`,
+        definitionLevels
+      ),
+      listOffsets: createTransientView(
+        graph,
+        `${this.id}-${depth.name}-list-offsets`,
+        'uint32',
+        definitionLevels.length + 1
+      ),
+      elementCount: createTransientView(
+        graph,
+        `${this.id}-${depth.name}-element-count`,
+        'uint32',
+        1
+      ),
+      rowCount: createTransientView(graph, `${this.id}-${depth.name}-row-count`, 'uint32', 1)
     }));
 
     for (let chunkIndex = 0; chunkIndex < definitionLevels.data.length; chunkIndex++) {
@@ -127,133 +158,76 @@ export class GPUParquetNestedColumnLayout {
       ) {
         throw new Error(`${this.id} inputs must belong to the target graph`);
       }
-      const chunkId = `${this.id}-chunk-${chunkIndex}`;
       const slotCount = definitionLevelChunk.length;
-      const validity = createTransientView(graph, `${chunkId}-validity`, 'uint32', slotCount);
-      const valueOffsets = createTransientView(
-        graph,
-        `${chunkId}-value-offsets`,
-        'uint32',
-        slotCount
-      );
-      const nonNullValueCount = createTransientView(
-        graph,
-        `${chunkId}-non-null-value-count`,
-        'uint32',
-        1
-      );
-      validityChunks.push(validity);
-      valueOffsetChunks.push(valueOffsets);
-      nonNullValueCountChunks.push(nonNullValueCount);
+      const chunkId = `${this.id}-chunk-${chunkIndex}`;
 
       for (let depthIndex = 0; depthIndex < this.props.depths.length; depthIndex++) {
         const depth = this.props.depths[depthIndex];
-        const output = depthChunks[depthIndex];
+        const output = depthOutputs[depthIndex];
         const depthId = `${chunkId}-${depth.name}`;
-        const elementFlags = createTransientView(
-          graph,
-          `${depthId}-element-flags`,
-          'uint32',
-          slotCount
-        );
-        const elementOffsets = createTransientView(
-          graph,
-          `${depthId}-element-offsets`,
-          'uint32',
-          slotCount
-        );
-        const rowStartFlags = createTransientView(
-          graph,
-          `${depthId}-row-start-flags`,
-          'uint32',
-          slotCount
-        );
-        const rowIndices = createTransientView(
-          graph,
-          `${depthId}-row-indices`,
-          'uint32',
-          slotCount
-        );
-        const listOffsets = createTransientView(
-          graph,
-          `${depthId}-list-offsets`,
-          'uint32',
-          slotCount + 1
-        );
-        const elementCount = createTransientView(graph, `${depthId}-element-count`, 'uint32', 1);
-        const rowCount = createTransientView(graph, `${depthId}-row-count`, 'uint32', 1);
-        output.elementFlags.push(elementFlags);
-        output.elementOffsets.push(elementOffsets);
-        output.rowStartFlags.push(rowStartFlags);
-        output.rowIndices.push(rowIndices);
-        output.listOffsets.push(listOffsets);
-        output.elementCounts.push(elementCount);
-        output.rowCounts.push(rowCount);
 
         if (slotCount > 0) {
           addClassifyPass(graph, {
             id: `${depthId}-classify`,
             definitionLevels: definitionLevelChunk,
             repetitionLevels: repetitionLevelChunk,
-            validity: depthIndex === 0 ? validity : undefined,
-            elementFlags,
-            rowStartFlags,
+            validity: depthIndex === 0 ? validity.data[chunkIndex] : undefined,
+            elementFlags: output.elementFlags.data[chunkIndex],
+            rowStartFlags: output.rowStartFlags.data[chunkIndex],
             maxDefinitionLevel: this.props.maxDefinitionLevel,
             elementDefinitionLevel: depth.elementDefinitionLevel,
+            rowDefinitionLevel:
+              depthIndex === 0 ? 0 : this.props.depths[depthIndex - 1].elementDefinitionLevel,
             rowStartRepetitionLevel: depth.rowStartRepetitionLevel
           });
         }
-        if (depthIndex === 0) {
-          new GPUFlagOffsets({
-            id: `${chunkId}-leaf-values`,
-            flags: validity,
-            offsets: valueOffsets,
-            count: nonNullValueCount
-          }).addToGraph(graph);
-        }
-        new GPUFlagOffsets({
-          id: `${depthId}-elements`,
-          flags: elementFlags,
-          offsets: elementOffsets,
-          count: elementCount
-        }).addToGraph(graph);
-        new GPUSegmentOffsets({
-          id: `${depthId}-rows`,
-          elementFlags,
-          elementOffsets,
-          segmentStartFlags: rowStartFlags,
-          segmentIndices: rowIndices,
-          segmentOffsets: listOffsets,
-          segmentCount: rowCount
-        }).addToGraph(graph);
       }
     }
 
+    new GPUFlagOffsets({
+      id: `${this.id}-leaf-values`,
+      flags: validity,
+      offsets: valueOffsets,
+      count: nonNullValueCount
+    }).addToGraph(graph);
+    for (let depthIndex = 0; depthIndex < this.props.depths.length; depthIndex++) {
+      const depth = this.props.depths[depthIndex];
+      const output = depthOutputs[depthIndex];
+      new GPUFlagOffsets({
+        id: `${this.id}-${depth.name}-elements`,
+        flags: output.elementFlags,
+        offsets: output.elementOffsets,
+        count: output.elementCount
+      }).addToGraph(graph);
+      new GPUSegmentOffsets({
+        id: `${this.id}-${depth.name}-rows`,
+        elementFlags: output.elementFlags,
+        elementOffsets: output.elementOffsets,
+        segmentStartFlags: output.rowStartFlags,
+        segmentIndices: output.rowIndices,
+        segmentOffsets: output.listOffsets,
+        segmentCount: output.rowCount
+      }).addToGraph(graph);
+    }
+
     return Object.freeze({
-      validity: makeVector(`${this.id}-validity`, validityChunks),
-      valueOffsets: makeVector(`${this.id}-value-offsets`, valueOffsetChunks),
-      nonNullValueCounts: makeVector(`${this.id}-non-null-value-counts`, nonNullValueCountChunks),
+      validity,
+      valueOffsets,
+      nonNullValueCounts: makeVector(`${this.id}-non-null-value-counts`, [nonNullValueCount]),
       depths: Object.freeze(
         this.props.depths.map((depth, depthIndex) => {
-          const chunks = depthChunks[depthIndex];
+          const output = depthOutputs[depthIndex];
           return Object.freeze({
             name: depth.name,
-            elementFlags: makeVector(`${this.id}-${depth.name}-element-flags`, chunks.elementFlags),
-            elementOffsets: makeVector(
-              `${this.id}-${depth.name}-element-offsets`,
-              chunks.elementOffsets
-            ),
-            rowStartFlags: makeVector(
-              `${this.id}-${depth.name}-row-start-flags`,
-              chunks.rowStartFlags
-            ),
-            rowIndices: makeVector(`${this.id}-${depth.name}-row-indices`, chunks.rowIndices),
-            listOffsets: makeVector(`${this.id}-${depth.name}-list-offsets`, chunks.listOffsets),
-            elementCounts: makeVector(
-              `${this.id}-${depth.name}-element-counts`,
-              chunks.elementCounts
-            ),
-            rowCounts: makeVector(`${this.id}-${depth.name}-row-counts`, chunks.rowCounts)
+            elementFlags: output.elementFlags,
+            elementOffsets: output.elementOffsets,
+            rowStartFlags: output.rowStartFlags,
+            rowIndices: output.rowIndices,
+            listOffsets: makeVector(`${this.id}-${depth.name}-list-offsets`, [output.listOffsets]),
+            elementCounts: makeVector(`${this.id}-${depth.name}-element-counts`, [
+              output.elementCount
+            ]),
+            rowCounts: makeVector(`${this.id}-${depth.name}-row-counts`, [output.rowCount])
           });
         })
       )
@@ -270,6 +244,7 @@ type ClassifyPassProps = {
   rowStartFlags: GraphDataView<'uint32'>;
   maxDefinitionLevel: number;
   elementDefinitionLevel: number;
+  rowDefinitionLevel: number;
   rowStartRepetitionLevel: number;
 };
 
@@ -297,6 +272,7 @@ function addClassifyPass<Parameters>(
   const source = `const LENGTH: u32 = ${length}u;
 const MAX_DEFINITION_LEVEL: u32 = ${props.maxDefinitionLevel}u;
 const ELEMENT_DEFINITION_LEVEL: u32 = ${props.elementDefinitionLevel}u;
+const ROW_DEFINITION_LEVEL: u32 = ${props.rowDefinitionLevel}u;
 const ROW_START_REPETITION_LEVEL: u32 = ${props.rowStartRepetitionLevel}u;
 const DEFINITION_OFFSET: u32 = ${getViewElementOffset(props.definitionLevels)}u;
 const REPETITION_OFFSET: u32 = ${getViewElementOffset(props.repetitionLevels)}u;
@@ -321,7 +297,8 @@ fn main(
   rowStartFlags[ROW_START_OFFSET + index] = select(
     0u,
     1u,
-    index > 0u && repetitionLevels[REPETITION_OFFSET + index] <= ROW_START_REPETITION_LEVEL
+    definitionLevel >= ROW_DEFINITION_LEVEL &&
+      repetitionLevels[REPETITION_OFFSET + index] <= ROW_START_REPETITION_LEVEL
   );
 }`;
   const resources = [
@@ -389,6 +366,17 @@ function makeVector(
     rowByteLength: Uint32Array.BYTES_PER_ELEMENT,
     data
   });
+}
+
+function createOutputVector<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  id: string,
+  template: GraphVectorView<'uint32'>
+): GraphVectorView<'uint32'> {
+  const chunks = template.data.map((chunk, chunkIndex) =>
+    createTransientView(graph, `${id}-chunk-${chunkIndex}`, 'uint32', chunk.length)
+  );
+  return makeVector(id, chunks);
 }
 
 function validateConfiguration(props: Readonly<GPUParquetNestedColumnLayoutProps>): void {

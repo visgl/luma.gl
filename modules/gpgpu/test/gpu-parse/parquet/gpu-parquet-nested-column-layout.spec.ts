@@ -43,12 +43,12 @@ it('GPUParquetNestedColumnLayout preserves page chunks and materializes two dept
   };
   const definitionLevels = importChunks('definition-levels', [
     Uint32Array.from([3, 3, 2, 3, 1, 3]),
-    Uint32Array.from([3, 2]),
+    Uint32Array.from([3, 0, 3, 2]),
     new Uint32Array(0)
   ]);
   const repetitionLevels = importChunks('repetition-levels', [
     Uint32Array.from([0, 2, 1, 0, 0, 1]),
-    Uint32Array.from([0, 1]),
+    Uint32Array.from([2, 0, 0, 0]),
     new Uint32Array(0)
   ]);
   const result = new GPUParquetNestedColumnLayout({
@@ -61,8 +61,8 @@ it('GPUParquetNestedColumnLayout preserves page chunks and materializes two dept
     ]
   }).addToGraph(graph);
 
-  expect(result.validity.data.map(chunk => chunk.length)).toEqual([6, 2, 0]);
-  expect(result.depths[0].listOffsets.data.map(chunk => chunk.length)).toEqual([7, 3, 1]);
+  expect(result.validity.data.map(chunk => chunk.length)).toEqual([6, 4, 0]);
+  expect(result.depths[0].listOffsets.data.map(chunk => chunk.length)).toEqual([11]);
 
   const readbacks = new Map<GraphDataView<'uint32'>, Buffer>();
   const addReadback = (id: string, view: GraphDataView<'uint32'>) => {
@@ -118,22 +118,20 @@ it('GPUParquetNestedColumnLayout preserves page chunks and materializes two dept
       return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, view.length));
     };
     expect(await read(result.validity.data[0])).toEqual([1, 1, 0, 1, 0, 1]);
-    expect(await read(result.validity.data[1])).toEqual([1, 0]);
+    expect(await read(result.validity.data[1])).toEqual([1, 0, 1, 0]);
     expect(await read(result.valueOffsets.data[0])).toEqual([0, 1, 2, 2, 3, 3]);
-    expect(await read(result.nonNullValueCounts.data[0])).toEqual([4]);
-    expect((await read(result.depths[0].listOffsets.data[0])).slice(0, 4)).toEqual([0, 3, 4, 6]);
-    expect(await read(result.depths[0].elementCounts.data[0])).toEqual([6]);
-    expect(await read(result.depths[0].rowCounts.data[0])).toEqual([3]);
-    expect((await read(result.depths[1].listOffsets.data[0])).slice(0, 6)).toEqual([
-      0, 2, 3, 4, 4, 5
+    expect(await read(result.valueOffsets.data[1])).toEqual([4, 5, 5, 6]);
+    expect(await read(result.nonNullValueCounts.data[0])).toEqual([6]);
+    expect((await read(result.depths[0].listOffsets.data[0])).slice(0, 7)).toEqual([
+      0, 3, 4, 7, 7, 8, 9
     ]);
-    expect(await read(result.depths[1].elementCounts.data[0])).toEqual([5]);
-    expect(await read(result.depths[1].rowCounts.data[0])).toEqual([5]);
-    expect((await read(result.depths[1].listOffsets.data[1])).slice(0, 3)).toEqual([0, 1, 2]);
-    expect(await read(result.nonNullValueCounts.data[2])).toEqual([0]);
-    expect(await read(result.depths[0].listOffsets.data[2])).toEqual([0]);
-    expect(await read(result.depths[0].elementCounts.data[2])).toEqual([0]);
-    expect(await read(result.depths[0].rowCounts.data[2])).toEqual([0]);
+    expect(await read(result.depths[0].elementCounts.data[0])).toEqual([9]);
+    expect(await read(result.depths[0].rowCounts.data[0])).toEqual([6]);
+    expect((await read(result.depths[1].listOffsets.data[0])).slice(0, 8)).toEqual([
+      0, 2, 3, 4, 4, 6, 7, 8
+    ]);
+    expect(await read(result.depths[1].elementCounts.data[0])).toEqual([8]);
+    expect(await read(result.depths[1].rowCounts.data[0])).toEqual([7]);
   } finally {
     compiled.destroy();
     for (const buffer of buffers) {
