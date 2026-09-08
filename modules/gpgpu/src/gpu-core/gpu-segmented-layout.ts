@@ -101,7 +101,8 @@ export class GPUSegmentedLayout {
       output: props.segmentIndices,
       mode: 'inclusive'
     }).addToGraph(graph);
-    addFinalizePass(graph, props);
+    addSegmentOffsetsPass(graph, props);
+    addCountsPass(graph, props);
   }
 }
 
@@ -151,38 +152,28 @@ fn main(
   );
 }
 
-function addFinalizePass<Parameters>(
+function addSegmentOffsetsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentedLayoutProps>
 ): void {
   const length = props.valueFlags.length;
   const dispatchLayout = getBoundedDispatchLayout(
-    'GPUSegmentedLayoutFinalize',
+    'GPUSegmentedLayoutSegmentOffsets',
     length,
     SEGMENTED_LAYOUT_WORKGROUP_SIZE,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = `const LENGTH: u32 = ${length}u;
-const VALUE_FLAG_OFFSET: u32 = ${getViewElementOffset(props.valueFlags)}u;
-const VALUE_OFFSET: u32 = ${getViewElementOffset(props.valueOffsets)}u;
 const ELEMENT_FLAG_OFFSET: u32 = ${getViewElementOffset(props.elementFlags)}u;
 const ELEMENT_OFFSET: u32 = ${getViewElementOffset(props.elementOffsets)}u;
 const SEGMENT_START_OFFSET: u32 = ${getViewElementOffset(props.segmentStartFlags)}u;
 const SEGMENT_INDEX_OFFSET: u32 = ${getViewElementOffset(props.segmentIndices)}u;
 const SEGMENT_OFFSET: u32 = ${getViewElementOffset(props.segmentOffsets)}u;
-const VALUE_COUNT_OFFSET: u32 = ${getViewElementOffset(props.valueCount)}u;
-const ELEMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.elementCount)}u;
-const SEGMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.segmentCount)}u;
-@group(0) @binding(0) var<storage, read> valueFlags: array<u32>;
-@group(0) @binding(1) var<storage, read> valueOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read> segmentStartFlags: array<u32>;
-@group(0) @binding(3) var<storage, read> segmentIndices: array<u32>;
-@group(0) @binding(4) var<storage, read> elementFlags: array<u32>;
-@group(0) @binding(5) var<storage, read> elementOffsets: array<u32>;
-@group(0) @binding(6) var<storage, read_write> segmentOffsets: array<u32>;
-@group(0) @binding(7) var<storage, read_write> valueCount: array<u32>;
-@group(0) @binding(8) var<storage, read_write> elementCount: array<u32>;
-@group(0) @binding(9) var<storage, read_write> segmentCount: array<u32>;
+@group(0) @binding(0) var<storage, read> segmentStartFlags: array<u32>;
+@group(0) @binding(1) var<storage, read> segmentIndices: array<u32>;
+@group(0) @binding(2) var<storage, read> elementFlags: array<u32>;
+@group(0) @binding(3) var<storage, read> elementOffsets: array<u32>;
+@group(0) @binding(4) var<storage, read_write> segmentOffsets: array<u32>;
 @compute @workgroup_size(${SEGMENTED_LAYOUT_WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3u,
@@ -196,29 +187,82 @@ fn main(
       elementOffsets[ELEMENT_OFFSET + index];
   }
   if (index + 1u == LENGTH) {
-    let physicalValueCount = valueOffsets[VALUE_OFFSET + index] + valueFlags[VALUE_FLAG_OFFSET + index];
     let logicalElementCount = elementOffsets[ELEMENT_OFFSET + index] + elementFlags[ELEMENT_FLAG_OFFSET + index];
     let segments = segmentIndices[SEGMENT_INDEX_OFFSET + index] + 1u;
-    valueCount[VALUE_COUNT_OFFSET] = physicalValueCount;
-    elementCount[ELEMENT_COUNT_OFFSET] = logicalElementCount;
-    segmentCount[SEGMENT_COUNT_OFFSET] = segments;
     segmentOffsets[SEGMENT_OFFSET + segments] = logicalElementCount;
   }
 }`;
   addPass(
     graph,
-    `${props.id}-finalize`,
-    'GPUSegmentedLayoutFinalize',
+    `${props.id}-segment-offsets`,
+    'GPUSegmentedLayoutSegmentOffsets',
     source,
     length,
     [
-      {name: 'valueFlags', view: props.valueFlags, usage: 'storage-read'},
-      {name: 'valueOffsets', view: props.valueOffsets, usage: 'storage-read'},
       {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
       {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
       {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
       {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
+      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
+    ],
+    dispatchLayout
+  );
+}
+
+function addCountsPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: Readonly<GPUSegmentedLayoutProps>
+): void {
+  const length = props.valueFlags.length;
+  const dispatchLayout = getBoundedDispatchLayout(
+    'GPUSegmentedLayoutCounts',
+    1,
+    SEGMENTED_LAYOUT_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  const lastIndex = length - 1;
+  const source = `const LAST_INDEX: u32 = ${lastIndex}u;
+const VALUE_FLAG_OFFSET: u32 = ${getViewElementOffset(props.valueFlags)}u;
+const VALUE_OFFSET: u32 = ${getViewElementOffset(props.valueOffsets)}u;
+const ELEMENT_FLAG_OFFSET: u32 = ${getViewElementOffset(props.elementFlags)}u;
+const ELEMENT_OFFSET: u32 = ${getViewElementOffset(props.elementOffsets)}u;
+const SEGMENT_INDEX_OFFSET: u32 = ${getViewElementOffset(props.segmentIndices)}u;
+const VALUE_COUNT_OFFSET: u32 = ${getViewElementOffset(props.valueCount)}u;
+const ELEMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.elementCount)}u;
+const SEGMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.segmentCount)}u;
+@group(0) @binding(0) var<storage, read> valueFlags: array<u32>;
+@group(0) @binding(1) var<storage, read> valueOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read> elementFlags: array<u32>;
+@group(0) @binding(3) var<storage, read> elementOffsets: array<u32>;
+@group(0) @binding(4) var<storage, read> segmentIndices: array<u32>;
+@group(0) @binding(5) var<storage, read_write> valueCount: array<u32>;
+@group(0) @binding(6) var<storage, read_write> elementCount: array<u32>;
+@group(0) @binding(7) var<storage, read_write> segmentCount: array<u32>;
+@compute @workgroup_size(${SEGMENTED_LAYOUT_WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3u,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, SEGMENTED_LAYOUT_WORKGROUP_SIZE)}
+  if (index > 0u) { return; }
+  valueCount[VALUE_COUNT_OFFSET] =
+    valueOffsets[VALUE_OFFSET + LAST_INDEX] + valueFlags[VALUE_FLAG_OFFSET + LAST_INDEX];
+  elementCount[ELEMENT_COUNT_OFFSET] =
+    elementOffsets[ELEMENT_OFFSET + LAST_INDEX] + elementFlags[ELEMENT_FLAG_OFFSET + LAST_INDEX];
+  segmentCount[SEGMENT_COUNT_OFFSET] = segmentIndices[SEGMENT_INDEX_OFFSET + LAST_INDEX] + 1u;
+}`;
+  addPass(
+    graph,
+    `${props.id}-counts`,
+    'GPUSegmentedLayoutCounts',
+    source,
+    1,
+    [
+      {name: 'valueFlags', view: props.valueFlags, usage: 'storage-read'},
+      {name: 'valueOffsets', view: props.valueOffsets, usage: 'storage-read'},
+      {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
+      {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
+      {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
       {name: 'valueCount', view: props.valueCount, usage: 'storage-write'},
       {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
       {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}

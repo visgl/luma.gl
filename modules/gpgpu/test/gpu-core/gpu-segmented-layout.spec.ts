@@ -8,7 +8,7 @@ import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 it('GPUSegmentedLayout materializes generic value and segment offsets', async () => {
-  const device = await getWebGPUTestDevice();
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
     return;
   }
@@ -79,7 +79,7 @@ it('GPUSegmentedLayout materializes generic value and segment offsets', async ()
 });
 
 it('GPUSegmentedLayout clears counts and the first offset for an empty sequence', async () => {
-  const device = await getWebGPUTestDevice();
+  const device = await getWebGPUTestDevice('core');
   if (!device) {
     return;
   }

@@ -98,7 +98,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads three packed binary flag streams; writes value and element offsets, segment indices and offsets, and three counts.',
     ownership: 'All public inputs and outputs are caller-owned; hierarchical scan scratch is graph-owned transient memory.',
     output: 'Exact source-aligned offsets plus a segment-offset prefix named by segmentCount.',
-    work: 'Three hierarchical scans and one publication pass over the complete slot domain.',
+    work: 'Three hierarchical scans, one segment-offset pass, and one scalar-count pass.',
     chunks: 'The initial contract consumes packed GraphDataView inputs; preserve source batches by invoking it once per durable chunk.',
     execution: 'Contributes ordinary graph nodes and does not compile, submit, read back, or publish results.',
     neighborhood: 'format-specific classification → GPUSegmentedLayout → compaction, gather, nested layout, or rendering.',

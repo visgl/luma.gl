@@ -87,8 +87,10 @@ new GPUSegmentedLayout({
 }).addToGraph(graph);
 ```
 
-The operation contributes three `GPUScan` pipelines and one final publication pass. It does not
-compile the graph, submit commands, map counts, or move physical payload values.
+The operation contributes three `GPUScan` pipelines, one segment-offset pass, and one count pass.
+The publication work is split so every shader stays within the eight-storage-buffer limit of the
+default WebGPU CORE profile. It does not compile the graph, submit commands, map counts, or move
+physical payload values.
 
 ## Composition patterns
 
