@@ -162,6 +162,8 @@ export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
+export {GPUSegmentedLayout} from './gpu-segmented-layout';
+export type {GPUSegmentedLayoutProps} from './gpu-segmented-layout';
 export {
   GPUIndexedRangeCompaction,
   GPUPartitionedIndexedRangeCompaction
