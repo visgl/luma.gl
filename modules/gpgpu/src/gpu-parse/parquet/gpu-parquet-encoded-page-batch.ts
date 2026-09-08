@@ -306,6 +306,15 @@ function addValuesToGraph<Parameters>(
         byteLength: plan.decodedByteLength
       });
     }
+    case 'empty-byte-array':
+      return Object.freeze({
+        layout: 'byte-array' as const,
+        values: input,
+        lengths: createTransientResultView(graph, `${id}-lengths`, 0),
+        offsets: createTransientResultView(graph, `${id}-offsets`, 0),
+        valueCount: 0,
+        byteLength: 0
+      });
     case 'rle-boolean': {
       const values = createTransientResultView(graph, `${id}-values`, plan.valueCount);
       new GPUParquetRleBitPackedDecoder({

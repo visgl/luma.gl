@@ -159,6 +159,11 @@ export type GPUParquetValuePlan =
       decodedByteLength: number;
     }>
   | Readonly<{
+      kind: 'empty-byte-array';
+      valueCount: 0;
+      decodedByteLength: 0;
+    }>
+  | Readonly<{
       kind: 'rle-boolean';
       valueCount: number;
       decodedByteLength: number;
@@ -717,6 +722,14 @@ function planValues(
       valueCount,
       byteWidth,
       decodedByteLength
+    });
+  }
+
+  if (encoding === 'DELTA_BYTE_ARRAY' && physicalType === 'BYTE_ARRAY' && valueCount === 0) {
+    return Object.freeze({
+      kind: 'empty-byte-array' as const,
+      valueCount: 0 as const,
+      decodedByteLength: 0 as const
     });
   }
 

@@ -244,6 +244,41 @@ it('loaders.gl DELTA_BYTE_ARRAY values execute through the automatic GPU graph',
   }
 });
 
+it('loaders.gl empty DELTA_BYTE_ARRAY values produce an empty GPU graph result', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(new Uint8Array(0), 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 0)
+  );
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-empty-delta-byte-array-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const page = result.pages[0] as GPUParquetDecodedPage;
+  expect(page.values.layout).toBe('byte-array');
+  if (page.values.layout === 'byte-array') {
+    expect(page.values.valueCount).toBe(0);
+    expect(page.values.byteLength).toBe(0);
+    expect(page.values.values.length).toBe(0);
+    expect(page.values.lengths.length).toBe(0);
+    expect(page.values.offsets.length).toBe(0);
+  }
+  const compiled = graph.compile();
+
+  try {
+    const commandEncoder = device.createCommandEncoder({
+      id: 'gpu-parquet-empty-delta-byte-array-encoder'
+    });
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+  }
+});
+
 function makeBatch(
   data: Uint8Array,
   encoding: 'PLAIN' | 'BYTE_STREAM_SPLIT' = 'BYTE_STREAM_SPLIT'

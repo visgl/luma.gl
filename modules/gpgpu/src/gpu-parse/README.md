@@ -132,6 +132,9 @@ const plan = planGPUParquetEncodedPageBatch(encodedBatch, {
 });
 ```
 
+An all-null page has zero physical values and therefore a known empty result. The adapter emits an
+`empty-byte-array` plan for that case without invoking the callback or parsing absent delta headers.
+
 ### Levels and page versions
 
 - Data Page V1 levels have a four-byte encoded-length prefix; use

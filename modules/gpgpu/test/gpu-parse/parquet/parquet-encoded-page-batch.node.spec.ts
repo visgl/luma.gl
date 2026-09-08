@@ -249,6 +249,21 @@ it('GPU Parquet page planner uses caller-provided DELTA_BYTE_ARRAY output length
   }
 });
 
+it('GPU Parquet page planner accepts empty DELTA_BYTE_ARRAY pages without capacity metadata', () => {
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(new Uint8Array(0), 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 0)
+  );
+  expect(plan.gpuPageCount).toBe(1);
+  expect(plan.pages[0].mode).toBe('gpu');
+  if (plan.pages[0].mode === 'gpu') {
+    expect(plan.pages[0].values).toEqual({
+      kind: 'empty-byte-array',
+      valueCount: 0,
+      decodedByteLength: 0
+    });
+  }
+});
+
 function makeSinglePageBatch(
   data: Uint8Array,
   physicalType: string,
