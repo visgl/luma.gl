@@ -1,6 +1,21 @@
 <!doctype html>
 <html lang="en">
   <head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="experimental/lucim-volume-lab" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="simulation" />
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = installStandaloneExampleSupport();
+    if (!exampleSupport.supported) {
+      document
+        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
+        .forEach(script => script.remove());
+    }
+  </script>
+  <!-- /luma-example-support -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#020914" />
