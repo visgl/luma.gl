@@ -1134,11 +1134,8 @@ void main(void) {
   float escapedIteration = mandelbrot32.iterationLimit;
   float radiusSquared = 0.0;
 
-  for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    if (float(iteration) >= mandelbrot32.iterationLimit) {
-      break;
-    }
-
+  int iterationLimit = int(mandelbrot32.iterationLimit);
+  for (int iteration = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration++) {
     float nextX = z.x * z.x - z.y * z.y + c.x;
     float nextY = 2.0 * z.x * z.y + c.y;
     z = vec2(nextX, nextY);
@@ -1197,11 +1194,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   var escapedIteration = mandelbrot32.iterationLimit;
   var radiusSquared = 0.0;
 
-  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS; iteration = iteration + 1) {
-    if (f32(iteration) >= mandelbrot32.iterationLimit) {
-      break;
-    }
-
+  let iterationLimit = i32(mandelbrot32.iterationLimit);
+  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration = iteration + 1) {
     let nextX = z.x * z.x - z.y * z.y + c.x;
     let nextY = 2.0 * z.x * z.y + c.y;
     z = vec2<f32>(nextX, nextY);
@@ -1268,11 +1262,8 @@ void main(void) {
   float escapedIteration = mandelbrot64.iterationLimit;
   float radiusSquared = 0.0;
 
-  for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    if (float(iteration) >= mandelbrot64.iterationLimit) {
-      break;
-    }
-
+  int iterationLimit = int(mandelbrot64.iterationLimit);
+  for (int iteration = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration++) {
     vec2 xSquared = mul_fp64(zx, zx);
     vec2 ySquared = mul_fp64(zy, zy);
     vec2 xy = mul_fp64(zx, zy);
@@ -1343,11 +1334,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   var escapedIteration = mandelbrot64.iterationLimit;
   var radiusSquared = 0.0;
 
-  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS; iteration = iteration + 1) {
-    if (f32(iteration) >= mandelbrot64.iterationLimit) {
-      break;
-    }
-
+  let iterationLimit = i32(mandelbrot64.iterationLimit);
+  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration = iteration + 1) {
     let xSquared = mul_fp64(zx, zx);
     let ySquared = mul_fp64(zy, zy);
     let xy = mul_fp64(zx, zy);
