@@ -1,5 +1,20 @@
 <!doctype html>
 <head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="experimental/bloom" />
+  <meta name="luma-example-backends" content="webgpu,webgl2" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="effects" />
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = installStandaloneExampleSupport();
+    if (!exampleSupport.supported) {
+      document
+        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
+        .forEach(script => script.remove());
+    }
+  </script>
+  <!-- /luma-example-support -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html,

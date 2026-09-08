@@ -97,6 +97,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   private inspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private controls: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private canvasTouchAction = '';
   private traceDuration = 240;
   private timeMinimum = 0;
   private timeMaximum = 240;
@@ -164,6 +165,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.touchAction = 'none';
       canvas.addEventListener('click', this.handleClick);
       canvas.addEventListener('wheel', this.handleWheel, {passive: false});
@@ -205,6 +207,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   }
 
   override onFinalize(): void {
+    if (this.canvas) this.canvas.style.touchAction = this.canvasTouchAction;
     this.canvas?.removeEventListener('click', this.handleClick);
     this.canvas?.removeEventListener('wheel', this.handleWheel);
     this.panels.finalize();

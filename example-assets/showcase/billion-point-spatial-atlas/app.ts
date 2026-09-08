@@ -216,6 +216,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
   private resources: AtlasResources | null = null;
   private animationLoop: AnimationProps['animationLoop'] | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private canvasTouchAction = '';
   private canvasContainer: HTMLElement | null = null;
   private canvasContainerPosition = '';
   private navigationOverlay: HTMLDivElement | null = null;
@@ -350,6 +351,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.animationLoop = animationLoop;
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.cursor = 'crosshair';
       canvas.style.touchAction = 'none';
       canvas.tabIndex = 0;
@@ -547,6 +549,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     this.lidarLoadAbortController?.abort();
     if (this.lidarPublishTimer) clearTimeout(this.lidarPublishTimer);
     if (this.canvas) {
+      this.canvas.style.touchAction = this.canvasTouchAction;
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
       this.canvas.removeEventListener('pointerleave', this.handlePointerLeave);
