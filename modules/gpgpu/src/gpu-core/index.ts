@@ -137,9 +137,13 @@ export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
   GPU_LZ_BYTE_WORKGROUP_SIZE,
-  getGPULZByteDecompressorShaderSource
+  getGPULZByteDecompressorShaderSource,
+  planGPULZByteDescriptors
 } from './gpu-lz-byte-decompressor';
-export type {GPULZByteDecompressorProps} from './gpu-lz-byte-decompressor';
+export type {
+  GPULZByteDecompressorProps,
+  GPULZByteDescriptorPlan
+} from './gpu-lz-byte-decompressor';
 export {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples

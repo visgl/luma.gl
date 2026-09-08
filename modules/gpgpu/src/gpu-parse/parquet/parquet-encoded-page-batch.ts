@@ -110,6 +110,14 @@ export type GPUParquetCompressionPlan = Readonly<{
   input: GPUParquetUploadSection;
   descriptors: GPUParquetUploadSection;
   descriptorCount: number;
+  /** Match/copy descriptors resolved to compressed-input gathers during CPU planning. */
+  directCopyCount: number;
+  /** Match/copy descriptors that still require output-prefix recursion on the GPU. */
+  recursiveCopyCount: number;
+  /** Decoded bytes covered by direct copy descriptors. */
+  directCopyByteLength: number;
+  /** Decoded bytes covered by recursive copy descriptors. */
+  recursiveCopyByteLength: number;
   outputByteLength: number;
 }>;
 
@@ -613,6 +621,10 @@ function planCompression(
       input,
       descriptors: upload.add(plan.descriptors, 'snappy descriptors'),
       descriptorCount: plan.descriptorCount,
+      directCopyCount: plan.directCopyCount,
+      recursiveCopyCount: plan.recursiveCopyCount,
+      directCopyByteLength: plan.directCopyByteLength,
+      recursiveCopyByteLength: plan.recursiveCopyByteLength,
       outputByteLength
     });
   }
@@ -628,6 +640,10 @@ function planCompression(
       input,
       descriptors: upload.add(plan.descriptors, 'lz4 descriptors'),
       descriptorCount: plan.descriptorCount,
+      directCopyCount: plan.directCopyCount,
+      recursiveCopyCount: plan.recursiveCopyCount,
+      directCopyByteLength: plan.directCopyByteLength,
+      recursiveCopyByteLength: plan.recursiveCopyByteLength,
       outputByteLength
     });
   }

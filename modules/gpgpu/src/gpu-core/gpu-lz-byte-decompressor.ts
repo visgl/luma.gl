@@ -16,14 +16,133 @@ import {
   validatePackedUint32View
 } from './graph-data-view-utils';
 
-export const GPU_LZ_BYTE_DESCRIPTOR_WORDS = 4;
+export const GPU_LZ_BYTE_DESCRIPTOR_WORDS = 5;
 export const GPU_LZ_BYTE_WORKGROUP_SIZE = 256;
+
+/** CPU result for compact LZ spans annotated with direct compressed-input provenance. */
+export type GPULZByteDescriptorPlan = Readonly<{
+  descriptors: Uint32Array;
+  descriptorCount: number;
+  directCopyCount: number;
+  recursiveCopyCount: number;
+  directCopyByteLength: number;
+  recursiveCopyByteLength: number;
+}>;
+
+/**
+ * Converts `[outputOffset, byteLength, literalSourceOffset, matchOffset]` spans into GPU records.
+ *
+ * A copy becomes a direct compressed-input gather when its source cycle is contained by one prior
+ * direct descriptor. Other copies retain their compact backreference. Planning remains one record
+ * per input span and never materializes byte-level provenance, keeping CPU work and upload size
+ * bounded while removing descriptor recursion from the common literal-followed-by-copy pattern.
+ */
+export function planGPULZByteDescriptors(spans: readonly number[]): GPULZByteDescriptorPlan {
+  if (spans.length % 4 !== 0) {
+    throw new Error('LZ byte spans must contain four words per record');
+  }
+  const descriptors: number[] = [];
+  let directCopyCount = 0;
+  let recursiveCopyCount = 0;
+  let directCopyByteLength = 0;
+  let recursiveCopyByteLength = 0;
+  for (let spanOffset = 0; spanOffset < spans.length; spanOffset += 4) {
+    const outputOffset = spans[spanOffset];
+    const byteLength = spans[spanOffset + 1];
+    const literalSourceOffset = spans[spanOffset + 2];
+    const matchOffset = spans[spanOffset + 3];
+    if (matchOffset === 0) {
+      descriptors.push(outputOffset, byteLength, literalSourceOffset, 0, 0);
+      continue;
+    }
+    const directCopy = findDirectCopy(
+      descriptors,
+      outputOffset - matchOffset,
+      byteLength,
+      matchOffset
+    );
+    if (directCopy) {
+      descriptors.push(
+        outputOffset,
+        byteLength,
+        directCopy.literalSourceOffset,
+        directCopy.literalPeriod,
+        0
+      );
+      directCopyCount++;
+      directCopyByteLength += byteLength;
+    } else {
+      descriptors.push(outputOffset, byteLength, 0, 0, matchOffset);
+      recursiveCopyCount++;
+      recursiveCopyByteLength += byteLength;
+    }
+  }
+  return Object.freeze({
+    descriptors: Uint32Array.from(descriptors),
+    descriptorCount: descriptors.length / GPU_LZ_BYTE_DESCRIPTOR_WORDS,
+    directCopyCount,
+    recursiveCopyCount,
+    directCopyByteLength,
+    recursiveCopyByteLength
+  });
+}
+
+function findDirectCopy(
+  descriptors: readonly number[],
+  sourceOutputOffset: number,
+  byteLength: number,
+  matchOffset: number
+): {literalSourceOffset: number; literalPeriod: number} | undefined {
+  const descriptorIndex = findContainingDescriptor(descriptors, sourceOutputOffset);
+  if (descriptorIndex < 0) return undefined;
+  const descriptorOffset = descriptorIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  const descriptorOutputOffset = descriptors[descriptorOffset];
+  const descriptorByteLength = descriptors[descriptorOffset + 1];
+  const literalSourceOffset = descriptors[descriptorOffset + 2];
+  const literalPeriod = descriptors[descriptorOffset + 3];
+  const sourceMatchOffset = descriptors[descriptorOffset + 4];
+  if (sourceMatchOffset !== 0) return undefined;
+  const relativeSourceOffset = sourceOutputOffset - descriptorOutputOffset;
+  const sourceCycleLength = Math.min(byteLength, matchOffset);
+  if (relativeSourceOffset + sourceCycleLength > descriptorByteLength) return undefined;
+  if (literalPeriod === 0) {
+    return {
+      literalSourceOffset: literalSourceOffset + relativeSourceOffset,
+      literalPeriod: byteLength > matchOffset ? matchOffset : 0
+    };
+  }
+  const literalPhase = relativeSourceOffset % literalPeriod;
+  const repeatsSourceCycle = byteLength > matchOffset;
+  if (literalPhase !== 0 || (repeatsSourceCycle && matchOffset % literalPeriod !== 0)) {
+    return undefined;
+  }
+  return {literalSourceOffset, literalPeriod};
+}
+
+function findContainingDescriptor(descriptors: readonly number[], outputOffset: number): number {
+  let lowerIndex = 0;
+  let upperIndex = descriptors.length / GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  while (lowerIndex < upperIndex) {
+    const middleIndex = lowerIndex + Math.floor((upperIndex - lowerIndex) / 2);
+    if (descriptors[middleIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS] <= outputOffset) {
+      lowerIndex = middleIndex + 1;
+    } else {
+      upperIndex = middleIndex;
+    }
+  }
+  const descriptorIndex = lowerIndex - 1;
+  if (descriptorIndex < 0) return -1;
+  const descriptorOffset = descriptorIndex * GPU_LZ_BYTE_DESCRIPTOR_WORDS;
+  return outputOffset < descriptors[descriptorOffset] + descriptors[descriptorOffset + 1]
+    ? descriptorIndex
+    : -1;
+}
 
 export type GPULZByteDecompressorProps = {
   id?: string;
   /** Compressed bytes packed into little-endian uint32 words. */
   input: GraphDataView<'uint32'>;
-  /** Sorted `[outputOffset, byteLength, literalSourceOffset, matchOffset]` records. */
+  /** Sorted `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]` records. */
   descriptors: GraphDataView<'uint32'>;
   /** Decompressed bytes packed into little-endian uint32 words. */
   output: GraphDataView<'uint32'>;
@@ -35,10 +154,11 @@ export type GPULZByteDecompressorProps = {
 /**
  * Expands literal and LZ backreference spans into a packed byte buffer.
  *
- * A zero `matchOffset` marks a literal span and uses `literalSourceOffset`. A nonzero
- * `matchOffset` marks a copy from the already-defined output prefix. Each invocation owns one
- * complete output word and recursively resolves backreferences to literals, so overlapping copies
- * are deterministic without global barriers or byte-level write races.
+ * A zero `matchOffset` gathers compressed literal bytes directly; a nonzero `literalPeriod`
+ * repeats that source range for a resolved overlapping copy. A nonzero `matchOffset` retains a
+ * copy whose provenance crosses descriptor boundaries. Each invocation owns one complete output
+ * word and only recursively resolves those remaining backreferences, so overlapping copies are
+ * deterministic without global barriers or byte-level write races.
  */
 export class GPULZByteDecompressor {
   readonly id: string;
@@ -97,7 +217,7 @@ fn findDescriptor(outputByteIndex: u32) -> u32 {
   while (lowerDescriptorIndex < upperDescriptorIndex) {
     let middleDescriptorIndex = lowerDescriptorIndex +
       (upperDescriptorIndex - lowerDescriptorIndex) / 2u;
-    let descriptorOutputOffset = descriptors[DESCRIPTOR_OFFSET + middleDescriptorIndex * 4u];
+    let descriptorOutputOffset = descriptors[DESCRIPTOR_OFFSET + middleDescriptorIndex * 5u];
     if (descriptorOutputOffset <= outputByteIndex) {
       lowerDescriptorIndex = middleDescriptorIndex + 1u;
     } else {
@@ -106,18 +226,24 @@ fn findDescriptor(outputByteIndex: u32) -> u32 {
   }
   return lowerDescriptorIndex - 1u;
 }
-fn resolveLiteralByte(outputByteIndex: u32) -> u32 {
+fn resolveLiteralByte(outputByteIndex: u32, initialDescriptorIndex: u32) -> u32 {
   var sourceOutputByteIndex = outputByteIndex;
+  var sourceDescriptorIndex = initialDescriptorIndex;
   for (var depth = 0u; depth < DESCRIPTOR_COUNT; depth++) {
-    let descriptorIndex = DESCRIPTOR_OFFSET + findDescriptor(sourceOutputByteIndex) * 4u;
+    let descriptorIndex = DESCRIPTOR_OFFSET + sourceDescriptorIndex * 5u;
     let descriptorOutputOffset = descriptors[descriptorIndex];
     let literalSourceOffset = descriptors[descriptorIndex + 2u];
-    let matchOffset = descriptors[descriptorIndex + 3u];
-    let relativeByteIndex = sourceOutputByteIndex - descriptorOutputOffset;
+    let literalPeriod = descriptors[descriptorIndex + 3u];
+    let matchOffset = descriptors[descriptorIndex + 4u];
+    var relativeByteIndex = sourceOutputByteIndex - descriptorOutputOffset;
     if (matchOffset == 0u) {
+      if (literalPeriod != 0u) {
+        relativeByteIndex %= literalPeriod;
+      }
       return readInputByte(literalSourceOffset + relativeByteIndex);
     }
     sourceOutputByteIndex = descriptorOutputOffset - matchOffset + relativeByteIndex % matchOffset;
+    sourceDescriptorIndex = findDescriptor(sourceOutputByteIndex);
   }
   return 0u;
 }
@@ -130,10 +256,15 @@ fn main(
   let outputWordIndex = index;
   if (outputWordIndex >= OUTPUT_WORD_COUNT) { return; }
   var outputWord = 0u;
+  var descriptorIndex = findDescriptor(outputWordIndex * 4u);
   for (var byteLane = 0u; byteLane < 4u; byteLane++) {
     let outputByteIndex = outputWordIndex * 4u + byteLane;
     if (outputByteIndex < OUTPUT_BYTE_LENGTH) {
-      outputWord |= resolveLiteralByte(outputByteIndex) << (byteLane * 8u);
+      if (descriptorIndex + 1u < DESCRIPTOR_COUNT &&
+          descriptors[DESCRIPTOR_OFFSET + (descriptorIndex + 1u) * 5u] <= outputByteIndex) {
+        descriptorIndex += 1u;
+      }
+      outputWord |= resolveLiteralByte(outputByteIndex, descriptorIndex) << (byteLane * 8u);
     }
   }
   outputWords[OUTPUT_OFFSET + outputWordIndex] = outputWord;
