@@ -4,12 +4,23 @@
 
 import {expect, it, vi} from 'vitest';
 
+import {log} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import {getShaderLayoutFromGLSL} from '@luma.gl/webgl';
+
+type ReflectedUniform = {
+  name: string;
+  type: number;
+  size?: number;
+  byteOffset: number;
+  byteStride?: number;
+};
 
 type ReflectionOptions = {
   activeBlockCount?: number;
   activeUniformInfo?: WebGLActiveInfo | null;
+  /** Per-uniform driver results. Overrides `activeUniformInfo`, `uniformIndices` and `uniformTypes`. */
+  activeUniforms?: ReflectedUniform[];
   blockIndexByName?: Record<string, number>;
   blockName?: string | null;
   nullBlockParameter?: number;
@@ -24,8 +35,18 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
 } {
   const activeBlockCount = options.activeBlockCount ?? 1;
   const blockName = options.blockName === undefined ? 'rawUniforms' : options.blockName;
-  const uniformIndices = options.uniformIndices === undefined ? [4] : options.uniformIndices;
-  const uniformTypes = options.uniformTypes === undefined ? [GL.FLOAT] : options.uniformTypes;
+  const activeUniforms = options.activeUniforms;
+  const firstUniformIndex = 4;
+  const uniformIndices = activeUniforms
+    ? activeUniforms.map((_uniform, index) => firstUniformIndex + index)
+    : options.uniformIndices === undefined
+      ? [firstUniformIndex]
+      : options.uniformIndices;
+  const uniformTypes = activeUniforms
+    ? activeUniforms.map(uniform => uniform.type)
+    : options.uniformTypes === undefined
+      ? [GL.FLOAT]
+      : options.uniformTypes;
   const activeUniformInfo =
     options.activeUniformInfo === undefined
       ? ({name: 'raw.value', size: 1, type: GL.FLOAT} as WebGLActiveInfo)
@@ -38,13 +59,19 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
         case GL.UNIFORM_TYPE:
           return uniformTypes;
         case GL.UNIFORM_SIZE:
-          return uniformTypes && uniformTypes.map(() => 1);
+          return activeUniforms
+            ? activeUniforms.map(uniform => uniform.size ?? 1)
+            : uniformTypes && uniformTypes.map(() => 1);
         case GL.UNIFORM_BLOCK_INDEX:
           return uniformTypes && uniformTypes.map(() => uniformBlockIndex);
         case GL.UNIFORM_OFFSET:
-          return uniformTypes && uniformTypes.map((_value, index) => index * 16);
+          return activeUniforms
+            ? activeUniforms.map(uniform => uniform.byteOffset)
+            : uniformTypes && uniformTypes.map((_value, index) => index * 16);
         case GL.UNIFORM_ARRAY_STRIDE:
-          return uniformTypes && uniformTypes.map(() => 0);
+          return activeUniforms
+            ? activeUniforms.map(uniform => uniform.byteStride ?? 0)
+            : uniformTypes && uniformTypes.map(() => 0);
         default:
           throw new Error(`Unexpected active uniform parameter ${parameter}`);
       }
@@ -94,7 +121,13 @@ function makeReflectionContext(options: ReflectionOptions = {}): {
       }
     },
     getActiveUniforms,
-    getActiveUniform: () => activeUniformInfo
+    getActiveUniform: (_program: WebGLProgram, uniformIndex: number) => {
+      if (!activeUniforms) {
+        return activeUniformInfo;
+      }
+      const uniform = activeUniforms[uniformIndex - firstUniformIndex];
+      return uniform && {name: uniform.name, size: uniform.size ?? 1, type: uniform.type};
+    }
   } as unknown as WebGL2RenderingContext;
 
   return {gl, getActiveUniforms};
@@ -241,4 +274,148 @@ it('getShaderLayoutFromGLSL validates nullable uniform block parameters', () => 
   expect(() => getShaderLayoutFromGLSL(gl, program)).toThrow(
     /uniform block "rawUniforms".*UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES returned null/
   );
+});
+
+it('getShaderLayoutFromGLSL reflects GLSL bool members as i32 for raw GLSL blocks', () => {
+  const {gl} = makeReflectionContext({
+    activeUniforms: [
+      {name: 'raw.flag', type: GL.BOOL, byteOffset: 0},
+      {name: 'raw.flags', type: GL.BOOL_VEC2, byteOffset: 8}
+    ]
+  });
+
+  const shaderLayout = getShaderLayoutFromGLSL(gl, program);
+
+  expect(shaderLayout.bindings[0]).toMatchObject({
+    name: 'rawUniforms',
+    uniforms: [
+      {name: 'raw.flag', format: 'i32', byteOffset: 0, byteStride: 0, arrayLength: 1},
+      {name: 'raw.flags', format: 'vec2<i32>', byteOffset: 8, byteStride: 0, arrayLength: 1}
+    ]
+  });
+});
+
+it('getShaderLayoutFromGLSL validates GLSL bool members declared as i32 in module metadata', () => {
+  const {gl} = makeReflectionContext({
+    blockIndexByName: {materialUniforms: 0},
+    activeUniforms: [
+      {name: 'material.unlit', type: GL.BOOL, byteOffset: 0},
+      {name: 'material.ambient', type: GL.FLOAT, byteOffset: 4}
+    ]
+  });
+  const logOnce = vi.spyOn(log, 'once').mockImplementation(() => () => {});
+
+  try {
+    const shaderLayout = getShaderLayoutFromGLSL(gl, program, {
+      uniformBlockLayouts: [
+        {name: 'materialUniforms', uniformTypes: {unlit: 'i32', ambient: 'f32'}}
+      ]
+    });
+
+    expect(logOnce, 'no reflection fallback warning').not.toHaveBeenCalled();
+    expect(shaderLayout.bindings[0]).toMatchObject({
+      name: 'materialUniforms',
+      minBindingSize: 16,
+      uniforms: [
+        {name: 'unlit', format: 'i32', byteOffset: 0},
+        {name: 'ambient', format: 'f32', byteOffset: 4}
+      ]
+    });
+  } finally {
+    logOnce.mockRestore();
+  }
+});
+
+it('getShaderLayoutFromGLSL expands struct arrays per element to match WebGL reflection', () => {
+  const {gl} = makeReflectionContext({
+    blockIndexByName: {lightingUniforms: 0},
+    activeUniforms: [
+      {name: 'lighting.lightCount', type: GL.INT, byteOffset: 0},
+      {name: 'lighting.lights[0].color', type: GL.FLOAT_VEC3, byteOffset: 16},
+      {name: 'lighting.lights[0].intensity', type: GL.FLOAT, byteOffset: 28},
+      {name: 'lighting.lights[1].color', type: GL.FLOAT_VEC3, byteOffset: 32},
+      {name: 'lighting.lights[1].intensity', type: GL.FLOAT, byteOffset: 44}
+    ]
+  });
+  const logOnce = vi.spyOn(log, 'once').mockImplementation(() => () => {});
+
+  try {
+    const shaderLayout = getShaderLayoutFromGLSL(gl, program, {
+      uniformBlockLayouts: [
+        {
+          name: 'lightingUniforms',
+          uniformTypes: {
+            lightCount: 'i32',
+            lights: [{color: 'vec3<f32>', intensity: 'f32'}, 2]
+          }
+        }
+      ]
+    });
+
+    expect(logOnce, 'no reflection fallback warning').not.toHaveBeenCalled();
+    expect(shaderLayout.bindings[0]).toEqual({
+      type: 'uniform',
+      name: 'lightingUniforms',
+      group: 0,
+      location: 0,
+      visibility: 0,
+      minBindingSize: 48,
+      uniforms: [
+        {name: 'lightCount', format: 'i32', byteOffset: 0, byteStride: 0, arrayLength: 1},
+        {
+          name: 'lights[0].color',
+          format: 'vec3<f32>',
+          byteOffset: 16,
+          byteStride: 0,
+          arrayLength: 1
+        },
+        {name: 'lights[0].intensity', format: 'f32', byteOffset: 28, byteStride: 0, arrayLength: 1},
+        {
+          name: 'lights[1].color',
+          format: 'vec3<f32>',
+          byteOffset: 32,
+          byteStride: 0,
+          arrayLength: 1
+        },
+        {name: 'lights[1].intensity', format: 'f32', byteOffset: 44, byteStride: 0, arrayLength: 1}
+      ]
+    });
+  } finally {
+    logOnce.mockRestore();
+  }
+});
+
+it('getShaderLayoutFromGLSL warns and keeps module metadata when reflected offsets diverge', () => {
+  const {gl} = makeReflectionContext({
+    blockIndexByName: {materialUniforms: 0},
+    activeUniforms: [
+      {name: 'material.unlit', type: GL.BOOL, byteOffset: 0},
+      {name: 'material.ambient', type: GL.FLOAT, byteOffset: 16}
+    ]
+  });
+  const logOnce = vi.spyOn(log, 'once').mockImplementation(() => () => {});
+
+  try {
+    const shaderLayout = getShaderLayoutFromGLSL(gl, program, {
+      uniformBlockLayouts: [
+        {name: 'materialUniforms', uniformTypes: {unlit: 'i32', ambient: 'f32'}}
+      ]
+    });
+
+    expect(logOnce).toHaveBeenCalledWith(
+      0,
+      expect.stringMatching(
+        /reflected layout for "material.ambient" does not match supplied std140 metadata/
+      )
+    );
+    expect(shaderLayout.bindings[0]).toMatchObject({
+      name: 'materialUniforms',
+      uniforms: [
+        {name: 'unlit', byteOffset: 0},
+        {name: 'ambient', byteOffset: 4}
+      ]
+    });
+  } finally {
+    logOnce.mockRestore();
+  }
 });
