@@ -10,6 +10,8 @@ From v9.4WebGPU supportedWebGL 2 not supported
 
 InfoSource
 
+Mobile
+
 ```
 // Loading source…
 ```

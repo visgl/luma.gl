@@ -8,6 +8,8 @@ Keep a chosen image-space line sharp while progressively blurring the surroundin
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

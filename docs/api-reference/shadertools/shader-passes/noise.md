@@ -8,6 +8,8 @@ Add controllable monochrome grain to the current image. `noise` provides a simpl
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

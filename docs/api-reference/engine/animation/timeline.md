@@ -10,6 +10,8 @@ Manages an animation timeline, with multiple channels that can be running at dif
 
 InfoSource
 
+Mobile
+
 ```
 // Loading source…
 ```

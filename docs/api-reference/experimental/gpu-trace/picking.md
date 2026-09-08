@@ -16,6 +16,8 @@ Click a span in the live trace explorer, collapse one of its neighboring process
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

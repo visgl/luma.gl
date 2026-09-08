@@ -8,6 +8,8 @@ Adjust subdued colors while protecting hues that are already strongly saturated.
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

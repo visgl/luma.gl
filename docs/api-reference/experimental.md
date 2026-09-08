@@ -28,6 +28,8 @@ This explicitly activated example compares A-buffer, weighted-blended, and ordin
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

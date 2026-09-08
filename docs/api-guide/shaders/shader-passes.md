@@ -12,6 +12,8 @@ Choose an effect and adjust its parameters to see a shader pass update the sourc
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

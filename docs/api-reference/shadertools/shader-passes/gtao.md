@@ -8,6 +8,8 @@ Estimate horizon-based ambient visibility with temporally reprojected history an
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

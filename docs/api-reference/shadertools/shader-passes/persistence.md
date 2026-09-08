@@ -8,6 +8,8 @@ Accumulate the current frame into a fading history texture to create luminous mo
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

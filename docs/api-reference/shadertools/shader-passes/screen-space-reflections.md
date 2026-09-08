@@ -8,6 +8,8 @@ Reflect visible scene lighting from glossy and rough surfaces using depth, surfa
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

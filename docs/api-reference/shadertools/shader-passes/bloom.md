@@ -8,6 +8,8 @@ Spread bright scene highlights into a controllable photographic glow. luma.gl pr
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

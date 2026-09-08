@@ -14,6 +14,8 @@ This cubemap loads six faces asynchronously, generates mipmaps, and samples the 
 
 InfoSource
 
+Mobile
+
 ```
 // Loading source…
 ```

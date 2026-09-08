@@ -8,6 +8,8 @@ Shape overall exposure and tonal separation with a compact, single-pass color ad
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

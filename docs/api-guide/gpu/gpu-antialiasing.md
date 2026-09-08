@@ -56,6 +56,8 @@ The comparison below keeps the before side as the single-sample baseline and app
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

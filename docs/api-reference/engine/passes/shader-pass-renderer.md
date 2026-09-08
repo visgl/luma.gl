@@ -14,6 +14,8 @@ For the descriptor types, see [`ShaderPass`](https://luma.gl/docs/api-reference/
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

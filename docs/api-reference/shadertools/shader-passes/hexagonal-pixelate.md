@@ -8,6 +8,8 @@ Replace fine image detail with a regular mosaic of hexagonal cells. `hexagonalPi
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

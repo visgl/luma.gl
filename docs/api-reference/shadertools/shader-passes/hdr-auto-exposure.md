@@ -8,6 +8,8 @@ Continuously meter scene luminance and adapt camera exposure entirely on the GPU
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

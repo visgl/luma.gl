@@ -8,6 +8,8 @@ Darken tight creases and nearby surface contacts using the current scene depth b
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

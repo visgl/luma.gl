@@ -14,6 +14,8 @@ GPU-resident MLS-MPM fluid
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

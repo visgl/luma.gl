@@ -8,6 +8,8 @@ Reveal object silhouettes and hard surface transitions by comparing nearby depth
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

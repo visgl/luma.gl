@@ -8,6 +8,8 @@ Accumulate jittered samples from successive frames while following scene motion 
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

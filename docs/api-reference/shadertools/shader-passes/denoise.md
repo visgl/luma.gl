@@ -8,6 +8,8 @@ Reduce visible image grain while preserving local color boundaries. `denoise` ap
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

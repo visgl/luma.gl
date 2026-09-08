@@ -12,6 +12,8 @@ The pass stays intentionally composable. It does not traverse a scene, own mater
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

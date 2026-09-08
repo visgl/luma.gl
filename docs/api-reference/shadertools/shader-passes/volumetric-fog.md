@@ -8,6 +8,8 @@ Add depth-aware height fog, directional atmospheric scattering, and temporally s
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

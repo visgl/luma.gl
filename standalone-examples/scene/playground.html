@@ -180,6 +180,23 @@
         letter-spacing: 0.08em;
       }
 
+      .editor-toggle {
+        flex: none;
+        padding: 7px 9px;
+        border: 1px solid rgba(191, 203, 247, 0.16);
+        border-radius: 5px;
+        background: rgba(191, 203, 247, 0.06);
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 9px;
+        letter-spacing: 0.06em;
+      }
+
+      .editor-toggle:hover {
+        border-color: rgba(176, 155, 255, 0.35);
+        color: #fff;
+      }
+
       .workspace {
         display: grid;
         grid-template-columns: minmax(370px, 42%) minmax(0, 1fr);
@@ -322,6 +339,14 @@
         grid-template-rows: minmax(0, 1fr);
         overflow: hidden;
         background: #090c17;
+      }
+
+      .workspace.editor-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .workspace.editor-collapsed .editor-panel {
+        display: none;
       }
 
       .preview-canvas {
@@ -482,12 +507,12 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="./assets/playground-DI7kw4eR.js"></script>
+    <script type="module" crossorigin src="./assets/playground-CreABKWG.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/chunk-BRNzzbbm.js">
     <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-nWFcKNmA.js">
     <link rel="modulepreload" crossorigin href="./assets/debug-hooks-BajvVC89.js">
     <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-39HtRWEL.js">
-    <link rel="modulepreload" crossorigin href="./assets/usd-samples-DGI6mSYC.js">
+    <link rel="modulepreload" crossorigin href="./assets/usd-samples-vrm7aTDI.js">
     <link rel="modulepreload" crossorigin href="./assets/editor.api-BcxXo12d.js">
     <link rel="stylesheet" crossorigin href="./assets/editor-CJEeZjoM.css">
   </head>
@@ -515,10 +540,13 @@
         </select>
         <input id="usd-file-input" type="file" accept=".usd,.usda,.usdz,.gltf,.glb" hidden />
         <div id="backend-label" class="backend-label">CONNECTING DEVICE…</div>
+        <button id="editor-toggle" class="editor-toggle" type="button" aria-controls="scene-editor-panel" aria-expanded="true">
+          HIDE EDITOR
+        </button>
       </section>
 
       <section class="workspace">
-        <section class="editor-panel" aria-label="JSON scene editor">
+        <section id="scene-editor-panel" class="editor-panel" aria-label="JSON scene editor">
           <div class="panel-toolbar">
             <span class="section-label">SCENE.JSON</span>
             <div class="editor-actions">

@@ -8,6 +8,8 @@ Push image coordinates outward or pull them inward inside a circular region. `bu
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -8,6 +8,8 @@ Integrate scene color along per-pixel motion vectors while reducing bleed across
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

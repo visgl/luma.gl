@@ -1,4 +1,4 @@
-import {UniformStore, VariableShaderType} from '@luma.gl/core';
+import {UniformStore} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -10,121 +10,20 @@ import {
 } from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-import {
-  ColumnPanel,
-  type Panel,
-  type SettingsChangeDescriptor,
-  type SettingsSchema
-} from '@deck.gl-community/panels';
+import {type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
   ExampleSettingsPanelManager,
   getChangedSetting,
-  makeExamplePanelHostHtml,
-  makeHtmlCustomPanel
+  makeExamplePanelHostHtml
 } from '../../example-panels';
+import {makeAnimationPanel, makeAnimationSettingsSchema} from './app-ui';
+import type {VariableShaderType} from '@luma.gl/core';
+
+const {app, source, vs, fs} = getShaderSources();
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
-
-// SHADERS
-
-type AppUniforms = {
-  uColor: number[];
-  uModel: number[];
-  uView: number[];
-  uProjection: number[];
-};
-
-const app: {uniformTypes: Record<string, VariableShaderType>} = {
-  uniformTypes: {
-    uColor: 'vec3<f32>',
-    uModel: 'mat4x4<f32>',
-    uView: 'mat4x4<f32>',
-    uProjection: 'mat4x4<f32>'
-  }
-};
-
-const source = /* wgsl */ `\
-struct Uniforms {
-  uColor : vec3<f32>,
-  uModel : mat4x4<f32>,
-  uView : mat4x4<f32>,
-  uProjection : mat4x4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app : Uniforms;
-
-struct VertexInputs {
-  // CUBE GEOMETRY
-  @location(0) positions : vec4<f32>,
-  @location(1) normals : vec3<f32>
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec3<f32>,
-  @location(1) dirlightNormal: DirlightNormal,
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  // gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
-  outputs.Position = app.uProjection * app.uView * app.uModel * inputs.positions;
-  outputs.color = app.uColor;
-
-  let normal: vec3<f32> = (app.uModel * vec4<f32>(inputs.normals, 0.0)).xyz;
-  outputs.dirlightNormal = dirlight_setNormal(normal);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  var fragColor = vec4(inputs.color, 1.);
-  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.dirlightNormal));
-  return fragColor;
-}
-`;
-
-const vs = /* glsl */ `\
-#version 300 es
-
-in vec3 positions;
-in vec3 normals;
-
-uniform appUniforms {
-  vec3 uColor;
-  mat4 uModel;
-  mat4 uView;
-  mat4 uProjection;
-} app;
-
-out vec3 color;
-
-void main(void) {
-  vec3 normal = vec3(app.uModel * vec4(normals, 0.0));
-
-  // Set up data for modules
-  color = app.uColor;
-  dirlight_setNormal(normal);
-  gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
-}
-`;
-
-const fs = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-in vec3 color;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = vec4(color, 1.);
-  fragColor = dirlight_filterColor(fragColor);
-}
-`;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
@@ -186,7 +85,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       settings: {time: this.timeline.getTime()},
       onSettingsChange: this.handleSettingsChange
     });
-    this.panels = new ExamplePanelManager({panel: this.makePanel()});
+    this.panels = new ExamplePanelManager({
+      panel: makeAnimationPanel(this.settingsPanel, this.timeline)
+    });
     this.panels.mount();
 
     const channels = [
@@ -267,7 +168,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device, aspect}: AnimationProps) {
     this.settingsPanel.setSettings({time: this.timeline.getTime()});
-    this.panels.setPanel(this.makePanel());
+    this.panels.setPanel(makeAnimationPanel(this.settingsPanel, this.timeline));
 
     const modelMatrix = new Matrix4();
     const projectionMatrix = new Matrix4().perspective({
@@ -310,39 +211,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 
-  private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'animation-controls',
-      title: 'Controls',
-      panels: [
-        makeHtmlCustomPanel({
-          id: 'animation-actions',
-          title: '',
-          html: `\
-          <p>Key frame animation based on multiple hierarchical timelines.</p>
-          <div style="display: flex; gap: 8px;">
-            <button id="play" type="button">Play</button>
-            <button id="pause" type="button">Pause</button>
-          </div>
-          `,
-          onRender: rootElement => {
-            const playButton = rootElement.querySelector<HTMLButtonElement>('#play');
-            const pauseButton = rootElement.querySelector<HTMLButtonElement>('#pause');
-            const handlePlay = () => this.timeline.play();
-            const handlePause = () => this.timeline.pause();
-            playButton?.addEventListener('click', handlePlay);
-            pauseButton?.addEventListener('click', handlePause);
-            return () => {
-              playButton?.removeEventListener('click', handlePlay);
-              pauseButton?.removeEventListener('click', handlePause);
-            };
-          }
-        }),
-        this.settingsPanel.makePanel()
-      ]
-    });
-  }
-
   private readonly handleSettingsChange = (
     _settings: Record<string, unknown>,
     changedSettings?: SettingsChangeDescriptor[]
@@ -354,26 +222,110 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   };
 }
 
-function makeAnimationSettingsSchema(): SettingsSchema {
-  return {
-    title: 'Settings',
-    sections: [
-      {
-        id: 'timeline',
-        name: 'Timeline',
-        initiallyCollapsed: false,
-        settings: [
-          {
-            name: 'time',
-            label: 'Time',
-            type: 'number',
-            persist: 'none',
-            min: 0,
-            max: 30000,
-            step: 1
-          }
-        ]
-      }
-    ]
+type AppUniforms = {
+  uColor: number[];
+  uModel: number[];
+  uView: number[];
+  uProjection: number[];
+};
+
+function getShaderSources() {
+  // SHADERS
+
+  const app: {uniformTypes: Record<string, VariableShaderType>} = {
+    uniformTypes: {
+      uColor: 'vec3<f32>',
+      uModel: 'mat4x4<f32>',
+      uView: 'mat4x4<f32>',
+      uProjection: 'mat4x4<f32>'
+    }
   };
+
+  const source = /* wgsl */ `\
+  struct Uniforms {
+    uColor : vec3<f32>,
+    uModel : mat4x4<f32>,
+    uView : mat4x4<f32>,
+    uProjection : mat4x4<f32>,
+  };
+
+  @group(0) @binding(auto) var<uniform> app : Uniforms;
+
+  struct VertexInputs {
+    // CUBE GEOMETRY
+    @location(0) positions : vec4<f32>,
+    @location(1) normals : vec3<f32>
+  };
+
+  struct FragmentInputs {
+    @builtin(position) Position : vec4<f32>,
+    @location(0) color : vec3<f32>,
+    @location(1) dirlightNormal: DirlightNormal,
+  }
+
+  @vertex
+  fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+    var outputs : FragmentInputs;
+    // gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
+    outputs.Position = app.uProjection * app.uView * app.uModel * inputs.positions;
+    outputs.color = app.uColor;
+
+    let normal: vec3<f32> = (app.uModel * vec4<f32>(inputs.normals, 0.0)).xyz;
+    outputs.dirlightNormal = dirlight_setNormal(normal);
+    return outputs;
+  }
+
+  @fragment
+  fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+    var fragColor = vec4(inputs.color, 1.);
+    fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.dirlightNormal));
+    return fragColor;
+  }
+  `;
+
+  const vs = /* glsl */ `\
+  #version 300 es
+
+  in vec3 positions;
+  in vec3 normals;
+
+  uniform appUniforms {
+    vec3 uColor;
+    mat4 uModel;
+    mat4 uView;
+    mat4 uProjection;
+  } app;
+
+  out vec3 color;
+
+  void main(void) {
+    vec3 normal = vec3(app.uModel * vec4(normals, 0.0));
+
+    // Set up data for modules
+    color = app.uColor;
+    dirlight_setNormal(normal);
+    gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
+  }
+  `;
+
+  const fs = /* glsl */ `\
+  #version 300 es
+
+  precision highp float;
+
+  in vec3 color;
+  out vec4 fragColor;
+
+  void main(void) {
+    fragColor = vec4(color, 1.);
+    fragColor = dirlight_filterColor(fragColor);
+  }
+  `;
+
+  return {
+    app,
+    source,
+    vs,
+    fs
+  } as const;
 }
