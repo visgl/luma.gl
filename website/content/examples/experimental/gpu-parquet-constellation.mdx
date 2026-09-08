@@ -1,0 +1,38 @@
+---
+title: GPU Parquet Constellation
+sidebar_label: GPU Parquet constellation
+description: Decode a deliberately GPU-friendly Parquet galaxy on the CPU or GPU and render the result without readback.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, parquet, data, command-graphs]
+---
+
+import {GPUParquetConstellationExample} from '@site/src/examples';
+
+<GPUParquetConstellationExample />
+
+This example is a visible vertical slice through `@luma.gl/gpgpu/gpu-parse`. It creates one real
+Parquet row group containing the position, radius, temperature, and sequence fields for an animated
+five-arm galaxy. The four `FLOAT` columns use Snappy-compressed `BYTE_STREAM_SPLIT`; the monotonic
+`UINT32` sequence uses uncompressed `DELTA_BINARY_PACKED`. DataPageV2 and multiple pages per column
+exercise decompression and page-batch planning rather than a convenient PLAIN-only fixture. The
+fixture is checked in so file generation does not pollute the measured decode paths.
+
+In **GPU command graph** mode, loaders.gl reads page headers and preserves the encoded value
+sections. `planGPUParquetEncodedPageBatch()` validates and packs those sections, and
+`addGPUParquetEncodedPageBatchToGraph()` composes the required column decoders. A final graph copy
+places each decoded page in persistent render storage. The render graph then binds those buffers
+directly; values never return to JavaScript.
+
+In **CPU on main thread** mode, the same loaders.gl source fully decodes the values and constructs
+Arrow arrays before luma.gl uploads five materialized columns. Keeping this comparison explicitly on
+the main thread makes UI responsiveness measurable. A production application can instead use a
+loaders.gl worker, trading worker startup, memory, and transfer costs against main-thread work.
+
+Use **Compare CPU → GPU** after the fixture is built. Total latency includes page access, decoding,
+buffer creation, and render-graph preparation. **Longest frame** records the largest animation gap
+while the old constellation remains active, making main-thread stalls visible. Results depend on the
+browser, GPU, row count, and whether shader pipelines are warm; they are an experiment, not a fixed
+performance claim.
