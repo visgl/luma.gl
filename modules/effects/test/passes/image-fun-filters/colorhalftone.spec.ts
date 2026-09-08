@@ -4,14 +4,14 @@
 
 import {colorHalftone} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('colorHalftone#build/uniform', t => {
+it('colorHalftone#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(colorHalftone, {}, {});
 
-  t.ok(uniforms, 'colorHalftone module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'colorHalftone center uniform is ok');
-  t.equal(uniforms.angle, 1.1, 'colorHalftone angle uniform is ok');
-  t.equal(uniforms.size, 4, 'colorHalftone size uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'colorHalftone module build is ok').toBe(true);
+  expect(uniforms.center, 'colorHalftone center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.angle, 'colorHalftone angle uniform is ok').toBe(1.1);
+  expect(uniforms.size, 'colorHalftone size uniform is ok').toBe(4);
+  void 0;
 });

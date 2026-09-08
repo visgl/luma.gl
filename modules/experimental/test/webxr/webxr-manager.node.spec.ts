@@ -10,7 +10,7 @@ import type {
   TextureProps,
   TextureView
 } from '@luma.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {WebXRManager} from '../../src/webxr/webxr-manager';
 
 type MockTextureHandle = GPUTexture & {destroyCount: number};
@@ -28,7 +28,7 @@ type MockXRSession = XRSession & {
   updatedLayers: XRProjectionLayer[] | null;
 };
 
-test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffers', async testCase => {
+it('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffers', async () => {
   const device = makeMockWebGPUDevice();
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeMockXRSession(referenceSpace, ['webgpu']);
@@ -59,7 +59,7 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
     }
 
     getViewSubImage(receivedLayer: XRProjectionLayer, view: XRView): XRGPUSubImage {
-      testCase.equal(receivedLayer, projectionLayer, 'queries the configured projection layer');
+      expect(receivedLayer, 'queries the configured projection layer').toBe(projectionLayer);
       const viewIndex = view.eye === 'left' ? 0 : 1;
       return {
         colorTexture: colorTextureHandle,
@@ -85,111 +85,78 @@ test('webxr#WebXRManager resolves independent borrowed WebGPU stereo framebuffer
     } as XRFrame;
     const frameState = manager.getFrameState(frame);
 
-    testCase.equal(receivedBindingSession, session, 'binding receives the active XR session');
-    testCase.equal(receivedBindingDevice, device.handle, 'binding receives the native GPU device');
-    testCase.deepEqual(
+    expect(receivedBindingSession, 'binding receives the active XR session').toBe(session);
+    expect(receivedBindingDevice, 'binding receives the native GPU device').toBe(device.handle);
+    expect(
       receivedProjectionLayerInit,
-      {colorFormat: 'bgra8unorm', depthStencilFormat: 'depth24plus', scaleFactor: 0.8},
       'projection layer uses preferred formats and caller options'
+    ).toEqual({colorFormat: 'bgra8unorm', depthStencilFormat: 'depth24plus', scaleFactor: 0.8});
+    expect(session.updatedLayers, 'installs a native projection layer').toEqual([projectionLayer]);
+    expect(session.updatedBaseLayer, 'WebGPU does not install a legacy WebGL layer').toBe(null);
+    expect(manager.baseLayer, 'legacy layer remains unset').toBe(null);
+    expect(manager.projectionLayer, 'exposes the native projection layer').toBe(projectionLayer);
+    expect(frameState?.views.length, 'resolves both stereo views').toBe(2);
+    expect(frameState?.framebuffer, 'legacy frame framebuffer points to the first WebGPU eye').toBe(
+      frameState?.views[0]?.framebuffer
     );
-    testCase.deepEqual(
-      session.updatedLayers,
-      [projectionLayer],
-      'installs a native projection layer'
-    );
-    testCase.equal(session.updatedBaseLayer, null, 'WebGPU does not install a legacy WebGL layer');
-    testCase.equal(manager.baseLayer, null, 'legacy layer remains unset');
-    testCase.equal(manager.projectionLayer, projectionLayer, 'exposes the native projection layer');
-    testCase.equal(frameState?.views.length, 2, 'resolves both stereo views');
-    testCase.equal(
-      frameState?.framebuffer,
+    expect(
       frameState?.views[0]?.framebuffer,
-      'legacy frame framebuffer points to the first WebGPU eye'
-    );
-    testCase.notEqual(
-      frameState?.views[0]?.framebuffer,
-      frameState?.views[1]?.framebuffer,
       'WebGPU eyes receive independently clearable framebuffers'
+    ).not.toBe(frameState?.views[1]?.framebuffer);
+    expect(frameState?.views[0]?.viewport, 'keeps left viewport').toEqual([0, 2, 30, 28]);
+    expect(frameState?.views[1]?.viewport, 'keeps right viewport').toEqual([32, 2, 30, 28]);
+    expect(frameState?.views[1]?.projectionMatrix, 'retains each eye projection matrix').toBe(
+      rightView.projectionMatrix
     );
-    testCase.deepEqual(frameState?.views[0]?.viewport, [0, 2, 30, 28], 'keeps left viewport');
-    testCase.deepEqual(frameState?.views[1]?.viewport, [32, 2, 30, 28], 'keeps right viewport');
-    testCase.equal(
-      frameState?.views[1]?.projectionMatrix,
-      rightView.projectionMatrix,
-      'retains each eye projection matrix'
-    );
-    testCase.equal(device.createdTextures.length, 4, 'wraps both color and depth for each eye');
-    testCase.equal(device.createdFramebuffers.length, 2, 'creates one framebuffer per eye');
-    testCase.deepEqual(
+    expect(device.createdTextures.length, 'wraps both color and depth for each eye').toBe(4);
+    expect(device.createdFramebuffers.length, 'creates one framebuffer per eye').toBe(2);
+    expect(
       device.createdTextures.map(texture => texture.props.view?.baseArrayLayer),
-      [0, 0, 1, 1],
       'color and depth views honor compositor-selected array layers'
-    );
-    testCase.ok(
-      device.createdTextures.every(texture => texture.props._isHandleBorrowed),
+    ).toEqual([0, 0, 1, 1]);
+    expect(
+      Boolean(device.createdTextures.every(texture => texture.props._isHandleBorrowed)),
       'every compositor texture handle is explicitly borrowed'
-    );
-    testCase.ok(
-      device.createdTextures.every(
-        texture =>
-          texture.props.view?.dimension === '2d' && texture.props.view?.arrayLayerCount === 1
+    ).toBe(true);
+    expect(
+      Boolean(
+        device.createdTextures.every(
+          texture =>
+            texture.props.view?.dimension === '2d' && texture.props.view?.arrayLayerCount === 1
+        )
       ),
       'array-backed stereo render attachments use single-layer 2D views'
-    );
+    ).toBe(true);
 
     const repeatedFrameState = manager.getFrameState(frame);
-    testCase.equal(
-      device.createdTextures.length,
-      4,
-      'reuses wrappers while native textures are stable'
+    expect(device.createdTextures.length, 'reuses wrappers while native textures are stable').toBe(
+      4
     );
-    testCase.equal(
-      repeatedFrameState?.views[1]?.framebuffer,
-      frameState?.views[1]?.framebuffer,
-      'reuses unchanged eye framebuffers'
+    expect(repeatedFrameState?.views[1]?.framebuffer, 'reuses unchanged eye framebuffers').toBe(
+      frameState?.views[1]?.framebuffer
     );
 
     activeViews = [leftView];
     manager.getFrameState(frame);
-    testCase.equal(
-      device.createdFramebuffers[1]?.destroyCount,
-      1,
-      'releases removed eye framebuffer'
-    );
-    testCase.equal(
-      device.createdTextures[2]?.destroyCount,
-      1,
-      'releases removed eye color wrapper'
-    );
-    testCase.equal(
-      device.createdTextures[3]?.destroyCount,
-      1,
-      'releases removed eye depth wrapper'
-    );
+    expect(device.createdFramebuffers[1]?.destroyCount, 'releases removed eye framebuffer').toBe(1);
+    expect(device.createdTextures[2]?.destroyCount, 'releases removed eye color wrapper').toBe(1);
+    expect(device.createdTextures[3]?.destroyCount, 'releases removed eye depth wrapper').toBe(1);
 
     manager.destroy();
     manager.destroy();
-    testCase.equal(device.createdFramebuffers[0]?.destroyCount, 1, 'cleanup is idempotent');
-    testCase.equal(
-      colorTextureHandle.destroyCount,
-      0,
-      'never destroys browser-owned color texture'
-    );
-    testCase.equal(
-      depthTextureHandle.destroyCount,
-      0,
-      'never destroys browser-owned depth texture'
-    );
-    testCase.equal(manager.projectionLayer, null, 'clears native projection layer');
-    testCase.equal(manager.webGPUBinding, null, 'clears native GPU binding');
+    expect(device.createdFramebuffers[0]?.destroyCount, 'cleanup is idempotent').toBe(1);
+    expect(colorTextureHandle.destroyCount, 'never destroys browser-owned color texture').toBe(0);
+    expect(depthTextureHandle.destroyCount, 'never destroys browser-owned depth texture').toBe(0);
+    expect(manager.projectionLayer, 'clears native projection layer').toBe(null);
+    expect(manager.webGPUBinding, 'clears native GPU binding').toBe(null);
   } finally {
     globalThis.XRGPUBinding = originalXRGPUBinding;
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('webxr#WebXRManager handles legacy image indices and rotating GPU compositor textures', async testCase => {
+it('webxr#WebXRManager handles legacy image indices and rotating GPU compositor textures', async () => {
   const device = makeMockWebGPUDevice();
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeMockXRSession(referenceSpace, ['webgpu']);
@@ -226,51 +193,40 @@ test('webxr#WebXRManager handles legacy image indices and rotating GPU composito
     const frame = {session, getViewerPose: () => ({views: [view]})} as XRFrame;
     const firstFrameState = manager.getFrameState(frame);
 
-    testCase.equal(device.createdTextures.length, 1, 'depth attachment remains optional');
-    testCase.equal(
+    expect(device.createdTextures.length, 'depth attachment remains optional').toBe(1);
+    expect(
       device.createdTextures[0]?.props.view?.baseArrayLayer,
-      1,
       'legacy image index selects the requested array slice'
-    );
-    testCase.equal(
+    ).toBe(1);
+    expect(
       firstFrameState?.views[0]?.framebuffer.depthStencilAttachment,
-      null,
       'framebuffer does not synthesize browser-owned depth'
-    );
+    ).toBe(null);
 
     activeTextureHandle = secondTextureHandle;
     activeImageIndex = 0;
     const secondFrameState = manager.getFrameState(frame);
 
-    testCase.notEqual(
+    expect(
       secondFrameState?.views[0]?.framebuffer,
-      firstFrameState?.views[0]?.framebuffer,
       'rotating native textures rebuild the eye framebuffer'
-    );
-    testCase.equal(device.createdFramebuffers[0]?.destroyCount, 1, 'releases obsolete framebuffer');
-    testCase.equal(device.createdTextures[0]?.destroyCount, 1, 'releases obsolete texture wrapper');
-    testCase.equal(device.createdTextures[1]?.props.view?.baseArrayLayer, 0, 'updates array slice');
-    testCase.equal(
-      firstTextureHandle.destroyCount,
-      0,
-      'obsolete compositor texture remains borrowed'
-    );
+    ).not.toBe(firstFrameState?.views[0]?.framebuffer);
+    expect(device.createdFramebuffers[0]?.destroyCount, 'releases obsolete framebuffer').toBe(1);
+    expect(device.createdTextures[0]?.destroyCount, 'releases obsolete texture wrapper').toBe(1);
+    expect(device.createdTextures[1]?.props.view?.baseArrayLayer, 'updates array slice').toBe(0);
+    expect(firstTextureHandle.destroyCount, 'obsolete compositor texture remains borrowed').toBe(0);
 
     manager.clearSession();
-    testCase.equal(
-      secondTextureHandle.destroyCount,
-      0,
-      'active compositor texture remains borrowed'
-    );
-    testCase.equal(manager.getFrameState(frame), null, 'cleared session no longer resolves frames');
+    expect(secondTextureHandle.destroyCount, 'active compositor texture remains borrowed').toBe(0);
+    expect(manager.getFrameState(frame), 'cleared session no longer resolves frames').toBe(null);
   } finally {
     globalThis.XRGPUBinding = originalXRGPUBinding;
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('webxr#WebXRManager shares identical WebGPU atlas attachments across stereo eyes', async testCase => {
+it('webxr#WebXRManager shares identical WebGPU atlas attachments across stereo eyes', async () => {
   const device = makeMockWebGPUDevice();
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeMockXRSession(referenceSpace, ['webgpu']);
@@ -315,58 +271,36 @@ test('webxr#WebXRManager shares identical WebGPU atlas attachments across stereo
     } as XRFrame;
     const frameState = manager.getFrameState(frame);
 
-    testCase.equal(device.createdTextures.length, 2, 'wraps shared color and depth only once');
-    testCase.equal(device.createdFramebuffers.length, 1, 'deduplicates shared atlas framebuffer');
-    testCase.equal(
+    expect(device.createdTextures.length, 'wraps shared color and depth only once').toBe(2);
+    expect(device.createdFramebuffers.length, 'deduplicates shared atlas framebuffer').toBe(1);
+    expect(
       frameState?.views[0]?.framebuffer,
-      frameState?.views[1]?.framebuffer,
       'both atlas eyes expose identical framebuffer identity'
-    );
-    testCase.deepEqual(frameState?.views[0]?.viewport, [0, 0, 32, 32], 'keeps left atlas viewport');
-    testCase.deepEqual(
-      frameState?.views[1]?.viewport,
-      [32, 0, 32, 32],
-      'keeps right atlas viewport'
-    );
+    ).toBe(frameState?.views[1]?.framebuffer);
+    expect(frameState?.views[0]?.viewport, 'keeps left atlas viewport').toEqual([0, 0, 32, 32]);
+    expect(frameState?.views[1]?.viewport, 'keeps right atlas viewport').toEqual([32, 0, 32, 32]);
 
     activeViews = [leftView];
     manager.getFrameState(frame);
-    testCase.equal(
+    expect(
       device.createdFramebuffers[0]?.destroyCount,
-      0,
       'remaining eye retains shared framebuffer when another eye disappears'
-    );
+    ).toBe(0);
 
     manager.destroy();
-    testCase.equal(device.createdFramebuffers[0]?.destroyCount, 1, 'destroys shared wrapper once');
-    testCase.equal(
-      device.createdTextures[0]?.destroyCount,
-      1,
-      'destroys shared color wrapper once'
-    );
-    testCase.equal(
-      device.createdTextures[1]?.destroyCount,
-      1,
-      'destroys shared depth wrapper once'
-    );
-    testCase.equal(
-      colorTextureHandle.destroyCount,
-      0,
-      'preserves browser-owned shared color texture'
-    );
-    testCase.equal(
-      depthTextureHandle.destroyCount,
-      0,
-      'preserves browser-owned shared depth texture'
-    );
+    expect(device.createdFramebuffers[0]?.destroyCount, 'destroys shared wrapper once').toBe(1);
+    expect(device.createdTextures[0]?.destroyCount, 'destroys shared color wrapper once').toBe(1);
+    expect(device.createdTextures[1]?.destroyCount, 'destroys shared depth wrapper once').toBe(1);
+    expect(colorTextureHandle.destroyCount, 'preserves browser-owned shared color texture').toBe(0);
+    expect(depthTextureHandle.destroyCount, 'preserves browser-owned shared depth texture').toBe(0);
   } finally {
     globalThis.XRGPUBinding = originalXRGPUBinding;
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames', async testCase => {
+it('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames', async () => {
   const device = makeMockWebGPUDevice();
   const referenceSpace = {} as XRReferenceSpace;
   const sessionWithoutWebGPU = makeMockXRSession(referenceSpace, ['local-floor']);
@@ -390,13 +324,12 @@ test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames'
     const manager = new WebXRManager(device);
     try {
       await manager.setSession(sessionWithoutWebGPU);
-      testCase.fail('session without the webgpu feature should be rejected');
+      expect(false, 'session without the webgpu feature should be rejected').toBe(true);
     } catch (error) {
-      testCase.match(
+      expect(
         error instanceof Error ? error.message : '',
-        /webgpu feature/,
         'rejects sessions that did not negotiate WebGPU'
-      );
+      ).toMatch(/webgpu feature/);
     }
 
     const session = makeMockXRSession(referenceSpace, ['webgpu']);
@@ -407,38 +340,35 @@ test('webxr#WebXRManager rejects unsupported WebGPU sessions and foreign frames'
       getViewerPose: () => ({views: [makeMockXRView('left', 0)]})
     } as XRFrame;
 
-    testCase.throws(
+    expect(
       () => manager.getFrameState(foreignFrame),
-      /different XRSession/,
       'rejects a frame belonging to another session'
-    );
-    testCase.equal(
+    ).toThrow(/different XRSession/);
+    expect(
       manager.getFrameState({session, getViewerPose: () => undefined} as XRFrame),
-      null,
       'missing viewer poses do not create attachments'
-    );
+    ).toBe(null);
     manager.destroy();
 
     globalThis.XRGPUBinding = undefined as unknown as typeof XRGPUBinding;
     const unavailableManager = new WebXRManager(device);
     try {
       await unavailableManager.setSession(session);
-      testCase.fail('missing WebGPU XR browser binding should be rejected');
+      expect(false, 'missing WebGPU XR browser binding should be rejected').toBe(true);
     } catch (error) {
-      testCase.match(
+      expect(
         error instanceof Error ? error.message : '',
-        /not supported/,
         'reports unavailable browser WebGPU XR support'
-      );
+      ).toMatch(/not supported/);
     }
   } finally {
     globalThis.XRGPUBinding = originalXRGPUBinding;
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('webxr#WebXRManager resolves input source poses and select activity', async testCase => {
+it('webxr#WebXRManager resolves input source poses and select activity', async () => {
   const referenceSpace = {} as XRReferenceSpace;
   const targetRaySpace = {} as XRSpace;
   const gripSpace = {} as XRSpace;
@@ -490,49 +420,48 @@ test('webxr#WebXRManager resolves input source poses and select activity', async
     const frame = {
       session,
       getPose(space: XRSpace, baseSpace: XRReferenceSpace): XRPose | undefined {
-        testCase.equal(baseSpace, referenceSpace, 'queries poses in the manager reference space');
+        expect(baseSpace, 'queries poses in the manager reference space').toBe(referenceSpace);
         return poseBySpace.get(space);
       },
       getViewerPose: () => undefined
     } as XRFrame;
     let inputState = manager.getInputState(frame);
 
-    testCase.equal(inputState?.length, 2, 'reports every active input source');
-    testCase.equal(inputState?.[0]?.inputSource, controllerInputSource, 'retains input identity');
-    testCase.equal(inputState?.[0]?.handedness, 'left', 'keeps handedness');
-    testCase.equal(inputState?.[0]?.targetRayMode, 'tracked-pointer', 'keeps target ray mode');
-    testCase.deepEqual(
-      inputState?.[0]?.profiles,
-      ['oculus-touch-v3', 'generic-trigger-squeeze-thumbstick'],
-      'keeps profile order'
-    );
-    testCase.equal(inputState?.[0]?.gamepad, controllerInputSource.gamepad, 'keeps gamepad');
-    testCase.equal(inputState?.[0]?.targetRayPose, targetRayPose, 'keeps target ray pose');
-    testCase.equal(inputState?.[0]?.targetRayMatrix, targetRayPose.transform.matrix, 'keeps ray');
-    testCase.equal(inputState?.[0]?.gripPose, gripPose, 'keeps grip pose');
-    testCase.equal(inputState?.[0]?.gripMatrix, gripPose.transform.matrix, 'keeps grip');
-    testCase.equal(inputState?.[0]?.selectActive, false, 'select starts inactive');
-    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeeze starts inactive');
-    testCase.equal(inputState?.[1]?.targetRayPose, null, 'missing poses become null');
-    testCase.equal(inputState?.[1]?.gripPose, null, 'missing grip spaces become null');
+    expect(inputState?.length, 'reports every active input source').toBe(2);
+    expect(inputState?.[0]?.inputSource, 'retains input identity').toBe(controllerInputSource);
+    expect(inputState?.[0]?.handedness, 'keeps handedness').toBe('left');
+    expect(inputState?.[0]?.targetRayMode, 'keeps target ray mode').toBe('tracked-pointer');
+    expect(inputState?.[0]?.profiles, 'keeps profile order').toEqual([
+      'oculus-touch-v3',
+      'generic-trigger-squeeze-thumbstick'
+    ]);
+    expect(inputState?.[0]?.gamepad, 'keeps gamepad').toBe(controllerInputSource.gamepad);
+    expect(inputState?.[0]?.targetRayPose, 'keeps target ray pose').toBe(targetRayPose);
+    expect(inputState?.[0]?.targetRayMatrix, 'keeps ray').toBe(targetRayPose.transform.matrix);
+    expect(inputState?.[0]?.gripPose, 'keeps grip pose').toBe(gripPose);
+    expect(inputState?.[0]?.gripMatrix, 'keeps grip').toBe(gripPose.transform.matrix);
+    expect(inputState?.[0]?.selectActive, 'select starts inactive').toBe(false);
+    expect(inputState?.[0]?.squeezeActive, 'squeeze starts inactive').toBe(false);
+    expect(inputState?.[1]?.targetRayPose, 'missing poses become null').toBe(null);
+    expect(inputState?.[1]?.gripPose, 'missing grip spaces become null').toBe(null);
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
-    testCase.equal(inputState?.[0]?.selectActive, true, 'selectstart marks the source active');
-    testCase.equal(inputState?.[0]?.squeezeActive, false, 'select does not affect squeeze');
+    expect(inputState?.[0]?.selectActive, 'selectstart marks the source active').toBe(true);
+    expect(inputState?.[0]?.squeezeActive, 'select does not affect squeeze').toBe(false);
 
     session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
-    testCase.equal(inputState?.[0]?.squeezeActive, true, 'squeezestart marks the source active');
-    testCase.equal(inputState?.[0]?.selectActive, true, 'squeeze does not affect select');
+    expect(inputState?.[0]?.squeezeActive, 'squeezestart marks the source active').toBe(true);
+    expect(inputState?.[0]?.selectActive, 'squeeze does not affect select').toBe(true);
 
     session.dispatchEvent(makeMockXRInputSourceEvent('squeezeend', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
-    testCase.equal(inputState?.[0]?.squeezeActive, false, 'squeezeend marks the source inactive');
+    expect(inputState?.[0]?.squeezeActive, 'squeezeend marks the source inactive').toBe(false);
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectend', controllerInputSource, frame));
     inputState = manager.getInputState(frame);
-    testCase.equal(inputState?.[0]?.selectActive, false, 'selectend marks the source inactive');
+    expect(inputState?.[0]?.selectActive, 'selectend marks the source inactive').toBe(false);
 
     session.dispatchEvent(makeMockXRInputSourceEvent('selectstart', controllerInputSource, frame));
     session.dispatchEvent(makeMockXRInputSourceEvent('squeezestart', controllerInputSource, frame));
@@ -545,32 +474,31 @@ test('webxr#WebXRManager resolves input source poses and select activity', async
       }) as XRInputSourcesChangeEvent
     );
     inputState = manager.getInputState(frame);
-    testCase.equal(inputState?.length, 1, 'removed sources disappear from snapshots');
-    testCase.equal(inputState?.[0]?.inputSource, screenInputSource, 'keeps remaining source');
-    testCase.equal(inputState?.[0]?.selectActive, false, 'removed source cannot stay selected');
-    testCase.equal(inputState?.[0]?.squeezeActive, false, 'removed source cannot stay squeezed');
+    expect(inputState?.length, 'removed sources disappear from snapshots').toBe(1);
+    expect(inputState?.[0]?.inputSource, 'keeps remaining source').toBe(screenInputSource);
+    expect(inputState?.[0]?.selectActive, 'removed source cannot stay selected').toBe(false);
+    expect(inputState?.[0]?.squeezeActive, 'removed source cannot stay squeezed').toBe(false);
 
     const foreignFrame = {
       session: makeMockXRSession(referenceSpace, []),
       getPose: () => undefined,
       getViewerPose: () => undefined
     } as XRFrame;
-    testCase.throws(
+    expect(
       () => manager.getInputState(foreignFrame),
-      /different XRSession/,
       'rejects foreign frames for input snapshots'
-    );
+    ).toThrow(/different XRSession/);
 
     manager.clearSession();
-    testCase.equal(manager.getInputState(frame), null, 'cleared sessions expose no inputs');
+    expect(manager.getInputState(frame), 'cleared sessions expose no inputs').toBe(null);
   } finally {
     globalThis.XRWebGLLayer = originalXRWebGLLayer;
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('webxr#WebXRManager preserves shared WebGL framebuffers in a mocked Node session', async testCase => {
+it('webxr#WebXRManager preserves shared WebGL framebuffers in a mocked Node session', async () => {
   const referenceSpace = {} as XRReferenceSpace;
   const session = makeMockXRSession(referenceSpace, []);
   const leftView = makeMockXRView('left', 0);
@@ -607,22 +535,21 @@ test('webxr#WebXRManager preserves shared WebGL framebuffers in a mocked Node se
       getViewerPose: () => ({views: [leftView, rightView]})
     } as XRFrame);
 
-    testCase.equal(compatibilityCallCount, 1, 'makes WebGL context XR compatible');
-    testCase.equal(session.updatedBaseLayer, manager.baseLayer, 'retains legacy base layer setup');
-    testCase.equal(session.updatedLayers, null, 'does not request WebGPU projection layers');
-    testCase.equal(frameState?.framebuffer.props.handle, framebufferHandle, 'borrows native layer');
-    testCase.equal(
+    expect(compatibilityCallCount, 'makes WebGL context XR compatible').toBe(1);
+    expect(session.updatedBaseLayer, 'retains legacy base layer setup').toBe(manager.baseLayer);
+    expect(session.updatedLayers, 'does not request WebGPU projection layers').toBe(null);
+    expect(frameState?.framebuffer.props.handle, 'borrows native layer').toBe(framebufferHandle);
+    expect(
       frameState?.views[0]?.framebuffer,
-      frameState?.views[1]?.framebuffer,
       'both WebGL eyes still share the same framebuffer'
-    );
-    testCase.deepEqual(frameState?.views[1]?.viewport, [32, 0, 32, 32], 'keeps eye viewport');
+    ).toBe(frameState?.views[1]?.framebuffer);
+    expect(frameState?.views[1]?.viewport, 'keeps eye viewport').toEqual([32, 0, 32, 32]);
     manager.destroy();
   } finally {
     globalThis.XRWebGLLayer = originalXRWebGLLayer;
   }
 
-  testCase.end();
+  void 0;
 });
 
 function makeMockWebGPUDevice(): MockWebGPUDevice {

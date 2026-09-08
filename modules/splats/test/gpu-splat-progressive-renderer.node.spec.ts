@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUSplatGraphRenderer reserves progressive hints lazily while borrowing original batches', t => {
+it('GPUSplatGraphRenderer reserves progressive hints lazily while borrowing original batches', () => {
   const device = makeProgressiveWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(device, makeProgressiveNodeSplatSource([0.25, 0.75], 0));
   const secondBatch = makeGPUSplatData(device, makeProgressiveNodeSplatSource([0.5], 2));
@@ -18,42 +18,48 @@ test('GPUSplatGraphRenderer reserves progressive hints lazily while borrowing or
     viewportSize: [32, 24]
   });
 
-  t.equal(renderer.compiledGraph, undefined, 'does not compile anticipated slots before streaming');
+  expect(renderer.compiledGraph, 'does not compile anticipated slots before streaming').toBe(
+    undefined
+  );
   renderer.appendData(firstBatch);
   renderer.appendData(secondBatch);
-  t.equal(renderer.compiledGraph, undefined, 'does not compile eagerly while batches are appended');
-  t.equal(renderer.batches[0], firstBatch, 'retains the original first streamed GPU batch');
-  t.equal(renderer.batches[1], secondBatch, 'retains the original second streamed GPU batch');
-  t.equal(
+  expect(renderer.compiledGraph, 'does not compile eagerly while batches are appended').toBe(
+    undefined
+  );
+  expect(renderer.batches[0], 'retains the original first streamed GPU batch').toBe(firstBatch);
+  expect(renderer.batches[1], 'retains the original second streamed GPU batch').toBe(secondBatch);
+  expect(
     renderer.stats.splatCount,
-    3,
     'reports populated rows instead of reserved scene capacity'
-  );
-  t.equal(
+  ).toBe(3);
+  expect(
     renderer.stats.batchCount,
-    2,
     'reports populated batches instead of reserved batch slots'
-  );
-  t.equal(
+  ).toBe(2);
+  expect(
     renderer.batches[0].positions.data[0].buffer,
-    firstPositionBuffer,
     'preserves the first original source GPU allocation'
-  );
-  t.equal(
+  ).toBe(firstPositionBuffer);
+  expect(
     renderer.batches[1].positions.data[0].buffer,
-    secondPositionBuffer,
     'preserves the second original source GPU allocation'
-  );
+  ).toBe(secondPositionBuffer);
 
   renderer.destroy();
-  t.notOk(firstPositionBuffer.destroyed, 'never destroys the first borrowed source allocation');
-  t.notOk(secondPositionBuffer.destroyed, 'never destroys the second borrowed source allocation');
+  expect(
+    Boolean(firstPositionBuffer.destroyed),
+    'never destroys the first borrowed source allocation'
+  ).toBe(false);
+  expect(
+    Boolean(secondPositionBuffer.destroyed),
+    'never destroys the second borrowed source allocation'
+  ).toBe(false);
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer preserves mixed packed and HDR progressive source formats', t => {
+it('GPUSplatGraphRenderer preserves mixed packed and HDR progressive source formats', () => {
   const device = makeProgressiveWebGPUNullDevice();
   const packedBatch = makeGPUSplatData(device, makeProgressiveNodeSplatSource([0.25], 0));
   const highDynamicRangeSource = makeProgressiveNodeSplatSource([0.75], 1);
@@ -65,28 +71,38 @@ test('GPUSplatGraphRenderer preserves mixed packed and HDR progressive source fo
     data: packedBatch
   });
 
-  t.equal(packedBatch.colors.format, 'unorm8x4', 'retains packed streamed colors');
-  t.equal(renderer.props.toneMapping, 'none', 'does not tone-map packed SDR source data');
+  expect(packedBatch.colors.format, 'retains packed streamed colors').toBe('unorm8x4');
+  expect(renderer.props.toneMapping, 'does not tone-map packed SDR source data').toBe('none');
   renderer.appendData(highDynamicRangeBatch);
-  t.equal(
+  expect(
     highDynamicRangeBatch.colors.format,
-    'float32x4',
     'preserves streamed HDR radiance without byte quantization'
+  ).toBe('float32x4');
+  expect(renderer.props.toneMapping, 'automatically resolves streamed HDR display').toBe(
+    'reinhard'
   );
-  t.equal(renderer.props.toneMapping, 'reinhard', 'automatically resolves streamed HDR display');
-  t.equal(renderer.stats.splatCount, 2, 'accepts more rows than an underestimated scene hint');
-  t.equal(renderer.stats.batchCount, 2, 'accepts more batches than an underestimated slot hint');
-  t.equal(renderer.compiledGraph, undefined, 'grows lazy anticipated capacity without compilation');
+  expect(renderer.stats.splatCount, 'accepts more rows than an underestimated scene hint').toBe(2);
+  expect(renderer.stats.batchCount, 'accepts more batches than an underestimated slot hint').toBe(
+    2
+  );
+  expect(renderer.compiledGraph, 'grows lazy anticipated capacity without compilation').toBe(
+    undefined
+  );
 
   renderer.destroy();
-  t.notOk(packedBatch.destroyed, 'retains ownership of the initial packed batch');
-  t.notOk(highDynamicRangeBatch.destroyed, 'retains ownership of the progressive HDR batch');
+  expect(Boolean(packedBatch.destroyed), 'retains ownership of the initial packed batch').toBe(
+    false
+  );
+  expect(
+    Boolean(highDynamicRangeBatch.destroyed),
+    'retains ownership of the progressive HDR batch'
+  ).toBe(false);
   packedBatch.destroy();
   highDynamicRangeBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer replaces progressively retained batches without destroying sources', t => {
+it('GPUSplatGraphRenderer replaces progressively retained batches without destroying sources', () => {
   const device = makeProgressiveWebGPUNullDevice();
   const firstBatch = makeGPUSplatData(device, makeProgressiveNodeSplatSource([0.25], 0));
   const secondBatch = makeGPUSplatData(device, makeProgressiveNodeSplatSource([0.5], 1));
@@ -102,24 +118,27 @@ test('GPUSplatGraphRenderer replaces progressively retained batches without dest
 
   renderer.appendData(secondBatch);
   renderer.setProps({data: replacementBatch});
-  t.equal(renderer.batches.length, 1, 'replaces the entire previously streamed batch sequence');
-  t.equal(renderer.batches[0], replacementBatch, 'retains the exact replacement GPU batch');
-  t.equal(renderer.stats.splatCount, 1, 'resets populated scene row counts after replacement');
-  t.notOk(firstPositionBuffer.destroyed, 'preserves the previous first borrowed source allocation');
-  t.notOk(
-    secondPositionBuffer.destroyed,
+  expect(renderer.batches.length, 'replaces the entire previously streamed batch sequence').toBe(1);
+  expect(renderer.batches[0], 'retains the exact replacement GPU batch').toBe(replacementBatch);
+  expect(renderer.stats.splatCount, 'resets populated scene row counts after replacement').toBe(1);
+  expect(
+    Boolean(firstPositionBuffer.destroyed),
+    'preserves the previous first borrowed source allocation'
+  ).toBe(false);
+  expect(
+    Boolean(secondPositionBuffer.destroyed),
     'preserves the previous second borrowed source allocation'
-  );
+  ).toBe(false);
 
   renderer.destroy();
-  t.notOk(
-    replacementPositionBuffer.destroyed,
+  expect(
+    Boolean(replacementPositionBuffer.destroyed),
     'destroying replacement graph slots preserves the caller-owned replacement allocation'
-  );
+  ).toBe(false);
   firstBatch.destroy();
   secondBatch.destroy();
   replacementBatch.destroy();
-  t.end();
+  void 0;
 });
 
 function makeProgressiveWebGPUNullDevice(): NullDevice {

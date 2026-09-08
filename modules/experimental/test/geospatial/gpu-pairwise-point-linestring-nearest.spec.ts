@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -11,11 +11,11 @@ import {GPUPairwisePointLinestringNearest} from '../../src/geospatial/gpu-pairwi
 
 const NO_INDEX = 0xffffffff;
 
-test('GPUPairwisePointLinestringNearest covers multipart f32 topology and optional outputs', async tapeTest => {
+it('GPUPairwisePointLinestringNearest covers multipart f32 topology and optional outputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   const pointValues = Float32Array.from([1, 1, 3, 4, 1, 1, 1.5, 1, 1, 0, 1, 0, 0, 0, 1, 1, 5, 1]);
@@ -117,7 +117,7 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
     pointValues.length / 2
   );
 
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPairwisePointLinestringNearest({
         points,
@@ -132,10 +132,9 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
         linestringOffsets,
         output
       }),
-    /one more row than points/,
     'one geometry interval is required per point row'
-  );
-  tapeTest.throws(
+  ).toThrow(/one more row than points/);
+  expect(
     () =>
       new GPUPairwisePointLinestringNearest({
         points,
@@ -150,10 +149,9 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
           pointValues.length / 2
         )
       }),
-    /output output and points must not overlap/,
     'distinct handles backed by one core buffer cannot alias'
-  );
-  tapeTest.throws(
+  ).toThrow(/output output and points must not overlap/);
+  expect(
     () =>
       new GPUPairwisePointLinestringNearest({
         points,
@@ -170,9 +168,8 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
           pointValues.length / 2
         )
       }),
-    /output linestringIndices and output nearestPoints must not overlap/,
     'optional outputs cannot alias through distinct handles'
-  );
+  ).toThrow(/output linestringIndices and output nearestPoints must not overlap/);
 
   new GPUPairwisePointLinestringNearest({
     points,
@@ -201,9 +198,9 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
   ];
   for (let index = 0; index < expectedDistances.length; index++) {
     if (Number.isNaN(expectedDistances[index])) {
-      tapeTest.ok(Number.isNaN(distances[index]), `distance ${index} is invalid`);
+      expect(Boolean(Number.isNaN(distances[index])), `distance ${index} is invalid`).toBe(true);
     } else {
-      tapeTest.equal(distances[index], expectedDistances[index], `distance ${index}`);
+      expect(distances[index], `distance ${index}`).toBe(expectedDistances[index]);
     }
   }
 
@@ -230,12 +227,14 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
   ];
   for (let index = 0; index < expectedNearest.length; index++) {
     if (Number.isNaN(expectedNearest[index])) {
-      tapeTest.ok(Number.isNaN(nearest[index]), `nearest component ${index} is invalid`);
+      expect(Boolean(Number.isNaN(nearest[index])), `nearest component ${index} is invalid`).toBe(
+        true
+      );
     } else {
-      tapeTest.equal(nearest[index], expectedNearest[index], `nearest component ${index}`);
+      expect(nearest[index], `nearest component ${index}`).toBe(expectedNearest[index]);
     }
   }
-  tapeTest.deepEqual(await readUint32(linestringIndexBuffer, pointValues.length / 2), [
+  expect(await readUint32(linestringIndexBuffer, pointValues.length / 2), '').toEqual([
     NO_INDEX,
     NO_INDEX,
     0,
@@ -246,7 +245,7 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
     NO_INDEX,
     1
   ]);
-  tapeTest.deepEqual(await readUint32(segmentIndexBuffer, pointValues.length / 2), [
+  expect(await readUint32(segmentIndexBuffer, pointValues.length / 2), '').toEqual([
     NO_INDEX,
     NO_INDEX,
     0,
@@ -271,14 +270,14 @@ test('GPUPairwisePointLinestringNearest covers multipart f32 topology and option
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPairwisePointLinestringNearest invalidates malformed offset rows', async tapeTest => {
+it('GPUPairwisePointLinestringNearest invalidates malformed offset rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -320,18 +319,18 @@ test('GPUPairwisePointLinestringNearest invalidates malformed offset rows', asyn
   encode(device, compiled);
 
   const distances = await readFloat32(distanceBuffer, 5);
-  tapeTest.equal(distances[0], 1, 'the well-formed row remains queryable');
+  expect(distances[0], 'the well-formed row remains queryable').toBe(1);
   for (let index = 1; index < distances.length; index++) {
-    tapeTest.ok(Number.isNaN(distances[index]), `malformed row ${index} is invalid`);
+    expect(Boolean(Number.isNaN(distances[index])), `malformed row ${index} is invalid`).toBe(true);
   }
-  tapeTest.deepEqual(await readUint32(linestringIndexBuffer, 5), [
+  expect(await readUint32(linestringIndexBuffer, 5), '').toEqual([
     0,
     NO_INDEX,
     NO_INDEX,
     NO_INDEX,
     NO_INDEX
   ]);
-  tapeTest.deepEqual(await readUint32(segmentIndexBuffer, 5), [
+  expect(await readUint32(segmentIndexBuffer, 5), '').toEqual([
     0,
     NO_INDEX,
     NO_INDEX,
@@ -342,14 +341,20 @@ test('GPUPairwisePointLinestringNearest invalidates malformed offset rows', asyn
   geometryOffsetsBuffer.write(Uint32Array.from([1, 1, 1, 2, 3, 4]));
   encode(device, compiled);
   for (const [index, distance] of (await readFloat32(distanceBuffer, 5)).entries()) {
-    tapeTest.ok(Number.isNaN(distance), `nonzero global geometry start invalidates row ${index}`);
+    expect(
+      Boolean(Number.isNaN(distance)),
+      `nonzero global geometry start invalidates row ${index}`
+    ).toBe(true);
   }
 
   geometryOffsetsBuffer.write(geometryOffsetValues);
   linestringOffsetsBuffer.write(Uint32Array.from([0, 2, 1, 5, 3]));
   encode(device, compiled);
   for (const [index, distance] of (await readFloat32(distanceBuffer, 5)).entries()) {
-    tapeTest.ok(Number.isNaN(distance), `wrong global vertex terminal invalidates row ${index}`);
+    expect(
+      Boolean(Number.isNaN(distance)),
+      `wrong global vertex terminal invalidates row ${index}`
+    ).toBe(true);
   }
 
   compiled.destroy();
@@ -364,14 +369,14 @@ test('GPUPairwisePointLinestringNearest invalidates malformed offset rows', asyn
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', async tapeTest => {
+it('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -417,25 +422,27 @@ test('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', a
 
   const distances = await readFloat32(distanceBuffer, 6);
   for (const [index, distance] of distances.slice(0, 2).entries()) {
-    assertRelativeClose(tapeTest, distance, 1e38, 2e-6, `extreme distance ${index}`);
+    assertRelativeClose(distance, 1e38, 2e-6, `extreme distance ${index}`);
   }
-  assertRelativeClose(tapeTest, distances[2], 1e30, 2e-6, 'far perpendicular distance');
-  tapeTest.ok(distances[3] <= 2e32, 'long-diagonal projection remains near the point');
-  tapeTest.equal(distances[4], 1, 'tiny fraction retains its perpendicular distance');
-  assertRelativeClose(tapeTest, distances[5], 3e38, 2e-6, 'overflowed end delta distance');
+  assertRelativeClose(distances[2], 1e30, 2e-6, 'far perpendicular distance');
+  expect(Boolean(distances[3] <= 2e32), 'long-diagonal projection remains near the point').toBe(
+    true
+  );
+  expect(distances[4], 'tiny fraction retains its perpendicular distance').toBe(1);
+  assertRelativeClose(distances[5], 3e38, 2e-6, 'overflowed end delta distance');
   const nearestPoints = await readFloat32(nearestPointBuffer, 12);
-  assertRelativeClose(tapeTest, nearestPoints[0], 3e38, 2e-6, 'extreme positive nearest x');
-  tapeTest.equal(nearestPoints[1], 0, 'extreme positive nearest y');
-  assertRelativeClose(tapeTest, nearestPoints[2], -3e38, 2e-6, 'extreme negative nearest x');
-  tapeTest.equal(nearestPoints[3], 0, 'extreme negative nearest y');
-  tapeTest.equal(nearestPoints[4], 0.5, 'far point retains the short-segment projection');
-  tapeTest.equal(nearestPoints[5], 0, 'far point projects onto the short segment');
-  assertRelativeClose(tapeTest, nearestPoints[6], 1e38, 2e-6, 'long-diagonal nearest x');
-  assertRelativeClose(tapeTest, nearestPoints[7], 1e38, 2e-6, 'long-diagonal nearest y');
-  tapeTest.equal(nearestPoints[8], 1, 'tiny fraction retains its projected displacement');
-  tapeTest.equal(nearestPoints[9], 0, 'tiny fraction projects onto the huge segment');
-  tapeTest.equal(nearestPoints[10], 0, 'overflowed end delta selects the segment start x');
-  tapeTest.equal(nearestPoints[11], 0, 'overflowed end delta selects the segment start y');
+  assertRelativeClose(nearestPoints[0], 3e38, 2e-6, 'extreme positive nearest x');
+  expect(nearestPoints[1], 'extreme positive nearest y').toBe(0);
+  assertRelativeClose(nearestPoints[2], -3e38, 2e-6, 'extreme negative nearest x');
+  expect(nearestPoints[3], 'extreme negative nearest y').toBe(0);
+  expect(nearestPoints[4], 'far point retains the short-segment projection').toBe(0.5);
+  expect(nearestPoints[5], 'far point projects onto the short segment').toBe(0);
+  assertRelativeClose(nearestPoints[6], 1e38, 2e-6, 'long-diagonal nearest x');
+  assertRelativeClose(nearestPoints[7], 1e38, 2e-6, 'long-diagonal nearest y');
+  expect(nearestPoints[8], 'tiny fraction retains its projected displacement').toBe(1);
+  expect(nearestPoints[9], 'tiny fraction projects onto the huge segment').toBe(0);
+  expect(nearestPoints[10], 'overflowed end delta selects the segment start x').toBe(0);
+  expect(nearestPoints[11], 'overflowed end delta selects the segment start y').toBe(0);
 
   compiled.destroy();
   for (const buffer of [
@@ -448,14 +455,14 @@ test('GPUPairwisePointLinestringNearest keeps extreme finite f32 rows finite', a
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPairwisePointLinestringNearest compiles independent optional outputs at nonzero offsets', async tapeTest => {
+it('GPUPairwisePointLinestringNearest compiles independent optional outputs at nonzero offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -520,19 +527,18 @@ test('GPUPairwisePointLinestringNearest compiles independent optional outputs at
     const compiled = graph.compile();
     encode(device, compiled);
 
-    tapeTest.equal(
+    expect(
       (await readFloat32(distanceBuffer, 1, byteOffset))[0],
-      1,
       `${configuration.id} distance`
-    );
+    ).toBe(1);
     if (configuration.nearestPoint) {
-      tapeTest.deepEqual(await readFloat32(nearestPointBuffer, 2, byteOffset), [1, 0]);
+      expect(await readFloat32(nearestPointBuffer, 2, byteOffset), '').toEqual([1, 0]);
     }
     if (configuration.linestringIndex) {
-      tapeTest.deepEqual(await readUint32(linestringIndexBuffer, 1, byteOffset), [0]);
+      expect(await readUint32(linestringIndexBuffer, 1, byteOffset), '').toEqual([0]);
     }
     if (configuration.segmentIndex) {
-      tapeTest.deepEqual(await readUint32(segmentIndexBuffer, 1, byteOffset), [0]);
+      expect(await readUint32(segmentIndexBuffer, 1, byteOffset), '').toEqual([0]);
     }
 
     compiled.destroy();
@@ -549,19 +555,19 @@ test('GPUPairwisePointLinestringNearest compiles independent optional outputs at
       buffer.destroy();
     }
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas', async tapeTest => {
+it('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 nearest-linestring shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -670,23 +676,11 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
   for (let index = 0; index < expectedDistances.length; index++) {
     const distance = distanceLimbs[index * 2] + distanceLimbs[index * 2 + 1];
     if (Number.isNaN(expectedDistances[index])) {
-      tapeTest.ok(Number.isNaN(distance), `raw distance ${index} is invalid`);
+      expect(Boolean(Number.isNaN(distance)), `raw distance ${index} is invalid`).toBe(true);
     } else if (index === expectedDistances.length - 1) {
-      assertClose(
-        tapeTest,
-        distance,
-        0,
-        extremeDiagonalCoordinate * 1e-12,
-        'raw near-end diagonal distance'
-      );
+      assertClose(distance, 0, extremeDiagonalCoordinate * 1e-12, 'raw near-end diagonal distance');
     } else {
-      assertRelativeClose(
-        tapeTest,
-        distance,
-        expectedDistances[index],
-        2e-6,
-        `raw distance ${index}`
-      );
+      assertRelativeClose(distance, expectedDistances[index], 2e-6, `raw distance ${index}`);
     }
   }
 
@@ -704,35 +698,32 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     const nearestX = nearestLimbs[index * 4] + nearestLimbs[index * 4 + 1];
     const nearestY = nearestLimbs[index * 4 + 2] + nearestLimbs[index * 4 + 3];
     if (Number.isNaN(expectedNearest[index][0])) {
-      tapeTest.ok(Number.isNaN(nearestX) && Number.isNaN(nearestY));
+      expect(Boolean(Number.isNaN(nearestX) && Number.isNaN(nearestY)), '').toBe(true);
     } else if (index === expectedNearest.length - 1) {
       assertClose(
-        tapeTest,
         nearestX,
         expectedNearest[index][0],
         Math.abs(expectedNearest[index][0]) * 1e-12,
         `raw nearest x ${index}`
       );
       assertClose(
-        tapeTest,
         nearestY,
         expectedNearest[index][1],
         Math.abs(expectedNearest[index][1]) * 1e-12,
         `raw nearest y ${index}`
       );
     } else {
-      assertClose(tapeTest, nearestX, expectedNearest[index][0], 2e-7, `raw nearest x ${index}`);
-      assertClose(tapeTest, nearestY, expectedNearest[index][1], 2e-7, `raw nearest y ${index}`);
+      assertClose(nearestX, expectedNearest[index][0], 2e-7, `raw nearest x ${index}`);
+      assertClose(nearestY, expectedNearest[index][1], 2e-7, `raw nearest y ${index}`);
     }
   }
   assertClose(
-    tapeTest,
     nearestLimbs[16] + nearestLimbs[17],
     1e-30,
     2e-36,
     'raw tiny fraction retains its projected displacement'
   );
-  tapeTest.deepEqual(await readUint32(linestringIndexBuffer, points.length), [
+  expect(await readUint32(linestringIndexBuffer, points.length), '').toEqual([
     1,
     0,
     NO_INDEX,
@@ -741,7 +732,7 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
     0,
     0
   ]);
-  tapeTest.deepEqual(await readUint32(segmentIndexBuffer, points.length), [
+  expect(await readUint32(segmentIndexBuffer, points.length), '').toEqual([
     0,
     0,
     NO_INDEX,
@@ -764,7 +755,7 @@ test('GPUPairwisePointLinestringNearest preserves raw-binary64 projection deltas
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
 type Point = readonly [number, number];
@@ -826,32 +817,19 @@ function encode(device: Device, compiled: ReturnType<GPUCommandGraph['compile']>
 }
 
 function assertRelativeClose(
-  tapeTest: {ok: (value: unknown, message?: string) => void},
   actual: number,
   expected: number,
   relativeTolerance: number,
   message: string
 ): void {
-  assertClose(
-    tapeTest,
-    actual,
-    expected,
-    Math.max(1e-12, Math.abs(expected) * relativeTolerance),
-    message
-  );
+  assertClose(actual, expected, Math.max(1e-12, Math.abs(expected) * relativeTolerance), message);
 }
 
-function assertClose(
-  tapeTest: {ok: (value: unknown, message?: string) => void},
-  actual: number,
-  expected: number,
-  tolerance: number,
-  message: string
-): void {
-  tapeTest.ok(
-    Math.abs(actual - expected) <= tolerance,
+function assertClose(actual: number, expected: number, tolerance: number, message: string): void {
+  expect(
+    Boolean(Math.abs(actual - expected) <= tolerance),
     `${message}: expected ${expected} ± ${tolerance}, received ${actual}`
-  );
+  ).toBe(true);
 }
 
 function isSoftwareBackedDevice(device: Device): boolean {

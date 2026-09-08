@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {parse} from '@loaders.gl/core';
 import {readFile} from 'node:fs/promises';
 import {USDLoader, parseUSD} from '../../../examples/showcase/scene/usd-loader/usd-loader';
@@ -6,7 +6,7 @@ import {makeANARIJSONSceneFromUSD} from '../../../examples/showcase/scene/usd-to
 
 const TEXT_ENCODER = new TextEncoder();
 
-test('OpenUSD loader exposes a loaders.gl-compatible ASCII loader', async testContext => {
+it('OpenUSD loader exposes a loaders.gl-compatible ASCII loader', async () => {
   const source = `#usda 1.0
 (
     defaultPrim = "World"
@@ -26,23 +26,22 @@ def Xform "World"
 }`;
   const stage = await parse(TEXT_ENCODER.encode(source).buffer, USDLoader);
 
-  testContext.equal(USDLoader.id, 'usd', 'the future loaders.gl module uses the usd identifier');
-  testContext.equal(stage.metadata['upAxis'], 'Z', 'stage metadata remains available');
-  testContext.equal(stage.metadata['metersPerUnit'], 0.01, 'numeric metadata is parsed');
-  testContext.equal(stage.rootPrims[0].children[0].type, 'Mesh', 'nested prim types are preserved');
-  testContext.deepEqual(
+  expect(USDLoader.id, 'the future loaders.gl module uses the usd identifier').toBe('usd');
+  expect(stage.metadata['upAxis'], 'stage metadata remains available').toBe('Z');
+  expect(stage.metadata['metersPerUnit'], 'numeric metadata is parsed').toBe(0.01);
+  expect(stage.rootPrims[0].children[0].type, 'nested prim types are preserved').toBe('Mesh');
+  expect(
     stage.rootPrims[0].children[0].attributes['points'].value,
-    [
-      [0, 0, 0],
-      [1, 0, 0],
-      [0, 1, 0]
-    ],
     'nested point arrays are decoded'
-  );
-  testContext.end();
+  ).toEqual([
+    [0, 0, 0],
+    [1, 0, 0],
+    [0, 1, 0]
+  ]);
+  void 0;
 });
 
-test('OpenUSD loader resolves references, variants, and local overrides', async testContext => {
+it('OpenUSD loader resolves references, variants, and local overrides', async () => {
   const layers = new Map([
     [
       'https://example.com/assets/geometry.usda',
@@ -105,31 +104,28 @@ def Xform "World"
   const vehicle = stage.rootPrims[0].children[0];
   const goldBody = vehicle.children.find(child => child.name === 'GoldBody');
 
-  testContext.equal(stage.layers.length, 3, 'root and both referenced layers are tracked');
-  testContext.equal(goldBody?.type, 'Mesh', 'the chosen variant resolves its referenced geometry');
-  testContext.deepEqual(
+  expect(stage.layers.length, 'root and both referenced layers are tracked').toBe(3);
+  expect(goldBody?.type, 'the chosen variant resolves its referenced geometry').toBe('Mesh');
+  expect(
     goldBody?.children[0].attributes['material:binding'].value,
-    {path: '/Materials/Gold'},
     'local over opinions replace referenced material bindings'
-  );
-  testContext.end();
+  ).toEqual({path: '/Materials/Gold'});
+  void 0;
 });
 
-test('OpenUSD loader rejects unsupported binary USDC layers explicitly', async testContext => {
+it('OpenUSD loader rejects unsupported binary USDC layers explicitly', async () => {
   try {
     await parseUSD(TEXT_ENCODER.encode('PXR-USDC\0\0').buffer);
-    testContext.fail('binary USD crates should not silently parse as ASCII');
+    expect(false, 'binary USD crates should not silently parse as ASCII').toBe(true);
   } catch (error) {
-    testContext.match(
-      String(error),
-      /Binary USDC crate layers are not implemented/,
-      'unsupported crates report the actual missing format'
+    expect(String(error), 'unsupported crates report the actual missing format').toMatch(
+      /Binary USDC crate layers are not implemented/
     );
   }
-  testContext.end();
+  void 0;
 });
 
-test('OpenUSD loader reads uncompressed ASCII-root USDZ archives', async testContext => {
+it('OpenUSD loader reads uncompressed ASCII-root USDZ archives', async () => {
   const filename = TEXT_ENCODER.encode('scene.usda');
   const contents = TEXT_ENCODER.encode('#usda 1.0\ndef Xform "PackagedWorld" {}');
   const localHeaderLength = 30 + filename.length;
@@ -164,12 +160,12 @@ test('OpenUSD loader reads uncompressed ASCII-root USDZ archives', async testCon
 
   const stage = await parseUSD(archive);
 
-  testContext.equal(stage.format, 'usdz', 'packaged stages retain their USDZ format');
-  testContext.equal(stage.rootPrims[0].name, 'PackagedWorld', 'the ASCII root layer is composed');
-  testContext.end();
+  expect(stage.format, 'packaged stages retain their USDZ format').toBe('usdz');
+  expect(stage.rootPrims[0].name, 'the ASCII root layer is composed').toBe('PackagedWorld');
+  void 0;
 });
 
-test('OpenUSD importer composes the bundled CC0 sedan and preserves material groups', async testContext => {
+it('OpenUSD importer composes the bundled CC0 sedan and preserves material groups', async () => {
   const assetRoot = new URL(
     '../../../examples/showcase/scene/public/usd/mini-vehicles/',
     import.meta.url
@@ -196,45 +192,56 @@ test('OpenUSD importer composes the bundled CC0 sedan and preserves material gro
     }
   );
   const scene = makeANARIJSONSceneFromUSD(stage, 'TEST SEDAN');
-  testContext.ok(stage.layers.length > 7, 'external geometry, wheel, and material layers resolve');
-  testContext.ok(
-    Object.keys(scene.geometries).length > 4,
+  expect(
+    Boolean(stage.layers.length > 7),
+    'external geometry, wheel, and material layers resolve'
+  ).toBe(true);
+  expect(
+    Boolean(Object.keys(scene.geometries).length > 4),
     'material subsets become ANARI surfaces'
-  );
-  testContext.ok((scene.instances?.length || 0) > 8, 'shared wheel assemblies retain placements');
-  testContext.ok(
-    Object.values(scene.textures || {}).some(texture => texture.source.endsWith('/red.jpg')),
+  ).toBe(true);
+  expect(
+    Boolean((scene.instances?.length || 0) > 8),
+    'shared wheel assemblies retain placements'
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.values(scene.textures || {}).some(texture => texture.source.endsWith('/red.jpg'))
+    ),
     'USD material bindings resolve the authored crimson texture relative to its material layer'
-  );
-  testContext.ok(
-    Object.values(scene.materials).some(material => material.baseColorTexture),
+  ).toBe(true);
+  expect(
+    Boolean(Object.values(scene.materials).some(material => material.baseColorTexture)),
     'USD preview-surface connections become retained image samplers'
-  );
-  testContext.ok(
-    Object.values(scene.geometries).some(
-      geometry => (geometry['vertex.attribute1']?.length || 0) > 0
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.values(scene.geometries).some(
+        geometry => (geometry['vertex.attribute1']?.length || 0) > 0
+      )
     ),
     'USD primvar UVs remain retained geometry attributes'
-  );
-  testContext.ok(
-    Object.entries(scene.materials)
-      .filter(([identifier]) => identifier.includes('greylight'))
-      .every(([_identifier, material]) => material.emissive === undefined),
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.entries(scene.materials)
+        .filter(([identifier]) => identifier.includes('greylight'))
+        .every(([_identifier, material]) => material.emissive === undefined)
+    ),
     'light-grey materials are not accidentally classified as emissive vehicle lights'
-  );
-  testContext.ok(
-    Math.hypot(...(scene.camera.position || [0, 0, 0])) < 30,
+  ).toBe(true);
+  expect(
+    Boolean(Math.hypot(...(scene.camera.position || [0, 0, 0])) < 30),
     'large source assets are normalized into a point-light-friendly studio scale'
-  );
-  testContext.equal(
+  ).toBe(true);
+  expect(
     (scene.lights || []).filter(light => light.animation?.['@@type'] === 'follow').length,
-    2,
     'animated cyan and amber point lights follow their visible HDR emitters'
-  );
-  testContext.end();
+  ).toBe(2);
+  void 0;
 });
 
-test('OpenUSD importer composes detailed Fancy and Utah teapot reference geometry', async testContext => {
+it('OpenUSD importer composes detailed Fancy and Utah teapot reference geometry', async () => {
   const assetRoot = new URL('../../../examples/showcase/scene/public/usd/', import.meta.url);
   const rootPath = 'porcelain-atelier.usda';
   const rootData = await readFile(new URL(rootPath, assetRoot));
@@ -259,45 +266,34 @@ test('OpenUSD importer composes detailed Fancy and Utah teapot reference geometr
   const fancyGeometry = fancyCenterpiece?.children.find(prim => prim.name === 'Geometry');
   const scene = makeANARIJSONSceneFromUSD(stage, 'PORCELAIN ATELIER');
 
-  testContext.equal(
-    stage.layers.length,
-    3,
-    'Fancy and Utah references share composed stage layers'
-  );
-  testContext.equal(
-    fancyGeometry?.type,
-    'Mesh',
-    'the detailed Fancy centerpiece resolves as a mesh'
-  );
-  testContext.ok(
-    Array.isArray(fancyGeometry?.attributes['points']?.value),
+  expect(stage.layers.length, 'Fancy and Utah references share composed stage layers').toBe(3);
+  expect(fancyGeometry?.type, 'the detailed Fancy centerpiece resolves as a mesh').toBe('Mesh');
+  expect(
+    Boolean(Array.isArray(fancyGeometry?.attributes['points']?.value)),
     'large OpenUSD point arrays survive parsing'
-  );
-  testContext.ok(
-    Object.keys(scene.materials).some(identifier => identifier.includes('midnightporcelain')),
+  ).toBe(true);
+  expect(
+    Boolean(
+      Object.keys(scene.materials).some(identifier => identifier.includes('midnightporcelain'))
+    ),
     'the centerpiece preserves its authored material override'
-  );
-  testContext.ok(
-    (scene.instances?.length || 0) > 40,
+  ).toBe(true);
+  expect(
+    Boolean((scene.instances?.length || 0) > 40),
     'the cinematic stage includes reference geometry and instanced architectural accents'
-  );
+  ).toBe(true);
   const haloInstances = (scene.instances || []).filter(instance =>
     instance['@@id'].includes('goldorb')
   );
-  testContext.equal(
-    haloInstances.length,
-    11,
-    'USD point instancers produce every authored halo orb'
-  );
-  testContext.equal(
+  expect(haloInstances.length, 'USD point instancers produce every authored halo orb').toBe(11);
+  expect(
     new Set(haloInstances.map(instance => instance.surface)).size,
-    1,
     'repeated point-instancer primitives reuse one retained ANARI surface'
-  );
-  testContext.end();
+  ).toBe(1);
+  void 0;
 });
 
-test('OpenUSD importer stages the detailed attributed Open Chess Set knight', async testContext => {
+it('OpenUSD importer stages the detailed attributed Open Chess Set knight', async () => {
   const assetRoot = new URL('../../../examples/showcase/scene/public/usd/', import.meta.url);
   const rootPath = 'knights-gambit.usda';
   const rootData = await readFile(new URL(rootPath, assetRoot));
@@ -322,22 +318,18 @@ test('OpenUSD importer stages the detailed attributed Open Chess Set knight', as
     0
   );
 
-  testContext.equal(
-    stage.layers.length,
-    2,
-    'the knight geometry resolves as one shared USD reference'
-  );
-  testContext.ok(
-    detailedTriangleCount > 20000,
+  expect(stage.layers.length, 'the knight geometry resolves as one shared USD reference').toBe(2);
+  expect(
+    Boolean(detailedTriangleCount > 20000),
     'the knight contains production-quality mesh detail'
-  );
-  testContext.ok(
-    Object.keys(scene.materials).some(identifier => identifier.includes('royalgold')),
+  ).toBe(true);
+  expect(
+    Boolean(Object.keys(scene.materials).some(identifier => identifier.includes('royalgold'))),
     'gold material overrides survive reference composition'
-  );
-  testContext.ok(
-    Object.keys(scene.materials).some(identifier => identifier.includes('frozensilver')),
+  ).toBe(true);
+  expect(
+    Boolean(Object.keys(scene.materials).some(identifier => identifier.includes('frozensilver'))),
     'separate material overrides create a contrasting silver knight'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });

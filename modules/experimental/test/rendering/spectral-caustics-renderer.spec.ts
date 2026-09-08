@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Texture} from '@luma.gl/core';
 import {CubeGeometry, Model} from '@luma.gl/engine';
 import {fromHalfFloat} from '@luma.gl/shadertools';
@@ -11,11 +11,11 @@ import {SpectralCausticsRenderer} from '../../src/rendering/spectral-caustics-re
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
-test('spectral caustics renderer records its WebGPU capture, trace, and splat passes', async t => {
+it('spectral caustics renderer records its WebGPU capture, trace, and splat passes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -51,16 +51,25 @@ test('spectral caustics renderer records its WebGPU capture, trace, and splat pa
     });
     device.submit();
 
-    t.equal(receiverProps.causticMap, renderer.causticMap, 'encode returns the owned HDR XYZ map');
-    t.equal(renderer.causticMap.format, 'rgba16float', 'caustic radiance remains floating point');
+    expect(receiverProps.causticMap, 'encode returns the owned HDR XYZ map').toBe(
+      renderer.causticMap
+    );
+    expect(renderer.causticMap.format, 'caustic radiance remains floating point').toBe(
+      'rgba16float'
+    );
     const xyzPixels = await readRgba16FloatTexture(renderer.causticMap, 16, 16);
-    t.ok(xyzPixels.every(Number.isFinite), 'traced XYZ radiance remains finite');
-    t.ok(Math.max(...xyzPixels) > 1, 'a closed refractor deposits photon energy above SDR white');
+    expect(Boolean(xyzPixels.every(Number.isFinite)), 'traced XYZ radiance remains finite').toBe(
+      true
+    );
+    expect(
+      Boolean(Math.max(...xyzPixels) > 1),
+      'a closed refractor deposits photon energy above SDR white'
+    ).toBe(true);
   } finally {
     captureModel.destroy();
     renderer.destroy();
   }
-  t.end();
+  void 0;
 });
 
 const CAPTURE_SHADER = /* wgsl */ `\

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {readFileSync} from 'node:fs';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   convertGeoArrowTableToInterleaved,
   convertGeoArrowVectorToInterleaved
@@ -23,7 +23,7 @@ const FIXTURE_PAIRS = [
   ['example_multipolygon.arrows', 'example_multipolygon_interleaved.arrows']
 ] as const;
 
-test('convertGeoArrowTableToInterleaved matches native interleaved GeoArrow fixtures', t => {
+it('convertGeoArrowTableToInterleaved matches native interleaved GeoArrow fixtures', () => {
   for (const [separatedFixture, interleavedFixture] of FIXTURE_PAIRS) {
     const separatedTable = loadGeoArrowFixture(separatedFixture);
     const interleavedTable = loadGeoArrowFixture(interleavedFixture);
@@ -35,35 +35,31 @@ test('convertGeoArrowTableToInterleaved matches native interleaved GeoArrow fixt
     const convertedGeometry = convertedTable.getChild('geometry')!;
     const interleavedGeometry = interleavedTable.getChild('geometry')!;
 
-    t.equal(
+    expect(
       convertedField.metadata.get('ARROW:extension:name'),
-      interleavedField.metadata.get('ARROW:extension:name'),
       `${separatedFixture} preserves GeoArrow extension metadata`
-    );
-    t.equal(
+    ).toBe(interleavedField.metadata.get('ARROW:extension:name'));
+    expect(
       convertedGeometry.type.toString(),
-      interleavedGeometry.type.toString(),
       `${separatedFixture} converts to the interleaved fixture type`
-    );
-    t.deepEqual(
+    ).toBe(interleavedGeometry.type.toString());
+    expect(
       getVectorRows(convertedGeometry),
-      getVectorRows(interleavedGeometry),
       `${separatedFixture} converts coordinate values`
-    );
+    ).toEqual(getVectorRows(interleavedGeometry));
   }
-  t.end();
+  void 0;
 });
 
-test('convertGeoArrowVectorToInterleaved returns already-interleaved vectors unchanged', t => {
+it('convertGeoArrowVectorToInterleaved returns already-interleaved vectors unchanged', () => {
   const table = loadGeoArrowFixture('example_multipolygon_interleaved.arrows');
   const geometry = table.getChild('geometry')!;
 
-  t.equal(
+  expect(
     convertGeoArrowVectorToInterleaved(geometry),
-    geometry,
     'returns the original vector when coordinate leaves are already interleaved'
-  );
-  t.end();
+  ).toBe(geometry);
+  void 0;
 });
 
 function loadGeoArrowFixture(name: string): arrow.Table {

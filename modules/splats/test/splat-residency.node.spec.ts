@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   makeGPUSplatData,
   SplatRenderer,
@@ -13,7 +13,7 @@ import {
 } from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('SplatResidencyManager preserves independent source batches and exact GPU allocations', t => {
+it('SplatResidencyManager preserves independent source batches and exact GPU allocations', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(2, 4, 11));
   const secondBatch = makeGPUSplatData(device, makeSplatResidencySource(3, 5, 13));
@@ -29,44 +29,48 @@ test('SplatResidencyManager preserves independent source batches and exact GPU a
   });
   const secondChunk = manager.register(secondBatch, {id: 'tile/5/13', priority: 7});
 
-  t.equal(firstChunk?.id, '4:11', 'derives stable default identity from source metadata');
-  t.equal(secondChunk?.id, 'tile/5/13', 'retains explicit streamed tile identity');
-  t.equal(firstChunk?.levelOfDetail, 2, 'retains caller-defined hierarchy level');
-  t.deepEqual(
-    firstChunk?.bounds,
-    {center: [1, 2, 3], radius: 4},
-    'retains explicit source tile bounds'
-  );
-  t.deepEqual(
+  expect(firstChunk?.id, 'derives stable default identity from source metadata').toBe('4:11');
+  expect(secondChunk?.id, 'retains explicit streamed tile identity').toBe('tile/5/13');
+  expect(firstChunk?.levelOfDetail, 'retains caller-defined hierarchy level').toBe(2);
+  expect(firstChunk?.bounds, 'retains explicit source tile bounds').toEqual({
+    center: [1, 2, 3],
+    radius: 4
+  });
+  expect(
     manager.getResidentBatches(),
-    [firstBatch, secondBatch],
     'preserves independently prepared source batches in admission order'
-  );
-  t.equal(manager.residentChunks.length, 2, 'exposes explicit independent chunk metadata');
-  t.equal(manager.stats.residentChunkCount, 2, 'counts intact source batches');
-  t.equal(manager.stats.residentSplatCount, 5, 'counts logical source rows');
-  t.equal(
+  ).toEqual([firstBatch, secondBatch]);
+  expect(manager.residentChunks.length, 'exposes explicit independent chunk metadata').toBe(2);
+  expect(manager.stats.residentChunkCount, 'counts intact source batches').toBe(2);
+  expect(manager.stats.residentSplatCount, 'counts logical source rows').toBe(5);
+  expect(
     manager.stats.residentGpuByteLength,
-    firstBatch.byteLength + secondBatch.byteLength,
     'accounts for every original source GPU allocation'
-  );
-  t.deepEqual(
+  ).toBe(firstBatch.byteLength + secondBatch.byteLength);
+  expect(
     manager.residentBatches.map(batch => batch.sourceInfo),
-    [firstBatch.sourceInfo, secondBatch.sourceInfo],
     'never combines source batch identities or global row offsets'
+  ).toEqual([firstBatch.sourceInfo, secondBatch.sourceInfo]);
+  expect(manager.getChunk(firstBatch), 'resolves exact prepared source-batch objects').toBe(
+    firstChunk
   );
-  t.equal(manager.getChunk(firstBatch), firstChunk, 'resolves exact prepared source-batch objects');
-  t.equal(manager.getChunk('tile/5/13'), secondChunk, 'resolves explicit tile identities');
+  expect(manager.getChunk('tile/5/13'), 'resolves explicit tile identities').toBe(secondChunk);
 
   manager.destroy();
-  t.notOk(firstBatch.destroyed, 'borrowing residency preserves the first caller-owned batch');
-  t.notOk(secondBatch.destroyed, 'borrowing residency preserves the second caller-owned batch');
+  expect(
+    Boolean(firstBatch.destroyed),
+    'borrowing residency preserves the first caller-owned batch'
+  ).toBe(false);
+  expect(
+    Boolean(secondBatch.destroyed),
+    'borrowing residency preserves the second caller-owned batch'
+  ).toBe(false);
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager evicts by priority and least-recently-used access', t => {
+it('SplatResidencyManager evicts by priority and least-recently-used access', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const secondBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -78,40 +82,45 @@ test('SplatResidencyManager evicts by priority and least-recently-used access', 
   manager.add(secondBatch, {id: 'high', priority: 5});
   manager.add(thirdBatch, {id: 'medium', priority: 3});
 
-  t.notOk(manager.has('low'), 'evicts a less valuable resident before a more valuable one');
-  t.ok(manager.has('high'), 'preserves higher-priority source batches');
-  t.ok(manager.has('medium'), 'admits the more valuable replacement');
-  t.equal(manager.stats.evictedChunkCount, 1, 'records the budget-triggered eviction');
-  t.equal(
+  expect(
+    Boolean(manager.has('low')),
+    'evicts a less valuable resident before a more valuable one'
+  ).toBe(false);
+  expect(Boolean(manager.has('high')), 'preserves higher-priority source batches').toBe(true);
+  expect(Boolean(manager.has('medium')), 'admits the more valuable replacement').toBe(true);
+  expect(manager.stats.evictedChunkCount, 'records the budget-triggered eviction').toBe(1);
+  expect(
     manager.add(fourthBatch, {id: 'rejected', priority: 2}),
-    undefined,
     'rejects a tile that would require evicting more valuable resident data'
-  );
-  t.deepEqual(
+  ).toBe(undefined);
+  expect(
     manager.residentBatches,
-    [secondBatch, thirdBatch],
     'leaves all resident batches untouched after a rejected admission'
-  );
-  t.equal(manager.stats.rejectedChunkCount, 1, 'records rejected source tiles');
+  ).toEqual([secondBatch, thirdBatch]);
+  expect(manager.stats.rejectedChunkCount, 'records rejected source tiles').toBe(1);
 
   manager.setPriority('high', 3);
   manager.touch('high');
   manager.add(fourthBatch, {id: 'replacement', priority: 3});
 
-  t.ok(manager.has('high'), 'retains the recently accessed equal-priority tile');
-  t.notOk(manager.has('medium'), 'evicts the least-recently-used equal-priority tile');
-  t.ok(manager.has(fourthBatch), 'retains exact replacement source identity');
-  t.equal(manager.stats.evictedChunkCount, 2, 'records both bounded-residency evictions');
+  expect(Boolean(manager.has('high')), 'retains the recently accessed equal-priority tile').toBe(
+    true
+  );
+  expect(Boolean(manager.has('medium')), 'evicts the least-recently-used equal-priority tile').toBe(
+    false
+  );
+  expect(Boolean(manager.has(fourthBatch)), 'retains exact replacement source identity').toBe(true);
+  expect(manager.stats.evictedChunkCount, 'records both bounded-residency evictions').toBe(2);
 
   manager.destroy();
   firstBatch.destroy();
   secondBatch.destroy();
   thirdBatch.destroy();
   fourthBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager protects pinned tiles across shrinking budgets', t => {
+it('SplatResidencyManager protects pinned tiles across shrinking budgets', () => {
   const device = new NullDevice({});
   const pinnedBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const transientBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -122,31 +131,53 @@ test('SplatResidencyManager protects pinned tiles across shrinking budgets', t =
   manager.add(transientBatch, {id: 'transient', priority: 10});
   manager.setBudget({maxResidentChunks: 1});
 
-  t.ok(manager.has('pinned'), 'retains a pinned tile despite its lower priority');
-  t.notOk(manager.has('transient'), 'evicts unprotected data after a reduced chunk budget');
-  t.equal(manager.stats.pinnedChunkCount, 1, 'reports protected source tiles');
-  t.notOk(manager.evict('pinned'), 'does not explicitly evict protected data without force');
-  t.equal(
-    manager.add(replacementBatch, {id: 'replacement', priority: 100}),
-    undefined,
-    'never evicts pinned data for a more valuable incoming source tile'
+  expect(Boolean(manager.has('pinned')), 'retains a pinned tile despite its lower priority').toBe(
+    true
   );
+  expect(
+    Boolean(manager.has('transient')),
+    'evicts unprotected data after a reduced chunk budget'
+  ).toBe(false);
+  expect(manager.stats.pinnedChunkCount, 'reports protected source tiles').toBe(1);
+  expect(
+    Boolean(manager.evict('pinned')),
+    'does not explicitly evict protected data without force'
+  ).toBe(false);
+  expect(
+    manager.add(replacementBatch, {id: 'replacement', priority: 100}),
+    'never evicts pinned data for a more valuable incoming source tile'
+  ).toBe(undefined);
 
   manager.setBudget(0);
-  t.ok(manager.stats.overBudget, 'reports pinned allocations exceeding a reduced byte budget');
-  t.ok(manager.has('pinned'), 'never destroys or removes protected over-budget data');
-  t.ok(manager.unpin('pinned'), 'allows callers to release explicit residency protection');
-  t.notOk(manager.has('pinned'), 'immediately trims the newly unprotected over-budget tile');
-  t.notOk(manager.stats.overBudget, 'restores all active allocation limits after eviction');
+  expect(
+    Boolean(manager.stats.overBudget),
+    'reports pinned allocations exceeding a reduced byte budget'
+  ).toBe(true);
+  expect(
+    Boolean(manager.has('pinned')),
+    'never destroys or removes protected over-budget data'
+  ).toBe(true);
+  expect(
+    Boolean(manager.unpin('pinned')),
+    'allows callers to release explicit residency protection'
+  ).toBe(true);
+  expect(
+    Boolean(manager.has('pinned')),
+    'immediately trims the newly unprotected over-budget tile'
+  ).toBe(false);
+  expect(
+    Boolean(manager.stats.overBudget),
+    'restores all active allocation limits after eviction'
+  ).toBe(false);
 
   manager.destroy();
   pinnedBatch.destroy();
   transientBatch.destroy();
   replacementBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager never returns a source chunk evicted by metadata updates', async t => {
+it('SplatResidencyManager never returns a source chunk evicted by metadata updates', async () => {
   const device = new NullDevice({});
   const registeredBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const loadedBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -155,16 +186,28 @@ test('SplatResidencyManager never returns a source chunk evicted by metadata upd
 
   registeredManager.register(registeredBatch, {id: 'registered', pinned: true});
   registeredManager.setBudget(0);
-  t.ok(registeredManager.stats.overBudget, 'preserves an over-budget pinned registered source');
+  expect(
+    Boolean(registeredManager.stats.overBudget),
+    'preserves an over-budget pinned registered source'
+  ).toBe(true);
 
   const registeredChunk = registeredManager.register(registeredBatch, {
     id: 'registered',
     pinned: false
   });
-  t.equal(registeredChunk, undefined, 'does not return a registered chunk evicted by unpinning');
-  t.ok(registeredBatch.destroyed, 'releases explicitly owned source data during unpinning');
-  t.notOk(registeredManager.has('registered'), 'removes the stale source identity');
-  t.notOk(registeredManager.stats.overBudget, 'restores the active byte budget');
+  expect(registeredChunk, 'does not return a registered chunk evicted by unpinning').toBe(
+    undefined
+  );
+  expect(
+    Boolean(registeredBatch.destroyed),
+    'releases explicitly owned source data during unpinning'
+  ).toBe(true);
+  expect(Boolean(registeredManager.has('registered')), 'removes the stale source identity').toBe(
+    false
+  );
+  expect(Boolean(registeredManager.stats.overBudget), 'restores the active byte budget').toBe(
+    false
+  );
 
   loadedManager.add(loadedBatch, {id: 'loaded', pinned: true});
   loadedManager.setBudget(0);
@@ -177,17 +220,23 @@ test('SplatResidencyManager never returns a source chunk evicted by metadata upd
     },
     {pinned: false}
   );
-  t.equal(loadedChunk, undefined, 'does not return a cached loaded chunk evicted by unpinning');
-  t.notOk(requestedLoad, 'never reloads an already registered source identity');
-  t.ok(loadedBatch.destroyed, 'releases the manager-owned previously loaded source');
-  t.notOk(loadedManager.has('loaded'), 'never reports destroyed loaded data as resident');
+  expect(loadedChunk, 'does not return a cached loaded chunk evicted by unpinning').toBe(undefined);
+  expect(Boolean(requestedLoad), 'never reloads an already registered source identity').toBe(false);
+  expect(
+    Boolean(loadedBatch.destroyed),
+    'releases the manager-owned previously loaded source'
+  ).toBe(true);
+  expect(
+    Boolean(loadedManager.has('loaded')),
+    'never reports destroyed loaded data as resident'
+  ).toBe(false);
 
   registeredManager.destroy();
   loadedManager.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager enforces byte, row, and chunk budgets transactionally', t => {
+it('SplatResidencyManager enforces byte, row, and chunk budgets transactionally', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const protectedBatch = makeGPUSplatData(device, makeSplatResidencySource(2, 1, 1));
@@ -204,28 +253,30 @@ test('SplatResidencyManager enforces byte, row, and chunk budgets transactionall
   manager.add(protectedBatch, {id: 'protected', priority: 10});
   const rejectedChunk = manager.add(oversizedBatch, {id: 'oversized', priority: 5});
 
-  t.equal(rejectedChunk, undefined, 'rejects an incoming source batch that cannot fit');
-  t.deepEqual(evictionEvents, [], 'does not partially evict data before confirming admission');
-  t.deepEqual(
+  expect(rejectedChunk, 'rejects an incoming source batch that cannot fit').toBe(undefined);
+  expect(evictionEvents, 'does not partially evict data before confirming admission').toEqual([]);
+  expect(
     manager.residentBatches,
-    [firstBatch, protectedBatch],
     'retains every resident batch after transactional rejection'
-  );
-  t.notOk(oversizedBatch.destroyed, 'does not claim ownership of synchronously rejected data');
+  ).toEqual([firstBatch, protectedBatch]);
+  expect(
+    Boolean(oversizedBatch.destroyed),
+    'does not claim ownership of synchronously rejected data'
+  ).toBe(false);
 
   manager.setBudget({maxResidentSplats: 2});
-  t.deepEqual(manager.residentBatches, [protectedBatch], 'enforces logical row budgets');
+  expect(manager.residentBatches, 'enforces logical row budgets').toEqual([protectedBatch]);
   manager.setBudget({maxResidentChunks: 0});
-  t.deepEqual(manager.residentBatches, [], 'enforces independent source-chunk budgets');
+  expect(manager.residentBatches, 'enforces independent source-chunk budgets').toEqual([]);
 
   manager.destroy();
   firstBatch.destroy();
   protectedBatch.destroy();
   oversizedBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager destroys only explicitly owned data after renderer callbacks', t => {
+it('SplatResidencyManager destroys only explicitly owned data after renderer callbacks', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const borrowedBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -245,35 +296,43 @@ test('SplatResidencyManager destroys only explicitly owned data after renderer c
   manager.add(firstBatch, {id: 'owned', priority: 1});
   manager.add(borrowedBatch, {id: 'borrowed', priority: 2, ownsData: false});
 
-  t.ok(firstBatch.destroyed, 'destroys source buffers after manager-owned eviction');
-  t.deepEqual(
+  expect(
+    Boolean(firstBatch.destroyed),
+    'destroys source buffers after manager-owned eviction'
+  ).toBe(true);
+  expect(
     evictionEvents[0],
-    ['owned', 'budget', false],
     'notifies renderer integrations before destroying manager-owned GPU buffers'
-  );
+  ).toEqual(['owned', 'budget', false]);
 
   manager.add(finalBatch, {id: 'final', priority: 3});
-  t.notOk(borrowedBatch.destroyed, 'preserves individually borrowed source buffers on eviction');
-  t.deepEqual(
+  expect(
+    Boolean(borrowedBatch.destroyed),
+    'preserves individually borrowed source buffers on eviction'
+  ).toBe(false);
+  expect(
     residencyEvents,
-    [[0], [], [1], [], [2]],
     'provides exact source-batch lists for borrowing renderer synchronization'
-  );
+  ).toEqual([[0], [], [1], [], [2]]);
 
   manager.destroy();
   manager.destroy();
-  t.ok(finalBatch.destroyed, 'destroys the final manager-owned source batch exactly once');
-  t.notOk(borrowedBatch.destroyed, 'never destroys an individually borrowed batch');
-  t.deepEqual(
-    evictionEvents[2],
-    ['final', 'destroy', false],
-    'keeps owned GPU buffers live until destruction callbacks have finished'
+  expect(
+    Boolean(finalBatch.destroyed),
+    'destroys the final manager-owned source batch exactly once'
+  ).toBe(true);
+  expect(Boolean(borrowedBatch.destroyed), 'never destroys an individually borrowed batch').toBe(
+    false
   );
+  expect(
+    evictionEvents[2],
+    'keeps owned GPU buffers live until destruction callbacks have finished'
+  ).toEqual(['final', 'destroy', false]);
   borrowedBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager updates pinned and replacement source chunk metadata', t => {
+it('SplatResidencyManager updates pinned and replacement source chunk metadata', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const replacementBatch = makeGPUSplatData(device, makeSplatResidencySource(2, 1, 1));
@@ -287,28 +346,38 @@ test('SplatResidencyManager updates pinned and replacement source chunk metadata
     bounds: {center: [5, 6, 7]}
   });
 
-  t.equal(updatedChunk, firstChunk, 'updates explicit metadata without duplicating source batches');
-  t.equal(updatedChunk?.priority, 5, 'retains updated source tile priority');
-  t.ok(updatedChunk?.pinned, 'retains updated eviction protection');
-  t.equal(updatedChunk?.levelOfDetail, 1, 'retains updated hierarchy level');
-  t.deepEqual(updatedChunk?.bounds, {center: [5, 6, 7]}, 'retains updated tile bounds');
-  t.equal(manager.stats.residentChunkCount, 1, 'never duplicates source allocations');
-  t.ok(manager.remove('tile'), 'allows callers to explicitly remove pinned source tiles');
-  t.notOk(firstBatch.destroyed, 'preserves explicitly removed caller-owned source batches');
+  expect(updatedChunk, 'updates explicit metadata without duplicating source batches').toBe(
+    firstChunk
+  );
+  expect(updatedChunk?.priority, 'retains updated source tile priority').toBe(5);
+  expect(Boolean(updatedChunk?.pinned), 'retains updated eviction protection').toBe(true);
+  expect(updatedChunk?.levelOfDetail, 'retains updated hierarchy level').toBe(1);
+  expect(updatedChunk?.bounds, 'retains updated tile bounds').toEqual({center: [5, 6, 7]});
+  expect(manager.stats.residentChunkCount, 'never duplicates source allocations').toBe(1);
+  expect(
+    Boolean(manager.remove('tile')),
+    'allows callers to explicitly remove pinned source tiles'
+  ).toBe(true);
+  expect(
+    Boolean(firstBatch.destroyed),
+    'preserves explicitly removed caller-owned source batches'
+  ).toBe(false);
 
   manager.add(firstBatch, {id: 'replaceable', priority: 10});
   const replacementChunk = manager.add(replacementBatch, {id: 'replaceable', priority: 1});
-  t.equal(replacementChunk?.data, replacementBatch, 'replaces one explicit tile identity');
-  t.equal(manager.stats.residentChunkCount, 1, 'preserves the intact chunk budget on replacement');
-  t.equal(manager.stats.residentSplatCount, 2, 'accounts for replacement source row counts');
+  expect(replacementChunk?.data, 'replaces one explicit tile identity').toBe(replacementBatch);
+  expect(manager.stats.residentChunkCount, 'preserves the intact chunk budget on replacement').toBe(
+    1
+  );
+  expect(manager.stats.residentSplatCount, 'accounts for replacement source row counts').toBe(2);
 
   manager.destroy();
   firstBatch.destroy();
   replacementBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager coalesces asynchronous tile loads and respects late ownership', async t => {
+it('SplatResidencyManager coalesces asynchronous tile loads and respects late ownership', async () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const rejectedBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -324,16 +393,21 @@ test('SplatResidencyManager coalesces asynchronous tile loads and respects late 
     return rejectedBatch;
   });
 
-  t.equal(firstRequest, secondRequest, 'coalesces concurrent requests for the same source tile');
-  t.equal(manager.stats.pendingChunkCount, 1, 'reports the pending source-batch load');
+  expect(firstRequest, 'coalesces concurrent requests for the same source tile').toBe(
+    secondRequest
+  );
+  expect(manager.stats.pendingChunkCount, 'reports the pending source-batch load').toBe(1);
   const loadedChunk = await firstRequest;
-  t.equal(loadCount, 1, 'invokes the source-batch loader exactly once');
-  t.equal(loadedChunk?.data, firstBatch, 'retains the exact independently loaded source batch');
-  t.equal(manager.stats.pendingChunkCount, 0, 'releases completed streaming requests');
+  expect(loadCount, 'invokes the source-batch loader exactly once').toBe(1);
+  expect(loadedChunk?.data, 'retains the exact independently loaded source batch').toBe(firstBatch);
+  expect(manager.stats.pendingChunkCount, 'releases completed streaming requests').toBe(0);
 
   const rejectedChunk = await manager.load('rejected', () => rejectedBatch, {priority: -1});
-  t.equal(rejectedChunk, undefined, 'rejects a lower-priority asynchronously loaded tile');
-  t.ok(rejectedBatch.destroyed, 'releases manager-owned rejected asynchronous GPU allocations');
+  expect(rejectedChunk, 'rejects a lower-priority asynchronously loaded tile').toBe(undefined);
+  expect(
+    Boolean(rejectedBatch.destroyed),
+    'releases manager-owned rejected asynchronous GPU allocations'
+  ).toBe(true);
 
   let finishLoad: (data: GPUSplatData) => void = () => {};
   const pendingBatch = new Promise<GPUSplatData>(resolve => {
@@ -342,13 +416,19 @@ test('SplatResidencyManager coalesces asynchronous tile loads and respects late 
   const lateRequest = manager.load('late', () => pendingBatch, {priority: 10});
   manager.destroy();
   finishLoad(lateBatch);
-  t.equal(await lateRequest, undefined, 'does not admit source data after manager destruction');
-  t.ok(lateBatch.destroyed, 'releases manager-owned source batches finishing after destruction');
-  t.ok(firstBatch.destroyed, 'releases the original manager-owned resident source batch');
-  t.end();
+  expect(await lateRequest, 'does not admit source data after manager destruction').toBe(undefined);
+  expect(
+    Boolean(lateBatch.destroyed),
+    'releases manager-owned source batches finishing after destruction'
+  ).toBe(true);
+  expect(
+    Boolean(firstBatch.destroyed),
+    'releases the original manager-owned resident source batch'
+  ).toBe(true);
+  void 0;
 });
 
-test('SplatResidencyManager reserves source allocations before asynchronous preparation', async t => {
+it('SplatResidencyManager reserves source allocations before asynchronous preparation', async () => {
   const device = new NullDevice({});
   const residentBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const estimatedGpuBytes = residentBatch.byteLength;
@@ -380,26 +460,37 @@ test('SplatResidencyManager reserves source allocations before asynchronous prep
     {priority: 1, estimatedGpuBytes, estimatedSplatCount: 1}
   );
 
-  t.ok(residentBatch.destroyed, 'destroys owned source buffers before the loader can allocate');
-  t.equal(loaderInvocationCount, 0, 'reserves capacity before invoking asynchronous preparation');
-  t.deepEqual(manager.residentBatches, [], 'detaches evicted source batches before loading');
-  t.equal(manager.stats.pendingChunkCount, 1, 'retains the coalesced pending load');
+  expect(
+    Boolean(residentBatch.destroyed),
+    'destroys owned source buffers before the loader can allocate'
+  ).toBe(true);
+  expect(loaderInvocationCount, 'reserves capacity before invoking asynchronous preparation').toBe(
+    0
+  );
+  expect(manager.residentBatches, 'detaches evicted source batches before loading').toEqual([]);
+  expect(manager.stats.pendingChunkCount, 'retains the coalesced pending load').toBe(1);
 
   const incomingChunk = await pendingChunk;
-  t.equal(incomingChunk?.data, loadedBatch, 'admits the exact independently prepared source batch');
-  t.deepEqual(
-    residencyEvents,
-    ['resident:1', 'evict:resident:false', 'resident:0', 'load:true', 'resident:1'],
-    'notifies renderers, releases owned GPU buffers, then invokes source preparation'
+  expect(incomingChunk?.data, 'admits the exact independently prepared source batch').toBe(
+    loadedBatch
   );
-  t.equal(manager.stats.residentGpuByteLength, estimatedGpuBytes, 'retains the exact byte budget');
+  expect(
+    residencyEvents,
+    'notifies renderers, releases owned GPU buffers, then invokes source preparation'
+  ).toEqual(['resident:1', 'evict:resident:false', 'resident:0', 'load:true', 'resident:1']);
+  expect(manager.stats.residentGpuByteLength, 'retains the exact byte budget').toBe(
+    estimatedGpuBytes
+  );
 
   manager.destroy();
-  t.ok(loadedBatch?.destroyed, 'preserves explicit ownership of the newly prepared source');
-  t.end();
+  expect(
+    Boolean(loadedBatch?.destroyed),
+    'preserves explicit ownership of the newly prepared source'
+  ).toBe(true);
+  void 0;
 });
 
-test('SplatResidencyManager rejects protected reservations without preparing or partially evicting', async t => {
+it('SplatResidencyManager rejects protected reservations without preparing or partially evicting', async () => {
   const device = new NullDevice({});
   const pinnedBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const lowerPriorityBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -446,32 +537,43 @@ test('SplatResidencyManager rejects protected reservations without preparing or 
     }
   );
 
-  t.equal(rejectedPinnedChunk, undefined, 'rejects loads requiring a pinned source allocation');
-  t.equal(pinnedLoaderInvocationCount, 0, 'never allocates a source protected by pinned residency');
-  t.equal(rejectedProtectedChunk, undefined, 'rejects loads requiring higher-priority allocations');
-  t.equal(
+  expect(rejectedPinnedChunk, 'rejects loads requiring a pinned source allocation').toBe(undefined);
+  expect(
+    pinnedLoaderInvocationCount,
+    'never allocates a source protected by pinned residency'
+  ).toBe(0);
+  expect(rejectedProtectedChunk, 'rejects loads requiring higher-priority allocations').toBe(
+    undefined
+  );
+  expect(
     protectedLoaderInvocationCount,
-    0,
     'never prepares data that cannot displace more valuable source tiles'
+  ).toBe(0);
+  expect(evictionEvents, 'does not partially evict admissible tiles when admission fails').toEqual(
+    []
   );
-  t.deepEqual(evictionEvents, [], 'does not partially evict admissible tiles when admission fails');
-  t.deepEqual(pinnedManager.residentBatches, [pinnedBatch], 'retains the protected pinned source');
-  t.deepEqual(
+  expect(pinnedManager.residentBatches, 'retains the protected pinned source').toEqual([
+    pinnedBatch
+  ]);
+  expect(
     protectedManager.residentBatches,
-    [lowerPriorityBatch, higherPriorityBatch],
     'retains every original batch after transactional reservation rejection'
+  ).toEqual([lowerPriorityBatch, higherPriorityBatch]);
+  expect(pinnedManager.stats.rejectedChunkCount, 'counts rejected pinned reservations').toBe(1);
+  expect(protectedManager.stats.rejectedChunkCount, 'counts rejected protected reservations').toBe(
+    1
   );
-  t.equal(pinnedManager.stats.rejectedChunkCount, 1, 'counts rejected pinned reservations');
-  t.equal(protectedManager.stats.rejectedChunkCount, 1, 'counts rejected protected reservations');
-  t.equal(pinnedManager.stats.pendingChunkCount, 0, 'never registers rejected pinned loads');
-  t.equal(protectedManager.stats.pendingChunkCount, 0, 'never registers rejected protected loads');
+  expect(pinnedManager.stats.pendingChunkCount, 'never registers rejected pinned loads').toBe(0);
+  expect(protectedManager.stats.pendingChunkCount, 'never registers rejected protected loads').toBe(
+    0
+  );
 
   pinnedManager.destroy();
   protectedManager.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager prevents concurrent pending reservations from exceeding budgets', async t => {
+it('SplatResidencyManager prevents concurrent pending reservations from exceeding budgets', async () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const secondBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -505,44 +607,49 @@ test('SplatResidencyManager prevents concurrent pending reservations from exceed
     {priority: 100, ...reservationOptions}
   );
 
-  t.equal(firstRequest, duplicateFirstRequest, 'coalesces reservations for the same source tile');
-  t.equal(
-    await rejectedRequest,
-    undefined,
-    'protects every previously reserved pending allocation'
+  expect(firstRequest, 'coalesces reservations for the same source tile').toBe(
+    duplicateFirstRequest
   );
-  t.equal(rejectedLoaderInvocationCount, 0, 'never invokes an overcommitted concurrent loader');
-  t.equal(manager.stats.pendingChunkCount, 2, 'retains both independently reserved pending loads');
-  t.equal(
+  expect(await rejectedRequest, 'protects every previously reserved pending allocation').toBe(
+    undefined
+  );
+  expect(rejectedLoaderInvocationCount, 'never invokes an overcommitted concurrent loader').toBe(0);
+  expect(manager.stats.pendingChunkCount, 'retains both independently reserved pending loads').toBe(
+    2
+  );
+  expect(
     manager.add(unreservedBatch, {id: 'unreserved', priority: 100}),
-    undefined,
     'prevents synchronous admission from consuming reserved source capacity'
-  );
-  t.notOk(unreservedBatch.destroyed, 'preserves ownership of synchronously rejected source data');
+  ).toBe(undefined);
+  expect(
+    Boolean(unreservedBatch.destroyed),
+    'preserves ownership of synchronously rejected source data'
+  ).toBe(false);
 
   finishSecondLoad(secondBatch);
   const secondChunk = await secondRequest;
-  t.equal(secondChunk?.data, secondBatch, 'admits a later reservation finishing first');
-  t.equal(manager.stats.pendingChunkCount, 1, 'retains the first pending reservation');
+  expect(secondChunk?.data, 'admits a later reservation finishing first').toBe(secondBatch);
+  expect(manager.stats.pendingChunkCount, 'retains the first pending reservation').toBe(1);
 
   finishFirstLoad(firstBatch);
   const firstChunk = await firstRequest;
-  t.equal(firstChunk?.data, firstBatch, 'admits the remaining independently reserved source');
-  t.deepEqual(
+  expect(firstChunk?.data, 'admits the remaining independently reserved source').toBe(firstBatch);
+  expect(
     manager.residentBatches,
-    [secondBatch, firstBatch],
     'retains independent source batches in actual admission order'
+  ).toEqual([secondBatch, firstBatch]);
+  expect(manager.stats.residentGpuByteLength, 'preserves the byte budget').toBe(
+    estimatedGpuBytes * 2
   );
-  t.equal(manager.stats.residentGpuByteLength, estimatedGpuBytes * 2, 'preserves the byte budget');
-  t.equal(manager.stats.residentSplatCount, 2, 'preserves the logical row budget');
-  t.equal(manager.stats.pendingChunkCount, 0, 'releases every completed pending reservation');
+  expect(manager.stats.residentSplatCount, 'preserves the logical row budget').toBe(2);
+  expect(manager.stats.pendingChunkCount, 'releases every completed pending reservation').toBe(0);
 
   manager.destroy();
   unreservedBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatResidencyManager releases failed asynchronous allocation reservations', async t => {
+it('SplatResidencyManager releases failed asynchronous allocation reservations', async () => {
   const device = new NullDevice({});
   const incomingBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const manager = new SplatResidencyManager({
@@ -563,18 +670,23 @@ test('SplatResidencyManager releases failed asynchronous allocation reservations
       error => error
     );
 
-  t.equal(rejectedLoad, expectedError, 'preserves the original asynchronous loader failure');
-  t.equal(manager.stats.pendingChunkCount, 0, 'releases the rejected pending source identity');
+  expect(rejectedLoad, 'preserves the original asynchronous loader failure').toBe(expectedError);
+  expect(manager.stats.pendingChunkCount, 'releases the rejected pending source identity').toBe(0);
   const admittedChunk = await manager.load('incoming', () => incomingBatch, reservationOptions);
-  t.equal(admittedChunk?.data, incomingBatch, 'reuses GPU and source-row reservation capacity');
-  t.equal(manager.stats.residentChunkCount, 1, 'reuses the independent source-chunk reservation');
+  expect(admittedChunk?.data, 'reuses GPU and source-row reservation capacity').toBe(incomingBatch);
+  expect(manager.stats.residentChunkCount, 'reuses the independent source-chunk reservation').toBe(
+    1
+  );
 
   manager.destroy();
-  t.ok(incomingBatch.destroyed, 'preserves manager ownership after reservation recovery');
-  t.end();
+  expect(
+    Boolean(incomingBatch.destroyed),
+    'preserves manager ownership after reservation recovery'
+  ).toBe(true);
+  void 0;
 });
 
-test('SplatResidencyManager synchronizes borrowing renderers before owned batch eviction', t => {
+it('SplatResidencyManager synchronizes borrowing renderers before owned batch eviction', () => {
   const device = new NullDevice({});
   const firstBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 0, 0));
   const secondBatch = makeGPUSplatData(device, makeSplatResidencySource(1, 1, 1));
@@ -586,17 +698,24 @@ test('SplatResidencyManager synchronizes borrowing renderers before owned batch 
   });
 
   manager.add(firstBatch, {priority: 0});
-  t.deepEqual(renderer.batches, [firstBatch], 'adds the independently resident source batch');
+  expect(renderer.batches, 'adds the independently resident source batch').toEqual([firstBatch]);
   manager.add(secondBatch, {priority: 1});
-  t.ok(firstBatch.destroyed, 'destroys manager-owned data after renderer detachment');
-  t.deepEqual(renderer.batches, [secondBatch], 'retains only the current source residency window');
-  t.equal(renderer.stats.splatCount, 1, 'keeps renderer diagnostics within residency limits');
+  expect(
+    Boolean(firstBatch.destroyed),
+    'destroys manager-owned data after renderer detachment'
+  ).toBe(true);
+  expect(renderer.batches, 'retains only the current source residency window').toEqual([
+    secondBatch
+  ]);
+  expect(renderer.stats.splatCount, 'keeps renderer diagnostics within residency limits').toBe(1);
 
   manager.destroy();
-  t.deepEqual(renderer.batches, [], 'detaches every source batch before final destruction');
-  t.ok(secondBatch.destroyed, 'releases the final manager-owned source allocation');
+  expect(renderer.batches, 'detaches every source batch before final destruction').toEqual([]);
+  expect(Boolean(secondBatch.destroyed), 'releases the final manager-owned source allocation').toBe(
+    true
+  );
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSplatResidencySource(

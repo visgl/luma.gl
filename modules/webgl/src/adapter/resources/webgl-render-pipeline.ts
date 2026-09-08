@@ -29,6 +29,7 @@ import {WEBGLTextureView} from './webgl-texture-view';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {WEBGLSharedRenderPipeline} from './webgl-shared-render-pipeline';
+import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
 
 /** Creates a new render pipeline */
 export class WEBGLRenderPipeline extends RenderPipeline {
@@ -69,7 +70,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this.vs = webglSharedRenderPipeline.vs;
     this.fs = webglSharedRenderPipeline.fs;
     this.linkStatus = webglSharedRenderPipeline.linkStatus;
-    this.introspectedLayout = webglSharedRenderPipeline.introspectedLayout;
+    // Uniform-block metadata is wrapper-specific and intentionally excluded from the shared
+    // WebGLProgram cache. Resolve it only after the shared program has been selected.
+    this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle, {
+      uniformBlockLayouts: props._uniformBlockLayouts,
+      shaderLayout: props.shaderLayout
+    });
     this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
 
     // WebGL only honors shaderLayout overrides for attributes that already exist in the

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   isGLTFSplatPrimitive,
   loadGPUSplatDataFromGLTF,
@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/splats';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('glTF Gaussian primitives preserve source identities and convert Khronos attributes', t => {
+it('glTF Gaussian primitives preserve source identities and convert Khronos attributes', () => {
   const device = new NullDevice({});
   const primitive = makeGLTFSplatPrimitive();
   const source = makeSplatSourceFromGLTF(primitive, {sourceBatchIndex: 7, rowIndexBase: 42});
@@ -21,31 +21,36 @@ test('glTF Gaussian primitives preserve source identities and convert Khronos at
     rowIndexBase: 42
   });
 
-  t.ok(isGLTFSplatPrimitive(primitive), 'recognizes the declared Khronos primitive extension');
-  t.equal(source.positions, primitive.attributes['POSITION'], 'borrows decoded Float32 positions');
-  t.equal(
-    source.scales,
-    primitive.attributes['KHR_gaussian_splatting:SCALE'],
-    'borrows decoded linear Float32 scales'
+  expect(
+    Boolean(isGLTFSplatPrimitive(primitive)),
+    'recognizes the declared Khronos primitive extension'
+  ).toBe(true);
+  expect(source.positions, 'borrows decoded Float32 positions').toBe(
+    primitive.attributes['POSITION']
   );
-  t.deepEqual(
+  expect(source.scales, 'borrows decoded linear Float32 scales').toBe(
+    primitive.attributes['KHR_gaussian_splatting:SCALE']
+  );
+  expect(
     Array.from(source.rotations),
-    [1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5],
     'converts glTF XYZW quaternions to renderer WXYZ order'
-  );
-  t.ok(Math.abs(source.colors[0] - 0.7820947917738781) < 1e-6, 'reconstructs SH DC radiance');
-  t.equal(source.colors[3], 1, 'keeps opacity separate from the diffuse color alpha');
-  t.deepEqual(Array.from(source.opacities), [0.25, 0.75], 'retains linear source opacity');
-  t.deepEqual(Array.from(source.semanticIds!), [3, 9], 'preserves 3D Tiles feature identifiers');
-  t.equal(prepared.sourceInfo.sourceBatchIndex, 7, 'retains the source tile batch identity');
-  t.equal(prepared.sourceInfo.sourceRowIndexOffset, 42, 'retains stable global source rows');
-  t.equal(prepared.semanticIds?.format, 'uint32', 'uploads feature metadata as semantic IDs');
+  ).toEqual([1, 0, 0, 0, 0.5, 0.5, 0.5, 0.5]);
+  expect(
+    Boolean(Math.abs(source.colors[0] - 0.7820947917738781) < 1e-6),
+    'reconstructs SH DC radiance'
+  ).toBe(true);
+  expect(source.colors[3], 'keeps opacity separate from the diffuse color alpha').toBe(1);
+  expect(Array.from(source.opacities), 'retains linear source opacity').toEqual([0.25, 0.75]);
+  expect(Array.from(source.semanticIds!), 'preserves 3D Tiles feature identifiers').toEqual([3, 9]);
+  expect(prepared.sourceInfo.sourceBatchIndex, 'retains the source tile batch identity').toBe(7);
+  expect(prepared.sourceInfo.sourceRowIndexOffset, 'retains stable global source rows').toBe(42);
+  expect(prepared.semanticIds?.format, 'uploads feature metadata as semantic IDs').toBe('uint32');
 
   prepared.destroy();
-  t.end();
+  void 0;
 });
 
-test('glTF Gaussian primitives normalize integer accessors and decode sRGB display colors', t => {
+it('glTF Gaussian primitives normalize integer accessors and decode sRGB display colors', () => {
   const primitive = makeGLTFSplatPrimitive('srgb_rec709_display');
   const normalizedPrimitive: GLTFSplatPrimitive = {
     ...primitive,
@@ -65,17 +70,19 @@ test('glTF Gaussian primitives normalize integer accessors and decode sRGB displ
   };
   const source = makeSplatSourceFromGLTF(normalizedPrimitive);
 
-  t.deepEqual(
+  expect(
     Array.from(source.rotations),
-    [1, 0, 0, 0, 0, -1, 0, 0],
     'normalizes signed glTF accessor components and clamps the negative endpoint'
-  );
-  t.deepEqual(Array.from(source.opacities), [0, 1], 'normalizes unsigned opacity accessors');
-  t.ok(source.colors[0] < 0.7820947917738781, 'converts sRGB display radiance to linear RGB');
-  t.end();
+  ).toEqual([1, 0, 0, 0, 0, -1, 0, 0]);
+  expect(Array.from(source.opacities), 'normalizes unsigned opacity accessors').toEqual([0, 1]);
+  expect(
+    Boolean(source.colors[0] < 0.7820947917738781),
+    'converts sRGB display radiance to linear RGB'
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF Gaussian primitives retain complete ordered SH bands and selected feature metadata', t => {
+it('glTF Gaussian primitives retain complete ordered SH bands and selected feature metadata', () => {
   const primitive = makeGLTFSplatPrimitive();
   const attributes: GLTFSplatPrimitive['attributes'] = {
     ...primitive.attributes,
@@ -106,31 +113,32 @@ test('glTF Gaussian primitives retain complete ordered SH bands and selected fea
   );
   const secondDegreeSource = makeSplatSourceFromGLTF({...primitive, attributes});
 
-  t.equal(firstDegreeSource.sphericalHarmonicsDegree, 1, 'caps fully authored higher-order bands');
-  t.equal(
+  expect(firstDegreeSource.sphericalHarmonicsDegree, 'caps fully authored higher-order bands').toBe(
+    1
+  );
+  expect(
     firstDegreeSource.sphericalHarmonics?.length,
-    18,
     'retains nine scalars per degree-one row'
-  );
-  t.ok(
-    Math.abs(firstDegreeSource.sphericalHarmonics![9] - 10.1) < 1e-5,
+  ).toBe(18);
+  expect(
+    Boolean(Math.abs(firstDegreeSource.sphericalHarmonics![9] - 10.1) < 1e-5),
     'packs source rows as basis-major RGB triplets'
+  ).toBe(true);
+  expect(secondDegreeSource.sphericalHarmonicsDegree, 'infers the complete degree-two band').toBe(
+    2
   );
-  t.equal(secondDegreeSource.sphericalHarmonicsDegree, 2, 'infers the complete degree-two band');
-  t.equal(
+  expect(
     secondDegreeSource.sphericalHarmonics?.length,
-    48,
     'retains 24 scalars per degree-two row'
-  );
-  t.deepEqual(
+  ).toBe(48);
+  expect(
     Array.from(firstDegreeSource.semanticIds!),
-    [17, 19],
     'selects requested 3D Tiles feature metadata without glTF package dependencies'
-  );
-  t.end();
+  ).toEqual([17, 19]);
+  void 0;
 });
 
-test('glTF Gaussian primitives select declared attribute-backed feature metadata', t => {
+it('glTF Gaussian primitives select declared attribute-backed feature metadata', () => {
   const primitive = makeGLTFSplatPrimitive();
   const withMixedFeatureDeclarations: GLTFSplatPrimitive = {
     ...primitive,
@@ -142,45 +150,40 @@ test('glTF Gaussian primitives select declared attribute-backed feature metadata
   };
 
   const source = makeSplatSourceFromGLTF(withMixedFeatureDeclarations);
-  t.deepEqual(
+  expect(
     Array.from(source.semanticIds!),
-    [13, 17],
     'skips non-attribute feature descriptors and selects the first declared attribute set'
-  );
-  t.throws(
+  ).toEqual([13, 17]);
+  expect(
     () => makeSplatSourceFromGLTF(primitive, {featureIdAttribute: '_FEATURE_ID_9'}),
-    /feature-ID attribute/,
     'rejects an explicitly requested feature set that is absent'
-  );
-  t.throws(
+  ).toThrow(/feature-ID attribute/);
+  expect(
     () =>
       makeSplatSourceFromGLTF({
         ...primitive,
         attributes: {...primitive.attributes, _FEATURE_ID_0: new Float32Array([1, 2])}
       }),
-    /unsigned integers/,
     'rejects lossy floating-point feature identifiers'
-  );
-  t.end();
+  ).toThrow(/unsigned integers/);
+  void 0;
 });
 
-test('glTF Gaussian primitives reject invalid modes, incomplete bands, and mismatched rows', t => {
+it('glTF Gaussian primitives reject invalid modes, incomplete bands, and mismatched rows', () => {
   const primitive = makeGLTFSplatPrimitive();
-  t.throws(
+  expect(
     () => makeSplatSourceFromGLTF({...primitive, mode: 4}),
-    /Unsupported glTF Gaussian splat primitive/,
     'requires glTF POINTS primitive mode'
-  );
-  t.throws(
+  ).toThrow(/Unsupported glTF Gaussian splat primitive/);
+  expect(
     () =>
       makeSplatSourceFromGLTF({
         ...primitive,
         attributes: {...primitive.attributes, 'KHR_gaussian_splatting:OPACITY': new Float32Array(1)}
       }),
-    /matching rows/,
     'rejects accessors that do not describe the same source rows'
-  );
-  t.throws(
+  ).toThrow(/matching rows/);
+  expect(
     () =>
       makeSplatSourceFromGLTF({
         ...primitive,
@@ -189,10 +192,9 @@ test('glTF Gaussian primitives reject invalid modes, incomplete bands, and misma
           'KHR_gaussian_splatting:SH_DEGREE_1_COEF_0': new Float32Array(6)
         }
       }),
-    /bands must be complete/,
     'rejects partially authored higher-order spherical harmonics'
-  );
-  t.throws(
+  ).toThrow(/bands must be complete/);
+  expect(
     () =>
       makeSplatSourceFromGLTF({
         ...primitive,
@@ -206,13 +208,12 @@ test('glTF Gaussian primitives reject invalid modes, incomplete bands, and misma
           )
         }
       }),
-    /bands must be consecutive/,
     'rejects higher bands without their required lower-order coefficients'
-  );
-  t.end();
+  ).toThrow(/bands must be consecutive/);
+  void 0;
 });
 
-test('glTF SPZ v2 primitives hand compressed payloads to caller-owned async decoders', async t => {
+it('glTF SPZ v2 primitives hand compressed payloads to caller-owned async decoders', async () => {
   const device = new NullDevice({});
   const decodedPrimitive = makeGLTFSplatPrimitive();
   const compression = {bufferView: 4};
@@ -234,34 +235,41 @@ test('glTF SPZ v2 primitives hand compressed payloads to caller-owned async deco
     signal: abortController.signal,
     decodeCompressedPrimitive: async (primitive, options) => {
       decoderCallCount++;
-      t.equal(primitive, compressedPrimitive, 'forwards the exact source primitive to the decoder');
-      t.equal(options.compression, compression, 'forwards the nested SPZ v2 extension metadata');
-      t.equal(options.signal, abortController.signal, 'forwards caller-owned cancellation');
+      expect(primitive, 'forwards the exact source primitive to the decoder').toBe(
+        compressedPrimitive
+      );
+      expect(options.compression, 'forwards the nested SPZ v2 extension metadata').toBe(
+        compression
+      );
+      expect(options.signal, 'forwards caller-owned cancellation').toBe(abortController.signal);
       return decodedPrimitive;
     }
   });
 
-  t.equal(decoderCallCount, 1, 'decodes the compressed primitive exactly once');
-  t.equal(prepared.rowIndexBase, 100, 'retains tile identity through the compression boundary');
+  expect(decoderCallCount, 'decodes the compressed primitive exactly once').toBe(1);
+  expect(prepared.rowIndexBase, 'retains tile identity through the compression boundary').toBe(100);
   prepared.destroy();
 
   const alreadyDecoded = await loadGPUSplatDataFromGLTF(device, {
     ...compressedPrimitive,
     attributes: decodedPrimitive.attributes
   });
-  t.equal(decoderCallCount, 1, 'never decodes accessors that the external loader already resolved');
+  expect(
+    decoderCallCount,
+    'never decodes accessors that the external loader already resolved'
+  ).toBe(1);
   alreadyDecoded.destroy();
 
   try {
     await loadGPUSplatDataFromGLTF(device, compressedPrimitive);
-    t.fail('compressed primitives require an externally supplied decoder');
+    expect(false, 'compressed primitives require an externally supplied decoder').toBe(true);
   } catch (error) {
-    t.ok(
-      error instanceof Error && /SPZ decoder/.test(error.message),
+    expect(
+      Boolean(error instanceof Error && /SPZ decoder/.test(error.message)),
       'reports compressed primitives without an externally supplied decoder'
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
 function makeGLTFSplatPrimitive(

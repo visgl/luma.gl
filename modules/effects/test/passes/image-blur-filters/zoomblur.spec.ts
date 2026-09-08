@@ -4,13 +4,13 @@
 
 import {zoomBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('zoomBlur#build/uniform', t => {
+it('zoomBlur#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(zoomBlur, {}, {});
 
-  t.ok(uniforms, 'zoomBlur module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'zoomBlur center uniform is ok');
-  t.equal(uniforms.strength, 0.3, 'zoomBlur strength uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'zoomBlur module build is ok').toBe(true);
+  expect(uniforms.center, 'zoomBlur center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.strength, 'zoomBlur strength uniform is ok').toBe(0.3);
+  void 0;
 });

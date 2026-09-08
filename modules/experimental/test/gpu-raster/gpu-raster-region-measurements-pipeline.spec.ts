@@ -15,7 +15,7 @@ import {
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type OutputRecord<Format extends 'float32' | 'uint32'> = {
   view: GraphDataView<Format>;
@@ -75,11 +75,11 @@ const PROJECTED_METADATA: GPURasterMetadata = {
   level: 0
 };
 
-test('GPURaster grouped measurements independently preserve geometry, calibrated intensity validity, and double-precision affine centroids', async testCase => {
+it('GPURaster grouped measurements independently preserve geometry, calibrated intensity validity, and double-precision affine centroids', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -112,21 +112,24 @@ test('GPURaster grouped measurements independently preserve geometry, calibrated
   };
   const result = await runDirectMeasurements(device, fixture);
   const expected = makeReferenceMeasurements(fixture, true);
-  assertMeasurementResults(testCase, result, expected, 'calibrated per-region measurements');
+  assertMeasurementResults(result, expected, 'calibrated per-region measurements');
 
-  testCase.equal(result.pixelCounts[0], 3, 'geometry retains all three classified region pixels');
-  testCase.equal(
-    result.intensityCounts[0],
-    0,
-    'raw nodata, NaN, and infinity reject only intensity'
+  expect(result.pixelCounts[0], 'geometry retains all three classified region pixels').toBe(3);
+  expect(result.intensityCounts[0], 'raw nodata, NaN, and infinity reject only intensity').toBe(0);
+  expect(result.intensitySums[0], 'an intensity-empty region has zero mergeable sum').toBe(0);
+  expect(Boolean(Number.isNaN(result.intensityMinimums[0])), 'empty intensity minimum is NaN').toBe(
+    true
   );
-  testCase.equal(result.intensitySums[0], 0, 'an intensity-empty region has zero mergeable sum');
-  testCase.ok(Number.isNaN(result.intensityMinimums[0]), 'empty intensity minimum is NaN');
-  testCase.ok(Number.isNaN(result.intensityMaximums[0]), 'empty intensity maximum is NaN');
-  testCase.ok(Number.isNaN(result.intensityMeans[0]), 'empty intensity mean is NaN');
-  testCase.ok(Number.isFinite(result.centroidColumns[0]), 'geometry-only centroid remains valid');
-  testCase.equal(result.pixelCounts[1], 3, 'region geometry is independent of band holes');
-  testCase.equal(result.intensityCounts[1], 1, 'raw sentinel and explicit mask remove intensity');
+  expect(Boolean(Number.isNaN(result.intensityMaximums[0])), 'empty intensity maximum is NaN').toBe(
+    true
+  );
+  expect(Boolean(Number.isNaN(result.intensityMeans[0])), 'empty intensity mean is NaN').toBe(true);
+  expect(
+    Boolean(Number.isFinite(result.centroidColumns[0])),
+    'geometry-only centroid remains valid'
+  ).toBe(true);
+  expect(result.pixelCounts[1], 'region geometry is independent of band holes').toBe(3);
+  expect(result.intensityCounts[1], 'raw sentinel and explicit mask remove intensity').toBe(1);
 
   const centroid = getRasterRegionWorldCentroid(
     PROJECTED_METADATA,
@@ -141,31 +144,28 @@ test('GPURaster grouped measurements independently preserve geometry, calibrated
       PROJECTED_METADATA.affine[4] * result.centroidRows[0]! +
       PROJECTED_METADATA.affine[5]
   ];
-  testCase.deepEqual(
-    centroid,
-    expectedWorld,
-    'JS affine translation retains full double precision'
-  );
-  testCase.notEqual(
+  expect(centroid, 'JS affine translation retains full double precision').toEqual(expectedWorld);
+  expect(
     centroid[0],
-    Math.fround(centroid[0]),
     'large projected origins are not silently rounded through float32 absolute coordinates'
-  );
-  testCase.equal(
+  ).not.toBe(Math.fround(centroid[0]));
+  expect(
     result.areas[0],
-    3 * Math.abs(2 * -3 - 0.25 * -0.5),
     'rotated/sheared affine area uses the absolute determinant in CRS coordinate units'
-  );
-  testCase.equal(result.pixelCounts[7], 0, 'unused bounded rows contain zero pixels');
-  testCase.ok(Number.isNaN(result.centroidColumns[7]), 'unused rows have no plausible centroid');
-  testCase.end();
+  ).toBe(3 * Math.abs(2 * -3 - 0.25 * -0.5));
+  expect(result.pixelCounts[7], 'unused bounded rows contain zero pixels').toBe(0);
+  expect(
+    Boolean(Number.isNaN(result.centroidColumns[7])),
+    'unused rows have no plausible centroid'
+  ).toBe(true);
+  void 0;
 });
 
-test('GPURaster classification, connected roots, dense labels, and regional measurements compose into one GPU graph', async testCase => {
+it('GPURaster classification, connected roots, dense labels, and regional measurements compose into one GPU graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -352,33 +352,34 @@ test('GPURaster classification, connected roots, dense labels, and regional meas
     );
     const actual = await readMeasurementOutputs(outputs);
     assertMeasurementResults(
-      testCase,
       actual,
       expected,
       `classification → sparse components → dense scan → grouped measurements, encoding ${encodingIndex}`
     );
-    testCase.equal((await readLogical(convergenceBuffer, 1, 1))[0], 1, 'upstream graph converges');
-    testCase.equal((await readLogical(overflowBuffer, 1, 1))[0], 0, 'bounded groups fit capacity');
-    testCase.deepEqual(
+    expect((await readLogical(convergenceBuffer, 1, 1))[0], 'upstream graph converges').toBe(1);
+    expect((await readLogical(overflowBuffer, 1, 1))[0], 'bounded groups fit capacity').toBe(0);
+    expect(
       (await readUnsigned(outputs.pixelCounts.buffer)).slice(0, outputs.pixelCounts.prefixLength),
-      Array.from({length: outputs.pixelCounts.prefixLength}, () => GUARD_VALUE),
       'caller-owned output prefix guards survive composed graph execution'
-    );
+    ).toEqual(Array.from({length: outputs.pixelCounts.prefixLength}, () => GUARD_VALUE));
   }
 
   compiled.destroy();
   for (const buffer of ownedBuffers) {
-    testCase.notOk(buffer.destroyed, 'compiled graphs never destroy borrowed measurement outputs');
+    expect(
+      Boolean(buffer.destroyed),
+      'compiled graphs never destroy borrowed measurement outputs'
+    ).toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster grouped outputs fail closed on nonconvergence, truncation, and invalid selected capacity', async testCase => {
+it('GPURaster grouped outputs fail closed on nonconvergence, truncation, and invalid selected capacity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -427,56 +428,51 @@ test('GPURaster grouped outputs fail closed on nonconvergence, truncation, and i
   const compiled = graph.compile();
   submitGraph(device, compiled, 'regions-initial-valid');
   let actual = await readMeasurementOutputs(outputs);
-  testCase.deepEqual(actual.pixelCounts, [2, 2, 0], 'initial geometry count is valid');
-  testCase.deepEqual(actual.intensitySums, [6, 14, 0], 'initial intensity reductions are valid');
+  expect(actual.pixelCounts, 'initial geometry count is valid').toEqual([2, 2, 0]);
+  expect(actual.intensitySums, 'initial intensity reductions are valid').toEqual([6, 14, 0]);
 
   convergenceBuffer.write(new Uint32Array([0]), Uint32Array.BYTES_PER_ELEMENT);
   submitGraph(device, compiled, 'regions-upstream-nonconverged');
   actual = await readMeasurementOutputs(outputs);
-  assertInvalidMeasurements(testCase, actual, 'nonconverged component roots');
+  assertInvalidMeasurements(actual, 'nonconverged component roots');
 
   convergenceBuffer.write(new Uint32Array([1]), Uint32Array.BYTES_PER_ELEMENT);
   overflowBuffer.write(new Uint32Array([1]), Uint32Array.BYTES_PER_ELEMENT);
   submitGraph(device, compiled, 'regions-upstream-overflow');
   actual = await readMeasurementOutputs(outputs);
-  assertInvalidMeasurements(testCase, actual, 'overflowed dense region IDs');
+  assertInvalidMeasurements(actual, 'overflowed dense region IDs');
 
   overflowBuffer.write(new Uint32Array([0]), Uint32Array.BYTES_PER_ELEMENT);
   countBuffer.write(new Uint32Array([4]), Uint32Array.BYTES_PER_ELEMENT);
   submitGraph(device, compiled, 'regions-invalid-count');
   actual = await readMeasurementOutputs(outputs);
-  assertInvalidMeasurements(testCase, actual, 'component count exceeding declared output capacity');
+  assertInvalidMeasurements(actual, 'component count exceeding declared output capacity');
 
   countBuffer.write(new Uint32Array([2]), Uint32Array.BYTES_PER_ELEMENT);
   intensity.set([4, 6, 100, 8, 10, 12]);
   intensityBuffer.write(intensity);
   submitGraph(device, compiled, 'regions-recovered');
   actual = await readMeasurementOutputs(outputs);
-  testCase.deepEqual(actual.pixelCounts, [2, 2, 0], 'valid geometry recovers on graph replay');
-  testCase.deepEqual(
-    actual.intensitySums,
-    [10, 18, 0],
-    'fresh floating samples replace stale data'
-  );
-  testCase.deepEqual(
+  expect(actual.pixelCounts, 'valid geometry recovers on graph replay').toEqual([2, 2, 0]);
+  expect(actual.intensitySums, 'fresh floating samples replace stale data').toEqual([10, 18, 0]);
+  expect(
     (await readUnsigned(outputs.intensityCounts.buffer)).slice(
       0,
       outputs.intensityCounts.prefixLength
     ),
-    Array.from({length: outputs.intensityCounts.prefixLength}, () => GUARD_VALUE),
     'repeated clear/aggregate passes preserve output prefix guards'
-  );
+  ).toEqual(Array.from({length: outputs.intensityCounts.prefixLength}, () => GUARD_VALUE));
 
   compiled.destroy();
   for (const buffer of ownedBuffers) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster regional pixel centers and overview affines preserve coordinate-system area semantics', async testCase => {
+it('GPURaster regional pixel centers and overview affines preserve coordinate-system area semantics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -504,35 +500,32 @@ test('GPURaster regional pixel centers and overview affines preserve coordinate-
     };
     const result = await runDirectMeasurements(device, fixture);
     const expected = makeReferenceMeasurements(fixture, true);
-    assertMeasurementResults(
-      testCase,
-      result,
-      expected,
-      `${pixelInterpretation}-centered grouping`
-    );
+    assertMeasurementResults(result, expected, `${pixelInterpretation}-centered grouping`);
     const expectedCenterOffset = pixelInterpretation === 'area' ? 0.5 : 0;
-    testCase.ok(
-      Math.abs(result.centroidColumns[0]! - (1 / 3 + expectedCenterOffset)) < 1e-5,
+    expect(
+      Boolean(Math.abs(result.centroidColumns[0]! - (1 / 3 + expectedCenterOffset)) < 1e-5),
       `${pixelInterpretation} pixel centers use their documented zero/half-pixel convention`
-    );
-    testCase.ok(
-      Math.abs(result.areas[0]! - 3 * Math.abs(0.25 * -0.5 - 0.1 * 0.05)) < 1e-6,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(result.areas[0]! - 3 * Math.abs(0.25 * -0.5 - 0.1 * 0.05)) < 1e-6),
       'geographic affine area remains square degrees, with no fabricated square-meter conversion'
-    );
+    ).toBe(true);
 
     const world = getRasterRegionWorldCentroid(
       metadata,
       result.centroidColumns[0]!,
       result.centroidRows[0]!
     );
-    testCase.ok(
-      Math.abs(
-        world[0] - (-122.125 + 0.25 * result.centroidColumns[0]! + 0.1 * result.centroidRows[0]!)
-      ) < 1e-12,
+    expect(
+      Boolean(
+        Math.abs(
+          world[0] - (-122.125 + 0.25 * result.centroidColumns[0]! + 0.1 * result.centroidRows[0]!)
+        ) < 1e-12
+      ),
       'retained affine translation is applied exactly once without adding level-zero tile origin'
-    );
+    ).toBe(true);
   }
-  testCase.end();
+  void 0;
 });
 
 async function runDirectMeasurements(
@@ -786,16 +779,13 @@ function makeReferenceMeasurements(fixture: RegionFixture, valid: boolean): Regi
 }
 
 function assertMeasurementResults(
-  testCase: Test,
   actual: RegionReference,
   expected: RegionReference,
   label: string
 ): void {
-  testCase.deepEqual(actual.pixelCounts, expected.pixelCounts, `${label}: exact geometry counts`);
-  testCase.deepEqual(
-    actual.intensityCounts,
-    expected.intensityCounts,
-    `${label}: exact valid intensity counts`
+  expect(actual.pixelCounts, `${label}: exact geometry counts`).toEqual(expected.pixelCounts);
+  expect(actual.intensityCounts, `${label}: exact valid intensity counts`).toEqual(
+    expected.intensityCounts
   );
   for (const key of [
     'intensitySums',
@@ -812,34 +802,33 @@ function assertMeasurementResults(
       const actualValue = actual[key][index]!;
       const expectedValue = expected[key][index]!;
       if (Number.isNaN(expectedValue)) {
-        testCase.ok(
-          Number.isNaN(actualValue),
+        expect(
+          Boolean(Number.isNaN(actualValue)),
           `${label}: ${key}[${index}] has no fabricated value`
-        );
+        ).toBe(true);
       } else {
         const tolerance = 0.0001 * Math.max(1, Math.abs(expectedValue));
-        testCase.ok(
-          Math.abs(actualValue - expectedValue) <= tolerance,
+        expect(
+          Boolean(Math.abs(actualValue - expectedValue) <= tolerance),
           `${label}: ${key}[${index}] matches finite CPU reference`
-        );
+        ).toBe(true);
       }
     }
   }
 }
 
-function assertInvalidMeasurements(testCase: Test, actual: RegionReference, reason: string): void {
-  testCase.ok(
-    actual.pixelCounts.every(value => value === 0),
+function assertInvalidMeasurements(actual: RegionReference, reason: string): void {
+  expect(
+    Boolean(actual.pixelCounts.every(value => value === 0)),
     `${reason}: geometry counts cleared`
-  );
-  testCase.ok(
-    actual.intensityCounts.every(value => value === 0),
+  ).toBe(true);
+  expect(
+    Boolean(actual.intensityCounts.every(value => value === 0)),
     `${reason}: intensity counts cleared`
-  );
+  ).toBe(true);
   for (const key of ['intensitySums', 'columnSums', 'rowSums', 'areas'] as const) {
-    testCase.ok(
-      actual[key].every(value => value === 0),
-      `${reason}: ${key} cleared`
+    expect(Boolean(actual[key].every(value => value === 0)), `${reason}: ${key} cleared`).toBe(
+      true
     );
   }
   for (const key of [
@@ -849,7 +838,10 @@ function assertInvalidMeasurements(testCase: Test, actual: RegionReference, reas
     'centroidColumns',
     'centroidRows'
   ] as const) {
-    testCase.ok(actual[key].every(Number.isNaN), `${reason}: ${key} contains no plausible result`);
+    expect(
+      Boolean(actual[key].every(Number.isNaN)),
+      `${reason}: ${key} contains no plausible result`
+    ).toBe(true);
   }
 }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   expandArrowVector,
   getArrowFixedSizeListValues,
@@ -26,54 +26,55 @@ import * as arrow from 'apache-arrow';
 
 type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, arrow.Int32>;
 
-test('makeArrowFixedSizeListVector creates FixedSizeList vectors from typed arrays', t => {
+it('makeArrowFixedSizeListVector creates FixedSizeList vectors from typed arrays', () => {
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     2,
     new Float32Array([1, 2, 3, 4])
   );
 
-  t.ok(arrow.DataType.isFixedSizeList(vector.type), 'creates a FixedSizeList vector');
-  t.equal(vector.type.listSize, 2, 'sets the list size');
-  t.equal(vector.length, 2, 'sets the row count');
-  t.deepEqual(
-    getArrowFixedSizeListValues(vector),
-    new Float32Array([1, 2, 3, 4]),
-    'exposes the child values'
+  expect(
+    Boolean(arrow.DataType.isFixedSizeList(vector.type)),
+    'creates a FixedSizeList vector'
+  ).toBe(true);
+  expect(vector.type.listSize, 'sets the list size').toBe(2);
+  expect(vector.length, 'sets the row count').toBe(2);
+  expect(getArrowFixedSizeListValues(vector), 'exposes the child values').toEqual(
+    new Float32Array([1, 2, 3, 4])
   );
-  t.deepEqual(
+  expect(
     getArrowVectorBufferSource(vector),
-    new Float32Array([1, 2, 3, 4]),
     'returns a buffer source for FixedSizeList vectors'
-  );
+  ).toEqual(new Float32Array([1, 2, 3, 4]));
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowVectorFromArray creates flat FixedSizeList rows from JS numeric arrays', t => {
+it('makeArrowVectorFromArray creates flat FixedSizeList rows from JS numeric arrays', () => {
   const vector = makeArrowVectorFromArray([1, 2, 3, 4], new arrow.Float32(), 2);
 
-  t.ok(arrow.DataType.isFixedSizeList(vector.type), 'creates a FixedSizeList vector');
-  t.equal(vector.type.listSize, 2, 'retains the requested row width');
-  t.deepEqual(
-    getArrowFixedSizeListValues(vector),
-    new Float32Array([1, 2, 3, 4]),
-    'materializes typed child values'
+  expect(
+    Boolean(arrow.DataType.isFixedSizeList(vector.type)),
+    'creates a FixedSizeList vector'
+  ).toBe(true);
+  expect(vector.type.listSize, 'retains the requested row width').toBe(2);
+  expect(getArrowFixedSizeListValues(vector), 'materializes typed child values').toEqual(
+    new Float32Array([1, 2, 3, 4])
   );
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowVectorFromArray mirrors scalar Apache Arrow array construction', t => {
+it('makeArrowVectorFromArray mirrors scalar Apache Arrow array construction', () => {
   const vector = makeArrowVectorFromArray(['hello', 'luma.gl'], new arrow.Utf8());
 
-  t.equal(vector.length, 2, 'creates one Arrow row per string');
-  t.equal(vector.get(0), 'hello', 'retains scalar row values');
+  expect(vector.length, 'creates one Arrow row per string').toBe(2);
+  expect(vector.get(0), 'retains scalar row values').toBe('hello');
 
-  t.end();
+  void 0;
 });
 
-test('isArrowFixedSizeListVector validates FixedSizeList vector shape', t => {
+it('isArrowFixedSizeListVector validates FixedSizeList vector shape', () => {
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     2,
@@ -81,39 +82,37 @@ test('isArrowFixedSizeListVector validates FixedSizeList vector shape', t => {
   );
   const primitiveVector = arrow.makeVector(new Float32Array([1, 2, 3, 4]));
 
-  t.ok(
-    isArrowFixedSizeListVector(vector, new arrow.Float32(), 2),
+  expect(
+    Boolean(isArrowFixedSizeListVector(vector, new arrow.Float32(), 2)),
     'accepts matching FixedSizeList vectors'
-  );
-  t.notOk(
-    isArrowFixedSizeListVector(vector, new arrow.Float32(), 3),
+  ).toBe(true);
+  expect(
+    Boolean(isArrowFixedSizeListVector(vector, new arrow.Float32(), 3)),
     'rejects FixedSizeList vectors with the wrong list size'
-  );
-  t.notOk(
-    isArrowFixedSizeListVector(vector, new arrow.Uint8(), 2),
+  ).toBe(false);
+  expect(
+    Boolean(isArrowFixedSizeListVector(vector, new arrow.Uint8(), 2)),
     'rejects FixedSizeList vectors with the wrong child type'
-  );
-  t.notOk(
-    isArrowFixedSizeListVector(primitiveVector, new arrow.Float32(), 2),
+  ).toBe(false);
+  expect(
+    Boolean(isArrowFixedSizeListVector(primitiveVector, new arrow.Float32(), 2)),
     'rejects primitive vectors'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowVectorBufferSource returns primitive vector values', t => {
+it('getArrowVectorBufferSource returns primitive vector values', () => {
   const vector = arrow.makeVector(new Uint32Array([1, 2, 3]));
 
-  t.deepEqual(
-    getArrowVectorBufferSource(vector),
-    new Uint32Array([1, 2, 3]),
-    'returns primitive vector values'
+  expect(getArrowVectorBufferSource(vector), 'returns primitive vector values').toEqual(
+    new Uint32Array([1, 2, 3])
   );
 
-  t.end();
+  void 0;
 });
 
-test('getArrowVectorByteLength sums Arrow data buffers and dictionary values', t => {
+it('getArrowVectorByteLength sums Arrow data buffers and dictionary values', () => {
   const primitiveVector = arrow.makeVector(new Uint32Array([1, 2, 3]));
   const utf8Vector = arrow.vectorFromArray(['a', 'luma.gl'], new arrow.Utf8());
   const dictionary = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
@@ -127,52 +126,47 @@ test('getArrowVectorByteLength sums Arrow data buffers and dictionary values', t
     })
   );
 
-  t.equal(
+  expect(
     getArrowVectorByteLength(primitiveVector),
-    primitiveVector.byteLength,
     'matches Vector.byteLength for primitive vectors'
-  );
-  t.equal(
+  ).toBe(primitiveVector.byteLength);
+  expect(
     getArrowVectorByteLength(utf8Vector),
-    utf8Vector.byteLength,
     'matches Vector.byteLength for plain Utf8 vectors'
-  );
-  t.equal(
+  ).toBe(utf8Vector.byteLength);
+  expect(
     getArrowVectorByteLength(dictionaryVector),
-    dictionaryVector.byteLength + dictionary.byteLength,
     'includes dictionary value buffers for Dictionary vectors'
-  );
+  ).toBe(dictionaryVector.byteLength + dictionary.byteLength);
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowFixedSizeListVector validates typed array length', t => {
-  t.throws(
+it('makeArrowFixedSizeListVector validates typed array length', () => {
+  expect(
     () => makeArrowFixedSizeListVector(new arrow.Uint8(), 4, new Uint8Array([1, 2, 3])),
-    /must be divisible/,
     'throws if values cannot be divided into fixed-size rows'
-  );
+  ).toThrow(/must be divisible/);
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowMatrix3x3Vector emits WGSL-storage column-major rows', t => {
+it('makeArrowMatrix3x3Vector emits WGSL-storage column-major rows', () => {
   const vector = makeArrowMatrix3x3Vector(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]), {
     order: 'row-major'
   });
 
-  t.equal(vector.type.listSize, 12, 'pads each vec3 matrix column to four floats');
-  t.equal(vector.length, 1, 'creates one matrix row');
-  t.deepEqual(
+  expect(vector.type.listSize, 'pads each vec3 matrix column to four floats').toBe(12);
+  expect(vector.length, 'creates one matrix row').toBe(1);
+  expect(
     getArrowFixedSizeListValues(vector),
-    new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]),
     'normalizes row-major logical values into WGSL-storage column-major layout'
-  );
+  ).toEqual(new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]));
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowMatrixVector describes every supported WGSL floating-point matrix shape', t => {
+it('makeArrowMatrixVector describes every supported WGSL floating-point matrix shape', () => {
   const matrixCases = [
     {shape: 'mat2x2', columns: 2, rows: 2, physicalComponentCount: 4},
     {shape: 'mat2x3', columns: 2, rows: 3, physicalComponentCount: 8},
@@ -191,43 +185,40 @@ test('makeArrowMatrixVector describes every supported WGSL floating-point matrix
     );
     const matrixInfo = getArrowMatrixVectorInfo(vector);
 
-    t.deepEqual(
+    expect(
       matrixInfo,
-      {
-        shape: matrixCase.shape,
-        columns: matrixCase.columns,
-        rows: matrixCase.rows,
-        order: 'column-major',
-        layout: 'wgsl-storage',
-        valueType: 'float32',
-        logicalComponentCount,
-        physicalComponentCount: matrixCase.physicalComponentCount,
-        columnStride: matrixCase.rows === 3 ? 4 : matrixCase.rows,
-        byteStride: matrixCase.physicalComponentCount * Float32Array.BYTES_PER_ELEMENT
-      },
       `${matrixCase.shape} retains explicit shape and physical layout metadata`
-    );
-    t.equal(
+    ).toEqual({
+      shape: matrixCase.shape,
+      columns: matrixCase.columns,
+      rows: matrixCase.rows,
+      order: 'column-major',
+      layout: 'wgsl-storage',
+      valueType: 'float32',
+      logicalComponentCount,
+      physicalComponentCount: matrixCase.physicalComponentCount,
+      columnStride: matrixCase.rows === 3 ? 4 : matrixCase.rows,
+      byteStride: matrixCase.physicalComponentCount * Float32Array.BYTES_PER_ELEMENT
+    });
+    expect(
       vector.type.listSize,
-      matrixCase.physicalComponentCount,
       `${matrixCase.shape} materializes the expected FixedSizeList width`
-    );
+    ).toBe(matrixCase.physicalComponentCount);
   }
 
-  t.end();
+  void 0;
 });
 
-test('makeArrowMatrixVector validates logical matrix lengths', t => {
-  t.throws(
+it('makeArrowMatrixVector validates logical matrix lengths', () => {
+  expect(
     () => makeArrowMatrixVector('mat4x4', new Float32Array(15)),
-    /must be divisible by 16/,
     'rejects incomplete matrix rows'
-  );
+  ).toThrow(/must be divisible by 16/);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector gathers FixedSizeList rows from typed row mappings', t => {
+it('expandArrowVector gathers FixedSizeList rows from typed row mappings', () => {
   const sourceVector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     4,
@@ -236,21 +227,20 @@ test('expandArrowVector gathers FixedSizeList rows from typed row mappings', t =
 
   const expandedVector = expandArrowVector(sourceVector, new Uint32Array([2, 0, 2, 1]));
 
-  t.ok(
-    arrow.util.compareTypes(expandedVector.type, sourceVector.type),
+  expect(
+    Boolean(arrow.util.compareTypes(expandedVector.type, sourceVector.type)),
     'preserves FixedSizeList type'
-  );
-  t.equal(expandedVector.length, 4, 'creates one row per mapping entry');
-  t.deepEqual(
+  ).toBe(true);
+  expect(expandedVector.length, 'creates one row per mapping entry').toBe(4);
+  expect(
     getArrowFixedSizeListValues(expandedVector),
-    new Float32Array([0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1]),
     'repeats source rows in mapping order'
-  );
+  ).toEqual(new Float32Array([0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1]));
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector accepts Arrow integer row mappings', t => {
+it('expandArrowVector accepts Arrow integer row mappings', () => {
   const sourceVector = makeArrowFixedSizeListVector(
     new arrow.Uint8(),
     2,
@@ -261,73 +251,69 @@ test('expandArrowVector accepts Arrow integer row mappings', t => {
     arrow.makeVector(new Int32Array([1, 2, 0]))
   );
 
-  t.deepEqual(
+  expect(
     getArrowFixedSizeListValues(expandedVector),
-    new Uint8Array([20, 21, 30, 31, 10, 11]),
     'expands rows from Arrow mapping vectors'
-  );
+  ).toEqual(new Uint8Array([20, 21, 30, 31, 10, 11]));
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector gathers scalar numeric vectors', t => {
+it('expandArrowVector gathers scalar numeric vectors', () => {
   const sourceVector = arrow.makeVector(new Int32Array([10, 20, 30]));
   const expandedVector = expandArrowVector(sourceVector, new Uint16Array([2, 2, 0]));
 
-  t.ok(
-    arrow.util.compareTypes(expandedVector.type, sourceVector.type),
+  expect(
+    Boolean(arrow.util.compareTypes(expandedVector.type, sourceVector.type)),
     'preserves scalar numeric type'
-  );
-  t.deepEqual(Array.from(expandedVector.toArray()), [30, 30, 10], 'gathers scalar rows');
+  ).toBe(true);
+  expect(Array.from(expandedVector.toArray()), 'gathers scalar rows').toEqual([30, 30, 10]);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector applies scalar nullValue to null source rows', t => {
+it('expandArrowVector applies scalar nullValue to null source rows', () => {
   const sourceVector = arrow.vectorFromArray([10, null, 30], new arrow.Int32());
   const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1, 2, 0, 1]), 99);
 
-  t.deepEqual(
+  expect(
     Array.from(expandedVector.toArray()),
-    [99, 30, 10, 99],
     'uses scalar nullValue wherever mapped source rows are null'
-  );
+  ).toEqual([99, 30, 10, 99]);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector applies FixedSizeList nullValue to null source rows', t => {
+it('expandArrowVector applies FixedSizeList nullValue to null source rows', () => {
   const sourceVector = arrow.vectorFromArray(
     [[1, 2], null, [3, 4]],
     new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false))
   ) as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
   const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1, 2, 0]), [9, 8]);
 
-  t.deepEqual(
+  expect(
     getArrowFixedSizeListValues(expandedVector),
-    new Float32Array([9, 8, 3, 4, 1, 2]),
     'uses vector nullValue wherever mapped source rows are null'
-  );
+  ).toEqual(new Float32Array([9, 8, 3, 4, 1, 2]));
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector checks null rows across chunked vectors', t => {
+it('expandArrowVector checks null rows across chunked vectors', () => {
   const firstChunk = arrow.vectorFromArray([1, 2], new arrow.Int32());
   const secondChunk = arrow.vectorFromArray([null, 4], new arrow.Int32());
   const sourceVector = new arrow.Vector([firstChunk.data[0]!, secondChunk.data[0]!]);
   const expandedVector = expandArrowVector(sourceVector, new Uint32Array([0, 2, 3]), 99);
 
-  t.deepEqual(
+  expect(
     Array.from(expandedVector.toArray()),
-    [1, 99, 4],
     'uses nullValue for null rows in later chunks'
-  );
+  ).toEqual([1, 99, 4]);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector validates nullValue shape and type', t => {
+it('expandArrowVector validates nullValue shape and type', () => {
   const scalarVector = arrow.makeVector(new Float32Array([10, 20]));
   const listVector = makeArrowFixedSizeListVector(
     new arrow.Uint8(),
@@ -335,74 +321,66 @@ test('expandArrowVector validates nullValue shape and type', t => {
     new Uint8Array([10, 20, 30, 255])
   );
 
-  t.throws(
+  expect(
     () => expandArrowVector(scalarVector, new Uint32Array([0]), [1]),
-    /scalar nullValue must be a number/,
     'rejects array nullValue for scalar vectors'
-  );
-  t.throws(
+  ).toThrow(/scalar nullValue must be a number/);
+  expect(
     () => expandArrowVector(listVector, new Uint32Array([0]), 1),
-    /FixedSizeList nullValue must be an array/,
     'rejects scalar nullValue for FixedSizeList vectors'
-  );
-  t.throws(
+  ).toThrow(/FixedSizeList nullValue must be an array/);
+  expect(
     () => expandArrowVector(listVector, new Uint32Array([0]), [1, 2, 3]),
-    /nullValue length 3 must match listSize 4/,
     'rejects FixedSizeList nullValue with the wrong width'
-  );
+  ).toThrow(/nullValue length 3 must match listSize 4/);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector preserves null-row values-buffer behavior without nullValue', t => {
+it('expandArrowVector preserves null-row values-buffer behavior without nullValue', () => {
   const sourceVector = arrow.vectorFromArray([10, null, 30], new arrow.Int32());
   const expandedVector = expandArrowVector(sourceVector, new Uint32Array([1]));
 
-  t.deepEqual(
+  expect(
     Array.from(expandedVector.toArray()),
-    [0],
     'omitted nullValue preserves existing values-buffer expansion behavior'
-  );
+  ).toEqual([0]);
 
-  t.end();
+  void 0;
 });
 
-test('expandArrowVector rejects invalid mappings and unsupported vectors', t => {
+it('expandArrowVector rejects invalid mappings and unsupported vectors', () => {
   const sourceVector = arrow.makeVector(new Float32Array([10, 20]));
 
-  t.throws(
+  expect(
     () => expandArrowVector(sourceVector, new Int32Array([-1])),
-    /cannot contain negative indices/,
     'rejects negative row indices'
-  );
-  t.throws(
+  ).toThrow(/cannot contain negative indices/);
+  expect(
     () => expandArrowVector(sourceVector, new Uint32Array([2])),
-    /outside vector length 2/,
     'rejects out-of-range row indices'
-  );
-  t.throws(
+  ).toThrow(/outside vector length 2/);
+  expect(
     () =>
       expandArrowVector(
         sourceVector,
         arrow.makeVector(new Float32Array([0])) as unknown as arrow.Vector<arrow.Int>
       ),
-    /row mapping must use 8, 16, or 32-bit integers/,
     'rejects non-integer Arrow row mappings'
-  );
-  t.throws(
+  ).toThrow(/row mapping must use 8, 16, or 32-bit integers/);
+  expect(
     () =>
       expandArrowVector(
         arrow.vectorFromArray(['alpha'], new arrow.Utf8()) as never,
         new Uint32Array([0])
       ),
-    /does not support Arrow type/,
     'rejects unsupported source vector types'
-  );
+  ).toThrow(/does not support Arrow type/);
 
-  t.end();
+  void 0;
 });
 
-test('GPUVector creates a GPU buffer from an Arrow vector', t => {
+it('GPUVector creates a GPU buffer from an Arrow vector', () => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -411,18 +389,18 @@ test('GPUVector creates a GPU buffer from an Arrow vector', t => {
   );
   const gpuVector = makeGPUVectorFromArrow(device, vector);
 
-  t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
-  t.equal(gpuVector.dataType, vector.type, 'exposes the Arrow vector type');
-  t.equal(gpuVector.format, 'float32x2', 'maps FixedSizeList<Float32, 2> to float32x2');
-  t.equal(gpuVector.length, 2, 'exposes the Arrow vector length');
-  t.equal(gpuVector.stride, 2, 'exposes the FixedSizeList stride');
-  t.equal(gpuVector.data[0].buffer.byteLength, 16, 'creates a buffer from the vector values');
+  expect(Boolean('vector' in gpuVector), 'does not retain the source Arrow vector').toBe(false);
+  expect(gpuVector.dataType, 'exposes the Arrow vector type').toBe(vector.type);
+  expect(gpuVector.format, 'maps FixedSizeList<Float32, 2> to float32x2').toBe('float32x2');
+  expect(gpuVector.length, 'exposes the Arrow vector length').toBe(2);
+  expect(gpuVector.stride, 'exposes the FixedSizeList stride').toBe(2);
+  expect(gpuVector.data[0].buffer.byteLength, 'creates a buffer from the vector values').toBe(16);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vector', async t => {
+it('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vector', async () => {
   const device = new NullDevice({});
   const sourceVector = makeArrowMatrix4x4Vector(
     new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1])
@@ -430,34 +408,36 @@ test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vect
   const gpuVector = makeGPUVectorFromArrow(device, sourceVector, {name: 'matrix'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
-  t.equal(gpuVector.stride, 16, 'preserves one mat4x4 scalar stride');
-  t.equal(gpuVector.byteStride, 64, 'preserves one mat4x4 row byte stride');
-  t.deepEqual(
+  expect(gpuVector.stride, 'preserves one mat4x4 scalar stride').toBe(16);
+  expect(gpuVector.byteStride, 'preserves one mat4x4 row byte stride').toBe(64);
+  expect(
     getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
-    getArrowFixedSizeListValues(sourceVector),
     'round-trips canonical matrix storage rows'
-  );
+  ).toEqual(getArrowFixedSizeListValues(sourceVector));
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
+it('GPUVector readAsync round-trips scalar numeric vectors', async () => {
   const device = new NullDevice({});
   const sourceVector = arrow.makeVector(new Int32Array([1, -2, 3]));
   const gpuVector = makeGPUVectorFromArrow(device, sourceVector);
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
-  t.ok(arrow.util.compareTypes(result.type, sourceVector.type), 'preserves Arrow dynamic type');
-  t.equal(result.length, sourceVector.length, 'preserves row count');
-  t.deepEqual(Array.from(result.toArray()), [1, -2, 3], 'reads scalar values from GPU buffer');
+  expect(
+    Boolean(arrow.util.compareTypes(result.type, sourceVector.type)),
+    'preserves Arrow dynamic type'
+  ).toBe(true);
+  expect(result.length, 'preserves row count').toBe(sourceVector.length);
+  expect(Array.from(result.toArray()), 'reads scalar values from GPU buffer').toEqual([1, -2, 3]);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector uploads Arrow Data chunks into separate GPUData buffers', async t => {
+it('GPUVector uploads Arrow Data chunks into separate GPUData buffers', async () => {
   const device = new NullDevice({});
   const type = new arrow.Float32();
   const sourceVector = new arrow.Vector([
@@ -469,32 +449,29 @@ test('GPUVector uploads Arrow Data chunks into separate GPUData buffers', async 
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
 
-  t.equal(gpuVector.data.length, 2, 'exposes one GPUData chunk per source chunk');
-  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunks');
-  t.notEqual(
-    gpuVector.data[0].buffer,
-    gpuVector.data[1].buffer,
-    'keeps each GPUData chunk on its own GPU buffer'
+  expect(gpuVector.data.length, 'exposes one GPUData chunk per source chunk').toBe(2);
+  expect(Boolean(gpuVector.data[0] instanceof GPUData), 'uses GPUData chunks').toBe(true);
+  expect(gpuVector.data[0].buffer, 'keeps each GPUData chunk on its own GPU buffer').not.toBe(
+    gpuVector.data[1].buffer
   );
-  t.equal(gpuVector.data[0].buffer.byteLength, 8, 'uploads the first source chunk buffer');
-  t.equal(gpuVector.data[1].buffer.byteLength, 4, 'uploads the second source chunk buffer');
-  t.notOk(
-    gpuVector.data[0].readbackMetadata,
+  expect(gpuVector.data[0].buffer.byteLength, 'uploads the first source chunk buffer').toBe(8);
+  expect(gpuVector.data[1].buffer.byteLength, 'uploads the second source chunk buffer').toBe(4);
+  expect(
+    Boolean(gpuVector.data[0].readbackMetadata),
     'fixed-width chunks do not retain extra readback metadata'
-  );
-  t.equal(gpuVector.data[1].byteOffset, 0, 'later chunks start at their own GPUData buffer');
-  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every chunk row');
-  t.deepEqual(
+  ).toBe(false);
+  expect(gpuVector.data[1].byteOffset, 'later chunks start at their own GPUData buffer').toBe(0);
+  expect(Array.from(vectorResult.toArray()), 'reads every chunk row').toEqual([1, 2, 3]);
+  expect(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
-    [1, 2],
     'reads one GPU data chunk'
-  );
+  ).toEqual([1, 2]);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t => {
+it('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async () => {
   const device = new NullDevice({});
   const firstChunk = arrow.vectorFromArray(['alpha', null], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['beta'], new arrow.Utf8());
@@ -504,28 +481,24 @@ test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t =>
   const vectorResult = await readArrowGPUVectorAsync(gpuVector);
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
 
-  t.equal(gpuVector.data.length, 2, 'keeps one GPUData object per UTF-8 source chunk');
-  t.equal(
-    gpuVector.data[0].readbackMetadata?.kind,
-    'utf8',
-    'retains compact UTF-8 readback metadata'
+  expect(gpuVector.data.length, 'keeps one GPUData object per UTF-8 source chunk').toBe(2);
+  expect(gpuVector.data[0].readbackMetadata?.kind, 'retains compact UTF-8 readback metadata').toBe(
+    'utf8'
   );
-  t.deepEqual(
+  expect(
     Array.from(vectorResult.toArray()),
-    ['alpha', null, 'beta'],
     'reads UTF-8 rows back across chunk boundaries'
-  );
-  t.deepEqual(
+  ).toEqual(['alpha', null, 'beta']);
+  expect(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
-    ['alpha', null],
     'reads an individual UTF-8 GPUData chunk'
-  );
+  ).toEqual(['alpha', null]);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining source data', async t => {
+it('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining source data', async () => {
   const device = new NullDevice({});
   const sourceVector = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
   const slicedVector = sourceVector.slice(1) as arrow.Vector<arrow.Utf8>;
@@ -533,18 +506,17 @@ test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining sour
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
-  t.deepEqual(Array.from(result.toArray()), [null, 'kept'], 'reads sliced UTF-8 rows');
-  t.deepEqual(
+  expect(Array.from(result.toArray()), 'reads sliced UTF-8 rows').toEqual([null, 'kept']);
+  expect(
     Array.from(result.data[0].valueOffsets as Int32Array),
-    [0, 0, 4],
     'reconstructs local compact UTF-8 offsets'
-  );
+  ).toEqual([0, 0, 4]);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector Dictionary<Utf8> upload uses sliced index rows', async t => {
+it('GPUVector Dictionary<Utf8> upload uses sliced index rows', async () => {
   const device = new NullDevice({});
   const sourceVector = makeExplicitArrowDictionaryVector(
     ['skip', 'alpha', 'beta'],
@@ -564,17 +536,15 @@ test('GPUVector Dictionary<Utf8> upload uses sliced index rows', async t => {
     sourceVector.length
   );
 
-  t.deepEqual(
-    Array.from(uploadedIndices),
-    [1, 2],
-    'uploads the sliced logical dictionary index range'
-  );
+  expect(Array.from(uploadedIndices), 'uploads the sliced logical dictionary index range').toEqual([
+    1, 2
+  ]);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
+it('GPUVector readAsync round-trips FixedSizeList vectors', async () => {
   const device = new NullDevice({});
   const sourceVector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -585,19 +555,20 @@ test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
-  t.ok(arrow.util.compareTypes(result.type, sourceVector.type), 'preserves FixedSizeList type');
-  t.equal(result.length, sourceVector.length, 'preserves FixedSizeList row count');
-  t.deepEqual(
-    getArrowFixedSizeListValues(result),
-    new Float32Array([1, 2, 3, 4]),
-    'reads child values from GPU buffer'
+  expect(
+    Boolean(arrow.util.compareTypes(result.type, sourceVector.type)),
+    'preserves FixedSizeList type'
+  ).toBe(true);
+  expect(result.length, 'preserves FixedSizeList row count').toBe(sourceVector.length);
+  expect(getArrowFixedSizeListValues(result), 'reads child values from GPU buffer').toEqual(
+    new Float32Array([1, 2, 3, 4])
   );
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector infers Arrow-vector object construction from vector props', t => {
+it('GPUVector infers Arrow-vector object construction from vector props', () => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -606,19 +577,19 @@ test('GPUVector infers Arrow-vector object construction from vector props', t =>
   );
   const gpuVector = makeGPUVectorFromArrow(device, vector, {name: 'positions'});
 
-  t.equal(gpuVector.name, 'positions', 'exposes vector name');
-  t.equal(gpuVector.dataType, vector.type, 'exposes the Arrow vector type');
-  t.equal(gpuVector.length, 2, 'exposes vector length');
-  t.equal(gpuVector.stride, 2, 'exposes scalar stride');
-  t.equal(gpuVector.byteOffset, 0, 'defaults byteOffset');
-  t.equal(gpuVector.byteStride, 8, 'deduces byteStride');
-  t.equal(gpuVector.ownsBuffer, true, 'uploaded vectors own their buffers');
+  expect(gpuVector.name, 'exposes vector name').toBe('positions');
+  expect(gpuVector.dataType, 'exposes the Arrow vector type').toBe(vector.type);
+  expect(gpuVector.length, 'exposes vector length').toBe(2);
+  expect(gpuVector.stride, 'exposes scalar stride').toBe(2);
+  expect(gpuVector.byteOffset, 'defaults byteOffset').toBe(0);
+  expect(gpuVector.byteStride, 'deduces byteStride').toBe(8);
+  expect(gpuVector.ownsBuffer, 'uploaded vectors own their buffers').toBe(true);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector wraps existing typed buffers', t => {
+it('GPUVector wraps existing typed buffers', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 16});
   const gpuVector = new GPUVector({
@@ -637,21 +608,21 @@ test('GPUVector wraps existing typed buffers', t => {
     destroy();
   };
 
-  t.equal(gpuVector.name, 'weights', 'exposes vector name');
-  t.equal(gpuVector.dataType.typeId, new arrow.Float32().typeId, 'exposes supplied Arrow type');
-  t.equal(gpuVector.length, 4, 'exposes supplied length');
-  t.equal(gpuVector.stride, 1, 'deduces scalar stride');
-  t.equal(gpuVector.byteStride, 4, 'deduces byte stride');
-  t.equal(gpuVector.data.length, 1, 'exposes one GPUData chunk for the wrapped buffer');
-  t.equal(gpuVector.data[0].buffer, buffer, 'GPUData keeps the wrapped buffer');
+  expect(gpuVector.name, 'exposes vector name').toBe('weights');
+  expect(gpuVector.dataType.typeId, 'exposes supplied Arrow type').toBe(new arrow.Float32().typeId);
+  expect(gpuVector.length, 'exposes supplied length').toBe(4);
+  expect(gpuVector.stride, 'deduces scalar stride').toBe(1);
+  expect(gpuVector.byteStride, 'deduces byte stride').toBe(4);
+  expect(gpuVector.data.length, 'exposes one GPUData chunk for the wrapped buffer').toBe(1);
+  expect(gpuVector.data[0].buffer, 'GPUData keeps the wrapped buffer').toBe(buffer);
 
   gpuVector.destroy();
-  t.equal(destroyed, false, 'does not destroy non-owned buffers');
+  expect(destroyed, 'does not destroy non-owned buffers').toBe(false);
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector readAsync respects wrapped-buffer byteOffset and padded byteStride', async t => {
+it('GPUVector readAsync respects wrapped-buffer byteOffset and padded byteStride', async () => {
   const device = new NullDevice({});
   const bytes = new Uint8Array(20);
   new Float32Array(bytes.buffer, 4, 1)[0] = 1.5;
@@ -670,14 +641,14 @@ test('GPUVector readAsync respects wrapped-buffer byteOffset and padded byteStri
 
   const result = await readArrowGPUVectorAsync(gpuVector);
 
-  t.deepEqual(Array.from(result.toArray()), [1.5, 2.5], 'compacts padded rows');
+  expect(Array.from(result.toArray()), 'compacts padded rows').toEqual([1.5, 2.5]);
 
   gpuVector.destroy();
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector wraps interleaved buffers', t => {
+it('GPUVector wraps interleaved buffers', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 32});
   const gpuVector = new GPUVector({
@@ -694,31 +665,33 @@ test('GPUVector wraps interleaved buffers', t => {
     ownsBuffer: true
   });
 
-  t.equal(gpuVector.name, 'instances', 'exposes vector name');
-  t.ok(arrow.DataType.isBinary(gpuVector.dataType), 'uses Arrow Binary for interleaved storage');
-  t.equal(gpuVector.length, 2, 'exposes row count');
-  t.equal(gpuVector.stride, 16, 'uses byte stride as opaque row stride');
-  t.equal(gpuVector.data.length, 1, 'exposes one opaque GPUData chunk');
-  t.ok(arrow.DataType.isBinary(gpuVector.data[0].dataType), 'GPUData uses Arrow Binary');
-  t.equal(gpuVector.data[0].buffer, buffer, 'GPUData keeps the interleaved buffer');
-  t.deepEqual(
-    gpuVector.bufferLayout,
-    {
-      name: 'instances',
-      byteStride: 16,
-      attributes: [
-        {attribute: 'positions', format: 'float32x3', byteOffset: 0},
-        {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
-      ]
-    },
-    'exposes interleaved buffer layout'
-  );
+  expect(gpuVector.name, 'exposes vector name').toBe('instances');
+  expect(
+    Boolean(arrow.DataType.isBinary(gpuVector.dataType)),
+    'uses Arrow Binary for interleaved storage'
+  ).toBe(true);
+  expect(gpuVector.length, 'exposes row count').toBe(2);
+  expect(gpuVector.stride, 'uses byte stride as opaque row stride').toBe(16);
+  expect(gpuVector.data.length, 'exposes one opaque GPUData chunk').toBe(1);
+  expect(
+    Boolean(arrow.DataType.isBinary(gpuVector.data[0].dataType)),
+    'GPUData uses Arrow Binary'
+  ).toBe(true);
+  expect(gpuVector.data[0].buffer, 'GPUData keeps the interleaved buffer').toBe(buffer);
+  expect(gpuVector.bufferLayout, 'exposes interleaved buffer layout').toEqual({
+    name: 'instances',
+    byteStride: 16,
+    attributes: [
+      {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+      {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
+    ]
+  });
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector readAsync rejects interleaved vectors', async t => {
+it('GPUVector readAsync rejects interleaved vectors', async () => {
   const device = new NullDevice({});
   const gpuVector = new GPUVector({
     type: 'interleaved',
@@ -736,19 +709,19 @@ test('GPUVector readAsync rejects interleaved vectors', async t => {
 
   try {
     await readArrowGPUVectorAsync(gpuVector);
-    t.fail('readAsync should reject interleaved vectors');
+    expect(false, 'readAsync should reject interleaved vectors').toBe(true);
   } catch (error) {
-    t.ok(
-      error instanceof Error && /does not support interleaved vectors/.test(error.message),
+    expect(
+      Boolean(error instanceof Error && /does not support interleaved vectors/.test(error.message)),
       'throws a clear unsupported error'
-    );
+    ).toBe(true);
   }
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector transfers buffer ownership between same-buffer views', t => {
+it('GPUVector transfers buffer ownership between same-buffer views', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 16});
   const source = new GPUVector({
@@ -772,15 +745,15 @@ test('GPUVector transfers buffer ownership between same-buffer views', t => {
 
   source.transferBufferOwnership(target);
 
-  t.equal(source.ownsBuffer, false, 'source no longer owns the buffer');
-  t.equal(target.ownsBuffer, true, 'target now owns the buffer');
+  expect(source.ownsBuffer, 'source no longer owns the buffer').toBe(false);
+  expect(target.ownsBuffer, 'target now owns the buffer').toBe(true);
 
   source.destroy();
   target.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector addData aggregates GPU chunks without adopting their buffers', t => {
+it('GPUVector addData aggregates GPU chunks without adopting their buffers', () => {
   const device = new NullDevice({});
   const firstBuffer = device.createBuffer({byteLength: 8});
   const secondBuffer = device.createBuffer({byteLength: 8});
@@ -807,32 +780,35 @@ test('GPUVector addData aggregates GPU chunks without adopting their buffers', t
 
   gpuVector.addData(secondData);
 
-  t.equal(gpuVector.length, 4, 'updates aggregate row count');
-  t.equal(gpuVector.data.length, 2, 'preserves each appended GPU data chunk');
-  t.notEqual(
-    gpuVector.data[0].buffer,
-    gpuVector.data[1].buffer,
-    'keeps aggregate vector storage on its GPUData chunks'
+  expect(gpuVector.length, 'updates aggregate row count').toBe(4);
+  expect(gpuVector.data.length, 'preserves each appended GPU data chunk').toBe(2);
+  expect(gpuVector.data[0].buffer, 'keeps aggregate vector storage on its GPUData chunks').not.toBe(
+    gpuVector.data[1].buffer
   );
 
   gpuVector.destroy();
-  t.notOk(firstBuffer.destroyed, 'does not adopt ownership of the first data buffer');
-  t.notOk(secondBuffer.destroyed, 'does not adopt ownership of the appended data buffer');
+  expect(Boolean(firstBuffer.destroyed), 'does not adopt ownership of the first data buffer').toBe(
+    false
+  );
+  expect(
+    Boolean(secondBuffer.destroyed),
+    'does not adopt ownership of the appended data buffer'
+  ).toBe(false);
   firstBuffer.destroy();
   secondBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUVector exposes primitive vector length and stride', t => {
+it('GPUVector exposes primitive vector length and stride', () => {
   const device = new NullDevice({});
   const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
   const gpuVector = makeGPUVectorFromArrow(device, vector);
 
-  t.equal(gpuVector.length, 3, 'exposes the primitive vector length');
-  t.equal(gpuVector.stride, 1, 'exposes primitive vector stride as 1');
+  expect(gpuVector.length, 'exposes the primitive vector length').toBe(3);
+  expect(gpuVector.stride, 'exposes primitive vector stride as 1').toBe(1);
 
   gpuVector.destroy();
-  t.end();
+  void 0;
 });
 
 function makeExplicitArrowDictionaryVector(

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('filterShaderPlugin#WebGL2 model binds, updates, and draws', async t => {
+it('filterShaderPlugin#WebGL2 model binds, updates, and draws', async () => {
   const device = await getWebGLTestDevice();
   const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)');
@@ -38,21 +38,23 @@ void main() { fragmentColor = vec4(1.0); }`,
 
   model.shaderInputs.setProps({filter: {enabled: true, min: 0.25, max: 0.75}});
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
-  t.ok(model.draw(renderPass), 'WebGL2 model draws through the filter plugin');
+  expect(Boolean(model.draw(renderPass)), 'WebGL2 model draws through the filter plugin').toBe(
+    true
+  );
   renderPass.end();
   device.submit();
 
   renderPass.destroy();
   model.destroy();
   filterValues.destroy();
-  t.end();
+  void 0;
 });
 
-test('filterShaderPlugin#WebGPU model binds, updates, and draws', async t => {
+it('filterShaderPlugin#WebGPU model binds, updates, and draws', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -85,20 +87,24 @@ fn fragmentMain() -> @location(0) vec4<f32> {
     bufferLayout: [{name: 'filterValues', format: 'float32'}]
   });
 
-  t.ok(
-    model.pipeline.shaderLayout.attributes.some(
-      attribute => attribute.name === 'filterValues' && attribute.type === 'f32'
+  expect(
+    Boolean(
+      model.pipeline.shaderLayout.attributes.some(
+        attribute => attribute.name === 'filterValues' && attribute.type === 'f32'
+      )
     ),
     'reflected plugin attribute uses its public name'
-  );
+  ).toBe(true);
   model.shaderInputs.setProps({filter: {enabled: true, min: 0.25, max: 0.75}});
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
-  t.ok(model.draw(renderPass), 'WebGPU model draws through the filter plugin');
+  expect(Boolean(model.draw(renderPass)), 'WebGPU model draws through the filter plugin').toBe(
+    true
+  );
   renderPass.end();
   device.submit();
 
   renderPass.destroy();
   model.destroy();
   filterValues.destroy();
-  t.end();
+  void 0;
 });

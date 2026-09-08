@@ -127,6 +127,12 @@ export class FlatController {
     }
     const xRange = view.xMax - view.xMin;
     const yRange = view.yMax - view.yMin;
+    // Finite endpoints are not sufficient: subtracting two very large values can overflow to
+    // Infinity, which would contaminate the derived view state and eventually reach the GPU.
+    if (!Number.isFinite(xRange) || !Number.isFinite(yRange) || xRange <= 0 || yRange <= 0) {
+      this.lastPointer = [event.clientX, event.clientY];
+      return;
+    }
     const xMin = clamp(
       view.xMin - (horizontalMovement / Math.max(rectangle.width, 1)) * xRange,
       bounds.xMin,
@@ -137,7 +143,18 @@ export class FlatController {
       bounds.yMin,
       Math.max(bounds.yMin, bounds.yMax - yRange)
     );
-    this.props.onViewChange({xMin, xMax: xMin + xRange, yMin, yMax: yMin + yRange});
+    const xMax = xMin + xRange;
+    const yMax = yMin + yRange;
+    if (
+      !Number.isFinite(xMin) ||
+      !Number.isFinite(xMax) ||
+      !Number.isFinite(yMin) ||
+      !Number.isFinite(yMax)
+    ) {
+      this.lastPointer = [event.clientX, event.clientY];
+      return;
+    }
+    this.props.onViewChange({xMin, xMax, yMin, yMax});
     this.lastPointer = [event.clientX, event.clientY];
   };
 
@@ -180,7 +197,14 @@ export class FlatController {
     );
     const previousRange = view.xMax - view.xMin;
     const maximumRange = bounds.xMax - bounds.xMin;
-    if (previousRange <= 0 || maximumRange <= 0) {
+    // Validate the arithmetic as well as its inputs because finite endpoints can still produce an
+    // infinite range. Continuing with that range can turn later Infinity - Infinity math into NaN.
+    if (
+      !Number.isFinite(previousRange) ||
+      !Number.isFinite(maximumRange) ||
+      previousRange <= 0 ||
+      maximumRange <= 0
+    ) {
       return;
     }
     const rangeTolerance = Math.max(maximumRange, 1) * Number.EPSILON * 8;
@@ -196,6 +220,9 @@ export class FlatController {
     const requestedXMin = anchor - nextRange * horizontalFraction;
     const xMin = clamp(requestedXMin, bounds.xMin, Math.max(bounds.xMin, bounds.xMax - nextRange));
     const xMax = xMin + nextRange;
+    if (!Number.isFinite(xMin) || !Number.isFinite(xMax)) {
+      return;
+    }
     if (xMin === view.xMin && xMax === view.xMax) {
       return;
     }

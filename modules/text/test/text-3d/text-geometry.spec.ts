@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   buildText3DGlyphAtlas,
   extrudeShapes,
@@ -13,49 +13,47 @@ import {
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 
-test('extrudeShapes outputs complete attribute arrays', t => {
+it('extrudeShapes outputs complete attribute arrays', () => {
   const font = parseFont(simpleFont);
   const shapes = font.generateShapes('A', 20, 2);
   const attributes = extrudeShapes(shapes, {depth: 2, curveSegments: 2});
 
-  t.ok(attributes.positions.length > 0, 'positions are populated');
-  t.equal(attributes.normals.length, attributes.positions.length, 'normals align with positions');
-  t.equal(
-    attributes.uvs.length,
-    (attributes.positions.length / 3) * 2,
-    'uv count matches vertices'
+  expect(Boolean(attributes.positions.length > 0), 'positions are populated').toBe(true);
+  expect(attributes.normals.length, 'normals align with positions').toBe(
+    attributes.positions.length
   );
-  t.end();
+  expect(attributes.uvs.length, 'uv count matches vertices').toBe(
+    (attributes.positions.length / 3) * 2
+  );
+  void 0;
 });
 
-test('TextGeometry exposes luma.gl attribute layout', t => {
+it('TextGeometry exposes luma.gl attribute layout', () => {
   const font = parseFont(simpleFont);
   const geometry = new TextGeometry('A', {font, size: 10, depth: 2, curveSegments: 2});
 
-  t.equal(geometry.topology, 'triangle-list', 'topology matches expected primitive type');
-  t.ok(geometry.attributes.positions.value.length > 0, 'positions are populated');
-  t.equal(
-    geometry.attributes.normals.value.length,
-    geometry.attributes.positions.value.length,
-    'normals align with position count'
+  expect(geometry.topology, 'topology matches expected primitive type').toBe('triangle-list');
+  expect(Boolean(geometry.attributes.positions.value.length > 0), 'positions are populated').toBe(
+    true
   );
-  t.equal(
-    geometry.attributes.texCoords.value.length,
-    (geometry.attributes.positions.value.length / 3) * 2,
-    'uvs match vertex count'
+  expect(geometry.attributes.normals.value.length, 'normals align with position count').toBe(
+    geometry.attributes.positions.value.length
   );
-  t.deepEqual(geometry.bounds.min, [0, 0, 0], 'bounds expose the mesh minimum');
-  t.ok(geometry.bounds.max[0] > 0, 'bounds expose the mesh width');
-  t.ok(geometry.bounds.max[1] > 0, 'bounds expose the mesh height');
-  t.equal(geometry.bounds.max[2], 2, 'bounds expose the extrusion depth');
-  t.end();
+  expect(geometry.attributes.texCoords.value.length, 'uvs match vertex count').toBe(
+    (geometry.attributes.positions.value.length / 3) * 2
+  );
+  expect(geometry.bounds.min, 'bounds expose the mesh minimum').toEqual([0, 0, 0]);
+  expect(Boolean(geometry.bounds.max[0] > 0), 'bounds expose the mesh width').toBe(true);
+  expect(Boolean(geometry.bounds.max[1] > 0), 'bounds expose the mesh height').toBe(true);
+  expect(geometry.bounds.max[2], 'bounds expose the extrusion depth').toBe(2);
+  void 0;
 });
 
-test('Font can center each line independently', t => {
+it('Font can center each line independently', () => {
   const font = parseFont(simpleFont);
   const shapes = font.generateShapes('A\nAA', 10, 2, {align: 'center'});
 
-  t.equal(shapes.length, 3, 'each glyph produced a shape');
+  expect(shapes.length, 'each glyph produced a shape').toBe(3);
 
   const lineBounds = new Map<number, {minX: number; maxX: number}>();
   for (const shape of shapes) {
@@ -80,11 +78,14 @@ test('Font can center each line independently', t => {
   const [firstLineBounds, secondLineBounds] = [...lineBounds.values()];
   const firstLineCenter = (firstLineBounds.minX + firstLineBounds.maxX) / 2;
   const secondLineCenter = (secondLineBounds.minX + secondLineBounds.maxX) / 2;
-  t.ok(Math.abs(firstLineCenter - secondLineCenter) < 0.0001, 'line centers align horizontally');
-  t.end();
+  expect(
+    Boolean(Math.abs(firstLineCenter - secondLineCenter) < 0.0001),
+    'line centers align horizontally'
+  ).toBe(true);
+  void 0;
 });
 
-test('extrusion preserves holes in polygonal glyphs', t => {
+it('extrusion preserves holes in polygonal glyphs', () => {
   const font = parseFont(simpleFont);
   const shapes = font.generateShapes('A', 20, 4);
   const attributes = extrudeShapes(shapes, {depth: 2, bevelEnabled: false, curveSegments: 4});
@@ -95,15 +96,15 @@ test('extrusion preserves holes in polygonal glyphs', t => {
   const expectedArea =
     expectedOuterWidth * expectedOuterWidth - expectedHoleWidth * expectedHoleWidth;
 
-  t.ok(frontFaceArea > 0, 'front face area was measured');
-  t.ok(
-    Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05,
+  expect(Boolean(frontFaceArea > 0), 'front face area was measured').toBe(true);
+  expect(
+    Boolean(Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05),
     'triangulation honors inner hole'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('Text3D glyph atlas reuses renderable glyph geometry in stable first-use order', t => {
+it('Text3D glyph atlas reuses renderable glyph geometry in stable first-use order', () => {
   const font = parseFont(simpleFont);
   const glyphAtlas = buildText3DGlyphAtlas(['ABBA'], {
     font,
@@ -112,26 +113,22 @@ test('Text3D glyph atlas reuses renderable glyph geometry in stable first-use or
     curveSegments: 2
   });
 
-  t.deepEqual(
+  expect(
     glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
-    ['A', '?'],
     'missing source glyphs reuse the fallback glyph once'
+  ).toEqual(['A', '?']);
+  expect(glyphAtlas.glyphs[0].firstVertex, 'first glyph starts the shared geometry').toBe(0);
+  expect(glyphAtlas.glyphs[1].firstVertex, 'second glyph starts after the first shared range').toBe(
+    glyphAtlas.glyphs[0].vertexCount
   );
-  t.equal(glyphAtlas.glyphs[0].firstVertex, 0, 'first glyph starts the shared geometry');
-  t.equal(
-    glyphAtlas.glyphs[1].firstVertex,
-    glyphAtlas.glyphs[0].vertexCount,
-    'second glyph starts after the first shared range'
-  );
-  t.equal(
+  expect(
     glyphAtlas.geometry.vertexCount,
-    glyphAtlas.glyphs.reduce((vertexCount, glyph) => vertexCount + glyph.vertexCount, 0),
     'shared geometry contains each renderable used glyph once'
-  );
-  t.end();
+  ).toBe(glyphAtlas.glyphs.reduce((vertexCount, glyph) => vertexCount + glyph.vertexCount, 0));
+  void 0;
 });
 
-test('Text3D glyph layout advances spaces and rows without emitting whitespace geometry', t => {
+it('Text3D glyph layout advances spaces and rows without emitting whitespace geometry', () => {
   const font = parseFont(simpleFont);
   const glyphAtlas = buildText3DGlyphAtlas(['A A', 'A'], {
     font,
@@ -141,24 +138,23 @@ test('Text3D glyph layout advances spaces and rows without emitting whitespace g
   });
   const glyphLayout = layoutText3DGlyphRows(['A A', 'A'], glyphAtlas);
 
-  t.deepEqual(
+  expect(
     glyphAtlas.glyphs.map(glyph => glyph.glyphCharacter),
-    ['A'],
     'space advances text without entering the renderable glyph atlas'
-  );
-  t.equal(glyphLayout.instances.length, 3, 'only visible glyphs emit instances');
-  t.ok(
-    glyphLayout.instances[1].offset[0] > glyphLayout.instances[0].offset[0],
+  ).toEqual(['A']);
+  expect(glyphLayout.instances.length, 'only visible glyphs emit instances').toBe(3);
+  expect(
+    Boolean(glyphLayout.instances[1].offset[0] > glyphLayout.instances[0].offset[0]),
     'space contributes horizontal advance between visible glyphs'
-  );
-  t.ok(
-    glyphLayout.instances[2].offset[1] < glyphLayout.instances[0].offset[1],
+  ).toBe(true);
+  expect(
+    Boolean(glyphLayout.instances[2].offset[1] < glyphLayout.instances[0].offset[1]),
     'next row advances downward by line height'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('Text3D glyph layout centers each row using the current font advances', t => {
+it('Text3D glyph layout centers each row using the current font advances', () => {
   const font = parseFont(simpleFont);
   const glyphAtlas = buildText3DGlyphAtlas(['A', 'AA'], {
     font,
@@ -169,18 +165,17 @@ test('Text3D glyph layout centers each row using the current font advances', t =
   const glyphLayout = layoutText3DGlyphRows(['A', 'AA'], glyphAtlas, {align: 'center'});
   const [firstRowGlyph, secondRowFirstGlyph, secondRowSecondGlyph] = glyphLayout.instances;
 
-  t.equal(firstRowGlyph.offset[0], -font.measureLineWidth('A', 10) / 2, 'single glyph row centers');
-  t.equal(
-    secondRowFirstGlyph.offset[0],
-    -font.measureLineWidth('AA', 10) / 2,
-    'multi-glyph row starts at its centered advance'
+  expect(firstRowGlyph.offset[0], 'single glyph row centers').toBe(
+    -font.measureLineWidth('A', 10) / 2
   );
-  t.equal(
+  expect(secondRowFirstGlyph.offset[0], 'multi-glyph row starts at its centered advance').toBe(
+    -font.measureLineWidth('AA', 10) / 2
+  );
+  expect(
     secondRowSecondGlyph.offset[0],
-    secondRowFirstGlyph.offset[0] + font.getGlyphAdvance('A', 10),
     'later glyphs retain source advance after centered start'
-  );
-  t.end();
+  ).toBe(secondRowFirstGlyph.offset[0] + font.getGlyphAdvance('A', 10));
+  void 0;
 });
 
 /** Computes the area of the first lid in the extruded geometry. */

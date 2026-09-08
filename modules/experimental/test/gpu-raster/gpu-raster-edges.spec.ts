@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -47,11 +47,11 @@ type EdgeResult = {
   stats: ReturnType<GPUCommandGraph['compile']>['stats'];
 };
 
-test('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, and every border mode', async testCase => {
+it('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, and every border mode', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -80,19 +80,17 @@ test('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, 
       borderMode: 'clamp'
     };
     const result = await assertEdgeMatchesOracle(
-      testCase,
       device,
       `${configuration.operator}-${configuration.direction}-ramp`,
       fixture
     );
-    testCase.equal(
+    expect(
       result.values[3 * width + 4],
-      configuration.response,
       `${configuration.operator} ${configuration.direction} preserves its raw signed response`
-    );
+    ).toBe(configuration.response);
   }
 
-  const scaled = await assertEdgeMatchesOracle(testCase, device, 'scaled-sobel-ramp', {
+  const scaled = await assertEdgeMatchesOracle(device, 'scaled-sobel-ramp', {
     width,
     height,
     values: ramp,
@@ -101,10 +99,10 @@ test('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, 
     scale: 0.125,
     borderMode: 'clamp'
   });
-  testCase.equal(scaled.values[3 * width + 4], 2, 'positive scale multiplies the signed response');
+  expect(scaled.values[3 * width + 4], 'positive scale multiplies the signed response').toBe(2);
 
   for (const borderMode of ['clamp', 'reflect', 'constant', 'nodata'] as const) {
-    await assertEdgeMatchesOracle(testCase, device, `sobel-border-${borderMode}`, {
+    await assertEdgeMatchesOracle(device, `sobel-border-${borderMode}`, {
       width: 3,
       height: 3,
       values: Float32Array.from([1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -114,7 +112,7 @@ test('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, 
       borderValue: 5
     });
   }
-  await assertEdgeMatchesOracle(testCase, device, 'scharr-one-pixel-reflect', {
+  await assertEdgeMatchesOracle(device, 'scharr-one-pixel-reflect', {
     width: 1,
     height: 1,
     values: Float32Array.from([11]),
@@ -122,21 +120,21 @@ test('GPURaster gradients preserve signed Sobel/Scharr ramp responses, scaling, 
     direction: 'y',
     borderMode: 'reflect'
   });
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster Laplacians preserve signed four/eight-connected impulse responses and constant regions', async testCase => {
+it('GPURaster Laplacians preserve signed four/eight-connected impulse responses and constant regions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const impulse = new Float32Array(25);
   impulse[12] = 1;
   for (const connectivity of [4, 8] as const) {
-    const result = await assertEdgeMatchesOracle(testCase, device, `laplacian-${connectivity}`, {
+    const result = await assertEdgeMatchesOracle(device, `laplacian-${connectivity}`, {
       width: 5,
       height: 5,
       values: impulse,
@@ -144,16 +142,14 @@ test('GPURaster Laplacians preserve signed four/eight-connected impulse response
       connectivity,
       borderMode: 'clamp'
     });
-    testCase.equal(result.values[12], -connectivity, 'positive impulse has a negative center');
-    testCase.equal(
-      result.values[6],
-      connectivity === 8 ? 1 : 0,
-      'diagonal response follows connectivity'
+    expect(result.values[12], 'positive impulse has a negative center').toBe(-connectivity);
+    expect(result.values[6], 'diagonal response follows connectivity').toBe(
+      connectivity === 8 ? 1 : 0
     );
-    testCase.equal(result.values[7], 1, 'orthogonal impulse response remains positive');
+    expect(result.values[7], 'orthogonal impulse response remains positive').toBe(1);
   }
 
-  const constant = await assertEdgeMatchesOracle(testCase, device, 'laplacian-constant', {
+  const constant = await assertEdgeMatchesOracle(device, 'laplacian-constant', {
     width: 7,
     height: 5,
     values: Float32Array.from(Array.from({length: 35}, () => 17)),
@@ -162,18 +158,18 @@ test('GPURaster Laplacians preserve signed four/eight-connected impulse response
     scale: 0.5,
     borderMode: 'reflect'
   });
-  testCase.ok(
-    constant.values.every(value => value === 0),
+  expect(
+    Boolean(constant.values.every(value => value === 0)),
     'constant scenes have zero curvature'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPURaster edges reject native integer nodata, NaN, masks and preserve calibration/view offsets', async testCase => {
+it('GPURaster edges reject native integer nodata, NaN, masks and preserve calibration/view offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -183,7 +179,7 @@ test('GPURaster edges reject native integer nodata, NaN, masks and preserve cali
   unsignedValues[10] = 4294967295;
   const unsignedValidity = Uint32Array.from(Array.from({length: 35}, () => 1));
   unsignedValidity[24] = 0;
-  const unsigned = await assertEdgeMatchesOracle(testCase, device, 'unsigned-nodata-offsets', {
+  const unsigned = await assertEdgeMatchesOracle(device, 'unsigned-nodata-offsets', {
     width: 7,
     height: 5,
     values: unsignedValues,
@@ -198,14 +194,14 @@ test('GPURaster edges reject native integer nodata, NaN, masks and preserve cali
     prefixLength: 1,
     borderMode: 'clamp'
   });
-  testCase.equal(unsigned.prefixedValues[0], 0, 'float32 output prefix remains untouched');
-  testCase.equal(unsigned.prefixedValidity[0], 0, 'validity prefix remains untouched');
-  testCase.equal(unsigned.validity[10], 0, 'raw maximum uint32 nodata stays invalid');
-  testCase.equal(unsigned.validity[24], 0, 'explicit validity masks stay invalid');
+  expect(unsigned.prefixedValues[0], 'float32 output prefix remains untouched').toBe(0);
+  expect(unsigned.prefixedValidity[0], 'validity prefix remains untouched').toBe(0);
+  expect(unsigned.validity[10], 'raw maximum uint32 nodata stays invalid').toBe(0);
+  expect(unsigned.validity[24], 'explicit validity masks stay invalid').toBe(0);
 
   const signedValues = Int32Array.from(Array.from({length: 25}, (_, index) => index - 12));
   signedValues[12] = -2147483648;
-  await assertEdgeMatchesOracle(testCase, device, 'signed-nodata-scharr', {
+  await assertEdgeMatchesOracle(device, 'signed-nodata-scharr', {
     width: 5,
     height: 5,
     values: signedValues,
@@ -223,7 +219,7 @@ test('GPURaster edges reject native integer nodata, NaN, masks and preserve cali
   floatingValues[22] = Number.POSITIVE_INFINITY;
   const floatingValidity = Uint32Array.from(Array.from({length: 35}, () => 1));
   floatingValidity[18] = 0;
-  const floating = await assertEdgeMatchesOracle(testCase, device, 'floating-invalid-magnitude', {
+  const floating = await assertEdgeMatchesOracle(device, 'floating-invalid-magnitude', {
     width: 7,
     height: 5,
     values: floatingValues,
@@ -232,17 +228,20 @@ test('GPURaster edges reject native integer nodata, NaN, masks and preserve cali
     borderMode: 'clamp'
   });
   for (const index of [9, 18, 22]) {
-    testCase.equal(floating.validity[index], 0, `invalid center ${index} remains masked`);
-    testCase.ok(Number.isNaN(floating.values[index]), `invalid center ${index} publishes NaN`);
+    expect(floating.validity[index], `invalid center ${index} remains masked`).toBe(0);
+    expect(
+      Boolean(Number.isNaN(floating.values[index])),
+      `invalid center ${index} publishes NaN`
+    ).toBe(true);
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster gradient magnitude uses graph-owned scratch and overflow-stable GPU hypot', async testCase => {
+it('GPURaster gradient magnitude uses graph-owned scratch and overflow-stable GPU hypot', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -255,7 +254,7 @@ test('GPURaster gradient magnitude uses graph-owned scratch and overflow-stable 
     )
   );
   for (const operator of ['sobel', 'scharr'] as const) {
-    const result = await assertEdgeMatchesOracle(testCase, device, `${operator}-magnitude`, {
+    const result = await assertEdgeMatchesOracle(device, `${operator}-magnitude`, {
       width,
       height,
       values: ramp,
@@ -263,27 +262,23 @@ test('GPURaster gradient magnitude uses graph-owned scratch and overflow-stable 
       operator,
       borderMode: 'reflect'
     });
-    testCase.deepEqual(
+    expect(
       result.stats.nodeOrder,
-      [
-        `${operator}-magnitude-horizontal`,
-        `${operator}-magnitude-vertical`,
-        `${operator}-magnitude-magnitude`
-      ],
       `${operator} magnitude contributes three dependency-ordered GPU passes`
+    ).toEqual([
+      `${operator}-magnitude-horizontal`,
+      `${operator}-magnitude-vertical`,
+      `${operator}-magnitude-magnitude`
+    ]);
+    expect(result.stats.logicalTransientBufferCount, 'both directions own values/masks').toBe(4);
+    expect(result.stats.physicalTransientBufferCount, 'all four live until hypot').toBe(4);
+    expect(result.stats.logicalTransientBytes, 'four float32-width buffers').toBe(
+      width * height * 16
     );
-    testCase.equal(result.stats.logicalTransientBufferCount, 4, 'both directions own values/masks');
-    testCase.equal(result.stats.physicalTransientBufferCount, 4, 'all four live until hypot');
-    testCase.equal(
-      result.stats.logicalTransientBytes,
-      width * height * 16,
-      'four float32-width buffers'
-    );
-    testCase.equal(
+    expect(
       result.values[3 * width + 4],
-      operator === 'sobel' ? 40 : 160,
       'orthogonal 3-4 ramp yields an exact 5-scaled magnitude'
-    );
+    ).toBe(operator === 'sobel' ? 40 : 160);
   }
 
   const hugeRamp = Float32Array.from(
@@ -292,25 +287,25 @@ test('GPURaster gradient magnitude uses graph-owned scratch and overflow-stable 
       (_, index) => (index % width) * 1e20 + Math.floor(index / width) * 0.75e20
     )
   );
-  const stable = await assertEdgeMatchesOracle(testCase, device, 'overflow-stable-magnitude', {
+  const stable = await assertEdgeMatchesOracle(device, 'overflow-stable-magnitude', {
     width,
     height,
     values: hugeRamp,
     mode: 'magnitude',
     borderMode: 'clamp'
   });
-  testCase.ok(
-    Number.isFinite(stable.values[3 * width + 4]) && stable.values[3 * width + 4] > 1e20,
+  expect(
+    Boolean(Number.isFinite(stable.values[3 * width + 4]) && stable.values[3 * width + 4] > 1e20),
     'magnitude remains finite even though naively squaring either component overflows float32'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('GPURaster chained magnitudes reuse transient allocations and preserve imported buffer ownership', async testCase => {
+it('GPURaster chained magnitudes reuse transient allocations and preserve imported buffer ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -372,35 +367,28 @@ test('GPURaster chained magnitudes reuse transient allocations and preserve impo
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.equal(
-    compiled.stats.logicalTransientBufferCount,
-    8,
-    'four logical buffers per magnitude'
-  );
-  testCase.equal(
+  expect(compiled.stats.logicalTransientBufferCount, 'four logical buffers per magnitude').toBe(8);
+  expect(
     compiled.stats.physicalTransientBufferCount,
-    4,
     'nonoverlapping lifetimes reuse four buffers'
-  );
-  testCase.equal(
-    compiled.stats.reusedTransientBytes,
-    pixelCount * 16,
-    'scratch reuse avoids duplicate allocations'
+  ).toBe(4);
+  expect(compiled.stats.reusedTransientBytes, 'scratch reuse avoids duplicate allocations').toBe(
+    pixelCount * 16
   );
   submitGraph(device, compiled, 'first-edge-encoding');
   const initial = await readFloat32(secondOutputBuffer, pixelCount);
-  testCase.ok(
-    initial.some(value => value !== 0),
+  expect(
+    Boolean(initial.some(value => value !== 0)),
     'first scene produces a nonconstant edge response'
-  );
+  ).toBe(true);
 
   sourceBuffer.write(Float32Array.from(Array.from({length: pixelCount}, () => 7)));
   submitGraph(device, compiled, 'second-edge-encoding');
   const updated = await readFloat32(secondOutputBuffer, pixelCount);
-  testCase.ok(
-    updated.every(value => value === 0),
+  expect(
+    Boolean(updated.every(value => value === 0)),
     'reusable graph recomputes replacement constant scene'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -410,33 +398,34 @@ test('GPURaster chained magnitudes reuse transient allocations and preserve impo
     secondOutputBuffer,
     secondValidityBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'graph never destroys imported caller-owned storage');
+    expect(Boolean(buffer.destroyed), 'graph never destroys imported caller-owned storage').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 async function assertEdgeMatchesOracle(
-  testCase: Test,
   device: Device,
   id: string,
   fixture: EdgeFixture
 ): Promise<EdgeResult> {
   const result = await executeEdge(device, id, fixture);
   const expected = calculateEdgeOracle(fixture);
-  testCase.deepEqual(result.validity, expected.validity, `${id}: validity matches CPU oracle`);
+  expect(result.validity, `${id}: validity matches CPU oracle`).toEqual(expected.validity);
   for (const [index, expectedValue] of expected.values.entries()) {
     if (Number.isNaN(expectedValue)) {
-      testCase.ok(
-        Number.isNaN(result.values[index]),
+      expect(
+        Boolean(Number.isNaN(result.values[index])),
         `${id}: invalid pixel ${index} publishes NaN`
-      );
+      ).toBe(true);
     } else {
       const tolerance = Math.max(0.0001, Math.abs(expectedValue) * 0.00003);
-      testCase.ok(
-        Math.abs(result.values[index] - expectedValue) <= tolerance,
+      expect(
+        Boolean(Math.abs(result.values[index] - expectedValue) <= tolerance),
         `${id}: pixel ${index} matches CPU (${result.values[index]} versus ${expectedValue})`
-      );
+      ).toBe(true);
     }
   }
   return result;

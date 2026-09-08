@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {
   GPUSplatGraphMixedRenderer,
@@ -12,9 +12,9 @@ import {
 } from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
-test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draws preserved WebGPU batches', async t => {
+it('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draws preserved WebGPU batches', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     const firstBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.2, 0.9], 0));
@@ -29,31 +29,30 @@ test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draw
     });
 
     const encoding = renderer.encode(device.commandEncoder);
-    t.ok(
-      encoding,
+    expect(
+      Boolean(encoding),
       'encodes every projection, global sort, and render node into the caller encoder'
-    );
-    t.ok(
-      renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-project-batch-0'),
+    ).toBe(true);
+    expect(
+      Boolean(renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-project-batch-0')),
       'projects the first preserved source batch on the GPU'
-    );
-    t.ok(
-      renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-project-batch-1'),
+    ).toBe(true);
+    expect(
+      Boolean(renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-project-batch-1')),
       'projects the second preserved source batch on the GPU'
-    );
-    t.ok(
-      renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-indirect-render'),
+    ).toBe(true);
+    expect(
+      Boolean(renderer.compiledGraph?.stats.nodeOrder.includes('gaussian-splat-indirect-render')),
       'schedules exactly one graph-native indirect render pass'
-    );
-    t.equal(
+    ).toBe(true);
+    expect(
       renderer.stats.drawCallCount,
-      1,
       'renders all source batches through one indirect draw'
-    );
+    ).toBe(1);
     device.submit();
 
     if (isSoftwareBackedGraphDevice(device)) {
-      t.comment('Skipping Gaussian splat GPU buffer readback on a software-backed adapter');
+      void 0;
     } else {
       const commandBytes = await renderer.drawCommands.buffer.readAsync();
       const commandWords = new Uint32Array(
@@ -61,11 +60,10 @@ test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draw
         commandBytes.byteOffset,
         commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      t.deepEqual(
+      expect(
         Array.from(commandWords),
-        [4, 3, 0, 0],
         'GPU projection publishes three visible quad instances into its indirect command'
-      );
+      ).toEqual([4, 3, 0, 0]);
 
       const sortedIndexBytes = await renderer.sortedIndexBuffer!.readAsync();
       const sortedIndices = new Uint32Array(
@@ -73,47 +71,45 @@ test('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draw
         sortedIndexBytes.byteOffset,
         sortedIndexBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      t.deepEqual(
+      expect(
         Array.from(sortedIndices.slice(0, 4)),
-        [1, 2, 0, 3],
         'globally sorts visible rows far-to-near and moves the culled sentinel to the end'
-      );
-      t.deepEqual(
+      ).toEqual([1, 2, 0, 3]);
+      expect(
         Array.from(sortedIndices.slice(4)),
-        [4, 5, 6, 7],
         'retains inactive reserved row identifiers behind every populated source row'
-      );
+      ).toEqual([4, 5, 6, 7]);
     }
 
-    t.equal(
+    expect(
       renderer.encode(device.commandEncoder),
-      undefined,
       'does not repeat GPU projection and sorting when the camera remains stationary'
-    );
+    ).toBe(undefined);
     const previousGraph = renderer.compiledGraph;
     renderer.setProps({radiusScale: 1.5});
-    t.ok(renderer.encode(device.commandEncoder), 'encodes updated camera/style uniforms');
-    t.equal(
-      renderer.compiledGraph,
-      previousGraph,
-      'reuses the compiled graph for property changes'
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'encodes updated camera/style uniforms'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses the compiled graph for property changes').toBe(
+      previousGraph
     );
     device.submit();
 
     const firstPositionBuffer = firstBatch.positions.data[0].buffer;
     renderer.destroy();
-    t.notOk(
-      firstPositionBuffer.destroyed,
+    expect(
+      Boolean(firstPositionBuffer.destroyed),
       'destroying the renderer preserves borrowed source data'
-    );
+    ).toBe(false);
     firstBatch.destroy();
     secondBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer progressively binds borrowed batches without rebuilding its reserved graph', async t => {
+it('GPUSplatGraphRenderer progressively binds borrowed batches without rebuilding its reserved graph', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
@@ -125,33 +121,45 @@ test('GPUSplatGraphRenderer progressively binds borrowed batches without rebuild
       viewportSize: [32, 32],
       alphaCutoff: 0.01
     });
-    t.ok(renderer.encode(device.commandEncoder), 'renders the first streamed source batch');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'renders the first streamed source batch'
+    ).toBe(true);
     device.submit();
     const originalGraph = renderer.compiledGraph;
-    t.deepEqual(renderer.capacity, {splatCount: 6, batchCount: 3}, 'reserves exact stream totals');
-    await assertVisibleGraphInstanceCount(t, device, renderer, 2);
+    expect(renderer.capacity, 'reserves exact stream totals').toEqual({
+      splatCount: 6,
+      batchCount: 3
+    });
+    await assertVisibleGraphInstanceCount(device, renderer, 2);
 
     const secondSource = makeBrowserGraphSplatSource([0.6, 0.4], 2);
     secondSource.colors = new Float32Array([2, 0.5, 0.25, 1, 3, 1, 0.5, 1]);
     secondSource.opacities[1] = 0;
     const secondBatch = makeGPUSplatData(device, secondSource);
     renderer.appendData(secondBatch);
-    t.ok(renderer.encode(device.commandEncoder), 'renders the newly appended Float32 HDR batch');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'renders the newly appended Float32 HDR batch'
+    ).toBe(true);
     device.submit();
-    t.equal(
-      renderer.compiledGraph,
-      originalGraph,
-      'reuses the original graph for the second batch'
+    expect(renderer.compiledGraph, 'reuses the original graph for the second batch').toBe(
+      originalGraph
     );
-    t.equal(renderer.props.toneMapping, 'reinhard', 'adapts mixed HDR source colors on SDR');
-    await assertVisibleGraphInstanceCount(t, device, renderer, 3);
+    expect(renderer.props.toneMapping, 'adapts mixed HDR source colors on SDR').toBe('reinhard');
+    await assertVisibleGraphInstanceCount(device, renderer, 3);
 
     const thirdBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.75, 0.3], 4));
     renderer.appendData(thirdBatch);
-    t.ok(renderer.encode(device.commandEncoder), 'renders the final appended Uint8 source batch');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'renders the final appended Uint8 source batch'
+    ).toBe(true);
     device.submit();
-    t.equal(renderer.compiledGraph, originalGraph, 'still uses the graph compiled for batch one');
-    await assertVisibleGraphInstanceCount(t, device, renderer, 5);
+    expect(renderer.compiledGraph, 'still uses the graph compiled for batch one').toBe(
+      originalGraph
+    );
+    await assertVisibleGraphInstanceCount(device, renderer, 5);
     if (!isSoftwareBackedGraphDevice(device)) {
       const sortedBytes = await renderer.sortedIndexBuffer!.readAsync();
       const sortedIndices = new Uint32Array(
@@ -159,27 +167,32 @@ test('GPUSplatGraphRenderer progressively binds borrowed batches without rebuild
         sortedBytes.byteOffset,
         sortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
       );
-      t.deepEqual(
+      expect(
         Array.from(sortedIndices),
-        [1, 4, 2, 5, 0, 3],
         'globally sorts three original mixed-format batches and retains the culled sentinel last'
-      );
+      ).toEqual([1, 4, 2, 5, 0, 3]);
     }
 
     const firstSourceBuffer = firstBatch.positions.data[0].buffer;
     const secondSourceBuffer = secondBatch.colors.data[0].buffer;
     renderer.destroy();
-    t.notOk(firstSourceBuffer.destroyed, 'preserves the original borrowed first source allocation');
-    t.notOk(secondSourceBuffer.destroyed, 'preserves the original borrowed HDR color allocation');
+    expect(
+      Boolean(firstSourceBuffer.destroyed),
+      'preserves the original borrowed first source allocation'
+    ).toBe(false);
+    expect(
+      Boolean(secondSourceBuffer.destroyed),
+      'preserves the original borrowed HDR color allocation'
+    ).toBe(false);
     firstBatch.destroy();
     secondBatch.destroy();
     thirdBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async t => {
+it('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
@@ -191,7 +204,10 @@ test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async 
     renderer.encode(device.commandEncoder);
     device.submit();
     const initialGraph = renderer.compiledGraph;
-    t.deepEqual(renderer.capacity, {splatCount: 4, batchCount: 4}, 'reserves four unknown slots');
+    expect(renderer.capacity, 'reserves four unknown slots').toEqual({
+      splatCount: 4,
+      batchCount: 4
+    });
 
     for (let batchIndex = 1; batchIndex < 4; batchIndex++) {
       const batch = makeGPUSplatData(
@@ -202,7 +218,7 @@ test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async 
       renderer.appendData(batch);
       renderer.encode(device.commandEncoder);
       device.submit();
-      t.equal(renderer.compiledGraph, initialGraph, 'keeps the graph until its capacity fills');
+      expect(renderer.compiledGraph, 'keeps the graph until its capacity fills').toBe(initialGraph);
     }
 
     const overflowBatch = makeGPUSplatData(device, makeBrowserGraphSplatSource([0.8], 4));
@@ -210,12 +226,13 @@ test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async 
     renderer.appendData(overflowBatch);
     renderer.encode(device.commandEncoder);
     device.submit();
-    t.notEqual(renderer.compiledGraph, initialGraph, 'rebuilds once when both capacities overflow');
-    t.deepEqual(
-      renderer.capacity,
-      {splatCount: 8, batchCount: 8},
-      'doubles reserved row and slot capacity'
+    expect(renderer.compiledGraph, 'rebuilds once when both capacities overflow').not.toBe(
+      initialGraph
     );
+    expect(renderer.capacity, 'doubles reserved row and slot capacity').toEqual({
+      splatCount: 8,
+      batchCount: 8
+    });
 
     renderer.destroy();
     for (const batch of batches) {
@@ -223,16 +240,16 @@ test('GPUSplatGraphRenderer grows unknown stream capacity geometrically', async 
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real WebGPU buffers', async t => {
+it('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real WebGPU buffers', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     if (isSoftwareBackedGraphDevice(device)) {
-      t.comment('Skipping directional Gaussian source readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -304,7 +321,10 @@ test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real W
     );
     const firstRed = firstRecord[8];
     const firstGreen = firstRecord[9];
-    t.ok(firstRed < 0.2, 'evaluates negative first-order directional red radiance directly on GPU');
+    expect(
+      Boolean(firstRed < 0.2),
+      'evaluates negative first-order directional red radiance directly on GPU'
+    ).toBe(true);
     const firstPixel = await renderDirectionalPixel();
 
     renderer.setProps({cameraPosition: [1, 0, 0.5]});
@@ -316,31 +336,32 @@ test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real W
       secondRecordBytes.byteOffset,
       secondRecordBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(secondRecord[8] > firstRed + 0.7, 'reverses the SH basis when the camera crosses the row');
-    t.ok(
-      Math.abs(secondRecord[9] - firstGreen) < 0.0001,
+    expect(
+      Boolean(secondRecord[8] > firstRed + 0.7),
+      'reverses the SH basis when the camera crosses the row'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(secondRecord[9] - firstGreen) < 0.0001),
       'retains unrelated diffuse color channels'
-    );
+    ).toBe(true);
     const secondPixel = await renderDirectionalPixel();
-    t.ok(
-      secondPixel[0] > firstPixel[0] + 120,
+    expect(
+      Boolean(secondPixel[0] > firstPixel[0] + 120),
       'reverses the actual rendered WebGPU pixel as the camera crosses the degree-one Gaussian'
-    );
-    t.ok(
-      Math.abs(secondPixel[1] - firstPixel[1]) < 5,
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(secondPixel[1] - firstPixel[1]) < 5),
       'leaves unrelated rendered diffuse channels unchanged across degree-one camera movement'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'reuses the graph across camera-direction changes').toBe(
+      initialGraph
     );
-    t.equal(
-      renderer.compiledGraph,
-      initialGraph,
-      'reuses the graph across camera-direction changes'
+    expect(batch.sphericalHarmonics?.data[0].buffer, 'borrows source SH').toBe(
+      sourceCoefficientBuffer
     );
-    t.equal(batch.sphericalHarmonics?.data[0].buffer, sourceCoefficientBuffer, 'borrows source SH');
-    t.deepEqual(
-      Array.from(source.colors),
-      [0.5, 0.25, 0.25, 1],
-      'never rewrites source-owned diffuse radiance'
-    );
+    expect(Array.from(source.colors), 'never rewrites source-owned diffuse radiance').toEqual([
+      0.5, 0.25, 0.25, 1
+    ]);
 
     renderer.setProps({cameraPosition: [0, 0, -0.5], sphericalHarmonicsDegree: 2});
     renderer.encode(device.commandEncoder);
@@ -351,8 +372,14 @@ test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real W
       secondDegreeBytes.byteOffset,
       secondDegreeBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(secondDegreeRecord[9] > 0.55, 'evaluates the complete second-order zonal green basis');
-    t.ok(Math.abs(secondDegreeRecord[10] - 0.25) < 0.0001, 'caps third-order blue at degree two');
+    expect(
+      Boolean(secondDegreeRecord[9] > 0.55),
+      'evaluates the complete second-order zonal green basis'
+    ).toBe(true);
+    expect(
+      Boolean(Math.abs(secondDegreeRecord[10] - 0.25) < 0.0001),
+      'caps third-order blue at degree two'
+    ).toBe(true);
 
     renderer.setProps({sphericalHarmonicsDegree: 3});
     renderer.encode(device.commandEncoder);
@@ -363,11 +390,12 @@ test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real W
       thirdDegreeBytes.byteOffset,
       thirdDegreeBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(thirdDegreeRecord[10] > 0.6, 'evaluates the complete third-order zonal blue basis');
-    t.equal(
-      renderer.compiledGraph,
-      initialGraph,
-      'changes SH degree without recompiling the graph'
+    expect(
+      Boolean(thirdDegreeRecord[10] > 0.6),
+      'evaluates the complete third-order zonal blue basis'
+    ).toBe(true);
+    expect(renderer.compiledGraph, 'changes SH degree without recompiling the graph').toBe(
+      initialGraph
     );
 
     renderer.setProps({sphericalHarmonicsDegree: 0});
@@ -379,30 +407,33 @@ test('GPUSplatGraphRenderer evaluates higher-order spherical harmonics on real W
       restoredRecordBytes.byteOffset,
       restoredRecordBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.ok(
-      Math.abs(restoredRecord[8] - 0.5) < 0.0001,
+    expect(
+      Boolean(Math.abs(restoredRecord[8] - 0.5) < 0.0001),
       'restores DC radiance when bands are disabled'
-    );
+    ).toBe(true);
 
     pixelReadback.destroy();
     mixedRenderer.destroy();
     renderer.destroy();
-    t.notOk(sourceCoefficientBuffer.destroyed, 'graph destruction preserves caller-owned SH data');
+    expect(
+      Boolean(sourceCoefficientBuffer.destroyed),
+      'graph destruction preserves caller-owned SH data'
+    ).toBe(false);
     batch.destroy();
     framebuffer.destroy();
     colorTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer filters semantic rows before the real GPU global sort and indirect draw', async t => {
+it('GPUSplatGraphRenderer filters semantic rows before the real GPU global sort and indirect draw', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     if (isSoftwareBackedGraphDevice(device)) {
-      t.comment('Skipping semantic Gaussian source readback on a software-backed adapter');
+      void 0;
       continue;
     }
 
@@ -421,44 +452,45 @@ test('GPUSplatGraphRenderer filters semantic rows before the real GPU global sor
     renderer.encode(device.commandEncoder);
     device.submit();
     const initialGraph = renderer.compiledGraph;
-    await assertVisibleGraphInstanceCount(t, device, renderer, 1);
+    await assertVisibleGraphInstanceCount(device, renderer, 1);
     let sortedBytes = await renderer.sortedIndexBuffer!.readAsync();
     let sortedIndices = new Uint32Array(
       sortedBytes.buffer,
       sortedBytes.byteOffset,
       sortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.equal(sortedIndices[0], 1, 'retains only the included source semantic class before sorting');
-    t.ok(
-      renderer.graphStats?.nodeOrder.includes('gaussian-splat-features-batch-0'),
-      'schedules semantic visibility and SH as a reusable GPU feature node'
+    expect(sortedIndices[0], 'retains only the included source semantic class before sorting').toBe(
+      1
     );
+    expect(
+      Boolean(renderer.graphStats?.nodeOrder.includes('gaussian-splat-features-batch-0')),
+      'schedules semantic visibility and SH as a reusable GPU feature node'
+    ).toBe(true);
 
     renderer.setProps({semanticFilter: {exclude: new Set([7]), includeUnlabeled: true}});
     renderer.encode(device.commandEncoder);
     device.submit();
-    await assertVisibleGraphInstanceCount(t, device, renderer, 2);
+    await assertVisibleGraphInstanceCount(device, renderer, 2);
     sortedBytes = await renderer.sortedIndexBuffer!.readAsync();
     sortedIndices = new Uint32Array(
       sortedBytes.buffer,
       sortedBytes.byteOffset,
       sortedBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(sortedIndices.subarray(0, 2)),
-      [0, 2],
       'retains accepted labeled and unlabeled rows in their original far-to-near order'
+    ).toEqual([0, 2]);
+    expect(renderer.compiledGraph, 'changes semantic selections without rebuilding').toBe(
+      initialGraph
     );
-    t.equal(renderer.compiledGraph, initialGraph, 'changes semantic selections without rebuilding');
 
     renderer.setProps({semanticFilter: undefined});
     renderer.encode(device.commandEncoder);
     device.submit();
-    await assertVisibleGraphInstanceCount(t, device, renderer, 3);
-    t.equal(
-      renderer.compiledGraph,
-      initialGraph,
-      'restores every source row in the original graph'
+    await assertVisibleGraphInstanceCount(device, renderer, 3);
+    expect(renderer.compiledGraph, 'restores every source row in the original graph').toBe(
+      initialGraph
     );
 
     renderer.destroy();
@@ -466,10 +498,10 @@ test('GPUSplatGraphRenderer filters semantic rows before the real GPU global sor
     unlabeledBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer reuses fixed graph slots across bounded residency frontier replacement', async t => {
+it('GPUSplatGraphRenderer reuses fixed graph slots across bounded residency frontier replacement', async () => {
   const devices = await getTestDevices(['webgpu']);
 
   for (const device of devices) {
@@ -489,53 +521,64 @@ test('GPUSplatGraphRenderer reuses fixed graph slots across bounded residency fr
     const originalSortedBuffer = renderer.sortedIndexBuffer;
 
     renderer.setProps({data: replacementBatch});
-    t.equal(renderer.compiledGraph, originalGraph, 'keeps the compiled graph during page swap');
+    expect(renderer.compiledGraph, 'keeps the compiled graph during page swap').toBe(originalGraph);
     renderer.encode(device.commandEncoder);
     device.submit();
-    t.equal(
-      renderer.compiledGraph,
-      originalGraph,
-      'reuses fixed source slots after page replacement'
+    expect(renderer.compiledGraph, 'reuses fixed source slots after page replacement').toBe(
+      originalGraph
     );
-    t.equal(
-      renderer.projectedRecordBuffer,
-      originalProjectedBuffer,
-      'retains projected allocations'
+    expect(renderer.projectedRecordBuffer, 'retains projected allocations').toBe(
+      originalProjectedBuffer
     );
-    t.equal(
-      renderer.sortedIndexBuffer,
-      originalSortedBuffer,
-      'retains globally sorted allocations'
+    expect(renderer.sortedIndexBuffer, 'retains globally sorted allocations').toBe(
+      originalSortedBuffer
     );
-    await assertVisibleGraphInstanceCount(t, device, renderer, 2);
-    t.deepEqual(renderer.batches, [replacementBatch], 'renders only the caller-selected frontier');
-    t.notOk(firstBatch.destroyed, 'never destroys the evicted caller-owned page');
-    t.notOk(secondBatch.destroyed, 'never destroys another caller-owned evicted page');
+    await assertVisibleGraphInstanceCount(device, renderer, 2);
+    expect(renderer.batches, 'renders only the caller-selected frontier').toEqual([
+      replacementBatch
+    ]);
+    expect(Boolean(firstBatch.destroyed), 'never destroys the evicted caller-owned page').toBe(
+      false
+    );
+    expect(Boolean(secondBatch.destroyed), 'never destroys another caller-owned evicted page').toBe(
+      false
+    );
 
     renderer.setProps({data: []});
-    t.equal(renderer.compiledGraph, originalGraph, 'retains the graph across an empty frontier');
+    expect(renderer.compiledGraph, 'retains the graph across an empty frontier').toBe(
+      originalGraph
+    );
     const emptyEncoding = renderer.encode(device.commandEncoder);
-    t.equal(emptyEncoding?.stats.nodeCount, 1, 'encodes exactly one empty-frontier clearing pass');
-    t.equal(
+    expect(emptyEncoding?.stats.nodeCount, 'encodes exactly one empty-frontier clearing pass').toBe(
+      1
+    );
+    expect(
       emptyEncoding?.stats.nodes[0].id,
-      'gaussian-splat-clear',
       'clears previously presented splats when every resident page leaves the frontier'
-    );
+    ).toBe('gaussian-splat-clear');
     device.submit();
-    await assertVisibleGraphInstanceCount(t, device, renderer, 0);
-    t.equal(
+    await assertVisibleGraphInstanceCount(device, renderer, 0);
+    expect(
       renderer.encode(device.commandEncoder),
-      undefined,
       'does not repeatedly clear a stationary empty residency frontier'
+    ).toBe(undefined);
+    expect(renderer.projectedRecordBuffer, 'keeps reserved empty rows').toBe(
+      originalProjectedBuffer
     );
-    t.equal(renderer.projectedRecordBuffer, originalProjectedBuffer, 'keeps reserved empty rows');
-    t.equal(renderer.sortedIndexBuffer, originalSortedBuffer, 'keeps reserved empty sort slots');
+    expect(renderer.sortedIndexBuffer, 'keeps reserved empty sort slots').toBe(
+      originalSortedBuffer
+    );
 
     renderer.setProps({data: secondBatch});
-    t.ok(renderer.encode(device.commandEncoder), 'restores a newly resident source page');
+    expect(
+      Boolean(renderer.encode(device.commandEncoder)),
+      'restores a newly resident source page'
+    ).toBe(true);
     device.submit();
-    t.equal(renderer.compiledGraph, originalGraph, 'reuses the same graph after an empty frontier');
-    await assertVisibleGraphInstanceCount(t, device, renderer, 1);
+    expect(renderer.compiledGraph, 'reuses the same graph after an empty frontier').toBe(
+      originalGraph
+    );
+    await assertVisibleGraphInstanceCount(device, renderer, 1);
 
     renderer.destroy();
     firstBatch.destroy();
@@ -543,11 +586,10 @@ test('GPUSplatGraphRenderer reuses fixed graph slots across bounded residency fr
     replacementBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 async function assertVisibleGraphInstanceCount(
-  assertion: {equal: (actual: number, expected: number, message: string) => void},
   device: Device,
   renderer: GPUSplatGraphRenderer,
   expectedCount: number
@@ -561,11 +603,10 @@ async function assertVisibleGraphInstanceCount(
     commandBytes.byteOffset,
     commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
   );
-  assertion.equal(
+  expect(
     commandWords[1],
-    expectedCount,
     `GPU culling publishes ${expectedCount} progressive indirect-draw instances`
-  );
+  ).toBe(expectedCount);
 }
 
 function isSoftwareBackedGraphDevice(device: Device): boolean {

@@ -255,6 +255,7 @@ export class PipelineFactory {
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
     const varyingHash = this._getWebGLVaryingHash(props);
     const shaderLayoutHash = this._getHash(JSON.stringify(props.shaderLayout));
+    const uniformBlockLayoutHash = this._getHash(JSON.stringify(props._uniformBlockLayouts));
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     const {type} = this.device;
@@ -265,7 +266,7 @@ export class PipelineFactory {
         // Future WebGL-only additions here must not turn wrapper reuse into a prerequisite
         // for shared `WebGLProgram` reuse.
         const webglParameterHash = this._getHash(JSON.stringify(props.parameters));
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}SL${shaderLayoutHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}SL${shaderLayoutHash}UBL${uniformBlockLayoutHash}BL${bufferLayoutHash}`;
 
       case 'webgpu':
       default:

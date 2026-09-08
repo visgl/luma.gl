@@ -15,7 +15,7 @@ import {
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 type GPUDerivedSourceSchema = {
@@ -34,11 +34,11 @@ type GPUDerivedConstantSourceSchema = GPUDerivedSourceSchema & {
   tier: 'uint32';
 };
 
-test('GPUDataFrame materializes chained nullable GPU columns without disturbing source batches', async testContext => {
+it('GPUDataFrame materializes chained nullable GPU columns without disturbing source batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -52,21 +52,15 @@ test('GPUDataFrame materializes chained nullable GPU columns without disturbing 
     .filter(column('doubleFare').greaterThan(literal(30)))
     .select(['category', 'doubleFare']);
 
-  testContext.equal(
+  expect(
     createBufferSpy.mock.calls.length,
-    0,
     'chained derived-column planning never allocates GPU storage'
-  );
-  testContext.equal(
-    submitSpy.mock.calls.length,
-    0,
-    'derived-column planning never submits GPU work'
-  );
-  testContext.deepEqual(
+  ).toBe(0);
+  expect(submitSpy.mock.calls.length, 'derived-column planning never submits GPU work').toBe(0);
+  expect(
     fixture.frame.columnNames,
-    ['fare', 'category', 'distance'],
     'source dataframe remains unchanged while new logical columns are planned'
-  );
+  ).toEqual(['fare', 'category', 'distance']);
 
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
     id: 'gpu-dataframe-chained-derived-columns'
@@ -74,40 +68,32 @@ test('GPUDataFrame materializes chained nullable GPU columns without disturbing 
   const compiled = query.compile(graph);
 
   try {
-    testContext.deepEqual(
+    expect(
       compiled.table.schema.fields.map(field => field.name),
-      ['category', 'doubleFare'],
       'hidden intermediate columns are not materialized in the selected result'
-    );
-    testContext.deepEqual(
+    ).toEqual(['category', 'doubleFare']);
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [2, 0, 3],
       'derived outputs preserve original record-batch boundaries'
-    );
-    testContext.equal(
+    ).toEqual([2, 0, 3]);
+    expect(
       compiled.table.schema.fields.find(field => field.name === 'doubleFare')?.nullable,
-      true,
       'nullable arithmetic marks the resulting GPU field nullable'
-    );
-    testContext.deepEqual(
+    ).toBe(true);
+    expect(
       compiled.dictionaries.category,
-      {values: ['economy', 'standard', 'premium'], ordered: false},
       'selected categorical source metadata survives the derived projection'
-    );
+    ).toEqual({values: ['economy', 'standard', 'premium'], ordered: false});
 
     fixture.frame.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => !buffer.destroyed)),
       'compiled derived queries retain the owned source lease'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-derived-first-encode'});
     compiled.encode(commandEncoder);
-    testContext.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'derived-column compilation only records GPU work'
-    );
+    expect(submitSpy.mock.calls.length, 'derived-column compilation only records GPU work').toBe(0);
     device.submit(commandEncoder.finish());
 
     const derivedVector = compiled.table.gpuVectors.doubleFare;
@@ -116,45 +102,40 @@ test('GPUDataFrame materializes chained nullable GPU columns without disturbing 
       throw new Error('Expected a GPU validity vector for the nullable derived column');
     }
 
-    testContext.deepEqual(
+    expect(
       await readFloat32VectorChunks(derivedVector),
-      [[20, 40], [], [60, 208, 80]],
       'chained GPU arithmetic materializes exact floating-point values in each source batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[20, 40], [], [60, 208, 80]]);
+    expect(
       await readUint32VectorChunks(derivedValidity),
-      [[1, 1], [], [1, 0, 1]],
       'derived GPU validity propagates source nulls through every arithmetic expression'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 1], [], [1, 0, 1]]);
+    expect(
       await readUint32VectorChunks(compiled.selectionMask),
-      [[0, 1], [], [1, 0, 1]],
       'filters consume chained derived expressions without accepting null rows'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [1, 0, 1]]);
+    expect(
       await readUint32VectorChunks(compiled.selectedCounts),
-      [[1], [0], [2]],
       'derived filters publish independent selection counts for empty and nonempty batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1], [0], [2]]);
+    expect(
       await readSelectedSourceRows(compiled.rowIndices, compiled.selectedCounts),
-      [[41], [], [42, 44]],
       'derived filtering preserves stable original source-row identities'
-    );
+    ).toEqual([[41], [], [42, 44]]);
 
     const derivedBuffers = [
       ...derivedVector.data.map(getGPUDataBuffer),
       ...derivedValidity.data.map(getGPUDataBuffer)
     ];
     compiled.destroy();
-    testContext.ok(
-      derivedBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(derivedBuffers.every(buffer => buffer.destroyed)),
       'compiled queries own and release their materialized derived value and validity buffers'
-    );
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => buffer.destroyed),
+    ).toBe(true);
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => buffer.destroyed)),
       'source allocations are released only after the compiled derived query is destroyed'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
@@ -162,14 +143,14 @@ test('GPUDataFrame materializes chained nullable GPU columns without disturbing 
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame computes signed derived columns without requiring an explicit filter', async testContext => {
+it('GPUDataFrame computes signed derived columns without requiring an explicit filter', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -187,39 +168,35 @@ test('GPUDataFrame computes signed derived columns without requiring an explicit
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readSignedVectorChunks(compiled.table.gpuVectors.distanceOffset),
-      [[-4, 1], [], [-3, 2, 6]],
       'signed 32-bit derived arithmetic remains GPU-native and batch aligned'
-    );
-    testContext.equal(
+    ).toEqual([[-4, 1], [], [-3, 2, 6]]);
+    expect(
       compiled.validity.distanceOffset,
-      undefined,
       'non-nullable derived values do not allocate unnecessary GPU validity sidecars'
-    );
-    testContext.deepEqual(
+    ).toBe(undefined);
+    expect(
       await readUint32VectorChunks(compiled.selectionMask),
-      [[1, 1], [], [1, 1, 1]],
       'derived-only queries accept every source row without requiring a synthetic user filter'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 1], [], [1, 1, 1]]);
+    expect(
       await readUint32VectorChunks(compiled.selectedCounts),
-      [[2], [0], [3]],
       'derived-only queries retain independent source-batch row counts'
-    );
+    ).toEqual([[2], [0], [3]]);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame evaluates derived expressions containing immutable GPUConstant columns', async testContext => {
+it('GPUDataFrame evaluates derived expressions containing immutable GPUConstant columns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -259,40 +236,36 @@ test('GPUDataFrame evaluates derived expressions containing immutable GPUConstan
       throw new Error('Expected nullable GPUConstant-derived validity');
     }
 
-    testContext.deepEqual(
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[10, 20], [], [30, 104, 40]],
       'trusted float32 constant controls participate in derived GPU arithmetic'
-    );
-    testContext.deepEqual(
+    ).toEqual([[10, 20], [], [30, 104, 40]]);
+    expect(
       await readUint32VectorChunks(validity),
-      [[1, 1], [], [1, 0, 1]],
       'immutable GPU constants do not create false nulls in derived outputs'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 1], [], [1, 0, 1]]);
+    expect(
       await readUint32VectorChunks(compiled.selectionMask),
-      [[0, 0], [], [0, 0, 1]],
       'hidden unsigned constants remain available to mixed derived predicates'
-    );
-    testContext.equal(
+    ).toEqual([[0, 0], [], [0, 0, 1]]);
+    expect(
       compiled.table.gpuConstants.tip,
-      constants.tip,
       'selected GPUConstant identities remain borrowed instead of being materialized'
-    );
+    ).toBe(constants.tip);
   } finally {
     compiled.destroy();
     frame.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame updates derived values and null validity in one caller-owned command encoder', async testContext => {
+it('GPUDataFrame updates derived values and null validity in one caller-owned command encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -352,30 +325,26 @@ test('GPUDataFrame updates derived values and null validity in one caller-owned 
     compiled.encode(commandEncoder, {adjustment: null});
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await Promise.all(firstCounts.map(async buffer => (await readUint32Buffer(buffer, 1))[0])),
-      [1, 0, 2],
       'first encoded derived values use their own non-null parameter value'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 0, 2]);
+    expect(
       await Promise.all(
         firstValidity.map((buffer, batchIndex) =>
           buffer ? readUint32Buffer(buffer, validity.data[batchIndex].length) : Promise.resolve([])
         )
       ),
-      [[1, 1], [], [1, 0, 1]],
       'encoder-ordered staging snapshots the first derived validity state'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 1], [], [1, 0, 1]]);
+    expect(
       await readUint32VectorChunks(validity),
-      [[0, 0], [], [0, 0, 0]],
       'a null parameter makes every derived value invalid on the second encoding'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0], [], [0, 0, 0]]);
+    expect(
       await readUint32VectorChunks(compiled.selectedCounts),
-      [[0], [0], [0]],
       'filters reject null derived values after parameter changes without recompiling'
-    );
+    ).toEqual([[0], [0], [0]]);
   } finally {
     for (const buffer of firstCounts) buffer.destroy();
     for (const buffer of firstValidity) buffer?.destroy();
@@ -383,14 +352,14 @@ test('GPUDataFrame updates derived values and null validity in one caller-owned 
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame retains derived schemas for source tables without any record batches', async testContext => {
+it('GPUDataFrame retains derived schemas for source tables without any record batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -421,31 +390,23 @@ test('GPUDataFrame retains derived schemas for source tables without any record 
     .compile(graph);
 
   try {
-    testContext.deepEqual(
+    expect(
       compiled.table.schema.fields,
-      [{name: 'fareWithTip', format: 'float32', nullable: true, metadata: new Map()}],
       'schema-only derived columns preserve their inferred format and nullability'
-    );
-    testContext.equal(
+    ).toEqual([{name: 'fareWithTip', format: 'float32', nullable: true, metadata: new Map()}]);
+    expect(
       compiled.table.schema.metadata.get('dataset'),
-      'empty-derived',
       'result schema retains source adapter metadata'
-    );
-    testContext.deepEqual(
-      compiled.table.batches,
-      [],
-      'no source batches means no synthetic batches'
-    );
-    testContext.equal(
+    ).toBe('empty-derived');
+    expect(compiled.table.batches, 'no source batches means no synthetic batches').toEqual([]);
+    expect(
       compiled.validity.fareWithTip,
-      undefined,
       'schema-only derived columns do not create synthetic validity chunks'
-    );
-    testContext.deepEqual(
+    ).toBe(undefined);
+    expect(
       compiled.selectedCounts.data,
-      [],
       'schema-only derived queries do not allocate selection counts'
-    );
+    ).toEqual([]);
 
     const commandEncoder = device.createCommandEncoder({
       id: 'gpu-dataframe-schema-only-derived-encode'
@@ -457,7 +418,7 @@ test('GPUDataFrame retains derived schemas for source tables without any record 
     frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUDerivedFixture(device: Device): GPUDerivedFixture {

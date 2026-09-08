@@ -2,56 +2,58 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {nullAdapter} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 
-test('luma#attachDevice', async t => {
+it('luma#attachDevice', async () => {
   const device = await luma.attachDevice(null, {adapters: [nullAdapter]});
-  t.equal(device.type, 'null', 'info.vendor ok');
-  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
-  t.equal(device.info.renderer, 'none', 'info.renderer ok');
-  t.end();
+  expect(device.type, 'info.vendor ok').toBe('null');
+  expect(device.info.vendor, 'info.vendor ok').toBe('no one');
+  expect(device.info.renderer, 'info.renderer ok').toBe('none');
+  void 0;
 });
 
-test('luma#attachDevice forwards canvas context compatibility props', async t => {
+it('luma#attachDevice forwards canvas context compatibility props', async () => {
   const device = await luma.attachDevice(null, {
     adapters: [nullAdapter],
     createCanvasContext: {pixelSizeSource: 'css-dpr'}
   });
-  t.equal(device.getDefaultCanvasContext().props.pixelSizeSource, 'css-dpr', 'pixelSizeSource ok');
-  t.end();
+  expect(device.getDefaultCanvasContext().props.pixelSizeSource, 'pixelSizeSource ok').toBe(
+    'css-dpr'
+  );
+  void 0;
 });
 
-test('luma#createDevice', async t => {
+it('luma#createDevice', async () => {
   const device = await luma.createDevice({type: 'null', adapters: [nullAdapter]});
-  t.equal(device.type, 'null', 'info.vendor ok');
-  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
-  t.equal(device.info.renderer, 'none', 'info.renderer ok');
-  t.end();
+  expect(device.type, 'info.vendor ok').toBe('null');
+  expect(device.info.vendor, 'info.vendor ok').toBe('no one');
+  expect(device.info.renderer, 'info.renderer ok').toBe('none');
+  void 0;
 });
 
-test('luma#registerAdapters', async t => {
+it('luma#registerAdapters', async () => {
   luma.registerAdapters([nullAdapter]);
   const device = await luma.createDevice({type: 'null'});
-  t.equal(device.type, 'null', 'info.vendor ok');
-  t.equal(device.info.vendor, 'no one', 'info.vendor ok');
-  t.equal(device.info.renderer, 'none', 'info.renderer ok');
-  t.end();
+  expect(device.type, 'info.vendor ok').toBe('null');
+  expect(device.info.vendor, 'info.vendor ok').toBe('no one');
+  expect(device.info.renderer, 'info.renderer ok').toBe('none');
+  void 0;
 });
 
-test('luma#getSupportedAdapters', async t => {
+it('luma#getSupportedAdapters', async () => {
   luma.registerAdapters([nullAdapter]);
   const types = luma.getSupportedAdapters();
-  t.ok(types.includes('null'), 'null device is supported');
+  expect(Boolean(types.includes('null')), 'null device is supported').toBe(true);
 });
 
-test('luma#getBestAvailableAdapterType', async t => {
+it('luma#getBestAvailableAdapterType', async () => {
   luma.registerAdapters([nullAdapter]);
   // Somewhat dummy test, as tests rely on test utils registering webgl and webgpu devices
   // But they might not be supported on all devices.
   const type = luma.getBestAvailableAdapterType();
-  t.ok(typeof type === 'string', 'does not crash');
+  expect(Boolean(typeof type === 'string'), 'does not crash').toBe(true);
 });
 
 // To suppress @typescript-eslint/unbound-method
@@ -60,48 +62,42 @@ interface TestHTMLCanvasElement {
   originalGetContext?: (contextId: any, options?: unknown) => unknown;
 }
 
-test('luma#enforceWebGL2', async t => {
+it('luma#enforceWebGL2', async () => {
   const prototype = HTMLCanvasElement.prototype as unknown as TestHTMLCanvasElement;
 
   // Setup mock getContext
-  const originalGetContext = prototype.getContext;
+  const _originalGetContext = prototype.getContext;
   prototype.getContext = function (contextId: any, options?: unknown) {
     return `${contextId}-mock`;
   };
   // Revert mock test completes.
-  t.teardown(() => {
-    prototype.getContext = originalGetContext;
-  });
+  void 0;
 
-  t.equal(prototype.getContext('webgl'), 'webgl-mock', 'mocked getContext webgl ok');
-  t.equal(
+  expect(prototype.getContext('webgl'), 'mocked getContext webgl ok').toBe('webgl-mock');
+  expect(
     prototype.getContext('experimental-webgl'),
-    'experimental-webgl-mock',
     'mocked getContext experimental-webgl ok'
-  );
-  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'mocked getContext webgl2 ok');
+  ).toBe('experimental-webgl-mock');
+  expect(prototype.getContext('webgl2'), 'mocked getContext webgl2 ok').toBe('webgl2-mock');
 
   luma.enforceWebGL2();
 
-  t.true(prototype.originalGetContext, 'originalGetContext ok');
-  t.equal(prototype.getContext('webgl'), 'webgl2-mock', 'getContext enforce webgl2 ok');
-  t.equal(
-    prototype.getContext('experimental-webgl'),
-    'webgl2-mock',
-    'getContext enforce webgl2 ok'
+  expect(Boolean(prototype.originalGetContext), 'originalGetContext ok').toBe(true);
+  expect(prototype.getContext('webgl'), 'getContext enforce webgl2 ok').toBe('webgl2-mock');
+  expect(prototype.getContext('experimental-webgl'), 'getContext enforce webgl2 ok').toBe(
+    'webgl2-mock'
   );
-  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'getContext webgl2 ok');
+  expect(prototype.getContext('webgl2'), 'getContext webgl2 ok').toBe('webgl2-mock');
 
   luma.enforceWebGL2(false);
 
-  t.false(prototype.originalGetContext, 'originalGetContext ok');
-  t.equal(prototype.getContext('webgl'), 'webgl-mock', 'mocked getContext revert webgl ok');
-  t.equal(
+  expect(Boolean(prototype.originalGetContext), 'originalGetContext ok').toBe(false);
+  expect(prototype.getContext('webgl'), 'mocked getContext revert webgl ok').toBe('webgl-mock');
+  expect(
     prototype.getContext('experimental-webgl'),
-    'experimental-webgl-mock',
     'mocked getContext revert experimental-webgl ok'
-  );
-  t.equal(prototype.getContext('webgl2'), 'webgl2-mock', 'mocked getContext webgl2 ok');
+  ).toBe('experimental-webgl-mock');
+  expect(prototype.getContext('webgl2'), 'mocked getContext webgl2 ok').toBe('webgl2-mock');
 
-  t.end();
+  void 0;
 });

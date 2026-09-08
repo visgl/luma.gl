@@ -14,7 +14,7 @@ import {
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 const FLOAT32_EPSILON = 1e-6;
 
@@ -201,25 +201,26 @@ function almostEqual(actualValue: number, expectedValue: number): boolean {
   return Math.abs(actualValue - expectedValue) <= FLOAT32_EPSILON;
 }
 
-test('shadertools#pbrMaterial compiles texture-dependent diffuse-transmission IBL on WebGPU', async testCase => {
+it('shadertools#pbrMaterial compiles texture-dependent diffuse-transmission IBL on WebGPU', async () => {
   const diffuseTransmissionSource =
     pbrMaterial.source?.match(/fn calculateDiffuseTransmissionIBL\([\s\S]*?\n}\n#endif/)?.[0] || '';
 
-  testCase.ok(diffuseTransmissionSource, 'diffuse-transmission IBL helper is present');
-  testCase.equal(
+  expect(Boolean(diffuseTransmissionSource), 'diffuse-transmission IBL helper is present').toBe(
+    true
+  );
+  expect(
     (diffuseTransmissionSource.match(/\btextureSampleLevel\(/g) || []).length,
-    2,
     'scene and legacy environment paths use derivative-free cubemap sampling'
-  );
-  testCase.notOk(
-    /\btextureSample\(/.test(diffuseTransmissionSource),
+  ).toBe(2);
+  expect(
+    Boolean(/\btextureSample\(/.test(diffuseTransmissionSource)),
     'data-dependent transmission branches do not require uniform implicit derivatives'
-  );
+  ).toBe(false);
 
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable; diffuse-transmission source assertions still run');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -248,38 +249,35 @@ test('shadertools#pbrMaterial compiles texture-dependent diffuse-transmission IB
         .filter(message => message.type === 'error')
         .map(message => message.message);
 
-      testCase.equal(
+      expect(
         compilationErrors.length,
-        0,
         `${environmentName} IBL compiles with a texture-dependent transmission factor${
           compilationErrors.length ? `: ${compilationErrors.join('; ')}` : ''
         }`
-      );
+      ).toBe(0);
     } finally {
       shader.destroy();
     }
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial exposes typed defaults and uniform names', testCase => {
+it('shadertools#pbrMaterial exposes typed defaults and uniform names', () => {
   const pbrMaterialUniformTypecheck: Required<PBRMaterialUniforms> = pbrMaterial.defaultUniforms;
-  testCase.ok(pbrMaterialUniformTypecheck, 'pbrMaterial default uniforms are typed');
+  expect(Boolean(pbrMaterialUniformTypecheck), 'pbrMaterial default uniforms are typed').toBe(true);
 
   // @ts-expect-error Fix typing
   const uniforms = getShaderModuleUniforms(pbrMaterial, {}, {});
-  testCase.ok(uniforms, 'default PBR material uniforms resolve');
-  testCase.deepEqual(
-    Object.keys(pbrMaterial.uniformTypes),
-    EXPECTED_UNIFORM_NAMES,
-    'uniform type field order is stable'
+  expect(Boolean(uniforms), 'default PBR material uniforms resolve').toBe(true);
+  expect(Object.keys(pbrMaterial.uniformTypes), 'uniform type field order is stable').toEqual(
+    EXPECTED_UNIFORM_NAMES
   );
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial widens base and clearcoat specular lobes', testCase => {
+it('shadertools#pbrMaterial widens base and clearcoat specular lobes', () => {
   const shaderSources = [
     {
       language: 'GLSL',
@@ -296,81 +294,82 @@ test('shadertools#pbrMaterial widens base and clearcoat specular lobes', testCas
   ] as const;
 
   for (const {language, source, derivativeFunctionX, derivativeFunctionY} of shaderSources) {
-    testCase.ok(
-      source.includes('normalDerivativeX = ' + derivativeFunctionX + '(normal)'),
+    expect(
+      Boolean(source.includes('normalDerivativeX = ' + derivativeFunctionX + '(normal)')),
       language + ' derives the specular footprint from the shaded normal'
-    );
-    testCase.ok(
-      source.includes('normalDerivativeY = ' + derivativeFunctionY + '(normal)'),
+    ).toBe(true);
+    expect(
+      Boolean(source.includes('normalDerivativeY = ' + derivativeFunctionY + '(normal)')),
       language + ' derives the second axis of the specular footprint'
-    );
-    testCase.ok(
-      source.includes('kernelRoughnessSquared = min(2.0 * normalVariance, 1.0)'),
+    ).toBe(true);
+    expect(
+      Boolean(source.includes('kernelRoughnessSquared = min(2.0 * normalVariance, 1.0)')),
       language + ' bounds the normal-variance roughness contribution'
-    );
-    testCase.ok(
-      source.includes('perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)'),
+    ).toBe(true);
+    expect(
+      Boolean(
+        source.includes('perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n)')
+      ),
       language + ' widens the base specular lobe'
-    );
-    testCase.ok(
-      source.includes(
-        'clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal)'
+    ).toBe(true);
+    expect(
+      Boolean(
+        source.includes(
+          'clearcoatRoughness = widenSpecularRoughness(clearcoatRoughness, clearcoatNormal)'
+        )
       ),
       language + ' widens the clearcoat specular lobe'
-    );
+    ).toBe(true);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial shader uniform blocks match uniformTypes order', testCase => {
+it('shadertools#pbrMaterial shader uniform blocks match uniformTypes order', () => {
   const fragmentValidationResult = getShaderModuleUniformLayoutValidationResult(
     pbrMaterial,
     'fragment'
   );
   const wgslValidationResult = getShaderModuleUniformLayoutValidationResult(pbrMaterial, 'wgsl');
 
-  testCase.ok(fragmentValidationResult?.matches, 'fragment validation result matches');
-  testCase.ok(wgslValidationResult?.matches, 'WGSL validation result matches');
-  testCase.deepEqual(
+  expect(Boolean(fragmentValidationResult?.matches), 'fragment validation result matches').toBe(
+    true
+  );
+  expect(Boolean(wgslValidationResult?.matches), 'WGSL validation result matches').toBe(true);
+  expect(
     getShaderModuleUniformBlockFields(pbrMaterial, 'fragment'),
-    EXPECTED_UNIFORM_NAMES,
     'GLSL uniform block order matches uniformTypes'
-  );
-  testCase.deepEqual(
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
+  expect(
     getShaderModuleUniformBlockFields(pbrMaterial, 'wgsl'),
-    EXPECTED_UNIFORM_NAMES,
     'WGSL uniform struct order matches uniformTypes'
-  );
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial uniform buffer layout matches expected std140 packing', testCase => {
+it('shadertools#pbrMaterial uniform buffer layout matches expected std140 packing', () => {
   const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
 
-  testCase.equal(
-    shaderBlockLayout.byteLength,
-    1696,
-    'uniform buffer layout reports the exact packed size'
+  expect(shaderBlockLayout.byteLength, 'uniform buffer layout reports the exact packed size').toBe(
+    1696
   );
-  testCase.deepEqual(
+  expect(
     Object.keys(shaderBlockLayout.fields),
-    EXPECTED_UNIFORM_NAMES,
     'uniform buffer layout key order matches uniform definitions'
-  );
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
 
   for (const [uniformName, expectedLayout] of Object.entries(EXPECTED_UNIFORM_BUFFER_LAYOUT)) {
     const actualLayout = shaderBlockLayout.fields[uniformName];
-    testCase.ok(actualLayout, `${uniformName} is present in the layout`);
-    testCase.equal(actualLayout?.offset, expectedLayout.offset, `${uniformName} offset`);
-    testCase.equal(actualLayout?.size, expectedLayout.size, `${uniformName} size`);
+    expect(Boolean(actualLayout), `${uniformName} is present in the layout`).toBe(true);
+    expect(actualLayout?.offset, `${uniformName} offset`).toBe(expectedLayout.offset);
+    expect(actualLayout?.size, `${uniformName} size`).toBe(expectedLayout.size);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial uniform store reports minimum allocation size separately', testCase => {
+it('shadertools#pbrMaterial uniform store reports minimum allocation size separately', () => {
   const uniformStore = new UniformStore<{material: PBRMaterialUniforms}>({type: 'webgl'} as any, {
     material: {
       uniformTypes: pbrMaterial.uniformTypes,
@@ -378,21 +377,19 @@ test('shadertools#pbrMaterial uniform store reports minimum allocation size sepa
     }
   });
 
-  testCase.equal(
+  expect(
     uniformStore.getUniformBufferByteLength('material'),
-    1696,
     'uniform store keeps the minimum allocation size'
-  );
-  testCase.equal(
+  ).toBe(1696);
+  expect(
     uniformStore.getUniformBufferData('material').byteLength,
-    1696,
     'uniform store serializes only the packed block data'
-  );
+  ).toBe(1696);
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial serializes a full PBR sample into the expected buffer slots', testCase => {
+it('shadertools#pbrMaterial serializes a full PBR sample into the expected buffer slots', () => {
   const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
   const shaderBlockWriter = new ShaderBlockWriter(shaderBlockLayout);
   const uniformBufferData = shaderBlockWriter.getData(fullPBRUniforms);
@@ -421,7 +418,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
 
   for (const [uniformName, expectedValue] of Object.entries(expectedIntegerValues)) {
     const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
-    testCase.equal(int32View[uniformOffset], expectedValue, `${uniformName} encoded as i32`);
+    expect(int32View[uniformOffset], `${uniformName} encoded as i32`).toBe(expectedValue);
   }
 
   const expectedScalarValues = {
@@ -446,10 +443,10 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
 
   for (const [uniformName, expectedValue] of Object.entries(expectedScalarValues)) {
     const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
-    testCase.ok(
-      almostEqual(float32View[uniformOffset], expectedValue),
+    expect(
+      Boolean(almostEqual(float32View[uniformOffset], expectedValue)),
       `${uniformName} encoded as f32`
-    );
+    ).toBe(true);
   }
 
   const expectedVectorValues = {
@@ -470,10 +467,10 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
     const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
 
     for (let valueIndex = 0; valueIndex < expectedValues.length; valueIndex++) {
-      testCase.ok(
-        almostEqual(float32View[uniformOffset + valueIndex], expectedValues[valueIndex]),
+      expect(
+        Boolean(almostEqual(float32View[uniformOffset + valueIndex], expectedValues[valueIndex])),
         `${uniformName}[${valueIndex}] encoded as f32`
-      );
+      ).toBe(true);
     }
   }
 
@@ -489,14 +486,14 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
 
   for (const [uniformName, paddingSlots] of Object.entries(expectedPaddingSlots)) {
     for (const paddingSlot of paddingSlots) {
-      testCase.equal(float32View[paddingSlot], 0, `${uniformName} padding remains zeroed`);
+      expect(float32View[paddingSlot], `${uniformName} padding remains zeroed`).toBe(0);
     }
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('shadertools#pbrMaterial uniform store preserves prior and default values across partial updates', testCase => {
+it('shadertools#pbrMaterial uniform store preserves prior and default values across partial updates', () => {
   const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
   const uniformStore = new UniformStore<{material: PBRMaterialUniforms}>({type: 'webgl'} as any, {
     material: {
@@ -534,36 +531,47 @@ test('shadertools#pbrMaterial uniform store preserves prior and default values a
   const scaleIBLAmbientOffset = shaderBlockLayout.fields.scaleIBLAmbient.offset;
   const scaleDiffBaseMROffset = shaderBlockLayout.fields.scaleDiffBaseMR.offset;
 
-  testCase.ok(almostEqual(float32View[baseColorFactorOffset], 0.25), 'baseColorFactor update kept');
-  testCase.ok(
-    almostEqual(float32View[baseColorFactorOffset + 2], 0.75),
+  expect(
+    Boolean(almostEqual(float32View[baseColorFactorOffset], 0.25)),
+    'baseColorFactor update kept'
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[baseColorFactorOffset + 2], 0.75)),
     'baseColorFactor vector update kept'
-  );
-  testCase.ok(
-    almostEqual(float32View[metallicRoughnessValuesOffset], 0.4),
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[metallicRoughnessValuesOffset], 0.4)),
     'metallicRoughnessValues first component updated'
-  );
-  testCase.ok(
-    almostEqual(float32View[metallicRoughnessValuesOffset + 1], 0.6),
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[metallicRoughnessValuesOffset + 1], 0.6)),
     'metallicRoughnessValues second component updated'
-  );
-  testCase.ok(almostEqual(float32View[clearcoatFactorOffset], 0.8), 'clearcoatFactor kept');
-  testCase.ok(almostEqual(float32View[emissiveStrengthOffset], 2.5), 'emissiveStrength kept');
-  testCase.ok(
-    almostEqual(float32View[iorOffset], pbrMaterial.defaultUniforms.ior),
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[clearcoatFactorOffset], 0.8)),
+    'clearcoatFactor kept'
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[emissiveStrengthOffset], 2.5)),
+    'emissiveStrength kept'
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[iorOffset], pbrMaterial.defaultUniforms.ior)),
     'default ior preserved'
-  );
-  testCase.equal(int32View[IBLenabledOffset], 1, 'IBL enabled flag updated');
-  testCase.ok(almostEqual(float32View[scaleIBLAmbientOffset], 0.5), 'scaleIBLAmbient x updated');
-  testCase.ok(
-    almostEqual(float32View[scaleIBLAmbientOffset + 1], 1.5),
+  ).toBe(true);
+  expect(int32View[IBLenabledOffset], 'IBL enabled flag updated').toBe(1);
+  expect(
+    Boolean(almostEqual(float32View[scaleIBLAmbientOffset], 0.5)),
+    'scaleIBLAmbient x updated'
+  ).toBe(true);
+  expect(
+    Boolean(almostEqual(float32View[scaleIBLAmbientOffset + 1], 1.5)),
     'scaleIBLAmbient y updated'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     float32View[scaleDiffBaseMROffset],
-    0,
     'default debug uniforms remain untouched when not updated'
-  );
+  ).toBe(0);
 
-  testCase.end();
+  void 0;
 });

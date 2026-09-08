@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
@@ -75,12 +75,12 @@ const projectUniforms = {
   pseudoMeters: 1
 } as const;
 
-test('ShaderModule project layout regression reads original deck project uniforms on GPU', async t => {
+it('ShaderModule project layout regression reads original deck project uniforms on GPU', async () => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -122,29 +122,25 @@ test('ShaderModule project layout regression reads original deck project uniform
   });
   transform.run();
 
-  t.deepEqual(
+  expect(
     Array.from(await readTransformOutput(transform, 'outConfig')),
-    [3, 4, 14.75, 1],
     'reads scalar and bool-like config values from the original project block'
-  );
-  t.deepEqual(
+  ).toEqual([3, 4, 14.75, 1]);
+  expect(
     Array.from(await readTransformOutput(transform, 'outMeters')),
-    [11.125, 12.25, 13.5, 1],
     'reads vec3 and bool-like meter values from the original project block'
-  );
-  t.deepEqual(
+  ).toEqual([11.125, 12.25, 13.5, 1]);
+  expect(
     Array.from(await readTransformOutput(transform, 'outViewport')),
-    [301.25, 302.5, 303.75, 304.5],
     'reads vec2 + scalar viewport values from the original project block'
-  );
-  t.deepEqual(
+  ).toEqual([301.25, 302.5, 303.75, 304.5]);
+  expect(
     Array.from(await readTransformOutput(transform, 'outOrigins')),
-    [501.125, 502.25, 601.125, 602.25],
     'reads vec3 origin values from the original project block'
-  );
+  ).toEqual([501.125, 502.25, 601.125, 602.25]);
 
   transform.destroy();
-  t.end();
+  void 0;
 });
 
 async function readTransformOutput(

@@ -174,6 +174,34 @@ describe('FlatController', () => {
 
     controller.destroy();
   });
+
+  test('rejects finite view endpoints whose computed range overflows', () => {
+    const canvasTarget = new EventTarget();
+    const canvas = Object.assign(canvasTarget, {
+      style: {cursor: '', touchAction: ''},
+      getBoundingClientRect: () => ({left: 0, top: 0, width: 100, height: 100})
+    }) as unknown as HTMLCanvasElement;
+    let interactionCount = 0;
+    let viewChangeCount = 0;
+    const overflowingView = {
+      xMin: -Number.MAX_VALUE,
+      xMax: Number.MAX_VALUE,
+      yMin: 0,
+      yMax: 100
+    };
+    const controller = new FlatController(canvas, {
+      getView: () => overflowingView,
+      getBounds: () => overflowingView,
+      onInteractionStart: () => interactionCount++,
+      onViewChange: () => viewChangeCount++
+    });
+
+    canvas.dispatchEvent(makeWheelEvent(50, -100));
+    expect(interactionCount).toBe(0);
+    expect(viewChangeCount).toBe(0);
+
+    controller.destroy();
+  });
 });
 
 function makePointerEvent(

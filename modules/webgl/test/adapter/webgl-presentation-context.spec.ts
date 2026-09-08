@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 import {
   getNullTestDevice,
@@ -11,11 +11,14 @@ import {
   getWebGPUTestDevice
 } from '@luma.gl/test-utils';
 
-test('WebGLPresentationContext delegates framebuffer sizing and present()', async t => {
+it('WebGLPresentationContext delegates framebuffer sizing and present()', async () => {
   const device = await getPresentationWebGLTestDevice();
   if (!device) {
-    t.pass('OffscreenCanvas unavailable, skipped WebGL presentation-context test');
-    t.end();
+    expect(
+      Boolean('OffscreenCanvas unavailable, skipped WebGL presentation-context test'),
+      ''
+    ).toBe(true);
+    void 0;
     return;
   }
 
@@ -42,23 +45,26 @@ test('WebGLPresentationContext delegates framebuffer sizing and present()', asyn
   const presentationContext = device.createPresentationContext({canvas: destinationCanvas});
   const framebuffer = presentationContext.getCurrentFramebuffer();
 
-  t.ok(framebuffer, 'presentation context returns a framebuffer');
-  t.equal(defaultCanvas.width, 64, 'default canvas width matches presentation width');
-  t.equal(defaultCanvas.height, 32, 'default canvas height matches presentation height');
+  expect(Boolean(framebuffer), 'presentation context returns a framebuffer').toBe(true);
+  expect(defaultCanvas.width, 'default canvas width matches presentation width').toBe(64);
+  expect(defaultCanvas.height, 'default canvas height matches presentation height').toBe(32);
 
   presentationContext.present();
 
-  t.equal(drawImageCalls.length, 1, 'present copies once into the destination canvas');
-  t.equal(drawImageCalls[0][0], defaultCanvas, 'present copies from the default canvas');
+  expect(drawImageCalls.length, 'present copies once into the destination canvas').toBe(1);
+  expect(drawImageCalls[0][0], 'present copies from the default canvas').toBe(defaultCanvas);
 
-  t.end();
+  void 0;
 });
 
-test('WebGLPresentationContext supports sequential presentation contexts', async t => {
+it('WebGLPresentationContext supports sequential presentation contexts', async () => {
   const device = await getPresentationWebGLTestDevice();
   if (!device) {
-    t.pass('OffscreenCanvas unavailable, skipped sequential presentation-context test');
-    t.end();
+    expect(
+      Boolean('OffscreenCanvas unavailable, skipped sequential presentation-context test'),
+      ''
+    ).toBe(true);
+    void 0;
     return;
   }
 
@@ -76,24 +82,29 @@ test('WebGLPresentationContext supports sequential presentation contexts', async
   firstPresentationContext.getCurrentFramebuffer();
   firstPresentationContext.present();
 
-  t.equal(defaultCanvas.width, 32, 'first presentation context resizes default canvas width');
-  t.equal(defaultCanvas.height, 16, 'first presentation context resizes default canvas height');
+  expect(defaultCanvas.width, 'first presentation context resizes default canvas width').toBe(32);
+  expect(defaultCanvas.height, 'first presentation context resizes default canvas height').toBe(16);
 
   const secondPresentationContext = device.createPresentationContext({canvas: secondCanvas});
   secondPresentationContext.getCurrentFramebuffer();
   secondPresentationContext.present();
 
-  t.equal(defaultCanvas.width, 96, 'second presentation context resizes default canvas width');
-  t.equal(defaultCanvas.height, 48, 'second presentation context resizes default canvas height');
+  expect(defaultCanvas.width, 'second presentation context resizes default canvas width').toBe(96);
+  expect(defaultCanvas.height, 'second presentation context resizes default canvas height').toBe(
+    48
+  );
 
-  t.end();
+  void 0;
 });
 
-test('WebGLPresentationContext skips present() for zero-sized destinations', async t => {
+it('WebGLPresentationContext skips present() for zero-sized destinations', async () => {
   const device = await getPresentationWebGLTestDevice();
   if (!device) {
-    t.pass('OffscreenCanvas unavailable, skipped zero-size presentation-context test');
-    t.end();
+    expect(
+      Boolean('OffscreenCanvas unavailable, skipped zero-size presentation-context test'),
+      ''
+    ).toBe(true);
+    void 0;
     return;
   }
 
@@ -109,19 +120,21 @@ test('WebGLPresentationContext skips present() for zero-sized destinations', asy
     useDevicePixels: false
   });
 
-  t.doesNotThrow(
+  expect(
     () => presentationContext.present(),
     'present is a no-op when the presentation canvas is zero-sized'
-  );
+  ).not.toThrow();
 
-  t.end();
+  void 0;
 });
 
-test('WebGLPresentationContext fails without a default canvas context', async t => {
+it('WebGLPresentationContext fails without a default canvas context', async () => {
   const device = await getPresentationWebGLTestDevice();
   if (!device) {
-    t.pass('OffscreenCanvas unavailable, skipped missing-default-context test');
-    t.end();
+    expect(Boolean('OffscreenCanvas unavailable, skipped missing-default-context test'), '').toBe(
+      true
+    );
+    void 0;
     return;
   }
 
@@ -134,37 +147,38 @@ test('WebGLPresentationContext fails without a default canvas context', async t 
   device.canvasContext = null;
 
   try {
-    t.throws(
+    expect(
       () => device.createPresentationContext({canvas: destinationCanvas}),
-      /Device has no default CanvasContext/,
       'constructor requires a default canvas context'
-    );
+    ).toThrow(/Device has no default CanvasContext/);
   } finally {
     // @ts-expect-error restoring test state
     device.canvasContext = originalCanvasContext;
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLPresentationContext fails when default canvas is not offscreen', async t => {
+it('WebGLPresentationContext fails when default canvas is not offscreen', async () => {
   const device = await getWebGLTestDevice();
   const destinationCanvas = document.createElement('canvas');
 
-  t.throws(
+  expect(
     () => device.createPresentationContext({canvas: destinationCanvas}),
-    /requires the default CanvasContext canvas to be an OffscreenCanvas/,
     'constructor requires an offscreen default canvas context'
-  );
+  ).toThrow(/requires the default CanvasContext canvas to be an OffscreenCanvas/);
 
-  t.end();
+  void 0;
 });
 
-test('WebGLPresentationContext fails when destination canvas has no 2d context', async t => {
+it('WebGLPresentationContext fails when destination canvas has no 2d context', async () => {
   const device = await getPresentationWebGLTestDevice();
   if (!device) {
-    t.pass('OffscreenCanvas unavailable, skipped destination-context failure test');
-    t.end();
+    expect(
+      Boolean('OffscreenCanvas unavailable, skipped destination-context failure test'),
+      ''
+    ).toBe(true);
+    void 0;
     return;
   }
 
@@ -178,20 +192,19 @@ test('WebGLPresentationContext fails when destination canvas has no 2d context',
     return originalGetContext(contextId as any, options as any);
   }) as typeof destinationCanvas.getContext;
 
-  t.throws(
+  expect(
     () => device.createPresentationContext({canvas: destinationCanvas}),
-    /Failed to create 2d presentation context/,
     'constructor requires a destination 2d context'
-  );
+  ).toThrow(/Failed to create 2d presentation context/);
 
-  t.end();
+  void 0;
 });
 
-test('WebGPUPresentationContext renders directly to its destination canvas', async t => {
+it('WebGPUPresentationContext renders directly to its destination canvas', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.pass('WebGPU unavailable, skipped WebGPU presentation-context test');
-    t.end();
+    expect(Boolean('WebGPU unavailable, skipped WebGPU presentation-context test'), '').toBe(true);
+    void 0;
     return;
   }
 
@@ -209,36 +222,34 @@ test('WebGPUPresentationContext renders directly to its destination canvas', asy
   const framebuffer = presentationContext.getCurrentFramebuffer() as any;
   const secondFramebuffer = presentationContext.getCurrentFramebuffer() as any;
 
-  t.ok(framebuffer, 'WebGPU presentation context returns a framebuffer');
-  t.equal(
-    secondFramebuffer,
-    framebuffer,
-    'WebGPU presentation context reuses its framebuffer wrapper'
+  expect(Boolean(framebuffer), 'WebGPU presentation context returns a framebuffer').toBe(true);
+  expect(secondFramebuffer, 'WebGPU presentation context reuses its framebuffer wrapper').toBe(
+    framebuffer
   );
-  t.equal(
+  expect(
     secondFramebuffer.colorAttachments[0],
-    framebuffer.colorAttachments[0],
     'WebGPU presentation context reuses its texture view wrapper'
-  );
-  t.equal(
+  ).toBe(framebuffer.colorAttachments[0]);
+  expect(
     secondFramebuffer.colorAttachments[0].texture,
-    framebuffer.colorAttachments[0].texture,
     'WebGPU presentation context reuses its texture wrapper'
-  );
-  t.equal(destinationCanvas.width, 32, 'destination canvas width is preserved');
-  t.equal(destinationCanvas.height, 16, 'destination canvas height is preserved');
+  ).toBe(framebuffer.colorAttachments[0].texture);
+  expect(destinationCanvas.width, 'destination canvas width is preserved').toBe(32);
+  expect(destinationCanvas.height, 'destination canvas height is preserved').toBe(16);
 
-  t.doesNotThrow(() => presentationContext.present(), 'present submits without copy step');
+  expect(() => presentationContext.present(), 'present submits without copy step').not.toThrow();
 
   presentationContext.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPUPresentationContext destroy() releases its depth attachment', async t => {
+it('WebGPUPresentationContext destroy() releases its depth attachment', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.pass('WebGPU unavailable, skipped WebGPU depth-attachment cleanup test');
-    t.end();
+    expect(Boolean('WebGPU unavailable, skipped WebGPU depth-attachment cleanup test'), '').toBe(
+      true
+    );
+    void 0;
     return;
   }
 
@@ -264,9 +275,14 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
   } | null;
   const framebuffer = (presentationContext as any).framebuffer as {destroy: () => void} | null;
 
-  t.ok(depthStencilAttachment, 'presentation context creates a depth attachment by default');
-  t.ok(colorAttachment, 'presentation context caches a color attachment wrapper');
-  t.ok(framebuffer, 'presentation context caches a framebuffer wrapper');
+  expect(
+    Boolean(depthStencilAttachment),
+    'presentation context creates a depth attachment by default'
+  ).toBe(true);
+  expect(Boolean(colorAttachment), 'presentation context caches a color attachment wrapper').toBe(
+    true
+  );
+  expect(Boolean(framebuffer), 'presentation context caches a framebuffer wrapper').toBe(true);
 
   let destroyCallCount = 0;
   if (depthStencilAttachment) {
@@ -295,34 +311,30 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
 
   presentationContext.destroy();
 
-  t.equal(destroyCallCount, 1, 'destroy releases the cached depth attachment');
-  t.equal(colorDestroyCallCount, 1, 'destroy releases the cached color attachment wrapper');
-  t.equal(framebufferDestroyCallCount, 1, 'destroy releases the cached framebuffer wrapper');
-  t.equal(
+  expect(destroyCallCount, 'destroy releases the cached depth attachment').toBe(1);
+  expect(colorDestroyCallCount, 'destroy releases the cached color attachment wrapper').toBe(1);
+  expect(framebufferDestroyCallCount, 'destroy releases the cached framebuffer wrapper').toBe(1);
+  expect(
     (presentationContext as any).depthStencilAttachment,
-    null,
     'destroy clears the cached depth attachment reference'
-  );
-  t.equal(
+  ).toBe(null);
+  expect(
     (presentationContext as any).colorAttachment,
-    null,
     'destroy clears the cached color attachment reference'
-  );
-  t.equal(
+  ).toBe(null);
+  expect(
     (presentationContext as any).framebuffer,
-    null,
     'destroy clears the cached framebuffer reference'
-  );
+  ).toBe(null);
 
-  t.end();
+  void 0;
 });
-test('PresentationContext is unsupported on NullDevice', async t => {
+it('PresentationContext is unsupported on NullDevice', async () => {
   const nullDevice = await getNullTestDevice();
-  t.throws(
+  expect(
     () => nullDevice.createPresentationContext({width: 1, height: 1}),
-    /not supported/,
     'NullDevice rejects presentation contexts'
-  );
+  ).toThrow(/not supported/);
 
-  t.end();
+  void 0;
 });

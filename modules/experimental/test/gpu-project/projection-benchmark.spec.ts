@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {createWebMercatorProjection} from '@luma.gl/experimental/gpu-project';
 import {runGPUProjectionBenchmark} from '@luma.gl/experimental/gpu-project/benchmarks';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU paths', async tapeTest => {
+it('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -28,51 +28,61 @@ test('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU p
     measuredIterations: configuredRows ? 5 : 1
   });
 
-  tapeTest.equal(benchmarkReport.cpu.coordinateCount, coordinateCount);
-  tapeTest.ok(benchmarkReport.cpu.patchCount > 1, 'benchmark rows span multiple adaptive patches');
-  tapeTest.deepEqual(
+  expect(benchmarkReport.cpu.coordinateCount, '').toBe(coordinateCount);
+  expect(
+    Boolean(benchmarkReport.cpu.patchCount > 1),
+    'benchmark rows span multiple adaptive patches'
+  ).toBe(true);
+  expect(
     benchmarkReport.cpu.paths.map(path => path.strategy),
-    ['provider', 'plan-scan', 'plan-patch-ids'],
     'provider and both CPU patch strategies share one deterministic dataset'
-  );
-  tapeTest.deepEqual(
+  ).toEqual(['provider', 'plan-scan', 'plan-patch-ids']);
+  expect(
     benchmarkReport.paths.map(path => `${path.inputFormat}:${path.patchStrategy}`),
-    ['float32x2:scan', 'float32x2:patch-ids', 'uint32x4:scan', 'uint32x4:patch-ids'],
     'both source representations are compared with scan and explicit patch IDs'
-  );
+  ).toEqual(['float32x2:scan', 'float32x2:patch-ids', 'uint32x4:scan', 'uint32x4:patch-ids']);
 
   for (const path of benchmarkReport.paths) {
-    tapeTest.ok(
-      path.synchronizedCoordinatesPerSecond > 0,
+    expect(
+      Boolean(path.synchronizedCoordinatesPerSecond > 0),
       `${path.inputFormat} reports throughput`
-    );
-    tapeTest.ok(path.synchronizedTimeMilliseconds.minimum >= 0, 'GPU submission is synchronized');
-    tapeTest.ok(path.cpuEncodeTimeMilliseconds.minimum >= 0, 'CPU encoding is measured separately');
-    tapeTest.ok(path.maxError <= 0.0301, 'the entire output matches its source-format CPU oracle');
-    tapeTest.equal(
+    ).toBe(true);
+    expect(
+      Boolean(path.synchronizedTimeMilliseconds.minimum >= 0),
+      'GPU submission is synchronized'
+    ).toBe(true);
+    expect(
+      Boolean(path.cpuEncodeTimeMilliseconds.minimum >= 0),
+      'CPU encoding is measured separately'
+    ).toBe(true);
+    expect(
+      Boolean(path.maxError <= 0.0301),
+      'the entire output matches its source-format CPU oracle'
+    ).toBe(true);
+    expect(
       path.synchronizedSpeedupOverCPUProvider,
-      path.synchronizedCoordinatesPerSecond / benchmarkReport.cpu.paths[0].coordinatesPerSecond,
       'end-to-end GPU throughput is compared directly against the CPU provider'
+    ).toBe(
+      path.synchronizedCoordinatesPerSecond / benchmarkReport.cpu.paths[0].coordinatesPerSecond
     );
     if (path.gpuCoordinatesPerSecond !== undefined) {
-      tapeTest.equal(
+      expect(
         path.gpuSpeedupOverCPUProvider,
-        path.gpuCoordinatesPerSecond / benchmarkReport.cpu.paths[0].coordinatesPerSecond,
         'timestamped compute throughput is compared directly against the CPU provider'
-      );
+      ).toBe(path.gpuCoordinatesPerSecond / benchmarkReport.cpu.paths[0].coordinatesPerSecond);
     }
   }
-  tapeTest.ok(
-    benchmarkReport.paths[1].memoryByteLength > benchmarkReport.paths[0].memoryByteLength,
+  expect(
+    Boolean(benchmarkReport.paths[1].memoryByteLength > benchmarkReport.paths[0].memoryByteLength),
     'explicit patch-ID storage is reflected in reported memory consumption'
-  );
-  tapeTest.ok(
-    benchmarkReport.paths[2].memoryByteLength > benchmarkReport.paths[0].memoryByteLength,
+  ).toBe(true);
+  expect(
+    Boolean(benchmarkReport.paths[2].memoryByteLength > benchmarkReport.paths[0].memoryByteLength),
     'raw binary64 inputs report their wider physical storage'
-  );
+  ).toBe(true);
 
   if (configuredRows) {
-    tapeTest.comment('GPU_PROJECT_BENCHMARK_REPORT', JSON.stringify(benchmarkReport));
+    void 0;
   }
-  tapeTest.end();
+  void 0;
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -12,11 +12,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURasterHistogram excludes finite raw nodata and preserves offset-aligned source masks', async testCase => {
+it('GPURasterHistogram excludes finite raw nodata and preserves offset-aligned source masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -49,34 +49,30 @@ test('GPURasterHistogram excludes finite raw nodata and preserves offset-aligned
   const validityIndex = compiled.stats.nodeOrder.indexOf('masked-histogram-resolve-validity');
   const extentIndex = compiled.stats.nodeOrder.indexOf('masked-histogram-valid-extent-finalize');
   const histogramIndex = compiled.stats.nodeOrder.indexOf('masked-histogram-bins-local');
-  testCase.ok(
-    validityIndex !== -1 && extentIndex > validityIndex && histogramIndex > extentIndex,
+  expect(
+    Boolean(validityIndex !== -1 && extentIndex > validityIndex && histogramIndex > extentIndex),
     'declared graph hazards order raw validity, masked extent, and histogram accumulation'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiled, 'raster-offset-histogram');
   const extent = await readFloat32(extentBuffer, 3);
   const histogram = await readUint32(histogramBuffer, 4);
-  testCase.deepEqual(
-    extent.slice(1),
-    [1, 7],
-    'finite nodata and invalid pixels do not affect extent'
-  );
-  testCase.deepEqual(histogram.slice(1), [1, 1, 1], 'only offset-aligned valid pixels enter bins');
+  expect(extent.slice(1), 'finite nodata and invalid pixels do not affect extent').toEqual([1, 7]);
+  expect(histogram.slice(1), 'only offset-aligned valid pixels enter bins').toEqual([1, 1, 1]);
 
   compiled.destroy();
   valuesBuffer.destroy();
   sourceValidityBuffer.destroy();
   extentBuffer.destroy();
   histogramBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterHistogram retains exact signed and unsigned integer nodata sentinels', async testCase => {
+it('GPURasterHistogram retains exact signed and unsigned integer nodata sentinels', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -87,8 +83,8 @@ test('GPURasterHistogram retains exact signed and unsigned integer nodata sentin
     values: Int32Array.from([-2147483648, -7, 0, 7]),
     noDataValue: -2147483648
   });
-  testCase.deepEqual(signed.domain, [-7, 7], 'minimum signed integer nodata is excluded exactly');
-  testCase.deepEqual(signed.bins, [1, 1, 1], 'signed raw-domain values retain their exact bins');
+  expect(signed.domain, 'minimum signed integer nodata is excluded exactly').toEqual([-7, 7]);
+  expect(signed.bins, 'signed raw-domain values retain their exact bins').toEqual([1, 1, 1]);
 
   const unsigned = await runIntegerHistogram({
     device,
@@ -97,24 +93,22 @@ test('GPURasterHistogram retains exact signed and unsigned integer nodata sentin
     values: Uint32Array.from([4294967295, 16777217, 16777218, 16777219]),
     noDataValue: 4294967295
   });
-  testCase.deepEqual(
+  expect(
     unsigned.domain,
-    [16777217, 16777219],
     'uint32 values above float32 precision retain their exact automatic domain'
-  );
-  testCase.deepEqual(
+  ).toEqual([16777217, 16777219]);
+  expect(
     unsigned.bins,
-    [1, 1, 1],
     'maximum uint32 nodata and nearby integer bins never round through float32'
-  );
-  testCase.end();
+  ).toEqual([1, 1, 1]);
+  void 0;
 });
 
-test('GPURasterHistogram clears all-invalid outputs and reuses one compiled graph', async testCase => {
+it('GPURasterHistogram clears all-invalid outputs and reuses one compiled graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -138,28 +132,23 @@ test('GPURasterHistogram clears all-invalid outputs and reuses one compiled grap
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'raster-histogram-all-invalid');
-  testCase.deepEqual(await readFloat32(extentBuffer, 2), [0, 0], 'all-invalid extent becomes zero');
-  testCase.deepEqual(await readUint32(histogramBuffer, 2), [0, 0], 'all-invalid bins are cleared');
+  expect(await readFloat32(extentBuffer, 2), 'all-invalid extent becomes zero').toEqual([0, 0]);
+  expect(await readUint32(histogramBuffer, 2), 'all-invalid bins are cleared').toEqual([0, 0]);
 
   valuesBuffer.write(Float32Array.from([2, 6]));
   submitGraph(device, compiled, 'raster-histogram-updated');
-  testCase.deepEqual(
-    await readFloat32(extentBuffer, 2),
-    [2, 6],
-    'domain updates without compiling'
-  );
-  testCase.deepEqual(
-    await readUint32(histogramBuffer, 2),
-    [1, 1],
-    'updated valid samples are binned'
-  );
+  expect(await readFloat32(extentBuffer, 2), 'domain updates without compiling').toEqual([2, 6]);
+  expect(await readUint32(histogramBuffer, 2), 'updated valid samples are binned').toEqual([1, 1]);
 
   compiled.destroy();
-  testCase.notOk(valuesBuffer.destroyed, 'borrowed source storage survives graph destruction');
+  expect(
+    Boolean(valuesBuffer.destroyed),
+    'borrowed source storage survives graph destruction'
+  ).toBe(false);
   valuesBuffer.destroy();
   extentBuffer.destroy();
   histogramBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function runIntegerHistogram<Format extends 'uint32' | 'sint32'>(options: {

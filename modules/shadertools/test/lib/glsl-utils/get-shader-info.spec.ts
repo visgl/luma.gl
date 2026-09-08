@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getShaderInfo} from '@luma.gl/shadertools';
 
 const SHADER_1 = /* glsl */ `\
@@ -98,38 +98,42 @@ const versionTests = {
   [SHADER7]: 300
 };
 
-test('WebGL#getShaderInfo()', t => {
-  t.equal(
-    getShaderInfo(SHADER_1).name,
-    'name-of-shader',
-    'getShaderInfo().name extracted correct name'
+it('WebGL#getShaderInfo()', () => {
+  expect(getShaderInfo(SHADER_1).name, 'getShaderInfo().name extracted correct name').toBe(
+    'name-of-shader'
   );
 
-  t.equal(getShaderInfo(SHADER_2).name, 'unnamed', 'getShaderInfo().name extracted default name');
-
-  t.equal(
-    getShaderInfo(SHADER_3).name,
-    'name-of-shader',
-    'getShaderInfo().name extracted correct name'
+  expect(getShaderInfo(SHADER_2).name, 'getShaderInfo().name extracted default name').toBe(
+    'unnamed'
   );
 
-  t.equal(
-    getShaderInfo(SHADER_4).name,
-    'name-of-shader',
-    'getShaderInfo().name extracted correct name'
+  expect(getShaderInfo(SHADER_3).name, 'getShaderInfo().name extracted correct name').toBe(
+    'name-of-shader'
   );
 
-  t.equal(getShaderInfo(SHADER_5).name, 'unnamed', 'getShaderInfo().name extracted default name');
+  expect(getShaderInfo(SHADER_4).name, 'getShaderInfo().name extracted correct name').toBe(
+    'name-of-shader'
+  );
 
-  t.equal(getShaderInfo(SHADER_6).name, 'unnamed', 'getShaderInfo().name extracted default name');
+  expect(getShaderInfo(SHADER_5).name, 'getShaderInfo().name extracted default name').toBe(
+    'unnamed'
+  );
 
-  t.equal(getShaderInfo(SHADER_7).name, 'unnamed', 'getShaderInfo().name extracted default name');
+  expect(getShaderInfo(SHADER_6).name, 'getShaderInfo().name extracted default name').toBe(
+    'unnamed'
+  );
 
-  t.equal(getShaderInfo(SHADER_8).name, 'unnamed', 'getShaderInfo().name extracted default name');
+  expect(getShaderInfo(SHADER_7).name, 'getShaderInfo().name extracted default name').toBe(
+    'unnamed'
+  );
+
+  expect(getShaderInfo(SHADER_8).name, 'getShaderInfo().name extracted default name').toBe(
+    'unnamed'
+  );
 
   for (const string in versionTests) {
-    t.equal(getShaderInfo(string).version, versionTests[string], 'Version should match');
+    expect(getShaderInfo(string).version, 'Version should match').toBe(versionTests[string]);
   }
 
-  t.end();
+  void 0;
 });

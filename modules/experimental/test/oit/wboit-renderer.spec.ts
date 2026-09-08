@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   Buffer,
   type Device,
@@ -21,59 +21,58 @@ import {
 } from '@luma.gl/experimental';
 import {getTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-test('wboit module exposes portable capture helpers', t => {
-  t.equal(wboitPlugin.name, 'wboit', 'plugin has stable name');
-  t.deepEqual(wboitPlugin.modules, [wboit], 'plugin installs the portable shader module');
-  t.match(wboit.source || '', /wboit_captureStraightColor/, 'WGSL helper is present');
-  t.match(wboit.fs || '', /wboit_captureStraightColor/, 'GLSL helper is present');
-  t.deepEqual(
-    wboit.getUniforms?.({pass: 'accumulation'}),
-    {capturePass: 1},
-    'selects accumulation'
-  );
-  t.deepEqual(wboit.getUniforms?.({pass: 'revealage'}), {capturePass: 2}, 'selects revealage');
-  t.deepEqual(wboit.getUniforms?.({}), {capturePass: 0}, 'defaults to inactive');
-  t.end();
+it('wboit module exposes portable capture helpers', () => {
+  expect(wboitPlugin.name, 'plugin has stable name').toBe('wboit');
+  expect(wboitPlugin.modules, 'plugin installs the portable shader module').toEqual([wboit]);
+  expect(wboit.source || '', 'WGSL helper is present').toMatch(/wboit_captureStraightColor/);
+  expect(wboit.fs || '', 'GLSL helper is present').toMatch(/wboit_captureStraightColor/);
+  expect(wboit.getUniforms?.({pass: 'accumulation'}), 'selects accumulation').toEqual({
+    capturePass: 1
+  });
+  expect(wboit.getUniforms?.({pass: 'revealage'}), 'selects revealage').toEqual({capturePass: 2});
+  expect(wboit.getUniforms?.({}), 'defaults to inactive').toEqual({capturePass: 0});
+  void 0;
 });
 
-test('WBOIT resolve is packaged as a CompositeShaderPass', t => {
+it('WBOIT resolve is packaged as a CompositeShaderPass', () => {
   const pipeline = createWBOITResolveCompositeShaderPass();
-  t.equal(pipeline.steps.length, 1, 'resolve pipeline has one fullscreen step');
-  t.equal(pipeline.steps[0].shaderPass, wboitResolve, 'pipeline uses the exported resolve pass');
-  t.deepEqual(
-    pipeline.steps[0].inputs,
-    {sourceTexture: 'previous'},
-    'resolve composites over the previous color'
+  expect(pipeline.steps.length, 'resolve pipeline has one fullscreen step').toBe(1);
+  expect(pipeline.steps[0].shaderPass, 'pipeline uses the exported resolve pass').toBe(
+    wboitResolve
   );
-  t.end();
+  expect(pipeline.steps[0].inputs, 'resolve composites over the previous color').toEqual({
+    sourceTexture: 'previous'
+  });
+  void 0;
 });
 
-test('getWBOITSupport reports backend and rgba16float requirements', async t => {
+it('getWBOITSupport reports backend and rgba16float requirements', async () => {
   const nullDevice = await getTestDevice('null');
   if (nullDevice) {
     const support = getWBOITSupport(nullDevice);
-    t.equal(support.supported, false, 'null device is rejected');
-    t.match(support.reason || '', /WebGPU or WebGL2/, 'reason identifies supported backends');
+    expect(support.supported, 'null device is rejected').toBe(false);
+    expect(support.reason || '', 'reason identifies supported backends').toMatch(
+      /WebGPU or WebGL2/
+    );
   }
 
   for (const device of await getTestDevices()) {
     const capabilities = device.getTextureFormatCapabilities('rgba16float');
-    t.equal(
+    expect(
       getWBOITSupport(device).supported,
-      capabilities.render && capabilities.blend,
       `${device.type} support follows rgba16float capabilities`
-    );
+    ).toBe(capabilities.render && capabilities.blend);
   }
-  t.end();
+  void 0;
 });
 
-test('WBOITRenderer is order independent and rejects fragments behind opaque depth', async t => {
+it('WBOITRenderer is order independent and rejects fragments behind opaque depth', async () => {
   const devices = await getTestDevices();
   let testedDeviceCount = 0;
 
   for (const device of devices) {
     if (!getWBOITSupport(device).supported) {
-      t.comment(`${device.type} does not support blendable rgba16float targets`);
+      void 0;
       continue;
     }
 
@@ -84,12 +83,17 @@ test('WBOITRenderer is order independent and rejects fragments behind opaque dep
     const reverseColor = await renderTransparency(device, renderer, framebuffer, true);
     const occludedColor = await renderOpaqueOcclusion(device, renderer, framebuffer);
 
-    t.deepEqual(reverseColor, forwardColor, `${device.type} result is independent of draw order`);
-    t.ok(forwardColor[3] > 0, `${device.type} composite contains translucent alpha`);
-    t.ok(
-      occludedColor[1] > 245 && occludedColor[0] < 10 && occludedColor[2] < 10,
-      `${device.type} opaque depth rejects hidden translucent fragments`
+    expect(reverseColor, `${device.type} result is independent of draw order`).toEqual(
+      forwardColor
     );
+    expect(
+      Boolean(forwardColor[3] > 0),
+      `${device.type} composite contains translucent alpha`
+    ).toBe(true);
+    expect(
+      Boolean(occludedColor[1] > 245 && occludedColor[0] < 10 && occludedColor[2] < 10),
+      `${device.type} opaque depth rejects hidden translucent fragments`
+    ).toBe(true);
 
     renderer.resize({width: 2, height: 2});
     renderer.resize({width: 1, height: 1});
@@ -98,17 +102,17 @@ test('WBOITRenderer is order independent and rejects fragments behind opaque dep
     colorTexture.destroy();
   }
 
-  t.ok(testedDeviceCount > 0, 'at least one WBOIT backend was tested');
-  t.end();
+  expect(Boolean(testedDeviceCount > 0), 'at least one WBOIT backend was tested').toBe(true);
+  void 0;
 });
 
-test('WBOITRenderer preserves the configured rgba16float resolve format', async t => {
+it('WBOITRenderer preserves the configured rgba16float resolve format', async () => {
   let testedDeviceCount = 0;
 
   for (const device of await getTestDevices()) {
     const capabilities = device.getTextureFormatCapabilities('rgba16float');
     if (!getWBOITSupport(device).supported || !capabilities.filter) {
-      t.comment(`${device.type} does not support filterable rgba16float resolve textures`);
+      void 0;
       continue;
     }
 
@@ -130,19 +134,20 @@ test('WBOITRenderer preserves the configured rgba16float resolve format', async 
     });
     device.submit();
 
-    t.equal(
+    expect(
       outputTexture.format,
-      'rgba16float',
       `${device.type} resolved output retains the requested HDR format`
-    );
+    ).toBe('rgba16float');
 
     renderer.destroy();
     framebuffer.destroy();
     colorTexture.destroy();
   }
 
-  t.ok(testedDeviceCount > 0, 'at least one HDR-capable WBOIT backend was tested');
-  t.end();
+  expect(Boolean(testedDeviceCount > 0), 'at least one HDR-capable WBOIT backend was tested').toBe(
+    true
+  );
+  void 0;
 });
 
 async function renderTransparency(

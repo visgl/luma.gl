@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   convertGeoArrowTableToInterleavedAsync,
   convertGeoArrowVectorToInterleaved,
@@ -10,29 +10,26 @@ import {
 } from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
-test('convertGeoArrowTableToInterleavedAsync converts separated coordinates', async t => {
+it('convertGeoArrowTableToInterleavedAsync converts separated coordinates', async () => {
   const table = makeSeparatedPointTable();
   const convertedTable = await convertGeoArrowTableToInterleavedAsync(table);
   const geometry = convertedTable.getChild('geometry')!;
 
-  t.equal(
+  expect(
     convertedTable.schema.fields[0].metadata.get('ARROW:extension:name'),
-    'geoarrow.point',
     'preserves GeoArrow metadata'
+  ).toBe('geoarrow.point');
+  expect(geometry.type.toString(), 'creates interleaved XYZ rows').toBe(
+    'FixedSizeList[3]<Float64>'
   );
-  t.equal(geometry.type.toString(), 'FixedSizeList[3]<Float64>', 'creates interleaved XYZ rows');
-  t.deepEqual(
-    getVectorRows(geometry),
-    [
-      [1, 2, 3],
-      [4, 5, 6]
-    ],
-    'returns interleaved coordinates'
-  );
-  t.end();
+  expect(getVectorRows(geometry), 'returns interleaved coordinates').toEqual([
+    [1, 2, 3],
+    [4, 5, 6]
+  ]);
+  void 0;
 });
 
-test('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate offsets', t => {
+it('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate offsets', () => {
   const vector = makeSeparatedPointVector(
     [
       [10, 20, 30],
@@ -45,16 +42,16 @@ test('convertGeoArrowVectorToInterleaved normalizes sliced separated coordinate 
   const slicedVector = vector.slice(1, 4);
   const convertedVector = convertGeoArrowVectorToInterleaved(slicedVector);
 
-  t.equal(convertedVector.data[0].offset, 0, 'resets the compacted FixedSizeList chunk offset');
-  t.deepEqual(
-    getVectorRows(convertedVector),
-    [null, [4, 5, 6], [7, 8, 9]],
-    'preserves sliced validity and coordinate rows'
-  );
-  t.end();
+  expect(convertedVector.data[0].offset, 'resets the compacted FixedSizeList chunk offset').toBe(0);
+  expect(getVectorRows(convertedVector), 'preserves sliced validity and coordinate rows').toEqual([
+    null,
+    [4, 5, 6],
+    [7, 8, 9]
+  ]);
+  void 0;
 });
 
-test('convertGeoArrowVectorToInterleaved preserves validity after a byte-aligned slice', t => {
+it('convertGeoArrowVectorToInterleaved preserves validity after a byte-aligned slice', () => {
   const coordinates = Array.from({length: 12}, (_, index) => [index, index + 100, index + 200]);
   const validRows = Array.from({length: 12}, () => true);
   validRows[0] = false;
@@ -63,15 +60,15 @@ test('convertGeoArrowVectorToInterleaved preserves validity after a byte-aligned
     makeSeparatedPointVector(coordinates, validRows).slice(8, 11)
   );
 
-  t.deepEqual(
-    getVectorRows(convertedVector),
-    [coordinates[8], null, coordinates[10]],
-    'uses the full Arrow validity bitmap offset'
-  );
-  t.end();
+  expect(getVectorRows(convertedVector), 'uses the full Arrow validity bitmap offset').toEqual([
+    coordinates[8],
+    null,
+    coordinates[10]
+  ]);
+  void 0;
 });
 
-test('makeGeoArrowColumnFromArrowVector borrows Arrow coordinate buffers', t => {
+it('makeGeoArrowColumnFromArrowVector borrows Arrow coordinate buffers', () => {
   const vector = makeSeparatedPointVector([
     [1, 2, 3],
     [4, 5, 6]
@@ -79,17 +76,18 @@ test('makeGeoArrowColumnFromArrowVector borrows Arrow coordinate buffers', t => 
   const column = makeGeoArrowColumnFromArrowVector(vector, {encoding: 'geoarrow.point'});
   const chunk = column.chunks[0];
 
-  t.equal(column.dimension, 'xyz', 'infers the semantic dimension');
-  t.equal(column.coordinateLayout, 'separated', 'infers the coordinate layout');
-  t.ok(chunk.kind === 'struct', 'adapts separated coordinates as a struct descriptor');
+  expect(column.dimension, 'infers the semantic dimension').toBe('xyz');
+  expect(column.coordinateLayout, 'infers the coordinate layout').toBe('separated');
+  expect(
+    Boolean(chunk.kind === 'struct'),
+    'adapts separated coordinates as a struct descriptor'
+  ).toBe(true);
   if (chunk.kind === 'struct' && chunk.children.x.kind === 'primitive') {
-    t.equal(
-      chunk.children.x.values,
-      vector.data[0].children[0].values,
-      'borrows the Arrow typed-array view without copying'
+    expect(chunk.children.x.values, 'borrows the Arrow typed-array view without copying').toBe(
+      vector.data[0].children[0].values
     );
   }
-  t.end();
+  void 0;
 });
 
 function makeSeparatedPointTable(): arrow.Table {

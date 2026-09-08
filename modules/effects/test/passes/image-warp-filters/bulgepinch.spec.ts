@@ -4,14 +4,14 @@
 
 import {bulgePinch} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('bulgePinch#build/uniform', t => {
+it('bulgePinch#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(bulgePinch, {}, {});
 
-  t.ok(uniforms, 'bulgePinch module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'bulgePinch center uniform is ok');
-  t.equal(uniforms.radius, 200, 'bulgePinch radius uniform is ok');
-  t.equal(uniforms.strength, 0.5, 'bulgePinch strength uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'bulgePinch module build is ok').toBe(true);
+  expect(uniforms.center, 'bulgePinch center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.radius, 'bulgePinch radius uniform is ok').toBe(200);
+  expect(uniforms.strength, 'bulgePinch strength uniform is ok').toBe(0.5);
+  void 0;
 });

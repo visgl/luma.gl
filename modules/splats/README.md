@@ -17,9 +17,11 @@ mixed-scene helpers compose splats with caller-owned depth-tested meshes.
 `SplatHierarchyManager` traverses frustum-culled, foveated source hierarchies while preserving
 coarse parent fallback and bounded asynchronous loading. `SplatRADHierarchyManager` follows
 Spark's authored per-row global child links, retaining mixed source-page leaves and parent
-fallback until the complete child frontier is resident. `SplatResidencyManager` bounds intact
-streamed batches by GPU bytes, rows, or chunks. Structural glTF adapters accept decoded
-`KHR_gaussian_splatting` attributes, mesh feature IDs, and caller-owned SPZ v2 decoder handoffs.
+fallback until the complete child frontier is resident. It retargets the retained coherent tree
+across camera changes so resolved visible detail does not collapse while bounded traversal
+reprioritizes and discovers branches. `SplatResidencyManager` bounds intact streamed batches by
+GPU bytes, rows, or chunks. Structural glTF adapters accept decoded `KHR_gaussian_splatting`
+attributes, mesh feature IDs, and caller-owned SPZ v2 decoder handoffs.
 
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.

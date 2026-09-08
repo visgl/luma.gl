@@ -7,14 +7,14 @@ import {Buffer} from '@luma.gl/core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
-test('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and dictionaries', async testContext => {
+it('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and dictionaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -24,81 +24,74 @@ test('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and d
   const result = makeGPUAnalyticsTableFromArrowTable(device, source);
 
   try {
-    testContext.deepEqual(
+    expect(
       result.table.batches.map(batch => batch.numRows),
-      [2, 0, 3],
       'preserves uneven and empty Arrow record batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 3]);
+    expect(
       result.table.batches.map(batch => batch.sourceInfo),
-      [
-        {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-        {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 0},
-        {sourceBatchIndex: 2, sourceRowIndexOffset: 2, sourceRowCount: 3}
-      ],
       'retains stable source identities without reading rows'
-    );
-    testContext.deepEqual(
+    ).toEqual([
+      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
+      {sourceBatchIndex: 1, sourceRowIndexOffset: 2, sourceRowCount: 0},
+      {sourceBatchIndex: 2, sourceRowIndexOffset: 2, sourceRowCount: 3}
+    ]);
+    expect(
       result.table.schema.fields.map(field => [field.name, field.format]),
-      [
-        ['fare', 'float32'],
-        ['category', 'uint32']
-      ],
       'uploads portable numerical values and dictionary indices'
-    );
-    testContext.deepEqual(
+    ).toEqual([
+      ['fare', 'float32'],
+      ['category', 'uint32']
+    ]);
+    expect(
       result.dictionaries['category'],
-      {values: ['economy', 'premium'], ordered: true},
       'retains dictionary labels exclusively as adapter-owned metadata'
-    );
-    testContext.deepEqual(
-      result.nullCounts,
-      {fare: [1, 0, 1], category: [0, 0, 0]},
-      'retains accurate per-column and per-batch null counts'
-    );
+    ).toEqual({values: ['economy', 'premium'], ordered: true});
+    expect(result.nullCounts, 'retains accurate per-column and per-batch null counts').toEqual({
+      fare: [1, 0, 1],
+      category: [0, 0, 0]
+    });
 
     for (const [batchIndex, batch] of result.table.batches.entries()) {
       for (const [columnName, data] of Object.entries(batch.gpuData)) {
-        testContext.ok(data.buffer.usage & Buffer.STORAGE, 'source chunks support GPU analytics');
-        testContext.ok(data.ownsBuffer, 'source chunks retain explicit GPU ownership');
-        testContext.notEqual(
+        expect(
+          Boolean(data.buffer.usage & Buffer.STORAGE),
+          'source chunks support GPU analytics'
+        ).toBe(true);
+        expect(Boolean(data.ownsBuffer), 'source chunks retain explicit GPU ownership').toBe(true);
+        expect(
           result.validity[columnName]?.data[batchIndex].buffer,
-          data.buffer,
           'validity occupies a separate GPU-backed sidecar'
-        );
+        ).not.toBe(data.buffer);
         if (batch.numRows === 0) {
-          testContext.ok(
-            data.buffer.byteLength >= 4,
+          expect(
+            Boolean(data.buffer.byteLength >= 4),
             'empty source batches retain bindable nonzero physical allocations'
-          );
-          testContext.ok(
-            (result.validity[columnName]?.data[batchIndex].buffer.byteLength ?? 0) >= 4,
+          ).toBe(true);
+          expect(
+            Boolean((result.validity[columnName]?.data[batchIndex].buffer.byteLength ?? 0) >= 4),
             'empty validity chunks retain bindable nonzero physical allocations'
-          );
+          ).toBe(true);
         }
       }
     }
 
-    testContext.equal(submit.mock.calls.length, 0, 'ingestion never submits GPU command work');
-    testContext.equal(
-      createCommandEncoder.mock.calls.length,
-      0,
-      'ingestion never creates command encoders'
+    expect(submit.mock.calls.length, 'ingestion never submits GPU command work').toBe(0);
+    expect(createCommandEncoder.mock.calls.length, 'ingestion never creates command encoders').toBe(
+      0
     );
 
     submit.mockRestore();
     createCommandEncoder.mockRestore();
 
-    testContext.deepEqual(
+    expect(
       await readGPUValidity(result.validity['fare']!),
-      [[0, 1], [], [0, 1, 1]],
       'normalizes sliced Arrow bitmaps to per-row WebGPU validity masks'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1], [], [0, 1, 1]]);
+    expect(
       await readGPUValidity(result.validity['category']!),
-      [[1, 1], [], [1, 1, 1]],
       'materializes all-valid nullable dictionary sidecars'
-    );
+    ).toEqual([[1, 1], [], [1, 1, 1]]);
   } finally {
     submit.mockRestore();
     createCommandEncoder.mockRestore();
@@ -110,13 +103,13 @@ test('Arrow analytics ingestion preserves WebGPU batches, sliced validity, and d
     ];
     result.table.destroy();
     for (const validity of Object.values(result.validity)) validity?.destroy();
-    testContext.ok(
-      ownedBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(ownedBuffers.every(buffer => buffer.destroyed)),
       'source chunks and independent validity sidecars release exactly their owned allocations'
-    );
+    ).toBe(true);
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createBrowserAnalyticsTable(): arrow.Table {

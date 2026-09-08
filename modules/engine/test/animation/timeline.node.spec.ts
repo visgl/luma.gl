@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {it} from 'vitest';
 import {registerTimelineTests} from './timeline.spec.shared';
 
-registerTimelineTests(test);
+registerTimelineTests(it);

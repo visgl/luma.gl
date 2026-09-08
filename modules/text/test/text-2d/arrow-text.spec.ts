@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
@@ -23,24 +23,24 @@ type TextDatum = {
   rowIndex: number;
 };
 
-test('createArrowUtf8TextIndexAccessor mutates the caller target', t => {
+it('createArrowUtf8TextIndexAccessor mutates the caller target', () => {
   const texts = arrow.vectorFromArray(['ASCII', 'e', '🙂', ''], new arrow.Utf8());
   const accessor = createArrowUtf8TextIndexAccessor<TextDatum>(texts, datum => datum.rowIndex);
   const target = {startIndex: -1, endIndex: -1};
 
   const firstResult = accessor({rowIndex: 0}, {index: 0, target});
-  t.equal(firstResult, target, 'returns the caller target');
-  t.deepEqual([target.startIndex, target.endIndex], [0, 5], 'ASCII row range matches bytes');
+  expect(firstResult, 'returns the caller target').toBe(target);
+  expect([target.startIndex, target.endIndex], 'ASCII row range matches bytes').toEqual([0, 5]);
 
   accessor({rowIndex: 2}, {index: 1, target});
-  t.deepEqual([target.startIndex, target.endIndex], [6, 10], 'emoji row range matches bytes');
+  expect([target.startIndex, target.endIndex], 'emoji row range matches bytes').toEqual([6, 10]);
 
   accessor({rowIndex: 3}, {index: 2, target});
-  t.deepEqual([target.startIndex, target.endIndex], [10, 10], 'empty row range is empty');
-  t.end();
+  expect([target.startIndex, target.endIndex], 'empty row range is empty').toEqual([10, 10]);
+  void 0;
 });
 
-test('Arrow UTF-8 chunks handle chunked, sliced, and null rows', t => {
+it('Arrow UTF-8 chunks handle chunked, sliced, and null rows', () => {
   const firstChunk = arrow.vectorFromArray(['a', 'bb'], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['ccc', 'dddd'], new arrow.Utf8());
   const chunked = new arrow.Vector<arrow.Utf8>([firstChunk.data[0]!, secondChunk.data[0]!]);
@@ -48,19 +48,19 @@ test('Arrow UTF-8 chunks handle chunked, sliced, and null rows', t => {
   const target = {startIndex: 0, endIndex: 0};
 
   populateUtf8TextIndices(chunks, 2, target);
-  t.deepEqual([target.startIndex, target.endIndex], [3, 6], 'chunked row bytes are normalized');
+  expect([target.startIndex, target.endIndex], 'chunked row bytes are normalized').toEqual([3, 6]);
 
   const source = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
   const sliced = source.slice(1) as arrow.Vector<arrow.Utf8>;
   const slicedChunks = buildArrowUtf8Chunks(sliced);
   populateUtf8TextIndices(slicedChunks, 0, target);
-  t.deepEqual([target.startIndex, target.endIndex], [0, 0], 'null rows are empty');
+  expect([target.startIndex, target.endIndex], 'null rows are empty').toEqual([0, 0]);
   populateUtf8TextIndices(slicedChunks, 1, target);
-  t.deepEqual([target.startIndex, target.endIndex], [0, 4], 'sliced rows keep local offsets');
-  t.end();
+  expect([target.startIndex, target.endIndex], 'sliced rows keep local offsets').toEqual([0, 4]);
+  void 0;
 });
 
-test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph counts', t => {
+it('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph counts', () => {
   const texts = arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8());
   const chunks = buildArrowUtf8Chunks(texts);
   const target = {startIndex: 0, endIndex: 0};
@@ -72,8 +72,8 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
     target.endIndex,
     codePoint => decoded.push(String.fromCodePoint(codePoint))
   );
-  t.equal(decodedCount, 1, 'emoji decodes as one code point');
-  t.deepEqual(decoded, ['🙂'], 'emoji code point round-trips');
+  expect(decodedCount, 'emoji decodes as one code point').toBe(1);
+  expect(decoded, 'emoji code point round-trips').toEqual(['🙂']);
 
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
@@ -87,14 +87,14 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
     characterSet
   });
 
-  t.deepEqual(layout.startIndices, [0, 2, 3], 'start indices count code points');
-  t.equal(layout.glyphCount, 3, 'glyph count includes the emoji once');
-  t.deepEqual(Array.from(layout.glyphOffsets), [2, 6, 7, 6, 4, 6], 'offsets use advances');
-  t.ok(characterSet.has('🙂'), 'auto character collection sees Unicode');
-  t.end();
+  expect(layout.startIndices, 'start indices count code points').toEqual([0, 2, 3]);
+  expect(layout.glyphCount, 'glyph count includes the emoji once').toBe(3);
+  expect(Array.from(layout.glyphOffsets), 'offsets use advances').toEqual([2, 6, 7, 6, 4, 6]);
+  expect(Boolean(characterSet.has('🙂')), 'auto character collection sees Unicode').toBe(true);
+  void 0;
 });
 
-test('Arrow glyph layouts preserve atlas pages, BMFont offsets, and kerning', t => {
+it('Arrow glyph layouts preserve atlas pages, BMFont offsets, and kerning', () => {
   const mapping: CharacterMapping = {
     A: {
       x: 0,
@@ -131,14 +131,16 @@ test('Arrow glyph layouts preserve atlas pages, BMFont offsets, and kerning', t 
     fontAtlas: makeFontAtlas(mapping, kerning)
   });
 
-  t.deepEqual(Array.from(layout.glyphOffsets), [-1, 9, 5, 10], 'layout uses offsets and kerning');
-  t.deepEqual(Array.from(layout.glyphPages), [1, 2], 'layout carries atlas pages per glyph');
-  t.deepEqual(Array.from(stream.glyphPages), [0, 1, 2], 'shared glyph pages align with ids');
-  t.deepEqual(Array.from(stream.glyphKernings), [1, 2, -2, 0], 'GPU kerning uses glyph ids');
-  t.end();
+  expect(Array.from(layout.glyphOffsets), 'layout uses offsets and kerning').toEqual([
+    -1, 9, 5, 10
+  ]);
+  expect(Array.from(layout.glyphPages), 'layout carries atlas pages per glyph').toEqual([1, 2]);
+  expect(Array.from(stream.glyphPages), 'shared glyph pages align with ids').toEqual([0, 1, 2]);
+  expect(Array.from(stream.glyphKernings), 'GPU kerning uses glyph ids').toEqual([1, 2, -2, 0]);
+  void 0;
 });
 
-test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null labels', t => {
+it('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null labels', () => {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   const firstChunk = makeArrowTextDictionaries(['AB', 'A', null], dictionaryType);
   const secondChunk = makeArrowTextDictionaries(['AB'], dictionaryType);
@@ -156,40 +158,35 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     characterSet: new Set<string>()
   });
 
-  t.deepEqual(layout.startIndices, [0, 2, 3, 3, 5], 'row starts follow dictionary labels');
-  t.equal(layout.glyphCount, 5, 'repeated dictionary values still emit repeated glyphs');
-  t.deepEqual(
-    Array.from(layout.glyphOffsets),
-    [2, 6, 7, 6, 2, 6, 2, 6, 7, 6],
-    'glyph offsets are expanded per row occurrence'
-  );
+  expect(layout.startIndices, 'row starts follow dictionary labels').toEqual([0, 2, 3, 3, 5]);
+  expect(layout.glyphCount, 'repeated dictionary values still emit repeated glyphs').toBe(5);
+  expect(Array.from(layout.glyphOffsets), 'glyph offsets are expanded per row occurrence').toEqual([
+    2, 6, 7, 6, 2, 6, 2, 6, 7, 6
+  ]);
 
   const sliced = makeExplicitArrowTextDictionaries(
     ['skip', 'AB', 'A'],
     new Int32Array([0, 1, 2])
   ).slice(1) as arrow.Vector<ArrowUtf8Dictionary>;
   const slicedTextInput = buildGpuTextDictionaryUtf8Input(sliced);
-  t.deepEqual(slicedTextInput.startIndices, [0, 2, 3], 'sliced dictionary rows stay normalized');
-  t.deepEqual(
+  expect(slicedTextInput.startIndices, 'sliced dictionary rows stay normalized').toEqual([0, 2, 3]);
+  expect(
     Array.from(slicedTextInput.rowDictionaryIndices),
-    [1, 2],
     'sliced dictionary rows read dictionary keys from the logical row offset'
-  );
-  t.equal(slicedTextInput.byteLength, 3, 'sliced dictionary output reserves glyphs per row');
+  ).toEqual([1, 2]);
+  expect(slicedTextInput.byteLength, 'sliced dictionary output reserves glyphs per row').toBe(3);
   const slicedStream = buildGpuTextDictionaryCompressedStream({
     texts: sliced,
     fontAtlas: makeFontAtlas(mapping)
   });
-  t.deepEqual(
+  expect(
     slicedStream.startIndices,
-    [0, 2, 3],
     'compressed sliced dictionary rows use the same logical key range'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 3]);
+  expect(
     Array.from(slicedStream.rowDictionaryIndices),
-    [1, 2],
     'compressed sliced dictionary rows preserve shifted dictionary keys'
-  );
+  ).toEqual([1, 2]);
   const offsetTextDictionaries = makeExplicitArrowTextDictionaries(
     ['skip', 'AB', 'A'],
     new Int32Array([0, 1, 2]),
@@ -199,16 +196,13 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     2
   );
   const offsetTextInput = buildGpuTextDictionaryUtf8Input(offsetTextDictionaries);
-  t.deepEqual(
-    offsetTextInput.startIndices,
-    [0, 2, 3],
-    'offset dictionary data rows stay normalized'
-  );
-  t.deepEqual(
+  expect(offsetTextInput.startIndices, 'offset dictionary data rows stay normalized').toEqual([
+    0, 2, 3
+  ]);
+  expect(
     Array.from(offsetTextInput.rowDictionaryIndices),
-    [1, 2],
     'offset dictionary data rows read dictionary keys from data.offset'
-  );
+  ).toEqual([1, 2]);
 
   const nullableDictionaryValues = makeExplicitArrowTextDictionaries(
     ['AB', null, 'A'],
@@ -218,15 +212,13 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
     texts: nullableDictionaryValues,
     fontAtlas: makeFontAtlas(mapping)
   });
-  t.deepEqual(
-    nullableLayout.startIndices,
-    [0, 2, 2, 3],
-    'nullable dictionary values render as empty labels'
-  );
-  t.end();
+  expect(nullableLayout.startIndices, 'nullable dictionary values render as empty labels').toEqual([
+    0, 2, 2, 3
+  ]);
+  void 0;
 });
 
-test('buildGpuExpandedTextStream packs glyph ids and shared definitions deterministically', t => {
+it('buildGpuExpandedTextStream packs glyph ids and shared definitions deterministically', () => {
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
     B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7},
@@ -238,29 +230,26 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
     characterSet: new Set<string>()
   });
 
-  t.deepEqual(stream.startIndices, [0, 2, 4], 'glyph row starts match code point counts');
-  t.deepEqual(Array.from(stream.labelGlyphRanges), [0, 2, 2, 4], 'label glyph spans are packed');
-  t.deepEqual(
+  expect(stream.startIndices, 'glyph row starts match code point counts').toEqual([0, 2, 4]);
+  expect(Array.from(stream.labelGlyphRanges), 'label glyph spans are packed').toEqual([0, 2, 2, 4]);
+  expect(
     Array.from(stream.packedGlyphIds),
-    [1 | (2 << 16), 3 | (1 << 16)],
     'two uint16 glyph ids share each uint32 input word'
-  );
-  t.deepEqual(
+  ).toEqual([1 | (2 << 16), 3 | (1 << 16)]);
+  expect(
     Array.from(stream.glyphFrames),
-    [0, 0, 0, 0, 0, 0, 4, 6, 4, 0, 4, 6, 8, 0, 8, 8],
     'frame definitions are deduplicated with a missing-glyph row at zero'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 0, 0, 4, 6, 4, 0, 4, 6, 8, 0, 8, 8]);
+  expect(
     Array.from(stream.glyphMetrics),
-    [0, 0, 32, 0, 2, 0, 5, 0, 2, 0, 7, 0, 4, 0, 9, 0],
     'glyph metrics carry layout offset and advance for compute expansion'
-  );
-  t.equal(stream.baselineOffsetY, 6, 'baseline output offset is prevalidated and stored once');
-  t.equal(stream.glyphCount, 4, 'glyph count stays CPU-known');
-  t.end();
+  ).toEqual([0, 0, 32, 0, 2, 0, 5, 0, 2, 0, 7, 0, 4, 0, 9, 0]);
+  expect(stream.baselineOffsetY, 'baseline output offset is prevalidated and stored once').toBe(6);
+  expect(stream.glyphCount, 'glyph count stays CPU-known').toBe(4);
+  void 0;
 });
 
-test('buildGpuTextDictionaryUtf8Input uploads dictionary bytes once per chunk', t => {
+it('buildGpuTextDictionaryUtf8Input uploads dictionary bytes once per chunk', () => {
   const texts = makeExplicitArrowTextDictionaries(['AB', 'A'], new Int32Array([0, 1, 0]));
   const textInput = buildGpuTextDictionaryUtf8Input(texts);
   const packedBytes = new Uint8Array(textInput.packedDictionaryUtf8Bytes.buffer).subarray(
@@ -268,29 +257,26 @@ test('buildGpuTextDictionaryUtf8Input uploads dictionary bytes once per chunk', 
     textInput.dictionaryByteLength
   );
 
-  t.deepEqual(textInput.startIndices, [0, 2, 3, 5], 'row starts reserve glyph slots per row');
-  t.deepEqual(
+  expect(textInput.startIndices, 'row starts reserve glyph slots per row').toEqual([0, 2, 3, 5]);
+  expect(
     Array.from(textInput.rowDictionaryIndices),
-    [0, 1, 0],
     'rows point at shared dictionary values'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 0]);
+  expect(
     Array.from(textInput.rowOutputGlyphRanges),
-    [0, 2, 2, 3, 3, 5],
     'row output ranges allocate repeated labels independently'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 2, 3, 3, 5]);
+  expect(
     Array.from(textInput.dictionaryValueByteRanges),
-    [0, 2, 2, 3],
     'dictionary value byte ranges are unique per dictionary entry'
-  );
-  t.deepEqual(Array.from(packedBytes), [65, 66, 65], 'source UTF-8 bytes are packed once');
-  t.equal(textInput.dictionaryByteLength, 3, 'dictionary source bytes are shared');
-  t.equal(textInput.byteLength, 5, 'output glyph slots are per visible label occurrence');
-  t.end();
+  ).toEqual([0, 2, 2, 3]);
+  expect(Array.from(packedBytes), 'source UTF-8 bytes are packed once').toEqual([65, 66, 65]);
+  expect(textInput.dictionaryByteLength, 'dictionary source bytes are shared').toBe(3);
+  expect(textInput.byteLength, 'output glyph slots are per visible label occurrence').toBe(5);
+  void 0;
 });
 
-test('buildGpuTextDictionaryCompressedStream shares dictionary glyph records per chunk', t => {
+it('buildGpuTextDictionaryCompressedStream shares dictionary glyph records per chunk', () => {
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
     B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
@@ -302,48 +288,49 @@ test('buildGpuTextDictionaryCompressedStream shares dictionary glyph records per
     characterSet: new Set<string>()
   });
 
-  t.deepEqual(stream.startIndices, [0, 2, 3, 5, 6], 'row starts remain per label occurrence');
-  t.deepEqual(
+  expect(stream.startIndices, 'row starts remain per label occurrence').toEqual([0, 2, 3, 5, 6]);
+  expect(
     Array.from(stream.rowDictionaryIndices),
-    [0, 1, 0, 1],
     'rows reference shared dictionary values'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 0, 1]);
+  expect(
     Array.from(stream.dictionaryGlyphRanges),
-    [0, 2, 2, 3],
     'dictionary values own one shared glyph run each'
-  );
-  t.deepEqual(
+  ).toEqual([0, 2, 2, 3]);
+  expect(
     Array.from(stream.dictionaryGlyphRecords),
-    [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
     'dictionary glyph ids and offsets are stored once per dictionary value'
-  );
-  t.deepEqual(
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2,
+    packSignedInt16Pair(2, 6),
+    1
+  ]);
+  expect(
     Array.from(stream.rowGlyphRanges),
-    [0, 2, 2, 3, 3, 5, 5, 6],
     'row glyph ranges map instance indices back to source rows'
-  );
-  t.equal(stream.dictionaryGlyphCount, 3, 'shared dictionary glyph records scale with values');
-  t.equal(stream.glyphCount, 6, 'visible glyph count still scales with row occurrences');
-  t.end();
+  ).toEqual([0, 2, 2, 3, 3, 5, 5, 6]);
+  expect(stream.dictionaryGlyphCount, 'shared dictionary glyph records scale with values').toBe(3);
+  expect(stream.glyphCount, 'visible glyph count still scales with row occurrences').toBe(6);
+  void 0;
 });
 
-test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', t => {
+it('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', () => {
   const textInput = buildGpuUtf8TextInput(arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8()));
   const packedBytes = new Uint8Array(textInput.packedUtf8Bytes.buffer).subarray(
     0,
     textInput.byteLength
   );
 
-  t.deepEqual(textInput.startIndices, [0, 2, 6], 'row byte prefixes support limit batching');
-  t.deepEqual(Array.from(textInput.rowByteRanges), [0, 2, 2, 6], 'row byte spans stay aligned');
-  t.deepEqual(
-    Array.from(packedBytes),
-    [65, 66, 240, 159, 153, 130],
-    'packed upload retains the normalized UTF-8 byte stream'
+  expect(textInput.startIndices, 'row byte prefixes support limit batching').toEqual([0, 2, 6]);
+  expect(Array.from(textInput.rowByteRanges), 'row byte spans stay aligned').toEqual([0, 2, 2, 6]);
+  expect(Array.from(packedBytes), 'packed upload retains the normalized UTF-8 byte stream').toEqual(
+    [65, 66, 240, 159, 153, 130]
   );
-  t.equal(textInput.byteLength, 6, 'one render slot can be reserved per source byte');
-  t.end();
+  expect(textInput.byteLength, 'one render slot can be reserved per source byte').toBe(6);
+  void 0;
 });
 
 function makeFontAtlas(mapping: CharacterMapping, kerning?: TextKerning): FontAtlas {

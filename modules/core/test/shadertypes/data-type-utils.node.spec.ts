@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getDataTypeByteLength,
   getDataTypeFromTypedArray,
@@ -10,39 +10,38 @@ import {
   NativeFloat16ArrayConstructor
 } from '@luma.gl/core';
 
-test('data-type-utils maps typed array constructors', t => {
-  t.equal(getTypedArrayFromDataType('float16'), NativeFloat16ArrayConstructor ?? Uint16Array);
-  t.equal(getTypedArrayFromDataType('float32'), Float32Array);
-  t.equal(getTypedArrayFromDataType('uint8'), Uint8Array);
-  t.equal(getTypedArrayFromDataType('unorm8'), Uint8Array);
-  t.equal(getTypedArrayFromDataType('sint16'), Int16Array);
-  t.equal(getTypedArrayFromDataType('snorm16'), Int16Array);
-  t.equal(getDataTypeFromTypedArray(Uint16Array), 'uint16', 'Uint16Array remains uint16');
-  t.equal(
-    getDataTypeFromTypedArray(new Uint16Array(1)),
-    'uint16',
-    'Uint16Array view remains uint16'
+it('data-type-utils maps typed array constructors', () => {
+  expect(getTypedArrayFromDataType('float16'), '').toBe(
+    NativeFloat16ArrayConstructor ?? Uint16Array
+  );
+  expect(getTypedArrayFromDataType('float32'), '').toBe(Float32Array);
+  expect(getTypedArrayFromDataType('uint8'), '').toBe(Uint8Array);
+  expect(getTypedArrayFromDataType('unorm8'), '').toBe(Uint8Array);
+  expect(getTypedArrayFromDataType('sint16'), '').toBe(Int16Array);
+  expect(getTypedArrayFromDataType('snorm16'), '').toBe(Int16Array);
+  expect(getDataTypeFromTypedArray(Uint16Array), 'Uint16Array remains uint16').toBe('uint16');
+  expect(getDataTypeFromTypedArray(new Uint16Array(1)), 'Uint16Array view remains uint16').toBe(
+    'uint16'
   );
 
   if (NativeFloat16ArrayConstructor) {
-    t.equal(
+    expect(
       getDataTypeFromTypedArray(NativeFloat16ArrayConstructor),
-      'float16',
       'native Float16Array maps to float16'
-    );
+    ).toBe('float16');
   }
 
-  t.end();
+  void 0;
 });
 
-test('data-type-utils reports scalar byte lengths', t => {
-  t.equal(getDataTypeByteLength('uint8'), 1, 'uint8 byte length');
-  t.equal(getDataTypeByteLength('sint8'), 1, 'sint8 byte length');
-  t.equal(getDataTypeByteLength('uint16'), 2, 'uint16 byte length');
-  t.equal(getDataTypeByteLength('snorm16'), 2, 'snorm16 byte length');
-  t.equal(getDataTypeByteLength('float16'), 2, 'float16 byte length');
-  t.equal(getDataTypeByteLength('uint32'), 4, 'uint32 byte length');
-  t.equal(getDataTypeByteLength('float32'), 4, 'float32 byte length');
+it('data-type-utils reports scalar byte lengths', () => {
+  expect(getDataTypeByteLength('uint8'), 'uint8 byte length').toBe(1);
+  expect(getDataTypeByteLength('sint8'), 'sint8 byte length').toBe(1);
+  expect(getDataTypeByteLength('uint16'), 'uint16 byte length').toBe(2);
+  expect(getDataTypeByteLength('snorm16'), 'snorm16 byte length').toBe(2);
+  expect(getDataTypeByteLength('float16'), 'float16 byte length').toBe(2);
+  expect(getDataTypeByteLength('uint32'), 'uint32 byte length').toBe(4);
+  expect(getDataTypeByteLength('float32'), 'float32 byte length').toBe(4);
 
-  t.end();
+  void 0;
 });

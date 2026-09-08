@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getDggsUint64Words,
   packDggsA5CellKey,
@@ -15,61 +15,50 @@ import {getS2IndexFromToken, getS2TokenFromIndex} from '@math.gl/dggs-s2';
 import {hexToU64, u64ToHex} from 'a5-js';
 import {h3IndexToSplitLong, splitLongToH3Index} from 'h3-js';
 
-test('arrow#dggs-gpu-polygons packs Uint64 DGGS keys', t => {
-  t.equal(packDggsGeohashKey('s'), 0x1000000000000018n, 'packs geohash length and base32 code');
-  t.equal(packDggsGeohashKey('S0'), 0x2000000000000300n, 'normalizes geohash case');
-  t.equal(packDggsQuadkeyKey('123'), 0x0c0000000000001bn, 'packs quadkey length and digits');
+it('arrow#dggs-gpu-polygons packs Uint64 DGGS keys', () => {
+  expect(packDggsGeohashKey('s'), 'packs geohash length and base32 code').toBe(0x1000000000000018n);
+  expect(packDggsGeohashKey('S0'), 'normalizes geohash case').toBe(0x2000000000000300n);
+  expect(packDggsQuadkeyKey('123'), 'packs quadkey length and digits').toBe(0x0c0000000000001bn);
 
   const s2CellKey = packDggsS2CellKey(3, [1, 2]);
-  t.equal(s2CellKey, 0x6d00000000000000n, 'packs native S2 CellId bits');
-  t.equal(
-    getS2IndexFromToken(getS2TokenFromIndex(s2CellKey)),
-    s2CellKey,
-    'matches math.gl S2 tokens'
+  expect(s2CellKey, 'packs native S2 CellId bits').toBe(0x6d00000000000000n);
+  expect(getS2IndexFromToken(getS2TokenFromIndex(s2CellKey)), 'matches math.gl S2 tokens').toBe(
+    s2CellKey
   );
-  t.deepEqual(getDggsUint64Words(s2CellKey), [0, 0x6d000000], 'returns little-endian words');
+  expect(getDggsUint64Words(s2CellKey), 'returns little-endian words').toEqual([0, 0x6d000000]);
 
   const a5CellKey = 0x1a38000000000000n;
-  t.equal(packDggsA5CellKey(a5CellKey), a5CellKey, 'passes native A5 Uint64 ids through');
-  t.equal(packDggsA5CellKey('1a38000000000000'), a5CellKey, 'parses A5 hex ids');
-  t.equal(
-    packDggsA5CellKey('0x1A38000000000000'),
-    a5CellKey,
-    'parses prefixed uppercase A5 hex ids'
+  expect(packDggsA5CellKey(a5CellKey), 'passes native A5 Uint64 ids through').toBe(a5CellKey);
+  expect(packDggsA5CellKey('1a38000000000000'), 'parses A5 hex ids').toBe(a5CellKey);
+  expect(packDggsA5CellKey('0x1A38000000000000'), 'parses prefixed uppercase A5 hex ids').toBe(
+    a5CellKey
   );
-  t.equal(hexToU64(u64ToHex(a5CellKey)), a5CellKey, 'matches a5-js hex round trip');
-  t.throws(() => packDggsA5CellKey(''), /1-16 hexadecimal/, 'rejects empty A5 ids');
-  t.throws(() => packDggsA5CellKey('xyz'), /Invalid A5 cell id/, 'rejects non-hex A5 ids');
-  t.throws(
+  expect(hexToU64(u64ToHex(a5CellKey)), 'matches a5-js hex round trip').toBe(a5CellKey);
+  expect(() => packDggsA5CellKey(''), 'rejects empty A5 ids').toThrow(/1-16 hexadecimal/);
+  expect(() => packDggsA5CellKey('xyz'), 'rejects non-hex A5 ids').toThrow(/Invalid A5 cell id/);
+  expect(
     () => packDggsA5CellKey('10000000000000000'),
-    /1-16 hexadecimal/,
     'rejects A5 ids longer than 64 bits'
-  );
+  ).toThrow(/1-16 hexadecimal/);
 
   const h3CellKey = 0x8428309ffffffffn;
-  t.equal(packDggsH3CellKey(h3CellKey), h3CellKey, 'passes native H3 Uint64 ids through');
-  t.equal(packDggsH3CellKey('8428309ffffffff'), h3CellKey, 'parses H3 hex ids');
-  t.equal(
-    packDggsH3CellKey('0x8428309FFFFFFFF'),
-    h3CellKey,
-    'parses prefixed uppercase H3 hex ids'
+  expect(packDggsH3CellKey(h3CellKey), 'passes native H3 Uint64 ids through').toBe(h3CellKey);
+  expect(packDggsH3CellKey('8428309ffffffff'), 'parses H3 hex ids').toBe(h3CellKey);
+  expect(packDggsH3CellKey('0x8428309FFFFFFFF'), 'parses prefixed uppercase H3 hex ids').toBe(
+    h3CellKey
   );
-  t.deepEqual(
-    getDggsUint64Words(h3CellKey),
-    h3IndexToSplitLong('8428309ffffffff'),
-    'matches h3-js split long words'
+  expect(getDggsUint64Words(h3CellKey), 'matches h3-js split long words').toEqual(
+    h3IndexToSplitLong('8428309ffffffff')
   );
-  t.equal(
+  expect(
     splitLongToH3Index(...getDggsUint64Words(h3CellKey)),
-    '8428309ffffffff',
     'round trips through h3-js split long conversion'
-  );
-  t.throws(() => packDggsH3CellKey(''), /1-16 hexadecimal/, 'rejects empty H3 ids');
-  t.throws(() => packDggsH3CellKey('xyz'), /Invalid H3 cell id/, 'rejects non-hex H3 ids');
-  t.throws(
+  ).toBe('8428309ffffffff');
+  expect(() => packDggsH3CellKey(''), 'rejects empty H3 ids').toThrow(/1-16 hexadecimal/);
+  expect(() => packDggsH3CellKey('xyz'), 'rejects non-hex H3 ids').toThrow(/Invalid H3 cell id/);
+  expect(
     () => packDggsH3CellKey('10000000000000000'),
-    /1-16 hexadecimal/,
     'rejects H3 ids longer than 64 bits'
-  );
-  t.end();
+  ).toThrow(/1-16 hexadecimal/);
+  void 0;
 });

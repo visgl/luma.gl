@@ -6,9 +6,9 @@ import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneSurface} from '@luma.gl/experimental';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('SceneRenderer draws existing skin palettes and updates morph targets on available backends', async testCase => {
+it('SceneRenderer draws existing skin palettes and updates morph targets on available backends', async () => {
   for (const device of await getTestDevices()) {
     const renderer = new SceneRenderer(device);
     const surface: SceneSurface = {
@@ -49,22 +49,14 @@ test('SceneRenderer draws existing skin palettes and updates morph targets on av
     };
 
     try {
-      testCase.equal(
-        renderer.render(options).drawCount,
-        1,
-        `${device.type} draws existing skin data`
-      );
+      expect(renderer.render(options).drawCount, `${device.type} draws existing skin data`).toBe(1);
       device.submit();
       surface.morphWeights = [0.75];
-      testCase.equal(
-        renderer.render(options).drawCount,
-        1,
-        `${device.type} updates morph geometry`
-      );
+      expect(renderer.render(options).drawCount, `${device.type} updates morph geometry`).toBe(1);
       device.submit();
     } finally {
       renderer.destroy();
     }
   }
-  testCase.end();
+  void 0;
 });

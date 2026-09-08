@@ -13,7 +13,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 const MISSING_JOIN_ROW = 0xffffffff;
@@ -34,11 +34,11 @@ type GPUJoinFixtureOptions = {
   noRightBatches?: boolean;
 };
 
-test('GPUDataFrame inner joins preserve mismatched nullable batches, stable row identities, and both source leases', async testContext => {
+it('GPUDataFrame inner joins preserve mismatched nullable batches, stable row identities, and both source leases', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -47,8 +47,8 @@ test('GPUDataFrame inner joins preserve mismatched nullable batches, stable row 
   const submitSpy = vi.spyOn(device, 'submit');
   const query = fixture.left.innerJoin(fixture.right, {leftOn: 'key', rightOn: 'lookupKey'});
 
-  testContext.equal(createBufferSpy.mock.calls.length, 0, 'join planning allocates no GPU buffers');
-  testContext.equal(submitSpy.mock.calls.length, 0, 'join planning submits no GPU work');
+  expect(createBufferSpy.mock.calls.length, 'join planning allocates no GPU buffers').toBe(0);
+  expect(submitSpy.mock.calls.length, 'join planning submits no GPU work').toBe(0);
 
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
     id: 'gpu-dataframe-mismatched-batch-inner-join'
@@ -56,66 +56,55 @@ test('GPUDataFrame inner joins preserve mismatched nullable batches, stable row 
   const compiled = query.compile(graph);
 
   try {
-    testContext.deepEqual(
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [3, 0, 5],
       'joined output retains the original left record batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([3, 0, 5]);
+    expect(
       compiled.rightTable.batches.map(batch => batch.numRows),
-      [2, 0, 3],
       'the retained right side preserves its independent source topology'
-    );
+    ).toEqual([2, 0, 3]);
 
     fixture.left.destroy();
     fixture.right.destroy();
-    testContext.ok(
-      [...fixture.leftBuffers, ...fixture.rightBuffers].every(buffer => !buffer.destroyed),
+    expect(
+      Boolean([...fixture.leftBuffers, ...fixture.rightBuffers].every(buffer => !buffer.destroyed)),
       'compiled joins retain both owned source leases'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-inner-join-encode'});
     compiled.encode(commandEncoder);
-    testContext.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'encoding leaves submission application-owned'
-    );
+    expect(submitSpy.mock.calls.length, 'encoding leaves submission application-owned').toBe(0);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUJoinChunks(compiled.requiredCounts),
-      [[2], [0], [3]],
       'required matches are counted independently per left batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[2], [0], [3]]);
+    expect(
       await readGPUJoinChunks(compiled.selectedCounts),
-      [[2], [0], [3]],
       'published counts remain coherent with inherited stable row indices'
-    );
-    testContext.deepEqual(await readGPUJoinChunks(compiled.overflows), [[0], [0], [0]]);
-    testContext.deepEqual(
+    ).toEqual([[2], [0], [3]]);
+    expect(await readGPUJoinChunks(compiled.overflows), '').toEqual([[0], [0], [0]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rowIndices, compiled.selectedCounts),
-      [[100, 102], [], [800, 802, 803]],
       'left source identifiers retain discontinuous sourceInfo offsets and stable match order'
-    );
-    testContext.deepEqual(
+    ).toEqual([[100, 102], [], [800, 802, 803]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rightRowIndices, compiled.selectedCounts),
-      [[501, 500], [], [900, 901, 500]],
       'right identities resolve across multiple batches without concatenating or repacking'
-    );
-    testContext.deepEqual(
+    ).toEqual([[501, 500], [], [900, 901, 500]]);
+    expect(
       (await readGPUJoinChunks(compiled.indexStatistics))[0].slice(0, 4),
-      [4, 0, 0, 0],
       'ordinary nullable right rows are skipped without becoming reserved-key violations'
-    );
-    testContext.deepEqual(await readGPUJoinChunks(compiled.contractViolation), [[0]]);
+    ).toEqual([4, 0, 0, 0]);
+    expect(await readGPUJoinChunks(compiled.contractViolation), '').toEqual([[0]]);
 
     compiled.destroy();
-    testContext.ok(
-      [...fixture.leftBuffers, ...fixture.rightBuffers].every(buffer => buffer.destroyed),
+    expect(
+      Boolean([...fixture.leftBuffers, ...fixture.rightBuffers].every(buffer => buffer.destroyed)),
       'both owned sources are destroyed only after the compiled join is released'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     fixture.left.destroy();
@@ -124,14 +113,14 @@ test('GPUDataFrame inner joins preserve mismatched nullable batches, stable row 
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame bounded lookups keep source-aligned matches, nullable keys, and missing markers on the GPU', async testContext => {
+it('GPUDataFrame bounded lookups keep source-aligned matches, nullable keys, and missing markers on the GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -148,41 +137,41 @@ test('GPUDataFrame bounded lookups keep source-aligned matches, nullable keys, a
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUJoinChunks(compiled.matchMask),
-      [[1, 0, 1], [], [1, 0, 1, 1, 0]],
       'missing and explicitly null left keys never report a match'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 0, 1], [], [1, 0, 1, 1, 0]]);
+    expect(
       await readGPUJoinChunks(compiled.rightRowIndices),
-      [[501, MISSING_JOIN_ROW, 500], [], [900, MISSING_JOIN_ROW, 901, 500, MISSING_JOIN_ROW]],
       'bounded lookups retain source-aligned stable right identities and explicit missing markers'
-    );
-    testContext.deepEqual(
+    ).toEqual([
+      [501, MISSING_JOIN_ROW, 500],
+      [],
+      [900, MISSING_JOIN_ROW, 901, 500, MISSING_JOIN_ROW]
+    ]);
+    expect(
       compiled.probeCounts.data.map(chunk => chunk.length),
-      [3, 0, 5],
       'probe counts preserve the original left chunk topology'
-    );
-    testContext.deepEqual(
+    ).toEqual([3, 0, 5]);
+    expect(
       compiled.lookupStatistics.data.map(chunk => chunk.length),
-      [4, 4, 4],
       'lookup diagnostics retain one four-word statistics block per left batch'
-    );
-    testContext.deepEqual(await readGPUJoinChunks(compiled.contractViolation), [[0]]);
+    ).toEqual([4, 4, 4]);
+    expect(await readGPUJoinChunks(compiled.contractViolation), '').toEqual([[0]]);
   } finally {
     compiled.destroy();
     fixture.left.destroy();
     fixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame left outer joins retain nullable and unmatched left rows with explicit right validity', async testContext => {
+it('GPUDataFrame left outer joins retain nullable and unmatched left rows with explicit right validity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -196,38 +185,39 @@ test('GPUDataFrame left outer joins retain nullable and unmatched left rows with
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(compiled.joinType, 'left');
-    testContext.deepEqual(await readGPUJoinChunks(compiled.requiredCounts), [[3], [0], [5]]);
-    testContext.deepEqual(await readGPUJoinChunks(compiled.selectedCounts), [[3], [0], [5]]);
-    testContext.deepEqual(
+    expect(compiled.joinType, '').toBe('left');
+    expect(await readGPUJoinChunks(compiled.requiredCounts), '').toEqual([[3], [0], [5]]);
+    expect(await readGPUJoinChunks(compiled.selectedCounts), '').toEqual([[3], [0], [5]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rowIndices, compiled.selectedCounts),
-      [[100, 101, 102], [], [800, 801, 802, 803, 804]],
       'selected unmatched and nullable left keys retain their stable source identities'
-    );
-    testContext.deepEqual(
+    ).toEqual([[100, 101, 102], [], [800, 801, 802, 803, 804]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rightRowIndices, compiled.selectedCounts),
-      [[501, MISSING_JOIN_ROW, 500], [], [900, MISSING_JOIN_ROW, 901, 500, MISSING_JOIN_ROW]],
       'outer joins publish an explicit missing marker without inventing a right row'
-    );
-    testContext.deepEqual(
+    ).toEqual([
+      [501, MISSING_JOIN_ROW, 500],
+      [],
+      [900, MISSING_JOIN_ROW, 901, 500, MISSING_JOIN_ROW]
+    ]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rightValidity, compiled.selectedCounts),
-      [[1, 0, 1], [], [1, 0, 1, 1, 0]],
       'right-side nullability remains explicit and aligned with compacted output pairs'
-    );
+    ).toEqual([[1, 0, 1], [], [1, 0, 1, 1, 0]]);
   } finally {
     compiled.destroy();
     fixture.left.destroy();
     fixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame semi and anti joins stably partition selected matches and nullable nonmatches', async testContext => {
+it('GPUDataFrame semi and anti joins stably partition selected matches and nullable nonmatches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -245,30 +235,30 @@ test('GPUDataFrame semi and anti joins stably partition selected matches and nul
     anti.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.equal(semi.joinType, 'semi');
-    testContext.equal(anti.joinType, 'anti');
-    testContext.deepEqual(await readGPUJoinChunks(semi.selectedCounts), [[2], [0], [3]]);
-    testContext.deepEqual(await readGPUJoinPublishedRows(semi.rowIndices, semi.selectedCounts), [
+    expect(semi.joinType, '').toBe('semi');
+    expect(anti.joinType, '').toBe('anti');
+    expect(await readGPUJoinChunks(semi.selectedCounts), '').toEqual([[2], [0], [3]]);
+    expect(await readGPUJoinPublishedRows(semi.rowIndices, semi.selectedCounts), '').toEqual([
       [100, 102],
       [],
       [800, 802, 803]
     ]);
-    testContext.deepEqual(await readGPUJoinPublishedRows(semi.rightValidity, semi.selectedCounts), [
+    expect(await readGPUJoinPublishedRows(semi.rightValidity, semi.selectedCounts), '').toEqual([
       [1, 1],
       [],
       [1, 1, 1]
     ]);
-    testContext.deepEqual(await readGPUJoinChunks(anti.requiredCounts), [[1], [0], [2]]);
-    testContext.deepEqual(
+    expect(await readGPUJoinChunks(anti.requiredCounts), '').toEqual([[1], [0], [2]]);
+    expect(
       await readGPUJoinPublishedRows(anti.rowIndices, anti.selectedCounts),
-      [[101], [], [801, 804]],
       'anti joins include selected nullable left keys as unmatched rows'
-    );
-    testContext.deepEqual(
-      await readGPUJoinPublishedRows(anti.rightRowIndices, anti.selectedCounts),
-      [[MISSING_JOIN_ROW], [], [MISSING_JOIN_ROW, MISSING_JOIN_ROW]]
-    );
-    testContext.deepEqual(await readGPUJoinPublishedRows(anti.rightValidity, anti.selectedCounts), [
+    ).toEqual([[101], [], [801, 804]]);
+    expect(await readGPUJoinPublishedRows(anti.rightRowIndices, anti.selectedCounts), '').toEqual([
+      [MISSING_JOIN_ROW],
+      [],
+      [MISSING_JOIN_ROW, MISSING_JOIN_ROW]
+    ]);
+    expect(await readGPUJoinPublishedRows(anti.rightValidity, anti.selectedCounts), '').toEqual([
       [0],
       [],
       [0, 0]
@@ -280,14 +270,14 @@ test('GPUDataFrame semi and anti joins stably partition selected matches and nul
     fixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame outer and anti joins respect filters, bounded capacity, and invalid-index suppression', async testContext => {
+it('GPUDataFrame outer and anti joins respect filters, bounded capacity, and invalid-index suppression', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -311,27 +301,24 @@ test('GPUDataFrame outer and anti joins respect filters, bounded capacity, and i
     invalidAnti.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(await readGPUJoinChunks(bounded.requiredCounts), [[2], [0], [4]]);
-    testContext.deepEqual(await readGPUJoinChunks(bounded.selectedCounts), [[2], [0], [2]]);
-    testContext.deepEqual(await readGPUJoinChunks(bounded.overflows), [[0], [0], [1]]);
-    testContext.deepEqual(
+    expect(await readGPUJoinChunks(bounded.requiredCounts), '').toEqual([[2], [0], [4]]);
+    expect(await readGPUJoinChunks(bounded.selectedCounts), '').toEqual([[2], [0], [2]]);
+    expect(await readGPUJoinChunks(bounded.overflows), '').toEqual([[0], [0], [1]]);
+    expect(
       await readGPUJoinPublishedRows(bounded.rowIndices, bounded.selectedCounts),
-      [[100, 102], [], [801, 802]],
       'capacity truncates the stable filtered left prefix independently per source batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[100, 102], [], [801, 802]]);
+    expect(
       await readGPUJoinPublishedRows(bounded.rightValidity, bounded.selectedCounts),
-      [[1, 1], [], [0, 1]],
       'nullable unmatched rows remain distinguishable after bounded publication'
-    );
+    ).toEqual([[1, 1], [], [0, 1]]);
 
     for (const compiled of [invalidOuter, invalidAnti]) {
-      testContext.deepEqual(await readGPUJoinChunks(compiled.contractViolation), [[1]]);
-      testContext.deepEqual(
+      expect(await readGPUJoinChunks(compiled.contractViolation), '').toEqual([[1]]);
+      expect(
         await readGPUJoinChunks(compiled.selectedCounts),
-        [[0], [0], [0]],
         'invalid unique-right indexes never turn into fabricated outer or anti matches'
-      );
+      ).toEqual([[0], [0], [0]]);
     }
   } finally {
     bounded.destroy();
@@ -343,14 +330,14 @@ test('GPUDataFrame outer and anti joins respect filters, bounded capacity, and i
     duplicateFixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame reuses filtered joins across two ordered encodings without reading source rows', async testContext => {
+it('GPUDataFrame reuses filtered joins across two ordered encodings without reading source rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -383,26 +370,22 @@ test('GPUDataFrame reuses filtered joins across two ordered encodings without re
     compiled.encode(commandEncoder, {minimumFare: 35});
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await Promise.all(firstCounts.map(buffer => readGPUJoinBuffer(buffer, 1))),
-      [[2], [0], [2]],
       'the first encoder-ordered parameter update retains matching filtered rows per batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[2], [0], [2]]);
+    expect(
       await readGPUJoinChunks(compiled.selectedCounts),
-      [[0], [0], [1]],
       'the second update reuses the same index and graph with a stricter source predicate'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0], [0], [1]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rowIndices, compiled.selectedCounts),
-      [[], [], [802]],
       'reused joins publish only the final matching stable left row'
-    );
-    testContext.deepEqual(
+    ).toEqual([[], [], [802]]);
+    expect(
       await readGPUJoinPublishedRows(compiled.rightRowIndices, compiled.selectedCounts),
-      [[], [], [901]],
       'reused joins retain the corresponding stable right source identity'
-    );
+    ).toEqual([[], [], [901]]);
   } finally {
     for (const buffer of firstCounts) buffer.destroy();
     compiled.destroy();
@@ -410,14 +393,14 @@ test('GPUDataFrame reuses filtered joins across two ordered encodings without re
     fixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame reports bounded join overflow and suppresses duplicate, reserved-key, and incomplete right indexes', async testContext => {
+it('GPUDataFrame reports bounded join overflow and suppresses duplicate, reserved-key, and incomplete right indexes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -452,39 +435,35 @@ test('GPUDataFrame reports bounded join overflow and suppresses duplicate, reser
     incomplete.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(await readGPUJoinChunks(bounded.requiredCounts), [[2], [0], [3]]);
-    testContext.deepEqual(await readGPUJoinChunks(bounded.selectedCounts), [[1], [0], [1]]);
-    testContext.deepEqual(await readGPUJoinChunks(bounded.overflows), [[1], [0], [1]]);
-    testContext.deepEqual(
+    expect(await readGPUJoinChunks(bounded.requiredCounts), '').toEqual([[2], [0], [3]]);
+    expect(await readGPUJoinChunks(bounded.selectedCounts), '').toEqual([[1], [0], [1]]);
+    expect(await readGPUJoinChunks(bounded.overflows), '').toEqual([[1], [0], [1]]);
+    expect(
       await readGPUJoinPublishedRows(bounded.rowIndices, bounded.selectedCounts),
-      [[100], [], [800]],
       'bounded batches publish their earliest stable matching left row'
-    );
-    testContext.deepEqual(
+    ).toEqual([[100], [], [800]]);
+    expect(
       await readGPUJoinPublishedRows(bounded.rightRowIndices, bounded.selectedCounts),
-      [[501], [], [900]],
       'bounded partner outputs remain aligned with the published left rows'
-    );
+    ).toEqual([[501], [], [900]]);
 
     for (const [compiled, statisticIndex, label] of [
       [duplicate, 1, 'duplicate right keys'],
       [invalid, 3, 'reserved valid right keys'],
       [incomplete, 2, 'incomplete right indexes']
     ] as const) {
-      testContext.ok(
-        (await readGPUJoinChunks(compiled.indexStatistics))[0][statisticIndex] > 0,
+      expect(
+        Boolean((await readGPUJoinChunks(compiled.indexStatistics))[0][statisticIndex] > 0),
         `${label} remain visible in GPU-resident index diagnostics`
-      );
-      testContext.deepEqual(
+      ).toBe(true);
+      expect(
         await readGPUJoinChunks(compiled.contractViolation),
-        [[1]],
         `${label} raise an explicit GPU contract violation`
-      );
-      testContext.deepEqual(
+      ).toEqual([[1]]);
+      expect(
         await readGPUJoinChunks(compiled.selectedCounts),
-        [[0], [0], [0]],
         `${label} never publish potentially incorrect join matches`
-      );
+      ).toEqual([[0], [0], [0]]);
     }
   } finally {
     bounded.destroy();
@@ -497,14 +476,14 @@ test('GPUDataFrame reports bounded join overflow and suppresses duplicate, reser
     }
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame joins and lookups preserve empty left chunks against a schema-only right source', async testContext => {
+it('GPUDataFrame joins and lookups preserve empty left chunks against a schema-only right source', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -522,19 +501,17 @@ test('GPUDataFrame joins and lookups preserve empty left chunks against a schema
     lookup.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(join.rightTable.batches, [], 'no right batches are fabricated');
-    testContext.deepEqual(await readGPUJoinChunks(join.selectedCounts), [[0], [0], [0]]);
-    testContext.deepEqual(await readGPUJoinChunks(join.requiredCounts), [[0], [0], [0]]);
-    testContext.deepEqual(
+    expect(join.rightTable.batches, 'no right batches are fabricated').toEqual([]);
+    expect(await readGPUJoinChunks(join.selectedCounts), '').toEqual([[0], [0], [0]]);
+    expect(await readGPUJoinChunks(join.requiredCounts), '').toEqual([[0], [0], [0]]);
+    expect(
       await readGPUJoinChunks(lookup.matchMask),
-      [[0, 0, 0], [], [0, 0, 0, 0, 0]],
       'empty right indexes leave every preserved left row unmatched'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0, 0], [], [0, 0, 0, 0, 0]]);
+    expect(
       (await readGPUJoinChunks(join.indexStatistics))[0].slice(0, 4),
-      [0, 0, 0, 0],
       'empty right sources clear index statistics without reading data back'
-    );
+    ).toEqual([0, 0, 0, 0]);
   } finally {
     join.destroy();
     lookup.destroy();
@@ -542,7 +519,7 @@ test('GPUDataFrame joins and lookups preserve empty left chunks against a schema
     fixture.right.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUJoinFixture(device: Device, options: GPUJoinFixtureOptions = {}): GPUJoinFixture {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   ArrowTextRenderer,
   createArrowTextPickingManager,
@@ -41,7 +41,7 @@ import * as arrow from 'apache-arrow';
 const CHARACTER_SET = ' AB';
 const FONT_ATLAS = buildBitmapFontAtlas({characterSet: CHARACTER_SET, fontSize: 10});
 
-test('ArrowTextRenderer prepares attribute text and draws attribute picking batches', async t => {
+it('ArrowTextRenderer prepares attribute text and draws attribute picking batches', async () => {
   const device = new NullDevice({});
   const sourceVectors = makeArrowTextSourceVectors(['AB', 'A']);
   const renderer = await ArrowTextRenderer.create(device, {
@@ -50,34 +50,47 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(renderer.resolvedModel, 'attribute', 'NullDevice keeps text on the attribute path');
-  t.ok(renderer.textRenderer instanceof TextRenderer, 'renderer uses the stable text facade');
-  t.equal(renderer.textData[0]?.strategy, 'attribute', 'prepared data records the strategy');
-  t.equal(renderer.textRenderer.stats.glyphCount, 3, 'renderer exposes aggregate statistics');
-  t.ok(renderer.model instanceof TextAttributeModel, 'attribute renderer owns an attribute model');
-  t.equal(getArrowTextRenderModules(device).length, 1, 'renderer resolves one picking module');
-  t.notOk(supportsTextIndexPicking(device), 'NullDevice does not support index picking');
-  t.equal(
+  expect(renderer.resolvedModel, 'NullDevice keeps text on the attribute path').toBe('attribute');
+  expect(
+    Boolean(renderer.textRenderer instanceof TextRenderer),
+    'renderer uses the stable text facade'
+  ).toBe(true);
+  expect(renderer.textData[0]?.strategy, 'prepared data records the strategy').toBe('attribute');
+  expect(renderer.textRenderer.stats.glyphCount, 'renderer exposes aggregate statistics').toBe(3);
+  expect(
+    Boolean(renderer.model instanceof TextAttributeModel),
+    'attribute renderer owns an attribute model'
+  ).toBe(true);
+  expect(getArrowTextRenderModules(device).length, 'renderer resolves one picking module').toBe(1);
+  expect(
+    Boolean(supportsTextIndexPicking(device)),
+    'NullDevice does not support index picking'
+  ).toBe(false);
+  expect(
     createArrowTextPickingManager(device, renderer.shaderInputs, () => {}),
-    null,
     'unsupported devices skip picking manager creation'
-  );
+  ).toBe(null);
 
   const preparedFromSource = prepareArrowTextInput(device, {
     ...sourceVectors,
     arrowVectorByteLength: 12
   });
-  t.equal(preparedFromSource.arrowVectorByteLength, 12, 'source preparation keeps byte metadata');
+  expect(preparedFromSource.arrowVectorByteLength, 'source preparation keeps byte metadata').toBe(
+    12
+  );
   preparedFromSource.destroy();
 
   const preparedFromData = await prepareArrowTextInputFromData(device, sourceVectors);
-  t.ok(preparedFromData.arrowVectorByteLength > 0, 'direct source preparation measures text bytes');
+  expect(
+    Boolean(preparedFromData.arrowVectorByteLength > 0),
+    'direct source preparation measures text bytes'
+  ).toBe(true);
   const resources = new GPUTextResources(device, {fontAtlas: FONT_ATLAS});
   const preparedTextData = makeGPUTextDataFromArrow(device, {
     ...preparedFromData,
     resources
   });
-  t.equal(preparedTextData[0]?.strategy, 'attribute', 'automatic preparation uses attributes');
+  expect(preparedTextData[0]?.strategy, 'automatic preparation uses attributes').toBe('attribute');
   const preparedTextRenderer = new TextRenderer(device, {data: preparedTextData});
   preparedTextRenderer.destroy();
   for (const data of preparedTextData) {
@@ -87,62 +100,58 @@ test('ArrowTextRenderer prepares attribute text and draws attribute picking batc
   preparedFromData.destroy();
 
   const pickingModel = createArrowTextPickingModel(device, renderer.model, renderer.shaderInputs);
-  t.equal(
-    pickingModel.instanceCount,
-    renderer.model.instanceCount,
-    'picking model mirrors glyph rows'
+  expect(pickingModel.instanceCount, 'picking model mirrors glyph rows').toBe(
+    renderer.model.instanceCount
   );
 
   const drawState = makePickingDrawState();
   drawArrowTextPickingPass({} as RenderPass, makePickingDrawModel(drawState), renderer.model, {
     onBatch: batchIndex => drawState.batchIndices.push(batchIndex)
   });
-  t.deepEqual(drawState.batchIndices, [0], 'attribute picking reports each glyph batch');
-  t.deepEqual(
-    drawState.instanceCounts,
-    [3, 3],
-    'attribute picking binds and restores glyph counts'
-  );
-  t.equal(drawState.attributeSetCount, 2, 'attribute picking binds and restores attributes');
-  t.equal(drawState.drawCount, 1, 'attribute picking draws each glyph batch');
+  expect(drawState.batchIndices, 'attribute picking reports each glyph batch').toEqual([0]);
+  expect(drawState.instanceCounts, 'attribute picking binds and restores glyph counts').toEqual([
+    3, 3
+  ]);
+  expect(drawState.attributeSetCount, 'attribute picking binds and restores attributes').toBe(2);
+  expect(drawState.drawCount, 'attribute picking draws each glyph batch').toBe(1);
 
-  t.equal(
+  expect(
     (await renderer.setProps({color: [1, 2, 3, 4]})).modelChanged,
-    true,
     'constant style changes rebuild the model'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     (await renderer.setProps({color: [1, 2, 3, 4]})).modelChanged,
-    false,
     'unchanged constant styles keep the model'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     (await renderer.setProps({texts: makeArrowTexts(['A', 'A'])})).modelChanged,
-    true,
     'direct text vector changes rebuild prepared input'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     (await renderer.setProps({model: 'storage'})).modelChanged,
-    true,
     'unsupported storage requests rebuild through attribute fallback'
+  ).toBe(true);
+  expect(renderer.resolvedModel, 'unsupported storage resolves back to attributes').toBe(
+    'attribute'
   );
-  t.equal(renderer.resolvedModel, 'attribute', 'unsupported storage resolves back to attributes');
 
   renderer.needsRedraw();
   renderer.setNeedsRedraw('renderer redraw');
-  t.equal(renderer.needsRedraw(), 'renderer redraw', 'renderer exposes pending redraw reason');
+  expect(renderer.needsRedraw(), 'renderer exposes pending redraw reason').toBe('renderer redraw');
   renderer.predraw(device.commandEncoder);
   renderer.draw(device.getDefaultRenderPass());
 
   pickingModel.destroy();
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible imports', async t => {
+it('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible imports', async () => {
   const labels = ['A', 'ABABABABABABA', null];
   const texts = makeArrowUtf8ViewTexts(labels);
-  t.ok(isArrowUtf8ViewVector(texts), 'detects Utf8View by its runtime type ID');
+  expect(Boolean(isArrowUtf8ViewVector(texts)), 'detects Utf8View by its runtime type ID').toBe(
+    true
+  );
   const data = texts.data[0] as unknown as {
     buffers: readonly (ArrayBufferView | undefined)[];
     variadicBuffers: readonly Uint8Array[];
@@ -155,18 +164,15 @@ test('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible impo
     (byteLength, buffer) => byteLength + buffer.byteLength,
     0
   );
-  t.equal(
+  expect(
     getArrowVectorByteLength(texts),
-    fixedBufferByteLength + variadicBufferByteLength,
     'counts view records, validity, and variadic buffers'
-  );
+  ).toBe(fixedBufferByteLength + variadicBufferByteLength);
 
   const normalized = normalizeArrowUtf8TextVector(texts);
-  t.ok(normalized.type instanceof arrow.Utf8, 'normalizes Utf8View to Utf8');
-  t.deepEqual(
-    Array.from(normalized),
-    labels,
-    'preserves sliced inline, out-of-line, and null labels'
+  expect(Boolean(normalized.type instanceof arrow.Utf8), 'normalizes Utf8View to Utf8').toBe(true);
+  expect(Array.from(normalized), 'preserves sliced inline, out-of-line, and null labels').toEqual(
+    labels
   );
 
   const device = new NullDevice({});
@@ -176,31 +182,42 @@ test('ArrowTextRenderer normalizes Utf8View labels with Arrow 17-compatible impo
     model: 'attribute',
     fontAtlas: FONT_ATLAS
   });
-  t.ok(
-    renderer.textInput.sourceVectors.texts.type instanceof arrow.Utf8,
+  expect(
+    Boolean(renderer.textInput.sourceVectors.texts.type instanceof arrow.Utf8),
     'renderer retains normalized Utf8 source data'
+  ).toBe(true);
+  expect(renderer.textRenderer.stats.glyphCount, 'renderer expands every view-backed glyph').toBe(
+    14
   );
-  t.equal(renderer.textRenderer.stats.glyphCount, 14, 'renderer expands every view-backed glyph');
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Arrow Utf8View normalization preserves dictionary encoding', t => {
+it('Arrow Utf8View normalization preserves dictionary encoding', () => {
   const texts = makeArrowUtf8ViewDictionaryTexts(['A', 'ABABABABABABA'], [1, 0, 1]);
-  t.ok(isArrowUtf8ViewDictionaryVector(texts), 'detects dictionary-encoded Utf8View');
+  expect(
+    Boolean(isArrowUtf8ViewDictionaryVector(texts)),
+    'detects dictionary-encoded Utf8View'
+  ).toBe(true);
 
   const normalized = normalizeArrowUtf8TextVector(texts);
-  t.ok(arrow.DataType.isDictionary(normalized.type), 'preserves dictionary encoding');
-  t.ok(normalized.type.dictionary instanceof arrow.Utf8, 'normalizes dictionary values to Utf8');
-  t.deepEqual(
-    Array.from(normalized),
-    ['ABABABABABABA', 'A', 'ABABABABABABA'],
-    'preserves dictionary row values'
-  );
-  t.end();
+  expect(
+    Boolean(arrow.DataType.isDictionary(normalized.type)),
+    'preserves dictionary encoding'
+  ).toBe(true);
+  expect(
+    Boolean(normalized.type.dictionary instanceof arrow.Utf8),
+    'normalizes dictionary values to Utf8'
+  ).toBe(true);
+  expect(Array.from(normalized), 'preserves dictionary row values').toEqual([
+    'ABABABABABABA',
+    'A',
+    'ABABABABABABA'
+  ]);
+  void 0;
 });
 
-test('ArrowTextRenderer can transfer GPUTextData ownership to a host', async t => {
+it('ArrowTextRenderer can transfer GPUTextData ownership to a host', async () => {
   const device = new NullDevice({});
   const renderer = await ArrowTextRenderer.create(device, {
     ...makeArrowTextSourceVectors(['AB']),
@@ -209,14 +226,14 @@ test('ArrowTextRenderer can transfer GPUTextData ownership to a host', async t =
   const textData = renderer.transferTextDataOwnership(() => {});
 
   renderer.destroy();
-  t.equal(textData[0]?.glyphCount, 2, 'destroying the renderer preserves host-owned data');
+  expect(textData[0]?.glyphCount, 'destroying the renderer preserves host-owned data').toBe(2);
   textData[0]?.destroy();
   textData[0]?.destroy();
-  t.pass('caller-owned GPUTextData destruction is idempotent');
-  t.end();
+  expect(Boolean('caller-owned GPUTextData destruction is idempotent'), '').toBe(true);
+  void 0;
 });
 
-test('makeGPUTextDataFromArrowStream preserves incremental global indices', async t => {
+it('makeGPUTextDataFromArrowStream preserves incremental global indices', async () => {
   const device = new NullDevice({});
   const resources = new GPUTextResources(device, {fontAtlas: FONT_ATLAS});
   const inputs = await Promise.all(
@@ -234,15 +251,14 @@ test('makeGPUTextDataFromArrowStream preserves incremental global indices', asyn
     batches.push(batch);
   }
 
-  t.equal(batches.length, 2, 'one GPUTextData is yielded for each input batch');
-  t.deepEqual(
+  expect(batches.length, 'one GPUTextData is yielded for each input batch').toBe(2);
+  expect(
     batches.map(batch => [batch.sourceBatchIndex, batch.rowIndexBase, batch.glyphIndexBase]),
-    [
-      [0, 0, 0],
-      [1, 1, 2]
-    ],
     'stream metadata remains global without rebuilding earlier batches'
-  );
+  ).toEqual([
+    [0, 0, 0],
+    [1, 1, 2]
+  ]);
   for (const batch of batches) {
     batch.destroy();
   }
@@ -250,10 +266,10 @@ test('makeGPUTextDataFromArrowStream preserves incremental global indices', asyn
     input.destroy();
   }
   resources.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTextRenderer streams data-backed text batches into prepared updates', async t => {
+it('ArrowTextRenderer streams data-backed text batches into prepared updates', async () => {
   const device = new NullDevice({});
   const renderer = await ArrowTextRenderer.create(device, {
     data: new arrow.Table([makeTextRecordBatch(new Float32Array([0, 0]), ['A'])]),
@@ -277,32 +293,30 @@ test('ArrowTextRenderer streams data-backed text batches into prepared updates',
     }
   );
 
-  t.deepEqual(
+  expect(
     updates.map(update => update.loadedBatchCount),
-    [1, 2],
     'streaming updates report uploaded GPU table batch count'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2]);
+  expect(
     updates.map(update => update.isFirstBatch),
-    [true, false],
     'streaming updates distinguish first and appended batches'
-  );
-  t.equal(renderer.textInput.positions.length, 3, 'streamed renderer retains every source row');
-  t.equal(renderer.textInput.texts.length, 3, 'streamed renderer retains every text row');
-  t.equal(renderer.model, firstBatchModel, 'appending keeps the first render model');
-  t.equal(renderer.textData[0], firstTextData, 'appending keeps the first prepared batch');
-  t.equal(renderer.textData.length, 2, 'each streamed source batch has independent data');
-  t.equal(renderer.textRenderer.stats.sourceBatchCount, 2, 'stats retain source boundaries');
+  ).toEqual([true, false]);
+  expect(renderer.textInput.positions.length, 'streamed renderer retains every source row').toBe(3);
+  expect(renderer.textInput.texts.length, 'streamed renderer retains every text row').toBe(3);
+  expect(renderer.model, 'appending keeps the first render model').toBe(firstBatchModel);
+  expect(renderer.textData[0], 'appending keeps the first prepared batch').toBe(firstTextData);
+  expect(renderer.textData.length, 'each streamed source batch has independent data').toBe(2);
+  expect(renderer.textRenderer.stats.sourceBatchCount, 'stats retain source boundaries').toBe(2);
 
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowTextRenderer keeps auto text on attributes below compact compute limits', async t => {
+it('ArrowTextRenderer keeps auto text on attributes below compact compute limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -316,7 +330,7 @@ test('ArrowTextRenderer keeps auto text on attributes below compact compute limi
       ...makeArrowTextSourceVectors(['AB', 'A']),
       fontAtlas: FONT_ATLAS
     });
-    t.equal(renderer.resolvedModel, 'attribute', 'portable compute limits use attribute text');
+    expect(renderer.resolvedModel, 'portable compute limits use attribute text').toBe('attribute');
     renderer.destroy();
   } finally {
     Object.defineProperty(device.limits, 'maxStorageBuffersPerShaderStage', {
@@ -324,10 +338,10 @@ test('ArrowTextRenderer keeps auto text on attributes below compact compute limi
       value: originalMaxStorageBuffersPerShaderStage
     });
   }
-  t.end();
+  void 0;
 });
 
-test('Arrow text picking draws storage and dictionary models with borrowed state', t => {
+it('Arrow text picking draws storage and dictionary models with borrowed state', () => {
   const dictionaryTextModel = makeTextModelStateStub(TextDictionaryModel, 'dictionary-text');
   const storageTextModel = makeTextModelStateStub(TextStorageModel, 'storage-text');
   const storageDrawState = makePickingDrawState();
@@ -337,8 +351,8 @@ test('Arrow text picking draws storage and dictionary models with borrowed state
     storageTextModel,
     {onBatch: batchIndex => storageDrawState.batchIndices.push(batchIndex)}
   );
-  t.deepEqual(storageDrawState.batchIndices, [0], 'storage picking reports one render batch');
-  t.equal(storageDrawState.drawCount, 1, 'storage picking draws once');
+  expect(storageDrawState.batchIndices, 'storage picking reports one render batch').toEqual([0]);
+  expect(storageDrawState.drawCount, 'storage picking draws once').toBe(1);
 
   const dictionaryDrawState = makePickingDrawState();
   drawArrowTextPickingPass(
@@ -347,9 +361,11 @@ test('Arrow text picking draws storage and dictionary models with borrowed state
     dictionaryTextModel,
     {onBatch: batchIndex => dictionaryDrawState.batchIndices.push(batchIndex)}
   );
-  t.deepEqual(dictionaryDrawState.batchIndices, [0], 'dictionary picking reports one render batch');
-  t.equal(dictionaryDrawState.drawCount, 1, 'dictionary picking draws once');
-  t.end();
+  expect(dictionaryDrawState.batchIndices, 'dictionary picking reports one render batch').toEqual([
+    0
+  ]);
+  expect(dictionaryDrawState.drawCount, 'dictionary picking draws once').toBe(1);
+  void 0;
 });
 
 function makeArrowTextSourceVectors(labels: readonly (string | null)[]) {

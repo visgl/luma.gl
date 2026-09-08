@@ -30,7 +30,7 @@ import {
   type GPURasterTileSourceMetadata
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type SeamOperator =
   | 'pointwise'
@@ -71,29 +71,29 @@ const NATIVE_SEAM_SCENARIOS: readonly SeamScenario[] = [
   }
 ];
 
-test('GPURaster tiled halos match monolithic pointwise, smoothing, derivatives, and morphology', async testCase => {
+it('GPURaster tiled halos match monolithic pointwise, smoothing, derivatives, and morphology', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const source = new SeamParityTileSource();
   const cache = createSeamParityCache(device, source);
   for (const scenario of NATIVE_SEAM_SCENARIOS) {
-    await assertTiledPipelineParity(testCase, device, cache, scenario);
+    await assertTiledPipelineParity(device, cache, scenario);
   }
   cache.destroy();
-  testCase.equal(cache.stats.pinnedTiles, 0, 'every native tile pin is released after submission');
-  testCase.end();
+  expect(cache.stats.pinnedTiles, 'every native tile pin is released after submission').toBe(0);
+  void 0;
 });
 
-test('GPURaster cumulative halos preserve ragged anisotropic-overview seams and masked boundaries', async testCase => {
+it('GPURaster cumulative halos preserve ragged anisotropic-overview seams and masked boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -119,7 +119,7 @@ test('GPURaster cumulative halos preserve ragged anisotropic-overview seams and 
       level: 1
     }
   ] satisfies SeamScenario[]) {
-    await assertTiledPipelineParity(testCase, device, cache, scenario);
+    await assertTiledPipelineParity(device, cache, scenario);
   }
 
   const overviewPlan = new GPURasterTileHaloAssembler(cache).plan({
@@ -128,22 +128,19 @@ test('GPURaster cumulative halos preserve ragged anisotropic-overview seams and 
     row: 1,
     stages: [{requiredHalo: 2}, {requiredHalo: 1}]
   });
-  testCase.deepEqual(
+  expect(
     overviewPlan.levelZeroHalo,
-    [6, 9],
     'cumulative overview radii preserve independent 2× horizontal and 3× vertical scales'
-  );
-  testCase.deepEqual(
+  ).toEqual([6, 9]);
+  expect(
     overviewPlan.corePixelBounds,
-    [3, 2, 6, 3],
     'ragged overview cores retain half-open ownership at both actual dataset edges'
-  );
+  ).toEqual([3, 2, 6, 3]);
   cache.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function assertTiledPipelineParity(
-  testCase: Test,
   device: Device,
   cache: GPURasterTileCache,
   scenario: SeamScenario
@@ -184,31 +181,33 @@ async function assertTiledPipelineParity(
     }
   }
 
-  testCase.ok(
-    ownership.every(count => count === 1),
+  expect(
+    Boolean(ownership.every(count => count === 1)),
     `${scenario.name}: half-open cores own every pixel exactly once`
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     Array.from(assembledValidity),
-    Array.from(reference.validity),
     `${scenario.name}: nodata, cloud masks, and actual-edge border validity match monolithic`
-  );
+  ).toEqual(Array.from(reference.validity));
   for (let pixelIndex = 0; pixelIndex < assembledValues.length; pixelIndex++) {
     if (reference.validity[pixelIndex] === 0) {
-      testCase.ok(
-        Number.isNaN(assembledValues[pixelIndex]),
+      expect(
+        Boolean(Number.isNaN(assembledValues[pixelIndex])),
         `${scenario.name}: invalid pixel ${pixelIndex} preserves its canonical float NaN`
-      );
+      ).toBe(true);
     } else {
       const difference = Math.abs(assembledValues[pixelIndex]! - reference.values[pixelIndex]!);
-      testCase.ok(
-        difference < 0.0001,
+      expect(
+        Boolean(difference < 0.0001),
         `${scenario.name}: tiled pixel ${pixelIndex} matches monolithic (${difference})`
-      );
+      ).toBe(true);
     }
   }
   if (stages.some(stage => stage.requiredHalo > 0)) {
-    testCase.ok(usedNeighbor, `${scenario.name}: interior seams read actual neighboring tiles`);
+    expect(
+      Boolean(usedNeighbor),
+      `${scenario.name}: interior seams read actual neighboring tiles`
+    ).toBe(true);
   }
 }
 

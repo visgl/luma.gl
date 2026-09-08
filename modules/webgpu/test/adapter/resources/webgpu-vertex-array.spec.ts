@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout, type BufferLayout} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('WebGPUVertexArray rebinds split vertex layouts with repeated buffers and binding offsets', async t => {
+it('WebGPUVertexArray rebinds split vertex layouts with repeated buffers and binding offsets', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -54,32 +54,31 @@ test('WebGPUVertexArray rebinds split vertex layouts with repeated buffers and b
     }
   } as any);
 
-  t.deepEqual(
+  expect(
     vertexBufferCalls.map(call => ({
       slot: call.slot,
       gpuBuffer: call.gpuBuffer,
       offset: call.offset
     })),
-    [
-      {slot: 0, gpuBuffer: buffer.handle, offset: 0},
-      {slot: 1, gpuBuffer: buffer.handle, offset: 24},
-      {slot: 2, gpuBuffer: buffer.handle, offset: 48},
-      {slot: 3, gpuBuffer: buffer.handle, offset: 72}
-    ],
     'same GPU buffer is rebound across the expanded slots with the expected offsets'
-  );
+  ).toEqual([
+    {slot: 0, gpuBuffer: buffer.handle, offset: 0},
+    {slot: 1, gpuBuffer: buffer.handle, offset: 24},
+    {slot: 2, gpuBuffer: buffer.handle, offset: 48},
+    {slot: 3, gpuBuffer: buffer.handle, offset: 72}
+  ]);
 
   buffer.destroy();
   vertexArray.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPUVertexArray keeps simple single-slot bindings unchanged', async t => {
+it('WebGPUVertexArray keeps simple single-slot bindings unchanged', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -105,17 +104,16 @@ test('WebGPUVertexArray keeps simple single-slot bindings unchanged', async t =>
     }
   } as any);
 
-  t.deepEqual(
+  expect(
     vertexBufferCalls.map(call => ({
       slot: call.slot,
       gpuBuffer: call.gpuBuffer,
       offset: call.offset
     })),
-    [{slot: 0, gpuBuffer: buffer.handle, offset: 0}],
     'simple vertex buffers still bind once at offset 0'
-  );
+  ).toEqual([{slot: 0, gpuBuffer: buffer.handle, offset: 0}]);
 
   buffer.destroy();
   vertexArray.destroy();
-  t.end();
+  void 0;
 });

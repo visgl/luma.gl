@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -41,176 +41,157 @@ import {
   ssrTemporal
 } from '../../src';
 
-test('advanced effects expose composable pipeline shapes', testCase => {
-  testCase.deepEqual(
+it('advanced effects expose composable pipeline shapes', () => {
+  expect(
     createSSAOCompositeShaderPass().renderTargets?.ssaoRaw.scale,
-    [1, 1],
     'SSAO defaults to full-resolution intermediate framebuffers'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1]);
+  expect(
     createGTAOCompositeShaderPass().renderTargets?.gtaoRaw.scale,
-    [1, 1],
     'GTAO defaults to full-resolution intermediate framebuffers'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1]);
+  expect(
     createSSGICompositeShaderPass().renderTargets?.ssgiRaw.scale,
-    [1, 1],
     'diffuse global illumination defaults to full-resolution intermediate framebuffers'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1]);
+  expect(
     createSSRCompositeShaderPass().renderTargets?.ssrRaw.scale,
-    [1, 1],
     'screen-space reflections default to full-resolution intermediate framebuffers'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1]);
+  expect(
     createClusteredVolumetricLightingCompositeShaderPass().renderTargets?.clusteredVolumeRaw.scale,
-    [1, 1],
     'clustered volumetric lighting defaults to full-resolution intermediate framebuffers'
-  );
+  ).toEqual([1, 1]);
 
   const ssao = createSSAOCompositeShaderPass({
     normalSource: 'normal-texture',
     resolutionScale: 0.5
   });
-  testCase.equal(ssao.steps.length, 4, 'SSAO evaluates, blurs twice, and composites');
-  testCase.deepEqual(ssao.renderTargets?.ssaoRaw.scale, [0.5, 0.5], 'SSAO honors scale');
-  testCase.equal(
+  expect(ssao.steps.length, 'SSAO evaluates, blurs twice, and composites').toBe(4);
+  expect(ssao.renderTargets?.ssaoRaw.scale, 'SSAO honors scale').toEqual([0.5, 0.5]);
+  expect(
     ssao.steps[0].inputs?.normalTexture,
-    undefined,
     'normal-texture mode consumes the external normal binding'
-  );
+  ).toBe(undefined);
 
   const gtao = createGTAOCompositeShaderPass({resolutionScale: 0.5});
-  testCase.equal(gtao.steps.length, 6, 'GTAO evaluates, stabilizes, denoises, and composites');
-  testCase.deepEqual(gtao.renderTargets?.gtaoRaw.scale, [0.5, 0.5], 'GTAO honors scale');
-  testCase.equal(gtao.renderTargets?.gtaoHistory.lifetime, 'history', 'GTAO retains AO history');
-  testCase.equal(
+  expect(gtao.steps.length, 'GTAO evaluates, stabilizes, denoises, and composites').toBe(6);
+  expect(gtao.renderTargets?.gtaoRaw.scale, 'GTAO honors scale').toEqual([0.5, 0.5]);
+  expect(gtao.renderTargets?.gtaoHistory.lifetime, 'GTAO retains AO history').toBe('history');
+  expect(
     gtao.renderTargets?.gtaoHistoryDepth.lifetime,
-    'history',
     'GTAO retains depth history for disocclusion rejection'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     gtao.steps[1].inputs?.historyTexture,
-    gtao.steps[1].output,
     'GTAO intentionally reprojects one logical history target'
-  );
-  testCase.equal(
+  ).toBe(gtao.steps[1].output);
+  expect(
     gtaoTemporal.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'GTAO temporal rejection reconstructs linear view-space depth'
-  );
-  testCase.ok(
-    gtaoEvaluate.source.includes('gtaoEvaluate_integrateSlice'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(gtaoEvaluate.source.includes('gtaoEvaluate_integrateSlice')),
     'GTAO integrates cosine-weighted visibility between signed horizon angles'
-  );
-  testCase.ok(
-    gtaoEvaluate.source.includes('gtaoEvaluate.frameIndex *'),
+  ).toBe(true);
+  expect(
+    Boolean(gtaoEvaluate.source.includes('gtaoEvaluate.frameIndex *')),
     'GTAO rotates and jitters horizon samples across animation frames'
-  );
+  ).toBe(true);
 
   const ambientOnlyGTAO = createGTAOCompositeShaderPass({composition: 'ambient-only'});
-  testCase.equal(
+  expect(
     ambientOnlyGTAO.steps[5].shaderPass,
-    gtaoAmbientComposite,
     'ambient-only GTAO selects the composable ambient-light correction'
-  );
-  testCase.ok(
-    gtaoAmbientComposite.bindingLayout.some(binding => binding.name === 'ambientLightingTexture'),
+  ).toBe(gtaoAmbientComposite);
+  expect(
+    Boolean(
+      gtaoAmbientComposite.bindingLayout.some(binding => binding.name === 'ambientLightingTexture')
+    ),
     'ambient-only composition explicitly consumes the isolated ambient contribution'
-  );
+  ).toBe(true);
 
   const globalIllumination = createSSGICompositeShaderPass({resolutionScale: 0.5});
-  testCase.equal(
+  expect(
     globalIllumination.steps.length,
-    6,
     'SSGI traces, stabilizes, denoises twice, and composites diffuse bounce'
-  );
-  testCase.deepEqual(
+  ).toBe(6);
+  expect(
     globalIllumination.renderTargets?.ssgiRaw.scale,
-    [0.5, 0.5],
     'SSGI honors the requested tracing resolution'
-  );
-  testCase.equal(
+  ).toEqual([0.5, 0.5]);
+  expect(
     globalIllumination.renderTargets?.ssgiHistory.lifetime,
-    'history',
     'SSGI retains indirect-radiance history'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     globalIllumination.renderTargets?.ssgiHistoryDepth.lifetime,
-    'history',
     'SSGI retains depth history for disocclusion rejection'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     globalIllumination.steps[1].inputs?.historyTexture,
-    globalIllumination.steps[1].output,
     'SSGI intentionally reprojects one logical indirect-radiance history target'
-  );
-  testCase.equal(
+  ).toBe(globalIllumination.steps[1].output);
+  expect(
     ssgiTemporal.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'SSGI temporal rejection reconstructs linear view-space depth'
-  );
+  ).toBe('mat4x4<f32>');
 
   const volumetricLighting = createClusteredVolumetricLightingCompositeShaderPass({
     resolutionScale: 0.4
   });
-  testCase.equal(
+  expect(
     volumetricLighting.steps.length,
-    6,
     'clustered volumetric lighting integrates, stabilizes, denoises, and composites'
-  );
-  testCase.deepEqual(
+  ).toBe(6);
+  expect(
     volumetricLighting.renderTargets?.clusteredVolumeRaw.scale,
-    [0.4, 0.4],
     'clustered volumetric lighting honors low-resolution integration'
-  );
-  testCase.equal(
+  ).toEqual([0.4, 0.4]);
+  expect(
     volumetricLighting.renderTargets?.clusteredVolumeHistory.lifetime,
-    'history',
     'clustered volumetric lighting retains scattering history'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.lifetime,
-    'history',
     'clustered volumetric lighting retains depth history'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     clusteredVolumetricTemporal.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'clustered volumetric temporal rejection reconstructs linear view-space depth'
-  );
-  testCase.equal(
+  ).toBe('mat4x4<f32>');
+  expect(
     clusteredVolumetricTemporal.uniformTypes.inverseViewProjectionMatrix,
-    'mat4x4<f32>',
     'clustered volumetric temporal reprojection reconstructs current world positions'
-  );
-  testCase.equal(
+  ).toBe('mat4x4<f32>');
+  expect(
     clusteredVolumetricTemporal.uniformTypes.previousViewProjectionMatrix,
-    'mat4x4<f32>',
     'clustered volumetric temporal reprojection projects through the previous camera'
-  );
-  testCase.equal(
+  ).toBe('mat4x4<f32>');
+  expect(
     volumetricLighting.renderTargets?.clusteredVolumeDepthHistory.format,
-    'rg16float',
     'clustered volumetric lighting stores compact core-filterable linear depth'
-  );
-  testCase.equal(
+  ).toBe('rg16float');
+  expect(
     clusteredVolumetricDepthHistoryCopy.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'clustered volumetric depth history linearizes depth when it is captured'
-  );
-  testCase.ok(
-    clusteredVolumetricTemporal.source.includes('cameraPreviousCoord(texCoord, currentDepth)'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(
+      clusteredVolumetricTemporal.source.includes('cameraPreviousCoord(texCoord, currentDepth)')
+    ),
     'empty-space volume history follows explicit camera reprojection'
-  );
-  testCase.ok(
-    clusteredVolumetricTemporal.source.includes('currentDepth < 0.99999 && velocityIsFinite'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      clusteredVolumetricTemporal.source.includes('currentDepth < 0.99999 && velocityIsFinite')
+    ),
     'surface volume history preserves valid object velocity'
-  );
-  testCase.ok(
-    clusteredVolumetricTemporal.source.includes('previousViewDepth = textureLoad'),
+  ).toBe(true);
+  expect(
+    Boolean(clusteredVolumetricTemporal.source.includes('previousViewDepth = textureLoad')),
     'temporal rejection compares stored linear depth directly'
-  );
+  ).toBe(true);
 
   const adaptiveExposure = createHDRAutoExposureCompositeShaderPass();
   const minimumScaleAdaptiveExposure = createHDRAutoExposureCompositeShaderPass({
@@ -219,259 +200,241 @@ test('advanced effects expose composable pipeline shapes', testCase => {
   const seededAdaptiveExposure = createHDRAutoExposureCompositeShaderPass({
     initialExposure: 0.35
   });
-  testCase.equal(
+  expect(
     adaptiveExposure.steps.length,
-    7,
     'HDR auto exposure extracts, reduces, adapts persistent history, and applies exposure'
-  );
-  testCase.equal(
+  ).toBe(7);
+  expect(
     adaptiveExposure.renderTargets?.hdrExposureHistory.lifetime,
-    'history',
     'HDR auto exposure keeps its adapted state on the GPU between frames'
-  );
-  testCase.deepEqual(
+  ).toBe('history');
+  expect(
     adaptiveExposure.renderTargets?.hdrExposureHistory.initialize?.clearColor,
-    [1, 1, 1, 1],
     'HDR auto exposure preserves its neutral default history seed'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1, 1, 1]);
+  expect(
     seededAdaptiveExposure.renderTargets?.hdrExposureHistory.initialize?.clearColor,
-    [0.35, 1, 1, 1],
     'HDR auto exposure can start at the scene minimum without a bright first frame'
-  );
-  testCase.equal(
+  ).toEqual([0.35, 1, 1, 1]);
+  expect(
     adaptiveExposure.steps[5].inputs?.historyTexture,
-    adaptiveExposure.steps[5].output,
     'HDR auto exposure reprojects one logical exposure-history target'
-  );
-  testCase.equal(
+  ).toBe(adaptiveExposure.steps[5].output);
+  expect(
     hdrAutoExposureAdapt.uniformTypes.deltaTime,
-    'f32',
     'HDR auto exposure adapts according to elapsed frame time'
-  );
-  testCase.ok(
-    hdrLuminanceExtract.source.includes('weightedLogLuminance, totalWeight'),
+  ).toBe('f32');
+  expect(
+    Boolean(hdrLuminanceExtract.source.includes('weightedLogLuminance, totalWeight')),
     'HDR metering preserves weighted luminance and weight until the final reduction'
-  );
-  testCase.deepEqual(
+  ).toBe(true);
+  expect(
     minimumScaleAdaptiveExposure.renderTargets?.hdrLuminanceQuarter.scale,
-    [0.25, 0.25],
     'HDR metering clamps sub-quarter scales so its 4x4 footprint covers the complete source'
-  );
-  testCase.ok(
-    hdrLuminanceReduce.source.includes('.rg'),
+  ).toEqual([0.25, 0.25]);
+  expect(
+    Boolean(hdrLuminanceReduce.source.includes('.rg')),
     'HDR metering reduces weighted luminance and weight together'
-  );
-  testCase.ok(
-    hdrAutoExposureAdapt.source.includes('textureLoad(sourceTexture'),
+  ).toBe(true);
+  expect(
+    Boolean(hdrAutoExposureAdapt.source.includes('textureLoad(sourceTexture')),
     'HDR exposure consumes every texel in the final luminance level'
-  );
-  testCase.ok(
-    hdrAutoExposureAdapt.source.includes(
-      'min(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure)'
+  ).toBe(true);
+  expect(
+    Boolean(
+      hdrAutoExposureAdapt.source.includes(
+        'min(hdrAutoExposureAdapt.minimumExposure, hdrAutoExposureAdapt.maximumExposure)'
+      )
     ),
     'HDR exposure canonicalizes inverted exposure limits'
-  );
-  testCase.ok(
-    /let exposure = clamp\([\s\S]*mix\(previousExposure, targetExposure, adaptationWeight\)/.test(
-      hdrAutoExposureAdapt.source
+  ).toBe(true);
+  expect(
+    Boolean(
+      /let exposure = clamp\([\s\S]*mix\(previousExposure, targetExposure, adaptationWeight\)/.test(
+        hdrAutoExposureAdapt.source
+      )
     ),
     'HDR exposure clamps the temporally adapted result to the configured limits'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     hdrAutoExposureApply.uniformTypes.enabled,
-    'f32',
     'HDR exposure can bypass application while preserving adaptation history'
-  );
+  ).toBe('f32');
 
   const hdrBloom = createBloomCompositeShaderPass({resolutionScale: 0.75});
-  testCase.equal(
+  expect(
     hdrBloom.renderTargets?.blurHalf.format,
-    'rgba16float',
     'cinematic bloom preserves HDR highlight energy in floating-point intermediates'
-  );
-  testCase.deepEqual(
+  ).toBe('rgba16float');
+  expect(
     hdrBloom.renderTargets?.blurHalf.scale,
-    [0.375, 0.375],
     'cinematic bloom scales its complete multiresolution pyramid'
-  );
-  testCase.notOk(
-    clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS'),
+  ).toEqual([0.375, 0.375]);
+  expect(
+    Boolean(
+      clusteredVolumetricTrace.source.includes('lightIndex % CLUSTERED_VOLUMETRIC_MAX_LIGHTS')
+    ),
     'clustered volumetric lighting does not discard candidates through hash collisions'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes('lightScore < worstScore'),
+  ).toBe(false);
+  expect(
+    Boolean(clusteredVolumetricTrace.source.includes('lightScore < worstScore')),
     'clustered volumetric lighting retains a bounded best-scoring light set'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes('dot(viewDirection, lightDirection)'),
+  ).toBe(true);
+  expect(
+    Boolean(clusteredVolumetricTrace.source.includes('dot(viewDirection, lightDirection)')),
     'point-light anisotropy uses the camera-to-sample propagation direction'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes(
-      'dot(viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView))'
+  ).toBe(true);
+  expect(
+    Boolean(
+      clusteredVolumetricTrace.source.includes(
+        'dot(viewDirection, normalize(clusteredVolumetricTrace.directionalLightDirectionView))'
+      )
     ),
     'directional anisotropy uses the camera-to-sample propagation direction'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes(
-      'let candidateCount = min(clusterCount, storedCandidateCapacity)'
+  ).toBe(true);
+  expect(
+    Boolean(
+      clusteredVolumetricTrace.source.includes(
+        'let candidateCount = min(clusterCount, storedCandidateCapacity)'
+      )
     ),
     'clustered volumetric lighting bounds overflow work to stored tile-local candidates'
-  );
-  testCase.notOk(
-    clusteredVolumetricTrace.source.includes(
-      'min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),\n    overflowed'
+  ).toBe(true);
+  expect(
+    Boolean(
+      clusteredVolumetricTrace.source.includes(
+        'min(clusteredVolumetricTrace.pointLightCount, arrayLength(&pointLights)),\n    overflowed'
+      )
     ),
     'cluster overflow never falls back to scanning every active light per ray step'
-  );
-  testCase.equal(
+  ).toBe(false);
+  expect(
     clusteredVolumetricTrace.uniformTypes.godRayPosition,
-    'vec2<f32>',
     'crepuscular god rays expose a configurable screen-space sun position'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes('clusteredVolumetricTrace_godRayVisibility'),
+  ).toBe('vec2<f32>');
+  expect(
+    Boolean(clusteredVolumetricTrace.source.includes('clusteredVolumetricTrace_godRayVisibility')),
     'crepuscular god rays trace scene-depth visibility toward the sun'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     clusteredVolumetricTrace.uniformTypes.godRaysOnly,
-    'f32',
     'crepuscular god rays expose a separable diagnostic mode'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes('farPosition - rayOrigin'),
+  ).toBe('f32');
+  expect(
+    Boolean(clusteredVolumetricTrace.source.includes('farPosition - rayOrigin')),
     'volume tracing derives a projection-independent view ray'
-  );
-  testCase.ok(
-    clusteredVolumetricTrace.source.includes('rayOrigin + viewDirection * travel'),
+  ).toBe(true);
+  expect(
+    Boolean(clusteredVolumetricTrace.source.includes('rayOrigin + viewDirection * travel')),
     'volume tracing preserves the per-pixel origin required by orthographic projection'
-  );
+  ).toBe(true);
 
   const reconstructedSSAO = createSSAOCompositeShaderPass();
-  testCase.equal(
+  expect(
     reconstructedSSAO.steps[0].inputs?.normalTexture,
-    'previous',
     'depth reconstruction mode supplies a harmless fallback normal binding'
-  );
+  ).toBe('previous');
 
   const outlines = createOutlineCompositeShaderPass({normalSource: 'normal-texture'});
-  testCase.equal(outlines.steps[0].output, 'previous', 'outlines compose into previous');
+  expect(outlines.steps[0].output, 'outlines compose into previous').toBe('previous');
 
   const taa = createTAACompositeShaderPass();
-  testCase.equal(taa.renderTargets?.taaHistoryColor.lifetime, 'history', 'TAA retains color');
-  testCase.equal(taa.renderTargets?.taaHistoryDepth.lifetime, 'history', 'TAA retains depth');
-  testCase.equal(
+  expect(taa.renderTargets?.taaHistoryColor.lifetime, 'TAA retains color').toBe('history');
+  expect(taa.renderTargets?.taaHistoryDepth.lifetime, 'TAA retains depth').toBe('history');
+  expect(
     taa.steps[0].inputs?.historyTexture,
-    taa.steps[0].output,
     'TAA intentionally reads and writes one logical history target'
-  );
+  ).toBe(taa.steps[0].output);
 
   const cameraReprojectionTaa = createCameraReprojectionTAACompositeShaderPass();
-  testCase.equal(
+  expect(
     cameraReprojectionTaa.renderTargets?.cameraReprojectionTaaHistoryColor.format,
-    'rgba16float',
     'camera-reprojection TAA preserves HDR history'
-  );
-  testCase.equal(
+  ).toBe('rgba16float');
+  expect(
     cameraReprojectionTaa.renderTargets?.cameraReprojectionTaaHistoryDepth.lifetime,
-    'history',
     'camera-reprojection TAA retains depth history'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     cameraReprojectionTaa.steps[0].inputs?.historyTexture,
-    cameraReprojectionTaa.steps[0].output,
     'camera-reprojection TAA reads and writes one logical history target'
-  );
-  testCase.equal(
+  ).toBe(cameraReprojectionTaa.steps[0].output);
+  expect(
     cameraReprojectionTaaResolve.uniformTypes.inverseViewProjectionMatrix,
-    'mat4x4<f32>',
     'camera-reprojection TAA receives the current inverse view-projection matrix'
-  );
-  testCase.equal(
+  ).toBe('mat4x4<f32>');
+  expect(
     cameraReprojectionTaaResolve.uniformTypes.previousViewProjectionMatrix,
-    'mat4x4<f32>',
     'camera-reprojection TAA receives the previous view-projection matrix'
-  );
-  testCase.ok(
-    cameraReprojectionTaaResolve.source.includes('textureLoad(previousDepthTexture'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(cameraReprojectionTaaResolve.source.includes('textureLoad(previousDepthTexture')),
     'camera-reprojection TAA validates each bilinear history tap against depth'
-  );
+  ).toBe(true);
 
   const fog = createVolumetricFogCompositeShaderPass();
-  testCase.equal(
-    fog.renderTargets?.fogHistory.initialize,
-    'original',
-    'fog history starts from source'
+  expect(fog.renderTargets?.fogHistory.initialize, 'fog history starts from source').toBe(
+    'original'
   );
 
-  testCase.equal(depthAwareBlurCompositeShaderPass.steps.length, 2, 'depth blur is separable');
-  testCase.equal(createMotionBlurCompositeShaderPass().steps.length, 1, 'motion blur is one stage');
+  expect(depthAwareBlurCompositeShaderPass.steps.length, 'depth blur is separable').toBe(2);
+  expect(createMotionBlurCompositeShaderPass().steps.length, 'motion blur is one stage').toBe(1);
   const reflections = createSSRCompositeShaderPass({resolutionScale: 0.5});
-  testCase.equal(
-    reflections.steps.length,
-    6,
-    'SSR traces, stabilizes, denoises twice, and composites'
+  expect(reflections.steps.length, 'SSR traces, stabilizes, denoises twice, and composites').toBe(
+    6
   );
-  testCase.deepEqual(
+  expect(
     reflections.renderTargets?.ssrRaw.scale,
-    [0.5, 0.5],
     'SSR honors the requested tracing resolution'
-  );
-  testCase.equal(
+  ).toEqual([0.5, 0.5]);
+  expect(
     reflections.renderTargets?.ssrHistory.lifetime,
-    'history',
     'SSR retains reflection radiance history'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     reflections.renderTargets?.ssrHistoryDepth.lifetime,
-    'history',
     'SSR retains depth history for disocclusion rejection'
-  );
-  testCase.equal(
+  ).toBe('history');
+  expect(
     reflections.steps[1].inputs?.historyTexture,
-    reflections.steps[1].output,
     'SSR intentionally reprojects one logical reflection history target'
-  );
-  testCase.equal(
+  ).toBe(reflections.steps[1].output);
+  expect(
     ssrTemporal.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'SSR temporal rejection reconstructs linear view-space depth'
-  );
-  testCase.ok(
-    ssrTrace.source.includes('ssrTrace_hash(pixelCoordinate, ssrTrace.frameIndex)'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(ssrTrace.source.includes('ssrTrace_hash(pixelCoordinate, ssrTrace.frameIndex)')),
     'SSR rotates its stochastic trace sample every frame'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     ssrSpatial.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'SSR denoising compares linear view-space depth'
-  );
-  testCase.ok(
-    ssrSpatial.source.includes('relativeDepthDelta'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(ssrSpatial.source.includes('relativeDepthDelta')),
     'SSR denoising rejects relative view-depth discontinuities'
-  );
-  testCase.equal(
+  ).toBe(true);
+  expect(
     ssrComposite.uniformTypes.inverseProjectionMatrix,
-    'mat4x4<f32>',
     'SSR upsampling compares linear view-space depth'
-  );
-  testCase.ok(
-    ssrTemporal.source.includes('let hasCurrentSupport = maximumReflection.a > 0.001'),
+  ).toBe('mat4x4<f32>');
+  expect(
+    Boolean(ssrTemporal.source.includes('let hasCurrentSupport = maximumReflection.a > 0.001')),
     'SSR temporal accumulation detects frame-local hit support'
-  );
-  testCase.ok(
-    ssrTemporal.source.includes('historyReflection.a * ssrTemporal.historyWeight'),
+  ).toBe(true);
+  expect(
+    Boolean(ssrTemporal.source.includes('historyReflection.a * ssrTemporal.historyWeight')),
     'SSR temporal accumulation decays valid history across stochastic misses'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async testCase => {
+it('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping ambient-only composition execution');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -523,7 +486,9 @@ test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async t
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'ambient-only composition produces a scene-color texture');
+    expect(Boolean(outputTexture), 'ambient-only composition produces a scene-color texture').toBe(
+      true
+    );
     if (outputTexture) {
       const layout = outputTexture.computeMemoryLayout({width: 1, height: 1});
       const readbackBuffer = device.createBuffer({
@@ -536,10 +501,10 @@ test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async t
         const pixel = new Uint8Array(outputBytes.buffer, outputBytes.byteOffset, 4);
         const expected = [0.65, 0.525, 0.3625];
         for (let channel = 0; channel < expected.length; channel++) {
-          testCase.ok(
-            Math.abs(pixel[channel]! / 255 - expected[channel]!) < 0.015,
+          expect(
+            Boolean(Math.abs(pixel[channel]! / 255 - expected[channel]!) < 0.015),
             `channel ${channel} preserves direct/emissive light while occluding ambient`
-          );
+          ).toBe(true);
         }
       } finally {
         readbackBuffer.destroy();
@@ -553,14 +518,14 @@ test('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async t
     ambientOcclusionTexture.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('clustered volumetric lighting stays continuous across screen-tile boundaries', async testCase => {
+it('clustered volumetric lighting stays continuous across screen-tile boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU unavailable, skipping volumetric tile-boundary regression');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -664,7 +629,7 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'clustered volumetric regression scene renders');
+    expect(Boolean(outputTexture), 'clustered volumetric regression scene renders').toBe(true);
     if (outputTexture) {
       const memoryLayout = outputTexture.computeMemoryLayout({width, height});
       const readbackBuffer = device.createBuffer({
@@ -680,18 +645,18 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
         const leftRedScattering = pixelBytes[leftPixelOffset]!;
         const leftGreenScattering = pixelBytes[leftPixelOffset + 1]!;
         const rightGreenScattering = pixelBytes[rightPixelOffset + 1]!;
-        testCase.ok(
-          leftRedScattering > 20 && leftGreenScattering > 20,
+        expect(
+          Boolean(leftRedScattering > 20 && leftGreenScattering > 20),
           'an overflowing cluster selects its best lights across all stored candidates'
-        );
-        testCase.ok(
-          leftGreenScattering > 20 && rightGreenScattering > 20,
+        ).toBe(true);
+        expect(
+          Boolean(leftGreenScattering > 20 && rightGreenScattering > 20),
           'both tiles retain the shared nearby light at the stored candidate boundary'
-        );
-        testCase.ok(
-          Math.abs(leftGreenScattering - rightGreenScattering) < 45,
+        ).toBe(true);
+        expect(
+          Boolean(Math.abs(leftGreenScattering - rightGreenScattering) < 45),
           'adjacent tiles produce comparable fog scattering'
-        );
+        ).toBe(true);
       } finally {
         readbackBuffer.destroy();
       }
@@ -706,14 +671,14 @@ test('clustered volumetric lighting stays continuous across screen-tile boundari
     sourceTexture.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('advanced effects compose in order with existing effects', async testCase => {
+it('advanced effects compose in order with existing effects', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('Core WebGPU unavailable, skipping mixed effect execution');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -828,79 +793,125 @@ test('advanced effects compose in order with existing effects', async testCase =
     });
     device.submit();
 
-    testCase.ok(outputTexture, 'mixed old and new effect stack renders on WebGPU');
-    testCase.deepEqual(
+    expect(Boolean(outputTexture), 'mixed old and new effect stack renders on WebGPU').toBe(true);
+    expect(
       renderer.passRenderers.map(passRenderer => passRenderer.passDefinition.name),
-      mixedEffectStack.map(effect => effect.name),
       'renderer preserves the declared old/new effect order'
-    );
+    ).toEqual(mixedEffectStack.map(effect => effect.name));
 
-    testCase.notOk(
-      hasBinding('brightnessContrast', 'depthTexture'),
+    expect(
+      Boolean(hasBinding('brightnessContrast', 'depthTexture')),
       'color-only effects do not receive scene depth'
+    ).toBe(false);
+    expect(Boolean(hasBinding('ssaoEvaluate', 'depthTexture')), 'SSAO receives scene depth').toBe(
+      true
     );
-    testCase.ok(hasBinding('ssaoEvaluate', 'depthTexture'), 'SSAO receives scene depth');
-    testCase.ok(hasBinding('ssaoEvaluate', 'normalTexture'), 'SSAO receives scene normals');
-    testCase.ok(hasBinding('gtaoEvaluate', 'depthTexture'), 'GTAO receives scene depth');
-    testCase.ok(hasBinding('gtaoEvaluate', 'normalTexture'), 'GTAO receives scene normals');
-    testCase.ok(hasBinding('gtaoTemporal', 'velocityTexture'), 'GTAO receives scene velocity');
-    testCase.ok(hasBinding('ssgiTrace', 'depthTexture'), 'SSGI tracing receives scene depth');
-    testCase.ok(hasBinding('ssgiTrace', 'normalTexture'), 'SSGI tracing receives scene normals');
-    testCase.ok(
-      hasBinding('ssgiTemporal', 'velocityTexture'),
+    expect(
+      Boolean(hasBinding('ssaoEvaluate', 'normalTexture')),
+      'SSAO receives scene normals'
+    ).toBe(true);
+    expect(Boolean(hasBinding('gtaoEvaluate', 'depthTexture')), 'GTAO receives scene depth').toBe(
+      true
+    );
+    expect(
+      Boolean(hasBinding('gtaoEvaluate', 'normalTexture')),
+      'GTAO receives scene normals'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('gtaoTemporal', 'velocityTexture')),
+      'GTAO receives scene velocity'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssgiTrace', 'depthTexture')),
+      'SSGI tracing receives scene depth'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssgiTrace', 'normalTexture')),
+      'SSGI tracing receives scene normals'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssgiTemporal', 'velocityTexture')),
       'SSGI history receives scene velocity'
-    );
-    testCase.ok(
-      hasBinding('ssgiSpatial', 'normalTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssgiSpatial', 'normalTexture')),
       'SSGI denoising receives scene normals'
-    );
-    testCase.ok(hasBinding('ssrTrace', 'depthTexture'), 'SSR tracing receives scene depth');
-    testCase.ok(hasBinding('ssrTrace', 'normalTexture'), 'SSR tracing receives scene normals');
-    testCase.ok(
-      hasBinding('ssrTemporal', 'velocityTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrTrace', 'depthTexture')),
+      'SSR tracing receives scene depth'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrTrace', 'normalTexture')),
+      'SSR tracing receives scene normals'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrTemporal', 'velocityTexture')),
       'SSR history receives scene velocity'
-    );
-    testCase.ok(hasBinding('ssrSpatial', 'normalTexture'), 'SSR denoising receives scene normals');
-    testCase.ok(hasBinding('ssrComposite', 'depthTexture'), 'SSR upsampling preserves depth edges');
-    testCase.ok(
-      hasBinding('ssrComposite', 'normalTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrSpatial', 'normalTexture')),
+      'SSR denoising receives scene normals'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrComposite', 'depthTexture')),
+      'SSR upsampling preserves depth edges'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('ssrComposite', 'normalTexture')),
       'SSR upsampling preserves surface-normal edges'
-    );
-    testCase.ok(
-      hasBinding('clusteredVolumetricTrace', 'pointLights'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('clusteredVolumetricTrace', 'pointLights')),
       'volumetric integration receives the shared point-light storage buffer'
-    );
-    testCase.ok(
-      hasBinding('clusteredVolumetricTrace', 'clusterLightCounts'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('clusteredVolumetricTrace', 'clusterLightCounts')),
       'volumetric integration receives compute-built cluster occupancy'
-    );
-    testCase.ok(
-      hasBinding('clusteredVolumetricTrace', 'clusterLightIndices'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('clusteredVolumetricTrace', 'clusterLightIndices')),
       'volumetric integration receives compute-built local light lists'
-    );
-    testCase.ok(
-      hasBinding('clusteredVolumetricTemporal', 'velocityTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('clusteredVolumetricTemporal', 'velocityTexture')),
       'volumetric history receives scene velocity'
-    );
-    testCase.ok(
-      hasBinding('hdrAutoExposureAdapt', 'historyTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('hdrAutoExposureAdapt', 'historyTexture')),
       'GPU-driven HDR metering retains adapted exposure history'
-    );
-    testCase.ok(
-      hasBinding('hdrAutoExposureApply', 'exposureTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('hdrAutoExposureApply', 'exposureTexture')),
       'HDR exposure resolve receives the adapted luminance state'
-    );
-    testCase.notOk(
-      hasBinding('bloomExtract', 'velocityTexture'),
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('bloomExtract', 'velocityTexture')),
       'bloom does not receive scene velocity'
+    ).toBe(false);
+    expect(Boolean(hasBinding('dof', 'depthTexture')), 'DOF receives scene depth').toBe(true);
+    expect(Boolean(hasBinding('dof', 'normalTexture')), 'DOF does not receive scene normals').toBe(
+      false
     );
-    testCase.ok(hasBinding('dof', 'depthTexture'), 'DOF receives scene depth');
-    testCase.notOk(hasBinding('dof', 'normalTexture'), 'DOF does not receive scene normals');
-    testCase.ok(hasBinding('taaResolve', 'depthTexture'), 'TAA receives scene depth');
-    testCase.ok(hasBinding('taaResolve', 'velocityTexture'), 'TAA receives scene velocity');
-    testCase.notOk(hasBinding('taaResolve', 'normalTexture'), 'TAA does not receive scene normals');
-    testCase.ok(hasBinding('motionBlur', 'depthTexture'), 'motion blur receives scene depth');
-    testCase.ok(hasBinding('motionBlur', 'velocityTexture'), 'motion blur receives scene velocity');
+    expect(Boolean(hasBinding('taaResolve', 'depthTexture')), 'TAA receives scene depth').toBe(
+      true
+    );
+    expect(
+      Boolean(hasBinding('taaResolve', 'velocityTexture')),
+      'TAA receives scene velocity'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('taaResolve', 'normalTexture')),
+      'TAA does not receive scene normals'
+    ).toBe(false);
+    expect(
+      Boolean(hasBinding('motionBlur', 'depthTexture')),
+      'motion blur receives scene depth'
+    ).toBe(true);
+    expect(
+      Boolean(hasBinding('motionBlur', 'velocityTexture')),
+      'motion blur receives scene velocity'
+    ).toBe(true);
   } finally {
     renderer.destroy();
     sceneFramebuffer.destroy();
@@ -913,5 +924,5 @@ test('advanced effects compose in order with existing effects', async testCase =
     clusterLightIndices.destroy();
   }
 
-  testCase.end();
+  void 0;
 });

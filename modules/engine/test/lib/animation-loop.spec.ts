@@ -2,23 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
 import {AnimationLoop, AnimationLoopTemplate, makeAnimationLoop} from '@luma.gl/engine';
 
-test('engine#AnimationLoop constructor', async t => {
+it('engine#AnimationLoop constructor', async () => {
   const device = await getWebGLTestDevice();
 
-  t.ok(AnimationLoop, 'AnimationLoop imported');
+  expect(Boolean(AnimationLoop), 'AnimationLoop imported').toBe(true);
   const animationLoop = new AnimationLoop({device});
-  t.ok(animationLoop, 'AnimationLoop constructor should not throw');
-  t.end();
+  expect(Boolean(animationLoop), 'AnimationLoop constructor should not throw').toBe(true);
+  void 0;
 });
 
-test('engine#AnimationLoop uses provided stats object', async t => {
+it('engine#AnimationLoop uses provided stats object', async () => {
   const device = await getWebGLTestDevice();
   const customStats = luma.stats.get('GPU Time and Memory');
   customStats.reset();
@@ -28,7 +28,7 @@ test('engine#AnimationLoop uses provided stats object', async t => {
   const beforeGpuTime = customStats.get('GPU Time').lastSampleTime;
 
   const animationLoop = new AnimationLoop({device, stats: customStats});
-  t.is(animationLoop.stats, customStats, 'AnimationLoop stores provided stats object');
+  expect(animationLoop.stats, 'AnimationLoop stores provided stats object').toBe(customStats);
 
   await animationLoop.start();
   await animationLoop.waitForRender();
@@ -42,20 +42,19 @@ test('engine#AnimationLoop uses provided stats object', async t => {
     frameRateUpdated = frameRate.lastSampleTime > beforeFrameRate;
     cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
   }
-  t.ok(frameRateUpdated, 'Frame Rate updates on custom stats object');
-  t.ok(cpuTimeUpdated, 'CPU Time updates on custom stats object');
-  t.equal(
+  expect(Boolean(frameRateUpdated), 'Frame Rate updates on custom stats object').toBe(true);
+  expect(Boolean(cpuTimeUpdated), 'CPU Time updates on custom stats object').toBe(true);
+  expect(
     customStats.get('GPU Time').lastSampleTime,
-    beforeGpuTime,
     'GPU Time remains unchanged when no profiled passes are encoded'
-  );
+  ).toBe(beforeGpuTime);
 
   animationLoop.stop();
   animationLoop.destroy();
-  t.end();
+  void 0;
 });
 
-test('engine#AnimationLoop start,stop', async t => {
+it('engine#AnimationLoop start,stop', async () => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -70,15 +69,15 @@ test('engine#AnimationLoop start,stop', async t => {
     onRender: ({animationLoop}) => {
       renderCalled++;
 
-      t.is(animationLoop.device.isLost, false, 'isContextLost returns false');
+      expect(animationLoop.device.isLost, 'isContextLost returns false').toBe(false);
 
       animationLoop.stop();
 
-      t.is(initializeCalled, 1, 'onInitialize called');
-      t.is(renderCalled, 1, 'onRender called');
-      t.is(finalizeCalled, 1, 'onFinalize called');
+      expect(initializeCalled, 'onInitialize called').toBe(1);
+      expect(renderCalled, 'onRender called').toBe(1);
+      expect(finalizeCalled, 'onFinalize called').toBe(1);
 
-      t.end();
+      void 0;
     },
     onFinalize: () => {
       finalizeCalled++;
@@ -86,7 +85,7 @@ test('engine#AnimationLoop start,stop', async t => {
   }).start();
 });
 
-test('engine#AnimationLoop redraw', async t => {
+it('engine#AnimationLoop redraw', async () => {
   const device = await getWebGLTestDevice();
 
   let renderCalled = 0;
@@ -97,9 +96,9 @@ test('engine#AnimationLoop redraw', async t => {
       animationLoop.redraw();
       animationLoop.stop();
 
-      t.is(renderCalled, 1, 'onRender called');
+      expect(renderCalled, 'onRender called').toBe(1);
 
-      t.end();
+      void 0;
     },
     onRender: () => {
       renderCalled++;
@@ -107,7 +106,7 @@ test('engine#AnimationLoop redraw', async t => {
   }).start();
 });
 
-test('engine#AnimationLoop passes frame payload from custom animation frame provider', async t => {
+it('engine#AnimationLoop passes frame payload from custom animation frame provider', async () => {
   const device = await getWebGLTestDevice();
   const animationFrame = {};
   let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
@@ -126,10 +125,8 @@ test('engine#AnimationLoop passes frame payload from custom animation frame prov
     device,
     animationFrameProvider,
     onRender: ({animationLoop, animationFrame: receivedAnimationFrame}) => {
-      t.equal(
-        receivedAnimationFrame,
-        animationFrame,
-        'onRender receives frame payload from frame provider'
+      expect(receivedAnimationFrame, 'onRender receives frame payload from frame provider').toBe(
+        animationFrame
       );
       animationLoop.stop();
     }
@@ -138,13 +135,13 @@ test('engine#AnimationLoop passes frame payload from custom animation frame prov
   await animationLoop.start();
   scheduledCallback?.(123, animationFrame);
 
-  t.equal(cancelAnimationFrameCallCount, 1, 'stopping cancels scheduled custom frame');
+  expect(cancelAnimationFrameCallCount, 'stopping cancels scheduled custom frame').toBe(1);
   animationLoop.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });
 
-test('engine#AnimationLoop should not call initialize more than once', async t => {
+it('engine#AnimationLoop should not call initialize more than once', async () => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -159,11 +156,11 @@ test('engine#AnimationLoop should not call initialize more than once', async t =
   animationLoop.start();
   await animationLoop.waitForRender();
   animationLoop.stop();
-  t.is(initializeCalled, 1, 'onInitialize called');
-  t.end();
+  expect(initializeCalled, 'onInitialize called').toBe(1);
+  void 0;
 });
 
-test('engine#AnimationLoop two start()s should only run one loop', async t => {
+it('engine#AnimationLoop two start()s should only run one loop', async () => {
   const device = await getWebGLTestDevice();
 
   let renderCalled = 0;
@@ -180,11 +177,11 @@ test('engine#AnimationLoop two start()s should only run one loop', async t => {
   await animationLoop.waitForRender();
   await animationLoop.waitForRender();
   animationLoop.stop();
-  t.is(renderCalled, 3, 'onRender called');
-  t.end();
+  expect(renderCalled, 'onRender called').toBe(3);
+  void 0;
 });
 
-test('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
+it('engine#AnimationLoop start followed immediately by stop() should stop', async () => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -198,11 +195,11 @@ test('engine#AnimationLoop start followed immediately by stop() should stop', as
   animationLoop.start();
   animationLoop.stop();
   await new Promise<void>(resolve => setTimeout(resolve, 100));
-  t.is(initializeCalled, 0, 'onInitialize called');
-  t.end();
+  expect(initializeCalled, 'onInitialize called').toBe(0);
+  void 0;
 });
 
-test('engine#makeAnimationLoop stops after template initialization failure', async t => {
+it('engine#makeAnimationLoop stops after template initialization failure', async () => {
   const device = await getWebGLTestDevice();
   let renderCalled = 0;
 
@@ -227,8 +224,8 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
       device
     });
     const startResult = await animationLoop.start();
-    t.is(startResult, null, 'Animation loop stops after template initialization failure');
-    t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
+    expect(startResult, 'Animation loop stops after template initialization failure').toBe(null);
+    expect(renderCalled, 'onRender is not called after template initialization failure').toBe(0);
     animationLoop.destroy();
   } finally {
     // biome-ignore lint/suspicious/noConsole: test restores console state after suppressing expected logging.
@@ -238,10 +235,10 @@ test('engine#makeAnimationLoop stops after template initialization failure', asy
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('engine#makeAnimationLoop exposes the active template instance', async t => {
+it('engine#makeAnimationLoop exposes the active template instance', async () => {
   const device = await getWebGLTestDevice();
 
   class InspectableAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -252,18 +249,22 @@ test('engine#makeAnimationLoop exposes the active template instance', async t =>
   const animationLoop = makeAnimationLoop(InspectableAnimationLoopTemplate, {
     device
   });
-  t.is(animationLoop.getAnimationLoopTemplate(), null, 'template is absent before initialization');
-  await animationLoop.start();
-  t.ok(
-    animationLoop.getAnimationLoopTemplate() instanceof InspectableAnimationLoopTemplate,
-    'initialized template is exposed'
+  expect(animationLoop.getAnimationLoopTemplate(), 'template is absent before initialization').toBe(
+    null
   );
+  await animationLoop.start();
+  expect(
+    Boolean(animationLoop.getAnimationLoopTemplate() instanceof InspectableAnimationLoopTemplate),
+    'initialized template is exposed'
+  ).toBe(true);
   animationLoop.destroy();
-  t.is(animationLoop.getAnimationLoopTemplate(), null, 'finalized template is no longer exposed');
-  t.end();
+  expect(animationLoop.getAnimationLoopTemplate(), 'finalized template is no longer exposed').toBe(
+    null
+  );
+  void 0;
 });
 
-test('engine#makeAnimationLoop runs onAfterRender before device submission', async t => {
+it('engine#makeAnimationLoop runs onAfterRender before device submission', async () => {
   const device = await getWebGLTestDevice();
   const frameStages: string[] = [];
   let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
@@ -300,19 +301,18 @@ test('engine#makeAnimationLoop runs onAfterRender before device submission', asy
   try {
     await animationLoop.start();
     scheduledCallback?.(123);
-    t.deepEqual(
+    expect(
       frameStages,
-      ['template-render', 'after-render', 'device-submit'],
       'post-render hook runs while the frame command encoder is still open'
-    );
+    ).toEqual(['template-render', 'after-render', 'device-submit']);
   } finally {
     animationLoop.destroy();
     device.submit = originalSubmit;
   }
-  t.end();
+  void 0;
 });
 
-test('engine#makeAnimationLoop skips device submission when a frame is idle', async t => {
+it('engine#makeAnimationLoop skips device submission when a frame is idle', async () => {
   const device = await getWebGLTestDevice();
   let scheduledCallback: ((time: DOMHighResTimeStamp, animationFrame?: unknown) => void) | null =
     null;
@@ -345,15 +345,15 @@ test('engine#makeAnimationLoop skips device submission when a frame is idle', as
   try {
     await animationLoop.start();
     scheduledCallback?.(123);
-    t.is(submissionCount, 0, 'idle frame does not submit an empty command buffer');
+    expect(submissionCount, 'idle frame does not submit an empty command buffer').toBe(0);
   } finally {
     animationLoop.destroy();
     device.submit = originalSubmit;
   }
-  t.end();
+  void 0;
 });
 
-test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
+it('engine#AnimationLoop a start/stop/start should not call initialize again', async () => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -368,13 +368,13 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
   setTimeout(() => animationLoop.stop(), 50);
   setTimeout(() => animationLoop.start(), 100);
   setTimeout(() => {
-    t.is(initializeCalled, 1, 'onInitialize called');
+    expect(initializeCalled, 'onInitialize called').toBe(1);
     animationLoop.stop();
-    t.end();
+    void 0;
   }, 150);
 });
 
-test('engine#AnimationLoop GPU timing graceful fallback', async t => {
+it('engine#AnimationLoop GPU timing graceful fallback', async () => {
   const device = await getWebGLTestDevice();
 
   const animationLoop = new AnimationLoop({device});
@@ -382,35 +382,33 @@ test('engine#AnimationLoop GPU timing graceful fallback', async t => {
   await animationLoop.waitForRender();
 
   // Stats should exist regardless of timer support
-  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
-  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+  expect(Boolean(animationLoop.gpuTime), 'gpuTime stat exists').toBe(true);
+  expect(Boolean(animationLoop.cpuTime), 'cpuTime stat exists').toBe(true);
 
   // Device-managed GPU timing should match feature availability
   const hasTimerQuery = device.features.has('timestamp-query') && Boolean(device.props.debug);
-  t.is(
+  expect(
     device._isDebugGPUTimeEnabled(),
-    hasTimerQuery,
     `device GPU timing enabled when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
-  );
-  t.is(
+  ).toBe(hasTimerQuery);
+  expect(
     device.commandEncoder.getTimeProfilingQuerySet()?.props.count || 0,
-    hasTimerQuery ? 256 : 0,
     'timestamp query set pre-allocates slots for profiling passes'
-  );
+  ).toBe(hasTimerQuery ? 256 : 0);
 
   // Destroy should not throw
   animationLoop.stop();
   animationLoop.destroy();
-  t.is(device._isDebugGPUTimeEnabled(), false, 'Query cleaned up on destroy');
+  expect(device._isDebugGPUTimeEnabled(), 'Query cleaned up on destroy').toBe(false);
 
-  t.end();
+  void 0;
 });
 
-test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => {
+it('engine#AnimationLoop WebGPU timing path avoids backend casts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -418,20 +416,19 @@ test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => 
   await animationLoop.start();
   await animationLoop.waitForRender();
 
-  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
-  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
-  t.is(
+  expect(Boolean(animationLoop.gpuTime), 'gpuTime stat exists').toBe(true);
+  expect(Boolean(animationLoop.cpuTime), 'cpuTime stat exists').toBe(true);
+  expect(
     device._isDebugGPUTimeEnabled(),
-    device.features.has('timestamp-query') && Boolean(device.props.debug),
     'device GPU timing follows timestamp-query support and debug flags'
-  );
+  ).toBe(device.features.has('timestamp-query') && Boolean(device.props.debug));
 
   animationLoop.stop();
   animationLoop.destroy();
-  t.end();
+  void 0;
 });
 
-test.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
+it.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async () => {
   let device: WebGPUDevice | null = null;
   try {
     device = (await luma.createDevice({
@@ -447,8 +444,8 @@ test.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full deb
   }
 
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -456,14 +453,13 @@ test.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full deb
   await animationLoop.start();
   await animationLoop.waitForRender();
 
-  t.is(
+  expect(
     device._isDebugGPUTimeEnabled(),
-    device.features.has('timestamp-query'),
     'debugGPUTime enables GPU timing query setup when the feature is available'
-  );
+  ).toBe(device.features.has('timestamp-query'));
 
   animationLoop.stop();
   animationLoop.destroy();
   device.destroy();
-  t.end();
+  void 0;
 });

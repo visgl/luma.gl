@@ -4,13 +4,13 @@
 
 import {hueSaturation} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('hueSaturation#build/uniform', t => {
+it('hueSaturation#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(hueSaturation, {}, {});
 
-  t.ok(uniforms, 'hueSaturation module build is ok');
-  t.equal(uniforms.hue, 0, 'hueSaturation hue uniform is ok');
-  t.equal(uniforms.saturation, 0, 'hueSaturation saturation uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'hueSaturation module build is ok').toBe(true);
+  expect(uniforms.hue, 'hueSaturation hue uniform is ok').toBe(0);
+  expect(uniforms.saturation, 'hueSaturation saturation uniform is ok').toBe(0);
+  void 0;
 });
