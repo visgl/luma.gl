@@ -18,9 +18,9 @@ import {
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   default as GaussianSplatsAnimationLoopTemplate,
-  getGaussianSplatExecutionMode,
-  makeGaussianSplatInfoHtml
+  getGaussianSplatExecutionMode
 } from '../../examples/showcase/gaussian-splats/app';
+import {makeGaussianSplatInfoHtml} from '../../examples/showcase/gaussian-splats/app-ui';
 import {
   GAUSSIAN_SPLAT_SOURCE_CATALOG,
   getLocalGaussianSplatLoadersConfiguration,

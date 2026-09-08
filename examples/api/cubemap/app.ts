@@ -163,6 +163,9 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   }
 };
 
+const {ROOM_CUBE_SOURCE, ROOM_CUBE_VS, ROOM_CUBE_FS, PRISM_SOURCE, PRISM_VS, PRISM_FS} =
+  getShaderSources();
+
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
     super(device, {
@@ -175,7 +178,34 @@ class RoomCube extends Model {
     });
   }
 
-  static source = /* wgsl */ `\
+  static source = /* wgsl */ ROOM_CUBE_SOURCE;
+
+  static vs = /* glsl */ ROOM_CUBE_VS;
+
+  static fs = /* glsl */ ROOM_CUBE_FS;
+}
+
+class Prism extends Model {
+  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
+    super(device, {
+      ...props,
+      id: 'prism',
+      geometry: new CubeGeometry({indices: true}),
+      source: Prism.source,
+      vs: Prism.vs,
+      fs: Prism.fs
+    });
+  }
+
+  static source = /* wgsl */ PRISM_SOURCE;
+
+  static vs = /* glsl */ PRISM_VS;
+
+  static fs = /* glsl */ PRISM_FS;
+}
+
+function getShaderSources() {
+  const ROOM_CUBE_SOURCE = `\
 struct appUniforms {
   modelMatrix: mat4x4<f32>,
   viewMatrix: mat4x4<f32>,
@@ -210,7 +240,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 }
   `;
 
-  static vs = /* glsl */ `\
+  const ROOM_CUBE_VS = `\
 #version 300 es
 in vec3 positions;
 
@@ -228,7 +258,7 @@ void main(void) {
 }
   `;
 
-  static fs = /* glsl */ `\
+  const ROOM_CUBE_FS = `\
 #version 300 es
 precision highp float;
 
@@ -248,21 +278,8 @@ void main(void) {
   fragColor = texture(cubeTexture, normalize(vPosition));
 }
   `;
-}
 
-class Prism extends Model {
-  constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    super(device, {
-      ...props,
-      id: 'prism',
-      geometry: new CubeGeometry({indices: true}),
-      source: Prism.source,
-      vs: Prism.vs,
-      fs: Prism.fs
-    });
-  }
-
-  static source = /* wgsl */ `\
+  const PRISM_SOURCE = `\
 struct appUniforms {
   modelMatrix: mat4x4<f32>,
   viewMatrix: mat4x4<f32>,
@@ -309,7 +326,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 }
     `;
 
-  static vs = /* glsl */ `\
+  const PRISM_VS = `\
 #version 300 es
 in vec3 positions;
 in vec3 normals;
@@ -334,7 +351,7 @@ void main(void) {
 }
   `;
 
-  static fs = /* glsl */ `\
+  const PRISM_FS = `\
 #version 300 es
 precision highp float;
 
@@ -361,4 +378,6 @@ void main(void) {
   fragColor = mix(color, reflectedColor, 0.8);
 }
   `;
+
+  return {ROOM_CUBE_SOURCE, ROOM_CUBE_VS, ROOM_CUBE_FS, PRISM_SOURCE, PRISM_VS, PRISM_FS} as const;
 }

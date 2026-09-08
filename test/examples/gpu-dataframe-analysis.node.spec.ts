@@ -89,6 +89,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
 
   test('keeps the existing WebGPU example route and benchmark explicitly opt-in', () => {
     const example = readRepositoryFile('examples/experimental/gpu-data-analysis/src/app.ts');
+    const exampleUi = readRepositoryFile('examples/experimental/gpu-data-analysis/src/app-ui.ts');
     const exampleShell = readRepositoryFile(
       'examples/experimental/gpu-data-analysis/src/app-shell.ts'
     );
@@ -111,11 +112,11 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     expect(exampleShell).toContain('data-gpu-dataframe-benchmark-iterations');
     expect(exampleShell).toContain('1,048,576 rows');
     expect(example).toContain('warmupIterations: 1');
-    expect(example).toContain('MEDIAN OPERATION COMPARISONS');
-    expect(example).toContain('data-gpu-dataframe-crossover');
+    expect(exampleUi).toContain('MEDIAN OPERATION COMPARISONS');
+    expect(exampleUi).toContain('data-gpu-dataframe-crossover');
 
     for (const phase of ['upload', 'compile', 'index', 'execution', 'readback', 'cpu']) {
-      expect(example).toContain(`['${phase}',`);
+      expect(exampleUi).toContain(`['${phase}',`);
     }
   });
 

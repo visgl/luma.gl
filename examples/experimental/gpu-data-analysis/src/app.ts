@@ -25,17 +25,22 @@ import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
-import {GPU_DATA_ANALYSIS_STYLES, GPU_DATA_ANALYSIS_TEMPLATE} from './app-shell';
 import {
   runGPUDataFrameBenchmark,
   type GPUDataFrameBenchmarkResult
 } from './gpu-dataframe-benchmark';
-
-const APP_ID = 'gpu-data-analysis-app';
-const STYLE_ID = 'gpu-data-analysis-style';
+import {
+  type ExampleElements,
+  getElements,
+  mountGPUDataAnalysisShell,
+  renderGPUDataFrameBenchmark,
+  renderGrid,
+  renderGroups,
+  renderHistogram
+} from './app-ui';
 const DATASET_LENGTHS = {small: 4096, medium: 65_537, large: 262_144} as const;
 const IRREGULAR_HISTOGRAM_EDGES = [-2.5, -1.5, -0.75, -0.25, 0, 0.25, 0.75, 1.5, 2.5];
-const GROUP_LABELS = ['Northwest', 'Northeast', 'Southwest', 'Southeast'];
+const GROUP_COUNT = 4;
 
 type ExampleResources = {
   compiled: CompiledGPUCommandGraph;
@@ -47,46 +52,12 @@ type ExampleResources = {
   outputs: Buffer[];
 };
 
-type ExampleElements = {
-  bins: HTMLSelectElement;
-  compileTime: HTMLElement;
-  dataset: HTMLSelectElement;
-  grid: HTMLSelectElement;
-  groupFilter: HTMLSelectElement;
-  groups: HTMLElement;
-  heatmap: HTMLElement;
-  histogram: HTMLElement;
-  gpuDataFrameAdjustment: HTMLInputElement;
-  gpuDataFrameExecution: HTMLElement;
-  gpuDataFrameExpression: HTMLElement;
-  gpuDataFrameMultiplier: HTMLSelectElement;
-  gpuDataFramePreview: HTMLElement;
-  gpuDataFrameRate: HTMLElement;
-  gpuDataFrameResult: HTMLElement;
-  gpuDataFrameRun: HTMLButtonElement;
-  gpuDataFrameSelected: HTMLElement;
-  gpuDataFrameThreshold: HTMLInputElement;
-  gpuDataFrameBenchmark: HTMLButtonElement;
-  gpuDataFrameBenchmarkIterations: HTMLSelectElement;
-  gpuDataFrameBenchmarkResults: HTMLElement;
-  gpuDataFrameBenchmarkRows: HTMLSelectElement;
-  gpuDataFrameBenchmarkStatus: HTMLElement;
-  nodes: HTMLElement;
-  reuse: HTMLElement;
-  run: HTMLButtonElement;
-  status: HTMLElement;
-  validation: HTMLElement;
-};
-
 /** Cleanup handle returned by {@link initializeGPUDataAnalysisExample}. */
 export type GPUDataAnalysisExampleHandle = {destroy: () => void};
 
 /** Mounts the graph-native GPU data-analysis example into `#gpu-data-analysis-app`. */
 export function initializeGPUDataAnalysisExample(): GPUDataAnalysisExampleHandle {
-  const root = document.getElementById(APP_ID);
-  if (!root) throw new Error(`GPU data-analysis example requires #${APP_ID}`);
-  ensureStyles();
-  root.innerHTML = GPU_DATA_ANALYSIS_TEMPLATE;
+  const root = mountGPUDataAnalysisShell();
   const example = new GPUDataAnalysisExample(root);
   void example.initialize();
   return {destroy: () => example.destroy()};
@@ -258,8 +229,8 @@ class GPUDataAnalysisExample {
         'cumulative-grid-rows',
         gridWidth * gridWidth
       );
-      const groupCountsBuffer = makeOutputBuffer(this.device, 'group-counts', GROUP_LABELS.length);
-      const groupMeansBuffer = makeOutputBuffer(this.device, 'group-means', GROUP_LABELS.length);
+      const groupCountsBuffer = makeOutputBuffer(this.device, 'group-counts', GROUP_COUNT);
+      const groupMeansBuffer = makeOutputBuffer(this.device, 'group-means', GROUP_COUNT);
       const outputs = [
         extentBuffer,
         ...(histogramEdgesBuffer ? [histogramEdgesBuffer] : []),
@@ -347,14 +318,14 @@ class GPUDataAnalysisExample {
         groupCountsBuffer,
         'group-counts',
         'uint32',
-        GROUP_LABELS.length
+        GROUP_COUNT
       );
       const groupMeans = importOutput(
         graph,
         groupMeansBuffer,
         'group-means',
         'float32',
-        GROUP_LABELS.length
+        GROUP_COUNT
       );
       new GPUReduction({
         id: 'extent',
@@ -532,10 +503,10 @@ class GPUDataAnalysisExample {
         )
       );
       const gpuGroupCounts = Array.from(
-        new Uint32Array(groupCountsBytes.buffer, groupCountsBytes.byteOffset, GROUP_LABELS.length)
+        new Uint32Array(groupCountsBytes.buffer, groupCountsBytes.byteOffset, GROUP_COUNT)
       );
       const gpuGroupMeans = Array.from(
-        new Float32Array(groupMeansBytes.buffer, groupMeansBytes.byteOffset, GROUP_LABELS.length)
+        new Float32Array(groupMeansBytes.buffer, groupMeansBytes.byteOffset, GROUP_COUNT)
       );
       if (this.destroyed || version !== this.runVersion) {
         destroyResources(nextResources);
@@ -896,8 +867,8 @@ function analyzeOnCPU(
     gridPrefix += count;
     return gridPrefix;
   });
-  const groupCounts = Array.from({length: GROUP_LABELS.length}, () => 0);
-  const groupSums = Array.from({length: GROUP_LABELS.length}, () => 0);
+  const groupCounts = Array.from({length: GROUP_COUNT}, () => 0);
+  const groupSums = Array.from({length: GROUP_COUNT}, () => 0);
   for (let index = 0; index < groupKeys.length; index++) {
     if (selection[index] !== 0 && groupKeys[index] < groupCounts.length) {
       const groupIndex = groupKeys[index];
@@ -976,57 +947,6 @@ function importOutput<T extends 'float32' | 'uint32'>(
   return graph.createDataView(handle, {format, length});
 }
 
-function renderHistogram(
-  element: HTMLElement,
-  counts: number[],
-  cumulativeCounts: number[],
-  edges?: readonly number[]
-): void {
-  const maximum = Math.max(...counts, 1);
-  element.innerHTML = counts
-    .map((count, index) => {
-      const interval = edges
-        ? ` · [${edges[index]}, ${edges[index + 1]}${index === counts.length - 1 ? ']' : ')'}`
-        : '';
-      return `<i style="height:${Math.max(2, (count / maximum) * 100)}%" title="${count} rows · ${cumulativeCounts[index]} cumulative${interval}"></i>`;
-    })
-    .join('');
-}
-
-function renderGrid(
-  element: HTMLElement,
-  counts: number[],
-  weightSums: number[],
-  weightMinimums: number[],
-  weightMaximums: number[],
-  weightMeans: number[],
-  cumulativeCounts: number[],
-  width: number
-): void {
-  const maximum = Math.max(...counts, 1);
-  element.style.gridTemplateColumns = `repeat(${width},1fr)`;
-  element.innerHTML = counts
-    .map(
-      (count, index) =>
-        `<i style="opacity:${0.08 + (count / maximum) * 0.92}" title="${count} rows · sum ${formatStatistic(weightSums[index])} · mean ${formatStatistic(weightMeans[index])} · range [${formatStatistic(weightMinimums[index])}, ${formatStatistic(weightMaximums[index])}] · ${cumulativeCounts[index]} row cumulative"></i>`
-    )
-    .join('');
-}
-
-function renderGroups(element: HTMLElement, counts: number[], means: number[]): void {
-  const maximum = Math.max(...counts, 1);
-  element.innerHTML = counts
-    .map(
-      (count, index) =>
-        `<div title="${count.toLocaleString()} selected rows · mean ${formatStatistic(means[index])}"><span>${GROUP_LABELS[index]}</span><i style="width:${(count / maximum) * 100}%"></i><strong>${count.toLocaleString()} · μ ${formatStatistic(means[index])}</strong></div>`
-    )
-    .join('');
-}
-
-function formatStatistic(value: number): string {
-  return Number.isNaN(value) ? 'empty' : value.toFixed(3);
-}
-
 function destroyResources(resources: ExampleResources | null): void {
   if (!resources) return;
   resources.compiled.destroy();
@@ -1035,105 +955,6 @@ function destroyResources(resources: ExampleResources | null): void {
   resources.groupKeys.destroy();
   resources.selection.destroy();
   for (const output of resources.outputs) output.destroy();
-}
-
-function getElements(root: HTMLElement): ExampleElements {
-  const get = <T extends HTMLElement>(selector: string): T => {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing GPU data-analysis element ${selector}`);
-    return element;
-  };
-  return {
-    bins: get('[data-bins]'),
-    compileTime: get('[data-compile-time]'),
-    dataset: get('[data-dataset]'),
-    grid: get('[data-grid]'),
-    groupFilter: get('[data-group-filter]'),
-    groups: get('[data-groups]'),
-    heatmap: get('[data-heatmap]'),
-    histogram: get('[data-histogram]'),
-    gpuDataFrameAdjustment: get('[data-gpu-dataframe-adjustment]'),
-    gpuDataFrameExecution: get('[data-gpu-dataframe-execution]'),
-    gpuDataFrameExpression: get('[data-gpu-dataframe-expression]'),
-    gpuDataFrameMultiplier: get('[data-gpu-dataframe-multiplier]'),
-    gpuDataFramePreview: get('[data-gpu-dataframe-preview]'),
-    gpuDataFrameRate: get('[data-gpu-dataframe-rate]'),
-    gpuDataFrameResult: get('[data-gpu-dataframe-result]'),
-    gpuDataFrameRun: get('[data-gpu-dataframe-run]'),
-    gpuDataFrameSelected: get('[data-gpu-dataframe-selected]'),
-    gpuDataFrameThreshold: get('[data-gpu-dataframe-threshold]'),
-    gpuDataFrameBenchmark: get('[data-gpu-dataframe-benchmark]'),
-    gpuDataFrameBenchmarkIterations: get('[data-gpu-dataframe-benchmark-iterations]'),
-    gpuDataFrameBenchmarkResults: get('[data-gpu-dataframe-benchmark-phases]'),
-    gpuDataFrameBenchmarkRows: get('[data-gpu-dataframe-benchmark-rows]'),
-    gpuDataFrameBenchmarkStatus: get('[data-gpu-dataframe-benchmark-status]'),
-    nodes: get('[data-nodes]'),
-    reuse: get('[data-reuse]'),
-    run: get('[data-run]'),
-    status: get('[data-status]'),
-    validation: get('[data-validation]')
-  };
-}
-
-function ensureStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = GPU_DATA_ANALYSIS_STYLES;
-  document.head.appendChild(style);
-}
-
-/** Renders only bounded, independently fenced phase timings and explicit CPU-oracle validation. */
-function renderGPUDataFrameBenchmark(
-  elements: ExampleElements,
-  result: GPUDataFrameBenchmarkResult,
-  history: readonly GPUDataFrameBenchmarkResult[]
-): void {
-  const timingRows = [
-    ['upload', 'Arrow upload', result.timings.uploadMilliseconds],
-    ['compile', 'Graph compilation', result.timings.compileMilliseconds],
-    ['index', 'Standalone hash-index build', result.timings.indexMilliseconds],
-    ['execution', 'Fenced WebGPU execution', result.timings.executionMilliseconds],
-    ['readback', 'Bounded result readback', result.timings.readbackMilliseconds],
-    ['cpu', 'Equivalent CPU reference', result.timings.cpuMilliseconds]
-  ] as const;
-  const phaseTable = `<table><thead><tr><th scope="col">Phase</th><th scope="col">Milliseconds</th></tr></thead><tbody>${timingRows
-    .map(
-      ([phase, label, milliseconds]) =>
-        `<tr data-gpu-dataframe-phase="${phase}"><th scope="row">${label}</th><td>${milliseconds.toFixed(2)}</td></tr>`
-    )
-    .join('')}</tbody></table>`;
-  const workloadRows = Object.entries(result.workloads)
-    .map(
-      ([name, workload]) =>
-        `<tr data-gpu-dataframe-workload="${name}"><th scope="row">${name}</th><td>${workload.cpuMilliseconds.toFixed(2)}</td><td>${workload.gpuMilliseconds.toFixed(2)}</td><td>${formatBenchmarkThroughput(workload.gpuRowsPerSecond)}</td><td>${workload.speedup.toFixed(2)}×</td></tr>`
-    )
-    .join('');
-  const crossover = [...history]
-    .sort((left, right) => left.rowCount - right.rowCount)
-    .find(
-      measurement => measurement.timings.cpuMilliseconds > measurement.timings.executionMilliseconds
-    );
-  const crossoverMessage = crossover
-    ? `Measured end-to-end GPU crossover: ${crossover.rowCount.toLocaleString()} rows.`
-    : 'No GPU crossover observed yet; compare larger datasets on this device.';
-  elements.gpuDataFrameBenchmarkResults.innerHTML = `${phaseTable}
-    <p class="workload-title">MEDIAN OPERATION COMPARISONS</p>
-    <p class="workload-metadata">${result.measurement.warmupIterations} warmup · ${result.measurement.iterations} measured sample${result.measurement.iterations === 1 ? '' : 's'} · GPU durations include completion fences</p>
-    <table class="workload-table"><thead><tr><th scope="col">Operation</th><th scope="col">CPU ms</th><th scope="col">GPU ms</th><th scope="col">GPU rows/s</th><th scope="col">GPU speedup</th></tr></thead><tbody>${workloadRows}</tbody></table>
-    <p class="benchmark-crossover" data-gpu-dataframe-crossover>${crossoverMessage}</p>`;
-  const validated = Object.values(result.validation).every(Boolean);
-  elements.gpuDataFrameBenchmarkResults.dataset.state = validated ? 'ok' : 'error';
-  elements.gpuDataFrameBenchmarkResults.dataset.validated = String(validated);
-  elements.gpuDataFrameBenchmarkStatus.textContent = validated
-    ? `${result.rowCount.toLocaleString()} Arrow rows · batches ${result.batchRowCounts.join(' / ')} · filter, grouping, sorting, and joins match the CPU reference · ${result.readbackBytes.toLocaleString()} summary bytes read`
-    : 'GPU dataframe results did not match their equivalent CPU reference.';
-}
-
-function formatBenchmarkThroughput(rowsPerSecond: number): string {
-  if (rowsPerSecond >= 1_000_000) return `${(rowsPerSecond / 1_000_000).toFixed(2)}M`;
-  if (rowsPerSecond >= 1_000) return `${(rowsPerSecond / 1_000).toFixed(1)}K`;
-  return rowsPerSecond.toFixed(0);
 }
 
 function getErrorMessage(error: unknown): string {
