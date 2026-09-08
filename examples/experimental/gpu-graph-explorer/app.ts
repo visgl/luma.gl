@@ -434,6 +434,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
       canvas.style.cursor = 'grab';
+      canvas.style.touchAction = 'none';
       canvas.addEventListener('pointerdown', this.handlePointerDown);
       canvas.addEventListener('pointermove', this.handlePointerMove);
       canvas.addEventListener('pointerup', this.handlePointerUp);
