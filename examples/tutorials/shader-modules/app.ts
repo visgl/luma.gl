@@ -2,166 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumberArray3} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
-import {ShaderModule} from '@luma.gl/shadertools';
+import type {NumberArray3} from '@math.gl/types';
+import type {ShaderModule} from '@luma.gl/shadertools';
 
-// Base vertex and fragment shader code pairs
-
-const source1 = /* wgsl */ `\
-struct VertexOutput {
-  @builtin(position) position: vec4<f32>,
-  @location(0) localPosition: vec2<f32>,
-};
-
-@vertex
-fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
-  var output: VertexOutput;
-  output.position = vec4<f32>(position - vec2<f32>(0.5, 0.0), 0.0, 1.0);
-  output.localPosition = position;
-  return output;
-}
-
-struct ColorUniforms {
-  hsv: vec3<f32>,
-  phase: f32,
-};
-
-@group(0) @binding(auto) var<uniform> color: ColorUniforms;
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  return vec4<f32>(color_applyBands(color.hsv, input.localPosition, color.phase), 1.0);
-}
-`;
-
-const source2 = /* wgsl */ `\
-struct VertexOutput {
-  @builtin(position) position: vec4<f32>,
-  @location(0) localPosition: vec2<f32>,
-};
-
-@vertex
-fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
-  var output: VertexOutput;
-  output.position = vec4<f32>(position + vec2<f32>(0.5, 0.0), 0.0, 1.0);
-  output.localPosition = position;
-  return output;
-}
-
-struct ColorUniforms {
-  hsv: vec3<f32>,
-  phase: f32,
-};
-
-@group(0) @binding(auto) var<uniform> color: ColorUniforms;
-
-@fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  return vec4<f32>(color_applyBands(color.hsv, input.localPosition, color.phase), 1.0);
-}
-`;
-
-const vs1 = `\
-#version 300 es
-in vec2 position;
-out vec2 localPosition;
-void main() {
-  gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
-  localPosition = position;
-}
-`;
-
-const fs1 = `\
-#version 300 es
-precision highp float;
-
-uniform colorUniforms {
-  vec3 hsv;
-  float phase;
-} color;
-
-in vec2 localPosition;
-out vec4 fragColor;
-
-void main() {
-  fragColor = vec4(color_applyBands(color.hsv, localPosition, color.phase), 1.0);
-}
-`;
-
-const vs2 = `\
-#version 300 es
-in vec2 position;
-out vec2 localPosition;
-void main() {
-  gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
-  localPosition = position;
-}
-`;
-
-const fs2 = `\
-#version 300 es
-
-precision highp float;
-
-uniform colorUniforms {
-  vec3 hsv;
-  float phase;
-} color;
-
-in vec2 localPosition;
-out vec4 fragColor;
-
-void main() {
-  fragColor = vec4(color_applyBands(color.hsv, localPosition, color.phase), 1.0);
-}
-`;
-
-type ColorModuleProps = {
-  hsv: NumberArray3;
-  phase: number;
-};
-
-// We define a small custom shader module that converts HSV to RGB and applies moving bands.
-// From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
-const color: ShaderModule<ColorModuleProps> = {
-  name: 'color',
-  source: /* wgsl */ `\
-fn color_hsv2rgb(hsv: vec3<f32>) -> vec3<f32> {
-  let K = vec4<f32>(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  let p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
-  let rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), hsv.y);
-  return rgb;
-}
-
-fn color_applyBands(hsv: vec3<f32>, localPosition: vec2<f32>, phase: f32) -> vec3<f32> {
-  let baseColor = color_hsv2rgb(hsv);
-  let bandWave = 0.5 + 0.5 * sin(localPosition.x * 20.0 + localPosition.y * 12.0 + phase);
-  let bandStrength = smoothstep(0.15, 0.85, bandWave);
-  return baseColor * mix(0.35, 1.0, bandStrength) + vec3<f32>(0.08 * bandStrength);
-}
-`,
-  fs: /* glsl */ `\
-vec3 color_hsv2rgb(vec3 hsv) {
-  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
-  vec3 rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
-  return rgb;
-}
-
-vec3 color_applyBands(vec3 hsv, vec2 localPosition, float phase) {
-  vec3 baseColor = color_hsv2rgb(hsv);
-  float bandWave = 0.5 + 0.5 * sin(localPosition.x * 20.0 + localPosition.y * 12.0 + phase);
-  float bandStrength = smoothstep(0.15, 0.85, bandWave);
-  return baseColor * mix(0.35, 1.0, bandStrength) + vec3(0.08 * bandStrength);
-}
-  `,
-  uniformTypes: {
-    hsv: 'vec3<f32>',
-    phase: 'f32'
-  }
-};
+const {source1, source2, vs1, fs1, vs2, fs2, color} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
@@ -237,4 +83,172 @@ Re-using shader code with shader modules
     this.model2.draw(renderPass);
     renderPass.end();
   }
+}
+
+type ColorModuleProps = {
+  hsv: NumberArray3;
+  phase: number;
+};
+
+function getShaderSources() {
+  // Base vertex and fragment shader code pairs
+
+  const source1 = /* wgsl */ `\
+  struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) localPosition: vec2<f32>,
+  };
+
+  @vertex
+  fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = vec4<f32>(position - vec2<f32>(0.5, 0.0), 0.0, 1.0);
+    output.localPosition = position;
+    return output;
+  }
+
+  struct ColorUniforms {
+    hsv: vec3<f32>,
+    phase: f32,
+  };
+
+  @group(0) @binding(auto) var<uniform> color: ColorUniforms;
+
+  @fragment
+  fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    return vec4<f32>(color_applyBands(color.hsv, input.localPosition, color.phase), 1.0);
+  }
+  `;
+
+  const source2 = /* wgsl */ `\
+  struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) localPosition: vec2<f32>,
+  };
+
+  @vertex
+  fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
+    var output: VertexOutput;
+    output.position = vec4<f32>(position + vec2<f32>(0.5, 0.0), 0.0, 1.0);
+    output.localPosition = position;
+    return output;
+  }
+
+  struct ColorUniforms {
+    hsv: vec3<f32>,
+    phase: f32,
+  };
+
+  @group(0) @binding(auto) var<uniform> color: ColorUniforms;
+
+  @fragment
+  fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    return vec4<f32>(color_applyBands(color.hsv, input.localPosition, color.phase), 1.0);
+  }
+  `;
+
+  const vs1 = /* glsl */ `\
+  #version 300 es
+  in vec2 position;
+  out vec2 localPosition;
+  void main() {
+    gl_Position = vec4(position - vec2(0.5, 0.0), 0.0, 1.0);
+    localPosition = position;
+  }
+  `;
+
+  const fs1 = /* glsl */ `\
+  #version 300 es
+  precision highp float;
+
+  uniform colorUniforms {
+    vec3 hsv;
+    float phase;
+  } color;
+
+  in vec2 localPosition;
+  out vec4 fragColor;
+
+  void main() {
+    fragColor = vec4(color_applyBands(color.hsv, localPosition, color.phase), 1.0);
+  }
+  `;
+
+  const vs2 = /* glsl */ `\
+  #version 300 es
+  in vec2 position;
+  out vec2 localPosition;
+  void main() {
+    gl_Position = vec4(position + vec2(0.5, 0.0), 0.0, 1.0);
+    localPosition = position;
+  }
+  `;
+
+  const fs2 = /* glsl */ `\
+  #version 300 es
+
+  precision highp float;
+
+  uniform colorUniforms {
+    vec3 hsv;
+    float phase;
+  } color;
+
+  in vec2 localPosition;
+  out vec4 fragColor;
+
+  void main() {
+    fragColor = vec4(color_applyBands(color.hsv, localPosition, color.phase), 1.0);
+  }
+  `;
+
+  // We define a small custom shader module that converts HSV to RGB and applies moving bands.
+  // From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+  const color: ShaderModule<ColorModuleProps> = {
+    name: 'color',
+    source: /* wgsl */ `\
+  fn color_hsv2rgb(hsv: vec3<f32>) -> vec3<f32> {
+    let K = vec4<f32>(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    let p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+    let rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), hsv.y);
+    return rgb;
+  }
+
+  fn color_applyBands(hsv: vec3<f32>, localPosition: vec2<f32>, phase: f32) -> vec3<f32> {
+    let baseColor = color_hsv2rgb(hsv);
+    let bandWave = 0.5 + 0.5 * sin(localPosition.x * 20.0 + localPosition.y * 12.0 + phase);
+    let bandStrength = smoothstep(0.15, 0.85, bandWave);
+    return baseColor * mix(0.35, 1.0, bandStrength) + vec3<f32>(0.08 * bandStrength);
+  }
+  `,
+    fs: /* glsl */ `\
+  vec3 color_hsv2rgb(vec3 hsv) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+    vec3 rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
+    return rgb;
+  }
+
+  vec3 color_applyBands(vec3 hsv, vec2 localPosition, float phase) {
+    vec3 baseColor = color_hsv2rgb(hsv);
+    float bandWave = 0.5 + 0.5 * sin(localPosition.x * 20.0 + localPosition.y * 12.0 + phase);
+    float bandStrength = smoothstep(0.15, 0.85, bandWave);
+    return baseColor * mix(0.35, 1.0, bandStrength) + vec3(0.08 * bandStrength);
+  }
+    `,
+    uniformTypes: {
+      hsv: 'vec3<f32>',
+      phase: 'f32'
+    }
+  };
+
+  return {
+    source1,
+    source2,
+    vs1,
+    fs1,
+    vs2,
+    fs2,
+    color
+  } as const;
 }
