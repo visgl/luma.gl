@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core';
-import {getGPUDataEvaluator, GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {getGPUDataEvaluator, GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 import {expect, test, vi} from 'vitest';
@@ -165,7 +165,8 @@ test('GPUDataEvaluator.fromGPUData validates fixed-width chunks and preserves st
 
 test('GPUDataEvaluator.fromGPUData accepts segmented data', async () => {
   const device = new NullDevice({});
-  const values = new Float32Array([99, 99, 0, 0, 1, 1, 2, 2]);
+  const values = new Float32Array([0, 0, 1, 1, 2, 2]);
+  const valueOffsets = new Int32Array([0, 2, 3]);
   const buffer = device.createBuffer({
     usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     data: values
@@ -179,17 +180,13 @@ test('GPUDataEvaluator.fromGPUData accepts segmented data', async () => {
         buffer,
         format: 'vertex-list<float32x2>',
         length: 2,
-        valueLength: 4,
+        valueLength: 3,
         stride: 2,
         byteStride: 8,
         rowByteLength: 8,
         ownsBuffer: true,
-        readbackMetadata: {
-          kind: 'variable-length-attribute',
-          valueOffsets: new Int32Array([1, 3, 4]),
-          nullCount: 0,
-          valueByteLength: values.byteLength
-        }
+        valueOffsets,
+        valueByteLength: values.byteLength
       })
     ],
     ownsData: true
@@ -199,14 +196,85 @@ test('GPUDataEvaluator.fromGPUData accepts segmented data', async () => {
 
   expect(evaluator.type).toBe('float32');
   expect(evaluator.size).toBe(2);
-  expect(evaluator.length).toBe(4);
+  expect(evaluator.length).toBe(3);
   expect(evaluator.format).toBe('float32x2');
-  expect(evaluator.gpuVector.format).toBe('float32x2');
+  expect(evaluator.gpuVector.format).toBe('vertex-list<float32x2>');
+  expect(evaluator.segmentedFormat).toBe('vertex-list<float32x2>');
   expect(evaluator.startIndices?.length).toBe(3);
-  expect(Array.from(evaluator.startIndices!.value!)).toEqual([1, 3, 4]);
+  expect(Array.from(evaluator.startIndices!.value!)).toEqual([0, 2, 3]);
   expect(Array.from(await evaluator.readValue())).toEqual(Array.from(values));
 
   evaluator.destroy();
+  vector.destroy();
+  device.destroy();
+});
+
+test('GPUVectorEvaluator preserves batch-local segmented offsets', async () => {
+  const device = new NullDevice({});
+  const firstValues = new Float32Array([0, 0, 1, 1, 2, 2]);
+  const secondValues = new Float32Array([3, 3, 4, 4, 5, 5, 6, 6]);
+  const firstData = new GPUData({
+    buffer: device.createBuffer({
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: firstValues
+    }),
+    format: 'vertex-list<float32x2>',
+    length: 2,
+    valueLength: 3,
+    stride: 2,
+    byteStride: 8,
+    rowByteLength: 8,
+    valueOffsets: new Int32Array([0, 2, 3]),
+    valueByteLength: firstValues.byteLength,
+    ownsBuffer: true
+  });
+  const secondData = new GPUData({
+    buffer: device.createBuffer({
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: secondValues
+    }),
+    format: 'vertex-list<float32x2>',
+    length: 2,
+    valueLength: 4,
+    stride: 2,
+    byteStride: 8,
+    rowByteLength: 8,
+    valueOffsets: new Int32Array([0, 1, 4]),
+    valueByteLength: secondValues.byteLength,
+    ownsBuffer: true
+  });
+  const vector = new GPUVector({
+    type: 'data',
+    name: 'paths',
+    format: 'vertex-list<float32x2>',
+    data: [firstData, secondData],
+    ownsData: true
+  });
+  const sourceEvaluator = GPUVectorEvaluator.fromGPUVector(vector);
+  const transformedEvaluator = sourceEvaluator.mapGPUData(
+    source =>
+      new GPUDataEvaluator({
+        type: source.type,
+        size: source.size,
+        length: source.length,
+        format: source.format,
+        source
+      })
+  );
+  const result = await transformedEvaluator.evaluate(device, {name: 'transformed-paths'});
+
+  expect(sourceEvaluator.length).toBe(4);
+  expect(sourceEvaluator.gpuDataEvaluators.map(data => data.length)).toEqual([3, 4]);
+  expect(result.format).toBe('vertex-list<float32x2>');
+  expect(result.length).toBe(4);
+  expect(result.valueLength).toBe(7);
+  expect(result.data.map(data => Array.from(data.valueOffsets!))).toEqual([
+    [0, 2, 3],
+    [0, 1, 4]
+  ]);
+
+  transformedEvaluator.destroy();
+  sourceEvaluator.destroy();
   vector.destroy();
   device.destroy();
 });
