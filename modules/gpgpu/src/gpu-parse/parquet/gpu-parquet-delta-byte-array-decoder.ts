@@ -351,6 +351,7 @@ function validateProps(props: Readonly<GPUParquetDeltaByteArrayDecoderProps>): v
     suffixMiniBlockDescriptors: props.suffixMiniBlockDescriptors,
     prefixLengths: props.prefixLengths,
     suffixLengths: props.suffixLengths,
+    valueLengths: props.valueLengths,
     valueOffsets: props.valueOffsets,
     output: props.output
   })) {
