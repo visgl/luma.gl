@@ -113,16 +113,16 @@ const AUTO_ZOOM_SPEED = 2.5;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
 // Stop just before fp64 precision and the selected landmark begin to break down.
-const MIN_PIXEL_SCALE = 1e-9;
+const MIN_PIXEL_SCALE = 4e-9;
 const MAX_ZOOM_DEPTH = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE);
 const RENDER_TIMING_SAMPLE_INTERVAL = 5;
 const RENDER_TIMING_SMOOTHING = 0.2;
 const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   seahorse: {
     label: 'Seahorse',
-    // Deep-zoom landmark from the classic seahorse-valley sequence.
+    // Slightly nudged toward the visible detail in the low-resolution tour.
     centerX: -0.7436442,
-    centerY: 0.1318261
+    centerY: 0.131826105
   },
   elephant: {
     label: 'Elephant',
@@ -474,7 +474,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       (this.state.zoomDepth + elapsedSeconds * AUTO_ZOOM_SPEED) % (MAX_ZOOM_DEPTH + 0.01);
     this.settingsPanel.setSettingValue('zoomDepth', nextZoomDepth);
     if (this.autoZoomPanelRefreshCount++ % 4 === 0) {
-      this.panels.refresh();
+      // Recreate the settings panel so its controlled range input follows the
+      // animated value instead of only updating the renderer and overlay.
+      this.panels.setPanel(this.settingsPanel.makePanel());
     }
     this.autoZoomAnimationFrame = requestAnimationFrame(this.animateAutoZoom);
   };
@@ -1110,7 +1112,7 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.01, 0.015, 0.03, 1],
       description:
-        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, hybrid mode uses integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
+        'Mandelbrot rendered with luma.gl double-single fp64 emulation (WebGPU exposes f32 here, not native hardware fp64). The compute benchmark below separately measures dependent fp64 add, multiply, divide, and square-root operations.',
       fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
       kind: 'fp64',
