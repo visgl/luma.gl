@@ -236,6 +236,16 @@ describe('live example catalog metadata', () => {
         EXAMPLE_SUPPORT_REGISTRY[canonicalId],
         `${relativeFile} requires a sidecar support definition`
       ).toBeDefined();
+      const standaloneHtml = readFileSync(
+        path.join(process.cwd(), 'examples', relativeFile),
+        'utf8'
+      );
+      expect(standaloneHtml, `${relativeFile} requires the standalone support bootstrap`).toContain(
+        'data-luma-example-support-bootstrap'
+      );
+      expect(standaloneHtml, `${relativeFile} requires its canonical example identifier`).toContain(
+        `<meta name="luma-example-id" content="${canonicalId}" />`
+      );
     }
   });
 
