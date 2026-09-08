@@ -19,10 +19,10 @@ const outputStream = {
   }
 };
 const schema = new ParquetSchema({
-  positionX: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'SNAPPY'},
-  positionY: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'SNAPPY'},
-  radius: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'SNAPPY'},
-  temperature: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'SNAPPY'},
+  positionX: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
+  positionY: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
+  radius: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
+  temperature: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
   sequence: {type: 'UINT_32', encoding: 'DELTA_BINARY_PACKED', compression: 'UNCOMPRESSED'}
 });
 const data = makeParquetConstellationData(ROW_COUNT);

@@ -34,7 +34,7 @@ const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const UNIFORM_BYTE_LENGTH = 4 * Float32Array.BYTES_PER_ELEMENT;
 const PARQUET_URL = new URL('./data/constellation.parquet', import.meta.url);
 const INFO_HTML = `<div style="display:grid;gap:12px;min-width:min(360px,80vw)">
-  <div><strong>GPU Parquet Constellation</strong><p style="margin:6px 0 0;line-height:1.45">A real Parquet row group becomes an animated galaxy. Four FLOAT columns use Snappy → <code>BYTE_STREAM_SPLIT</code>; one UINT32 column uses <code>DELTA_BINARY_PACKED</code>.</p></div>
+  <div><strong>GPU Parquet Constellation</strong><p style="margin:6px 0 0;line-height:1.45">A real Parquet row group becomes an animated galaxy. Four FLOAT columns use <code>BYTE_STREAM_SPLIT</code>; one UINT32 column uses <code>DELTA_BINARY_PACKED</code>.</p></div>
   <div style="display:grid;gap:9px">
     <div><strong>${formatCount(ROW_COUNT)}</strong> rows · ${formatCount(PAGE_SIZE)} rows/page</div>
     <label>Decoder <select data-decode-mode><option value="gpu" selected>GPU command graph</option><option value="cpu">CPU on main thread</option></select></label>
@@ -54,8 +54,13 @@ type RenderParameters = {
 type PreparedScene = {
   buffers: Record<ParquetConstellationColumn, Buffer>;
   compiled: CompiledGPUCommandGraph<RenderParameters>;
+  gpuDecoder?: {
+    compiled: CompiledGPUCommandGraph<undefined>;
+    inputBuffer: Buffer;
+  };
   uploadByteLength: number;
   decodeGraphNodeCount: number;
+  decodeExecutionMilliseconds: number;
 };
 
 type DecodeMeasurement = {
@@ -63,6 +68,8 @@ type DecodeMeasurement = {
   longestFrameMilliseconds: number;
   uploadByteLength: number;
   graphNodeCount: number;
+  decodeExecutionMilliseconds: number;
+  reusedGraphExecutionMilliseconds?: number;
 };
 
 export default class GPUParquetConstellationAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -200,7 +207,11 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     const preparationVersion = ++this.preparationVersion;
     this.setControlsDisabled(true);
     try {
-      await this.prepareMode(mode, preparationVersion);
+      if (mode === 'gpu' && this.scene?.gpuDecoder) {
+        await this.rerunGPUDecode(preparationVersion);
+      } else {
+        await this.prepareMode(mode, preparationVersion);
+      }
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
@@ -222,6 +233,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       if (preparationVersion !== this.preparationVersion) return;
       this.selectedMode = 'gpu';
       await this.prepareMode('gpu', preparationVersion);
+      await this.rerunGPUDecode(preparationVersion);
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
@@ -262,7 +274,8 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         elapsedMilliseconds,
         longestFrameMilliseconds: this.longestPreparationFrameMilliseconds,
         uploadByteLength: nextScene.uploadByteLength,
-        graphNodeCount: nextScene.decodeGraphNodeCount
+        graphNodeCount: nextScene.decodeGraphNodeCount,
+        decodeExecutionMilliseconds: nextScene.decodeExecutionMilliseconds
       };
       this.destroyScene();
       this.scene = nextScene;
@@ -279,11 +292,13 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private async prepareCPUScene(parquetBytes: ArrayBuffer): Promise<PreparedScene> {
+    const decodeStartedAt = performance.now();
     const source = ParquetSourceLoader.createDataSource(new Blob([parquetBytes]), {
       core: {worker: false}
     });
     try {
       for await (const batch of source.read({columns: PARQUET_CONSTELLATION_COLUMNS})) {
+        const decodeExecutionMilliseconds = performance.now() - decodeStartedAt;
         if (batch.length !== ROW_COUNT) {
           throw new Error(`CPU decoder returned ${batch.length} of ${ROW_COUNT} rows`);
         }
@@ -303,11 +318,17 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
           ),
           sequence: this.createColumnBuffer('cpu-sequence', getUint32Column(batch.data, 'sequence'))
         };
-        return this.createPreparedScene(
-          buffers,
-          PARQUET_CONSTELLATION_COLUMNS.length * ROW_COUNT * UINT32_BYTE_LENGTH,
-          0
-        );
+        try {
+          return this.createPreparedScene(
+            buffers,
+            PARQUET_CONSTELLATION_COLUMNS.length * ROW_COUNT * UINT32_BYTE_LENGTH,
+            0,
+            decodeExecutionMilliseconds
+          );
+        } catch (error) {
+          for (const buffer of Object.values(buffers)) buffer.destroy();
+          throw error;
+        }
       }
     } finally {
       await source.close();
@@ -336,39 +357,44 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             })
           ])
         ) as Record<ParquetConstellationColumn, Buffer>;
-        const decodeGraph = new GPUCommandGraph(this.device, {
-          id: 'gpu-parquet-constellation-decode'
-        });
-        const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(this.device, plan);
-        const decoded = addGPUParquetEncodedPageBatchToGraph(decodeGraph, plan, inputBuffer);
-        const destinationHandles = Object.fromEntries(
-          PARQUET_CONSTELLATION_COLUMNS.map(column => [
-            column,
-            decodeGraph.importBuffer(
-              {
-                id: `gpu-${column}-decoded`,
-                byteLength: buffers[column].byteLength,
-                usage: buffers[column].usage
-              },
-              buffers[column]
-            )
-          ])
-        ) as Record<ParquetConstellationColumn, GraphBufferHandle>;
-        this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
-        const compiledDecode = decodeGraph.compile();
-        const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
+        let inputBuffer: Buffer | null = null;
+        let compiledDecode: CompiledGPUCommandGraph<undefined> | null = null;
         try {
-          const commandEncoder = this.device.createCommandEncoder({
+          const decodeGraph = new GPUCommandGraph<undefined>(this.device, {
             id: 'gpu-parquet-constellation-decode'
           });
-          compiledDecode.encode(commandEncoder, {parameters: undefined});
-          this.device.submit(commandEncoder.finish());
-          await waitForSubmittedWork(this.device);
-        } finally {
-          compiledDecode.destroy();
-          inputBuffer.destroy();
+          inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(this.device, plan);
+          const decoded = addGPUParquetEncodedPageBatchToGraph(decodeGraph, plan, inputBuffer);
+          const destinationHandles = Object.fromEntries(
+            PARQUET_CONSTELLATION_COLUMNS.map(column => [
+              column,
+              decodeGraph.importBuffer(
+                {
+                  id: `gpu-${column}-decoded`,
+                  byteLength: buffers[column].byteLength,
+                  usage: buffers[column].usage
+                },
+                buffers[column]
+              )
+            ])
+          ) as Record<ParquetConstellationColumn, GraphBufferHandle>;
+          this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
+          compiledDecode = decodeGraph.compile();
+          const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
+          const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode);
+          return this.createPreparedScene(
+            buffers,
+            plan.uploadData.byteLength,
+            decodeGraphNodeCount,
+            decodeExecutionMilliseconds,
+            {compiled: compiledDecode, inputBuffer}
+          );
+        } catch (error) {
+          compiledDecode?.destroy();
+          inputBuffer?.destroy();
+          for (const buffer of Object.values(buffers)) buffer.destroy();
+          throw error;
         }
-        return this.createPreparedScene(buffers, plan.uploadData.byteLength, decodeGraphNodeCount);
       }
     } finally {
       await source.close();
@@ -377,7 +403,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private addDecodedPageCopies(
-    graph: GPUCommandGraph,
+    graph: GPUCommandGraph<undefined>,
     sourceColumns: readonly {path: readonly string[]}[],
     pages: readonly (GPUParquetDecodedPage | {mode: 'cpu-fallback'})[],
     destinations: Record<ParquetConstellationColumn, GraphBufferHandle>
@@ -416,7 +442,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private addPageCopy(
-    graph: GPUCommandGraph,
+    graph: GPUCommandGraph<undefined>,
     source: GraphDataView<'uint32'>,
     destination: GraphBufferHandle,
     destinationByteOffset: number,
@@ -449,15 +475,53 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   private createPreparedScene(
     buffers: Record<ParquetConstellationColumn, Buffer>,
     uploadByteLength: number,
-    decodeGraphNodeCount: number
+    decodeGraphNodeCount: number,
+    decodeExecutionMilliseconds: number,
+    gpuDecoder?: PreparedScene['gpuDecoder']
   ): PreparedScene {
+    const compiled = this.createRenderGraph(buffers);
+    return {
+      buffers,
+      compiled,
+      gpuDecoder,
+      uploadByteLength,
+      decodeGraphNodeCount,
+      decodeExecutionMilliseconds
+    };
+  }
+
+  private async rerunGPUDecode(preparationVersion: number): Promise<void> {
+    const gpuDecoder = this.scene?.gpuDecoder;
+    const measurement = this.measurements.gpu;
+    if (!gpuDecoder || !measurement) return;
+    this.preparationActive = true;
+    this.preparationStartedAt = performance.now();
+    this.longestPreparationFrameMilliseconds = 0;
+    this.setStatus('Reusing the compiled GPU graph for another decode submission…');
+    await nextAnimationFrame();
     try {
-      const compiled = this.createRenderGraph(buffers);
-      return {buffers, compiled, uploadByteLength, decodeGraphNodeCount};
-    } catch (error) {
-      for (const buffer of Object.values(buffers)) buffer.destroy();
-      throw error;
+      const executionMilliseconds = await this.executeGPUDecode(gpuDecoder.compiled);
+      await nextAnimationFrame();
+      if (preparationVersion !== this.preparationVersion) return;
+      measurement.reusedGraphExecutionMilliseconds = executionMilliseconds;
+      this.setStatus(
+        `GPU reused its compiled ${measurement.graphNodeCount}-node graph in ${executionMilliseconds.toFixed(1)} ms.`
+      );
+      this.updateMeasurements();
+    } finally {
+      this.preparationActive = false;
     }
+  }
+
+  private async executeGPUDecode(compiled: CompiledGPUCommandGraph<undefined>): Promise<number> {
+    const decodeStartedAt = performance.now();
+    const commandEncoder = this.device.createCommandEncoder({
+      id: 'gpu-parquet-constellation-decode'
+    });
+    compiled.encode(commandEncoder, {parameters: undefined});
+    this.device.submit(commandEncoder.finish());
+    await waitForSubmittedWork(this.device);
+    return performance.now() - decodeStartedAt;
   }
 
   private createRenderGraph(
@@ -582,12 +646,14 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       <thead><tr><th style="text-align:left"></th><th>GPU</th><th>CPU</th></tr></thead>
       <tbody>
         <tr><th style="text-align:left;font-weight:normal">Preparation latency</th><td>${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">First decode execution</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Reused graph execution</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
         <tr><th style="text-align:left;font-weight:normal">Longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">GPU upload</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">Decode graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>${formatMetric(cpuMeasurement, value => String(value.graphNodeCount))}</td></tr>
       </tbody>
     </table>
-    <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × SNAPPY → BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>Parquet DataPageV2 · dictionary off</div>`;
+    <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · uncompressed · dictionary off</div>`;
   }
 }
 
@@ -621,6 +687,8 @@ function isParquetConstellationColumn(
 
 function destroyPreparedScene(scene: PreparedScene): void {
   scene.compiled.destroy();
+  scene.gpuDecoder?.compiled.destroy();
+  scene.gpuDecoder?.inputBuffer.destroy();
   for (const buffer of Object.values(scene.buffers)) buffer.destroy();
 }
 
