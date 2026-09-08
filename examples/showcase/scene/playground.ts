@@ -34,6 +34,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly orbitControls: OrbitControls;
   private importRequest = 0;
   private animationScrubbing = false;
+  private editorCollapsed = false;
 
   constructor({device}: AnimationProps) {
     super();
@@ -127,6 +128,18 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   }
 
   private initializeControls(): void {
+    const editorToggle = getRequiredElement('editor-toggle', HTMLButtonElement);
+    const workspace = editorToggle
+      .closest<HTMLElement>('.shell')
+      ?.querySelector<HTMLElement>('.workspace');
+    editorToggle.addEventListener('click', () => {
+      if (!workspace) return;
+      this.editorCollapsed = !this.editorCollapsed;
+      workspace.classList.toggle('editor-collapsed', this.editorCollapsed);
+      editorToggle.setAttribute('aria-expanded', String(!this.editorCollapsed));
+      editorToggle.textContent = this.editorCollapsed ? 'SHOW EDITOR' : 'HIDE EDITOR';
+    });
+
     const presetList = getRequiredElement('preset-list', HTMLDivElement);
     for (const [presetIndex, preset] of PLAYGROUND_PRESETS.entries()) {
       const button = document.createElement('button');
