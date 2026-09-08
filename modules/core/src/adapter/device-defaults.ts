@@ -8,7 +8,7 @@ import type {DeviceProps} from './device';
 /** Shared defaults for device creation without importing the Device class. */
 export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   id: null!,
-  powerPreference: 'high-performance',
+  powerPreference: 'default',
   failIfMajorPerformanceCaveat: false,
   featureLevel: undefined!,
   optionalFeatures: [],

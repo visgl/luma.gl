@@ -157,7 +157,7 @@ export class WebGPUDevice extends Device {
     return Device._getCanvasContextProps(props);
   }
 
-  /** @internal Initializes the default canvas as a separately diagnosable stage. */
+  /** @internal Initializes the default canvas as a separately diagnosable creation stage. */
   initializeCanvasContext(props: CanvasContextProps): void {
     this.canvasContext = new WebGPUCanvasContext(this, this.adapter, props);
     this.preferredColorFormat = this.canvasContext.colorFormat || this.preferredColorFormat;
