@@ -61,9 +61,17 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
 
 /**
  * Internal helper for resolving the default `debug` prop.
- * Precedence is: explicit log debug value first, then `NODE_ENV`, then `false`.
+ * Precedence is: URL `debug` parameter, explicit log debug value, `NODE_ENV`, then `false`.
  */
-export function _getDefaultDebugValue(logDebugValue: unknown, nodeEnv?: string): boolean {
+export function _getDefaultDebugValue(
+  logDebugValue: unknown,
+  nodeEnv?: string,
+  locationSearch?: string
+): boolean {
+  if (locationSearch && new URLSearchParams(locationSearch).has('debug')) {
+    return true;
+  }
+
   if (logDebugValue !== undefined && logDebugValue !== null) {
     return Boolean(logDebugValue);
   }
@@ -76,7 +84,11 @@ export function _getDefaultDebugValue(logDebugValue: unknown, nodeEnv?: string):
 }
 
 function getDefaultDebugValue(): boolean {
-  return _getDefaultDebugValue(log.get('debug'), getNodeEnv());
+  return _getDefaultDebugValue(log.get('debug'), getNodeEnv(), getLocationSearch());
+}
+
+function getLocationSearch(): string | undefined {
+  return typeof location === 'undefined' ? undefined : location.search;
 }
 
 function getNodeEnv(): string | undefined {
