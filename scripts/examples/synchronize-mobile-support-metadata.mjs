@@ -4,6 +4,7 @@
 
 import {readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
+import {transformStaticImports} from './standalone-module-imports.mjs';
 
 const REPOSITORY_ROOT = process.cwd();
 const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
@@ -124,20 +125,6 @@ ${tagIndentation}  if (exampleSupport.supported) {
 ${gatedSource}
 ${tagIndentation}  }
 ${tagIndentation}</script>`;
-    }
-  );
-}
-
-function transformStaticImports(source) {
-  return source.replace(
-    /(^[ \t]*)import\s+(.+?)\s+from\s+(["'])([^"']+)\3;?[ \t]*$/gm,
-    (statement, indentation, bindings, quote, moduleSource) => {
-      const destructuredBindings = bindings.startsWith('{')
-        ? bindings
-        : bindings.includes(', {')
-          ? `{default: ${bindings.replace(', {', ', ').replace(/}$/, '')}}`
-          : `{default: ${bindings}}`;
-      return `${indentation}const ${destructuredBindings} = await import(${quote}${moduleSource}${quote});`;
     }
   );
 }
