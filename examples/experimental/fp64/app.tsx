@@ -29,6 +29,7 @@ type AppState = {
   benchmarkResults: FP64ComputeBenchmarkResult[] | null;
   fp64RenderTiming: FP64RenderTiming | null;
   initializationError: string | null;
+  isAutoZooming: boolean;
   isBenchmarkRunning: boolean;
   isReady: boolean;
   renderWidth: number;
@@ -99,21 +100,29 @@ type VisualizationTiming = {
 
 const CANVAS_WIDTH = 420;
 const CANVAS_HEIGHT = 280;
-const MIN_RENDER_WIDTH = 160;
-const MAX_RENDER_WIDTH = 640;
+// Keep the expensive Mandelbrot fragment passes bounded even when the canvas is displayed larger.
+const DEFAULT_RENDER_WIDTH = 192;
+const MIN_RENDER_WIDTH = 96;
+const MAX_RENDER_WIDTH = 256;
 const RENDER_ASPECT_RATIO = CANVAS_WIDTH / CANVAS_HEIGHT;
-const FIXED_ITERATION_LIMIT = 1400;
+const FIXED_ITERATION_LIMIT = 768;
+const BASE_ITERATION_LIMIT = 160;
+const ITERATION_GROWTH_PER_ZOOM = 18;
+const RENDER_INTERVAL_MILLISECONDS = 50;
+const AUTO_ZOOM_SPEED = 2.5;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
-const MIN_PIXEL_SCALE = 1e-12;
+// Stop just before fp64 precision and the selected landmark begin to break down.
+const MIN_PIXEL_SCALE = 4e-9;
 const MAX_ZOOM_DEPTH = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE);
 const RENDER_TIMING_SAMPLE_INTERVAL = 5;
 const RENDER_TIMING_SMOOTHING = 0.2;
 const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   seahorse: {
     label: 'Seahorse',
-    centerX: -0.743643887037151,
-    centerY: 0.13182590420533
+    // Slightly nudged toward the visible detail in the low-resolution tour.
+    centerX: -0.7436442,
+    centerY: 0.131826105
   },
   elephant: {
     label: 'Elephant',
@@ -135,6 +144,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   private ownsDevice = false;
   private initializationGeneration = 0;
   private isComponentMounted = false;
+  private autoZoomAnimationFrame: number | null = null;
+  private autoZoomLastTime = 0;
+  private autoZoomPanelRefreshCount = 0;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
 
@@ -146,9 +158,10 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       benchmarkResults: null,
       fp64RenderTiming: null,
       initializationError: null,
+      isAutoZooming: true,
       isBenchmarkRunning: false,
       isReady: false,
-      renderWidth: CANVAS_WIDTH,
+      renderWidth: DEFAULT_RENDER_WIDTH,
       selectedArithmeticMode: 'hybrid',
       selectedBackend: 'auto',
       selectedPresetId: DEFAULT_PRESET_ID,
@@ -162,7 +175,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         selectedArithmeticMode: 'hybrid',
         selectedBackend: 'auto',
         selectedPresetId: DEFAULT_PRESET_ID,
-        renderWidth: CANVAS_WIDTH,
+        renderWidth: DEFAULT_RENDER_WIDTH,
         zoomDepth: 0
       },
       onSettingsChange: this.handleSettingsChange
@@ -229,6 +242,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   override componentWillUnmount(): void {
     this.isComponentMounted = false;
     this.initializationGeneration++;
+    this.stopAutoZoom();
     this.panels.finalize();
     this.settingsPanel.finalize();
     this.destroyResources();
@@ -276,6 +290,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       this.renderer = renderer;
       this.ownsDevice = !externalDevice;
       this.renderer.start();
+      this.startAutoZoom();
 
       const rendererErrors = this.renderer.getInitializationErrors();
 
@@ -302,6 +317,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       benchmarkResults,
       fp64RenderTiming,
       initializationError,
+      isAutoZooming,
       isBenchmarkRunning,
       isReady,
       renderWidth,
@@ -324,6 +340,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       isBenchmarkRunning,
       isReady,
       onRunBenchmark: this.handleRunBenchmark,
+      isAutoZooming,
+      onToggleAutoZoom: this.handleToggleAutoZoom,
       settingsHostId: FP64_SETTINGS_HOST_ID,
       visualizations: visualizationSpecs.map((visualization, index) => ({
         canvasRef: this.canvasRefs[index],
@@ -417,6 +435,52 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     }
   };
 
+  private handleToggleAutoZoom = (): void => {
+    if (this.state.isAutoZooming) {
+      this.stopAutoZoom();
+    } else {
+      this.startAutoZoom();
+    }
+  };
+
+  private startAutoZoom(): void {
+    if (this.autoZoomAnimationFrame !== null) {
+      return;
+    }
+    this.autoZoomLastTime = performance.now();
+    this.autoZoomPanelRefreshCount = 0;
+    this.setState({isAutoZooming: true});
+    this.autoZoomAnimationFrame = requestAnimationFrame(this.animateAutoZoom);
+  }
+
+  private stopAutoZoom(): void {
+    if (this.autoZoomAnimationFrame !== null) {
+      cancelAnimationFrame(this.autoZoomAnimationFrame);
+      this.autoZoomAnimationFrame = null;
+    }
+    if (this.state.isAutoZooming && this.isComponentMounted) {
+      this.setState({isAutoZooming: false});
+    }
+  }
+
+  private animateAutoZoom = (time: number): void => {
+    this.autoZoomAnimationFrame = null;
+    if (!this.state.isAutoZooming) {
+      return;
+    }
+    const elapsedSeconds = Math.min((time - this.autoZoomLastTime) / 1000, 0.1);
+    this.autoZoomLastTime = time;
+    const nextZoomDepth =
+      (this.state.zoomDepth + elapsedSeconds * AUTO_ZOOM_SPEED) % (MAX_ZOOM_DEPTH + 0.01);
+    this.settingsPanel.setSettingValue('zoomDepth', nextZoomDepth);
+    if (this.autoZoomPanelRefreshCount++ % 4 === 0) {
+      // Recreate the settings panel so its controlled range input follows the
+      // animated value instead of only updating the renderer and overlay.
+      this.panels.setPanel(this.settingsPanel.makePanel());
+    }
+    this.autoZoomAnimationFrame = requestAnimationFrame(this.animateAutoZoom);
+  };
+
   private handleRunBenchmark = async (): Promise<void> => {
     const device = this.device;
     const renderer = this.renderer;
@@ -425,6 +489,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     }
 
     const initializationGeneration = this.initializationGeneration;
+    this.stopAutoZoom();
     renderer?.pause();
     this.setState({benchmarkError: null, benchmarkResults: null, isBenchmarkRunning: true});
 
@@ -511,7 +576,7 @@ export function makeFP64SettingsSchema(includeBackend = true): SettingsSchema {
             name: 'renderWidth',
             label: 'Render-buffer width (pixels)',
             description:
-              'Changes GPU fragment workload for both views without changing their CSS size.',
+              'Changes the bounded GPU fragment workload for both views without changing their CSS size.',
             type: 'number',
             persist: 'none',
             min: MIN_RENDER_WIDTH,
@@ -566,6 +631,7 @@ class MultiCanvasRenderer {
 
   animationFrame: number | null = null;
   frameIndex = 0;
+  nextRenderTime = 0;
   isRunning = false;
   zoomDepth: number;
   zoomPreset: ZoomPreset;
@@ -616,6 +682,7 @@ class MultiCanvasRenderer {
       return;
     }
     this.isRunning = true;
+    this.nextRenderTime = 0;
     this.animationFrame = requestAnimationFrame(this.animate);
   }
 
@@ -649,9 +716,10 @@ class MultiCanvasRenderer {
   }
 
   setRenderWidth(renderWidth: number): void {
-    const renderHeight = getRenderHeight(renderWidth);
+    const boundedRenderWidth = clampRenderWidth(renderWidth);
+    const renderHeight = getRenderHeight(boundedRenderWidth);
     for (const visualization of this.visualizations) {
-      visualization.presentationContext?.setDrawingBufferSize(renderWidth, renderHeight);
+      visualization.presentationContext?.setDrawingBufferSize(boundedRenderWidth, renderHeight);
     }
     this.resetRenderTiming();
   }
@@ -680,8 +748,13 @@ class MultiCanvasRenderer {
     }
   }
 
-  private animate = (): void => {
+  private animate = (time: number): void => {
     this.animationFrame = null;
+    if (time < this.nextRenderTime) {
+      this.scheduleNextFrame();
+      return;
+    }
+    this.nextRenderTime = time + RENDER_INTERVAL_MILLISECONDS;
     const pixelScale = getPixelScale(this.zoomDepth);
     const sampleTiming = this.frameIndex % RENDER_TIMING_SAMPLE_INTERVAL === 0;
 
@@ -719,6 +792,7 @@ function createVisualizationRenderer(
   arithmeticMode: FP64ArithmeticMode,
   renderWidth: number
 ): VisualizationRenderer {
+  renderWidth = clampRenderWidth(renderWidth);
   const presentationContext = device.createPresentationContext({
     canvas,
     width: CANVAS_WIDTH,
@@ -927,7 +1001,10 @@ function split64(value: number): [number, number] {
 
 function computeIterationLimit(pixelScale: number): number {
   const zoomDepth = Math.max(0, Math.log2(INITIAL_PIXEL_SCALE / pixelScale));
-  return Math.min(FIXED_ITERATION_LIMIT, Math.round(220 + zoomDepth * 28));
+  return Math.min(
+    FIXED_ITERATION_LIMIT,
+    Math.round(BASE_ITERATION_LIMIT + zoomDepth * ITERATION_GROWTH_PER_ZOOM)
+  );
 }
 
 function getPixelScale(zoomDepth: number): number {
@@ -937,6 +1014,10 @@ function getPixelScale(zoomDepth: number): number {
 
 function getRenderHeight(renderWidth: number): number {
   return Math.round(renderWidth / RENDER_ASPECT_RATIO);
+}
+
+function clampRenderWidth(renderWidth: number): number {
+  return Math.max(MIN_RENDER_WIDTH, Math.min(MAX_RENDER_WIDTH, Math.round(renderWidth)));
 }
 
 function waitForSubmittedWork(device: Device): Promise<void> | null {
@@ -964,19 +1045,14 @@ function getOverlayLines(
     device?.type === 'webgpu' ? `fp64 ${arithmeticMode}` : 'fp64 classic (WebGL2)';
 
   const overlayLines = [
-    'mode = mandelbrot zoom',
-    `target = ${zoomPreset.label}`,
-    `x = ${zoomPreset.centerX}`,
-    `y = ${zoomPreset.centerY}`,
-    `scale = ${currentZoomLabel}`,
-    `render buffer = ${renderWidth} × ${getRenderHeight(renderWidth)}`,
-    `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
-    kind === 'fp32' ? 'precision = native fp32' : `precision = ${precisionLabel}`,
-    'iterations = adaptive'
+    `${zoomPreset.label} · scale ${currentZoomLabel}`,
+    `center ${zoomPreset.centerX.toFixed(6)}, ${zoomPreset.centerY.toFixed(6)}`,
+    `${renderWidth}×${getRenderHeight(renderWidth)} · ${kind === 'fp32' ? 'native fp32' : precisionLabel}`,
+    'adaptive iterations'
   ];
   if (kind === 'fp64') {
     overlayLines.push(
-      fp64RenderTiming ? formatFP64RenderTiming(fp64RenderTiming) : 'fp64 render = sampling…'
+      fp64RenderTiming ? formatFP64RenderTiming(fp64RenderTiming) : 'GPU timing: sampling…'
     );
   }
   return overlayLines;
@@ -1036,7 +1112,7 @@ function getVisualizationSpecs(): VisualizationSpec[] {
     {
       clearColor: [0.01, 0.015, 0.03, 1],
       description:
-        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, hybrid mode uses integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
+        'Mandelbrot rendered with luma.gl double-single fp64 emulation (WebGPU exposes f32 here, not native hardware fp64). The compute benchmark below separately measures dependent fp64 add, multiply, divide, and square-root operations.',
       fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
       fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
       kind: 'fp64',
@@ -1092,7 +1168,7 @@ layout(std140) uniform mandelbrot32Uniforms {
   float iterationLimit;
 } mandelbrot32;
 
-const int MAX_ITERATIONS = 2048;
+const int MAX_ITERATIONS = 1024;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
 const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
@@ -1113,11 +1189,8 @@ void main(void) {
   float escapedIteration = mandelbrot32.iterationLimit;
   float radiusSquared = 0.0;
 
-  for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    if (float(iteration) >= mandelbrot32.iterationLimit) {
-      break;
-    }
-
+  int iterationLimit = int(mandelbrot32.iterationLimit);
+  for (int iteration = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration++) {
     float nextX = z.x * z.x - z.y * z.y + c.x;
     float nextY = 2.0 * z.x * z.y + c.y;
     z = vec2(nextX, nextY);
@@ -1154,7 +1227,7 @@ struct Mandelbrot32Uniforms {
 
 @group(0) @binding(auto) var<uniform> mandelbrot32 : Mandelbrot32Uniforms;
 
-const MAX_ITERATIONS: i32 = 2048;
+const MAX_ITERATIONS: i32 = 1024;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
 const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
@@ -1176,11 +1249,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   var escapedIteration = mandelbrot32.iterationLimit;
   var radiusSquared = 0.0;
 
-  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS; iteration = iteration + 1) {
-    if (f32(iteration) >= mandelbrot32.iterationLimit) {
-      break;
-    }
-
+  let iterationLimit = i32(mandelbrot32.iterationLimit);
+  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration = iteration + 1) {
     let nextX = z.x * z.x - z.y * z.y + c.x;
     let nextY = 2.0 * z.x * z.y + c.y;
     z = vec2<f32>(nextX, nextY);
@@ -1221,7 +1291,7 @@ layout(std140) uniform mandelbrot64Uniforms {
   float iterationLimit;
 } mandelbrot64;
 
-const int MAX_ITERATIONS = 2048;
+const int MAX_ITERATIONS = 1024;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
 const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
@@ -1247,11 +1317,8 @@ void main(void) {
   float escapedIteration = mandelbrot64.iterationLimit;
   float radiusSquared = 0.0;
 
-  for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-    if (float(iteration) >= mandelbrot64.iterationLimit) {
-      break;
-    }
-
+  int iterationLimit = int(mandelbrot64.iterationLimit);
+  for (int iteration = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration++) {
     vec2 xSquared = mul_fp64(zx, zx);
     vec2 ySquared = mul_fp64(zy, zy);
     vec2 xy = mul_fp64(zx, zy);
@@ -1261,8 +1328,8 @@ void main(void) {
     zx = nextX;
     zy = nextY;
 
-    vec2 magnitudeSquared = sum_fp64(mul_fp64(zx, zx), mul_fp64(zy, zy));
-    radiusSquared = magnitudeSquared.x + magnitudeSquared.y;
+    // The high terms are sufficient for the bailout threshold and avoid two fp64 multiplies.
+    radiusSquared = dot(vec2(nextX.x, nextY.x), vec2(nextX.x, nextY.x));
 
     if (radiusSquared > ESCAPE_RADIUS_SQUARED) {
       escapedIteration = float(iteration);
@@ -1296,7 +1363,7 @@ struct Mandelbrot64Uniforms {
 
 @group(0) @binding(auto) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
 
-const MAX_ITERATIONS: i32 = 2048;
+const MAX_ITERATIONS: i32 = 1024;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
 const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
@@ -1322,11 +1389,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   var escapedIteration = mandelbrot64.iterationLimit;
   var radiusSquared = 0.0;
 
-  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS; iteration = iteration + 1) {
-    if (f32(iteration) >= mandelbrot64.iterationLimit) {
-      break;
-    }
-
+  let iterationLimit = i32(mandelbrot64.iterationLimit);
+  for (var iteration: i32 = 0; iteration < MAX_ITERATIONS && iteration < iterationLimit; iteration = iteration + 1) {
     let xSquared = mul_fp64(zx, zx);
     let ySquared = mul_fp64(zy, zy);
     let xy = mul_fp64(zx, zy);
@@ -1336,8 +1400,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
     zx = nextX;
     zy = nextY;
 
-    let magnitudeSquared = sum_fp64(mul_fp64(zx, zx), mul_fp64(zy, zy));
-    radiusSquared = magnitudeSquared.x + magnitudeSquared.y;
+    // The high terms are sufficient for the bailout threshold and avoid two fp64 multiplies.
+    radiusSquared = dot(vec2<f32>(nextX.x, nextY.x), vec2<f32>(nextX.x, nextY.x));
 
     if (radiusSquared > ESCAPE_RADIUS_SQUARED) {
       escapedIteration = f32(iteration);

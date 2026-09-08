@@ -13,17 +13,15 @@ import FP64App, {
 import {requiresFP64ArithmeticUniform} from '../../examples/experimental/fp64/fp64-compute-benchmark';
 
 describe('FP64 example responsive layout', () => {
-  test('keeps each precision description paired with its canvas when the panes stack', () => {
+  test('keeps both precision panes aligned in a two-column grid', () => {
     const markup = renderToStaticMarkup(React.createElement(FP64App));
     const singlePrecisionPane = markup.indexOf('data-fp64-visualization="fp32"');
     const singlePrecisionCanvas = markup.indexOf('<canvas', singlePrecisionPane);
     const doublePrecisionPane = markup.indexOf('data-fp64-visualization="fp64"');
     const doublePrecisionCanvas = markup.indexOf('<canvas', doublePrecisionPane);
 
-    expect(markup).toContain(
-      'grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr))'
-    );
-    expect(markup.match(/grid-template-rows:1fr auto/g)?.length).toBe(2);
+    expect(markup).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))');
+    expect(markup.match(/grid-template-rows:auto 1fr/g)?.length).toBe(2);
     expect(singlePrecisionPane).toBeGreaterThanOrEqual(0);
     expect(singlePrecisionCanvas).toBeGreaterThan(singlePrecisionPane);
     expect(doublePrecisionPane).toBeGreaterThan(singlePrecisionCanvas);
@@ -34,8 +32,8 @@ describe('FP64 example responsive layout', () => {
     const markup = renderToStaticMarkup(React.createElement(FP64App));
 
     expect(markup).toContain('box-sizing:border-box;display:block;width:100%');
-    expect(markup).toContain('left:12px;right:12px;bottom:12px;box-sizing:border-box');
-    expect(markup).toContain('max-width:calc(100% - 24px)');
+    expect(markup).toContain('left:6px;right:6px;bottom:6px;box-sizing:border-box');
+    expect(markup).toContain('max-width:calc(100% - 12px)');
     expect(markup.match(/overflow-wrap:anywhere/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -56,7 +54,7 @@ describe('FP64 example responsive layout', () => {
       expect.objectContaining({type: 'number', min: 0, step: 0.1, sliderDebounceMs: 0})
     );
     expect(renderWidthSetting).toEqual(
-      expect.objectContaining({type: 'number', min: 160, max: 640, step: 20})
+      expect.objectContaining({type: 'number', min: 96, max: 256, step: 20})
     );
     expect(makeFP64SettingsSchema(false).sections[0].settings).not.toContainEqual(
       expect.objectContaining({name: 'selectedBackend'})
