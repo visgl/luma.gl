@@ -160,7 +160,7 @@ it('loaders.gl RLE BOOLEAN values execute through the automatic GPU graph', asyn
   }
 
   const plan = planGPUParquetEncodedPageBatch(
-    makeSinglePageBatch(Uint8Array.from([8, 1, 8, 0]), 'BOOLEAN', 'RLE', 8)
+    makeSinglePageBatch(Uint8Array.from([4, 0, 0, 0, 8, 1, 8, 0]), 'BOOLEAN', 'RLE', 8)
   );
   const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
   const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-rle-boolean-batch-test'});

@@ -53,7 +53,7 @@ public class matrix for every scalar type. Object-oriented operations such as `G
 | `parseParquetPlainByteArrayPlan` | PLAIN BYTE_ARRAY has interleaved lengths | source offsets, lengths, compacted offsets, output size |
 | `parseParquetRleBitPackedRunPlan` | an unframed hybrid stream is isolated | fixed-width run descriptors |
 | `parseParquetDictionaryIndicesPlan` | indices include a leading bit-width byte | bit width and rebased run descriptors |
-| `parseParquetLengthPrefixedRleBitPackedRunPlan` | Data Page V1 RLE/levels include a length | rebased run descriptors |
+| `parseParquetLengthPrefixedRleBitPackedRunPlan` | Data Page V1 levels or RLE values include a length | rebased run descriptors |
 | `parseParquetBitPackedRunPlan` | deprecated standalone BIT_PACKED is encountered | validated MSB-first payload metadata |
 | `parseParquetDeltaBinaryPackedPlan` | INT32 uses DELTA_BINARY_PACKED | mini-block descriptors and first value |
 | `parseParquetDeltaBinaryPackedInt64Plan` | INT64 uses DELTA_BINARY_PACKED | split-word mini-block descriptors and first value |
@@ -97,8 +97,9 @@ unless a function explicitly documents an isolated slice.
 - BYTE_STREAM_SPLIT INT32, INT64, FLOAT, DOUBLE, or FIXED_LEN_BYTE_ARRAY uses
   `GPUParquetByteStreamSplitDecoder`.
 - PLAIN BOOLEAN uses `GPUParquetPlainBooleanDecoder`.
-- RLE BOOLEAN uses `GPUParquetRleBitPackedDecoder` with bit width one. The automatic page adapter
-  selects this path and returns the same one-uint32-per-row layout as PLAIN BOOLEAN.
+- RLE BOOLEAN uses `parseParquetLengthPrefixedRleBitPackedRunPlan` followed by
+  `GPUParquetRleBitPackedDecoder` with bit width one. The automatic page adapter consumes the
+  four-byte value-stream envelope and returns the same one-uint32-per-row layout as PLAIN BOOLEAN.
 - PLAIN BYTE_ARRAY uses `parseParquetPlainByteArrayPlan` and
   `GPUParquetPlainByteArrayDecoder`. Its metadata layout is directly compatible with
   `GPUByteRangeGather`.

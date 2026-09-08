@@ -210,7 +210,7 @@ it('GPU Parquet page planner caches variable dictionaries across data pages', ()
 });
 
 it('GPU Parquet page planner accepts RLE-encoded BOOLEAN values', () => {
-  const data = Uint8Array.from([8, 1, 8, 0]);
+  const data = Uint8Array.from([4, 0, 0, 0, 8, 1, 8, 0]);
   const batch = makeSinglePageBatch(data, 'BOOLEAN', 'RLE', 8);
   const plan = planGPUParquetEncodedPageBatch(batch);
   expect(plan.gpuPageCount).toBe(1);
@@ -219,6 +219,7 @@ it('GPU Parquet page planner accepts RLE-encoded BOOLEAN values', () => {
     expect(plan.pages[0].values.kind).toBe('rle-boolean');
     if (plan.pages[0].values.kind === 'rle-boolean') {
       expect(plan.pages[0].values.runPlan?.runCount).toBe(2);
+      expect(plan.pages[0].values.runPlan?.bytesConsumed).toBe(data.byteLength);
       expect(plan.pages[0].values.decodedByteLength).toBe(32);
     }
   }

@@ -31,6 +31,7 @@ import {
 import {
   parseParquetBitPackedRunPlan,
   parseParquetDictionaryIndicesPlan,
+  parseParquetLengthPrefixedRleBitPackedRunPlan,
   type ParquetBitPackedPlan,
   type ParquetDictionaryIndicesPlan
 } from './parquet-rle-framing';
@@ -726,7 +727,7 @@ function planValues(
     );
   }
   if (encoding === 'RLE' && physicalType === 'BOOLEAN') {
-    const runPlan = parseParquetRleBitPackedRunPlan(encoded, 1, valueCount);
+    const runPlan = parseParquetLengthPrefixedRleBitPackedRunPlan(encoded, 1, valueCount);
     return Object.freeze({
       kind: 'rle-boolean' as const,
       valueCount,
