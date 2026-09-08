@@ -74,10 +74,10 @@ const WEBGL_SHADER_TYPES: Record<GLUniformType, VariableShaderType> = {
   [GL.UNSIGNED_INT_VEC3]: 'vec3<u32>',
   [GL.UNSIGNED_INT_VEC4]: 'vec4<u32>',
 
-  [GL.BOOL]: 'f32',
-  [GL.BOOL_VEC2]: 'vec2<f32>',
-  [GL.BOOL_VEC3]: 'vec3<f32>',
-  [GL.BOOL_VEC4]: 'vec4<f32>',
+  [GL.BOOL]: 'i32',
+  [GL.BOOL_VEC2]: 'vec2<i32>',
+  [GL.BOOL_VEC3]: 'vec3<i32>',
+  [GL.BOOL_VEC4]: 'vec4<i32>',
 
   // TODO - are sizes/components below correct?
   [GL.FLOAT_MAT2]: 'mat2x2<f32>',
