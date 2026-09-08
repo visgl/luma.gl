@@ -93,6 +93,18 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Scan and scatter visit the input domain even when the compacted result is small.',
     mistake: 'Do not treat unused output capacity beyond the GPU-written count as valid rows.'
   },
+  'gpu-segmented-layout': {
+    problem: 'Turn slot-aligned value, element, and segment-start flags into dense columnar layout metadata.',
+    readsWrites: 'Reads three packed binary flag streams; writes value and element offsets, segment indices and offsets, and three counts.',
+    ownership: 'All public inputs and outputs are caller-owned; hierarchical scan scratch is graph-owned transient memory.',
+    output: 'Exact source-aligned offsets plus a segment-offset prefix named by segmentCount.',
+    work: 'Three hierarchical scans, one segment-offset pass, and one scalar-count pass.',
+    chunks: 'The initial contract consumes packed GraphDataView inputs; preserve source batches by invoking it once per durable chunk.',
+    execution: 'Contributes ordinary graph nodes and does not compile, submit, read back, or publish results.',
+    neighborhood: 'format-specific classification → GPUSegmentedLayout → compaction, gather, nested layout, or rendering.',
+    cost: 'Every slot is scanned three times even when few values are present or few segments are produced.',
+    mistake: 'Use binary flags, keep segmentStartFlags[0] zero, and consume only segmentCount + 1 segment offsets.'
+  },
   'gpu-visibility-workflow': {
     problem: 'Turn visibility decisions into one mask, stable ID list, and draw-ready count.',
     readsWrites: 'Reads predicate masks and optional source IDs; writes mask, packed IDs, and count.',

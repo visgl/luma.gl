@@ -33,12 +33,22 @@ These `@luma.gl/gpgpu/gpu-core` operations were extracted because they are usefu
 | --- | --- | --- |
 | `GPUScan` | lengths, flags, or deltas need prefix sums | inclusive or exclusive uint32 prefixes |
 | `GPUScanUint64` | split low/high words need an inclusive 64-bit prefix sum | modulo-2^64 low/high prefixes with carry propagation |
+| `GPUSegmentedLayout` | format-specific classification has produced value, element, and segment-start flags | dense value/element offsets, segment indices, list-style segment offsets, and scalar counts |
+| `GPUCompaction` | flagged uint32 values must be packed while preserving order | compacted values and the accepted count |
 | `GPUUint32Gather` | rows must be selected or reordered by indices | one uint32 per index; invalid indices use a fallback |
 | `GPUByteRangeGather` | variable byte ranges must be concatenated | packed bytes from source offsets, lengths, and output offsets |
 | `GPULZByteDecompressor` | a format parser can describe literals and backreferences | race-free packed bytes, including overlapping LZ copies |
 
 `GPUByteRangeGather` dispatches one invocation per output word, avoiding races when adjacent bytes
 share a packed `uint32` destination.
+
+`GPUSegmentedLayout` deliberately starts after format parsing. Its three slot-aligned inputs are
+binary flags: whether a slot owns a physical value, represents a logical element, and begins a new
+segment after the implicit first segment. Use it for null/value offsets, list offsets, or grouped
+sequences. Compose `GPUCompaction` when the physical values themselves must be packed, or consume
+the emitted offsets directly when a later shader can address the original payload. Parquet's
+definition and repetition levels are one producer of these flags, but the operation contains no
+Parquet rules.
 
 Operation names stay generic when the ordinary native representation is sufficient. A materially
 different contract uses an operation-first specialization such as `GPUScanUint64`; this avoids a
@@ -83,7 +93,7 @@ unless a function explicitly documents an isolated slice.
 | `GPUParquetDeltaBinaryPackedInt64Decoder` | INT64 uses DELTA_BINARY_PACKED | split-word unpacker + `GPUScanUint64` |
 | `GPUParquetDeltaLengthByteArrayDecoder` | BYTE_ARRAY uses delta lengths | delta decoder + exclusive scan; payload stays zero-copy |
 | `GPUParquetDeltaByteArrayDecoder` | BYTE_ARRAY uses prefix compression | two delta decoders + two scans + prefix reconstruction |
-| `GPUParquetLevelLayout` | decoded levels must become null/value and repeated-row layout | physical validity/value offsets, logical element offsets, row indices, list offsets, and counts |
+| `GPUParquetLevelLayout` | decoded levels must become null/value and repeated-row layout | Parquet classification followed by generic `GPUSegmentedLayout` materialization |
 | `GPULZ4RawDecompressor` | a page body uses LZ4_RAW | semantic wrapper over `GPULZByteDecompressor` |
 | `GPUSnappyDecompressor` | a Parquet page body uses raw Snappy | semantic wrapper over `GPULZByteDecompressor` |
 | `addGPUParquetEncodedPageBatchToGraph` | a loaders.gl page-batch plan should become executable GPU work | decompression, level decoding, value decoding, dictionary reuse, and result graph views |
@@ -144,8 +154,9 @@ An all-null page has zero physical values and therefore a known empty result. Th
 - Deprecated standalone BIT_PACKED is a different, MSB-first encoding. Use
   `parseParquetBitPackedRunPlan` and `GPUParquetBitPackedDecoder`, not the hybrid decoder.
 - After level expansion, use `GPUParquetLevelLayout` once per repeated ancestor that needs offsets.
-  It keeps null compaction and repeated-row assembly GPU-resident and exposes intermediate flags and
-  indices for custom nested-layout composition.
+  It classifies Parquet definition/repetition levels into binary flags, then composes
+  `GPUSegmentedLayout`. The generic operation keeps null/value offsets and repeated-row assembly
+  GPU-resident and exposes intermediate flags and indices for custom nested-layout composition.
 
 ### Compression
 
@@ -273,22 +284,24 @@ policy boundaries become CPU fallbacks; corrupt data is never relabeled as an un
 
 ## Follow-up roadmap
 
-Tranches 1–3 are complete: the package has composable low-level operations; loaders.gl encoded-page
+Tranches 1–4 are complete: the package has composable low-level operations; loaders.gl encoded-page
 batches can be validated, uploaded once, and executed as mixed GPU/CPU command graphs; and
 decompressed V1 framing, variable dictionaries, RLE BOOLEAN, and bounded `DELTA_BYTE_ARRAY` pages
-flow through the automatic adapter. Further work should remain incremental. Each tranche below has
-a useful stopping point and does not require turning `gpu-parse` into a complete Parquet parser.
+flow through the automatic adapter. Format-specific level classification now composes generic
+segmented layout, compaction, gather, and byte-range operations. Further work should remain
+incremental. Each tranche below has a useful stopping point and does not require turning
+`gpu-parse` into a complete Parquet parser.
 
 | Tranche | Priority | Scope | Completion bar |
 | --- | --- | --- | --- |
 | 3. Close inexpensive adapter gaps | Complete | Loader-selected preserved compression or CPU-decompressed encoded pages; automatic bounded `DELTA_BYTE_ARRAY`; variable dictionaries; decompressed V1 level framing; RLE BOOLEAN values | Common supported encodings no longer fall back for adapter-only gaps; no GPU metadata parser was introduced |
-| 4. Extract generic materialization primitives | High value | Generalize validity expansion, segmented offsets, compaction, scatter, and byte-range assembly from the Parquet level and byte-array paths | The same operations can materialize another columnar format without importing Parquet-specific classes |
+| 4. Extract generic materialization primitives | Complete | `GPUSegmentedLayout` owns validity/value and segment offsets; existing `GPUCompaction`, gathers, and scatter operations own payload movement | Another columnar format can materialize offsets and values without importing Parquet-specific classes |
 | 5. Assemble nested GPU columns | Selective | Compose multiple definition/repetition depths into validity, row, and list offsets; expose chunk-preserving `GPUData`/`GPUVector` results without adding Arrow to `@luma.gl/gpgpu` | Common required, optional, list, and nested-list columns can remain GPU-resident through their consumer boundary |
 | 6. Streaming and throughput | Measure first | Reuse compiled graph templates, pool upload/output buffers, batch compatible pages and columns, add backpressure, and benchmark CPU/GPU crossover thresholds | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
 | 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
 | 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
 
-The intended next step is tranche 4, then whichever of 5–7 is justified by an actual consumer.
+The intended next step is whichever of tranches 5–7 is justified by an actual consumer.
 Tranche 8 is not a completeness checklist.
 
 ### Roadmap stop line

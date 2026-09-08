@@ -6,7 +6,7 @@ import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
-  GPUScan,
+  GPUSegmentedLayout,
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
   getViewBinding,
@@ -77,77 +77,23 @@ export class GPUParquetLevelLayout {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
     }
-    if (props.definitionLevels.length === 0) {
-      addEmptyPass(graph, props);
-      return;
+    if (props.definitionLevels.length > 0) {
+      addClassifyPass(graph, props);
     }
-    addClassifyPass(graph, props);
-    new GPUScan({
-      id: `${this.id}-value-offsets`,
-      input: props.validity,
-      output: props.valueOffsets,
-      mode: 'exclusive'
+    new GPUSegmentedLayout({
+      id: `${this.id}-materialize`,
+      valueFlags: props.validity,
+      elementFlags: props.elementFlags,
+      segmentStartFlags: props.rowStartFlags,
+      valueOffsets: props.valueOffsets,
+      elementOffsets: props.elementOffsets,
+      segmentIndices: props.rowIndices,
+      segmentOffsets: props.listOffsets,
+      valueCount: props.nonNullValueCount,
+      elementCount: props.elementCount,
+      segmentCount: props.rowCount
     }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-element-offsets`,
-      input: props.elementFlags,
-      output: props.elementOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-row-indices`,
-      input: props.rowStartFlags,
-      output: props.rowIndices,
-      mode: 'inclusive'
-    }).addToGraph(graph);
-    addFinalizePass(graph, props);
   }
-}
-
-function addEmptyPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: Readonly<GPUParquetLevelLayoutProps>
-): void {
-  const dispatchLayout = getBoundedDispatchLayout(
-    'GPUParquetLevelLayoutEmpty',
-    1,
-    WORKGROUP_SIZE,
-    graph.device.limits.maxComputeWorkgroupsPerDimension
-  );
-  const source = `const LIST_OFFSET: u32 = ${getViewElementOffset(props.listOffsets)}u;
-const NON_NULL_COUNT_OFFSET: u32 = ${getViewElementOffset(props.nonNullValueCount)}u;
-const ELEMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.elementCount)}u;
-const ROW_COUNT_OFFSET: u32 = ${getViewElementOffset(props.rowCount)}u;
-@group(0) @binding(0) var<storage, read_write> listOffsets: array<u32>;
-@group(0) @binding(1) var<storage, read_write> nonNullValueCount: array<u32>;
-@group(0) @binding(2) var<storage, read_write> elementCount: array<u32>;
-@group(0) @binding(3) var<storage, read_write> rowCount: array<u32>;
-@compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(
-  @builtin(workgroup_id) workgroupId: vec3u,
-  @builtin(local_invocation_index) localInvocationIndex: u32
-) {
-  ${getBoundedInvocationIndexSource(dispatchLayout, WORKGROUP_SIZE)}
-  if (index > 0u) { return; }
-  listOffsets[LIST_OFFSET] = 0u;
-  nonNullValueCount[NON_NULL_COUNT_OFFSET] = 0u;
-  elementCount[ELEMENT_COUNT_OFFSET] = 0u;
-  rowCount[ROW_COUNT_OFFSET] = 0u;
-}`;
-  addPass(
-    graph,
-    `${props.id}-empty`,
-    'GPUParquetLevelLayoutEmpty',
-    source,
-    1,
-    [
-      {name: 'listOffsets', view: props.listOffsets, usage: 'storage-write'},
-      {name: 'nonNullValueCount', view: props.nonNullValueCount, usage: 'storage-write'},
-      {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
-      {name: 'rowCount', view: props.rowCount, usage: 'storage-write'}
-    ],
-    dispatchLayout
-  );
 }
 
 function addClassifyPass<Parameters>(
@@ -202,81 +148,6 @@ fn main(
       {name: 'validity', view: props.validity, usage: 'storage-write'},
       {name: 'elementFlags', view: props.elementFlags, usage: 'storage-write'},
       {name: 'rowStartFlags', view: props.rowStartFlags, usage: 'storage-write'}
-    ],
-    dispatchLayout
-  );
-}
-
-function addFinalizePass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: Readonly<GPUParquetLevelLayoutProps>
-): void {
-  const length = props.definitionLevels.length;
-  const dispatchLayout = getBoundedDispatchLayout(
-    'GPUParquetLevelLayoutFinalize',
-    length,
-    WORKGROUP_SIZE,
-    graph.device.limits.maxComputeWorkgroupsPerDimension
-  );
-  const source = `const LENGTH: u32 = ${length}u;
-const VALIDITY_OFFSET: u32 = ${getViewElementOffset(props.validity)}u;
-const VALUE_OFFSET: u32 = ${getViewElementOffset(props.valueOffsets)}u;
-const ELEMENT_FLAG_OFFSET: u32 = ${getViewElementOffset(props.elementFlags)}u;
-const ELEMENT_OFFSET: u32 = ${getViewElementOffset(props.elementOffsets)}u;
-const ROW_START_OFFSET: u32 = ${getViewElementOffset(props.rowStartFlags)}u;
-const ROW_INDEX_OFFSET: u32 = ${getViewElementOffset(props.rowIndices)}u;
-const LIST_OFFSET: u32 = ${getViewElementOffset(props.listOffsets)}u;
-const NON_NULL_COUNT_OFFSET: u32 = ${getViewElementOffset(props.nonNullValueCount)}u;
-const ELEMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.elementCount)}u;
-const ROW_COUNT_OFFSET: u32 = ${getViewElementOffset(props.rowCount)}u;
-@group(0) @binding(0) var<storage, read> validity: array<u32>;
-@group(0) @binding(1) var<storage, read> valueOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read> rowStartFlags: array<u32>;
-@group(0) @binding(3) var<storage, read> rowIndices: array<u32>;
-@group(0) @binding(4) var<storage, read> elementFlags: array<u32>;
-@group(0) @binding(5) var<storage, read> elementOffsets: array<u32>;
-@group(0) @binding(6) var<storage, read_write> listOffsets: array<u32>;
-@group(0) @binding(7) var<storage, read_write> nonNullValueCount: array<u32>;
-@group(0) @binding(8) var<storage, read_write> elementCount: array<u32>;
-@group(0) @binding(9) var<storage, read_write> rowCount: array<u32>;
-@compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(
-  @builtin(workgroup_id) workgroupId: vec3u,
-  @builtin(local_invocation_index) localInvocationIndex: u32
-) {
-  ${getBoundedInvocationIndexSource(dispatchLayout, WORKGROUP_SIZE)}
-  if (index >= LENGTH) { return; }
-  if (index == 0u) { listOffsets[LIST_OFFSET] = 0u; }
-  if (rowStartFlags[ROW_START_OFFSET + index] != 0u) {
-    listOffsets[LIST_OFFSET + rowIndices[ROW_INDEX_OFFSET + index]] = elementOffsets[ELEMENT_OFFSET + index];
-  }
-  if (index + 1u == LENGTH) {
-    let valueCount = valueOffsets[VALUE_OFFSET + index] + validity[VALIDITY_OFFSET + index];
-    let logicalElementCount = elementOffsets[ELEMENT_OFFSET + index] + elementFlags[ELEMENT_FLAG_OFFSET + index];
-    let rows = rowIndices[ROW_INDEX_OFFSET + index] + 1u;
-    nonNullValueCount[NON_NULL_COUNT_OFFSET] = valueCount;
-    elementCount[ELEMENT_COUNT_OFFSET] = logicalElementCount;
-    rowCount[ROW_COUNT_OFFSET] = rows;
-    listOffsets[LIST_OFFSET + rows] = logicalElementCount;
-  }
-}`;
-  addPass(
-    graph,
-    `${props.id}-finalize`,
-    'GPUParquetLevelLayoutFinalize',
-    source,
-    length,
-    [
-      {name: 'validity', view: props.validity, usage: 'storage-read'},
-      {name: 'valueOffsets', view: props.valueOffsets, usage: 'storage-read'},
-      {name: 'rowStartFlags', view: props.rowStartFlags, usage: 'storage-read'},
-      {name: 'rowIndices', view: props.rowIndices, usage: 'storage-read'},
-      {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
-      {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-      {name: 'listOffsets', view: props.listOffsets, usage: 'storage-write'},
-      {name: 'nonNullValueCount', view: props.nonNullValueCount, usage: 'storage-write'},
-      {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
-      {name: 'rowCount', view: props.rowCount, usage: 'storage-write'}
     ],
     dispatchLayout
   );

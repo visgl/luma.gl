@@ -85,6 +85,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   private selectedMode: DecodeMode = 'gpu';
   private fetchMilliseconds = 0;
   private preparationVersion = 0;
+  private preparationAbortController: AbortController | null = null;
   private preparationActive = false;
   private preparationStartedAt = 0;
   private longestPreparationFrameMilliseconds = 0;
@@ -170,6 +171,8 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   override onFinalize(): void {
+    this.preparationAbortController?.abort();
+    this.preparationAbortController = null;
     this.preparationVersion++;
     this.destroyScene();
     this.cleanupControls?.();
@@ -179,25 +182,27 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private async loadDataset(): Promise<void> {
+    const abortController = this.startPreparation();
     const preparationVersion = ++this.preparationVersion;
     this.setControlsDisabled(true);
     this.setStatus(`Fetching ${formatCount(ROW_COUNT)} rows from the Parquet fixture…`);
     await nextAnimationFrame();
     const fetchStartedAt = performance.now();
     try {
-      const response = await fetch(PARQUET_URL);
+      const response = await fetch(PARQUET_URL, {signal: abortController.signal});
       if (!response.ok) throw new Error(`Could not fetch Parquet fixture (${response.status})`);
       const parquetBytes = await response.arrayBuffer();
       if (preparationVersion !== this.preparationVersion) return;
       this.parquetBytes = parquetBytes;
       this.fetchMilliseconds = performance.now() - fetchStartedAt;
       this.measurements = {};
-      await this.prepareMode(this.selectedMode, preparationVersion);
+      await this.prepareMode(this.selectedMode, preparationVersion, abortController.signal);
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
       }
     } finally {
+      this.finishPreparation(abortController);
       if (preparationVersion === this.preparationVersion) {
         this.setControlsDisabled(false);
       }
@@ -206,20 +211,22 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
 
   private async selectMode(mode: DecodeMode): Promise<void> {
     if (!this.parquetBytes || this.preparationActive) return;
+    const abortController = this.startPreparation();
     this.selectedMode = mode;
     const preparationVersion = ++this.preparationVersion;
     this.setControlsDisabled(true);
     try {
       if (mode === 'gpu' && this.scene?.gpuDecoder) {
-        await this.rerunGPUDecode(preparationVersion);
+        await this.rerunGPUDecode(preparationVersion, abortController.signal);
       } else {
-        await this.prepareMode(mode, preparationVersion);
+        await this.prepareMode(mode, preparationVersion, abortController.signal);
       }
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
       }
     } finally {
+      this.finishPreparation(abortController);
       if (preparationVersion === this.preparationVersion) {
         this.setControlsDisabled(false);
       }
@@ -228,27 +235,34 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
 
   private async compareModes(): Promise<void> {
     if (!this.parquetBytes || this.preparationActive) return;
+    const abortController = this.startPreparation();
     const preparationVersion = ++this.preparationVersion;
     this.setControlsDisabled(true);
     try {
-      await this.prepareMode('cpu', preparationVersion);
+      await this.prepareMode('cpu', preparationVersion, abortController.signal);
       await waitForMilliseconds(250);
+      abortController.signal.throwIfAborted();
       if (preparationVersion !== this.preparationVersion) return;
       this.selectedMode = 'gpu';
-      await this.prepareMode('gpu', preparationVersion);
-      await this.rerunGPUDecode(preparationVersion);
+      await this.prepareMode('gpu', preparationVersion, abortController.signal);
+      await this.rerunGPUDecode(preparationVersion, abortController.signal);
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
       }
     } finally {
+      this.finishPreparation(abortController);
       if (preparationVersion === this.preparationVersion) {
         this.setControlsDisabled(false);
       }
     }
   }
 
-  private async prepareMode(mode: DecodeMode, preparationVersion: number): Promise<void> {
+  private async prepareMode(
+    mode: DecodeMode,
+    preparationVersion: number,
+    signal: AbortSignal
+  ): Promise<void> {
     const parquetBytes = this.parquetBytes;
     if (!parquetBytes) return;
     this.preparationActive = true;
@@ -265,9 +279,10 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     try {
       nextScene =
         mode === 'gpu'
-          ? await this.prepareGPUScene(parquetBytes)
-          : await this.prepareCPUScene(parquetBytes);
+          ? await this.prepareGPUScene(parquetBytes, signal)
+          : await this.prepareCPUScene(parquetBytes, signal);
       await nextAnimationFrame();
+      signal.throwIfAborted();
       if (preparationVersion !== this.preparationVersion) {
         destroyPreparedScene(nextScene);
         return;
@@ -294,13 +309,19 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     }
   }
 
-  private async prepareCPUScene(parquetBytes: ArrayBuffer): Promise<PreparedScene> {
+  private async prepareCPUScene(
+    parquetBytes: ArrayBuffer,
+    signal: AbortSignal
+  ): Promise<PreparedScene> {
     const decodeStartedAt = performance.now();
     const source = ParquetSourceLoader.createDataSource(new Blob([parquetBytes]), {
       core: {worker: false}
     });
     try {
-      for await (const batch of source.read({columns: PARQUET_CONSTELLATION_COLUMNS})) {
+      for await (const batch of source.read({
+        columns: PARQUET_CONSTELLATION_COLUMNS,
+        signal
+      })) {
         const decodeExecutionMilliseconds = performance.now() - decodeStartedAt;
         if (batch.length !== ROW_COUNT) {
           throw new Error(`CPU decoder returned ${batch.length} of ${ROW_COUNT} rows`);
@@ -339,12 +360,16 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     throw new Error('CPU decoder returned no Parquet row group');
   }
 
-  private async prepareGPUScene(parquetBytes: ArrayBuffer): Promise<PreparedScene> {
+  private async prepareGPUScene(
+    parquetBytes: ArrayBuffer,
+    signal: AbortSignal
+  ): Promise<PreparedScene> {
     const source = ParquetSourceLoader.createDataSource(new Blob([parquetBytes]), {});
     try {
       for await (const batch of source.readPages({
         columns: PARQUET_CONSTELLATION_COLUMNS,
-        preserveCompression: ['SNAPPY', 'LZ4_RAW']
+        preserveCompression: ['SNAPPY', 'LZ4_RAW'],
+        signal
       })) {
         const plan = planGPUParquetEncodedPageBatch(batch);
         if (plan.cpuFallbackPageCount > 0) {
@@ -384,7 +409,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
           this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
           compiledDecode = decodeGraph.compile();
           const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
-          const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode);
+          const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode, signal);
           return this.createPreparedScene(
             buffers,
             plan.uploadData.byteLength,
@@ -493,7 +518,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     };
   }
 
-  private async rerunGPUDecode(preparationVersion: number): Promise<void> {
+  private async rerunGPUDecode(preparationVersion: number, signal: AbortSignal): Promise<void> {
     const gpuDecoder = this.scene?.gpuDecoder;
     const measurement = this.measurements.gpu;
     if (!gpuDecoder || !measurement) return;
@@ -503,8 +528,9 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     this.setStatus('Reusing the compiled GPU graph for another decode submission…');
     await nextAnimationFrame();
     try {
-      const executionMilliseconds = await this.executeGPUDecode(gpuDecoder.compiled);
+      const executionMilliseconds = await this.executeGPUDecode(gpuDecoder.compiled, signal);
       await nextAnimationFrame();
+      signal.throwIfAborted();
       if (preparationVersion !== this.preparationVersion) return;
       measurement.reusedGraphExecutionMilliseconds = executionMilliseconds;
       this.setStatus(
@@ -516,7 +542,11 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     }
   }
 
-  private async executeGPUDecode(compiled: CompiledGPUCommandGraph<undefined>): Promise<number> {
+  private async executeGPUDecode(
+    compiled: CompiledGPUCommandGraph<undefined>,
+    signal: AbortSignal
+  ): Promise<number> {
+    signal.throwIfAborted();
     const decodeStartedAt = performance.now();
     const commandEncoder = this.device.createCommandEncoder({
       id: 'gpu-parquet-constellation-decode'
@@ -524,7 +554,21 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     compiled.encode(commandEncoder, {parameters: undefined});
     this.device.submit(commandEncoder.finish());
     await waitForSubmittedWork(this.device);
+    signal.throwIfAborted();
     return performance.now() - decodeStartedAt;
+  }
+
+  private startPreparation(): AbortController {
+    this.preparationAbortController?.abort();
+    const abortController = new AbortController();
+    this.preparationAbortController = abortController;
+    return abortController;
+  }
+
+  private finishPreparation(abortController: AbortController): void {
+    if (this.preparationAbortController === abortController) {
+      this.preparationAbortController = null;
+    }
   }
 
   private createRenderGraph(

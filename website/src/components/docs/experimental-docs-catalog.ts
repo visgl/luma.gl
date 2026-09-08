@@ -69,6 +69,7 @@ export type GPUCoreDocsTabId =
   | 'scan'
   | 'galloping-search'
   | 'compaction'
+  | 'segmented-layout'
   | 'mask'
   | 'visibility-workflow'
   | 'virtual-geometry'
@@ -235,6 +236,7 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   scan: {id: 'scan', label: 'Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-scan'},
   'galloping-search': {id: 'galloping-search', label: 'Galloping Search', href: '/docs/api-reference/experimental/gpu-core/gpu-galloping-search'},
   compaction: {id: 'compaction', label: 'Compaction', href: '/docs/api-reference/experimental/gpu-core/gpu-compaction'},
+  'segmented-layout': {id: 'segmented-layout', label: 'Segmented Layout', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-layout'},
   mask: {id: 'mask', label: 'Masks', href: '/docs/api-reference/experimental/gpu-core/gpu-mask'},
   'visibility-workflow': {id: 'visibility-workflow', label: 'Visibility', href: '/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow'},
   'virtual-geometry': {id: 'virtual-geometry', label: 'Virtual Geometry', href: '/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection'},
@@ -281,7 +283,7 @@ function getGPUCoreTabs(
 export const GPU_CORE_DOCS_TAB_GROUPS: readonly DocsTabGroup<GPUCoreDocsTabId>[] = [
   {id: 'learning', label: 'Learn GPU Core', tabs: getGPUCoreTabs(['overview', 'tutorial', 'recipes', 'concepts'])},
   {id: 'graph-execution', label: 'Graph execution', tabs: getGPUCoreTabs(['command-graph', 'texture-history', 'readback-ring', 'draw-command-buffer'])},
-  {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['scan', 'galloping-search', 'compaction', 'mask', 'visibility-workflow', 'virtual-geometry'])},
+  {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['scan', 'galloping-search', 'compaction', 'segmented-layout', 'mask', 'visibility-workflow', 'virtual-geometry'])},
   {id: 'hierarchies-and-traversal', label: 'Hierarchies and traversal', tabs: getGPUCoreTabs(['hierarchy-layout', 'graph-traversal', 'ancestor-projection'])},
   {id: 'sorting-and-transforms', label: 'Sorting and transforms', tabs: getGPUCoreTabs(['sort', 'segmented-sort', 'transpose', 'fft1d', 'fft2d', 'convolution'])},
   {id: 'aggregation', label: 'Aggregation', tabs: getGPUCoreTabs(['reduction', 'histogram', 'group-aggregation'])},
