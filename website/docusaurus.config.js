@@ -318,6 +318,10 @@ module.exports = {
           return {
             resolve: {
               alias: {
+                'apache-arrow/type$': path.resolve(
+                  __dirname,
+                  '../examples/experimental/gpu-parquet-constellation/apache-arrow-type-compat.js'
+                ),
                 '@deck.gl-community/arrow-layers$': path.resolve(
                   __dirname,
                   '../modules/deck-arrow-layers/src/index.ts'

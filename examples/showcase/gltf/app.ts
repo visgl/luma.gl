@@ -20,13 +20,11 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import GLTFCatalogApp, {
-  GLTF_ANIMATION_INFO_ID,
-  GLTF_CROWD_INFO_ID,
-  GLTF_MODEL_INFO_ID,
   saveOptions,
   type GLTFCatalogModel,
   type GLTFModelReference
 } from './gltf-catalog-app';
+import {GLTF_DESCRIPTION_HTML} from './app-ui';
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemo} from './gltf-extension-demos';
 import {GLTF_STUDIO_DEFAULT_VARIANT, type GLTFAnimationStudioState} from './gltf-animation-studio';
 import {GLTF_ANIMATION_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
@@ -62,52 +60,7 @@ const SHOWCASE_FALLBACK_LIGHTING = {
   ]
 } as const satisfies LightingProps;
 
-const BACKGROUND_SHADER_WGSL = /* wgsl */ `\
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let topColor = vec3<f32>(0.60, 0.60, 0.58);
-  let bottomColor = vec3<f32>(0.45, 0.44, 0.41);
-  let verticalMix = smoothstep(1.0, 0.0, inputs.uv.y);
-  let gradientColor = mix(topColor, bottomColor, verticalMix);
-  let centeredPosition = inputs.uv - vec2<f32>(0.5, 0.4);
-  let radialLift = 0.02 * exp(-6.0 * dot(centeredPosition, centeredPosition));
-
-  return vec4<f32>(gradientColor + vec3<f32>(radialLift), 1.0);
-}
-`;
-
-const BACKGROUND_SHADER_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-  vec3 topColor = vec3(0.60, 0.60, 0.58);
-  vec3 bottomColor = vec3(0.45, 0.44, 0.41);
-  float verticalMix = smoothstep(1.0, 0.0, uv.y);
-  vec3 gradientColor = mix(topColor, bottomColor, verticalMix);
-  vec2 centeredPosition = uv - vec2(0.5, 0.4);
-  float radialLift = 0.02 * exp(-6.0 * dot(centeredPosition, centeredPosition));
-
-  fragColor = vec4(gradientColor + vec3(radialLift), 1.0);
-}
-`;
-
-const GLTF_DESCRIPTION_HTML = `\
-<p>Explore animated glTF characters, skeletal rigs, and expressive motion.</p>
-<div id="loading-state" class="gltf-loading-indicator" hidden>
-  <span class="gltf-loading-spinner" aria-hidden="true"></span>
-</div>
-<p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
-<div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
-<div id="${GLTF_ANIMATION_INFO_ID}" style="margin-top: 8px;" hidden></div>
-<div id="${GLTF_CROWD_INFO_ID}" style="margin-top: 8px;" hidden></div>
-<div id="model-light-indicator" style="margin-top: 8px;"></div>
-<div id="extension-support" style="margin-top: 12px;"></div>
-<div id="error" style="color: #b00020; margin-top: 8px;"></div>
-`;
+const {BACKGROUND_SHADER_WGSL, BACKGROUND_SHADER_GLSL} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   static override info = makeExamplePanelHostHtml();
@@ -813,4 +766,41 @@ function isGltfExtensionName(extensionName: string, extensionDemos: GLTFExtensio
 
 function makeMorphSettingName(identifier: string): string {
   return `morph__${identifier.replace(':', '__')}`;
+}
+
+function getShaderSources() {
+  const BACKGROUND_SHADER_WGSL = /* wgsl */ `\
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let topColor = vec3<f32>(0.60, 0.60, 0.58);
+  let bottomColor = vec3<f32>(0.45, 0.44, 0.41);
+  let verticalMix = smoothstep(1.0, 0.0, inputs.uv.y);
+  let gradientColor = mix(topColor, bottomColor, verticalMix);
+  let centeredPosition = inputs.uv - vec2<f32>(0.5, 0.4);
+  let radialLift = 0.02 * exp(-6.0 * dot(centeredPosition, centeredPosition));
+
+  return vec4<f32>(gradientColor + vec3<f32>(radialLift), 1.0);
+}
+`;
+
+  const BACKGROUND_SHADER_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec2 uv;
+out vec4 fragColor;
+
+void main(void) {
+  vec3 topColor = vec3(0.60, 0.60, 0.58);
+  vec3 bottomColor = vec3(0.45, 0.44, 0.41);
+  float verticalMix = smoothstep(1.0, 0.0, uv.y);
+  vec3 gradientColor = mix(topColor, bottomColor, verticalMix);
+  vec2 centeredPosition = uv - vec2(0.5, 0.4);
+  float radialLift = 0.02 * exp(-6.0 * dot(centeredPosition, centeredPosition));
+
+  fragColor = vec4(gradientColor + vec3(radialLift), 1.0);
+}
+`;
+
+  return {BACKGROUND_SHADER_WGSL, BACKGROUND_SHADER_GLSL} as const;
 }

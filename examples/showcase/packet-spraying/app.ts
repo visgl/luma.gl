@@ -145,28 +145,21 @@ import {
 import {makeStudioEnvironmentMipLevels} from './optics';
 import {makeNetworkRenderProfile, type NetworkRenderProfile} from './render-profile';
 import {getExampleRuntimeEnvironment} from '../../example-support';
+import {NetworkStoryController} from './story-controller';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
   DEFAULT_NETWORK_OPTICS_LEVEL,
-  getNetworkStoryBeat,
-  getNetworkStoryChapter,
-  getNetworkStoryProgress,
   getNetworkVerticalFieldOfView,
   getNetworkVerticalViewportOffset,
-  getWrappedStoryChapterIndex,
   GUIDED_STORY_SWITCH_INDEX,
   makeNetworkDynamicRangeProfile,
   makeNetworkOpticsProfile,
-  makeNetworkStoryCamera,
   makeNetworkSwitchHighlightColor,
   MAX_NETWORK_HDR_HIGHLIGHT_BOOST,
-  NETWORK_AUTOROTATION_SCENARIO_DURATION,
-  shouldAdvanceNetworkAutorotationScenario,
   type NetworkDynamicRangeOptions,
   type NetworkDynamicRangeProfile,
   type NetworkOpticsProfile,
-  type NetworkStoryBeat,
-  type NetworkStoryCamera
+  type NetworkStoryChapter
 } from './story';
 import {
   makeSettingsSchema,
@@ -236,400 +229,24 @@ const appShaderModule: ShaderModule<AppUniforms> = {
   }
 };
 
-const WGSL_SHADER = /* wgsl */ `\
-struct AppUniforms {
-  cameraPosition: vec3<f32>,
-  projectionMatrix: mat4x4<f32>,
-  viewMatrix: mat4x4<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-
-struct VertexInputs {
-  @location(0) positions: vec3<f32>,
-  @location(1) normals: vec3<f32>,
-  @location(2) instanceModelMatrixCol0: vec4<f32>,
-  @location(3) instanceModelMatrixCol1: vec4<f32>,
-  @location(4) instanceModelMatrixCol2: vec4<f32>,
-  @location(5) instanceModelMatrixCol3: vec4<f32>,
-  @location(6) instanceColor: vec4<f32>,
-};
-
-struct VertexOutputs {
-  @builtin(position) position: vec4<f32>,
-  @location(0) normal: vec3<f32>,
-  @location(1) color: vec4<f32>,
-  @location(2) worldPosition: vec3<f32>,
-  @location(3) localPosition: vec3<f32>,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
-  let modelMatrix = mat4x4<f32>(
-    inputs.instanceModelMatrixCol0,
-    inputs.instanceModelMatrixCol1,
-    inputs.instanceModelMatrixCol2,
-    inputs.instanceModelMatrixCol3
-  );
-  let worldPosition = modelMatrix * vec4<f32>(inputs.positions, 1.0);
-
-  var outputs: VertexOutputs;
-  outputs.position = app.projectionMatrix * app.viewMatrix * worldPosition;
-  let normalMatrix = mat3x3<f32>(
-    cross(modelMatrix[1].xyz, modelMatrix[2].xyz),
-    cross(modelMatrix[2].xyz, modelMatrix[0].xyz),
-    cross(modelMatrix[0].xyz, modelMatrix[1].xyz)
-  );
-  outputs.normal = normalize(normalMatrix * inputs.normals);
-  outputs.color = inputs.instanceColor;
-  outputs.worldPosition = worldPosition.xyz;
-  outputs.localPosition = inputs.positions;
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let lightDirection = normalize(vec3<f32>(0.4, 0.8, 0.65));
-  let light = 0.28 + 0.72 * max(dot(normalize(inputs.normal), lightDirection), 0.0);
-  return vec4<f32>(inputs.color.rgb * light, inputs.color.a);
-}
-`;
-
-const REFLECTIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let reflectiveColor = reflectiveMaterial_getIlluminatedColor(
-    inputs.normal,
-    inputs.worldPosition,
-    inputs.color,
-    app.cameraPosition
-  );
-  let causticColor = opticalCaustics_getColor(
-    inputs.normal,
-    inputs.worldPosition,
-    app.cameraPosition
-  );
-  let color = vec4<f32>(reflectiveColor.rgb + causticColor, reflectiveColor.a);
-#if OPAQUE_REFLECTIVE
-  return vec4<f32>(color.rgb, inputs.color.a);
-#else
-  return color;
-#endif
-}
-`;
-
-const EMISSIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentEmissive(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  return emissiveMaterial_getColor(
-    inputs.normal,
-    inputs.worldPosition,
-    inputs.color,
-    app.cameraPosition
-  );
-}
-`;
-
-const TRAIL_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentTrail(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  return emissiveMaterial_getTrailColor(
-    inputs.normal,
-    inputs.worldPosition,
-    inputs.color,
-    app.cameraPosition,
-    inputs.localPosition.y + 0.5,
-    1.0
-  );
-}
-`;
-
-const GLASS_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let glassColor = glassTransmission_getIlluminatedColor(
-    inputs.normal,
-    inputs.worldPosition,
-    inputs.color,
-    app.cameraPosition,
-    inputs.position
-  );
-  let failureTint = smoothstep(0.44, 0.54, inputs.color.a);
-  let viewDirection = normalize(app.cameraPosition - inputs.worldPosition);
-  let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
-  let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
-  let focusSignal = max(inputs.color.g - inputs.color.b * 0.6, 0.0);
-  let focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
-  let focusColor = vec3<f32>(0.12, 0.34, 0.72) *
-    focusStrength * (0.05 + focusRim * 0.55);
-  let color = vec4<f32>(
-    glassColor.rgb + inputs.color.rgb * failureTint * 0.46 + focusColor,
-    glassColor.a
-  );
-#if A_BUFFER_ENABLED
-  return aBuffer_captureStraightColor(color, inputs.position);
-#else
-#if WBOIT_ENABLED
-  return wboit_captureStraightColor(color, inputs.position);
-#else
-  return color;
-#endif
-#endif
-}
-`;
-
-const GLASS_BACKFACE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentGlassBackface(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let encodedNormal = normalize(inputs.normal) * 0.5 + vec3<f32>(0.5);
-  return vec4<f32>(encodedNormal, inputs.position.z);
-}
-`;
-
-const PICKING_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
-@fragment
-fn fragmentPicking(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  return picking_getPickingColor(i32(inputs.color.r));
-}
-`;
-
-const VERTEX_SHADER = /* glsl */ `\
-#version 300 es
-
-in vec3 positions;
-in vec3 normals;
-in vec4 instanceModelMatrixCol0;
-in vec4 instanceModelMatrixCol1;
-in vec4 instanceModelMatrixCol2;
-in vec4 instanceModelMatrixCol3;
-in vec4 instanceColor;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-out vec3 vNormal;
-out vec4 vColor;
-out vec3 vWorldPosition;
-out vec3 vLocalPosition;
-
-void main(void) {
-  mat4 modelMatrix = mat4(
-    instanceModelMatrixCol0,
-    instanceModelMatrixCol1,
-    instanceModelMatrixCol2,
-    instanceModelMatrixCol3
-  );
-  vec4 worldPosition = modelMatrix * vec4(positions, 1.0);
-  gl_Position = app.projectionMatrix * app.viewMatrix * worldPosition;
-  mat3 normalMatrix = mat3(
-    cross(modelMatrix[1].xyz, modelMatrix[2].xyz),
-    cross(modelMatrix[2].xyz, modelMatrix[0].xyz),
-    cross(modelMatrix[0].xyz, modelMatrix[1].xyz)
-  );
-  vNormal = normalize(normalMatrix * normals);
-  vColor = instanceColor;
-  vWorldPosition = worldPosition.xyz;
-  vLocalPosition = positions;
-}
-`;
-
-const PICKING_VERTEX_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-in vec3 positions;
-in vec4 instanceModelMatrixCol0;
-in vec4 instanceModelMatrixCol1;
-in vec4 instanceModelMatrixCol2;
-in vec4 instanceModelMatrixCol3;
-in vec4 instanceColor;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-void main(void) {
-  mat4 modelMatrix = mat4(
-    instanceModelMatrixCol0,
-    instanceModelMatrixCol1,
-    instanceModelMatrixCol2,
-    instanceModelMatrixCol3
-  );
-  gl_Position = app.projectionMatrix * app.viewMatrix * modelMatrix * vec4(positions, 1.0);
-  picking_setObjectIndex(int(instanceColor.r));
-}
-`;
-
-const PICKING_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = picking_getPickingColor();
-}
-`;
-
-const GLASS_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-in vec3 vNormal;
-in vec4 vColor;
-in vec3 vWorldPosition;
-out vec4 fragColor;
-
-void main(void) {
-  vec4 glassColor = glassTransmission_getIlluminatedColor(
-    vNormal,
-    vWorldPosition,
-    vColor,
-    app.cameraPosition,
-    gl_FragCoord
-  );
-  float failureTint = smoothstep(0.44, 0.54, vColor.a);
-  vec3 viewDirection = normalize(app.cameraPosition - vWorldPosition);
-  float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
-  float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
-  float focusSignal = max(vColor.g - vColor.b * 0.6, 0.0);
-  float focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
-  vec3 focusColor = vec3(0.12, 0.34, 0.72) * focusStrength * (0.05 + focusRim * 0.55);
-  vec4 color = vec4(
-    glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
-    glassColor.a
-  );
-#if WBOIT_ENABLED
-  fragColor = wboit_captureStraightColor(color, gl_FragCoord);
-#else
-  fragColor = color;
-#endif
-}
-`;
-
-const GLASS_BACKFACE_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec3 vNormal;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = vec4(normalize(vNormal) * 0.5 + vec3(0.5), gl_FragCoord.z);
-}
-`;
-
-const FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec3 vNormal;
-in vec4 vColor;
-out vec4 fragColor;
-
-void main(void) {
-  vec3 lightDirection = normalize(vec3(0.4, 0.8, 0.65));
-  float light = 0.28 + 0.72 * max(dot(normalize(vNormal), lightDirection), 0.0);
-  fragColor = vec4(vColor.rgb * light, vColor.a);
-}
-`;
-
-const REFLECTIVE_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-in vec3 vNormal;
-in vec4 vColor;
-in vec3 vWorldPosition;
-out vec4 fragColor;
-
-void main(void) {
-  vec4 reflectiveColor = reflectiveMaterial_getIlluminatedColor(
-    vNormal,
-    vWorldPosition,
-    vColor,
-    app.cameraPosition
-  );
-  vec3 causticColor = opticalCaustics_getColor(
-    vNormal,
-    vWorldPosition,
-    app.cameraPosition
-  );
-  vec4 color = vec4(reflectiveColor.rgb + causticColor, reflectiveColor.a);
-#if OPAQUE_REFLECTIVE
-  fragColor = vec4(color.rgb, vColor.a);
-#else
-  fragColor = color;
-#endif
-}
-`;
-
-const EMISSIVE_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-in vec3 vNormal;
-in vec4 vColor;
-in vec3 vWorldPosition;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = emissiveMaterial_getColor(vNormal, vWorldPosition, vColor, app.cameraPosition);
-}
-`;
-
-const TRAIL_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  vec3 cameraPosition;
-  mat4 projectionMatrix;
-  mat4 viewMatrix;
-} app;
-
-in vec3 vNormal;
-in vec4 vColor;
-in vec3 vWorldPosition;
-in vec3 vLocalPosition;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = emissiveMaterial_getTrailColor(
-    vNormal,
-    vWorldPosition,
-    vColor,
-    app.cameraPosition,
-    vLocalPosition.y + 0.5,
-    1.0
-  );
-}
-`;
+const {
+  WGSL_SHADER,
+  REFLECTIVE_WGSL_SHADER,
+  EMISSIVE_WGSL_SHADER,
+  TRAIL_WGSL_SHADER,
+  GLASS_WGSL_SHADER,
+  GLASS_BACKFACE_WGSL_SHADER,
+  PICKING_WGSL_SHADER,
+  VERTEX_SHADER,
+  PICKING_VERTEX_SHADER,
+  PICKING_FRAGMENT_SHADER,
+  GLASS_FRAGMENT_SHADER,
+  GLASS_BACKFACE_FRAGMENT_SHADER,
+  FRAGMENT_SHADER,
+  REFLECTIVE_FRAGMENT_SHADER,
+  EMISSIVE_FRAGMENT_SHADER,
+  TRAIL_FRAGMENT_SHADER
+} = getShaderSources();
 
 const INSTANCE_BUFFER_LAYOUT = [
   {
@@ -1047,6 +664,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   mrcPanel: NetworkInfoPanel | null = null;
   opticsPanel: NetworkInfoPanel | null = null;
   storyControls: NetworkStoryControls | null = null;
+  readonly storyController: NetworkStoryController;
 
   private canvas: HTMLCanvasElement | null = null;
   private pendingPickRequest: NetworkNodePickRequest | null = null;
@@ -1055,11 +673,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private readonly nextSwitchProbeTimes = new Map<number, number>();
   private readonly recoveryProbeCompletionTimes = new Map<number, number>();
   private readonly recoveryProbeConfirmations = new Map<number, NetworkPacketEvent>();
-  private animationTime = 0;
-  private rawAnimationTime = 0;
-  private animationTimeOffset = 0;
-  private animationPausedAt: number | null = null;
-  private rawAnimationPausedAt: number | null = null;
   private droppedPacketCount = 0;
   private trimmedPacketCount = 0;
   private pickingInProgress = false;
@@ -1067,22 +680,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   private pointerSequence = 0;
   private previousLinkTrafficTime: number | null = null;
   private previousCausticTime: number | null = null;
-  private autorotationScenarioStartedAt: number | null = null;
-  private guidedStoryChapterIndex = 0;
-  private guidedStoryChapterStartedAt = 0;
-  private guidedStoryElapsedAtPause = 0;
-  private guidedStoryPlaying = false;
-  private guidedStoryStarted = false;
-  private guidedStoryCamera: NetworkStoryCamera | null = null;
-  private guidedStoryCameraTransitionEndsAt = 0;
-  private guidedStoryPreviousCameraTime: number | null = null;
-  private currentStoryBeat: NetworkStoryBeat | null = null;
-  private highlightedPlaneIndex: number | null = null;
-  private highlightedPathIndex: number | null = null;
-  private manualHighlightedPlaneIndex: number | null = null;
-  private manualHighlightedPathIndex: number | null = null;
-  private storyHighlightedPlaneIndex: number | null = null;
-  private storyHighlightedPathIndex: number | null = null;
   private previousPlaneHighlightTime: number | null = null;
   private previousVisualIntensityTime: number | null = null;
   private currentVisualIntensity = DEFAULT_NETWORK_OPTICS_LEVEL;
@@ -1143,8 +740,37 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   exposure = 0.96;
   hdrHighlightBoost = DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST;
 
+  private get animationTime(): number {
+    return this.storyController.animationTime;
+  }
+
+  private get guidedStoryPlaying(): boolean {
+    return this.storyController.guidedStoryPlaying;
+  }
+
+  private get highlightedPlaneIndex(): number | null {
+    return this.storyController.highlightedPlaneIndex;
+  }
+
+  private get highlightedPathIndex(): number | null {
+    return this.storyController.highlightedPathIndex;
+  }
+
   constructor({device, width, height}: AnimationProps) {
     super();
+
+    this.storyController = new NetworkStoryController(
+      () => ({
+        canvas: this.canvas,
+        isReflectionLab: this.reflectionLab,
+        mrcPanel: this.mrcPanel,
+        opticsPanel: this.opticsPanel,
+        orbit: this.orbit,
+        orbitControls: this.orbitControls,
+        storyControls: this.storyControls
+      }),
+      chapter => this.enterNetworkStoryChapter(chapter)
+    );
 
     const searchParams = new URLSearchParams(window.location.search);
     this.reflectionLab = searchParams.get('lab') === 'reflection';
@@ -1550,27 +1176,33 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         accessibleLabel: 'MRC network protocol information',
         content: PACKET_SPRAYING_BACKGROUND_HTML,
         id: 'mrc',
-        onClose: () => this.setMrcPanelVisible(false),
+        onClose: () => this.storyController.setMrcPanelVisible(false),
         title: 'MULTIPATH RELIABLE CONNECTION'
       });
       this.opticsPanel = new NetworkInfoPanel(canvas, {
         accessibleLabel: 'GPU optics rendering techniques',
         content: PACKET_SPRAYING_OPTICS_HTML,
         id: 'optics',
-        onClose: () => this.setOpticsPanelVisible(false),
+        onClose: () => this.storyController.setOpticsPanelVisible(false),
         title: 'GPU OPTICS'
       });
       this.storyControls = new NetworkStoryControls(canvas, {
-        onNext: () => this.moveGuidedStoryChapter(1),
-        onPrevious: () => this.moveGuidedStoryChapter(-1),
-        onSelectChapter: chapterIndex => this.selectGuidedStoryChapter(chapterIndex),
-        onTogglePlayback: () => this.setGuidedStoryPlaying(!this.guidedStoryPlaying),
-        onHighlightPlane: planeIndex => this.setHighlightedPlane(planeIndex),
-        onHighlightPath: pathIndex => this.setHighlightedPath(pathIndex),
+        onNext: () => this.storyController.moveGuidedStoryChapter(1),
+        onPrevious: () => this.storyController.moveGuidedStoryChapter(-1),
+        onSelectChapter: chapterIndex =>
+          this.storyController.selectGuidedStoryChapter(chapterIndex),
+        onTogglePlayback: () =>
+          this.storyController.setGuidedStoryPlaying(!this.guidedStoryPlaying),
+        onHighlightPlane: planeIndex => this.storyController.setHighlightedPlane(planeIndex),
+        onHighlightPath: pathIndex => this.storyController.setHighlightedPath(pathIndex),
         onToggleMrc: () =>
-          this.setMrcPanelVisible(this.canvas?.dataset.packetSprayingMrcExpanded !== 'true'),
+          this.storyController.setMrcPanelVisible(
+            this.canvas?.dataset.packetSprayingMrcExpanded !== 'true'
+          ),
         onToggleOptics: () =>
-          this.setOpticsPanelVisible(this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'),
+          this.storyController.setOpticsPanelVisible(
+            this.canvas?.dataset.packetSprayingOpticsExpanded !== 'true'
+          ),
         onHdrHighlightBoostChange: highlightBoost => this.setHdrHighlightBoost(highlightBoost),
         onVisualIntensityChange: level => this.setVisualIntensity(level),
         hdrHighlightBoost: this.hdrHighlightBoost,
@@ -1598,12 +1230,12 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       canvas.dataset.packetSprayingVisualRefraction = this.opticsProfile.refraction.toFixed(2);
       canvas.dataset.packetSprayingAnimationPaused = 'false';
       canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
-      this.updateGuidedStoryControls();
+      this.storyController.updateControls();
       this.updateNetworkTelemetry();
       this.updateFailureAccessibility();
 
       if (new URLSearchParams(window.location.search).get('story') === '1') {
-        this.setGuidedStoryPlaying(true);
+        this.storyController.setGuidedStoryPlaying(true);
       }
     }
   }
@@ -1611,9 +1243,9 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
   override onRender({device, width, height, aspect, time}: AnimationProps): void {
     this.resizeSceneFramebuffer(width, height);
     this.updateVisualIntensity(time / 1000);
-    this.updateAnimationClock((time / 1000) * this.speed);
-    this.updateAutorotationScenario(time / 1000);
-    this.updateGuidedStory(this.animationTime);
+    this.storyController.updateAnimationClock((time / 1000) * this.speed);
+    this.storyController.updateAutorotationScenario(time / 1000);
+    this.storyController.updateGuidedStory();
     this.updateSwitchStoryState(this.animationTime);
     this.updateSwitchPressure(this.animationTime);
     this.updatePlaneHighlight(time / 1000);
@@ -2015,7 +1647,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
           const switchIndex = objectIndex - HOST_POSITIONS.length;
           if (switchIndex >= 0 && switchIndex < this.glassInstances.length) {
             if (this.guidedStoryPlaying) {
-              this.setGuidedStoryPlaying(false);
+              this.storyController.setGuidedStoryPlaying(false);
             }
             this.advanceSwitchState(switchIndex);
           }
@@ -2033,7 +1665,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
                 HOST_POSITIONS.length -
                 LEAF_POSITIONS.length -
                 AGGREGATION_POSITIONS.length;
-          this.setHighlightedPath(
+          this.storyController.setHighlightedPath(
             spineIndex >= 0 && spineIndex < SPINE_POSITIONS.length ? spineIndex : null
           );
         }
@@ -2100,120 +1732,11 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.pendingPickRequest = null;
     this.pickingManager.clearPickState();
     this.nodePopup?.hide();
-    this.setHighlightedPath(null);
+    this.storyController.setHighlightedPath(null);
   };
 
-  private updateAnimationClock(rawAnimationTime: number): void {
-    this.rawAnimationTime = rawAnimationTime;
-    this.animationTime = this.animationPausedAt ?? rawAnimationTime - this.animationTimeOffset;
-
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingAnimationPaused = String(this.animationPausedAt !== null);
-      this.canvas.dataset.packetSprayingAnimationTime = this.animationTime.toFixed(3);
-    }
-  }
-
-  private setAnimationClockPaused(isPaused: boolean): void {
-    if (isPaused) {
-      if (this.animationPausedAt === null) {
-        this.animationPausedAt = this.animationTime;
-        this.rawAnimationPausedAt = this.rawAnimationTime;
-      }
-      return;
-    }
-
-    if (this.animationPausedAt !== null && this.rawAnimationPausedAt !== null) {
-      this.animationTimeOffset += this.rawAnimationTime - this.rawAnimationPausedAt;
-      this.animationTime = this.rawAnimationTime - this.animationTimeOffset;
-    }
-    this.animationPausedAt = null;
-    this.rawAnimationPausedAt = null;
-  }
-
-  private updateAutorotationScenario(renderTime: number): void {
-    const autoRotate = Boolean(this.orbitControls?.props.autoRotate) && !this.reflectionLab;
-    const animationPaused = this.animationPausedAt !== null;
-    const automaticScenarios = autoRotate && !animationPaused && !this.guidedStoryPlaying;
-
-    if (!automaticScenarios) {
-      this.autorotationScenarioStartedAt = null;
-      if (this.canvas) {
-        this.canvas.dataset.packetSprayingAutomaticScenarios = 'false';
-        this.canvas.dataset.packetSprayingScenarioProgress = '0.000';
-      }
-      return;
-    }
-
-    this.autorotationScenarioStartedAt ??= renderTime;
-    const elapsedTime = renderTime - this.autorotationScenarioStartedAt;
-    if (
-      shouldAdvanceNetworkAutorotationScenario(elapsedTime, {
-        animationPaused,
-        autoRotate,
-        guidedStoryPlaying: this.guidedStoryPlaying
-      })
-    ) {
-      this.guidedStoryStarted = true;
-      this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + 1);
-      this.autorotationScenarioStartedAt = renderTime;
-    }
-
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingAutomaticScenarios = 'true';
-      this.canvas.dataset.packetSprayingScenarioProgress = Math.min(
-        (renderTime - this.autorotationScenarioStartedAt) / NETWORK_AUTOROTATION_SCENARIO_DURATION,
-        1
-      ).toFixed(3);
-    }
-  }
-
-  private setGuidedStoryPlaying(isPlaying: boolean): void {
-    if (isPlaying === this.guidedStoryPlaying) {
-      return;
-    }
-
-    this.guidedStoryPlaying = isPlaying;
-    if (isPlaying) {
-      this.setAnimationClockPaused(false);
-      this.orbitControls?.setAutoRotate(false);
-      if (this.guidedStoryStarted) {
-        this.guidedStoryChapterStartedAt = this.animationTime - this.guidedStoryElapsedAtPause;
-      } else {
-        this.guidedStoryStarted = true;
-        this.enterGuidedStoryChapter(this.guidedStoryChapterIndex);
-      }
-    } else {
-      this.guidedStoryElapsedAtPause = this.animationTime - this.guidedStoryChapterStartedAt;
-      this.guidedStoryCameraTransitionEndsAt = this.animationTime;
-      this.setAnimationClockPaused(true);
-      this.orbitControls?.setAutoRotate(this.orbit > 0);
-    }
-
-    this.updateGuidedStoryControls();
-  }
-
-  private moveGuidedStoryChapter(direction: number): void {
-    this.guidedStoryStarted = true;
-    this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + direction);
-  }
-
-  private selectGuidedStoryChapter(chapterIndex: number): void {
-    this.guidedStoryStarted = true;
-    this.enterGuidedStoryChapter(chapterIndex);
-  }
-
-  private enterGuidedStoryChapter(chapterIndex: number): void {
-    this.guidedStoryChapterIndex = getWrappedStoryChapterIndex(chapterIndex);
-    this.autorotationScenarioStartedAt = null;
-    this.guidedStoryChapterStartedAt = this.animationTime;
-    this.guidedStoryElapsedAtPause = 0;
-    this.guidedStoryCamera = getNetworkStoryChapter(this.guidedStoryChapterIndex).camera;
-    this.guidedStoryCameraTransitionEndsAt = this.animationTime + 1.4;
-    this.guidedStoryPreviousCameraTime = null;
-    this.currentStoryBeat = null;
-
+  private enterNetworkStoryChapter(chapter: NetworkStoryChapter): void {
     const switchIndex = GUIDED_STORY_SWITCH_INDEX;
-    const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
 
     switch (chapter.networkState) {
       case 'healthy':
@@ -2256,8 +1779,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         this.advanceSwitchState(switchIndex);
         break;
     }
-
-    this.updateGuidedStoryControls();
   }
 
   private resetGuidedStoryNetwork(): void {
@@ -2286,90 +1807,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
     this.updateSwitchColors();
     this.updateHealthyRoutes();
     this.updateFailureAccessibility();
-  }
-
-  private updateGuidedStory(animationTime: number): void {
-    if (!this.guidedStoryStarted) {
-      return;
-    }
-
-    if (this.guidedStoryPlaying) {
-      const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
-      if (animationTime - this.guidedStoryChapterStartedAt >= chapter.duration) {
-        this.enterGuidedStoryChapter(this.guidedStoryChapterIndex + 1);
-      }
-    }
-
-    const chapterElapsedTime = this.guidedStoryPlaying
-      ? animationTime - this.guidedStoryChapterStartedAt
-      : this.guidedStoryElapsedAtPause;
-    const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
-    const beat = getNetworkStoryBeat(this.guidedStoryChapterIndex, chapterElapsedTime);
-    if (beat !== this.currentStoryBeat) {
-      this.currentStoryBeat = beat;
-      this.guidedStoryCamera = makeNetworkStoryCamera(chapter, beat);
-      this.guidedStoryCameraTransitionEndsAt = animationTime + 1.25;
-      this.storyControls?.updateBeat(chapter, beat);
-      this.setStoryHighlight(beat?.planeIndex ?? null, beat?.pathIndex ?? null);
-    }
-    this.storyControls?.updateProgress(this.guidedStoryChapterIndex, chapterElapsedTime);
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingStoryProgress = getNetworkStoryProgress(
-        this.guidedStoryChapterIndex,
-        chapterElapsedTime
-      ).overallProgress.toFixed(3);
-      this.canvas.dataset.packetSprayingStoryBeat = beat?.id ?? '';
-    }
-
-    if (
-      !this.guidedStoryCamera ||
-      !this.orbitControls ||
-      (!this.guidedStoryPlaying && animationTime >= this.guidedStoryCameraTransitionEndsAt)
-    ) {
-      return;
-    }
-
-    const elapsedTime = Math.min(
-      Math.max(animationTime - (this.guidedStoryPreviousCameraTime ?? animationTime - 1 / 60), 0),
-      0.12
-    );
-    const smoothing = 1 - Math.exp(-elapsedTime * 3.8);
-    const controls = this.orbitControls;
-    const camera = this.guidedStoryCamera;
-    const cameraTarget: Vector3 = [...camera.target];
-    if (!beat?.camera?.target && beat?.pathIndex !== undefined) {
-      cameraTarget[2] += SPINE_POSITIONS[beat.pathIndex][2] * 0.2;
-    } else if (!beat?.camera?.target && beat?.planeIndex !== undefined) {
-      cameraTarget[2] += beat.planeIndex === 0 ? 0.32 : -0.32;
-    }
-    const yawDelta = Math.atan2(
-      Math.sin(camera.yaw - controls.yaw),
-      Math.cos(camera.yaw - controls.yaw)
-    );
-
-    controls.yaw += yawDelta * smoothing;
-    controls.pitch += (camera.pitch - controls.pitch) * smoothing;
-    controls.distance += (camera.distance - controls.distance) * smoothing;
-    controls.props.target = [
-      controls.props.target[0] + (cameraTarget[0] - controls.props.target[0]) * smoothing,
-      controls.props.target[1] + (cameraTarget[1] - controls.props.target[1]) * smoothing,
-      controls.props.target[2] + (cameraTarget[2] - controls.props.target[2]) * smoothing
-    ];
-    this.guidedStoryPreviousCameraTime = animationTime;
-  }
-
-  private updateGuidedStoryControls(): void {
-    const chapter = getNetworkStoryChapter(this.guidedStoryChapterIndex);
-    this.storyControls?.update(chapter, this.guidedStoryChapterIndex, this.guidedStoryPlaying);
-    this.storyControls?.updateBeat(chapter, this.currentStoryBeat);
-    this.storyControls?.updateProgress(
-      this.guidedStoryChapterIndex,
-      this.guidedStoryElapsedAtPause
-    );
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingStoryChapter = chapter.id;
-      this.canvas.dataset.packetSprayingStoryPlaying = String(this.guidedStoryPlaying);
-    }
   }
 
   private setVisualIntensity(level: number, synchronizeSettings = true): void {
@@ -2446,94 +1883,6 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
         this.dynamicRangeProfile.highlightBoost.toFixed(3);
       this.canvas.dataset.packetSprayingMaximumLuminance =
         this.dynamicRangeProfile.maximumLuminance.toFixed(2);
-    }
-  }
-
-  private setHighlightedPlane(planeIndex: number | null): void {
-    this.manualHighlightedPlaneIndex = planeIndex;
-    this.synchronizeStoryHighlights();
-  }
-
-  private setHighlightedPath(pathIndex: number | null): void {
-    this.manualHighlightedPathIndex = pathIndex;
-    this.synchronizeStoryHighlights();
-  }
-
-  private setStoryHighlight(planeIndex: number | null, pathIndex: number | null): void {
-    this.storyHighlightedPlaneIndex = planeIndex;
-    this.storyHighlightedPathIndex = pathIndex;
-    this.synchronizeStoryHighlights();
-  }
-
-  private synchronizeStoryHighlights(): void {
-    const hasManualHighlight =
-      this.manualHighlightedPlaneIndex !== null || this.manualHighlightedPathIndex !== null;
-    const planeIndex = hasManualHighlight
-      ? this.manualHighlightedPlaneIndex
-      : this.storyHighlightedPlaneIndex;
-    const pathIndex = hasManualHighlight
-      ? this.manualHighlightedPathIndex
-      : this.storyHighlightedPathIndex;
-
-    this.updateHighlightedPlane(planeIndex);
-    this.updateHighlightedPath(pathIndex);
-  }
-
-  private updateHighlightedPlane(planeIndex: number | null): void {
-    if (this.highlightedPlaneIndex === planeIndex) {
-      return;
-    }
-
-    this.highlightedPlaneIndex = planeIndex;
-    this.storyControls?.setHighlightedPlane(planeIndex);
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingHighlightedPlane =
-        planeIndex === null ? '' : String(planeIndex + 1);
-    }
-  }
-
-  private updateHighlightedPath(pathIndex: number | null): void {
-    if (this.highlightedPathIndex === pathIndex) {
-      return;
-    }
-
-    this.highlightedPathIndex = pathIndex;
-    this.storyControls?.setHighlightedPath(pathIndex);
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingHighlightedPath =
-        pathIndex === null ? '' : String(pathIndex + 1);
-    }
-  }
-
-  private setMrcPanelVisible(isVisible: boolean): void {
-    if (isVisible) {
-      this.setOpticsPanelVisible(false);
-    }
-
-    const wasVisible = this.canvas?.dataset.packetSprayingMrcExpanded === 'true';
-    this.mrcPanel?.setVisible(isVisible);
-    this.storyControls?.setMrcExpanded(isVisible);
-    if (!isVisible && wasVisible) {
-      this.storyControls?.focusMrcButton();
-    }
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingMrcExpanded = String(isVisible);
-    }
-  }
-
-  private setOpticsPanelVisible(isVisible: boolean): void {
-    if (isVisible) {
-      this.setMrcPanelVisible(false);
-    }
-
-    const wasVisible = this.canvas?.dataset.packetSprayingOpticsExpanded === 'true';
-    this.opticsPanel?.setVisible(isVisible);
-    this.storyControls?.setOpticsExpanded(isVisible);
-    if (!isVisible && wasVisible) {
-      this.storyControls?.focusOpticsButton();
-    }
-    if (this.canvas) {
-      this.canvas.dataset.packetSprayingOpticsExpanded = String(isVisible);
     }
   }
 
@@ -4609,4 +3958,420 @@ function smoothstep(edgeStart: number, edgeEnd: number, value: number): number {
 
 function isTransparencyMode(value: unknown): value is TransparencyMode {
   return value === 'a-buffer' || value === 'weighted-blended' || value === 'sorted-alpha';
+}
+
+function getShaderSources() {
+  const WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  cameraPosition: vec3<f32>,
+  projectionMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+  @location(1) normals: vec3<f32>,
+  @location(2) instanceModelMatrixCol0: vec4<f32>,
+  @location(3) instanceModelMatrixCol1: vec4<f32>,
+  @location(4) instanceModelMatrixCol2: vec4<f32>,
+  @location(5) instanceModelMatrixCol3: vec4<f32>,
+  @location(6) instanceColor: vec4<f32>,
+};
+
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) normal: vec3<f32>,
+  @location(1) color: vec4<f32>,
+  @location(2) worldPosition: vec3<f32>,
+  @location(3) localPosition: vec3<f32>,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+  let modelMatrix = mat4x4<f32>(
+    inputs.instanceModelMatrixCol0,
+    inputs.instanceModelMatrixCol1,
+    inputs.instanceModelMatrixCol2,
+    inputs.instanceModelMatrixCol3
+  );
+  let worldPosition = modelMatrix * vec4<f32>(inputs.positions, 1.0);
+
+  var outputs: VertexOutputs;
+  outputs.position = app.projectionMatrix * app.viewMatrix * worldPosition;
+  let normalMatrix = mat3x3<f32>(
+    cross(modelMatrix[1].xyz, modelMatrix[2].xyz),
+    cross(modelMatrix[2].xyz, modelMatrix[0].xyz),
+    cross(modelMatrix[0].xyz, modelMatrix[1].xyz)
+  );
+  outputs.normal = normalize(normalMatrix * inputs.normals);
+  outputs.color = inputs.instanceColor;
+  outputs.worldPosition = worldPosition.xyz;
+  outputs.localPosition = inputs.positions;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let lightDirection = normalize(vec3<f32>(0.4, 0.8, 0.65));
+  let light = 0.28 + 0.72 * max(dot(normalize(inputs.normal), lightDirection), 0.0);
+  return vec4<f32>(inputs.color.rgb * light, inputs.color.a);
+}
+`;
+
+  const REFLECTIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentReflective(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let reflectiveColor = reflectiveMaterial_getIlluminatedColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition
+  );
+  let causticColor = opticalCaustics_getColor(
+    inputs.normal,
+    inputs.worldPosition,
+    app.cameraPosition
+  );
+  let color = vec4<f32>(reflectiveColor.rgb + causticColor, reflectiveColor.a);
+#if OPAQUE_REFLECTIVE
+  return vec4<f32>(color.rgb, inputs.color.a);
+#else
+  return color;
+#endif
+}
+`;
+
+  const EMISSIVE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentEmissive(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return emissiveMaterial_getColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition
+  );
+}
+`;
+
+  const TRAIL_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentTrail(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return emissiveMaterial_getTrailColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition,
+    inputs.localPosition.y + 0.5,
+    1.0
+  );
+}
+`;
+
+  const GLASS_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentGlass(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let glassColor = glassTransmission_getIlluminatedColor(
+    inputs.normal,
+    inputs.worldPosition,
+    inputs.color,
+    app.cameraPosition,
+    inputs.position
+  );
+  let failureTint = smoothstep(0.44, 0.54, inputs.color.a);
+  let viewDirection = normalize(app.cameraPosition - inputs.worldPosition);
+  let viewAlignment = abs(dot(normalize(inputs.normal), viewDirection));
+  let focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
+  let focusSignal = max(inputs.color.g - inputs.color.b * 0.6, 0.0);
+  let focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
+  let focusColor = vec3<f32>(0.12, 0.34, 0.72) *
+    focusStrength * (0.05 + focusRim * 0.55);
+  let color = vec4<f32>(
+    glassColor.rgb + inputs.color.rgb * failureTint * 0.46 + focusColor,
+    glassColor.a
+  );
+#if A_BUFFER_ENABLED
+  return aBuffer_captureStraightColor(color, inputs.position);
+#else
+#if WBOIT_ENABLED
+  return wboit_captureStraightColor(color, inputs.position);
+#else
+  return color;
+#endif
+#endif
+}
+`;
+
+  const GLASS_BACKFACE_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentGlassBackface(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  let encodedNormal = normalize(inputs.normal) * 0.5 + vec3<f32>(0.5);
+  return vec4<f32>(encodedNormal, inputs.position.z);
+}
+`;
+
+  const PICKING_WGSL_SHADER = /* wgsl */ `${WGSL_SHADER}
+@fragment
+fn fragmentPicking(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return picking_getPickingColor(i32(inputs.color.r));
+}
+`;
+
+  const VERTEX_SHADER = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+in vec3 normals;
+in vec4 instanceModelMatrixCol0;
+in vec4 instanceModelMatrixCol1;
+in vec4 instanceModelMatrixCol2;
+in vec4 instanceModelMatrixCol3;
+in vec4 instanceColor;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+out vec3 vNormal;
+out vec4 vColor;
+out vec3 vWorldPosition;
+out vec3 vLocalPosition;
+
+void main(void) {
+  mat4 modelMatrix = mat4(
+    instanceModelMatrixCol0,
+    instanceModelMatrixCol1,
+    instanceModelMatrixCol2,
+    instanceModelMatrixCol3
+  );
+  vec4 worldPosition = modelMatrix * vec4(positions, 1.0);
+  gl_Position = app.projectionMatrix * app.viewMatrix * worldPosition;
+  mat3 normalMatrix = mat3(
+    cross(modelMatrix[1].xyz, modelMatrix[2].xyz),
+    cross(modelMatrix[2].xyz, modelMatrix[0].xyz),
+    cross(modelMatrix[0].xyz, modelMatrix[1].xyz)
+  );
+  vNormal = normalize(normalMatrix * normals);
+  vColor = instanceColor;
+  vWorldPosition = worldPosition.xyz;
+  vLocalPosition = positions;
+}
+`;
+
+  const PICKING_VERTEX_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+precision highp int;
+
+in vec3 positions;
+in vec4 instanceModelMatrixCol0;
+in vec4 instanceModelMatrixCol1;
+in vec4 instanceModelMatrixCol2;
+in vec4 instanceModelMatrixCol3;
+in vec4 instanceColor;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+void main(void) {
+  mat4 modelMatrix = mat4(
+    instanceModelMatrixCol0,
+    instanceModelMatrixCol1,
+    instanceModelMatrixCol2,
+    instanceModelMatrixCol3
+  );
+  gl_Position = app.projectionMatrix * app.viewMatrix * modelMatrix * vec4(positions, 1.0);
+  picking_setObjectIndex(int(instanceColor.r));
+}
+`;
+
+  const PICKING_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+precision highp int;
+
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = picking_getPickingColor();
+}
+`;
+
+  const GLASS_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+out vec4 fragColor;
+
+void main(void) {
+  vec4 glassColor = glassTransmission_getIlluminatedColor(
+    vNormal,
+    vWorldPosition,
+    vColor,
+    app.cameraPosition,
+    gl_FragCoord
+  );
+  float failureTint = smoothstep(0.44, 0.54, vColor.a);
+  vec3 viewDirection = normalize(app.cameraPosition - vWorldPosition);
+  float viewAlignment = abs(dot(normalize(vNormal), viewDirection));
+  float focusRim = pow(1.0 - clamp(viewAlignment, 0.0, 1.0), 1.8);
+  float focusSignal = max(vColor.g - vColor.b * 0.6, 0.0);
+  float focusStrength = smoothstep(0.008, 0.05, focusSignal) * (1.0 - failureTint);
+  vec3 focusColor = vec3(0.12, 0.34, 0.72) * focusStrength * (0.05 + focusRim * 0.55);
+  vec4 color = vec4(
+    glassColor.rgb + vColor.rgb * failureTint * 0.46 + focusColor,
+    glassColor.a
+  );
+#if WBOIT_ENABLED
+  fragColor = wboit_captureStraightColor(color, gl_FragCoord);
+#else
+  fragColor = color;
+#endif
+}
+`;
+
+  const GLASS_BACKFACE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vNormal;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = vec4(normalize(vNormal) * 0.5 + vec3(0.5), gl_FragCoord.z);
+}
+`;
+
+  const FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vNormal;
+in vec4 vColor;
+out vec4 fragColor;
+
+void main(void) {
+  vec3 lightDirection = normalize(vec3(0.4, 0.8, 0.65));
+  float light = 0.28 + 0.72 * max(dot(normalize(vNormal), lightDirection), 0.0);
+  fragColor = vec4(vColor.rgb * light, vColor.a);
+}
+`;
+
+  const REFLECTIVE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+out vec4 fragColor;
+
+void main(void) {
+  vec4 reflectiveColor = reflectiveMaterial_getIlluminatedColor(
+    vNormal,
+    vWorldPosition,
+    vColor,
+    app.cameraPosition
+  );
+  vec3 causticColor = opticalCaustics_getColor(
+    vNormal,
+    vWorldPosition,
+    app.cameraPosition
+  );
+  vec4 color = vec4(reflectiveColor.rgb + causticColor, reflectiveColor.a);
+#if OPAQUE_REFLECTIVE
+  fragColor = vec4(color.rgb, vColor.a);
+#else
+  fragColor = color;
+#endif
+}
+`;
+
+  const EMISSIVE_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = emissiveMaterial_getColor(vNormal, vWorldPosition, vColor, app.cameraPosition);
+}
+`;
+
+  const TRAIL_FRAGMENT_SHADER = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  vec3 cameraPosition;
+  mat4 projectionMatrix;
+  mat4 viewMatrix;
+} app;
+
+in vec3 vNormal;
+in vec4 vColor;
+in vec3 vWorldPosition;
+in vec3 vLocalPosition;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = emissiveMaterial_getTrailColor(
+    vNormal,
+    vWorldPosition,
+    vColor,
+    app.cameraPosition,
+    vLocalPosition.y + 0.5,
+    1.0
+  );
+}
+`;
+
+  return {
+    WGSL_SHADER,
+    REFLECTIVE_WGSL_SHADER,
+    EMISSIVE_WGSL_SHADER,
+    TRAIL_WGSL_SHADER,
+    GLASS_WGSL_SHADER,
+    GLASS_BACKFACE_WGSL_SHADER,
+    PICKING_WGSL_SHADER,
+    VERTEX_SHADER,
+    PICKING_VERTEX_SHADER,
+    PICKING_FRAGMENT_SHADER,
+    GLASS_FRAGMENT_SHADER,
+    GLASS_BACKFACE_FRAGMENT_SHADER,
+    FRAGMENT_SHADER,
+    REFLECTIVE_FRAGMENT_SHADER,
+    EMISSIVE_FRAGMENT_SHADER,
+    TRAIL_FRAGMENT_SHADER
+  } as const;
 }

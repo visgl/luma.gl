@@ -302,7 +302,22 @@ function observeStandaloneFirstFrame(reportRunning: () => void): void {
     if (hasReportedOutput) return;
     const canvas = document.querySelector('canvas');
     const hasCanvasOutput = canvas && canvas.clientWidth > 0 && canvas.clientHeight > 0;
-    const hasDomOutput = document.body?.children.length > 1;
+    const hasDomOutput = [...(document.body?.querySelectorAll('*') || [])].some(element => {
+      if (
+        element instanceof HTMLScriptElement ||
+        element instanceof HTMLStyleElement ||
+        element.hasAttribute('data-luma-example-mobile-badge') ||
+        element.hasAttribute('data-luma-example-status')
+      ) {
+        return false;
+      }
+      const bounds = element.getBoundingClientRect();
+      return (
+        bounds.width > 0 &&
+        bounds.height > 0 &&
+        (element.textContent?.trim() || element.children.length)
+      );
+    });
     if (hasCanvasOutput || hasDomOutput) {
       hasReportedOutput = true;
       observer.disconnect();

@@ -29,6 +29,7 @@ import support19 from './experimental/deferred-rendering/mobile-support';
 import support20 from './experimental/shadow-map/mobile-support';
 import support21 from './v10/gpgpu/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
+import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
 import support24 from './experimental/gpu-graph-explorer/mobile-support';
 import support25 from './experimental/gpu-trace-scene/mobile-support';
@@ -184,6 +185,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'api/texture-compressed': standaloneSupport0,
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
+  'experimental/gpu-parquet-constellation': parquetSupport,
   'homepage/instancing': support2
 };
 

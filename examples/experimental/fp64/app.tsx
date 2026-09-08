@@ -16,11 +16,8 @@ import {
   ExampleSettingsPanelManager,
   getChangedSetting
 } from '../../example-panels';
-import {
-  runFP64ComputeBenchmark,
-  type FP64BenchmarkMode,
-  type FP64ComputeBenchmarkResult
-} from './fp64-compute-benchmark';
+import {runFP64ComputeBenchmark, type FP64ComputeBenchmarkResult} from './fp64-compute-benchmark';
+import {makeFP64ExampleLayout} from './app-ui';
 
 type AppProps = {
   device?: Device | null;
@@ -316,66 +313,34 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     const currentZoomLabel = formatZoomScale(getPixelScale(zoomDepth));
     const visualizationSpecs = getVisualizationSpecs();
 
-    return (
-      <div
-        style={{
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
-          minWidth: 0,
-          padding: 20,
-          width: '100%'
-        }}
-      >
-        {initializationError ? (
-          <p style={{color: '#b00020', margin: 0}}>{initializationError}</p>
-        ) : null}
-        <div id={FP64_SETTINGS_HOST_ID} />
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
-            gap: 20,
-            alignItems: 'stretch',
-            minWidth: 0
-          }}
-        >
-          {visualizationSpecs.map((visualization, index) => (
-            <div
-              data-fp64-visualization={visualization.kind}
-              key={visualization.kind}
-              style={{display: 'grid', gridTemplateRows: '1fr auto', gap: 12, minWidth: 0}}
-            >
-              <ExamplePaneCopy
-                description={visualization.description}
-                title={visualization.title}
-              />
-              <ExamplePaneCanvas
-                canvasRef={this.canvasRefs[index]}
-                isReady={isReady}
-                overlayLines={getOverlayLines(
-                  selectedPreset,
-                  currentZoomLabel,
-                  visualization.kind,
-                  this.device,
-                  selectedArithmeticMode,
-                  fp64RenderTiming,
-                  renderWidth
-                )}
-              />
-            </div>
-          ))}
-        </div>
-        <FP64BenchmarkPanel
-          device={this.device}
-          error={benchmarkError}
-          isRunning={isBenchmarkRunning}
-          onRun={this.handleRunBenchmark}
-          results={benchmarkResults}
-        />
-      </div>
-    );
+    return makeFP64ExampleLayout({
+      benchmarkError,
+      benchmarkResults,
+      canvasHeight: CANVAS_HEIGHT,
+      canvasRefs: this.canvasRefs,
+      canvasWidth: CANVAS_WIDTH,
+      device: this.device,
+      initializationError,
+      isBenchmarkRunning,
+      isReady,
+      onRunBenchmark: this.handleRunBenchmark,
+      settingsHostId: FP64_SETTINGS_HOST_ID,
+      visualizations: visualizationSpecs.map((visualization, index) => ({
+        canvasRef: this.canvasRefs[index],
+        description: visualization.description,
+        kind: visualization.kind,
+        overlayLines: getOverlayLines(
+          selectedPreset,
+          currentZoomLabel,
+          visualization.kind,
+          this.device,
+          selectedArithmeticMode,
+          fp64RenderTiming,
+          renderWidth
+        ),
+        title: visualization.title
+      }))
+    });
   }
 
   private isReadyForInitialization(initializationGeneration: number): boolean {
@@ -1024,256 +989,6 @@ export function formatFP64RenderTiming(timing: FP64RenderTiming): string {
   return `fp64 ${timing.source} = ${milliseconds} ms · ${framesPerSecondEquivalent.toFixed(1)} FPS-equivalent`;
 }
 
-function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
-  const {description, title} = props;
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        width: '100%'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-start',
-          paddingBottom: 2
-        }}
-      >
-        <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
-        <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ExamplePaneCanvas(props: {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  isReady: boolean;
-  overlayLines: string[];
-}): React.ReactNode {
-  const {canvasRef, isReady, overlayLines} = props;
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        width: '100%',
-        position: 'relative'
-      }}
-    >
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        style={{
-          boxSizing: 'border-box',
-          display: 'block',
-          width: '100%',
-          height: 'auto',
-          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
-          border: '1px solid #1f192c',
-          background: '#000',
-          opacity: isReady ? 1 : 0.5
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: 12,
-          right: 12,
-          bottom: 12,
-          boxSizing: 'border-box',
-          maxWidth: 'calc(100% - 24px)',
-          padding: '8px 10px',
-          background: 'rgba(0, 0, 0, 0.68)',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: 12,
-          lineHeight: 1.45,
-          borderRadius: 8,
-          overflowWrap: 'anywhere',
-          pointerEvents: 'none'
-        }}
-      >
-        {overlayLines.map(line => (
-          <div key={line}>{line}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FP64BenchmarkPanel(props: {
-  device: Device | null;
-  error: string | null;
-  isRunning: boolean;
-  onRun: () => Promise<void>;
-  results: FP64ComputeBenchmarkResult[] | null;
-}): React.ReactNode {
-  const {device, error, isRunning, onRun, results} = props;
-  const isWebGPU = device?.type === 'webgpu';
-  const automaticSelection =
-    isWebGPU && device.info.gpu === 'apple' ? 'Metal-safe integer' : 'classic';
-
-  return (
-    <section
-      style={{
-        border: '1px solid #d7d2df',
-        borderRadius: 10,
-        padding: 16,
-        minWidth: 0
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'start',
-          justifyContent: 'space-between',
-          gap: 16,
-          flexWrap: 'wrap'
-        }}
-      >
-        <div style={{maxWidth: 760}}>
-          <h3 style={{margin: '0 0 6px'}}>FP64 compute benchmark</h3>
-          <p style={{margin: 0, lineHeight: 1.45}}>
-            Runs dependent add, multiply, divide, and square-root recurrences across 8,192 GPU
-            lanes. Results compare native float32, automatic selection, classic, hybrid, and
-            integer-controlled double-single arithmetic. The Mandelbrot animation pauses while the
-            benchmark runs.
-          </p>
-        </div>
-        <button
-          disabled={!isWebGPU || isRunning}
-          onClick={() => void onRun()}
-          style={{padding: '8px 14px', whiteSpace: 'nowrap'}}
-          type="button"
-        >
-          {isRunning ? 'Running benchmark…' : 'Run WebGPU benchmark'}
-        </button>
-      </div>
-      <p
-        style={{
-          margin: '12px 0 0',
-          fontFamily: 'monospace',
-          fontSize: 12,
-          overflowWrap: 'anywhere'
-        }}
-      >
-        {device
-          ? `device = ${getBenchmarkDeviceLabel(device)} · automatic = ${automaticSelection}`
-          : 'device = initializing'}
-      </p>
-      {!isWebGPU ? (
-        <p style={{margin: '10px 0 0'}}>This benchmark is available on WebGPU devices only.</p>
-      ) : null}
-      {error ? <p style={{color: '#b00020', margin: '10px 0 0'}}>{error}</p> : null}
-      {results ? <FP64BenchmarkResultsTable results={results} /> : null}
-    </section>
-  );
-}
-
-function FP64BenchmarkResultsTable(props: {
-  results: FP64ComputeBenchmarkResult[];
-}): React.ReactNode {
-  return (
-    <div style={{overflowX: 'auto', marginTop: 16}}>
-      <table style={{borderCollapse: 'collapse', fontSize: 13, width: '100%'}}>
-        <thead>
-          <tr>
-            {[
-              'Operation',
-              'Arithmetic path',
-              'Runtime',
-              'Throughput',
-              'Max relative error',
-              'Timer'
-            ].map(heading => (
-              <th
-                key={heading}
-                style={{borderBottom: '1px solid #a9a2b5', padding: '7px 9px', textAlign: 'left'}}
-              >
-                {heading}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {props.results.map(result => (
-            <tr key={`${result.operation}-${result.mode}`}>
-              <td style={BENCHMARK_CELL_STYLE}>{result.operation}</td>
-              <td style={BENCHMARK_CELL_STYLE}>{formatBenchmarkMode(result.mode)}</td>
-              {result.error !== undefined ? (
-                <td colSpan={4} style={{...BENCHMARK_CELL_STYLE, color: '#b00020'}}>
-                  {result.error}
-                </td>
-              ) : (
-                <>
-                  <td style={BENCHMARK_CELL_STYLE}>
-                    {formatBenchmarkRuntime(result.runtimeMilliseconds)}
-                  </td>
-                  <td style={BENCHMARK_CELL_STYLE}>
-                    {result.throughputMillionIterationsPerSecond.toFixed(2)} M iter/s
-                  </td>
-                  <td style={BENCHMARK_CELL_STYLE}>
-                    {formatBenchmarkError(result.maximumRelativeError)}
-                  </td>
-                  <td style={BENCHMARK_CELL_STYLE}>{result.timing}</td>
-                </>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p style={{fontSize: 12, lineHeight: 1.4, margin: '10px 0 0'}}>
-        Timed work uses three dispatches of 8,192 lanes × 32 dependent iterations. Accuracy is
-        checked once after timing against JavaScript number arithmetic; no performance threshold is
-        enforced.
-      </p>
-    </div>
-  );
-}
-
-const BENCHMARK_CELL_STYLE: React.CSSProperties = {
-  borderBottom: '1px solid #e4e0e8',
-  padding: '7px 9px',
-  textAlign: 'left',
-  whiteSpace: 'nowrap'
-};
-
-function getBenchmarkDeviceLabel(device: Device): string {
-  const adapter = device.info.renderer || device.info.vendor || device.info.gpu;
-  const backend = device.info.gpuBackend || device.type;
-  return `${adapter} (${backend})`;
-}
-
-function formatBenchmarkMode(mode: FP64BenchmarkMode): string {
-  switch (mode) {
-    case 'automatic':
-      return 'FP64 automatic';
-    case 'classic':
-      return 'FP64 classic';
-    case 'hybrid':
-      return 'FP64 hybrid';
-    case 'integer':
-      return 'FP64 integer';
-    case 'float32':
-      return 'native float32';
-  }
-}
-
-function formatBenchmarkRuntime(runtimeMilliseconds: number): string {
-  return runtimeMilliseconds < 1
-    ? `${runtimeMilliseconds.toFixed(3)} ms`
-    : `${runtimeMilliseconds.toFixed(2)} ms`;
-}
-
-function formatBenchmarkError(relativeError: number): string {
-  return relativeError === 0 ? '0' : relativeError.toExponential(2);
-}
-
 const mandelbrot32: ShaderModule<Mandelbrot32Uniforms> = {
   name: 'mandelbrot32',
   uniformTypes: {
@@ -1298,7 +1013,40 @@ const mandelbrot64: ShaderModule<Mandelbrot64Uniforms> = {
   }
 };
 
-const FULLSCREEN_SOURCE = /* wgsl */ `\
+const {
+  FULLSCREEN_SOURCE,
+  FULLSCREEN_VERTEX_SHADER,
+  MANDELBROT32_FRAGMENT_SHADER,
+  MANDELBROT32_FRAGMENT_WGSL,
+  MANDELBROT64_FRAGMENT_SHADER,
+  MANDELBROT64_FRAGMENT_WGSL
+} = getShaderSources();
+
+function getVisualizationSpecs(): VisualizationSpec[] {
+  return [
+    {
+      clearColor: [0.02, 0.015, 0.04, 1],
+      description:
+        'Single-precision Mandelbrot fragment shader. Use the shared zoom slider to inspect the selected target.',
+      fragmentShaderGLSL: MANDELBROT32_FRAGMENT_SHADER,
+      fragmentShaderWGSL: MANDELBROT32_FRAGMENT_WGSL,
+      kind: 'fp32',
+      title: 'Mandelbrot FP32'
+    },
+    {
+      clearColor: [0.01, 0.015, 0.03, 1],
+      description:
+        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, hybrid mode uses integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
+      fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
+      fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
+      kind: 'fp64',
+      title: 'Mandelbrot FP64 (fp64arithmetic)'
+    }
+  ];
+}
+
+function getShaderSources() {
+  const FULLSCREEN_SOURCE = /* wgsl */ `\
 struct VertexInput {
   @location(0) position: vec2<f32>,
 }
@@ -1317,7 +1065,7 @@ fn vertexMain(input: VertexInput) -> FragmentOutput {
 }
 `;
 
-const FULLSCREEN_VERTEX_SHADER = /* glsl */ `\
+  const FULLSCREEN_VERTEX_SHADER = /* glsl */ `\
 #version 300 es
 layout(location = 0) in vec2 position;
 
@@ -1329,7 +1077,7 @@ void main(void) {
 }
 `;
 
-const MANDELBROT32_FRAGMENT_SHADER = /* glsl */ `\
+  const MANDELBROT32_FRAGMENT_SHADER = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -1395,7 +1143,7 @@ void main(void) {
 }
 `;
 
-const MANDELBROT32_FRAGMENT_WGSL = /* wgsl */ `\
+  const MANDELBROT32_FRAGMENT_WGSL = /* wgsl */ `\
 struct Mandelbrot32Uniforms {
   resolution: vec2<f32>,
   center: vec2<f32>,
@@ -1457,7 +1205,7 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-const MANDELBROT64_FRAGMENT_SHADER = /* glsl */ `\
+  const MANDELBROT64_FRAGMENT_SHADER = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -1536,7 +1284,7 @@ void main(void) {
 }
 `;
 
-const MANDELBROT64_FRAGMENT_WGSL = /* wgsl */ `\
+  const MANDELBROT64_FRAGMENT_WGSL = /* wgsl */ `\
 struct Mandelbrot64Uniforms {
   resolution: vec2<f32>,
   centerX: vec2<f32>,
@@ -1610,25 +1358,12 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
 }
 `;
 
-function getVisualizationSpecs(): VisualizationSpec[] {
-  return [
-    {
-      clearColor: [0.02, 0.015, 0.04, 1],
-      description:
-        'Single-precision Mandelbrot fragment shader. Use the shared zoom slider to inspect the selected target.',
-      fragmentShaderGLSL: MANDELBROT32_FRAGMENT_SHADER,
-      fragmentShaderWGSL: MANDELBROT32_FRAGMENT_WGSL,
-      kind: 'fp32',
-      title: 'Mandelbrot FP32'
-    },
-    {
-      clearColor: [0.01, 0.015, 0.03, 1],
-      description:
-        'FP64 Mandelbrot fragment shader using fp64arithmetic. On Apple WebGPU, hybrid mode uses integer-reconstructed high residuals and native low-term accumulation; the fully reliable integer path remains available in the benchmark.',
-      fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
-      fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
-      kind: 'fp64',
-      title: 'Mandelbrot FP64 (fp64arithmetic)'
-    }
-  ];
+  return {
+    FULLSCREEN_SOURCE,
+    FULLSCREEN_VERTEX_SHADER,
+    MANDELBROT32_FRAGMENT_SHADER,
+    MANDELBROT32_FRAGMENT_WGSL,
+    MANDELBROT64_FRAGMENT_SHADER,
+    MANDELBROT64_FRAGMENT_WGSL
+  } as const;
 }

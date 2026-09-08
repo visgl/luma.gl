@@ -911,7 +911,15 @@ function useExampleRuntimeEnvironment(): ExampleRuntimeEnvironment {
           devicePixelRatio: 1
         }
       : getExampleRuntimeEnvironment(window, navigator);
-  const [environment, setEnvironment] = useState<ExampleRuntimeEnvironment>(getEnvironment);
+  const [environment, setEnvironment] = useState<ExampleRuntimeEnvironment>({
+    compactViewport: false,
+    handheld: false,
+    coarsePointer: false,
+    maxTouchPoints: 0,
+    viewportWidth: 1,
+    viewportHeight: 1,
+    devicePixelRatio: 1
+  });
 
   useEffect(() => {
     const updateEnvironment = () => setEnvironment(getEnvironment());

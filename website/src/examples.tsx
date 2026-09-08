@@ -42,6 +42,8 @@ const loadArrowPolygonRendererApp = () => import('../../examples/arrow/arrow-pol
 const loadBloomApp = () => import('../../examples/experimental/bloom/app');
 const loadHTMLUIPrismApp = () => import('../../examples/experimental/html-ui-prism/app');
 const loadGPUFrustumCullingApp = () => import('../../examples/experimental/gpu-frustum-culling/app');
+const loadGPUParquetConstellationApp = () =>
+  import('../../examples/experimental/gpu-parquet-constellation/app');
 const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene-graph/app');
 const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
 const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
@@ -1979,6 +1981,18 @@ export const GPUFrustumCullingExample: React.FC = props => (
     directory="experimental"
     devices={['webgpu']}
     loadTemplate={loadGPUFrustumCullingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUParquetConstellationExample: React.FC = props => (
+  <LumaExample
+    id="gpu-parquet-constellation"
+    title="GPU Parquet Constellation"
+    directory="experimental"
+    devices={['webgpu-max']}
+    loadTemplate={loadGPUParquetConstellationApp}
     config={exampleConfig}
     {...props}
   />

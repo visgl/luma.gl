@@ -144,8 +144,15 @@ export class AnimationLoop {
   }
 
   reportError(error: Error): void {
-    this.props.onError(error);
     this._error = error;
+    this.props.onError(error);
+    if (
+      this.props.onError === AnimationLoop.defaultAnimationLoopProps.onError &&
+      typeof window !== 'undefined' &&
+      typeof ErrorEvent !== 'undefined'
+    ) {
+      window.dispatchEvent(new ErrorEvent('error', {error, message: error.message}));
+    }
   }
 
   /** Flags this animation loop as needing redraw */
@@ -228,17 +235,17 @@ export class AnimationLoop {
   stop() {
     // console.debug(`Stopping ${this.constructor.name}`);
     if (this._running) {
+      const animationProps = this.animationProps;
       // call callback
       // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps && !this._error) {
-        this.props.onFinalize(this.animationProps);
-      }
-
       this._cancelAnimationFrame();
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._running = false;
       this._lastFrameTime = 0;
+      if (animationProps) {
+        this.props.onFinalize(animationProps);
+      }
     }
     return this;
   }
