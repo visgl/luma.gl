@@ -13,6 +13,7 @@ import {
   DynamicTexture
 } from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
+import {HELLO_CUBE_INFO_HTML} from './app-ui';
 
 export const title = 'Rotating Cube';
 export const description = 'Shows rendering a basic triangle.';
@@ -112,15 +113,7 @@ const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
 const eyePosition = [0, 0, -4];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-<p>
-Drawing a textured cube
-</p>
-
-<p>
-Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <code>AnimationLoop</code> classes.
-</p>
-`;
+  static info = HELLO_CUBE_INFO_HTML;
 
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
