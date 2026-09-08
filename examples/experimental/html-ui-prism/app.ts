@@ -235,6 +235,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     HTMLTexture.configureCanvas(this.canvas);
     this.canvas.style.background = '#0d1117';
     this.canvas.style.cursor = 'grab';
+    this.canvas.style.touchAction = 'none';
     this.canvas.style.overflow = 'visible';
     this.canvas.style.position = 'relative';
     this.styleElement = document.createElement('style');

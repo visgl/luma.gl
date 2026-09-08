@@ -351,6 +351,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
       canvas.style.cursor = 'crosshair';
+      canvas.style.touchAction = 'none';
       canvas.tabIndex = 0;
       canvas.setAttribute('role', 'img');
       canvas.setAttribute(

@@ -196,6 +196,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
     }
     this.canvas = canvas;
     canvas.style.cursor = 'grab';
+    canvas.style.touchAction = 'none';
     canvas.addEventListener('pointerdown', this.handlePointerDown);
     canvas.addEventListener('pointermove', this.handlePointerMove);
     canvas.addEventListener('pointerup', this.handlePointerUp);

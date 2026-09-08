@@ -164,6 +164,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      canvas.style.touchAction = 'none';
       canvas.addEventListener('click', this.handleClick);
       canvas.addEventListener('wheel', this.handleWheel, {passive: false});
     }
