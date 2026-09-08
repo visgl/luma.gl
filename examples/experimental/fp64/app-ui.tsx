@@ -14,9 +14,11 @@ export function makeFP64ExampleLayout(props: {
   canvasWidth: number;
   device: Device | null;
   initializationError: string | null;
+  isAutoZooming: boolean;
   isBenchmarkRunning: boolean;
   isReady: boolean;
   onRunBenchmark: () => Promise<void>;
+  onToggleAutoZoom: () => void;
   settingsHostId: string;
   visualizations: Array<{
     canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -42,10 +44,18 @@ export function makeFP64ExampleLayout(props: {
         <p style={{color: '#b00020', margin: 0}}>{props.initializationError}</p>
       ) : null}
       <div id={props.settingsHostId} />
+      <button
+        onClick={props.onToggleAutoZoom}
+        style={{alignSelf: 'flex-start', padding: '7px 12px'}}
+        type="button"
+      >
+        {props.isAutoZooming ? 'Stop automatic zoom' : 'Start automatic zoom'}
+      </button>
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          // Keep the precision views side by side so their zoomed regions can be compared directly.
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           gap: 20,
           alignItems: 'stretch',
           minWidth: 0
@@ -55,9 +65,8 @@ export function makeFP64ExampleLayout(props: {
           <div
             data-fp64-visualization={visualization.kind}
             key={visualization.kind}
-            style={{display: 'grid', gridTemplateRows: '1fr auto', gap: 12, minWidth: 0}}
+            style={{display: 'grid', gridTemplateRows: 'auto 1fr', gap: 12, minWidth: 0}}
           >
-            <ExamplePaneCopy description={visualization.description} title={visualization.title} />
             <ExamplePaneCanvas
               canvasHeight={props.canvasHeight}
               canvasRef={visualization.canvasRef}
@@ -65,6 +74,7 @@ export function makeFP64ExampleLayout(props: {
               isReady={props.isReady}
               overlayLines={visualization.overlayLines}
             />
+            <ExamplePaneCopy description={visualization.description} title={visualization.title} />
           </div>
         ))}
       </div>
@@ -139,18 +149,18 @@ function ExamplePaneCanvas(props: {
       <div
         style={{
           position: 'absolute',
-          left: 12,
-          right: 12,
-          bottom: 12,
+          left: 6,
+          right: 6,
+          bottom: 6,
           boxSizing: 'border-box',
-          maxWidth: 'calc(100% - 24px)',
-          padding: '8px 10px',
-          background: 'rgba(0, 0, 0, 0.68)',
+          maxWidth: 'calc(100% - 12px)',
+          padding: '5px 7px',
+          background: 'rgba(0, 0, 0, 0.52)',
           color: '#fff',
           fontFamily: 'monospace',
-          fontSize: 12,
-          lineHeight: 1.45,
-          borderRadius: 8,
+          fontSize: 10,
+          lineHeight: 1.25,
+          borderRadius: 5,
           overflowWrap: 'anywhere',
           pointerEvents: 'none'
         }}

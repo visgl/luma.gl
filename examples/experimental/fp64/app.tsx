@@ -29,6 +29,7 @@ type AppState = {
   benchmarkResults: FP64ComputeBenchmarkResult[] | null;
   fp64RenderTiming: FP64RenderTiming | null;
   initializationError: string | null;
+  isAutoZooming: boolean;
   isBenchmarkRunning: boolean;
   isReady: boolean;
   renderWidth: number;
@@ -108,17 +109,20 @@ const FIXED_ITERATION_LIMIT = 768;
 const BASE_ITERATION_LIMIT = 160;
 const ITERATION_GROWTH_PER_ZOOM = 18;
 const RENDER_INTERVAL_MILLISECONDS = 50;
+const AUTO_ZOOM_SPEED = 2.5;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
-const MIN_PIXEL_SCALE = 1e-12;
+// Stop just before fp64 precision and the selected landmark begin to break down.
+const MIN_PIXEL_SCALE = 1e-9;
 const MAX_ZOOM_DEPTH = Math.log2(INITIAL_PIXEL_SCALE / MIN_PIXEL_SCALE);
 const RENDER_TIMING_SAMPLE_INTERVAL = 5;
 const RENDER_TIMING_SMOOTHING = 0.2;
 const ZOOM_PRESETS: Record<ZoomPresetId, ZoomPreset> = {
   seahorse: {
     label: 'Seahorse',
-    centerX: -0.743643887037151,
-    centerY: 0.13182590420533
+    // Deep-zoom landmark from the classic seahorse-valley sequence.
+    centerX: -0.7436442,
+    centerY: 0.1318261
   },
   elephant: {
     label: 'Elephant',
@@ -140,6 +144,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   private ownsDevice = false;
   private initializationGeneration = 0;
   private isComponentMounted = false;
+  private autoZoomAnimationFrame: number | null = null;
+  private autoZoomLastTime = 0;
+  private autoZoomPanelRefreshCount = 0;
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
 
@@ -151,6 +158,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       benchmarkResults: null,
       fp64RenderTiming: null,
       initializationError: null,
+      isAutoZooming: true,
       isBenchmarkRunning: false,
       isReady: false,
       renderWidth: DEFAULT_RENDER_WIDTH,
@@ -234,6 +242,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   override componentWillUnmount(): void {
     this.isComponentMounted = false;
     this.initializationGeneration++;
+    this.stopAutoZoom();
     this.panels.finalize();
     this.settingsPanel.finalize();
     this.destroyResources();
@@ -281,6 +290,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       this.renderer = renderer;
       this.ownsDevice = !externalDevice;
       this.renderer.start();
+      this.startAutoZoom();
 
       const rendererErrors = this.renderer.getInitializationErrors();
 
@@ -307,6 +317,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       benchmarkResults,
       fp64RenderTiming,
       initializationError,
+      isAutoZooming,
       isBenchmarkRunning,
       isReady,
       renderWidth,
@@ -329,6 +340,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       isBenchmarkRunning,
       isReady,
       onRunBenchmark: this.handleRunBenchmark,
+      isAutoZooming,
+      onToggleAutoZoom: this.handleToggleAutoZoom,
       settingsHostId: FP64_SETTINGS_HOST_ID,
       visualizations: visualizationSpecs.map((visualization, index) => ({
         canvasRef: this.canvasRefs[index],
@@ -422,6 +435,50 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     }
   };
 
+  private handleToggleAutoZoom = (): void => {
+    if (this.state.isAutoZooming) {
+      this.stopAutoZoom();
+    } else {
+      this.startAutoZoom();
+    }
+  };
+
+  private startAutoZoom(): void {
+    if (this.autoZoomAnimationFrame !== null) {
+      return;
+    }
+    this.autoZoomLastTime = performance.now();
+    this.autoZoomPanelRefreshCount = 0;
+    this.setState({isAutoZooming: true});
+    this.autoZoomAnimationFrame = requestAnimationFrame(this.animateAutoZoom);
+  }
+
+  private stopAutoZoom(): void {
+    if (this.autoZoomAnimationFrame !== null) {
+      cancelAnimationFrame(this.autoZoomAnimationFrame);
+      this.autoZoomAnimationFrame = null;
+    }
+    if (this.state.isAutoZooming && this.isComponentMounted) {
+      this.setState({isAutoZooming: false});
+    }
+  }
+
+  private animateAutoZoom = (time: number): void => {
+    this.autoZoomAnimationFrame = null;
+    if (!this.state.isAutoZooming) {
+      return;
+    }
+    const elapsedSeconds = Math.min((time - this.autoZoomLastTime) / 1000, 0.1);
+    this.autoZoomLastTime = time;
+    const nextZoomDepth =
+      (this.state.zoomDepth + elapsedSeconds * AUTO_ZOOM_SPEED) % (MAX_ZOOM_DEPTH + 0.01);
+    this.settingsPanel.setSettingValue('zoomDepth', nextZoomDepth);
+    if (this.autoZoomPanelRefreshCount++ % 4 === 0) {
+      this.panels.refresh();
+    }
+    this.autoZoomAnimationFrame = requestAnimationFrame(this.animateAutoZoom);
+  };
+
   private handleRunBenchmark = async (): Promise<void> => {
     const device = this.device;
     const renderer = this.renderer;
@@ -430,6 +487,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     }
 
     const initializationGeneration = this.initializationGeneration;
+    this.stopAutoZoom();
     renderer?.pause();
     this.setState({benchmarkError: null, benchmarkResults: null, isBenchmarkRunning: true});
 
@@ -985,19 +1043,14 @@ function getOverlayLines(
     device?.type === 'webgpu' ? `fp64 ${arithmeticMode}` : 'fp64 classic (WebGL2)';
 
   const overlayLines = [
-    'mode = mandelbrot zoom',
-    `target = ${zoomPreset.label}`,
-    `x = ${zoomPreset.centerX}`,
-    `y = ${zoomPreset.centerY}`,
-    `scale = ${currentZoomLabel}`,
-    `render buffer = ${renderWidth} × ${getRenderHeight(renderWidth)}`,
-    `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
-    kind === 'fp32' ? 'precision = native fp32' : `precision = ${precisionLabel}`,
-    'iterations = adaptive'
+    `${zoomPreset.label} · scale ${currentZoomLabel}`,
+    `center ${zoomPreset.centerX.toFixed(6)}, ${zoomPreset.centerY.toFixed(6)}`,
+    `${renderWidth}×${getRenderHeight(renderWidth)} · ${kind === 'fp32' ? 'native fp32' : precisionLabel}`,
+    'adaptive iterations'
   ];
   if (kind === 'fp64') {
     overlayLines.push(
-      fp64RenderTiming ? formatFP64RenderTiming(fp64RenderTiming) : 'fp64 render = sampling…'
+      fp64RenderTiming ? formatFP64RenderTiming(fp64RenderTiming) : 'GPU timing: sampling…'
     );
   }
   return overlayLines;
