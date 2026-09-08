@@ -237,10 +237,10 @@ export function installStandaloneExampleSupport(): StandaloneExampleSupport {
   const preflight = preflightExampleSupport(definition, environment, capabilities);
   const quality = getExampleMobileQuality(definition, environment);
 
-  documentElement.dataset.lumaExampleId = definition.id;
-  documentElement.dataset.lumaExampleMobileMode = definition.mobileMode;
-  documentElement.dataset.lumaExampleQualityProfile = definition.mobileProfile;
-  documentElement.dataset.lumaExampleState = preflight.supported ? 'loading' : 'unsupported';
+  documentElement.dataset['lumaExampleId'] = definition.id;
+  documentElement.dataset['lumaExampleMobileMode'] = definition.mobileMode;
+  documentElement.dataset['lumaExampleQualityProfile'] = definition.mobileProfile;
+  documentElement.dataset['lumaExampleState'] = preflight.supported ? 'loading' : 'unsupported';
   if (environment.handheld && typeof quality.canvasPixelRatio === 'number') {
     Object.defineProperty(window, 'devicePixelRatio', {
       configurable: true,
@@ -249,15 +249,15 @@ export function installStandaloneExampleSupport(): StandaloneExampleSupport {
   }
 
   const reportFailed = (error: unknown): void => {
-    if (documentElement.dataset.lumaExampleState === 'unsupported') {
+    if (documentElement.dataset['lumaExampleState'] === 'unsupported') {
       return;
     }
-    documentElement.dataset.lumaExampleState = 'failed';
+    documentElement.dataset['lumaExampleState'] = 'failed';
     showStandaloneStatus('failed', getStandaloneErrorMessage(error));
   };
   const reportRunning = (): void => {
-    if (documentElement.dataset.lumaExampleState === 'loading') {
-      documentElement.dataset.lumaExampleState = 'running';
+    if (documentElement.dataset['lumaExampleState'] === 'loading') {
+      documentElement.dataset['lumaExampleState'] = 'running';
     }
   };
 
@@ -331,7 +331,7 @@ function observeStandaloneFirstFrame(reportRunning: () => void): void {
 
 function showStandaloneMobileBadge(mode: ExampleMobileMode): void {
   const badge = document.createElement('span');
-  badge.dataset.lumaExampleMobileBadge = '';
+  badge.dataset['lumaExampleMobileBadge'] = '';
   badge.setAttribute('aria-label', `Mobile support: ${getExampleMobileLabel(mode)}`);
   badge.style.cssText =
     'position:fixed;left:calc(8px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:2147483646;padding:4px 8px;border:1px solid #7dd3fc57;border-radius:999px;background:#020617dd;color:#bae6fd;font:700 11px/1.4 system-ui;pointer-events:none;';
@@ -342,7 +342,7 @@ function showStandaloneMobileBadge(mode: ExampleMobileMode): void {
 function showStandaloneStatus(state: 'failed' | 'unsupported', message: string): void {
   document.querySelector('[data-luma-example-status]')?.remove();
   const alert = document.createElement('div');
-  alert.dataset.lumaExampleStatus = state;
+  alert.dataset['lumaExampleStatus'] = state;
   alert.setAttribute('role', 'alert');
   alert.style.cssText =
     'position:fixed;inset:16px;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;border:1px solid #475569;border-radius:12px;background:#020617ee;color:#e2e8f0;font:16px/1.5 system-ui;text-align:center;';
