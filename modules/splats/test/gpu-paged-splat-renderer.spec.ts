@@ -927,8 +927,8 @@ it('GPUPagedSplatRenderer reuses sparse real WebGPU graphs for semantic and row-
     );
     expect(
       Array.from(frontierSorted),
-      'resorts replaced original source offsets exactly across overlapping page depths'
-    ).toEqual([2, 0, 3, 1]);
+      'resorts packed segment row identities exactly across overlapping page depths'
+    ).toEqual([2, 1, 3, 0]);
 
     renderer.setFrontier([
       {id: 'directional-page', data: firstPage, activeRows: new Uint32Array([2])},

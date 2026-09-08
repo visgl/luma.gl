@@ -153,7 +153,7 @@ function getPackOutputWord(type: string, componentByteLength: number, scalarCoun
     const encoded = type.startsWith('sint')
       ? `bitcast<u32>(i32(encodeValue(readSourceValue(${scalarIndex}))))`
       : `u32(encodeValue(readSourceValue(${scalarIndex})))`;
-    return `select(0u, (${encoded}) & ${mask}, ${scalarIndex} < ${scalarCount}u) << ${slot * bitWidth}u`;
+    return `(select(0u, (${encoded}) & ${mask}, ${scalarIndex} < ${scalarCount}u) << ${slot * bitWidth}u)`;
   });
   return `result[wordIndex] = ${values.join(' |\n    ')};`;
 }

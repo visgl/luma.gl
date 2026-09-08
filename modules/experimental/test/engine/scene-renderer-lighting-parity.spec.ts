@@ -397,7 +397,6 @@ it('ray tracing without temporal accumulation renders deterministic one-sample p
         readLightingParityPixel(target.color, horizontal, vertical)
       )
     );
-
     expect(
       Boolean(referencePixels.some(pixel => pixel[0] > 25)),
       'the deterministic reference includes a visibly lit center sample'
