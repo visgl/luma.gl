@@ -73,7 +73,7 @@ function makeSupportBlock(catalogId, definition) {
   <meta name="luma-example-mobile-profile" content="${definition.mobileProfile}" />${unsupportedReasonMeta}
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = installStandaloneExampleSupport();
+    const exampleSupport = await installStandaloneExampleSupport();
     if (!exampleSupport.supported) {
       document
         .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
