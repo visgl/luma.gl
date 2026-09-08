@@ -960,7 +960,7 @@ function ExampleStatusMessage({
       <div style={{maxWidth: 620}}>
         <strong style={{display: 'block', fontSize: 18, marginBottom: 8}}>
           {state === 'unsupported'
-            ? 'This example does not support this mobile device.'
+            ? 'This example is not supported in the current environment.'
             : 'This example could not start on the selected GPU.'}
         </strong>
         <span>{message}</span>

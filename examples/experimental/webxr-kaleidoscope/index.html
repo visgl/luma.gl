@@ -6,14 +6,19 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="effects" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
     <meta charset="UTF-8" />
@@ -164,109 +169,112 @@
     </aside>
     <div class="preview-hint">Drag to orbit · Scroll to move through the portal</div>
 
-    <script type="module">
-      import {luma} from '@luma.gl/core';
-      import {makeAnimationLoop} from '@luma.gl/engine';
-      import {webgl2Adapter} from '@luma.gl/webgl';
-      import {webgpuAdapter} from '@luma.gl/webgpu';
-      import AnimationLoopTemplate from './app.ts';
+    <script type="module" data-luma-example-application>
+      const exampleSupport = await window.lumaExampleSupportPromise;
+      if (exampleSupport.supported) {
+        const {luma} = await import('@luma.gl/core');
+        const {makeAnimationLoop} = await import('@luma.gl/engine');
+        const {webgl2Adapter} = await import('@luma.gl/webgl');
+        const {webgpuAdapter} = await import('@luma.gl/webgpu');
+        const {default: AnimationLoopTemplate} = await import('./app.ts');
 
-      const sceneElement = document.getElementById('scene');
-      const backendStatus = document.getElementById('backend-status');
-      const sessionStatus = document.getElementById('session-status');
-      const switchBackendButton = document.getElementById('switch-backend');
-      let animationLoop = null;
-      let currentDevice = null;
+        const sceneElement = document.getElementById('scene');
+        const backendStatus = document.getElementById('backend-status');
+        const sessionStatus = document.getElementById('session-status');
+        const switchBackendButton = document.getElementById('switch-backend');
+        let animationLoop = null;
+        let currentDevice = null;
 
-      function makeDeviceProps(type, xrCompatible = false) {
-        return {
-          id: `immersive-prism-portal-${type}`,
-          type,
-          adapters: [webgpuAdapter, webgl2Adapter],
-          xrCompatible,
-          createCanvasContext: {container: sceneElement, alphaMode: 'opaque'}
-        };
-      }
-
-      async function createPreferredDevice(type = 'webgpu') {
-        if (type === 'webgl') {
-          return await luma.createDevice(makeDeviceProps('webgl'));
+        function makeDeviceProps(type, xrCompatible = false) {
+          return {
+            id: `immersive-prism-portal-${type}`,
+            type,
+            adapters: [webgpuAdapter, webgl2Adapter],
+            xrCompatible,
+            createCanvasContext: {container: sceneElement, alphaMode: 'opaque'}
+          };
         }
 
-        try {
-          return await luma.createDevice(makeDeviceProps('webgpu', true));
-        } catch {
-          try {
-            return await luma.createDevice(makeDeviceProps('webgpu'));
-          } catch {
+        async function createPreferredDevice(type = 'webgpu') {
+          if (type === 'webgl') {
             return await luma.createDevice(makeDeviceProps('webgl'));
           }
-        }
-      }
 
-      async function startRenderer(type = 'webgpu') {
-        animationLoop?.destroy();
-        currentDevice?.destroy();
-        sceneElement.replaceChildren();
-        sessionStatus.textContent = '';
-
-        currentDevice = await createPreferredDevice(type);
-        animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice});
-        await animationLoop.start();
-
-        if (currentDevice.type === 'webgpu') {
-          const supportsNativeXR = currentDevice.props.xrCompatible && 'XRGPUBinding' in window;
-          backendStatus.textContent = supportsNativeXR
-            ? 'WebGPU · native XR projection layers available when a headset is connected'
-            : 'WebGPU desktop preview · switch to WebGL2 for immersive headset fallback';
-          switchBackendButton.textContent = 'Use WebGL2';
-        } else {
-          backendStatus.textContent = 'WebGL2 · portable stereo and optional AR camera access';
-          switchBackendButton.textContent = 'Use WebGPU';
-        }
-      }
-
-      async function toggleSession(mode) {
-        const application = AnimationLoopTemplate.current;
-        if (!application) {
-          return;
-        }
-
-        try {
-          sessionStatus.dataset.error = 'false';
-          if (application.xrSessionMode === mode) {
-            await application.exitXR();
-            sessionStatus.textContent = 'Returned to the live desktop preview';
-          } else {
-            if (application.xrSession) {
-              await application.exitXR();
+          try {
+            return await luma.createDevice(makeDeviceProps('webgpu', true));
+          } catch {
+            try {
+              return await luma.createDevice(makeDeviceProps('webgpu'));
+            } catch {
+              return await luma.createDevice(makeDeviceProps('webgl'));
             }
-            await application.enterXR(mode);
-            sessionStatus.textContent = `${mode === 'immersive-ar' ? 'AR' : 'VR'} session active`;
           }
-        } catch (error) {
-          sessionStatus.dataset.error = 'true';
-          sessionStatus.textContent = error instanceof Error ? error.message : String(error);
         }
-      }
 
-      document.getElementById('enter-vr').addEventListener('click', () => {
-        void toggleSession('immersive-vr');
-      });
-      document.getElementById('enter-ar').addEventListener('click', () => {
-        void toggleSession('immersive-ar');
-      });
-      switchBackendButton.addEventListener('click', () => {
-        void startRenderer(currentDevice?.type === 'webgpu' ? 'webgl' : 'webgpu').catch(error => {
+        async function startRenderer(type = 'webgpu') {
+          animationLoop?.destroy();
+          currentDevice?.destroy();
+          sceneElement.replaceChildren();
+          sessionStatus.textContent = '';
+
+          currentDevice = await createPreferredDevice(type);
+          animationLoop = makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice});
+          await animationLoop.start();
+
+          if (currentDevice.type === 'webgpu') {
+            const supportsNativeXR = currentDevice.props.xrCompatible && 'XRGPUBinding' in window;
+            backendStatus.textContent = supportsNativeXR
+              ? 'WebGPU · native XR projection layers available when a headset is connected'
+              : 'WebGPU desktop preview · switch to WebGL2 for immersive headset fallback';
+            switchBackendButton.textContent = 'Use WebGL2';
+          } else {
+            backendStatus.textContent = 'WebGL2 · portable stereo and optional AR camera access';
+            switchBackendButton.textContent = 'Use WebGPU';
+          }
+        }
+
+        async function toggleSession(mode) {
+          const application = AnimationLoopTemplate.current;
+          if (!application) {
+            return;
+          }
+
+          try {
+            sessionStatus.dataset.error = 'false';
+            if (application.xrSessionMode === mode) {
+              await application.exitXR();
+              sessionStatus.textContent = 'Returned to the live desktop preview';
+            } else {
+              if (application.xrSession) {
+                await application.exitXR();
+              }
+              await application.enterXR(mode);
+              sessionStatus.textContent = `${mode === 'immersive-ar' ? 'AR' : 'VR'} session active`;
+            }
+          } catch (error) {
+            sessionStatus.dataset.error = 'true';
+            sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+          }
+        }
+
+        document.getElementById('enter-vr').addEventListener('click', () => {
+          void toggleSession('immersive-vr');
+        });
+        document.getElementById('enter-ar').addEventListener('click', () => {
+          void toggleSession('immersive-ar');
+        });
+        switchBackendButton.addEventListener('click', () => {
+          void startRenderer(currentDevice?.type === 'webgpu' ? 'webgl' : 'webgpu').catch(error => {
+            sessionStatus.dataset.error = 'true';
+            sessionStatus.textContent = error instanceof Error ? error.message : String(error);
+          });
+        });
+
+        startRenderer().catch(error => {
           sessionStatus.dataset.error = 'true';
           sessionStatus.textContent = error instanceof Error ? error.message : String(error);
         });
-      });
-
-      startRenderer().catch(error => {
-        sessionStatus.dataset.error = 'true';
-        sessionStatus.textContent = error instanceof Error ? error.message : String(error);
-      });
+      }
     </script>
   </body>
 </html>

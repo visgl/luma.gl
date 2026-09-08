@@ -670,6 +670,7 @@ export const TempestOceanExample: React.FC<WebsiteExampleProps> = props => (
 
 export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -678,6 +679,7 @@ export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...
       .then(({initializeGPGPUShowcase}) => {
         if (!isCancelled) {
           handle = initializeGPGPUShowcase();
+          setHasInitialized(true);
         }
       })
       .catch(error => {
@@ -697,7 +699,7 @@ export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : hasInitialized ? 'running' : 'loading'}
       style={{background: '#f7f8fb', overflow: 'hidden', ...props.style}}
     >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
@@ -768,6 +770,7 @@ export const GPGPUExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
 export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -776,6 +779,7 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
       .then(({initializeGPUSortExample}) => {
         if (!isCancelled) {
           handle = initializeGPUSortExample();
+          setHasInitialized(true);
         }
       })
       .catch(error => {
@@ -795,7 +799,7 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : hasInitialized ? 'running' : 'loading'}
       style={{background: '#f7f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-sort-app" />
@@ -814,6 +818,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
   ...props
 }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -822,6 +827,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
       .then(({initializeGPUDataAnalysisExample}) => {
         if (!isCancelled) {
           handle = initializeGPUDataAnalysisExample();
+          setHasInitialized(true);
         }
       })
       .catch(error => {
@@ -840,7 +846,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : hasInitialized ? 'running' : 'loading'}
       style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-data-analysis-app" />

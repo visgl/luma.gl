@@ -5,14 +5,19 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="effects" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
   <meta charset="UTF-8" />
@@ -39,22 +44,25 @@
     }
   </style>
 </head>
-<script type="module">
-  import {luma} from '@luma.gl/core';
-  import {webgl2Adapter} from '@luma.gl/webgl';
-  import {webgpuAdapter} from '@luma.gl/webgpu';
-  import {makeAnimationLoop} from '@luma.gl/engine';
-  import AnimationLoopTemplate from './app.ts';
+<script type="module" data-luma-example-application>
+  const exampleSupport = await window.lumaExampleSupportPromise;
+  if (exampleSupport.supported) {
+    const {luma} = await import('@luma.gl/core');
+    const {webgl2Adapter} = await import('@luma.gl/webgl');
+    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {makeAnimationLoop} = await import('@luma.gl/engine');
+    const {default: AnimationLoopTemplate} = await import('./app.ts');
 
-  const requestedDevice = new URLSearchParams(window.location.search).get('device');
-  const adapters =
-    requestedDevice === 'webgl'
-      ? [webgl2Adapter]
-      : requestedDevice === 'webgpu'
-        ? [webgpuAdapter]
-        : [webgpuAdapter, webgl2Adapter];
-  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters});
-  animationLoop.start();
+    const requestedDevice = new URLSearchParams(window.location.search).get('device');
+    const adapters =
+      requestedDevice === 'webgl'
+        ? [webgl2Adapter]
+        : requestedDevice === 'webgpu'
+          ? [webgpuAdapter]
+          : [webgpuAdapter, webgl2Adapter];
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters});
+    animationLoop.start();
+  }
 </script>
 <body>
 </body>
