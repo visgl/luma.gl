@@ -99,8 +99,10 @@ type VisualizationTiming = {
 
 const CANVAS_WIDTH = 420;
 const CANVAS_HEIGHT = 280;
-const MIN_RENDER_WIDTH = 160;
-const MAX_RENDER_WIDTH = 640;
+// Keep the expensive Mandelbrot fragment passes bounded even when the canvas is displayed larger.
+const DEFAULT_RENDER_WIDTH = 192;
+const MIN_RENDER_WIDTH = 96;
+const MAX_RENDER_WIDTH = 256;
 const RENDER_ASPECT_RATIO = CANVAS_WIDTH / CANVAS_HEIGHT;
 const FIXED_ITERATION_LIMIT = 1400;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
@@ -148,7 +150,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       initializationError: null,
       isBenchmarkRunning: false,
       isReady: false,
-      renderWidth: CANVAS_WIDTH,
+      renderWidth: DEFAULT_RENDER_WIDTH,
       selectedArithmeticMode: 'hybrid',
       selectedBackend: 'auto',
       selectedPresetId: DEFAULT_PRESET_ID,
@@ -162,7 +164,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         selectedArithmeticMode: 'hybrid',
         selectedBackend: 'auto',
         selectedPresetId: DEFAULT_PRESET_ID,
-        renderWidth: CANVAS_WIDTH,
+        renderWidth: DEFAULT_RENDER_WIDTH,
         zoomDepth: 0
       },
       onSettingsChange: this.handleSettingsChange
@@ -511,7 +513,7 @@ export function makeFP64SettingsSchema(includeBackend = true): SettingsSchema {
             name: 'renderWidth',
             label: 'Render-buffer width (pixels)',
             description:
-              'Changes GPU fragment workload for both views without changing their CSS size.',
+              'Changes the bounded GPU fragment workload for both views without changing their CSS size.',
             type: 'number',
             persist: 'none',
             min: MIN_RENDER_WIDTH,
@@ -649,9 +651,10 @@ class MultiCanvasRenderer {
   }
 
   setRenderWidth(renderWidth: number): void {
-    const renderHeight = getRenderHeight(renderWidth);
+    const boundedRenderWidth = clampRenderWidth(renderWidth);
+    const renderHeight = getRenderHeight(boundedRenderWidth);
     for (const visualization of this.visualizations) {
-      visualization.presentationContext?.setDrawingBufferSize(renderWidth, renderHeight);
+      visualization.presentationContext?.setDrawingBufferSize(boundedRenderWidth, renderHeight);
     }
     this.resetRenderTiming();
   }
@@ -719,6 +722,7 @@ function createVisualizationRenderer(
   arithmeticMode: FP64ArithmeticMode,
   renderWidth: number
 ): VisualizationRenderer {
+  renderWidth = clampRenderWidth(renderWidth);
   const presentationContext = device.createPresentationContext({
     canvas,
     width: CANVAS_WIDTH,
@@ -937,6 +941,10 @@ function getPixelScale(zoomDepth: number): number {
 
 function getRenderHeight(renderWidth: number): number {
   return Math.round(renderWidth / RENDER_ASPECT_RATIO);
+}
+
+function clampRenderWidth(renderWidth: number): number {
+  return Math.max(MIN_RENDER_WIDTH, Math.min(MAX_RENDER_WIDTH, Math.round(renderWidth)));
 }
 
 function waitForSubmittedWork(device: Device): Promise<void> | null {

@@ -56,7 +56,7 @@ describe('FP64 example responsive layout', () => {
       expect.objectContaining({type: 'number', min: 0, step: 0.1, sliderDebounceMs: 0})
     );
     expect(renderWidthSetting).toEqual(
-      expect.objectContaining({type: 'number', min: 160, max: 640, step: 20})
+      expect.objectContaining({type: 'number', min: 96, max: 256, step: 20})
     );
     expect(makeFP64SettingsSchema(false).sections[0].settings).not.toContainEqual(
       expect.objectContaining({name: 'selectedBackend'})
