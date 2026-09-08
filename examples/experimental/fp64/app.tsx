@@ -104,7 +104,10 @@ const DEFAULT_RENDER_WIDTH = 192;
 const MIN_RENDER_WIDTH = 96;
 const MAX_RENDER_WIDTH = 256;
 const RENDER_ASPECT_RATIO = CANVAS_WIDTH / CANVAS_HEIGHT;
-const FIXED_ITERATION_LIMIT = 1400;
+const FIXED_ITERATION_LIMIT = 768;
+const BASE_ITERATION_LIMIT = 160;
+const ITERATION_GROWTH_PER_ZOOM = 18;
+const RENDER_INTERVAL_MILLISECONDS = 50;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 const INITIAL_PIXEL_SCALE = 1.35;
 const MIN_PIXEL_SCALE = 1e-12;
@@ -568,6 +571,7 @@ class MultiCanvasRenderer {
 
   animationFrame: number | null = null;
   frameIndex = 0;
+  nextRenderTime = 0;
   isRunning = false;
   zoomDepth: number;
   zoomPreset: ZoomPreset;
@@ -618,6 +622,7 @@ class MultiCanvasRenderer {
       return;
     }
     this.isRunning = true;
+    this.nextRenderTime = 0;
     this.animationFrame = requestAnimationFrame(this.animate);
   }
 
@@ -683,8 +688,13 @@ class MultiCanvasRenderer {
     }
   }
 
-  private animate = (): void => {
+  private animate = (time: number): void => {
     this.animationFrame = null;
+    if (time < this.nextRenderTime) {
+      this.scheduleNextFrame();
+      return;
+    }
+    this.nextRenderTime = time + RENDER_INTERVAL_MILLISECONDS;
     const pixelScale = getPixelScale(this.zoomDepth);
     const sampleTiming = this.frameIndex % RENDER_TIMING_SAMPLE_INTERVAL === 0;
 
@@ -931,7 +941,10 @@ function split64(value: number): [number, number] {
 
 function computeIterationLimit(pixelScale: number): number {
   const zoomDepth = Math.max(0, Math.log2(INITIAL_PIXEL_SCALE / pixelScale));
-  return Math.min(FIXED_ITERATION_LIMIT, Math.round(220 + zoomDepth * 28));
+  return Math.min(
+    FIXED_ITERATION_LIMIT,
+    Math.round(BASE_ITERATION_LIMIT + zoomDepth * ITERATION_GROWTH_PER_ZOOM)
+  );
 }
 
 function getPixelScale(zoomDepth: number): number {
@@ -1100,7 +1113,7 @@ layout(std140) uniform mandelbrot32Uniforms {
   float iterationLimit;
 } mandelbrot32;
 
-const int MAX_ITERATIONS = 2048;
+const int MAX_ITERATIONS = 1024;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
 const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
@@ -1162,7 +1175,7 @@ struct Mandelbrot32Uniforms {
 
 @group(0) @binding(auto) var<uniform> mandelbrot32 : Mandelbrot32Uniforms;
 
-const MAX_ITERATIONS: i32 = 2048;
+const MAX_ITERATIONS: i32 = 1024;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
 const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
@@ -1229,7 +1242,7 @@ layout(std140) uniform mandelbrot64Uniforms {
   float iterationLimit;
 } mandelbrot64;
 
-const int MAX_ITERATIONS = 2048;
+const int MAX_ITERATIONS = 1024;
 const float ESCAPE_RADIUS_SQUARED = 256.0;
 const float COLOR_FREQUENCY = 0.025;
 const float TAU = 6.28318530718;
@@ -1269,8 +1282,8 @@ void main(void) {
     zx = nextX;
     zy = nextY;
 
-    vec2 magnitudeSquared = sum_fp64(mul_fp64(zx, zx), mul_fp64(zy, zy));
-    radiusSquared = magnitudeSquared.x + magnitudeSquared.y;
+    // The high terms are sufficient for the bailout threshold and avoid two fp64 multiplies.
+    radiusSquared = dot(vec2(nextX.x, nextY.x), vec2(nextX.x, nextY.x));
 
     if (radiusSquared > ESCAPE_RADIUS_SQUARED) {
       escapedIteration = float(iteration);
@@ -1304,7 +1317,7 @@ struct Mandelbrot64Uniforms {
 
 @group(0) @binding(auto) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
 
-const MAX_ITERATIONS: i32 = 2048;
+const MAX_ITERATIONS: i32 = 1024;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
 const COLOR_FREQUENCY: f32 = 0.025;
 const TAU: f32 = 6.28318530718;
@@ -1344,8 +1357,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
     zx = nextX;
     zy = nextY;
 
-    let magnitudeSquared = sum_fp64(mul_fp64(zx, zx), mul_fp64(zy, zy));
-    radiusSquared = magnitudeSquared.x + magnitudeSquared.y;
+    // The high terms are sufficient for the bailout threshold and avoid two fp64 multiplies.
+    radiusSquared = dot(vec2<f32>(nextX.x, nextY.x), vec2<f32>(nextX.x, nextY.x));
 
     if (radiusSquared > ESCAPE_RADIUS_SQUARED) {
       escapedIteration = f32(iteration);
