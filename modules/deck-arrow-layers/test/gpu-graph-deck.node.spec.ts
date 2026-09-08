@@ -180,10 +180,12 @@ describe('GPU Graph native deck.gl resident layers', () => {
   });
 
   test('renders accessible graph scale, truthful GPU diagnostics, and real analytic controls', () => {
-    const source = readFileSync(
-      new URL('../../../examples/deck/gpu-graph-explorer/app.ts', import.meta.url),
-      'utf8'
-    );
+    const source = [
+      '../../../examples/deck/gpu-graph-explorer/app.ts',
+      '../../../examples/deck/gpu-graph-explorer/app-ui.ts'
+    ]
+      .map(path => readFileSync(new URL(path, import.meta.url), 'utf8'))
+      .join('\n');
 
     for (const attribute of [
       'data-gpu-graph-size',
@@ -223,7 +225,7 @@ describe('GPU Graph native deck.gl resident layers', () => {
 
   test('disables exact and spatial layout controls at their actual execution boundaries', () => {
     const source = readFileSync(
-      new URL('../../../examples/deck/gpu-graph-explorer/app.ts', import.meta.url),
+      new URL('../../../examples/deck/gpu-graph-explorer/app-ui.ts', import.meta.url),
       'utf8'
     );
 

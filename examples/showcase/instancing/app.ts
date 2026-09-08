@@ -37,170 +37,9 @@ import {
 
 const random = makeRandomGenerator();
 
-const WGSL_SHADER = /* wgsl */ `\
-
-// APPLICATION
-
-struct AppUniforms {
-  modelMatrix: mat4x4<f32>,
-  viewMatrix: mat4x4<f32>,
-  projectionMatrix: mat4x4<f32>,
-  geometryScale: f32,
-  time: f32,
-  highDynamicRange: f32,
-};
-
-@group(0) @binding(auto) var<uniform> app : AppUniforms;
-
-struct VertexInputs {
-  @builtin(instance_index) instanceIndex : u32,
-  // CUBE GEOMETRY
-  @location(0) positions : vec4<f32>,
-  @location(1) normals : vec3<f32>,
-  // INSTANCED ATTRIBUTES
-  @location(2) instanceOffsets : vec2<f32>,
-  @location(3) instanceColors : vec4<f32>,
-}
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) normal : vec3<f32>,
-  @location(1) color : vec4<f32>,
-  @location(2) crestEnergy : f32,
-  @location(3) centerWeight : f32,
-  @interpolate(flat, either)
-  @location(4) objectIndex : i32,
-}
-
-struct PickingFragmentOutputs {
-  @location(0) fragColor : vec4<f32>,
-  @location(1) pickingColor : vec2<i32>,
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs: FragmentInputs;
-
-  // Vertex position (z coordinate undulates with time), and model rotates around center
-  let delta = length(inputs.instanceOffsets);
-  let wave = sin((app.time + delta) * 0.1);
-  let offset = vec4<f32>(inputs.instanceOffsets, wave * 16.0, 0);
-  let scaledPosition = vec4<f32>(inputs.positions.xyz * app.geometryScale, inputs.positions.w);
-  outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
-
-  outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
-  outputs.color = inputs.instanceColors;
-  outputs.crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
-  outputs.centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
-  outputs.objectIndex = i32(inputs.instanceIndex);
-
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  var fragColor = inputs.color;
-  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal));
-  let luminance = dot(fragColor.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
-  let wideGamutColor = clamp(
-    vec3<f32>(luminance) + (fragColor.rgb - vec3<f32>(luminance)) * 1.28,
-    vec3<f32>(0.0),
-    vec3<f32>(1.0)
-  );
-  let crestIntensity = mix(1.5, 3.0, inputs.centerWeight);
-  fragColor = vec4<f32>(
-    mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
-      (1.0 + inputs.crestEnergy * crestIntensity),
-    fragColor.a
-  );
-  fragColor = picking_filterHighlightColor(fragColor, inputs.objectIndex);
-  return fragColor;
-}
-
-@fragment
-fn fragmentPicking(inputs: FragmentInputs) -> PickingFragmentOutputs {
-  var outputs: PickingFragmentOutputs;
-  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
-  return outputs;
-}
-`;
+const {WGSL_SHADER, VS_GLSL, FS_GLSL} = getShaderSources();
 
 // GLSL
-
-const APP_UNIFORMS_GLSL = /* glsl */ `\
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 viewMatrix;
-  mat4 projectionMatrix;
-  float geometryScale;
-  float time;
-  float highDynamicRange;
-} app;
-`;
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-in vec3 positions;
-in vec3 normals;
-
-in vec2 instanceOffsets;
-in vec3 instanceColors;
-
-${APP_UNIFORMS_GLSL}
-
-out vec3 color;
-out float crestEnergy;
-out float centerWeight;
-
-void main(void) {
-  color = instanceColors;
-
-  vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
-  dirlight_setNormal(normal);
-  picking_setObjectIndex(0);
-
-  // Vertex position (z coordinate undulates with time), and model rotates around center
-  float delta = length(instanceOffsets);
-  float wave = sin((app.time + delta) * 0.1);
-  vec4 offset = vec4(instanceOffsets, wave * 16.0, 0);
-  crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
-  centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
-  vec4 scaledPosition = vec4(positions * app.geometryScale, 1.0);
-  gl_Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-${APP_UNIFORMS_GLSL}
-
-in vec3 color;
-in float crestEnergy;
-in float centerWeight;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = vec4(color, 1.);
-  fragColor = dirlight_filterColor(fragColor);
-  float luminance = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-  vec3 wideGamutColor = clamp(
-    vec3(luminance) + (fragColor.rgb - vec3(luminance)) * 1.28,
-    vec3(0.0),
-    vec3(1.0)
-  );
-  float crestIntensity = mix(1.5, 3.0, centerWeight);
-  fragColor.rgb = mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
-    (1.0 + crestEnergy * crestIntensity);
-  fragColor = picking_filterColor(fragColor);
-}
-`;
 
 const DEFAULT_INSTANCE_SIDE = 256;
 const MAX_INSTANCE_SIDE = 2048;
@@ -592,4 +431,171 @@ function makeInstancingSettingsSchema(highDynamicRangeAvailable: boolean): Setti
       }
     ]
   };
+}
+
+function getShaderSources() {
+  const WGSL_SHADER = /* wgsl */ `\
+
+// APPLICATION
+
+struct AppUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+  geometryScale: f32,
+  time: f32,
+  highDynamicRange: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app : AppUniforms;
+
+struct VertexInputs {
+  @builtin(instance_index) instanceIndex : u32,
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) normals : vec3<f32>,
+  // INSTANCED ATTRIBUTES
+  @location(2) instanceOffsets : vec2<f32>,
+  @location(3) instanceColors : vec4<f32>,
+}
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) normal : vec3<f32>,
+  @location(1) color : vec4<f32>,
+  @location(2) crestEnergy : f32,
+  @location(3) centerWeight : f32,
+  @interpolate(flat, either)
+  @location(4) objectIndex : i32,
+}
+
+struct PickingFragmentOutputs {
+  @location(0) fragColor : vec4<f32>,
+  @location(1) pickingColor : vec2<i32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+
+  // Vertex position (z coordinate undulates with time), and model rotates around center
+  let delta = length(inputs.instanceOffsets);
+  let wave = sin((app.time + delta) * 0.1);
+  let offset = vec4<f32>(inputs.instanceOffsets, wave * 16.0, 0);
+  let scaledPosition = vec4<f32>(inputs.positions.xyz * app.geometryScale, inputs.positions.w);
+  outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
+
+  outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
+  outputs.color = inputs.instanceColors;
+  outputs.crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
+  outputs.centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
+  outputs.objectIndex = i32(inputs.instanceIndex);
+
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  var fragColor = inputs.color;
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal));
+  let luminance = dot(fragColor.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
+  let wideGamutColor = clamp(
+    vec3<f32>(luminance) + (fragColor.rgb - vec3<f32>(luminance)) * 1.28,
+    vec3<f32>(0.0),
+    vec3<f32>(1.0)
+  );
+  let crestIntensity = mix(1.5, 3.0, inputs.centerWeight);
+  fragColor = vec4<f32>(
+    mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
+      (1.0 + inputs.crestEnergy * crestIntensity),
+    fragColor.a
+  );
+  fragColor = picking_filterHighlightColor(fragColor, inputs.objectIndex);
+  return fragColor;
+}
+
+@fragment
+fn fragmentPicking(inputs: FragmentInputs) -> PickingFragmentOutputs {
+  var outputs: PickingFragmentOutputs;
+  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
+  return outputs;
+}
+`;
+
+  const APP_UNIFORMS_GLSL = /* glsl */ `\
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  float geometryScale;
+  float time;
+  float highDynamicRange;
+} app;
+`;
+
+  const VS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+precision highp int;
+
+in vec3 positions;
+in vec3 normals;
+
+in vec2 instanceOffsets;
+in vec3 instanceColors;
+
+${APP_UNIFORMS_GLSL}
+
+out vec3 color;
+out float crestEnergy;
+out float centerWeight;
+
+void main(void) {
+  color = instanceColors;
+
+  vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
+  dirlight_setNormal(normal);
+  picking_setObjectIndex(0);
+
+  // Vertex position (z coordinate undulates with time), and model rotates around center
+  float delta = length(instanceOffsets);
+  float wave = sin((app.time + delta) * 0.1);
+  vec4 offset = vec4(instanceOffsets, wave * 16.0, 0);
+  crestEnergy = smoothstep(-0.5, 1.0, wave) * app.highDynamicRange;
+  centerWeight = 1.0 - smoothstep(0.0, 450.0, delta);
+  vec4 scaledPosition = vec4(positions * app.geometryScale, 1.0);
+  gl_Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
+}
+`;
+
+  const FS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+precision highp int;
+
+${APP_UNIFORMS_GLSL}
+
+in vec3 color;
+in float crestEnergy;
+in float centerWeight;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = vec4(color, 1.);
+  fragColor = dirlight_filterColor(fragColor);
+  float luminance = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  vec3 wideGamutColor = clamp(
+    vec3(luminance) + (fragColor.rgb - vec3(luminance)) * 1.28,
+    vec3(0.0),
+    vec3(1.0)
+  );
+  float crestIntensity = mix(1.5, 3.0, centerWeight);
+  fragColor.rgb = mix(fragColor.rgb, wideGamutColor, app.highDynamicRange) *
+    (1.0 + crestEnergy * crestIntensity);
+  fragColor = picking_filterColor(fragColor);
+}
+`;
+
+  return {WGSL_SHADER, APP_UNIFORMS_GLSL, VS_GLSL, FS_GLSL} as const;
 }

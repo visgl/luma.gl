@@ -50,6 +50,7 @@ import {
   SUN_DIRECTION,
   type CityInstanceBuffers
 } from './city-shadows';
+import {ADVANCED_EFFECTS_BACKGROUND_HTML} from './app-ui';
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 180;
@@ -202,14 +203,6 @@ const DEFAULT_SETTINGS: AdvancedEffectsSettings = {
   contactShadowsEnabled: true
 };
 
-const ADVANCED_EFFECTS_BACKGROUND_HTML = `
-<p><b>Hybrid render stack:</b> the city first writes a shared G-buffer with scene color, depth, normals, and velocity. Shadow maps handle geometric visibility from directional, spot, and point lights; screen-space passes then reuse the same buffers for contact shadows, ambient occlusion, reflections, fog, outlines, temporal antialiasing, and motion blur.</p>
-<p><b>Why this is composable:</b> each fullscreen effect declares the textures it reads and writes into an ordered <code>CompositeShaderPass</code>. Effects can be toggled or reordered without changing the scene draw, while depth/normal/velocity-aware passes avoid treating the image as a flat bitmap.</p>
-<p><b>Visualization City vs. Illumination Lab:</b> this is the breadth-first showcase for cascaded, spot, point, and contact shadows plus SSAO, simple height fog, outlines, temporal AA, and motion blur. <b>Deferred Illumination Lab</b> goes deeper into deferred Cook-Torrance materials, hundreds of clustered lights, GTAO, colored diffuse bounce, and participating-media scattering. Both examples reuse the same screen-space reflection pipeline; they are not competing copies of SSR.</p>
-<p><b>Where the GPU work goes:</b> shadow maps trade extra light-view geometry passes for stable long-range occlusion. Screen-space effects trade texture bandwidth and fullscreen pixels for details that would be expensive to model with more scene geometry or rays. TAA and motion blur additionally consume frame history and velocity.</p>
-<p><b>What to watch:</b> debug views expose the intermediate contracts. The comparison split shows the cost/quality boundary between the base draw and the composed stack.</p>
-`;
-
 type CityUniforms = {
   viewProjectionMatrix: Matrix4;
   previousViewProjectionMatrix: Matrix4;
@@ -239,192 +232,7 @@ const cityUniforms: ShaderModule<CityUniforms> = {
   }
 };
 
-const CITY_SHADER = /* wgsl */ `\
-struct CityUniforms {
-  viewProjectionMatrix: mat4x4<f32>,
-  previousViewProjectionMatrix: mat4x4<f32>,
-  viewMatrix: mat4x4<f32>,
-  sunDirection: vec3f,
-  spotPosition: vec3f,
-  spotDirection: vec3f,
-  pointPosition: vec3f,
-  time: f32,
-  previousTime: f32,
-  jitter: vec2f,
-};
-@group(0) @binding(auto) var<uniform> city: CityUniforms;
-
-struct VertexInputs {
-  @location(0) positions: vec3f,
-  @location(1) normals: vec3f,
-  @location(2) instancePositions: vec3f,
-  @location(3) instanceScales: vec3f,
-  @location(4) instanceColors: vec4f,
-  @location(5) instanceMotion: f32,
-};
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) worldNormal: vec3f,
-  @location(1) colorRoughness: vec4f,
-  @location(2) currentClip: vec4f,
-  @location(3) previousClip: vec4f,
-  @location(4) worldPosition: vec3f,
-  @location(5) viewPosition: vec3f,
-};
-
-struct FragmentOutputs {
-  @location(0) color: vec4f,
-  @location(1) normalRoughness: vec4f,
-  @location(2) velocity: vec2f,
-  @location(3) unshadowedColor: vec4f,
-  @location(4) directionalDirect: vec4f,
-  @location(5) shadowDebug: vec4f,
-};
-
-fn motionOffset(position: vec3f, motion: f32, time: f32) -> vec3f {
-  let phase = position.x * 0.37 + position.z * 0.19;
-  return motion * vec3f(sin(time * 0.7 + phase) * 13.0, 2.2 + sin(time * 1.8 + phase), cos(time * 0.7 + phase) * 13.0);
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  let localPosition = inputs.positions * inputs.instanceScales;
-  let currentWorld = vec4f(localPosition + inputs.instancePositions + motionOffset(inputs.instancePositions, inputs.instanceMotion, city.time), 1.0);
-  let previousWorld = vec4f(localPosition + inputs.instancePositions + motionOffset(inputs.instancePositions, inputs.instanceMotion, city.previousTime), 1.0);
-  let currentClip = city.viewProjectionMatrix * currentWorld;
-  let previousClip = city.previousViewProjectionMatrix * previousWorld;
-  var output: FragmentInputs;
-  output.position = vec4f(currentClip.xy + city.jitter * currentClip.w * 2.0, currentClip.zw);
-  output.worldNormal = normalize(inputs.normals);
-  output.colorRoughness = inputs.instanceColors;
-  output.currentClip = currentClip;
-  output.previousClip = previousClip;
-  output.worldPosition = currentWorld.xyz;
-  output.viewPosition = (city.viewMatrix * currentWorld).xyz;
-  return output;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> FragmentOutputs {
-  let worldNormal = normalize(inputs.worldNormal);
-  let viewNormal = normalize((city.viewMatrix * vec4f(worldNormal, 0.0)).xyz);
-  let baseColor = inputs.colorRoughness.rgb;
-  let rim = pow(1.0 - abs(viewNormal.z), 3.0);
-  let emissiveStrength = select(0.0, 1.45, inputs.colorRoughness.a < 0.12);
-
-  let directionalDiffuse = max(dot(worldNormal, normalize(city.sunDirection)), 0.0);
-  let directionalUnshadowed = baseColor * directionalDiffuse * vec3f(1.0, 0.92, 0.78) * 0.82;
-  let directionalFactor = shadow_getDirectionalFactor(
-    inputs.worldPosition,
-    worldNormal,
-    -inputs.viewPosition.z
-  );
-
-  let toSpot = city.spotPosition - inputs.worldPosition;
-  let spotDistance = length(toSpot);
-  let spotDirectionToLight = normalize(toSpot);
-  let spotCone = smoothstep(cos(0.42), cos(0.30), dot(normalize(-toSpot), normalize(city.spotDirection)));
-  let spotAttenuation = spotCone * pow(clamp(1.0 - spotDistance / 52.0, 0.0, 1.0), 2.0);
-  let spotDiffuse = max(dot(worldNormal, spotDirectionToLight), 0.0);
-  let spotUnshadowed = vec3f(1.0, 0.55, 0.24) * spotDiffuse * spotAttenuation * 3.2;
-  let spotFactor = shadow_getSpotFactor(0, inputs.worldPosition, worldNormal);
-
-  let toPoint = city.pointPosition - inputs.worldPosition;
-  let pointDistance = length(toPoint);
-  let pointAttenuation = pow(clamp(1.0 - pointDistance / 24.0, 0.0, 1.0), 2.0);
-  let pointDiffuse = max(dot(worldNormal, normalize(toPoint)), 0.0);
-  let pointUnshadowed = vec3f(0.18, 0.78, 1.0) * pointDiffuse * pointAttenuation * 4.0;
-  let pointFactor = shadow_getPointFactor(0, inputs.worldPosition, worldNormal);
-
-  let ambientEmissive = baseColor * (0.13 + rim * 0.16 + emissiveStrength);
-  let unshadowed = ambientEmissive + directionalUnshadowed + spotUnshadowed + pointUnshadowed;
-  let shadowedDirectional = directionalUnshadowed * directionalFactor;
-  let shadowed = ambientEmissive + shadowedDirectional + spotUnshadowed * spotFactor + pointUnshadowed * pointFactor;
-  let currentUv = inputs.currentClip.xy / inputs.currentClip.w * 0.5 + 0.5;
-  let previousUv = inputs.previousClip.xy / inputs.previousClip.w * 0.5 + 0.5;
-  let cascadeIndex = max(shadow_getDirectionalCascadeIndex(-inputs.viewPosition.z), 0);
-  var output: FragmentOutputs;
-  output.color = vec4f(shadowed, 1.0);
-  output.normalRoughness = vec4f(viewNormal * 0.5 + 0.5, inputs.colorRoughness.a);
-  output.velocity = currentUv - previousUv;
-  output.unshadowedColor = vec4f(unshadowed, 1.0);
-  output.directionalDirect = vec4f(shadowedDirectional, 1.0);
-  output.shadowDebug = vec4f(
-    directionalFactor,
-    spotFactor,
-    pointFactor,
-    f32(cascadeIndex) / 3.0
-  );
-  return output;
-}
-`;
-
-const displayPass = {
-  name: 'advancedEffectsDisplay',
-  source: /* wgsl */ `\
-struct advancedEffectsDisplayUniforms {
-  split: f32,
-  debugMode: f32,
-};
-@group(0) @binding(auto) var<uniform> advancedEffectsDisplay: advancedEffectsDisplayUniforms;
-@group(0) @binding(auto) var unshadowedColorTexture: texture_2d<f32>;
-@group(0) @binding(auto) var unshadowedColorTextureSampler: sampler;
-@group(0) @binding(auto) var depthTexture: texture_depth_2d;
-@group(0) @binding(auto) var depthTextureSampler: sampler;
-@group(0) @binding(auto) var normalTexture: texture_2d<f32>;
-@group(0) @binding(auto) var normalTextureSampler: sampler;
-@group(0) @binding(auto) var velocityTexture: texture_2d<f32>;
-@group(0) @binding(auto) var velocityTextureSampler: sampler;
-@group(0) @binding(auto) var shadowDebugTexture: texture_2d<f32>;
-@group(0) @binding(auto) var shadowDebugTextureSampler: sampler;
-fn advancedEffectsDisplay_sampleColor(
-  sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f
-) -> vec4f {
-  let sceneCoord = texCoord;
-  if (advancedEffectsDisplay.debugMode > 0.5 && advancedEffectsDisplay.debugMode < 1.5) {
-    let depth = textureSample(depthTexture, depthTextureSampler, sceneCoord);
-    return vec4f(vec3f(pow(depth, 32.0)), 1.0);
-  }
-  if (advancedEffectsDisplay.debugMode > 1.5 && advancedEffectsDisplay.debugMode < 2.5) {
-    return vec4f(textureSample(normalTexture, normalTextureSampler, sceneCoord).rgb, 1.0);
-  }
-  if (advancedEffectsDisplay.debugMode > 2.5 && advancedEffectsDisplay.debugMode < 3.5) {
-    let velocity = textureSample(velocityTexture, velocityTextureSampler, sceneCoord).xy;
-    return vec4f(0.5 + velocity.x * 12.0, 0.5 + velocity.y * 12.0, length(velocity) * 18.0, 1.0);
-  }
-  let shadowDebug = textureSample(shadowDebugTexture, shadowDebugTextureSampler, sceneCoord);
-  if (advancedEffectsDisplay.debugMode > 3.5 && advancedEffectsDisplay.debugMode < 4.5) {
-    return vec4f(vec3f(shadowDebug.r), 1.0);
-  }
-  if (advancedEffectsDisplay.debugMode > 4.5 && advancedEffectsDisplay.debugMode < 5.5) {
-    let colors = array<vec3f, 4>(
-      vec3f(0.2, 0.6, 1.0), vec3f(0.2, 1.0, 0.45), vec3f(1.0, 0.75, 0.2), vec3f(1.0, 0.25, 0.35)
-    );
-    return vec4f(colors[min(i32(round(shadowDebug.a * 3.0)), 3)], 1.0);
-  }
-  if (advancedEffectsDisplay.debugMode > 5.5 && advancedEffectsDisplay.debugMode < 6.5) {
-    return vec4f(vec3f(shadowDebug.g), 1.0);
-  }
-  if (advancedEffectsDisplay.debugMode > 6.5 && advancedEffectsDisplay.debugMode < 7.5) {
-    return vec4f(vec3f(shadowDebug.b), 1.0);
-  }
-  let processed = textureSample(sourceTexture, sourceTextureSampler, texCoord);
-  if (advancedEffectsDisplay.debugMode > 7.5) { return processed; }
-  let original = textureSample(unshadowedColorTexture, unshadowedColorTextureSampler, sceneCoord);
-  return select(processed, original, texCoord.x < advancedEffectsDisplay.split);
-}`,
-  bindingLayout: [
-    {name: 'unshadowedColorTexture', group: 0},
-    {name: 'depthTexture', group: 0},
-    {name: 'normalTexture', group: 0},
-    {name: 'velocityTexture', group: 0},
-    {name: 'shadowDebugTexture', group: 0}
-  ],
-  uniformTypes: {split: 'f32', debugMode: 'f32'},
-  propTypes: {split: {value: 0.52, min: 0, max: 1}, debugMode: {value: 0, private: true}},
-  passes: [{sampler: true}]
-} as const satisfies ShaderPass;
+const {CITY_SHADER, displayPass} = getShaderSources();
 
 const displayPipeline: CompositeShaderPass = {
   name: 'advancedEffectsDisplayPipeline',
@@ -1079,4 +887,195 @@ function makeSettingsSchema(): SettingsSchema {
       }
     ]
   };
+}
+
+function getShaderSources() {
+  const CITY_SHADER = /* wgsl */ `\
+struct CityUniforms {
+  viewProjectionMatrix: mat4x4<f32>,
+  previousViewProjectionMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  sunDirection: vec3f,
+  spotPosition: vec3f,
+  spotDirection: vec3f,
+  pointPosition: vec3f,
+  time: f32,
+  previousTime: f32,
+  jitter: vec2f,
+};
+@group(0) @binding(auto) var<uniform> city: CityUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3f,
+  @location(1) normals: vec3f,
+  @location(2) instancePositions: vec3f,
+  @location(3) instanceScales: vec3f,
+  @location(4) instanceColors: vec4f,
+  @location(5) instanceMotion: f32,
+};
+
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) worldNormal: vec3f,
+  @location(1) colorRoughness: vec4f,
+  @location(2) currentClip: vec4f,
+  @location(3) previousClip: vec4f,
+  @location(4) worldPosition: vec3f,
+  @location(5) viewPosition: vec3f,
+};
+
+struct FragmentOutputs {
+  @location(0) color: vec4f,
+  @location(1) normalRoughness: vec4f,
+  @location(2) velocity: vec2f,
+  @location(3) unshadowedColor: vec4f,
+  @location(4) directionalDirect: vec4f,
+  @location(5) shadowDebug: vec4f,
+};
+
+fn motionOffset(position: vec3f, motion: f32, time: f32) -> vec3f {
+  let phase = position.x * 0.37 + position.z * 0.19;
+  return motion * vec3f(sin(time * 0.7 + phase) * 13.0, 2.2 + sin(time * 1.8 + phase), cos(time * 0.7 + phase) * 13.0);
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  let localPosition = inputs.positions * inputs.instanceScales;
+  let currentWorld = vec4f(localPosition + inputs.instancePositions + motionOffset(inputs.instancePositions, inputs.instanceMotion, city.time), 1.0);
+  let previousWorld = vec4f(localPosition + inputs.instancePositions + motionOffset(inputs.instancePositions, inputs.instanceMotion, city.previousTime), 1.0);
+  let currentClip = city.viewProjectionMatrix * currentWorld;
+  let previousClip = city.previousViewProjectionMatrix * previousWorld;
+  var output: FragmentInputs;
+  output.position = vec4f(currentClip.xy + city.jitter * currentClip.w * 2.0, currentClip.zw);
+  output.worldNormal = normalize(inputs.normals);
+  output.colorRoughness = inputs.instanceColors;
+  output.currentClip = currentClip;
+  output.previousClip = previousClip;
+  output.worldPosition = currentWorld.xyz;
+  output.viewPosition = (city.viewMatrix * currentWorld).xyz;
+  return output;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> FragmentOutputs {
+  let worldNormal = normalize(inputs.worldNormal);
+  let viewNormal = normalize((city.viewMatrix * vec4f(worldNormal, 0.0)).xyz);
+  let baseColor = inputs.colorRoughness.rgb;
+  let rim = pow(1.0 - abs(viewNormal.z), 3.0);
+  let emissiveStrength = select(0.0, 1.45, inputs.colorRoughness.a < 0.12);
+
+  let directionalDiffuse = max(dot(worldNormal, normalize(city.sunDirection)), 0.0);
+  let directionalUnshadowed = baseColor * directionalDiffuse * vec3f(1.0, 0.92, 0.78) * 0.82;
+  let directionalFactor = shadow_getDirectionalFactor(
+    inputs.worldPosition,
+    worldNormal,
+    -inputs.viewPosition.z
+  );
+
+  let toSpot = city.spotPosition - inputs.worldPosition;
+  let spotDistance = length(toSpot);
+  let spotDirectionToLight = normalize(toSpot);
+  let spotCone = smoothstep(cos(0.42), cos(0.30), dot(normalize(-toSpot), normalize(city.spotDirection)));
+  let spotAttenuation = spotCone * pow(clamp(1.0 - spotDistance / 52.0, 0.0, 1.0), 2.0);
+  let spotDiffuse = max(dot(worldNormal, spotDirectionToLight), 0.0);
+  let spotUnshadowed = vec3f(1.0, 0.55, 0.24) * spotDiffuse * spotAttenuation * 3.2;
+  let spotFactor = shadow_getSpotFactor(0, inputs.worldPosition, worldNormal);
+
+  let toPoint = city.pointPosition - inputs.worldPosition;
+  let pointDistance = length(toPoint);
+  let pointAttenuation = pow(clamp(1.0 - pointDistance / 24.0, 0.0, 1.0), 2.0);
+  let pointDiffuse = max(dot(worldNormal, normalize(toPoint)), 0.0);
+  let pointUnshadowed = vec3f(0.18, 0.78, 1.0) * pointDiffuse * pointAttenuation * 4.0;
+  let pointFactor = shadow_getPointFactor(0, inputs.worldPosition, worldNormal);
+
+  let ambientEmissive = baseColor * (0.13 + rim * 0.16 + emissiveStrength);
+  let unshadowed = ambientEmissive + directionalUnshadowed + spotUnshadowed + pointUnshadowed;
+  let shadowedDirectional = directionalUnshadowed * directionalFactor;
+  let shadowed = ambientEmissive + shadowedDirectional + spotUnshadowed * spotFactor + pointUnshadowed * pointFactor;
+  let currentUv = inputs.currentClip.xy / inputs.currentClip.w * 0.5 + 0.5;
+  let previousUv = inputs.previousClip.xy / inputs.previousClip.w * 0.5 + 0.5;
+  let cascadeIndex = max(shadow_getDirectionalCascadeIndex(-inputs.viewPosition.z), 0);
+  var output: FragmentOutputs;
+  output.color = vec4f(shadowed, 1.0);
+  output.normalRoughness = vec4f(viewNormal * 0.5 + 0.5, inputs.colorRoughness.a);
+  output.velocity = currentUv - previousUv;
+  output.unshadowedColor = vec4f(unshadowed, 1.0);
+  output.directionalDirect = vec4f(shadowedDirectional, 1.0);
+  output.shadowDebug = vec4f(
+    directionalFactor,
+    spotFactor,
+    pointFactor,
+    f32(cascadeIndex) / 3.0
+  );
+  return output;
+}
+`;
+
+  const displayPass = {
+    name: 'advancedEffectsDisplay',
+    source: /* wgsl */ `\
+struct advancedEffectsDisplayUniforms {
+  split: f32,
+  debugMode: f32,
+};
+@group(0) @binding(auto) var<uniform> advancedEffectsDisplay: advancedEffectsDisplayUniforms;
+@group(0) @binding(auto) var unshadowedColorTexture: texture_2d<f32>;
+@group(0) @binding(auto) var unshadowedColorTextureSampler: sampler;
+@group(0) @binding(auto) var depthTexture: texture_depth_2d;
+@group(0) @binding(auto) var depthTextureSampler: sampler;
+@group(0) @binding(auto) var normalTexture: texture_2d<f32>;
+@group(0) @binding(auto) var normalTextureSampler: sampler;
+@group(0) @binding(auto) var velocityTexture: texture_2d<f32>;
+@group(0) @binding(auto) var velocityTextureSampler: sampler;
+@group(0) @binding(auto) var shadowDebugTexture: texture_2d<f32>;
+@group(0) @binding(auto) var shadowDebugTextureSampler: sampler;
+fn advancedEffectsDisplay_sampleColor(
+  sourceTexture: texture_2d<f32>, sourceTextureSampler: sampler, texSize: vec2f, texCoord: vec2f
+) -> vec4f {
+  let sceneCoord = texCoord;
+  if (advancedEffectsDisplay.debugMode > 0.5 && advancedEffectsDisplay.debugMode < 1.5) {
+    let depth = textureSample(depthTexture, depthTextureSampler, sceneCoord);
+    return vec4f(vec3f(pow(depth, 32.0)), 1.0);
+  }
+  if (advancedEffectsDisplay.debugMode > 1.5 && advancedEffectsDisplay.debugMode < 2.5) {
+    return vec4f(textureSample(normalTexture, normalTextureSampler, sceneCoord).rgb, 1.0);
+  }
+  if (advancedEffectsDisplay.debugMode > 2.5 && advancedEffectsDisplay.debugMode < 3.5) {
+    let velocity = textureSample(velocityTexture, velocityTextureSampler, sceneCoord).xy;
+    return vec4f(0.5 + velocity.x * 12.0, 0.5 + velocity.y * 12.0, length(velocity) * 18.0, 1.0);
+  }
+  let shadowDebug = textureSample(shadowDebugTexture, shadowDebugTextureSampler, sceneCoord);
+  if (advancedEffectsDisplay.debugMode > 3.5 && advancedEffectsDisplay.debugMode < 4.5) {
+    return vec4f(vec3f(shadowDebug.r), 1.0);
+  }
+  if (advancedEffectsDisplay.debugMode > 4.5 && advancedEffectsDisplay.debugMode < 5.5) {
+    let colors = array<vec3f, 4>(
+      vec3f(0.2, 0.6, 1.0), vec3f(0.2, 1.0, 0.45), vec3f(1.0, 0.75, 0.2), vec3f(1.0, 0.25, 0.35)
+    );
+    return vec4f(colors[min(i32(round(shadowDebug.a * 3.0)), 3)], 1.0);
+  }
+  if (advancedEffectsDisplay.debugMode > 5.5 && advancedEffectsDisplay.debugMode < 6.5) {
+    return vec4f(vec3f(shadowDebug.g), 1.0);
+  }
+  if (advancedEffectsDisplay.debugMode > 6.5 && advancedEffectsDisplay.debugMode < 7.5) {
+    return vec4f(vec3f(shadowDebug.b), 1.0);
+  }
+  let processed = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  if (advancedEffectsDisplay.debugMode > 7.5) { return processed; }
+  let original = textureSample(unshadowedColorTexture, unshadowedColorTextureSampler, sceneCoord);
+  return select(processed, original, texCoord.x < advancedEffectsDisplay.split);
+}`,
+    bindingLayout: [
+      {name: 'unshadowedColorTexture', group: 0},
+      {name: 'depthTexture', group: 0},
+      {name: 'normalTexture', group: 0},
+      {name: 'velocityTexture', group: 0},
+      {name: 'shadowDebugTexture', group: 0}
+    ],
+    uniformTypes: {split: 'f32', debugMode: 'f32'},
+    propTypes: {split: {value: 0.52, min: 0, max: 1}, debugMode: {value: 0, private: true}},
+    passes: [{sampler: true}]
+  } as const satisfies ShaderPass;
+
+  return {CITY_SHADER, displayPass} as const;
 }

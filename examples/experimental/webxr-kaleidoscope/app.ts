@@ -24,6 +24,7 @@ import {
   type WebXRManagerProps
 } from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
+import {WebxrKaleidoscopeInfoHtml} from './app-ui';
 
 export const title = 'WebXR: Immersive Prism Portal';
 export const description =
@@ -63,280 +64,14 @@ const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
   }
 };
 
-const WGSL_SHADER = /* wgsl */ `\
-struct AppUniforms {
-  modelViewProjectionMatrix: mat4x4<f32>,
-  time: f32,
-  cameraMix: f32,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-@group(0) @binding(auto) var cameraTexture: texture_2d<f32>;
-@group(0) @binding(auto) var cameraTextureSampler: sampler;
-
-struct VertexInputs {
-  @location(0) positions: vec3<f32>,
-  @location(1) texCoords: vec2<f32>,
-  @location(2) shardData: vec4<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) uv: vec2<f32>,
-  @location(1) localPosition: vec3<f32>,
-  @location(2) energy: f32,
-  @location(3) depthFactor: f32,
-  @location(4) shardKind: f32,
-};
-
-fn rotatePoint(point: vec2<f32>, angle: f32) -> vec2<f32> {
-  let sine = sin(angle);
-  let cosine = cos(angle);
-  return vec2<f32>(
-    point.x * cosine - point.y * sine,
-    point.x * sine + point.y * cosine
-  );
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  var position = inputs.positions;
-  let depthFactor = inputs.shardData.x;
-  let orbitPhase = inputs.shardData.y;
-  let shardKind = inputs.shardData.w;
-  let orbitDirection = select(-1.0, 1.0, fract(depthFactor * 7.0) > 0.5);
-  let orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
-  position = vec3<f32>(rotatePoint(position.xy, orbitAngle), position.z);
-  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardKind * 0.055);
-  let radialBreathing = 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
-  position = vec3<f32>(position.xy * radialBreathing, position.z);
-
-  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
-  outputs.uv = inputs.texCoords;
-  outputs.localPosition = position;
-  outputs.energy = inputs.shardData.z *
-    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
-  outputs.depthFactor = depthFactor;
-  outputs.shardKind = shardKind;
-  return outputs;
-}
-
-fn kaleidoscopeUv(uv: vec2<f32>) -> vec2<f32> {
-  let centered = uv * 2.0 - vec2<f32>(1.0);
-  let radius = length(centered);
-  let segment = 6.2831853 / 9.0;
-  var angle = atan2(centered.y, centered.x);
-  angle = abs((angle + segment * 0.5) - segment * floor((angle + segment * 0.5) / segment));
-  angle = abs(angle - segment * 0.5);
-  return vec2<f32>(cos(angle), sin(angle)) * radius * 0.5 + vec2<f32>(0.5);
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let edgeDistance = min(min(inputs.uv.x, 1.0 - inputs.uv.x),
-                         min(inputs.uv.y, 1.0 - inputs.uv.y));
-  let edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
-  let coreGlow = pow(max(0.0, 1.0 - length(inputs.uv - vec2<f32>(0.5)) * 1.75), 3.2);
-  let prismPhase = inputs.depthFactor * 8.5 + inputs.localPosition.x * 0.6 + app.time * 0.42;
-  let cyan = vec3<f32>(0.03, 0.86, 1.18);
-  let violet = vec3<f32>(0.66, 0.13, 1.18);
-  let coral = vec3<f32>(1.0, 0.29, 0.44);
-  let spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
-                          coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
-  let distanceFade = mix(1.0, 0.36, inputs.depthFactor);
-  let shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + inputs.localPosition.z * 1.9);
-  var color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
-              inputs.energy * distanceFade * shimmer;
-
-  let cameraUv = kaleidoscopeUv(vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y));
-  let cameraColor = textureSample(cameraTexture, cameraTextureSampler, cameraUv).rgb;
-  color = mix(color, cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
-              app.cameraMix * (1.0 - inputs.depthFactor * 0.7));
-  let alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
-                    (0.75 + inputs.shardKind * 0.12), 0.0, 0.98);
-  return vec4<f32>(color, alpha);
-}
-`;
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-
-in vec3 positions;
-in vec2 texCoords;
-in vec4 shardData;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float cameraMix;
-} app;
-
-out vec2 vUV;
-out vec3 vLocalPosition;
-out float vEnergy;
-out float vDepthFactor;
-out float vShardKind;
-
-vec2 rotatePoint(vec2 point, float angle) {
-  float sine = sin(angle);
-  float cosine = cos(angle);
-  return vec2(point.x * cosine - point.y * sine, point.x * sine + point.y * cosine);
-}
-
-void main(void) {
-  vec3 position = positions;
-  float depthFactor = shardData.x;
-  float orbitPhase = shardData.y;
-  float orbitDirection = fract(depthFactor * 7.0) > 0.5 ? 1.0 : -1.0;
-  float orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
-  position.xy = rotatePoint(position.xy, orbitAngle);
-  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardData.w * 0.055);
-  position.xy *= 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
-
-  gl_Position = app.modelViewProjectionMatrix * vec4(position, 1.0);
-  vUV = texCoords;
-  vLocalPosition = position;
-  vEnergy = shardData.z *
-    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
-  vDepthFactor = depthFactor;
-  vShardKind = shardData.w;
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform sampler2D cameraTexture;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float cameraMix;
-} app;
-
-in vec2 vUV;
-in vec3 vLocalPosition;
-in float vEnergy;
-in float vDepthFactor;
-in float vShardKind;
-
-out vec4 fragColor;
-
-const float TAU = 6.283185307179586;
-
-vec2 kaleidoscopeUv(vec2 uv) {
-  vec2 centered = uv * 2.0 - 1.0;
-  float radius = length(centered);
-  float angle = atan(centered.y, centered.x);
-  float segment = TAU / 9.0;
-  angle = abs(mod(angle + segment * 0.5, segment) - segment * 0.5);
-  return vec2(cos(angle), sin(angle)) * radius * 0.5 + 0.5;
-}
-
-void main(void) {
-  float edgeDistance = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
-  float edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
-  float coreGlow = pow(max(0.0, 1.0 - length(vUV - vec2(0.5)) * 1.75), 3.2);
-  float prismPhase = vDepthFactor * 8.5 + vLocalPosition.x * 0.6 + app.time * 0.42;
-  vec3 cyan = vec3(0.03, 0.86, 1.18);
-  vec3 violet = vec3(0.66, 0.13, 1.18);
-  vec3 coral = vec3(1.0, 0.29, 0.44);
-  vec3 spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
-    coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
-  float distanceFade = mix(1.0, 0.36, vDepthFactor);
-  float shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + vLocalPosition.z * 1.9);
-  vec3 color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
-    vEnergy * distanceFade * shimmer;
-
-  vec2 cameraUv = kaleidoscopeUv(vec2(vUV.x, 1.0 - vUV.y));
-  vec3 cameraColor = texture(cameraTexture, cameraUv).rgb;
-  color = mix(color,
-    cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
-    app.cameraMix * (1.0 - vDepthFactor * 0.7));
-  float alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
-    (0.75 + vShardKind * 0.12), 0.0, 0.98);
-  fragColor = vec4(color, alpha);
-}
-`;
-
-const CONTROLLER_RAY_WGSL_SHADER = /* wgsl */ `\
-struct AppUniforms {
-  modelViewProjectionMatrix: mat4x4<f32>,
-  time: f32,
-  cameraMix: f32,
-};
-
-@group(0) @binding(auto) var<uniform> app: AppUniforms;
-
-struct VertexInputs {
-  @location(0) positions: vec3<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) rayDepth: f32,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
-  outputs.rayDepth = clamp(-inputs.positions.z / 3.2, 0.0, 1.0);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let idleColor = vec3<f32>(0.05, 0.92, 1.0);
-  let activeColor = vec3<f32>(1.0, 0.36, 0.18);
-  let color = mix(idleColor, activeColor, app.cameraMix);
-  let alpha = mix(0.86, 0.28, inputs.rayDepth);
-  return vec4<f32>(color * (1.15 - inputs.rayDepth * 0.38), alpha);
-}
-`;
-
-const CONTROLLER_RAY_VS_GLSL = /* glsl */ `\
-#version 300 es
-
-in vec3 positions;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float cameraMix;
-} app;
-
-out float vRayDepth;
-
-void main(void) {
-  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
-  vRayDepth = clamp(-positions.z / 3.2, 0.0, 1.0);
-}
-`;
-
-const CONTROLLER_RAY_FS_GLSL = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float cameraMix;
-} app;
-
-in float vRayDepth;
-out vec4 fragColor;
-
-void main(void) {
-  vec3 idleColor = vec3(0.05, 0.92, 1.0);
-  vec3 activeColor = vec3(1.0, 0.36, 0.18);
-  vec3 color = mix(idleColor, activeColor, app.cameraMix);
-  float alpha = mix(0.86, 0.28, vRayDepth);
-  fragColor = vec4(color * (1.15 - vRayDepth * 0.38), alpha);
-}
-`;
+const {
+  WGSL_SHADER,
+  VS_GLSL,
+  FS_GLSL,
+  CONTROLLER_RAY_WGSL_SHADER,
+  CONTROLLER_RAY_VS_GLSL,
+  CONTROLLER_RAY_FS_GLSL
+} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
@@ -356,15 +91,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  static info = `\
-  <p>
-  Fly through a stereoscopic field of animated prism shards. WebGPU renders directly into
-  native WebXR projection layers when supported. WebGL2 remains available on older XR
-  browsers and can fold raw AR camera imagery into the portal when access is granted.
-  Desktop testing works with the
-  <a href="https://chromewebstore.google.com/detail/codex/hehggadaopoacecdllhhajmbjkdcmajg?pli=1" target="_blank" rel="noreferrer">Immersive Web Emulator Chrome extension</a>.
-  </p>
-  `;
+  static info = WebxrKaleidoscopeInfoHtml;
 
   readonly device: Device;
   readonly animationLoop: AnimationProps['animationLoop'];
@@ -1110,4 +837,290 @@ function appendVertex(
   positions.push(...position);
   texCoords.push(...texCoord);
   shardAttributes.push(...shardData);
+}
+
+function getShaderSources() {
+  const WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  time: f32,
+  cameraMix: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var cameraTexture: texture_2d<f32>;
+@group(0) @binding(auto) var cameraTextureSampler: sampler;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+  @location(1) texCoords: vec2<f32>,
+  @location(2) shardData: vec4<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+  @location(1) localPosition: vec3<f32>,
+  @location(2) energy: f32,
+  @location(3) depthFactor: f32,
+  @location(4) shardKind: f32,
+};
+
+fn rotatePoint(point: vec2<f32>, angle: f32) -> vec2<f32> {
+  let sine = sin(angle);
+  let cosine = cos(angle);
+  return vec2<f32>(
+    point.x * cosine - point.y * sine,
+    point.x * sine + point.y * cosine
+  );
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  var position = inputs.positions;
+  let depthFactor = inputs.shardData.x;
+  let orbitPhase = inputs.shardData.y;
+  let shardKind = inputs.shardData.w;
+  let orbitDirection = select(-1.0, 1.0, fract(depthFactor * 7.0) > 0.5);
+  let orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
+  position = vec3<f32>(rotatePoint(position.xy, orbitAngle), position.z);
+  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardKind * 0.055);
+  let radialBreathing = 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
+  position = vec3<f32>(position.xy * radialBreathing, position.z);
+
+  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+  outputs.uv = inputs.texCoords;
+  outputs.localPosition = position;
+  outputs.energy = inputs.shardData.z *
+    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
+  outputs.depthFactor = depthFactor;
+  outputs.shardKind = shardKind;
+  return outputs;
+}
+
+fn kaleidoscopeUv(uv: vec2<f32>) -> vec2<f32> {
+  let centered = uv * 2.0 - vec2<f32>(1.0);
+  let radius = length(centered);
+  let segment = 6.2831853 / 9.0;
+  var angle = atan2(centered.y, centered.x);
+  angle = abs((angle + segment * 0.5) - segment * floor((angle + segment * 0.5) / segment));
+  angle = abs(angle - segment * 0.5);
+  return vec2<f32>(cos(angle), sin(angle)) * radius * 0.5 + vec2<f32>(0.5);
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let edgeDistance = min(min(inputs.uv.x, 1.0 - inputs.uv.x),
+                         min(inputs.uv.y, 1.0 - inputs.uv.y));
+  let edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
+  let coreGlow = pow(max(0.0, 1.0 - length(inputs.uv - vec2<f32>(0.5)) * 1.75), 3.2);
+  let prismPhase = inputs.depthFactor * 8.5 + inputs.localPosition.x * 0.6 + app.time * 0.42;
+  let cyan = vec3<f32>(0.03, 0.86, 1.18);
+  let violet = vec3<f32>(0.66, 0.13, 1.18);
+  let coral = vec3<f32>(1.0, 0.29, 0.44);
+  let spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
+                          coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
+  let distanceFade = mix(1.0, 0.36, inputs.depthFactor);
+  let shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + inputs.localPosition.z * 1.9);
+  var color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
+              inputs.energy * distanceFade * shimmer;
+
+  let cameraUv = kaleidoscopeUv(vec2<f32>(inputs.uv.x, 1.0 - inputs.uv.y));
+  let cameraColor = textureSample(cameraTexture, cameraTextureSampler, cameraUv).rgb;
+  color = mix(color, cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
+              app.cameraMix * (1.0 - inputs.depthFactor * 0.7));
+  let alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
+                    (0.75 + inputs.shardKind * 0.12), 0.0, 0.98);
+  return vec4<f32>(color, alpha);
+}
+`;
+
+  const VS_GLSL = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+in vec2 texCoords;
+in vec4 shardData;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+out vec2 vUV;
+out vec3 vLocalPosition;
+out float vEnergy;
+out float vDepthFactor;
+out float vShardKind;
+
+vec2 rotatePoint(vec2 point, float angle) {
+  float sine = sin(angle);
+  float cosine = cos(angle);
+  return vec2(point.x * cosine - point.y * sine, point.x * sine + point.y * cosine);
+}
+
+void main(void) {
+  vec3 position = positions;
+  float depthFactor = shardData.x;
+  float orbitPhase = shardData.y;
+  float orbitDirection = fract(depthFactor * 7.0) > 0.5 ? 1.0 : -1.0;
+  float orbitAngle = app.time * (0.10 + depthFactor * 0.17) * orbitDirection;
+  position.xy = rotatePoint(position.xy, orbitAngle);
+  position.z += sin(app.time * 1.65 + orbitPhase * 6.28318) * (0.045 + shardData.w * 0.055);
+  position.xy *= 1.0 + sin(app.time * 1.15 + depthFactor * 7.2) * 0.025;
+
+  gl_Position = app.modelViewProjectionMatrix * vec4(position, 1.0);
+  vUV = texCoords;
+  vLocalPosition = position;
+  vEnergy = shardData.z *
+    (0.75 + 0.25 * sin(app.time * 2.1 + orbitPhase * 8.0 - depthFactor * 9.0));
+  vDepthFactor = depthFactor;
+  vShardKind = shardData.w;
+}
+`;
+
+  const FS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform sampler2D cameraTexture;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+in vec2 vUV;
+in vec3 vLocalPosition;
+in float vEnergy;
+in float vDepthFactor;
+in float vShardKind;
+
+out vec4 fragColor;
+
+const float TAU = 6.283185307179586;
+
+vec2 kaleidoscopeUv(vec2 uv) {
+  vec2 centered = uv * 2.0 - 1.0;
+  float radius = length(centered);
+  float angle = atan(centered.y, centered.x);
+  float segment = TAU / 9.0;
+  angle = abs(mod(angle + segment * 0.5, segment) - segment * 0.5);
+  return vec2(cos(angle), sin(angle)) * radius * 0.5 + 0.5;
+}
+
+void main(void) {
+  float edgeDistance = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
+  float edgeGlow = 1.0 - smoothstep(0.025, 0.22, edgeDistance);
+  float coreGlow = pow(max(0.0, 1.0 - length(vUV - vec2(0.5)) * 1.75), 3.2);
+  float prismPhase = vDepthFactor * 8.5 + vLocalPosition.x * 0.6 + app.time * 0.42;
+  vec3 cyan = vec3(0.03, 0.86, 1.18);
+  vec3 violet = vec3(0.66, 0.13, 1.18);
+  vec3 coral = vec3(1.0, 0.29, 0.44);
+  vec3 spectralColor = mix(mix(cyan, violet, 0.5 + 0.5 * sin(prismPhase)),
+    coral, (0.5 + 0.5 * sin(prismPhase * 0.63 + 2.1)) * 0.28);
+  float distanceFade = mix(1.0, 0.36, vDepthFactor);
+  float shimmer = 0.73 + 0.27 * sin(app.time * 3.4 + vLocalPosition.z * 1.9);
+  vec3 color = spectralColor * (0.35 + edgeGlow * 1.05 + coreGlow * 0.6) *
+    vEnergy * distanceFade * shimmer;
+
+  vec2 cameraUv = kaleidoscopeUv(vec2(vUV.x, 1.0 - vUV.y));
+  vec3 cameraColor = texture(cameraTexture, cameraUv).rgb;
+  color = mix(color,
+    cameraColor * (0.72 + edgeGlow * 0.4) + spectralColor * edgeGlow * 0.55,
+    app.cameraMix * (1.0 - vDepthFactor * 0.7));
+  float alpha = clamp((0.38 + edgeGlow * 0.5 + coreGlow * 0.45) *
+    (0.75 + vShardKind * 0.12), 0.0, 0.98);
+  fragColor = vec4(color, alpha);
+}
+`;
+
+  const CONTROLLER_RAY_WGSL_SHADER = /* wgsl */ `\
+struct AppUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  time: f32,
+  cameraMix: f32,
+};
+
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+
+struct VertexInputs {
+  @location(0) positions: vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) rayDepth: f32,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
+  outputs.rayDepth = clamp(-inputs.positions.z / 3.2, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let idleColor = vec3<f32>(0.05, 0.92, 1.0);
+  let activeColor = vec3<f32>(1.0, 0.36, 0.18);
+  let color = mix(idleColor, activeColor, app.cameraMix);
+  let alpha = mix(0.86, 0.28, inputs.rayDepth);
+  return vec4<f32>(color * (1.15 - inputs.rayDepth * 0.38), alpha);
+}
+`;
+
+  const CONTROLLER_RAY_VS_GLSL = /* glsl */ `\
+#version 300 es
+
+in vec3 positions;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+out float vRayDepth;
+
+void main(void) {
+  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  vRayDepth = clamp(-positions.z / 3.2, 0.0, 1.0);
+}
+`;
+
+  const CONTROLLER_RAY_FS_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+  float time;
+  float cameraMix;
+} app;
+
+in float vRayDepth;
+out vec4 fragColor;
+
+void main(void) {
+  vec3 idleColor = vec3(0.05, 0.92, 1.0);
+  vec3 activeColor = vec3(1.0, 0.36, 0.18);
+  vec3 color = mix(idleColor, activeColor, app.cameraMix);
+  float alpha = mix(0.86, 0.28, vRayDepth);
+  fragColor = vec4(color * (1.15 - vRayDepth * 0.38), alpha);
+}
+`;
+
+  return {
+    WGSL_SHADER,
+    VS_GLSL,
+    FS_GLSL,
+    CONTROLLER_RAY_WGSL_SHADER,
+    CONTROLLER_RAY_VS_GLSL,
+    CONTROLLER_RAY_FS_GLSL
+  } as const;
 }
