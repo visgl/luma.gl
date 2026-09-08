@@ -8,6 +8,8 @@ import path from 'node:path';
 const REPOSITORY_ROOT = process.cwd();
 const EXAMPLE_DIRECTORY = path.join(REPOSITORY_ROOT, 'examples');
 const SUPPORT_BLOCK_PATTERN = /\n?\s*<!-- luma-example-support -->[\s\S]*?<!-- \/luma-example-support -->\n?/;
+const DEFERRED_MODULE_TYPE = 'application/luma-example-module';
+const APPLICATION_SCRIPT_ATTRIBUTE = 'data-luma-example-application';
 const CATALOG_ALIASES = new Map([
   ['arrow/arrow-instancing', 'showcase/instancing'],
   ['showcase/scene', 'experimental/scene-playground'],
@@ -26,6 +28,7 @@ for (const relativeHtmlFile of htmlFiles) {
   const supportBlock = makeSupportBlock(catalogId, definition);
   const absoluteHtmlFile = path.join(EXAMPLE_DIRECTORY, relativeHtmlFile);
   let html = readFileSync(absoluteHtmlFile, 'utf8').replace(SUPPORT_BLOCK_PATTERN, '\n');
+  html = gateApplicationModuleScripts(html);
 
   if (!/<meta\s+name=["']viewport["']/i.test(html)) {
     const viewport = '  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n';
@@ -71,16 +74,83 @@ function makeSupportBlock(catalogId, definition) {
   <meta name="luma-example-backends" content="${definition.backends.join(',')}" />
   <meta name="luma-example-mobile" content="${definition.mobile}" />
   <meta name="luma-example-mobile-profile" content="${definition.mobileProfile}" />${unsupportedReasonMeta}
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->`;
+}
+
+function gateApplicationModuleScripts(html) {
+  return html.replace(
+    /^([ \t]*)<script\b([^>]*)>([\s\S]*?)<\/script>/gim,
+    (script, tagIndentation, attributes, source) => {
+      const type = attributes.match(/\btype=(["'])(.*?)\1/i)?.[2];
+      if (
+        (type !== 'module' && type !== DEFERRED_MODULE_TYPE) ||
+        attributes.includes(APPLICATION_SCRIPT_ATTRIBUTE)
+      ) {
+        return script;
+      }
+
+      const sourceAttribute = attributes.match(/\bsrc=(["'])(.*?)\1/i);
+      const applicationSource = sourceAttribute
+        ? `await import(${JSON.stringify(sourceAttribute[2])});`
+        : transformStaticImports(source);
+      if (/^\s*import\s/m.test(applicationSource)) {
+        throw new Error('Standalone application scripts must use one-line static imports.');
+      }
+
+      const applicationAttributes = attributes
+        .replace(/\s*\bsrc=(["'])(.*?)\1/i, '')
+        .replace(
+          /\btype=(["'])(?:module|application\/luma-example-module)\1/i,
+          'type="module"'
+        );
+      const gatedSource = indentApplicationSource(applicationSource, `${tagIndentation}    `);
+      return `${tagIndentation}<script${applicationAttributes} ${APPLICATION_SCRIPT_ATTRIBUTE}>
+${tagIndentation}  const exampleSupport = await window.lumaExampleSupportPromise;
+${tagIndentation}  if (exampleSupport.supported) {
+${gatedSource}
+${tagIndentation}  }
+${tagIndentation}</script>`;
+    }
+  );
+}
+
+function transformStaticImports(source) {
+  return source.replace(
+    /(^[ \t]*)import\s+(.+?)\s+from\s+(["'])([^"']+)\3;?[ \t]*$/gm,
+    (statement, indentation, bindings, quote, moduleSource) => {
+      const destructuredBindings = bindings.startsWith('{')
+        ? bindings
+        : bindings.includes(', {')
+          ? `{default: ${bindings.replace(', {', ', ').replace(/}$/, '')}}`
+          : `{default: ${bindings}}`;
+      return `${indentation}const ${destructuredBindings} = await import(${quote}${moduleSource}${quote});`;
+    }
+  );
+}
+
+function indentApplicationSource(source, indentation) {
+  const lines = source.replace(/^\s*\n/, '').replace(/\n\s*$/, '').split('\n');
+  const indentationLengths = lines
+    .filter(line => line.trim())
+    .map(line => line.match(/^\s*/)[0].length);
+  const minimumIndentation = Math.min(...indentationLengths);
+  return lines
+    .map(line => `${indentation}${line.slice(minimumIndentation)}`.trimEnd())
+    .join('\n');
 }
 
 function escapeHtmlAttribute(value) {

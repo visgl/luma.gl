@@ -6,14 +6,19 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="large-data" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
     <meta charset="UTF-8" />
@@ -83,64 +88,67 @@
       <h1>Chromatic Observatory</h1>
       <div id="gaussian-splats-panel-container"></div>
     </aside>
-    <script type="module">
-      import {luma} from '@luma.gl/core';
-      import {makeAnimationLoop} from '@luma.gl/engine';
-      import {webgl2Adapter} from '@luma.gl/webgl';
-      import {webgpuAdapter} from '@luma.gl/webgpu';
-      import AnimationLoopTemplate, {makeGaussianSplatInfoHtml} from './app.ts';
+    <script type="module" data-luma-example-application>
+      const exampleSupport = await window.lumaExampleSupportPromise;
+      if (exampleSupport.supported) {
+        const {luma} = await import('@luma.gl/core');
+        const {makeAnimationLoop} = await import('@luma.gl/engine');
+        const {webgl2Adapter} = await import('@luma.gl/webgl');
+        const {webgpuAdapter} = await import('@luma.gl/webgpu');
+        const {default: AnimationLoopTemplate, makeGaussianSplatInfoHtml} = await import('./app.ts');
 
-      window.__lumaGaussianSplatsLocalLoadersRoot = import.meta.env.VITE_LOADERS_GL_ROOT || '';
-      document.getElementById('gaussian-splats-panel-container').innerHTML =
-        makeGaussianSplatInfoHtml();
+        window.__lumaGaussianSplatsLocalLoadersRoot = import.meta.env.VITE_LOADERS_GL_ROOT || '';
+        document.getElementById('gaussian-splats-panel-container').innerHTML =
+          makeGaussianSplatInfoHtml();
 
-      try {
-        const requestedDevice = new URLSearchParams(window.location.search).get('device');
-        const adapters =
-          requestedDevice === 'webgl' || requestedDevice === 'webgl2'
-            ? [webgl2Adapter]
-            : requestedDevice === 'webgpu'
-              ? [webgpuAdapter]
-              : [webgpuAdapter, webgl2Adapter];
-        const deviceOptions = {
-          id: 'gaussian-splats',
-          adapters,
-          createCanvasContext: true
-        };
-        const prefersHighDynamicRange =
-          requestedDevice !== 'webgl' &&
-          requestedDevice !== 'webgl2' &&
-          window.matchMedia('(dynamic-range: high)').matches;
-        let device;
-        if (prefersHighDynamicRange) {
-          try {
-            device = await luma.createDevice({
-              ...deviceOptions,
-              adapters: [webgpuAdapter],
-              createCanvasContext: {
-                colorFormat: 'rgba16float',
-                colorSpace: 'display-p3',
-                toneMapping: 'extended'
-              }
-            });
-          } catch {
+        try {
+          const requestedDevice = new URLSearchParams(window.location.search).get('device');
+          const adapters =
+            requestedDevice === 'webgl' || requestedDevice === 'webgl2'
+              ? [webgl2Adapter]
+              : requestedDevice === 'webgpu'
+                ? [webgpuAdapter]
+                : [webgpuAdapter, webgl2Adapter];
+          const deviceOptions = {
+            id: 'gaussian-splats',
+            adapters,
+            createCanvasContext: true
+          };
+          const prefersHighDynamicRange =
+            requestedDevice !== 'webgl' &&
+            requestedDevice !== 'webgl2' &&
+            window.matchMedia('(dynamic-range: high)').matches;
+          let device;
+          if (prefersHighDynamicRange) {
+            try {
+              device = await luma.createDevice({
+                ...deviceOptions,
+                adapters: [webgpuAdapter],
+                createCanvasContext: {
+                  colorFormat: 'rgba16float',
+                  colorSpace: 'display-p3',
+                  toneMapping: 'extended'
+                }
+              });
+            } catch {
+              device = await luma.createDevice(deviceOptions);
+            }
+          } else {
             device = await luma.createDevice(deviceOptions);
           }
-        } else {
-          device = await luma.createDevice(deviceOptions);
+          const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+            device,
+            autoResizeViewport: true
+          });
+          await animationLoop.start();
+        } catch (error) {
+          const errorElement = document.createElement('div');
+          errorElement.id = 'gaussian-splats-error';
+          errorElement.setAttribute('role', 'alert');
+          errorElement.textContent =
+            error instanceof Error ? error.message : 'Unable to initialize Gaussian splat rendering.';
+          document.body.append(errorElement);
         }
-        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
-          device,
-          autoResizeViewport: true
-        });
-        await animationLoop.start();
-      } catch (error) {
-        const errorElement = document.createElement('div');
-        errorElement.id = 'gaussian-splats-error';
-        errorElement.setAttribute('role', 'alert');
-        errorElement.textContent =
-          error instanceof Error ? error.message : 'Unable to initialize Gaussian splat rendering.';
-        document.body.append(errorElement);
       }
     </script>
   </body>

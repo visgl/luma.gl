@@ -6,14 +6,19 @@
   <meta name="luma-example-backends" content="webgpu,webgl2" />
   <meta name="luma-example-mobile" content="reduced" />
   <meta name="luma-example-mobile-profile" content="effects" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
     <meta charset="UTF-8" />
@@ -522,26 +527,29 @@
         }
       }
     </style>
-    <script type="module">
-      import {luma} from '@luma.gl/core';
-      import {makeAnimationLoop} from '@luma.gl/engine';
-      import {webgl2Adapter} from '@luma.gl/webgl';
-      import {webgpuAdapter} from '@luma.gl/webgpu';
-      import ANARIPlayground from './playground.ts';
+    <script type="module" data-luma-example-application>
+      const exampleSupport = await window.lumaExampleSupportPromise;
+      if (exampleSupport.supported) {
+        const {luma} = await import('@luma.gl/core');
+        const {makeAnimationLoop} = await import('@luma.gl/engine');
+        const {webgl2Adapter} = await import('@luma.gl/webgl');
+        const {webgpuAdapter} = await import('@luma.gl/webgpu');
+        const {default: ANARIPlayground} = await import('./playground.ts');
 
-      const forceWebGL = new URLSearchParams(window.location.search).get('backend') === 'webgl';
-      const supportsHighDynamicRange =
-        !forceWebGL && window.matchMedia('(dynamic-range: high)').matches;
-      const canvas = document.getElementById('playground-canvas');
-      const canvasProperties = supportsHighDynamicRange
-        ? {canvas, colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
-        : {canvas};
-      const device = await luma.createDevice({
-        id: 'anari-json-playground',
-        adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
-        createCanvasContext: canvasProperties
-      });
-      makeAnimationLoop(ANARIPlayground, {device}).start();
+        const forceWebGL = new URLSearchParams(window.location.search).get('backend') === 'webgl';
+        const supportsHighDynamicRange =
+          !forceWebGL && window.matchMedia('(dynamic-range: high)').matches;
+        const canvas = document.getElementById('playground-canvas');
+        const canvasProperties = supportsHighDynamicRange
+          ? {canvas, colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
+          : {canvas};
+        const device = await luma.createDevice({
+          id: 'anari-json-playground',
+          adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
+          createCanvasContext: canvasProperties
+        });
+        makeAnimationLoop(ANARIPlayground, {device}).start();
+      }
     </script>
   </head>
   <body>

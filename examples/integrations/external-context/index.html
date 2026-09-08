@@ -6,14 +6,19 @@
   <meta name="luma-example-backends" content="webgl2" />
   <meta name="luma-example-mobile" content="full" />
   <meta name="luma-example-mobile-profile" content="standard" />
+  <script data-luma-example-support-promise>
+    window.lumaExampleSupportPromise = new Promise(resolve => {
+      window.addEventListener('luma-example-support-ready', event => resolve(event.detail), {
+        once: true
+      });
+    });
+  </script>
   <script type="module" data-luma-example-support-bootstrap>
     import {installStandaloneExampleSupport} from '../../example-support.ts';
     const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
+    window.dispatchEvent(
+      new CustomEvent('luma-example-support-ready', {detail: exampleSupport})
+    );
   </script>
   <!-- /luma-example-support -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -50,18 +55,21 @@
   <body>
     <div id="status">Connect luma.gl to the MapLibre WebGL context.</div>
     <div id="map-container"></div>
-    <script type="module">
-      import initializeExternalWebGLContext from './app.ts'
+    <script type="module" data-luma-example-application>
+      const exampleSupport = await window.lumaExampleSupportPromise;
+      if (exampleSupport.supported) {
+        const {default: initializeExternalWebGLContext} = await import('./app.ts');
 
-      initializeExternalWebGLContext({
-        container: document.getElementById('map-container')
-      }).catch(error => {
-        const status = document.getElementById('status')
-        if (status) {
-          status.textContent = error.message
-          status.style.background = 'rgba(128, 0, 0, 0.75)'
-        }
-      })
+        initializeExternalWebGLContext({
+          container: document.getElementById('map-container')
+        }).catch(error => {
+          const status = document.getElementById('status')
+          if (status) {
+            status.textContent = error.message
+            status.style.background = 'rgba(128, 0, 0, 0.75)'
+          }
+        })
+      }
     </script>
   </body>
 </html>

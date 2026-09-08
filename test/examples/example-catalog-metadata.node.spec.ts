@@ -243,6 +243,27 @@ describe('live example catalog metadata', () => {
       expect(standaloneHtml, `${relativeFile} requires the standalone support bootstrap`).toContain(
         'data-luma-example-support-bootstrap'
       );
+      expect(
+        standaloneHtml.match(/<script[^>]*type="module"/g),
+        `${relativeFile} must have a support bootstrap and gated application module`
+      ).toHaveLength(2);
+      expect(
+        standaloneHtml,
+        `${relativeFile} must gate its application module until support is known`
+      ).toContain('data-luma-example-application');
+      const applicationSource = standaloneHtml.match(
+        /<script[^>]*data-luma-example-application[^>]*>([\s\S]*?)<\/script>/
+      )?.[1];
+      expect(applicationSource, `${relativeFile} must await its support preflight`).toContain(
+        'await window.lumaExampleSupportPromise'
+      );
+      expect(applicationSource, `${relativeFile} must defer its application imports`).toContain(
+        'import('
+      );
+      expect(
+        applicationSource,
+        `${relativeFile} must not statically import application code`
+      ).not.toMatch(/^\s*import\s/m);
       expect(standaloneHtml, `${relativeFile} requires its canonical example identifier`).toContain(
         `<meta name="luma-example-id" content="${canonicalId}" />`
       );

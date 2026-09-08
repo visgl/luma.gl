@@ -367,9 +367,9 @@ describe('immersive WebGPU and WebGL2 prism portal', () => {
       dependencies: Record<string, string>;
     };
 
-    expect(standaloneSource).toContain("import {luma} from '@luma.gl/core'");
-    expect(standaloneSource).toContain("import {webgpuAdapter} from '@luma.gl/webgpu'");
-    expect(standaloneSource).toContain("import {webgl2Adapter} from '@luma.gl/webgl'");
+    expect(standaloneSource).toContain("const {luma} = await import('@luma.gl/core')");
+    expect(standaloneSource).toContain("const {webgpuAdapter} = await import('@luma.gl/webgpu')");
+    expect(standaloneSource).toContain("const {webgl2Adapter} = await import('@luma.gl/webgl')");
     expect(standaloneSource).toContain("luma.createDevice(makeDeviceProps('webgpu', true))");
     expect(standaloneSource).toContain(
       'makeAnimationLoop(AnimationLoopTemplate, {device: currentDevice})'
