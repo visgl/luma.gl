@@ -14,9 +14,9 @@ import {GPUParquetConstellationExample} from '@site/src/examples';
 <GPUParquetConstellationExample />
 
 This example is a visible vertical slice through `@luma.gl/gpgpu/gpu-parse`. It creates one real
-Parquet row group containing the position, radius, temperature, and sequence fields for an animated
-five-arm galaxy. The four `FLOAT` columns use Snappy-compressed `BYTE_STREAM_SPLIT`; the monotonic
-`UINT32` sequence uses uncompressed `DELTA_BINARY_PACKED`. DataPageV2 and multiple pages per column
+Parquet row group containing position, radius, temperature, and sequence fields for 600,000 animated
+points in a five-arm galaxy. The four `FLOAT` columns use Snappy-compressed `BYTE_STREAM_SPLIT`; the
+monotonic `UINT32` sequence uses uncompressed `DELTA_BINARY_PACKED`. DataPageV2 and multiple pages per column
 exercise decompression and page-batch planning rather than a convenient PLAIN-only fixture. The
 fixture is checked in so file generation does not pollute the measured decode paths.
 

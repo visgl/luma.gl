@@ -6,8 +6,8 @@ import {writeFile} from 'node:fs/promises';
 import {ParquetEncoder, ParquetSchema} from '@loaders.gl/parquet';
 import {makeParquetConstellationData} from './parquet-constellation-data.ts';
 
-const ROW_COUNT = 120_000;
-const PAGE_SIZE = 16_384;
+const ROW_COUNT = 600_000;
+const PAGE_SIZE = 65_536;
 const chunks = [];
 const outputStream = {
   write(chunk, callback) {

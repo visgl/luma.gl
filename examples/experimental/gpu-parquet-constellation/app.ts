@@ -28,8 +28,8 @@ export const title = 'GPU Parquet Constellation';
 export const description =
   'Switch a multi-page Parquet galaxy between main-thread CPU decoding and graph-native GPU decoding.';
 
-const ROW_COUNT = 120_000;
-const PAGE_SIZE = 16_384;
+const ROW_COUNT = 600_000;
+const PAGE_SIZE = 65_536;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const UNIFORM_BYTE_LENGTH = 4 * Float32Array.BYTES_PER_ELEMENT;
 const PARQUET_URL = new URL('./data/constellation.parquet', import.meta.url);
