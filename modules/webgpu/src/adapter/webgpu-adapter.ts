@@ -189,23 +189,31 @@ export class WebGPUAdapter extends Adapter {
   }
 
   async create(props: DeviceProps): Promise<WebGPUDevice> {
-    if (!navigator.gpu) {
-      throw new Error('WebGPU not available. Recent Chrome browsers should work.');
+    return await this._create(props, true);
+  }
+
+  private async _create(
+    props: DeviceProps,
+    allowImmediateLossRetry: boolean
+  ): Promise<WebGPUDevice> {
+    if (typeof navigator === 'undefined' || !navigator.gpu) {
+      throw new Error('WebGPU is not available');
     }
 
     const requestedFeatureLevel = getWebGPUFeatureLevel(props);
     const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
-    const adapter = await this.requestGPUAdapter(requestAdapterOptions);
+    let adapter: GPUAdapter | null;
+    try {
+      adapter = await this.requestGPUAdapter(requestAdapterOptions);
+    } catch (error) {
+      throw new Error('WebGPU adapter request failed', {cause: error});
+    }
 
     if (!adapter) {
       throw new Error('Failed to request WebGPU adapter');
     }
 
-    //  Note: adapter.requestAdapterInfo() has been replaced with adapter.info. Fall back in case adapter.info is not available
-    const adapterInfo =
-      adapter.info ||
-      // @ts-ignore
-      (await adapter.requestAdapterInfo?.());
+    const adapterInfo = await getWebGPUAdapterInfo(adapter);
     // log.probe(2, 'Adapter available', adapterInfo)();
 
     const deviceDescriptor: GPUDeviceDescriptor = {};
@@ -223,7 +231,25 @@ export class WebGPUAdapter extends Adapter {
       deviceDescriptor.requiredLimits = getRequiredWebGPULimits(adapter.limits);
     }
 
-    const gpuDevice = await adapter.requestDevice(deviceDescriptor);
+    let gpuDevice: GPUDevice;
+    try {
+      gpuDevice = await adapter.requestDevice(deviceDescriptor);
+    } catch (error) {
+      throw new Error('WebGPU device request failed', {cause: error});
+    }
+
+    const immediateLoss = await getImmediateDeviceLoss(gpuDevice);
+    if (immediateLoss) {
+      gpuDevice.destroy();
+      if (allowImmediateLossRetry && immediateLoss.reason !== 'destroyed') {
+        log.warn('WebGPU device was returned already lost; retrying with a fresh adapter')();
+        return await this._create(props, false);
+      }
+      throw new Error(
+        `WebGPU device was returned already lost${immediateLoss.message ? `: ${immediateLoss.message}` : ''}`,
+        {cause: immediateLoss}
+      );
+    }
 
     // log.probe(1, 'GPUDevice available')();
 
@@ -233,7 +259,23 @@ export class WebGPUAdapter extends Adapter {
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
-      const device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
+      let device: WebGPUDevice;
+      try {
+        device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
+      } catch (error) {
+        gpuDevice.destroy();
+        throw new Error('WebGPU wrapper initialization failed', {cause: error});
+      }
+
+      const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+      if (canvasContextProps) {
+        try {
+          device.initializeCanvasContext(canvasContextProps);
+        } catch (error) {
+          device.destroy();
+          throw new Error('WebGPU canvas initialization failed', {cause: error});
+        }
+      }
       log.probe(
         1,
         'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
@@ -258,3 +300,23 @@ export class WebGPUAdapter extends Adapter {
 }
 
 export const webgpuAdapter = new WebGPUAdapter();
+
+/** Reads adapter metadata without making optional metadata support creation-critical. */
+export async function getWebGPUAdapterInfo(adapter: GPUAdapter): Promise<GPUAdapterInfo> {
+  try {
+    return (
+      adapter.info ||
+      // @ts-ignore Legacy Chromium API.
+      (await adapter.requestAdapterInfo?.()) ||
+      ({} as GPUAdapterInfo)
+    );
+  } catch (error) {
+    log.warn('WebGPU adapter metadata is unavailable', error)();
+    return {} as GPUAdapterInfo;
+  }
+}
+
+/** Detects an already-lost device without delaying normal device creation. */
+async function getImmediateDeviceLoss(device: GPUDevice): Promise<GPUDeviceLostInfo | null> {
+  return await Promise.race([device.lost, Promise.resolve(null)]);
+}

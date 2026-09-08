@@ -565,44 +565,23 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(cameraRaySource).not.toContain('let nearPosition =');
   });
 
-  test('reuses the centered guide hit only for explicitly non-temporal single samples', () => {
+  test('traces radiance samples independently from the centered temporal guide', () => {
     const mainStart = RAY_TRACING_SCENE_SHADER.indexOf('@compute @workgroup_size(8, 8, 1)');
     const mainSource = RAY_TRACING_SCENE_SHADER.slice(mainStart);
     const guideHitIndex = mainSource.indexOf(
       'let guideHit = intersectScene(guideRay, RAY_INFINITY)'
     );
-    const stableGuardIndex = mainSource.indexOf('let useStableGuideSample = sampleCount == 1u');
     const loopIndex = mainSource.indexOf(
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
-    const reusedRayIndex = mainSource.indexOf('var ray = guideRay');
-    const reusedHitIndex = mainSource.indexOf('var hit = guideHit');
-    const jitterGuardIndex = mainSource.indexOf('if (!useStableGuideSample)');
-    const jitteredRayIndex = mainSource.indexOf('ray = makeCameraRay(pixel, sampleIndex)');
-    const tracedHitIndex = mainSource.indexOf('hit = intersectScene(ray, RAY_INFINITY)');
+    const jitteredRayIndex = mainSource.indexOf('let ray = makeCameraRay(pixel, sampleIndex)');
+    const tracedHitIndex = mainSource.indexOf('let hit = intersectScene(ray, RAY_INFINITY)');
 
     expect(guideHitIndex).toBeGreaterThan(0);
-    expect(stableGuardIndex).toBeGreaterThan(guideHitIndex);
-    expect(mainSource).toContain('uniforms.previousCameraPosition.w < 0.5');
-    expect(mainSource).toContain('uniforms.temporal.w < 0.5');
-    expect(loopIndex).toBeGreaterThan(stableGuardIndex);
-    expect(reusedRayIndex).toBeGreaterThan(loopIndex);
-    expect(reusedHitIndex).toBeGreaterThan(reusedRayIndex);
-    expect(jitterGuardIndex).toBeGreaterThan(reusedHitIndex);
-    expect(jitteredRayIndex).toBeGreaterThan(jitterGuardIndex);
+    expect(loopIndex).toBeGreaterThan(guideHitIndex);
+    expect(jitteredRayIndex).toBeGreaterThan(loopIndex);
     expect(tracedHitIndex).toBeGreaterThan(jitteredRayIndex);
     expect(mainSource.match(/intersectScene\(/g)).toHaveLength(2);
-
-    for (const [sampleCount, progressive, temporalReprojection, reusesGuide] of [
-      [1, false, false, true],
-      [1, true, false, false],
-      [1, false, true, false],
-      [1, true, true, false],
-      [2, false, false, false],
-      [16, false, false, false]
-    ] as const) {
-      expect(sampleCount === 1 && !progressive && !temporalReprojection).toBe(reusesGuide);
-    }
   });
 
   test('reprojects bilinear per-instance radiance and rejects invalid history', () => {

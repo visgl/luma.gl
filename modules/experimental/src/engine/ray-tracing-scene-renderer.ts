@@ -907,6 +907,7 @@ export class RayTracingSceneRenderer {
     }
 
     const progressive = options.progressive ?? true;
+    const temporalReprojection = options.temporalReprojection ?? true;
     if (resources.historyNeedsReset) {
       resources.accumulatedFrameCount = 0;
       resources.phaseCount = 1;
@@ -939,7 +940,7 @@ export class RayTracingSceneRenderer {
           0
         ),
         accumulatedFrameCount,
-        frameIndex: resources.frameIndex
+        frameIndex: progressive || temporalReprojection ? resources.frameIndex : 0
       })
     );
 

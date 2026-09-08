@@ -31,6 +31,8 @@ const config = getDocusaurusConfig({
   // TODO: Remove after @vis.gl/docusaurus-website handles an omitted webpack resolve config.
   webpackConfig: {resolve: {}},
   customCss: ['./src/custom.css'],
+  // The shared website package deep-merges this field and currently requires an object.
+  webpackConfig: {resolve: {}},
   navbarItems: [
     {
       to: '/showcase',

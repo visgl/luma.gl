@@ -117,9 +117,12 @@ const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/gltf/test/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/scene/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
+  'modules/arrow/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
   'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/gpgpu/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
+  'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
+  'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
   'modules/experimental/test/gpu-sql/lu-sql.node.spec.{ts,js}'
 ];

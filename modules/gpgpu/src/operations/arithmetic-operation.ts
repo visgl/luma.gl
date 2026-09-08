@@ -147,7 +147,7 @@ function deduceArithmeticOutputProps(op: ArithmeticOp, args: NormalizedArithmeti
           length: 1
         };
 
-  const literalSize = literalArgs.reduce((size: number, arg: number | number[]) => {
+  const literalSize = literalArgs.reduce<number>((size, arg) => {
     if (Array.isArray(arg)) {
       return Math.max(size, arg.length);
     }

@@ -1261,7 +1261,7 @@ fn main() {
       integerValues[29] =
         (hasFloatColor ? 1 : 0) | (this.props.lodOpacity ? 2 : 0) | (encodeLinearColor ? 4 : 0);
       integerValues[30] = segment.activeRows ? 1 : 0;
-      integerValues[31] = segment.sourceRowOffset - segment.sourceBindingRowOffset;
+      integerValues[31] = segment.sourceRowOffset;
       segment.uniformBuffer.write(new Uint8Array(uniformData));
 
       const featureData = new ArrayBuffer(GPU_SPLAT_GRAPH_FEATURE_UNIFORM_BYTE_LENGTH);

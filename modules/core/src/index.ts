@@ -17,7 +17,8 @@ export type {
   BrowserDeviceFeature,
   DeviceTextureFormatCapabilities,
   WebGPUFeatureLevel,
-  WebGPUDeviceFeatureLevel
+  WebGPUDeviceFeatureLevel,
+  DeviceLostInfo
 } from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './adapter/device';
 

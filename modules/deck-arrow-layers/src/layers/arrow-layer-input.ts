@@ -3,10 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  canConvertColors,
+  convertArrowToGPUVector,
   getArrowPaths,
   getArrowRecordBatchAsyncIterator,
+  readArrowGPUVectorAsync,
   type ArrowRecordBatchSource
 } from '@luma.gl/arrow';
+import type {Device} from '@luma.gl/core';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {RecordBatch, Table, type DataType, type Vector} from 'apache-arrow';
 
@@ -53,6 +57,91 @@ export function assertArrowLayerGPUVector(
         `${ownerName} direct GPUVector "${vector.name}" contains null rows; replace nulls before passing a GPUVector`
       );
     }
+  }
+}
+
+/** Validates a caller-owned color vector that is normalized already or convertible by luma.gl. */
+export function assertArrowLayerColorGPUVector(
+  ownerName: string,
+  vector: GPUVector,
+  expectedLength?: number
+): void {
+  if (vector.format === 'vertex-list<unorm8x4>') {
+    assertArrowLayerGPUVector(ownerName, vector, ['vertex-list<unorm8x4>'], expectedLength);
+    return;
+  }
+  if (!canConvertColors(vector)) {
+    throw new Error(
+      `${ownerName} GPUVector.format "${vector.format ?? 'undefined'}" must be a convertible fixed-width RGB/RGBA format or vertex-list<unorm8x4>`
+    );
+  }
+  assertArrowLayerGPUVector(ownerName, vector, [vector.format!], expectedLength);
+}
+
+/** Returns normalized RGBA8 colors, preserving caller ownership when conversion is unnecessary. */
+export async function convertArrowLayerColorGPUVector(
+  device: Device,
+  vector: GPUVector,
+  name: string
+): Promise<{
+  vector: GPUVector<'unorm8x4' | 'vertex-list<unorm8x4>'>;
+  converted: boolean;
+}> {
+  if (vector.format === 'unorm8x4' || vector.format === 'vertex-list<unorm8x4>') {
+    return {
+      vector: vector as GPUVector<'unorm8x4' | 'vertex-list<unorm8x4>'>,
+      converted: false
+    };
+  }
+  const prepared = await convertArrowToGPUVector(device, vector, {
+    name,
+    semantic: 'color',
+    format: 'unorm8x4'
+  });
+  return {
+    vector: prepared.vector as GPUVector<'unorm8x4'>,
+    converted: prepared.ownsVector
+  };
+}
+
+/** Reads one borrowed GPU vector, optionally normalizing fixed-width colors before readback. */
+export async function readArrowLayerGPUVector(
+  device: Device,
+  vector: GPUVector,
+  name: string,
+  normalizeColor: boolean
+): Promise<Vector> {
+  if (!normalizeColor) {
+    return await readArrowGPUVectorAsync(vector);
+  }
+  const normalized = await convertArrowLayerColorGPUVector(device, vector, name);
+  try {
+    return await readArrowGPUVectorAsync(normalized.vector);
+  } finally {
+    if (normalized.converted) {
+      normalized.vector.destroy();
+    }
+  }
+}
+
+/** Normalizes convertible fixed-width Arrow colors and preserves specialized nested vectors. */
+export async function convertArrowLayerColorVector(
+  device: Device,
+  vector: Vector,
+  name: string
+): Promise<Vector> {
+  if (!canConvertColors(vector)) {
+    return vector;
+  }
+  const prepared = await convertArrowToGPUVector(device, vector, {
+    name,
+    semantic: 'color',
+    format: 'unorm8x4'
+  });
+  try {
+    return await readArrowGPUVectorAsync(prepared.vector);
+  } finally {
+    prepared.destroy();
   }
 }
 
