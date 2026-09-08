@@ -698,26 +698,28 @@ function getUniformInfosFromTypes(
       throw new Error(`Nested uniform arrays are not supported for ${name}`);
     }
 
-    for (const [memberName, memberType] of Object.entries(
-      type as Record<string, CompositeShaderType>
-    )) {
-      if (typeof memberType !== 'string') {
-        throw new Error(`Composite uniform array members are not supported for ${name}`);
+    const memberEntries = Object.entries(type as Record<string, CompositeShaderType>);
+    if (memberEntries.some(([, memberType]) => typeof memberType !== 'string')) {
+      throw new Error(`Composite uniform array members are not supported for ${name}`);
+    }
+
+    // WebGL reflects each member of each struct array element as its own non-array uniform
+    // (`lights[0].color`, `lights[1].color`, ...), so expand the declared array the same way.
+    for (let elementIndex = 0; elementIndex < arrayLength; elementIndex++) {
+      for (const [memberName] of memberEntries) {
+        const elementName = `${name}[${elementIndex}].${memberName}`;
+        const field = fields[elementName];
+        if (!field) {
+          throw new Error(`Missing std140 array layout field ${elementName}`);
+        }
+        uniforms.push({
+          name: elementName,
+          format: field.shaderType,
+          arrayLength: 1,
+          byteOffset: field.offset * 4,
+          byteStride: 0
+        });
       }
-      const firstName = `${name}[0].${memberName}`;
-      const secondName = `${name}[1].${memberName}`;
-      const firstField = fields[firstName];
-      const secondField = arrayLength > 1 ? fields[secondName] : undefined;
-      if (!firstField) {
-        throw new Error(`Missing std140 array layout field ${firstName}`);
-      }
-      uniforms.push({
-        name: firstName,
-        format: firstField.shaderType,
-        arrayLength,
-        byteOffset: firstField.offset * 4,
-        byteStride: secondField ? (secondField.offset - firstField.offset) * 4 : 0
-      });
     }
   };
 
