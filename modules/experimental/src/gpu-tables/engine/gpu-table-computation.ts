@@ -5,8 +5,11 @@
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Computation, type ComputationProps} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/engine';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {
+  isFixedSizeListGPUVectorFormat,
+  type GPUData,
+  type GPUVector
+} from '@luma.gl/gpgpu/gpu-data';
 
 /** Metadata supplied to one GPU table computation batch dispatch. */
 export type GPUTableComputationBatch = {
@@ -160,10 +163,19 @@ function getBatchVectorBindings(
 }
 
 function getGPUDataBinding(data: GPUData): Binding {
+  const fixedSizeListByteLength =
+    data.format && isFixedSizeListGPUVectorFormat(data.format)
+      ? data.length === 0
+        ? 0
+        : (data.length - 1) * data.byteStride + data.rowByteLength
+      : undefined;
   return {
     buffer: getGPUDataBuffer(data),
     offset: data.byteOffset,
-    size: data.length * data.byteStride
+    size:
+      fixedSizeListByteLength === undefined
+        ? (data.valueByteLength ?? data.length * data.byteStride)
+        : Math.max(data.valueByteLength ?? 0, fixedSizeListByteLength)
   };
 }
 

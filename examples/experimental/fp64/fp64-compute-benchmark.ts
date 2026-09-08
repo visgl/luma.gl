@@ -6,7 +6,7 @@ import {Buffer, type ComputeShaderLayout, type Device, type QuerySet} from '@lum
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 
-export type FP64BenchmarkMode = 'automatic' | 'classic' | 'integer' | 'float32';
+export type FP64BenchmarkMode = 'automatic' | 'classic' | 'hybrid' | 'integer' | 'float32';
 export type FP64BenchmarkOperation = 'add' | 'multiply' | 'divide' | 'square root';
 
 type FP64ComputeBenchmarkResultBase = {
@@ -40,7 +40,13 @@ const FP64_ARITHMETIC_UNIFORM_BINDING = 100;
 // without cloning the module so future metadata remains attached.
 const FP64_BENCHMARK_MODULE: ShaderModule<any, any, any> = fp64arithmetic;
 
-const BENCHMARK_MODES: FP64BenchmarkMode[] = ['automatic', 'classic', 'integer', 'float32'];
+const BENCHMARK_MODES: FP64BenchmarkMode[] = [
+  'automatic',
+  'classic',
+  'hybrid',
+  'integer',
+  'float32'
+];
 const BENCHMARK_OPERATIONS: FP64BenchmarkOperation[] = ['add', 'multiply', 'divide', 'square root'];
 
 type BenchmarkInputs = {
@@ -164,18 +170,19 @@ function makeComputation(
   const defines: Record<string, boolean | number> = {};
   if (mode === 'classic') {
     defines['LUMA_FP64_INTEGER_ARITHMETIC'] = false;
+  } else if (mode === 'hybrid') {
+    defines['LUMA_FP64_HYBRID_ARITHMETIC'] = true;
+    defines['LUMA_FP64_INTEGER_ARITHMETIC'] = false;
   } else if (mode === 'integer') {
     defines['LUMA_FP64_INTEGER_ARITHMETIC'] = true;
   }
-  const usesClassicSplit =
-    operation !== 'add' &&
-    (mode === 'classic' || (mode === 'automatic' && device.info.gpu !== 'apple'));
+  const usesFP64ArithmeticUniform = requiresFP64ArithmeticUniform(mode, operation, device.info.gpu);
   const storageBindings: ComputeShaderLayout['bindings'] = [
     {name: 'inputValues', type: 'read-only-storage', group: 0, location: 1},
     {name: 'outputValues', type: 'storage', group: 0, location: 2}
   ];
   const shaderLayout: ComputeShaderLayout = {
-    bindings: usesClassicSplit
+    bindings: usesFP64ArithmeticUniform
       ? [
           {
             name: 'fp64arithmeticUniforms',
@@ -195,11 +202,22 @@ function makeComputation(
     defines,
     shaderLayout,
     // Do not create a managed module-uniform binding when the selected path
-    // cannot reach classic split(). The declaration is absent from the
-    // caller-owned layout in those cases and an extra logical binding would
-    // produce a misleading validation warning.
-    shaderInputs: new ShaderInputs(usesClassicSplit ? {fp64arithmetic} : {})
+    // cannot reach classic split() or hybrid fp64_runtime_zero(). The declaration
+    // is absent from the caller-owned layout in those cases and an extra logical
+    // binding would produce a misleading validation warning.
+    shaderInputs: new ShaderInputs(usesFP64ArithmeticUniform ? {fp64arithmetic} : {})
   });
+}
+
+export function requiresFP64ArithmeticUniform(
+  mode: FP64BenchmarkMode,
+  operation: FP64BenchmarkOperation,
+  gpu: Device['info']['gpu']
+): boolean {
+  const usesClassicSplit =
+    operation !== 'add' && (mode === 'classic' || (mode === 'automatic' && gpu !== 'apple'));
+  const usesHybridRuntimeZero = mode === 'hybrid' && operation === 'divide';
+  return usesClassicSplit || usesHybridRuntimeZero;
 }
 
 function makeBenchmarkShader(operation: FP64BenchmarkOperation, useFloat32: boolean): string {

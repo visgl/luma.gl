@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   GPUHistogram,
   GraphBufferHandle,
@@ -13,7 +13,7 @@ import {
 
 type ScalarFormat = 'float32' | 'uint32';
 
-test('GPUHistogram accepts aligned masks and preserves public selection metadata', testCase => {
+it('GPUHistogram accepts aligned masks and preserves public selection metadata', () => {
   const input = createView('input', 'float32', 4);
   const output = createView('output', 'uint32', 4);
   const mask: GPUHistogramMask = createView('mask', 'uint32', 4, {
@@ -21,12 +21,11 @@ test('GPUHistogram accepts aligned masks and preserves public selection metadata
   });
   const histogram = new GPUHistogram({input, output, mask, domain: [0, 3]});
 
-  testCase.equal(histogram.mask, mask, 'retains the caller-owned public selection mask');
-  testCase.equal(mask.byteOffset, 4, 'accepts packed uint32-aligned nonzero view offsets');
-  testCase.end();
+  expect(histogram.mask, 'retains the caller-owned public selection mask').toBe(mask);
+  expect(mask.byteOffset, 'accepts packed uint32-aligned nonzero view offsets').toBe(4);
 });
 
-test('GPUHistogram rejects invalid atomic mask formats, layouts, lengths, and aliases', testCase => {
+it('GPUHistogram rejects invalid atomic mask formats, layouts, lengths, and aliases', () => {
   const input = createView('input', 'float32', 4);
   const output = createView('output', 'uint32', 4);
   const shortMask = createView('short-mask', 'uint32', 3);
@@ -34,35 +33,29 @@ test('GPUHistogram rejects invalid atomic mask formats, layouts, lengths, and al
   const stridedMask = createView('strided-mask', 'uint32', 4, {byteStride: 8});
   const unalignedMask = createView('unaligned-mask', 'uint32', 4, {byteOffset: 2});
 
-  testCase.throws(
+  expect(
     () => new GPUHistogram({input, output, mask: shortMask, domain: [0, 3]}),
-    /input and mask lengths must match/,
     'atomic masks require one source-aligned row per input value'
-  );
-  testCase.throws(
+  ).toThrow(/input and mask lengths must match/);
+  expect(
     () => new GPUHistogram({input, output, mask: floatMask as never, domain: [0, 3]}),
-    /packed, uint32-aligned uint32/,
     'floating-point masks cannot be reinterpreted as selection flags'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUHistogram({input, output, mask: stridedMask, domain: [0, 3]}),
-    /packed, uint32-aligned uint32/,
     'strided selections cannot be consumed by packed mask shaders'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUHistogram({input, output, mask: unalignedMask, domain: [0, 3]}),
-    /packed, uint32-aligned uint32/,
     'selection views must start at uint32-aligned byte offsets'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUHistogram({input, output, mask: output, domain: [0, 3]}),
-    /mask and output must use separate buffers/,
     'selection flags cannot alias the cleared and accumulated output'
-  );
-  testCase.end();
+  ).toThrow(/mask and output must use separate buffers/);
 });
 
-test('GPUHistogram requires identical mask view kind and ordered vector topology', testCase => {
+it('GPUHistogram requires identical mask view kind and ordered vector topology', () => {
   const input = createVector('input', 'float32', [2, 0, 3]);
   const matchingMask = createVector('matching-mask', 'uint32', [2, 0, 3]);
   const mismatchedMask = createVector('mismatched-mask', 'uint32', [1, 0, 4]);
@@ -71,23 +64,19 @@ test('GPUHistogram requires identical mask view kind and ordered vector topology
   const output = createView('output', 'uint32', 4);
 
   const histogram = new GPUHistogram({input, output, mask: matchingMask, domain: [0, 4]});
-  testCase.equal(histogram.mask, matchingMask, 'accepts empty chunks at matching source indices');
-  testCase.throws(
+  expect(histogram.mask, 'accepts empty chunks at matching source indices').toBe(matchingMask);
+  expect(
     () => new GPUHistogram({input, output, mask: atomicMask, domain: [0, 4]}),
-    /same view kind/,
     'vector inputs cannot silently concatenate an atomic selection'
-  );
-  testCase.throws(
+  ).toThrow(/same view kind/);
+  expect(
     () => new GPUHistogram({input, output, mask: mismatchedMask, domain: [0, 4]}),
-    /same chunk topology/,
     'equal total row counts do not permit different ordered chunk sizes'
-  );
-  testCase.throws(
+  ).toThrow(/same chunk topology/);
+  expect(
     () => new GPUHistogram({input, output, mask: differentChunkCountMask, domain: [0, 4]}),
-    /same chunk topology/,
     'vector masks must preserve the complete source chunk count'
-  );
-  testCase.end();
+  ).toThrow(/same chunk topology/);
 });
 
 function createView<T extends ScalarFormat>(

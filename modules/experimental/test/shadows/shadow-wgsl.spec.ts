@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -68,7 +68,7 @@ struct VertexOutput {
   return vec4f(vec3f(factor), 1.0);
 }`;
 
-test('shadow WGSL assembles and reflects group-2 depth resources', async t => {
+it('shadow WGSL assembles and reflects group-2 depth resources', async () => {
   const assembler = new WGSLShaderAssembler();
   const assembled = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -86,14 +86,14 @@ test('shadow WGSL assembles and reflects group-2 depth resources', async t => {
     'shadowComparisonSampler'
   ]) {
     const resource = resources.find(candidate => candidate.name === resourceName);
-    t.ok(resource, `${resourceName} reflects`);
-    t.equal(resource?.group, 2, `${resourceName} stays in group 2`);
+    expect(Boolean(resource), `${resourceName} reflects`).toBe(true);
+    expect(resource?.group, `${resourceName} stays in group 2`).toBe(2);
   }
-  await compileWGSL(t, assembled, 'shadow-receiver');
-  t.end();
+  await compileWGSL(assembled, 'shadow-receiver');
+  void 0;
 });
 
-test('contact shadow passes assemble and compile', async t => {
+it('contact shadow passes assemble and compile', async () => {
   const assembler = new WGSLShaderAssembler();
   for (const shaderPass of [
     contactShadowTrace,
@@ -110,17 +110,17 @@ test('contact shadow passes assemble and compile', async t => {
       source: `${CLIP_SPACE_VERTEX_SHADER}\n${fragmentSource}`,
       modules: [textureTransform, shaderPass]
     }).source;
-    t.ok(new WgslReflect(assembled), `${shaderPass.name} reflects`);
-    await compileWGSL(t, assembled, shaderPass.name);
+    expect(Boolean(new WgslReflect(assembled)), `${shaderPass.name} reflects`).toBe(true);
+    await compileWGSL(assembled, shaderPass.name);
   }
-  t.end();
+  void 0;
 });
 
-test('ShadowMapRenderer executes caster and receiver draws for every light view', async t => {
+it('ShadowMapRenderer executes caster and receiver draws for every light view', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU unavailable');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const renderer = new ShadowMapRenderer(device, {
@@ -171,7 +171,7 @@ test('ShadowMapRenderer executes caster and receiver draws for every light view'
       casterDrawCount++;
     }
   });
-  t.equal(casterDrawCount, 10, 'draws three cascades, one spot and six point faces');
+  expect(casterDrawCount, 'draws three cascades, one spot and six point faces').toBe(10);
 
   const shaderInputs = new ShaderInputs({shadow});
   shaderInputs.setProps({shadow: shaderProps});
@@ -199,7 +199,7 @@ test('ShadowMapRenderer executes caster and receiver draws for every light view'
   receiverPass.end();
   device.submit();
   const pixel = await readPixels(colorTexture, 1, 1);
-  t.equal(pixel[3], 255, 'receiver sampled all auxiliary shadow bindings');
+  expect(pixel[3], 'receiver sampled all auxiliary shadow bindings').toBe(255);
 
   framebuffer.destroy();
   colorTexture.destroy();
@@ -207,20 +207,13 @@ test('ShadowMapRenderer executes caster and receiver draws for every light view'
   shaderInputs.destroy();
   caster.destroy();
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
-async function compileWGSL(
-  t: {
-    equal: (actual: unknown, expected: unknown, message?: string) => void;
-    comment: (message: string) => void;
-  },
-  source: string,
-  name: string
-): Promise<void> {
+async function compileWGSL(source: string, name: string): Promise<void> {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment(`WebGPU unavailable; ${name} reflection-only`);
+    void 0;
     return;
   }
   const shader = device.createShader({id: name, source});
@@ -229,7 +222,7 @@ async function compileWGSL(
     .filter(message => message.type === 'error')
     .map(message => message.message)
     .join('\n');
-  t.equal(errors, '', `${name} compiles${errors ? `\n${errors}` : ''}`);
+  expect(errors, `${name} compiles${errors ? `\n${errors}` : ''}`).toBe('');
   shader.destroy();
 }
 

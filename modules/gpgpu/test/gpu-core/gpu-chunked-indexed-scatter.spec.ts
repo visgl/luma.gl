@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,15 +7,12 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUChunkedIndexedScatter, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const INVALID_ROUTE = 0xffffffff;
 
-test('GPUChunkedIndexedScatter routes compacted IDs into indirect-ready chunk ranges', async t => {
+it('GPUChunkedIndexedScatter routes compacted IDs into indirect-ready chunk ranges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -71,29 +69,25 @@ test('GPUChunkedIndexedScatter routes compacted IDs into indirect-ready chunk ra
   try {
     await encodeAndSubmit(device, compiled, 'chunked-scatter-first');
     const firstOutput = await readUint32(outputBuffer, 6);
-    t.deepEqual(
+    expect(
       firstOutput.slice(0, 2).sort((a, b) => a - b),
-      [2, 9],
       'chunk zero jobs'
-    );
-    t.deepEqual(
+    ).toEqual([2, 9]);
+    expect(
       firstOutput.slice(2, 4).sort((a, b) => a - b),
-      [3, 10],
       'chunk one jobs'
-    );
-    t.deepEqual(
+    ).toEqual([3, 10]);
+    expect(
       firstOutput.slice(4, 6).sort((a, b) => a - b),
-      [8, 11],
       'chunk two jobs'
-    );
+    ).toEqual([8, 11]);
 
     sourceCountBuffer.write(Uint32Array.from([1]));
     await encodeAndSubmit(device, compiled, 'chunked-scatter-updated');
-    t.deepEqual(
+    expect(
       (await readUint32(outputBuffer, 2)).sort((a, b) => a - b),
-      [10, 11],
       'GPU-resident counts update routed work without recompilation'
-    );
+    ).toEqual([10, 11]);
   } finally {
     compiled.destroy();
     sourceIdsBuffer.destroy();
@@ -101,8 +95,6 @@ test('GPUChunkedIndexedScatter routes compacted IDs into indirect-ready chunk ra
     routesBuffer.destroy();
     outputBuffer.destroy();
   }
-
-  t.end();
 });
 
 async function encodeAndSubmit(

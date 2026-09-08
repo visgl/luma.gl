@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -8,7 +9,6 @@ import {
   type GPUCommandGraphExecutionPlanStep,
   type GPUCommandGraphNodePreflight
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 
 function makeNode(
   id: string,
@@ -30,7 +30,7 @@ function makeNode(
   };
 }
 
-test('GPUCommandGraph execution planning respects multidimensional budgets', t => {
+it('GPUCommandGraph execution planning respects multidimensional budgets', () => {
   const plan = getGPUCommandGraphExecutionPlan(
     {
       nodes: [
@@ -54,53 +54,51 @@ test('GPUCommandGraph execution planning respects multidimensional budgets', t =
     }
   );
 
-  t.equal(plan.stepCount, 3, 'plans three queue submissions');
-  t.equal(plan.nodeCount, 5, 'retains every scheduled node');
-  t.equal(plan.maximumInvocationCount, 1600, 'reports complete invocation bounds');
-  t.equal(plan.conditionalNodeCount, 1, 'retains conservative conditional-node bounds');
-  t.equal(plan.steps[0].conditionalNodeCount, 1, 'reports conditions per submission step');
-  t.equal(plan.readByteLength, 6400, 'reports complete read bounds');
-  t.deepEqual(
+  expect(plan.stepCount, 'plans three queue submissions').toBe(3);
+  expect(plan.nodeCount, 'retains every scheduled node').toBe(5);
+  expect(plan.maximumInvocationCount, 'reports complete invocation bounds').toBe(1600);
+  expect(plan.conditionalNodeCount, 'retains conservative conditional-node bounds').toBe(1);
+  expect(plan.steps[0].conditionalNodeCount, 'reports conditions per submission step').toBe(1);
+  expect(plan.readByteLength, 'reports complete read bounds').toBe(6400);
+  expect(
     plan.steps.map(step => [step.firstNodeIndex, step.nextNodeIndex]),
-    [
-      [0, 3],
-      [3, 4],
-      [4, 5]
-    ],
     'keeps dependency order while packing bounded ranges'
-  );
-  t.equal(plan.steps[0].commandCount, 2, 'packs commands up to the budget');
-  t.ok(plan.steps[1].exceedsBudget, 'allows one indivisible oversized node to make progress');
-  t.equal(plan.oversizedStepCount, 1, 'summarizes oversized work before execution');
-  t.ok(Object.isFrozen(plan), 'freezes the plan');
-  t.ok(Object.isFrozen(plan.steps), 'freezes the step list');
-  t.ok(Object.isFrozen(plan.steps[0]), 'freezes individual steps');
-  t.end();
+  ).toEqual([
+    [0, 3],
+    [3, 4],
+    [4, 5]
+  ]);
+  expect(plan.steps[0].commandCount, 'packs commands up to the budget').toBe(2);
+  expect(
+    Boolean(plan.steps[1].exceedsBudget),
+    'allows one indivisible oversized node to make progress'
+  ).toBe(true);
+  expect(plan.oversizedStepCount, 'summarizes oversized work before execution').toBe(1);
+  expect(Boolean(Object.isFrozen(plan)), 'freezes the plan').toBe(true);
+  expect(Boolean(Object.isFrozen(plan.steps)), 'freezes the step list').toBe(true);
+  expect(Boolean(Object.isFrozen(plan.steps[0])), 'freezes individual steps').toBe(true);
 });
 
-test('GPUCommandGraph execution planning rejects invalid budgets', t => {
+it('GPUCommandGraph execution planning rejects invalid budgets', () => {
   const preflight = {nodes: [makeNode('partition', 1)], annotatedNodeCount: 1};
-  t.throws(
+  expect(
     () =>
       getGPUCommandGraphExecutionPlan(preflight, {
         maximumInvocationCount: 0
       }),
-    /maximumInvocationCount must be a positive safe integer/,
     'rejects a zero invocation budget'
-  );
-  t.throws(
+  ).toThrow(/maximumInvocationCount must be a positive safe integer/);
+  expect(
     () =>
       getGPUCommandGraphExecutionPlan(preflight, {
         maximumInvocationCount: 1,
         maximumReadByteLength: Number.POSITIVE_INFINITY
       }),
-    /maximumReadByteLength must be a positive safe integer/,
     'rejects a non-finite byte budget'
-  );
-  t.end();
+  ).toThrow(/maximumReadByteLength must be a positive safe integer/);
 });
 
-test('GPUCommandGraph execution planning controls coherent partial publication', t => {
+it('GPUCommandGraph execution planning controls coherent partial publication', () => {
   const preflight = {
     nodes: [
       makeNode('summary-work', 300),
@@ -115,34 +113,36 @@ test('GPUCommandGraph execution planning controls coherent partial publication',
   const atomicPlan = getGPUCommandGraphExecutionPlan(preflight, budget, {
     latencyPriority: 'background'
   });
-  t.equal(atomicPlan.stepCount, 1, 'keeps intermediate results private by default');
-  t.equal(atomicPlan.publicationCount, 0, 'does not surface undeclared application publication');
-  t.equal(atomicPlan.latencyPriority, 'background', 'retains explicit scheduling urgency');
-  t.ok(atomicPlan.steps[0].publishable, 'always publishes the completed graph');
+  expect(atomicPlan.stepCount, 'keeps intermediate results private by default').toBe(1);
+  expect(atomicPlan.publicationCount, 'does not surface undeclared application publication').toBe(
+    0
+  );
+  expect(atomicPlan.latencyPriority, 'retains explicit scheduling urgency').toBe('background');
+  expect(Boolean(atomicPlan.steps[0].publishable), 'always publishes the completed graph').toBe(
+    true
+  );
 
   const progressivePlan = getGPUCommandGraphExecutionPlan(preflight, budget, {
     latencyPriority: 'interactive',
     publicationPolicy: 'progressive'
   });
-  t.equal(progressivePlan.stepCount, 3, 'ends steps at coherent intermediate boundaries');
-  t.equal(progressivePlan.publicationCount, 2, 'reports every surfaced intermediate result');
-  t.deepEqual(
+  expect(progressivePlan.stepCount, 'ends steps at coherent intermediate boundaries').toBe(3);
+  expect(progressivePlan.publicationCount, 'reports every surfaced intermediate result').toBe(2);
+  expect(
     progressivePlan.steps.map(step => step.publications.map(publication => publication.id)),
-    [['summary'], ['histogram'], []],
     'identifies exactly which result became safe after each queue completion'
-  );
-  t.ok(
-    progressivePlan.steps.every(step => step.publishable),
+  ).toEqual([['summary'], ['histogram'], []]);
+  expect(
+    Boolean(progressivePlan.steps.every(step => step.publishable)),
     'marks intermediate boundaries and final completion as publishable'
-  );
-  t.ok(
-    progressivePlan.steps.every(step => step.latencyPriority === 'interactive'),
+  ).toBe(true);
+  expect(
+    Boolean(progressivePlan.steps.every(step => step.latencyPriority === 'interactive')),
     'propagates latency priority to every scheduler-visible step'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('GPUCommandGraph execution budget controller learns from saturated measured steps', t => {
+it('GPUCommandGraph execution budget controller learns from saturated measured steps', () => {
   const controller = new GPUCommandGraphExecutionBudgetController({
     initialBudget: {
       maximumInvocationCount: 1000,
@@ -174,28 +174,27 @@ test('GPUCommandGraph execution budget controller learns from saturated measured
   });
 
   const slowObservation = controller.observeStep(makeStep(1000, 10, 4000), 20);
-  t.equal(slowObservation.scale, 0.5, 'halves the future envelope after a saturated slow step');
-  t.equal(
+  expect(slowObservation.scale, 'halves the future envelope after a saturated slow step').toBe(0.5);
+  expect(
     controller.budget.maximumInvocationCount,
-    500,
     'scales invocation limits for the next execution'
+  ).toBe(500);
+  expect(controller.budget.maximumReadByteLength, 'scales memory-traffic limits coherently').toBe(
+    2000
   );
-  t.equal(controller.budget.maximumReadByteLength, 2000, 'scales memory-traffic limits coherently');
 
   const fastObservation = controller.observeStep(makeStep(500, 5, 2000), 2.5);
-  t.equal(fastObservation.scale, 1, 'recovers conservatively after a saturated fast step');
+  expect(fastObservation.scale, 'recovers conservatively after a saturated fast step').toBe(1);
   controller.reset();
   const partialObservation = controller.observeStep(makeStep(250, 2, 1000), 2.5);
-  t.equal(
+  expect(
     partialObservation.scale,
-    1,
     'does not inflate the budget from a proportionally fast partial tail step'
-  );
-  t.equal(controller.sampleCount, 1, 'reset clears prior empirical samples');
-  t.end();
+  ).toBe(1);
+  expect(controller.sampleCount, 'reset clears prior empirical samples').toBe(1);
 });
 
-test('GPUCommandGraph execution latency priorities select queue-time targets', t => {
+it('GPUCommandGraph execution latency priorities select queue-time targets', () => {
   const makeController = (
     latencyPriority: 'interactive' | 'normal' | 'background'
   ): GPUCommandGraphExecutionBudgetController =>
@@ -203,8 +202,9 @@ test('GPUCommandGraph execution latency priorities select queue-time targets', t
       initialBudget: {maximumInvocationCount: 1000},
       latencyPriority
     });
-  t.equal(makeController('interactive').targetStepMilliseconds, 4, 'prioritizes low latency');
-  t.equal(makeController('normal').targetStepMilliseconds, 8, 'uses the balanced default');
-  t.equal(makeController('background').targetStepMilliseconds, 16, 'favors background throughput');
-  t.end();
+  expect(makeController('interactive').targetStepMilliseconds, 'prioritizes low latency').toBe(4);
+  expect(makeController('normal').targetStepMilliseconds, 'uses the balanced default').toBe(8);
+  expect(makeController('background').targetStepMilliseconds, 'favors background throughput').toBe(
+    16
+  );
 });

@@ -13,8 +13,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUGraphModularityToGraphWithDispatchLimit} from '../../src/gpu-graph/gpu-graph-modularity-internals';
 
 type ScalarFormat = 'uint32' | 'float32';
@@ -300,11 +299,9 @@ const modularityScenarios: ModularityScenario[] = [
 ];
 
 for (const scenario of modularityScenarios) {
-  test(`GPUGraphModularity GPU: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphModularity GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -313,42 +310,36 @@ for (const scenario of modularityScenarios) {
     try {
       compileModularity(fixture, scenario.maximumWorkgroups);
       executeModularity(fixture);
-      await assertModularity(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertModularity(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'modularity consumes every original ordered source chunk without flattening'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.expectedScore !== undefined) {
-        tapeTest.ok(
-          Math.abs(expected.score - scenario.expectedScore) < 1e-6,
+        expect(
+          Boolean(Math.abs(expected.score - scenario.expectedScore) < 1e-6),
           'independent CPU modularity oracle agrees with the explicit exact partition score'
-        );
+        ).toBe(true);
       }
       if (scenario.expectedContributions) {
         assertApproximateValues(
-          tapeTest,
           expected.contributions,
           scenario.expectedContributions,
           'independent CPU oracle confirms explicit stable-community contribution rows'
         );
       }
       if (scenario.expectedValid !== undefined) {
-        tapeTest.equal(expected.valid, scenario.expectedValid);
+        expect(expected.valid).toBe(scenario.expectedValid);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphModularity scores existing GPU label propagation in the same command graph', async tapeTest => {
+it('GPUGraphModularity scores existing GPU label propagation in the same command graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -397,39 +388,32 @@ test('GPUGraphModularity scores existing GPU label propagation in the same comma
     propagation.addToGraph(fixture.commandGraph);
     fixture.modularity.addToGraph(fixture.commandGraph);
     fixture.compiled = fixture.commandGraph.compile();
-    tapeTest.equal(
+    expect(
       submitSpy.mock.calls.length,
-      0,
       'composition declares and compiles without submission'
-    );
-    tapeTest.equal(
+    ).toBe(0);
+    expect(
       readbackSpy.mock.calls.length,
-      0,
       'generated communities are never staged through CPU'
-    );
+    ).toBe(0);
     submitSpy.mockRestore();
 
     executeModularity(fixture);
-    await assertModularity(tapeTest, fixture, calculateExpectedModularity(scenario));
-    tapeTest.equal(
+    await assertModularity(fixture, calculateExpectedModularity(scenario));
+    expect(
       readbackSpy.mock.calls.length,
-      0,
       'the exact partition score consumes live label-propagation output entirely on the GPU'
-    );
+    ).toBe(0);
   } finally {
     submitSpy.mockRestore();
     readbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
-test('GPUGraphModularity recomputes scores after caller-owned community and source updates', async tapeTest => {
+it('GPUGraphModularity recomputes scores after caller-owned community and source updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -449,27 +433,25 @@ test('GPUGraphModularity recomputes scores after caller-owned community and sour
 
   try {
     compileModularity(fixture);
-    tapeTest.equal(submitSpy.mock.calls.length, 0);
-    tapeTest.ok(readbackSpies.every(spy => spy.mock.calls.length === 0));
+    expect(submitSpy.mock.calls.length).toBe(0);
+    expect(Boolean(readbackSpies.every(spy => spy.mock.calls.length === 0))).toBe(true);
     submitSpy.mockRestore();
     for (const readbackSpy of readbackSpies) readbackSpy.mockRestore();
 
     executeModularity(fixture);
-    await assertModularity(tapeTest, fixture, calculateExpectedModularity(original));
+    await assertModularity(fixture, calculateExpectedModularity(original));
 
     const communityBuffer = fixture.modularity.communities.data[0].buffer as Buffer;
     communityBuffer.write(Uint32Array.from([0, 0, 0, 0]));
     const updated = {...original, communities: [0, 0, 0, 0]};
     executeModularity(fixture);
-    await assertModularity(tapeTest, fixture, calculateExpectedModularity(updated));
-    tapeTest.equal(fixture.modularity.communities.data[0].buffer, communityBuffer);
+    await assertModularity(fixture, calculateExpectedModularity(updated));
+    expect(fixture.modularity.communities.data[0].buffer).toBe(communityBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const readbackSpy of readbackSpies) readbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Evaluates Newman community volumes independently over original graph source partitions. */
@@ -733,7 +715,6 @@ function executeModularity(fixture: ModularityExecutionFixture): void {
 }
 
 async function assertModularity(
-  tapeTest: Test,
   fixture: ModularityExecutionFixture,
   expected: ExpectedModularity
 ): Promise<void> {
@@ -747,35 +728,31 @@ async function assertModularity(
       : Promise.resolve(undefined)
   ]);
 
-  tapeTest.ok(
-    Math.abs(score[0] - expected.score) < 2e-5,
+  expect(
+    Boolean(Math.abs(score[0] - expected.score) < 2e-5),
     `GPU Newman modularity ${score[0]} matches independent weighted CPU score ${expected.score}`
-  );
+  ).toBe(true);
   if (contributions) {
     assertApproximateValues(
-      tapeTest,
       contributions,
       expected.contributions,
       'GPU contributions match stable community identifiers and independent group volumes'
     );
   }
-  if (valid)
-    tapeTest.equal(valid[0], Number(expected.valid), 'validity reports actual score status');
+  if (valid) expect(valid[0], 'validity reports actual score status').toBe(Number(expected.valid));
   if (!expected.valid) {
-    tapeTest.equal(score[0], 0, 'invalid partitions never publish misleading partial scores');
-    if (contributions) tapeTest.ok(contributions.every(contribution => contribution === 0));
+    expect(score[0], 'invalid partitions never publish misleading partial scores').toBe(0);
+    if (contributions)
+      expect(Boolean(contributions.every(contribution => contribution === 0))).toBe(true);
   }
 }
 
-function assertApproximateValues(
-  tapeTest: Test,
-  actual: number[],
-  expected: number[],
-  message: string
-): void {
-  tapeTest.equal(actual.length, expected.length);
+function assertApproximateValues(actual: number[], expected: number[], message: string): void {
+  expect(actual.length).toBe(expected.length);
   for (const [index, value] of actual.entries()) {
-    tapeTest.ok(Math.abs(value - expected[index]) < 2e-5, `${message}: row ${index}`);
+    expect(Boolean(Math.abs(value - expected[index]) < 2e-5), `${message}: row ${index}`).toBe(
+      true
+    );
   }
 }
 
@@ -799,12 +776,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: ModularityExecutionFixture): void {
+function destroyExecutionFixture(fixture: ModularityExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'borrowed source chunks, labels, and outputs retain caller-owned buffer lifetime'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

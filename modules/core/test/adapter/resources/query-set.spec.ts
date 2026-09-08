@@ -2,55 +2,57 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
-test('QuerySet construct/delete', async t => {
+it('QuerySet construct/delete', async () => {
   for (const device of await getTestDevices()) {
     const querySet = device.createQuerySet({type: 'occlusion', count: 1});
-    t.ok(querySet instanceof QuerySet, 'QuerySet construction successful');
+    expect(Boolean(querySet instanceof QuerySet), 'QuerySet construction successful').toBe(true);
     querySet.destroy();
-    t.pass('QuerySet delete successful');
+    expect(Boolean('QuerySet delete successful'), '').toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('QuerySet timestamp duration', async t => {
+it('QuerySet timestamp duration', async () => {
   for (const device of await getTestDevices()) {
     if (!device.features.has('timestamp-query')) {
-      t.comment(`${device.type} does not support timestamp queries`);
+      void 0;
     } else {
       const querySet = device.createQuerySet({type: 'timestamp', count: 2});
-      t.notOk(
-        querySet.isResultAvailable(),
+      expect(
+        Boolean(querySet.isResultAvailable()),
         `${device.type} timestamp result unavailable before recording`
-      );
+      ).toBe(false);
 
       device.commandEncoder.writeTimestamp(querySet, 0);
       device.commandEncoder.writeTimestamp(querySet, 1);
       device.submit();
 
       const duration = await querySet.readTimestampDuration(0, 1);
-      t.ok(duration >= 0, `${device.type} timestamp duration is non-negative`);
+      expect(Boolean(duration >= 0), `${device.type} timestamp duration is non-negative`).toBe(
+        true
+      );
 
       querySet.destroy();
     }
   }
-  t.end();
+  void 0;
 });
 
-test('WebGPU QuerySet reads do not replace the active command encoder', async t => {
+it('WebGPU QuerySet reads do not replace the active command encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   if (!device.features.has('timestamp-query')) {
-    t.comment('WebGPU timestamp queries are not supported');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -62,28 +64,26 @@ test('WebGPU QuerySet reads do not replace the active command encoder', async t 
   const activeCommandEncoder = device.commandEncoder;
   const duration = await querySet.readTimestampDuration(0, 1);
 
-  t.ok(duration >= 0, 'WebGPU timestamp duration remains readable');
-  t.equal(
-    device.commandEncoder,
-    activeCommandEncoder,
-    'WebGPU query reads keep the active command encoder intact'
+  expect(Boolean(duration >= 0), 'WebGPU timestamp duration remains readable').toBe(true);
+  expect(device.commandEncoder, 'WebGPU query reads keep the active command encoder intact').toBe(
+    activeCommandEncoder
   );
 
   querySet.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPU QuerySet defers inline resolve when a readback is already in flight', async t => {
+it('WebGPU QuerySet defers inline resolve when a readback is already in flight', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   if (!device.features.has('timestamp-query')) {
-    t.comment('WebGPU timestamp queries are not supported');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -102,64 +102,66 @@ test('WebGPU QuerySet defers inline resolve when a readback is already in flight
     }
   });
 
-  t.notOk(encoded, 'webgpu skips inline resolve while a readback is already in flight');
-  t.equal(
+  expect(
+    Boolean(encoded),
+    'webgpu skips inline resolve while a readback is already in flight'
+  ).toBe(false);
+  expect(
     resolveQuerySetCallCount,
-    0,
     'webgpu does not encode resolveQuerySet while readback is active'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     copyBufferToBufferCallCount,
-    0,
     'webgpu does not encode copyBufferToBuffer while readback is active'
-  );
-  t.ok(querySet._resultsPendingResolution, 'webgpu keeps results pending for fallback resolution');
+  ).toBe(0);
+  expect(
+    Boolean(querySet._resultsPendingResolution),
+    'webgpu keeps results pending for fallback resolution'
+  ).toBe(true);
 
   querySet._readResultsPromise = null;
   querySet.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGL QuerySet timestamp pair validation', async t => {
+it('WebGL QuerySet timestamp pair validation', async () => {
   const device = await getWebGLTestDevice();
   if (!device.features.has('timestamp-query')) {
-    t.comment('WebGL timestamp queries are not supported');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   const querySet = device.createQuerySet({type: 'timestamp', count: 2});
-  t.throws(
+  expect(
     () => device.commandEncoder.writeTimestamp(querySet, 1),
-    /started/,
     'ending before starting throws'
-  );
+  ).toThrow(/started/);
 
   device.commandEncoder.writeTimestamp(querySet, 0);
-  t.throws(
+  expect(
     () => device.commandEncoder.writeTimestamp(querySet, 0),
-    /active/,
     'starting the same timestamp pair twice throws'
-  );
+  ).toThrow(/active/);
   device.commandEncoder.writeTimestamp(querySet, 1);
   device.submit();
 
   const duration = await querySet.readTimestampDuration(0, 1);
-  t.ok(duration >= 0, 'completed WebGL timestamp pair is readable');
+  expect(Boolean(duration >= 0), 'completed WebGL timestamp pair is readable').toBe(true);
 
   querySet.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
+it('WebGL QuerySet destroy cancels pending RAF polling', async () => {
   const device = await getWebGLTestDevice();
   const querySet = device.createQuerySet({type: 'timestamp', count: 2}) as any;
   const queryHandle = device.gl.createQuery();
 
-  t.ok(queryHandle, 'created a WebGL query handle for the pending poll test');
+  expect(Boolean(queryHandle), 'created a WebGL query handle for the pending poll test').toBe(true);
   if (!queryHandle) {
     querySet.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -197,10 +199,10 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
     querySetPrototype._pollQueryAvailability = () => false;
 
     const durationPromise = querySet.readTimestampDuration(0, 1);
-    t.ok(
-      scheduledCallback,
+    expect(
+      Boolean(scheduledCallback),
       'readTimestampDuration schedules an RAF poll when results are unavailable'
-    );
+    ).toBe(true);
 
     querySet.destroy();
     const duration = await Promise.race([
@@ -213,15 +215,15 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
       )
     ]);
 
-    t.equal(cancelAnimationFrameCallCount, 1, 'destroy cancels the pending RAF poll');
-    t.equal(duration, 0, 'destroy resolves the pending timestamp read with a neutral duration');
+    expect(cancelAnimationFrameCallCount, 'destroy cancels the pending RAF poll').toBe(1);
+    expect(duration, 'destroy resolves the pending timestamp read with a neutral duration').toBe(0);
   } finally {
     querySetPrototype._requestAnimationFrame = originalRequestAnimationFrame;
     querySetPrototype._cancelAnimationFrame = originalCancelAnimationFrame;
     querySetPrototype._pollQueryAvailability = originalPollQueryAvailability;
   }
 
-  t.end();
+  void 0;
 });
 
 /*

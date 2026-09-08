@@ -29,7 +29,7 @@
     "@probe.gl/stats-widget": "^4.1.1",
     "@signalwire/docusaurus-plugin-llms-txt": "^1.2.2",
     "@stackblitz/sdk": "^1.11.0",
-    "@vis.gl/docusaurus-website": "1.0.0-alpha.21",
+    "@vis.gl/docusaurus-website": "2.0.0-beta.1",
     "clsx": "^1.1.1",
     "maplibre-gl": "^5.13.0",
     "react": "^18.2.0",

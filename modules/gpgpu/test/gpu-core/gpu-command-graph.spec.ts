@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -18,7 +19,6 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
@@ -31,11 +31,9 @@ import {
   getGPUScanStrategy
 } from '../../src/gpu-core/gpu-scan';
 
-test('GPUCommandGraph compiles dependencies and reuses transient buffers', async t => {
+it('GPUCommandGraph compiles dependencies and reuses transient buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -77,56 +75,51 @@ test('GPUCommandGraph compiles dependencies and reuses transient buffers', async
   const compiled = graph.compile();
   const debugString =
     'CompiledGPUCommandGraph:"graph-scheduling-test":3 nodes:128B transient:active';
-  t.equal(
-    Object.prototype.toString.call(compiled),
-    '[object CompiledGPUCommandGraph]',
-    'exposes a compact object-inspection tag'
+  expect(Object.prototype.toString.call(compiled), 'exposes a compact object-inspection tag').toBe(
+    '[object CompiledGPUCommandGraph]'
   );
-  t.equal(compiled.toString(), debugString, 'summarizes graph identity, size, and lifecycle');
-  t.equal(compiled.toJSON(), debugString, 'serializes without recursive resource graphs');
-  t.equal(JSON.stringify(compiled), JSON.stringify(debugString), 'keeps JSON logs compact');
-  t.deepEqual(
-    compiled.stats.nodeOrder,
-    ['write-first', 'write-second', 'read-second'],
-    'stable order includes inferred dependency'
+  expect(compiled.toString(), 'summarizes graph identity, size, and lifecycle').toBe(debugString);
+  expect(compiled.toJSON(), 'serializes without recursive resource graphs').toBe(debugString);
+  expect(JSON.stringify(compiled), 'keeps JSON logs compact').toBe(JSON.stringify(debugString));
+  expect(compiled.stats.nodeOrder, 'stable order includes inferred dependency').toEqual([
+    'write-first',
+    'write-second',
+    'read-second'
+  ]);
+  expect(compiled.stats.logicalTransientBufferCount, 'tracks two logical buffers').toBe(2);
+  expect(compiled.stats.logicalBufferCount, 'reports all logical buffers').toBe(2);
+  expect(compiled.stats.importedBufferCount, 'reports no imported buffers').toBe(0);
+  expect(compiled.stats.physicalTransientBufferCount, 'reuses one physical allocation').toBe(1);
+  expect(compiled.stats.logicalTransientBytes, 'reports logical bytes').toBe(192);
+  expect(compiled.stats.logicalBufferBytes, 'reports total logical buffer bytes').toBe(192);
+  expect(compiled.stats.physicalTransientBytes, 'reports physical bytes').toBe(128);
+  expect(compiled.stats.logicalResourceBytes, 'reports total logical resource bytes').toBe(192);
+  expect(compiled.stats.physicalTransientResourceBytes, 'reports total owned transient bytes').toBe(
+    128
   );
-  t.equal(compiled.stats.logicalTransientBufferCount, 2, 'tracks two logical buffers');
-  t.equal(compiled.stats.logicalBufferCount, 2, 'reports all logical buffers');
-  t.equal(compiled.stats.importedBufferCount, 0, 'reports no imported buffers');
-  t.equal(compiled.stats.physicalTransientBufferCount, 1, 'reuses one physical allocation');
-  t.equal(compiled.stats.logicalTransientBytes, 192, 'reports logical bytes');
-  t.equal(compiled.stats.logicalBufferBytes, 192, 'reports total logical buffer bytes');
-  t.equal(compiled.stats.physicalTransientBytes, 128, 'reports physical bytes');
-  t.equal(compiled.stats.logicalResourceBytes, 192, 'reports total logical resource bytes');
-  t.equal(
-    compiled.stats.physicalTransientResourceBytes,
-    128,
-    'reports total owned transient bytes'
-  );
-  t.equal(compiled.preflight.commandCount, 1, 'aggregates annotated commands');
-  t.equal(compiled.preflight.annotatedNodeCount, 1, 'reports workload-estimate coverage');
-  t.equal(compiled.preflight.maximumWorkgroupCount, 2, 'aggregates annotated workgroups');
-  t.equal(compiled.preflight.maximumInvocationCount, 512, 'aggregates annotated invocations');
-  t.equal(compiled.preflight.readByteLength, 16, 'aggregates annotated reads');
-  t.equal(compiled.preflight.writeByteLength, 64, 'aggregates annotated writes');
-  t.equal(compiled.preflight.largestBufferByteLength, 128, 'reports the largest buffer');
-  t.equal(compiled.preflight.nodes[0].operation, 'TestFill', 'preserves operation identity');
-  t.equal(compiled.preflight.fitsDeviceLimits, true, 'reports valid declared resources');
+  expect(compiled.preflight.commandCount, 'aggregates annotated commands').toBe(1);
+  expect(compiled.preflight.annotatedNodeCount, 'reports workload-estimate coverage').toBe(1);
+  expect(compiled.preflight.maximumWorkgroupCount, 'aggregates annotated workgroups').toBe(2);
+  expect(compiled.preflight.maximumInvocationCount, 'aggregates annotated invocations').toBe(512);
+  expect(compiled.preflight.readByteLength, 'aggregates annotated reads').toBe(16);
+  expect(compiled.preflight.writeByteLength, 'aggregates annotated writes').toBe(64);
+  expect(compiled.preflight.largestBufferByteLength, 'reports the largest buffer').toBe(128);
+  expect(compiled.preflight.nodes[0].operation, 'preserves operation identity').toBe('TestFill');
+  expect(compiled.preflight.fitsDeviceLimits, 'reports valid declared resources').toBe(true);
   const commandEncoder = device.createCommandEncoder({id: 'graph-scheduling-encoding'});
   const encoding = compiled.encode(commandEncoder, {parameters: undefined});
-  t.equal(encoding.stats.computePassCount, 1, 'coalesces consecutive graph compute nodes');
-  t.equal(encoding.stats.coalescedComputeNodeCount, 2, 'reports nodes sharing the physical pass');
+  expect(encoding.stats.computePassCount, 'coalesces consecutive graph compute nodes').toBe(1);
+  expect(encoding.stats.coalescedComputeNodeCount, 'reports nodes sharing the physical pass').toBe(
+    2
+  );
   commandEncoder.destroy();
   compiled.destroy();
-  t.match(compiled.toString(), /:destroyed$/, 'reports destroyed graph state compactly');
-  t.end();
+  expect(compiled.toString(), 'reports destroyed graph state compactly').toMatch(/:destroyed$/);
 });
 
-test('GPUCommandGraph reports adapter capabilities and explicit encoding timings', async t => {
+it('GPUCommandGraph reports adapter capabilities and explicit encoding timings', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -152,46 +145,43 @@ test('GPUCommandGraph reports adapter capabilities and explicit encoding timings
   });
   const compiled = graph.compile();
 
-  t.equal(compiled.stats.importedBufferCount, 1, 'counts imported buffers');
-  t.equal(compiled.stats.importedBufferBytes, 32, 'reports imported buffer capacity');
-  t.equal(compiled.stats.logicalBufferBytes, 32, 'includes imports in logical memory');
-  t.equal(
-    compiled.capabilities.timestampQueries,
-    device.features.has('timestamp-query'),
-    'reports timestamp-query support'
+  expect(compiled.stats.importedBufferCount, 'counts imported buffers').toBe(1);
+  expect(compiled.stats.importedBufferBytes, 'reports imported buffer capacity').toBe(32);
+  expect(compiled.stats.logicalBufferBytes, 'includes imports in logical memory').toBe(32);
+  expect(compiled.capabilities.timestampQueries, 'reports timestamp-query support').toBe(
+    device.features.has('timestamp-query')
   );
-  t.equal(
-    compiled.capabilities.subgroups,
-    device.features.has('subgroups'),
-    'reports subgroup device support'
+  expect(compiled.capabilities.subgroups, 'reports subgroup device support').toBe(
+    device.features.has('subgroups')
   );
-  t.equal(
-    compiled.capabilities.subgroupId,
-    device.wgslLanguageFeatures.has('subgroup_id'),
-    'reports subgroup_id WGSL language support'
+  expect(compiled.capabilities.subgroupId, 'reports subgroup_id WGSL language support').toBe(
+    device.wgslLanguageFeatures.has('subgroup_id')
   );
-  t.equal(
-    compiled.capabilities.maxBufferByteLength,
-    device.limits.maxBufferSize,
-    'reports the device buffer limit'
+  expect(compiled.capabilities.maxBufferByteLength, 'reports the device buffer limit').toBe(
+    device.limits.maxBufferSize
   );
 
   const commandEncoder = device.createCommandEncoder({id: 'graph-diagnostics-encoding'});
   const encoding = compiled.encode(commandEncoder, {parameters: undefined});
-  t.equal(encoding.stats.nodeCount, 2, 'reports every encoded node');
-  t.equal(encoding.stats.computePassCount, 1, 'reports the number of physical compute passes');
-  t.equal(encoding.stats.coalescedComputeNodeCount, 0, 'reports no merged standalone node');
-  t.equal(encoding.stats.timestampedNodeCount, 0, 'does not invent GPU timestamps');
-  t.notOk(encoding.canReadGPUTimings, 'plain encoders do not expose GPU timing readback');
-  t.ok(encoding.stats.cpuEncodeTimeMilliseconds >= 0, 'reports total CPU encoding time');
-  t.deepEqual(
+  expect(encoding.stats.nodeCount, 'reports every encoded node').toBe(2);
+  expect(encoding.stats.computePassCount, 'reports the number of physical compute passes').toBe(1);
+  expect(encoding.stats.coalescedComputeNodeCount, 'reports no merged standalone node').toBe(0);
+  expect(encoding.stats.timestampedNodeCount, 'does not invent GPU timestamps').toBe(0);
+  expect(
+    Boolean(encoding.canReadGPUTimings),
+    'plain encoders do not expose GPU timing readback'
+  ).toBe(false);
+  expect(
+    Boolean(encoding.stats.cpuEncodeTimeMilliseconds >= 0),
+    'reports total CPU encoding time'
+  ).toBe(true);
+  expect(
     encoding.stats.nodes.map(node => [node.id, node.type, node.hasGPUTimestamps]),
-    [
-      ['observe-import', 'compute', false],
-      ['cpu-only-copy', 'copy', false]
-    ],
     'reports stable per-node encoding metadata'
-  );
+  ).toEqual([
+    ['observe-import', 'compute', false],
+    ['cpu-only-copy', 'copy', false]
+  ]);
   commandEncoder.destroy();
 
   if (device.features.has('timestamp-query')) {
@@ -208,30 +198,34 @@ test('GPUCommandGraph reports adapter capabilities and explicit encoding timings
     const commandBuffer = timestampEncoder.finish();
     device.submit(commandBuffer);
     const report = await timestampEncoding.readTimings();
-    t.equal(
+    expect(
       timestampEncoding.stats.timestampedNodeCount,
-      1,
       'timestamps render and compute passes'
-    );
-    t.ok(timestampEncoding.canReadGPUTimings, 'exposes explicit timing readback capability');
-    t.ok(report.gpuTimeMilliseconds !== undefined, 'reads a total GPU duration after submission');
-    t.ok(report.nodes[0].gpuTimeMilliseconds !== undefined, 'reads the compute node GPU duration');
-    t.equal(report.nodes[1].gpuTimeMilliseconds, undefined, 'copy nodes remain CPU-timed');
+    ).toBe(1);
+    expect(
+      Boolean(timestampEncoding.canReadGPUTimings),
+      'exposes explicit timing readback capability'
+    ).toBe(true);
+    expect(
+      Boolean(report.gpuTimeMilliseconds !== undefined),
+      'reads a total GPU duration after submission'
+    ).toBe(true);
+    expect(
+      Boolean(report.nodes[0].gpuTimeMilliseconds !== undefined),
+      'reads the compute node GPU duration'
+    ).toBe(true);
+    expect(report.nodes[1].gpuTimeMilliseconds, 'copy nodes remain CPU-timed').toBe(undefined);
     querySet.destroy();
   } else {
-    t.comment('Timestamp queries are unavailable on this adapter');
   }
 
   compiled.destroy();
   importedBuffer.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph spreads workload-annotated nodes across bounded execution steps', async t => {
+it('GPUCommandGraph spreads workload-annotated nodes across bounded execution steps', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -264,60 +258,61 @@ test('GPUCommandGraph spreads workload-annotated nodes across bounded execution 
     maximumWriteByteLength: 1400
   };
   const plan = compiled.getExecutionPlan(executionBudget);
-  t.equal(plan.stepCount, 3, 'plans three bounded queue submissions');
-  t.equal(plan.maximumInvocationCount, 1600, 'reports complete invocation bounds');
-  t.equal(plan.readByteLength, 6400, 'reports complete read bounds');
-  t.equal(plan.steps[0].commandCount, 2, 'packs commands up to the multidimensional budget');
-  t.equal(plan.steps[0].readByteLength, 2800, 'packs reads up to the byte budget');
-  t.ok(plan.steps[1].exceedsBudget, 'identifies an indivisible oversized partition');
-  t.equal(plan.oversizedStepCount, 1, 'summarizes oversized steps before encoding');
+  expect(plan.stepCount, 'plans three bounded queue submissions').toBe(3);
+  expect(plan.maximumInvocationCount, 'reports complete invocation bounds').toBe(1600);
+  expect(plan.readByteLength, 'reports complete read bounds').toBe(6400);
+  expect(plan.steps[0].commandCount, 'packs commands up to the multidimensional budget').toBe(2);
+  expect(plan.steps[0].readByteLength, 'packs reads up to the byte budget').toBe(2800);
+  expect(
+    Boolean(plan.steps[1].exceedsBudget),
+    'identifies an indivisible oversized partition'
+  ).toBe(true);
+  expect(plan.oversizedStepCount, 'summarizes oversized steps before encoding').toBe(1);
   const execution = compiled.createExecution(executionBudget);
-  t.deepEqual(execution.plan, plan, 'execution exposes an equivalent immutable plan');
+  expect(execution.plan, 'execution exposes an equivalent immutable plan').toEqual(plan);
 
   const firstEncoder = device.createCommandEncoder({id: 'bounded-execution-step-0'});
   const firstStep = execution.encodeNext(firstEncoder, {parameters: undefined});
-  t.deepEqual(
-    encodedNodeIds,
-    ['initialize', 'partition-0', 'partition-1'],
-    'first step packs dependency-ordered nodes up to the budget'
-  );
-  t.equal(firstStep.maximumInvocationCount, 700, 'reports the first step invocation bound');
-  t.equal(firstStep.stepIndex, 0, 'reports the encoded plan step');
-  t.equal(firstStep.progress, 1 / 3, 'reports planned-submission progress');
-  t.equal(firstStep.publishedProgress, 0, 'keeps incomplete results private by default');
-  t.notOk(firstStep.completed, 'execution remains resumable');
+  expect(encodedNodeIds, 'first step packs dependency-ordered nodes up to the budget').toEqual([
+    'initialize',
+    'partition-0',
+    'partition-1'
+  ]);
+  expect(firstStep.maximumInvocationCount, 'reports the first step invocation bound').toBe(700);
+  expect(firstStep.stepIndex, 'reports the encoded plan step').toBe(0);
+  expect(firstStep.progress, 'reports planned-submission progress').toBe(1 / 3);
+  expect(firstStep.publishedProgress, 'keeps incomplete results private by default').toBe(0);
+  expect(Boolean(firstStep.completed), 'execution remains resumable').toBe(false);
   firstEncoder.destroy();
 
   const secondEncoder = device.createCommandEncoder({id: 'bounded-execution-step-1'});
   const secondStep = execution.encodeNext(secondEncoder, {parameters: undefined});
-  t.deepEqual(
-    encodedNodeIds,
-    ['initialize', 'partition-0', 'partition-1', 'oversized-partition'],
-    'one oversized node still makes forward progress'
-  );
-  t.equal(secondStep.maximumInvocationCount, 900, 'reports an indivisible oversized node');
-  t.ok(secondStep.exceedsBudget, 'propagates the oversized-step diagnostic');
-  t.equal(secondStep.publishedProgress, 0, 'does not expose an unsafe intermediate state');
-  t.notOk(secondStep.completed, 'trailing finalization remains pending');
+  expect(encodedNodeIds, 'one oversized node still makes forward progress').toEqual([
+    'initialize',
+    'partition-0',
+    'partition-1',
+    'oversized-partition'
+  ]);
+  expect(secondStep.maximumInvocationCount, 'reports an indivisible oversized node').toBe(900);
+  expect(Boolean(secondStep.exceedsBudget), 'propagates the oversized-step diagnostic').toBe(true);
+  expect(secondStep.publishedProgress, 'does not expose an unsafe intermediate state').toBe(0);
+  expect(Boolean(secondStep.completed), 'trailing finalization remains pending').toBe(false);
   secondEncoder.destroy();
 
   const thirdEncoder = device.createCommandEncoder({id: 'bounded-execution-step-2'});
   const thirdStep = execution.encodeNext(thirdEncoder, {parameters: undefined});
-  t.deepEqual(encodedNodeIds.at(-1), 'finalize', 'finalization is encoded last');
-  t.ok(thirdStep.completed, 'final step completes the execution');
-  t.equal(thirdStep.progress, 1, 'completed execution reports full progress');
-  t.equal(thirdStep.publishedProgress, 1, 'publishes the atomically completed graph');
+  expect(encodedNodeIds.at(-1), 'finalization is encoded last').toEqual('finalize');
+  expect(Boolean(thirdStep.completed), 'final step completes the execution').toBe(true);
+  expect(thirdStep.progress, 'completed execution reports full progress').toBe(1);
+  expect(thirdStep.publishedProgress, 'publishes the atomically completed graph').toBe(1);
   thirdEncoder.destroy();
 
   compiled.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph rejects explicit dependency cycles', async t => {
+it('GPUCommandGraph rejects explicit dependency cycles', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device, {id: 'cycle-test'});
@@ -331,15 +326,12 @@ test('GPUCommandGraph rejects explicit dependency cycles', async t => {
     dependsOn: ['left'],
     compile: () => ({encode: () => {}})
   });
-  t.throws(() => graph.compile(), /dependency cycle/, 'cycle is rejected');
-  t.end();
+  expect(() => graph.compile(), 'cycle is rejected').toThrow(/dependency cycle/);
 });
 
-test('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed ownership', async t => {
+it('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -375,21 +367,23 @@ test('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed owners
   const firstView = graph.importGPUData('first-data', firstChunk);
   const vectorView = graph.importGPUVector('values', vector);
 
-  t.equal(firstView.format, 'uint32', 'GPUData format is preserved');
-  t.equal(firstView.length, 2, 'GPUData length is preserved');
-  t.equal(firstView.byteOffset, 0, 'GPUData byte offset is preserved');
-  t.equal(firstView.byteStride, 4, 'GPUData byte stride is preserved');
-  t.equal(vectorView.name, 'values', 'GPUVector name is preserved');
-  t.equal(vectorView.length, 6, 'GPUVector row count is preserved');
-  t.equal(vectorView.data.length, 3, 'GPUVector chunk count is preserved');
-  t.equal(vectorView.data[0].buffer, firstView.buffer, 'reuses an already imported table buffer');
-  t.equal(vectorView.data[0].buffer, vectorView.data[1].buffer, 'shared chunks share one handle');
-  t.notEqual(
-    vectorView.data[1].buffer,
-    vectorView.data[2].buffer,
-    'distinct buffers stay distinct'
+  expect(firstView.format, 'GPUData format is preserved').toBe('uint32');
+  expect(firstView.length, 'GPUData length is preserved').toBe(2);
+  expect(firstView.byteOffset, 'GPUData byte offset is preserved').toBe(0);
+  expect(firstView.byteStride, 'GPUData byte stride is preserved').toBe(4);
+  expect(vectorView.name, 'GPUVector name is preserved').toBe('values');
+  expect(vectorView.length, 'GPUVector row count is preserved').toBe(6);
+  expect(vectorView.data.length, 'GPUVector chunk count is preserved').toBe(3);
+  expect(vectorView.data[0].buffer, 'reuses an already imported table buffer').toBe(
+    firstView.buffer
   );
-  t.equal(vectorView.data[1].byteOffset, 8, 'per-chunk byte offsets are preserved');
+  expect(vectorView.data[0].buffer, 'shared chunks share one handle').toBe(
+    vectorView.data[1].buffer
+  );
+  expect(vectorView.data[1].buffer, 'distinct buffers stay distinct').not.toBe(
+    vectorView.data[2].buffer
+  );
+  expect(vectorView.data[1].byteOffset, 'per-chunk byte offsets are preserved').toBe(8);
 
   graph.addCopyPass({
     id: 'read-first-chunk',
@@ -404,26 +398,30 @@ test('GPUCommandGraph preserves fixed-width GPUVector chunks and borrowed owners
   });
   graph.addCopyPass({id: 'gate', compile: () => ({encode: () => {}})});
   const compiled = graph.compile();
-  t.deepEqual(
+  expect(
     compiled.stats.nodeOrder,
-    ['gate', 'read-first-chunk', 'write-second-chunk'],
     'hazards are inferred through the shared physical buffer handle'
-  );
+  ).toEqual(['gate', 'read-first-chunk', 'write-second-chunk']);
 
   compiled.destroy();
-  t.notOk(sharedBuffer.destroyed, 'compiled graph does not destroy borrowed shared storage');
-  t.notOk(trailingBuffer.destroyed, 'compiled graph does not destroy borrowed trailing storage');
+  expect(
+    Boolean(sharedBuffer.destroyed),
+    'compiled graph does not destroy borrowed shared storage'
+  ).toBe(false);
+  expect(
+    Boolean(trailingBuffer.destroyed),
+    'compiled graph does not destroy borrowed trailing storage'
+  ).toBe(false);
   vector.destroy();
-  t.ok(sharedBuffer.destroyed, 'GPUVector retains shared-buffer ownership');
-  t.ok(trailingBuffer.destroyed, 'GPUVector retains trailing-buffer ownership');
-  t.end();
+  expect(Boolean(sharedBuffer.destroyed), 'GPUVector retains shared-buffer ownership').toBe(true);
+  expect(Boolean(trailingBuffer.destroyed), 'GPUVector retains trailing-buffer ownership').toBe(
+    true
+  );
 });
 
-test('GPUCommandGraph rejects interleaved and variable-length GPUVector imports', async t => {
+it('GPUCommandGraph rejects interleaved and variable-length GPUVector imports', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -453,27 +451,22 @@ test('GPUCommandGraph rejects interleaved and variable-length GPUVector imports'
   });
   const graph = new GPUCommandGraph(device);
 
-  t.throws(
+  expect(
     () => graph.importGPUVector('interleaved', interleaved),
-    /does not accept interleaved/,
     'interleaved vectors require an explicit attribute adapter'
-  );
-  t.throws(
+  ).toThrow(/does not accept interleaved/);
+  expect(
     () => graph.importGPUVector('variable-length', variableLength),
-    /fixed-width GPUVector format/,
     'variable-length vectors require an explicit topology adapter'
-  );
+  ).toThrow(/fixed-width GPUVector format/);
 
   interleaved.destroy();
   variableLength.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph exposes safe extension-library helpers', async t => {
+it('GPUCommandGraph exposes safe extension-library helpers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -492,39 +485,34 @@ test('GPUCommandGraph exposes safe extension-library helpers', async t => {
     }
   };
   contributor.addToGraph(graph);
-  t.equal(
-    contributorOutputUsage,
-    Buffer.STORAGE | Buffer.INDIRECT,
-    'contributors can request additional transient usage flags'
+  expect(contributorOutputUsage, 'contributors can request additional transient usage flags').toBe(
+    Buffer.STORAGE | Buffer.INDIRECT
   );
 
-  t.throws(
+  expect(
     () => createTransientView(graph, 'invalid-length', 'uint32', -1),
-    /non-negative safe integer/,
     'negative transient lengths are rejected before graph allocation'
-  );
-  t.doesNotThrow(
+  ).toThrow(/non-negative safe integer/);
+  expect(
     () => createTransientView(graph, 'invalid-length', 'uint32', 0),
     'a rejected transient does not reserve its graph resource id'
-  );
-  t.throws(
+  ).not.toThrow();
+  expect(
     () => createTransientView(graph, 'missing-storage', 'uint32', 1, Buffer.INDIRECT),
-    /must include Buffer.STORAGE/,
     'typed transient views retain storage binding usage'
-  );
+  ).toThrow(/must include Buffer.STORAGE/);
   for (const [format, id] of [
     ['vertex-list<float32x3>', 'vertex-list-transient'],
     ['value-list<uint32>', 'value-list-transient']
   ] as const) {
-    t.throws(
+    expect(
       () => Reflect.apply(createTransientView, undefined, [graph, id, format, 2]),
-      /requires a fixed-width GPUVector format/,
       `${format} requires an explicit variable-length adapter`
-    );
-    t.doesNotThrow(
+    ).toThrow(/requires a fixed-width GPUVector format/);
+    expect(
       () => createTransientView(graph, id, 'float32x3', 2),
       `${format} is rejected before reserving its graph resource id`
-    );
+    ).not.toThrow();
   }
 
   const bindingBuffer = device.createBuffer({byteLength: 512, usage: Buffer.STORAGE});
@@ -538,55 +526,49 @@ test('GPUCommandGraph exposes safe extension-library helpers', async t => {
     byteOffset: 260
   });
   const binding = getViewBinding(bindingView, () => bindingBuffer);
-  t.equal(binding.offset, 256, 'storage binding starts at an aligned byte offset');
-  t.equal(binding.size, 8, 'storage binding includes the view prefix and row');
-  t.equal(getViewElementOffset(bindingView), 1, 'shader element offset addresses the view row');
+  expect(binding.offset, 'storage binding starts at an aligned byte offset').toBe(256);
+  expect(binding.size, 'storage binding includes the view prefix and row').toBe(8);
+  expect(getViewElementOffset(bindingView), 'shader element offset addresses the view row').toBe(1);
 
   const misalignedView = graph.createDataView(bindingHandle, {
     format: 'uint32',
     length: 1,
     byteOffset: 261
   });
-  t.throws(
+  expect(
     () => getViewElementOffset(misalignedView),
-    /must be uint32-aligned/,
     'fractional shader element offsets are rejected'
-  );
+  ).toThrow(/must be uint32-aligned/);
   const emptyEndView = graph.createDataView(bindingHandle, {
     format: 'uint32',
     length: 0,
     byteOffset: bindingHandle.byteLength
   });
-  t.throws(
+  expect(
     () => getViewBinding(emptyEndView, () => bindingBuffer),
-    /exceeds its logical buffer/,
     'empty views still require one bindable row inside the logical buffer'
-  );
+  ).toThrow(/exceeds its logical buffer/);
 
   bindingBuffer.destroy();
-  t.end();
 });
 
-test('GPUCommandGraph validates resources and overlapping lifetimes', async t => {
+it('GPUCommandGraph validates resources and overlapping lifetimes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const nullDevice = await getNullTestDevice();
   const wrongDeviceBuffer = nullDevice.createBuffer({byteLength: 16, usage: Buffer.STORAGE});
   const wrongDeviceGraph = new GPUCommandGraph(device);
-  t.throws(
+  expect(
     () =>
       wrongDeviceGraph.importBuffer(
         {id: 'wrong-device', byteLength: 16, usage: Buffer.STORAGE},
         wrongDeviceBuffer
       ),
-    /another device/,
     'wrong-device imports are rejected'
-  );
+  ).toThrow(/another device/);
 
   const validationGraph = new GPUCommandGraph(device);
   const copyOnly = validationGraph.createTransientBuffer({
@@ -594,56 +576,51 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     byteLength: 16,
     usage: Buffer.COPY_DST
   });
-  t.throws(
+  expect(
     () =>
       validationGraph.addComputePass({
         id: 'invalid-use',
         resources: [{buffer: copyOnly, usage: 'storage-read'}],
         compile: () => ({encode: () => {}})
       }),
-    /does not declare usage/,
     'node uses must be compatible with descriptors'
-  );
+  ).toThrow(/does not declare usage/);
   const unaligned = validationGraph.createDataView(copyOnly, {
     format: 'uint32',
     length: 1,
     byteOffset: 2
   });
-  t.throws(
+  expect(
     () => new GPUScan({input: unaligned, output: unaligned}),
-    /uint32-aligned/,
     'uint32 algorithms reject misaligned views'
-  );
-  t.throws(
+  ).toThrow(/uint32-aligned/);
+  expect(
     () =>
       validationGraph.createDataView(copyOnly, {
         format: 'uint32',
         length: 4,
         byteOffset: 4
       }),
-    /exceeds buffer/,
     'views cannot exceed logical capacity'
-  );
-  t.throws(
+  ).toThrow(/exceeds buffer/);
+  expect(
     () =>
       validationGraph.createDataView(copyOnly, {
         format: 'uint32',
         length: 1,
         byteOffset: Number.MAX_SAFE_INTEGER
       }),
-    /safe integer precision/,
     'view byte ranges cannot overflow safe integer precision'
-  );
-  t.throws(
+  ).toThrow(/safe integer precision/);
+  expect(
     () =>
       validationGraph.createTransientBuffer({
         id: 'oversized-buffer',
         byteLength: device.limits.maxBufferSize + 1,
         usage: Buffer.STORAGE
       }),
-    /device buffer limit/,
     'logical buffers cannot exceed the adapter allocation limit'
-  );
+  ).toThrow(/device buffer limit/);
   const aliasingBuffer = validationGraph.createTransientBuffer({
     id: 'aliasing-storage',
     byteLength: 512,
@@ -658,7 +635,7 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     length: 16,
     byteOffset: 64
   });
-  t.throws(
+  expect(
     () =>
       validationGraph.addComputePass({
         id: 'writable-storage-alias',
@@ -668,9 +645,8 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
         ],
         compile: () => ({encode: () => {}})
       }),
-    /overlapping writable storage bindings.*aliasing-storage.*0–64 bytes.*0–128 bytes/,
     'aligned WebGPU binding ranges are validated before shader compilation'
-  );
+  ).toThrow(/overlapping writable storage bindings.*aliasing-storage.*0–64 bytes.*0–128 bytes/);
   const alignedStorageView = validationGraph.createDataView(aliasingBuffer, {
     format: 'uint32',
     length: 16,
@@ -684,7 +660,7 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     ],
     compile: () => ({encode: () => {}})
   });
-  t.throws(
+  expect(
     () =>
       validationGraph.createTransientTexture({
         id: 'oversized-texture',
@@ -693,9 +669,8 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
         height: 1,
         usage: Texture.RENDER
       }),
-    /device dimension limits/,
     'logical textures cannot exceed adapter dimension limits'
-  );
+  ).toThrow(/device dimension limits/);
 
   const overlapGraph = new GPUCommandGraph(device);
   const first = overlapGraph.createTransientBuffer({
@@ -727,21 +702,17 @@ test('GPUCommandGraph validates resources and overlapping lifetimes', async t =>
     compile: () => ({encode: () => {}})
   });
   const overlapping = overlapGraph.compile();
-  t.equal(
+  expect(
     overlapping.stats.physicalTransientBufferCount,
-    2,
     'overlapping transient lifetimes use separate allocations'
-  );
+  ).toBe(2);
   overlapping.destroy();
   wrongDeviceBuffer.destroy();
-  t.end();
 });
 
-test('CompiledGPUCommandGraph rejects encoding after device loss', async t => {
+it('CompiledGPUCommandGraph rejects encoding after device loss', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -752,11 +723,10 @@ test('CompiledGPUCommandGraph rejects encoding after device loss', async t => {
   const existingDescriptor = Object.getOwnPropertyDescriptor(device, 'isLost');
   Object.defineProperty(device, 'isLost', {configurable: true, value: true});
   try {
-    t.throws(
+    expect(
       () => compiled.encode(commandEncoder, {parameters: undefined}),
-      /after device loss/,
       'device loss fails before resource resolution or command recording'
-    );
+    ).toThrow(/after device loss/);
   } finally {
     if (existingDescriptor) {
       Object.defineProperty(device, 'isLost', existingDescriptor);
@@ -766,14 +736,11 @@ test('CompiledGPUCommandGraph rejects encoding after device loss', async t => {
   }
   commandEncoder.destroy();
   compiled.destroy();
-  t.end();
 });
 
-test('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves imports', async t => {
+it('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves imports', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const dynamicBuffer = new DynamicBuffer(device, {
@@ -798,134 +765,124 @@ test('CompiledGPUCommandGraph resolves DynamicBuffer replacements and preserves 
   dynamicBuffer.resize({byteLength: 32});
   const secondBackingBuffer = dynamicBuffer.buffer;
   compiled.encode(device.createCommandEncoder({id: 'dynamic-second'}), {parameters: undefined});
-  t.equal(resolvedBuffers[0], firstBackingBuffer, 'first encoding resolves initial backing buffer');
-  t.equal(
-    resolvedBuffers[1],
-    secondBackingBuffer,
-    'second encoding resolves replacement backing buffer'
+  expect(resolvedBuffers[0], 'first encoding resolves initial backing buffer').toBe(
+    firstBackingBuffer
+  );
+  expect(resolvedBuffers[1], 'second encoding resolves replacement backing buffer').toBe(
+    secondBackingBuffer
   );
   compiled.destroy();
-  t.notOk(secondBackingBuffer.destroyed, 'destroying graph leaves imported buffer alive');
+  expect(
+    Boolean(secondBackingBuffer.destroyed),
+    'destroying graph leaves imported buffer alive'
+  ).toBe(false);
   dynamicBuffer.destroy();
 
   const missingGraph = new GPUCommandGraph(device);
   missingGraph.importBuffer({id: 'required', byteLength: 16, usage: Buffer.STORAGE});
   const missingCompiled = missingGraph.compile();
-  t.throws(
+  expect(
     () =>
       missingCompiled.encode(device.createCommandEncoder({id: 'missing-import'}), {
         parameters: undefined
       }),
-    /is required/,
     'encoding rejects a missing import'
-  );
+  ).toThrow(/is required/);
   const undersized = device.createBuffer({byteLength: 4, usage: Buffer.STORAGE});
-  t.throws(
+  expect(
     () =>
       missingCompiled.encode(device.createCommandEncoder({id: 'undersized-import'}), {
         parameters: undefined,
         buffers: {required: undersized}
       }),
-    /smaller than compiled capacity/,
     'encoding rejects an undersized override'
-  );
+  ).toThrow(/smaller than compiled capacity/);
   missingCompiled.destroy();
   undersized.destroy();
-  t.end();
 });
 
-test('GPUScan plans bounded multidimensional direct dispatches', t => {
+it('GPUScan plans bounded multidimensional direct dispatches', () => {
   const maximum = 65_535;
   const oneDimensionalRowCapacity = maximum * 256;
 
-  t.deepEqual(getGPUScanDispatchLayout(0, maximum), {x: 1, y: 1, z: 1});
-  t.deepEqual(getGPUScanDispatchLayout(oneDimensionalRowCapacity, maximum), {
+  expect(getGPUScanDispatchLayout(0, maximum)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUScanDispatchLayout(oneDimensionalRowCapacity, maximum)).toEqual({
     x: maximum,
     y: 1,
     z: 1
   });
-  t.deepEqual(getGPUScanDispatchLayout(oneDimensionalRowCapacity + 1, maximum), {
+  expect(getGPUScanDispatchLayout(oneDimensionalRowCapacity + 1, maximum)).toEqual({
     x: maximum,
     y: 2,
     z: 1
   });
-  t.deepEqual(
+  expect(
     getGPUScanDispatchLayout(4 * 256 + 1, 2),
-    {x: 2, y: 2, z: 2},
     'a small synthetic limit exercises the third dispatch dimension'
-  );
-  t.throws(() => getGPUScanDispatchLayout(8 * 256 + 1, 2), /exceeding the 3D dispatch limit/);
-  t.throws(
+  ).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUScanDispatchLayout(8 * 256 + 1, 2)).toThrow(/exceeding the 3D dispatch limit/);
+  expect(
     () => getBoundedDispatchLayout('GPUScan', 1024, 3, maximum),
-    /power of two greater than one/,
     'the shared uint32 guard rejects workgroup sizes that can wrap padded lanes'
-  );
-  t.throws(
+  ).toThrow(/power of two greater than one/);
+  expect(
     () => getBoundedInvocationIndexSource({x: 1, y: 1, z: 1}, 1),
-    /power of two greater than one/,
     'the source helper never emits an unrepresentable 2^32 guard literal'
-  );
+  ).toThrow(/power of two greater than one/);
 
   const source = getGPUScanInvocationIndexSource({x: 3, y: 2, z: 2});
-  t.match(source, /workgroupId\.z \* 2u \+ workgroupId\.y/);
-  t.match(source, /\* 3u \+ workgroupId\.x/);
-  t.match(
-    source,
-    /workgroupIndex >= 16777216u/,
-    'padded workgroups cannot wrap the uint32 invocation index'
+  expect(source).toMatch(/workgroupId\.z \* 2u \+ workgroupId\.y/);
+  expect(source).toMatch(/\* 3u \+ workgroupId\.x/);
+  expect(source, 'padded workgroups cannot wrap the uint32 invocation index').toMatch(
+    /workgroupIndex >= 16777216u/
   );
-  t.ok(
-    source.indexOf('workgroupIndex >= 16777216u') <
-      source.indexOf('workgroupIndex * 256u + localInvocationIndex'),
+  expect(
+    Boolean(
+      source.indexOf('workgroupIndex >= 16777216u') <
+        source.indexOf('workgroupIndex * 256u + localInvocationIndex')
+    ),
     'the uint32 guard executes before invocation-index multiplication'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('GPUScan selects subgroups only when device and WGSL capabilities are both available', t => {
+it('GPUScan selects subgroups only when device and WGSL capabilities are both available', () => {
   const makeDevice = (subgroups: boolean, subgroupId: boolean) =>
     ({
       features: {has: (feature: string) => feature === 'subgroups' && subgroups},
       wgslLanguageFeatures: new Set(subgroupId ? ['subgroup_id'] : [])
     }) as Device;
 
-  t.equal(getGPUScanStrategy(makeDevice(true, true)), 'subgroups', 'selects the fast path');
-  t.equal(
+  expect(getGPUScanStrategy(makeDevice(true, true)), 'selects the fast path').toBe('subgroups');
+  expect(
     getGPUScanStrategy(makeDevice(true, false)),
-    'portable',
     'requires the subgroup_id language extension'
+  ).toBe('portable');
+  expect(getGPUScanStrategy(makeDevice(false, true)), 'requires the subgroup device feature').toBe(
+    'portable'
   );
-  t.equal(
-    getGPUScanStrategy(makeDevice(false, true)),
-    'portable',
-    'requires the subgroup device feature'
-  );
-  t.equal(
+  expect(
     getGPUScanStrategy(makeDevice(true, true), true),
-    'portable',
     'keeps segmented scans on the portable path'
-  );
-  t.end();
+  ).toBe('portable');
 });
 
-test('GPUReduction selects subgroups only when device and WGSL capabilities are available', t => {
+it('GPUReduction selects subgroups only when device and WGSL capabilities are available', () => {
   const makeDevice = (subgroups: boolean, subgroupId: boolean) =>
     ({
       features: {has: (feature: string) => feature === 'subgroups' && subgroups},
       wgslLanguageFeatures: new Set(subgroupId ? ['subgroup_id'] : [])
     }) as Device;
 
-  t.equal(getGPUReductionStrategy(makeDevice(true, true)), 'subgroups', 'selects subgroups');
-  t.equal(getGPUReductionStrategy(makeDevice(true, false)), 'portable', 'requires subgroup_id');
-  t.equal(getGPUReductionStrategy(makeDevice(false, true)), 'portable', 'requires device feature');
-  t.end();
+  expect(getGPUReductionStrategy(makeDevice(true, true)), 'selects subgroups').toBe('subgroups');
+  expect(getGPUReductionStrategy(makeDevice(true, false)), 'requires subgroup_id').toBe('portable');
+  expect(getGPUReductionStrategy(makeDevice(false, true)), 'requires device feature').toBe(
+    'portable'
+  );
 });
 
-test('GPUScan executes multidimensional block and offset dispatches', async t => {
+it('GPUScan executes multidimensional block and offset dispatches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -941,19 +898,15 @@ test('GPUScan executes multidimensional block and offset dispatches', async t =>
     maxComputeWorkgroupsPerDimension: 2
   });
 
-  t.deepEqual(
+  expect(
     result,
-    getExpectedScan(values, 'exclusive', segmentFlags),
     'five block scans and their offset pass execute through a padded 2x2x2 layout'
-  );
-  t.end();
+  ).toEqual(getExpectedScan(values, 'exclusive', segmentFlags));
 });
 
-test('GPUScan preserves vector segments and carries through multidimensional passes', async t => {
+it('GPUScan preserves vector segments and carries through multidimensional passes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -970,20 +923,17 @@ test('GPUScan preserves vector segments and carries through multidimensional pas
     maxComputeWorkgroupsPerDimension: 2
   });
 
-  t.deepEqual(result.chunks[0], [0], 'the first chunk starts the vector-wide prefix');
-  t.equal(result.chunks[1][0], 10, 'the preceding chunk carry reaches the 3D-dispatched chunk');
-  t.equal(result.chunks[1][699], 709, 'the carry survives x-to-y workgroup boundaries');
-  t.equal(result.chunks[1][700], 0, 'the interior segment start resets the carried prefix');
-  t.equal(result.chunks[1][1024], 324, 'the reset segment survives the padded z workgroup');
-  t.deepEqual(result.chunks[2], [325], 'the final chunk receives the last segment total');
-  t.end();
+  expect(result.chunks[0], 'the first chunk starts the vector-wide prefix').toEqual([0]);
+  expect(result.chunks[1][0], 'the preceding chunk carry reaches the 3D-dispatched chunk').toBe(10);
+  expect(result.chunks[1][699], 'the carry survives x-to-y workgroup boundaries').toBe(709);
+  expect(result.chunks[1][700], 'the interior segment start resets the carried prefix').toBe(0);
+  expect(result.chunks[1][1024], 'the reset segment survives the padded z workgroup').toBe(324);
+  expect(result.chunks[2], 'the final chunk receives the last segment total').toEqual([325]);
 });
 
-test('GPUScan computes exclusive uint32 prefixes', async t => {
+it('GPUScan computes exclusive uint32 prefixes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -1037,19 +987,16 @@ test('GPUScan computes exclusive uint32 prefixes', async t => {
       matches &&= result[index] === expected;
       expected += inputValues[index];
     }
-    t.ok(matches, `exclusive scan matches for ${length} values`);
+    expect(Boolean(matches), `exclusive scan matches for ${length} values`).toBe(true);
     compiled.destroy();
     inputBuffer.destroy();
     outputBuffer.destroy();
   }
-  t.end();
 });
 
-test('GPUScan propagates carries across GPUVector chunks without changing topology', async t => {
+it('GPUScan propagates carries across GPUVector chunks without changing topology', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -1059,23 +1006,26 @@ test('GPUScan propagates carries across GPUVector chunks without changing topolo
     Uint32Array.from([7, 8])
   ];
   const result = await runVectorScan(device, chunks);
-  t.equal(result.chunks.length, 3, 'output preserves all source chunks');
-  t.equal(result.chunks[0].length, 300, 'first chunk length is preserved');
-  t.deepEqual(result.chunks[1], [], 'empty middle chunk is preserved');
-  t.equal(result.chunks[0][299], 299, 'hierarchical local scan completes within the first chunk');
-  t.deepEqual(result.chunks[2], [300, 307], 'later chunks receive the sum of all preceding chunks');
-  t.notOk(
-    result.nodeOrder.some(id => id.includes('clear-chunk-totals') || id.endsWith('-total')),
-    'final local scan levels write compact chunk totals without separate passes'
+  expect(result.chunks.length, 'output preserves all source chunks').toBe(3);
+  expect(result.chunks[0].length, 'first chunk length is preserved').toBe(300);
+  expect(result.chunks[1], 'empty middle chunk is preserved').toEqual([]);
+  expect(result.chunks[0][299], 'hierarchical local scan completes within the first chunk').toBe(
+    299
   );
-  t.end();
+  expect(result.chunks[2], 'later chunks receive the sum of all preceding chunks').toEqual([
+    300, 307
+  ]);
+  expect(
+    Boolean(
+      result.nodeOrder.some(id => id.includes('clear-chunk-totals') || id.endsWith('-total'))
+    ),
+    'final local scan levels write compact chunk totals without separate passes'
+  ).toBe(false);
 });
 
-test('GPUScan computes inclusive and segmented uint32 prefixes across block boundaries', async t => {
+it('GPUScan computes inclusive and segmented uint32 prefixes across block boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -1090,35 +1040,28 @@ test('GPUScan computes inclusive and segmented uint32 prefixes across block boun
 
   for (const mode of ['exclusive', 'inclusive'] as const) {
     const result = await runScan(device, values, {mode, segmentFlags});
-    t.deepEqual(
-      result,
-      getExpectedScan(values, mode, segmentFlags),
-      `${mode} segmented scan matches the CPU oracle`
+    expect(result, `${mode} segmented scan matches the CPU oracle`).toEqual(
+      getExpectedScan(values, mode, segmentFlags)
     );
   }
 
   const inclusive = await runScan(device, values, {mode: 'inclusive'});
-  t.deepEqual(
+  expect(
     inclusive,
-    getExpectedScan(values, 'inclusive'),
     'inclusive unsegmented scan matches the CPU oracle and wraps modulo 2^32'
-  );
-  t.deepEqual(
+  ).toEqual(getExpectedScan(values, 'inclusive'));
+  expect(
     await runScan(device, new Uint32Array(0), {
       mode: 'inclusive',
       segmentFlags: new Uint32Array(0)
     }),
-    [],
     'empty segmented scans add no work'
-  );
-  t.end();
+  ).toEqual([]);
 });
 
-test('GPUScan preserves segments and carries across GPUVector chunk boundaries', async t => {
+it('GPUScan preserves segments and carries across GPUVector chunk boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -1139,21 +1082,21 @@ test('GPUScan preserves segments and carries across GPUVector chunk boundaries',
     segmentFlagChunks,
     mode: 'exclusive'
   });
-  t.deepEqual(
+  expect(
     exclusive.chunks,
-    [[0, 2], [], [5, 0, 7], [18]],
     'exclusive segments continue across chunks and reset at flagged rows'
-  );
+  ).toEqual([[0, 2], [], [5, 0, 7], [18]]);
 
   const inclusive = await runVectorScan(device, valueChunks, {
     segmentFlagChunks,
     mode: 'inclusive'
   });
-  t.deepEqual(
-    inclusive.chunks,
-    [[2, 5], [], [10, 7, 18], [31]],
-    'inclusive segments preserve the same chunk topology'
-  );
+  expect(inclusive.chunks, 'inclusive segments preserve the same chunk topology').toEqual([
+    [2, 5],
+    [],
+    [10, 7, 18],
+    [31]
+  ]);
 
   const longChunkValues = [Uint32Array.from([10]), Uint32Array.from({length: 512}, () => 1)];
   const longChunkSegmentFlags = [new Uint32Array(1), new Uint32Array(512)];
@@ -1162,21 +1105,17 @@ test('GPUScan preserves segments and carries across GPUVector chunk boundaries',
     segmentFlagChunks: longChunkSegmentFlags,
     mode: 'exclusive'
   });
-  t.equal(longChunkResult.chunks[1][99], 109, 'carry reaches rows before the segment start');
-  t.equal(longChunkResult.chunks[1][100], 0, 'the segment start discards the preceding carry');
-  t.equal(
+  expect(longChunkResult.chunks[1][99], 'carry reaches rows before the segment start').toBe(109);
+  expect(longChunkResult.chunks[1][100], 'the segment start discards the preceding carry').toBe(0);
+  expect(
     longChunkResult.chunks[1][256],
-    156,
     'the discarded carry stays removed in later workgroups'
-  );
-  t.end();
+  ).toBe(156);
 });
 
-test('GPUCompaction preserves selected order and writes indirect instance count', async t => {
+it('GPUCompaction preserves selected order and writes indirect instance count', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const values = new Uint32Array([11, 22, 33, 44, 55, 66, 77]);
@@ -1236,27 +1175,24 @@ test('GPUCompaction preserves selected order and writes indirect instance count'
 
   const outputBytes = await outputBuffer.readAsync();
   const output = new Uint32Array(outputBytes.buffer, outputBytes.byteOffset, values.length);
-  t.deepEqual(Array.from(output.slice(0, 4)), [22, 33, 55, 77], 'selected values stay ordered');
+  expect(Array.from(output.slice(0, 4)), 'selected values stay ordered').toEqual([22, 33, 55, 77]);
   const countBytes = await drawCommands.buffer.readAsync(
     drawCommands.getInstanceCountByteOffset(0),
     Uint32Array.BYTES_PER_ELEMENT
   );
   const count = new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0];
-  t.equal(count, 4, 'compaction writes indirect instance count');
+  expect(count, 'compaction writes indirect instance count').toBe(4);
 
   compiled.destroy();
   valuesBuffer.destroy();
   flagsBuffer.destroy();
   outputBuffer.destroy();
   drawCommands.destroy();
-  t.end();
 });
 
-test('GPUTextSelection gathers selected row-indexed glyph records and indirect count', async t => {
+it('GPUTextSelection gathers selected row-indexed glyph records and indirect count', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const records = new Uint32Array([10, 100, 2, 11, 101, 0, 12, 102, 1, 13, 103, 2, 14, 104, 0]);
@@ -1332,26 +1268,23 @@ test('GPUTextSelection gathers selected row-indexed glyph records and indirect c
   device.submit(commandEncoder.finish());
 
   const selectedIdBytes = await selectedIdBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Uint32Array(selectedIdBytes.buffer, selectedIdBytes.byteOffset, 4)),
-    [0, 1, 3, 4],
     'selection preserves original glyph order'
-  );
+  ).toEqual([0, 1, 3, 4]);
   const selectedRecordBytes = await selectedRecordBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Uint32Array(selectedRecordBytes.buffer, selectedRecordBytes.byteOffset, 12)),
-    [10, 100, 2, 11, 101, 0, 13, 103, 2, 14, 104, 0],
     'selected compact records retain original row ids'
-  );
+  ).toEqual([10, 100, 2, 11, 101, 0, 13, 103, 2, 14, 104, 0]);
   const countBytes = await drawCommands.buffer.readAsync(
     drawCommands.getInstanceCountByteOffset(0),
     Uint32Array.BYTES_PER_ELEMENT
   );
-  t.equal(
+  expect(
     new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0],
-    4,
     'selection writes exact indirect glyph count'
-  );
+  ).toBe(4);
 
   compiled.destroy();
   recordBuffer.destroy();
@@ -1359,14 +1292,11 @@ test('GPUTextSelection gathers selected row-indexed glyph records and indirect c
   selectedIdBuffer.destroy();
   selectedRecordBuffer.destroy();
   drawCommands.destroy();
-  t.end();
 });
 
-test('GPUCompaction handles empty, none, all, alternating, and random masks', async t => {
+it('GPUCompaction handles empty, none, all, alternating, and random masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const randomValues = Uint32Array.from({length: 71}, (_, index) => index * 17 + 3);
@@ -1390,17 +1320,14 @@ test('GPUCompaction handles empty, none, all, alternating, and random masks', as
   for (const scenario of scenarios) {
     const result = await runCompaction(device, scenario.values, scenario.flags, scenario.name);
     const expected = Array.from(scenario.values).filter((_, index) => scenario.flags[index] !== 0);
-    t.equal(result.count, expected.length, `${scenario.name} mask writes exact count`);
-    t.deepEqual(result.values, expected, `${scenario.name} mask preserves stable order`);
+    expect(result.count, `${scenario.name} mask writes exact count`).toBe(expected.length);
+    expect(result.values, `${scenario.name} mask preserves stable order`).toEqual(expected);
   }
-  t.end();
 });
 
-test('GPUCompaction preserves GPUVector topology while selecting across chunks', async t => {
+it('GPUCompaction preserves GPUVector topology while selecting across chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -1419,31 +1346,26 @@ test('GPUCompaction preserves GPUVector topology while selecting across chunks',
       Uint32Array.from([1, 1, 0])
     ]
   );
-  t.equal(result.count, 4, 'count spans the complete logical vector');
-  t.deepEqual(
+  expect(result.count, 'count spans the complete logical vector').toBe(4);
+  expect(
     result.chunks.map(chunk => chunk.length),
-    [3, 0, 0, 3],
     'output chunk boundaries remain intact'
-  );
-  t.deepEqual(result.chunks[0], [10, 12, 20], 'selection crosses into the first output chunk');
-  t.equal(result.chunks[3][0], 21, 'selection continues in the next non-empty output chunk');
-  t.notOk(
-    result.nodeOrder.some(id => id.endsWith('-write-count')),
+  ).toEqual([3, 0, 0, 3]);
+  expect(result.chunks[0], 'selection crosses into the first output chunk').toEqual([10, 12, 20]);
+  expect(result.chunks[3][0], 'selection continues in the next non-empty output chunk').toBe(21);
+  expect(
+    Boolean(result.nodeOrder.some(id => id.endsWith('-write-count'))),
     'the final scatter writes the vector-wide count without a separate pass'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     result.logicalTransientBufferCount,
-    5,
     'zero-length offset chunks share one transient backing view'
-  );
-  t.end();
+  ).toBe(5);
 });
 
-test('DrawCommandBuffer replays an indirect draw through a render bundle', async t => {
+it('DrawCommandBuffer replays an indirect draw through a render bundle', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const colorTexture = device.createTexture({
@@ -1492,20 +1414,17 @@ test('DrawCommandBuffer replays an indirect draw through a render bundle', async
   renderPass.end();
   device.submit(commandEncoder.finish());
   const pixels = await readPixels(framebuffer.colorAttachments[0].texture, 4, 4);
-  t.ok(pixels[0] > 200, 'render bundle replays GPU indirect vertex count');
+  expect(Boolean(pixels[0] > 200), 'render bundle replays GPU indirect vertex count').toBe(true);
   bundle.destroy();
   drawCommands.destroy();
   model.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
-  t.end();
 });
 
-test('DispatchCommandBuffer stores typed GPU-writable dispatch records', async t => {
+it('DispatchCommandBuffer stores typed GPU-writable dispatch records', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const dispatchCommands = new DispatchCommandBuffer(device, {
@@ -1514,25 +1433,19 @@ test('DispatchCommandBuffer stores typed GPU-writable dispatch records', async t
   });
   const bytes = await dispatchCommands.buffer.readAsync();
   const values = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-  t.deepEqual(
-    Array.from(values),
-    [2, 1, 1, 3, 4, 5, 0, 0, 0],
-    'records preserve WebGPU x/y/z layout and zero-fill capacity'
+  expect(Array.from(values), 'records preserve WebGPU x/y/z layout and zero-fill capacity').toEqual(
+    [2, 1, 1, 3, 4, 5, 0, 0, 0]
   );
   const secondCommand = dispatchCommands.getCommandData(1);
-  t.equal(secondCommand.length, 3, 'borrowed command data contains three uint32 rows');
-  t.equal(
-    secondCommand.byteOffset,
-    DispatchCommandBuffer.recordByteLength,
-    'borrowed command data points at the selected record'
+  expect(secondCommand.length, 'borrowed command data contains three uint32 rows').toBe(3);
+  expect(secondCommand.byteOffset, 'borrowed command data points at the selected record').toBe(
+    DispatchCommandBuffer.recordByteLength
   );
-  t.throws(
+  expect(
     () => dispatchCommands.getCommandByteOffset(3),
-    /out of range/,
     'command index is bounded by capacity'
-  );
+  ).toThrow(/out of range/);
   dispatchCommands.destroy();
-  t.end();
 });
 
 async function readPixels(texture: Texture, width: number, height: number): Promise<Uint8Array> {

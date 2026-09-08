@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getDebugTableForShaderLayout} from '../../src/debug/debug-shader-layout';
 
@@ -17,8 +17,8 @@ const SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
-test('getDebugTableForShaderLayout#tests', t => {
+it('getDebugTableForShaderLayout#tests', () => {
   const table = getDebugTableForShaderLayout(SHADER_LAYOUT, 'test');
-  t.ok(table);
-  t.end();
+  expect(Boolean(table), '').toBe(true);
+  void 0;
 });

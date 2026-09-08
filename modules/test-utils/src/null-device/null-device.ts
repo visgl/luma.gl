@@ -23,7 +23,8 @@ import type {
   CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
-  QuerySetProps
+  QuerySetProps,
+  DeviceLostInfo
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import type {NullCommandBuffer} from './resources/null-command-buffer';
@@ -62,7 +63,7 @@ export class NullDevice extends Device {
   readonly canvasContext: NullCanvasContext;
   override commandEncoder: NullCommandEncoder;
 
-  readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  readonly lost: Promise<DeviceLostInfo>;
   private _isLost: boolean = false;
 
   constructor(props: DeviceProps) {

@@ -9,8 +9,7 @@ import {
   parseParquetDeltaByteArrayPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {vi, expect, it} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 
 const PREFIX_LENGTHS = Uint8Array.from([
@@ -22,22 +21,18 @@ const SUFFIX_LENGTHS = Uint8Array.from([
 const SUFFIX_DATA = new TextEncoder().encode('catrtoondog');
 const ENCODED = Uint8Array.from([...PREFIX_LENGTHS, ...SUFFIX_LENGTHS, ...SUFFIX_DATA]);
 
-test('parseParquetDeltaByteArrayPlan rebases the suffix length descriptors', testCase => {
+it('parseParquetDeltaByteArrayPlan rebases the suffix length descriptors', () => {
   const plan = parseParquetDeltaByteArrayPlan(ENCODED);
-  testCase.equal(plan.prefixLengthPlan.valueCount, 4);
-  testCase.equal(plan.suffixLengthPlan.valueCount, 4);
-  testCase.equal(plan.prefixLengthPlan.bytesConsumed, PREFIX_LENGTHS.length);
-  testCase.equal(
-    plan.suffixLengthPlan.bytesConsumed,
-    PREFIX_LENGTHS.length + SUFFIX_LENGTHS.length
-  );
-  testCase.equal(plan.suffixLengthPlan.miniBlockDescriptors[2], PREFIX_LENGTHS.length + 10);
-  testCase.equal(plan.suffixDataByteOffset, 44);
-  testCase.equal(plan.suffixDataByteLength, SUFFIX_DATA.length);
-  testCase.end();
+  expect(plan.prefixLengthPlan.valueCount).toBe(4);
+  expect(plan.suffixLengthPlan.valueCount).toBe(4);
+  expect(plan.prefixLengthPlan.bytesConsumed).toBe(PREFIX_LENGTHS.length);
+  expect(plan.suffixLengthPlan.bytesConsumed).toBe(PREFIX_LENGTHS.length + SUFFIX_LENGTHS.length);
+  expect(plan.suffixLengthPlan.miniBlockDescriptors[2]).toBe(PREFIX_LENGTHS.length + 10);
+  expect(plan.suffixDataByteOffset).toBe(44);
+  expect(plan.suffixDataByteLength).toBe(SUFFIX_DATA.length);
 });
 
-test('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstruction', testCase => {
+it('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconstruction', () => {
   const plan = parseParquetDeltaByteArrayPlan(ENCODED);
   const graph = new GPUCommandGraph(makeSupportDevice());
   const addComputePass = vi.spyOn(graph, 'addComputePass');
@@ -108,19 +103,12 @@ test('GPUParquetDeltaByteArrayDecoder composes both decoders, scans, and reconst
     graph.createDataView(suffixOffsetHandle, {format: 'uint32', length: 4}),
     {x: 1, y: 1, z: 1}
   );
-  testCase.deepEqual(
-    new WgslReflect(source).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /position >= prefixLength/);
-  testCase.match(source, /row -= 1u/);
-  testCase.doesNotThrow(() => decoder.addToGraph(graph));
-  testCase.ok(addComputePass.mock.calls.length >= 7);
-  testCase.equal(
-    addComputePass.mock.calls.at(-1)?.[0].id,
-    'gpu-parquet-delta-byte-array-reconstruct'
-  );
-  testCase.end();
+  expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/position >= prefixLength/);
+  expect(source).toMatch(/row -= 1u/);
+  expect(() => decoder.addToGraph(graph)).not.toThrow();
+  expect(Boolean(addComputePass.mock.calls.length >= 7)).toBe(true);
+  expect(addComputePass.mock.calls.at(-1)?.[0].id).toBe('gpu-parquet-delta-byte-array-reconstruct');
 });
 
 function makeSupportDevice(): Device {

@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPUParquetPlainBooleanDecoder} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetPlainBooleanDecoder expands booleans across word boundaries', async testCase => {
+it('GPUParquetPlainBooleanDecoder expands booleans across word boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const expected = Array.from({length: 40}, (_, valueIndex) =>
@@ -47,8 +45,7 @@ test('GPUParquetPlainBooleanDecoder expands booleans across word boundaries', as
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint32Array(result.buffer, result.byteOffset, expected.length)),
+    expect(Array.from(new Uint32Array(result.buffer, result.byteOffset, expected.length))).toEqual(
       expected
     );
   } finally {
@@ -56,5 +53,4 @@ test('GPUParquetPlainBooleanDecoder expands booleans across word boundaries', as
     inputBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

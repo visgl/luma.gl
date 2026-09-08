@@ -11,6 +11,7 @@ import * as gpuData from '@luma.gl/gpgpu/gpu-data';
 import * as gpuCrossfilter from '@luma.gl/experimental/gpu-crossfilter';
 import * as gpuDataframe from '@luma.gl/experimental/gpu-dataframe';
 import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
+import * as gpuVectorSearch from '@luma.gl/gpgpu/gpu-vector-search';
 import * as gpuProject from '@luma.gl/experimental/gpu-project';
 import * as gpuRaster from '@luma.gl/experimental/gpu-raster';
 import * as gpuTables from '@luma.gl/experimental/gpu-tables';
@@ -18,7 +19,7 @@ import * as models from '@luma.gl/experimental/models';
 import * as gpuTrace from '@luma.gl/experimental/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
-const GPGPU_MODULES = ['gpu-data', 'gpu-core', 'gpu-graph'] as const;
+const GPGPU_MODULES = ['gpu-data', 'gpu-core', 'gpu-graph', 'gpu-vector-search'] as const;
 const EXPERIMENTAL_MODULES = [
   'gpu-tables',
   'models',
@@ -34,6 +35,7 @@ const UNPUBLISHED_WORKING_NAMES = [
   'luraster',
   'luproj',
   'ludf',
+  'luvs',
   'luxfilter',
   'lutrace'
 ] as const;
@@ -93,6 +95,7 @@ describe('experimental GPU module naming', () => {
       '@luma.gl/gpgpu/gpu-core',
       '@luma.gl/gpgpu/gpu-graph',
       '@luma.gl/gpgpu/gpu-graph/benchmarks',
+      '@luma.gl/gpgpu/gpu-vector-search',
       '@luma.gl/experimental/gpu-tables',
       '@luma.gl/experimental/models'
     ]) {
@@ -115,6 +118,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuData.getDataTypeByteLength).toBeTypeOf('function');
     expect(gpuCore.GPUCommandGraph).toBeTypeOf('function');
     expect(gpuGraphModule.GPUGraph).toBeTypeOf('function');
+    expect(gpuVectorSearch.GPUSimilaritySearch).toBeTypeOf('function');
     expect(gpuTables.GPURecordBatch).toBeTypeOf('function');
     expect(gpuTables.GPUTable).toBeTypeOf('function');
     expect(models.PathStorageModel).toBeTypeOf('function');
@@ -133,7 +137,7 @@ describe('experimental GPU module naming', () => {
       expect(exportName in experimentalRoot, exportName).toBe(false);
     }
 
-    for (const moduleExports of [gpuGraphModule, gpuDataframe, gpuCrossfilter]) {
+    for (const moduleExports of [gpuGraphModule, gpuVectorSearch, gpuDataframe, gpuCrossfilter]) {
       expect(Object.keys(moduleExports).some(exportName => /^Lu|^Lux/u.test(exportName))).toBe(
         false
       );
@@ -142,6 +146,8 @@ describe('experimental GPU module naming', () => {
 
   test('publishes only canonical documentation routes', () => {
     const experimentalDocumentation = path.join(process.cwd(), 'docs/api-reference/experimental');
+    const gpgpuDocumentation = path.join(process.cwd(), 'docs/api-reference/gpgpu');
+    expect(existsSync(path.join(gpgpuDocumentation, 'gpu-vector-search.md'))).toBe(true);
     for (const moduleName of [
       'gpu-core',
       'gpu-graph',

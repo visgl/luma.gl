@@ -1,6 +1,6 @@
 /* eslint-disable no-continue, max-depth */
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getNullTestDevice,
   getWebGLTestDevice,
@@ -34,45 +34,44 @@ function toUint8(arr: ArrayBuffer | ArrayBufferView): Uint8Array {
     : new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
 }
 
-test('Texture#createView returns a TextureView', async t => {
+it('Texture#createView returns a TextureView', async () => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({width: 2, height: 2});
     const view = tex.createView({});
-    t.ok(view instanceof TextureView, `${device.type}: createView returns TextureView`);
-    t.equal(
-      view.texture.width,
-      tex.width,
-      `${device.type}: view.texture.width matches texture.width`
+    expect(
+      Boolean(view instanceof TextureView),
+      `${device.type}: createView returns TextureView`
+    ).toBe(true);
+    expect(view.texture.width, `${device.type}: view.texture.width matches texture.width`).toBe(
+      tex.width
     );
-    t.equal(
-      view.texture.height,
-      tex.height,
-      `${device.type}: view.texture.height matches texture.height`
+    expect(view.texture.height, `${device.type}: view.texture.height matches texture.height`).toBe(
+      tex.height
     );
     tex.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#clone overrides size', async t => {
+it('Texture#clone overrides size', async () => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({format: 'rgba8unorm', width: 2, height: 2});
 
     const cloned = tex.clone({width: 4, height: 4});
 
-    t.notEqual(cloned, tex, `${device.type}: clone returns a new texture`);
-    t.equal(cloned.width, 4, `${device.type}: cloned width is overridden`);
-    t.equal(cloned.height, 4, `${device.type}: cloned height is overridden`);
-    t.equal(tex.width, 2, `${device.type}: original width unchanged`);
-    t.equal(tex.height, 2, `${device.type}: original height unchanged`);
+    expect(cloned, `${device.type}: clone returns a new texture`).not.toBe(tex);
+    expect(cloned.width, `${device.type}: cloned width is overridden`).toBe(4);
+    expect(cloned.height, `${device.type}: cloned height is overridden`).toBe(4);
+    expect(tex.width, `${device.type}: original width unchanged`).toBe(2);
+    expect(tex.height, `${device.type}: original height unchanged`).toBe(2);
 
     tex.destroy();
     cloned.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#copyElementImage returns copied size on supported implementations', async t => {
+it('Texture#copyElementImage returns copied size on supported implementations', async () => {
   const device = await getNullTestDevice();
   const texture = device.createTexture({width: 2, height: 2});
   const copiedSize = texture.copyElementImage({
@@ -81,10 +80,10 @@ test('Texture#copyElementImage returns copied size on supported implementations'
     height: 2
   });
 
-  t.deepEqual(copiedSize, {width: 2, height: 2}, 'copyElementImage returns copied size');
+  expect(copiedSize, 'copyElementImage returns copied size').toEqual({width: 2, height: 2});
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 function getTextureMemoryStats(device: Device): {
@@ -132,7 +131,7 @@ function getExpectedTextureAllocation(texture: Texture): number {
   return expectedAllocation * texture.samples;
 }
 
-test('Texture tracks GPU memory stats', async t => {
+it('Texture tracks GPU memory stats', async () => {
   for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
     const beforeStats = getTextureMemoryStats(device);
     const texture = device.createTexture({
@@ -144,39 +143,35 @@ test('Texture tracks GPU memory stats', async t => {
     const expectedAllocation = getExpectedTextureAllocation(texture);
     const afterCreateStats = getTextureMemoryStats(device);
 
-    t.equal(
+    expect(
       afterCreateStats.gpuMemory - beforeStats.gpuMemory,
-      expectedAllocation,
       `${device.type} Texture updates total GPU Memory`
-    );
-    t.equal(
+    ).toBe(expectedAllocation);
+    expect(
       afterCreateStats.textureMemory - beforeStats.textureMemory,
-      expectedAllocation,
       `${device.type} Texture updates Texture Memory`
-    );
+    ).toBe(expectedAllocation);
 
     texture.destroy();
 
     const afterDestroyStats = getTextureMemoryStats(device);
-    t.equal(
+    expect(
       afterDestroyStats.gpuMemory,
-      beforeStats.gpuMemory,
       `${device.type} Texture destroy restores total GPU Memory`
-    );
-    t.equal(
+    ).toBe(beforeStats.gpuMemory);
+    expect(
       afterDestroyStats.textureMemory,
-      beforeStats.textureMemory,
       `${device.type} Texture destroy restores Texture Memory`
-    );
+    ).toBe(beforeStats.textureMemory);
   }
-  t.end();
+  void 0;
 });
 
-test('Handle-backed Texture tracks external memory stats', async t => {
+it('Handle-backed Texture tracks external memory stats', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const beforeStats = getTextureMemoryStats(device);
@@ -198,45 +193,40 @@ test('Handle-backed Texture tracks external memory stats', async t => {
   const afterCreateStats = getTextureMemoryStats(device);
   const expectedAllocation = getExpectedTextureAllocation(texture);
 
-  t.equal(
+  expect(
     afterCreateStats.gpuMemory - beforeStats.gpuMemory,
-    expectedAllocation,
     'webgpu handle-backed Texture updates total GPU Memory'
-  );
-  t.equal(
+  ).toBe(expectedAllocation);
+  expect(
     afterCreateStats.textureMemory - beforeStats.textureMemory,
-    0,
     'webgpu handle-backed Texture does not update owned Texture Memory'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     afterCreateStats.externalTextureMemory - beforeStats.externalTextureMemory,
-    expectedAllocation,
     'webgpu handle-backed Texture updates External Texture Memory'
-  );
+  ).toBe(expectedAllocation);
 
   texture.destroy();
 
   const afterDestroyStats = getTextureMemoryStats(device);
-  t.equal(
+  expect(
     afterDestroyStats.gpuMemory,
-    beforeStats.gpuMemory,
     'webgpu handle-backed Texture destroy restores total GPU Memory'
-  );
-  t.equal(
+  ).toBe(beforeStats.gpuMemory);
+  expect(
     afterDestroyStats.externalTextureMemory,
-    beforeStats.externalTextureMemory,
     'webgpu handle-backed Texture destroy restores External Texture Memory'
-  );
+  ).toBe(beforeStats.externalTextureMemory);
 
   handle.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPU handle-backed Texture reinitialize updates external memory stats', async t => {
+it('WebGPU handle-backed Texture reinitialize updates external memory stats', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -278,46 +268,41 @@ test('WebGPU handle-backed Texture reinitialize updates external memory stats', 
   const afterReinitializeResourceStats = getTextureResourceCountStats(device);
   const resizedAllocation = getExpectedTextureAllocation(texture);
 
-  t.equal(
+  expect(
     afterCreateStats.externalTextureMemory - beforeStats.externalTextureMemory,
-    initialAllocation,
     'webgpu handle-backed Texture initially tracks external memory'
-  );
-  t.equal(
+  ).toBe(initialAllocation);
+  expect(
     afterReinitializeStats.externalTextureMemory - beforeStats.externalTextureMemory,
-    resizedAllocation,
     'webgpu handle-backed Texture reinitialize updates external memory'
-  );
-  t.equal(
+  ).toBe(resizedAllocation);
+  expect(
     afterReinitializeResourceStats.texturesCreated,
-    afterCreateResourceStats.texturesCreated,
     'webgpu handle-backed Texture reinitialize does not increment Textures Created'
-  );
-  t.equal(
+  ).toBe(afterCreateResourceStats.texturesCreated);
+  expect(
     afterReinitializeResourceStats.textureViewsCreated,
-    afterCreateResourceStats.textureViewsCreated,
     'webgpu handle-backed Texture reinitialize does not increment TextureViews Created'
-  );
+  ).toBe(afterCreateResourceStats.textureViewsCreated);
 
   texture.destroy();
 
   const afterDestroyStats = getTextureMemoryStats(device);
-  t.equal(
+  expect(
     afterDestroyStats.externalTextureMemory,
-    beforeStats.externalTextureMemory,
     'webgpu handle-backed Texture destroy restores external memory after reinitialize'
-  );
+  ).toBe(beforeStats.externalTextureMemory);
 
   firstHandle.destroy();
   secondHandle.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPU Texture reuses the shared default sampler when sampler is omitted', async t => {
+it('WebGPU Texture reuses the shared default sampler when sampler is omitted', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -325,33 +310,30 @@ test('WebGPU Texture reuses the shared default sampler when sampler is omitted',
   const secondTextureWithoutSampler = device.createTexture({width: 4, height: 4});
   const sharedSampler = firstTextureWithoutSampler.sampler;
 
-  t.equal(
+  expect(
     secondTextureWithoutSampler.sampler,
-    sharedSampler,
     'webgpu textures without sampler props reuse the shared default sampler'
-  );
+  ).toBe(sharedSampler);
 
   firstTextureWithoutSampler.destroy();
-  t.notOk(
-    sharedSampler.destroyed,
+  expect(
+    Boolean(sharedSampler.destroyed),
     'webgpu shared default sampler remains alive after texture destroy'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     secondTextureWithoutSampler.sampler,
-    sharedSampler,
     'webgpu remaining texture still references the shared default sampler'
-  );
+  ).toBe(sharedSampler);
 
   const textureWithSamplerProps = device.createTexture({
     width: 4,
     height: 4,
     sampler: {}
   });
-  t.notEqual(
+  expect(
     textureWithSamplerProps.sampler,
-    sharedSampler,
     'webgpu explicit sampler props create a dedicated sampler'
-  );
+  ).not.toBe(sharedSampler);
 
   const explicitSampler = device.createSampler({
     minFilter: 'nearest',
@@ -362,22 +344,21 @@ test('WebGPU Texture reuses the shared default sampler when sampler is omitted',
     height: 4,
     sampler: explicitSampler
   });
-  t.equal(
+  expect(
     textureWithExplicitSampler.sampler,
-    explicitSampler,
     'webgpu explicit sampler instance is used unchanged'
-  );
+  ).toBe(explicitSampler);
 
   textureWithExplicitSampler.destroy();
-  t.notOk(
-    explicitSampler.destroyed,
+  expect(
+    Boolean(explicitSampler.destroyed),
     'webgpu explicit sampler instance is not destroyed with texture'
-  );
+  ).toBe(false);
 
   secondTextureWithoutSampler.destroy();
   textureWithSamplerProps.destroy();
   explicitSampler.destroy();
-  t.end();
+  void 0;
 });
 
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -633,11 +614,11 @@ function uploadTexture(
   }
 }
 
-test('Texture#copyImageData handles padded rows on WebGL', async t => {
+it('Texture#copyImageData handles padded rows on WebGL', async () => {
   const device = await getWebGLTestDevice();
   if (!device) {
-    t.comment('WebGL not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -680,15 +661,15 @@ test('Texture#copyImageData handles padded rows on WebGL', async t => {
 
   const result = toUint8(texture.readDataSyncWebGL({width, height})).slice(0, expected.length);
 
-  t.deepEquals(result, expected, 'webgl: copyImageData uploads data with padded rows correctly');
+  expect(result, 'webgl: copyImageData uploads data with padded rows correctly').toEqual(expected);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('Texture#writeData & readDataAsync round-trip', async t => {
+it('Texture#writeData & readDataAsync round-trip', async () => {
   for (const device of await getTestDevices()) {
-    t.comment(`Testing ${device.type}`);
+    void 0;
 
     const tex = device.createTexture({
       width: 2,
@@ -700,17 +681,16 @@ test('Texture#writeData & readDataAsync round-trip', async t => {
     tex.writeData(RGBA8_DATA);
     const result = await readTexturePixels(tex, {});
 
-    t.deepEquals(
+    expect(
       result.slice(0, RGBA8_DATA.length),
-      RGBA8_DATA,
       `${device.type}: writeData + readBuffer returns same pixels`
-    );
+    ).toEqual(RGBA8_DATA);
     tex.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Texture color read APIs support subresources and mip levels', async t => {
+it('Texture color read APIs support subresources and mip levels', async () => {
   for (const device of await getTestDevices()) {
     const twoDimensionalTexture = device.createTexture({
       width: 2,
@@ -728,16 +708,14 @@ test('Texture color read APIs support subresources and mip levels', async t => {
       }),
       {width: 2, height: 2, bytesPerRow: 256, rowsPerImage: 2}
     );
-    t.deepEquals(
+    expect(
       await readTexturePixels(twoDimensionalTexture, {width: 2, height: 2}),
-      repeatRgbaPixel([1, 2, 3, 255], 4),
       `${device.type}: readDataAsync reads 2d base level texels`
-    );
-    t.deepEquals(
+    ).toEqual(repeatRgbaPixel([1, 2, 3, 255], 4));
+    expect(
       await readTextureBufferPixels(twoDimensionalTexture, {width: 2, height: 2}),
-      repeatRgbaPixel([1, 2, 3, 255], 4),
       `${device.type}: readBuffer matches 2d base level texels`
-    );
+    ).toEqual(repeatRgbaPixel([1, 2, 3, 255], 4));
     twoDimensionalTexture.destroy();
 
     const mipTexture = device.createTexture({
@@ -757,11 +735,10 @@ test('Texture color read APIs support subresources and mip levels', async t => {
       }),
       {width: 2, height: 2, mipLevel: 1, bytesPerRow: 256, rowsPerImage: 2}
     );
-    t.deepEquals(
+    expect(
       await readTexturePixels(mipTexture, {mipLevel: 1, width: 2, height: 2}),
-      repeatRgbaPixel([4, 5, 6, 255], 4),
       `${device.type}: readDataAsync reads nonzero mip texels`
-    );
+    ).toEqual(repeatRgbaPixel([4, 5, 6, 255], 4));
     mipTexture.destroy();
 
     const cubeTexture = device.createTexture({
@@ -780,11 +757,10 @@ test('Texture color read APIs support subresources and mip levels', async t => {
       }),
       {width: 1, height: 1, z: 5, bytesPerRow: 256}
     );
-    t.deepEquals(
+    expect(
       await readTexturePixels(cubeTexture, {width: 1, height: 1, z: 5}),
-      new Uint8Array([7, 8, 9, 255]),
       `${device.type}: readDataAsync reads cube face texels`
-    );
+    ).toEqual(new Uint8Array([7, 8, 9, 255]));
     cubeTexture.destroy();
 
     const arrayTexture = device.createTexture({
@@ -811,11 +787,10 @@ test('Texture color read APIs support subresources and mip levels', async t => {
         rowsPerImage: 1
       }
     );
-    t.deepEquals(
+    expect(
       await readTexturePixels(arrayTexture, {width: 1, height: 1, z: 1, depthOrArrayLayers: 1}),
-      new Uint8Array([10, 11, 12, 255]),
       `${device.type}: readDataAsync reads array layer texels`
-    );
+    ).toEqual(new Uint8Array([10, 11, 12, 255]));
     arrayTexture.destroy();
 
     const threeDimensionalTexture = device.createTexture({
@@ -842,23 +817,22 @@ test('Texture color read APIs support subresources and mip levels', async t => {
         rowsPerImage: 1
       }
     );
-    t.deepEquals(
+    expect(
       await readTexturePixels(threeDimensionalTexture, {
         width: 1,
         height: 1,
         z: 1,
         depthOrArrayLayers: 1
       }),
-      new Uint8Array([13, 14, 15, 255]),
       `${device.type}: readDataAsync reads 3d slice texels`
-    );
+    ).toEqual(new Uint8Array([13, 14, 15, 255]));
     threeDimensionalTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture color read APIs pack multi-layer and multi-slice reads consistently', async t => {
+it('Texture color read APIs pack multi-layer and multi-slice reads consistently', async () => {
   for (const device of await getTestDevices()) {
     const arrayTexture = device.createTexture({
       dimension: '2d-array',
@@ -882,11 +856,10 @@ test('Texture color read APIs pack multi-layer and multi-slice reads consistentl
       {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
     );
 
-    t.deepEquals(
+    expect(
       await readTexturePixels(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
-      new Uint8Array([1, 10, 20, 255, 2, 11, 21, 255]),
       `${device.type}: multi-layer reads pack consecutive array layers`
-    );
+    ).toEqual(new Uint8Array([1, 10, 20, 255, 2, 11, 21, 255]));
     arrayTexture.destroy();
 
     const threeDimensionalTexture = device.createTexture({
@@ -911,22 +884,21 @@ test('Texture color read APIs pack multi-layer and multi-slice reads consistentl
       {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
     );
 
-    t.deepEquals(
+    expect(
       await readTexturePixels(threeDimensionalTexture, {
         width: 1,
         height: 1,
         depthOrArrayLayers: 2
       }),
-      new Uint8Array([3, 12, 22, 255, 4, 13, 23, 255]),
       `${device.type}: multi-slice reads pack consecutive 3d slices`
-    );
+    ).toEqual(new Uint8Array([3, 12, 22, 255, 4, 13, 23, 255]));
     threeDimensionalTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture color read APIs keep readBuffer and readDataAsync in parity', async t => {
+it('Texture color read APIs keep readBuffer and readDataAsync in parity', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       dimension: '2d-array',
@@ -951,18 +923,17 @@ test('Texture color read APIs keep readBuffer and readDataAsync in parity', asyn
     );
 
     const options = {width: 1, height: 1, depthOrArrayLayers: 2};
-    t.deepEquals(
+    expect(
       await readTextureBufferPixels(texture, options),
-      await readTexturePixels(texture, options),
       `${device.type}: readBuffer and readDataAsync return the same texel bytes`
-    );
+    ).toEqual(await readTexturePixels(texture, options));
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#readDataSyncWebGL matches async color reads on WebGL subresources', async t => {
+it('Texture#readDataSyncWebGL matches async color reads on WebGL subresources', async () => {
   for (const device of await getTestDevices()) {
     if (!(device instanceof WebGLDevice)) {
       continue;
@@ -985,11 +956,10 @@ test('Texture#readDataSyncWebGL matches async color reads on WebGL subresources'
       }),
       {width: 2, height: 2, mipLevel: 1, bytesPerRow: 256, rowsPerImage: 2}
     );
-    t.deepEquals(
+    expect(
       readTexturePixelsSyncWebGL(mipTexture, {mipLevel: 1, width: 2, height: 2}),
-      await readTexturePixels(mipTexture, {mipLevel: 1, width: 2, height: 2}),
       'webgl: readDataSyncWebGL matches readDataAsync for lower mip reads'
-    );
+    ).toEqual(await readTexturePixels(mipTexture, {mipLevel: 1, width: 2, height: 2}));
     mipTexture.destroy();
 
     const arrayTexture = device.createTexture({
@@ -1013,18 +983,17 @@ test('Texture#readDataSyncWebGL matches async color reads on WebGL subresources'
       }),
       {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
     );
-    t.deepEquals(
+    expect(
       readTexturePixelsSyncWebGL(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
-      await readTexturePixels(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
       'webgl: readDataSyncWebGL matches readDataAsync for multi-layer reads'
-    );
+    ).toEqual(await readTexturePixels(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}));
     arrayTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture upload methods round-trip through full-level uploads', async t => {
+it('Texture upload methods round-trip through full-level uploads', async () => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
       const texture = device.createTexture({
@@ -1048,21 +1017,20 @@ test('Texture upload methods round-trip through full-level uploads', async t => 
       );
       const result = await readTexturePixels(texture, {width: 64, height: 1});
 
-      t.deepEquals(
+      expect(
         result,
-        expected,
         `${device.type}: ${method} round-trips tightly packed full-level uploads`
-      );
+      ).toEqual(expected);
 
       uploadBuffer?.destroy();
       texture.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture upload methods support lower mip uploads', async t => {
+it('Texture upload methods support lower mip uploads', async () => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
       const texture = device.createTexture({
@@ -1090,21 +1058,20 @@ test('Texture upload methods support lower mip uploads', async t => {
       const uploadBuffer = uploadTexture(device, texture, method, expected, options);
       const result = await readTexturePixels(texture, {width: 2, height: 2, mipLevel: 1});
 
-      t.deepEquals(
+      expect(
         result,
-        repeatRgbaPixel([90, 80, 70, 255], 4),
         `${device.type}: ${method} uploads lower mip subresources using mip-sized extents`
-      );
+      ).toEqual(repeatRgbaPixel([90, 80, 70, 255], 4));
 
       uploadBuffer?.destroy();
       texture.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture upload methods honor explicit byteOffset and bytesPerRow', async t => {
+it('Texture upload methods honor explicit byteOffset and bytesPerRow', async () => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
       const texture = device.createTexture({
@@ -1132,10 +1099,8 @@ test('Texture upload methods honor explicit byteOffset and bytesPerRow', async t
       const uploadBuffer = uploadTexture(device, texture, method, data, options);
       const result = await readTexturePixels(texture, {width: 2, height: 2});
 
-      t.deepEquals(
-        result,
-        new Uint8Array([11, 22, 33, 255, 11, 22, 33, 255, 11, 22, 33, 255, 11, 22, 33, 255]),
-        `${device.type}: ${method} honors byteOffset and padded rows`
+      expect(result, `${device.type}: ${method} honors byteOffset and padded rows`).toEqual(
+        new Uint8Array([11, 22, 33, 255, 11, 22, 33, 255, 11, 22, 33, 255, 11, 22, 33, 255])
       );
 
       uploadBuffer?.destroy();
@@ -1143,13 +1108,13 @@ test('Texture upload methods honor explicit byteOffset and bytesPerRow', async t
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture upload methods interpret byteOffset as bytes for typed array uploads', async t => {
+it('Texture upload methods interpret byteOffset as bytes for typed array uploads', async () => {
   for (const device of await getTestDevices()) {
     if (!device.isTextureFormatSupported('rgba16uint')) {
-      t.comment(`${device.type}: skipping rgba16uint byteOffset regression test`);
+      void 0;
       continue;
     }
 
@@ -1189,21 +1154,20 @@ test('Texture upload methods interpret byteOffset as bytes for typed array uploa
       const result = await readTexturePixels(texture, {width: 1, height: 1});
       const pixel = Array.from(new Uint16Array(result.buffer, result.byteOffset, 4));
 
-      t.deepEquals(
+      expect(
         pixel,
-        [20, 0, 0, 65535],
         `${device.type}: ${method} converts byteOffset to typed-array element offset`
-      );
+      ).toEqual([20, 0, 0, 65535]);
 
       uploadBuffer?.destroy();
       texture.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture upload methods target cube faces, array layers, and 3d slices consistently', async t => {
+it('Texture upload methods target cube faces, array layers, and 3d slices consistently', async () => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
       const cubeTexture = device.createTexture({
@@ -1234,10 +1198,8 @@ test('Texture upload methods target cube faces, array layers, and 3d slices cons
         depthOrArrayLayers: 1
       });
 
-      t.deepEquals(
-        cubePixels,
-        new Uint8Array([7, 8, 9, 255]),
-        `${device.type}: ${method} targets the requested cube face`
+      expect(cubePixels, `${device.type}: ${method} targets the requested cube face`).toEqual(
+        new Uint8Array([7, 8, 9, 255])
       );
 
       cubeUploadBuffer?.destroy();
@@ -1279,10 +1241,8 @@ test('Texture upload methods target cube faces, array layers, and 3d slices cons
         depthOrArrayLayers: 1
       });
 
-      t.deepEquals(
-        arrayPixels,
-        new Uint8Array([21, 22, 23, 255]),
-        `${device.type}: ${method} targets the requested array layer`
+      expect(arrayPixels, `${device.type}: ${method} targets the requested array layer`).toEqual(
+        new Uint8Array([21, 22, 23, 255])
       );
 
       arrayUploadBuffer?.destroy();
@@ -1324,21 +1284,20 @@ test('Texture upload methods target cube faces, array layers, and 3d slices cons
         depthOrArrayLayers: 1
       });
 
-      t.deepEquals(
+      expect(
         threeDimensionalPixels,
-        new Uint8Array([31, 32, 33, 255]),
         `${device.type}: ${method} targets the requested 3d slice`
-      );
+      ).toEqual(new Uint8Array([31, 32, 33, 255]));
 
       threeDimensionalUploadBuffer?.destroy();
       threeDimensionalTexture.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#copyExternalImage uploads image data on both backends', async t => {
+it('Texture#copyExternalImage uploads image data on both backends', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 2,
@@ -1351,19 +1310,17 @@ test('Texture#copyExternalImage uploads image data on both backends', async t =>
     texture.copyExternalImage({image});
     const result = await readTexturePixels(texture, {width: 2, height: 1});
 
-    t.deepEquals(
-      result,
-      new Uint8Array([1, 2, 3, 255, 5, 6, 7, 255]),
-      `${device.type}: copyExternalImage uploads pixel data`
+    expect(result, `${device.type}: copyExternalImage uploads pixel data`).toEqual(
+      new Uint8Array([1, 2, 3, 255, 5, 6, 7, 255])
     );
 
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGPUTexture#copyExternalImage falls back to a CPU upload', async t => {
+it('WebGPUTexture#copyExternalImage falls back to a CPU upload', async () => {
   const device = await getWebGPUTestDevice();
   const texture = device.createTexture({
     width: 2,
@@ -1400,19 +1357,17 @@ test('WebGPUTexture#copyExternalImage falls back to a CPU upload', async t => {
   }
 
   const result = await readTexturePixels(texture, {width: 2, height: 1});
-  t.deepEquals(
-    result,
-    new Uint8Array([11, 12, 13, 255, 21, 22, 23, 255]),
-    'WebGPU CPU fallback uploads pixel data'
+  expect(result, 'WebGPU CPU fallback uploads pixel data').toEqual(
+    new Uint8Array([11, 12, 13, 255, 21, 22, 23, 255])
   );
-  t.equal(nativeCopyCallCount, 1, 'native TypeError path was attempted once');
+  expect(nativeCopyCallCount, 'native TypeError path was attempted once').toBe(1);
 
   image.close();
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPUTexture#copyExternalImage proactively uses CPU upload on CPU adapters', async t => {
+it('WebGPUTexture#copyExternalImage proactively uses CPU upload on CPU adapters', async () => {
   const device = await getWebGPUTestDevice();
   const texture = device.createTexture({
     width: 2,
@@ -1446,18 +1401,16 @@ test('WebGPUTexture#copyExternalImage proactively uses CPU upload on CPU adapter
   }
 
   const result = await readTexturePixels(texture, {width: 2, height: 1});
-  t.deepEquals(
-    result,
-    new Uint8Array([31, 32, 33, 255, 41, 42, 43, 255]),
-    'CPU adapter fallback uploads pixel data'
+  expect(result, 'CPU adapter fallback uploads pixel data').toEqual(
+    new Uint8Array([31, 32, 33, 255, 41, 42, 43, 255])
   );
-  t.equal(nativeCopyCallCount, 0, 'unstable native external-image copy was bypassed');
+  expect(nativeCopyCallCount, 'unstable native external-image copy was bypassed').toBe(0);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('Texture#copyImageData is a compatibility wrapper over writeData', async t => {
+it('Texture#copyImageData is a compatibility wrapper over writeData', async () => {
   for (const device of await getTestDevices()) {
     const writeDataTexture = device.createTexture({
       width: 2,
@@ -1496,20 +1449,19 @@ test('Texture#copyImageData is a compatibility wrapper over writeData', async t 
       height: 2
     });
 
-    t.deepEquals(
+    expect(
       copyImageDataPixels,
-      writeDataPixels,
       `${device.type}: copyImageData matches writeData for equivalent uploads`
-    );
+    ).toEqual(writeDataPixels);
 
     writeDataTexture.destroy();
     copyImageDataTexture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#createTexture uploads tightly packed 3d texture data', async t => {
+it('Texture#createTexture uploads tightly packed 3d texture data', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       dimension: '3d',
@@ -1528,19 +1480,18 @@ test('Texture#createTexture uploads tightly packed 3d texture data', async t => 
       })
     });
 
-    t.deepEquals(
+    expect(
       await readTexturePixels(texture, {width: 2, height: 1, depthOrArrayLayers: 2}),
-      new Uint8Array([11, 12, 13, 255, 11, 12, 13, 255, 21, 22, 23, 255, 21, 22, 23, 255]),
       `${device.type}: createTexture accepts tightly packed 3d upload data`
-    );
+    ).toEqual(new Uint8Array([11, 12, 13, 255, 11, 12, 13, 255, 21, 22, 23, 255, 21, 22, 23, 255]));
 
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#writeData rejects invalid row layout', async t => {
+it('Texture#writeData rejects invalid row layout', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 2,
@@ -1549,7 +1500,7 @@ test('Texture#writeData rejects invalid row layout', async t => {
       usage: Texture.COPY_DST | Texture.COPY_SRC
     });
 
-    t.throws(
+    expect(
       () =>
         texture.writeData(new Uint8Array(8), {
           width: 2,
@@ -1557,21 +1508,20 @@ test('Texture#writeData rejects invalid row layout', async t => {
           bytesPerRow: 4,
           rowsPerImage: 2
         }),
-      /bytesPerRow/,
       `${device.type}: writeData rejects bytesPerRow smaller than the write width`
-    );
+    ).toThrow(/bytesPerRow/);
 
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
-  t.timeoutAfter(60000);
+it('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async () => {
+  void 0;
 
   for (const device of await getTestDevices()) {
-    t.comment(`Testing device: ${device.type}`);
+    void 0;
     const formatTable = _getTextureFormatTable(device);
     const formats: TextureFormat[] = Object.keys(formatTable) as TextureFormat[];
 
@@ -1600,7 +1550,7 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
       }
 
       if (!device.isTextureFormatRenderable(format)) {
-        t.comment(`Skipping unrenderable format ${format}`);
+        void 0;
         continue;
       }
 
@@ -1647,9 +1597,14 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
 
           const match =
             ArrayType === Float32Array ? almostEqual(output, input) : deepEqual(output, input);
-          t.ok(match, `${device.type} ${format} ${dimension} round-trip succeeded`);
+          expect(Boolean(match), `${device.type} ${format} ${dimension} round-trip succeeded`).toBe(
+            true
+          );
         } catch (err) {
-          t.fail(`${device.type} ${format} ${dimension} round-trip failed: ${err.message}`);
+          expect(
+            false,
+            `${device.type} ${format} ${dimension} round-trip failed: ${err.message}`
+          ).toBe(true);
         }
 
         tex.destroy();
@@ -1657,7 +1612,7 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
     }
   }
 
-  t.end();
+  void 0;
 });
 
 function deepEqual(a: TypedArray, b: TypedArray): boolean {
@@ -1741,22 +1696,21 @@ function isSoftwareBackedDevice(device: Device): boolean {
   );
 }
 
-test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
+it.skip('Texture#copyImageData & readDataAsync round-trip', async () => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
     tex.copyImageData({data: RGBA8_DATA});
     const result = await readTexturePixels(tex, {});
-    t.deepEquals(
+    expect(
       result.slice(0, RGBA8_DATA.length),
-      RGBA8_DATA,
       `${device.type}: copyImageData + readBuffer returns same pixels`
-    );
+    ).toEqual(RGBA8_DATA);
     tex.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test.skip('Texture#writeBuffer & readBuffer round-trip', async t => {
+it.skip('Texture#writeBuffer & readBuffer round-trip', async () => {
   for (const device of await getTestDevices()) {
     const width = 2;
     const height = 1;
@@ -1773,18 +1727,16 @@ test.skip('Texture#writeBuffer & readBuffer round-trip', async t => {
     const tex = device.createTexture({width, height, format: 'rgba8unorm'});
     tex.writeBuffer(upload, {});
     const result = await readTexturePixels(tex, {});
-    t.deepEquals(
-      result,
-      RGBA8_DATA,
-      `${device.type}: writeBuffer + readBuffer returns same pixels`
+    expect(result, `${device.type}: writeBuffer + readBuffer returns same pixels`).toEqual(
+      RGBA8_DATA
     );
     upload.destroy();
     tex.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test.skip('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
+it.skip('Texture#readBuffer & Buffer.readAsync round-trip', async () => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
     // initialize via writeData
@@ -1794,31 +1746,28 @@ test.skip('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
     tex.readBuffer({}, buf);
     const arr = await buf.readAsync();
     const result = toUint8(arr);
-    t.deepEquals(
-      result,
-      RGBA8_DATA,
-      `${device.type}: readBuffer + Buffer.readAsync returns same pixels`
+    expect(result, `${device.type}: readBuffer + Buffer.readAsync returns same pixels`).toEqual(
+      RGBA8_DATA
     );
     tex.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#readBuffer requires explicit destination buffer', async t => {
+it('Texture#readBuffer requires explicit destination buffer', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
-    t.throws(
+    expect(
       () => texture.readBuffer({}),
-      /requires a destination buffer/,
       `${device.type}: readBuffer requires a caller-supplied destination buffer`
-    );
+    ).toThrow(/requires a destination buffer/);
     texture.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#readDataSyncWebGL returns correct data on WebGL', async t => {
+it('Texture#readDataSyncWebGL returns correct data on WebGL', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device instanceof WebGLDevice) {
@@ -1826,14 +1775,14 @@ test('Texture#readDataSyncWebGL returns correct data on WebGL', async t => {
       tex.writeData(RGBA8_DATA, {});
       const syncData = tex.readDataSyncWebGL({});
       const result = toUint8(syncData);
-      t.deepEquals(result, RGBA8_DATA, `webgl: readDataSyncWebGL returns same pixels`);
+      expect(result, `webgl: readDataSyncWebGL returns same pixels`).toEqual(RGBA8_DATA);
       tex.destroy();
     }
   }
-  t.end();
+  void 0;
 });
 
-test('Texture color read APIs reject unsupported formats and aspects', async t => {
+it('Texture color read APIs reject unsupported formats and aspects', async () => {
   const compressedFormats: TextureFormat[] = [
     'bc1-rgba-unorm',
     'etc2-rgba8unorm',
@@ -1847,32 +1796,29 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
     const colorTexture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
-    t.throws(
+    expect(
       () => colorTexture.readBuffer({aspect: 'depth-only'}, readBuffer),
-      /aspect 'all'/,
       `${device.type}: color reads reject non-all aspects`
-    );
+    ).toThrow(/aspect 'all'/);
     colorTexture.destroy();
 
     const depthTexture = device.createTexture({width: 1, height: 1, format: 'depth16unorm'});
-    t.throws(
+    expect(
       () => depthTexture.readBuffer({}, readBuffer),
-      /depth formats/,
       `${device.type}: color reads reject depth formats`
-    );
+    ).toThrow(/depth formats/);
     depthTexture.destroy();
 
     if (device.isTextureFormatSupported('stencil8')) {
       try {
         const stencilTexture = device.createTexture({width: 1, height: 1, format: 'stencil8'});
-        t.throws(
+        expect(
           () => stencilTexture.readBuffer({}, readBuffer),
-          /stencil formats/,
           `${device.type}: color reads reject stencil formats`
-        );
+        ).toThrow(/stencil formats/);
         stencilTexture.destroy();
-      } catch (error) {
-        t.comment(`${device.type}: skipping stencil read guard test (${(error as Error).message})`);
+      } catch (_error) {
+        void 0;
       }
     }
 
@@ -1881,11 +1827,10 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       height: 1,
       format: 'depth24plus-stencil8'
     });
-    t.throws(
+    expect(
       () => depthStencilTexture.readBuffer({}, readBuffer),
-      /depth-stencil formats/,
       `${device.type}: color reads reject depth-stencil formats`
-    );
+    ).toThrow(/depth-stencil formats/);
     depthStencilTexture.destroy();
 
     const compressedFormat = compressedFormats.find(format =>
@@ -1897,29 +1842,26 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
         height: 4,
         format: compressedFormat
       });
-      t.throws(
+      expect(
         () => compressedTexture.readBuffer({}, readBuffer),
-        /compressed formats/,
         `${device.type}: color reads reject compressed formats`
-      );
+      ).toThrow(/compressed formats/);
       compressedTexture.destroy();
     } else {
-      t.comment(
-        `${device.type}: skipping compressed read guard test (no supported compressed format)`
-      );
+      void 0;
     }
 
     readBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
+it('Texture#readBuffer reuses the cached WebGL read framebuffer', async () => {
   const device = await getWebGLTestDevice();
   if (!device) {
-    t.comment('WebGL not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1960,23 +1902,23 @@ test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
   texture.readBuffer({width: 1, height: 1, z: 1, depthOrArrayLayers: 1}, secondReadBuffer);
   const secondFramebuffer = (texture as any)._framebuffer;
 
-  t.ok(firstFramebuffer, 'webgl: first read creates a cached read framebuffer');
-  t.equal(
-    secondFramebuffer,
-    firstFramebuffer,
-    'webgl: subsequent reads reuse the cached read framebuffer'
+  expect(Boolean(firstFramebuffer), 'webgl: first read creates a cached read framebuffer').toBe(
+    true
+  );
+  expect(secondFramebuffer, 'webgl: subsequent reads reuse the cached read framebuffer').toBe(
+    firstFramebuffer
   );
 
   firstReadBuffer.destroy();
   secondReadBuffer.destroy();
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 // //////////////////////////////
 
-test('Device#isTextureFormatSupported()', async t => {
+it('Device#isTextureFormatSupported()', async () => {
   const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {
     webgl: ['stencil8'],
     webgpu: ['rgb32float-webgl']
@@ -1992,16 +1934,16 @@ test('Device#isTextureFormatSupported()', async t => {
 
     unSupportedFormats.sort();
     const expected = UNSUPPORTED_FORMATS[device.type].sort();
-    t.ok(
-      unSupportedFormats.every(format => expected.includes(format)),
+    expect(
+      Boolean(unSupportedFormats.every(format => expected.includes(format))),
       `${device.type}: unsupported formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
-    );
+    ).toBe(true);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Device#isTextureFormatFilterable()', async t => {
+it('Device#isTextureFormatFilterable()', async () => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
     webgl: [
       'rgba8unorm',
@@ -2025,16 +1967,16 @@ test('Device#isTextureFormatFilterable()', async t => {
 
     unSupportedFormats.sort();
     const expected = UNSUPPORTED_FORMATS[device.type].sort();
-    t.ok(
-      unSupportedFormats.every(format => expected.includes(format)),
+    expect(
+      Boolean(unSupportedFormats.every(format => expected.includes(format))),
       `${device.type}: Unfilterable formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
-    );
+    ).toBe(true);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Device#isTextureFormatRenderable()', async t => {
+it('Device#isTextureFormatRenderable()', async () => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
     webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
     webgpu: []
@@ -2050,45 +1992,50 @@ test('Device#isTextureFormatRenderable()', async t => {
 
     unSupportedFormats.sort();
     const expected = UNSUPPORTED_FORMATS[device.type].sort();
-    t.ok(
-      unSupportedFormats.every(format => expected.includes(format)),
+    expect(
+      Boolean(unSupportedFormats.every(format => expected.includes(format))),
       `${device.type}: Unrenderable formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
-    );
+    ).toBe(true);
   }
 
-  t.end();
+  void 0;
 });
 
-test('Texture#construct/delete', async t => {
+it('Texture#construct/delete', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({width: 1, height: 1});
-    t.ok(texture instanceof Texture, 'Texture construction successful');
+    expect(Boolean(texture instanceof Texture), 'Texture construction successful').toBe(true);
     texture.destroy();
-    t.ok(texture instanceof Texture, 'Texture delete successful');
+    expect(Boolean(texture instanceof Texture), 'Texture delete successful').toBe(true);
     texture.destroy();
-    t.ok(texture instanceof Texture, 'Texture repeated delete successful');
+    expect(Boolean(texture instanceof Texture), 'Texture repeated delete successful').toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#depth/stencil formats', async t => {
+it('Texture#depth/stencil formats', async () => {
   const DEPTH_STENCIL_FORMATS = ['depth16unorm', 'depth24plus', 'depth24plus-stencil8'];
   for (const device of await getTestDevices()) {
     for (const key of DEPTH_STENCIL_FORMATS) {
       const format = key as TextureFormat;
-      t.ok(device.isTextureFormatSupported(format), `${device.type} ${format} is supported`);
-      t.notOk(
-        device.isTextureFormatFilterable(format),
+      expect(
+        Boolean(device.isTextureFormatSupported(format)),
+        `${device.type} ${format} is supported`
+      ).toBe(true);
+      expect(
+        Boolean(device.isTextureFormatFilterable(format)),
         `${device.type} ${format} is not filterable`
-      );
+      ).toBe(false);
       const texture = device.createTexture({format, width: 1, height: 1});
-      t.ok(texture instanceof Texture, `Texture ${format} construction successful`);
+      expect(Boolean(texture instanceof Texture), `Texture ${format} construction successful`).toBe(
+        true
+      );
     }
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#format simple creation', async t => {
+it('Texture#format simple creation', async () => {
   for (const device of await getTestDevices()) {
     for (const key of Object.keys(_getTextureFormatTable)) {
       const formatName = key as TextureFormat;
@@ -2103,20 +2050,20 @@ test('Texture#format simple creation', async t => {
         const height = decodedFormat.blockHeight ?? 4;
 
         let texture: Texture;
-        t.doesNotThrow(() => {
+        expect(() => {
           texture = device.createTexture({
             format: formatName,
             height,
             width
           });
-        }, `Texture(${device.type},${formatName}) creation OK`);
+        }, `Texture(${device.type},${formatName}) creation OK`).not.toThrow();
 
-        t.equals(texture.format, formatName, `Texture(${device.type},${formatName}).format OK`);
+        expect(texture.format, `Texture(${device.type},${formatName}).format OK`).toBe(formatName);
         texture.destroy();
       }
     }
   }
-  t.end();
+  void 0;
 });
 
 const DEFAULT_TEXTURE_DATA = new Uint8Array([
@@ -2146,7 +2093,7 @@ const TEXTURE_DATA = {
 //   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
 // };
 
-function testFormatCreation(t, device: Device, withData: boolean = false) {
+function testFormatCreation(device: Device, withData: boolean = false) {
   for (const [formatName] of Object.entries(_getTextureFormatTable)) {
     const format = formatName as TextureFormat;
 
@@ -2186,17 +2133,16 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
           mipmaps,
           sampler
         });
-        t.equals(
+        expect(
           texture.props.format,
-          format,
           `Texture(${device.type},${format}) created with mipmaps=${mipmaps}`
-        );
+        ).toBe(format);
         texture.destroy();
-      } catch (error) {
-        t.comment(`Texture(${device.type},${format}) creation FAILED ${error}`);
+      } catch (_error) {
+        void 0;
       }
     } else {
-      t.comment(`Texture(${device.type},${format}) not supported`);
+      void 0;
     }
   }
 }
@@ -2208,14 +2154,14 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
 //   t.end();
 // });
 
-test('Texture#format creation with data', async t => {
+it('Texture#format creation with data', async () => {
   for (const device of await getTestDevices()) {
-    testFormatCreation(t, device, true);
+    testFormatCreation(device, true);
   }
-  t.end();
+  void 0;
 });
 
-test('Texture#dimension=3d,format=r32float', async t => {
+it('Texture#dimension=3d,format=r32float', async () => {
   for (const device of await getTestDevices()) {
     if (device.info.type === 'webgpu') {
       // TODO validation fails due to insufficient texture layers?
@@ -2236,12 +2182,14 @@ test('Texture#dimension=3d,format=r32float', async t => {
         addressModeW: 'clamp-to-edge'
       }
     });
-    t.ok(texture, `${device.type}: Texture(dimension=3d,format=r32float) created`);
-    t.end();
+    expect(Boolean(texture), `${device.type}: Texture(dimension=3d,format=r32float) created`).toBe(
+      true
+    );
+    void 0;
   }
 });
 
-test('Texture#copyExternalImage', async t => {
+it('Texture#copyExternalImage', async () => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 2,
@@ -2251,11 +2199,10 @@ test('Texture#copyExternalImage', async t => {
 
     if (device.info.type === 'webgl') {
       const webglDevice = device as WebGLDevice;
-      t.deepEquals(
+      expect(
         webglDevice.readPixelsToArrayWebGL(texture),
-        new Uint8Array(8),
         `${device.info.type} Pixels are initially empty`
-      );
+      ).toEqual(new Uint8Array(8));
     }
 
     if (typeof document !== 'undefined') {
@@ -2270,11 +2217,10 @@ test('Texture#copyExternalImage', async t => {
       texture.copyExternalImage({image: canvas});
 
       if (device.info.type === 'webgl') {
-        t.deepEquals(
+        expect(
           device.readPixelsToArrayWebGL(texture),
-          new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]),
           `${device.info.type} Pixels were set correctly (full image)`
-        );
+        ).toEqual(new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]));
       }
 
       // Subimage copy
@@ -2284,11 +2230,10 @@ test('Texture#copyExternalImage', async t => {
       texture.copyExternalImage({image: canvas, x: 1});
 
       if (device.info.type === 'webgl') {
-        t.deepEquals(
+        expect(
           device.readPixelsToArrayWebGL(texture),
-          new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255]),
           `${device.info.type} Pixels were set correctly (sub image)`
-        );
+        ).toEqual(new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255]));
       }
 
       // Subimage copy (smaller canvas)
@@ -2300,23 +2245,22 @@ test('Texture#copyExternalImage', async t => {
       texture.copyExternalImage({image: canvas, x: 1});
 
       if (device.info.type === 'webgl') {
-        t.deepEquals(
+        expect(
           device.readPixelsToArrayWebGL(texture),
-          new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255]),
           `${device.info.type} Pixels were set correctly (sub image small canvas)`
-        );
+        ).toEqual(new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255]));
       }
     }
 
     if (device.info.type !== 'webgl') {
-      t.pass('WebGPU copyExternalImage test cannot yet read pixels');
+      expect(Boolean('WebGPU copyExternalImage test cannot yet read pixels'), '').toBe(true);
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test.skip('Texture#setImageData', async t => {
+it.skip('Texture#setImageData', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const texture = webglDevice.createTexture({
@@ -2326,16 +2270,16 @@ test.skip('Texture#setImageData', async t => {
     type: GL.FLOAT,
     mipmaps: false
   });
-  t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
+  expect(readPixelsToArray(texture), 'Pixels are empty').toEqual(new Float32Array(8));
 
   // data: typed array
   const data = new Float32Array([0.1, 0.2, -3, -2, 0, 0.5, 128, 255]);
   texture.copyExternalImage({data});
-  t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
-  t.end();
+  expect(readPixelsToArray(texture), 'Pixels are set correctly').toEqual(data);
+  void 0;
 });
 
-test.skip('WebGL2#Texture setSubImageData', async t => {
+it.skip('WebGL2#Texture setSubImageData', async () => {
   let data;
 
   // data: null
@@ -2347,25 +2291,21 @@ test.skip('WebGL2#Texture setSubImageData', async t => {
     type: GL.FLOAT,
     mipmaps: false
   });
-  t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
+  expect(readPixelsToArray(texture), 'Pixels are empty').toEqual(new Float32Array(8));
 
   // data: typed array
   data = new Float32Array([0.1, 0.2, -3, -2]);
   texture.setSubImageData({data, x: 0, y: 0, width: 1, height: 1});
-  t.deepEquals(
-    readPixelsToArray(texture),
-    new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0]),
-    'Pixels are set correctly'
+  expect(readPixelsToArray(texture), 'Pixels are set correctly').toEqual(
+    new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 0])
   );
 
   // data: buffer
   data = new Float32Array([-3, 255, 128, 3.333]);
   const buffer = webglDevice.createByffer({data, accessor: {size: 4, type: GL.FLOAT}});
   texture.setSubImageData({data: buffer, x: 1, y: 0, width: 1, height: 1});
-  t.deepEquals(
-    readPixelsToArray(texture),
-    new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333]),
-    'Pixels are set correctly'
+  expect(readPixelsToArray(texture), 'Pixels are set correctly').toEqual(
+    new Float32Array([0.1, 0.2, -3, -2, -3, 255, 128, 3.333])
   );
 
   // data: canvas
@@ -2376,80 +2316,76 @@ test.skip('WebGL2#Texture setSubImageData', async t => {
     const ctx = canvas.getContext('2d');
     ctx.fillRect(0, 0, 1, 1);
     texture.setSubImageData({data: canvas, x: 1, y: 0, width: 1, height: 1});
-    t.deepEquals(
-      readPixelsToArray(texture),
-      new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1]),
-      'Pixels are set correctly'
+    expect(readPixelsToArray(texture), 'Pixels are set correctly').toEqual(
+      new Float32Array([0.1, 0.2, -3, -2, 0, 0, 0, 1])
     );
   }
 
-  t.end();
+  void 0;
 });
 
 // NON-2D TEXTURES
 
-test('Texture(dimension)#construct/delete', async t => {
+it('Texture(dimension)#construct/delete', async () => {
   for (const device of await getTestDevices()) {
     for (const dimension of ['3d', '2d-array', 'cube']) {
       const texture = device.createTexture({dimension, width: 1, height: 1});
-      t.equal(texture.dimension, dimension, `${device.info.type} Texture construction successful`);
-      t.equal(
-        texture.view.props.dimension,
-        dimension,
-        `${device.info.type} Texture view construction successful`
+      expect(texture.dimension, `${device.info.type} Texture construction successful`).toBe(
+        dimension
       );
+      expect(
+        texture.view.props.dimension,
+        `${device.info.type} Texture view construction successful`
+      ).toBe(dimension);
       texture.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test.skip('Texture#buffer update', async t => {
+it.skip('Texture#buffer update', async () => {
   let texture = webglDevice.createTexture({width: 1, height: 1});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
+  expect(Boolean(texture instanceof Texture), 'Texture construction successful').toBe(true);
 
   texture = texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
+  expect(Boolean(texture instanceof Texture), 'Texture delete successful').toBe(true);
 
-  t.end();
+  void 0;
 });
 
 // CUBE TEXTURES
 
-test.skip('WebGL#TextureCube construct/delete', async t => {
-  t.throws(
-    // @ts-expect-error
-    () => new TextureCube(),
-    /.*WebGLRenderingContext.*/,
-    'TextureCube throws on missing gl context'
+it.skip('WebGL#TextureCube construct/delete', async () => {
+  expect(() => new TextureCube(), 'TextureCube throws on missing gl context').toThrow(
+    /.*WebGLRenderingContext.*/
   );
 
   const texture = webglDevice.createTexture({dimension: 'cube', width: 1, height: 1});
-  t.ok(texture instanceof Texture, 'TextureCube construction successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube construction successful').toBe(true);
 
   // t.comment(JSON.stringify(texture.getParameters({keys: true})));
 
   texture.destroy();
-  t.ok(texture instanceof Texture, 'TextureCube delete successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube delete successful').toBe(true);
 
   texture.destroy();
-  t.ok(texture instanceof Texture, 'TextureCube repeated delete successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube repeated delete successful').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test.skip('WebGL#TextureCube buffer update', async t => {
+it.skip('WebGL#TextureCube buffer update', async () => {
   const texture = webglDevice.createTexture({dimension: 'cube', width: 1, height: 1});
-  t.ok(texture instanceof Texture, 'TextureCube construction successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube construction successful').toBe(true);
 
   texture.destroy();
-  t.ok(texture instanceof Texture, 'TextureCube delete successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube delete successful').toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test.skip('WebGL#TextureCube multiple LODs', async t => {
+it.skip('WebGL#TextureCube multiple LODs', async () => {
   const texture = webglDevice.createTexture(
     {dimension: 'cube', width: 1, height: 1},
     {
@@ -2463,18 +2399,18 @@ test.skip('WebGL#TextureCube multiple LODs', async t => {
       }
     }
   );
-  t.ok(texture instanceof Texture, 'TextureCube construction successful');
+  expect(Boolean(texture instanceof Texture), 'TextureCube construction successful').toBe(true);
 
-  t.end();
+  void 0;
 });
 
 // 3D TEXTURES
 
-test.skip('WebGL#Texture3D construct/delete', async t => {
-  t.throws(
+it.skip('WebGL#Texture3D construct/delete', async () => {
+  expect(
     () => webglDevice.createTexture({dimension: '3d', width: 1, height: 1}),
     'Texture3D throws on missing gl context'
-  );
+  ).toThrow();
 
   // TODO(Tarek): generating mipmaps on an empty 3D texture seems to trigger an INVALID_OPERATION
   //    error. See if this is expected behaviour.
@@ -2517,12 +2453,12 @@ test.skip('WebGL#Texture3D construct/delete', async t => {
   buffer.destroy();
   */
 
-  t.end();
+  void 0;
 });
 
-test.skip('Texture#setParameters', async t => {
+it.skip('Texture#setParameters', async () => {
   const texture = webglDevice.createTexture({width: 1, height: 1});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
+  expect(Boolean(texture instanceof Texture), 'Texture construction successful').toBe(true);
 
   testSamplerParameters({t, texture, sampler: SAMPLER_PARAMETERS});
 
@@ -2539,14 +2475,14 @@ test.skip('Texture#setParameters', async t => {
   */
 
   texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
+  expect(Boolean(texture instanceof Texture), 'Texture delete successful').toBe(true);
 
-  t.end();
+  void 0;
 });
 
 // Move to engine
 
-test.skip('WebGL2#Texture generateMipmap', async t => {
+it.skip('WebGL2#Texture generateMipmap', async () => {
   let texture = webglDevice.createTexture({
     data: null,
     width: 3,
@@ -2555,7 +2491,7 @@ test.skip('WebGL2#Texture generateMipmap', async t => {
   });
 
   texture.generateMipmap();
-  t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
+  expect(Boolean(texture.mipmaps), 'Should not turn on mipmaps for NPOT.').toBe(false);
 
   texture = webglDevice.createTexture({
     data: null,
@@ -2565,7 +2501,7 @@ test.skip('WebGL2#Texture generateMipmap', async t => {
   });
 
   texture.generateMipmap();
-  t.ok(texture.mipmaps, 'Should turn on mipmaps for POT.');
+  expect(Boolean(texture.mipmaps), 'Should turn on mipmaps for POT.').toBe(true);
 
-  t.end();
+  void 0;
 });

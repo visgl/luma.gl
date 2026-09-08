@@ -15,8 +15,8 @@ import {
 import {
   ArrowPathRenderer,
   getArrowRecordBatchAsyncIterator,
-  readArrowGPUVectorAsync,
   resolveArrowPathSourceVectors,
+  type ArrowColorType,
   type ArrowPathSourceVectors,
   type ArrowPathSourceVectorSelectors,
   type ArrowRecordBatchSource,
@@ -30,7 +30,7 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
-import {GPUConstant, GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {PathAttributeModel, PathStorageModel} from '@luma.gl/experimental/models';
 import {
   DataType,
@@ -52,23 +52,26 @@ import {
   type ArrowLayerPickingInfo
 } from './arrow-layer-types';
 import {
+  assertArrowLayerColorGPUVector,
   assertArrowLayerGPUVector,
+  convertArrowLayerColorGPUVector,
+  convertArrowLayerColorVector,
   getArrowLayerInputNullValue,
   getArrowLayerInputSource,
   hasArrowLayerColumn,
   isArrowLayerColor,
   isArrowLayerGPUVector,
   isArrowLayerScalar,
+  readArrowLayerGPUVector,
   type ArrowLayerColumnSource,
   type ArrowLayerInput
 } from './arrow-layer-input';
 
 type ArrowPathColor = [number, number, number, number];
-type ArrowPathRowColorType = FixedSizeList<Uint8>;
-type ArrowPathVertexColorType = List<ArrowPathRowColorType>;
+type ArrowPathRowColorType = ArrowColorType;
+type ArrowPathVertexColorType = List<FixedSizeList<Uint8>>;
 type ArrowPathColorSource = ArrowLayerColumnSource<
-  ArrowPathRowColorType | ArrowPathVertexColorType,
-  'unorm8x4' | VertexList<'unorm8x4'>
+  ArrowPathRowColorType | ArrowPathVertexColorType
 >;
 type ArrowPathWidthSource = ArrowLayerColumnSource<Float32, 'float32'>;
 
@@ -419,6 +422,7 @@ type ArrowPathLayerBatch = {
   rowIndexOffset: number;
   rowCount: number;
   temporalBuffer: Buffer | null;
+  convertedColorVector: GPUVector | null;
 };
 
 /** Deck-facing props for an Arrow-backed path layer. */
@@ -635,10 +639,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       widthNullValue
     );
     if (isArrowLayerGPUVector(colorSource)) {
-      assertArrowLayerGPUVector('ArrowPathLayer color', colorSource, [
-        'unorm8x4',
-        'vertex-list<unorm8x4>'
-      ]);
+      assertArrowLayerColorGPUVector('ArrowPathLayer color', colorSource);
     }
     if (isArrowLayerGPUVector(widthSource)) {
       assertArrowLayerGPUVector('ArrowPathLayer width', widthSource, ['float32']);
@@ -646,23 +647,43 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const colorSelector =
       model === 'storage' && isArrowLayerGPUVector(colorSource)
         ? undefined
-        : await this.resolvePathStyleSource(colorSource, rowIndexOffset, recordBatch?.numRows);
+        : await this.resolvePathStyleSource(
+            colorSource,
+            rowIndexOffset,
+            recordBatch?.numRows,
+            true
+          );
     const widthSelector =
       model === 'storage' && isArrowLayerGPUVector(widthSource)
         ? undefined
-        : await this.resolvePathStyleSource(widthSource, rowIndexOffset, recordBatch?.numRows);
-    const sourceVectors = fillNullablePathStyleVectors(
-      resolveArrowPathSourceVectors(model === 'storage' ? PathStorageModel : PathAttributeModel, {
+        : await this.resolvePathStyleSource(
+            widthSource,
+            rowIndexOffset,
+            recordBatch?.numRows,
+            false
+          );
+    let sourceVectors = resolveArrowPathSourceVectors(
+      model === 'storage' ? PathStorageModel : PathAttributeModel,
+      {
         data: recordBatch,
         selectors: {
           paths: props.paths,
-          colors: colorSelector ?? null,
+          colors: (colorSelector ?? null) as ArrowPathSourceVectorSelectors['colors'],
           widths: widthSelector ?? null
         }
-      }),
-      colorNullValue,
-      widthNullValue
+      }
     );
+    if (sourceVectors.colors && !DataType.isList(sourceVectors.colors.type)) {
+      sourceVectors = {
+        ...sourceVectors,
+        colors: (await convertArrowLayerColorVector(
+          this.context.device,
+          sourceVectors.colors,
+          `${props.id}-batch-${batchIndex}-arrow-colors`
+        )) as NonNullable<ArrowPathSourceVectors['colors']>
+      };
+    }
+    sourceVectors = fillNullablePathStyleVectors(sourceVectors, colorNullValue, widthNullValue);
     const prepared = await ArrowPathRenderer.convertToGPUVectors(
       this.context.device,
       sourceVectors,
@@ -677,10 +698,32 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       return;
     }
 
-    const preparedColorColumn =
-      model === 'storage' && isArrowLayerGPUVector(colorSource)
-        ? getPathStorageGPUVectorBatch(colorSource, batchIndex, sourceVectors.paths.length)
-        : prepared.colors;
+    let convertedColorVector: GPUVector | null = null;
+    let preparedColorColumn = prepared.colors;
+    if (model === 'storage' && isArrowLayerGPUVector(colorSource)) {
+      try {
+        const sourceColorBatch = getPathStorageGPUVectorBatch(
+          colorSource,
+          batchIndex,
+          sourceVectors.paths.length
+        );
+        const normalized = await convertArrowLayerColorGPUVector(
+          this.context.device,
+          sourceColorBatch,
+          `${props.id}-batch-${batchIndex}-colors`
+        );
+        preparedColorColumn = normalized.vector;
+        convertedColorVector = normalized.converted ? normalized.vector : null;
+      } catch (error) {
+        prepared.destroy();
+        throw error;
+      }
+      if (!this.isActiveLoad(loadVersion)) {
+        convertedColorVector?.destroy();
+        prepared.destroy();
+        return;
+      }
+    }
     const preparedWidthColumn =
       model === 'storage' && isArrowLayerGPUVector(widthSource)
         ? getPathStorageGPUVectorBatch(widthSource, batchIndex, sourceVectors.paths.length)
@@ -743,12 +786,14 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       }
     } catch (error) {
       destroyBuffers(constantStyle.buffers);
+      convertedColorVector?.destroy();
       prepared.destroy();
       throw error;
     }
     if (!this.isActiveLoad(loadVersion)) {
       renderModel.destroy();
       destroyBuffers(constantStyle.buffers);
+      convertedColorVector?.destroy();
       prepared.destroy();
       return;
     }
@@ -761,7 +806,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
       batchIndex,
       rowIndexOffset,
       rowCount,
-      temporalBuffer: constantStyle.temporalBuffer
+      temporalBuffer: constantStyle.temporalBuffer,
+      convertedColorVector
     };
     const batches = [...this.getLayerState().batches, batch];
     this.setState({batches, loadVersion, sourceInitialized: true});
@@ -794,7 +840,8 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
   private async resolvePathStyleSource<Source extends ArrowPathColorSource | ArrowPathWidthSource>(
     source: Source | undefined,
     rowIndexOffset: number,
-    rowCount: number | undefined
+    rowCount: number | undefined,
+    normalizeColor: boolean
   ): Promise<Exclude<Source, GPUVector> | undefined> {
     if (!isArrowLayerGPUVector(source)) {
       return source as Exclude<Source, GPUVector> | undefined;
@@ -802,7 +849,12 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     const cache = this.getLayerState().gpuVectorSourceCache;
     let arrowVectorPromise = cache.get(source);
     if (!arrowVectorPromise) {
-      arrowVectorPromise = readArrowGPUVectorAsync(source);
+      arrowVectorPromise = readArrowLayerGPUVector(
+        this.context.device,
+        source,
+        `${this.id}-${normalizeColor ? 'colors' : 'values'}`,
+        normalizeColor
+      );
       cache.set(source, arrowVectorPromise);
     }
     const arrowVector = await arrowVectorPromise;
@@ -900,9 +952,11 @@ function hasArrowDataNulls(data: Data): boolean {
   return data.nullCount > 0 || data.children.some(hasArrowDataNulls);
 }
 
-function getPathStorageGPUVectorBatch<
-  Format extends 'unorm8x4' | VertexList<'unorm8x4'> | 'float32'
->(vector: GPUVector<Format>, batchIndex: number, expectedRowCount: number): GPUVector<Format> {
+function getPathStorageGPUVectorBatch<Format extends GPUVectorFormat>(
+  vector: GPUVector<Format>,
+  batchIndex: number,
+  expectedRowCount: number
+): GPUVector<Format> {
   const useWholeVector =
     vector.data.length === 1 && batchIndex === 0 && vector.length === expectedRowCount;
   const data = useWholeVector ? vector.data[0] : vector.data[batchIndex];
@@ -1080,6 +1134,7 @@ function destroyPathBatches(batches: ArrowPathLayerBatch[]): void {
   for (const batch of batches) {
     batch.model.destroy();
     destroyBuffers(batch.constantBuffers);
+    batch.convertedColorVector?.destroy();
     batch.prepared.destroy();
   }
 }

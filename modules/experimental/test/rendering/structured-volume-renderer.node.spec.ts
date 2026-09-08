@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {getTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {
@@ -18,7 +18,7 @@ import {
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
-test('structured volume uniforms pack typed styles and transforms', testContext => {
+it('structured volume uniforms pack typed styles and transforms', () => {
   const uniforms = makeStructuredVolumeUniformData(
     {
       inverseViewProjectionMatrix: IDENTITY_MATRIX,
@@ -36,84 +36,78 @@ test('structured volume uniforms pack typed styles and transforms', testContext 
     [8, 9, 10]
   );
 
-  testContext.equal(
-    uniforms.byteLength,
-    STRUCTURED_VOLUME_UNIFORM_BYTE_LENGTH,
-    'byte size matches WGSL'
-  );
-  testContext.deepEqual(
+  expect(uniforms.byteLength, 'byte size matches WGSL').toBe(STRUCTURED_VOLUME_UNIFORM_BYTE_LENGTH);
+  expect(
     Array.from(
       uniforms.slice(
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.worldToVolumeMatrix + 12,
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.worldToVolumeMatrix + 16
       )
     ),
-    [-2, -3, -4, 1],
     'model transform is inverted before upload'
-  );
-  testContext.deepEqual(
+  ).toEqual([-2, -3, -4, 1]);
+  expect(
     Array.from(
       uniforms.slice(
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.dimensionsAndMode,
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.dimensionsAndMode + 4
       )
     ),
-    [8, 9, 10, 2],
     'dimensions and hybrid mode are packed'
-  );
-  testContext.deepEqual(
+  ).toEqual([8, 9, 10, 2]);
+  expect(
     Array.from(
       uniforms.slice(
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.scalarScales,
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.scalarScales + 4
       )
     ),
-    [2, 3, 0.5, 1],
     'signed scalar style is packed'
-  );
-  testContext.deepEqual(
+  ).toEqual([2, 3, 0.5, 1]);
+  expect(
     Array.from(
       uniforms.slice(
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.glyphGrid,
         STRUCTURED_VOLUME_UNIFORM_OFFSETS.glyphGrid + 4
       )
     ),
-    [4, 5, 6, 1],
     'glyph grid and enable flag are packed'
-  );
-  testContext.end();
+  ).toEqual([4, 5, 6, 1]);
+  void 0;
 });
 
-test('structured volume shaders specialize buffer and texture sources', testContext => {
+it('structured volume shaders specialize buffer and texture sources', () => {
   const bufferSource = {type: 'buffer' as const, format: 'float32' as const, buffer: null!};
   const textureSource = {type: 'texture' as const, format: 'float32x4' as const, texture: null!};
   const source = getStructuredVolumeShaderSource({scalar: bufferSource, vector: textureSource});
 
-  testContext.ok(
-    source.includes('scalarVolume: array<f32>'),
+  expect(
+    Boolean(source.includes('scalarVolume: array<f32>')),
     'scalar buffer uses packed f32 storage'
-  );
-  testContext.ok(
-    source.includes('vectorVolume: texture_3d<f32>'),
+  ).toBe(true);
+  expect(
+    Boolean(source.includes('vectorVolume: texture_3d<f32>')),
     'vector texture uses a 3D binding'
-  );
-  testContext.ok(source.includes('volumeRaymarch_composite'), 'shared module contract is consumed');
-  testContext.ok(source.includes('step < 256u'), 'shader has a bounded maximum loop');
-  testContext.end();
+  ).toBe(true);
+  expect(
+    Boolean(source.includes('volumeRaymarch_composite')),
+    'shared module contract is consumed'
+  ).toBe(true);
+  expect(Boolean(source.includes('step < 256u')), 'shader has a bounded maximum loop').toBe(true);
+  void 0;
 });
 
-test('structured volume reports WebGPU support and validates resources', async testContext => {
+it('structured volume reports WebGPU support and validates resources', async () => {
   const nullDevice = await getTestDevice('null');
-  testContext.deepEqual(
-    getStructuredVolumeSupport(nullDevice),
-    {supported: false, reason: 'StructuredVolumeRenderer requires WebGPU.'},
-    'non-WebGPU support is explicit'
-  );
+  expect(getStructuredVolumeSupport(nullDevice), 'non-WebGPU support is explicit').toEqual({
+    supported: false,
+    reason: 'StructuredVolumeRenderer requires WebGPU.'
+  });
 
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
   const scalarBuffer = device.createBuffer({byteLength: 4 * 4 * 4 * 4, usage: Buffer.STORAGE});
@@ -130,24 +124,22 @@ test('structured volume reports WebGPU support and validates resources', async t
     scalar: {type: 'buffer', format: 'float32', buffer: scalarBuffer}
   });
   try {
-    testContext.throws(
+    expect(
       () =>
         renderer.setSources({
           scalar: {type: 'texture', format: 'float32', texture: scalarTexture}
         }),
-      /backing type are immutable/,
       'rebinding cannot change the pipeline backing type'
-    );
-    testContext.throws(
+    ).toThrow(/backing type are immutable/);
+    expect(
       () =>
         new StructuredVolumeRenderer(device, {
           dimensions: [4, 4, 4],
           scalar: {type: 'buffer', format: 'float32', buffer: {buffer: scalarBuffer, size: 12}}
         }),
-      /smaller than its dimensions/,
       'undersized buffer views are rejected'
-    );
-    testContext.throws(
+    ).toThrow(/smaller than its dimensions/);
+    expect(
       () =>
         makeStructuredVolumeUniformData(
           {
@@ -159,13 +151,12 @@ test('structured volume reports WebGPU support and validates resources', async t
           },
           [4, 4, 4]
         ),
-      /sampleCount/,
       'invalid sample counts are rejected'
-    );
+    ).toThrow(/sampleCount/);
   } finally {
     renderer.destroy();
     scalarBuffer.destroy();
     scalarTexture.destroy();
   }
-  testContext.end();
+  void 0;
 });

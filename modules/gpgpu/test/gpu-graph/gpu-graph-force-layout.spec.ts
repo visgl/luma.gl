@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphForceLayoutToGraphWithDispatchLimit,
   getGPUGraphForceLayoutDispatchLayout
@@ -322,21 +321,18 @@ const layoutScenarios: ForceLayoutScenario[] = [
   }
 ];
 
-test('GPUGraphForceLayout plans bounded three-dimensional exact repulsion dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphForceLayoutDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphForceLayoutDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphForceLayoutDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphForceLayoutDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphForceLayoutDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphForceLayout plans bounded three-dimensional exact repulsion dispatch', () => {
+  expect(getGPUGraphForceLayoutDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphForceLayoutDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphForceLayoutDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphForceLayoutDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphForceLayoutDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of layoutScenarios) {
-  test(`GPUGraphForceLayout exact GPU physics: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphForceLayout exact GPU physics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -345,32 +341,26 @@ for (const scenario of layoutScenarios) {
     try {
       compileLayout(fixture, scenario.maximumWorkgroups);
       executeLayout(fixture);
-      await assertForceLayout(tapeTest, fixture, scenario, expected);
-      tapeTest.deepEqual(
+      await assertForceLayout(fixture, scenario, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'exact GPU layout preserves caller-owned source chunks and empty record batches'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.assertNoScratch) {
-        tapeTest.equal(
+        expect(
           fixture.compiled?.stats.logicalTransientBufferCount,
-          6,
           'exact force and integration passes allocate no scratch beyond forward/reverse CSR'
-        );
+        ).toBe(6);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphForceLayout progressively warm-starts and repeats deterministic seeded reset', async tapeTest => {
+it('GPUGraphForceLayout progressively warm-starts and repeats deterministic seeded reset', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -395,16 +385,16 @@ test('GPUGraphForceLayout progressively warm-starts and repeats deterministic se
 
   try {
     compileLayout(fixture);
-    tapeTest.equal(submitSpy.mock.calls.length, 0, 'force layout construction never submits work');
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'force layout construction never submits work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'exact layout never reads graph or render data back to the CPU'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executeLayout(fixture);
-    await assertForceLayout(tapeTest, fixture, initial, expectedInitial);
+    await assertForceLayout(fixture, initial, expectedInitial);
 
     const warmStart = {
       ...initial,
@@ -413,24 +403,21 @@ test('GPUGraphForceLayout progressively warm-starts and repeats deterministic se
       reset: 0
     };
     executeLayout(fixture);
-    await assertForceLayout(tapeTest, fixture, warmStart, calculateExpectedForceLayout(warmStart));
+    await assertForceLayout(fixture, warmStart, calculateExpectedForceLayout(warmStart));
 
     const resetBuffer = fixture.layout.reset!.data[0].buffer as Buffer;
     resetBuffer.write(Uint32Array.from([1]));
     executeLayout(fixture);
-    await assertForceLayout(tapeTest, fixture, initial, expectedInitial);
-    tapeTest.equal(
+    await assertForceLayout(fixture, initial, expectedInitial);
+    expect(
       fixture.layout.positions.data[0].buffer.usage & Buffer.VERTEX,
-      Buffer.VERTEX,
       'the exact caller-owned layout buffer remains directly usable as a render vertex attribute'
-    );
+    ).toBe(Buffer.VERTEX);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Evaluates exact all-pairs repulsion and undirected incident-edge attraction on the CPU. */
@@ -845,7 +832,6 @@ function executeLayout(fixture: LayoutExecutionFixture): void {
 }
 
 async function assertForceLayout(
-  tapeTest: Test,
   fixture: LayoutExecutionFixture,
   scenario: ForceLayoutScenario,
   expected: ExpectedForceLayout
@@ -862,92 +848,71 @@ async function assertForceLayout(
         : Promise.resolve(undefined)
     ]);
 
-  tapeTest.equal(
-    positions.length,
-    scenario.vertexCount * 2,
-    'two render coordinates remain per vertex'
+  expect(positions.length, 'two render coordinates remain per vertex').toBe(
+    scenario.vertexCount * 2
   );
   assertCloseCoordinates(
-    tapeTest,
     positions,
     expected.positions,
     'GPU positions match exact CPU force physics'
   );
   assertCloseCoordinates(
-    tapeTest,
     velocities,
     expected.velocities,
     'GPU velocities match damped CPU force and clipping'
   );
-  tapeTest.ok(
-    positions.every(Number.isFinite) && velocities.every(Number.isFinite),
+  expect(
+    Boolean(positions.every(Number.isFinite) && velocities.every(Number.isFinite)),
     'all softened coordinates and velocities remain finite'
+  ).toBe(true);
+  expect(invalidEdgeCount[0], 'invalid graph endpoints are excluded').toBe(
+    expected.invalidEdgeCount
   );
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid graph endpoints are excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward capacity remains explicit'
+  expect(forwardOverflow[0], 'forward capacity remains explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse capacity remains explicit'
+    expect(reverseOverflow[0], 'reverse capacity remains explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
   if (reset)
-    tapeTest.equal(reset[0], 0, 'GPU consumes and clears deterministic initialization control');
+    expect(reset[0], 'GPU consumes and clears deterministic initialization control').toBe(0);
 
   for (const [vertexIndex, pinned] of (scenario.pinned ?? []).entries()) {
     if (pinned) {
-      tapeTest.equal(
-        positions[vertexIndex * 2],
-        scenario.positions[vertexIndex * 2],
-        'pinned x coordinate never moves'
+      expect(positions[vertexIndex * 2], 'pinned x coordinate never moves').toBe(
+        scenario.positions[vertexIndex * 2]
       );
-      tapeTest.equal(
-        positions[vertexIndex * 2 + 1],
-        scenario.positions[vertexIndex * 2 + 1],
-        'pinned y coordinate never moves'
+      expect(positions[vertexIndex * 2 + 1], 'pinned y coordinate never moves').toBe(
+        scenario.positions[vertexIndex * 2 + 1]
       );
-      tapeTest.equal(velocities[vertexIndex * 2], 0, 'pinned horizontal velocity is cleared');
-      tapeTest.equal(velocities[vertexIndex * 2 + 1], 0, 'pinned vertical velocity is cleared');
+      expect(velocities[vertexIndex * 2], 'pinned horizontal velocity is cleared').toBe(0);
+      expect(velocities[vertexIndex * 2 + 1], 'pinned vertical velocity is cleared').toBe(0);
     }
   }
 
   if (expected.failed) {
-    tapeTest.deepEqual(
-      positions,
-      Array.from(new Float32Array(scenario.positions)),
-      'CSR overflow preserves all render positions'
+    expect(positions, 'CSR overflow preserves all render positions').toEqual(
+      Array.from(new Float32Array(scenario.positions))
     );
-    tapeTest.ok(
-      velocities.every(velocity => velocity === 0),
+    expect(
+      Boolean(velocities.every(velocity => velocity === 0)),
       'CSR overflow clears every simulation velocity'
-    );
+    ).toBe(true);
   }
 }
 
-function assertCloseCoordinates(
-  tapeTest: Test,
-  actual: number[],
-  expected: number[],
-  message: string
-): void {
+function assertCloseCoordinates(actual: number[], expected: number[], message: string): void {
   const largestError = actual.reduce(
     (largest, value, coordinateIndex) =>
       Math.max(largest, Math.abs(value - expected[coordinateIndex])),
     0
   );
-  tapeTest.ok(
-    largestError <= PHYSICS_TOLERANCE,
+  expect(
+    Boolean(largestError <= PHYSICS_TOLERANCE),
     `${message} within ${PHYSICS_TOLERANCE}: ${largestError}`
-  );
+  ).toBe(true);
 }
 
 async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> {
@@ -964,12 +929,12 @@ async function readCoordinateVector(vector: GPUVector<'float32x2'>): Promise<num
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length * 2));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: LayoutExecutionFixture): void {
+function destroyExecutionFixture(fixture: LayoutExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying borrowed force-layout vectors preserves every caller-owned physical allocation'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

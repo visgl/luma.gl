@@ -2,9 +2,9 @@ import {ANARIDevice} from '@luma.gl/scene';
 import type {Device} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('ANARI renderer draws instanced physically based surfaces on available GPU backends', async testContext => {
+it('ANARI renderer draws instanced physically based surfaces on available GPU backends', async () => {
   for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('sphere', {radius: 0.6, segments: 8});
@@ -45,34 +45,28 @@ test('ANARI renderer draws instanced physically based surfaces on available GPU 
     const statistics = frame.render();
     graphicsDevice.submit();
 
-    testContext.equal(
-      statistics.drawCount,
-      1,
-      `${graphicsDevice.type} executes one instanced draw`
-    );
-    testContext.equal(
-      statistics.instanceCount,
-      2,
-      `${graphicsDevice.type} renders both placements`
-    );
-    testContext.ok(statistics.triangleCount > 0, `${graphicsDevice.type} produces sphere geometry`);
+    expect(statistics.drawCount, `${graphicsDevice.type} executes one instanced draw`).toBe(1);
+    expect(statistics.instanceCount, `${graphicsDevice.type} renders both placements`).toBe(2);
+    expect(
+      Boolean(statistics.triangleCount > 0),
+      `${graphicsDevice.type} produces sphere geometry`
+    ).toBe(true);
 
     movingLight.setParameter('position', [2, 1, -1]).commitParameters();
     const illuminatedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       illuminatedStatistics.drawCount,
-      1,
       `${graphicsDevice.type} renders successfully after moving a committed point light`
-    );
+    ).toBe(1);
 
     frame.destroy();
     device.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI renderer binds indexed RGB vertex colors on available GPU backends', async testContext => {
+it('ANARI renderer binds indexed RGB vertex colors on available GPU backends', async () => {
   for (const graphicsDevice of await getLiveTestDevices()) {
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('triangle', {
@@ -90,23 +84,19 @@ test('ANARI renderer binds indexed RGB vertex colors on available GPU backends',
     const statistics = frame.render();
     graphicsDevice.submit();
 
-    testContext.equal(
-      statistics.drawCount,
-      1,
-      `${graphicsDevice.type} draws colored indexed meshes`
-    );
-    testContext.equal(statistics.triangleCount, 1, `${graphicsDevice.type} preserves mesh indices`);
+    expect(statistics.drawCount, `${graphicsDevice.type} draws colored indexed meshes`).toBe(1);
+    expect(statistics.triangleCount, `${graphicsDevice.type} preserves mesh indices`).toBe(1);
 
     frame.destroy();
     device.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI renderer samples PBR image maps on available GPU backends', async testContext => {
+it('ANARI renderer samples PBR image maps on available GPU backends', async () => {
   for (const graphicsDevice of await getLiveTestDevices()) {
     if (isSoftwareBackedWebGLDevice(graphicsDevice)) {
-      testContext.comment('Skipping unstable PBR image-map shaders on software WebGL');
+      void 0;
       continue;
     }
 
@@ -145,25 +135,24 @@ test('ANARI renderer samples PBR image maps on available GPU backends', async te
       const statistics = frame.render();
       graphicsDevice.submit();
 
-      testContext.equal(statistics.drawCount, 1, `${graphicsDevice.type} draws textured meshes`);
-      testContext.equal(
+      expect(statistics.drawCount, `${graphicsDevice.type} draws textured meshes`).toBe(1);
+      expect(
         statistics.triangleCount,
-        1,
         `${graphicsDevice.type} preserves textured mesh geometry`
-      );
+      ).toBe(1);
     } finally {
       frame.destroy();
       device.destroy();
       image.destroy();
     }
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI renderer samples optional secondary texture coordinates on GPU backends', async testContext => {
+it('ANARI renderer samples optional secondary texture coordinates on GPU backends', async () => {
   for (const graphicsDevice of await getLiveTestDevices()) {
     if (isSoftwareBackedWebGLDevice(graphicsDevice)) {
-      testContext.comment('Skipping unstable secondary-UV shaders on software WebGL');
+      void 0;
       continue;
     }
 
@@ -195,29 +184,24 @@ test('ANARI renderer samples optional secondary texture coordinates on GPU backe
       const statistics = frame.render();
       graphicsDevice.submit();
 
-      testContext.equal(
+      expect(
         statistics.drawCount,
-        1,
         `${graphicsDevice.type} binds TEXCOORD_1 and compiles the shared secondary-UV shader path`
-      );
-      testContext.equal(
-        statistics.triangleCount,
-        1,
-        `${graphicsDevice.type} preserves UV1 geometry`
-      );
+      ).toBe(1);
+      expect(statistics.triangleCount, `${graphicsDevice.type} preserves UV1 geometry`).toBe(1);
     } finally {
       frame.destroy();
       device.destroy();
       image.destroy();
     }
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI renderer delegates masked extension materials to canonical PBR shaders', async testContext => {
+it('ANARI renderer delegates masked extension materials to canonical PBR shaders', async () => {
   for (const graphicsDevice of await getLiveTestDevices()) {
     if (isSoftwareBackedWebGLDevice(graphicsDevice)) {
-      testContext.comment('Skipping unstable masked PBR extension shaders on software WebGL');
+      void 0;
       continue;
     }
 
@@ -256,19 +240,17 @@ test('ANARI renderer delegates masked extension materials to canonical PBR shade
     const frame = device.newFrame({world, camera, renderer, size: [32, 32]});
 
     try {
-      testContext.equal(
+      expect(
         frame.render().drawCount,
-        1,
         `${graphicsDevice.type} compiles masked PBR extension samplers`
-      );
+      ).toBe(1);
       graphicsDevice.submit();
 
       material.setParameters({alphaMode: 'blend', opacity: 0.45}).commitParameters();
-      testContext.equal(
+      expect(
         frame.render().drawCount,
-        1,
         `${graphicsDevice.type} recompiles the shared pipeline when committed alpha mode changes`
-      );
+      ).toBe(1);
       graphicsDevice.submit();
     } finally {
       frame.destroy();
@@ -276,13 +258,13 @@ test('ANARI renderer delegates masked extension materials to canonical PBR shade
       image.destroy();
     }
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', async testContext => {
+it('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', async () => {
   for (const graphicsDevice of [await getWebGPUTestDevice('core')]) {
     if (!graphicsDevice) {
-      testContext.comment('WebGPU is not available');
+      void 0;
       continue;
     }
 
@@ -291,14 +273,13 @@ test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', 
       graphicsDevice.info.gpuType !== 'cpu' &&
       !graphicsDevice.info.fallback;
     if (!supportsRawValidationErrorScopes) {
-      testContext.comment('software WebGPU can cancel raw validation error-scope callbacks');
+      void 0;
     }
 
-    testContext.equal(
+    expect(
       graphicsDevice.limits.maxColorAttachmentBytesPerSample,
-      32,
       'deferred rendering preserves the default 32-byte WebGPU core attachment limit'
-    );
+    ).toBe(32);
     const device = new ANARIDevice(graphicsDevice);
     const geometry = device.newGeometry('sphere', {radius: 0.7, segments: 8});
     const material = device.newMaterial('physicallyBased', {
@@ -345,40 +326,39 @@ test('ANARI deferred renderer resolves PBR surfaces within WebGPU core limits', 
     graphicsDevice.submit();
     if (supportsRawValidationErrorScopes) {
       const deferredValidationError = await graphicsDevice.handle.popErrorScope();
-      testContext.equal(
+      expect(
         deferredValidationError,
-        null,
         'deferred frame encoding and submission produce no WebGPU validation errors'
-      );
+      ).toBe(null);
     }
-    testContext.equal(statistics.drawCount, 1, 'WebGPU deferred renderer draws one surface batch');
-    testContext.equal(statistics.instanceCount, 2, 'WebGPU deferred renderer keeps instances');
-    testContext.ok(statistics.triangleCount > 0, 'WebGPU deferred renderer counts geometry');
+    expect(statistics.drawCount, 'WebGPU deferred renderer draws one surface batch').toBe(1);
+    expect(statistics.instanceCount, 'WebGPU deferred renderer keeps instances').toBe(2);
+    expect(Boolean(statistics.triangleCount > 0), 'WebGPU deferred renderer counts geometry').toBe(
+      true
+    );
 
     material.setParameter('transmission', 0.6).commitParameters();
     const fallbackStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       fallbackStatistics.drawCount,
-      1,
       'unsupported deferred material extensions transparently use the shared forward renderer'
-    );
-    testContext.equal(
+    ).toBe(1);
+    expect(
       fallbackStatistics.instanceCount,
-      2,
       'deferred-to-forward fallback preserves retained surface instancing'
-    );
+    ).toBe(2);
 
     frame.destroy();
     device.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes within WebGPU core limits', async testContext => {
+it('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes within WebGPU core limits', async () => {
   for (const graphicsDevice of [await getWebGPUTestDevice('core')]) {
     if (!graphicsDevice) {
-      testContext.comment('WebGPU is not available');
+      void 0;
       continue;
     }
 
@@ -387,14 +367,13 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       graphicsDevice.info.gpuType !== 'cpu' &&
       !graphicsDevice.info.fallback;
     if (!supportsRawValidationErrorScopes) {
-      testContext.comment('software WebGPU can cancel raw validation error-scope callbacks');
+      void 0;
     }
 
-    testContext.equal(
+    expect(
       graphicsDevice.limits.maxStorageBuffersPerShaderStage,
-      8,
       'GPU BVH construction fits the default WebGPU core storage-buffer limit'
-    );
+    ).toBe(8);
     const device = new ANARIDevice(graphicsDevice);
     const sphereGeometry = device.newGeometry('sphere', {radius: 0.65});
     const sphereMaterial = device.newMaterial('physicallyBased', {
@@ -448,26 +427,23 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
     graphicsDevice.submit();
     if (supportsRawValidationErrorScopes) {
       const initialValidationError = await graphicsDevice.handle.popErrorScope();
-      testContext.equal(
+      expect(
         initialValidationError,
-        null,
         'GPU object bounds, BVH construction, and shadow traversal produce no core validation errors'
-      );
+      ).toBe(null);
     }
-    testContext.equal(statistics.surfaceCount, 2, 'ray tracing retains both unique surfaces');
-    testContext.equal(statistics.instanceCount, 3, 'ray tracing preserves transformed placements');
-    testContext.equal(statistics.drawCount, 1, 'ray tracing presents through one fullscreen draw');
-    testContext.equal(
-      statistics.triangleCount,
-      1,
-      'analytic spheres do not generate mesh triangles'
-    );
-    testContext.ok(
-      statistics.rayTracing?.graph?.topology &&
-        statistics.rayTracing.graph.acceleration &&
-        statistics.rayTracing.graph.trace,
+    expect(statistics.surfaceCount, 'ray tracing retains both unique surfaces').toBe(2);
+    expect(statistics.instanceCount, 'ray tracing preserves transformed placements').toBe(3);
+    expect(statistics.drawCount, 'ray tracing presents through one fullscreen draw').toBe(1);
+    expect(statistics.triangleCount, 'analytic spheres do not generate mesh triangles').toBe(1);
+    expect(
+      Boolean(
+        statistics.rayTracing?.graph?.topology &&
+          statistics.rayTracing.graph.acceleration &&
+          statistics.rayTracing.graph.trace
+      ),
       'retained ANARI frames expose topology, acceleration, and tracing graph-stage diagnostics'
-    );
+    ).toBe(true);
 
     if (supportsRawValidationErrorScopes) {
       graphicsDevice.handle.pushErrorScope('validation');
@@ -475,43 +451,44 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
     camera.setParameters({position: [0, 0, 4], direction: [0, 0, -1]}).commitParameters();
     const accumulatedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       accumulatedStatistics.instanceCount,
-      3,
       'stable recommitted camera parameters preserve progressive rendering'
-    );
-    testContext.ok(
-      accumulatedStatistics.rayTracing?.graph?.trace &&
-        !accumulatedStatistics.rayTracing.graph.topology &&
-        !accumulatedStatistics.rayTracing.graph.acceleration &&
-        !accumulatedStatistics.rayTracing.graph.refit,
+    ).toBe(3);
+    expect(
+      Boolean(
+        accumulatedStatistics.rayTracing?.graph?.trace &&
+          !accumulatedStatistics.rayTracing.graph.topology &&
+          !accumulatedStatistics.rayTracing.graph.acceleration &&
+          !accumulatedStatistics.rayTracing.graph.refit
+      ),
       'stable ANARI frames expose only the tracing graph without rebuilding acceleration'
-    );
+    ).toBe(true);
 
     renderer.setParameters({toneMapMode: 1, outputColorSpace: 'linear'}).commitParameters();
     const colorManagedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       colorManagedStatistics.instanceCount,
-      3,
       'committed ANARI tone-mapping and output-color settings preserve retained placements'
-    );
-    testContext.ok(
-      colorManagedStatistics.rayTracing?.graph?.trace &&
-        !colorManagedStatistics.rayTracing.graph.topology &&
-        !colorManagedStatistics.rayTracing.graph.acceleration &&
-        !colorManagedStatistics.rayTracing.graph.refit,
+    ).toBe(3);
+    expect(
+      Boolean(
+        colorManagedStatistics.rayTracing?.graph?.trace &&
+          !colorManagedStatistics.rayTracing.graph.topology &&
+          !colorManagedStatistics.rayTracing.graph.acceleration &&
+          !colorManagedStatistics.rayTracing.graph.refit
+      ),
       'presentation-policy updates recreate only the tracing graph, without rebuilding acceleration'
-    );
+    ).toBe(true);
 
     world.setParameter('instance', [firstInstance]).commitParameters();
     const reducedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       reducedStatistics.instanceCount,
-      2,
       'the BVH excludes inactive leaves when a retained world removes an instance'
-    );
+    ).toBe(2);
 
     firstInstance
       .setParameter(
@@ -525,30 +502,21 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
     world.setParameter('instance', [firstInstance, secondInstance]).commitParameters();
     const restoredStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       restoredStatistics.instanceCount,
-      3,
       'the BVH refits rotated, nonuniformly scaled instances when retained placements return'
-    );
+    ).toBe(3);
 
     sphereMaterial.setParameter('roughness', 0.8).commitParameters();
     renderer.setParameters({progressive: false, shadows: false}).commitParameters();
     const updatedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
-      updatedStatistics.drawCount,
-      1,
-      'material and renderer updates rebuild history'
-    );
+    expect(updatedStatistics.drawCount, 'material and renderer updates rebuild history').toBe(1);
 
     frame.setParameter('size', [16, 16]).commitParameters();
     const resizedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
-      resizedStatistics.triangleCount,
-      1,
-      'resizing rebuilds frame-owned resources'
-    );
+    expect(resizedStatistics.triangleCount, 'resizing rebuilds frame-owned resources').toBe(1);
 
     const primitiveSurfaces = (['quad', 'cylinder', 'cone'] as const).map(subtype =>
       device.newSurface({
@@ -564,40 +532,38 @@ test('ANARI ray tracing renderer accelerates analytic spheres and indexed meshes
       .commitParameters();
     const primitiveStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(primitiveStatistics.surfaceCount, 3, 'generated primitives remain distinct');
-    testContext.ok(
-      primitiveStatistics.triangleCount > 1,
+    expect(primitiveStatistics.surfaceCount, 'generated primitives remain distinct').toBe(3);
+    expect(
+      Boolean(primitiveStatistics.triangleCount > 1),
       'orthographic rays trace generated quad, cylinder, and cone meshes'
-    );
+    ).toBe(true);
 
     frame.setParameter('world', device.newWorld()).commitParameters();
     const emptyStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(emptyStatistics.instanceCount, 0, 'empty worlds present their background');
-    testContext.equal(emptyStatistics.drawCount, 1, 'empty worlds still use one presentation draw');
+    expect(emptyStatistics.instanceCount, 'empty worlds present their background').toBe(0);
+    expect(emptyStatistics.drawCount, 'empty worlds still use one presentation draw').toBe(1);
 
     renderer.setParameters({progressive: true, shadows: true}).commitParameters();
     frame.setParameters({world, camera}).commitParameters();
     const repopulatedStatistics = frame.render();
     graphicsDevice.submit();
-    testContext.equal(
+    expect(
       repopulatedStatistics.instanceCount,
-      3,
       'BVH traversal and direct-light shadows recover after an empty retained world'
-    );
+    ).toBe(3);
     if (supportsRawValidationErrorScopes) {
       const updatedValidationError = await graphicsDevice.handle.popErrorScope();
-      testContext.equal(
+      expect(
         updatedValidationError,
-        null,
         'BVH refits, resize, empty scenes, repopulation, and shadow updates remain core-valid'
-      );
+      ).toBe(null);
     }
 
     frame.destroy();
     device.destroy();
   }
-  testContext.end();
+  void 0;
 });
 
 async function getLiveTestDevices(): Promise<Device[]> {

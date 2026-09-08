@@ -14,7 +14,7 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowPolygonRenderer,
-  readArrowGPUVectorAsync,
+  type ArrowColorType,
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
 } from '@luma.gl/arrow';
@@ -29,24 +29,27 @@ import {
   watchDeckArrowModelPipeline
 } from './arrow-layer-types';
 import type {ArrowLayerPickingInfo} from './arrow-layer-types';
-import {GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPURecordBatchSourceInfo} from '@luma.gl/experimental/gpu-tables';
 import {POLYGON_STORAGE_SHADER_LAYOUT} from '@luma.gl/experimental/models';
-import type {Vector} from 'apache-arrow';
+import {Vector} from 'apache-arrow';
 import {
-  assertArrowLayerGPUVector,
+  assertArrowLayerColorGPUVector,
+  convertArrowLayerColorVector,
   getArrowLayerInputNullValue,
   getArrowLayerInputSource,
   inspectArrowLayerColumn,
   isArrowLayerColor,
   isArrowLayerGPUVector,
+  readArrowLayerGPUVector,
   type ArrowLayerInput
 } from './arrow-layer-input';
 
 type ArrowPolygonColor = [number, number, number, number];
 type ArrowPolygonColorSource =
   | Exclude<ArrowPolygonRendererProps['colors'], null | undefined>
-  | GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
+  | Vector<ArrowColorType>
+  | GPUVector;
 type ArrowPolygonResolvedColorSource = {
   value: Exclude<ArrowPolygonColorSource, GPUVector> | null;
 };
@@ -317,13 +320,12 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
       ...this.getRendererModelProps(props),
       data: props.data,
       polygons: props.polygons,
-      colors:
-        resolvedColorSource?.value ??
+      colors: (resolvedColorSource?.value ??
         (resolvedColorSource
           ? null
           : isArrowLayerGPUVector(colorSource)
             ? null
-            : (colorSource ?? null)),
+            : (colorSource ?? null))) as ArrowPolygonRendererProps['colors'],
       tessellated: props.tessellated,
       color: getArrowLayerInputNullValue(props.color, DEFAULT_POLYGON_COLOR, isArrowLayerColor),
       center: props.center,
@@ -348,6 +350,29 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     const state = this.getLayerState();
     const colorResolveVersion = state.colorResolveVersion + 1;
     state.colorResolveVersion = colorResolveVersion;
+    if (colorSource instanceof Vector) {
+      renderer.setProps(this.getRendererProps(props, {value: null}));
+      void convertArrowLayerColorVector(this.context.device, colorSource, `${this.id}-colors`)
+        .then(colorVector => {
+          if (
+            this.getRendererOrNull() === renderer &&
+            this.getLayerState().colorResolveVersion === colorResolveVersion
+          ) {
+            renderer.setProps(
+              this.getRendererProps(props, {value: colorVector as Vector as never})
+            );
+            this.watchRendererPipeline(renderer);
+            this.setNeedsRedraw();
+          }
+        })
+        .catch(error => {
+          if (this.getLayerState().colorResolveVersion === colorResolveVersion) {
+            if (props.onDataError) props.onDataError(error);
+            else this.raiseError(toError(error), `resolving Arrow polygon color in ${this}`);
+          }
+        });
+      return;
+    }
     if (!isArrowLayerGPUVector(colorSource)) {
       if (typeof colorSource === 'string') {
         if (!props.data) {
@@ -398,14 +423,9 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     }
     const polygonRowCount =
       props.polygons && typeof props.polygons !== 'string' ? props.polygons.length : undefined;
-    assertArrowLayerGPUVector(
-      'ArrowPolygonLayer color',
-      colorSource,
-      ['unorm8x4', 'vertex-list<unorm8x4>'],
-      polygonRowCount
-    );
+    assertArrowLayerColorGPUVector('ArrowPolygonLayer color', colorSource, polygonRowCount);
     renderer.setProps({data: null});
-    void readArrowGPUVectorAsync(colorSource)
+    void readArrowLayerGPUVector(this.context.device, colorSource, `${this.id}-colors`, true)
       .then(colorVector => {
         if (
           this.getRendererOrNull() === renderer &&

@@ -147,12 +147,12 @@ jobs:
     needs: [check_branch, node_tests, browser_tests]
     permissions:
       contents: write
+      id-token: write
 
     if: ${{ success() && github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build == 'true' }}
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -162,6 +162,11 @@ jobs:
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Update npm
+        run: npm install --global npm@^11.15.0
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -184,9 +189,6 @@ jobs:
 
       - name: Build packages
         run: yarn build
-
-      - name: Login to NPM
-        run: npm config set "//registry.npmjs.org/:_authToken=${NPM_ACCESS_TOKEN}"
 
       # ocular-publish creates the GitHub Release before publishing the tagged packages to npm.
       - name: Post GitHub release and publish to NPM

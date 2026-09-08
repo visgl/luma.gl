@@ -151,6 +151,7 @@ export async function convertArrowPathFloat64ToGPUVector(
         dataType: pathType,
         format: pathFormat,
         length: data.length,
+        valueLength: pathValues.length / componentCount,
         stride: componentCount,
         byteStride: componentCount * Float32Array.BYTES_PER_ELEMENT,
         rowByteLength: componentCount * Float32Array.BYTES_PER_ELEMENT,

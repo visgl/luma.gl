@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,13 +10,10 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetRleDictionaryDecoder expands composed fixed-width dictionary values', async testCase => {
+it('GPUParquetRleDictionaryDecoder expands composed fixed-width dictionary values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const encoded = Uint8Array.from([
@@ -65,13 +63,9 @@ test('GPUParquetRleDictionaryDecoder expands composed fixed-width dictionary val
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint8Array(result.buffer, result.byteOffset, 24)),
-      [
-        30, 31, 32, 30, 31, 32, 30, 31, 32, 10, 11, 12, 20, 21, 22, 30, 31, 32, 10, 11, 12, 20, 21,
-        22
-      ]
-    );
+    expect(Array.from(new Uint8Array(result.buffer, result.byteOffset, 24))).toEqual([
+      30, 31, 32, 30, 31, 32, 30, 31, 32, 10, 11, 12, 20, 21, 22, 30, 31, 32, 10, 11, 12, 20, 21, 22
+    ]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
@@ -79,7 +73,6 @@ test('GPUParquetRleDictionaryDecoder expands composed fixed-width dictionary val
     dictionaryBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });
 
 function importUint32View(graph: GPUCommandGraph, id: string, buffer: Buffer, length: number) {

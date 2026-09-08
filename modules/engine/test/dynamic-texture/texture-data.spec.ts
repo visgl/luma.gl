@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 import {
   isTextureSliceData,
@@ -15,126 +15,116 @@ import type {} from '../../src/dynamic-texture/dynamic-texture';
 
 import {isExternalImage, getExternalImageSize} from '@luma.gl/core';
 
-test('isTextureSliceData: typed array image vs not', t => {
-  t.equal(
-    isTextureSliceData(mkImageData(4, 2)),
-    true,
-    'true for TextureImageData with typed array'
+it('isTextureSliceData: typed array image vs not', () => {
+  expect(isTextureSliceData(mkImageData(4, 2)), 'true for TextureImageData with typed array').toBe(
+    true
   );
 
   // Random non-image objects
-  t.equal(isTextureSliceData({} as any), false, 'false for random object');
-  t.equal(isTextureSliceData([] as any), false, 'false for array');
-  t.equal(isTextureSliceData(null as any), false, 'false for null');
+  expect(isTextureSliceData({} as any), 'false for random object').toBe(false);
+  expect(isTextureSliceData([] as any), 'false for array').toBe(false);
+  expect(isTextureSliceData(null as any), 'false for null').toBe(false);
 
   // If environment provides an ExternalImage, ensure it returns false here
   const image = maybeMakeExternalImage();
   if (image) {
-    t.equal(isExternalImage(image), true, 'isExternalImage: external image is detected by luma');
-    t.equal(isTextureSliceData(image), true, 'isTextureSliceData: ExternalImage');
-  } else {
-    t.comment(
-      'ExternalImage test skipped (no native external image type available in this environment).'
+    expect(isExternalImage(image), 'isExternalImage: external image is detected by luma').toBe(
+      true
     );
+    expect(isTextureSliceData(image), 'isTextureSliceData: ExternalImage').toBe(true);
+  } else {
+    void 0;
   }
 
-  t.end();
+  void 0;
 });
 
-test('getFirstMipLevel: single, array, empty', t => {
+it('getFirstMipLevel: single, array, empty', () => {
   const m0 = mkImageData(8, 8);
-  t.equal(getFirstMipLevel(m0), m0, 'returns item when single mip');
+  expect(getFirstMipLevel(m0), 'returns item when single mip').toBe(m0);
 
   const m1 = mkImageData(4, 4);
-  t.equal(getFirstMipLevel([m0, m1]), m0, 'returns first when array');
+  expect(getFirstMipLevel([m0, m1]), 'returns first when array').toBe(m0);
 
-  t.equal(getFirstMipLevel(null), null, 'null input → null');
-  t.equal(getFirstMipLevel([]), null, 'empty array → null');
+  expect(getFirstMipLevel(null), 'null input → null').toBe(null);
+  expect(getFirstMipLevel([]), 'empty array → null').toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('getTextureSizeFromData: 1d', t => {
+it('getTextureSizeFromData: 1d', () => {
   const props: TextureDataProps = {dimension: '1d', data: mkImageData(32, 1)};
-  t.deepEqual(getTextureSizeFromData(props), {width: 32, height: 1});
-  t.end();
+  expect(getTextureSizeFromData(props), '').toEqual({width: 32, height: 1});
+  void 0;
 });
 
-test('getTextureSizeFromData: 2d (single & mips)', t => {
-  t.deepEqual(
+it('getTextureSizeFromData: 2d (single & mips)', () => {
+  expect(
     getTextureSizeFromData({dimension: '2d', data: mkImageData(64, 32)}),
-    {width: 64, height: 32},
     '2d single mip'
-  );
+  ).toEqual({width: 64, height: 32});
 
-  t.deepEqual(
+  expect(
     getTextureSizeFromData({dimension: '2d', data: [mkImageData(64, 64), mkImageData(32, 32)]}),
-    {width: 64, height: 64},
     '2d first mip from array'
-  );
+  ).toEqual({width: 64, height: 64});
 
-  t.equal(
+  expect(
     getTextureSizeFromData({dimension: '2d', data: new Uint8Array([1, 2, 3, 4])}),
-    null,
     '2d bare typed array requires explicit props size'
-  );
+  ).toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('getTextureSizeFromData: 2d with ExternalImage (env-dependent)', t => {
+it('getTextureSizeFromData: 2d with ExternalImage (env-dependent)', () => {
   const ext = maybeMakeExternalImage();
   if (!ext) {
-    t.comment('Skipping 2d ExternalImage size test (no native external image available).');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   // Sanity check: luma reports correct size
   const reported = getExternalImageSize(ext);
-  t.ok(
-    reported && typeof reported.width === 'number' && typeof reported.height === 'number',
+  expect(
+    Boolean(reported && typeof reported.width === 'number' && typeof reported.height === 'number'),
     'getExternalImageSize returns width/height'
-  );
+  ).toBe(true);
 
   const props: TextureDataProps = {dimension: '2d', data: ext};
-  t.deepEqual(
-    getTextureSizeFromData(props),
-    reported,
-    'uses getExternalImageSize for ExternalImage'
+  expect(getTextureSizeFromData(props), 'uses getExternalImageSize for ExternalImage').toEqual(
+    reported
   );
-  t.end();
+  void 0;
 });
 
-test('getTextureSizeFromData: 3d & 2d-array', t => {
+it('getTextureSizeFromData: 3d & 2d-array', () => {
   const threeD = [
     [mkImageData(16, 8), mkImageData(8, 4)], // depth slice 0 (with mips)
     [mkImageData(16, 8)] // depth slice 1
   ];
-  t.deepEqual(
+  expect(
     getTextureSizeFromData({dimension: '3d', data: threeD as any}),
-    {width: 16, height: 8},
     '3d first slice, first mip'
-  );
+  ).toEqual({width: 16, height: 8});
 
   const arr = [mkImageData(20, 10), mkImageData(20, 10)];
-  t.deepEqual(
+  expect(
     getTextureSizeFromData({dimension: '2d-array', data: arr as any}),
-    {width: 20, height: 10},
     '2d-array first layer, first mip'
-  );
+  ).toEqual({width: 20, height: 10});
 
-  t.equal(getTextureSizeFromData({dimension: '3d', data: [] as any}), null, '3d empty → null');
-  t.equal(
+  expect(getTextureSizeFromData({dimension: '3d', data: [] as any}), '3d empty → null').toBe(null);
+  expect(
     getTextureSizeFromData({dimension: '2d-array', data: [] as any}),
-    null,
     '2d-array empty → null'
-  );
+  ).toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('getTextureSizeFromData: cube & cube-array', t => {
+it('getTextureSizeFromData: cube & cube-array', () => {
   const cube: Record<TextureCubeFace, TextureSliceData> = {
     '+X': mkImageData(128, 128),
     '-X': mkImageData(128, 128),
@@ -143,11 +133,10 @@ test('getTextureSizeFromData: cube & cube-array', t => {
     '+Z': mkImageData(128, 128),
     '-Z': mkImageData(128, 128)
   };
-  t.deepEqual(
+  expect(
     getTextureSizeFromData({dimension: 'cube', data: cube}),
-    {width: 128, height: 128},
     'cube: picks first face first mip'
-  );
+  ).toEqual({width: 128, height: 128});
 
   const cube0: Record<TextureCubeFace, TextureSliceData> = {
     '+X': [mkImageData(64, 64), mkImageData(32, 32)],
@@ -165,38 +154,34 @@ test('getTextureSizeFromData: cube & cube-array', t => {
     '+Z': mkImageData(32, 32),
     '-Z': mkImageData(32, 32)
   };
-  t.deepEqual(
+  expect(
     getTextureSizeFromData({dimension: 'cube-array', data: [cube0, cube1]}),
-    {width: 64, height: 64},
     'cube-array: first cube, first face, first mip'
-  );
+  ).toEqual({width: 64, height: 64});
 
-  t.equal(
+  expect(
     getTextureSizeFromData({dimension: 'cube', data: {} as any}),
-    null,
     'cube empty map → null'
-  );
-  t.equal(
+  ).toBe(null);
+  expect(
     getTextureSizeFromData({dimension: 'cube-array', data: [] as any}),
-    null,
     'cube-array empty → null'
-  );
+  ).toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test('getTextureSizeFromData: invalid 2d payload throws', t => {
+it('getTextureSizeFromData: invalid 2d payload throws', () => {
   // When first mip is neither ExternalImage nor has width/height keys.
   const bad: any = {foo: 'bar'};
-  t.throws(
+  expect(
     () => getTextureSizeFromData({dimension: '2d', data: bad}),
-    /Unsupported mip-level data/,
     'throws for unsupported mip-level data'
-  );
-  t.end();
+  ).toThrow(/Unsupported mip-level data/);
+  void 0;
 });
 
-test('getTexture2DSubresources: bare typed arrays use explicit base size', t => {
+it('getTexture2DSubresources: bare typed arrays use explicit base size', () => {
   const subresources = getTexture2DSubresources(
     0,
     new Uint8Array([1, 2, 3, 4]),
@@ -204,14 +189,14 @@ test('getTexture2DSubresources: bare typed arrays use explicit base size', t => 
     'rgba8unorm'
   );
 
-  t.equal(subresources.length, 1, 'creates one subresource');
-  t.equal(subresources[0].type, 'texture-data', 'typed array normalizes to texture-data');
+  expect(subresources.length, 'creates one subresource').toBe(1);
+  expect(subresources[0].type, 'typed array normalizes to texture-data').toBe('texture-data');
   if (subresources[0].type === 'texture-data') {
-    t.equal(subresources[0].data.width, 1, 'preserves width');
-    t.equal(subresources[0].data.height, 1, 'preserves height');
+    expect(subresources[0].data.width, 'preserves width').toBe(1);
+    expect(subresources[0].data.height, 'preserves height').toBe(1);
   }
 
-  t.end();
+  void 0;
 });
 
 // ---------------- Helpers ----------------

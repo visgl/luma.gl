@@ -8,9 +8,9 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGPU call', async testContext => {
+it('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGPU call', async () => {
   const source = postProcessGLTF(
     await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
@@ -82,45 +82,51 @@ test('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGP
         try {
           colorTexture.readBuffer({width: 32, height: 32}, readbackBuffer);
           const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-          testContext.ok(
-            pixels.some((value, index) => index % 4 === 3 && value > 0),
+          expect(
+            Boolean(pixels.some((value, index) => index % 4 === 3 && value > 0)),
             `${device.type} writes visible crowd geometry into the real framebuffer`
-          );
+          ).toBe(true);
         } finally {
           readbackBuffer.destroy();
         }
       }
 
-      testContext.equal(drawCount, 1, `${device.type} submits one shared primitive draw`);
-      testContext.equal(model.instanceCount, 3, `${device.type} draws all three actor instances`);
-      testContext.ok(model.isInstanced, `${device.type} enables instanced primitive rendering`);
-      testContext.notDeepEqual(
+      expect(drawCount, `${device.type} submits one shared primitive draw`).toBe(1);
+      expect(model.instanceCount, `${device.type} draws all three actor instances`).toBe(3);
+      expect(
+        Boolean(model.isInstanced),
+        `${device.type} enables instanced primitive rendering`
+      ).toBe(true);
+      expect(
         Array.from(first.skins.bindings[0].jointMatrices),
-        Array.from(second.skins.bindings[0].jointMatrices),
         `${device.type} preserves independent actor joint poses`
-      );
+      ).not.toEqual(Array.from(second.skins.bindings[0].jointMatrices));
       const resource = crowd.primitiveGroups[0].skinJointMatrices;
-      testContext.ok(
-        device.type === 'webgpu' ? resource instanceof Buffer : resource instanceof Texture,
+      expect(
+        Boolean(
+          device.type === 'webgpu' ? resource instanceof Buffer : resource instanceof Texture
+        ),
         `${device.type} selects its native crowd palette binding`
-      );
+      ).toBe(true);
 
       const initialModel = model;
       const initialThirdTime = third.time;
       crowd.update(0.1);
-      testContext.equal(crowd.models[0], initialModel, `${device.type} reuses its compiled model`);
-      testContext.ok(third.time > initialThirdTime, `${device.type} advances actor-local playback`);
+      expect(crowd.models[0], `${device.type} reuses its compiled model`).toBe(initialModel);
+      expect(
+        Boolean(third.time > initialThirdTime),
+        `${device.type} advances actor-local playback`
+      ).toBe(true);
 
       const updatedRenderPass = device.beginRenderPass({
         framebuffer,
         clearColor: [0, 0, 0, 0],
         clearDepth: 1
       });
-      testContext.equal(
+      expect(
         crowd.draw(updatedRenderPass),
-        1,
         `${device.type} keeps draw count constant after animation`
-      );
+      ).toBe(1);
       updatedRenderPass.end();
       device.submit();
     } finally {
@@ -131,11 +137,11 @@ test('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGP
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one live graphics backend is exercised');
-  testContext.end();
+  expect(Boolean(devices.length > 0), 'at least one live graphics backend is exercised').toBe(true);
+  void 0;
 });
 
-test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU draws', async testContext => {
+it('glTF crowds select independent authored skin LODs in real WebGL and WebGPU draws', async () => {
   const source = postProcessGLTF(
     await load('/modules/gltf/test/data/SimpleSkinLOD.gltf', GLTFLoader, {
       gltf: {loadImages: false}
@@ -212,44 +218,42 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
       renderPass.end();
       device.submit();
 
-      testContext.equal(drawCount, 3, `${device.type} issues one draw per occupied authored level`);
-      testContext.deepEqual(
+      expect(drawCount, `${device.type} issues one draw per occupied authored level`).toBe(3);
+      expect(
         crowd.primitiveGroups.map(group => group.model.instanceCount),
-        [1, 1, 1],
         `${device.type} densely packs the actors in separate GPU instances`
-      );
-      testContext.deepEqual(
+      ).toEqual([1, 1, 1]);
+      expect(
         crowd.primitiveGroups.map(group => group.triangleCount),
-        [8, 4, 2],
         `${device.type} retains decreasing authored indexed geometry`
-      );
-      testContext.equal(crowd.lodStats.visibleActors, 3, `${device.type} retains visible actors`);
-      testContext.equal(crowd.lodStats.culledActors, 1, `${device.type} culls the distant actor`);
-      testContext.equal(crowd.lodStats.triangles, 14, `${device.type} reports submitted triangles`);
-      testContext.equal(crowd.lodStats.vertices, 42, `${device.type} counts submitted indices`);
+      ).toEqual([8, 4, 2]);
+      expect(crowd.lodStats.visibleActors, `${device.type} retains visible actors`).toBe(3);
+      expect(crowd.lodStats.culledActors, `${device.type} culls the distant actor`).toBe(1);
+      expect(crowd.lodStats.triangles, `${device.type} reports submitted triangles`).toBe(14);
+      expect(crowd.lodStats.vertices, `${device.type} counts submitted indices`).toBe(42);
 
       for (const [level, actor] of [near, middle, far].entries()) {
         const group = crowd.primitiveGroups[level];
-        testContext.deepEqual(
+        expect(
           Array.from(group.jointMatrices!.subarray(0, 32)),
-          Array.from(actor.skins.bindings[0].jointMatrices),
           `${device.type} binds actor ${actor.id}'s private pose to LOD ${level}`
-        );
-        testContext.ok(
-          device.type === 'webgpu'
-            ? group.skinJointMatrices instanceof Buffer
-            : group.skinJointMatrices instanceof Texture,
+        ).toEqual(Array.from(actor.skins.bindings[0].jointMatrices));
+        expect(
+          Boolean(
+            device.type === 'webgpu'
+              ? group.skinJointMatrices instanceof Buffer
+              : group.skinJointMatrices instanceof Texture
+          ),
           `${device.type} preserves its portable per-level skin palette`
-        );
+        ).toBe(true);
       }
 
       crowd.setLODVertexBudget(24);
-      testContext.deepEqual(
+      expect(
         crowd.primitiveGroups.map(group => group.model.instanceCount),
-        [0, 1, 2],
         `${device.type} repacks the smallest actors into lower-detail GPU groups`
-      );
-      testContext.deepEqual(
+      ).toEqual([0, 1, 2]);
+      expect(
         {
           vertices: crowd.lodStats.vertices,
           vertexBudget: crowd.lodStats.vertexBudget,
@@ -257,24 +261,26 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
           budgetSatisfied: crowd.lodStats.budgetSatisfied,
           visibleActors: crowd.lodStats.visibleActors
         },
-        {vertices: 24, vertexBudget: 24, demotedActors: 2, budgetSatisfied: true, visibleActors: 3},
         `${device.type} enforces the global vertex limit without hiding visible actors`
-      );
-      testContext.deepEqual(
+      ).toEqual({
+        vertices: 24,
+        vertexBudget: 24,
+        demotedActors: 2,
+        budgetSatisfied: true,
+        visibleActors: 3
+      });
+      expect(
         Array.from(crowd.primitiveGroups[1].jointMatrices!.subarray(0, 32)),
-        Array.from(near.skins.bindings[0].jointMatrices),
         `${device.type} preserves the near actor's independent skin pose after demotion`
-      );
-      testContext.deepEqual(
+      ).toEqual(Array.from(near.skins.bindings[0].jointMatrices));
+      expect(
         Array.from(crowd.primitiveGroups[2].jointMatrices!.subarray(0, 32)),
-        Array.from(middle.skins.bindings[0].jointMatrices),
         `${device.type} packs the middle actor into the first compacted low-detail palette`
-      );
-      testContext.deepEqual(
+      ).toEqual(Array.from(middle.skins.bindings[0].jointMatrices));
+      expect(
         Array.from(crowd.primitiveGroups[2].jointMatrices!.subarray(32, 64)),
-        Array.from(far.skins.bindings[0].jointMatrices),
         `${device.type} packs the far actor into the second compacted low-detail palette`
-      );
+      ).toEqual(Array.from(far.skins.bindings[0].jointMatrices));
 
       const budgetedPass = device.beginRenderPass({
         framebuffer,
@@ -284,11 +290,10 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
       const budgetedDrawCount = crowd.draw(budgetedPass);
       budgetedPass.end();
       device.submit();
-      testContext.equal(
+      expect(
         budgetedDrawCount,
-        2,
         `${device.type} issues one real instanced draw per occupied budgeted detail bucket`
-      );
+      ).toBe(2);
 
       if (
         device.info.gpu !== 'software' &&
@@ -303,10 +308,10 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
         try {
           colorTexture.readBuffer({width: 64, height: 64}, readbackBuffer);
           const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-          testContext.ok(
-            pixels.some((value, index) => index % 4 === 3 && value > 0),
+          expect(
+            Boolean(pixels.some((value, index) => index % 4 === 3 && value > 0)),
             `${device.type} writes visible per-actor LOD geometry into the real framebuffer`
-          );
+          ).toBe(true);
         } finally {
           readbackBuffer.destroy();
         }
@@ -319,11 +324,14 @@ test('glTF crowds select independent authored skin LODs in real WebGL and WebGPU
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one live graphics backend exercises crowd LOD');
-  testContext.end();
+  expect(
+    Boolean(devices.length > 0),
+    'at least one live graphics backend exercises crowd LOD'
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU', async testContext => {
+it('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
     await load('/modules/gltf/test/data/SimpleSkinLOD.gltf', GLTFLoader, {
       gltf: {loadImages: false}
@@ -395,24 +403,22 @@ test('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU
       renderPass.end();
       device.submit();
 
-      testContext.equal(crowd.lodStats.source, 'generated', `${device.type} reports generated LOD`);
-      testContext.equal(drawCount, 3, `${device.type} draws three simplified instance buckets`);
+      expect(crowd.lodStats.source, `${device.type} reports generated LOD`).toBe('generated');
+      expect(drawCount, `${device.type} draws three simplified instance buckets`).toBe(3);
       const triangleCounts = crowd.primitiveGroups.map(group => group.triangleCount);
-      testContext.ok(
-        triangleCounts[0] === 8 &&
-          triangleCounts[1] < triangleCounts[0] &&
-          triangleCounts[2] < triangleCounts[1],
+      expect(
+        Boolean(
+          triangleCounts[0] === 8 &&
+            triangleCounts[1] < triangleCounts[0] &&
+            triangleCounts[2] < triangleCounts[1]
+        ),
         `${device.type} renders progressively simplified generated index buffers`
+      ).toBe(true);
+      expect(source.nodes.length, `${device.type} preserves the source node hierarchy`).toBe(
+        originalNodeCount
       );
-      testContext.equal(
-        source.nodes.length,
-        originalNodeCount,
-        `${device.type} preserves the source node hierarchy`
-      );
-      testContext.equal(
-        crowd.lodStats.triangles,
-        triangleCounts.reduce((total, count) => total + count, 0),
-        `${device.type} reports real generated work`
+      expect(crowd.lodStats.triangles, `${device.type} reports real generated work`).toBe(
+        triangleCounts.reduce((total, count) => total + count, 0)
       );
     } finally {
       crowd.destroy();
@@ -422,11 +428,14 @@ test('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one real backend exercises generated skin LOD');
-  testContext.end();
+  expect(
+    Boolean(devices.length > 0),
+    'at least one real backend exercises generated skin LOD'
+  ).toBe(true);
+  void 0;
 });
 
-test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', async testContext => {
+it('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
     await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
@@ -488,30 +497,32 @@ test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', 
       device.submit();
 
       const group = crowd.primitiveGroups[0];
-      testContext.equal(drawCount, 1, `${device.type} keeps baked skin clips in one draw`);
-      testContext.equal(crowd.animationStats.mode, 'gpu', `${device.type} reports GPU sampling`);
-      testContext.equal(
-        group.skinJointMatrices,
-        undefined,
-        `${device.type} avoids CPU skin palettes`
-      );
-      testContext.ok(
-        device.type === 'webgpu'
-          ? group.animationFrames instanceof Buffer
-          : group.animationFrames instanceof Texture,
+      expect(drawCount, `${device.type} keeps baked skin clips in one draw`).toBe(1);
+      expect(crowd.animationStats.mode, `${device.type} reports GPU sampling`).toBe('gpu');
+      expect(group.skinJointMatrices, `${device.type} avoids CPU skin palettes`).toBe(undefined);
+      expect(
+        Boolean(
+          device.type === 'webgpu'
+            ? group.animationFrames instanceof Buffer
+            : group.animationFrames instanceof Texture
+        ),
         `${device.type} binds its native baked frame resource`
-      );
-      testContext.notDeepEqual(
+      ).toBe(true);
+      expect(
         Array.from(group.animationParameters!.subarray(0, 3)),
-        Array.from(group.animationParameters!.subarray(4, 7)),
         `${device.type} preserves independent actor frame addresses`
-      );
+      ).not.toEqual(Array.from(group.animationParameters!.subarray(4, 7)));
 
       const firstTime = first.time;
       const secondTime = second.time;
       crowd.update(0.1);
-      testContext.ok(first.time > firstTime, `${device.type} advances the first GPU clock`);
-      testContext.ok(second.time > secondTime, `${device.type} advances the second GPU clock`);
+      expect(Boolean(first.time > firstTime), `${device.type} advances the first GPU clock`).toBe(
+        true
+      );
+      expect(
+        Boolean(second.time > secondTime),
+        `${device.type} advances the second GPU clock`
+      ).toBe(true);
 
       if (
         device.info.gpu !== 'software' &&
@@ -526,10 +537,10 @@ test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', 
         try {
           colorTexture.readBuffer({width: 32, height: 32}, readbackBuffer);
           const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-          testContext.ok(
-            pixels.some((value, index) => index % 4 === 3 && value > 0),
+          expect(
+            Boolean(pixels.some((value, index) => index % 4 === 3 && value > 0)),
             `${device.type} writes GPU-sampled skin geometry into the framebuffer`
-          );
+          ).toBe(true);
         } finally {
           readbackBuffer.destroy();
         }
@@ -542,11 +553,13 @@ test('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', 
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one real backend samples baked skin clips');
-  testContext.end();
+  expect(Boolean(devices.length > 0), 'at least one real backend samples baked skin clips').toBe(
+    true
+  );
+  void 0;
 });
 
-test('glTF crowds render independently phased GPU morph targets in real WebGL and WebGPU', async testContext => {
+it('glTF crowds render independently phased GPU morph targets in real WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
     await load('/examples/showcase/scene/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
       gltf: {loadImages: false}
@@ -608,21 +621,22 @@ test('glTF crowds render independently phased GPU morph targets in real WebGL an
       device.submit();
 
       const group = crowd.primitiveGroups[0];
-      testContext.equal(drawCount, 1, `${device.type} draws phased morph actors together`);
-      testContext.equal(crowd.animationStats.mode, 'gpu', `${device.type} bakes morph clips`);
-      testContext.equal(group.morphTargetCount, 2, `${device.type} retains both morph targets`);
-      testContext.equal(group.morphWeights, undefined, `${device.type} avoids CPU morph uploads`);
-      testContext.ok(
-        device.type === 'webgpu'
-          ? group.morphTargetData instanceof Buffer
-          : group.morphTargetData instanceof Texture,
+      expect(drawCount, `${device.type} draws phased morph actors together`).toBe(1);
+      expect(crowd.animationStats.mode, `${device.type} bakes morph clips`).toBe('gpu');
+      expect(group.morphTargetCount, `${device.type} retains both morph targets`).toBe(2);
+      expect(group.morphWeights, `${device.type} avoids CPU morph uploads`).toBe(undefined);
+      expect(
+        Boolean(
+          device.type === 'webgpu'
+            ? group.morphTargetData instanceof Buffer
+            : group.morphTargetData instanceof Texture
+        ),
         `${device.type} binds immutable native morph deltas`
-      );
-      testContext.notDeepEqual(
+      ).toBe(true);
+      expect(
         Array.from(group.animationParameters!.subarray(0, 3)),
-        Array.from(group.animationParameters!.subarray(4, 7)),
         `${device.type} sends distinct morph frame addresses per actor`
-      );
+      ).not.toEqual(Array.from(group.animationParameters!.subarray(4, 7)));
 
       if (
         device.info.gpu !== 'software' &&
@@ -637,10 +651,10 @@ test('glTF crowds render independently phased GPU morph targets in real WebGL an
         try {
           colorTexture.readBuffer({width: 64, height: 64}, readbackBuffer);
           const pixels = await readbackBuffer.readAsync(0, memoryLayout.byteLength);
-          testContext.ok(
-            pixels.some((value, index) => index % 4 === 3 && value > 0),
+          expect(
+            Boolean(pixels.some((value, index) => index % 4 === 3 && value > 0)),
             `${device.type} writes GPU-morphed geometry into the framebuffer`
-          );
+          ).toBe(true);
         } finally {
           readbackBuffer.destroy();
         }
@@ -653,6 +667,9 @@ test('glTF crowds render independently phased GPU morph targets in real WebGL an
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one real backend samples independent morph clips');
-  testContext.end();
+  expect(
+    Boolean(devices.length > 0),
+    'at least one real backend samples independent morph clips'
+  ).toBe(true);
+  void 0;
 });

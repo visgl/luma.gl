@@ -14,7 +14,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 type GPUGroupedSourceSchema = {
@@ -28,11 +28,11 @@ type GPUGroupedFixture = {
   sourceBuffers: Buffer[];
 };
 
-test('GPUDataFrame groups nullable source batches into explicit dense GPU statistics', async testContext => {
+it('GPUDataFrame groups nullable source batches into explicit dense GPU statistics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -48,15 +48,12 @@ test('GPUDataFrame groups nullable source batches into explicit dense GPU statis
     averageFare: {mean: 'fare'}
   });
 
-  testContext.equal(
+  expect(
     createBufferSpy.mock.calls.length,
-    0,
     'grouped aggregation planning never allocates GPU storage'
-  );
-  testContext.equal(
-    submitSpy.mock.calls.length,
-    0,
-    'grouped aggregation planning never submits GPU work'
+  ).toBe(0);
+  expect(submitSpy.mock.calls.length, 'grouped aggregation planning never submits GPU work').toBe(
+    0
   );
 
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
@@ -65,86 +62,74 @@ test('GPUDataFrame groups nullable source batches into explicit dense GPU statis
   const compiled = query.compile(graph);
 
   try {
-    testContext.equal(compiled.groupCount, 4, 'dictionary labels determine the dense group domain');
-    testContext.deepEqual(
+    expect(compiled.groupCount, 'dictionary labels determine the dense group domain').toBe(4);
+    expect(
       compiled.table.schema.fields.map(field => field.name),
-      ['category', 'count', 'totalFare', 'minimumFare', 'maximumFare', 'averageFare'],
       'grouped schema retains the dense key and requested metric ordering'
-    );
-    testContext.deepEqual(
+    ).toEqual(['category', 'count', 'totalFare', 'minimumFare', 'maximumFare', 'averageFare']);
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [4],
       'all original source batches contribute to one dense GPU-owned result batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([4]);
+    expect(
       compiled.dictionaries.category,
-      {values: ['economy', 'standard', 'premium', 'unused'], ordered: false},
       'grouped categorical keys retain their adapter-owned dictionary labels'
-    );
-    testContext.deepEqual(
+    ).toEqual({values: ['economy', 'standard', 'premium', 'unused'], ordered: false});
+    expect(
       compiled.selectionMask.data.map(chunk => chunk.length),
-      [2, 0, 3],
       'source selection masks preserve every original record-batch boundary'
-    );
+    ).toEqual([2, 0, 3]);
 
     fixture.frame.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => !buffer.destroyed)),
       'compiled grouped queries retain their owned source lease'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-dense-group-encode'});
     compiled.encode(commandEncoder);
-    testContext.equal(
+    expect(
       submitSpy.mock.calls.length,
-      0,
       'grouped aggregation encodes work into the caller-owned command encoder'
-    );
+    ).toBe(0);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.category),
-      [[0, 1, 2, 3]],
       'dense grouped rows publish stable unsigned categorical keys'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1, 2, 3]]);
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.count),
-      [[2, 2, 0, 0]],
       'group counts reject null keys but include rows with null metric values'
-    );
-    testContext.deepEqual(
+    ).toEqual([[2, 2, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[40, 20, 0, 0]],
       'group sums exclude null keys and values across all source batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([[40, 20, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.minimumFare),
-      [[10, 20, NaN, NaN]],
       'group minimums publish NaN payloads for empty categories'
-    );
-    testContext.deepEqual(
+    ).toEqual([[10, 20, NaN, NaN]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.maximumFare),
-      [[30, 20, NaN, NaN]],
       'group maximums publish NaN payloads for empty categories'
-    );
-    testContext.deepEqual(
+    ).toEqual([[30, 20, NaN, NaN]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.averageFare),
-      [[20, 20, NaN, NaN]],
       'group means divide only finite, non-null source values'
-    );
+    ).toEqual([[20, 20, NaN, NaN]]);
 
     for (const metricName of ['totalFare', 'minimumFare', 'maximumFare', 'averageFare'] as const) {
       const validity = compiled.validity[metricName];
       if (!validity) {
         throw new Error(`Expected explicit GPU group validity for ${metricName}`);
       }
-      testContext.deepEqual(
+      expect(
         await readUint32VectorChunks(validity),
-        [[1, 1, 0, 0]],
         `${metricName} distinguishes populated groups from empty or entirely null groups`
-      );
+      ).toEqual([[1, 1, 0, 0]]);
     }
-    testContext.equal(compiled.validity.count, undefined, 'dense count columns are never nullable');
+    expect(compiled.validity.count, 'dense count columns are never nullable').toBe(undefined);
 
     const groupedBuffers = Object.values(compiled.table.gpuVectors).flatMap(vector =>
       vector.data.map(getGPUDataBuffer)
@@ -157,18 +142,18 @@ test('GPUDataFrame groups nullable source batches into explicit dense GPU statis
       )
     );
     compiled.destroy();
-    testContext.ok(
-      groupedBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(groupedBuffers.every(buffer => buffer.destroyed)),
       'grouped results release every owned dense value buffer'
-    );
-    testContext.ok(
-      validityBuffers.every(buffer => buffer.destroyed),
+    ).toBe(true);
+    expect(
+      Boolean(validityBuffers.every(buffer => buffer.destroyed)),
       'grouped results release shared statistic-validity buffers exactly once'
-    );
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => buffer.destroyed),
+    ).toBe(true);
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => buffer.destroyed)),
       'owned source buffers survive until the final grouped lease is destroyed'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
@@ -176,14 +161,14 @@ test('GPUDataFrame groups nullable source batches into explicit dense GPU statis
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame reuses filtered grouped aggregations with encoder-ordered parameters', async testContext => {
+it('GPUDataFrame reuses filtered grouped aggregations with encoder-ordered parameters', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -224,36 +209,31 @@ test('GPUDataFrame reuses filtered grouped aggregations with encoder-ordered par
     compiled.encode(commandEncoder, {minimumFare: 25});
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readUint32Buffer(firstCount, 4),
-      [1, 1, 0, 0],
       'the first encoding preserves its own filtered dense group counts'
-    );
-    testContext.deepEqual(
+    ).toEqual([1, 1, 0, 0]);
+    expect(
       await readFloat32Buffer(firstTotal, 4),
-      [30, 20, 0, 0],
       'the first encoding snapshots grouped sums before the parameter changes'
-    );
-    testContext.deepEqual(
+    ).toEqual([30, 20, 0, 0]);
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.count),
-      [[1, 0, 0, 0]],
       'the second encoding reuses the graph with a stricter selection threshold'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 0, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[30, 0, 0, 0]],
       'grouped statistic kernels observe encoder-ordered parameter uploads'
-    );
+    ).toEqual([[30, 0, 0, 0]]);
 
     const validity = compiled.validity.totalFare;
     if (!validity) {
       throw new Error('Expected nullable grouped total validity');
     }
-    testContext.deepEqual(
+    expect(
       await readUint32VectorChunks(validity),
-      [[1, 0, 0, 0]],
       'group validity is recomputed when dynamic filter parameters change'
-    );
+    ).toEqual([[1, 0, 0, 0]]);
   } finally {
     firstCount.destroy();
     firstTotal.destroy();
@@ -261,14 +241,14 @@ test('GPUDataFrame reuses filtered grouped aggregations with encoder-ordered par
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame groups chained nullable derived values without materializing hidden sources', async testContext => {
+it('GPUDataFrame groups chained nullable derived values without materializing hidden sources', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -287,44 +267,40 @@ test('GPUDataFrame groups chained nullable derived values without materializing 
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       compiled.table.schema.fields.map(field => field.name),
-      ['category', 'count', 'totalFare', 'averageFare'],
       'derived grouping publishes only the key and requested aggregate aliases'
-    );
-    testContext.deepEqual(
+    ).toEqual(['category', 'count', 'totalFare', 'averageFare']);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[80, 40, 0, 0]],
       'GPU grouping consumes nullable derived values across preserved source batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([[80, 40, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.averageFare),
-      [[40, 40, NaN, NaN]],
       'derived group means retain empty-group payload semantics'
-    );
+    ).toEqual([[40, 40, NaN, NaN]]);
 
     const validity = compiled.validity.totalFare;
     if (!validity) {
       throw new Error('Expected derived group validity');
     }
-    testContext.deepEqual(
+    expect(
       await readUint32VectorChunks(validity),
-      [[1, 1, 0, 0]],
       'nullable derived source sidecars propagate into dense grouped validity'
-    );
+    ).toEqual([[1, 1, 0, 0]]);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame excludes nonfinite metric values without changing categorical row counts', async testContext => {
+it('GPUDataFrame excludes nonfinite metric values without changing categorical row counts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -353,51 +329,46 @@ test('GPUDataFrame excludes nonfinite metric values without changing categorical
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.count),
-      [[2, 2, 0, 0]],
       'categorical count excludes only invalid group keys, not NaN or infinite metric values'
-    );
-    testContext.deepEqual(
+    ).toEqual([[2, 2, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[10, 0, 0, 0]],
       'floating-point group sums discard NaN, infinity, and explicit null values'
-    );
-    testContext.deepEqual(
+    ).toEqual([[10, 0, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.minimumFare),
-      [[10, NaN, NaN, NaN]],
       'groups with only nonfinite contributions retain invalid minimum payloads'
-    );
-    testContext.deepEqual(
+    ).toEqual([[10, NaN, NaN, NaN]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.averageFare),
-      [[10, NaN, NaN, NaN]],
       'floating-point means divide only finite and explicitly valid contributions'
-    );
+    ).toEqual([[10, NaN, NaN, NaN]]);
 
     for (const name of ['totalFare', 'minimumFare', 'averageFare'] as const) {
       const validity = compiled.validity[name];
       if (!validity) {
         throw new Error(`Expected explicit finite-value group validity for ${name}`);
       }
-      testContext.deepEqual(
+      expect(
         await readUint32VectorChunks(validity),
-        [[1, 0, 0, 0]],
         `${name} excludes categories populated only by NaN, infinity, or null values`
-      );
+      ).toEqual([[1, 0, 0, 0]]);
     }
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame initializes dictionary groups when source tables have no record batches', async testContext => {
+it('GPUDataFrame initializes dictionary groups when source tables have no record batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -435,58 +406,50 @@ test('GPUDataFrame initializes dictionary groups when source tables have no reco
     compiled.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [3],
       'schema-only sources still publish one dense categorical result batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([3]);
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.category),
-      [[0, 1, 2]],
       'empty source tables initialize every dictionary group key'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 1, 2]]);
+    expect(
       await readUint32VectorChunks(compiled.table.gpuVectors.count),
-      [[0, 0, 0]],
       'empty source tables publish deterministic zero group counts'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.totalFare),
-      [[0, 0, 0]],
       'empty source groups retain zero sum payloads'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0, 0]]);
+    expect(
       await readFloat32VectorChunks(compiled.table.gpuVectors.averageFare),
-      [[NaN, NaN, NaN]],
       'empty source groups retain NaN mean payloads'
-    );
+    ).toEqual([[NaN, NaN, NaN]]);
     for (const name of ['totalFare', 'averageFare'] as const) {
       const validity = compiled.validity[name];
       if (!validity) {
         throw new Error(`Expected explicit empty group validity for ${name}`);
       }
-      testContext.deepEqual(
+      expect(
         await readUint32VectorChunks(validity),
-        [[0, 0, 0]],
         `${name} marks every schema-only source group invalid`
-      );
+      ).toEqual([[0, 0, 0]]);
     }
-    testContext.deepEqual(
+    expect(
       compiled.selectedCounts.data,
-      [],
       'schema-only grouping does not invent source selection batches'
-    );
-    testContext.equal(
+    ).toEqual([]);
+    expect(
       compiled.table.schema.metadata.get('dataset'),
-      'empty-groups',
       'dense grouped schemas retain independent source metadata'
-    );
+    ).toBe('empty-groups');
   } finally {
     compiled.destroy();
     frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUGroupedFixture(device: Device): GPUGroupedFixture {

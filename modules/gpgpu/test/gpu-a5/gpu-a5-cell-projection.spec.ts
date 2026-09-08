@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,7 +7,6 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUA5CellProjection} from '@luma.gl/gpgpu/gpu-a5';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const A5_CELLS = [
   0x0200000000000000n,
@@ -16,11 +16,9 @@ const A5_CELLS = [
   0x35bd75e8fee1100dn
 ];
 
-test('GPUA5CellProjection projects representative A5 resolutions to geographic centers', async t => {
+it('GPUA5CellProjection projects representative A5 resolutions to geographic centers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -29,37 +27,36 @@ test('GPUA5CellProjection projects representative A5 resolutions to geographic c
   for (let cellIndex = 0; cellIndex < A5_CELLS.length; cellIndex++) {
     const longitude = longitudeLatitudes.values[cellIndex * 2];
     const latitude = longitudeLatitudes.values[cellIndex * 2 + 1];
-    t.ok(
-      Number.isFinite(longitude) && longitude >= -180 && longitude <= 180,
+    expect(
+      Boolean(Number.isFinite(longitude) && longitude >= -180 && longitude <= 180),
       `cell ${A5_CELLS[cellIndex].toString(16)} longitude ${longitude} is finite`
-    );
-    t.ok(
-      Number.isFinite(latitude) && latitude >= -90 && latitude <= 90,
+    ).toBe(true);
+    expect(
+      Boolean(Number.isFinite(latitude) && latitude >= -90 && latitude <= 90),
       `cell ${A5_CELLS[cellIndex].toString(16)} latitude ${latitude} is finite`
-    );
-    t.equal(longitudeLatitudes.validity[cellIndex], 1, 'valid A5 cell sets the validity mask');
+    ).toBe(true);
+    expect(longitudeLatitudes.validity[cellIndex], 'valid A5 cell sets the validity mask').toBe(1);
 
     const x = unitVectors.values[cellIndex * 3];
     const y = unitVectors.values[cellIndex * 3 + 1];
     const z = unitVectors.values[cellIndex * 3 + 2];
-    t.ok(Math.abs(Math.hypot(x, y, z) - 1) < 0.001, 'unit-vector output is normalized');
-    t.equal(unitVectors.validity[cellIndex], 1, 'unit-vector projection preserves validity');
+    expect(
+      Boolean(Math.abs(Math.hypot(x, y, z) - 1) < 0.001),
+      'unit-vector output is normalized'
+    ).toBe(true);
+    expect(unitVectors.validity[cellIndex], 'unit-vector projection preserves validity').toBe(1);
   }
-  t.end();
 });
 
-test('GPUA5CellProjection rejects the reserved zero index', async t => {
+it('GPUA5CellProjection rejects the reserved zero index', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const result = await runA5Projection(device, [0n], 'lnglat');
-  t.deepEqual(Array.from(result.values), [0, 0], 'invalid rows produce zero coordinates');
-  t.deepEqual(Array.from(result.validity), [0], 'invalid rows clear the validity mask');
-  t.end();
+  expect(Array.from(result.values), 'invalid rows produce zero coordinates').toEqual([0, 0]);
+  expect(Array.from(result.validity), 'invalid rows clear the validity mask').toEqual([0]);
 });
 
 type A5ProjectionKind = 'lnglat' | 'unit-vector';

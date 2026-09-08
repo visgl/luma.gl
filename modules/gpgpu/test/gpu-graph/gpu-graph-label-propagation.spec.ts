@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphLabelPropagationToGraphWithDispatchLimit,
   getGPUGraphLabelPropagationDispatchLayout
@@ -277,21 +276,18 @@ const propagationScenarios: PropagationScenario[] = [
   }
 ];
 
-test('GPUGraphLabelPropagation plans bounded three-dimensional vertex dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphLabelPropagationDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphLabelPropagationDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphLabelPropagationDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphLabelPropagationDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphLabelPropagationDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphLabelPropagation plans bounded three-dimensional vertex dispatch', () => {
+  expect(getGPUGraphLabelPropagationDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphLabelPropagationDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphLabelPropagationDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphLabelPropagationDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphLabelPropagationDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of propagationScenarios) {
-  test(`GPUGraphLabelPropagation GPU labeling: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphLabelPropagation GPU labeling: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -300,57 +296,48 @@ for (const scenario of propagationScenarios) {
     try {
       compilePropagation(fixture, scenario.maximumWorkgroups);
       executePropagation(fixture);
-      await assertPropagation(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertPropagation(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'community voting preserves every original source chunk'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.expectedLabels) {
-        tapeTest.deepEqual(
+        expect(
           expected.labels,
-          scenario.expectedLabels,
           'the independent CPU majority oracle matches the explicit stable-label fixture'
-        );
+        ).toEqual(scenario.expectedLabels);
       }
       if (scenario.expectedConvergence !== undefined) {
-        tapeTest.equal(
+        expect(
           expected.converged,
-          scenario.expectedConvergence,
           'the independent CPU oracle proves convergence only after an unchanged final round'
-        );
+        ).toBe(scenario.expectedConvergence);
       }
       if (scenario.proveSingleWeakComponent) {
-        tapeTest.equal(
+        expect(
           countWeakComponents(scenario),
-          1,
           'both distinct dense community labels belong to one actual weakly connected component'
-        );
+        ).toBe(1);
       }
       if (scenario.assertSnapshotAllocation) {
         const propagationOnlyGraph = new GPUCommandGraph(device);
         fixture.propagation.addToGraph(propagationOnlyGraph);
         const compiledPropagationOnly = propagationOnlyGraph.compile();
-        tapeTest.equal(
+        expect(
           compiledPropagationOnly.stats.logicalTransientBufferCount,
-          scenario.vertexCount > 0 ? 1 : 0,
           'synchronous propagation owns exactly one snapshot only when vertices exist'
-        );
+        ).toBe(scenario.vertexCount > 0 ? 1 : 0);
         compiledPropagationOnly.destroy();
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphLabelPropagation rebuilds communities after source updates without hidden execution', async tapeTest => {
+it('GPUGraphLabelPropagation rebuilds communities after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -370,38 +357,31 @@ test('GPUGraphLabelPropagation rebuilds communities after source updates without
 
   try {
     compilePropagation(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'construction and compilation never submit work'
-    );
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'construction and compilation never submit work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'community propagation never reads graph source buffers back'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executePropagation(fixture);
-    await assertPropagation(tapeTest, fixture, calculateExpectedPropagation(original));
+    await assertPropagation(fixture, calculateExpectedPropagation(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 1]));
     const updated = {...original, sourceChunks: [[9, 1], [], [3, 4]]};
     executePropagation(fixture);
-    await assertPropagation(tapeTest, fixture, calculateExpectedPropagation(updated));
-    tapeTest.equal(
+    await assertPropagation(fixture, calculateExpectedPropagation(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'source updates retain exact caller-owned chunk identity'
-    );
+    ).toBe(sourceBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Evaluates independent synchronous weak-neighbor majority voting from stable vertex IDs. */
@@ -721,7 +701,6 @@ function executePropagation(fixture: PropagationExecutionFixture): void {
 }
 
 async function assertPropagation(
-  tapeTest: Test,
   fixture: PropagationExecutionFixture,
   expected: ExpectedPropagation
 ): Promise<void> {
@@ -738,41 +717,31 @@ async function assertPropagation(
         : Promise.resolve(undefined)
     ]);
 
-  tapeTest.deepEqual(
+  expect(
     labels,
-    expected.labels,
     'GPU communities exactly match independent synchronous weak-neighbor majority voting'
-  );
+  ).toEqual(expected.labels);
 
   if (convergence) {
-    tapeTest.equal(
+    expect(
       convergence[0],
-      Number(expected.converged),
       'convergence is proven only when the final iteration makes no changes'
-    );
+    ).toBe(Number(expected.converged));
   }
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid source edges stay excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward adjacency overflow remains explicit'
+  expect(invalidEdgeCount[0], 'invalid source edges stay excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'forward adjacency overflow remains explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'required reverse adjacency overflow remains explicit'
+    expect(reverseOverflow[0], 'required reverse adjacency overflow remains explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
   if (expected.forwardOverflow || expected.reverseOverflow) {
-    tapeTest.ok(
-      labels.every(label => label === INVALID_LABEL),
+    expect(
+      Boolean(labels.every(label => label === INVALID_LABEL)),
       'truncated required adjacency publishes no misleading partial community labels'
-    );
+    ).toBe(true);
   }
 }
 
@@ -786,12 +755,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: PropagationExecutionFixture): void {
+function destroyExecutionFixture(fixture: PropagationExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'compiled community graphs and borrowed vectors never destroy caller-owned buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

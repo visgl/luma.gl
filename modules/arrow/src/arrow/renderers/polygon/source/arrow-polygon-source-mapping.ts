@@ -7,7 +7,7 @@ import type {
   ArrowPolygonColorType,
   ArrowPolygonInputType,
   ArrowPolygonSourceVectors
-} from '@math.gl/geoarrow';
+} from '../../../geoarrow/arrow-polygon-tessellation';
 import {getArrowPaths, getArrowVectorByPath} from '../../../arrow-utils/arrow-paths';
 
 /** Raw Arrow table or record batch accepted by polygon source mapping helpers. */

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   makeArrowFixedSizeListVector,
   makeGPURecordBatchFromArrowRecordBatch,
@@ -65,7 +65,7 @@ void main() {
 }
 `;
 
-test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel rendering', t => {
+it('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel rendering', () => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
   const table = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
@@ -78,30 +78,28 @@ test('makeGPUTableFromArrowTable converts Arrow tables for GPUTableModel renderi
   });
   const positionsBuffer = table.batches[0].gpuData.positions.buffer;
 
-  t.ok(table instanceof GPUTable, 'creates a GPUTable');
-  t.deepEqual(
-    model.bufferLayout,
-    [
-      {name: 'positions', format: 'float32x2', stepMode: 'instance'},
-      {name: 'colors', format: 'unorm8x4', stepMode: 'instance'}
-    ],
-    'sets buffer layout from converted Arrow columns'
-  );
-  t.equal(
+  expect(Boolean(table instanceof GPUTable), 'creates a GPUTable').toBe(true);
+  expect(model.bufferLayout, 'sets buffer layout from converted Arrow columns').toEqual([
+    {name: 'positions', format: 'float32x2', stepMode: 'instance'},
+    {name: 'colors', format: 'unorm8x4', stepMode: 'instance'}
+  ]);
+  expect(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer),
     'sets Model vertex array attributes from GPU table buffers'
-  );
-  t.equal(model.instanceCount, arrowTable.numRows, 'infers instanceCount from table row count');
+  ).toBe(getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer));
+  expect(model.instanceCount, 'infers instanceCount from table row count').toBe(arrowTable.numRows);
 
   model.destroy();
-  t.notOk(positionsBuffer.destroyed, 'GPUTableModel leaves converted tables caller-owned');
+  expect(
+    Boolean(positionsBuffer.destroyed),
+    'GPUTableModel leaves converted tables caller-owned'
+  ).toBe(false);
   table.destroy();
-  t.ok(positionsBuffer.destroyed, 'caller destroys converted table buffers');
-  t.end();
+  expect(Boolean(positionsBuffer.destroyed), 'caller destroys converted table buffers').toBe(true);
+  void 0;
 });
 
-test('makeGPUTableFromArrowTable converts scalar filter values to float32 attributes', t => {
+it('makeGPUTableFromArrowTable converts scalar filter values to float32 attributes', () => {
   const device = new NullDevice({});
   const arrowTable = new arrow.Table({
     filterValues: arrow.makeVector(new Float32Array([0, 0.5, 1]))
@@ -110,18 +108,18 @@ test('makeGPUTableFromArrowTable converts scalar filter values to float32 attrib
     shaderLayout: FILTER_SHADER_LAYOUT
   });
 
-  t.equal(table.gpuVectors.filterValues.format, 'float32', 'filter vector uses float32 storage');
-  t.deepEqual(
-    table.bufferLayout,
-    [{name: 'filterValues', format: 'float32', stepMode: 'instance'}],
-    'table exposes a matching scalar instance buffer layout'
+  expect(table.gpuVectors.filterValues.format, 'filter vector uses float32 storage').toBe(
+    'float32'
   );
+  expect(table.bufferLayout, 'table exposes a matching scalar instance buffer layout').toEqual([
+    {name: 'filterValues', format: 'float32', stepMode: 'instance'}
+  ]);
 
   table.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUTableFromArrowTable derives model storage bindings from batch GPUData', t => {
+it('makeGPUTableFromArrowTable derives model storage bindings from batch GPUData', () => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
   const table = makeGPUTableFromArrowTable(device, arrowTable, {
@@ -136,20 +134,21 @@ test('makeGPUTableFromArrowTable derives model storage bindings from batch GPUDa
   });
   const colorsBuffer = table.batches[0].gpuData.colors.buffer;
 
-  t.deepEqual(
+  expect(
     table.schema.fields.map(field => field.name),
-    ['positions', 'colors'],
     'keeps attribute and storage columns in the selected GPU schema'
+  ).toEqual(['positions', 'colors']);
+  expect(Boolean('bindings' in table), 'table does not cache storage bindings').toBe(false);
+  expect(model.bindings.colors, 'model receives storage bindings from the table').toBe(
+    colorsBuffer
   );
-  t.notOk('bindings' in table, 'table does not cache storage bindings');
-  t.equal(model.bindings.colors, colorsBuffer, 'model receives storage bindings from the table');
 
   model.destroy();
   table.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableModel supports vertex and no count inference from converted Arrow tables', t => {
+it('GPUTableModel supports vertex and no count inference from converted Arrow tables', () => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
   const vertexTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
@@ -162,8 +161,8 @@ test('GPUTableModel supports vertex and no count inference from converted Arrow 
     tableCount: 'vertex'
   });
 
-  t.equal(vertexModel.vertexCount, arrowTable.numRows, 'sets vertexCount from table row count');
-  t.equal(vertexModel.instanceCount, 0, 'does not infer instanceCount in vertex mode');
+  expect(vertexModel.vertexCount, 'sets vertexCount from table row count').toBe(arrowTable.numRows);
+  expect(vertexModel.instanceCount, 'does not infer instanceCount in vertex mode').toBe(0);
   vertexModel.destroy();
   vertexTable.destroy();
 
@@ -179,14 +178,14 @@ test('GPUTableModel supports vertex and no count inference from converted Arrow 
     tableCount: 'none'
   });
 
-  t.equal(noCountModel.vertexCount, 0, 'does not infer vertexCount in none mode');
-  t.equal(noCountModel.instanceCount, 0, 'does not infer instanceCount in none mode');
+  expect(noCountModel.vertexCount, 'does not infer vertexCount in none mode').toBe(0);
+  expect(noCountModel.instanceCount, 'does not infer instanceCount in none mode').toBe(0);
   noCountModel.destroy();
   noCountTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableModel updates converted GPU table props', t => {
+it('GPUTableModel updates converted GPU table props', () => {
   const device = new NullDevice({});
   const table = makeGPUTableFromArrowTable(device, makeArrowModelTable(), {
     shaderLayout: SHADER_LAYOUT
@@ -205,25 +204,23 @@ test('GPUTableModel updates converted GPU table props', t => {
 
   model.setProps({table: nextTable});
 
-  t.equal(model.instanceCount, nextTable.numRows, 'updates inferred instanceCount');
-  t.equal(
+  expect(model.instanceCount, 'updates inferred instanceCount').toBe(nextTable.numRows);
+  expect(
     model.pipeline,
-    previousPipeline,
     'does not rebuild pipeline when GPU table buffer layout is unchanged'
-  );
-  t.equal(
+  ).toBe(previousPipeline);
+  expect(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(nextTable.batches[0].gpuData.positions.buffer),
     'sets vertex array attributes from the updated GPU table buffers'
-  );
+  ).toBe(getConcreteTestBuffer(nextTable.batches[0].gpuData.positions.buffer));
 
   model.destroy();
   table.destroy();
   nextTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableModel consumes an immutable appended batch and tracks table growth', t => {
+it('GPUTableModel consumes an immutable appended batch and tracks table growth', () => {
   const device = new NullDevice({});
   const firstTable = makeArrowModelTable(1);
   const nextTable = makeArrowModelTable(3);
@@ -243,18 +240,18 @@ test('GPUTableModel consumes an immutable appended batch and tracks table growth
     })
   );
 
-  t.equal(model.table, table, 'uses the GPU table');
-  t.equal(model.instanceCount, 1, 'initially infers rows from the first immutable batch');
-  t.ok(model.needsRedraw(), 'detects appended immutable table batches');
-  t.equal(model.instanceCount, 4, 'refreshes inferred rows after table growth');
+  expect(model.table, 'uses the GPU table').toBe(table);
+  expect(model.instanceCount, 'initially infers rows from the first immutable batch').toBe(1);
+  expect(Boolean(model.needsRedraw()), 'detects appended immutable table batches').toBe(true);
+  expect(model.instanceCount, 'refreshes inferred rows after table growth').toBe(4);
 
   model.destroy();
   table.destroy();
-  t.ok(initialNeedsRedraw, 'model starts needing redraw');
-  t.end();
+  expect(Boolean(initialNeedsRedraw), 'model starts needing redraw').toBe(true);
+  void 0;
 });
 
-test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', t => {
+it('GPUTableModel.drawBatches draws preserved converted Arrow table batches', () => {
   const device = new NullDevice({});
   const firstBatch = makeArrowModelTable(1).batches[0];
   const secondBatch = makeArrowModelTable(2).batches[0];
@@ -288,42 +285,42 @@ test('GPUTableModel.drawBatches draws preserved converted Arrow table batches', 
     return draw(options);
   };
 
-  t.ok(model.drawBatches(renderPass), 'draws every retained Arrow record batch');
-  t.deepEqual(
+  expect(Boolean(model.drawBatches(renderPass)), 'draws every retained Arrow record batch').toBe(
+    true
+  );
+  expect(
     drawCalls.map(drawCall => drawCall.instanceCount),
-    [1, 2],
     'uses each batch row count as the draw instance count'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2]);
+  expect(
     drawCalls.map(drawCall => drawCall.buffer),
-    positionsBuffers,
     'binds each preserved batch GPU buffer directly'
+  ).toEqual(positionsBuffers);
+  expect(model.pipeline, 'does not rebuild the render pipeline').toBe(previousPipeline);
+  expect(model.bufferLayout, 'keeps the existing buffer layout').toEqual(previousBufferLayout);
+  expect(model.instanceCount, 'restores the table-level inferred row count').toBe(
+    arrowTable.numRows
   );
-  t.equal(model.pipeline, previousPipeline, 'does not rebuild the render pipeline');
-  t.deepEqual(model.bufferLayout, previousBufferLayout, 'keeps the existing buffer layout');
-  t.equal(model.instanceCount, arrowTable.numRows, 'restores the table-level inferred row count');
-  t.equal(
+  expect(
     model.vertexArray.attributes[0],
-    getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer),
     'restores table-level model attributes after batched drawing'
-  );
+  ).toBe(getConcreteTestBuffer(table.batches[0].gpuData.positions.buffer));
 
   drawCalls.length = 0;
   table.packBatches();
-  t.ok(model.drawBatches(renderPass), 'draws the explicitly packed table');
-  t.deepEqual(
+  expect(Boolean(model.drawBatches(renderPass)), 'draws the explicitly packed table').toBe(true);
+  expect(
     drawCalls.map(drawCall => drawCall.instanceCount),
-    [3],
     'packing reduces the preserved table to one draw'
-  );
+  ).toEqual([3]);
 
   renderPass.destroy();
   model.destroy();
   table.destroy();
-  t.end();
+  void 0;
 });
 
-test('makeGPUGeometryFromArrow converts Mesh Arrow tables for Model rendering', t => {
+it('makeGPUGeometryFromArrow converts Mesh Arrow tables for Model rendering', () => {
   const device = new NullDevice({});
   const geometry = makeGPUGeometryFromArrow(device, {arrowMesh: makeArrowModelMeshTable()});
   const model = new Model(device, {
@@ -334,37 +331,33 @@ test('makeGPUGeometryFromArrow converts Mesh Arrow tables for Model rendering', 
     geometry
   });
 
-  t.equal(model.vertexCount, 3, 'uses Mesh Arrow index count as vertex count');
-  t.ok(model.vertexArray.indexBuffer, 'binds Mesh Arrow index buffer');
-  t.deepEqual(
-    model.bufferLayout,
-    [
-      {
-        name: 'geometry',
-        stepMode: 'vertex',
-        byteStride: 16,
-        attributes: [
-          {attribute: 'positions', format: 'float32x3', byteOffset: 0},
-          {attribute: 'colors', format: 'unorm8x4', byteOffset: 12}
-        ]
-      }
-    ],
-    'sets Model buffer layout from Mesh Arrow geometry'
-  );
+  expect(model.vertexCount, 'uses Mesh Arrow index count as vertex count').toBe(3);
+  expect(Boolean(model.vertexArray.indexBuffer), 'binds Mesh Arrow index buffer').toBe(true);
+  expect(model.bufferLayout, 'sets Model buffer layout from Mesh Arrow geometry').toEqual([
+    {
+      name: 'geometry',
+      stepMode: 'vertex',
+      byteStride: 16,
+      attributes: [
+        {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+        {attribute: 'colors', format: 'unorm8x4', byteOffset: 12}
+      ]
+    }
+  ]);
 
   model.destroy();
   geometry.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTableModel validates duplicate explicit GPU table attributes and bindings', t => {
+it('GPUTableModel validates duplicate explicit GPU table attributes and bindings', () => {
   const device = new NullDevice({});
   const table = makeGPUTableFromArrowTable(device, makeArrowModelTable(), {
     shaderLayout: STORAGE_SHADER_LAYOUT
   });
   const duplicateBuffer = device.createBuffer({data: new Float32Array([0, 0, 1, 1])});
 
-  t.throws(
+  expect(
     () =>
       new GPUTableModel(device, {
         id: 'gpu-table-model-duplicate-attribute-test',
@@ -374,10 +367,9 @@ test('GPUTableModel validates duplicate explicit GPU table attributes and bindin
         table,
         attributes: {positions: duplicateBuffer}
       }),
-    /duplicates an explicit attribute/,
     'rejects duplicate explicit attributes'
-  );
-  t.throws(
+  ).toThrow(/duplicates an explicit attribute/);
+  expect(
     () =>
       new GPUTableModel(device, {
         id: 'gpu-table-model-duplicate-binding-test',
@@ -387,13 +379,12 @@ test('GPUTableModel validates duplicate explicit GPU table attributes and bindin
         table,
         bindings: {colors: duplicateBuffer}
       }),
-    /duplicates an explicit binding/,
     'rejects duplicate explicit storage bindings'
-  );
+  ).toThrow(/duplicates an explicit binding/);
 
   duplicateBuffer.destroy();
   table.destroy();
-  t.end();
+  void 0;
 });
 
 function makeArrowModelTable(rowCount = 2): arrow.Table {

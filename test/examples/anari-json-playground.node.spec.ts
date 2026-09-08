@@ -1,10 +1,10 @@
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {ANARIDevice, ANARIGroup} from '@luma.gl/scene';
 import {NullDevice} from '@luma.gl/test-utils';
 import {PLAYGROUND_PRESETS} from '../../examples/showcase/scene/playground-presets';
 import {createANARIJSONScene} from '../../examples/showcase/scene/playground-scene';
 
-test('ANARI JSON presets reproduce the complete Observatory scenes', testContext => {
+it('ANARI JSON presets reproduce the complete Observatory scenes', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const expectedInstanceCounts = [312, 429, 318];
   const expectedLightCounts = [3, 5, 5];
@@ -19,15 +19,11 @@ test('ANARI JSON presets reproduce the complete Observatory scenes', testContext
       throw new Error('JSON scenes must resolve retained instance and light arrays.');
     }
 
-    testContext.equal(
-      instances.length,
-      expectedInstanceCounts[presetIndex],
-      `${preset.label} retains its complete instance population`
+    expect(instances.length, `${preset.label} retains its complete instance population`).toBe(
+      expectedInstanceCounts[presetIndex]
     );
-    testContext.equal(
-      lights.length,
-      expectedLightCounts[presetIndex],
-      `${preset.label} retains its declared real lights`
+    expect(lights.length, `${preset.label} retains its declared real lights`).toBe(
+      expectedLightCounts[presetIndex]
     );
 
     const generatedTriangles = instances.some(instance => {
@@ -41,16 +37,19 @@ test('ANARI JSON presets reproduce the complete Observatory scenes', testContext
         : false;
     });
 
-    testContext.ok(generatedTriangles, `${preset.label} resolves procedural triangle geometry`);
+    expect(
+      Boolean(generatedTriangles),
+      `${preset.label} resolves procedural triangle geometry`
+    ).toBe(true);
     scene.update(2.5);
     scene.destroy();
   }
 
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI JSON following lights track animated celestial satellites', testContext => {
+it('ANARI JSON following lights track animated celestial satellites', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const celestialEngine = createANARIJSONScene(device, PLAYGROUND_PRESETS[2].scene);
   const world = celestialEngine.frame.getParameter('world');
@@ -70,41 +69,38 @@ test('ANARI JSON following lights track animated celestial satellites', testCont
   celestialEngine.update(3);
   const updatedPosition = orbitingLight.getParameter('position');
 
-  testContext.notDeepEqual(
-    updatedPosition,
-    initialPosition,
-    'orbiting lights move with their stars'
-  );
-  testContext.ok(
-    instances.some(instance => {
-      const transform = instance.getParameter('transform');
-      return (
-        transform &&
-        updatedPosition &&
-        transform[12] === updatedPosition[0] &&
-        transform[13] === updatedPosition[1] &&
-        transform[14] === updatedPosition[2]
-      );
-    }),
+  expect(updatedPosition, 'orbiting lights move with their stars').not.toEqual(initialPosition);
+  expect(
+    Boolean(
+      instances.some(instance => {
+        const transform = instance.getParameter('transform');
+        return (
+          transform &&
+          updatedPosition &&
+          transform[12] === updatedPosition[0] &&
+          transform[13] === updatedPosition[1] &&
+          transform[14] === updatedPosition[2]
+        );
+      })
+    ),
     'following lights use the current transform of a retained satellite instance'
-  );
+  ).toBe(true);
 
   celestialEngine.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI JSON scene references fail with actionable errors', testContext => {
+it('ANARI JSON scene references fail with actionable errors', () => {
   const device = new ANARIDevice(new NullDevice({}));
   const invalidScene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   invalidScene.surfaces.halo.geometry = 'missing-halo';
 
-  testContext.throws(
+  expect(
     () => createANARIJSONScene(device, invalidScene),
-    /Unknown geometry reference "missing-halo"/,
     'invalid resource references identify the missing scene object'
-  );
+  ).toThrow(/Unknown geometry reference "missing-halo"/);
 
   device.destroy();
-  testContext.end();
+  void 0;
 });

@@ -38,6 +38,14 @@ export {
   type GPUVectorFromInterleavedProps
 } from './gpu-vector';
 export {
+  GPUVectorModel,
+  getGPUVectorModelBatches,
+  type GPUVectorModelBatch,
+  type GPUVectorModelCount,
+  type GPUVectorModelDrawBatchesOptions,
+  type GPUVectorModelProps
+} from './gpu-vector-model';
+export {
   getGPUDataBuffersForLayout,
   getGPUVectorBuffer,
   getGPUVectorBuffersForLayout,
@@ -48,9 +56,11 @@ export {
 export {
   getGPUVectorElementFormat,
   getGPUVectorFormatInfo,
+  isFixedSizeListGPUVectorFormat,
   isGPUVectorFormatCompatibleWithShaderType,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
+  type FixedSizeList,
   type GPUVectorFormat,
   type GPUVectorFormatInfo,
   type ValueList,

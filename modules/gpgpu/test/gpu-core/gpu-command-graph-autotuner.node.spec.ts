@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -8,7 +9,6 @@ import {
   type GPUCommandGraphPreflightReport,
   type GPUCommandGraphTimingReport
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 
 const ADAPTER: GPUCommandGraphAdapterIdentity = Object.freeze({
   key: 'test-adapter',
@@ -25,13 +25,13 @@ const ADAPTER: GPUCommandGraphAdapterIdentity = Object.freeze({
 
 const CANDIDATES = [{id: 'portable'}, {id: 'subgroups'}] as const;
 
-test('GPUCommandGraphAutotuner explores then selects the measured faster kernel', t => {
+it('GPUCommandGraphAutotuner explores then selects the measured faster kernel', () => {
   const autotuner = new GPUCommandGraphAutotuner({adapter: ADAPTER});
   const request = {operation: 'GPUScan', candidates: CANDIDATES, workloadSize: 1_000_000};
 
   const first = autotuner.selectKernel(request);
-  t.equal(first.variant, 'portable', 'explores the first supported variant');
-  t.equal(first.reason, 'exploration', 'reports exploration explicitly');
+  expect(first.variant, 'explores the first supported variant').toBe('portable');
+  expect(first.reason, 'reports exploration explicitly').toBe('exploration');
   autotuner.observeKernel({
     operation: 'GPUScan',
     variant: 'portable',
@@ -40,7 +40,7 @@ test('GPUCommandGraphAutotuner explores then selects the measured faster kernel'
   });
 
   const second = autotuner.selectKernel(request);
-  t.equal(second.variant, 'subgroups', 'explores the remaining unmeasured variant');
+  expect(second.variant, 'explores the remaining unmeasured variant').toBe('subgroups');
   autotuner.observeKernel({
     operation: 'GPUScan',
     variant: 'subgroups',
@@ -49,13 +49,12 @@ test('GPUCommandGraphAutotuner explores then selects the measured faster kernel'
   });
 
   const selected = autotuner.selectKernel(request);
-  t.equal(selected.variant, 'subgroups', 'selects the faster calibrated implementation');
-  t.equal(selected.reason, 'calibrated', 'distinguishes an empirical decision');
-  t.equal(selected.estimatedDurationMilliseconds, 1, 'reports the expected duration');
-  t.end();
+  expect(selected.variant, 'selects the faster calibrated implementation').toBe('subgroups');
+  expect(selected.reason, 'distinguishes an empirical decision').toBe('calibrated');
+  expect(selected.estimatedDurationMilliseconds, 'reports the expected duration').toBe(1);
 });
 
-test('GPUCommandGraphAutotuner respects support and persists adapter-local calibration', t => {
+it('GPUCommandGraphAutotuner respects support and persists adapter-local calibration', () => {
   const autotuner = new GPUCommandGraphAutotuner({adapter: ADAPTER, explorationEnabled: false});
   autotuner.observeKernel({
     operation: 'GPUHistogram',
@@ -75,43 +74,39 @@ test('GPUCommandGraphAutotuner respects support and persists adapter-local calib
     profile,
     explorationEnabled: false
   });
-  t.equal(
+  expect(
     restored.selectKernel({
       operation: 'GPUHistogram',
       candidates: CANDIDATES,
       workloadSize: 1024
     }).variant,
-    'subgroups',
     'restores calibration for the matching adapter'
-  );
-  t.equal(
+  ).toBe('subgroups');
+  expect(
     restored.selectKernel({
       operation: 'GPUHistogram',
       candidates: [{id: 'portable'}, {id: 'subgroups', supported: false}],
       workloadSize: 1024
     }).variant,
-    'portable',
     'never selects an unsupported candidate'
-  );
+  ).toBe('portable');
 
   const mismatched = new GPUCommandGraphAutotuner({
     adapter: {...ADAPTER, key: 'another-adapter'},
     profile,
     explorationEnabled: false
   });
-  t.equal(
+  expect(
     mismatched.selectKernel({
       operation: 'GPUHistogram',
       candidates: CANDIDATES,
       workloadSize: 1024
     }).reason,
-    'fallback',
     'ignores measurements captured on another adapter'
-  );
-  t.end();
+  ).toBe('fallback');
 });
 
-test('GPUCommandGraphAutotuner consumes annotated graph GPU timings', t => {
+it('GPUCommandGraphAutotuner consumes annotated graph GPU timings', () => {
   const autotuner = new GPUCommandGraphAutotuner({adapter: ADAPTER});
   const preflight: GPUCommandGraphPreflightReport = {
     nodes: [
@@ -170,16 +165,13 @@ test('GPUCommandGraphAutotuner consumes annotated graph GPU timings', t => {
     ]
   };
 
-  t.equal(
+  expect(
     autotuner.observeTimingReport(timingReport, preflight),
-    1,
     'records only nodes with operation and variant annotations'
-  );
-  t.equal(autotuner.exportProfile().calibrations.length, 1, 'publishes one calibration entry');
-  t.equal(
+  ).toBe(1);
+  expect(autotuner.exportProfile().calibrations.length, 'publishes one calibration entry').toBe(1);
+  expect(
     autotuner.exportProfile().calibrations[0].meanWorkloadSize,
-    1024,
     'uses the node invocation bound as the workload size'
-  );
-  t.end();
+  ).toBe(1024);
 });

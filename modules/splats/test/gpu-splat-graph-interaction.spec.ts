@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {
@@ -14,13 +14,13 @@ import {
 import {getTestDevices} from '@luma.gl/test-utils';
 import {GPUSplatGraphMixedRenderer, GPUSplatGraphPicker} from '../src/gpu-splat-graph-interaction';
 
-test('GPUSplatGraphPicker reads original streamed identities from one real WebGPU indirect draw', async t => {
+it('GPUSplatGraphPicker reads original streamed identities from one real WebGPU indirect draw', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU graphics device is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU graphics device is available').toBe(true);
 
   for (const device of devices) {
     if (isSoftwareBackedGraphInteractionDevice(device)) {
-      t.comment('Skipping graph picking attachment readback on a software-backed WebGPU adapter');
+      void 0;
       continue;
     }
 
@@ -44,12 +44,14 @@ test('GPUSplatGraphPicker reads original streamed identities from one real WebGP
     const notifications: SplatPickingInfo[] = [];
     const picker = new GPUSplatGraphPicker(renderer, {onPick: info => notifications.push(info)});
 
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0]),
-      {batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
       'reads the first projected Gaussian while excluding a nearer GPU-culled transparent source'
-    );
-    t.notOk(picker.model?.pipeline.isErrored, 'compiles the projected-record integer GPU pipeline');
+    ).toEqual({batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
+    expect(
+      Boolean(picker.model?.pipeline.isErrored),
+      'compiles the projected-record integer GPU pipeline'
+    ).toBe(false);
     const initialGraph = renderer.compiledGraph;
     const initialPickingModel = picker.model;
     const initialProjectedRecords = renderer.projectedRecordBuffer;
@@ -66,49 +68,44 @@ test('GPUSplatGraphPicker reads original streamed identities from one real WebGP
       })
     );
     renderer.appendData(secondBatch);
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: 8},
       'restores a near streamed batch, original class, and high signed-32-bit global source row'
+    ).toEqual({batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: 8});
+    expect(renderer.compiledGraph, 'reuses the original progressive command graph').toBe(
+      initialGraph
     );
-    t.equal(renderer.compiledGraph, initialGraph, 'reuses the original progressive command graph');
-    t.equal(
-      picker.model,
-      initialPickingModel,
-      'reuses the original projected-record picking model'
+    expect(picker.model, 'reuses the original projected-record picking model').toBe(
+      initialPickingModel
     );
-    t.equal(
+    expect(
       renderer.projectedRecordBuffer,
-      initialProjectedRecords,
       'never rebuilds or reuploads already projected Gaussian source allocations'
-    );
-    t.equal(
-      renderer.sortedIndexBuffer,
-      initialSortedIndices,
-      'borrows the existing globally sorted GPU permutation'
+    ).toBe(initialProjectedRecords);
+    expect(renderer.sortedIndexBuffer, 'borrows the existing globally sorted GPU permutation').toBe(
+      initialSortedIndices
     );
 
     renderer.setProps({semanticFilter: {include: [4]}});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
       'excludes nearer rejected classes through graph-native semantic visibility'
-    );
+    ).toEqual({batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
     renderer.setProps({semanticFilter: {include: [8]}});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: 8},
       'updates semantic graph picking without rebuilding projected or sorted source buffers'
+    ).toEqual({batchIndex: 65_535, rowIndex: 2_000_000_000, batchRowIndex: 0, semanticId: 8});
+    expect(renderer.compiledGraph, 'reuses the compiled graph for semantic updates').toBe(
+      initialGraph
     );
-    t.equal(renderer.compiledGraph, initialGraph, 'reuses the compiled graph for semantic updates');
     renderer.setProps({semanticFilter: undefined});
 
     secondBatch.updateRows(0, {opacities: new Float32Array([0])});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
       'honors graph-native source revisions and GPU visibility without CPU row projection'
-    );
+    ).toEqual({batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
 
     const thirdBatch = makeGPUSplatData(
       device,
@@ -121,52 +118,62 @@ test('GPUSplatGraphPicker reads original streamed identities from one real WebGP
       })
     );
     renderer.appendData(thirdBatch);
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 1_000_001, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 12},
       'rebinds graph-owned picking resources safely after progressive source capacity grows'
-    );
-    t.notEqual(
+    ).toEqual({batchIndex: 1_000_001, rowIndex: 1_900_000_000, batchRowIndex: 0, semanticId: 12});
+    expect(
       picker.model,
-      initialPickingModel,
       'replaces its borrowed picking model when graph-projected allocations are rebuilt'
-    );
-    t.ok(initialProjectedRecords?.destroyed, 'the graph owns and releases superseded projections');
+    ).not.toBe(initialPickingModel);
+    expect(
+      Boolean(initialProjectedRecords?.destroyed),
+      'the graph owns and releases superseded projections'
+    ).toBe(true);
 
     renderer.setProps({data: firstBatch});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
       'rebuilds source-offset identity after residency replaces the complete graph frontier'
-    );
-    t.notOk(secondBatch.destroyed, 'frontier replacement never destroys a borrowed source batch');
-    t.notOk(thirdBatch.destroyed, 'frontier replacement preserves independently owned pages');
-    t.equal(
+    ).toEqual({batchIndex: 500, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
+    expect(
+      Boolean(secondBatch.destroyed),
+      'frontier replacement never destroys a borrowed source batch'
+    ).toBe(false);
+    expect(
+      Boolean(thirdBatch.destroyed),
+      'frontier replacement preserves independently owned pages'
+    ).toBe(false);
+    expect(
       notifications.length,
-      7,
       'publishes each changed original source identity exactly once'
-    );
+    ).toBe(7);
 
     const sourcePositionBuffer = secondBatch.positions.data[0].buffer;
     picker.destroy();
-    t.notOk(renderer.destroyed, 'does not destroy its borrowing graph renderer');
-    t.notOk(sourcePositionBuffer.destroyed, 'preserves caller-owned original GPU source buffers');
+    expect(Boolean(renderer.destroyed), 'does not destroy its borrowing graph renderer').toBe(
+      false
+    );
+    expect(
+      Boolean(sourcePositionBuffer.destroyed),
+      'preserves caller-owned original GPU source buffers'
+    ).toBe(false);
     renderer.destroy();
     firstBatch.destroy();
     secondBatch.destroy();
     thirdBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaque and transparent meshes', async t => {
+it('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaque and transparent meshes', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU graphics device is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU graphics device is available').toBe(true);
 
   for (const device of devices) {
     if (isSoftwareBackedGraphInteractionDevice(device)) {
-      t.comment('Skipping mixed graph Gaussian readback on a software-backed WebGPU adapter');
+      void 0;
       continue;
     }
 
@@ -236,10 +243,10 @@ test('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaqu
     });
     const drawOrder: string[] = [];
 
-    t.ok(
-      mixedRenderer.predraw(device.commandEncoder),
+    expect(
+      Boolean(mixedRenderer.predraw(device.commandEncoder)),
       'projects and globally sorts the Gaussian before opening the shared mesh render pass'
-    );
+    ).toBe(true);
     opaqueMesh.predraw(device.commandEncoder);
     transparentMesh.predraw(device.commandEncoder);
     const mixedPass = device.beginRenderPass({
@@ -247,27 +254,29 @@ test('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaqu
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
-    t.ok(
-      mixedRenderer.draw(mixedPass, {
-        opaqueMeshes: [
-          {
-            draw(renderPass) {
-              drawOrder.push('opaque');
-              return opaqueMesh.draw(renderPass);
+    expect(
+      Boolean(
+        mixedRenderer.draw(mixedPass, {
+          opaqueMeshes: [
+            {
+              draw(renderPass) {
+                drawOrder.push('opaque');
+                return opaqueMesh.draw(renderPass);
+              }
             }
-          }
-        ],
-        transparentMeshes: [
-          {
-            draw(renderPass) {
-              drawOrder.push('transparent');
-              return transparentMesh.draw(renderPass);
+          ],
+          transparentMeshes: [
+            {
+              draw(renderPass) {
+                drawOrder.push('transparent');
+                return transparentMesh.draw(renderPass);
+              }
             }
-          }
-        ]
-      }),
+          ]
+        })
+      ),
       'records opaque mesh, graph-visible Gaussian indirect draw, and transparent mesh'
-    );
+    ).toBe(true);
     mixedPass.end();
     device.submit();
     colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
@@ -275,38 +284,41 @@ test('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaqu
     const centerPixelOffset = 2 * pixelLayout.bytesPerRow + 2 * 4;
     const occludedPixel = mixedPixels.slice(centerPixelOffset, centerPixelOffset + 4);
 
-    t.deepEqual(drawOrder, ['opaque', 'transparent'], 'keeps caller meshes around the splat draw');
-    t.ok(
-      occludedPixel[0] < 10 && occludedPixel[1] > 90 && occludedPixel[2] > 90,
+    expect(drawOrder, 'keeps caller meshes around the splat draw').toEqual([
+      'opaque',
+      'transparent'
+    ]);
+    expect(
+      Boolean(occludedPixel[0] < 10 && occludedPixel[1] > 90 && occludedPixel[2] > 90),
       'opaque shared depth rejects the farther red splat while the nearer blue overlay blends'
-    );
+    ).toBe(true);
 
-    t.ok(
-      mixedRenderer.predraw(device.commandEncoder),
+    expect(
+      Boolean(mixedRenderer.predraw(device.commandEncoder)),
       'reuses the projected graph and scene model'
-    );
+    ).toBe(true);
     const unoccludedPass = device.beginRenderPass({
       framebuffer,
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
-    t.ok(
-      mixedRenderer.draw(unoccludedPass),
+    expect(
+      Boolean(mixedRenderer.draw(unoccludedPass)),
       'records the same globally sorted Gaussian indirect draw'
-    );
+    ).toBe(true);
     unoccludedPass.end();
     device.submit();
     colorTexture.readBuffer({width: textureSize, height: textureSize}, readback);
     const unoccludedPixels = await readback.readAsync(0, pixelLayout.byteLength);
     const unoccludedPixel = unoccludedPixels.slice(centerPixelOffset, centerPixelOffset + 4);
-    t.ok(
-      unoccludedPixel[0] > occludedPixel[0] + 100,
+    expect(
+      Boolean(unoccludedPixel[0] > occludedPixel[0] + 100),
       'the unchanged graph-projected red Gaussian becomes visible when opaque depth is absent'
-    );
-    t.notOk(
-      mixedRenderer.model?.pipeline.isErrored,
+    ).toBe(true);
+    expect(
+      Boolean(mixedRenderer.model?.pipeline.isErrored),
       'compiles the shared-depth GPU scene pipeline'
-    );
+    ).toBe(false);
 
     const sourcePositionBuffer = sourceBatch.positions.data[0].buffer;
     mixedRenderer.destroy();
@@ -315,13 +327,19 @@ test('GPUSplatGraphMixedRenderer depth-tests real projected splats between opaqu
     readback.destroy();
     framebuffer.destroy();
     colorTexture.destroy();
-    t.notOk(graphRenderer.destroyed, 'scene composition never owns the borrowing graph renderer');
-    t.notOk(sourcePositionBuffer.destroyed, 'scene composition never owns prepared Gaussian data');
+    expect(
+      Boolean(graphRenderer.destroyed),
+      'scene composition never owns the borrowing graph renderer'
+    ).toBe(false);
+    expect(
+      Boolean(sourcePositionBuffer.destroyed),
+      'scene composition never owns prepared Gaussian data'
+    ).toBe(false);
     graphRenderer.destroy();
     sourceBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 function makeBrowserGraphInteractionSource({

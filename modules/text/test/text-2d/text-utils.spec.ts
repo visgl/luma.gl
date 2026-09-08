@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {buildMapping, nextPowOfTwo} from '../../src/index';
 
-test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
+it('text-2d mapping helpers preserve deck-compatible packing behavior', () => {
   const {mapping, xOffset, yOffsetMin, yOffsetMax, canvasHeight} = buildMapping({
     characterSet: new Set('abcd'),
     measureText: character => ({
@@ -18,12 +18,12 @@ test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
     maxCanvasWidth: 16
   });
 
-  t.equal(nextPowOfTwo(5), 8, 'power-of-two helper matches atlas sizing expectations');
-  t.equal(xOffset, 15, 'x offset matches deck packing');
-  t.equal(yOffsetMin, 8, 'row min y matches deck packing');
-  t.equal(yOffsetMax, 16, 'row max y matches deck packing');
-  t.equal(canvasHeight, 16, 'canvas height rounds to a power of two');
-  t.deepEqual(mapping.d, {
+  expect(nextPowOfTwo(5), 'power-of-two helper matches atlas sizing expectations').toBe(8);
+  expect(xOffset, 'x offset matches deck packing').toBe(15);
+  expect(yOffsetMin, 'row min y matches deck packing').toBe(8);
+  expect(yOffsetMax, 'row max y matches deck packing').toBe(16);
+  expect(canvasHeight, 'canvas height rounds to a power of two').toBe(16);
+  expect(mapping.d, '').toEqual({
     x: 9,
     y: 10,
     width: 4,
@@ -35,10 +35,10 @@ test('text-2d mapping helpers preserve deck-compatible packing behavior', t => {
     layoutOffsetX: 0,
     layoutOffsetY: -3
   });
-  t.end();
+  void 0;
 });
 
-test('text-2d mapping aligns glyphs to a shared baseline', t => {
+it('text-2d mapping aligns glyphs to a shared baseline', () => {
   const {mapping} = buildMapping({
     characterSet: new Set('ag'),
     measureText: character => ({
@@ -51,17 +51,15 @@ test('text-2d mapping aligns glyphs to a shared baseline', t => {
     maxCanvasWidth: 32
   });
 
-  t.equal(mapping.a?.layoutOffsetY, -3, 'non-descender top is offset by its ascent');
-  t.equal(mapping.g?.layoutOffsetY, -2, 'descender top is offset by its ascent');
-  t.equal(
+  expect(mapping.a?.layoutOffsetY, 'non-descender top is offset by its ascent').toBe(-3);
+  expect(mapping.g?.layoutOffsetY, 'descender top is offset by its ascent').toBe(-2);
+  expect(
     (mapping.a?.layoutOffsetY ?? 0) + (mapping.a?.height ?? 0),
-    1,
     'non-descender bottom uses its descent'
-  );
-  t.equal(
+  ).toBe(1);
+  expect(
     (mapping.g?.layoutOffsetY ?? 0) + (mapping.g?.height ?? 0),
-    2,
     'descender extends below the shared baseline'
-  );
-  t.end();
+  ).toBe(2);
+  void 0;
 });

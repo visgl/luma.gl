@@ -4,6 +4,10 @@
   "private": true,
   "description": "deck.gl layers using the WebGPU-only GPU compute graph",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
   "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",

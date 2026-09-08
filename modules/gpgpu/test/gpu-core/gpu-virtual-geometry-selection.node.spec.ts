@@ -1,49 +1,46 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {makeGPUVirtualGeometrySelectionPlan} from '@luma.gl/gpgpu/gpu-core';
 
-test('GPU virtual geometry publishes an immutable breadth-level plan', testCase => {
+it('GPU virtual geometry publishes an immutable breadth-level plan', () => {
   const levelOffsets = [0, 2, 6, 10];
   const plan = makeGPUVirtualGeometrySelectionPlan(levelOffsets, 10);
 
-  testCase.deepEqual(plan, {
+  expect(plan).toEqual({
     nodeCount: 10,
     rootCount: 2,
     levelCount: 3,
     traversalPassCount: 3,
     levelOffsets: [0, 2, 6, 10]
   });
-  testCase.ok(Object.isFrozen(plan), 'the plan is immutable');
-  testCase.ok(Object.isFrozen(plan.levelOffsets), 'the copied level offsets are immutable');
+  expect(Boolean(Object.isFrozen(plan)), 'the plan is immutable').toBe(true);
+  expect(
+    Boolean(Object.isFrozen(plan.levelOffsets)),
+    'the copied level offsets are immutable'
+  ).toBe(true);
 
   levelOffsets[1] = 4;
-  testCase.deepEqual(plan.levelOffsets, [0, 2, 6, 10], 'caller mutation cannot change the plan');
-  testCase.end();
+  expect(plan.levelOffsets, 'caller mutation cannot change the plan').toEqual([0, 2, 6, 10]);
 });
 
-test('GPU virtual geometry rejects invalid CPU-known hierarchy layouts', testCase => {
-  testCase.throws(
+it('GPU virtual geometry rejects invalid CPU-known hierarchy layouts', () => {
+  expect(
     () => makeGPUVirtualGeometrySelectionPlan([1, 2], 2),
-    /begin with zero/,
     'the first breadth level begins at node zero'
-  );
-  testCase.throws(
+  ).toThrow(/begin with zero/);
+  expect(
     () => makeGPUVirtualGeometrySelectionPlan([0, 2, 2], 2),
-    /strictly increasing/,
     'empty or overlapping breadth levels are rejected'
-  );
-  testCase.throws(
+  ).toThrow(/strictly increasing/);
+  expect(
     () => makeGPUVirtualGeometrySelectionPlan([0, 2, 5], 6),
-    /end at nodeCount/,
     'the final level must cover every node'
-  );
-  testCase.throws(
+  ).toThrow(/end at nodeCount/);
+  expect(
     () => makeGPUVirtualGeometrySelectionPlan([0, 1], 0),
-    /positive safe integer/,
     'empty hierarchies are rejected'
-  );
-  testCase.end();
+  ).toThrow(/positive safe integer/);
 });

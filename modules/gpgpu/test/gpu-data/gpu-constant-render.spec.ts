@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -93,11 +93,9 @@ fn fragmentMain(inputs : VertexOutputs) -> @location(0) vec4<f32> {
 }
 `;
 
-test('WebGPU draws multiple instances from one zero-stride attribute value', async t => {
+it('WebGPU draws multiple instances from one zero-stride attribute value', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -145,28 +143,24 @@ test('WebGPU draws multiple instances from one zero-stride attribute value', asy
   });
 
   const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-  t.ok(model.draw(renderPass), 'draw succeeds');
+  expect(Boolean(model.draw(renderPass)), 'draw succeeds').toBe(true);
   renderPass.end();
   device.submit();
 
-  t.deepEqual(
+  expect(
     Array.from(await readPixel(framebuffer.colorAttachments[0].texture)),
-    [0, 255, 0, 255],
     'every instance reads the single green payload'
-  );
+  ).toEqual([0, 255, 0, 255]);
 
   model.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   colorBuffer.destroy();
-  t.end();
 });
 
-test('GPUTableModel draws all-constant WebGPU table columns', async t => {
+it('GPUTableModel draws all-constant WebGPU table columns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -221,27 +215,22 @@ test('GPUTableModel draws all-constant WebGPU table columns', async t => {
   });
 
   const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-  t.ok(model.drawBatches(renderPass), 'table batch draw succeeds');
+  expect(Boolean(model.drawBatches(renderPass)), 'table batch draw succeeds').toBe(true);
   renderPass.end();
   device.submit();
-  t.deepEqual(
-    Array.from(await readPixel(colorTexture)),
-    [0, 255, 0, 255],
-    'table constants render green'
-  );
+  expect(Array.from(await readPixel(colorTexture)), 'table constants render green').toEqual([
+    0, 255, 0, 255
+  ]);
 
   model.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   table.destroy();
-  t.end();
 });
 
-test('GPUTableModel draws one-row WebGPU storage constants', async t => {
+it('GPUTableModel draws one-row WebGPU storage constants', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -314,21 +303,18 @@ test('GPUTableModel draws one-row WebGPU storage constants', async t => {
   });
 
   const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
-  t.ok(model.drawBatches(renderPass), 'storage table batch draw succeeds');
+  expect(Boolean(model.drawBatches(renderPass)), 'storage table batch draw succeeds').toBe(true);
   renderPass.end();
   device.submit();
-  t.equal(model.tableBindingByteLength, 48, 'counts two aligned payload rows and one uniform');
-  t.deepEqual(
-    Array.from(await readPixel(colorTexture)),
-    [0, 255, 0, 255],
-    'storage constants render green'
-  );
+  expect(model.tableBindingByteLength, 'counts two aligned payload rows and one uniform').toBe(48);
+  expect(Array.from(await readPixel(colorTexture)), 'storage constants render green').toEqual([
+    0, 255, 0, 255
+  ]);
 
   model.destroy();
   framebuffer.destroy();
   colorTexture.destroy();
   table.destroy();
-  t.end();
 });
 
 async function readPixel(texture: Texture): Promise<Uint8Array> {

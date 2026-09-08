@@ -1,4 +1,5 @@
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {HELLO_TRIANGLE_INFO_HTML} from './app-ui';
 
 export const title = 'Hello Triangle';
 export const description = 'Shows rendering a basic triangle.';
@@ -35,9 +36,7 @@ void main() {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-<p>Have to start somewhere...</p>
-`;
+  static info = HELLO_TRIANGLE_INFO_HTML;
 
   model: Model;
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {
   makeGPUSplatData,
@@ -13,13 +13,15 @@ import {
 } from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
-test('SplatPicker reads actual Gaussian source identities from WebGPU and WebGL picking targets', async t => {
+it('SplatPicker reads actual Gaussian source identities from WebGPU and WebGL picking targets', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);
-  t.ok(devices.length > 0, 'at least one browser graphics backend is available');
+  expect(Boolean(devices.length > 0), 'at least one browser graphics backend is available').toBe(
+    true
+  );
 
   for (const device of devices) {
     if (isSoftwareBackedDevice(device)) {
-      t.comment(`${device.type}: skipping picking readback on a software-backed adapter`);
+      void 0;
       continue;
     }
 
@@ -48,54 +50,52 @@ test('SplatPicker reads actual Gaussian source identities from WebGPU and WebGL 
       onPick: pickInfo => notifications.push(pickInfo)
     });
 
-    t.equal(
+    expect(
       picker.mode,
-      device.type === 'webgpu' ? 'index' : 'color',
       `${device.type}: selects integer WebGPU picking or portable WebGL color picking`
-    );
+    ).toBe(device.type === 'webgpu' ? 'index' : 'color');
     const firstPick = await picker.pick([0, 0]);
-    t.notOk(
-      picker.model?.pipeline.isErrored,
+    expect(
+      Boolean(picker.model?.pipeline.isErrored),
       `${device.type}: compiles the dedicated GPU pipeline`
-    );
-    t.deepEqual(
+    ).toBe(false);
+    expect(
       firstPick,
-      {batchIndex: 11, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8},
       `${device.type}: GPU readback resolves stable source batch, global row, and semantic class`
-    );
+    ).toEqual({batchIndex: 11, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8});
 
     renderer.setProps({semanticFilter: {include: [4, 8]}});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 11, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8},
       `${device.type}: resolves the nearest globally identified row across overlapping source batches`
-    );
-    t.equal(
+    ).toEqual({batchIndex: 11, rowIndex: 25_000_400, batchRowIndex: 0, semanticId: 8});
+    expect(
       notifications.length,
-      1,
       `${device.type}: changing shared GPU batch uniforms never duplicates stable source callbacks`
-    );
+    ).toBe(1);
 
     renderer.setProps({semanticFilter: {include: [4]}});
-    t.deepEqual(
+    expect(
       await picker.pick([0, 0], {force: true}),
-      {batchIndex: 5, rowIndex: 100, batchRowIndex: 0, semanticId: 4},
       `${device.type}: excludes filtered Gaussian rows from GPU picking fragments`
-    );
-    t.equal(notifications.length, 2, `${device.type}: publishes each changed source-row pick once`);
+    ).toEqual({batchIndex: 5, rowIndex: 100, batchRowIndex: 0, semanticId: 4});
+    expect(
+      notifications.length,
+      `${device.type}: publishes each changed source-row pick once`
+    ).toBe(2);
 
     const sourcePositionBuffer = firstBatch.positions.data[0].buffer;
     picker.destroy();
-    t.notOk(
-      sourcePositionBuffer.destroyed,
+    expect(
+      Boolean(sourcePositionBuffer.destroyed),
       `${device.type}: destroying picking resources preserves independently owned source buffers`
-    );
+    ).toBe(false);
     renderer.destroy();
     firstBatch.destroy();
     secondBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 function makeBrowserPickingSplatSource({

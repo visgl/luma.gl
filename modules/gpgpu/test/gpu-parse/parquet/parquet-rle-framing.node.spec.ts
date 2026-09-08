@@ -7,37 +7,32 @@ import {
   parseParquetDictionaryIndicesPlan,
   parseParquetLengthPrefixedRleBitPackedRunPlan
 } from '@luma.gl/gpgpu/gpu-parse';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('parseParquetDictionaryIndicesPlan consumes and rebases the bit-width prefix', testCase => {
+it('parseParquetDictionaryIndicesPlan consumes and rebases the bit-width prefix', () => {
   const plan = parseParquetDictionaryIndicesPlan(Uint8Array.from([2, 6, 2]), 3);
-  testCase.equal(plan.bitWidth, 2);
-  testCase.equal(plan.bytesConsumed, 3);
-  testCase.deepEqual(Array.from(plan.runPlan.runDescriptors), [0, 3, 2, 0]);
-  testCase.end();
+  expect(plan.bitWidth).toBe(2);
+  expect(plan.bytesConsumed).toBe(3);
+  expect(Array.from(plan.runPlan.runDescriptors)).toEqual([0, 3, 2, 0]);
 });
 
-test('parseParquetLengthPrefixedRleBitPackedRunPlan consumes Data Page V1 framing', testCase => {
+it('parseParquetLengthPrefixedRleBitPackedRunPlan consumes Data Page V1 framing', () => {
   const plan = parseParquetLengthPrefixedRleBitPackedRunPlan(
     Uint8Array.from([2, 0, 0, 0, 6, 1]),
     1,
     3
   );
-  testCase.equal(plan.bytesConsumed, 6);
-  testCase.deepEqual(Array.from(plan.runDescriptors), [0, 3, 5, 0]);
-  testCase.throws(
-    () => parseParquetLengthPrefixedRleBitPackedRunPlan(Uint8Array.from([3, 0, 0, 0, 6, 1]), 1, 3),
-    /payload is truncated/
-  );
-  testCase.end();
+  expect(plan.bytesConsumed).toBe(6);
+  expect(Array.from(plan.runDescriptors)).toEqual([0, 3, 5, 0]);
+  expect(() =>
+    parseParquetLengthPrefixedRleBitPackedRunPlan(Uint8Array.from([3, 0, 0, 0, 6, 1]), 1, 3)
+  ).toThrow(/payload is truncated/);
 });
 
-test('parseParquetBitPackedRunPlan validates legacy MSB-first payloads', testCase => {
+it('parseParquetBitPackedRunPlan validates legacy MSB-first payloads', () => {
   const plan = parseParquetBitPackedRunPlan(Uint8Array.from([0x05, 0x39, 0x77]), 3, 8);
-  testCase.deepEqual(plan, {bitWidth: 3, valueCount: 8, bytesConsumed: 3});
-  testCase.throws(
-    () => parseParquetBitPackedRunPlan(Uint8Array.from([0x05, 0x39]), 3, 8),
+  expect(plan).toEqual({bitWidth: 3, valueCount: 8, bytesConsumed: 3});
+  expect(() => parseParquetBitPackedRunPlan(Uint8Array.from([0x05, 0x39]), 3, 8)).toThrow(
     /payload is truncated/
   );
-  testCase.end();
 });

@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TypedArrayConstructor} from '@math.gl/types';
+import {expect, it} from 'vitest';
 import {
   ConeGeometry,
   CubeGeometry,
@@ -12,7 +13,6 @@ import {
   SphereGeometry,
   TruncatedConeGeometry
 } from '@luma.gl/engine';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
 
 const GEOMETRY_TESTS = [
   {name: 'ConeGeometry', Geometry: ConeGeometry, props: [{height: 2}, {verticalAxis: 'z'}]},
@@ -53,38 +53,39 @@ function checkAttribute(attribute, type: TypedArrayConstructor[] = [Float32Array
   );
 }
 
-export function registerGeometriesTests(test: TapeTestFunction): void {
-  test('Object#Geometries', t => {
+export function registerGeometriesTests(): void {
+  it('Object#Geometries', () => {
     for (const geometryTest of GEOMETRY_TESTS) {
       const {name, Geometry} = geometryTest;
       const testProps = [undefined].concat(geometryTest.props || []);
 
       for (const props of testProps) {
         if (props?._shouldThrow) {
-          t.throws(() => new Geometry(props), `${name}: should throw`);
+          expect(() => new Geometry(props), `${name}: should throw`).toThrow();
           continue; // eslint-disable-line no-continue
         }
 
         const geometry = new Geometry(props);
 
-        t.is(typeof geometry.topology, 'string', `${name}: .topology is a string`);
-        t.is(typeof geometry.vertexCount, 'number', `${name}: .vertexCount is a number`);
-        t.ok(geometry.vertexCount > 0, `${name}: .vertexCount is positive`);
+        expect(typeof geometry.topology, `${name}: .topology is a string`).toBe('string');
+        expect(typeof geometry.vertexCount, `${name}: .vertexCount is a number`).toBe('number');
+        expect(geometry.vertexCount > 0, `${name}: .vertexCount is positive`).toBe(true);
 
         const attributes = geometry.attributes;
 
-        t.ok(checkAttribute(attributes.POSITION), `${name}: POSITION is Float32Array`);
-        t.ok(checkAttribute(attributes.NORMAL), `${name}: NORMAL is Float32Array`);
-        t.ok(checkAttribute(attributes.TEXCOORD_0), `${name}: TEXCOORD_0 is Float32Array`);
-        t.ok(geometry.bufferLayout.length > 0, `${name}: bufferLayout is populated`);
+        expect(checkAttribute(attributes.POSITION), `${name}: POSITION is Float32Array`).toBe(true);
+        expect(checkAttribute(attributes.NORMAL), `${name}: NORMAL is Float32Array`).toBe(true);
+        expect(checkAttribute(attributes.TEXCOORD_0), `${name}: TEXCOORD_0 is Float32Array`).toBe(
+          true
+        );
+        expect(geometry.bufferLayout.length > 0, `${name}: bufferLayout is populated`).toBe(true);
         if (geometry.indices) {
-          t.ok(
+          expect(
             checkAttribute(geometry.indices, [Uint16Array, Uint32Array]),
             `${name}: indices is Uint{16/32}Array`
-          );
+          ).toBe(true);
         }
       }
     }
-    t.end();
   });
 }

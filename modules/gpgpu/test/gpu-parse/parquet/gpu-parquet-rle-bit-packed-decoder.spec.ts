@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,13 +10,10 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', async testCase => {
+it('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const encoded = Uint8Array.from([6, 5, 3, 0x88, 0xc6, 0xfa, 0, 0]);
@@ -57,15 +55,13 @@ test('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', asyn
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint32Array(result.buffer, result.byteOffset, 8)),
-      [5, 5, 5, 0, 1, 2, 3, 4]
-    );
+    expect(Array.from(new Uint32Array(result.buffer, result.byteOffset, 8))).toEqual([
+      5, 5, 5, 0, 1, 2, 3, 4
+    ]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     descriptorBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

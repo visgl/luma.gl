@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,29 +10,25 @@ import {
   parseLZ4RawDecompressionPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 
 const COMPRESSED = Uint8Array.from([0x14, 65, 1, 0, 0x50, 66, 67, 68, 69, 70]);
 
-test('parseLZ4RawDecompressionPlan describes literals and overlapping matches', testCase => {
+it('parseLZ4RawDecompressionPlan describes literals and overlapping matches', () => {
   const plan = parseLZ4RawDecompressionPlan(COMPRESSED);
-  testCase.deepEqual(Array.from(plan.descriptors), [0, 1, 1, 0, 1, 8, 0, 1, 9, 5, 5, 0]);
-  testCase.equal(plan.descriptorCount, 3);
-  testCase.equal(plan.compressedByteLength, 10);
-  testCase.equal(plan.outputByteLength, 14);
-  testCase.throws(
-    () => parseLZ4RawDecompressionPlan(Uint8Array.from([0x10, 65, 0, 0])),
+  expect(Array.from(plan.descriptors)).toEqual([0, 1, 1, 0, 1, 8, 0, 1, 9, 5, 5, 0]);
+  expect(plan.descriptorCount).toBe(3);
+  expect(plan.compressedByteLength).toBe(10);
+  expect(plan.outputByteLength).toBe(14);
+  expect(() => parseLZ4RawDecompressionPlan(Uint8Array.from([0x10, 65, 0, 0]))).toThrow(
     /match offset.*outside/
   );
-  testCase.throws(
-    () => parseLZ4RawDecompressionPlan(Uint8Array.from([0xf0, 255])),
+  expect(() => parseLZ4RawDecompressionPlan(Uint8Array.from([0xf0, 255]))).toThrow(
     /extended length is truncated/
   );
-  testCase.end();
 });
 
-test('GPULZ4RawDecompressor emits recursive literal resolution WGSL', testCase => {
+it('GPULZ4RawDecompressor emits recursive literal resolution WGSL', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({id: 'input', byteLength: 12, usage: Buffer.STORAGE});
   const descriptorHandle = graph.importBuffer({
@@ -49,14 +46,10 @@ test('GPULZ4RawDecompressor emits recursive literal resolution WGSL', testCase =
     descriptorCount: 3
   });
   const source = getGPULZ4RawShaderSource(decompressor, {x: 1, y: 1, z: 1});
-  testCase.deepEqual(
-    new WgslReflect(source).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /relativeByteIndex % matchOffset/);
-  testCase.match(source, /depth < DESCRIPTOR_COUNT/);
-  testCase.doesNotThrow(() => decompressor.addToGraph(graph));
-  testCase.end();
+  expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/relativeByteIndex % matchOffset/);
+  expect(source).toMatch(/depth < DESCRIPTOR_COUNT/);
+  expect(() => decompressor.addToGraph(graph)).not.toThrow();
 });
 
 function makeSupportDevice(): Device {

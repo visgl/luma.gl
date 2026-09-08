@@ -8,10 +8,10 @@ import {
   getGPUParquetPlainBooleanShaderSource
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 
-test('GPUParquetPlainBooleanDecoder emits LSB-first boolean unpacking WGSL', testCase => {
+it('GPUParquetPlainBooleanDecoder emits LSB-first boolean unpacking WGSL', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({id: 'input', byteLength: 8, usage: Buffer.STORAGE});
   const outputHandle = graph.importBuffer({id: 'output', byteLength: 160, usage: Buffer.STORAGE});
@@ -21,14 +21,10 @@ test('GPUParquetPlainBooleanDecoder emits LSB-first boolean unpacking WGSL', tes
     valueCount: 40
   });
   const source = getGPUParquetPlainBooleanShaderSource(decoder, {x: 1, y: 1, z: 1});
-  testCase.deepEqual(
-    new WgslReflect(source).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /valueIndex \/ 32u/);
-  testCase.match(source, /valueIndex & 31u/);
-  testCase.doesNotThrow(() => decoder.addToGraph(graph));
-  testCase.end();
+  expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/valueIndex \/ 32u/);
+  expect(source).toMatch(/valueIndex & 31u/);
+  expect(() => decoder.addToGraph(graph)).not.toThrow();
 });
 
 function makeSupportDevice(): Device {

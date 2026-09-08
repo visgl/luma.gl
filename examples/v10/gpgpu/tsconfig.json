@@ -32,8 +32,6 @@
       "@luma.gl/webgl/*": ["../../../modules/webgl/src/*"],
       "@luma.gl/webgpu": ["../../../modules/webgpu/src/index.ts"],
       "@luma.gl/webgpu/*": ["../../../modules/webgpu/src/*"],
-      "@math.gl/geoarrow": ["../../../modules/math-geoarrow/src/index.ts"],
-      "@math.gl/geoarrow/*": ["../../../modules/math-geoarrow/src/*"]
     }
   },
   "include": ["."]

@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,18 +10,15 @@ import {
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const ENCODED = Uint8Array.from([
   128, 1, 4, 4, 0, 5, 3, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 1, 4, 4, 6, 3, 3, 0, 0,
   0, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 97, 116, 114, 116, 111, 111, 110, 100, 111, 103
 ]);
 
-test('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', async testCase => {
+it('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const plan = parseParquetDeltaByteArrayPlan(ENCODED);
@@ -89,10 +87,10 @@ test('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', as
     const decodedSuffixLengths = await suffixLengthsBuffer.readAsync();
     const decodedValueOffsets = await valueOffsetsBuffer.readAsync();
     const decodedOutput = await outputBuffer.readAsync();
-    testCase.deepEqual(readUint32(decodedPrefixLengths, 4), [0, 2, 3, 0]);
-    testCase.deepEqual(readUint32(decodedSuffixLengths, 4), [3, 1, 4, 3]);
-    testCase.deepEqual(readUint32(decodedValueOffsets, 4), [0, 3, 6, 13]);
-    testCase.equal(new TextDecoder().decode(decodedOutput), 'catcarcartoondog');
+    expect(readUint32(decodedPrefixLengths, 4)).toEqual([0, 2, 3, 0]);
+    expect(readUint32(decodedSuffixLengths, 4)).toEqual([3, 1, 4, 3]);
+    expect(readUint32(decodedValueOffsets, 4)).toEqual([0, 3, 6, 13]);
+    expect(new TextDecoder().decode(decodedOutput)).toBe('catcarcartoondog');
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
@@ -103,7 +101,6 @@ test('GPUParquetDeltaByteArrayDecoder reconstructs prefix-compressed values', as
     valueOffsetsBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });
 
 function importView(graph: GPUCommandGraph, buffer: Buffer, id: string, length: number) {

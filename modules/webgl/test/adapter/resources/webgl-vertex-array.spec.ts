@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {VertexArray} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
+import {expect, it} from 'vitest';
 
 function createVertexArray(device): WEBGLVertexArray {
   return device.createVertexArray({
@@ -16,24 +16,23 @@ function createVertexArray(device): WEBGLVertexArray {
   }) as WEBGLVertexArray;
 }
 
-test('VertexArray#construct/delete', async t => {
+it('VertexArray#construct/delete', async () => {
   const device = await getWebGLTestDevice();
 
   const vertexArray = device.createVertexArray({
     shaderLayout: {attributes: [], bindings: []},
     bufferLayout: []
   });
-  t.ok(vertexArray instanceof VertexArray, 'VertexArray construction successful');
+  expect(vertexArray instanceof VertexArray, 'VertexArray construction successful').toBe(true);
 
   vertexArray.destroy();
-  t.ok(vertexArray instanceof VertexArray, 'VertexArray delete successful');
+  expect(vertexArray instanceof VertexArray, 'VertexArray delete successful').toBe(true);
 
   vertexArray.destroy();
-  t.ok(vertexArray instanceof VertexArray, 'VertexArray repeated destroy successful');
-  t.end();
+  expect(vertexArray instanceof VertexArray, 'VertexArray repeated destroy successful').toBe(true);
 });
 
-test('WEBGLVertexArray#divisors', async t => {
+it('WEBGLVertexArray#divisors', async () => {
   const device = await getWebGLTestDevice();
 
   const vertexArray = createVertexArray(device);
@@ -45,28 +44,26 @@ test('WEBGLVertexArray#divisors', async t => {
     const divisor = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_DIVISOR);
     device.gl.bindVertexArray(null);
 
-    t.equal(divisor, 0, `vertex attribute ${i} should have 0 divisor`);
+    expect(divisor, `vertex attribute ${i} should have 0 divisor`).toBe(0);
   }
 
   vertexArray.destroy();
-
-  t.end();
 });
 
-test('WEBGLVertexArray#enable', async t => {
+it('WEBGLVertexArray#enable', async () => {
   const device = await getWebGLTestDevice();
 
   const vertexArray = createVertexArray(device);
 
   const maxVertexAttributes = device.limits.maxVertexAttributes;
-  t.ok(maxVertexAttributes >= 8, 'maxVertexAttributes >= 8');
+  expect(maxVertexAttributes >= 8, 'maxVertexAttributes >= 8').toBe(true);
 
   for (let i = 1; i < maxVertexAttributes; i++) {
     device.gl.bindVertexArray(vertexArray.handle);
     const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
     device.gl.bindVertexArray(null);
 
-    t.equal(enabled, false, `vertex attribute ${i} should initially be disabled`);
+    expect(enabled, `vertex attribute ${i} should initially be disabled`).toBe(false);
   }
 
   for (let i = 0; i < maxVertexAttributes; i++) {
@@ -79,7 +76,7 @@ test('WEBGLVertexArray#enable', async t => {
     const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
     device.gl.bindVertexArray(null);
 
-    t.equal(enabled, true, `vertex attribute ${i} should now be enabled`);
+    expect(enabled, `vertex attribute ${i} should now be enabled`).toBe(true);
   }
 
   for (let i = 1; i < maxVertexAttributes; i++) {
@@ -95,36 +92,36 @@ test('WEBGLVertexArray#enable', async t => {
     const enabled = device.gl.getVertexAttrib(i, GL.VERTEX_ATTRIB_ARRAY_ENABLED);
     device.gl.bindVertexArray(null);
 
-    t.equal(enabled, false, `vertex attribute ${i} should now be disabled`);
+    expect(enabled, `vertex attribute ${i} should now be disabled`).toBe(false);
   }
 
   vertexArray.destroy();
-
-  t.end();
 });
 
-test('WEBGLVertexArray#getConstantBuffer', async t => {
+it('WEBGLVertexArray#getConstantBuffer', async () => {
   const device = await getWebGLTestDevice();
 
   const vertexArray = createVertexArray(device);
 
   const buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as WEBGLBuffer;
 
-  t.equal(buffer.byteLength, 1200, 'byteLength should match');
-  t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
+  expect(buffer.byteLength, 'byteLength should match').toBe(1200);
+  expect(buffer.bytesUsed, 'bytesUsed should match').toBe(1200);
 
   const reusedBuffer = vertexArray.getConstantBuffer(
     100,
     new Float32Array([5, 3, 2])
   ) as WEBGLBuffer;
-  t.equal(reusedBuffer, buffer, 'buffer should be reused when element count is unchanged');
-  t.equal(reusedBuffer.byteLength, 1200, 'byteLength should be unchanged');
-  t.equal(reusedBuffer.bytesUsed, 1200, 'bytesUsed should reflect the fixed backing allocation');
+  expect(reusedBuffer, 'buffer should be reused when element count is unchanged').toBe(buffer);
+  expect(reusedBuffer.byteLength, 'byteLength should be unchanged').toBe(1200);
+  expect(reusedBuffer.bytesUsed, 'bytesUsed should reflect the fixed backing allocation').toBe(
+    1200
+  );
 
-  t.throws(
+  expect(
     () => vertexArray.getConstantBuffer(5, new Float32Array([5, 3, 2])),
     'changing element count should throw because the backing buffer size is immutable'
-  );
+  ).toThrow();
 
   vertexArray.destroy();
 
@@ -141,6 +138,4 @@ test('WEBGLVertexArray#getConstantBuffer', async t => {
   //   );
   //   t.comment(JSON.stringify(data));
   // }
-
-  t.end();
 });

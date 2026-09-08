@@ -1,18 +1,16 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one encoder', async t => {
+it('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one encoder', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -31,15 +29,14 @@ test('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one enco
 
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-fft2d-roundtrip'});
-    t.equal(
+    expect(
       transform.encode(commandEncoder, {
         inputBuffer,
         outputBuffer: forwardBuffer,
         direction: 'forward'
       }),
-      forwardBuffer,
       'forward encode returns the caller-owned output'
-    );
+    ).toBe(forwardBuffer);
     transform.encode(commandEncoder, {
       inputBuffer: forwardBuffer,
       outputBuffer: inverseBuffer,
@@ -49,13 +46,11 @@ test('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one enco
 
     const forwardValues = await readFloat32(forwardBuffer, inputValues.length);
     const inverseValues = await readFloat32(inverseBuffer, inputValues.length);
-    assertClose(t, forwardValues, expectedForward, 0.0005, 'forward transform');
-    assertClose(t, inverseValues, Array.from(inputValues), 0.0005, 'inverse round trip');
-    t.equal(transform.stats.passCount, 7, 'rectangular transform reports every dispatch');
-    t.equal(
-      transform.stats.scratchBufferByteLength,
-      inputValues.byteLength,
-      'one complex field of scratch is owned'
+    assertClose(forwardValues, expectedForward, 0.0005, 'forward transform');
+    assertClose(inverseValues, Array.from(inputValues), 0.0005, 'inverse round trip');
+    expect(transform.stats.passCount, 'rectangular transform reports every dispatch').toBe(7);
+    expect(transform.stats.scratchBufferByteLength, 'one complex field of scratch is owned').toBe(
+      inputValues.byteLength
     );
   } finally {
     transform.destroy();
@@ -64,14 +59,11 @@ test('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one enco
     forwardBuffer.destroy();
     inverseBuffer.destroy();
   }
-  t.end();
 });
 
-test('GPUFFT2D transforms packed RGB fields in one batched dispatch sequence', async testCase => {
+it('GPUFFT2D transforms packed RGB fields in one batched dispatch sequence', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -99,31 +91,18 @@ test('GPUFFT2D transforms packed RGB fields in one batched dispatch sequence', a
     transform.encode(commandEncoder, {inputBuffer, outputBuffer});
     device.submit(commandEncoder.finish());
     const actualValues = await readFloat32(outputBuffer, inputValues.length);
-    assertClose(
-      testCase,
-      actualValues,
-      expectedValues,
-      0.002,
-      'independent batched RGB transforms'
-    );
-    testCase.equal(
-      transform.stats.dispatchCountPerEncode,
-      6,
-      'batching preserves one FFT schedule'
-    );
+    assertClose(actualValues, expectedValues, 0.002, 'independent batched RGB transforms');
+    expect(transform.stats.dispatchCountPerEncode, 'batching preserves one FFT schedule').toBe(6);
   } finally {
     transform.destroy();
     inputBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });
 
-test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
+it('GPUFFT2D rejects aliased and incompatible caller buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -144,52 +123,47 @@ test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
   });
 
   try {
-    t.throws(
+    expect(
       () =>
         transform.encode(device.commandEncoder, {
           inputBuffer: validBuffer,
           outputBuffer: validBuffer
         }),
-      /must be separate/,
       'in-place aliasing is rejected'
-    );
-    t.throws(
+    ).toThrow(/must be separate/);
+    expect(
       () =>
         transform.encode(device.commandEncoder, {
           inputBuffer: validBuffer,
           outputBuffer: aliasBuffer
         }),
-      /must be separate/,
       'distinct Buffer wrappers cannot alias the same GPU allocation'
-    );
-    t.throws(
+    ).toThrow(/must be separate/);
+    expect(
       () =>
         transform.encode(device.commandEncoder, {
           inputBuffer: shortBuffer,
           outputBuffer: validBuffer
         }),
-      /at least 32 bytes/,
       'short complex fields are rejected'
-    );
-    t.throws(
+    ).toThrow(/at least 32 bytes/);
+    expect(
       () =>
         transform.encode(device.commandEncoder, {
           inputBuffer: copyOnlyBuffer,
           outputBuffer: validBuffer
         }),
-      /Buffer.STORAGE/,
       'buffers without storage usage are rejected'
-    );
+    ).toThrow(/Buffer.STORAGE/);
     transform.destroy();
-    t.throws(
+    expect(
       () =>
         transform.encode(device.commandEncoder, {
           inputBuffer: validBuffer,
           outputBuffer: shortBuffer
         }),
-      /destroyed/,
       'destroyed transforms reject new work'
-    );
+    ).toThrow(/destroyed/);
   } finally {
     transform.destroy();
     aliasBuffer.destroy();
@@ -197,14 +171,11 @@ test('GPUFFT2D rejects aliased and incompatible caller buffers', async t => {
     shortBuffer.destroy();
     copyOnlyBuffer.destroy();
   }
-  t.end();
 });
 
-test('GPUFFT2D construction unwinds partial GPU allocations', async t => {
+it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -232,28 +203,27 @@ test('GPUFFT2D construction unwinds partial GPU allocations', async t => {
   };
 
   try {
-    t.throws(
+    expect(
       () => new GPUFFT2D(device, {id, width: 4, height: 4}),
-      /injected GPUFFT2D allocation failure/,
       'the original allocation error is preserved'
-    );
+    ).toThrow(/injected GPUFFT2D allocation failure/);
   } finally {
     device.createBuffer = originalCreateBuffer;
     Computation.prototype.destroy = originalComputationDestroy;
   }
 
-  t.equal(allocatedBuffers.length, 4, 'scratch and completed parameter allocations were observed');
-  t.ok(
-    allocatedBuffers.every(buffer => buffer.destroyed),
+  expect(allocatedBuffers.length, 'scratch and completed parameter allocations were observed').toBe(
+    4
+  );
+  expect(
+    Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'every buffer allocated before the failure is destroyed'
-  );
-  t.equal(computationDestroyCount, 1, 'the partially initialized computation is destroyed');
-  t.equal(
+  ).toBe(true);
+  expect(computationDestroyCount, 'the partially initialized computation is destroyed').toBe(1);
+  expect(
     getResourceCount(device, 'Buffers'),
-    activeBufferCount,
     'active buffer accounting returns to its baseline'
-  );
-  t.end();
+  ).toBe(activeBufferCount);
 });
 
 function makeOutputBuffer(device: Device, id: string, byteLength: number): Buffer {
@@ -321,16 +291,13 @@ function makeCPUDFT2D(
   return output;
 }
 
-function assertClose(
-  t: {ok(value: unknown, message?: string): void},
-  actual: number[],
-  expected: number[],
-  tolerance: number,
-  label: string
-): void {
+function assertClose(actual: number[], expected: number[], tolerance: number, label: string): void {
   let maximumError = 0;
   for (let valueIndex = 0; valueIndex < expected.length; valueIndex++) {
     maximumError = Math.max(maximumError, Math.abs(actual[valueIndex] - expected[valueIndex]));
   }
-  t.ok(maximumError <= tolerance, `${label} maximum error ${maximumError} is within ${tolerance}`);
+  expect(
+    Boolean(maximumError <= tolerance),
+    `${label} maximum error ${maximumError} is within ${tolerance}`
+  ).toBe(true);
 }

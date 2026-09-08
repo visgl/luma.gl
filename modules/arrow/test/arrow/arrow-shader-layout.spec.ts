@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ArrowColumnInfo} from '@luma.gl/arrow';
 import {getArrowBufferLayout, getArrowVertexFormat, makeArrowMatrix3x3Vector} from '@luma.gl/arrow';
 import type {AttributeShaderType, ShaderLayout, VertexFormat} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
 
-test('getArrowVertexFormat maps Arrow columns to f32 shader attributes', t => {
+it('getArrowVertexFormat maps Arrow columns to f32 shader attributes', () => {
   const testCases: {
     signedDataType: ArrowColumnInfo['signedDataType'];
     components: 1 | 2 | 3 | 4;
@@ -29,140 +29,116 @@ test('getArrowVertexFormat maps Arrow columns to f32 shader attributes', t => {
   ];
 
   for (const testCase of testCases) {
-    t.equal(
+    expect(
       getArrowVertexFormat(
         makeColumnInfo(testCase.signedDataType, testCase.components),
         testCase.shaderType
       ),
-      testCase.result,
       `${testCase.signedDataType}x${testCase.components} maps to ${testCase.result}`
-    );
+    ).toBe(testCase.result);
   }
 
-  t.end();
+  void 0;
 });
 
-test('getArrowVertexFormat maps Arrow columns to integer shader attributes', t => {
-  t.equal(
-    getArrowVertexFormat(makeColumnInfo('sint8', 1), 'i32'),
-    'sint8',
-    'sint8 scalar maps to i32'
+it('getArrowVertexFormat maps Arrow columns to integer shader attributes', () => {
+  expect(getArrowVertexFormat(makeColumnInfo('sint8', 1), 'i32'), 'sint8 scalar maps to i32').toBe(
+    'sint8'
   );
-  t.equal(
+  expect(
     getArrowVertexFormat(makeColumnInfo('sint16', 2), 'vec2<i32>'),
-    'sint16x2',
     'sint16x2 maps to vec2<i32>'
-  );
-  t.equal(
+  ).toBe('sint16x2');
+  expect(
     getArrowVertexFormat(makeColumnInfo('sint32', 3), 'vec3<i32>'),
-    'sint32x3',
     'sint32x3 maps to vec3<i32>'
+  ).toBe('sint32x3');
+  expect(getArrowVertexFormat(makeColumnInfo('uint8', 1), 'u32'), 'uint8 scalar maps to u32').toBe(
+    'uint8'
   );
-  t.equal(
-    getArrowVertexFormat(makeColumnInfo('uint8', 1), 'u32'),
-    'uint8',
-    'uint8 scalar maps to u32'
-  );
-  t.equal(
+  expect(
     getArrowVertexFormat(makeColumnInfo('uint16', 2), 'vec2<u32>'),
-    'uint16x2',
     'uint16x2 maps to vec2<u32>'
-  );
-  t.equal(
+  ).toBe('uint16x2');
+  expect(
     getArrowVertexFormat(makeColumnInfo('uint32', 4), 'vec4<u32>'),
-    'uint32x4',
     'uint32x4 maps to vec4<u32>'
-  );
-  t.equal(
+  ).toBe('uint32x4');
+  expect(
     getArrowVertexFormat(makeColumnInfo('sint8', 3), 'vec3<i32>', {allowWebGLOnlyFormats: true}),
-    'sint8x3-webgl',
     'allowWebGLOnlyFormats enables sint8x3-webgl'
-  );
+  ).toBe('sint8x3-webgl');
 
-  t.end();
+  void 0;
 });
 
-test('getArrowVertexFormat maps Arrow columns to f16 shader attributes', t => {
-  t.equal(
+it('getArrowVertexFormat maps Arrow columns to f16 shader attributes', () => {
+  expect(
     getArrowVertexFormat(makeColumnInfo('float16', 1), 'f16'),
-    'float16',
     'float16 scalar maps to f16'
-  );
-  t.equal(
+  ).toBe('float16');
+  expect(
     getArrowVertexFormat(makeColumnInfo('float16', 2), 'vec2<f16>'),
-    'float16x2',
     'float16x2 maps to vec2<f16>'
-  );
-  t.equal(
+  ).toBe('float16x2');
+  expect(
     getArrowVertexFormat(makeColumnInfo('float16', 4), 'vec4<f16>'),
-    'float16x4',
     'float16x4 maps to vec4<f16>'
-  );
-  t.equal(
+  ).toBe('float16x4');
+  expect(
     getArrowVertexFormat(makeColumnInfo('uint8', 4), 'vec4<f16>'),
-    'unorm8x4',
     'uint8x4 maps to normalized vec4<f16>'
-  );
-  t.equal(
+  ).toBe('unorm8x4');
+  expect(
     getArrowVertexFormat(makeColumnInfo('sint16', 2), 'vec2<f16>'),
-    'snorm16x2',
     'sint16x2 maps to normalized vec2<f16>'
-  );
+  ).toBe('snorm16x2');
 
-  t.end();
+  void 0;
 });
 
-test('getArrowVertexFormat rejects incompatible shader attribute mappings', t => {
-  t.throws(
+it('getArrowVertexFormat rejects incompatible shader attribute mappings', () => {
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('uint32', 4), 'vec4<f32>'),
-    /no normalized 32-bit integer vertex format/,
     'uint32 columns cannot be normalized for f32 shader attributes'
-  );
-  t.throws(
+  ).toThrow(/no normalized 32-bit integer vertex format/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('float32', 2), 'vec2<i32>'),
-    /cannot be used/,
     'float columns cannot map to integer shader attributes'
-  );
-  t.throws(
+  ).toThrow(/cannot be used/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('uint16', 2), 'vec2<i32>'),
-    /signedness does not match/,
     'unsigned columns cannot map to signed shader attributes'
-  );
-  t.throws(
+  ).toThrow(/signedness does not match/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('sint16', 2), 'vec2<u32>'),
-    /signedness does not match/,
     'signed columns cannot map to unsigned shader attributes'
-  );
-  t.throws(
+  ).toThrow(/signedness does not match/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('float16', 3), 'vec3<f32>'),
-    /portable WebGPU layouts/,
     'float16x3 is rejected for portable layouts'
-  );
-  t.throws(
+  ).toThrow(/portable WebGPU layouts/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('uint8', 3), 'vec3<u32>'),
-    /portable WebGPU layouts/,
     'uint8x3 is rejected for portable layouts'
-  );
-  t.throws(
+  ).toThrow(/portable WebGPU layouts/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('uint8', 3), 'vec3<f32>'),
-    /portable WebGPU layouts/,
     'normalized uint8x3 is rejected for portable layouts'
-  );
-  t.throws(
+  ).toThrow(/portable WebGPU layouts/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('float32', 4), 'vec4<f16>'),
-    /cannot be used/,
     'float32 columns cannot map to f16 shader attributes'
-  );
-  t.throws(
+  ).toThrow(/cannot be used/);
+  expect(
     () => getArrowVertexFormat(makeColumnInfo('uint8', 4), 'vec3<u32>'),
-    /expects 3/,
     'component mismatches are rejected'
-  );
+  ).toThrow(/expects 3/);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowBufferLayout builds layouts from Arrow table columns', t => {
+it('getArrowBufferLayout builds layouts from Arrow table columns', () => {
   const arrowTable = makeShaderAttributeArrowTable();
   const shaderLayout: ShaderLayout = {
     attributes: [
@@ -174,17 +150,16 @@ test('getArrowBufferLayout builds layouts from Arrow table columns', t => {
     bindings: []
   };
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(shaderLayout, {arrowTable}),
-    [
-      {name: 'positions', format: 'float32x3'},
-      {name: 'colors', format: 'unorm8x4'},
-      {name: 'pickingIds', format: 'uint32'}
-    ],
     'same-name Arrow columns map to buffer layouts and missing columns are skipped'
-  );
+  ).toEqual([
+    {name: 'positions', format: 'float32x3'},
+    {name: 'colors', format: 'unorm8x4'},
+    {name: 'pickingIds', format: 'uint32'}
+  ]);
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(
       {
         attributes: [{name: 'instanceColors', location: 0, type: 'vec4<f32>'}],
@@ -195,14 +170,13 @@ test('getArrowBufferLayout builds layouts from Arrow table columns', t => {
         arrowPaths: {instanceColors: 'colors'}
       }
     ),
-    [{name: 'instanceColors', format: 'unorm8x4'}],
     'explicit Arrow paths can feed differently named shader attributes'
-  );
+  ).toEqual([{name: 'instanceColors', format: 'unorm8x4'}]);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowBufferLayout expands one matrix Arrow column into interleaved vector attributes', t => {
+it('getArrowBufferLayout expands one matrix Arrow column into interleaved vector attributes', () => {
   const arrowTable = new arrow.Table({
     instanceModelMatrix: makeArrowMatrix3x3Vector(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]), {
       order: 'row-major'
@@ -217,7 +191,7 @@ test('getArrowBufferLayout expands one matrix Arrow column into interleaved vect
     bindings: []
   };
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(shaderLayout, {
       arrowTable,
       arrowPaths: {
@@ -226,25 +200,24 @@ test('getArrowBufferLayout expands one matrix Arrow column into interleaved vect
         instanceModelMatrixCol2: 'instanceModelMatrix'
       }
     }),
-    [
-      {
-        name: 'instanceModelMatrix',
-        byteStride: 48,
-        stepMode: 'instance',
-        attributes: [
-          {attribute: 'instanceModelMatrixCol0', format: 'float32x3', byteOffset: 0},
-          {attribute: 'instanceModelMatrixCol1', format: 'float32x3', byteOffset: 16},
-          {attribute: 'instanceModelMatrixCol2', format: 'float32x3', byteOffset: 32}
-        ]
-      }
-    ],
     'derives one padded interleaved buffer layout from matrix metadata'
-  );
+  ).toEqual([
+    {
+      name: 'instanceModelMatrix',
+      byteStride: 48,
+      stepMode: 'instance',
+      attributes: [
+        {attribute: 'instanceModelMatrixCol0', format: 'float32x3', byteOffset: 0},
+        {attribute: 'instanceModelMatrixCol1', format: 'float32x3', byteOffset: 16},
+        {attribute: 'instanceModelMatrixCol2', format: 'float32x3', byteOffset: 32}
+      ]
+    }
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowBufferLayout builds layouts from Arrow vectors', t => {
+it('getArrowBufferLayout builds layouts from Arrow vectors', () => {
   const arrowTable = makeShaderAttributeArrowTable();
   const colorsVector = arrowTable.getChild('colors')!;
   const directColorsVector = arrow.makeVector(
@@ -258,15 +231,14 @@ test('getArrowBufferLayout builds layouts from Arrow vectors', t => {
     bindings: []
   };
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(shaderLayout, {
       arrowVectors: {colors: colorsVector}
     }),
-    [{name: 'colors', format: 'unorm8x4'}],
     'matching vector keys map to shader attributes and missing vectors are skipped'
-  );
+  ).toEqual([{name: 'colors', format: 'unorm8x4'}]);
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(
       {
         attributes: [{name: 'instanceColors', location: 0, type: 'vec4<f32>'}],
@@ -276,22 +248,20 @@ test('getArrowBufferLayout builds layouts from Arrow vectors', t => {
         arrowVectors: {instanceColors: colorsVector}
       }
     ),
-    [{name: 'instanceColors', format: 'unorm8x4'}],
     'vector keys can rename an Arrow vector to a shader attribute'
-  );
+  ).toEqual([{name: 'instanceColors', format: 'unorm8x4'}]);
 
-  t.deepEqual(
+  expect(
     getArrowBufferLayout(shaderLayout, {
       arrowVectors: {colors: directColorsVector}
     }),
-    [{name: 'colors', format: 'unorm8x4'}],
     'direct FixedSizeList vectors expose their child values for layout analysis'
-  );
+  ).toEqual([{name: 'colors', format: 'unorm8x4'}]);
 
-  t.end();
+  void 0;
 });
 
-test('getArrowBufferLayout validates Arrow source options', t => {
+it('getArrowBufferLayout validates Arrow source options', () => {
   const arrowTable = makeShaderAttributeArrowTable();
   const colorsVector = arrowTable.getChild('colors')!;
   const shaderLayout: ShaderLayout = {
@@ -299,27 +269,23 @@ test('getArrowBufferLayout validates Arrow source options', t => {
     bindings: []
   };
 
-  t.throws(
-    () => getArrowBufferLayout(shaderLayout, {}),
-    /exactly one/,
-    'object API requires a source'
+  expect(() => getArrowBufferLayout(shaderLayout, {}), 'object API requires a source').toThrow(
+    /exactly one/
   );
-  t.throws(
+  expect(
     () => getArrowBufferLayout(shaderLayout, {arrowTable, arrowVectors: {colors: colorsVector}}),
-    /exactly one/,
     'object API rejects multiple sources'
-  );
-  t.throws(
+  ).toThrow(/exactly one/);
+  expect(
     () =>
       getArrowBufferLayout(shaderLayout, {
         arrowTable,
         arrowPaths: {colors: 'doesNotExist'}
       }),
-    /doesNotExist/,
     'explicit missing table paths throw'
-  );
+  ).toThrow(/doesNotExist/);
 
-  t.end();
+  void 0;
 });
 
 function makeColumnInfo(

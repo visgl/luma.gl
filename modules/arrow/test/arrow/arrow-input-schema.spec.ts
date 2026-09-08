@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeGPUVectorFromArrow, prepareArrowInput, type ArrowInputSchema} from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUInputVectors} from '@luma.gl/experimental/gpu-tables';
@@ -18,7 +18,7 @@ type PreparedInput = {
   rowIndices: GPUVector<'uint32'>;
 };
 
-test('ArrowInputSchema resolves, converts, generates internal vectors, and validates', async t => {
+it('ArrowInputSchema resolves, converts, generates internal vectors, and validates', async () => {
   const device = new NullDevice({});
   const sourcePositions = arrow.vectorFromArray([1, 2], new arrow.Float32());
   const sourceRowIndices = arrow.vectorFromArray([0, 1], new arrow.Uint32());
@@ -54,14 +54,14 @@ test('ArrowInputSchema resolves, converts, generates internal vectors, and valid
 
   const preparedInput = await prepareArrowInput(device, schema, {});
 
-  t.equal(preparedInput.positions.format, 'float32', 'keeps converted source vector format');
-  t.equal(preparedInput.rowIndices.format, 'uint32', 'keeps generated internal vector format');
+  expect(preparedInput.positions.format, 'keeps converted source vector format').toBe('float32');
+  expect(preparedInput.rowIndices.format, 'keeps generated internal vector format').toBe('uint32');
   preparedInput.positions.destroy();
   preparedInput.rowIndices.destroy();
-  t.end();
+  void 0;
 });
 
-test('ArrowInputSchema rejects converted vectors outside the GPU input contract', async t => {
+it('ArrowInputSchema rejects converted vectors outside the GPU input contract', async () => {
   const device = new NullDevice({});
   const sourcePositions = arrow.vectorFromArray([1, 2], new arrow.Float32());
   let preparedPositions: GPUVector<'float32'> | null = null;
@@ -84,13 +84,15 @@ test('ArrowInputSchema rejects converted vectors outside the GPU input contract'
 
   try {
     await prepareArrowInput(device, schema, {});
-    t.fail('invalid converted vector format should be rejected');
+    expect(false, 'invalid converted vector format should be rejected').toBe(true);
   } catch (error) {
-    t.ok(
-      /positions GPUVector\.format "float32" must be one of uint32/.test((error as Error).message),
+    expect(
+      Boolean(
+        /positions GPUVector\.format "float32" must be one of uint32/.test((error as Error).message)
+      ),
       'validates converter output against gpuInputSchema'
-    );
+    ).toBe(true);
   }
   preparedPositions?.destroy();
-  t.end();
+  void 0;
 });

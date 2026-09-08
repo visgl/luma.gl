@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Geometry, GeometryProps} from '@luma.gl/engine';
 import {TypedArray} from '@math.gl/types';
 
@@ -70,31 +70,25 @@ const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = 
   }
 ];
 
-test('Geometry#constructor', t => {
+it('Geometry#constructor', () => {
   for (const testCase of TEST_CASES) {
     if (testCase.shouldThrow) {
-      t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);
+      expect(() => new Geometry(testCase.props), `${testCase.title}: should throw`).toThrow();
     } else {
       const geometry = new Geometry(testCase.props);
 
-      t.is(geometry.topology, testCase.topology, `${testCase.title}: topology is correct`);
-      t.is(
-        geometry.getVertexCount(),
-        testCase.vertexCount,
-        `${testCase.title}: vertexCount is correct`
+      expect(geometry.topology, `${testCase.title}: topology is correct`).toBe(testCase.topology);
+      expect(geometry.getVertexCount(), `${testCase.title}: vertexCount is correct`).toBe(
+        testCase.vertexCount
       );
-      t.deepEqual(
-        geometry.bufferLayout,
-        testCase.bufferLayout,
-        `${testCase.title}: bufferLayout is correct`
+      expect(geometry.bufferLayout, `${testCase.title}: bufferLayout is correct`).toEqual(
+        testCase.bufferLayout
       );
     }
   }
-
-  t.end();
 });
 
-test('Geometry#constructor preserves source attribute and explicit layout names', t => {
+it('Geometry#constructor preserves source attribute and explicit layout names', () => {
   const geometry = new Geometry({
     topology: 'triangle-list',
     attributes: {
@@ -103,9 +97,9 @@ test('Geometry#constructor preserves source attribute and explicit layout names'
     bufferLayout: [{name: 'POSITION', format: 'float32x3'}]
   });
 
-  t.ok(geometry.attributes.POSITION, 'semantic attribute name is preserved');
-  t.notOk(geometry.attributes.positions, 'semantic attribute has no shader-name alias');
-  t.deepEqual(geometry.bufferLayout, [{name: 'POSITION', format: 'float32x3'}]);
+  expect(geometry.attributes.POSITION, 'semantic attribute name is preserved').toBeTruthy();
+  expect(geometry.attributes.positions, 'semantic attribute has no shader-name alias').toBeFalsy();
+  expect(geometry.bufferLayout).toEqual([{name: 'POSITION', format: 'float32x3'}]);
 
   const positions = {value: new Float32Array([1, 1, 1]), size: 3};
   const geometryWithShaderNameOverride = new Geometry({
@@ -116,13 +110,14 @@ test('Geometry#constructor preserves source attribute and explicit layout names'
     }
   });
 
-  t.notOk(
+  expect(
     geometryWithShaderNameOverride.attributes.POSITION,
     'shader-name override replaces semantic'
+  ).toBeFalsy();
+  expect(geometryWithShaderNameOverride.attributes.positions, 'shader-name override wins').toBe(
+    positions
   );
-  t.is(geometryWithShaderNameOverride.attributes.positions, positions, 'shader-name override wins');
-  t.deepEqual(geometryWithShaderNameOverride.bufferLayout, [
+  expect(geometryWithShaderNameOverride.bufferLayout).toEqual([
     {name: 'positions', format: 'float32x3'}
   ]);
-  t.end();
 });

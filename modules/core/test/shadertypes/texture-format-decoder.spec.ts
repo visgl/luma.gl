@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   textureFormatDecoder,
   type TextureFormat,
@@ -23,20 +23,19 @@ const TEST_CASES: {format: TextureFormat, result: any}[] = [
   {format: 'r16float', result: {attachment: 'color', dataType: 'float16', components: 1, channels: 'r', integer: false, signed: false, normalized: false, bitsPerChannel: [16, 0, 0, 0], bytesPerPixel: 2, packed: false, srgb: false }}
 ];
 
-test('shadertype#textureFormatDecoder.getInfo', t => {
+it('shadertype#textureFormatDecoder.getInfo', () => {
   for (const tc of TEST_CASES) {
     const decoded = textureFormatDecoder.getInfo(tc.format);
 
-    t.deepEqual(
+    expect(
       decoded,
-      {format: tc.format, ...tc.result},
       `textureFormatDecoder.getInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
-    );
+    ).toEqual({format: tc.format, ...tc.result});
   }
-  t.end();
+  void 0;
 });
 
-test('shadertype#textureFormatDecoder.getInfo packed WebGL formats', t => {
+it('shadertype#textureFormatDecoder.getInfo packed WebGL formats', () => {
   const testCases = [
     {format: 'rgba4unorm-webgl' as const, channels: 'rgba', bitsPerChannel: [4, 4, 4, 4] as const},
     {format: 'rgb565unorm-webgl' as const, channels: 'rgb', bitsPerChannel: [5, 6, 5, 0] as const},
@@ -45,17 +44,15 @@ test('shadertype#textureFormatDecoder.getInfo packed WebGL formats', t => {
 
   for (const tc of testCases) {
     const decoded = textureFormatDecoder.getInfo(tc.format);
-    t.equal(decoded.packed, true, `${tc.format} remains packed`);
-    t.equal(decoded.webgl, true, `${tc.format} remains webgl-specific`);
-    t.equal(decoded.channels, tc.channels, `${tc.format} keeps channels`);
-    t.deepEqual(
-      decoded.bitsPerChannel,
-      tc.bitsPerChannel,
-      `${tc.format} keeps packed channel bit sizes`
+    expect(decoded.packed, `${tc.format} remains packed`).toBe(true);
+    expect(decoded.webgl, `${tc.format} remains webgl-specific`).toBe(true);
+    expect(decoded.channels, `${tc.format} keeps channels`).toBe(tc.channels);
+    expect(decoded.bitsPerChannel, `${tc.format} keeps packed channel bit sizes`).toEqual(
+      tc.bitsPerChannel
     );
   }
 
-  t.end();
+  void 0;
 });
 
 // biome-ignore format: preserve layout
@@ -67,17 +64,16 @@ const TEST_CASES_CAPABILITIES: {format: TextureFormat, result: Omit<TextureForma
   {format: 'r16uint', result: {create: true, render: true, filter: false, blend: true, store: true}},
 ];
 
-test('shadertype#textureFormatDecoder.getCapabilities', t => {
+it('shadertype#textureFormatDecoder.getCapabilities', () => {
   for (const tc of TEST_CASES_CAPABILITIES) {
     const decoded = textureFormatDecoder.getCapabilities(tc.format);
 
-    t.deepEqual(
-      decoded,
-      {format: tc.format, ...tc.result},
-      `getVertexFormatInfo('${tc.format}') => ${JSON.stringify(decoded)}`
-    );
+    expect(decoded, `getVertexFormatInfo('${tc.format}') => ${JSON.stringify(decoded)}`).toEqual({
+      format: tc.format,
+      ...tc.result
+    });
   }
-  t.end();
+  void 0;
 });
 
 /**
@@ -88,16 +84,16 @@ test('shadertype#textureFormatDecoder.getCapabilities', t => {
 const bytesPerPixelFromFormat = (format: TextureFormat) =>
   textureFormatDecoder.getInfo(format).bytesPerPixel;
 
-test('bytesPerPixelFromFormat', t => {
-  t.equal(bytesPerPixelFromFormat('r8unorm'), 1, 'r8unorm = 1 B/px');
-  t.equal(bytesPerPixelFromFormat('rgba8unorm'), 4, 'rgba8unorm = 4 B/px');
-  t.equal(bytesPerPixelFromFormat('bgra8unorm'), 4, 'bgra8unorm = 4 B/px');
-  t.equal(bytesPerPixelFromFormat('r16uint'), 2, 'r16uint = 2 B/px');
-  t.equal(bytesPerPixelFromFormat('rgba16uint'), 8, 'rgba16uint = 8 B/px');
-  t.equal(bytesPerPixelFromFormat('rgba16float'), 8, 'rgba16float = 8 B/px');
-  t.equal(bytesPerPixelFromFormat('r32uint'), 4, 'r32uint = 4 B/px');
-  t.equal(bytesPerPixelFromFormat('rgba32uint'), 16, 'rgba32uint = 16 B/px');
-  t.equal(bytesPerPixelFromFormat('r32float'), 4, 'r32float = 4 B/px');
-  t.equal(bytesPerPixelFromFormat('rgba32float'), 16, 'rgba32float = 16 B/px');
-  t.end();
+it('bytesPerPixelFromFormat', () => {
+  expect(bytesPerPixelFromFormat('r8unorm'), 'r8unorm = 1 B/px').toBe(1);
+  expect(bytesPerPixelFromFormat('rgba8unorm'), 'rgba8unorm = 4 B/px').toBe(4);
+  expect(bytesPerPixelFromFormat('bgra8unorm'), 'bgra8unorm = 4 B/px').toBe(4);
+  expect(bytesPerPixelFromFormat('r16uint'), 'r16uint = 2 B/px').toBe(2);
+  expect(bytesPerPixelFromFormat('rgba16uint'), 'rgba16uint = 8 B/px').toBe(8);
+  expect(bytesPerPixelFromFormat('rgba16float'), 'rgba16float = 8 B/px').toBe(8);
+  expect(bytesPerPixelFromFormat('r32uint'), 'r32uint = 4 B/px').toBe(4);
+  expect(bytesPerPixelFromFormat('rgba32uint'), 'rgba32uint = 16 B/px').toBe(16);
+  expect(bytesPerPixelFromFormat('r32float'), 'r32float = 4 B/px').toBe(4);
+  expect(bytesPerPixelFromFormat('rgba32float'), 'rgba32float = 16 B/px').toBe(16);
+  void 0;
 });

@@ -8,24 +8,23 @@ import {
   parseParquetDeltaLengthByteArrayPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {vi} from 'vitest';
+import {expect, it} from 'vitest';
 
 const ENCODED_LENGTHS = Uint8Array.from([
   128, 1, 4, 3, 6, 3, 3, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 const ENCODED = Uint8Array.from([...ENCODED_LENGTHS, 99, 97, 116, 100, 111, 103, 115, 101]);
 
-test('parseParquetDeltaLengthByteArrayPlan locates the contiguous payload', testCase => {
+it('parseParquetDeltaLengthByteArrayPlan locates the contiguous payload', () => {
   const plan = parseParquetDeltaLengthByteArrayPlan(ENCODED);
-  testCase.equal(plan.lengthPlan.valueCount, 3);
-  testCase.equal(plan.lengthPlan.firstValue, 3);
-  testCase.equal(plan.payloadByteOffset, ENCODED_LENGTHS.length);
-  testCase.equal(plan.payloadByteLength, 8);
-  testCase.end();
+  expect(plan.lengthPlan.valueCount).toBe(3);
+  expect(plan.lengthPlan.firstValue).toBe(3);
+  expect(plan.payloadByteOffset).toBe(ENCODED_LENGTHS.length);
+  expect(plan.payloadByteLength).toBe(8);
 });
 
-test('GPUParquetDeltaLengthByteArrayDecoder composes decode and exclusive scan', testCase => {
+it('GPUParquetDeltaLengthByteArrayDecoder composes decode and exclusive scan', () => {
   const plan = parseParquetDeltaLengthByteArrayPlan(ENCODED);
   const graph = new GPUCommandGraph(makeSupportDevice());
   const addComputePass = vi.spyOn(graph, 'addComputePass');
@@ -50,13 +49,11 @@ test('GPUParquetDeltaLengthByteArrayDecoder composes decode and exclusive scan',
     descriptorCount: plan.lengthPlan.descriptorCount,
     firstValue: plan.lengthPlan.firstValue
   }).addToGraph(graph);
-  testCase.ok(addComputePass.mock.calls.length >= 3);
-  testCase.equal(
-    addComputePass.mock.calls[0][0].id,
+  expect(addComputePass.mock.calls.length >= 3).toBe(true);
+  expect(addComputePass.mock.calls[0][0].id).toBe(
     'gpu-parquet-delta-length-byte-array-lengths-unpack'
   );
-  testCase.match(addComputePass.mock.calls.at(-1)?.[0].id ?? '', /offsets/);
-  testCase.end();
+  expect(addComputePass.mock.calls.at(-1)?.[0].id ?? '').toMatch(/offsets/);
 });
 
 function makeSupportDevice(): Device {

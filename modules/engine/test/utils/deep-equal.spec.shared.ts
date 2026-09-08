@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
 import {deepEqual} from '@luma.gl/engine/utils/deep-equal';
+import {expect, it} from 'vitest';
 
 const obj = {longitude: -70, latitude: 40.7, zoom: 12};
 const TEST_CASES = [
@@ -66,13 +66,11 @@ const TEST_CASES = [
   {a: {x: 1}, b: null, depth: 1, output: false}
 ];
 
-export function registerDeepEqualTests(test: TapeTestFunction): void {
-  test('utils#deepEqual', t => {
+export function registerDeepEqualTests(): void {
+  it('utils#deepEqual', () => {
     TEST_CASES.forEach(({a, b, depth, output}) => {
       const result = deepEqual(a, b, depth as number);
-      t.is(result, output, `should ${output ? '' : 'not '}be equal`);
+      expect(result, `should ${output ? '' : 'not '}be equal`).toBe(output);
     });
-
-    t.end();
   });
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
@@ -46,7 +46,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 }
 `;
 
-test('ShaderPlugin#resolve shared and backend contributions', t => {
+it('ShaderPlugin#resolve shared and backend contributions', () => {
   const resolved = resolveShaderPlugins(
     [
       {
@@ -83,49 +83,44 @@ test('ShaderPlugin#resolve shared and backend contributions', t => {
     'wgsl'
   );
 
-  t.deepEqual(
+  expect(
     resolved.modules.map(module => module.name),
-    ['shared-plugin-module', 'wgsl-plugin-module'],
     'shared and WGSL modules are combined'
-  );
-  t.deepEqual(
-    resolved.defines,
-    {COMMON: true, OVERRIDDEN: true, WGSL_ONLY: true},
-    'backend define overrides shared plugin define'
-  );
-  t.deepEqual(
+  ).toEqual(['shared-plugin-module', 'wgsl-plugin-module']);
+  expect(resolved.defines, 'backend define overrides shared plugin define').toEqual({
+    COMMON: true,
+    OVERRIDDEN: true,
+    WGSL_ONLY: true
+  });
+  expect(
     resolved.injections['fs:#decl'].map(injection => injection.injection),
-    ['fn sharedPlugin() {}', 'fn wgslPlugin() {}'],
     'shared and backend injections retain order'
-  );
-  t.equal(resolved.injections['fs:#decl'][1].order, 10, 'explicit order is preserved');
-  t.deepEqual(
+  ).toEqual(['fn sharedPlugin() {}', 'fn wgslPlugin() {}']);
+  expect(resolved.injections['fs:#decl'][1].order, 'explicit order is preserved').toBe(10);
+  expect(
     resolved.vertexInputs,
-    {sharedValue: 'f32', backendValue: 'vec2<f32>'},
     'identical declarations merge once and preserve declaration order'
-  );
-  t.deepEqual(
+  ).toEqual({sharedValue: 'f32', backendValue: 'vec2<f32>'});
+  expect(
     resolved.varyings,
-    {
-      sharedColor: {type: 'vec4<f32>', interpolation: 'smooth'},
-      category: {type: 'u32', interpolation: 'flat'}
-    },
     'varyings are normalized, deduplicated, and retain declaration order'
-  );
-  t.end();
+  ).toEqual({
+    sharedColor: {type: 'vec4<f32>', interpolation: 'smooth'},
+    category: {type: 'u32', interpolation: 'flat'}
+  });
+  void 0;
 });
 
-test('ShaderPlugin#rejects invalid and conflicting vertex inputs', t => {
-  t.throws(
+it('ShaderPlugin#rejects invalid and conflicting vertex inputs', () => {
+  expect(
     () =>
       resolveShaderPlugins(
         [{name: 'invalid-input', vertexInputs: {'invalid-name': 'f32'} as any}],
         'glsl'
       ),
-    /valid non-reserved identifier/,
     'invalid identifiers are rejected'
-  );
-  t.throws(
+  ).toThrow(/valid non-reserved identifier/);
+  expect(
     () =>
       resolveShaderPlugins(
         [
@@ -134,32 +129,29 @@ test('ShaderPlugin#rejects invalid and conflicting vertex inputs', t => {
         ],
         'wgsl'
       ),
-    /conflicting types/,
     'conflicting declarations are rejected'
-  );
-  t.end();
+  ).toThrow(/conflicting types/);
+  void 0;
 });
 
-test('ShaderPlugin#rejects invalid and conflicting varyings', t => {
-  t.throws(
+it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
+  expect(
     () =>
       resolveShaderPlugins(
         [{name: 'invalid-varying', varyings: {'invalid-name': {type: 'f32'}} as any}],
         'glsl'
       ),
-    /valid non-reserved identifier/,
     'invalid varying identifiers are rejected'
-  );
-  t.throws(
+  ).toThrow(/valid non-reserved identifier/);
+  expect(
     () =>
       resolveShaderPlugins(
         [{name: 'reserved-varying', varyings: {_luma_value: {type: 'f32'}}}],
         'wgsl'
       ),
-    /valid non-reserved identifier/,
     'reserved varying identifiers are rejected'
-  );
-  t.throws(
+  ).toThrow(/valid non-reserved identifier/);
+  expect(
     () =>
       resolveShaderPlugins(
         [
@@ -168,10 +160,9 @@ test('ShaderPlugin#rejects invalid and conflicting varyings', t => {
         ],
         'wgsl'
       ),
-    /conflicting declarations/,
     'conflicting varying types are rejected'
-  );
-  t.throws(
+  ).toThrow(/conflicting declarations/);
+  expect(
     () =>
       resolveShaderPlugins(
         [
@@ -183,19 +174,17 @@ test('ShaderPlugin#rejects invalid and conflicting varyings', t => {
         ],
         'wgsl'
       ),
-    /conflicting declarations/,
     'conflicting varying interpolation is rejected'
-  );
-  t.throws(
+  ).toThrow(/conflicting declarations/);
+  expect(
     () =>
       resolveShaderPlugins(
         [{name: 'smooth-integer', varyings: {value: {type: 'u32', interpolation: 'smooth'}}}],
         'wgsl'
       ),
-    /must use flat interpolation/,
     'integer varyings cannot use smooth interpolation'
-  );
-  t.throws(
+  ).toThrow(/must use flat interpolation/);
+  expect(
     () =>
       resolveShaderPlugins(
         [
@@ -207,14 +196,13 @@ test('ShaderPlugin#rejects invalid and conflicting varyings', t => {
         ],
         'glsl'
       ),
-    /both a vertex input and a varying/,
     'vertex input and varying namespaces are disjoint'
-  );
-  t.end();
+  ).toThrow(/both a vertex input and a varying/);
+  void 0;
 });
 
-test('ShaderPlugin#rejects raw replacement targets', t => {
-  t.throws(
+it('ShaderPlugin#rejects raw replacement targets', () => {
+  expect(
     () =>
       resolveShaderPlugins(
         [
@@ -225,25 +213,24 @@ test('ShaderPlugin#rejects raw replacement targets', t => {
         ],
         'glsl'
       ),
-    /must be a named shader anchor or hook/,
     'raw replacement targets are rejected'
-  );
-  t.end();
+  ).toThrow(/must be a named shader anchor or hook/);
+  void 0;
 });
 
-test('ShaderPlugin#explicit modules win duplicate names', t => {
+it('ShaderPlugin#explicit modules win duplicate names', () => {
   const modules = mergeShaderPluginModules(
     [EXPLICIT_MODULE],
     [DUPLICATE_PLUGIN_MODULE, SHARED_MODULE]
   );
 
-  t.equal(modules.length, 2, 'duplicate plugin module is skipped');
-  t.equal(modules[0], EXPLICIT_MODULE, 'explicit module instance is preserved');
-  t.equal(modules[1], SHARED_MODULE, 'new plugin module is appended');
-  t.end();
+  expect(modules.length, 'duplicate plugin module is skipped').toBe(2);
+  expect(modules[0], 'explicit module instance is preserved').toBe(EXPLICIT_MODULE);
+  expect(modules[1], 'new plugin module is appended').toBe(SHARED_MODULE);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL main injections land in stage bodies', t => {
+it('ShaderPlugin#WGSL main injections land in stage bodies', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const resolved = resolveShaderPlugins(
     [
@@ -266,22 +253,24 @@ test('ShaderPlugin#WGSL main injections land in stage bodies', t => {
     pluginInjections: resolved.injections
   });
 
-  t.ok(
-    assembled.source.includes('let pluginVertexStart = 1u;'),
+  expect(
+    Boolean(assembled.source.includes('let pluginVertexStart = 1u;')),
     'vertex-stage start injection is emitted'
-  );
-  t.ok(
-    assembled.source.includes('let pluginFragmentEnd = 2u;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembled.source.includes('let pluginFragmentEnd = 2u;')),
     'fragment-stage end injection is emitted'
-  );
-  t.ok(
-    assembled.source.indexOf('let pluginFragmentEnd = 2u;') < assembled.source.lastIndexOf('}'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembled.source.indexOf('let pluginFragmentEnd = 2u;') < assembled.source.lastIndexOf('}')
+    ),
     'fragment-stage end injection lands before the stage closing brace'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL fragment declarations enter unified shader source', t => {
+it('ShaderPlugin#WGSL fragment declarations enter unified shader source', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const resolved = resolveShaderPlugins(
     [
@@ -309,14 +298,14 @@ test('ShaderPlugin#WGSL fragment declarations enter unified shader source', t =>
     pluginInjections: resolved.injections
   });
 
-  t.ok(
-    assembled.source.includes('fn pluginGetColor() -> vec4<f32>'),
+  expect(
+    Boolean(assembled.source.includes('fn pluginGetColor() -> vec4<f32>')),
     'fragment declaration injection is emitted into unified WGSL source'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ShaderPlugin#GLSL vertex inputs are declared and conflicts are rejected', t => {
+it('ShaderPlugin#GLSL vertex inputs are declared and conflicts are rejected', () => {
   const shaderAssembler = new GLSLShaderAssembler();
   const shaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
@@ -330,9 +319,11 @@ void main() { fragmentColor = vec4(1.0); }`,
     pluginVertexInputs: {filterValues: 'f32', offsets: 'vec2<f32>'}
   });
 
-  t.ok(shaders.vs.includes('in float filterValues;'), 'scalar input is declared');
-  t.ok(shaders.vs.includes('in vec2 offsets;'), 'vector input is declared');
-  t.throws(
+  expect(Boolean(shaders.vs.includes('in float filterValues;')), 'scalar input is declared').toBe(
+    true
+  );
+  expect(Boolean(shaders.vs.includes('in vec2 offsets;')), 'vector input is declared').toBe(true);
+  expect(
     () =>
       shaderAssembler.assembleGLSLShaderPair({
         platformInfo: GLSL_PLATFORM_INFO,
@@ -345,13 +336,12 @@ out vec4 fragmentColor;
 void main() { fragmentColor = vec4(1.0); }`,
         pluginVertexInputs: {filterValues: 'f32'}
       }),
-    /conflicts with an existing GLSL input/,
     'application inputs cannot shadow plugin inputs'
-  );
-  t.end();
+  ).toThrow(/conflicts with an existing GLSL input/);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL vertex inputs support direct and struct entry-point inputs', t => {
+it('ShaderPlugin#WGSL vertex inputs support direct and struct entry-point inputs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)');
 
@@ -387,59 +377,65 @@ fn fragmentMain() -> @location(0) vec4<f32> {
     }
   });
 
-  t.ok(
-    assembled.source.includes('@location(1) _luma_filterValues: f32'),
+  expect(
+    Boolean(assembled.source.includes('@location(1) _luma_filterValues: f32')),
     'first unused direct or struct location is assigned first'
-  );
-  t.ok(
-    assembled.source.includes('@location(3) _luma_categoryValues: u32'),
+  ).toBe(true);
+  expect(
+    Boolean(assembled.source.includes('@location(3) _luma_categoryValues: u32')),
     'locations are assigned deterministically in declaration order'
-  );
-  t.ok(
-    assembled.source.includes('var<private> filterValues: f32;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembled.source.includes('var<private> filterValues: f32;')),
     'public input name is declared as a private variable for generated hooks'
-  );
-  t.ok(
-    assembled.source.indexOf('filterValues = _luma_filterValues;') <
-      assembled.source.indexOf('let initializedValue = filterValues;'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembled.source.indexOf('filterValues = _luma_filterValues;') <
+        assembled.source.indexOf('let initializedValue = filterValues;')
+    ),
     'private input variables initialize before other main-start injections'
-  );
-  t.ok(
-    assembled.source.indexOf('@location(1) _luma_filterValues: f32') >
-      assembled.source.indexOf('fn selectedVertexMain'),
-    'plugin parameters are appended to the selected entry point'
-  );
-  t.notOk(
-    assembled.source
-      .slice(
-        assembled.source.indexOf('fn unusedVertexMain'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembled.source.indexOf('@location(1) _luma_filterValues: f32') >
         assembled.source.indexOf('fn selectedVertexMain')
-      )
-      .includes('_luma_filterValues'),
+    ),
+    'plugin parameters are appended to the selected entry point'
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembled.source
+        .slice(
+          assembled.source.indexOf('fn unusedVertexMain'),
+          assembled.source.indexOf('fn selectedVertexMain')
+        )
+        .includes('_luma_filterValues')
+    ),
     'other vertex entry points are preserved'
-  );
-  t.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', t => {
+it('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', () => {
   const assembled = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
     source: WGSL_SOURCE,
     pluginVertexInputs: {filterValues: 'f32'}
   });
 
-  t.ok(
-    assembled.source.includes('fn vertexMain(\n  @location(0) _luma_filterValues: f32\n)'),
+  expect(
+    Boolean(assembled.source.includes('fn vertexMain(\n  @location(0) _luma_filterValues: f32\n)')),
     'the first plugin input becomes the first parameter and location'
-  );
-  t.ok(
-    assembled.source.includes('filterValues = _luma_filterValues;'),
+  ).toBe(true);
+  expect(
+    Boolean(assembled.source.includes('filterValues = _luma_filterValues;')),
     'the generated private variable is initialized in the parameterless entry point'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ShaderPlugin#GLSL varyings generate matched stage interfaces', t => {
+it('ShaderPlugin#GLSL varyings generate matched stage interfaces', () => {
   const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(inout vec4 color)');
@@ -472,15 +468,29 @@ void main() {
     }
   });
 
-  t.ok(shaders.vs.includes('out vec4 pluginColor;'), 'smooth vertex output is declared');
-  t.ok(shaders.fs.includes('in vec4 pluginColor;'), 'smooth fragment input is declared');
-  t.ok(shaders.vs.includes('flat out uint pluginCategory;'), 'flat vertex output is declared');
-  t.ok(shaders.fs.includes('flat in uint pluginCategory;'), 'flat fragment input is declared');
-  t.ok(
-    shaders.vs.indexOf('pluginColor = vec4(0.0);') < shaders.vs.indexOf('pluginColor.x = 0.5;'),
+  expect(
+    Boolean(shaders.vs.includes('out vec4 pluginColor;')),
+    'smooth vertex output is declared'
+  ).toBe(true);
+  expect(
+    Boolean(shaders.fs.includes('in vec4 pluginColor;')),
+    'smooth fragment input is declared'
+  ).toBe(true);
+  expect(
+    Boolean(shaders.vs.includes('flat out uint pluginCategory;')),
+    'flat vertex output is declared'
+  ).toBe(true);
+  expect(
+    Boolean(shaders.fs.includes('flat in uint pluginCategory;')),
+    'flat fragment input is declared'
+  ).toBe(true);
+  expect(
+    Boolean(
+      shaders.vs.indexOf('pluginColor = vec4(0.0);') < shaders.vs.indexOf('pluginColor.x = 0.5;')
+    ),
     'varyings initialize before other main-start injections'
-  );
-  t.throws(
+  ).toBe(true);
+  expect(
     () =>
       shaderAssembler.assembleGLSLShaderPair({
         platformInfo: GLSL_PLATFORM_INFO,
@@ -494,13 +504,12 @@ out vec4 fragmentColor;
 void main() { fragmentColor = pluginColor; }`,
         pluginVaryings: {pluginColor: {type: 'vec4<f32>', interpolation: 'smooth'}}
       }),
-    /conflicts with existing GLSL stage I\/O/,
     'application stage I/O cannot shadow plugin varyings'
-  );
-  t.end();
+  ).toThrow(/conflicts with existing GLSL stage I\/O/);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL varyings extend named stage structs', t => {
+it('ShaderPlugin#WGSL varyings extend named stage structs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(color: ptr<function, vec4<f32>>)');
@@ -562,57 +571,59 @@ fn selectedFragmentMain(inputs: FragmentInput, @builtin(front_facing) frontFacin
     }
   });
 
-  t.equal(
+  expect(
     assembled.source.match(/@location\(1\) pluginCoordinates: vec2<f32>/g)?.length,
-    2,
     'same location is appended to separate vertex and fragment structs'
-  );
-  t.equal(
+  ).toBe(2);
+  expect(
     assembled.source.match(/@location\(2\) @interpolate\(flat\) pluginCategory: u32/g)?.length,
-    2,
     'flat integer varying is appended to both structs'
-  );
-  t.ok(
-    assembled.source.includes(
-      'VertexOutput(vec4<f32>(0.0), inputValue, pluginCoordinates, pluginCategory)'
+  ).toBe(2);
+  expect(
+    Boolean(
+      assembled.source.includes(
+        'VertexOutput(vec4<f32>(0.0), inputValue, pluginCoordinates, pluginCategory)'
+      )
     ),
     'selected-entry positional constructor receives plugin values'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     assembled.source.match(/_luma_vertexOutput\d+\.pluginCoordinates = pluginCoordinates;/g)
       ?.length,
-    2,
     'every selected-entry return copies current varying values'
-  );
-  t.ok(
-    assembled.source.indexOf('pluginCoordinates = inputs.pluginCoordinates;') <
-      assembled.source.indexOf('let initializedCoordinates = pluginCoordinates;'),
+  ).toBe(2);
+  expect(
+    Boolean(
+      assembled.source.indexOf('pluginCoordinates = inputs.pluginCoordinates;') <
+        assembled.source.indexOf('let initializedCoordinates = pluginCoordinates;')
+    ),
     'fragment private variables initialize before other main-start injections'
-  );
-  t.notOk(
-    assembled.source
-      .slice(
-        assembled.source.indexOf('fn unusedVertexMain'),
-        assembled.source.indexOf('fn selectedVertexMain')
-      )
-      .includes('_luma_vertexOutput'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembled.source
+        .slice(
+          assembled.source.indexOf('fn unusedVertexMain'),
+          assembled.source.indexOf('fn selectedVertexMain')
+        )
+        .includes('_luma_vertexOutput')
+    ),
     'unselected entry points are preserved'
-  );
-  t.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('ShaderPlugin#WGSL varyings reject unsupported interfaces', t => {
+it('ShaderPlugin#WGSL varyings reject unsupported interfaces', () => {
   const assembler = new WGSLShaderAssembler();
-  t.throws(
+  expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
         source: WGSL_SOURCE,
         pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
-    /vertex entry point to return a named struct/,
     'direct vertex return types are rejected'
-  );
+  ).toThrow(/vertex entry point to return a named struct/);
 
   const sourceWithExternalConstructor = /* wgsl */ `
 struct VertexOutput {
@@ -627,16 +638,15 @@ fn makeOutput() -> VertexOutput {
 @fragment fn fragmentMain(inputs: VertexOutput) -> @location(0) vec4<f32> {
   return vec4<f32>(1.0);
 }`;
-  t.throws(
+  expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
         source: sourceWithExternalConstructor,
         pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
-    /constructed outside the selected vertex entry point/,
     'output struct constructors outside the selected entry point are rejected'
-  );
+  ).toThrow(/constructed outside the selected vertex entry point/);
 
   const namedVertexOutput = /* wgsl */ `
 struct VertexOutput {
@@ -647,7 +657,7 @@ struct VertexOutput {
   output.position = vec4<f32>(0.0);
   return output;
 }`;
-  t.throws(
+  expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
@@ -655,11 +665,10 @@ struct VertexOutput {
 @fragment fn fragmentMain() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }`,
         pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
-    /exactly one named WGSL fragment input struct; found 0/,
     'a missing fragment input struct is rejected'
-  );
+  ).toThrow(/exactly one named WGSL fragment input struct; found 0/);
 
-  t.throws(
+  expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
@@ -670,11 +679,10 @@ struct OtherInput { @location(0) other: f32, };
 }`,
         pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
-    /exactly one named WGSL fragment input struct; found 2/,
     'ambiguous fragment input structs are rejected'
-  );
+  ).toThrow(/exactly one named WGSL fragment input struct; found 2/);
 
-  t.throws(
+  expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
@@ -684,8 +692,7 @@ struct OtherInput { @location(0) other: f32, };
 }`,
         pluginVaryings: {position: {type: 'vec4<f32>', interpolation: 'smooth'}}
       }),
-    /conflicts with existing WGSL stage I\/O/,
     'application WGSL stage I/O cannot shadow plugin varyings'
-  );
-  t.end();
+  ).toThrow(/conflicts with existing WGSL stage I\/O/);
+  void 0;
 });

@@ -2,34 +2,32 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeArrowFixedSizeListVector, resolveArrowPolygonSourceVectors} from '@luma.gl/arrow';
 import * as arrow from 'apache-arrow';
 
 type PolygonArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
-test('resolveArrowPolygonSourceVectors maps same-name Table and RecordBatch columns', t => {
+it('resolveArrowPolygonSourceVectors maps same-name Table and RecordBatch columns', () => {
   const sourceVectors = makeArrowPolygonSourceVectors();
   const table = new arrow.Table(sourceVectors);
   const resolvedFromTable = resolveArrowPolygonSourceVectors({data: table});
   const resolvedFromRecordBatch = resolveArrowPolygonSourceVectors({data: table.batches[0]!});
 
-  assertPolygonVectorEqual(t, resolvedFromTable.polygons, sourceVectors.polygons, 'Table polygons');
+  assertPolygonVectorEqual(resolvedFromTable.polygons, sourceVectors.polygons, 'Table polygons');
   assertPolygonVectorEqual(
-    t,
     resolvedFromRecordBatch.polygons,
     sourceVectors.polygons,
     'RecordBatch polygons'
   );
-  t.deepEqual(
+  expect(
     Array.from(getColorValues(resolvedFromTable.colors!)),
-    Array.from(getColorValues(sourceVectors.colors)),
     'same-name colors resolve from Table'
-  );
-  t.end();
+  ).toEqual(Array.from(getColorValues(sourceVectors.colors)));
+  void 0;
 });
 
-test('resolveArrowPolygonSourceVectors maps nested string selectors', t => {
+it('resolveArrowPolygonSourceVectors maps nested string selectors', () => {
   const sourceVectors = makeArrowPolygonSourceVectors();
   const table = makeNestedArrowPolygonTable('source', sourceVectors);
   const resolved = resolveArrowPolygonSourceVectors({
@@ -37,35 +35,34 @@ test('resolveArrowPolygonSourceVectors maps nested string selectors', t => {
     selectors: {polygons: 'source.polygons', colors: 'source.colors'}
   });
 
-  assertPolygonVectorEqual(t, resolved.polygons, sourceVectors.polygons, 'nested polygons');
-  t.equal(resolved.colors?.length, sourceVectors.colors.length, 'nested colors resolve');
-  t.end();
+  assertPolygonVectorEqual(resolved.polygons, sourceVectors.polygons, 'nested polygons');
+  expect(resolved.colors?.length, 'nested colors resolve').toBe(sourceVectors.colors.length);
+  void 0;
 });
 
-test('resolveArrowPolygonSourceVectors supports direct vectors and optional disable', t => {
+it('resolveArrowPolygonSourceVectors supports direct vectors and optional disable', () => {
   const sourceVectors = makeArrowPolygonSourceVectors();
   const resolved = resolveArrowPolygonSourceVectors({
     selectors: {polygons: sourceVectors.polygons, colors: null}
   });
 
-  t.equal(resolved.polygons, sourceVectors.polygons, 'direct polygons do not require a Table');
-  t.equal(resolved.colors, undefined, 'null disables optional colors');
-  t.end();
+  expect(resolved.polygons, 'direct polygons do not require a Table').toBe(sourceVectors.polygons);
+  expect(resolved.colors, 'null disables optional colors').toBe(undefined);
+  void 0;
 });
 
-test('resolveArrowPolygonSourceVectors skips missing optional colors and requires polygons', t => {
+it('resolveArrowPolygonSourceVectors skips missing optional colors and requires polygons', () => {
   const sourceVectors = makeArrowPolygonSourceVectors();
   const resolved = resolveArrowPolygonSourceVectors({
     data: new arrow.Table({polygons: sourceVectors.polygons})
   });
 
-  t.equal(resolved.colors, undefined, 'missing optional colors are skipped');
-  t.throws(
+  expect(resolved.colors, 'missing optional colors are skipped').toBe(undefined);
+  expect(
     () => resolveArrowPolygonSourceVectors({data: new arrow.Table({colors: sourceVectors.colors})}),
-    /source column "polygons" for "polygons" is missing/,
     'missing required polygons throw'
-  );
-  t.end();
+  ).toThrow(/source column "polygons" for "polygons" is missing/);
+  void 0;
 });
 
 function makeArrowPolygonSourceVectors() {
@@ -139,23 +136,17 @@ function makePolygonVector(
 }
 
 function assertPolygonVectorEqual(
-  t: {
-    deepEqual: (actual: unknown, expected: unknown, message?: string) => void;
-  },
   actual: arrow.Vector,
   expected: arrow.Vector<PolygonArrowType>,
   label: string
 ): void {
   const actualPolygons = actual as arrow.Vector<PolygonArrowType>;
-  t.deepEqual(
+  expect(
     Array.from(actualPolygons.data[0]!.valueOffsets as Int32Array),
-    Array.from(expected.data[0]!.valueOffsets as Int32Array),
     `${label} offsets match`
-  );
-  t.deepEqual(
-    Array.from(getPolygonValues(actualPolygons)),
-    Array.from(getPolygonValues(expected)),
-    `${label} values match`
+  ).toEqual(Array.from(expected.data[0]!.valueOffsets as Int32Array));
+  expect(Array.from(getPolygonValues(actualPolygons)), `${label} values match`).toEqual(
+    Array.from(getPolygonValues(expected))
   );
 }
 

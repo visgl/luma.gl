@@ -13,7 +13,7 @@ import {
   type GPURasterScalarFormat
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type FloatOverviewOutputs = {
   values: GraphDataView<'float32'>;
@@ -32,11 +32,11 @@ const PYRAMID_METADATA: GPURasterMetadata = {
   level: 0
 };
 
-test('GPURaster analytical pyramids merge uneven masked coverage instead of averaging overview means', async testCase => {
+it('GPURaster analytical pyramids merge uneven masked coverage instead of averaging overview means', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -104,11 +104,13 @@ test('GPURaster analytical pyramids merge uneven masked coverage instead of aver
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.ok(
-    compiled.stats.nodeOrder.indexOf('overview-2x3') <
-      compiled.stats.nodeOrder.indexOf('overview-weighted-4x6'),
+  expect(
+    Boolean(
+      compiled.stats.nodeOrder.indexOf('overview-2x3') <
+        compiled.stats.nodeOrder.indexOf('overview-weighted-4x6')
+    ),
     'graph hazards order child sums and valid counts before parent aggregation'
-  );
+  ).toBe(true);
   submitGraph(device, compiled, 'submit-weighted-overview-pyramid');
 
   const directValues = await readFloat(directOutputs.values, ownedBuffers);
@@ -117,49 +119,39 @@ test('GPURaster analytical pyramids merge uneven masked coverage instead of aver
   const weightedSums = await readFloat(chainedOutputs.sum, ownedBuffers);
   const directCounts = await readUnsigned(directOutputs.count, ownedBuffers);
   const weightedCounts = await readUnsigned(chainedOutputs.count, ownedBuffers);
-  testCase.deepEqual(
+  expect(
     Array.from(weightedCounts),
-    Array.from(directCounts),
     'chained levels preserve exact unequal source coverage and odd boundary footprints'
-  );
+  ).toEqual(Array.from(directCounts));
+  assertApproximateArray(weightedSums, directSums, 'weighted sums match direct reduction');
   assertApproximateArray(
-    testCase,
-    weightedSums,
-    directSums,
-    'weighted sums match direct reduction'
-  );
-  assertApproximateArray(
-    testCase,
     weightedValues,
     directValues,
     'weighted means match direct 4×6 aggregation rather than averaging child means'
   );
-  testCase.deepEqual(
+  expect(
     Array.from(await readUnsigned(chainedOutputs.validity, ownedBuffers)),
-    Array.from(await readUnsigned(directOutputs.validity, ownedBuffers)),
     'invalid parent coverage remains separate from aggregate sample values'
-  );
-  testCase.deepEqual(
+  ).toEqual(Array.from(await readUnsigned(directOutputs.validity, ownedBuffers)));
+  expect(
     first.metadata.affine,
-    [4, 0.75, 552400, -1, -9, 4187600],
     'anisotropic child metadata preserves affine rotation, shear, and origin'
-  );
-  testCase.deepEqual(
+  ).toEqual([4, 0.75, 552400, -1, -9, 4187600]);
+  expect(
     makeRasterOverviewMetadata(first.metadata, 2).affine,
-    [8, 1.5, 552400, -2, -18, 4187600],
     'chained overview transforms retain the same world coordinate frame'
-  );
+  ).toEqual([8, 1.5, 552400, -2, -18, 4187600]);
 
   compiled.destroy();
   for (const buffer of ownedBuffers) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster categorical overview policies preserve exact labels and expose valid alternatives', async testCase => {
+it('GPURaster categorical overview policies preserve exact labels and expose valid alternatives', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -237,36 +229,31 @@ test('GPURaster categorical overview policies preserve exact labels and expose v
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'submit-categorical-policy-comparison');
-  testCase.deepEqual(
+  expect(
     Array.from(await readUnsigned(nearestValues, ownedBuffers)),
-    [0, 9, 42, 0],
     'nearest preserves invalid center/nodata while retaining exact valid integer categories'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 9, 42, 0]);
+  expect(
     Array.from(await readUnsigned(nearestValidity, ownedBuffers)),
-    [0, 1, 1, 0],
     'nearest validity describes the selected sample rather than any valid alternative'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 1, 1, 0]);
+  expect(
     Array.from(await readUnsigned(modeValues, ownedBuffers)),
-    [16777218, 9, 42, 11],
     'mode keeps labels above float32 precision and resolves ties to the smallest native label'
-  );
-  testCase.deepEqual(Array.from(await readUnsigned(modeValidity, ownedBuffers)), [1, 1, 1, 1]);
-  testCase.deepEqual(
+  ).toEqual([16777218, 9, 42, 11]);
+  expect(Array.from(await readUnsigned(modeValidity, ownedBuffers)), '').toEqual([1, 1, 1, 1]);
+  expect(
     Array.from(await readUnsigned(nearestCount, ownedBuffers)),
-    [3, 4, 4, 3],
     'coverage counts all valid alternatives even when the nearest selected sample is invalid'
-  );
-  testCase.deepEqual(
+  ).toEqual([3, 4, 4, 3]);
+  expect(
     Array.from(await readUnsigned(modeCount, ownedBuffers)),
-    [3, 4, 4, 3],
     'mode shares the same exact valid footprint population'
-  );
+  ).toEqual([3, 4, 4, 3]);
 
   compiled.destroy();
   for (const buffer of ownedBuffers) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 function makeFloatSource(
@@ -373,21 +360,16 @@ function submitGraph(
   device.submit(encoder.finish());
 }
 
-function assertApproximateArray(
-  testCase: Test,
-  actual: Float32Array,
-  expected: Float32Array,
-  label: string
-): void {
-  testCase.equal(actual.length, expected.length, `${label}: equal pixel counts`);
+function assertApproximateArray(actual: Float32Array, expected: Float32Array, label: string): void {
+  expect(actual.length, `${label}: equal pixel counts`).toBe(expected.length);
   for (let index = 0; index < actual.length; index++) {
     if (Number.isNaN(expected[index])) {
-      testCase.ok(Number.isNaN(actual[index]), `${label}: invalid parent ${index}`);
+      expect(Boolean(Number.isNaN(actual[index])), `${label}: invalid parent ${index}`).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(actual[index]! - expected[index]!) < 0.0001,
+      expect(
+        Boolean(Math.abs(actual[index]! - expected[index]!) < 0.0001),
         `${label}: parent ${index}`
-      );
+      ).toBe(true);
     }
   }
 }

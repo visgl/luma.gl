@@ -12,19 +12,19 @@ import {
   type GraphDataView
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GPUPointSpatialQuery, type GPUPointSpatialQueryKind} from '../../src/geospatial';
 
-test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', async tapeTest => {
+it('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   const softwareBackedDevice = isSoftwareBackedDevice(device);
   if (softwareBackedDevice) {
-    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
+    void 0;
   }
 
   const cases: QueryFixtureProps[] = [
@@ -116,27 +116,25 @@ test('GPUPointSpatialQuery scans bounds and radius predicates in 2D and 3D', asy
   for (const testCase of cases) {
     const fixture = createQueryFixture(device, testCase);
     encode(device, fixture.compiled);
-    tapeTest.deepEqual(
-      (await readResult(fixture)).ids.sort(sortNumbers),
-      testCase.expectedIds,
-      testCase.id
+    expect((await readResult(fixture)).ids.sort(sortNumbers), testCase.id).toEqual(
+      testCase.expectedIds
     );
     destroyFixture(fixture);
   }
 
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery preserves exact radius boundaries and subnormals', async tapeTest => {
+it('GPUPointSpatialQuery preserves exact radius boundaries and subnormals', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -172,34 +170,32 @@ test('GPUPointSpatialQuery preserves exact radius boundaries and subnormals', as
   });
 
   encode(device, fixture.compiled);
-  tapeTest.deepEqual(
+  expect(
     (await readResult(fixture)).ids.sort(sortNumbers),
-    [0, 2, 3, 5, 6, 7, 8],
     'one-ULP and multi-axis outside rows are rejected while exact boundaries remain inclusive'
-  );
+  ).toEqual([0, 2, 3, 5, 6, 7, 8]);
 
   fixture.query.write(Float32Array.from([0, 0, minimumSubnormal]));
   encode(device, fixture.compiled);
-  tapeTest.deepEqual(
+  expect(
     (await readResult(fixture)).ids.sort(sortNumbers),
-    [3, 7],
     'the same compiled graph preserves the minimum-subnormal inclusive boundary'
-  );
+  ).toEqual([3, 7]);
 
   destroyFixture(fixture);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery rejects outside radii at large coordinate offsets', async tapeTest => {
+it('GPUPointSpatialQuery rejects outside radii at large coordinate offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 radius shaders on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -243,23 +239,21 @@ test('GPUPointSpatialQuery rejects outside radii at large coordinate offsets', a
   encode(device, scanned.compiled);
   const indexedIds = (await readResult(indexed)).ids.sort(sortNumbers);
   const scannedIds = (await readResult(scanned)).ids.sort(sortNumbers);
-  tapeTest.deepEqual(
-    scannedIds,
-    sharedProps.expectedIds,
-    'delta-relative scaling rejects offsets that dwarf the small radius'
+  expect(scannedIds, 'delta-relative scaling rejects offsets that dwarf the small radius').toEqual(
+    sharedProps.expectedIds
   );
-  tapeTest.deepEqual(indexedIds, scannedIds, 'the grid broad phase preserves the exact result');
+  expect(indexedIds, 'the grid broad phase preserves the exact result').toEqual(scannedIds);
 
   destroyFixture(indexed);
   destroyFixture(scanned);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery keeps indexed row addressing separate from returned source IDs', async tapeTest => {
+it('GPUPointSpatialQuery keeps indexed row addressing separate from returned source IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -301,16 +295,14 @@ test('GPUPointSpatialQuery keeps indexed row addressing separate from returned s
 
   encode(device, indexed.compiled);
   encode(device, scanned.compiled);
-  tapeTest.deepEqual(
+  expect(
     (await readResult(indexed)).ids.sort(sortNumbers),
-    [1010, 1010],
     'the indexed path dereferences row indices without deduplicating application IDs'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([1010, 1010]);
+  expect(
     (await readResult(scanned)).ids.sort(sortNumbers),
-    [1010, 1010],
     'the scan path emits the same duplicate application IDs'
-  );
+  ).toEqual([1010, 1010]);
 
   indexed.query.write(Float32Array.from([2, 2, 4, 4]));
   scanned.query.write(Float32Array.from([2, 2, 4, 4]));
@@ -318,30 +310,28 @@ test('GPUPointSpatialQuery keeps indexed row addressing separate from returned s
   encode(device, scanned.compiled);
   const indexedUpdated = await readResult(indexed);
   const scannedUpdated = await readResult(scanned);
-  tapeTest.deepEqual(
+  expect(
     indexedUpdated.ids.sort(sortNumbers),
-    [4040, 5050, 7070],
     'an indexed query reads updated values on a later encoding without recompilation'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([4040, 5050, 7070]);
+  expect(
     scannedUpdated.ids.sort(sortNumbers),
-    [4040, 5050, 7070],
     'indexed and unindexed results remain equivalent after mutation'
-  );
-  tapeTest.equal(indexedUpdated.count, 3, 'the clamped result count is refreshed');
-  tapeTest.equal(indexedUpdated.totalCount, 3, 'the diagnostic total count is refreshed');
-  tapeTest.equal(indexedUpdated.overflow, 0, 'the rebuilt index and result both fit capacity');
+  ).toEqual([4040, 5050, 7070]);
+  expect(indexedUpdated.count, 'the clamped result count is refreshed').toBe(3);
+  expect(indexedUpdated.totalCount, 'the diagnostic total count is refreshed').toBe(3);
+  expect(indexedUpdated.overflow, 'the rebuilt index and result both fit capacity').toBe(0);
 
   destroyFixture(indexed);
   destroyFixture(scanned);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery preserves duplicate source IDs as distinct matching rows', async tapeTest => {
+it('GPUPointSpatialQuery preserves duplicate source IDs as distinct matching rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -369,29 +359,27 @@ test('GPUPointSpatialQuery preserves duplicate source IDs as distinct matching r
   encode(device, scanned.compiled);
   const indexedResult = await readResult(indexed);
   const scannedResult = await readResult(scanned);
-  tapeTest.deepEqual(
+  expect(
     indexedResult.ids.sort(sortNumbers),
-    [42, 42],
     'the indexed path does not deduplicate equal application IDs from separate rows'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([42, 42]);
+  expect(
     scannedResult.ids.sort(sortNumbers),
-    [42, 42],
     'the scan path preserves the same duplicate application IDs'
-  );
-  tapeTest.equal(indexedResult.count, 2, 'both matching rows contribute to the clamped count');
-  tapeTest.equal(indexedResult.totalCount, 2, 'both matching rows contribute to totalCount');
+  ).toEqual([42, 42]);
+  expect(indexedResult.count, 'both matching rows contribute to the clamped count').toBe(2);
+  expect(indexedResult.totalCount, 'both matching rows contribute to totalCount').toBe(2);
 
   destroyFixture(indexed);
   destroyFixture(scanned);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boundaries', async tapeTest => {
+it('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   const fixture = createQueryFixture(device, {
@@ -430,29 +418,27 @@ test('GPUPointSpatialQuery applies even-odd polygon holes and includes ring boun
 
   encode(device, fixture.compiled);
   const result = await readResult(fixture);
-  tapeTest.deepEqual(
+  expect(
     result.ids.sort(sortNumbers),
-    [0, 2, 3, 4, 6, 7, 9],
     'shell points and outer/hole boundaries match while hole interiors and outside points do not'
-  );
-  tapeTest.equal(result.overflow, 0);
+  ).toEqual([0, 2, 3, 4, 6, 7, 9]);
+  expect(result.overflow, '').toBe(0);
 
   destroyFixture(fixture);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery writes source IDs during indexed polygon refinement', async tapeTest => {
+it('GPUPointSpatialQuery writes source IDs during indexed polygon refinement', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
-  tapeTest.equal(
+  expect(
     device.limits.maxStorageBuffersPerShaderStage,
-    8,
     'the core device exercises the portable storage-binding limit'
-  );
+  ).toBe(8);
 
   const fixture = createQueryFixture(device, {
     id: 'indexed-polygon-source-ids',
@@ -470,21 +456,20 @@ test('GPUPointSpatialQuery writes source IDs during indexed polygon refinement',
   });
 
   encode(device, fixture.compiled);
-  tapeTest.deepEqual(
+  expect(
     (await readResult(fixture)).ids.sort(sortNumbers),
-    [101, 202],
     'the refinement emits application source IDs directly'
-  );
+  ).toEqual([101, 202]);
 
   destroyFixture(fixture);
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPointSpatialQuery handles empty inputs and zero-capacity output', async tapeTest => {
+it('GPUPointSpatialQuery handles empty inputs and zero-capacity output', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -499,7 +484,7 @@ test('GPUPointSpatialQuery handles empty inputs and zero-capacity output', async
   });
   encode(device, fixture.compiled);
 
-  tapeTest.deepEqual(await readResult(fixture), {
+  expect(await readResult(fixture), '').toEqual({
     ids: [],
     count: 0,
     overflow: 0,
@@ -507,7 +492,7 @@ test('GPUPointSpatialQuery handles empty inputs and zero-capacity output', async
   });
 
   destroyFixture(fixture);
-  tapeTest.end();
+  void 0;
 });
 
 type QueryFixtureProps = {

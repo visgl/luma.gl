@@ -13,8 +13,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphSingleSourceShortestPathToGraphWithDispatchLimit,
   getGPUGraphSingleSourceShortestPathDispatchLayout
@@ -255,24 +254,21 @@ const shortestPathScenarios: ShortestPathScenario[] = [
   }
 ];
 
-test('GPUGraphSingleSourceShortestPath plans bounded three-dimensional GPU work', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphSingleSourceShortestPathDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphSingleSourceShortestPathDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphSingleSourceShortestPathDispatchLayout(1025, 2), {
+it('GPUGraphSingleSourceShortestPath plans bounded three-dimensional GPU work', () => {
+  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphSingleSourceShortestPathDispatchLayout(1025, 2)).toEqual({
     x: 2,
     y: 2,
     z: 2
   });
-  tapeTest.throws(() => getGPUGraphSingleSourceShortestPathDispatchLayout(2049, 2), /3D dispatch/);
-  tapeTest.end();
+  expect(() => getGPUGraphSingleSourceShortestPathDispatchLayout(2049, 2)).toThrow(/3D dispatch/);
 });
 
 for (const scenario of shortestPathScenarios) {
-  test(`GPUGraphSingleSourceShortestPath GPU traversal: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphSingleSourceShortestPath GPU traversal: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -281,19 +277,16 @@ for (const scenario of shortestPathScenarios) {
     try {
       compileShortestPath(fixture, scenario.maximumWorkgroups);
       executeShortestPath(fixture);
-      await assertShortestPath(tapeTest, fixture, expected);
+      await assertShortestPath(fixture, expected);
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-    tapeTest.end();
   });
 }
 
-test('GPUGraphSingleSourceShortestPath schedules work without submission or source readback', async tapeTest => {
+it('GPUGraphSingleSourceShortestPath schedules work without submission or source readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -315,23 +308,18 @@ test('GPUGraphSingleSourceShortestPath schedules work without submission or sour
   const readbacks = sourceBuffers.map(chunk => vi.spyOn(chunk.buffer as Buffer, 'readAsync'));
   try {
     compileShortestPath(fixture);
-    tapeTest.equal(
-      submit.mock.calls.length,
-      0,
-      'constructing and compiling never submits GPU work'
-    );
+    expect(submit.mock.calls.length, 'constructing and compiling never submits GPU work').toBe(0);
     executeShortestPath(fixture);
-    await assertShortestPath(tapeTest, fixture, expected);
-    tapeTest.ok(
-      readbacks.every(readback => readback.mock.calls.length === 0),
+    await assertShortestPath(fixture, expected);
+    expect(
+      Boolean(readbacks.every(readback => readback.mock.calls.length === 0)),
       'weighted graph source buffers are never read back by the GPU operation'
-    );
+    ).toBe(true);
   } finally {
     submit.mockRestore();
     for (const readback of readbacks) readback.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-  tapeTest.end();
 });
 
 /** Computes the same synchronized float32 Bellman-Ford rounds as the GPU implementation. */
@@ -693,7 +681,6 @@ function executeShortestPath(fixture: ShortestPathExecutionFixture): void {
 }
 
 async function assertShortestPath(
-  tapeTest: Test,
   fixture: ShortestPathExecutionFixture,
   expected: ExpectedShortestPath
 ): Promise<void> {
@@ -712,42 +699,20 @@ async function assertShortestPath(
     readScalarVector(fixture.topology.invalidEdgeCount),
     readScalarVector(fixture.topology.forward.overflow)
   ]);
-  tapeTest.deepEqual(
-    distances,
-    expected.distances,
-    'weighted float32 distances match the CPU oracle'
+  expect(distances, 'weighted float32 distances match the CPU oracle').toEqual(expected.distances);
+  expect(predecessors, 'same-hop shortest routes choose the lowest stable predecessor').toEqual(
+    expected.predecessors
   );
-  tapeTest.deepEqual(
-    predecessors,
-    expected.predecessors,
-    'same-hop shortest routes choose the lowest stable predecessor'
+  expect(converged[0], 'GPU convergence status remains truthful').toBe(Number(expected.converged));
+  expect(invalidWeightCount[0], 'each invalid source-edge weight is counted once').toBe(
+    expected.invalidWeightCount
   );
-  tapeTest.equal(
-    converged[0],
-    Number(expected.converged),
-    'GPU convergence status remains truthful'
-  );
-  tapeTest.equal(
-    invalidWeightCount[0],
-    expected.invalidWeightCount,
-    'each invalid source-edge weight is counted once'
-  );
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid endpoints remain excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward overflow is explicit'
-  );
+  expect(invalidEdgeCount[0], 'invalid endpoints remain excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'forward overflow is explicit').toBe(Number(expected.forwardOverflow));
   if (fixture.topology.reverse) {
     const reverseOverflow = await readScalarVector(fixture.topology.reverse.overflow);
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse overflow remains explicit'
+    expect(reverseOverflow[0], 'reverse overflow remains explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
 }
@@ -768,12 +733,12 @@ async function readScalarVector(
   );
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: ShortestPathExecutionFixture): void {
+function destroyExecutionFixture(fixture: ShortestPathExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying the compiled operation preserves every caller-owned GPU buffer'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

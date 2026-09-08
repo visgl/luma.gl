@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {getIndexPickingModule} from '@luma.gl/engine';
 import {GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
@@ -16,8 +16,8 @@ import {
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
-test('filled polygon models declare generated row-preserving GPU inputs', t => {
-  t.deepEqual(POLYGON_GPU_INPUT_SCHEMA, [
+it('filled polygon models declare generated row-preserving GPU inputs', () => {
+  expect(POLYGON_GPU_INPUT_SCHEMA, '').toEqual([
     {
       columnName: 'positions',
       attributeName: 'positions',
@@ -53,12 +53,12 @@ test('filled polygon models declare generated row-preserving GPU inputs', t => {
       internal: true
     }
   ]);
-  t.equal(PolygonAttributeModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
-  t.equal(PolygonStorageModel.gpuInputSchema, POLYGON_GPU_INPUT_SCHEMA);
-  t.end();
+  expect(PolygonAttributeModel.gpuInputSchema, '').toBe(POLYGON_GPU_INPUT_SCHEMA);
+  expect(PolygonStorageModel.gpuInputSchema, '').toBe(POLYGON_GPU_INPUT_SCHEMA);
+  void 0;
 });
 
-test('PolygonAttributeModel consumes flattened vertex-list values through explicit table layout', t => {
+it('PolygonAttributeModel consumes flattened vertex-list values through explicit table layout', () => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device);
   const model = new PolygonAttributeModel(device, {
@@ -67,21 +67,23 @@ test('PolygonAttributeModel consumes flattened vertex-list values through explic
     shaderInputs: createPolygonShaderInputs(device)
   });
 
-  t.equal(model.table?.numRows, 1, 'keeps one logical source polygon row');
-  t.equal(model.table?.batches[0]?.gpuData.positions.format, 'vertex-list<float32x4>');
-  t.equal(model.vertexCount, 3, 'uses flattened reserved index valueLength for indexed draw count');
-  t.deepEqual(
+  expect(model.table?.numRows, 'keeps one logical source polygon row').toBe(1);
+  expect(model.table?.batches[0]?.gpuData.positions.format, '').toBe('vertex-list<float32x4>');
+  expect(
+    model.vertexCount,
+    'uses flattened reserved index valueLength for indexed draw count'
+  ).toBe(3);
+  expect(
     model.table?.bufferLayout.map(layout => layout.name),
-    ['positions', 'colors', 'rowIndices'],
     'keeps reserved indices out of shader attributes'
-  );
+  ).toEqual(['positions', 'colors', 'rowIndices']);
 
   model.destroy();
   destroyPolygonGPUVectors(vectors);
-  t.end();
+  void 0;
 });
 
-test('PolygonAttributeModel validates prepared GPUVector formats', t => {
+it('PolygonAttributeModel validates prepared GPUVector formats', () => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device);
   const invalidPositions = makePolygonGPUVector(
@@ -93,7 +95,7 @@ test('PolygonAttributeModel validates prepared GPUVector formats', t => {
     3
   );
 
-  t.throws(
+  expect(
     () =>
       new PolygonAttributeModel(device, {
         id: 'polygon-attribute-model-invalid-format',
@@ -101,15 +103,17 @@ test('PolygonAttributeModel validates prepared GPUVector formats', t => {
         positions: invalidPositions as unknown as PolygonGPUVectors['positions'],
         shaderInputs: createPolygonShaderInputs(device)
       }),
+    ''
+  ).toThrow(
     /positions GPUVector\.format "vertex-list<float32x3>" must be one of vertex-list<float32x4>/
   );
 
   invalidPositions.destroy();
   destroyPolygonGPUVectors(vectors);
-  t.end();
+  void 0;
 });
 
-test('PolygonAttributeModel appends retained indexed polygon batches', t => {
+it('PolygonAttributeModel appends retained indexed polygon batches', () => {
   const device = new NullDevice({});
   const firstVectors = makePolygonGPUVectors(device);
   const secondVectors = makePolygonGPUVectors(device, 1);
@@ -125,48 +129,46 @@ test('PolygonAttributeModel appends retained indexed polygon batches', t => {
     sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
   });
 
-  t.equal(model.table?.batches.length, 2, 'retains appended polygon GPU batches');
-  t.equal(model.table?.numRows, 2, 'aggregates logical source polygon rows');
-  t.deepEqual(
+  expect(model.table?.batches.length, 'retains appended polygon GPU batches').toBe(2);
+  expect(model.table?.numRows, 'aggregates logical source polygon rows').toBe(2);
+  expect(
     model.table?.batches.map(batch => batch.sourceInfo),
-    [
-      {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 1},
-      {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
-    ],
     'retains source row identity on model-owned GPU table batches'
-  );
-  t.doesNotThrow(() => model.needsRedraw(), 'does not bind aggregate local index buffers');
+  ).toEqual([
+    {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 1},
+    {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
+  ]);
+  expect(() => model.needsRedraw(), 'does not bind aggregate local index buffers').not.toThrow();
 
   model.destroy();
   destroyPolygonGPUVectors(firstVectors);
   destroyPolygonGPUVectors(secondVectors);
-  t.end();
+  void 0;
 });
 
-test('PolygonStorageModel rejects non-WebGPU devices', t => {
+it('PolygonStorageModel rejects non-WebGPU devices', () => {
   const device = new NullDevice({});
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
 
-  t.throws(
+  expect(
     () =>
       new PolygonStorageModel(device, {
         id: 'polygon-storage-model-test',
         ...vectors,
         shaderInputs: createPolygonShaderInputs(device)
       }),
-    /WebGPU-only/,
     'storage polygon model reports its backend contract'
-  );
+  ).toThrow(/WebGPU-only/);
 
   destroyPolygonGPUVectors(vectors);
-  t.end();
+  void 0;
 });
 
-test('PolygonStorageModel binds flattened polygon vectors as storage', async t => {
+it('PolygonStorageModel binds flattened polygon vectors as storage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('Skipping PolygonStorageModel storage test without WebGPU');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const vectors = makePolygonGPUVectors(device, 0, Buffer.VERTEX | Buffer.STORAGE);
@@ -179,33 +181,41 @@ test('PolygonStorageModel binds flattened polygon vectors as storage', async t =
     modules: [customModule]
   });
 
-  t.equal(model.table?.numRows, 1, 'keeps one logical source polygon row');
-  t.deepEqual(model.table?.bufferLayout, [], 'does not synthesize vertex attributes');
-  t.equal(model.vertexCount, 3, 'uses flattened reserved index valueLength for indexed draws');
-  t.equal(model.indexCount, 3, 'plumbs flattened reserved index valueLength to Model.draw');
-  t.notOk('bindings' in model.table!, 'does not cache model bindings on the table');
-  t.ok(model.bindings.polygonPositions, 'binds prepared positions as storage');
-  t.ok(model.bindings.polygonColors, 'binds prepared colors as storage');
-  t.ok(model.bindings.polygonRowIndices, 'binds prepared row indices as storage');
-  t.ok(
-    model.props.modules?.some(module => module.name === getIndexPickingModule(device).name),
+  expect(model.table?.numRows, 'keeps one logical source polygon row').toBe(1);
+  expect(model.table?.bufferLayout, 'does not synthesize vertex attributes').toEqual([]);
+  expect(model.vertexCount, 'uses flattened reserved index valueLength for indexed draws').toBe(3);
+  expect(model.indexCount, 'plumbs flattened reserved index valueLength to Model.draw').toBe(3);
+  expect(Boolean('bindings' in model.table!), 'does not cache model bindings on the table').toBe(
+    false
+  );
+  expect(Boolean(model.bindings.polygonPositions), 'binds prepared positions as storage').toBe(
+    true
+  );
+  expect(Boolean(model.bindings.polygonColors), 'binds prepared colors as storage').toBe(true);
+  expect(Boolean(model.bindings.polygonRowIndices), 'binds prepared row indices as storage').toBe(
+    true
+  );
+  expect(
+    Boolean(
+      model.props.modules?.some(module => module.name === getIndexPickingModule(device).name)
+    ),
     'keeps the required picking shader module'
-  );
-  t.ok(
-    model.props.modules?.some(module => module.name === customModule.name),
+  ).toBe(true);
+  expect(
+    Boolean(model.props.modules?.some(module => module.name === customModule.name)),
     'keeps the caller shader module'
-  );
+  ).toBe(true);
 
   model.addBatch({
     ...secondVectors,
     sourceInfo: {sourceBatchIndex: 1, sourceRowIndexOffset: 1, sourceRowCount: 1}
   });
-  t.equal(model.table?.batches.length, 2, 'prepares bindings for appended storage batches');
+  expect(model.table?.batches.length, 'prepares bindings for appended storage batches').toBe(2);
 
   model.destroy();
   destroyPolygonGPUVectors(vectors);
   destroyPolygonGPUVectors(secondVectors);
-  t.end();
+  void 0;
 });
 
 function makePolygonGPUVectors(

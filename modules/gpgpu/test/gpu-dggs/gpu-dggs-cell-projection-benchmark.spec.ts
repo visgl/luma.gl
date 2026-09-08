@@ -4,8 +4,7 @@
 
 import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/gpgpu/gpu-dggs/benchmarks';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
-import {expect} from 'vitest';
+import {expect, it} from 'vitest';
 
 const H3_CELLS = [0x089283082803ffffn, 0x089754e64993ffffn];
 const A5_CELLS = [
@@ -27,11 +26,9 @@ const A5_REFERENCE_LNGLATS = [
   [-122.41999998343744, 37.77999999438284]
 ] as const;
 
-test('DGGS cell projection benchmark validates and measures H3 and A5 paths', async t => {
+it('DGGS cell projection benchmark validates and measures H3 and A5 paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -47,16 +44,18 @@ test('DGGS cell projection benchmark validates and measures H3 and A5 paths', as
       warmupIterations: 0,
       measuredIterations: 1
     });
-    t.equal(report.family, family, `${family} family is reported`);
-    t.equal(report.cellCount, 256, `${family} row count is reported`);
-    t.ok(
-      Number.isFinite(report.synchronizedCellsPerSecond) && report.synchronizedCellsPerSecond > 0,
+    expect(report.family, `${family} family is reported`).toBe(family);
+    expect(report.cellCount, `${family} row count is reported`).toBe(256);
+    expect(
+      Boolean(
+        Number.isFinite(report.synchronizedCellsPerSecond) && report.synchronizedCellsPerSecond > 0
+      ),
       `${family} synchronized throughput is measured`
-    );
-    t.ok(
-      report.validationReadbackTimeMilliseconds >= 0,
+    ).toBe(true);
+    expect(
+      Boolean(report.validationReadbackTimeMilliseconds >= 0),
       `${family} correctness readback is measured separately`
-    );
+    ).toBe(true);
   }
 
   const incorrectReferences = makeUnitVectorReferences(H3_REFERENCE_LNGLATS, H3_CELLS.length);
@@ -71,7 +70,6 @@ test('DGGS cell projection benchmark validates and measures H3 and A5 paths', as
       measuredIterations: 1
     })
   ).rejects.toThrow(/reference values/);
-  t.end();
 });
 
 function makeUnitVectorReferences(

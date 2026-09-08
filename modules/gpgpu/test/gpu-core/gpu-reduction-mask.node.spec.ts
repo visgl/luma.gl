@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {
   GPUReduction,
   GraphBufferHandle,
@@ -13,18 +13,17 @@ import {
 
 type ScalarFormat = 'float32' | 'sint32' | 'uint32';
 
-test('GPUReduction accepts packed, source-aligned optional selection masks', testCase => {
+it('GPUReduction accepts packed, source-aligned optional selection masks', () => {
   const input = createView('input', 'float32', 4);
   const output = createView('output', 'float32', 2);
   const mask: GPUReductionMask = createView('mask', 'uint32', 4, {byteOffset: 4});
   const reduction = new GPUReduction({input, output, mask, operation: 'extent'});
 
-  testCase.equal(reduction.mask, mask, 'retains the caller-owned public selection mask');
-  testCase.equal(mask.byteOffset, 4, 'accepts packed uint32-aligned nonzero view offsets');
-  testCase.end();
+  expect(reduction.mask, 'retains the caller-owned public selection mask').toBe(mask);
+  expect(mask.byteOffset, 'accepts packed uint32-aligned nonzero view offsets').toBe(4);
 });
 
-test('GPUReduction rejects invalid selection mask formats, layouts, lengths, and aliases', testCase => {
+it('GPUReduction rejects invalid selection mask formats, layouts, lengths, and aliases', () => {
   const input = createView('input', 'uint32', 4);
   const output = createView('output', 'uint32', 1);
   const shortMask = createView('short-mask', 'uint32', 3);
@@ -32,35 +31,29 @@ test('GPUReduction rejects invalid selection mask formats, layouts, lengths, and
   const stridedMask = createView('strided-mask', 'uint32', 4, {byteStride: 8});
   const unalignedMask = createView('unaligned-mask', 'uint32', 4, {byteOffset: 2});
 
-  testCase.throws(
+  expect(
     () => new GPUReduction({input, output, mask: shortMask, operation: 'sum'}),
-    /input and mask lengths must match/,
     'scalar masks require one selection row per input value'
-  );
-  testCase.throws(
+  ).toThrow(/input and mask lengths must match/);
+  expect(
     () => new GPUReduction({input, output, mask: floatMask as never, operation: 'sum'}),
-    /packed, uint32-aligned uint32/,
     'floating-point views cannot be consumed as selection flags'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUReduction({input, output, mask: stridedMask, operation: 'sum'}),
-    /packed, uint32-aligned uint32/,
     'interleaved selections cannot be consumed by packed shaders'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUReduction({input, output, mask: unalignedMask, operation: 'sum'}),
-    /packed, uint32-aligned uint32/,
     'selection views must begin at a uint32-aligned byte offset'
-  );
-  testCase.throws(
+  ).toThrow(/packed, uint32-aligned uint32/);
+  expect(
     () => new GPUReduction({input, output, mask: output, operation: 'sum'}),
-    /mask and output must use separate buffers/,
     'selection flags cannot alias the caller-owned output'
-  );
-  testCase.end();
+  ).toThrow(/mask and output must use separate buffers/);
 });
 
-test('GPUReduction requires selection masks to preserve ordered vector topology', testCase => {
+it('GPUReduction requires selection masks to preserve ordered vector topology', () => {
   const input = createVector('input', 'sint32', [2, 0, 3]);
   const matchingMask = createVector('matching-mask', 'uint32', [2, 0, 3]);
   const mismatchedMask = createVector('mismatched-mask', 'uint32', [1, 0, 4]);
@@ -69,23 +62,19 @@ test('GPUReduction requires selection masks to preserve ordered vector topology'
   const output = createView('output', 'sint32', 1);
 
   const reduction = new GPUReduction({input, output, mask: matchingMask, operation: 'min'});
-  testCase.equal(reduction.mask, matchingMask, 'preserves empty chunks at their source positions');
-  testCase.throws(
+  expect(reduction.mask, 'preserves empty chunks at their source positions').toBe(matchingMask);
+  expect(
     () => new GPUReduction({input, output, mask: atomicMask, operation: 'min'}),
-    /same view kind/,
     'vector inputs cannot silently concatenate an atomic selection'
-  );
-  testCase.throws(
+  ).toThrow(/same view kind/);
+  expect(
     () => new GPUReduction({input, output, mask: mismatchedMask, operation: 'min'}),
-    /same chunk topology/,
     'equal total row counts cannot replace matching ordered chunk sizes'
-  );
-  testCase.throws(
+  ).toThrow(/same chunk topology/);
+  expect(
     () => new GPUReduction({input, output, mask: differentChunkCountMask, operation: 'min'}),
-    /same chunk topology/,
     'vector selections must preserve the complete source chunk count'
-  );
-  testCase.end();
+  ).toThrow(/same chunk topology/);
 });
 
 function createView<T extends ScalarFormat>(

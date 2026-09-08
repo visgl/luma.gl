@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -44,79 +44,70 @@ fn computeMain() {
 }
 `;
 
-test('floatColors#defaultUniforms', t => {
-  t.deepEqual(floatColors.defaultUniforms, {useByteColors: true}, 'default floatColors uniforms');
-  t.deepEqual(getShaderModuleUniforms(floatColors, {}), {}, 'empty props return no overrides');
-  t.end();
+it('floatColors#defaultUniforms', () => {
+  expect(floatColors.defaultUniforms, 'default floatColors uniforms').toEqual({
+    useByteColors: true
+  });
+  expect(getShaderModuleUniforms(floatColors, {}), 'empty props return no overrides').toEqual({});
+  void 0;
 });
 
-test('colors#defaultUniforms', t => {
-  t.deepEqual(colors.defaultUniforms, {useByteColors: true}, 'default colors uniforms');
-  t.deepEqual(getShaderModuleUniforms(colors, {}), {}, 'empty props return no overrides');
-  t.end();
+it('colors#defaultUniforms', () => {
+  expect(colors.defaultUniforms, 'default colors uniforms').toEqual({useByteColors: true});
+  expect(getShaderModuleUniforms(colors, {}), 'empty props return no overrides').toEqual({});
+  void 0;
 });
 
-test('storageColors#defaultUniforms', t => {
-  t.deepEqual(
-    storageColors.defaultUniforms,
-    {
-      format: STORAGE_COLOR_FORMAT.RGBA8UNORM,
-      wordStride: 1,
-      wordOffset: 0,
-      _padding: 0
-    },
-    'default storage colors uniforms'
-  );
+it('storageColors#defaultUniforms', () => {
+  expect(storageColors.defaultUniforms, 'default storage colors uniforms').toEqual({
+    format: STORAGE_COLOR_FORMAT.RGBA8UNORM,
+    wordStride: 1,
+    wordOffset: 0,
+    _padding: 0
+  });
 
-  t.deepEqual(
+  expect(
     storageColors.getUniforms({format: 'rgba16float', byteStride: 16, byteOffset: 4}),
-    {
-      format: STORAGE_COLOR_FORMAT.RGBA16FLOAT,
-      wordStride: 4,
-      wordOffset: 1,
-      _padding: 0
-    },
     'storage colors props resolve to packed word uniforms'
-  );
+  ).toEqual({
+    format: STORAGE_COLOR_FORMAT.RGBA16FLOAT,
+    wordStride: 4,
+    wordOffset: 1,
+    _padding: 0
+  });
 
-  t.throws(
+  expect(
     () => storageColors.getUniforms({format: 'rgba16float', byteStride: 4}),
-    /at least 8/,
     'short half-float stride is rejected'
+  ).toThrow(/at least 8/);
+  expect(() => storageColors.getUniforms({byteOffset: 2}), 'unaligned offset is rejected').toThrow(
+    /4-byte aligned/
   );
-  t.throws(
-    () => storageColors.getUniforms({byteOffset: 2}),
-    /4-byte aligned/,
-    'unaligned offset is rejected'
-  );
-  t.end();
+  void 0;
 });
 
-test('floatColors#cpuNormalizationHelpers', t => {
-  t.deepEqual(
-    normalizeByteColor3([255, 128, 64], true),
-    [1, 128 / 255, 64 / 255],
-    'byte colors normalize to floats'
-  );
-  t.deepEqual(
-    normalizeByteColor3([4, 2, 1], false),
-    [4, 2, 1],
-    'float and HDR colors pass through'
-  );
-  t.deepEqual(
-    normalizeByteColor4([255, 128, 64, 255], true),
-    [1, 128 / 255, 64 / 255, 1],
-    'byte rgba normalizes'
-  );
-  t.deepEqual(
-    normalizeByteColor4([1, 0.5, 0.25], false),
-    [1, 0.5, 0.25, 1],
-    'float rgb adds opaque alpha'
-  );
-  t.end();
+it('floatColors#cpuNormalizationHelpers', () => {
+  expect(normalizeByteColor3([255, 128, 64], true), 'byte colors normalize to floats').toEqual([
+    1,
+    128 / 255,
+    64 / 255
+  ]);
+  expect(normalizeByteColor3([4, 2, 1], false), 'float and HDR colors pass through').toEqual([
+    4, 2, 1
+  ]);
+  expect(normalizeByteColor4([255, 128, 64, 255], true), 'byte rgba normalizes').toEqual([
+    1,
+    128 / 255,
+    64 / 255,
+    1
+  ]);
+  expect(normalizeByteColor4([1, 0.5, 0.25], false), 'float rgb adds opaque alpha').toEqual([
+    1, 0.5, 0.25, 1
+  ]);
+  void 0;
 });
 
-test('colors#assembledGLSLContract', t => {
+it('colors#assembledGLSLContract', () => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: `\
@@ -137,22 +128,22 @@ void main(void) {
     modules: [colors]
   });
 
-  t.ok(
-    assembledShader.vs.includes('colorsUniforms'),
+  expect(
+    Boolean(assembledShader.vs.includes('colorsUniforms')),
     'colors uniforms assembled into vertex shader'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 colors_premultiplyAlpha'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 colors_premultiplyAlpha')),
     'colors helpers assembled into fragment shader'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 colors_premultiply_alpha'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 colors_premultiply_alpha')),
     'colors helper aliases assembled for compatibility'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('floatColors#assembledGLSLContract', t => {
+it('floatColors#assembledGLSLContract', () => {
   const assembledShader = assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: `\
@@ -173,18 +164,18 @@ void main(void) {
     modules: [floatColors]
   });
 
-  t.ok(
-    assembledShader.vs.includes('floatColorsUniforms'),
+  expect(
+    Boolean(assembledShader.vs.includes('floatColorsUniforms')),
     'floatColors uniforms assembled into vertex shader'
-  );
-  t.ok(
-    assembledShader.fs.includes('vec4 floatColors_premultiplyAlpha'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShader.fs.includes('vec4 floatColors_premultiplyAlpha')),
     'floatColors helpers assembled into fragment shader'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('storageColors#assembledWGSLContract', t => {
+it('storageColors#assembledWGSLContract', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const baseColorsShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
@@ -202,48 +193,54 @@ test('storageColors#assembledWGSLContract', t => {
     modules: [floatColors, storageColors]
   });
 
-  t.ok(baseColorsShader.source.includes('struct colorsUniforms'), 'base colors WGSL assembles');
-  t.notOk(
-    baseColorsShader.source.includes('storageColorsBuffer'),
+  expect(
+    Boolean(baseColorsShader.source.includes('struct colorsUniforms')),
+    'base colors WGSL assembles'
+  ).toBe(true);
+  expect(
+    Boolean(baseColorsShader.source.includes('storageColorsBuffer')),
     'base colors WGSL does not include storage color bindings'
-  );
-  t.notOk(
-    baseColorsShader.bindingTable.some(binding => binding.name === 'storageColorsBuffer'),
+  ).toBe(false);
+  expect(
+    Boolean(baseColorsShader.bindingTable.some(binding => binding.name === 'storageColorsBuffer')),
     'base colors binding table does not require storage color buffer'
-  );
-  t.ok(
-    storageColorsShader.bindingTable.some(
-      binding => binding.name === 'storageColorsBuffer' && binding.kind === 'read-only-storage'
+  ).toBe(false);
+  expect(
+    Boolean(
+      storageColorsShader.bindingTable.some(
+        binding => binding.name === 'storageColorsBuffer' && binding.kind === 'read-only-storage'
+      )
     ),
     'storage colors binding table includes read-only color storage buffer'
-  );
-  t.ok(
-    storageColorsShader.bindingTable.some(
-      binding => binding.name === 'storageColors' && binding.kind === 'uniform'
+  ).toBe(true);
+  expect(
+    Boolean(
+      storageColorsShader.bindingTable.some(
+        binding => binding.name === 'storageColors' && binding.kind === 'uniform'
+      )
     ),
     'storage colors binding table includes storage color uniforms'
-  );
-  t.notOk(
-    storageColorsShader.bindingTable.some(binding => binding.name === 'colors'),
+  ).toBe(true);
+  expect(
+    Boolean(storageColorsShader.bindingTable.some(binding => binding.name === 'colors')),
     'storage colors does not bind unused semantic color uniforms'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     countSourceOccurrences(legacyStorageColorsShader.source, 'fn floatColors_normalize('),
-    1,
     'legacy floatColors can assemble alongside storageColors without duplicate helper aliases'
-  );
-  t.end();
+  ).toBe(1);
+  void 0;
 });
 
-test('storageColors#WGSL readColor smoke', async t => {
+it('storageColors#WGSL readColor smoke', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping storageColors WGSL smoke test');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
-  await runStorageColorsReadCase(t, webgpuDevice, {
+  await runStorageColorsReadCase(webgpuDevice, {
     label: 'rgba8unorm',
     format: 'rgba8unorm',
     inputWords: new Uint32Array([packRgba8Unorm(255, 128, 0, 255), packRgba8Unorm(64, 32, 16, 8)]),
@@ -253,7 +250,7 @@ test('storageColors#WGSL readColor smoke', async t => {
     ]
   });
 
-  await runStorageColorsReadCase(t, webgpuDevice, {
+  await runStorageColorsReadCase(webgpuDevice, {
     label: 'rgba16float',
     format: 'rgba16float',
     inputWords: new Uint32Array([
@@ -269,7 +266,7 @@ test('storageColors#WGSL readColor smoke', async t => {
   });
 
   const rgba32FloatValues = new Float32Array([1.25, -0.5, 2, 0.25, 3.5, 0, 0.125, 1]);
-  await runStorageColorsReadCase(t, webgpuDevice, {
+  await runStorageColorsReadCase(webgpuDevice, {
     label: 'rgba32float',
     format: 'rgba32float',
     inputWords: new Uint32Array(rgba32FloatValues.buffer),
@@ -279,11 +276,10 @@ test('storageColors#WGSL readColor smoke', async t => {
     ]
   });
 
-  t.end();
+  void 0;
 });
 
 async function runStorageColorsReadCase(
-  t: {deepEqual: (actual: unknown, expected: unknown, message?: string) => void},
   webgpuDevice: Awaited<ReturnType<typeof getWebGPUTestDevice>>,
   storageColorCase: {
     expectedRows: number[][];
@@ -336,11 +332,10 @@ async function runStorageColorsReadCase(
       resultBytes.byteOffset,
       resultBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       getRoundedColorRows(resultValues, storageColorCase.expectedRows.length),
-      storageColorCase.expectedRows.map(roundColorRow),
       `${storageColorCase.label} colors read through WGSL storage helper`
-    );
+    ).toEqual(storageColorCase.expectedRows.map(roundColorRow));
   } finally {
     computation.destroy();
     inputBuffer.destroy();

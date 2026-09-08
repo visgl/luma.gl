@@ -30,7 +30,7 @@ export type GPUVectorFromBufferProps<T extends GPUVectorFormat = GPUVectorFormat
   format?: T;
   /** Number of logical rows in the buffer. */
   length: number;
-  /** Number of fixed rows or flattened vertex-list values in the buffer. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   valueLength?: number;
   /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
@@ -58,7 +58,7 @@ export type GPUVectorFromInterleavedProps<T extends GPUVectorFormat = GPUVectorF
   format?: T;
   /** Number of logical rows in the buffer. */
   length: number;
-  /** Number of fixed rows or flattened vertex-list values in the buffer. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   valueLength?: number;
   /** Byte offset of the first logical row. */
   byteOffset?: number;
@@ -84,7 +84,7 @@ export type GPUVectorFromDataProps<T extends GPUVectorFormat = GPUVectorFormat> 
   data: GPUData<T>[];
   /** Number of scalar values represented by one fixed row or flattened element. */
   stride?: number;
-  /** Number of fixed rows or flattened vertex-list values across all chunks. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   valueLength?: number;
   /** Bytes between adjacent fixed rows or flattened elements. Defaults to the first chunk stride. */
   byteStride?: number;
@@ -148,7 +148,7 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
   readonly format?: T;
   /** Number of logical rows represented by the vector. */
   length: number;
-  /** Number of fixed rows or flattened vertex-list values represented by the vector. */
+  /** Number of fixed rows, fixed-list elements, or flattened variable-length values. */
   valueLength: number;
   /** Number of scalar values represented by one fixed row or flattened element. */
   readonly stride: number;
@@ -179,11 +179,12 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
           buffer,
           format,
           length,
-          valueLength = length,
+          valueLength: explicitValueLength,
           byteOffset = 0,
           ownsBuffer = false
         } = props;
-        const {stride, byteStride, rowByteLength} = getResolvedGPUVectorLayout(props);
+        const {stride, byteStride, rowByteLength, listSize} = getResolvedGPUVectorLayout(props);
+        const valueLength = explicitValueLength ?? length * (listSize ?? 1);
         this.name = name;
         this.dataType = props.dataType;
         this.format = format;
@@ -216,21 +217,27 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
           buffer,
           format,
           length,
-          valueLength = length,
+          valueLength: explicitValueLength,
           byteOffset = 0,
           byteStride,
           attributes,
           ownsBuffer = false
         } = props;
+        const formatInfo = format ? getGPUVectorFormatInfo(format) : undefined;
+        const valueLength = explicitValueLength ?? length * (formatInfo?.listSize ?? 1);
+        const stride = formatInfo?.fixedSizeList
+          ? formatInfo.components * formatInfo.listSize!
+          : byteStride;
+        const rowByteLength = formatInfo?.fixedSizeList ? formatInfo.byteLength : byteStride;
         this.name = name;
         this.dataType = props.dataType;
         this.format = format;
         this.length = length;
         this.valueLength = valueLength;
-        this.stride = byteStride;
+        this.stride = stride;
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
-        this.rowByteLength = byteStride;
+        this.rowByteLength = rowByteLength;
         this.bufferLayout = {name, byteStride, attributes};
         this.data.push(
           new GPUData<T>({
@@ -238,10 +245,10 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
             format,
             length,
             valueLength,
-            stride: byteStride,
+            stride,
             byteOffset,
             byteStride,
-            rowByteLength: byteStride,
+            rowByteLength,
             ownsBuffer,
             dataType: props.dataType
           })
@@ -255,7 +262,8 @@ export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
         const {
           name,
           data,
-          stride = data[0]?.stride ?? formatInfo?.components ?? 1,
+          stride = data[0]?.stride ??
+            (formatInfo ? formatInfo.components * (formatInfo.listSize ?? 1) : 1),
           valueLength = data.reduce(
             (totalValueLength, chunk) => totalValueLength + chunk.valueLength,
             0
@@ -411,16 +419,20 @@ function getResolvedGPUVectorLayout<T extends GPUVectorFormat>(props: {
   stride?: number;
   byteStride?: number;
   rowByteLength?: number;
-}): {stride: number; byteStride: number; rowByteLength: number} {
+}): {stride: number; byteStride: number; rowByteLength: number; listSize?: number} {
   const formatInfo = props.format ? getGPUVectorFormatInfo(props.format) : undefined;
-  const rowByteLength = props.rowByteLength ?? props.byteStride ?? formatInfo?.byteLength;
+  const rowByteLength =
+    props.rowByteLength ??
+    (formatInfo?.fixedSizeList ? formatInfo.byteLength : props.byteStride) ??
+    formatInfo?.byteLength;
   if (rowByteLength === undefined) {
     throw new Error('GPUVector requires format or explicit rowByteLength');
   }
   return {
-    stride: props.stride ?? formatInfo?.components ?? 1,
+    stride: props.stride ?? (formatInfo ? formatInfo.components * (formatInfo.listSize ?? 1) : 1),
     byteStride: props.byteStride ?? rowByteLength,
-    rowByteLength
+    rowByteLength,
+    ...(formatInfo?.listSize ? {listSize: formatInfo.listSize} : {})
   };
 }
 

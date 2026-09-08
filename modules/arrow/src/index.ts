@@ -46,6 +46,13 @@ export {
   type ConvertArrowMatrixToGPUVectorOptions
 } from './arrow/vectors/arrow-matrix-gpu-vector';
 export {
+  canConvertColors,
+  convertColors,
+  convertArrowColors,
+  convertArrowColorsToArrow,
+  type ArrowColorType
+} from './arrow/arrow-colors';
+export {
   getArrowMatrixVectorInfo,
   makeArrowMatrixVector,
   makeArrowMatrix2x2Vector,
@@ -238,13 +245,38 @@ export {
   type ArrowTableFromGPUAnalyticsTableProps
 } from './arrow/gpu/arrow-gpu-analytics-readback';
 export {
+  convertArrowRecordBatchToGPURecordBatch,
+  convertArrowRecordBatchesToGPURecordBatches,
+  convertArrowTableToGPUTable,
+  convertArrowToGPUVector,
+  planArrowGPUConversion,
+  planArrowTableGPUConversion,
+  type ArrowGPUConversionBackend,
+  type ArrowGPUConversionCost,
+  type ArrowGPUConversionOptions,
+  type ArrowGPUConversionPlan,
+  type ArrowGPUConversionPolicy,
+  type ArrowGPUConversionSemantic,
+  type ArrowGPUConversionSource,
+  type ArrowGPUConversionStrategy,
+  type ArrowRecordBatchConversionSource,
+  type ArrowGPUTableConversionColumn,
+  type ArrowGPUTableConversionPlan,
+  type ArrowGPUTableConversionSchema,
+  type PreparedArrowGPUVector,
+  type PreparedArrowGPURecordBatch,
+  type PreparedArrowGPUTable
+} from './arrow/gpu/arrow-gpu-conversion';
+export {
   getRequiredArrowGPUVectorDataType,
+  getGPUVectorFormatFromArrowDataType,
   makeGPUDataFromArrowData,
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
+  type ArrowGPUValidityColumn,
   type GPURecordBatchFromArrowRecordBatchProps,
   type GPUTableFromArrowTableProps,
   type GPUVectorFromArrowProps,
@@ -343,6 +375,26 @@ export {
   type PreparedArrowPolygonGPUVectors,
   type ConvertArrowPolygonToGPUVectorsOptions
 } from './arrow/renderers/polygon/conversion/arrow-polygon-gpu-vectors';
+export {
+  convertGeoArrowTableToDenseUnion,
+  convertGeoArrowTableToInterleaved,
+  convertGeoArrowTableToInterleavedAsync,
+  convertGeoArrowVectorToDenseUnion,
+  convertGeoArrowVectorToInterleaved,
+  type GeoArrowDenseUnionTableOptions,
+  type GeoArrowDenseUnionVectorOptions,
+  type GeoArrowInterleaveOptions,
+  type GeoArrowNativeEncoding,
+  type GeoArrowSerializedEncoding
+} from './arrow/geoarrow/arrow-geoarrow-conversion';
+export {
+  inferGeoArrowCoordinateLayoutFromArrowType,
+  inferGeoArrowDimensionFromArrowType,
+  inferGeoArrowEncodingFromArrowType,
+  makeArrowVectorFromGeoArrowColumn,
+  makeGeoArrowColumnFromArrowVector,
+  type MakeGeoArrowColumnFromArrowVectorOptions
+} from './arrow/geoarrow/arrow-geoarrow-adapter';
 export {
   getArrowRecordBatchAsyncIterator,
   getOptionalArrowColumn,

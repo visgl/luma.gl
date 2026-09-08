@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {toneMapping} from '@luma.gl/effects';
 import {
   getShaderModuleUniforms,
@@ -54,7 +54,7 @@ fn fragmentMain() -> @location(0) vec4f {
 }
 `;
 
-test('toneMapping#defaults', testCase => {
+it('toneMapping#defaults', () => {
   const defaultUniforms = getShaderModuleUniforms(toneMapping, {}, {});
   const overriddenUniforms = getShaderModuleUniforms(
     toneMapping,
@@ -62,33 +62,40 @@ test('toneMapping#defaults', testCase => {
     {}
   );
 
-  testCase.equal(defaultUniforms.exposure, 1, 'exposure defaults to one');
-  testCase.equal(defaultUniforms.maximumLuminance, 1, 'standard displays retain existing output');
-  testCase.equal(overriddenUniforms.exposure, 2.5, 'exposure accepts caller configuration');
-  testCase.equal(
+  expect(defaultUniforms.exposure, 'exposure defaults to one').toBe(1);
+  expect(defaultUniforms.maximumLuminance, 'standard displays retain existing output').toBe(1);
+  expect(overriddenUniforms.exposure, 'exposure accepts caller configuration').toBe(2.5);
+  expect(
     overriddenUniforms.maximumLuminance,
-    1.6,
     'extended displays can preserve highlights above SDR white'
-  );
-  testCase.deepEqual(toneMapping.passes, [{filter: true}], 'runs as one fullscreen filter pass');
-  testCase.end();
+  ).toBe(1.6);
+  expect(toneMapping.passes, 'runs as one fullscreen filter pass').toEqual([{filter: true}]);
+  void 0;
 });
 
-test('toneMapping#cross-backend shader sources', testCase => {
+it('toneMapping#cross-backend shader sources', () => {
   for (const shaderSource of [toneMapping.source, toneMapping.fs]) {
-    testCase.ok(shaderSource.includes('2.51'), 'includes the ACES numerator coefficient');
-    testCase.ok(shaderSource.includes('2.43'), 'includes the ACES denominator coefficient');
-    testCase.ok(shaderSource.includes('toneMapping.exposure'), 'applies configurable exposure');
-    testCase.ok(
-      shaderSource.includes('toneMapping.maximumLuminance'),
-      'preserves optional extended-range highlight output'
+    expect(Boolean(shaderSource.includes('2.51')), 'includes the ACES numerator coefficient').toBe(
+      true
     );
-    testCase.ok(shaderSource.includes('color.a'), 'preserves input alpha');
+    expect(
+      Boolean(shaderSource.includes('2.43')),
+      'includes the ACES denominator coefficient'
+    ).toBe(true);
+    expect(
+      Boolean(shaderSource.includes('toneMapping.exposure')),
+      'applies configurable exposure'
+    ).toBe(true);
+    expect(
+      Boolean(shaderSource.includes('toneMapping.maximumLuminance')),
+      'preserves optional extended-range highlight output'
+    ).toBe(true);
+    expect(Boolean(shaderSource.includes('color.a')), 'preserves input alpha').toBe(true);
   }
-  testCase.end();
+  void 0;
 });
 
-test('toneMapping#WGSL assembly', testCase => {
+it('toneMapping#WGSL assembly', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WEBGPU_PLATFORM_INFO,
@@ -96,15 +103,18 @@ test('toneMapping#WGSL assembly', testCase => {
     modules: [toneMapping]
   });
 
-  testCase.ok(
-    assembledShader.source.includes('fn toneMapping_filterColor_ext('),
+  expect(
+    Boolean(assembledShader.source.includes('fn toneMapping_filterColor_ext(')),
     'assembles the WGSL filter entrypoint'
-  );
-  testCase.ok(new WgslReflect(assembledShader.source), 'assembled WGSL parses successfully');
-  testCase.end();
+  ).toBe(true);
+  expect(
+    Boolean(new WgslReflect(assembledShader.source)),
+    'assembled WGSL parses successfully'
+  ).toBe(true);
+  void 0;
 });
 
-test('toneMapping#GLSL assembly', testCase => {
+it('toneMapping#GLSL assembly', () => {
   const shaderAssembler = new GLSLShaderAssembler();
   const assembledShaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo: WEBGL_PLATFORM_INFO,
@@ -113,13 +123,13 @@ test('toneMapping#GLSL assembly', testCase => {
     modules: [toneMapping]
   });
 
-  testCase.ok(
-    assembledShaders.fs.includes('vec4 toneMapping_filterColor_ext('),
+  expect(
+    Boolean(assembledShaders.fs.includes('vec4 toneMapping_filterColor_ext(')),
     'assembles the GLSL filter entrypoint'
-  );
-  testCase.ok(
-    assembledShaders.fs.includes('layout(std140) uniform toneMappingUniforms'),
+  ).toBe(true);
+  expect(
+    Boolean(assembledShaders.fs.includes('layout(std140) uniform toneMappingUniforms')),
     'assembles the portable exposure uniform block'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });

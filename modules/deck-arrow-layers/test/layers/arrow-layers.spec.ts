@@ -4,14 +4,22 @@
 
 import {Deck, OrthographicView, type Layer, type PickingInfo} from '@deck.gl/core';
 import {ArrowPathLayer, ArrowPolygonLayer, ArrowTextLayer} from '@deck.gl-community/arrow-layers';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
-import test from 'test/utils/vitest-tape';
+import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {buildBitmapFontAtlas} from '@luma.gl/text';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Table, vectorFromArray, type RecordBatch} from 'apache-arrow';
+import {
+  Field,
+  FixedSizeList,
+  Float32,
+  Table,
+  Vector,
+  vectorFromArray,
+  type RecordBatch
+} from 'apache-arrow';
 import {afterAll, vi} from 'vitest';
 import {
   makeArrowLineRecordBatches,
@@ -34,7 +42,7 @@ afterAll(() => {
   finalizeSharedStorageDeck();
 });
 
-test('Arrow deck layers return source row indices from Deck picking', async t => {
+it('Arrow deck layers return source row indices from Deck picking', async () => {
   const pathSource = makeArrowLineSourceData(
     {pathCount: 12, pointCount: 8, label: 'picking test paths'},
     'lines',
@@ -63,9 +71,9 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
   });
   const nullablePathColors = vectorFromArray(
     Array.from({length: pathSource.sourceVectors.paths.length}, (_, rowIndex) =>
-      rowIndex % 2 === 0 ? [20, 120, 240, 255] : null
+      rowIndex % 2 === 0 ? [20 / 255, 120 / 255, 240 / 255, 1] : null
     ),
-    pathSource.sourceVectors.colors!.type
+    new FixedSizeList(4, new Field('value', new Float32(), false))
   );
   let nullablePathDataError: unknown;
   const nullablePathLayer = new ArrowPathLayer({
@@ -227,21 +235,22 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
         const constantLayouts = model.bufferLayout.filter(layout =>
           layout.name.startsWith('constantPath')
         );
-        t.deepEqual(
+        expect(
           constantLayouts.map(layout => layout.byteStride),
-          [0, 0, 0],
           `${model.device.type} path constants use zero-stride attribute layouts`
-        );
+        ).toEqual([0, 0, 0]);
         if (model.device.type === 'webgl') {
           for (const attributeName of ['segmentStartColors', 'segmentEndColors', 'widths']) {
             const attribute = model.pipeline.shaderLayout.attributes.find(
               candidate => candidate.name === attributeName
             );
-            t.ok(attribute, `WebGL path shader exposes ${attributeName}`);
-            t.ok(
-              attribute && ArrayBuffer.isView(model.vertexArray.attributes[attribute.location]),
+            expect(Boolean(attribute), `WebGL path shader exposes ${attributeName}`).toBe(true);
+            expect(
+              Boolean(
+                attribute && ArrayBuffer.isView(model.vertexArray.attributes[attribute.location])
+              ),
               `WebGL ${attributeName} is a native constant attribute`
-            );
+            ).toBe(true);
           }
         }
       }
@@ -258,18 +267,22 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
           const colorAttribute = model.pipeline.shaderLayout.attributes.find(
             attribute => attribute.name === 'colors'
           );
-          t.ok(
-            colorAttribute &&
-              ArrayBuffer.isView(model.vertexArray.attributes[colorAttribute.location]),
+          expect(
+            Boolean(
+              colorAttribute &&
+                ArrayBuffer.isView(model.vertexArray.attributes[colorAttribute.location])
+            ),
             'WebGL polygon color uses a native constant attribute'
-          );
+          ).toBe(true);
         } else {
-          t.ok(
-            model.bufferLayout.some(
-              layout => layout.name === 'gpu-table-constant-vertex' && layout.byteStride === 0
+          expect(
+            Boolean(
+              model.bufferLayout.some(
+                layout => layout.name === 'gpu-table-constant-vertex' && layout.byteStride === 0
+              )
             ),
             'WebGPU polygon constant uses a zero-stride attribute layout'
-          );
+          ).toBe(true);
         }
       }
     },
@@ -302,31 +315,31 @@ test('Arrow deck layers return source row indices from Deck picking', async t =>
         getError,
         inspectModel
       );
-      t.ok(pickingInfo?.picked, `${layer.id} returns a picked object`);
-      t.equal(pickingInfo?.layer?.id, layer.id, `${layer.id} decodes the picked layer`);
-      t.ok(
-        Number.isInteger(pickingInfo?.index) && pickingInfo!.index >= 0,
+      expect(Boolean(pickingInfo?.picked), `${layer.id} returns a picked object`).toBe(true);
+      expect(pickingInfo?.layer?.id, `${layer.id} decodes the picked layer`).toBe(layer.id);
+      expect(
+        Boolean(Number.isInteger(pickingInfo?.index) && pickingInfo!.index >= 0),
         `${layer.id} returns a source row index`
-      );
+      ).toBe(true);
     }
   } finally {
     deck.finalize();
     parent.remove();
   }
 
-  t.end();
+  void 0;
 });
 
-test('ArrowPathLayer storage draws streamed batches incrementally and preserves picking provenance', async t => {
+it('ArrowPathLayer storage draws streamed batches incrementally and preserves picking provenance', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping streamed WebGPU Deck rendering on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const source = makeArrowLineSourceData(
@@ -338,11 +351,15 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     6
   );
   const recordBatches = makeArrowLineRecordBatches(source);
-  t.equal(recordBatches.length, 2, 'test source contains two batches');
-  const callerColorVector = makeGPUVectorFromArrow(device, source.sourceVectors.colors!, {
-    name: 'caller-path-colors',
-    format: 'unorm8x4'
-  });
+  expect(recordBatches.length, 'test source contains two batches').toBe(2);
+  const callerColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(source.sourceVectors.colors!),
+    {
+      name: 'caller-path-colors',
+      format: 'float32x4'
+    }
+  );
   const callerColorBuffers = callerColorVector.data.map(data => data.buffer);
   let releaseSecondBatch = () => {};
   const secondBatchReady = new Promise<void>(resolve => {
@@ -371,12 +388,15 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     await waitForModelCount(layer, 1, () => dataError);
     const firstModel = layer.getModels()[0]!;
     await waitForPipeline(firstModel);
-    t.equal(firstModel.device.type, 'webgpu', 'streaming path test uses WebGPU');
-    t.ok(firstModel.instanceCount > 0, 'first streamed WebGPU batch is drawable before completion');
-    t.deepEqual(loadedBatchCounts, [1], 'first batch is reported before the source completes');
+    expect(firstModel.device.type, 'streaming path test uses WebGPU').toBe('webgpu');
+    expect(
+      Boolean(firstModel.instanceCount > 0),
+      'first streamed WebGPU batch is drawable before completion'
+    ).toBe(true);
+    expect(loadedBatchCounts, 'first batch is reported before the source completes').toEqual([1]);
     releaseSecondBatch();
     await waitForModelCount(layer, 2, () => dataError);
-    t.deepEqual(loadedBatchCounts, [1, 2], 'second batch appends without replacing the first');
+    expect(loadedBatchCounts, 'second batch appends without replacing the first').toEqual([1, 2]);
     const pickingInfo = layer.getPickingInfo({
       info: {index: 7, picked: true} as PickingInfo,
       mode: 'hover',
@@ -384,39 +404,45 @@ test('ArrowPathLayer storage draws streamed batches incrementally and preserves 
     } as never) as PickingInfo & {
       arrow?: {rowIndex: number; batchIndex: number; batchRowIndex: number};
     };
-    t.deepEqual(
+    expect(
       pickingInfo.arrow,
-      {rowIndex: 7, batchIndex: 1, batchRowIndex: 1},
       'global row index resolves to source batch and batch-local row'
-    );
+    ).toEqual({rowIndex: 7, batchIndex: 1, batchRowIndex: 1});
   } finally {
     deck.setProps({layers: []});
     for (const buffer of callerColorBuffers) {
-      t.notOk(buffer.destroyed, 'ArrowPathLayer leaves caller-owned GPU color buffers alive');
+      expect(
+        Boolean(buffer.destroyed),
+        'ArrowPathLayer leaves caller-owned GPU color buffers alive'
+      ).toBe(false);
     }
     callerColorVector.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Arrow polygon and text layers render storage-backed WebGPU models', async t => {
+it('Arrow polygon and text layers render storage-backed WebGPU models', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping storage-backed WebGPU Deck rendering on a software-backed adapter');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const polygonSource = makeArrowPolygonExampleData('10k-stream', 'polygon', 'row-colors');
   const polygonBatch = polygonSource.recordBatches[0]!;
-  const polygonColorVector = makeGPUVectorFromArrow(device, polygonBatch.getChild('colors')!, {
-    name: 'caller-polygon-colors',
-    format: 'unorm8x4'
-  });
+  const polygonColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(polygonBatch.getChild('colors')!),
+    {
+      name: 'caller-polygon-colors',
+      format: 'float32x4'
+    }
+  );
   let polygonDataError: unknown;
   const polygonLayer = new ArrowPolygonLayer({
     id: 'arrow-polygons-storage-test',
@@ -446,10 +472,14 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     'string-colors',
     {clipRects: true, angles: true, sizes: true}
   );
-  const textColorVector = makeGPUVectorFromArrow(device, textSource.colors!.slice(190, 210), {
-    name: 'caller-text-colors',
-    format: 'unorm8x4'
-  });
+  const textColorVector = makeGPUVectorFromArrow(
+    device,
+    makeFloat32ColorVector(textSource.colors!.slice(190, 210)),
+    {
+      name: 'caller-text-colors',
+      format: 'float32x4'
+    }
+  );
   let textDataError: unknown;
   const textLayer = new ArrowTextLayer({
     id: 'arrow-text-storage-test',
@@ -523,11 +553,13 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     for (const {layer, initialViewState, getError} of cases) {
       deck.setProps({layers: [layer], viewState: initialViewState});
       try {
-        const model = await waitForLayerModel(layer, getError);
+        const model = await waitForDrawableLayerModel(layer, getError);
         await waitForPipeline(model);
-        t.equal(model.device.type, 'webgpu', `${layer.id} uses WebGPU storage`);
+        expect(model.device.type, `${layer.id} uses WebGPU storage`).toBe('webgpu');
         const drawCount = model.isInstanced === true ? model.instanceCount : model.vertexCount;
-        t.ok(drawCount > 0, `${layer.id} has a drawable storage-backed draw count`);
+        expect(Boolean(drawCount > 0), `${layer.id} has a drawable storage-backed draw count`).toBe(
+          true
+        );
       } finally {
         deck.setProps({layers: []});
       }
@@ -536,16 +568,16 @@ test('Arrow polygon and text layers render storage-backed WebGPU models', async 
     deck.setProps({layers: []});
     for (const vector of [polygonColorVector, textColorVector]) {
       for (const data of vector.data) {
-        t.notOk(
-          data.buffer.destroyed,
+        expect(
+          Boolean(data.buffer.destroyed),
           `${vector.name} remains caller-owned after layer finalization`
-        );
+        ).toBe(false);
       }
       vector.destroy();
     }
     finalizeSharedStorageDeck();
   }
-  t.end();
+  void 0;
 });
 
 async function pickFirstLayerObject(
@@ -580,6 +612,22 @@ async function pickFirstLayerObject(
   } finally {
     deck.setProps({layers: []});
   }
+}
+
+function makeFloat32ColorVector(colors: Vector) {
+  let sourceRowOffset = 0;
+  const data = colors.data.map(sourceData => {
+    const values = new Float32Array(sourceData.length * 4);
+    for (let rowIndex = 0; rowIndex < sourceData.length; rowIndex++) {
+      const color = Array.from(colors.get(sourceRowOffset + rowIndex) as Iterable<number>);
+      for (let componentIndex = 0; componentIndex < 4; componentIndex++) {
+        values[rowIndex * 4 + componentIndex] = color[componentIndex] / 255;
+      }
+    }
+    sourceRowOffset += sourceData.length;
+    return makeArrowFixedSizeListVector(new Float32(), 4, values).data[0];
+  });
+  return new Vector(data);
 }
 
 function createTestDeck(device?: Device): {deck: Deck; parent: HTMLDivElement} {
@@ -657,6 +705,33 @@ async function waitForLayerModel(
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
   }
   throw new Error(`${layer.id} did not create a draw model`);
+}
+
+async function waitForDrawableLayerModel(
+  layer: Layer,
+  getError: () => unknown = () => undefined
+): Promise<Model> {
+  const timeout = Date.now() + TEST_MODEL_TIMEOUT_MILLISECONDS;
+  while (Date.now() < timeout) {
+    const model = layer.getModels()[0];
+    if (model && (model.instanceCount > 0 || model.vertexCount > 0)) {
+      return model;
+    }
+    const error = getError();
+    if (error) {
+      throw error;
+    }
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+  const state = layer.state as {
+    renderer?: {getMetrics?: () => {rowCount?: number}};
+  } | null;
+  const rowCount = state?.renderer?.getMetrics?.().rowCount;
+  const instanceCount = layer.getModels()[0]?.instanceCount;
+  const vertexCount = layer.getModels()[0]?.vertexCount;
+  throw new Error(
+    `${layer.id} did not create a drawable model (rows=${rowCount ?? 'unknown'}, instances=${instanceCount ?? 'missing'}, vertices=${vertexCount ?? 'missing'})`
+  );
 }
 
 async function waitForModelCount(

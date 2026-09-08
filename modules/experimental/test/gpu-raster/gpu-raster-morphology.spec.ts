@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -57,11 +57,11 @@ type OracleSource = {
   offset?: number;
 };
 
-test('GPURaster binary morphology removes islands, fills holes, and distinguishes square/Manhattan footprints', async testCase => {
+it('GPURaster binary morphology removes islands, fills holes, and distinguishes square/Manhattan footprints', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -69,7 +69,7 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
   const height = 7;
   const impulse = new Uint32Array(width * height);
   impulse[3 * width + 3] = 9;
-  const square = await assertMorphologyMatchesOracle(testCase, device, 'binary-square-radius-two', {
+  const square = await assertMorphologyMatchesOracle(device, 'binary-square-radius-two', {
     width,
     height,
     values: impulse,
@@ -78,7 +78,7 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
     radius: 2,
     structuringElement: 'square'
   });
-  const cross = await assertMorphologyMatchesOracle(testCase, device, 'binary-cross-radius-two', {
+  const cross = await assertMorphologyMatchesOracle(device, 'binary-cross-radius-two', {
     width,
     height,
     values: impulse,
@@ -87,16 +87,12 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
     radius: 2,
     structuringElement: 'cross'
   });
-  testCase.equal(square.values[1 * width + 1], 1, 'square includes radius-two diagonal corners');
-  testCase.equal(
-    cross.values[1 * width + 1],
-    0,
-    'Manhattan cross excludes distant diagonal corners'
-  );
-  testCase.equal(cross.values[2 * width + 2], 1, 'radius-two cross includes Manhattan diagonals');
-  testCase.equal(cross.values[3 * width + 3], 1, 'nonzero source flags canonicalize to one');
+  expect(square.values[1 * width + 1], 'square includes radius-two diagonal corners').toBe(1);
+  expect(cross.values[1 * width + 1], 'Manhattan cross excludes distant diagonal corners').toBe(0);
+  expect(cross.values[2 * width + 2], 'radius-two cross includes Manhattan diagonals').toBe(1);
+  expect(cross.values[3 * width + 3], 'nonzero source flags canonicalize to one').toBe(1);
 
-  const opened = await assertMorphologyMatchesOracle(testCase, device, 'binary-open-island', {
+  const opened = await assertMorphologyMatchesOracle(device, 'binary-open-island', {
     width,
     height,
     values: impulse,
@@ -104,14 +100,14 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
     operation: 'open',
     radius: 1
   });
-  testCase.ok(
-    opened.values.every(value => value === 0),
+  expect(
+    Boolean(opened.values.every(value => value === 0)),
     'opening removes a single-pixel island'
-  );
+  ).toBe(true);
 
   const hole = Uint32Array.from(Array.from({length: width * height}, () => 1));
   hole[3 * width + 3] = 0;
-  const closed = await assertMorphologyMatchesOracle(testCase, device, 'binary-close-hole', {
+  const closed = await assertMorphologyMatchesOracle(device, 'binary-close-hole', {
     width,
     height,
     values: hole,
@@ -120,7 +116,7 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
     radius: 1,
     validity: Uint32Array.from(Array.from({length: hole.length}, () => 1))
   });
-  testCase.equal(closed.values[3 * width + 3], 1, 'closing fills a valid background hole');
+  expect(closed.values[3 * width + 3], 'closing fills a valid background hole').toBe(1);
 
   const checkerboard = Uint32Array.from(
     Array.from(
@@ -128,7 +124,7 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
       (_, index) => ((index % width) + Math.floor(index / width)) % 2
     )
   );
-  await assertMorphologyMatchesOracle(testCase, device, 'binary-erode-checkerboard', {
+  await assertMorphologyMatchesOracle(device, 'binary-erode-checkerboard', {
     width,
     height,
     values: checkerboard,
@@ -137,14 +133,14 @@ test('GPURaster binary morphology removes islands, fills holes, and distinguishe
     radius: 1,
     structuringElement: 'cross'
   });
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster grayscale extrema preserve signed values and apply native integer calibration exactly once', async testCase => {
+it('GPURaster grayscale extrema preserve signed values and apply native integer calibration exactly once', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -152,7 +148,7 @@ test('GPURaster grayscale extrema preserve signed values and apply native intege
     Array.from({length: 35}, (_, index) => (index % 7) * 4 - Math.floor(index / 7) * 3)
   );
   for (const operation of ['dilate', 'erode'] as const) {
-    await assertMorphologyMatchesOracle(testCase, device, `signed-grayscale-${operation}`, {
+    await assertMorphologyMatchesOracle(device, `signed-grayscale-${operation}`, {
       width: 7,
       height: 5,
       values: signedRamp,
@@ -170,51 +166,47 @@ test('GPURaster grayscale extrema preserve signed values and apply native intege
   const unsignedRamp = Uint32Array.from(Array.from({length: 35}, (_, index) => index + 10));
   unsignedRamp[1] = 4294967295;
   for (const operation of ['open', 'close'] as const) {
-    const result = await assertMorphologyMatchesOracle(
-      testCase,
-      device,
-      `calibrated-${operation}`,
-      {
-        width: 7,
-        height: 5,
-        values: unsignedRamp,
-        format: 'uint32',
-        mode: 'grayscale',
-        operation,
-        radius: 1,
-        noDataValue: 4294967295,
-        noDataPolicy: 'ignore',
-        inputScale: 0.5,
-        inputOffset: 7
-      }
-    );
-    testCase.ok(result.values[17] < 30, 'second pass does not recalibrate intermediate extrema');
-    testCase.equal(result.validity[1], 0, 'raw integer sentinel remains invalid after both passes');
-    testCase.equal(result.stats.logicalTransientBufferCount, 2, 'sample and validity scratch');
-    testCase.equal(result.stats.logicalTransientBytes, 35 * 8, 'two packed scalar scratch buffers');
-    testCase.deepEqual(
-      result.stats.nodeOrder,
+    const result = await assertMorphologyMatchesOracle(device, `calibrated-${operation}`, {
+      width: 7,
+      height: 5,
+      values: unsignedRamp,
+      format: 'uint32',
+      mode: 'grayscale',
+      operation,
+      radius: 1,
+      noDataValue: 4294967295,
+      noDataPolicy: 'ignore',
+      inputScale: 0.5,
+      inputOffset: 7
+    });
+    expect(
+      Boolean(result.values[17] < 30),
+      'second pass does not recalibrate intermediate extrema'
+    ).toBe(true);
+    expect(result.validity[1], 'raw integer sentinel remains invalid after both passes').toBe(0);
+    expect(result.stats.logicalTransientBufferCount, 'sample and validity scratch').toBe(2);
+    expect(result.stats.logicalTransientBytes, 'two packed scalar scratch buffers').toBe(35 * 8);
+    expect(result.stats.nodeOrder, 'composed morphology exposes both ordered graph passes').toEqual(
       operation === 'open'
         ? [`calibrated-${operation}-erode`, `calibrated-${operation}-dilate`]
-        : [`calibrated-${operation}-dilate`, `calibrated-${operation}-erode`],
-      'composed morphology exposes both ordered graph passes'
+        : [`calibrated-${operation}-dilate`, `calibrated-${operation}-erode`]
     );
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster morphology honors all borders, constant binary values, and propagate/ignore validity semantics', async testCase => {
+it('GPURaster morphology honors all borders, constant binary values, and propagate/ignore validity semantics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   const grayscale = Float32Array.from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const binary = Uint32Array.from([0, 0, 0, 0, 1, 0, 0, 0, 0]);
   for (const borderMode of ['clamp', 'reflect', 'constant', 'nodata'] as const) {
-    await assertMorphologyMatchesOracle(testCase, device, `grayscale-border-${borderMode}`, {
+    await assertMorphologyMatchesOracle(device, `grayscale-border-${borderMode}`, {
       width: 3,
       height: 3,
       values: grayscale,
@@ -225,7 +217,7 @@ test('GPURaster morphology honors all borders, constant binary values, and propa
       borderValue: -4,
       noDataPolicy: borderMode === 'nodata' ? 'ignore' : 'propagate'
     });
-    await assertMorphologyMatchesOracle(testCase, device, `binary-border-${borderMode}`, {
+    await assertMorphologyMatchesOracle(device, `binary-border-${borderMode}`, {
       width: 3,
       height: 3,
       values: binary,
@@ -244,39 +236,31 @@ test('GPURaster morphology honors all borders, constant binary values, and propa
   const validity = Uint32Array.from(Array.from({length: values.length}, () => 1));
   validity[18] = 0;
   for (const noDataPolicy of ['propagate', 'ignore'] as const) {
-    const result = await assertMorphologyMatchesOracle(
-      testCase,
-      device,
-      `invalid-${noDataPolicy}`,
-      {
-        width: 7,
-        height: 5,
-        values,
-        mode: 'grayscale',
-        operation: 'dilate',
-        radius: 1,
-        validity,
-        noDataPolicy
-      }
-    );
+    const result = await assertMorphologyMatchesOracle(device, `invalid-${noDataPolicy}`, {
+      width: 7,
+      height: 5,
+      values,
+      mode: 'grayscale',
+      operation: 'dilate',
+      radius: 1,
+      validity,
+      noDataPolicy
+    });
     for (const index of [9, 18, 22]) {
-      testCase.equal(
-        result.validity[index],
-        0,
-        `${noDataPolicy} preserves invalid center ${index}`
-      );
-      testCase.ok(Number.isNaN(result.values[index]), `${noDataPolicy} publishes canonical NaN`);
+      expect(result.validity[index], `${noDataPolicy} preserves invalid center ${index}`).toBe(0);
+      expect(
+        Boolean(Number.isNaN(result.values[index])),
+        `${noDataPolicy} publishes canonical NaN`
+      ).toBe(true);
     }
-    testCase.equal(
-      result.validity[10],
-      noDataPolicy === 'ignore' ? 1 : 0,
-      'neighbor invalidity follows the explicit policy'
+    expect(result.validity[10], 'neighbor invalidity follows the explicit policy').toBe(
+      noDataPolicy === 'ignore' ? 1 : 0
     );
   }
 
   const rawBinary = Uint32Array.from([0, 4, 4294967295, 0, 1, 0, 0, 0, 3]);
   const rawValidity = Uint32Array.from([1, 1, 1, 1, 1, 0, 1, 1, 1]);
-  const binaryResult = await assertMorphologyMatchesOracle(testCase, device, 'binary-raw-nodata', {
+  const binaryResult = await assertMorphologyMatchesOracle(device, 'binary-raw-nodata', {
     width: 3,
     height: 3,
     values: rawBinary,
@@ -288,45 +272,36 @@ test('GPURaster morphology honors all borders, constant binary values, and propa
     noDataPolicy: 'ignore',
     prefixLength: 1
   });
-  testCase.equal(binaryResult.values[2], 0, 'raw uint32 sentinel publishes canonical invalid zero');
-  testCase.equal(
-    binaryResult.validity[2],
-    0,
-    'raw sentinel rejected before binary canonicalization'
-  );
-  testCase.equal(binaryResult.values[5], 0, 'invalid explicit mask publishes canonical zero');
-  testCase.equal(binaryResult.validity[5], 0, 'separate validity masks preserve unknown pixels');
-  testCase.equal(binaryResult.prefixedValues[0], 0, 'binary output view leaves prefix untouched');
-  testCase.equal(binaryResult.prefixedValidity[0], 0, 'validity view leaves prefix untouched');
+  expect(binaryResult.values[2], 'raw uint32 sentinel publishes canonical invalid zero').toBe(0);
+  expect(binaryResult.validity[2], 'raw sentinel rejected before binary canonicalization').toBe(0);
+  expect(binaryResult.values[5], 'invalid explicit mask publishes canonical zero').toBe(0);
+  expect(binaryResult.validity[5], 'separate validity masks preserve unknown pixels').toBe(0);
+  expect(binaryResult.prefixedValues[0], 'binary output view leaves prefix untouched').toBe(0);
+  expect(binaryResult.prefixedValidity[0], 'validity view leaves prefix untouched').toBe(0);
 
-  const completelyInvalid = await assertMorphologyMatchesOracle(
-    testCase,
-    device,
-    'all-invalid-ignore',
-    {
-      width: 1,
-      height: 1,
-      values: Float32Array.from([Number.NaN]),
-      mode: 'grayscale',
-      operation: 'erode',
-      radius: 2,
-      borderMode: 'nodata',
-      noDataPolicy: 'ignore'
-    }
-  );
-  testCase.equal(completelyInvalid.validity[0], 0, 'all-invalid neighborhoods remain invalid');
-  testCase.end();
+  const completelyInvalid = await assertMorphologyMatchesOracle(device, 'all-invalid-ignore', {
+    width: 1,
+    height: 1,
+    values: Float32Array.from([Number.NaN]),
+    mode: 'grayscale',
+    operation: 'erode',
+    radius: 2,
+    borderMode: 'nodata',
+    noDataPolicy: 'ignore'
+  });
+  expect(completelyInvalid.validity[0], 'all-invalid neighborhoods remain invalid').toBe(0);
+  void 0;
 });
 
-test('GPURaster radius-zero composites are scratch-free calibrated/binary identity passes', async testCase => {
+it('GPURaster radius-zero composites are scratch-free calibrated/binary identity passes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
-  const grayscale = await assertMorphologyMatchesOracle(testCase, device, 'identity-opening', {
+  const grayscale = await assertMorphologyMatchesOracle(device, 'identity-opening', {
     width: 3,
     height: 2,
     values: Int32Array.from([-2, 0, 2, 4, -2147483648, 8]),
@@ -339,16 +314,12 @@ test('GPURaster radius-zero composites are scratch-free calibrated/binary identi
     inputOffset: 4,
     prefixLength: 1
   });
-  testCase.deepEqual(
-    grayscale.stats.nodeOrder,
-    ['identity-opening'],
-    'opening contributes one pass'
-  );
-  testCase.equal(grayscale.stats.logicalTransientBufferCount, 0, 'opening allocates no scratch');
-  testCase.equal(grayscale.values[0], 3, 'source calibration is applied once');
-  testCase.equal(grayscale.prefixedValues[0], 0, 'grayscale output prefix remains untouched');
+  expect(grayscale.stats.nodeOrder, 'opening contributes one pass').toEqual(['identity-opening']);
+  expect(grayscale.stats.logicalTransientBufferCount, 'opening allocates no scratch').toBe(0);
+  expect(grayscale.values[0], 'source calibration is applied once').toBe(3);
+  expect(grayscale.prefixedValues[0], 'grayscale output prefix remains untouched').toBe(0);
 
-  const binary = await assertMorphologyMatchesOracle(testCase, device, 'identity-closing', {
+  const binary = await assertMorphologyMatchesOracle(device, 'identity-closing', {
     width: 3,
     height: 2,
     values: Uint32Array.from([0, 2, 7, 0, 1, 9]),
@@ -357,21 +328,17 @@ test('GPURaster radius-zero composites are scratch-free calibrated/binary identi
     radius: 0,
     validity: Uint32Array.from([1, 1, 0, 1, 1, 1])
   });
-  testCase.deepEqual(binary.stats.nodeOrder, ['identity-closing'], 'closing contributes one pass');
-  testCase.equal(binary.stats.logicalTransientBufferCount, 0, 'closing allocates no scratch');
-  testCase.deepEqual(
-    binary.values,
-    [0, 1, 0, 0, 1, 1],
-    'identity canonicalizes valid binary flags'
-  );
-  testCase.end();
+  expect(binary.stats.nodeOrder, 'closing contributes one pass').toEqual(['identity-closing']);
+  expect(binary.stats.logicalTransientBufferCount, 'closing allocates no scratch').toBe(0);
+  expect(binary.values, 'identity canonicalizes valid binary flags').toEqual([0, 1, 0, 0, 1, 1]);
+  void 0;
 });
 
-test('GPURaster chained opening/closing reuse scratch and preserve repeatable borrowed ownership', async testCase => {
+it('GPURaster chained opening/closing reuse scratch and preserve repeatable borrowed ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -433,40 +400,31 @@ test('GPURaster chained opening/closing reuse scratch and preserve repeatable bo
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.deepEqual(
+  expect(
     compiled.stats.nodeOrder,
-    ['opening-erode', 'opening-dilate', 'closing-dilate', 'closing-erode'],
     'graph exposes four correctly ordered morphological passes'
+  ).toEqual(['opening-erode', 'opening-dilate', 'closing-dilate', 'closing-erode']);
+  expect(compiled.stats.logicalTransientBufferCount, 'two logical scratch buffers per pair').toBe(
+    4
   );
-  testCase.equal(
-    compiled.stats.logicalTransientBufferCount,
-    4,
-    'two logical scratch buffers per pair'
-  );
-  testCase.equal(
-    compiled.stats.physicalTransientBufferCount,
-    2,
-    'nonoverlapping pairs reuse storage'
-  );
-  testCase.equal(
-    compiled.stats.reusedTransientBytes,
-    pixelCount * 8,
-    'reuse avoids duplicate allocations'
+  expect(compiled.stats.physicalTransientBufferCount, 'nonoverlapping pairs reuse storage').toBe(2);
+  expect(compiled.stats.reusedTransientBytes, 'reuse avoids duplicate allocations').toBe(
+    pixelCount * 8
   );
   submitGraph(device, compiled, 'first-morphology-encoding');
   const initial = await readFloat32(closingBuffer, pixelCount);
-  testCase.ok(
-    initial.some(value => value !== initial[0]),
+  expect(
+    Boolean(initial.some(value => value !== initial[0])),
     'first scene remains nonconstant'
-  );
+  ).toBe(true);
 
   sourceBuffer.write(Float32Array.from(Array.from({length: pixelCount}, () => 11)));
   submitGraph(device, compiled, 'second-morphology-encoding');
   const updated = await readFloat32(closingBuffer, pixelCount);
-  testCase.ok(
-    updated.every(value => value === 11),
+  expect(
+    Boolean(updated.every(value => value === 11)),
     'compiled graph recomputes replacement scene'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -476,32 +434,33 @@ test('GPURaster chained opening/closing reuse scratch and preserve repeatable bo
     closingBuffer,
     closingValidityBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'compiled graph never destroys caller-owned buffers');
+    expect(Boolean(buffer.destroyed), 'compiled graph never destroys caller-owned buffers').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 async function assertMorphologyMatchesOracle(
-  testCase: Test,
   device: Device,
   id: string,
   fixture: MorphologyFixture
 ): Promise<MorphologyResult> {
   const result = await executeMorphology(device, id, fixture);
   const expected = calculateMorphologyOracle(fixture);
-  testCase.deepEqual(result.validity, expected.validity, `${id}: validity matches CPU morphology`);
+  expect(result.validity, `${id}: validity matches CPU morphology`).toEqual(expected.validity);
   for (const [index, expectedValue] of expected.values.entries()) {
     if (Number.isNaN(expectedValue)) {
-      testCase.ok(
-        Number.isNaN(result.values[index]),
+      expect(
+        Boolean(Number.isNaN(result.values[index])),
         `${id}: invalid pixel ${index} publishes NaN`
-      );
+      ).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(result.values[index] - expectedValue) <= 0.00003,
+      expect(
+        Boolean(Math.abs(result.values[index] - expectedValue) <= 0.00003),
         `${id}: pixel ${index} matches CPU (${result.values[index]} versus ${expectedValue})`
-      );
+      ).toBe(true);
     }
   }
   return result;

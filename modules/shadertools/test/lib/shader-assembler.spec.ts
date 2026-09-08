@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   GLSLShaderAssembler,
   ShaderAssembler,
@@ -82,7 +82,7 @@ const FS_300 = /* glsl *`\
 `;
 */
 
-test('ShaderAssembler#hooks', t => {
+it('ShaderAssembler#hooks', () => {
   const shaderAssembler = new GLSLShaderAssembler();
 
   const preHookShaders = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
@@ -95,7 +95,7 @@ test('ShaderAssembler#hooks', t => {
 
   const assemblyResults = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  t.ok(preHookShaders !== assemblyResults, 'Adding hooks changes hash');
+  expect(Boolean(preHookShaders !== assemblyResults), 'Adding hooks changes hash').toBe(true);
 
   const pickingInjection = {
     ...picking,
@@ -111,25 +111,28 @@ test('ShaderAssembler#hooks', t => {
 
   const noModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  t.ok(preHookShaders !== noModuleProgram, 'Adding hooks changes hash');
+  expect(Boolean(preHookShaders !== noModuleProgram), 'Adding hooks changes hash').toBe(true);
 
   const noModuleVs = noModuleProgram.vs;
   const noModuleFs = noModuleProgram.fs;
 
-  t.ok(noModuleVs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader');
-  t.ok(
-    noModuleFs.indexOf('LUMAGL_fragmentColor') > -1,
+  expect(
+    Boolean(noModuleVs.indexOf('LUMAGL_pickColor') > -1),
+    'hook function injected into vertex shader'
+  ).toBe(true);
+  expect(
+    Boolean(noModuleFs.indexOf('LUMAGL_fragmentColor') > -1),
     'hook function injected into fragment shader'
-  );
+  ).toBe(true);
 
-  t.ok(
-    noModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1,
+  expect(
+    Boolean(noModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1),
     'injection code not included in vertex shader without module'
-  );
-  t.ok(
-    noModuleFs.indexOf('color = picking_filterColor(color)') === -1,
+  ).toBe(true);
+  expect(
+    Boolean(noModuleFs.indexOf('color = picking_filterColor(color)') === -1),
     'injection code not included in fragment shader without module'
-  );
+  ).toBe(true);
 
   const modulesProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
@@ -140,28 +143,33 @@ test('ShaderAssembler#hooks', t => {
   const modulesVs = modulesProgram.vs;
   const modulesFs = modulesProgram.fs;
 
-  t.ok(modulesVs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader');
-  t.ok(
-    modulesFs.indexOf('LUMAGL_fragmentColor') > -1,
+  expect(
+    Boolean(modulesVs.indexOf('LUMAGL_pickColor') > -1),
+    'hook function injected into vertex shader'
+  ).toBe(true);
+  expect(
+    Boolean(modulesFs.indexOf('LUMAGL_fragmentColor') > -1),
     'hook function injected into fragment shader'
-  );
+  ).toBe(true);
 
-  t.ok(
-    modulesVs.indexOf('picking_setPickingColor(color.rgb)') > -1,
+  expect(
+    Boolean(modulesVs.indexOf('picking_setPickingColor(color.rgb)') > -1),
     'injection code included in vertex shader with module'
-  );
-  t.ok(
-    modulesFs.indexOf('color = picking_filterColor(color)') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(modulesFs.indexOf('color = picking_filterColor(color)') > -1),
     'injection code included in fragment shader with module'
-  );
-  t.ok(
-    modulesFs.indexOf('if (color.a == 0.0) discard;') > -1,
+  ).toBe(true);
+  expect(
+    Boolean(modulesFs.indexOf('if (color.a == 0.0) discard;') > -1),
     'hook header injected into fragment shader'
-  );
-  t.ok(
-    modulesFs.indexOf('color.a *= 1.2;') > modulesFs.indexOf('color = picking_filterColor(color)'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      modulesFs.indexOf('color.a *= 1.2;') > modulesFs.indexOf('color = picking_filterColor(color)')
+    ),
     'hook footer injected after injection code'
-  );
+  ).toBe(true);
 
   const injectedShaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
@@ -175,8 +183,14 @@ test('ShaderAssembler#hooks', t => {
   const injectVs = injectedShaders.vs;
   const injectFs = injectedShaders.fs;
 
-  t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
-  t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
+  expect(
+    Boolean(injectVs.indexOf('color *= 0.1') > -1),
+    'argument injection code included in shader hook'
+  ).toBe(true);
+  expect(
+    Boolean(injectFs.indexOf('color += 0.1') > -1),
+    'argument injection code included in shader hook'
+  ).toBe(true);
 
   // const injectDefineProgram1 = shaderAssembler.assembleGLSLShaderPair({
   //   platformInfo,
@@ -198,10 +212,10 @@ test('ShaderAssembler#hooks', t => {
 
   // t.ok(injectDefineProgram1 !== injectDefineProgram2, 'Injects and defines hashed separately.');
 
-  t.end();
+  void 0;
 });
 
-test('ShaderAssembler#defaultModules', t => {
+it('ShaderAssembler#defaultModules', () => {
   const shaderAssembler = new GLSLShaderAssembler();
 
   const program = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
@@ -225,21 +239,28 @@ test('ShaderAssembler#defaultModules', t => {
     modules: [dirlight]
   });
 
-  t.notDeepEqual(program, defaultModuleProgram, 'Program with new default module properly cached');
-  t.deepEqual(preDefaultModuleProgram.vs, defaultModuleProgram.vs);
-  t.equal(preDefaultModuleProgram.fs, defaultModuleProgram.fs, 'Default module injected correctly');
-  t.equal(
-    moduleProgram.vs,
-    defaultModuleProgram.vs,
-    'Program with new default module matches regular module'
+  expect(program, 'Program with new default module properly cached').not.toEqual(
+    defaultModuleProgram
+  );
+  expect(preDefaultModuleProgram.vs, '').toEqual(defaultModuleProgram.vs);
+  expect(preDefaultModuleProgram.fs, 'Default module injected correctly').toBe(
+    defaultModuleProgram.fs
+  );
+  expect(moduleProgram.vs, 'Program with new default module matches regular module').toBe(
+    defaultModuleProgram.vs
   );
 
   shaderAssembler.removeDefaultModule(dirlight);
 
   const noDefaultModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  t.ok(program.fs === noDefaultModuleProgram.fs, 'Default module was removed');
-  t.ok(moduleProgram.fs !== noDefaultModuleProgram.fs, 'Default module was removed');
+  expect(Boolean(program.fs === noDefaultModuleProgram.fs), 'Default module was removed').toBe(
+    true
+  );
+  expect(
+    Boolean(moduleProgram.fs !== noDefaultModuleProgram.fs),
+    'Default module was removed'
+  ).toBe(true);
 
   // Reset program manager
 
@@ -248,57 +269,67 @@ test('ShaderAssembler#defaultModules', t => {
   const defaultModuleSource = uncachedProgram.fs;
 
   // TODO - this deep equal thing doesn't make sense due to getUniforms
-  t.notDeepEqual(defaultModuleProgram, uncachedProgram, 'Program is not cached');
-  t.deepEqual(preDefaultModuleSource, defaultModuleSource, 'Default modules create correct source');
+  expect(defaultModuleProgram, 'Program is not cached').not.toEqual(uncachedProgram);
+  expect(preDefaultModuleSource, 'Default modules create correct source').toEqual(
+    defaultModuleSource
+  );
 
-  t.end();
+  void 0;
 });
 
-test('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', t => {
+it('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', () => {
   const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
   const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
 
-  t.ok(glslShaderAssembler instanceof GLSLShaderAssembler, 'GLSL selects the GLSL assembler');
-  t.ok(wgslShaderAssembler instanceof WGSLShaderAssembler, 'WGSL selects the WGSL assembler');
-  t.equal(glslShaderAssembler.shaderLanguage, 'glsl', 'the GLSL default identifies its language');
-  t.equal(wgslShaderAssembler.shaderLanguage, 'wgsl', 'the WGSL default identifies its language');
-  t.equal(
+  expect(
+    Boolean(glslShaderAssembler instanceof GLSLShaderAssembler),
+    'GLSL selects the GLSL assembler'
+  ).toBe(true);
+  expect(
+    Boolean(wgslShaderAssembler instanceof WGSLShaderAssembler),
+    'WGSL selects the WGSL assembler'
+  ).toBe(true);
+  expect(glslShaderAssembler.shaderLanguage, 'the GLSL default identifies its language').toBe(
+    'glsl'
+  );
+  expect(wgslShaderAssembler.shaderLanguage, 'the WGSL default identifies its language').toBe(
+    'wgsl'
+  );
+  expect(
     ShaderAssembler.getDefaultShaderAssembler('glsl'),
-    glslShaderAssembler,
     'explicit GLSL requests reuse the GLSL assembler'
-  );
-  t.equal(
+  ).toBe(glslShaderAssembler);
+  expect(
     ShaderAssembler.getDefaultShaderAssembler('wgsl'),
-    wgslShaderAssembler,
     'explicit WGSL requests reuse the WGSL assembler'
+  ).toBe(wgslShaderAssembler);
+  expect(glslShaderAssembler, 'shader languages never share an assembler').not.toBe(
+    wgslShaderAssembler
   );
-  t.notEqual(glslShaderAssembler, wgslShaderAssembler, 'shader languages never share an assembler');
-  t.equal(
+  expect(
     typeof glslShaderAssembler.assembleGLSLShaderPair,
-    'function',
     'GLSL assemblers expose GLSL assembly'
-  );
-  t.notOk(
-    'assembleWGSLShader' in glslShaderAssembler,
+  ).toBe('function');
+  expect(
+    Boolean('assembleWGSLShader' in glslShaderAssembler),
     'GLSL assemblers do not expose WGSL assembly'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     typeof wgslShaderAssembler.assembleWGSLShader,
-    'function',
     'WGSL assemblers expose WGSL assembly'
-  );
-  t.notOk(
-    'assembleGLSLShaderPair' in wgslShaderAssembler,
+  ).toBe('function');
+  expect(
+    Boolean('assembleGLSLShaderPair' in wgslShaderAssembler),
     'WGSL assemblers do not expose GLSL assembly'
-  );
-  t.throws(
+  ).toBe(false);
+  expect(
     () => Reflect.apply(ShaderAssembler.getDefaultShaderAssembler, ShaderAssembler, []),
     'a shader language must be supplied explicitly'
-  );
-  t.throws(
+  ).toThrow();
+  expect(
     () => Reflect.apply(ShaderAssembler.getDefaultShaderAssembler, ShaderAssembler, ['spirv']),
     'unsupported shader languages are rejected'
-  );
+  ).toThrow();
 
   const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
   const isolatedWGSLShaderAssembler = new WGSLShaderAssembler();
@@ -335,32 +366,30 @@ test('ShaderAssembler#getDefaultShaderAssembler isolates shader language state',
     source: wgslSource
   }).source;
 
-  t.ok(
-    assembledGLSLSource.includes('void LUMAGL_isolatedHook(inout vec4 value)'),
+  expect(
+    Boolean(assembledGLSLSource.includes('void LUMAGL_isolatedHook(inout vec4 value)')),
     'GLSL assemblers retain their own GLSL hook signatures'
-  );
-  t.ok(
-    assembledWGSLSource.includes('fn LUMAGL_isolatedHook(value: ptr<function, vec4<f32>>)'),
+  ).toBe(true);
+  expect(
+    Boolean(
+      assembledWGSLSource.includes('fn LUMAGL_isolatedHook(value: ptr<function, vec4<f32>>)')
+    ),
     'WGSL assemblers retain their own WGSL hook signatures'
+  ).toBe(true);
+  expect(retainedGLSLDefaultSource, 'isolated hooks never mutate the GLSL default').toBe(
+    initialGLSLDefaultSource
   );
-  t.equal(
-    retainedGLSLDefaultSource,
-    initialGLSLDefaultSource,
-    'isolated hooks never mutate the GLSL default'
+  expect(retainedWGSLDefaultSource, 'isolated hooks never mutate the WGSL default').toBe(
+    initialWGSLDefaultSource
   );
-  t.equal(
-    retainedWGSLDefaultSource,
-    initialWGSLDefaultSource,
-    'isolated hooks never mutate the WGSL default'
-  );
-  t.notOk(
-    retainedGLSLDefaultSource.includes('LUMAGL_isolatedHook'),
+  expect(
+    Boolean(retainedGLSLDefaultSource.includes('LUMAGL_isolatedHook')),
     'isolated hooks are absent from shared GLSL source'
-  );
-  t.notOk(
-    retainedWGSLDefaultSource.includes('LUMAGL_isolatedHook'),
+  ).toBe(false);
+  expect(
+    Boolean(retainedWGSLDefaultSource.includes('LUMAGL_isolatedHook')),
     'isolated hooks are absent from shared WGSL source'
-  );
+  ).toBe(false);
 
-  t.end();
+  void 0;
 });

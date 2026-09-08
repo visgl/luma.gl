@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBatchHashJoin,
@@ -12,11 +12,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUBatchHashJoin preserves uneven and empty batch boundaries', async t => {
+it('GPUBatchHashJoin preserves uneven and empty batch boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -26,40 +24,36 @@ test('GPUBatchHashJoin preserves uneven and empty batch boundaries', async t => 
     firstLeftRow: 100
   });
 
-  t.deepEqual(result.counts, [1, 0, 3], 'each batch reports its own required match count');
-  t.deepEqual(result.overflows, [0, 0, 1], 'only the truncated batch overflows');
-  t.deepEqual(
-    result.leftRows,
-    [[100, 0], [], [102, 103]],
-    'global IDs advance across preserved chunks'
-  );
-  t.deepEqual(
-    result.rightRows,
-    [[700, 0], [], [200, 700]],
-    'pairs cannot spill between batch capacities'
-  );
-  t.deepEqual(
-    result.found,
-    [[1, 0], [], [1, 1, 1]],
-    'aligned match masks preserve source topology'
-  );
-  t.deepEqual(
+  expect(result.counts, 'each batch reports its own required match count').toEqual([1, 0, 3]);
+  expect(result.overflows, 'only the truncated batch overflows').toEqual([0, 0, 1]);
+  expect(result.leftRows, 'global IDs advance across preserved chunks').toEqual([
+    [100, 0],
+    [],
+    [102, 103]
+  ]);
+  expect(result.rightRows, 'pairs cannot spill between batch capacities').toEqual([
+    [700, 0],
+    [],
+    [200, 700]
+  ]);
+  expect(result.found, 'aligned match masks preserve source topology').toEqual([
+    [1, 0],
+    [],
+    [1, 1, 1]
+  ]);
+  expect(
     result.statistics.map(block => block.slice(0, 2)),
-    [
-      [1, 1],
-      [0, 0],
-      [3, 0]
-    ],
     'query statistics stay batch-addressable'
-  );
-  t.end();
+  ).toEqual([
+    [1, 1],
+    [0, 0],
+    [3, 0]
+  ]);
 });
 
-test('GPUBatchHashJoin preserves explicit IDs and propagates source overflow per batch', async t => {
+it('GPUBatchHashJoin preserves explicit IDs and propagates source overflow per batch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -72,27 +66,26 @@ test('GPUBatchHashJoin preserves explicit IDs and propagates source overflow per
     outputCapacities: [1, 2]
   });
 
-  t.deepEqual(result.overflows, [1, 1], 'an incomplete shared index marks every batch incomplete');
+  expect(result.overflows, 'an incomplete shared index marks every batch incomplete').toEqual([
+    1, 1
+  ]);
   for (let batchIndex = 0; batchIndex < result.leftRows.length; batchIndex++) {
     for (
       let outputIndex = 0;
       outputIndex < Math.min(result.counts[batchIndex], result.leftRows[batchIndex].length);
       outputIndex++
     ) {
-      t.ok(
-        [900, 800, 700].includes(result.leftRows[batchIndex][outputIndex]),
+      expect(
+        Boolean([900, 800, 700].includes(result.leftRows[batchIndex][outputIndex])),
         'retained matches use explicit left IDs'
-      );
+      ).toBe(true);
     }
   }
-  t.end();
 });
 
-test('GPUBatchHashJoin reports matches for nonempty zero-capacity batches', async t => {
+it('GPUBatchHashJoin reports matches for nonempty zero-capacity batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -101,19 +94,16 @@ test('GPUBatchHashJoin reports matches for nonempty zero-capacity batches', asyn
     outputCapacities: [0, 0]
   });
 
-  t.deepEqual(result.leftRows, [[], []], 'zero-capacity output chunks retain their topology');
-  t.deepEqual(result.rightRows, [[], []]);
-  t.deepEqual(result.counts, [2, 0], 'required counts remain exact without output bindings');
-  t.deepEqual(result.overflows, [1, 0], 'only a nonempty required result overflows');
-  t.deepEqual(result.found, [[1, 1], [0]], 'source-aligned lookup masks remain available');
-  t.end();
+  expect(result.leftRows, 'zero-capacity output chunks retain their topology').toEqual([[], []]);
+  expect(result.rightRows).toEqual([[], []]);
+  expect(result.counts, 'required counts remain exact without output bindings').toEqual([2, 0]);
+  expect(result.overflows, 'only a nonempty required result overflows').toEqual([1, 0]);
+  expect(result.found, 'source-aligned lookup masks remain available').toEqual([[1, 1], [0]]);
 });
 
-test('GPUBatchHashJoin validates partition and output topology', async t => {
+it('GPUBatchHashJoin validates partition and output topology', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -132,7 +122,7 @@ test('GPUBatchHashJoin validates partition and output topology', async t => {
     maxProbeCount: 4
   };
 
-  t.throws(
+  expect(
     () =>
       new GPUBatchHashJoin({
         index,
@@ -143,10 +133,9 @@ test('GPUBatchHashJoin validates partition and output topology', async t => {
         overflows: importView(graph, 'overflows', overflows, 2),
         statistics: importView(graph, 'statistics', statistics, 8)
       }),
-    /one capacity chunk per input batch/,
     'every input batch requires an output partition'
-  );
-  t.throws(
+  ).toThrow(/one capacity chunk per input batch/);
+  expect(
     () =>
       new GPUBatchHashJoin({
         index,
@@ -157,9 +146,8 @@ test('GPUBatchHashJoin validates partition and output topology', async t => {
         overflows: importView(graph, 'overflows-alias', overflows, 2),
         statistics: importView(graph, 'statistics-alias', statistics, 8)
       }),
-    /output views must not overlap/,
     'pair outputs cannot alias'
-  );
+  ).toThrow(/output views must not overlap/);
 
   destroyBuffers([
     ...keys.buffers,
@@ -171,7 +159,6 @@ test('GPUBatchHashJoin validates partition and output topology', async t => {
     overflows,
     statistics
   ]);
-  t.end();
 });
 
 type BatchJoinProps = {

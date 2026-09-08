@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {waterMaterial} from '../../../shadertools/src/modules/lighting/water-material/water-material';
@@ -36,7 +36,7 @@ const dynamicTextureMaterial: ShaderModule<Record<string, never>> = {
   dependencies: []
 };
 
-test('Material initializes uniform buffers with default module uniforms', async t => {
+it('Material initializes uniform buffers with default module uniforms', async () => {
   const webglDevice = await getWebGLTestDevice();
   const materialFactory = new MaterialFactory<{defaultUniformMaterial: {value?: number}}, {}>(
     webglDevice,
@@ -51,13 +51,15 @@ test('Material initializes uniform buffers with default module uniforms', async 
   ] as unknown as Buffer;
   const storedValue = new Float32Array(uniformBuffer.debugData, 0, 1)[0];
 
-  t.equal(storedValue, 2.5, 'constructor writes module default uniforms into the managed buffer');
+  expect(storedValue, 'constructor writes module default uniforms into the managed buffer').toBe(
+    2.5
+  );
 
   material.destroy();
-  t.end();
+  void 0;
 });
 
-test('Material preserves prior waterMaterial uniforms across partial updates', async t => {
+it('Material preserves prior waterMaterial uniforms across partial updates', async () => {
   const webglDevice = await getWebGLTestDevice();
   const materialFactory = new MaterialFactory<{waterMaterial: typeof waterMaterial.props}, {}>(
     webglDevice,
@@ -75,11 +77,10 @@ test('Material preserves prior waterMaterial uniforms across partial updates', a
     }
   });
   const uniformsAfterFirstUpdate = material.shaderInputs.getUniformValues()['waterMaterial']!;
-  t.deepEqual(
+  expect(
     uniformsAfterFirstUpdate['baseColor'],
-    [0, 64 / 255, 128 / 255],
     'first update normalizes and stores vector uniforms'
-  );
+  ).toEqual([0, 64 / 255, 128 / 255]);
   const directMergedUniforms = waterMaterial.getUniforms!(
     {
       time: 3.5,
@@ -87,11 +88,10 @@ test('Material preserves prior waterMaterial uniforms across partial updates', a
     },
     uniformsAfterFirstUpdate
   );
-  t.deepEqual(
+  expect(
     directMergedUniforms['baseColor'],
-    [0, 64 / 255, 128 / 255],
     'waterMaterial.getUniforms preserves prior vector uniforms when previous uniforms are supplied'
-  );
+  ).toEqual([0, 64 / 255, 128 / 255]);
 
   material.setProps({
     waterMaterial: {
@@ -101,21 +101,22 @@ test('Material preserves prior waterMaterial uniforms across partial updates', a
   });
 
   const uniforms = material.shaderInputs.getUniformValues()['waterMaterial']!;
-  t.deepEqual(
+  expect(
     uniforms['baseColor'],
-    [0, 64 / 255, 128 / 255],
     'partial updates preserve normalized sibling vector uniforms'
-  );
-  t.equal(uniforms['fresnelPower'], 6, 'partial updates preserve sibling scalar uniforms');
-  t.deepEqual(uniforms['waveADirection'], [0, 1], 'partial updates preserve normalized directions');
-  t.equal(uniforms['time'], 3.5, 'new scalar uniform is applied');
-  t.equal(uniforms['mappingMode'], 1, 'mapping prop resolves to world-space mode');
+  ).toEqual([0, 64 / 255, 128 / 255]);
+  expect(uniforms['fresnelPower'], 'partial updates preserve sibling scalar uniforms').toBe(6);
+  expect(uniforms['waveADirection'], 'partial updates preserve normalized directions').toEqual([
+    0, 1
+  ]);
+  expect(uniforms['time'], 'new scalar uniform is applied').toBe(3.5);
+  expect(uniforms['mappingMode'], 'mapping prop resolves to world-space mode').toBe(1);
 
   material.destroy();
-  t.end();
+  void 0;
 });
 
-test('Material invalidates bind-group cache keys when DynamicBuffer generation changes', async t => {
+it('Material invalidates bind-group cache keys when DynamicBuffer generation changes', async () => {
   const webglDevice = await getWebGLTestDevice();
   const materialFactory = new MaterialFactory<{}, {materialBuffer: DynamicBuffer}>(webglDevice, {
     modules: [dynamicBufferMaterial as ShaderModule]
@@ -137,19 +138,21 @@ test('Material invalidates bind-group cache keys when DynamicBuffer generation c
   material.getBindings();
   const resizedCacheKey = material.getBindGroupCacheKey(3);
 
-  t.ok(initialCacheKey !== resizedCacheKey, 'resizing DynamicBuffer invalidates cache token');
-  t.equal(
+  expect(
+    Boolean(initialCacheKey !== resizedCacheKey),
+    'resizing DynamicBuffer invalidates cache token'
+  ).toBe(true);
+  expect(
     material.getBindings()['materialBuffer'],
-    dynamicBuffer.buffer,
     'resolved bindings use the current DynamicBuffer backing buffer'
-  );
+  ).toBe(dynamicBuffer.buffer);
 
   material.destroy();
   dynamicBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('Material invalidates bind-group cache keys when DynamicTexture generation changes', async t => {
+it('Material invalidates bind-group cache keys when DynamicTexture generation changes', async () => {
   const webglDevice = await getWebGLTestDevice();
   const materialFactory = new MaterialFactory<{}, {materialTexture: DynamicTexture}>(webglDevice, {
     modules: [dynamicTextureMaterial as ShaderModule]
@@ -174,19 +177,21 @@ test('Material invalidates bind-group cache keys when DynamicTexture generation 
   material.getBindings();
   const resizedCacheKey = material.getBindGroupCacheKey(3);
 
-  t.ok(initialCacheKey !== resizedCacheKey, 'resizing DynamicTexture invalidates cache token');
-  t.equal(
+  expect(
+    Boolean(initialCacheKey !== resizedCacheKey),
+    'resizing DynamicTexture invalidates cache token'
+  ).toBe(true);
+  expect(
     material.getBindings()['materialTexture'],
-    dynamicTexture.texture,
     'resolved bindings use the current DynamicTexture backing texture'
-  );
+  ).toBe(dynamicTexture.texture);
 
   material.destroy();
   dynamicTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('Material invalidates bind-group cache keys for volatile external texture resolutions', async t => {
+it('Material invalidates bind-group cache keys for volatile external texture resolutions', async () => {
   const webglDevice = await getWebGLTestDevice();
   const materialFactory = new MaterialFactory<{}, {materialTexture: TextureBindingSource}>(
     webglDevice,
@@ -211,12 +216,16 @@ test('Material invalidates bind-group cache keys for volatile external texture r
   material.getBindings(shaderLayout);
   const nextCacheKey = material.getBindGroupCacheKey(3);
 
-  t.notEqual(initialCacheKey, nextCacheKey, 'new external resolution invalidates bind-group key');
-  t.equal(textureBindingSource.resolutionCount, 2, 'material resolves once per bindings request');
+  expect(initialCacheKey, 'new external resolution invalidates bind-group key').not.toBe(
+    nextCacheKey
+  );
+  expect(textureBindingSource.resolutionCount, 'material resolves once per bindings request').toBe(
+    2
+  );
 
   material.destroy();
   texture.destroy();
-  t.end();
+  void 0;
 });
 
 function makeVolatileTextureBindingSource(texture: Texture): TextureBindingSource & {

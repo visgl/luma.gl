@@ -23,9 +23,14 @@ while retaining the classic path where it is known to work.
 
 The two Mandelbrot views follow the same deep zoom. The left view uses native
 `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation.
+On Apple WebGPU, the live FP64 pane uses a hybrid double-single path: integer
+operations reconstruct the critical high-part residuals while native `f32`
+accumulates lower-order terms. This is faster than fully integer-controlled
+arithmetic and more optimizer-resistant than the classic path, but it is not
+fully reliable. The fully integer-controlled path remains available in the benchmark.
 On WebGPU, use the benchmark below the canvases to compare native `f32`,
-automatic selection, the classic transforms, and the integer-controlled path
-on the active device.
+automatic selection, the classic transforms, the hybrid path, and the
+integer-controlled path on the active device.
 
 <DeferredFP64Example embeddedHeight={900} />
 

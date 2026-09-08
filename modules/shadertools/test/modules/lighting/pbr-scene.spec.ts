@@ -9,7 +9,7 @@ import {
   PBR_TONE_MAP_MODE,
   pbrScene
 } from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 const EXPECTED_UNIFORM_NAMES = [
   'exposure',
@@ -23,16 +23,15 @@ const EXPECTED_UNIFORM_NAMES = [
   'projectionMatrix'
 ];
 
-test('shadertools#pbrScene exposes stable uniform layout metadata', testCase => {
-  testCase.deepEqual(
-    PBR_TONE_MAP_MODE,
-    {NONE: 0, REINHARD: 1, KHRONOS_PBR_NEUTRAL: 2, ACES: 3},
-    'portable public tone-mapping mode selectors remain stable'
-  );
-  testCase.deepEqual(
-    Object.keys(pbrScene.uniformTypes),
-    EXPECTED_UNIFORM_NAMES,
-    'uniform type field order is stable'
+it('shadertools#pbrScene exposes stable uniform layout metadata', () => {
+  expect(PBR_TONE_MAP_MODE, 'portable public tone-mapping mode selectors remain stable').toEqual({
+    NONE: 0,
+    REINHARD: 1,
+    KHRONOS_PBR_NEUTRAL: 2,
+    ACES: 3
+  });
+  expect(Object.keys(pbrScene.uniformTypes), 'uniform type field order is stable').toEqual(
+    EXPECTED_UNIFORM_NAMES
   );
 
   const fragmentValidationResult = getShaderModuleUniformLayoutValidationResult(
@@ -41,45 +40,37 @@ test('shadertools#pbrScene exposes stable uniform layout metadata', testCase => 
   );
   const wgslValidationResult = getShaderModuleUniformLayoutValidationResult(pbrScene, 'wgsl');
 
-  testCase.ok(fragmentValidationResult?.matches, 'fragment validation result matches');
-  testCase.ok(wgslValidationResult?.matches, 'WGSL validation result matches');
-  testCase.deepEqual(
+  expect(Boolean(fragmentValidationResult?.matches), 'fragment validation result matches').toBe(
+    true
+  );
+  expect(Boolean(wgslValidationResult?.matches), 'WGSL validation result matches').toBe(true);
+  expect(
     getShaderModuleUniformBlockFields(pbrScene, 'fragment'),
-    EXPECTED_UNIFORM_NAMES,
     'GLSL uniform block order matches uniformTypes'
-  );
-  testCase.deepEqual(
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
+  expect(
     getShaderModuleUniformBlockFields(pbrScene, 'wgsl'),
-    EXPECTED_UNIFORM_NAMES,
     'WGSL uniform struct order matches uniformTypes'
-  );
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
 
   const shaderBlockLayout = makeShaderBlockLayout(pbrScene.uniformTypes);
-  testCase.equal(
-    shaderBlockLayout.byteLength,
-    160,
-    'scene controls preserve the packed block size'
-  );
-  testCase.equal(
+  expect(shaderBlockLayout.byteLength, 'scene controls preserve the packed block size').toBe(160);
+  expect(
     shaderBlockLayout.fields.environmentMipCount.offset,
-    4,
     'environment mip count occupies the previously unused scalar position'
-  );
-  testCase.equal(
+  ).toBe(4);
+  expect(
     shaderBlockLayout.fields.outputEncoding.offset,
-    5,
     'output encoding occupies the remaining scene-uniform padding slot'
-  );
-  testCase.equal(
+  ).toBe(5);
+  expect(
     shaderBlockLayout.fields.framebufferSize.offset,
-    6,
     'framebuffer dimensions retain vector alignment after the mip count'
-  );
-  testCase.deepEqual(
+  ).toBe(6);
+  expect(
     Object.keys(shaderBlockLayout.fields),
-    EXPECTED_UNIFORM_NAMES,
     'uniform buffer layout key order matches uniform definitions'
-  );
+  ).toEqual(EXPECTED_UNIFORM_NAMES);
 
-  testCase.end();
+  void 0;
 });

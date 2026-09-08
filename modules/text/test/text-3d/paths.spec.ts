@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Vector2} from '@math.gl/core';
 import {CurvePath} from '../../src/text-3d/paths/curve-path';
 import {
@@ -31,10 +31,10 @@ const clockwiseSquare = [
   new Vector2(0, 0)
 ];
 
-test('Curve subclasses interpolate expected points', t => {
+it('Curve subclasses interpolate expected points', () => {
   const line = new LineCurve(new Vector2(0, 0), new Vector2(2, 0));
-  t.deepEqual(line.getPoint(0).toArray(), [0, 0], 'line starts at origin');
-  t.deepEqual(line.getPoint(1).toArray(), [2, 0], 'line ends at destination');
+  expect(line.getPoint(0).toArray(), 'line starts at origin').toEqual([0, 0]);
+  expect(line.getPoint(1).toArray(), 'line ends at destination').toEqual([2, 0]);
 
   const quadratic = new QuadraticBezierCurve(
     new Vector2(0, 0),
@@ -42,7 +42,7 @@ test('Curve subclasses interpolate expected points', t => {
     new Vector2(4, 0)
   );
   const midpoint = quadratic.getPoint(0.5);
-  t.deepEqual(midpoint.toArray(), [2, 1], 'quadratic midpoint matches control blend');
+  expect(midpoint.toArray(), 'quadratic midpoint matches control blend').toEqual([2, 1]);
 
   const cubic = new CubicBezierCurve(
     new Vector2(0, 0),
@@ -51,48 +51,52 @@ test('Curve subclasses interpolate expected points', t => {
     new Vector2(3, 0)
   );
   const cubicMidpoint = cubic.getPoint(0.5);
-  t.deepEqual(cubicMidpoint.toArray(), [1.5, 2.25], 'cubic midpoint matches bezier evaluation');
+  expect(cubicMidpoint.toArray(), 'cubic midpoint matches bezier evaluation').toEqual([1.5, 2.25]);
 
   const spline = new SplineCurve([new Vector2(0, 0), new Vector2(1, 1), new Vector2(2, 0)]);
   const splinePoint = spline.getPoint(0.5);
-  t.ok(splinePoint.x > 0.9 && splinePoint.x < 1.1, 'spline x is near middle');
-  t.ok(splinePoint.y > 0.4 && splinePoint.y < 0.8, 'spline y reflects curvature');
+  expect(Boolean(splinePoint.x > 0.9 && splinePoint.x < 1.1), 'spline x is near middle').toBe(true);
+  expect(Boolean(splinePoint.y > 0.4 && splinePoint.y < 0.8), 'spline y reflects curvature').toBe(
+    true
+  );
 
-  t.end();
+  void 0;
 });
 
-test('CurvePath merges child curve samples without duplicates', t => {
+it('CurvePath merges child curve samples without duplicates', () => {
   const path = new CurvePath<Vector2>();
   path.add(new LineCurve(new Vector2(0, 0), new Vector2(1, 0)));
   path.add(new LineCurve(new Vector2(1, 0), new Vector2(1, 1)));
 
   const points = path.getPoints(2);
-  t.equal(points.length, 5, 'points include shared vertex once');
-  t.deepEqual(points[0].toArray(), [0, 0], 'first point starts at origin');
-  t.deepEqual(points[points.length - 1].toArray(), [1, 1], 'last point ends at path terminus');
-  t.end();
+  expect(points.length, 'points include shared vertex once').toBe(5);
+  expect(points[0].toArray(), 'first point starts at origin').toEqual([0, 0]);
+  expect(points[points.length - 1].toArray(), 'last point ends at path terminus').toEqual([1, 1]);
+  void 0;
 });
 
-test('Path updates pen position when adding segments', t => {
+it('Path updates pen position when adding segments', () => {
   const path = new Path();
   path.moveTo(0, 0);
   path.lineTo(1, 0);
   path.quadraticCurveTo(1, 1, 0, 1);
   path.bezierCurveTo(0, 2, 1, 2, 1, 1);
-  t.deepEqual(path.currentPoint.toArray(), [1, 1], 'current point tracks last command');
-  t.equal(path.curves.length, 3, 'all curve commands recorded');
-  t.end();
+  expect(path.currentPoint.toArray(), 'current point tracks last command').toEqual([1, 1]);
+  expect(path.curves.length, 'all curve commands recorded').toBe(3);
+  void 0;
 });
 
-test('ShapeUtils area and orientation helpers', t => {
-  t.equal(ShapeUtils.area(unitSquare), 1, 'counter-clockwise square has positive area');
-  t.equal(ShapeUtils.area(clockwiseSquare), -1, 'clockwise square area is negative');
-  t.equal(ShapeUtils.isClockWise(unitSquare), false, 'counter-clockwise square is not clockwise');
-  t.equal(ShapeUtils.isClockWise(clockwiseSquare), true, 'clockwise square reports clockwise');
-  t.end();
+it('ShapeUtils area and orientation helpers', () => {
+  expect(ShapeUtils.area(unitSquare), 'counter-clockwise square has positive area').toBe(1);
+  expect(ShapeUtils.area(clockwiseSquare), 'clockwise square area is negative').toBe(-1);
+  expect(ShapeUtils.isClockWise(unitSquare), 'counter-clockwise square is not clockwise').toBe(
+    false
+  );
+  expect(ShapeUtils.isClockWise(clockwiseSquare), 'clockwise square reports clockwise').toBe(true);
+  void 0;
 });
 
-test('ShapeUtils triangulateShape handles holes', t => {
+it('ShapeUtils triangulateShape handles holes', () => {
   const contour = [
     new Vector2(-1, -1),
     new Vector2(1, -1),
@@ -108,13 +112,16 @@ test('ShapeUtils triangulateShape handles holes', t => {
     new Vector2(-0.5, -0.5)
   ];
   const faces = ShapeUtils.triangulateShape(contour, [hole]);
-  t.ok(faces.length > 4, 'triangulation produces multiple faces');
+  expect(Boolean(faces.length > 4), 'triangulation produces multiple faces').toBe(true);
   const maxIndex = Math.max(...faces.flat());
-  t.ok(maxIndex < contour.length + hole.length - 2, 'triangle indices stay within vertex count');
-  t.end();
+  expect(
+    Boolean(maxIndex < contour.length + hole.length - 2),
+    'triangle indices stay within vertex count'
+  ).toBe(true);
+  void 0;
 });
 
-test('ShapeUtils triangulateShape drops duplicate vertices before earcut', t => {
+it('ShapeUtils triangulateShape drops duplicate vertices before earcut', () => {
   const contour = [
     new Vector2(-1, -1),
     new Vector2(-1, -1),
@@ -153,12 +160,12 @@ test('ShapeUtils triangulateShape drops duplicate vertices before earcut', t => 
     Math.abs(ShapeUtils.area(cleanedContour)) - Math.abs(ShapeUtils.area(cleanedHole));
 
   const totalArea = faces.reduce((sum, face) => sum + faceArea(face, vertexList), 0);
-  t.ok(totalArea > 0, 'triangulation produced measurable area');
-  t.ok(
-    Math.abs(totalArea - expectedArea) < expectedArea * 0.02,
+  expect(Boolean(totalArea > 0), 'triangulation produced measurable area').toBe(true);
+  expect(
+    Boolean(Math.abs(totalArea - expectedArea) < expectedArea * 0.02),
     'triangulation respects hole after deduplication'
-  );
-  t.end();
+  ).toBe(true);
+  void 0;
 });
 
 /** Computes the area of a single triangle from indexed vertices. */
@@ -173,16 +180,16 @@ function faceArea(face: number[], vertices: Vector2[]): number {
   return Math.abs(area) * 0.5;
 }
 
-test('ShapePath groups holes with their parent shape', t => {
+it('ShapePath groups holes with their parent shape', () => {
   const shapePath = new ShapePath();
   shapePath.moveTo(0, 0).lineTo(2, 0).lineTo(2, 2).lineTo(0, 2).lineTo(0, 0);
   shapePath.moveTo(0.5, 0.5).lineTo(0.5, 1.5).lineTo(1.5, 1.5).lineTo(1.5, 0.5).lineTo(0.5, 0.5);
 
   const shapes = shapePath.toShapes();
-  t.equal(shapes.length, 1, 'outer contour collapses to a single shape');
-  t.equal(shapes[0].holes.length, 1, 'inner contour is attached as a hole');
+  expect(shapes.length, 'outer contour collapses to a single shape').toBe(1);
+  expect(shapes[0].holes.length, 'inner contour is attached as a hole').toBe(1);
   const extracted = shapes[0].extractPoints();
-  t.equal(extracted.shape.length > 0, true, 'outer shape points are present');
-  t.equal(extracted.holes.length, 1, 'hole points extracted');
-  t.end();
+  expect(extracted.shape.length > 0, 'outer shape points are present').toBe(true);
+  expect(extracted.holes.length, 'hole points extracted').toBe(1);
+  void 0;
 });

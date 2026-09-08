@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {type PlatformInfo, volumeRaymarch, WGSLShaderAssembler} from '@luma.gl/shadertools';
 
 const WGSL_PLATFORM_INFO: PlatformInfo = {
@@ -13,7 +13,7 @@ const WGSL_PLATFORM_INFO: PlatformInfo = {
   features: new Set()
 };
 
-test('volumeRaymarch assembles collision-free WGSL helpers', testContext => {
+it('volumeRaymarch assembles collision-free WGSL helpers', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const shader = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
@@ -25,16 +25,21 @@ test('volumeRaymarch assembles collision-free WGSL helpers', testContext => {
     modules: [volumeRaymarch]
   });
 
-  testContext.ok(shader.source.includes('fn volumeRaymarch_intersectBox'), 'box helper assembled');
-  testContext.ok(shader.source.includes('fn volumeRaymarch_mixScalar'), 'scalar helper assembled');
-  testContext.ok(
-    shader.source.includes('fn volumeRaymarch_arrowDistance'),
+  expect(
+    Boolean(shader.source.includes('fn volumeRaymarch_intersectBox')),
+    'box helper assembled'
+  ).toBe(true);
+  expect(
+    Boolean(shader.source.includes('fn volumeRaymarch_mixScalar')),
+    'scalar helper assembled'
+  ).toBe(true);
+  expect(
+    Boolean(shader.source.includes('fn volumeRaymarch_arrowDistance')),
     'arrow helper assembled'
-  );
-  testContext.equal(
+  ).toBe(true);
+  expect(
     shader.source.match(/fn volumeRaymarch_intersectBox/g)?.length,
-    1,
     'helper is included exactly once'
-  );
-  testContext.end();
+  ).toBe(1);
+  void 0;
 });

@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,33 +10,26 @@ import {
   parseParquetRleBitPackedRunPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 
-test('parseParquetRleBitPackedRunPlan parses mixed runs and truncates the final group', testCase => {
+it('parseParquetRleBitPackedRunPlan parses mixed runs and truncates the final group', () => {
   const encoded = Uint8Array.from([6, 5, 3, 0x88, 0xc6, 0xfa]);
   const plan = parseParquetRleBitPackedRunPlan(encoded, 3, 8);
-  testCase.deepEqual(Array.from(plan.runDescriptors), [0, 3, 1, 0, 3, 5, 3, 1]);
-  testCase.equal(plan.runCount, 2);
-  testCase.equal(plan.valueCount, 8);
-  testCase.equal(plan.bytesConsumed, 6);
-  testCase.ok(Object.isFrozen(plan));
-  testCase.throws(
-    () => parseParquetRleBitPackedRunPlan(Uint8Array.from([6]), 3, 3),
+  expect(Array.from(plan.runDescriptors)).toEqual([0, 3, 1, 0, 3, 5, 3, 1]);
+  expect(plan.runCount).toBe(2);
+  expect(plan.valueCount).toBe(8);
+  expect(plan.bytesConsumed).toBe(6);
+  expect(Boolean(Object.isFrozen(plan))).toBe(true);
+  expect(() => parseParquetRleBitPackedRunPlan(Uint8Array.from([6]), 3, 3)).toThrow(
     /payload is truncated/
   );
-  testCase.throws(
-    () => parseParquetRleBitPackedRunPlan(Uint8Array.from([0]), 3, 1),
+  expect(() => parseParquetRleBitPackedRunPlan(Uint8Array.from([0]), 3, 1)).toThrow(
     /zero run length/
   );
-  testCase.throws(
-    () => parseParquetRleBitPackedRunPlan(Uint8Array.from([]), 33, 0),
-    /0 through 32/
-  );
-  testCase.end();
+  expect(() => parseParquetRleBitPackedRunPlan(Uint8Array.from([]), 33, 0)).toThrow(/0 through 32/);
 });
 
-test('GPUParquetRleBitPackedDecoder emits bounded mixed-run WGSL', testCase => {
+it('GPUParquetRleBitPackedDecoder emits bounded mixed-run WGSL', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({id: 'input', byteLength: 8, usage: Buffer.STORAGE});
   const descriptorHandle = graph.importBuffer({
@@ -55,15 +49,11 @@ test('GPUParquetRleBitPackedDecoder emits bounded mixed-run WGSL', testCase => {
   });
   const source = getGPUParquetRleBitPackedShaderSource(decoder, {x: 1, y: 1, z: 1});
   const reflection = new WgslReflect(source);
-  testCase.deepEqual(
-    reflection.entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /while \(lowerRunIndex < upperRunIndex\)/);
-  testCase.match(source, /readBitPackedValue/);
-  testCase.match(source, /VALUE_MASK: u32 = 7u/);
-  testCase.doesNotThrow(() => decoder.addToGraph(graph));
-  testCase.end();
+  expect(reflection.entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/while \(lowerRunIndex < upperRunIndex\)/);
+  expect(source).toMatch(/readBitPackedValue/);
+  expect(source).toMatch(/VALUE_MASK: u32 = 7u/);
+  expect(() => decoder.addToGraph(graph)).not.toThrow();
 });
 
 function makeSupportDevice(): Device {

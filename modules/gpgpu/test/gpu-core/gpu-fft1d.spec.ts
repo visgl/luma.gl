@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -11,13 +12,10 @@ import {
   type GPUFFT1DStrategy
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPUFFT1D matches a CPU DFT for independent packed batches', async testCase => {
+it('GPUFFT1D matches a CPU DFT for independent packed batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const length = 8;
@@ -33,32 +31,18 @@ test('GPUFFT1D matches a CPU DFT for independent packed batches', async testCase
     );
   }
   const result = await runGPUFFT1D(device, inputValues, length, batchCount, 'portable');
-  assertClose(testCase, result.forward, expectedValues, 0.0005, 'batched forward transform');
-  assertClose(
-    testCase,
-    result.inverse,
-    Array.from(inputValues),
-    0.0005,
-    'batched inverse round trip'
-  );
-  testCase.equal(
-    result.logicalTransientBufferCount,
-    2,
-    'each transform declares inspectable scratch'
-  );
-  testCase.equal(
+  assertClose(result.forward, expectedValues, 0.0005, 'batched forward transform');
+  assertClose(result.inverse, Array.from(inputValues), 0.0005, 'batched inverse round trip');
+  expect(result.logicalTransientBufferCount, 'each transform declares inspectable scratch').toBe(2);
+  expect(
     result.physicalTransientBufferCount,
-    1,
     'disjoint forward and inverse scratch lifetimes alias physically'
-  );
-  testCase.end();
+  ).toBe(1);
 });
 
-test('GPUFFT1D benchmark correctness-gates available strategies', async testCase => {
+it('GPUFFT1D benchmark correctness-gates available strategies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const report = await runGPUFFT1DBenchmark(device, {
@@ -67,23 +51,20 @@ test('GPUFFT1D benchmark correctness-gates available strategies', async testCase
     warmupIterations: 1,
     measuredIterations: 2
   });
-  testCase.equal(report.length, 16);
-  testCase.equal(report.batchCount, 3);
-  testCase.equal(report.passCount, 5);
-  testCase.equal(report.paths[0].strategy, 'portable');
-  testCase.equal(report.paths.length, report.subgroupAvailable ? 2 : 1);
-  testCase.ok(
-    report.paths.every(path => Number.isFinite(path.cpuEncodeTimeMilliseconds.median)),
+  expect(report.length).toBe(16);
+  expect(report.batchCount).toBe(3);
+  expect(report.passCount).toBe(5);
+  expect(report.paths[0].strategy).toBe('portable');
+  expect(report.paths.length).toBe(report.subgroupAvailable ? 2 : 1);
+  expect(
+    Boolean(report.paths.every(path => Number.isFinite(path.cpuEncodeTimeMilliseconds.median))),
     'each available path reports a finite timing distribution'
-  );
-  testCase.end();
+  ).toBe(true);
 });
 
-test('GPUFFT1D auto strategy preserves portable numerical results', async testCase => {
+it('GPUFFT1D auto strategy preserves portable numerical results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const length = 32;
@@ -92,18 +73,16 @@ test('GPUFFT1D auto strategy preserves portable numerical results', async testCa
   const portable = await runGPUFFT1D(device, inputValues, length, batchCount, 'portable');
   const automatic = await runGPUFFT1D(device, inputValues, length, batchCount, 'auto');
   assertClose(
-    testCase,
     automatic.forward,
     portable.forward,
     0.0005,
     'automatic subgroup selection matches portable output'
   );
   const support = getGPUFFT1DSupport(device, {length, batchCount});
-  testCase.ok(
-    support.strategy === 'portable' || support.subgroupStageCount! > 0,
+  expect(
+    Boolean(support.strategy === 'portable' || support.subgroupStageCount! > 0),
     'support exposes whether subgroup butterflies were eligible'
-  );
-  testCase.end();
+  ).toBe(true);
 });
 
 async function runGPUFFT1D(
@@ -219,17 +198,16 @@ async function readFloat32(buffer: Buffer, length: number): Promise<number[]> {
 }
 
 function assertClose(
-  testCase: {ok: (value: unknown, message?: string) => void},
   actual: readonly number[],
   expected: readonly number[],
   tolerance: number,
   label: string
 ): void {
-  testCase.ok(actual.length === expected.length, `${label} length matches`);
+  expect(Boolean(actual.length === expected.length), `${label} length matches`).toBe(true);
   for (let index = 0; index < actual.length; index++) {
-    testCase.ok(
-      Math.abs(actual[index] - expected[index]) <= tolerance,
+    expect(
+      Boolean(Math.abs(actual[index] - expected[index]) <= tolerance),
       `${label} component ${index}: ${actual[index]} ~= ${expected[index]}`
-    );
+    ).toBe(true);
   }
 }

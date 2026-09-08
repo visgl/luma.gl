@@ -10,47 +10,41 @@ import {
   parseParquetDeltaBinaryPackedPlan
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {vi, expect, it} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 
 const ENCODED = Uint8Array.from([
   128, 1, 4, 5, 20, 1, 3, 255, 254, 253, 35, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 
-test('parseParquetDeltaBinaryPackedPlan publishes INT32 mini-block descriptors', testCase => {
+it('parseParquetDeltaBinaryPackedPlan publishes INT32 mini-block descriptors', () => {
   const plan = parseParquetDeltaBinaryPackedPlan(ENCODED);
-  testCase.deepEqual(
-    {
-      blockSize: plan.blockSize,
-      miniBlockCount: plan.miniBlockCount,
-      valuesPerMiniBlock: plan.valuesPerMiniBlock,
-      valueCount: plan.valueCount,
-      firstValue: plan.firstValue,
-      descriptorCount: plan.descriptorCount,
-      bytesConsumed: plan.bytesConsumed
-    },
-    {
-      blockSize: 128,
-      miniBlockCount: 4,
-      valuesPerMiniBlock: 32,
-      valueCount: 5,
-      firstValue: 10,
-      descriptorCount: 1,
-      bytesConsumed: 22
-    }
-  );
-  testCase.deepEqual(Array.from(plan.miniBlockDescriptors), [1, 4, 10, 3, 0xffffffff]);
-  testCase.equal(plan.bytesConsumed, 22, 'unused nonzero-width mini-blocks have no bodies');
-  testCase.throws(
-    () => parseParquetDeltaBinaryPackedPlan(Uint8Array.from([64, 1, 1, 0])),
+  expect({
+    blockSize: plan.blockSize,
+    miniBlockCount: plan.miniBlockCount,
+    valuesPerMiniBlock: plan.valuesPerMiniBlock,
+    valueCount: plan.valueCount,
+    firstValue: plan.firstValue,
+    descriptorCount: plan.descriptorCount,
+    bytesConsumed: plan.bytesConsumed
+  }).toEqual({
+    blockSize: 128,
+    miniBlockCount: 4,
+    valuesPerMiniBlock: 32,
+    valueCount: 5,
+    firstValue: 10,
+    descriptorCount: 1,
+    bytesConsumed: 22
+  });
+  expect(Array.from(plan.miniBlockDescriptors)).toEqual([1, 4, 10, 3, 0xffffffff]);
+  expect(plan.bytesConsumed, 'unused nonzero-width mini-blocks have no bodies').toBe(22);
+  expect(() => parseParquetDeltaBinaryPackedPlan(Uint8Array.from([64, 1, 1, 0]))).toThrow(
     /positive multiple of 128/
   );
-  testCase.throws(() => parseParquetDeltaBinaryPackedPlan(ENCODED.subarray(0, 12)), /truncated/);
-  testCase.end();
+  expect(() => parseParquetDeltaBinaryPackedPlan(ENCODED.subarray(0, 12))).toThrow(/truncated/);
 });
 
-test('GPUParquetDeltaBinaryPackedUnpacker emits mini-block extraction WGSL', testCase => {
+it('GPUParquetDeltaBinaryPackedUnpacker emits mini-block extraction WGSL', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({id: 'input', byteLength: 24, usage: Buffer.STORAGE});
   const descriptorHandle = graph.importBuffer({
@@ -69,17 +63,13 @@ test('GPUParquetDeltaBinaryPackedUnpacker emits mini-block extraction WGSL', tes
     firstValue: 10
   });
   const source = getGPUParquetDeltaBinaryPackedShaderSource(unpacker, {x: 1, y: 1, z: 1});
-  testCase.deepEqual(
-    new WgslReflect(source).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /minimumDelta \+ adjustedDelta/);
-  testCase.match(source, /outputDeltas\[OUTPUT_OFFSET\] = FIRST_VALUE/);
-  testCase.doesNotThrow(() => unpacker.addToGraph(graph));
-  testCase.end();
+  expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/minimumDelta \+ adjustedDelta/);
+  expect(source).toMatch(/outputDeltas\[OUTPUT_OFFSET\] = FIRST_VALUE/);
+  expect(() => unpacker.addToGraph(graph)).not.toThrow();
 });
 
-test('GPUParquetDeltaBinaryPackedDecoder composes unpack and inclusive scan', testCase => {
+it('GPUParquetDeltaBinaryPackedDecoder composes unpack and inclusive scan', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const addComputePass = vi.spyOn(graph, 'addComputePass');
   const inputHandle = graph.importBuffer({id: 'input', byteLength: 24, usage: Buffer.STORAGE});
@@ -98,10 +88,9 @@ test('GPUParquetDeltaBinaryPackedDecoder composes unpack and inclusive scan', te
     descriptorCount: 1,
     firstValue: 10
   }).addToGraph(graph);
-  testCase.ok(addComputePass.mock.calls.length >= 2);
-  testCase.equal(addComputePass.mock.calls[0][0].id, 'gpu-parquet-delta-binary-packed-unpack');
-  testCase.match(addComputePass.mock.calls[1][0].id, /gpu-parquet-delta-binary-packed-scan/);
-  testCase.end();
+  expect(Boolean(addComputePass.mock.calls.length >= 2)).toBe(true);
+  expect(addComputePass.mock.calls[0][0].id).toBe('gpu-parquet-delta-binary-packed-unpack');
+  expect(addComputePass.mock.calls[1][0].id).toMatch(/gpu-parquet-delta-binary-packed-scan/);
 });
 
 function makeSupportDevice(): Device {

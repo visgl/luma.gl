@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,13 +7,10 @@ import {Buffer} from '@luma.gl/core';
 import {GPULZ4RawDecompressor, parseLZ4RawDecompressionPlan} from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
+it('GPULZ4RawDecompressor resolves overlapping matches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
   const compressed = Uint8Array.from([0x14, 65, 1, 0, 0x50, 66, 67, 68, 69, 70]);
@@ -61,15 +59,13 @@ test('GPULZ4RawDecompressor resolves overlapping matches', async testCase => {
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const result = await outputBuffer.readAsync();
-    testCase.deepEqual(
-      Array.from(new Uint8Array(result.buffer, result.byteOffset, plan.outputByteLength)),
-      [65, 65, 65, 65, 65, 65, 65, 65, 65, 66, 67, 68, 69, 70]
-    );
+    expect(
+      Array.from(new Uint8Array(result.buffer, result.byteOffset, plan.outputByteLength))
+    ).toEqual([65, 65, 65, 65, 65, 65, 65, 65, 65, 66, 67, 68, 69, 70]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     descriptorBuffer.destroy();
     outputBuffer.destroy();
   }
-  testCase.end();
 });

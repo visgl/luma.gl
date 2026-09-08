@@ -10,12 +10,11 @@ import {
   makeGPUParquetDictionaryDecoderStats
 } from '@luma.gl/gpgpu/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 
-test('GPUParquetDictionaryDecoder plans arbitrary-width gathers', testCase => {
-  testCase.deepEqual(makeGPUParquetDictionaryDecoderStats(5, 3, 3), {
+it('GPUParquetDictionaryDecoder plans arbitrary-width gathers', () => {
+  expect(makeGPUParquetDictionaryDecoderStats(5, 3, 3)).toEqual({
     valueCount: 5,
     dictionaryValueCount: 3,
     byteWidth: 3,
@@ -24,7 +23,7 @@ test('GPUParquetDictionaryDecoder plans arbitrary-width gathers', testCase => {
     outputWordCount: 4,
     workgroupCount: 1
   });
-  testCase.deepEqual(makeGPUParquetDictionaryDecoderStats(0, 0, 8), {
+  expect(makeGPUParquetDictionaryDecoderStats(0, 0, 8)).toEqual({
     valueCount: 0,
     dictionaryValueCount: 0,
     byteWidth: 8,
@@ -33,11 +32,10 @@ test('GPUParquetDictionaryDecoder plans arbitrary-width gathers', testCase => {
     outputWordCount: 0,
     workgroupCount: 0
   });
-  testCase.throws(() => makeGPUParquetDictionaryDecoderStats(1, 1, 0), /byteWidth.*positive/);
-  testCase.end();
+  expect(() => makeGPUParquetDictionaryDecoderStats(1, 1, 0)).toThrow(/byteWidth.*positive/);
 });
 
-test('GPUParquetDictionaryDecoder validates and emits a byte gather shader', testCase => {
+it('GPUParquetDictionaryDecoder validates and emits a byte gather shader', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const dictionaryHandle = graph.importBuffer({
     id: 'dictionary',
@@ -55,17 +53,13 @@ test('GPUParquetDictionaryDecoder validates and emits a byte gather shader', tes
     byteWidth: 3
   });
   const source = getGPUParquetDictionaryShaderSource(decoder, {x: 1, y: 1, z: 1});
-  testCase.deepEqual(
-    new WgslReflect(source).entry.compute.map(entry => entry.name),
-    ['main']
-  );
-  testCase.match(source, /dictionaryIndex < DICTIONARY_VALUE_COUNT/);
-  testCase.match(source, /dictionaryIndex \* BYTE_WIDTH \+ byteIndexWithinValue/);
-  testCase.doesNotThrow(() => decoder.addToGraph(graph));
-  testCase.end();
+  expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
+  expect(source).toMatch(/dictionaryIndex < DICTIONARY_VALUE_COUNT/);
+  expect(source).toMatch(/dictionaryIndex \* BYTE_WIDTH \+ byteIndexWithinValue/);
+  expect(() => decoder.addToGraph(graph)).not.toThrow();
 });
 
-test('GPUParquetRleDictionaryDecoder composes two graph nodes through transient indices', testCase => {
+it('GPUParquetRleDictionaryDecoder composes two graph nodes through transient indices', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const addComputePass = vi.spyOn(graph, 'addComputePass');
   const createTransientBuffer = vi.spyOn(graph, 'createTransientBuffer');
@@ -93,13 +87,12 @@ test('GPUParquetRleDictionaryDecoder composes two graph nodes through transient 
     dictionaryValueCount: 3,
     byteWidth: 3
   }).addToGraph(graph);
-  testCase.equal(createTransientBuffer.mock.calls.length, 1);
-  testCase.equal(addComputePass.mock.calls.length, 2);
-  testCase.deepEqual(
-    addComputePass.mock.calls.map(call => call[0].id),
-    ['gpu-parquet-rle-dictionary-indices', 'gpu-parquet-rle-dictionary-gather']
-  );
-  testCase.end();
+  expect(createTransientBuffer.mock.calls.length).toBe(1);
+  expect(addComputePass.mock.calls.length).toBe(2);
+  expect(addComputePass.mock.calls.map(call => call[0].id)).toEqual([
+    'gpu-parquet-rle-dictionary-indices',
+    'gpu-parquet-rle-dictionary-gather'
+  ]);
 });
 
 function makeSupportDevice(): Device {

@@ -5,6 +5,7 @@
 import './arrow/arrow-paths.spec';
 import './arrow/arrow-column-info.spec';
 import './arrow/arrow-fixed-size-list.spec';
+import './arrow/arrow-gpu-fixed-size-list.spec';
 import './arrow/arrow-variable-length-attribute-gpu-vector.spec';
 import './arrow/arrow-path-model.spec';
 import './arrow/arrow-splats.spec';

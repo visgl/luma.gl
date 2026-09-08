@@ -1,8 +1,8 @@
-import test from 'test/utils/vitest-tape';
 import {parseGLTFLights} from '@luma.gl/gltf/parsers/parse-gltf-lights';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {expect, it} from 'vitest';
 
-test('gltf#parseGLTFLights - directional', t => {
+it('gltf#parseGLTFLights - directional', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [
       {
@@ -26,18 +26,19 @@ test('gltf#parseGLTFLights - directional', t => {
   } as any;
 
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 1, 'one light parsed');
+  expect(lights.length, 'one light parsed').toBe(1);
   const light = lights[0] as any;
-  t.equals(light.type, 'directional');
-  t.deepEquals(light.color, [51, 76.5, 102], 'glTF colors are normalized to luma light range');
-  t.equals(light.intensity, 2);
+  expect(light.type).toBe('directional');
+  expect(light.color, 'glTF colors are normalized to luma light range').toEqual([51, 76.5, 102]);
+  expect(light.intensity).toBe(2);
 
   const floatLights = parseGLTFLights(gltf, {useByteColors: false});
-  t.deepEquals((floatLights[0] as any).color, [0.2, 0.3, 0.4], 'float mode preserves glTF colors');
-  t.end();
+  expect((floatLights[0] as any).color, 'float mode preserves glTF colors').toEqual([
+    0.2, 0.3, 0.4
+  ]);
 });
 
-test('gltf#parseGLTFLights - point', t => {
+it('gltf#parseGLTFLights - point', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [
       {
@@ -60,16 +61,15 @@ test('gltf#parseGLTFLights - point', t => {
     }
   } as any;
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 1, 'one light parsed');
+  expect(lights.length, 'one light parsed').toBe(1);
   const light = lights[0] as any;
-  t.equals(light.type, 'point');
-  t.deepEquals(light.position, [1, 2, 3]);
-  t.equals(light.intensity, 5);
-  t.equals(light.attenuation[2], 1 / 100);
-  t.end();
+  expect(light.type).toBe('point');
+  expect(light.position).toEqual([1, 2, 3]);
+  expect(light.intensity).toBe(5);
+  expect(light.attenuation[2]).toBe(1 / 100);
 });
 
-test('gltf#parseGLTFLights - spot', t => {
+it('gltf#parseGLTFLights - spot', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [
       {
@@ -99,30 +99,28 @@ test('gltf#parseGLTFLights - spot', t => {
   } as any;
 
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 1, 'one spot light parsed');
+  expect(lights.length, 'one spot light parsed').toBe(1);
   const light = lights[0] as any;
-  t.equals(light.type, 'spot');
-  t.deepEquals(light.position, [1, 2, 3]);
-  t.deepEquals(light.direction, [0, 0, -1]);
-  t.deepEquals(light.color, [51, 76.5, 102], 'glTF colors are normalized to luma light range');
-  t.equals(light.intensity, 7);
-  t.equals(light.innerConeAngle, 0.1);
-  t.equals(light.outerConeAngle, 0.5);
-  t.equals(light.attenuation[2], 1 / 400);
-  t.end();
+  expect(light.type).toBe('spot');
+  expect(light.position).toEqual([1, 2, 3]);
+  expect(light.direction).toEqual([0, 0, -1]);
+  expect(light.color, 'glTF colors are normalized to luma light range').toEqual([51, 76.5, 102]);
+  expect(light.intensity).toBe(7);
+  expect(light.innerConeAngle).toBe(0.1);
+  expect(light.outerConeAngle).toBe(0.5);
+  expect(light.attenuation[2]).toBe(1 / 400);
 });
 
-test('gltf#parseGLTFLights - missing extension', t => {
+it('gltf#parseGLTFLights - missing extension', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [],
     scenes: []
   } as any;
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 0, 'no lights parsed');
-  t.end();
+  expect(lights.length, 'no lights parsed').toBe(0);
 });
 
-test('gltf#parseGLTFLights - postprocessed lights with node matrix', t => {
+it('gltf#parseGLTFLights - postprocessed lights with node matrix', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [
       {
@@ -141,15 +139,14 @@ test('gltf#parseGLTFLights - postprocessed lights with node matrix', t => {
   } as any;
 
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 1, 'one postprocessed light parsed');
+  expect(lights.length, 'one postprocessed light parsed').toBe(1);
   const light = lights[0] as any;
-  t.equals(light.type, 'point');
-  t.deepEquals(light.position, [4, 5, 6]);
-  t.equals(light.intensity, 3);
-  t.end();
+  expect(light.type).toBe('point');
+  expect(light.position).toEqual([4, 5, 6]);
+  expect(light.intensity).toBe(3);
 });
 
-test('gltf#parseGLTFLights - nested node transforms are resolved in world space', t => {
+it('gltf#parseGLTFLights - nested node transforms are resolved in world space', () => {
   const gltf: GLTFPostprocessed = {
     nodes: [
       {
@@ -179,12 +176,11 @@ test('gltf#parseGLTFLights - nested node transforms are resolved in world space'
   } as any;
 
   const lights = parseGLTFLights(gltf);
-  t.equal(lights.length, 1, 'one nested light parsed');
+  expect(lights.length, 'one nested light parsed').toBe(1);
   const light = lights[0] as any;
-  t.equals(light.type, 'spot');
-  t.deepEquals(light.position, [9, 2, -3], 'position includes parent rotation and translation');
-  t.deepEquals(light.direction, [0, 0, 1], 'direction includes parent rotation');
-  t.deepEquals(light.color, [255, 255, 255], 'white glTF light is normalized to 255');
-  t.equals(light.intensity, 4);
-  t.end();
+  expect(light.type).toBe('spot');
+  expect(light.position, 'position includes parent rotation and translation').toEqual([9, 2, -3]);
+  expect(light.direction, 'direction includes parent rotation').toEqual([0, 0, 1]);
+  expect(light.color, 'white glTF light is normalized to 255').toEqual([255, 255, 255]);
+  expect(light.intensity).toBe(4);
 });

@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -18,11 +18,9 @@ const POSITIONS_2D = Float32Array.from([
   0.25, 0.25, 0.75, 0.75, 1.25, 0.25, 0.25, 1.25, 1.25, 1.25, 1.75, 1.75
 ]);
 
-test('GPUGridIndexQuery selects point cells and refreshes IDs and masks', async t => {
+it('GPUGridIndexQuery selects point cells and refreshes IDs and masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -37,30 +35,25 @@ test('GPUGridIndexQuery selects point cells and refreshes IDs and masks', async 
     maskLength: 6
   });
   encode(device, fixture.compiled);
-  t.deepEqual((await readQueryResult(fixture)).ids.sort(sortNumbers), [0, 1]);
-  t.deepEqual(await readUint32(fixture.outputMask!, 6), [1, 1, 0, 0, 0, 0]);
+  expect((await readQueryResult(fixture)).ids.sort(sortNumbers)).toEqual([0, 1]);
+  expect(await readUint32(fixture.outputMask!, 6)).toEqual([1, 1, 0, 0, 0, 0]);
 
   fixture.query.write(Float32Array.from([1, 0.5]));
   encode(device, fixture.compiled);
-  t.deepEqual(
+  expect(
     await readQueryResult(fixture),
-    {ids: [2], count: 1, overflow: 0},
     'an internal boundary selects the same upper cell used by index construction'
-  );
-  t.deepEqual(
+  ).toEqual({ids: [2], count: 1, overflow: 0});
+  expect(
     await readUint32(fixture.outputMask!, 6),
-    [0, 0, 1, 0, 0, 0],
     'each encoding clears the previous source-aligned mask'
-  );
+  ).toEqual([0, 0, 1, 0, 0, 0]);
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUGridIndexQuery returns conservative bounds and radius candidates', async t => {
+it('GPUGridIndexQuery returns conservative bounds and radius candidates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -74,11 +67,10 @@ test('GPUGridIndexQuery returns conservative bounds and radius candidates', asyn
     outputCapacity: 6
   });
   encode(device, boundsFixture.compiled);
-  t.deepEqual(
+  expect(
     (await readQueryResult(boundsFixture)).ids.sort(sortNumbers),
-    [0, 1],
     'bounds return the containing-cell candidates, including a documented false positive'
-  );
+  ).toEqual([0, 1]);
   destroyFixture(boundsFixture);
 
   const radiusFixture = createQueryFixture(device, {
@@ -91,20 +83,16 @@ test('GPUGridIndexQuery returns conservative bounds and radius candidates', asyn
     outputCapacity: 6
   });
   encode(device, radiusFixture.compiled);
-  t.deepEqual(
+  expect(
     (await readQueryResult(radiusFixture)).ids.sort(sortNumbers),
-    [0, 1, 2, 3],
     'radius rejects a diagonally distant cell while preserving intersecting candidates'
-  );
+  ).toEqual([0, 1, 2, 3]);
   destroyFixture(radiusFixture);
-  t.end();
 });
 
-test('GPUGridIndexQuery reports query and source-index overflow independently', async t => {
+it('GPUGridIndexQuery reports query and source-index overflow independently', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -119,9 +107,9 @@ test('GPUGridIndexQuery reports query and source-index overflow independently', 
   });
   encode(device, outputOverflow.compiled);
   const outputResult = await readQueryResult(outputOverflow);
-  t.equal(outputResult.count, 6, 'candidate count reports required output capacity');
-  t.equal(outputResult.ids.length, 2, 'candidate storage remains bounded');
-  t.equal(outputResult.overflow, 1, 'candidate truncation sets overflow');
+  expect(outputResult.count, 'candidate count reports required output capacity').toBe(6);
+  expect(outputResult.ids.length, 'candidate storage remains bounded').toBe(2);
+  expect(outputResult.overflow, 'candidate truncation sets overflow').toBe(1);
   destroyFixture(outputOverflow);
 
   const indexOverflow = createQueryFixture(device, {
@@ -135,20 +123,16 @@ test('GPUGridIndexQuery reports query and source-index overflow independently', 
     outputCapacity: 6
   });
   encode(device, indexOverflow.compiled);
-  t.deepEqual(
+  expect(
     await readQueryResult(indexOverflow),
-    {ids: [], count: 0, overflow: 1},
     'an overflowed source index marks even an otherwise empty stored-prefix result incomplete'
-  );
+  ).toEqual({ids: [], count: 0, overflow: 1});
   destroyFixture(indexOverflow);
-  t.end();
 });
 
-test('GPUGridIndexQuery selects 3D point cells', async t => {
+it('GPUGridIndexQuery selects 3D point cells', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -162,16 +146,13 @@ test('GPUGridIndexQuery selects 3D point cells', async t => {
     outputCapacity: 3
   });
   encode(device, fixture.compiled);
-  t.deepEqual(await readQueryResult(fixture), {ids: [2], count: 1, overflow: 0});
+  expect(await readQueryResult(fixture)).toEqual({ids: [2], count: 1, overflow: 0});
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUGridIndexQuery handles extreme domains and exponential WGSL literals', async t => {
+it('GPUGridIndexQuery handles extreme domains and exponential WGSL literals', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -185,11 +166,10 @@ test('GPUGridIndexQuery handles extreme domains and exponential WGSL literals', 
     outputCapacity: 1
   });
   encode(device, pointFixture.compiled);
-  t.deepEqual(
+  expect(
     await readQueryResult(pointFixture),
-    {ids: [0], count: 1, overflow: 0},
     'cross-zero normalization agrees with index construction'
-  );
+  ).toEqual({ids: [0], count: 1, overflow: 0});
   destroyFixture(pointFixture);
 
   const radiusFixture = createQueryFixture(device, {
@@ -202,20 +182,16 @@ test('GPUGridIndexQuery handles extreme domains and exponential WGSL literals', 
     outputCapacity: 2
   });
   encode(device, radiusFixture.compiled);
-  t.deepEqual(
+  expect(
     (await readQueryResult(radiusFixture)).ids.sort(sortNumbers),
-    [0, 1],
     'overflow-safe cell boundaries preserve both cells touching the query radius'
-  );
+  ).toEqual([0, 1]);
   destroyFixture(radiusFixture);
-  t.end();
 });
 
-test('GPUGridIndexQuery rejects overlapping inputs and writable results', async t => {
+it('GPUGridIndexQuery rejects overlapping inputs and writable results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -238,7 +214,7 @@ test('GPUGridIndexQuery rejects overlapping inputs and writable results', async 
   const query = view('float32', 2, 40);
   const overflow = view('uint32', 1, 60);
 
-  t.throws(
+  expect(
     () =>
       new GPUGridIndexQuery({
         index,
@@ -248,10 +224,9 @@ test('GPUGridIndexQuery rejects overlapping inputs and writable results', async 
         count: view('uint32', 1, 56),
         overflow
       }),
-    /output and index objectIds must not overlap/,
     'query writes cannot alias live index reads'
-  );
-  t.throws(
+  ).toThrow(/output and index objectIds must not overlap/);
+  expect(
     () =>
       new GPUGridIndexQuery({
         index,
@@ -261,12 +236,10 @@ test('GPUGridIndexQuery rejects overlapping inputs and writable results', async 
         count: view('uint32', 1, 68),
         overflow
       }),
-    /count and output must not overlap/,
     'writable result views cannot race each other'
-  );
+  ).toThrow(/count and output must not overlap/);
 
   buffer.destroy();
-  t.end();
 });
 
 type QueryFixture = {

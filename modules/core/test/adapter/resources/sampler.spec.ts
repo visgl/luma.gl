@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {Device, Sampler} from '@luma.gl/core';
@@ -66,26 +66,26 @@ export const SAMPLER_PARAMETERS = {
   */
 };
 
-test('WebGL#Sampler setParameters', async t => {
+it('WebGL#Sampler setParameters', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  testSampler(t, webglDevice);
-  testSampler(t, webglDevice);
+  testSampler(webglDevice);
+  testSampler(webglDevice);
   // testSampler(t, webgpuDevice);
-  t.end();
+  void 0;
 });
 
-function testSampler(t: Test, device: Device): void {
+function testSampler(device: Device): void {
   for (const pname in SAMPLER_PARAMETERS) {
     const parameter = Number(pname);
     const values = SAMPLER_PARAMETERS[parameter];
     for (const valueString in values) {
       const value = Number(valueString);
       const sampler = device.createSampler({[parameter]: value});
-      t.ok(
-        sampler instanceof Sampler,
+      expect(
+        Boolean(sampler instanceof Sampler),
         `${device.type} new Sampler({${pname}: ${valueString}}) constructed.`
-      );
+      ).toBe(true);
       sampler.destroy();
     }
   }

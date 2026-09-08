@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -12,13 +13,10 @@ import {
   type GPUParquetDecodedPage
 } from '@luma.gl/gpgpu/gpu-parse';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
-test('loaders.gl encoded pages batch Snappy, levels, and values in one graph', async testCase => {
+it('loaders.gl encoded pages batch Snappy, levels, and values in one graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -27,19 +25,19 @@ test('loaders.gl encoded pages batch Snappy, levels, and values in one graph', a
   const snappyValues = Uint8Array.from([8, 28, ...byteStreamSplit]);
   const batch = makeBatch(Uint8Array.from([4, 1, ...snappyValues]));
   const plan = planGPUParquetEncodedPageBatch(batch);
-  testCase.equal(plan.gpuPageCount, 1);
-  testCase.equal(plan.pages[0].mode, 'gpu');
+  expect(plan.gpuPageCount).toBe(1);
+  expect(plan.pages[0].mode).toBe('gpu');
   if (plan.pages[0].mode === 'gpu') {
-    testCase.equal(plan.pages[0].compression?.codec, 'SNAPPY');
-    testCase.equal(plan.pages[0].values.kind, 'byte-stream-split');
+    expect(plan.pages[0].compression?.codec).toBe('SNAPPY');
+    expect(plan.pages[0].values.kind).toBe('byte-stream-split');
   }
 
   const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
   const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-loader-batch-test'});
   const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
   const page = result.pages[0] as GPUParquetDecodedPage;
-  testCase.equal(page.mode, 'gpu');
-  testCase.equal(page.values.layout, 'packed-bytes');
+  expect(page.mode).toBe('gpu');
+  expect(page.values.layout).toBe('packed-bytes');
 
   const valueReadback = createReadbackBuffer(device, expectedValues.byteLength);
   const levelReadback = createReadbackBuffer(device, 8);
@@ -58,30 +56,25 @@ test('loaders.gl encoded pages batch Snappy, levels, and values in one graph', a
     device.submit(commandEncoder.finish());
     const valueResult = await valueReadback.readAsync();
     const levelResult = await levelReadback.readAsync();
-    testCase.deepEqual(
+    expect(
       Array.from(new Uint8Array(valueResult.buffer, valueResult.byteOffset, expectedValues.length)),
-      Array.from(expectedValues),
       'decompresses and restores value-major bytes'
-    );
-    testCase.deepEqual(
+    ).toEqual(Array.from(expectedValues));
+    expect(
       Array.from(new Uint32Array(levelResult.buffer, levelResult.byteOffset, 2)),
-      [1, 1],
       'decodes V2 definition levels alongside values'
-    );
+    ).toEqual([1, 1]);
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     valueReadback.destroy();
     levelReadback.destroy();
   }
-  testCase.end();
 });
 
-test('compressed PLAIN page outputs remain available for graph readback', async testCase => {
+it('compressed PLAIN page outputs remain available for graph readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -108,26 +101,22 @@ test('compressed PLAIN page outputs remain available for graph readback', async 
     compiled.encode(commandEncoder, {parameters: undefined});
     device.submit(commandEncoder.finish());
     const resultData = await readback.readAsync();
-    testCase.deepEqual(
+    expect(
       Array.from(
         new Uint8Array(resultData.buffer, resultData.byteOffset, expectedValues.byteLength)
       ),
-      Array.from(expectedValues),
       'copies the decompressed PLAIN output directly'
-    );
+    ).toEqual(Array.from(expectedValues));
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     readback.destroy();
   }
-  testCase.end();
 });
 
-test('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages', async testCase => {
+it('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -150,21 +139,18 @@ test('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages'
     device.submit(commandEncoder.finish());
     const firstResult = await firstReadback.readAsync();
     const secondResult = await secondReadback.readAsync();
-    testCase.equal(
-      new TextDecoder().decode(new Uint8Array(firstResult.buffer, firstResult.byteOffset, 3)),
-      'abb'
-    );
-    testCase.equal(
-      new TextDecoder().decode(new Uint8Array(secondResult.buffer, secondResult.byteOffset, 2)),
-      'bb'
-    );
+    expect(
+      new TextDecoder().decode(new Uint8Array(firstResult.buffer, firstResult.byteOffset, 3))
+    ).toBe('abb');
+    expect(
+      new TextDecoder().decode(new Uint8Array(secondResult.buffer, secondResult.byteOffset, 2))
+    ).toBe('bb');
   } finally {
     compiled.destroy();
     inputBuffer.destroy();
     firstReadback.destroy();
     secondReadback.destroy();
   }
-  testCase.end();
 });
 
 function makeBatch(

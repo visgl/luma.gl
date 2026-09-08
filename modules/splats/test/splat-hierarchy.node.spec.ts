@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   GPUSplatGraphRenderer,
   makeGPUSplatData,
@@ -22,7 +22,7 @@ import {
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
-test('Splat hierarchy projects geometric error and conservatively culls bounding spheres', t => {
+it('Splat hierarchy projects geometric error and conservatively culls bounding spheres', () => {
   const centeredNode = makeSplatHierarchyNode('center', [0, 0, 0], 1, 0.1);
   const peripheralNode = makeSplatHierarchyNode('peripheral', [0.8, 0, 0], 1, 0.1);
   const outsideNode = makeSplatHierarchyNode('outside', [1.3, 0, 0], 1, 0.1);
@@ -32,17 +32,23 @@ test('Splat hierarchy projects geometric error and conservatively culls bounding
   const nearError = getSplatHierarchyScreenSpaceError(centeredNode, nearView);
   const farError = getSplatHierarchyScreenSpaceError(centeredNode, farView);
 
-  t.ok(nearError > farError, 'increases projected geometric error for nearby source pages');
-  t.ok(nearError > 0, 'reports finite physical-pixel approximation error');
-  t.ok(isSplatHierarchyNodeVisible(centeredNode, IDENTITY_MATRIX), 'retains visible pages');
-  t.notOk(
-    isSplatHierarchyNodeVisible(outsideNode, IDENTITY_MATRIX),
+  expect(
+    Boolean(nearError > farError),
+    'increases projected geometric error for nearby source pages'
+  ).toBe(true);
+  expect(Boolean(nearError > 0), 'reports finite physical-pixel approximation error').toBe(true);
+  expect(
+    Boolean(isSplatHierarchyNodeVisible(centeredNode, IDENTITY_MATRIX)),
+    'retains visible pages'
+  ).toBe(true);
+  expect(
+    Boolean(isSplatHierarchyNodeVisible(outsideNode, IDENTITY_MATRIX)),
     'culls a page whose complete bounding sphere lies outside a clip plane'
-  );
-  t.ok(
-    isSplatHierarchyNodeVisible(intersectingNode, IDENTITY_MATRIX),
+  ).toBe(false);
+  expect(
+    Boolean(isSplatHierarchyNodeVisible(intersectingNode, IDENTITY_MATRIX)),
     'retains a bounding sphere intersecting the conservative clip volume'
-  );
+  ).toBe(true);
 
   const foveation = {center: [0.5, 0.5] as const, radius: 0.05, strength: 8};
   const centeredPriority = getSplatHierarchyFoveatedPriority(
@@ -57,17 +63,19 @@ test('Splat hierarchy projects geometric error and conservatively culls bounding
     foveation,
     100
   );
-  t.equal(centeredPriority, 100, 'preserves full detail around the gaze position');
-  t.ok(peripheralPriority < centeredPriority, 'relaxes refinement away from the gaze position');
-  t.equal(
+  expect(centeredPriority, 'preserves full detail around the gaze position').toBe(100);
+  expect(
+    Boolean(peripheralPriority < centeredPriority),
+    'relaxes refinement away from the gaze position'
+  ).toBe(true);
+  expect(
     getSplatHierarchyFoveatedPriority(peripheralNode, nearView, {strength: 0}, 100),
-    100,
     'preserves geometric priority when foveation is disabled'
-  );
-  t.end();
+  ).toBe(100);
+  void 0;
 });
 
-test('SplatHierarchyManager retains a parent until every replacing child is resident', async t => {
+it('SplatHierarchyManager retains a parent until every replacing child is resident', async () => {
   const device = new NullDevice({});
   const parentBatch = makeSplatHierarchyBatch(device, 0, 10);
   const firstChildBatch = makeSplatHierarchyBatch(device, 1, 24);
@@ -98,73 +106,83 @@ test('SplatHierarchyManager retains a parent until every replacing child is resi
   });
 
   const initialFrontier = manager.update(makeSplatHierarchyView());
-  t.deepEqual(
+  expect(
     initialFrontier.map(entry => entry.node.id),
-    ['root'],
     'immediately renders the root'
-  );
-  t.ok(initialFrontier[0].isFallback, 'marks a resident parent as a temporary refinement fallback');
-  t.ok(residencyManager.getChunk('root')?.pinned, 'protects the visible fallback against eviction');
-  t.equal(manager.stats.pendingLoadCount, 2, 'starts bounded independent child page requests');
+  ).toEqual(['root']);
+  expect(
+    Boolean(initialFrontier[0].isFallback),
+    'marks a resident parent as a temporary refinement fallback'
+  ).toBe(true);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
+    'protects the visible fallback against eviction'
+  ).toBe(true);
+  expect(manager.stats.pendingLoadCount, 'starts bounded independent child page requests').toBe(2);
 
   manager.update(makeSplatHierarchyView());
-  t.equal(
+  expect(
     manager.stats.pendingLoadCount,
-    2,
     'coalesces repeated camera updates into one load per page'
-  );
+  ).toBe(2);
 
   await flushSplatHierarchyMicrotasks();
   pendingPages.get('first')?.(firstChildBatch);
   await flushSplatHierarchyMicrotasks();
 
-  t.ok(residencyManager.has('first'), 'retains the completed first source page independently');
-  t.deepEqual(
+  expect(
+    Boolean(residencyManager.has('first')),
+    'retains the completed first source page independently'
+  ).toBe(true);
+  expect(
     manager.frontier.map(entry => entry.node.id),
-    ['root'],
     'does not mix a replacing child with an overlapping resident fallback'
-  );
-  t.ok(
-    residencyManager.getChunk('first')?.pinned,
+  ).toEqual(['root']);
+  expect(
+    Boolean(residencyManager.getChunk('first')?.pinned),
     'protects a completed replacement sibling while the parent still covers its missing peer'
-  );
-  t.equal(manager.stats.pendingLoadCount, 1, 'keeps the missing sibling request in flight');
+  ).toBe(true);
+  expect(manager.stats.pendingLoadCount, 'keeps the missing sibling request in flight').toBe(1);
 
   pendingPages.get('second')?.(secondChildBatch);
   await manager.waitForIdle();
 
-  t.deepEqual(
+  expect(
     manager.frontier.map(entry => entry.node.id),
-    ['first', 'second'],
     'atomically replaces the parent once both child source pages are resident'
-  );
-  t.deepEqual(
+  ).toEqual(['first', 'second']);
+  expect(
     manager.frontierBatches.map(batch => batch.sourceInfo),
-    [firstChildBatch.sourceInfo, secondChildBatch.sourceInfo],
     'preserves exact source-batch and global-row identities for rendering and picking'
-  );
-  t.deepEqual(
-    frontierEvents,
-    [[0], [1, 2]],
-    'notifies renderers only when visible coverage changes'
-  );
-  t.notOk(
-    residencyManager.getChunk('root')?.pinned,
+  ).toEqual([firstChildBatch.sourceInfo, secondChildBatch.sourceInfo]);
+  expect(frontierEvents, 'notifies renderers only when visible coverage changes').toEqual([
+    [0],
+    [1, 2]
+  ]);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
     'releases obsolete hierarchy-owned parent pins'
+  ).toBe(false);
+  expect(manager.stats.completedLoadCount, 'records each independently completed source page').toBe(
+    2
   );
-  t.equal(manager.stats.completedLoadCount, 2, 'records each independently completed source page');
-  t.equal(manager.getNode('second')?.parentId, 'root', 'preserves original source parent metadata');
+  expect(manager.getNode('second')?.parentId, 'preserves original source parent metadata').toBe(
+    'root'
+  );
 
   manager.destroy();
-  t.notOk(residencyManager.destroyed, 'never destroys a caller-owned shared residency window');
+  expect(
+    Boolean(residencyManager.destroyed),
+    'never destroys a caller-owned shared residency window'
+  ).toBe(false);
   residencyManager.destroy();
   parentBatch.destroy();
   firstChildBatch.destroy();
   secondChildBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager synchronizes replacing and empty frontiers with a GPU graph', async t => {
+it('SplatHierarchyManager synchronizes replacing and empty frontiers with a GPU graph', async () => {
   const device = new NullDevice({});
   Object.defineProperties(device, {
     type: {value: 'webgpu'},
@@ -199,63 +217,63 @@ test('SplatHierarchyManager synchronizes replacing and empty frontiers with a GP
   });
 
   manager.update(makeSplatHierarchyView());
-  t.deepEqual(graphRenderer.batches, [rootBatch], 'publishes the intact resident graph fallback');
-  t.equal(
-    graphRenderer.compiledGraph,
-    undefined,
-    'does not force graph compilation from traversal'
+  expect(graphRenderer.batches, 'publishes the intact resident graph fallback').toEqual([
+    rootBatch
+  ]);
+  expect(graphRenderer.compiledGraph, 'does not force graph compilation from traversal').toBe(
+    undefined
   );
 
   await manager.waitForIdle();
-  t.deepEqual(
+  expect(
     graphRenderer.batches,
-    [firstChildBatch, secondChildBatch],
     'atomically replaces borrowed graph source slots once every child page is resident'
-  );
-  t.deepEqual(
+  ).toEqual([firstChildBatch, secondChildBatch]);
+  expect(
     graphRenderer.batches.map(batch => batch.sourceInfo),
-    [firstChildBatch.sourceInfo, secondChildBatch.sourceInfo],
     'preserves graph picking source-batch and noncontiguous global-row identities'
-  );
-  t.equal(
+  ).toEqual([firstChildBatch.sourceInfo, secondChildBatch.sourceInfo]);
+  expect(
     graphRenderer.batches[0].positions.data[0].buffer,
-    firstChildBatch.positions.data[0].buffer,
     'shares the original source allocation with the graph instead of repacking it'
-  );
+  ).toBe(firstChildBatch.positions.data[0].buffer);
 
   manager.update({
     ...makeSplatHierarchyView(),
     modelViewProjectionMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 3, 0, 0, 1]
   });
-  t.deepEqual(graphRenderer.batches, [], 'detaches every graph source when the frontier is empty');
-  t.equal(manager.stats.frontierNodeCount, 0, 'reports the fully culled hierarchy frontier');
-  t.notOk(
-    firstChildBatch.destroyed,
-    'preserves a borrowed page outside the graph-visible frontier'
+  expect(graphRenderer.batches, 'detaches every graph source when the frontier is empty').toEqual(
+    []
   );
-  t.notOk(secondChildBatch.destroyed, 'preserves every independently owned inactive source page');
+  expect(manager.stats.frontierNodeCount, 'reports the fully culled hierarchy frontier').toBe(0);
+  expect(
+    Boolean(firstChildBatch.destroyed),
+    'preserves a borrowed page outside the graph-visible frontier'
+  ).toBe(false);
+  expect(
+    Boolean(secondChildBatch.destroyed),
+    'preserves every independently owned inactive source page'
+  ).toBe(false);
 
   manager.update(makeSplatHierarchyView());
-  t.deepEqual(
+  expect(
     graphRenderer.batches,
-    [firstChildBatch, secondChildBatch],
     'restores the original resident graph frontier when the camera returns'
-  );
-  t.deepEqual(
+  ).toEqual([firstChildBatch, secondChildBatch]);
+  expect(
     graphFrontiers.map(batches => batches.map(batch => batch.sourceBatchIndex)),
-    [[26], [27, 28], [], [27, 28]],
     'publishes only complete parent, child, empty, and restored graph frontiers'
-  );
+  ).toEqual([[26], [27, 28], [], [27, 28]]);
 
   graphRenderer.destroy();
   manager.destroy();
   rootBatch.destroy();
   firstChildBatch.destroy();
   secondChildBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager supports additive source-page refinement without repacking', t => {
+it('SplatHierarchyManager supports additive source-page refinement without repacking', () => {
   const device = new NullDevice({});
   const parentBatch = makeSplatHierarchyBatch(device, 3, 100);
   const firstChildBatch = makeSplatHierarchyBatch(device, 4, 101);
@@ -276,30 +294,36 @@ test('SplatHierarchyManager supports additive source-page refinement without rep
   });
 
   manager.update(makeSplatHierarchyView());
-  t.deepEqual(
+  expect(
     manager.frontierBatches,
-    [parentBatch, firstChildBatch, secondChildBatch],
     'retains intact parent and independent additive child source batches'
-  );
-  t.deepEqual(
+  ).toEqual([parentBatch, firstChildBatch, secondChildBatch]);
+  expect(
     manager.frontier.map(entry => entry.levelOfDetail),
-    [0, 1, 1],
     'retains independently traversed source hierarchy levels'
+  ).toEqual([0, 1, 1]);
+  expect(
+    Boolean(manager.frontier[0].isFallback),
+    'marks complete additive refinement as resident'
+  ).toBe(false);
+  expect(manager.residencyManager.stats.residentChunkCount, 'never merges source allocations').toBe(
+    3
   );
-  t.notOk(manager.frontier[0].isFallback, 'marks complete additive refinement as resident');
-  t.equal(manager.residencyManager.stats.residentChunkCount, 3, 'never merges source allocations');
 
   manager.destroy();
-  t.ok(manager.residencyManager.destroyed, 'destroys only the hierarchy-created residency window');
-  t.notOk(parentBatch.destroyed, 'preserves borrowed parent source buffers');
-  t.notOk(firstChildBatch.destroyed, 'preserves borrowed child source buffers');
+  expect(
+    Boolean(manager.residencyManager.destroyed),
+    'destroys only the hierarchy-created residency window'
+  ).toBe(true);
+  expect(Boolean(parentBatch.destroyed), 'preserves borrowed parent source buffers').toBe(false);
+  expect(Boolean(firstChildBatch.destroyed), 'preserves borrowed child source buffers').toBe(false);
   parentBatch.destroy();
   firstChildBatch.destroy();
   secondChildBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager prioritizes foveated source pages and limits decoder workers', async t => {
+it('SplatHierarchyManager prioritizes foveated source pages and limits decoder workers', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 6, 200);
   const focusedBatch = makeSplatHierarchyBatch(device, 7, 201);
@@ -337,57 +361,59 @@ test('SplatHierarchyManager prioritizes foveated source pages and limits decoder
 
   manager.update(makeSplatHierarchyView());
   await flushSplatHierarchyMicrotasks();
-  t.deepEqual(loadOrder, ['focused'], 'schedules the gaze-centered page before peripheral content');
-  t.equal(manager.stats.pendingLoadCount, 1, 'limits simultaneously running decoder workers');
-  t.equal(manager.stats.queuedLoadCount, 1, 'applies explicit source-page request backpressure');
-  t.equal(loadContexts[0].levelOfDetail, 1, 'provides hierarchy depth to worker-style loaders');
-  t.notOk(loadContexts[0].signal.aborted, 'provides a live worker cancellation signal');
-  t.equal(
+  expect(loadOrder, 'schedules the gaze-centered page before peripheral content').toEqual([
+    'focused'
+  ]);
+  expect(manager.stats.pendingLoadCount, 'limits simultaneously running decoder workers').toBe(1);
+  expect(manager.stats.queuedLoadCount, 'applies explicit source-page request backpressure').toBe(
+    1
+  );
+  expect(loadContexts[0].levelOfDetail, 'provides hierarchy depth to worker-style loaders').toBe(1);
+  expect(
+    Boolean(loadContexts[0].signal.aborted),
+    'provides a live worker cancellation signal'
+  ).toBe(false);
+  expect(
     manager.getNode('peripheral')?.contentUri,
-    'tiles/peripheral.spz',
     'preserves format-independent source content locations'
-  );
-  t.deepEqual(
+  ).toBe('tiles/peripheral.spz');
+  expect(
     manager.getNode('peripheral')?.metadata,
-    {compression: 'spz-v2'},
     'passes compression or feature metadata through without a source-format dependency'
-  );
+  ).toEqual({compression: 'spz-v2'});
 
   pendingPages.get('focused')?.(focusedBatch);
   await flushSplatHierarchyMicrotasks();
-  t.deepEqual(
-    loadOrder,
-    ['focused', 'peripheral'],
-    'starts the next source page only after a slot opens'
-  );
-  t.equal(
+  expect(loadOrder, 'starts the next source page only after a slot opens').toEqual([
+    'focused',
+    'peripheral'
+  ]);
+  expect(
     manager.stats.pendingLoadCount,
-    1,
     'maintains the configured bounded decoder concurrency'
-  );
-  t.ok(
-    loadContexts[0].priority > loadContexts[1].priority,
+  ).toBe(1);
+  expect(
+    Boolean(loadContexts[0].priority > loadContexts[1].priority),
     'preserves foveated scheduling priorities'
-  );
+  ).toBe(true);
 
   pendingPages.get('peripheral')?.(peripheralBatch);
   await manager.waitForIdle();
-  t.deepEqual(
+  expect(
     manager.frontierBatches,
-    [peripheralBatch, focusedBatch],
     'keeps original child traversal order independent of worker completion order'
-  );
-  t.equal(manager.stats.pendingLoadCount, 0, 'releases every completed decoder worker slot');
-  t.equal(manager.stats.queuedLoadCount, 0, 'drains every queued source page request');
+  ).toEqual([peripheralBatch, focusedBatch]);
+  expect(manager.stats.pendingLoadCount, 'releases every completed decoder worker slot').toBe(0);
+  expect(manager.stats.queuedLoadCount, 'drains every queued source page request').toBe(0);
 
   manager.destroy();
   rootBatch.destroy();
   focusedBatch.destroy();
   peripheralBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager cancels source workers after conservative view culling', async t => {
+it('SplatHierarchyManager cancels source workers after conservative view culling', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 9, 300);
   let observedSignal: AbortSignal | undefined;
@@ -416,7 +442,7 @@ test('SplatHierarchyManager cancels source workers after conservative view culli
 
   manager.update(makeSplatHierarchyView());
   await flushSplatHierarchyMicrotasks();
-  t.equal(manager.stats.pendingLoadCount, 1, 'starts one source decoder worker');
+  expect(manager.stats.pendingLoadCount, 'starts one source decoder worker').toBe(1);
 
   manager.update({
     ...makeSplatHierarchyView(),
@@ -424,26 +450,26 @@ test('SplatHierarchyManager cancels source workers after conservative view culli
   });
   await manager.waitForIdle();
 
-  t.ok(observedSignal?.aborted, 'aborts a decoder worker whose source page leaves the view');
-  t.equal(
+  expect(
+    Boolean(observedSignal?.aborted),
+    'aborts a decoder worker whose source page leaves the view'
+  ).toBe(true);
+  expect(
     manager.stats.abortedLoadCount,
-    1,
     'records view-driven worker cancellation exactly once'
-  );
-  t.equal(manager.stats.culledNodeCount, 1, 'excludes the invisible child source branch');
-  t.equal(loadErrors, 0, 'does not report expected cancellation as a source loader failure');
-  t.deepEqual(
-    manager.frontierBatches,
-    [rootBatch],
-    'preserves intersecting resident parent coverage'
-  );
+  ).toBe(1);
+  expect(manager.stats.culledNodeCount, 'excludes the invisible child source branch').toBe(1);
+  expect(loadErrors, 'does not report expected cancellation as a source loader failure').toBe(0);
+  expect(manager.frontierBatches, 'preserves intersecting resident parent coverage').toEqual([
+    rootBatch
+  ]);
 
   manager.destroy();
   rootBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager never starts worker decoding after immediate cancellation', async t => {
+it('SplatHierarchyManager never starts worker decoding after immediate cancellation', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 25, 1200);
   let startedWorkers = 0;
@@ -473,22 +499,22 @@ test('SplatHierarchyManager never starts worker decoding after immediate cancell
   });
   await manager.waitForIdle();
 
-  t.equal(startedWorkers, 0, 'checks cancellation before dispatching a queued decoder microtask');
-  t.equal(reportedErrors, 0, 'does not report expected pre-dispatch cancellation as a failure');
-  t.equal(manager.stats.abortedLoadCount, 1, 'records immediate cancellation once');
-  t.equal(manager.stats.pendingLoadCount, 0, 'releases the cancelled decoder slot');
-  t.deepEqual(
-    manager.frontierBatches,
-    [rootBatch],
-    'preserves the visible resident source fallback'
+  expect(startedWorkers, 'checks cancellation before dispatching a queued decoder microtask').toBe(
+    0
   );
+  expect(reportedErrors, 'does not report expected pre-dispatch cancellation as a failure').toBe(0);
+  expect(manager.stats.abortedLoadCount, 'records immediate cancellation once').toBe(1);
+  expect(manager.stats.pendingLoadCount, 'releases the cancelled decoder slot').toBe(0);
+  expect(manager.frontierBatches, 'preserves the visible resident source fallback').toEqual([
+    rootBatch
+  ]);
 
   manager.destroy();
   rootBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager reserves estimated source capacity before starting decoder work', async t => {
+it('SplatHierarchyManager reserves estimated source capacity before starting decoder work', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 10, 400);
   const childBatch = makeSplatHierarchyBatch(device, 11, 401);
@@ -519,38 +545,37 @@ test('SplatHierarchyManager reserves estimated source capacity before starting d
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.equal(requestedLoads, 0, 'rejects over-budget worker requests before invoking the decoder');
-  t.equal(manager.stats.rejectedLoadCount, 1, 'records transactional source-page rejection');
-  t.deepEqual(
-    manager.frontierBatches,
-    [rootBatch],
-    'retains the protected fallback under pressure'
-  );
-  t.ok(
-    residencyManager.getChunk('root')?.pinned,
+  expect(requestedLoads, 'rejects over-budget worker requests before invoking the decoder').toBe(0);
+  expect(manager.stats.rejectedLoadCount, 'records transactional source-page rejection').toBe(1);
+  expect(manager.frontierBatches, 'retains the protected fallback under pressure').toEqual([
+    rootBatch
+  ]);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
     'never evicts the visible parent to start a page'
-  );
+  ).toBe(true);
 
   residencyManager.setBudget({maxResidentChunks: 2});
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.equal(requestedLoads, 1, 'retries rejected source pages after a later camera or budget update');
-  t.deepEqual(
-    manager.frontierBatches,
-    [childBatch],
-    'replaces fallback after bounded page admission'
-  );
-  t.equal(manager.stats.completedLoadCount, 1, 'records the successfully prepared source page');
+  expect(
+    requestedLoads,
+    'retries rejected source pages after a later camera or budget update'
+  ).toBe(1);
+  expect(manager.frontierBatches, 'replaces fallback after bounded page admission').toEqual([
+    childBatch
+  ]);
+  expect(manager.stats.completedLoadCount, 'records the successfully prepared source page').toBe(1);
 
   manager.destroy();
   residencyManager.destroy();
   rootBatch.destroy();
   childBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager reserves unknown page slots and avoids reloading prepared sources', async t => {
+it('SplatHierarchyManager reserves unknown page slots and avoids reloading prepared sources', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 19, 1000);
   const preparedChildBatch = makeSplatHierarchyBatch(device, 20, 1001);
@@ -579,34 +604,39 @@ test('SplatHierarchyManager reserves unknown page slots and avoids reloading pre
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.equal(decoderRequests, 0, 'reserves an intact page slot even when source sizes are unknown');
-  t.equal(manager.stats.rejectedLoadCount, 1, 'rejects only the genuinely unloaded source page');
-  t.notOk(
-    residencyManager.has('prepared'),
-    'does not upload a prepared source page beyond the active residency budget'
+  expect(decoderRequests, 'reserves an intact page slot even when source sizes are unknown').toBe(
+    0
   );
-  t.deepEqual(manager.frontierBatches, [rootBatch], 'retains protected resident fallback coverage');
+  expect(manager.stats.rejectedLoadCount, 'rejects only the genuinely unloaded source page').toBe(
+    1
+  );
+  expect(
+    Boolean(residencyManager.has('prepared')),
+    'does not upload a prepared source page beyond the active residency budget'
+  ).toBe(false);
+  expect(manager.frontierBatches, 'retains protected resident fallback coverage').toEqual([
+    rootBatch
+  ]);
 
   residencyManager.setBudget({maxResidentChunks: 3});
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.equal(decoderRequests, 1, 'never invokes the source loader for an already prepared page');
-  t.deepEqual(
+  expect(decoderRequests, 'never invokes the source loader for an already prepared page').toBe(1);
+  expect(
     manager.frontierBatches,
-    [preparedChildBatch, unloadedChildBatch],
     'preserves caller-prepared and asynchronously loaded source batches independently'
-  );
+  ).toEqual([preparedChildBatch, unloadedChildBatch]);
 
   manager.destroy();
   residencyManager.destroy();
   rootBatch.destroy();
   preparedChildBatch.destroy();
   unloadedChildBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager never thrashes replacement siblings that cannot all fit', async t => {
+it('SplatHierarchyManager never thrashes replacement siblings that cannot all fit', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 22, 1100);
   const firstChildBatch = makeSplatHierarchyBatch(device, 23, 1101);
@@ -636,64 +666,65 @@ test('SplatHierarchyManager never thrashes replacement siblings that cannot all 
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.deepEqual(
-    decoderRequests,
-    ['first'],
-    'never decodes a sibling beyond atomic replacement capacity'
-  );
-  t.equal(manager.stats.completedLoadCount, 1, 'prepares the first replacement sibling once');
-  t.equal(manager.stats.rejectedLoadCount, 1, 'rejects the blocked second sibling once');
-  t.equal(manager.stats.pendingLoadCount, 0, 'settles bounded workers without a retry loop');
-  t.equal(
+  expect(decoderRequests, 'never decodes a sibling beyond atomic replacement capacity').toEqual([
+    'first'
+  ]);
+  expect(manager.stats.completedLoadCount, 'prepares the first replacement sibling once').toBe(1);
+  expect(manager.stats.rejectedLoadCount, 'rejects the blocked second sibling once').toBe(1);
+  expect(manager.stats.pendingLoadCount, 'settles bounded workers without a retry loop').toBe(0);
+  expect(
     manager.stats.queuedLoadCount,
-    0,
     'does not leave an unfulfillable source request queued'
-  );
-  t.deepEqual(manager.frontierBatches, [rootBatch], 'retains complete resident fallback coverage');
-  t.ok(residencyManager.getChunk('root')?.pinned, 'protects the rendered source parent');
-  t.ok(
-    residencyManager.getChunk('first')?.pinned,
+  ).toBe(0);
+  expect(manager.frontierBatches, 'retains complete resident fallback coverage').toEqual([
+    rootBatch
+  ]);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
+    'protects the rendered source parent'
+  ).toBe(true);
+  expect(
+    Boolean(residencyManager.getChunk('first')?.pinned),
     'protects the already decoded replacement sibling'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     residencyManager.stats.evictedChunkCount,
-    0,
     'never evicts and reloads replacing siblings'
-  );
+  ).toBe(0);
 
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
-  t.deepEqual(
+  expect(
     decoderRequests,
-    ['first'],
     'remains stable across repeated views while replacement capacity is unavailable'
-  );
+  ).toEqual(['first']);
 
   residencyManager.setBudget({maxResidentChunks: 3});
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
 
-  t.deepEqual(
-    decoderRequests,
-    ['first', 'second'],
-    'loads only the missing sibling after capacity grows'
-  );
-  t.deepEqual(
+  expect(decoderRequests, 'loads only the missing sibling after capacity grows').toEqual([
+    'first',
+    'second'
+  ]);
+  expect(
     manager.frontierBatches,
-    [firstChildBatch, secondChildBatch],
     'atomically activates intact children after all replacing pages are resident'
-  );
-  t.notOk(residencyManager.getChunk('root')?.pinned, 'releases the replaced fallback source page');
+  ).toEqual([firstChildBatch, secondChildBatch]);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
+    'releases the replaced fallback source page'
+  ).toBe(false);
 
   manager.destroy();
   residencyManager.destroy();
   rootBatch.destroy();
   firstChildBatch.destroy();
   secondChildBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager retries failed source workers only on a new explicit update', async t => {
+it('SplatHierarchyManager retries failed source workers only on a new explicit update', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 12, 500);
   const childBatch = makeSplatHierarchyBatch(device, 13, 501);
@@ -722,34 +753,28 @@ test('SplatHierarchyManager retries failed source workers only on a new explicit
 
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
-  t.equal(attemptedLoads, 1, 'does not automatically loop on a failed source worker request');
-  t.deepEqual(
-    failures,
-    ['child:source decoder unavailable'],
-    'reports source errors alongside their original hierarchy metadata'
-  );
-  t.deepEqual(
-    manager.frontierBatches,
-    [rootBatch],
-    'retains resident coverage after decoder failure'
-  );
+  expect(attemptedLoads, 'does not automatically loop on a failed source worker request').toBe(1);
+  expect(failures, 'reports source errors alongside their original hierarchy metadata').toEqual([
+    'child:source decoder unavailable'
+  ]);
+  expect(manager.frontierBatches, 'retains resident coverage after decoder failure').toEqual([
+    rootBatch
+  ]);
 
   manager.update(makeSplatHierarchyView());
   await manager.waitForIdle();
-  t.equal(attemptedLoads, 2, 'allows a later explicit update to retry the source decoder');
-  t.deepEqual(
-    manager.frontierBatches,
-    [childBatch],
-    'publishes the independently recovered source'
-  );
+  expect(attemptedLoads, 'allows a later explicit update to retry the source decoder').toBe(2);
+  expect(manager.frontierBatches, 'publishes the independently recovered source').toEqual([
+    childBatch
+  ]);
 
   manager.destroy();
   rootBatch.destroy();
   childBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager retains caller-owned pins and discards stale worker results', async t => {
+it('SplatHierarchyManager retains caller-owned pins and discards stale worker results', async () => {
   const device = new NullDevice({});
   const rootBatch = makeSplatHierarchyBatch(device, 14, 600);
   const staleBatch = makeSplatHierarchyBatch(device, 15, 601);
@@ -778,30 +803,38 @@ test('SplatHierarchyManager retains caller-owned pins and discards stale worker 
   await flushSplatHierarchyMicrotasks();
   manager.destroy();
 
-  t.ok(manager.destroyed, 'marks hierarchy traversal as destroyed');
-  t.ok(
-    residencyManager.getChunk('root')?.pinned,
+  expect(Boolean(manager.destroyed), 'marks hierarchy traversal as destroyed').toBe(true);
+  expect(
+    Boolean(residencyManager.getChunk('root')?.pinned),
     'never releases an existing caller-owned source pin'
-  );
-  t.equal(manager.stats.abortedLoadCount, 1, 'cancels an outstanding worker on destruction');
+  ).toBe(true);
+  expect(manager.stats.abortedLoadCount, 'cancels an outstanding worker on destruction').toBe(1);
 
   finishStalePage?.(staleBatch);
   await manager.waitForIdle();
 
-  t.notOk(residencyManager.has('stale'), 'discards a page completed after hierarchy destruction');
-  t.ok(
-    staleBatch.destroyed,
+  expect(
+    Boolean(residencyManager.has('stale')),
+    'discards a page completed after hierarchy destruction'
+  ).toBe(false);
+  expect(
+    Boolean(staleBatch.destroyed),
     'destroys only stale source buffers with explicitly transferred ownership'
+  ).toBe(true);
+  expect(Boolean(rootBatch.destroyed), 'preserves borrowed externally pinned source buffers').toBe(
+    false
   );
-  t.notOk(rootBatch.destroyed, 'preserves borrowed externally pinned source buffers');
-  t.notOk(residencyManager.destroyed, 'preserves the caller-owned shared residency manager');
+  expect(
+    Boolean(residencyManager.destroyed),
+    'preserves the caller-owned shared residency manager'
+  ).toBe(false);
 
   residencyManager.destroy();
   rootBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager prunes large source hierarchies before loading invisible branches', t => {
+it('SplatHierarchyManager prunes large source hierarchies before loading invisible branches', () => {
   const device = new NullDevice({});
   const visibleBatch = makeSplatHierarchyBatch(device, 16, 700);
   const hierarchyDepth = 11;
@@ -838,43 +871,36 @@ test('SplatHierarchyManager prunes large source hierarchies before loading invis
 
   manager.update(makeSplatHierarchyView());
 
-  t.equal(
+  expect(
     manager.stats.nodeCount,
-    2 ** (hierarchyDepth + 1) - 1,
     'indexes every caller-owned source node without preparing GPU data'
-  );
-  t.equal(
+  ).toBe(2 ** (hierarchyDepth + 1) - 1);
+  expect(
     manager.stats.visibleNodeCount,
-    hierarchyDepth + 1,
     'visits only the root-to-leaf source branch intersecting the camera view'
-  );
-  t.equal(
+  ).toBe(hierarchyDepth + 1);
+  expect(
     manager.stats.culledNodeCount,
-    hierarchyDepth,
     'rejects invisible sibling subtrees before touching their descendants'
-  );
-  t.deepEqual(
-    manager.frontierBatches,
-    [visibleBatch],
-    'returns the single intact visible source page'
-  );
-  t.equal(
+  ).toBe(hierarchyDepth);
+  expect(manager.frontierBatches, 'returns the single intact visible source page').toEqual([
+    visibleBatch
+  ]);
+  expect(
     manager.stats.pendingLoadCount,
-    0,
     'does not schedule decoder work for invisible branches'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     manager.residencyManager.stats.residentChunkCount,
-    1,
     'uploads only the visible source page'
-  );
+  ).toBe(1);
 
   manager.destroy();
   visibleBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager replaces same-identity roots without losing externally owned pins', t => {
+it('SplatHierarchyManager replaces same-identity roots without losing externally owned pins', () => {
   const device = new NullDevice({});
   const originalBatch = makeSplatHierarchyBatch(device, 17, 800);
   const replacementBatch = makeSplatHierarchyBatch(device, 18, 900);
@@ -911,45 +937,54 @@ test('SplatHierarchyManager replaces same-identity roots without losing external
   manager.update(makeSplatHierarchyView());
   manager.setRoots([replacementNode]);
 
-  t.deepEqual(manager.frontierBatches, [replacementBatch], 'renders the replacement source batch');
-  t.equal(manager.frontier[0].node, replacementNode, 'publishes replacement source metadata');
-  t.equal(
+  expect(manager.frontierBatches, 'renders the replacement source batch').toEqual([
+    replacementBatch
+  ]);
+  expect(manager.frontier[0].node, 'publishes replacement source metadata').toBe(replacementNode);
+  expect(
     manager.frontier[0].chunk.data.sourceInfo,
-    replacementBatch.sourceInfo,
     'preserves the replacement source-batch and global-row identity'
-  );
-  t.deepEqual(
+  ).toBe(replacementBatch.sourceInfo);
+  expect(
     residencyManager.getChunk(originalNode.id)?.bounds,
-    replacementNode.bounds,
     'updates the retained spatial metadata for the replacement source node'
-  );
-  t.equal(
+  ).toEqual(replacementNode.bounds);
+  expect(
     residencyManager.getChunk(originalNode.id)?.ownsData,
-    true,
     'honors explicitly transferred ownership for the replacement source batch'
+  ).toBe(true);
+  expect(
+    Boolean(residencyManager.getChunk(originalNode.id)?.pinned),
+    'preserves the caller-owned source pin'
+  ).toBe(true);
+  expect(residencyManager.stats.residentChunkCount, 'reuses the existing bounded chunk slot').toBe(
+    1
   );
-  t.ok(residencyManager.getChunk(originalNode.id)?.pinned, 'preserves the caller-owned source pin');
-  t.equal(residencyManager.stats.residentChunkCount, 1, 'reuses the existing bounded chunk slot');
-  t.deepEqual(
+  expect(
     evictionEvents,
-    [{data: originalBatch, reason: 'replace'}],
     'reports exact replacement ownership before updating the rendered frontier'
-  );
-  t.deepEqual(frontierEvents, [[17], [18]], 'notifies renderers when stable IDs gain new data');
-  t.notOk(originalBatch.destroyed, 'never destroys the original caller-owned source batch');
+  ).toEqual([{data: originalBatch, reason: 'replace'}]);
+  expect(frontierEvents, 'notifies renderers when stable IDs gain new data').toEqual([[17], [18]]);
+  expect(
+    Boolean(originalBatch.destroyed),
+    'never destroys the original caller-owned source batch'
+  ).toBe(false);
 
   manager.destroy();
-  t.ok(
-    residencyManager.getChunk(originalNode.id)?.pinned,
+  expect(
+    Boolean(residencyManager.getChunk(originalNode.id)?.pinned),
     'never releases externally owned pins after a same-identity replacement'
-  );
+  ).toBe(true);
   residencyManager.destroy();
-  t.ok(replacementBatch.destroyed, 'destroys the explicitly manager-owned replacement batch');
+  expect(
+    Boolean(replacementBatch.destroyed),
+    'destroys the explicitly manager-owned replacement batch'
+  ).toBe(true);
   originalBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager transfers hierarchy-owned pins and honors prior source ownership', t => {
+it('SplatHierarchyManager transfers hierarchy-owned pins and honors prior source ownership', () => {
   const device = new NullDevice({});
   const originalBatch = makeSplatHierarchyBatch(device, 19, 950);
   const replacementBatch = makeSplatHierarchyBatch(device, 20, 1_000);
@@ -966,7 +1001,10 @@ test('SplatHierarchyManager transfers hierarchy-owned pins and honors prior sour
   });
 
   manager.update(makeSplatHierarchyView());
-  t.ok(residencyManager.getChunk('owned-root')?.pinned, 'protects the original visible root');
+  expect(
+    Boolean(residencyManager.getChunk('owned-root')?.pinned),
+    'protects the original visible root'
+  ).toBe(true);
   manager.setRoots([
     {
       ...makeSplatHierarchyNode('owned-root', [0.2, 0, 0], 0),
@@ -975,27 +1013,37 @@ test('SplatHierarchyManager transfers hierarchy-owned pins and honors prior sour
     }
   ]);
 
-  t.ok(originalBatch.destroyed, 'destroys the replaced source batch when its ownership was held');
-  t.deepEqual(manager.frontierBatches, [replacementBatch], 'publishes the intact borrowed source');
-  t.ok(residencyManager.getChunk('owned-root')?.pinned, 'transfers hierarchy-owned pin protection');
-  t.equal(
+  expect(
+    Boolean(originalBatch.destroyed),
+    'destroys the replaced source batch when its ownership was held'
+  ).toBe(true);
+  expect(manager.frontierBatches, 'publishes the intact borrowed source').toEqual([
+    replacementBatch
+  ]);
+  expect(
+    Boolean(residencyManager.getChunk('owned-root')?.pinned),
+    'transfers hierarchy-owned pin protection'
+  ).toBe(true);
+  expect(
     residencyManager.stats.pinnedChunkCount,
-    1,
     'keeps pin accounting balanced across transactional replacement'
-  );
+  ).toBe(1);
 
   manager.destroy();
-  t.notOk(
-    residencyManager.getChunk('owned-root')?.pinned,
+  expect(
+    Boolean(residencyManager.getChunk('owned-root')?.pinned),
     'releases transferred pins owned only by this hierarchy'
-  );
+  ).toBe(false);
   residencyManager.destroy();
-  t.notOk(replacementBatch.destroyed, 'preserves the explicitly borrowed replacement source');
+  expect(
+    Boolean(replacementBatch.destroyed),
+    'preserves the explicitly borrowed replacement source'
+  ).toBe(false);
   replacementBatch.destroy();
-  t.end();
+  void 0;
 });
 
-test('SplatHierarchyManager replaces source roots and rejects duplicate source identities', t => {
+it('SplatHierarchyManager replaces source roots and rejects duplicate source identities', () => {
   const device = new NullDevice({});
   const firstBatch = makeSplatHierarchyBatch(device, 17, 800);
   const secondBatch = makeSplatHierarchyBatch(device, 18, 900);
@@ -1004,51 +1052,44 @@ test('SplatHierarchyManager replaces source roots and rejects duplicate source i
   const manager = new SplatHierarchyManager({roots: [firstRoot]});
 
   manager.update(makeSplatHierarchyView());
-  t.deepEqual(manager.frontierBatches, [firstBatch], 'publishes the initial intact source root');
+  expect(manager.frontierBatches, 'publishes the initial intact source root').toEqual([firstBatch]);
   const initialChunk = manager.residencyManager.getChunk('first');
   manager.setRoots([firstRoot, secondRoot]);
-  t.deepEqual(
+  expect(
     manager.frontierBatches,
-    [firstBatch, secondBatch],
     'appends streamed independent roots without dropping existing visible source pages'
-  );
-  t.equal(
+  ).toEqual([firstBatch, secondBatch]);
+  expect(
     manager.residencyManager.getChunk('first'),
-    initialChunk,
     'retains existing source allocations and residency metadata while appending streamed roots'
-  );
-  t.deepEqual(
+  ).toBe(initialChunk);
+  expect(
     manager.frontierBatches.map(batch => batch.sourceInfo),
-    [firstBatch.sourceInfo, secondBatch.sourceInfo],
     'preserves original streamed source-batch and global-row identities'
-  );
+  ).toEqual([firstBatch.sourceInfo, secondBatch.sourceInfo]);
   manager.setRoots([secondRoot]);
-  t.deepEqual(
-    manager.frontierBatches,
-    [secondBatch],
-    'updates the active frontier for replacement roots'
+  expect(manager.frontierBatches, 'updates the active frontier for replacement roots').toEqual([
+    secondBatch
+  ]);
+  expect(manager.getNode('first'), 'removes superseded caller-owned hierarchy metadata').toBe(
+    undefined
   );
-  t.equal(
-    manager.getNode('first'),
-    undefined,
-    'removes superseded caller-owned hierarchy metadata'
+  expect(manager.getNode('second'), 'indexes the replacement source root directly').toBe(
+    secondRoot
   );
-  t.equal(manager.getNode('second'), secondRoot, 'indexes the replacement source root directly');
-  t.throws(
+  expect(
     () => new SplatHierarchyManager({roots: [firstRoot, {...firstRoot}]}),
-    /unique/,
     'rejects ambiguous source-page identities before traversing the hierarchy'
-  );
+  ).toThrow(/unique/);
 
   manager.destroy();
-  t.throws(
+  expect(
     () => manager.update(makeSplatHierarchyView()),
-    /destroyed/,
     'does not traverse a destroyed hierarchy'
-  );
+  ).toThrow(/destroyed/);
   firstBatch.destroy();
   secondBatch.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSplatHierarchyNode(

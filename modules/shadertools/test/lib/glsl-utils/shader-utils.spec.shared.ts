@@ -9,12 +9,12 @@ import {
   typeToChannelSuffix,
   typeToChannelCount
 } from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ChannelCount = 1 | 2 | 3 | 4;
 
-export function registerShaderUtilsTests(test: TapeTestFunction): void {
-  test('shader-utils#getQualifierDetails', t => {
+export function registerShaderUtilsTests(): void {
+  it('shader-utils#getQualifierDetails', () => {
     const QUALIFIER_TEST_CASES = [
       {
         line: 'uniform vec2 size;',
@@ -48,16 +48,14 @@ export function registerShaderUtilsTests(test: TapeTestFunction): void {
 
     QUALIFIER_TEST_CASES.forEach(testCase => {
       const result = getQualifierDetails(testCase.line, testCase.qualifiers);
-      t.deepEqual(
+      expect(
         result,
-        testCase.expected,
         `getQualifierDetails should return valid values when line=${testCase.line}`
-      );
+      ).toEqual(testCase.expected);
     });
-    t.end();
   });
 
-  test('shader-utils#getPassthroughFS', t => {
+  it('shader-utils#getPassthroughFS', () => {
     const PASSTHROUGH_TEST_CASES = [
       {
         input: 'myInput',
@@ -91,61 +89,50 @@ void main() {
         inputChannels: testCase.inputChannels,
         output: testCase.output
       });
-      t.equal(
+      expect(
         result,
-        testCase.expected,
         `Passthrough shader should match when channels=${testCase.inputChannels}`
-      );
+      ).toBe(testCase.expected);
     });
 
-    t.ok(
+    expect(
       getPassthroughFS().includes('transform_output'),
       'default passthrough shader is returned without input'
-    );
-    t.throws(() => getPassthroughFS({input: 'myInput'}), /inputChannels/, 'missing channels throw');
-    t.end();
+    ).toBe(true);
+    expect(() => getPassthroughFS({input: 'myInput'})).toThrow(/inputChannels/);
   });
 
-  test('shader-utils#typeToChannelSuffix', t => {
-    t.equal(typeToChannelSuffix('float'), 'x', 'typeToChannelSuffix should return x for float');
-    t.equal(typeToChannelSuffix('vec2'), 'xy', 'typeToChannelSuffix should return xy for vec2');
-    t.equal(typeToChannelSuffix('vec3'), 'xyz', 'typeToChannelSuffix should return xyz for vec3');
-    t.equal(typeToChannelSuffix('vec4'), 'xyzw', 'typeToChannelSuffix should return xyzw for vec4');
-    t.throws(() => typeToChannelSuffix('mat4'), /mat4/, 'invalid suffix types throw');
-    t.end();
+  it('shader-utils#typeToChannelSuffix', () => {
+    expect(typeToChannelSuffix('float'), 'typeToChannelSuffix should return x for float').toBe('x');
+    expect(typeToChannelSuffix('vec2'), 'typeToChannelSuffix should return xy for vec2').toBe('xy');
+    expect(typeToChannelSuffix('vec3'), 'typeToChannelSuffix should return xyz for vec3').toBe(
+      'xyz'
+    );
+    expect(typeToChannelSuffix('vec4'), 'typeToChannelSuffix should return xyzw for vec4').toBe(
+      'xyzw'
+    );
+    expect(() => typeToChannelSuffix('mat4')).toThrow(/mat4/);
   });
 
-  test('shader-utils#typeToChannelCount', t => {
-    t.equal(typeToChannelCount('float'), 1, 'typeToChannelCount should return 1 for float');
-    t.equal(typeToChannelCount('vec2'), 2, 'typeToChannelCount should return 2 for vec2');
-    t.equal(typeToChannelCount('vec3'), 3, 'typeToChannelCount should return 3 for vec3');
-    t.equal(typeToChannelCount('vec4'), 4, 'typeToChannelCount should return 4 for vec4');
-    t.throws(() => typeToChannelCount('mat4'), /mat4/, 'invalid channel count types throw');
-    t.end();
+  it('shader-utils#typeToChannelCount', () => {
+    expect(typeToChannelCount('float'), 'typeToChannelCount should return 1 for float').toBe(1);
+    expect(typeToChannelCount('vec2'), 'typeToChannelCount should return 2 for vec2').toBe(2);
+    expect(typeToChannelCount('vec3'), 'typeToChannelCount should return 3 for vec3').toBe(3);
+    expect(typeToChannelCount('vec4'), 'typeToChannelCount should return 4 for vec4').toBe(4);
+    expect(() => typeToChannelCount('mat4')).toThrow(/mat4/);
   });
 
-  test('shader-utils#convertToVec4', t => {
-    t.equal(
-      convertToVec4('one', 1),
-      'vec4(one, 0.0, 0.0, 1.0)',
-      'convertToVec4 should return right value for float'
+  it('shader-utils#convertToVec4', () => {
+    expect(convertToVec4('one', 1), 'convertToVec4 should return right value for float').toBe(
+      'vec4(one, 0.0, 0.0, 1.0)'
     );
-    t.equal(
-      convertToVec4('one', 2),
-      'vec4(one, 0.0, 1.0)',
-      'convertToVec4 should return right value for vec2'
+    expect(convertToVec4('one', 2), 'convertToVec4 should return right value for vec2').toBe(
+      'vec4(one, 0.0, 1.0)'
     );
-    t.equal(
-      convertToVec4('one', 3),
-      'vec4(one, 1.0)',
-      'convertToVec4 should return right value for vec3'
+    expect(convertToVec4('one', 3), 'convertToVec4 should return right value for vec3').toBe(
+      'vec4(one, 1.0)'
     );
-    t.equal(convertToVec4('one', 4), 'one', 'convertToVec4 should return right value for vec4');
-    t.throws(
-      () => convertToVec4('one', 5 as never),
-      /invalid channels/,
-      'invalid channel counts throw'
-    );
-    t.end();
+    expect(convertToVec4('one', 4), 'convertToVec4 should return right value for vec4').toBe('one');
+    expect(() => convertToVec4('one', 5 as never)).toThrow(/invalid channels/);
   });
 }

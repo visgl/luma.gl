@@ -4,13 +4,13 @@
 
 import {brightnessContrast} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('brightnessContrast#build/uniform', t => {
+it('brightnessContrast#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(brightnessContrast, {}, {});
 
-  t.ok(uniforms, 'brightnessContrast module build is ok');
-  t.equal(uniforms.brightness, 0, 'brightnessContrast brightness uniform is ok');
-  t.equal(uniforms.contrast, 0, 'brightnessContrast contrast uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'brightnessContrast module build is ok').toBe(true);
+  expect(uniforms.brightness, 'brightnessContrast brightness uniform is ok').toBe(0);
+  expect(uniforms.contrast, 'brightnessContrast contrast uniform is ok').toBe(0);
+  void 0;
 });

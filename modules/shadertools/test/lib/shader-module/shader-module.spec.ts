@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {
   initializeShaderModule,
@@ -15,11 +15,15 @@ import {
   validateShaderModuleUniformLayout
 } from '@luma.gl/shadertools';
 
-test('ShaderModule', t => {
+it('ShaderModule', () => {
   let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
 
-  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
-  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
+  expect(Boolean(getShaderModuleSource(shaderModule, 'vertex')), 'returns vertex shader').toBe(
+    true
+  );
+  expect(Boolean(getShaderModuleSource(shaderModule, 'fragment')), 'returns fragment shader').toBe(
+    true
+  );
 
   shaderModule = {
     name: 'test-shader-module',
@@ -35,15 +39,19 @@ varying float vClipped;
   };
   initializeShaderModule(shaderModule);
 
-  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
-  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
+  expect(Boolean(getShaderModuleSource(shaderModule, 'vertex')), 'returns vertex shader').toBe(
+    true
+  );
+  expect(Boolean(getShaderModuleSource(shaderModule, 'fragment')), 'returns fragment shader').toBe(
+    true
+  );
   // @ts-expect-error
-  t.throws(() => getShaderModuleSource(shaderModule, ''), 'unknown shader type');
+  expect(() => getShaderModuleSource(shaderModule, ''), 'unknown shader type').toThrow();
 
-  t.end();
+  void 0;
 });
 
-test('checkShader', t => {
+it('checkShader', () => {
   const shaderModule = {
     name: 'test-shader-module',
     uniformTypes: {},
@@ -78,17 +86,16 @@ void main() {
 
   checkShaderModuleDeprecations(shaderModule, testShader, log);
 
-  t.deepEqual(
-    log.deprecatedCalled[0],
-    ['project', 'project_to_clipspace'],
-    'log.deprecated called'
-  );
-  t.deepEqual(log.removedCalled[0], ['viewMatrix', 'uViewMatrix'], 'log.removed called');
+  expect(log.deprecatedCalled[0], 'log.deprecated called').toEqual([
+    'project',
+    'project_to_clipspace'
+  ]);
+  expect(log.removedCalled[0], 'log.removed called').toEqual(['viewMatrix', 'uViewMatrix']);
 
-  t.end();
+  void 0;
 });
 
-test('initializeShaderModule', t => {
+it('initializeShaderModule', () => {
   const module: ShaderModule = {
     name: 'test-shader-module',
     propTypes: {
@@ -106,12 +113,12 @@ test('initializeShaderModule', t => {
   initializeShaderModule(module);
 
   let uniforms = getShaderModuleUniforms(module, {});
-  t.deepEqual(uniforms, {
+  expect(uniforms, '').toEqual({
     center: [0.5, 0.5],
     strength: 0.3,
     enabled: false,
     sampler: null,
-    range: [0, 1]
+    range: new Float32Array([0, 1])
   });
 
   uniforms = getShaderModuleUniforms(module, {
@@ -119,22 +126,22 @@ test('initializeShaderModule', t => {
     sampler: {},
     range: [0, 2]
   });
-  t.deepEqual(uniforms, {
-    center: [0, 0],
+  expect(uniforms, '').toEqual({
+    center: new Float32Array([0, 0]),
     strength: 0.3,
     enabled: false,
     sampler: {},
-    range: [0, 1]
+    range: new Float32Array([0, 1])
   });
 
-  t.throws(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform');
-  t.throws(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform');
-  t.throws(() => getShaderModuleUniforms(module, {center: 0.5}), 'invalid uniform');
+  expect(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform').toThrow();
+  expect(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform').toThrow();
+  expect(() => getShaderModuleUniforms(module, {center: 0.5}), 'invalid uniform').toThrow();
 
-  t.end();
+  void 0;
 });
 
-test('ShaderModule detects GLSL uniform block layout qualifiers', t => {
+it('ShaderModule detects GLSL uniform block layout qualifiers', () => {
   const shaderSource = `\
 layout(std140) uniform Std140Block {
   float opacity;
@@ -155,46 +162,45 @@ layout(std430) uniform StorageStyleBlock {
 } storageStyleBlock;
 `;
 
-  t.deepEqual(
+  expect(
     getGLSLUniformBlocks(shaderSource).map(block => ({
       blockName: block.blockName,
       instanceName: block.instanceName,
       hasLayoutQualifier: block.hasLayoutQualifier,
       isStd140: block.isStd140
     })),
-    [
-      {
-        blockName: 'Std140Block',
-        instanceName: 'std140Block',
-        hasLayoutQualifier: true,
-        isStd140: true
-      },
-      {
-        blockName: 'DefaultBlock',
-        instanceName: 'defaultBlock',
-        hasLayoutQualifier: false,
-        isStd140: false
-      },
-      {
-        blockName: 'SharedBlock',
-        instanceName: 'sharedBlock',
-        hasLayoutQualifier: true,
-        isStd140: false
-      },
-      {
-        blockName: 'StorageStyleBlock',
-        instanceName: 'storageStyleBlock',
-        hasLayoutQualifier: true,
-        isStd140: false
-      }
-    ],
     'extracts GLSL uniform blocks and std140 compliance'
-  );
+  ).toEqual([
+    {
+      blockName: 'Std140Block',
+      instanceName: 'std140Block',
+      hasLayoutQualifier: true,
+      isStd140: true
+    },
+    {
+      blockName: 'DefaultBlock',
+      instanceName: 'defaultBlock',
+      hasLayoutQualifier: false,
+      isStd140: false
+    },
+    {
+      blockName: 'SharedBlock',
+      instanceName: 'sharedBlock',
+      hasLayoutQualifier: true,
+      isStd140: false
+    },
+    {
+      blockName: 'StorageStyleBlock',
+      instanceName: 'storageStyleBlock',
+      hasLayoutQualifier: true,
+      isStd140: false
+    }
+  ]);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderModule uniform block validation parses GLSL precision-qualified fields', t => {
+it('ShaderModule uniform block validation parses GLSL precision-qualified fields', () => {
   const shaderModule: ShaderModule = {
     name: 'precisionQualified',
     uniformTypes: {
@@ -211,20 +217,19 @@ uniform precisionQualifiedUniforms {
 `
   };
 
-  t.deepEqual(
+  expect(
     getShaderModuleUniformBlockFields(shaderModule, 'fragment'),
-    ['textureUnit', 'opacity', 'offsets'],
     'extracts precision-qualified GLSL uniform block fields'
-  );
-  t.ok(
-    getShaderModuleUniformLayoutValidationResult(shaderModule, 'fragment')?.matches,
+  ).toEqual(['textureUnit', 'opacity', 'offsets']);
+  expect(
+    Boolean(getShaderModuleUniformLayoutValidationResult(shaderModule, 'fragment')?.matches),
     'validation accepts precision-qualified GLSL uniform block fields'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });
 
-test('ShaderModule uniform block validation reports concise mismatch details', t => {
+it('ShaderModule uniform block validation reports concise mismatch details', () => {
   const shaderModule: ShaderModule = {
     name: 'mismatchReporter',
     uniformTypes: {
@@ -240,16 +245,17 @@ uniform mismatchReporterUniforms {
 `
   };
 
-  t.throws(
+  expect(
     () => validateShaderModuleUniformLayout(shaderModule, 'fragment'),
-    /Expected 3 fields, found 2\..*Shader block ends after field 2; expected next field uvTransform\..*Missing from shader block \(1\): uvTransform\./,
     'mismatch errors report counts, first mismatch location, and missing uniforms'
+  ).toThrow(
+    /Expected 3 fields, found 2\..*Shader block ends after field 2; expected next field uvTransform\..*Missing from shader block \(1\): uvTransform\./
   );
 
-  t.end();
+  void 0;
 });
 
-test('ShaderModule uniform block validation accepts original deck project layout', t => {
+it('ShaderModule uniform block validation accepts original deck project layout', () => {
   // Mirrors deck.gl master:
   // modules/core/src/shaderlib/project/project.ts
   // modules/core/src/shaderlib/project/project.glsl.ts
@@ -297,33 +303,32 @@ uniform projectUniforms {
 `
   };
 
-  t.deepEqual(
+  expect(
     getShaderModuleUniformBlockFields(shaderModule, 'vertex'),
-    [
-      'wrapLongitude',
-      'coordinateSystem',
-      'commonUnitsPerMeter',
-      'projectionMode',
-      'scale',
-      'commonUnitsPerWorldUnit',
-      'commonUnitsPerWorldUnit2',
-      'center',
-      'modelMatrix',
-      'viewProjectionMatrix',
-      'viewportSize',
-      'devicePixelRatio',
-      'focalDistance',
-      'cameraPosition',
-      'coordinateOrigin',
-      'commonOrigin',
-      'pseudoMeters'
-    ],
     'extracts original deck project field order'
-  );
-  t.ok(
-    getShaderModuleUniformLayoutValidationResult(shaderModule, 'vertex')?.matches,
+  ).toEqual([
+    'wrapLongitude',
+    'coordinateSystem',
+    'commonUnitsPerMeter',
+    'projectionMode',
+    'scale',
+    'commonUnitsPerWorldUnit',
+    'commonUnitsPerWorldUnit2',
+    'center',
+    'modelMatrix',
+    'viewProjectionMatrix',
+    'viewportSize',
+    'devicePixelRatio',
+    'focalDistance',
+    'cameraPosition',
+    'coordinateOrigin',
+    'commonOrigin',
+    'pseudoMeters'
+  ]);
+  expect(
+    Boolean(getShaderModuleUniformLayoutValidationResult(shaderModule, 'vertex')?.matches),
     'validation accepts original deck project field order'
-  );
+  ).toBe(true);
 
-  t.end();
+  void 0;
 });

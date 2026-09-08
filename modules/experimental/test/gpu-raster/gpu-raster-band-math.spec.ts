@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -17,11 +17,11 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 type ScalarArray = Float32Array | Uint32Array | Int32Array;
 
-test('GPURaster composes calibrated NDVI, masked extent, and histogram without intermediate readback', async testCase => {
+it('GPURaster composes calibrated NDVI, masked extent, and histogram without intermediate readback', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -85,13 +85,13 @@ test('GPURaster composes calibrated NDVI, masked extent, and histogram without i
     'vegetation-distribution-valid-extent-finalize'
   );
   const histogramIndex = compiled.stats.nodeOrder.indexOf('vegetation-distribution-bins-local');
-  testCase.ok(
-    ndviIndex !== -1 && extentIndex > ndviIndex && histogramIndex > extentIndex,
+  expect(
+    Boolean(ndviIndex !== -1 && extentIndex > ndviIndex && histogramIndex > extentIndex),
     'declared hazards order NDVI, masked GPU extent, and explicit-domain histogram'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiled, 'first-ndvi-histogram');
-  assertApproximateValues(testCase, await readFloat32(indexBuffer, 8), [
+  assertApproximateValues(await readFloat32(indexBuffer, 8), [
     1 / 3,
     5 / 7,
     1,
@@ -101,26 +101,23 @@ test('GPURaster composes calibrated NDVI, masked extent, and histogram without i
     Number.NaN,
     0.6
   ]);
-  testCase.deepEqual(
+  expect(
     await readUint32(indexMaskBuffer, 8),
-    [1, 1, 1, 0, 0, 0, 0, 1],
     'independent source masks and exact native nodata sentinels intersect before calibration'
-  );
-  assertApproximateValues(testCase, await readFloat32(extentBuffer, 2), [1 / 3, 1]);
-  testCase.deepEqual(
+  ).toEqual([1, 1, 1, 0, 0, 0, 0, 1]);
+  assertApproximateValues(await readFloat32(extentBuffer, 2), [1 / 3, 1]);
+  expect(
     await readUint32(histogramBuffer, 3),
-    [1, 2, 1],
     'only valid NDVI values contribute to the explicitly inferred GPU domain'
-  );
+  ).toEqual([1, 2, 1]);
 
   nearInfraredBuffer.write(Uint32Array.from([2, 2, 2, 7, 9, 1, 5, 4]));
   submitGraph(device, compiled, 'second-ndvi-histogram');
-  assertApproximateValues(testCase, await readFloat32(extentBuffer, 2), [0.6, 1]);
-  testCase.deepEqual(
+  assertApproximateValues(await readFloat32(extentBuffer, 2), [0.6, 1]);
+  expect(
     await readUint32(histogramBuffer, 3),
-    [3, 0, 1],
     're-encoding the same graph recomputes its domain and clears stale histogram counts'
-  );
+  ).toEqual([3, 0, 1]);
 
   compiled.destroy();
   for (const buffer of [
@@ -133,17 +130,19 @@ test('GPURaster composes calibrated NDVI, masked extent, and histogram without i
     extentBuffer,
     histogramBuffer
   ]) {
-    testCase.notOk(buffer.destroyed, 'compiled graphs do not own imported raster buffers');
+    expect(Boolean(buffer.destroyed), 'compiled graphs do not own imported raster buffers').toBe(
+      false
+    );
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster band math evaluates every calibrated operation, honors offsets, and reuses graphs', async testCase => {
+it('GPURaster band math evaluates every calibrated operation, honors offsets, and reuses graphs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -250,25 +249,23 @@ test('GPURaster band math evaluates every calibrated operation, honors offsets, 
   for (const {fixture, outputBuffer, validityBuffer} of results) {
     const values = await readFloat32(outputBuffer, 7);
     const validity = await readUint32(validityBuffer, 7);
-    testCase.equal(values[0], 0, `${fixture.operation} leaves its output prefix untouched`);
-    testCase.equal(validity[0], 0, `${fixture.operation} leaves its validity prefix untouched`);
-    assertApproximateValues(testCase, values.slice(1), fixture.expected);
-    testCase.deepEqual(
+    expect(values[0], `${fixture.operation} leaves its output prefix untouched`).toBe(0);
+    expect(validity[0], `${fixture.operation} leaves its validity prefix untouched`).toBe(0);
+    assertApproximateValues(values.slice(1), fixture.expected);
+    expect(
       validity.slice(1),
-      fixture.validity,
       `${fixture.operation} canonicalizes source selection and denominator validity`
-    );
+    ).toEqual(fixture.validity);
   }
 
   leftBuffer.write(Float32Array.from([1234, 2, 4, 6, 8, 10, 12]));
   rightBuffer.write(Float32Array.from([5678, 1, 2, 3, 4, 5, 6]));
   submitGraph(device, compiled, 'second-band-math-operations');
   assertApproximateValues(
-    testCase,
     (await readFloat32(results[0].outputBuffer, 7)).slice(1),
     [4, 7, 10, 13, 16, 19]
   );
-  assertApproximateValues(testCase, (await readFloat32(results[3].outputBuffer, 7)).slice(1), [
+  assertApproximateValues((await readFloat32(results[3].outputBuffer, 7)).slice(1), [
     1,
     3 / 4,
     2 / 3,
@@ -276,11 +273,10 @@ test('GPURaster band math evaluates every calibrated operation, honors offsets, 
     3 / 5,
     7 / 12
   ]);
-  testCase.deepEqual(
+  expect(
     (await readUint32(results[3].validityBuffer, 7)).slice(1),
-    [1, 1, 1, 1, 1, 1],
     're-encoding replaces previously invalid division output without recompilation'
-  );
+  ).toEqual([1, 1, 1, 1, 1, 1]);
 
   compiled.destroy();
   for (const buffer of [leftBuffer, rightBuffer, leftMaskBuffer, rightMaskBuffer]) {
@@ -290,14 +286,14 @@ test('GPURaster band math evaluates every calibrated operation, honors offsets, 
     outputBuffer.destroy();
     validityBuffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster NDVI rejects nonfinite and epsilon-sized denominators without implicit clamping', async testCase => {
+it('GPURaster NDVI rejects nonfinite and epsilon-sized denominators without implicit clamping', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -375,12 +371,11 @@ test('GPURaster NDVI rejects nonfinite and epsilon-sized denominators without im
   submitGraph(device, compiled, 'raster-ndvi-boundary-values');
   const expectedValidity = [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1];
   const outputValues = await readFloat32(outputBuffer, 12);
-  testCase.deepEqual(
+  expect(
     await readUint32(outputValidityBuffer, 12),
-    expectedValidity,
     'NaN, infinities, zero denominators, epsilon equality, and overflowing denominators are invalid'
-  );
-  assertApproximateValues(testCase, outputValues, [
+  ).toEqual(expectedValidity);
+  assertApproximateValues(outputValues, [
     1,
     Number.NaN,
     Number.NaN,
@@ -394,27 +389,32 @@ test('GPURaster NDVI rejects nonfinite and epsilon-sized denominators without im
     Number.NaN,
     5 / 3
   ]);
-  testCase.ok(outputValues[7] > 1, 'negative reflectance can yield valid NDVI above one');
-  testCase.ok(outputValues[11] > 1, 'valid values are not clamped by default');
+  expect(Boolean(outputValues[7] > 1), 'negative reflectance can yield valid NDVI above one').toBe(
+    true
+  );
+  expect(Boolean(outputValues[11] > 1), 'valid values are not clamped by default').toBe(true);
 
   const clampedValues = await readFloat32(clampedBuffer, 12);
-  testCase.equal(clampedValues[7], 1, 'an explicitly requested display clamp limits large NDVI');
-  testCase.equal(clampedValues[11], 1, 'the same clamp applies to every valid output pixel');
-  testCase.deepEqual(
+  expect(clampedValues[7], 'an explicitly requested display clamp limits large NDVI').toBe(1);
+  expect(clampedValues[11], 'the same clamp applies to every valid output pixel').toBe(1);
+  expect(
     await readUint32(clampedValidityBuffer, 12),
-    expectedValidity,
     'explicit clamping does not resurrect invalid pixels'
-  );
+  ).toEqual(expectedValidity);
 
   const overflowValues = await readFloat32(overflowBuffer, 12);
   const overflowValidity = await readUint32(overflowValidityBuffer, 12);
-  testCase.deepEqual(
+  expect(
     overflowValidity.slice(8, 10),
-    [0, 0],
     'finite raw values that overflow during independent calibration become invalid'
+  ).toEqual([0, 0]);
+  expect(Boolean(Number.isNaN(overflowValues[8])), 'overflowing calibrated source writes NaN').toBe(
+    true
   );
-  testCase.ok(Number.isNaN(overflowValues[8]), 'overflowing calibrated source writes NaN');
-  testCase.ok(Number.isNaN(overflowValues[9]), 'overflowing source cannot produce a finite sum');
+  expect(
+    Boolean(Number.isNaN(overflowValues[9])),
+    'overflowing source cannot produce a finite sum'
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -429,14 +429,14 @@ test('GPURaster NDVI rejects nonfinite and epsilon-sized denominators without im
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster pointwise contributors reject incompatible grids, ownership, output aliases, and options', async testCase => {
+it('GPURaster pointwise contributors reject incompatible grids, ownership, output aliases, and options', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -470,68 +470,58 @@ test('GPURaster pointwise contributors reject incompatible grids, ownership, out
     outputValidity
   };
 
-  testCase.throws(
+  expect(
     () => new GPURasterNDVI({...properties, width: 3}),
-    /one sample per pixel/,
     'both source grids must exactly match the declared output extent'
-  );
-  testCase.throws(
+  ).toThrow(/one sample per pixel/);
+  expect(
     () => new GPURasterNDVI({...properties, height: 0}),
-    /positive integers/,
     'empty raster grids are rejected before graph encoding'
-  );
-  testCase.throws(
+  ).toThrow(/positive integers/);
+  expect(
     () => new GPURasterNDVI({...properties, epsilon: Number.NaN}),
-    /finite and non-negative/,
     'epsilon cannot introduce non-finite comparisons'
-  );
-  testCase.throws(
+  ).toThrow(/finite and non-negative/);
+  expect(
     () => new GPURasterNDVI({...properties, epsilon: -1}),
-    /finite and non-negative/,
     'negative denominator tolerances are rejected'
-  );
-  testCase.throws(
+  ).toThrow(/finite and non-negative/);
+  expect(
     () => new GPURasterNDVI({...properties, clamp: [2, 1]}),
-    /ordered finite range/,
     'clamp ranges must be ordered'
-  );
-  testCase.throws(
+  ).toThrow(/ordered finite range/);
+  expect(
     () =>
       new GPURasterNDVI({
         ...properties,
         output: graph.createDataView(left.storage.values.buffer, {format: 'float32', length: 4})
       }),
-    /separate buffers/,
     'output values cannot overwrite either borrowed input band'
-  );
-  testCase.throws(
+  ).toThrow(/separate buffers/);
+  expect(
     () => new GPURasterNDVI({...properties, outputValidity: sourceMask}),
-    /separate buffers/,
     'output validity cannot overwrite either source selection mask'
-  );
-  testCase.throws(
+  ).toThrow(/separate buffers/);
+  expect(
     () =>
       new GPURasterNDVI({
         ...properties,
         outputValidity: graph.createDataView(output.buffer, {format: 'uint32', length: 4})
       }),
-    /separate buffers/,
     'output values and output validity require separate storage'
-  );
-  testCase.throws(
+  ).toThrow(/separate buffers/);
+  expect(
     () =>
       new GPURasterNDVI({
         ...properties,
         output: importView(foreignGraph, 'foreign-output', foreignOutputBuffer, 'float32', 4)
       }),
-    /same graph/,
     'every source and destination must belong to the same graph'
-  );
-  testCase.throws(
+  ).toThrow(/same graph/);
+  expect(
     () => new GPURasterNDVI(properties).addToGraph(foreignGraph),
-    /target graph/,
     'contributors cannot be added to a foreign command graph'
-  );
+  ).toThrow(/target graph/);
 
   for (const buffer of [
     leftBuffer,
@@ -543,7 +533,7 @@ test('GPURaster pointwise contributors reject incompatible grids, ownership, out
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
 function createInputBuffer(device: Device, data: ScalarArray): Buffer {
@@ -617,18 +607,22 @@ async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
 }
 
-function assertApproximateValues(testCase: Test, actual: number[], expected: number[]): void {
-  testCase.equal(actual.length, expected.length, 'the output retains every raster row');
+function assertApproximateValues(actual: number[], expected: number[]): void {
+  expect(actual.length, 'the output retains every raster row').toBe(expected.length);
   for (let index = 0; index < expected.length; index++) {
     const expectedValue = expected[index];
     const actualValue = actual[index];
     if (Number.isNaN(expectedValue)) {
-      testCase.ok(Number.isNaN(actualValue), `pixel ${index} is canonically invalid`);
-    } else {
-      testCase.ok(
-        Math.abs(actualValue - expectedValue) <= 0.000002 * Math.max(1, Math.abs(expectedValue)),
-        `pixel ${index} matches ${expectedValue} within float32 tolerance; received ${actualValue}`
+      expect(Boolean(Number.isNaN(actualValue)), `pixel ${index} is canonically invalid`).toBe(
+        true
       );
+    } else {
+      expect(
+        Boolean(
+          Math.abs(actualValue - expectedValue) <= 0.000002 * Math.max(1, Math.abs(expectedValue))
+        ),
+        `pixel ${index} matches ${expectedValue} within float32 tolerance; received ${actualValue}`
+      ).toBe(true);
     }
   }
 }

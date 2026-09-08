@@ -95,7 +95,9 @@ This means `table.schema.fields` may contain names absent from
 
 Explicitly merges adjacent physical batches. Constants survive unchanged and do not
 participate in copies. Indexed and variable-length restrictions still apply to the
-varying data being packed.
+varying data being packed. Columns carrying null bitmaps or producer-owned
+readback metadata are rejected until a metadata-preserving packing contract is
+available; ordinary non-null fixed-size-list storage columns remain packable.
 
 ### `addBatch(batch): this`
 

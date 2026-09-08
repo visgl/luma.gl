@@ -2,25 +2,22 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WebGLCanvasContext} from '@luma.gl/webgl';
+import {expect, it} from 'vitest';
 
-test('WebGLDevice#canvas context creation', async t => {
-  t.ok(WebGLCanvasContext, 'WebGLCanvasContext defined');
+it('WebGLDevice#canvas context creation', async () => {
+  expect(WebGLCanvasContext, 'WebGLCanvasContext defined').toBeTruthy();
   const webGLTestDevice = await getWebGLTestDevice();
-  t.ok(
+  expect(
     webGLTestDevice.getDefaultCanvasContext() instanceof WebGLCanvasContext,
     'Default context creation ok'
-  );
-  t.end();
+  ).toBe(true);
 });
 
-test('WebGPU default canvas context reuses framebuffer wrappers', async t => {
+it('WebGPU default canvas context reuses framebuffer wrappers', async () => {
   const webGPUDevice = await getWebGPUTestDevice();
   if (!webGPUDevice) {
-    t.pass('WebGPU unavailable, skipped default canvas wrapper reuse test');
-    t.end();
     return;
   }
 
@@ -28,21 +25,15 @@ test('WebGPU default canvas context reuses framebuffer wrappers', async t => {
   const firstFramebuffer = canvasContext.getCurrentFramebuffer();
   const secondFramebuffer = canvasContext.getCurrentFramebuffer();
 
-  t.equal(
-    secondFramebuffer,
-    firstFramebuffer,
-    'WebGPU canvas context reuses its framebuffer wrapper'
+  expect(secondFramebuffer, 'WebGPU canvas context reuses its framebuffer wrapper').toBe(
+    firstFramebuffer
   );
-  t.equal(
+  expect(
     secondFramebuffer.colorAttachments[0],
-    firstFramebuffer.colorAttachments[0],
     'WebGPU canvas context reuses its texture view wrapper'
-  );
-  t.equal(
+  ).toBe(firstFramebuffer.colorAttachments[0]);
+  expect(
     secondFramebuffer.colorAttachments[0].texture,
-    firstFramebuffer.colorAttachments[0].texture,
     'WebGPU canvas context reuses its texture wrapper'
-  );
-
-  t.end();
+  ).toBe(firstFramebuffer.colorAttachments[0].texture);
 });

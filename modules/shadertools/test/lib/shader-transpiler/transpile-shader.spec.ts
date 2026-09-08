@@ -4,46 +4,45 @@
 
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
-import test, {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 import {GL} from '@luma.gl/webgl/constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
 import {minifyShader} from './minify-shader';
 
 /** Compare shader strings - TODO move to test/utils */
-function compareStrings(t: Test, string1: string, string2: string, message?: string): void {
+function compareStrings(string1: string, string2: string, message?: string): void {
   const lines1 = string1.split('\n');
   const lines2 = string2.split('\n');
 
   for (let i = 0; i < lines1.length; i++) {
     if (lines1[i] !== lines2[i]) {
-      t.comment(`line ${i + 1}: '${lines1[i]}' --> '${lines2[i]}'`);
+      void 0;
       return;
     }
   }
 
-  t.equal(string1, string2, message);
+  expect(string1, message).toBe(string2);
 }
 
-test('transpileGLSLShader#import', async t => {
-  t.ok(transpileGLSLShader, 'transpileGLSLShader import successful');
-  t.end();
+it('transpileGLSLShader#import', async () => {
+  expect(Boolean(transpileGLSLShader), 'transpileGLSLShader import successful').toBe(true);
+  void 0;
 });
 
-test('transpileGLSLShader', async t => {
+it('transpileGLSLShader', async () => {
   for (const tc of TRANSPILATION_TEST_CASES) {
     const {title, stage, GLSL_300} = tc;
 
-    t.equal(
+    expect(
       transpileGLSLShader(GLSL_300, stage).startsWith('#version 300 es'),
-      true,
       `${title} preserves version`
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('transpileGLSLShader#minified shaders', async t => {
+it('transpileGLSLShader#minified shaders', async () => {
   let assembleResult;
 
   for (const tc of TRANSPILATION_TEST_CASES) {
@@ -52,17 +51,16 @@ test('transpileGLSLShader#minified shaders', async t => {
     // minified shaders
     assembleResult = minifyShader(transpileGLSLShader(minifyShader(GLSL_300), stage));
     compareStrings(
-      t,
       assembleResult,
       minifyShader(GLSL_300_TRANSPILED),
       `minified 3.00 => 3.00: ${title}`
     );
   }
 
-  t.end();
+  void 0;
 });
 
-test('transpileGLSLShader#compilation', async t => {
+it('transpileGLSLShader#compilation', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   for (const tc of COMPILATION_TEST_CASES) {
@@ -72,15 +70,15 @@ test('transpileGLSLShader#compilation', async t => {
     const fs300_300 = transpileGLSLShader(FS_300_VALID, 'fragment');
 
     // WebGL2 transpile to GLSL 300 and compile
-    const {success, log, stage} = compileAndLink(webglDevice.gl, vs300_300, fs300_300);
-    t.ok(success, `Compile (WebGL 2): 3.00 => 3.00: ${title}`);
+    const {success} = compileAndLink(webglDevice.gl, vs300_300, fs300_300);
+    expect(Boolean(success), `Compile (WebGL 2): 3.00 => 3.00: ${title}`).toBe(true);
     if (!success) {
-      t.comment(stage);
-      t.comment(log);
+      void 0;
+      void 0;
     }
   }
 
-  t.end();
+  void 0;
 });
 
 // HELPER FUNCTIONS

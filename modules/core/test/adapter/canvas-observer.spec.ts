@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {isBrowser} from '@probe.gl/env';
 import {CanvasObserver} from '../../src/adapter/canvas-observer';
 
@@ -38,9 +38,9 @@ function restoreGlobals(globalScope: typeof globalThis, originals: ObserverGloba
   globalScope.matchMedia = originals.matchMedia;
 }
 
-test('CanvasObserver#start is idempotent and stop is idempotent', t => {
+it('CanvasObserver#start is idempotent and stop is idempotent', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -98,22 +98,22 @@ test('CanvasObserver#start is idempotent and stop is idempotent', t => {
     observer.stop();
     observer.stop();
 
-    t.equal(calls.resizeObserve, 1, 'resize observer only starts once');
-    t.equal(calls.intersectionObserve, 1, 'intersection observer only starts once');
-    t.equal(calls.setTimeout, 1, 'deferred DPR observation is only scheduled once');
-    t.equal(calls.clearTimeout, 1, 'deferred DPR observation is only cleared once');
-    t.equal(calls.resizeDisconnect, 1, 'resize observer only disconnects once');
-    t.equal(calls.intersectionDisconnect, 1, 'intersection observer only disconnects once');
+    expect(calls.resizeObserve, 'resize observer only starts once').toBe(1);
+    expect(calls.intersectionObserve, 'intersection observer only starts once').toBe(1);
+    expect(calls.setTimeout, 'deferred DPR observation is only scheduled once').toBe(1);
+    expect(calls.clearTimeout, 'deferred DPR observation is only cleared once').toBe(1);
+    expect(calls.resizeDisconnect, 'resize observer only disconnects once').toBe(1);
+    expect(calls.intersectionDisconnect, 'intersection observer only disconnects once').toBe(1);
   } finally {
     restoreGlobals(globalScope, originals);
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasObserver#trackPosition polling stops after stop', t => {
+it('CanvasObserver#trackPosition polling stops after stop', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -158,26 +158,26 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
     });
 
     observer.start();
-    t.ok(intervalCallback, 'position polling interval is scheduled');
+    expect(Boolean(intervalCallback), 'position polling interval is scheduled').toBe(true);
 
     intervalCallback?.();
-    t.equal(positionChangeCalls, 1, 'position polling callback fires while observer is active');
+    expect(positionChangeCalls, 'position polling callback fires while observer is active').toBe(1);
 
     observer.stop();
-    t.equal(clearIntervalCalls, 1, 'position polling interval is cleared on stop');
+    expect(clearIntervalCalls, 'position polling interval is cleared on stop').toBe(1);
 
     intervalCallback?.();
-    t.equal(positionChangeCalls, 1, 'position polling callback does not fire after stop');
+    expect(positionChangeCalls, 'position polling callback does not fire after stop').toBe(1);
   } finally {
     restoreGlobals(globalScope, originals);
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasObserver#resizeObserverBox uses device-pixel-content-box when specified', t => {
+it('CanvasObserver#resizeObserverBox uses device-pixel-content-box when specified', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -212,18 +212,18 @@ test('CanvasObserver#resizeObserverBox uses device-pixel-content-box when specif
     });
 
     observer.start();
-    t.equal(observedBox, 'device-pixel-content-box', 'uses device-pixel-content-box');
+    expect(observedBox, 'uses device-pixel-content-box').toBe('device-pixel-content-box');
     observer.stop();
   } finally {
     restoreGlobals(globalScope, originals);
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasObserver#resizeObserverBox uses content-box when specified', t => {
+it('CanvasObserver#resizeObserverBox uses content-box when specified', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -258,18 +258,18 @@ test('CanvasObserver#resizeObserverBox uses content-box when specified', t => {
     });
 
     observer.start();
-    t.equal(observedBox, 'content-box', 'uses content-box when resizeObserverBox is set');
+    expect(observedBox, 'uses content-box when resizeObserverBox is set').toBe('content-box');
     observer.stop();
   } finally {
     restoreGlobals(globalScope, originals);
   }
 
-  t.end();
+  void 0;
 });
 
-test('CanvasObserver#start is a no-op without an HTML canvas', t => {
+it('CanvasObserver#start is a no-op without an HTML canvas', () => {
   if (!isBrowser()) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -313,12 +313,12 @@ test('CanvasObserver#start is a no-op without an HTML canvas', t => {
     observer.start();
     observer.stop();
 
-    t.equal(calls.resizeObserve, 0, 'resize observer is never started');
-    t.equal(calls.intersectionObserve, 0, 'intersection observer is never started');
-    t.equal(calls.setTimeout, 0, 'deferred DPR observation is never scheduled');
+    expect(calls.resizeObserve, 'resize observer is never started').toBe(0);
+    expect(calls.intersectionObserve, 'intersection observer is never started').toBe(0);
+    expect(calls.setTimeout, 'deferred DPR observation is never scheduled').toBe(0);
   } finally {
     restoreGlobals(globalScope, originals);
   }
 
-  t.end();
+  void 0;
 });
