@@ -162,6 +162,10 @@ export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
 export type {GPUCompactionInput, GPUCompactionProps} from './gpu-compaction';
+export {GPUFlagOffsets} from './gpu-flag-offsets';
+export type {GPUFlagOffsetsProps} from './gpu-flag-offsets';
+export {GPUSegmentOffsets} from './gpu-segment-offsets';
+export type {GPUSegmentOffsetsProps} from './gpu-segment-offsets';
 export {GPUSegmentedLayout} from './gpu-segmented-layout';
 export type {GPUSegmentedLayoutProps} from './gpu-segmented-layout';
 export {

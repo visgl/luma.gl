@@ -69,6 +69,8 @@ export type GPUCoreDocsTabId =
   | 'scan'
   | 'galloping-search'
   | 'compaction'
+  | 'flag-offsets'
+  | 'segment-offsets'
   | 'segmented-layout'
   | 'mask'
   | 'visibility-workflow'
@@ -236,6 +238,8 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   scan: {id: 'scan', label: 'Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-scan'},
   'galloping-search': {id: 'galloping-search', label: 'Galloping Search', href: '/docs/api-reference/experimental/gpu-core/gpu-galloping-search'},
   compaction: {id: 'compaction', label: 'Compaction', href: '/docs/api-reference/experimental/gpu-core/gpu-compaction'},
+  'flag-offsets': {id: 'flag-offsets', label: 'Flag Offsets', href: '/docs/api-reference/experimental/gpu-core/gpu-flag-offsets'},
+  'segment-offsets': {id: 'segment-offsets', label: 'Segment Offsets', href: '/docs/api-reference/experimental/gpu-core/gpu-segment-offsets'},
   'segmented-layout': {id: 'segmented-layout', label: 'Segmented Layout', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-layout'},
   mask: {id: 'mask', label: 'Masks', href: '/docs/api-reference/experimental/gpu-core/gpu-mask'},
   'visibility-workflow': {id: 'visibility-workflow', label: 'Visibility', href: '/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow'},

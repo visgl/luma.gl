@@ -93,6 +93,30 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Scan and scatter visit the input domain even when the compacted result is small.',
     mistake: 'Do not treat unused output capacity beyond the GPU-written count as valid rows.'
   },
+  'gpu-flag-offsets': {
+    problem: 'Turn one packed binary flag stream into stable dense indices and a count.',
+    readsWrites: 'Reads uint32 zero-or-one flags; writes exclusive uint32 offsets and one scalar count.',
+    ownership: 'Flags, offsets, and count are caller-owned; hierarchical scan scratch is graph-owned.',
+    output: 'One source-aligned exclusive offset per flag and an exact count modulo uint32.',
+    work: 'One hierarchical exclusive scan plus one scalar publication pass.',
+    chunks: 'Consumes one GraphDataView; invoke once per durable source chunk to retain boundaries.',
+    execution: 'Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.',
+    neighborhood: 'format classifier → GPUFlagOffsets → compaction destinations, counts, or GPUSegmentOffsets.',
+    cost: 'The complete flag stream is scanned even when few flags are set.',
+    mistake: 'Flags must be zero or one; larger values are summed rather than normalized.'
+  },
+  'gpu-segment-offsets': {
+    problem: 'Publish list-style boundaries when logical-element offsets are already available.',
+    readsWrites: 'Reads element flags/offsets and segment-start flags; writes segment indices, offsets, and count.',
+    ownership: 'All public views are caller-owned; hierarchical segment-scan scratch is graph-owned.',
+    output: 'Source-aligned segment indices plus a segmentCount + 1 valid offset prefix.',
+    work: 'One hierarchical inclusive scan, one offset publication pass, and one scalar count pass.',
+    chunks: 'Consumes one GraphDataView chunk and preserves its local segment coordinate space.',
+    execution: 'Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.',
+    neighborhood: 'GPUFlagOffsets plus segment flags → GPUSegmentOffsets → lists, groups, or nested consumers.',
+    cost: 'Separating shared value and per-depth element scans saves work only when layouts reuse them.',
+    mistake: 'Keep segmentStartFlags[0] zero and consume only the prefix named by segmentCount.'
+  },
   'gpu-segmented-layout': {
     problem: 'Turn slot-aligned value, element, and segment-start flags into dense columnar layout metadata.',
     readsWrites: 'Reads three packed binary flag streams; writes value and element offsets, segment indices and offsets, and three counts.',

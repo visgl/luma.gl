@@ -222,6 +222,7 @@ describe('GPGPU example catalog navigation', () => {
     expect(readCategoryIdentifiers(nestedCategories[1])).toEqual([
       'showcase/million-row-crossfilter',
       'showcase/raster-lab',
+      'experimental/gpu-parquet-constellation',
       'showcase/billion-point-spatial-atlas',
       'experimental/gpt-2'
     ]);

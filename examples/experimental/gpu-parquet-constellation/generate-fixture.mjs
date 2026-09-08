@@ -3,54 +3,48 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {writeFile} from 'node:fs/promises';
-import {ParquetEncoder, ParquetSchema} from '@loaders.gl/parquet';
+import * as arrow from 'apache-arrow';
+import {
+  Compression,
+  Encoding,
+  Table,
+  WriterPropertiesBuilder,
+  WriterVersion,
+  writeParquet
+} from 'parquet-wasm/node';
 import {makeParquetConstellationData} from './parquet-constellation-data.ts';
 
 const ROW_COUNT = 600_000;
 const PAGE_SIZE = 65_536;
-const chunks = [];
-const outputStream = {
-  write(chunk, callback) {
-    chunks.push(chunk.slice());
-    callback();
-  },
-  close(callback) {
-    callback();
-  }
-};
-const schema = new ParquetSchema({
-  positionX: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
-  positionY: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
-  radius: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
-  temperature: {type: 'FLOAT', encoding: 'BYTE_STREAM_SPLIT', compression: 'UNCOMPRESSED'},
-  sequence: {type: 'UINT_32', encoding: 'DELTA_BINARY_PACKED', compression: 'UNCOMPRESSED'}
-});
 const data = makeParquetConstellationData(ROW_COUNT);
-const encoder = await ParquetEncoder.openStream(schema, outputStream, {
-  dictionary: false,
-  pageSize: PAGE_SIZE,
-  rowGroupSize: ROW_COUNT,
-  useDataPageV2: true,
-  writeStatistics: true
-});
+const arrowTable = arrow.tableFromArrays(data);
+const arrowIPC = arrow.tableToIPC(arrowTable, 'stream');
+const variants = [
+  {name: 'UNCOMPRESSED', compression: Compression.UNCOMPRESSED, file: 'constellation.parquet'},
+  {name: 'SNAPPY', compression: Compression.SNAPPY, file: 'constellation-snappy.parquet'},
+  {name: 'LZ4_RAW', compression: Compression.LZ4_RAW, file: 'constellation-lz4-raw.parquet'}
+];
 
-for (let rowIndex = 0; rowIndex < ROW_COUNT; rowIndex++) {
-  await encoder.appendRow({
-    positionX: data.positionX[rowIndex],
-    positionY: data.positionY[rowIndex],
-    radius: data.radius[rowIndex],
-    temperature: data.temperature[rowIndex],
-    sequence: data.sequence[rowIndex]
-  });
+for (const variant of variants) {
+  const wasmTable = Table.fromIPCStream(arrowIPC);
+  const writerProperties = new WriterPropertiesBuilder()
+    .setWriterVersion(WriterVersion.V2)
+    .setCompression(variant.compression)
+    .setDictionaryEnabled(false)
+    .setMaxRowGroupSize(ROW_COUNT)
+    .setWriteBatchSize(PAGE_SIZE)
+    .setDataPageSizeLimit(PAGE_SIZE * Float32Array.BYTES_PER_ELEMENT)
+    .setColumnEncoding('positionX', Encoding.BYTE_STREAM_SPLIT)
+    .setColumnEncoding('positionY', Encoding.BYTE_STREAM_SPLIT)
+    .setColumnEncoding('radius', Encoding.BYTE_STREAM_SPLIT)
+    .setColumnEncoding('temperature', Encoding.BYTE_STREAM_SPLIT)
+    .setColumnEncoding('sequence', Encoding.DELTA_BINARY_PACKED)
+    // Its packed control headers must remain visible to the CPU-side graph planner.
+    .setColumnCompression('sequence', Compression.UNCOMPRESSED)
+    .build();
+  const parquetBytes = writeParquet(wasmTable, writerProperties);
+  await writeFile(new URL(`./data/${variant.file}`, import.meta.url), parquetBytes);
+  console.log(
+    `Wrote ${ROW_COUNT.toLocaleString()} ${variant.name} rows (${parquetBytes.byteLength.toLocaleString()} bytes)`
+  );
 }
-await encoder.close();
-
-const byteLength = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
-const parquetBytes = new Uint8Array(byteLength);
-let byteOffset = 0;
-for (const chunk of chunks) {
-  parquetBytes.set(chunk, byteOffset);
-  byteOffset += chunk.byteLength;
-}
-await writeFile(new URL('./data/constellation.parquet', import.meta.url), parquetBytes);
-console.log(`Wrote ${ROW_COUNT.toLocaleString()} rows (${byteLength.toLocaleString()} bytes)`);

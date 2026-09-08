@@ -32,11 +32,17 @@ const ROW_COUNT = 600_000;
 const PAGE_SIZE = 65_536;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const UNIFORM_BYTE_LENGTH = 8 * Float32Array.BYTES_PER_ELEMENT;
-const PARQUET_URL = new URL('./data/constellation.parquet', import.meta.url);
+const PARQUET_FIXTURES = {
+  uncompressed: new URL('./data/constellation.parquet', import.meta.url),
+  snappy: new URL('./data/constellation-snappy.parquet', import.meta.url),
+  'lz4-raw': new URL('./data/constellation-lz4-raw.parquet', import.meta.url)
+} as const;
 const INFO_HTML = `<div data-parquet-panel style="display:grid;gap:12px;min-width:min(360px,80vw)">
   <div><strong>GPU Parquet Constellation</strong><p style="margin:6px 0 0;line-height:1.45">A real Parquet row group becomes an animated galaxy. Four FLOAT columns use <code>BYTE_STREAM_SPLIT</code>; one UINT32 column uses <code>DELTA_BINARY_PACKED</code>.</p></div>
   <div style="display:grid;gap:9px">
-    <div><strong>${formatCount(ROW_COUNT)}</strong> rows · ${formatCount(PAGE_SIZE)} rows/page</div>
+    <div><strong>${formatCount(ROW_COUNT)}</strong> rows · multi-page row group</div>
+    <label>Compression <select data-compression><option value="uncompressed" selected>Uncompressed</option><option value="snappy">Snappy</option><option value="lz4-raw">LZ4 raw</option></select></label>
+    <div data-parquet-compression><strong>Compression:</strong> reading page metadata…</div>
     <label>Decoder <select data-decode-mode><option value="gpu" selected>GPU command graph</option><option value="cpu">CPU on main thread</option></select></label>
     <button type="button" data-run-selected>Decode and display</button>
     <button type="button" data-compare>Compare CPU → GPU</button>
@@ -46,6 +52,7 @@ const INFO_HTML = `<div data-parquet-panel style="display:grid;gap:12px;min-widt
 </div>`;
 
 type DecodeMode = 'cpu' | 'gpu';
+type CompressionMode = keyof typeof PARQUET_FIXTURES;
 
 type RenderParameters = {
   framebuffer: Framebuffer;
@@ -72,6 +79,12 @@ type DecodeMeasurement = {
   reusedGraphExecutionMilliseconds?: number;
 };
 
+type CompressionDetails = {
+  summary: string;
+  compressedByteLength: number;
+  uncompressedByteLength: number;
+};
+
 export default class GPUParquetConstellationAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
   static props = {createFramebuffer: true, debug: true};
@@ -82,6 +95,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
 
   private scene: PreparedScene | null = null;
   private parquetBytes: ArrayBuffer | null = null;
+  private selectedCompression: CompressionMode = 'uncompressed';
   private selectedMode: DecodeMode = 'gpu';
   private fetchMilliseconds = 0;
   private preparationVersion = 0;
@@ -91,6 +105,9 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   private longestPreparationFrameMilliseconds = 0;
   private previousFrameTime = 0;
   private measurements: Partial<Record<DecodeMode, DecodeMeasurement>> = {};
+  private compressionDetails: CompressionDetails | null = null;
+  private compressionElement: HTMLElement | null = null;
+  private decoderModeElement: HTMLSelectElement | null = null;
   private statusElement: HTMLElement | null = null;
   private measurementsElement: HTMLElement | null = null;
   private panelElement: HTMLElement | null = null;
@@ -181,22 +198,29 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     this.uniformBuffer.destroy();
   }
 
-  private async loadDataset(): Promise<void> {
+  private async loadDataset(
+    compression: CompressionMode = this.selectedCompression
+  ): Promise<void> {
     const abortController = this.startPreparation();
     const preparationVersion = ++this.preparationVersion;
+    this.selectedCompression = compression;
     this.setControlsDisabled(true);
-    this.setStatus(`Fetching ${formatCount(ROW_COUNT)} rows from the Parquet fixture…`);
+    this.compressionDetails = null;
+    this.updateCompressionDetails();
+    this.setStatus(
+      `Fetching the ${getCompressionLabel(compression)} Parquet fixture with ${formatCount(ROW_COUNT)} rows…`
+    );
     await nextAnimationFrame();
     const fetchStartedAt = performance.now();
     try {
-      const response = await fetch(PARQUET_URL, {signal: abortController.signal});
+      const response = await fetch(PARQUET_FIXTURES[compression], {signal: abortController.signal});
       if (!response.ok) throw new Error(`Could not fetch Parquet fixture (${response.status})`);
       const parquetBytes = await response.arrayBuffer();
       if (preparationVersion !== this.preparationVersion) return;
       this.parquetBytes = parquetBytes;
       this.fetchMilliseconds = performance.now() - fetchStartedAt;
       this.measurements = {};
-      await this.prepareMode(this.selectedMode, preparationVersion, abortController.signal);
+      await this.prepareComparison(preparationVersion, abortController.signal);
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
@@ -239,13 +263,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     const preparationVersion = ++this.preparationVersion;
     this.setControlsDisabled(true);
     try {
-      await this.prepareMode('cpu', preparationVersion, abortController.signal);
-      await waitForMilliseconds(250);
-      abortController.signal.throwIfAborted();
-      if (preparationVersion !== this.preparationVersion) return;
-      this.selectedMode = 'gpu';
-      await this.prepareMode('gpu', preparationVersion, abortController.signal);
-      await this.rerunGPUDecode(preparationVersion, abortController.signal);
+      await this.prepareComparison(preparationVersion, abortController.signal);
     } catch (error) {
       if (preparationVersion === this.preparationVersion) {
         this.setStatus(getErrorMessage(error), true);
@@ -256,6 +274,17 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         this.setControlsDisabled(false);
       }
     }
+  }
+
+  private async prepareComparison(preparationVersion: number, signal: AbortSignal): Promise<void> {
+    await this.prepareMode('cpu', preparationVersion, signal);
+    await waitForMilliseconds(250);
+    signal.throwIfAborted();
+    if (preparationVersion !== this.preparationVersion) return;
+    this.selectedMode = 'gpu';
+    if (this.decoderModeElement) this.decoderModeElement.value = 'gpu';
+    await this.prepareMode('gpu', preparationVersion, signal);
+    await this.rerunGPUDecode(preparationVersion, signal);
   }
 
   private async prepareMode(
@@ -371,6 +400,8 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         preserveCompression: ['SNAPPY', 'LZ4_RAW'],
         signal
       })) {
+        this.compressionDetails = getCompressionDetails(batch.columns);
+        this.updateCompressionDetails();
         const plan = planGPUParquetEncodedPageBatch(batch);
         if (plan.cpuFallbackPageCount > 0) {
           throw new Error(`${plan.cpuFallbackPageCount} Parquet pages require CPU fallback`);
@@ -637,26 +668,33 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private bindControls(root: ParentNode): () => void {
+    const compressionSelect = root.querySelector<HTMLSelectElement>('[data-compression]');
     const modeSelect = root.querySelector<HTMLSelectElement>('[data-decode-mode]');
     const runButton = root.querySelector<HTMLButtonElement>('[data-run-selected]');
     const compareButton = root.querySelector<HTMLButtonElement>('[data-compare]');
     this.statusElement = root.querySelector('[data-parquet-status]');
     this.measurementsElement = root.querySelector('[data-parquet-measurements]');
+    this.compressionElement = root.querySelector('[data-parquet-compression]');
+    this.decoderModeElement = modeSelect;
     this.panelElement = root.querySelector('[data-parquet-panel]');
-    if (!modeSelect || !runButton || !compareButton) return () => {};
-    this.controls = [modeSelect];
+    if (!compressionSelect || !modeSelect || !runButton || !compareButton) return () => {};
+    this.controls = [compressionSelect, modeSelect];
     this.actionButtons = [runButton, compareButton];
     const onMode = (): void => {
       this.selectedMode = modeSelect.value as DecodeMode;
     };
+    const onCompression = (): void =>
+      void this.loadDataset(compressionSelect.value as CompressionMode);
     const onRun = (): void => void this.selectMode(modeSelect.value as DecodeMode);
     const onCompare = (): void => void this.compareModes();
+    compressionSelect.addEventListener('change', onCompression);
     modeSelect.addEventListener('change', onMode);
     runButton.addEventListener('click', onRun);
     compareButton.addEventListener('click', onCompare);
     this.setControlsDisabled(this.preparationActive || !this.parquetBytes);
     this.updateMeasurements();
     return () => {
+      compressionSelect.removeEventListener('change', onCompression);
       modeSelect.removeEventListener('change', onMode);
       runButton.removeEventListener('click', onRun);
       compareButton.removeEventListener('click', onCompare);
@@ -664,6 +702,8 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       this.actionButtons = [];
       this.statusElement = null;
       this.measurementsElement = null;
+      this.compressionElement = null;
+      this.decoderModeElement = null;
       this.panelElement = null;
     };
   }
@@ -699,6 +739,21 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     this.statusElement.style.color = error ? '#fb7185' : '';
   }
 
+  private updateCompressionDetails(): void {
+    const element = this.compressionElement;
+    const details = this.compressionDetails;
+    if (!element) return;
+    if (!details) {
+      element.innerHTML = `<strong>Compression:</strong> loading ${getCompressionLabel(this.selectedCompression)} metadata…`;
+      return;
+    }
+    const ratio =
+      details.compressedByteLength > 0
+        ? details.uncompressedByteLength / details.compressedByteLength
+        : 1;
+    element.innerHTML = `<strong>Compression:</strong> ${details.summary}<br><small>${formatBytes(details.compressedByteLength)} page payload → ${formatBytes(details.uncompressedByteLength)} decoded · ${ratio.toFixed(2)}×</small>`;
+  }
+
   private updateMeasurements(): void {
     const element = this.measurementsElement;
     if (!element) return;
@@ -709,7 +764,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       format: (value: DecodeMeasurement) => string
     ): string => (measurement ? format(measurement) : '—');
     element.innerHTML = `<div style="margin-bottom:9px">
-      ${formatBytes(this.parquetBytes?.byteLength ?? 0)} fixture · ${this.fetchMilliseconds.toFixed(1)} ms fetch · ${formatCount(PAGE_SIZE)} rows/page
+      ${formatBytes(this.parquetBytes?.byteLength ?? 0)} fixture · ${this.fetchMilliseconds.toFixed(1)} ms fetch · ${formatCount(PAGE_SIZE)}-row write batches
     </div>
     <table style="width:100%;border-collapse:collapse;text-align:right">
       <thead><tr><th style="text-align:left"></th><th>GPU</th><th>CPU</th></tr></thead>
@@ -722,8 +777,41 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         <tr><th style="text-align:left;font-weight:normal">Decode graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>${formatMetric(cpuMeasurement, value => String(value.graphNodeCount))}</td></tr>
       </tbody>
     </table>
-    <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · uncompressed · dictionary off</div>`;
+    <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · ${this.compressionDetails?.summary ?? 'compression pending'} · dictionary off</div>`;
   }
+}
+
+function getCompressionLabel(compression: CompressionMode): string {
+  switch (compression) {
+    case 'uncompressed':
+      return 'uncompressed';
+    case 'snappy':
+      return 'Snappy';
+    case 'lz4-raw':
+      return 'LZ4 raw';
+  }
+}
+
+function getCompressionDetails(
+  columns: readonly {
+    compression: string;
+    dictionary?: {compressedByteLength: number; uncompressedByteLength: number};
+    pages: readonly {compressedByteLength: number; uncompressedByteLength: number}[];
+  }[]
+): CompressionDetails {
+  const codecCounts = new Map<string, number>();
+  let compressedByteLength = 0;
+  let uncompressedByteLength = 0;
+  for (const column of columns) {
+    codecCounts.set(column.compression, (codecCounts.get(column.compression) ?? 0) + 1);
+    const pages = column.dictionary ? [column.dictionary, ...column.pages] : column.pages;
+    for (const page of pages) {
+      compressedByteLength += page.compressedByteLength;
+      uncompressedByteLength += page.uncompressedByteLength;
+    }
+  }
+  const summary = Array.from(codecCounts, ([codec, count]) => `${count} × ${codec}`).join(' · ');
+  return {summary, compressedByteLength, uncompressedByteLength};
 }
 
 function getFloat32Column(

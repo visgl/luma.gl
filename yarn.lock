@@ -15591,6 +15591,7 @@ __metadata:
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     apache-arrow: "npm:^21.1.0"
     compress-utils: "npm:^0.8.0"
+    parquet-wasm: "npm:^0.7.2"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -18832,7 +18833,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parquet-wasm@npm:0.7.2":
+"parquet-wasm@npm:0.7.2, parquet-wasm@npm:^0.7.2":
   version: 0.7.2
   resolution: "parquet-wasm@npm:0.7.2"
   checksum: 10c0/cfdf72c542b7e6768e6b38e386c0ab7d13bd92c9d8c45da5619409846654107c279343177bb3dba8c7fcb40c3f7be09dc154b7d175479a669b599b8bce3210b7

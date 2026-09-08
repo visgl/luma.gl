@@ -415,6 +415,8 @@
                   "api-reference/experimental/gpu-core/gpu-scan",
                   "api-reference/experimental/gpu-core/gpu-galloping-search",
                   "api-reference/experimental/gpu-core/gpu-compaction",
+                  "api-reference/experimental/gpu-core/gpu-flag-offsets",
+                  "api-reference/experimental/gpu-core/gpu-segment-offsets",
                   "api-reference/experimental/gpu-core/gpu-segmented-layout",
                   "api-reference/experimental/gpu-core/gpu-mask",
                   "api-reference/experimental/gpu-core/gpu-visibility-workflow",
