@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {OrthographicView, type PickingInfo, type ViewStateChangeParameters} from '@deck.gl/core';
+import {OrthographicView, type ViewStateChangeParameters} from '@deck.gl/core';
 import {buildSdfFontAtlas} from '@luma.gl/text';
-import {ArrowExamplePanelManager} from '../../arrow/arrow-example-panels';
-import {makeHtmlCustomPanel} from '../../example-panels';
 import {ArrowDeck} from '../arrow-deck';
 import {
   getDeckExampleProps,
@@ -15,7 +13,8 @@ import {
 import {GPUCulledArrowTextLayer} from './gpu-culled-arrow-text-layer';
 import {GPUCulledTraceLayer} from './gpu-culled-trace-layer';
 import {GPUTraceCullingEffect, type GPUTraceCullingStats} from './gpu-trace-culling-effect';
-import {getTraceRow, makeDeckTraceData} from './trace-data';
+import {GPUCulledTraceUserInterface} from './app-ui';
+import {makeDeckTraceData} from './trace-data';
 
 const TRACE_ROW_COUNT = 25_000;
 const TRACE_LANE_WINDOW = 72;
@@ -38,7 +37,6 @@ export function createGPUCulledTraceDeck(
   let autoScroll = true;
   let restoreShaderAssembler: (() => void) | null = null;
   let viewState: TraceViewState = {target: [150, TRACE_LANE_WINDOW / 2, 0], zoom: 0};
-  let statsElement: HTMLElement | null = null;
   let cullingStats: GPUTraceCullingStats = {
     totalBlocks: traceData.count,
     visibleBlocks: 0,
@@ -53,27 +51,8 @@ export function createGPUCulledTraceDeck(
     transientReusePercentage: 0,
     labelStatus: 'Waiting for label layer'
   };
-  const panelManager = new ArrowExamplePanelManager({
-    descriptionHtml:
-      '<p style="margin:0;line-height:1.45">One WebGPU command graph culls trace blocks and row-indexed Arrow glyph records before deck.gl draws both layers indirectly.</p>',
-    settingsPanel: () =>
-      makeHtmlCustomPanel({
-        id: 'gpu-culled-trace-culling',
-        title: 'Culling',
-        html: '<div data-gpu-trace-culling-stats></div>',
-        onRender: root => {
-          statsElement = root.querySelector('[data-gpu-trace-culling-stats]');
-          renderCullingStats(statsElement, cullingStats);
-          return () => {
-            statsElement = null;
-          };
-        }
-      })
-  });
-  panelManager.setTableEntries([
-    {id: 'gpu-trace-text', label: 'Trace text', kind: 'source', table: traceData.textTable}
-  ]);
-  panelManager.mount();
+  const userInterface = new GPUCulledTraceUserInterface(traceData, cullingStats);
+  userInterface.mount();
 
   let deck: ArrowDeck<OrthographicView>;
   deck = new ArrowDeck({
@@ -98,7 +77,7 @@ export function createGPUCulledTraceDeck(
       restoreShaderAssembler = null;
       throw error;
     },
-    getTooltip: info => getTooltip(traceData, info),
+    getTooltip: info => userInterface.getTooltip(info),
     onViewStateChange: ({viewState: nextViewState}: ViewStateChangeParameters) => {
       viewState = nextViewState as TraceViewState;
       autoScroll = false;
@@ -109,7 +88,7 @@ export function createGPUCulledTraceDeck(
       cullingEffect = new GPUTraceCullingEffect(device, traceData, {
         onStats: stats => {
           cullingStats = stats;
-          renderCullingStats(statsElement, stats);
+          userInterface.updateCullingStats(stats);
         }
       });
       const resources = cullingEffect.resources;
@@ -158,7 +137,7 @@ export function createGPUCulledTraceDeck(
       restoreShaderAssembler?.();
       restoreShaderAssembler = null;
       cancelAnimationFrame(animationFrame);
-      panelManager.finalize();
+      userInterface.finalize();
     }
   });
 
@@ -185,21 +164,6 @@ export function createGPUCulledTraceDeck(
   return deck;
 }
 
-function getTooltip(
-  data: ReturnType<typeof makeDeckTraceData>,
-  info: PickingInfo
-): {html: string} | null {
-  const row = getTraceRow(data, info.index);
-  if (!row) return null;
-  return {
-    html: `<div><strong>${escapeHtml(row.name)}</strong></div>
-      <div>group: ${row.group}</div>
-      <div>start: ${row.start.toFixed(3)}</div>
-      <div>duration: ${row.duration.toFixed(3)}</div>
-      <div>lane: ${row.lane}</div>`
-  };
-}
-
 function getFontAtlas(): ReturnType<typeof buildSdfFontAtlas> {
   fontAtlas ??= buildSdfFontAtlas({
     characterSet: ' abcdefghijklmnopqrstuvwxyz0123456789-μé',
@@ -210,47 +174,4 @@ function getFontAtlas(): ReturnType<typeof buildSdfFontAtlas> {
     radius: 10
   });
   return fontAtlas;
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, character => {
-    const entities: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return entities[character]!;
-  });
-}
-
-function renderCullingStats(element: HTMLElement | null, stats: GPUTraceCullingStats): void {
-  if (!element) return;
-  const glyphCounts = stats.totalGlyphs
-    ? `${formatCount(stats.visibleGlyphs)} / ${formatCount(stats.totalGlyphs)}`
-    : escapeHtml(stats.labelStatus);
-  element.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:5px 16px;font:12px/1.45 system-ui,sans-serif;font-variant-numeric:tabular-nums">
-    <span>Visible blocks</span><strong>${formatCount(stats.visibleBlocks)} / ${formatCount(stats.totalBlocks)}</strong>
-    <span>Outside view</span><strong>${formatCount(stats.outsideBlocks)}</strong>
-    <span>Too small (&lt;1 px)</span><strong>${formatCount(stats.smallBlocks)}</strong>
-    <span>Visible glyphs</span><strong>${glyphCounts}</strong>
-    <span>Graph nodes</span><strong>${stats.graphNodeCount}</strong>
-    <span>CPU graph encode</span><strong>${stats.encodeTimeMilliseconds.toFixed(2)} ms</strong>
-    <span>Logical scratch</span><strong>${formatBytes(stats.logicalTransientBytes)}</strong>
-    <span>Physical scratch</span><strong>${formatBytes(stats.physicalTransientBytes)}</strong>
-    <span>Transient reuse</span><strong>${stats.transientReusePercentage.toFixed(0)}%</strong>
-  </div>`;
-}
-
-function formatCount(value: number): string {
-  return new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1}).format(
-    value
-  );
-}
-
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
-  return `${(value / 1024 / 1024).toFixed(1)} MiB`;
 }
