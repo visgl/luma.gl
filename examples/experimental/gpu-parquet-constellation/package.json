@@ -21,6 +21,7 @@
     "compress-utils": "^0.8.0"
   },
   "devDependencies": {
+    "parquet-wasm": "^0.7.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.0"
   }

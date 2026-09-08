@@ -50,15 +50,27 @@ export function makeParquetConstellationData(rowCount: number): ParquetConstella
     const radialJitter = (randomB - 0.5) * 0.035;
     const finalDistance = distance + radialJitter;
 
-    positionX[rowIndex] = Math.cos(spiralAngle) * finalDistance - Math.sin(spiralAngle) * spread;
-    positionY[rowIndex] =
-      (Math.sin(spiralAngle) * finalDistance + Math.cos(spiralAngle) * spread) * 0.58;
-    radius[rowIndex] = 0.0012 + Math.pow(randomB, 7) * 0.0065;
-    temperature[rowIndex] = Math.min(1, 0.15 + (1 - radialProgress) * 0.58 + randomA * 0.28);
+    positionX[rowIndex] = quantize(
+      Math.cos(spiralAngle) * finalDistance - Math.sin(spiralAngle) * spread,
+      8192
+    );
+    positionY[rowIndex] = quantize(
+      (Math.sin(spiralAngle) * finalDistance + Math.cos(spiralAngle) * spread) * 0.58,
+      8192
+    );
+    radius[rowIndex] = quantize(0.0012 + Math.pow(randomB, 7) * 0.0065, 65_536);
+    temperature[rowIndex] = quantize(
+      Math.min(1, 0.15 + (1 - radialProgress) * 0.58 + randomA * 0.28),
+      4096
+    );
     sequence[rowIndex] = rowIndex;
   }
 
   return {positionX, positionY, radius, temperature, sequence};
+}
+
+function quantize(value: number, scale: number): number {
+  return Math.round(value * scale) / scale;
 }
 
 function hashToUnitFloat(value: number): number {
