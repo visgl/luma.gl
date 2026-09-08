@@ -8,6 +8,10 @@ struct ConstellationUniforms {
   aspect: f32,
   pointScale: f32,
   brightness: f32,
+  horizontalOffset: f32,
+  padding0: f32,
+  padding1: f32,
+  padding2: f32,
 };
 
 @group(0) @binding(0) var<storage, read> positionX: array<f32>;
@@ -59,10 +63,9 @@ fn getStarColor(temperature: f32, armIndex: u32) -> vec3<f32> {
   let pulse = 0.88 + 0.12 * sin(uniforms.time * 1.7 + f32(sequences[instanceIndex] % 97u));
   let pointRadius = radii[instanceIndex] * uniforms.pointScale * pulse;
   let screenCorner = corner * pointRadius * vec2<f32>(1.0 / max(uniforms.aspect, 0.001), 1.0);
-
   var output: VertexOutput;
   output.position = vec4<f32>(center.x / max(uniforms.aspect, 0.001), center.y, 0.0, 1.0) +
-    vec4<f32>(screenCorner, 0.0, 0.0);
+    vec4<f32>(screenCorner.x + uniforms.horizontalOffset, screenCorner.y, 0.0, 0.0);
   output.localPosition = corner;
   output.color = getStarColor(temperatures[instanceIndex], sequences[instanceIndex] % 5u);
   output.alpha = (0.34 + temperatures[instanceIndex] * 0.66) * uniforms.brightness;

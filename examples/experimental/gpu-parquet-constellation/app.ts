@@ -31,9 +31,9 @@ export const description =
 const ROW_COUNT = 600_000;
 const PAGE_SIZE = 65_536;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
-const UNIFORM_BYTE_LENGTH = 4 * Float32Array.BYTES_PER_ELEMENT;
+const UNIFORM_BYTE_LENGTH = 8 * Float32Array.BYTES_PER_ELEMENT;
 const PARQUET_URL = new URL('./data/constellation.parquet', import.meta.url);
-const INFO_HTML = `<div style="display:grid;gap:12px;min-width:min(360px,80vw)">
+const INFO_HTML = `<div data-parquet-panel style="display:grid;gap:12px;min-width:min(360px,80vw)">
   <div><strong>GPU Parquet Constellation</strong><p style="margin:6px 0 0;line-height:1.45">A real Parquet row group becomes an animated galaxy. Four FLOAT columns use <code>BYTE_STREAM_SPLIT</code>; one UINT32 column uses <code>DELTA_BINARY_PACKED</code>.</p></div>
   <div style="display:grid;gap:9px">
     <div><strong>${formatCount(ROW_COUNT)}</strong> rows · ${formatCount(PAGE_SIZE)} rows/page</div>
@@ -92,6 +92,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   private measurements: Partial<Record<DecodeMode, DecodeMeasurement>> = {};
   private statusElement: HTMLElement | null = null;
   private measurementsElement: HTMLElement | null = null;
+  private panelElement: HTMLElement | null = null;
   private controls: HTMLSelectElement[] = [];
   private actionButtons: HTMLButtonElement[] = [];
   private cleanupControls: (() => void) | null = null;
@@ -152,7 +153,9 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       );
     }
     this.previousFrameTime = currentTime;
-    this.uniformBuffer.write(new Float32Array([time / 1000, aspect, 2.15, 1.8]));
+    this.uniformBuffer.write(
+      new Float32Array([time / 1000, aspect, 2.15, 1.8, this.getHorizontalOffset(), 0, 0, 0])
+    );
 
     const scene = this.scene;
     if (!scene) {
@@ -595,6 +598,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     const compareButton = root.querySelector<HTMLButtonElement>('[data-compare]');
     this.statusElement = root.querySelector('[data-parquet-status]');
     this.measurementsElement = root.querySelector('[data-parquet-measurements]');
+    this.panelElement = root.querySelector('[data-parquet-panel]');
     if (!modeSelect || !runButton || !compareButton) return () => {};
     this.controls = [modeSelect];
     this.actionButtons = [runButton, compareButton];
@@ -616,7 +620,28 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       this.actionButtons = [];
       this.statusElement = null;
       this.measurementsElement = null;
+      this.panelElement = null;
     };
+  }
+
+  private getHorizontalOffset(): number {
+    const canvas = this.device.getDefaultCanvasContext().canvas;
+    const panel = this.panelElement;
+    if (!(canvas instanceof HTMLCanvasElement) || !panel) return 0;
+    const canvasBounds = canvas.getBoundingClientRect();
+    const panelBounds = panel.getBoundingClientRect();
+    const overlapsVertically =
+      panelBounds.bottom > canvasBounds.top && panelBounds.top < canvasBounds.bottom;
+    if (
+      !overlapsVertically ||
+      canvasBounds.width <= canvasBounds.height ||
+      panelBounds.right <= canvasBounds.left
+    ) {
+      return 0;
+    }
+    const coveredWidth = Math.min(panelBounds.right, canvasBounds.right) - canvasBounds.left;
+    const coveredFraction = coveredWidth / canvasBounds.width;
+    return coveredFraction < 0.6 ? Math.max(0, coveredFraction) : 0;
   }
 
   private setControlsDisabled(disabled: boolean): void {
