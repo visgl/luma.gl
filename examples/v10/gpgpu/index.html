@@ -1,29 +1,5 @@
 <!doctype html>
 <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="v10/gpgpu" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="large-data" />
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = await installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('[data-luma-example-deferred]')
-        .forEach(script => script.remove());
-    } else {
-      document.querySelectorAll('[data-luma-example-deferred]').forEach(script => {
-        const activeScript = script.cloneNode(true);
-        activeScript.type = 'module';
-        activeScript.removeAttribute('data-luma-example-deferred');
-        script.replaceWith(activeScript);
-      });
-    }
-  </script>
-  <!-- /luma-example-support -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
     :root {
       color-scheme: light;
@@ -282,7 +258,7 @@
       <div id="table-status" class="status">Generating Arrow table...</div>
     </section>
   </main>
-  <script type="luma-example-module" data-luma-example-deferred>
+  <script type="module">
     import {initializeGPGPUShowcase} from './src/app.ts';
     initializeGPGPUShowcase();
   </script>

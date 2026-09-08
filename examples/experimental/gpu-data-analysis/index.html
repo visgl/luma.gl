@@ -1,34 +1,12 @@
 <!doctype html>
 <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="experimental/gpu-data-analysis" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="large-data" />
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = await installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('[data-luma-example-deferred]')
-        .forEach(script => script.remove());
-    } else {
-      document.querySelectorAll('[data-luma-example-deferred]').forEach(script => {
-        const activeScript = script.cloneNode(true);
-        activeScript.type = 'module';
-        activeScript.removeAttribute('data-luma-example-deferred');
-        script.replaceWith(activeScript);
-      });
-    }
-  </script>
-  <!-- /luma-example-support -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Graph-native GPU data analysis</title>
 </head>
 <body style="margin: 0">
   <main id="gpu-data-analysis-app"></main>
-  <script type="luma-example-module" data-luma-example-deferred>
+  <script type="module">
     import {initializeGPUDataAnalysisExample} from './src/app.ts';
     initializeGPUDataAnalysisExample();
   </script>

@@ -1,27 +1,5 @@
 <!doctype html>
 <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="showcase/tempest-ocean" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="simulation" />
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = await installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('[data-luma-example-deferred]')
-        .forEach(script => script.remove());
-    } else {
-      document.querySelectorAll('[data-luma-example-deferred]').forEach(script => {
-        const activeScript = script.cloneNode(true);
-        activeScript.type = 'module';
-        activeScript.removeAttribute('data-luma-example-deferred');
-        script.replaceWith(activeScript);
-      });
-    }
-  </script>
-  <!-- /luma-example-support -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tempest Ocean: Spectral Stormfront</title>
@@ -46,7 +24,7 @@
   <div id="tempest-ocean-status" style="margin: 24px; font: 14px system-ui; color: #bfe9ff">
     Loading Tempest Ocean…
   </div>
-  <script type="luma-example-module" data-luma-example-deferred>
+  <script type="module">
     const status = document.querySelector('#tempest-ocean-status');
 
     try {
