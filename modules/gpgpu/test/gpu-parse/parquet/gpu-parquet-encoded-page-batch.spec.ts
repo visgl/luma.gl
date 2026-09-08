@@ -153,6 +153,132 @@ it('loaders.gl encoded pages reuse one byte-array dictionary across GPU pages', 
   }
 });
 
+it('loaders.gl RLE BOOLEAN values execute through the automatic GPU graph', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(Uint8Array.from([4, 0, 0, 0, 8, 1, 8, 0]), 'BOOLEAN', 'RLE', 8)
+  );
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-rle-boolean-batch-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const page = result.pages[0] as GPUParquetDecodedPage;
+  const readback = createReadbackBuffer(device, 8 * Uint32Array.BYTES_PER_ELEMENT);
+  if (page.values.layout === 'uint32') {
+    addReadbackCopy(graph, page.values.values, readback, 'rle-boolean-values');
+  }
+  const compiled = graph.compile();
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-rle-boolean-encoder'});
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+    const resultData = await readback.readAsync();
+    expect(Array.from(new Uint32Array(resultData.buffer, resultData.byteOffset, 8))).toEqual([
+      1, 1, 1, 1, 0, 0, 0, 0
+    ]);
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+    readback.destroy();
+  }
+});
+
+it('loaders.gl DELTA_BYTE_ARRAY values execute through the automatic GPU graph', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const encoded = Uint8Array.from([
+    128, 1, 4, 4, 0, 5, 3, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 1, 4, 4, 6, 3, 3, 0,
+    0, 0, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 97, 116, 114, 116, 111, 111, 110, 100, 111, 103
+  ]);
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(encoded, 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 4),
+    {getPageOutputByteLength: () => 16}
+  );
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-delta-byte-array-batch-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const page = result.pages[0] as GPUParquetDecodedPage;
+  const valuesReadback = createReadbackBuffer(device, 16);
+  const lengthsReadback = createReadbackBuffer(device, 16);
+  const offsetsReadback = createReadbackBuffer(device, 16);
+  if (page.values.layout === 'byte-array') {
+    addReadbackCopy(graph, page.values.values, valuesReadback, 'delta-byte-array-values');
+    addReadbackCopy(graph, page.values.lengths, lengthsReadback, 'delta-byte-array-lengths');
+    addReadbackCopy(graph, page.values.offsets, offsetsReadback, 'delta-byte-array-offsets');
+  }
+  const compiled = graph.compile();
+
+  try {
+    const commandEncoder = device.createCommandEncoder({
+      id: 'gpu-parquet-delta-byte-array-encoder'
+    });
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+    const [valueData, lengthData, offsetData] = await Promise.all([
+      valuesReadback.readAsync(),
+      lengthsReadback.readAsync(),
+      offsetsReadback.readAsync()
+    ]);
+    expect(
+      new TextDecoder().decode(new Uint8Array(valueData.buffer, valueData.byteOffset, 16))
+    ).toBe('catcarcartoondog');
+    expect(Array.from(new Uint32Array(lengthData.buffer, lengthData.byteOffset, 4))).toEqual([
+      3, 3, 7, 3
+    ]);
+    expect(Array.from(new Uint32Array(offsetData.buffer, offsetData.byteOffset, 4))).toEqual([
+      0, 3, 6, 13
+    ]);
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+    valuesReadback.destroy();
+    lengthsReadback.destroy();
+    offsetsReadback.destroy();
+  }
+});
+
+it('loaders.gl empty DELTA_BYTE_ARRAY values produce an empty GPU graph result', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(new Uint8Array(0), 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 0)
+  );
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-empty-delta-byte-array-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const page = result.pages[0] as GPUParquetDecodedPage;
+  expect(page.values.layout).toBe('byte-array');
+  if (page.values.layout === 'byte-array') {
+    expect(page.values.valueCount).toBe(0);
+    expect(page.values.byteLength).toBe(0);
+    expect(page.values.values.length).toBe(0);
+    expect(page.values.lengths.length).toBe(0);
+    expect(page.values.offsets.length).toBe(0);
+  }
+  const compiled = graph.compile();
+
+  try {
+    const commandEncoder = device.createCommandEncoder({
+      id: 'gpu-parquet-empty-delta-byte-array-encoder'
+    });
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+  }
+});
+
 function makeBatch(
   data: Uint8Array,
   encoding: 'PLAIN' | 'BYTE_STREAM_SPLIT' = 'BYTE_STREAM_SPLIT'
@@ -263,6 +389,59 @@ function makeDictionaryBatch(): ParquetEncodedPageBatch {
           uncompressedByteLength: dictionaryData.byteLength
         },
         pages: [makeDataPage(0, 2, 2), makeDataPage(1, 1, 1)]
+      }
+    ]
+  };
+}
+
+function makeSinglePageBatch(
+  data: Uint8Array,
+  physicalType: string,
+  encoding: string,
+  valueCount: number
+): ParquetEncodedPageBatch {
+  return {
+    shape: 'parquet-encoded-pages',
+    rowGroup: {
+      index: 0,
+      rowOffset: 0,
+      rowCount: valueCount,
+      uncompressedByteLength: data.byteLength,
+      uncompressedSize: data.byteLength,
+      compressedByteLength: data.byteLength,
+      compressedSize: data.byteLength,
+      columns: [],
+      sortingColumns: []
+    },
+    projectedColumns: ['value'],
+    filterColumns: [],
+    columns: [
+      {
+        path: ['value'],
+        physicalType,
+        maxRepetitionLevel: 0,
+        maxDefinitionLevel: 0,
+        compression: 'UNCOMPRESSED',
+        valueCount,
+        pages: [
+          {
+            type: 'data-v2',
+            pageOrdinal: 0,
+            encoding,
+            repetitionLevelEncoding: 'RLE',
+            definitionLevelEncoding: 'RLE',
+            compression: 'UNCOMPRESSED',
+            compressionState: 'decompressed',
+            valueCount,
+            nonNullValueCount: valueCount,
+            data,
+            repetitionLevels: {byteOffset: 0, byteLength: 0},
+            definitionLevels: {byteOffset: 0, byteLength: 0},
+            values: {byteOffset: 0, byteLength: data.byteLength},
+            compressedByteLength: data.byteLength,
+            uncompressedByteLength: data.byteLength
+          }
+        ]
       }
     ]
   };

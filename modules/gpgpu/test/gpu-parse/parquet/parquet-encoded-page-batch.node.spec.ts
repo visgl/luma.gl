@@ -209,6 +209,114 @@ it('GPU Parquet page planner caches variable dictionaries across data pages', ()
   }
 });
 
+it('GPU Parquet page planner accepts RLE-encoded BOOLEAN values', () => {
+  const data = Uint8Array.from([4, 0, 0, 0, 8, 1, 8, 0]);
+  const batch = makeSinglePageBatch(data, 'BOOLEAN', 'RLE', 8);
+  const plan = planGPUParquetEncodedPageBatch(batch);
+  expect(plan.gpuPageCount).toBe(1);
+  expect(plan.pages[0].mode).toBe('gpu');
+  if (plan.pages[0].mode === 'gpu') {
+    expect(plan.pages[0].values.kind).toBe('rle-boolean');
+    if (plan.pages[0].values.kind === 'rle-boolean') {
+      expect(plan.pages[0].values.runPlan?.runCount).toBe(2);
+      expect(plan.pages[0].values.runPlan?.bytesConsumed).toBe(data.byteLength);
+      expect(plan.pages[0].values.decodedByteLength).toBe(32);
+    }
+  }
+});
+
+it('GPU Parquet page planner uses caller-provided DELTA_BYTE_ARRAY output lengths', () => {
+  const data = Uint8Array.from([
+    128, 1, 4, 4, 0, 5, 3, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 1, 4, 4, 6, 3, 3, 0,
+    0, 0, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 97, 116, 114, 116, 111, 111, 110, 100, 111, 103
+  ]);
+  const batch = makeSinglePageBatch(data, 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 4);
+  const fallbackPlan = planGPUParquetEncodedPageBatch(batch);
+  expect(fallbackPlan.pages[0].mode).toBe('cpu-fallback');
+  if (fallbackPlan.pages[0].mode === 'cpu-fallback') {
+    expect(fallbackPlan.pages[0].reason).toBe('missing-output-capacity');
+  }
+
+  const plan = planGPUParquetEncodedPageBatch(batch, {
+    getPageOutputByteLength: (column, page) =>
+      column.path[0] === 'value' && page.pageOrdinal === 0 ? 16 : undefined
+  });
+  expect(plan.gpuPageCount).toBe(1);
+  expect(plan.pages[0].mode).toBe('gpu');
+  if (plan.pages[0].mode === 'gpu') {
+    expect(plan.pages[0].values.kind).toBe('delta-byte-array');
+    expect(plan.pages[0].values.decodedByteLength).toBe(16);
+  }
+});
+
+it('GPU Parquet page planner accepts empty DELTA_BYTE_ARRAY pages without capacity metadata', () => {
+  const plan = planGPUParquetEncodedPageBatch(
+    makeSinglePageBatch(new Uint8Array(0), 'BYTE_ARRAY', 'DELTA_BYTE_ARRAY', 0)
+  );
+  expect(plan.gpuPageCount).toBe(1);
+  expect(plan.pages[0].mode).toBe('gpu');
+  if (plan.pages[0].mode === 'gpu') {
+    expect(plan.pages[0].values).toEqual({
+      kind: 'empty-byte-array',
+      valueCount: 0,
+      decodedByteLength: 0
+    });
+  }
+});
+
+function makeSinglePageBatch(
+  data: Uint8Array,
+  physicalType: string,
+  encoding: string,
+  valueCount: number
+): ParquetEncodedPageBatch {
+  return {
+    shape: 'parquet-encoded-pages',
+    rowGroup: {
+      index: 0,
+      rowOffset: 0,
+      rowCount: valueCount,
+      uncompressedByteLength: data.byteLength,
+      uncompressedSize: data.byteLength,
+      compressedByteLength: data.byteLength,
+      compressedSize: data.byteLength,
+      columns: [],
+      sortingColumns: []
+    },
+    projectedColumns: ['value'],
+    filterColumns: [],
+    columns: [
+      {
+        path: ['value'],
+        physicalType,
+        maxRepetitionLevel: 0,
+        maxDefinitionLevel: 0,
+        compression: 'UNCOMPRESSED',
+        valueCount,
+        pages: [
+          {
+            type: 'data-v2',
+            pageOrdinal: 0,
+            encoding,
+            repetitionLevelEncoding: 'RLE',
+            definitionLevelEncoding: 'RLE',
+            compression: 'UNCOMPRESSED',
+            compressionState: 'decompressed',
+            valueCount,
+            nonNullValueCount: valueCount,
+            data,
+            repetitionLevels: {byteOffset: 0, byteLength: 0},
+            definitionLevels: {byteOffset: 0, byteLength: 0},
+            values: {byteOffset: 0, byteLength: data.byteLength},
+            compressedByteLength: data.byteLength,
+            uncompressedByteLength: data.byteLength
+          }
+        ]
+      }
+    ]
+  };
+}
+
 async function makeEncodedPageBatch(useDataPageV2: boolean): Promise<ParquetEncodedPageBatch> {
   const bytes = await ParquetJSWriter.encode(
     {

@@ -27,6 +27,8 @@ export type GPUParquetDeltaByteArrayDecoderProps = {
   suffixMiniBlockDescriptors: GraphDataView<'uint32'>;
   prefixLengths: GraphDataView<'uint32'>;
   suffixLengths: GraphDataView<'uint32'>;
+  /** Reconstructed byte length for each value. */
+  valueLengths: GraphDataView<'uint32'>;
   valueOffsets: GraphDataView<'uint32'>;
   output: GraphDataView<'uint32'>;
   encodedByteLength: number;
@@ -78,12 +80,7 @@ export class GPUParquetDeltaByteArrayDecoder {
       firstValue: this.props.firstSuffixLength
     }).addToGraph(graph);
 
-    const valueLengths = createTransientView(
-      graph,
-      `${this.id}-value-lengths`,
-      'uint32',
-      this.props.valueCount
-    );
+    const valueLengths = this.props.valueLengths;
     const suffixOffsets = createTransientView(
       graph,
       `${this.id}-suffix-offsets`,
@@ -354,6 +351,7 @@ function validateProps(props: Readonly<GPUParquetDeltaByteArrayDecoderProps>): v
     suffixMiniBlockDescriptors: props.suffixMiniBlockDescriptors,
     prefixLengths: props.prefixLengths,
     suffixLengths: props.suffixLengths,
+    valueLengths: props.valueLengths,
     valueOffsets: props.valueOffsets,
     output: props.output
   })) {
@@ -384,6 +382,7 @@ function validateProps(props: Readonly<GPUParquetDeltaByteArrayDecoderProps>): v
   for (const [name, view] of Object.entries({
     prefixLengths: props.prefixLengths,
     suffixLengths: props.suffixLengths,
+    valueLengths: props.valueLengths,
     valueOffsets: props.valueOffsets
   })) {
     if (view.length < props.valueCount) {
@@ -396,6 +395,7 @@ function validateProps(props: Readonly<GPUParquetDeltaByteArrayDecoderProps>): v
   const writableBuffers = [
     props.prefixLengths.buffer,
     props.suffixLengths.buffer,
+    props.valueLengths.buffer,
     props.valueOffsets.buffer,
     props.output.buffer
   ];
@@ -418,6 +418,7 @@ function validateOwnership<Parameters>(
     props.suffixMiniBlockDescriptors,
     props.prefixLengths,
     props.suffixLengths,
+    props.valueLengths,
     props.valueOffsets,
     props.output
   ]) {

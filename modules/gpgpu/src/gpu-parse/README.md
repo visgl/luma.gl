@@ -53,7 +53,7 @@ public class matrix for every scalar type. Object-oriented operations such as `G
 | `parseParquetPlainByteArrayPlan` | PLAIN BYTE_ARRAY has interleaved lengths | source offsets, lengths, compacted offsets, output size |
 | `parseParquetRleBitPackedRunPlan` | an unframed hybrid stream is isolated | fixed-width run descriptors |
 | `parseParquetDictionaryIndicesPlan` | indices include a leading bit-width byte | bit width and rebased run descriptors |
-| `parseParquetLengthPrefixedRleBitPackedRunPlan` | Data Page V1 RLE/levels include a length | rebased run descriptors |
+| `parseParquetLengthPrefixedRleBitPackedRunPlan` | Data Page V1 levels or RLE values include a length | rebased run descriptors |
 | `parseParquetBitPackedRunPlan` | deprecated standalone BIT_PACKED is encountered | validated MSB-first payload metadata |
 | `parseParquetDeltaBinaryPackedPlan` | INT32 uses DELTA_BINARY_PACKED | mini-block descriptors and first value |
 | `parseParquetDeltaBinaryPackedInt64Plan` | INT64 uses DELTA_BINARY_PACKED | split-word mini-block descriptors and first value |
@@ -97,6 +97,9 @@ unless a function explicitly documents an isolated slice.
 - BYTE_STREAM_SPLIT INT32, INT64, FLOAT, DOUBLE, or FIXED_LEN_BYTE_ARRAY uses
   `GPUParquetByteStreamSplitDecoder`.
 - PLAIN BOOLEAN uses `GPUParquetPlainBooleanDecoder`.
+- RLE BOOLEAN uses `parseParquetLengthPrefixedRleBitPackedRunPlan` followed by
+  `GPUParquetRleBitPackedDecoder` with bit width one. The automatic page adapter consumes the
+  four-byte value-stream envelope and returns the same one-uint32-per-row layout as PLAIN BOOLEAN.
 - PLAIN BYTE_ARRAY uses `parseParquetPlainByteArrayPlan` and
   `GPUParquetPlainByteArrayDecoder`. Its metadata layout is directly compatible with
   `GPUByteRangeGather`.
@@ -116,6 +119,21 @@ Use `parseParquetDictionaryIndicesPlan`, then either:
 `GPUParquetDeltaLengthByteArrayDecoder` outputs lengths and exclusive offsets. The payload after
 `payloadByteOffset` is already contiguous. `GPUParquetDeltaByteArrayDecoder` additionally follows
 prefix references across any number of preceding rows and emits fully reconstructed bytes.
+
+`DELTA_BYTE_ARRAY` does not carry its final reconstructed byte length in the encoded payload.
+Automatic planning therefore needs `getPageOutputByteLength` to return an exact length from
+application or loader metadata. Without it, the page remains an explicit `missing-output-capacity`
+CPU fallback instead of guessing an allocation or adding a GPU readback barrier:
+
+```ts
+const plan = planGPUParquetEncodedPageBatch(encodedBatch, {
+  getPageOutputByteLength: (column, page) =>
+    decodedSizes.get(`${column.path.join('.')}:${page.pageOrdinal}`)
+});
+```
+
+An all-null page has zero physical values and therefore a known empty result. The adapter emits an
+`empty-byte-array` plan for that case without invoking the callback or parsing absent delta headers.
 
 ### Levels and page versions
 
@@ -140,6 +158,13 @@ Both supported codecs use CPU planning plus the same `GPULZByteDecompressor` GPU
 Use the codec-specific GPU wrapper when operation names and metrics should retain codec semantics;
 use `GPULZByteDecompressor` directly when another byte-oriented LZ format can produce the same
 descriptor contract.
+
+Codec support is a capability statement, not a performance promise. The generic resolver favors
+compact descriptors and deterministic overlapping-copy semantics; binary descriptor searches and
+irregular backreference chains can make either LZ4_RAW or Snappy slower than a mature CPU/Wasm
+decoder. Measure with representative pages. Prefer CPU decompression followed by deferred GPU value
+decoding when that split gives a better crossover, and reserve preserved compression for workloads
+where transfer savings and GPU reuse repay planning and execution costs.
 
 ## loaders.gl integration
 
@@ -211,7 +236,8 @@ controlled pipelines.
 - Encodings whose serial control headers remain hidden inside a compressed value payload. The
   loader may CPU-decompress these pages while still deferring their value decoding.
 - Encodings with no bounded automatic output allocation. Lower-level operations remain available
-  when an application supplies an explicit output capacity.
+  when an application supplies an explicit output capacity. `DELTA_BYTE_ARRAY` is automatic when
+  `getPageOutputByteLength` supplies its exact reconstructed length.
 
 CPU decoding remains the loaders.gl default. `readPages()` is the explicit opt-in, and mixed
 CPU/GPU execution remains caller-owned because loaders.gl should not depend on luma.gl.
@@ -232,12 +258,12 @@ policy boundaries become CPU fallbacks; corrupt data is never relabeled as an un
 | Encoding or codec | Status | Notes |
 | --- | --- | --- |
 | PLAIN fixed, BOOLEAN, BYTE_ARRAY | Supported | zero-copy, bit expansion, or generic range gather |
-| RLE / hybrid bit packing | Supported | bit widths 0–32; V1/V2 framing adapters |
+| RLE / hybrid bit packing | Supported | bit widths 0–32; V1/V2 level framing and BOOLEAN values |
 | BIT_PACKED | Compatibility support | deprecated MSB-first level encoding has a distinct decoder |
 | RLE_DICTIONARY / PLAIN_DICTIONARY | Supported | fixed and variable dictionaries |
 | DELTA_BINARY_PACKED | INT32 and INT64 supported | INT64 uses split uint32 words and modulo-2^64 scan |
 | DELTA_LENGTH_BYTE_ARRAY | Supported | lengths, offsets, zero-copy payload |
-| DELTA_BYTE_ARRAY | Supported | full prefix reconstruction |
+| DELTA_BYTE_ARRAY | Supported | full prefix reconstruction; automatic adapter needs exact output byte length |
 | BYTE_STREAM_SPLIT | Supported | all specified physical types except INT96 |
 | LZ4_RAW | Supported | raw blocks and overlapping matches |
 | Snappy | Supported | raw Snappy blocks, all literal and copy tag forms |
@@ -247,22 +273,23 @@ policy boundaries become CPU fallbacks; corrupt data is never relabeled as an un
 
 ## Follow-up roadmap
 
-Tranches 1 and 2 are complete: the package has composable low-level operations, and loaders.gl
-encoded-page batches can now be validated, uploaded once, and executed as mixed GPU/CPU command
-graphs. Further work should remain incremental. Each tranche below has a useful stopping point and
-does not require turning `gpu-parse` into a complete Parquet parser.
+Tranches 1–3 are complete: the package has composable low-level operations; loaders.gl encoded-page
+batches can be validated, uploaded once, and executed as mixed GPU/CPU command graphs; and
+decompressed V1 framing, variable dictionaries, RLE BOOLEAN, and bounded `DELTA_BYTE_ARRAY` pages
+flow through the automatic adapter. Further work should remain incremental. Each tranche below has
+a useful stopping point and does not require turning `gpu-parse` into a complete Parquet parser.
 
 | Tranche | Priority | Scope | Completion bar |
 | --- | --- | --- | --- |
-| 3. Close inexpensive adapter gaps | Recommended next | Let a loader choose preserve-compressed, CPU-decompress-but-keep-encoded, or CPU-decode per page; automatically use `DELTA_BYTE_ARRAY` when an exact output capacity is available; accept variable dictionaries and V1 level framing after loader-side decompression | Common supported encodings stop falling back merely because compression hides their serial control headers; no GPU metadata parser is introduced |
+| 3. Close inexpensive adapter gaps | Complete | Loader-selected preserved compression or CPU-decompressed encoded pages; automatic bounded `DELTA_BYTE_ARRAY`; variable dictionaries; decompressed V1 level framing; RLE BOOLEAN values | Common supported encodings no longer fall back for adapter-only gaps; no GPU metadata parser was introduced |
 | 4. Extract generic materialization primitives | High value | Generalize validity expansion, segmented offsets, compaction, scatter, and byte-range assembly from the Parquet level and byte-array paths | The same operations can materialize another columnar format without importing Parquet-specific classes |
 | 5. Assemble nested GPU columns | Selective | Compose multiple definition/repetition depths into validity, row, and list offsets; expose chunk-preserving `GPUData`/`GPUVector` results without adding Arrow to `@luma.gl/gpgpu` | Common required, optional, list, and nested-list columns can remain GPU-resident through their consumer boundary |
 | 6. Streaming and throughput | Measure first | Reuse compiled graph templates, pool upload/output buffers, batch compatible pages and columns, add backpressure, and benchmark CPU/GPU crossover thresholds | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
 | 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
 | 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
 
-The intended order is 3, 4, and then whichever of 5–7 is justified by an actual consumer. Tranche 8
-is not a completeness checklist.
+The intended next step is tranche 4, then whichever of 5–7 is justified by an actual consumer.
+Tranche 8 is not a completeness checklist.
 
 ### Roadmap stop line
 

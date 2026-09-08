@@ -17,6 +17,7 @@ import {GPUParquetByteStreamSplitDecoder} from './gpu-parquet-byte-stream-split-
 import {GPUParquetDeltaBinaryPackedDecoder} from './gpu-parquet-delta-binary-packed-decoder';
 import {GPUParquetDeltaBinaryPackedInt64Decoder} from './gpu-parquet-delta-binary-packed-int64-decoder';
 import {GPUParquetDeltaLengthByteArrayDecoder} from './gpu-parquet-delta-length-byte-array-decoder';
+import {GPUParquetDeltaByteArrayDecoder} from './gpu-parquet-delta-byte-array-decoder';
 import {GPUParquetPlainBooleanDecoder} from './gpu-parquet-plain-boolean-decoder';
 import {GPUParquetPlainByteArrayDecoder} from './gpu-parquet-plain-byte-array-decoder';
 import {GPUParquetRleBitPackedDecoder} from './gpu-parquet-rle-bit-packed-decoder';
@@ -305,6 +306,34 @@ function addValuesToGraph<Parameters>(
         byteLength: plan.decodedByteLength
       });
     }
+    case 'empty-byte-array':
+      return Object.freeze({
+        layout: 'byte-array' as const,
+        values: input,
+        lengths: createTransientResultView(graph, `${id}-lengths`, 0),
+        offsets: createTransientResultView(graph, `${id}-offsets`, 0),
+        valueCount: 0,
+        byteLength: 0
+      });
+    case 'rle-boolean': {
+      const values = createTransientResultView(graph, `${id}-values`, plan.valueCount);
+      new GPUParquetRleBitPackedDecoder({
+        id: `${id}-rle-boolean`,
+        input,
+        runDescriptors: createUploadView(graph, inputHandle, plan.runDescriptors),
+        output: values,
+        encodedByteLength: input.length * 4,
+        valueCount: plan.valueCount,
+        runCount: plan.runPlan.runCount,
+        bitWidth: 1
+      }).addToGraph(graph);
+      return Object.freeze({
+        layout: 'uint32' as const,
+        values,
+        valueCount: plan.valueCount,
+        byteLength: plan.decodedByteLength
+      });
+    }
     case 'plain-byte-array': {
       const values = createTransientPackedBytes(
         graph,
@@ -392,6 +421,62 @@ function addValuesToGraph<Parameters>(
       return Object.freeze({
         layout: 'byte-array' as const,
         values: createUploadView(graph, inputHandle, plan.payload),
+        lengths,
+        offsets,
+        valueCount: plan.valueCount,
+        byteLength: plan.decodedByteLength
+      });
+    }
+    case 'delta-byte-array': {
+      const prefixLengths = createTransientResultView(
+        graph,
+        `${id}-prefix-lengths`,
+        plan.valueCount
+      );
+      const suffixLengths = createTransientResultView(
+        graph,
+        `${id}-suffix-lengths`,
+        plan.valueCount
+      );
+      const lengths = createTransientResultView(graph, `${id}-lengths`, plan.valueCount);
+      const offsets = createTransientResultView(graph, `${id}-offsets`, plan.valueCount);
+      const values = createTransientPackedBytes(
+        graph,
+        `${id}-values`,
+        plan.decodedByteLength,
+        Buffer.STORAGE | Buffer.COPY_SRC
+      );
+      new GPUParquetDeltaByteArrayDecoder({
+        id: `${id}-delta-byte-array`,
+        input,
+        prefixMiniBlockDescriptors: createUploadView(
+          graph,
+          inputHandle,
+          plan.prefixMiniBlockDescriptors
+        ),
+        suffixMiniBlockDescriptors: createUploadView(
+          graph,
+          inputHandle,
+          plan.suffixMiniBlockDescriptors
+        ),
+        prefixLengths,
+        suffixLengths,
+        valueLengths: lengths,
+        valueOffsets: offsets,
+        output: values,
+        encodedByteLength: input.length * 4,
+        suffixDataByteOffset: plan.deltaPlan.suffixDataByteOffset,
+        suffixDataByteLength: plan.deltaPlan.suffixDataByteLength,
+        outputByteCapacity: plan.decodedByteLength,
+        valueCount: plan.valueCount,
+        prefixDescriptorCount: plan.deltaPlan.prefixLengthPlan.descriptorCount,
+        suffixDescriptorCount: plan.deltaPlan.suffixLengthPlan.descriptorCount,
+        firstPrefixLength: plan.deltaPlan.prefixLengthPlan.firstValue,
+        firstSuffixLength: plan.deltaPlan.suffixLengthPlan.firstValue
+      }).addToGraph(graph);
+      return Object.freeze({
+        layout: 'byte-array' as const,
+        values,
         lengths,
         offsets,
         valueCount: plan.valueCount,

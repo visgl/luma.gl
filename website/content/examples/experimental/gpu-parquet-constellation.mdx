@@ -21,10 +21,12 @@ exercise page-batch planning and composable value decoders rather than a conveni
 fixture. The fixture is checked in so file generation does not pollute the measured decode paths.
 
 The columns are deliberately uncompressed. That isolates the GPU-suitable column encodings and
-makes the comparison useful: the current generic Snappy/LZ resolver trades parallel performance for
-fully deterministic overlapping-copy semantics, so its descriptor searches and backreference
-chasing can dominate this workload. `readPages()` can still preserve Snappy and LZ4_RAW pages for GPU
-decoding; improving that generic LZ primitive is a separate optimization target.
+makes the comparison useful: the generic Snappy/LZ4_RAW resolver trades parallel performance for
+compact descriptors and fully deterministic overlapping-copy semantics, so descriptor searches
+and irregular backreference chains can dominate this workload. Tests with an LZ4_RAW version of
+this fixture reduced GPU kernel time but increased planning stalls and descriptor upload enough to
+lose the end-to-end comparison. `readPages()` can still preserve Snappy and LZ4_RAW pages for GPU
+decoding, but codec support is intentionally not presented as a universal speedup.
 
 In **GPU command graph** mode, loaders.gl reads page headers and preserves the encoded value
 sections. `planGPUParquetEncodedPageBatch()` validates and packs those sections, and
