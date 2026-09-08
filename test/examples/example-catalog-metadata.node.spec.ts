@@ -8,6 +8,7 @@ import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
 import {EXAMPLE_SUPPORT_REGISTRY} from '../../examples/example-support-registry';
+import {transformStaticImports} from '../../scripts/examples/standalone-module-imports.mjs';
 
 type ExampleSidebarEntry =
   | string
@@ -59,6 +60,21 @@ const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
+  test('rewrites namespace, aliased, and combined imports as valid dynamic imports', () => {
+    expect(transformStaticImports("import * as arrow from 'apache-arrow';")).toBe(
+      "const arrow = await import('apache-arrow');"
+    );
+    expect(transformStaticImports("import {Table as ArrowTable} from 'apache-arrow';")).toBe(
+      "const {Table: ArrowTable} = await import('apache-arrow');"
+    );
+    expect(transformStaticImports("import arrow, * as arrowNamespace from 'apache-arrow';")).toBe(
+      "const arrowNamespace = await import('apache-arrow');\nconst {default: arrow} = arrowNamespace;"
+    );
+    expect(
+      transformStaticImports("import Table, {makeTable as createTable} from 'apache-arrow';")
+    ).toBe("const {default: Table, makeTable: createTable} = await import('apache-arrow');");
+  });
+
   test('features MRC packet spraying in the visible showcase gallery', () => {
     expect(LIVE_EXAMPLES.find(({id}) => id === 'showcase/packet-spraying')).toMatchObject({
       id: 'showcase/packet-spraying',
