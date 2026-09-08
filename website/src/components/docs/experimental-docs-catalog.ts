@@ -14,6 +14,9 @@ export type ExperimentalDocsTabId =
   | 'pbr-environment'
   | 'gpu-project'
   | 'geospatial'
+  | 'gpu-dggs'
+  | 'gpu-h3'
+  | 'gpu-a5'
   | 'gpu-raster'
   | 'gpu-raster-concepts'
   | 'gpu-raster-operations'
@@ -122,7 +125,10 @@ export const EXPERIMENTAL_DOCS_TAB_GROUPS: readonly DocsTabGroup<ExperimentalDoc
     label: 'GPU Project',
     tabs: [
       {id: 'gpu-project', label: 'Projection', href: '/docs/api-reference/experimental/gpu-project'},
-      {id: 'geospatial', label: 'Geospatial Kernels', href: '/docs/api-reference/experimental/geospatial'}
+      {id: 'geospatial', label: 'Geospatial Kernels', href: '/docs/api-reference/experimental/geospatial'},
+      {id: 'gpu-dggs', label: 'DGGS', href: '/docs/api-reference/experimental/gpu-dggs'},
+      {id: 'gpu-h3', label: 'H3', href: '/docs/api-reference/experimental/gpu-h3'},
+      {id: 'gpu-a5', label: 'A5', href: '/docs/api-reference/experimental/gpu-a5'}
     ]
   },
   {

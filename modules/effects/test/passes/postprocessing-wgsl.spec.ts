@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
@@ -10,17 +10,17 @@ import {
   brightnessContrast,
   bulgePinch,
   colorHalftone,
-  createCameraReprojectionTAAShaderPassPipeline,
-  createClusteredVolumetricLightingShaderPassPipeline,
-  createGTAOShaderPassPipeline,
-  createHDRAutoExposureShaderPassPipeline,
-  createMotionBlurShaderPassPipeline,
-  createOutlineShaderPassPipeline,
-  createSSAOShaderPassPipeline,
-  createSSGIShaderPassPipeline,
-  createSSRShaderPassPipeline,
-  createTAAShaderPassPipeline,
-  createVolumetricFogShaderPassPipeline,
+  createCameraReprojectionTAACompositeShaderPass,
+  createClusteredVolumetricLightingCompositeShaderPass,
+  createGTAOCompositeShaderPass,
+  createHDRAutoExposureCompositeShaderPass,
+  createMotionBlurCompositeShaderPass,
+  createOutlineCompositeShaderPass,
+  createSSAOCompositeShaderPass,
+  createSSGICompositeShaderPass,
+  createSSRCompositeShaderPass,
+  createTAACompositeShaderPass,
+  createVolumetricFogCompositeShaderPass,
   dof,
   denoise,
   dotScreen,
@@ -78,18 +78,18 @@ const PLATFORM_INFO = {
 };
 
 const ADVANCED_SHADER_PASSES = [
-  createSSAOShaderPassPipeline({normalSource: 'normal-texture'}),
-  createGTAOShaderPassPipeline(),
-  createGTAOShaderPassPipeline({composition: 'ambient-only'}),
-  createHDRAutoExposureShaderPassPipeline(),
-  createSSGIShaderPassPipeline(),
-  createClusteredVolumetricLightingShaderPassPipeline(),
-  createOutlineShaderPassPipeline({normalSource: 'normal-texture'}),
-  createCameraReprojectionTAAShaderPassPipeline(),
-  createTAAShaderPassPipeline(),
-  createMotionBlurShaderPassPipeline(),
-  createSSRShaderPassPipeline(),
-  createVolumetricFogShaderPassPipeline()
+  createSSAOCompositeShaderPass({normalSource: 'normal-texture'}),
+  createGTAOCompositeShaderPass(),
+  createGTAOCompositeShaderPass({composition: 'ambient-only'}),
+  createHDRAutoExposureCompositeShaderPass(),
+  createSSGICompositeShaderPass(),
+  createClusteredVolumetricLightingCompositeShaderPass(),
+  createOutlineCompositeShaderPass({normalSource: 'normal-texture'}),
+  createCameraReprojectionTAACompositeShaderPass(),
+  createTAACompositeShaderPass(),
+  createMotionBlurCompositeShaderPass(),
+  createSSRCompositeShaderPass(),
+  createVolumetricFogCompositeShaderPass()
 ].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
 
 const SHADER_PASSES = [
@@ -171,12 +171,12 @@ async function getCompilationInfoWithTimeout(shader: {
   ]);
 }
 
-test('postprocessing WGSL#assemble/compile', async testCase => {
+it('postprocessing WGSL#assemble/compile', async () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const webgpuDevice = await getOptionalWebGPUDevice();
 
   if (!webgpuDevice) {
-    testCase.comment('WebGPU unavailable, validating assembled WGSL with WgslReflect only');
+    void 0;
   }
 
   for (const shaderPass of SHADER_PASSES) {
@@ -194,18 +194,20 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
       }).source;
       const targetFunctionName = getTargetFunctionName(shaderPass.name, action);
 
-      testCase.ok(
-        assembledSource.includes(`fn ${targetFunctionName}(`),
+      expect(
+        Boolean(assembledSource.includes(`fn ${targetFunctionName}(`)),
         `${shaderPass.name} ${action} assembles ${targetFunctionName}`
-      );
+      ).toBe(true);
 
       let parsedSuccessfully = false;
       try {
         const reflectedShader = new WgslReflect(assembledSource);
         parsedSuccessfully = Boolean(reflectedShader);
-        testCase.pass(`${shaderPass.name} ${action} parses as WGSL`);
+        expect(Boolean(`${shaderPass.name} ${action} parses as WGSL`), '').toBe(true);
       } catch (error) {
-        testCase.fail(`${shaderPass.name} ${action} WGSL parse failed: ${String(error)}`);
+        expect(false, `${shaderPass.name} ${action} WGSL parse failed: ${String(error)}`).toBe(
+          true
+        );
       }
 
       if (parsedSuccessfully && webgpuDevice) {
@@ -216,15 +218,15 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
         try {
           const compilationMessages = await getCompilationInfoWithTimeout(shader);
           const compilationErrors = formatCompilationErrors(compilationMessages);
-          testCase.equal(
+          expect(
             compilationErrors,
-            '',
             `${shaderPass.name} ${action} compiles as WebGPU WGSL${compilationErrors ? `\n${compilationErrors}` : ''}`
-          );
+          ).toBe('');
         } catch (error) {
-          testCase.fail(
+          expect(
+            false,
             `${shaderPass.name} ${action} WebGPU compilation check failed: ${String(error)}`
-          );
+          ).toBe(true);
         } finally {
           shader.destroy();
         }
@@ -232,5 +234,5 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
     }
   }
 
-  testCase.end();
+  void 0;
 });

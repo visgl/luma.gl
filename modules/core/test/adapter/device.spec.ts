@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, luma} from '@luma.gl/core';
 import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
@@ -10,16 +10,16 @@ import {_getDefaultDebugValue} from '../../src/adapter/device';
 
 // import {luma} from '@luma.gl/core';
 
-test('Device#info', async t => {
+it('Device#info', async () => {
   for (const device of await getTestDevices()) {
     // TODO
-    t.ok(typeof device.info.vendor === 'string', 'info.vendor ok');
-    t.ok(typeof device.info.renderer === 'string', 'info.renderer ok');
+    expect(Boolean(typeof device.info.vendor === 'string'), 'info.vendor ok').toBe(true);
+    expect(Boolean(typeof device.info.renderer === 'string'), 'info.renderer ok').toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('Device and Resource JSON debug output stays compact', async t => {
+it('Device and Resource JSON debug output stays compact', async () => {
   const device = await getNullTestDevice();
   const buffer = device.createBuffer({
     id: 'compact-json-buffer',
@@ -27,69 +27,65 @@ test('Device and Resource JSON debug output stays compact', async t => {
     usage: Buffer.VERTEX
   });
 
-  t.equal(JSON.stringify(device), JSON.stringify(device.toString()), 'device JSON uses toString()');
-  t.equal(
-    JSON.stringify(buffer),
-    JSON.stringify(buffer.toString()),
-    'resource JSON uses toString()'
+  expect(JSON.stringify(device), 'device JSON uses toString()').toBe(
+    JSON.stringify(device.toString())
+  );
+  expect(JSON.stringify(buffer), 'resource JSON uses toString()').toBe(
+    JSON.stringify(buffer.toString())
   );
 
   buffer.destroy();
-  t.end();
+  void 0;
 });
 
 // Minimal test, extensive test in texture-formats.spec
-test('Device#isTextureFormatCompressed', async t => {
+it('Device#isTextureFormatCompressed', async () => {
   for (const device of await getTestDevices()) {
     // Just sanity check two types
-    t.equal(device.isTextureFormatCompressed('rgba8unorm'), false);
-    t.equal(device.isTextureFormatCompressed('bc3-rgba-unorm'), true);
+    expect(device.isTextureFormatCompressed('rgba8unorm'), '').toBe(false);
+    expect(device.isTextureFormatCompressed('bc3-rgba-unorm'), '').toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('WebGPUDevice reports baseline rgba16float capabilities', async t => {
+it('WebGPUDevice reports baseline rgba16float capabilities', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   const capabilities = device.getTextureFormatCapabilities('rgba16float');
-  t.equal(capabilities.render, true, 'rgba16float is renderable');
-  t.equal(capabilities.filter, true, 'rgba16float is filterable');
-  t.end();
+  expect(capabilities.render, 'rgba16float is renderable').toBe(true);
+  expect(capabilities.filter, 'rgba16float is filterable').toBe(true);
+  void 0;
 });
 
-test('Device#getSupportedCompressedTextureFormats', async t => {
+it('Device#getSupportedCompressedTextureFormats', async () => {
   for (const device of await getTestDevices()) {
     const formats = device.getSupportedCompressedTextureFormats();
 
-    t.ok(Array.isArray(formats), `${device.id} returns an array`);
-    t.equal(
-      new Set(formats).size,
-      formats.length,
-      `${device.id} does not return duplicate formats`
+    expect(Boolean(Array.isArray(formats)), `${device.id} returns an array`).toBe(true);
+    expect(new Set(formats).size, `${device.id} does not return duplicate formats`).toBe(
+      formats.length
     );
 
     for (const format of formats) {
-      t.equal(
+      expect(
         device.isTextureFormatCompressed(format),
-        true,
         `${device.id} returns only compressed formats`
-      );
-      t.equal(
+      ).toBe(true);
+      expect(
         device.isTextureFormatSupported(format),
-        true,
         `${device.id} returns only supported compressed formats`
-      );
+      ).toBe(true);
     }
   }
-  t.end();
+  void 0;
 });
 
-test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
+it('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async () => {
   const device = await getNullTestDevice();
   const texture = device.createTexture({
     width: 2,
@@ -98,21 +94,20 @@ test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
     mipLevels: 2
   });
 
-  t.throws(
+  expect(
     () => device.generateMipmapsWebGPU(texture),
-    /not implemented/,
     'base Device stub throws on unsupported device types'
-  );
+  ).toThrow(/not implemented/);
 
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
+it('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -137,86 +132,75 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
   });
   texture.readBuffer({mipLevel: 1, width: 1, height: 1}, readBuffer);
   const mipLevelBytes = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength));
-  t.deepEqual(
+  expect(
     Array.from(mipLevelBytes.slice(0, 4)),
-    [128, 128, 128, 255],
     'WebGPU device method generates level 1 mip data'
-  );
+  ).toEqual([128, 128, 128, 255]);
 
   readBuffer.destroy();
   texture.destroy();
-  t.end();
+  void 0;
 });
 
-test('Device debug default helper respects log debug before NODE_ENV', t => {
-  t.equal(
+it('Device debug default helper respects log debug before NODE_ENV', () => {
+  expect(
     _getDefaultDebugValue(true, 'production'),
-    true,
     'log debug true overrides production NODE_ENV'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     _getDefaultDebugValue(false, 'development'),
-    false,
     'log debug false overrides development NODE_ENV'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     _getDefaultDebugValue(undefined, 'production'),
-    false,
     'production NODE_ENV defaults debug to false'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     _getDefaultDebugValue(undefined, 'development'),
-    true,
     'non-production NODE_ENV defaults debug to true'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     _getDefaultDebugValue(undefined, undefined),
-    false,
     'missing NODE_ENV defaults debug to false'
-  );
-  t.end();
+  ).toBe(false);
+  void 0;
 });
 
-test('Device manages debug GPU timing through a single API', async t => {
+it('Device manages debug GPU timing through a single API', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU device not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   device._disableDebugGPUTime();
-  t.equal(device._isDebugGPUTimeEnabled(), false, 'GPU timing starts disabled');
+  expect(device._isDebugGPUTimeEnabled(), 'GPU timing starts disabled').toBe(false);
 
   const querySet = device._enableDebugGPUTime();
   const shouldEnable = device._supportsDebugGPUTime();
-  t.equal(
-    device._isDebugGPUTimeEnabled(),
-    shouldEnable,
-    'enableDebugGPUTime follows device policy'
+  expect(device._isDebugGPUTimeEnabled(), 'enableDebugGPUTime follows device policy').toBe(
+    shouldEnable
   );
-  t.equal(
+  expect(
     device.commandEncoder.getTimeProfilingQuerySet(),
-    querySet,
     'command encoder picks up the device-managed timing query set'
-  );
+  ).toBe(querySet);
 
   device._disableDebugGPUTime();
-  t.equal(
+  expect(
     device._isDebugGPUTimeEnabled(),
-    false,
     'disableDebugGPUTime clears the device timing query'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     device.commandEncoder.getTimeProfilingQuerySet(),
-    null,
     'disableDebugGPUTime removes the profiling query set from the command encoder'
-  );
+  ).toBe(null);
 
-  t.end();
+  void 0;
 });
 
-test.skip('WebGLDevice#lost (Promise)', async t => {
+it.skip('WebGLDevice#lost (Promise)', async () => {
   const device = await luma.createDevice({
     id: 'webgl-test-device-lost',
     type: 'webgl',
@@ -228,12 +212,12 @@ test.skip('WebGLDevice#lost (Promise)', async t => {
   await new Promise<void>(resolve => {
     setTimeout(async () => {
       const cause = await device.lost;
-      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
+      expect(cause.reason, `Context lost: ${cause.message}`).toBe('destroyed');
       resolve();
     }, 0);
     device.loseDevice();
   });
 
   device.destroy();
-  t.end();
+  void 0;
 });

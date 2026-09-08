@@ -14,7 +14,7 @@ import {
   type GPURasterScalarFormat
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type Samples = Float32Array | Uint32Array | Int32Array;
 
@@ -25,11 +25,11 @@ type OwnedOverview = {
   counts: Buffer;
 };
 
-test('GPURaster analytical overview skips invalid/nodata samples and preserves ragged weighted coverage', async testCase => {
+it('GPURaster analytical overview skips invalid/nodata samples and preserves ragged weighted coverage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -102,42 +102,44 @@ test('GPURaster analytical overview skips invalid/nodata samples and preserves r
     3
   );
   assertNumberLists(
-    testCase,
     await readSamples(overviewBuffers.values, 'float32'),
     [getGuard('float32'), ...oracle.values, getGuard('float32')],
     'coverage-weighted calibrated mean and unchanged output guards'
   );
   assertNumberLists(
-    testCase,
     await readSamples(overviewBuffers.sums, 'float32'),
     [getGuard('float32'), ...oracle.sums, getGuard('float32')],
     'calibrated sums remain available for the next generated overview'
   );
-  testCase.deepEqual(
+  expect(
     await readSamples(overviewBuffers.counts, 'uint32'),
-    [getGuard('uint32'), ...oracle.counts, getGuard('uint32')],
     'odd final footprints divide by valid observations, not nominal cell area'
-  );
-  testCase.deepEqual(
+  ).toEqual([getGuard('uint32'), ...oracle.counts, getGuard('uint32')]);
+  expect(
     await readSamples(overviewBuffers.validity, 'uint32'),
-    [getGuard('uint32'), ...oracle.validity, getGuard('uint32')],
     'sentinel-only parent publishes zero validity and retains neighboring guards'
-  );
-  testCase.ok(Number.isNaN(oracle.values.at(-1)!), 'the final all-nodata parent is explicitly NaN');
+  ).toEqual([getGuard('uint32'), ...oracle.validity, getGuard('uint32')]);
+  expect(
+    Boolean(Number.isNaN(oracle.values.at(-1)!)),
+    'the final all-nodata parent is explicitly NaN'
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [sourceValues, sourceValidity, ...Object.values(overviewBuffers)]) {
-    testCase.notOk(buffer.destroyed, 'graph destruction never destroys borrowed overview storage');
+    expect(
+      Boolean(buffer.destroyed),
+      'graph destruction never destroys borrowed overview storage'
+    ).toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster analytical overviews merge child sums/counts and reject dishonest coverage bounds', async testCase => {
+it('GPURaster analytical overviews merge child sums/counts and reject dishonest coverage bounds', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -168,48 +170,40 @@ test('GPURaster analytical overviews merge child sums/counts and reject dishones
   const compiled = graph.compile();
   encodeGraph(device, compiled, 'weighted-child-valid');
 
-  testCase.equal(
-    (await readSamples(outputs.sums, 'float32'))[1],
-    360,
-    'child sums are merged directly'
+  expect((await readSamples(outputs.sums, 'float32'))[1], 'child sums are merged directly').toBe(
+    360
   );
-  testCase.equal(
+  expect(
     (await readSamples(outputs.counts, 'uint32'))[1],
-    6,
     'unequal child populations remain exact'
-  );
-  testCase.equal(
+  ).toBe(6);
+  expect(
     (await readSamples(outputs.values, 'float32'))[1],
-    60,
     'weighted mean differs from averaging child means'
-  );
-  testCase.notEqual(
+  ).toBe(60);
+  expect(
     (await readSamples(outputs.values, 'float32'))[1],
-    40,
     'already averaged means are never averaged again'
-  );
+  ).not.toBe(40);
 
   sourceCounts.write(Uint32Array.from([getGuard('uint32'), 1, 5, 1, 1, getGuard('uint32')]));
   encodeGraph(device, compiled, 'weighted-child-overflow');
-  testCase.equal(
+  expect(
     (await readSamples(outputs.validity, 'uint32'))[1],
-    0,
     'a child exceeding its declared count bound invalidates the parent'
-  );
-  testCase.equal(
+  ).toBe(0);
+  expect(
     (await readSamples(outputs.counts, 'uint32'))[1],
-    0,
     'dishonest bounds never publish a wrapped or partial count'
-  );
-  testCase.equal(
+  ).toBe(0);
+  expect(
     (await readSamples(outputs.sums, 'float32'))[1],
-    0,
     'unsafe aggregates never publish a misleading sum'
-  );
-  testCase.ok(
-    Number.isNaN((await readSamples(outputs.values, 'float32'))[1]!),
+  ).toBe(0);
+  expect(
+    Boolean(Number.isNaN((await readSamples(outputs.values, 'float32'))[1]!)),
     'unsafe means publish the standard invalid NaN'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   for (const buffer of [
@@ -221,26 +215,25 @@ test('GPURaster analytical overviews merge child sums/counts and reject dishones
   ]) {
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster categorical overviews preserve exact unsigned/signed labels and deterministic nodata policies', async testCase => {
+it('GPURaster categorical overviews preserve exact unsigned/signed labels and deterministic nodata policies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   for (const format of ['uint32', 'sint32'] as const) {
-    await assertCategoricalPolicy(testCase, device, format, 'nearest');
-    await assertCategoricalPolicy(testCase, device, format, 'mode');
+    await assertCategoricalPolicy(device, format, 'nearest');
+    await assertCategoricalPolicy(device, format, 'mode');
   }
-  testCase.end();
+  void 0;
 });
 
 async function assertCategoricalPolicy<Format extends GPURasterCategoricalOverviewFormat>(
-  testCase: Test,
   device: Device,
   format: Format,
   policy: GPURasterOverviewCategoricalPolicy
@@ -289,21 +282,18 @@ async function assertCategoricalPolicy<Format extends GPURasterCategoricalOvervi
         : [-2147483647, -11, 7];
   const expectedValidity = policy === 'nearest' ? [0, 1, 1] : [1, 1, 1];
 
-  testCase.deepEqual(
+  expect(
     await readSamples(selected, format),
-    [getGuard(format), ...expectedValues, getGuard(format)],
     `${format} ${policy} keeps exact labels, deterministic ties, and output guards`
-  );
-  testCase.deepEqual(
+  ).toEqual([getGuard(format), ...expectedValues, getGuard(format)]);
+  expect(
     await readSamples(selectedValidity, 'uint32'),
-    [getGuard('uint32'), ...expectedValidity, getGuard('uint32')],
     `${format} ${policy} rejects an invalid nearest without interpolating categories`
-  );
-  testCase.deepEqual(
+  ).toEqual([getGuard('uint32'), ...expectedValidity, getGuard('uint32')]);
+  expect(
     await readSamples(coverage, 'uint32'),
-    [getGuard('uint32'), 3, 4, 1, getGuard('uint32')],
     `${format} ${policy} records the actual valid footprint even when nearest is invalid`
-  );
+  ).toEqual([getGuard('uint32'), 3, 4, 1, getGuard('uint32')]);
   compiled.destroy();
   for (const buffer of [sourceValues, sourceValidity, selected, selectedValidity, coverage]) {
     buffer.destroy();
@@ -448,20 +438,19 @@ function computeFloatingOracle(
 }
 
 function assertNumberLists(
-  testCase: Test,
   actual: readonly number[],
   expected: readonly number[],
   label: string
 ): void {
-  testCase.equal(actual.length, expected.length, `${label}: length`);
+  expect(actual.length, `${label}: length`).toBe(expected.length);
   for (let index = 0; index < expected.length; index++) {
     if (Number.isNaN(expected[index])) {
-      testCase.ok(Number.isNaN(actual[index]), `${label}: invalid pixel ${index}`);
+      expect(Boolean(Number.isNaN(actual[index])), `${label}: invalid pixel ${index}`).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(actual[index]! - expected[index]!) < 0.00001,
+      expect(
+        Boolean(Math.abs(actual[index]! - expected[index]!) < 0.00001),
         `${label}: value ${index} (${actual[index]} versus ${expected[index]})`
-      );
+      ).toBe(true);
     }
   }
 }

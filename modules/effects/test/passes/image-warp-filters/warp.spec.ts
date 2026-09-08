@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {_warp as warp} from '@luma.gl/effects';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('warp#build', t => {
-  t.ok(warp.fs, 'warp module fs is ok');
-  t.end();
+it('warp#build', () => {
+  expect(Boolean(warp.fs), 'warp module fs is ok').toBe(true);
+  void 0;
 });

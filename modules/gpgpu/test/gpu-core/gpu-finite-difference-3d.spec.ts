@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,16 +10,13 @@ import {
   type GPUFiniteDifference3DOperator
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const RESOLUTION = 5;
 const SPACING = 0.4;
 
-test('GPUFiniteDifference3D matches analytic gradient and Laplacian', async t => {
+it('GPUFiniteDifference3D matches analytic gradient and Laplacian', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const values = Float32Array.from({length: RESOLUTION ** 3}, (_, index) => {
@@ -29,19 +27,16 @@ test('GPUFiniteDifference3D matches analytic gradient and Laplacian', async t =>
   const laplacian = await runOperator(device, 'laplacian', values);
   for (let index = 0; index < RESOLUTION ** 3; index++) {
     const [x, y, z] = getCoordinates(index);
-    close(t, gradient[index * 4], 2 + 2 * x, 0.0002);
-    close(t, gradient[index * 4 + 1], -3 + 3 * y, 0.0002);
-    close(t, gradient[index * 4 + 2], 4 + 4 * z, 0.0002);
-    close(t, laplacian[index], 9, 0.0004);
+    close(gradient[index * 4], 2 + 2 * x, 0.0002);
+    close(gradient[index * 4 + 1], -3 + 3 * y, 0.0002);
+    close(gradient[index * 4 + 2], 4 + 4 * z, 0.0002);
+    close(laplacian[index], 9, 0.0004);
   }
-  t.end();
 });
 
-test('GPUFiniteDifference3D matches divergence and curl identities', async t => {
+it('GPUFiniteDifference3D matches divergence and curl identities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const values = new Float32Array(RESOLUTION ** 3 * 4);
@@ -52,12 +47,11 @@ test('GPUFiniteDifference3D matches divergence and curl identities', async t => 
   const divergence = await runOperator(device, 'divergence', values);
   const curl = await runOperator(device, 'curl', values);
   for (let index = 0; index < RESOLUTION ** 3; index++) {
-    close(t, divergence[index], 0.5, 0.0001);
-    close(t, curl[index * 4], 0, 0.0001);
-    close(t, curl[index * 4 + 1], 0, 0.0001);
-    close(t, curl[index * 4 + 2], 2, 0.0001);
+    close(divergence[index], 0.5, 0.0001);
+    close(curl[index * 4], 0, 0.0001);
+    close(curl[index * 4 + 1], 0, 0.0001);
+    close(curl[index * 4 + 2], 2, 0.0001);
   }
-  t.end();
 });
 
 async function runOperator(
@@ -119,11 +113,6 @@ function getCoordinates(index: number): [number, number, number] {
   ];
 }
 
-function close(
-  t: {ok(value: unknown, message?: string): void},
-  actual: number,
-  expected: number,
-  epsilon: number
-): void {
-  t.ok(Math.abs(actual - expected) <= epsilon, `${actual} ~= ${expected}`);
+function close(actual: number, expected: number, epsilon: number): void {
+  expect(Boolean(Math.abs(actual - expected) <= epsilon), `${actual} ~= ${expected}`).toBe(true);
 }

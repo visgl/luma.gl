@@ -4,16 +4,16 @@
 
 import {tiltShift} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('tiltShift#build/uniform', t => {
+it('tiltShift#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(tiltShift, {}, {});
 
-  t.ok(uniforms, 'tiltShift module build is ok');
-  t.equal(uniforms.blurRadius, 15, 'tiltShift blurRadius uniform is ok');
-  t.equal(uniforms.gradientRadius, 200, 'tiltShift gradientRadius uniform is ok');
-  t.deepEqual(uniforms.start, [0, 0], 'tiltShift start uniform is ok');
-  t.deepEqual(uniforms.end, [1, 1], 'tiltShift end uniform is ok');
-  t.equal(uniforms.invert, 0, 'tiltShift invert uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'tiltShift module build is ok').toBe(true);
+  expect(uniforms.blurRadius, 'tiltShift blurRadius uniform is ok').toBe(15);
+  expect(uniforms.gradientRadius, 'tiltShift gradientRadius uniform is ok').toBe(200);
+  expect(uniforms.start, 'tiltShift start uniform is ok').toEqual([0, 0]);
+  expect(uniforms.end, 'tiltShift end uniform is ok').toEqual([1, 1]);
+  expect(uniforms.invert, 'tiltShift invert uniform is ok').toBe(0);
+  void 0;
 });

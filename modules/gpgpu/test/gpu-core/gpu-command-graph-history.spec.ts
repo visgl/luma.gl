@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -6,15 +7,12 @@ import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const HISTORY_TEXTURE_USAGE = Texture.SAMPLE | Texture.STORAGE | Texture.COPY_SRC;
 
-test('GPUTextureHistory preserves GPU results across copy-free CORE WebGPU frame rotation', async testCase => {
+it('GPUTextureHistory preserves GPU results across copy-free CORE WebGPU frame rotation', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
@@ -112,30 +110,23 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
 
   try {
     const rejectedEncoder = device.createCommandEncoder({id: 'rejected-history-alias'});
-    testCase.throws(
+    expect(
       () =>
         compiled.encode(rejectedEncoder, {
           parameters: undefined,
           textures: {previous: history.previousTexture, current: history.previousTexture}
         }),
-      /previous.*current.*same physical texture/i,
       'read/write aliases fail before any CORE GPU work is recorded'
-    );
+    ).toThrow(/previous.*current.*same physical texture/i);
     rejectedEncoder.destroy();
-    testCase.equal(
-      history.previousTexture,
-      initialPreviousTexture,
-      'a failed encoding leaves the previous role unchanged'
+    expect(history.previousTexture, 'a failed encoding leaves the previous role unchanged').toBe(
+      initialPreviousTexture
     );
-    testCase.equal(
-      history.currentTexture,
-      initialCurrentTexture,
-      'a failed encoding leaves the current role unchanged'
+    expect(history.currentTexture, 'a failed encoding leaves the current role unchanged').toBe(
+      initialCurrentTexture
     );
-    testCase.equal(
-      textureViewStats.count,
-      initialTextureViewCount,
-      'rejected aliases do not allocate concrete texture views'
+    expect(textureViewStats.count, 'rejected aliases do not allocate concrete texture views').toBe(
+      initialTextureViewCount
     );
 
     for (let frameIndex = 0; frameIndex < 3; frameIndex++) {
@@ -145,45 +136,45 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
         parameters: undefined,
         textures: history.getBindings('previous', 'current')
       });
-      testCase.equal(encoding.stats.nodeCount, 1, 'history graph encodes only the compute node');
-      testCase.equal(encoding.stats.computePassCount, 1, 'the graph opens one CORE compute pass');
+      expect(encoding.stats.nodeCount, 'history graph encodes only the compute node').toBe(1);
+      expect(encoding.stats.computePassCount, 'the graph opens one CORE compute pass').toBe(1);
       device.submit(commandEncoder.finish());
       const pixel = await readHistoryPixel(device, outputTexture);
-      testCase.equal(
-        pixel[0],
-        Math.round((frameIndex + 1) * 0.2 * 255),
-        'the next frame reads the retained previous GPU output'
+      expect(pixel[0], 'the next frame reads the retained previous GPU output').toBe(
+        Math.round((frameIndex + 1) * 0.2 * 255)
       );
       history.advance();
     }
 
-    testCase.equal(
+    expect(
       textureViewStats.count,
-      initialTextureViewCount + 4,
       'repeated role swaps retain only two concrete views per logical graph role'
-    );
+    ).toBe(initialTextureViewCount + 4);
     compiled.destroy();
-    testCase.equal(
-      textureViewStats.count,
-      initialTextureViewCount,
-      'destroying the graph releases its cached views'
+    expect(textureViewStats.count, 'destroying the graph releases its cached views').toBe(
+      initialTextureViewCount
     );
-    testCase.notOk(
-      initialPreviousTexture.destroyed,
+    expect(
+      Boolean(initialPreviousTexture.destroyed),
       'the first history texture stays caller-owned'
-    );
-    testCase.notOk(
-      initialCurrentTexture.destroyed,
+    ).toBe(false);
+    expect(
+      Boolean(initialCurrentTexture.destroyed),
       'the second history texture stays caller-owned'
-    );
+    ).toBe(false);
   } finally {
     compiled.destroy();
     history.destroy();
   }
 
-  testCase.ok(initialPreviousTexture.destroyed, 'history destruction releases the first texture');
-  testCase.ok(initialCurrentTexture.destroyed, 'history destruction releases the second texture');
-  testCase.end();
+  expect(
+    Boolean(initialPreviousTexture.destroyed),
+    'history destruction releases the first texture'
+  ).toBe(true);
+  expect(
+    Boolean(initialCurrentTexture.destroyed),
+    'history destruction releases the second texture'
+  ).toBe(true);
 });
 
 async function readHistoryPixel(device: Device, texture: Texture): Promise<Uint8Array> {

@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -19,120 +19,108 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getGPUGroupAggregationDispatchLayout} from '../../src/gpu-core/gpu-group-aggregation';
 
-test('GPUReduction handles operations, formats, hierarchy, and invalid floats', async t => {
+it('GPUReduction handles operations, formats, hierarchy, and invalid floats', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(await runReduction(device, Uint32Array.from([0xffffffff, 2]), 'uint32', 'sum'), [1]);
-  t.deepEqual(await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'min'), [3]);
-  t.deepEqual(await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'max'), [9]);
-  t.deepEqual(
-    await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'extent'),
-    [3, 9]
-  );
-  t.deepEqual(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'sum'), [-6]);
-  t.deepEqual(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'min'), [-7]);
-  t.deepEqual(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'max'), [3]);
-  t.deepEqual(
-    await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'extent'),
-    [-7, 3]
-  );
+  expect(await runReduction(device, Uint32Array.from([0xffffffff, 2]), 'uint32', 'sum')).toEqual([
+    1
+  ]);
+  expect(await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'min')).toEqual([3]);
+  expect(await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'max')).toEqual([9]);
+  expect(await runReduction(device, Uint32Array.from([7, 3, 9, 3]), 'uint32', 'extent')).toEqual([
+    3, 9
+  ]);
+  expect(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'sum')).toEqual([-6]);
+  expect(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'min')).toEqual([-7]);
+  expect(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'max')).toEqual([3]);
+  expect(await runReduction(device, Int32Array.from([-7, 3, -2]), 'sint32', 'extent')).toEqual([
+    -7, 3
+  ]);
   const hierarchical = Uint32Array.from({length: 513}, (_, index) => index % 11);
-  t.deepEqual(await runReduction(device, hierarchical, 'uint32', 'sum'), [2551]);
+  expect(await runReduction(device, hierarchical, 'uint32', 'sum')).toEqual([2551]);
 
   const invalidFloats = Float32Array.from([Number.NaN, 4, Number.POSITIVE_INFINITY, -2]);
   const floatSum = await runReduction(device, Float32Array.from([0.1, 0.2, 0.3]), 'float32', 'sum');
-  t.ok(Math.abs(floatSum[0] - 0.6) < 1e-6, 'float sum remains numerically accurate');
-  t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'min'), [-2]);
-  t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'max'), [4]);
-  t.deepEqual(await runReduction(device, invalidFloats, 'float32', 'extent'), [-2, 4]);
-  t.deepEqual(
+  expect(
+    Boolean(Math.abs(floatSum[0] - 0.6) < 1e-6),
+    'float sum remains numerically accurate'
+  ).toBe(true);
+  expect(await runReduction(device, invalidFloats, 'float32', 'min')).toEqual([-2]);
+  expect(await runReduction(device, invalidFloats, 'float32', 'max')).toEqual([4]);
+  expect(await runReduction(device, invalidFloats, 'float32', 'extent')).toEqual([-2, 4]);
+  expect(
     await runReduction(
       device,
       Float32Array.from([Number.NaN, Number.NEGATIVE_INFINITY]),
       'float32',
       'min'
-    ),
-    [0]
-  );
-  t.deepEqual(await runReduction(device, new Float32Array(0), 'float32', 'extent'), [0, 0]);
-  t.end();
+    )
+  ).toEqual([0]);
+  expect(await runReduction(device, new Float32Array(0), 'float32', 'extent')).toEqual([0, 0]);
 });
 
-test('GPUReduction combines fixed-width GPUVector chunks', async t => {
+it('GPUReduction combines fixed-width GPUVector chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runVectorReduction(
       device,
       [Uint32Array.from([7, 3]), new Uint32Array(0), Uint32Array.from([9, 4])],
       'uint32',
       'sum'
     ),
-    [23],
     'sum combines non-empty chunks and skips empty chunks'
-  );
-  t.deepEqual(
+  ).toEqual([23]);
+  expect(
     await runVectorReduction(
       device,
       [Uint32Array.from([7, 3]), Uint32Array.from([9, 4])],
       'uint32',
       'extent'
     ),
-    [3, 9],
     'extent combines per-chunk minima and maxima'
-  );
-  t.deepEqual(
+  ).toEqual([3, 9]);
+  expect(
     await runVectorReduction(
       device,
       [Float32Array.from([Number.NaN, Number.POSITIVE_INFINITY]), Float32Array.from([4, -2])],
       'float32',
       'min'
     ),
-    [-2],
     'invalid-only chunks do not inject zero into a valid floating reduction'
-  );
-  t.deepEqual(
+  ).toEqual([-2]);
+  expect(
     await runVectorReduction(
       device,
       [Float32Array.from([Number.NaN]), Float32Array.from([Number.NEGATIVE_INFINITY])],
       'float32',
       'max'
     ),
-    [0],
     'all-invalid floating chunks produce zero'
-  );
-  t.deepEqual(
+  ).toEqual([0]);
+  expect(
     await runVectorReduction(device, [new Int32Array(0), new Int32Array(0)], 'sint32', 'extent'),
-    [0, 0],
     'an all-empty vector produces zero'
-  );
-  t.end();
+  ).toEqual([0, 0]);
 });
 
-test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
+it('GPUHistogram supports literal, GPU, and automatic domains', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runHistogram(device, Uint32Array.from([0, 1, 2, 3, 4, 4, 5]), 'uint32', 4, [0, 4]),
-    [1, 1, 1, 3],
     'literal uint32 domain includes exact maximum in final bin'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 3]);
+  expect(
     await runHistogram(
       device,
       Uint32Array.from([0, 0x7fffffff, 0x80000000, 0xffffffff]),
@@ -140,10 +128,9 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
       2,
       [0, 0xffffffff]
     ),
-    [2, 2],
     'full-range uint32 bin boundaries stay in integer space'
-  );
-  t.deepEqual(
+  ).toEqual([2, 2]);
+  expect(
     await runHistogram(
       device,
       Int32Array.from([-0x80000000, -1, 0, 0x7fffffff]),
@@ -151,9 +138,8 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
       2,
       [-0x80000000, 0x7fffffff]
     ),
-    [2, 2],
     'full-range sint32 bin boundaries stay in integer space'
-  );
+  ).toEqual([2, 2]);
   let randomState = 0x1234abcd;
   const fullRangeValues = Uint32Array.from({length: 1025}, (_, index) => {
     randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
@@ -168,17 +154,15 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
         : Number((BigInt(value) * BigInt(fullRangeBinCount)) / 0xffffffffn);
     expectedFullRangeCounts[binIndex]++;
   }
-  t.deepEqual(
+  expect(
     await runHistogram(device, fullRangeValues, 'uint32', fullRangeBinCount, [0, 0xffffffff]),
-    expectedFullRangeCounts,
     'wide integer multiply/divide matches an exact BigInt reference above 256 bins'
-  );
-  t.deepEqual(
+  ).toEqual(expectedFullRangeCounts);
+  expect(
     await runHistogram(device, Int32Array.from([-2, -1, 0, 1, 2]), 'sint32', 2, [-2, 2], true),
-    [2, 3],
     'GPU sint32 domain is accepted'
-  );
-  t.deepEqual(
+  ).toEqual([2, 3]);
+  expect(
     await runHistogram(
       device,
       Float32Array.from([Number.NaN, -1, 0, 1, Number.POSITIVE_INFINITY]),
@@ -186,37 +170,30 @@ test('GPUHistogram supports literal, GPU, and automatic domains', async t => {
       2,
       'auto'
     ),
-    [1, 2],
     'automatic float domain ignores non-finite values'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2]);
+  expect(
     await runHistogram(device, Uint32Array.from([7, 7, 8]), 'uint32', 3, [7, 7]),
-    [2, 0, 0],
     'degenerate domain counts matching values in bin zero'
-  );
-  t.deepEqual(
+  ).toEqual([2, 0, 0]);
+  expect(
     await runHistogram(device, new Float32Array(0), 'float32', 4, 'auto'),
-    [0, 0, 0, 0],
     'empty automatic histogram is cleared'
-  );
+  ).toEqual([0, 0, 0, 0]);
   const globalValues = Uint32Array.from({length: 300}, (_, index) => index);
-  t.deepEqual(
+  expect(
     await runHistogram(device, globalValues, 'uint32', 300, [0, 299]),
-    Array.from({length: 300}, () => 1),
     'more than 256 bins uses the global atomic path'
-  );
-  t.end();
+  ).toEqual(Array.from({length: 300}, () => 1));
 });
 
-test('GPUHistogram supports irregular literal and GPU-resident edges', async t => {
+it('GPUHistogram supports irregular literal and GPU-resident edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.deepEqual(
+  expect(
     await runIrregularHistogram(
       device,
       Float32Array.from([
@@ -235,30 +212,27 @@ test('GPUHistogram supports irregular literal and GPU-resident edges', async t =
       'float32',
       [0, 1, 10, 100]
     ),
-    [2, 2, 3],
     'literal edges use half-open intervals and include the final edge'
-  );
-  t.deepEqual(
+  ).toEqual([2, 2, 3]);
+  expect(
     await runIrregularHistogram(
       device,
       Float32Array.from([0, 1e21, 2e21]),
       'float32',
       [0, 1e21, 2e21]
     ),
-    [1, 2],
     'exponential float edges generate valid WGSL literals'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2]);
+  expect(
     await runIrregularHistogram(
       device,
       Uint32Array.from([0, 1, 9, 10, 99, 100]),
       'uint32',
       [0, 10, 100]
     ),
-    [3, 3],
     'integer edge comparisons remain exact'
-  );
-  t.deepEqual(
+  ).toEqual([3, 3]);
+  expect(
     await runIrregularHistogram(
       device,
       Int32Array.from([-10, -1, 0, 9, 10]),
@@ -266,10 +240,9 @@ test('GPUHistogram supports irregular literal and GPU-resident edges', async t =
       [-10, 0, 10],
       true
     ),
-    [2, 3],
     'GPU-resident signed edges are accepted'
-  );
-  t.deepEqual(
+  ).toEqual([2, 3]);
+  expect(
     await runIrregularHistogram(
       device,
       Uint32Array.from([0, 1, 5, 10, 100]),
@@ -277,10 +250,9 @@ test('GPUHistogram supports irregular literal and GPU-resident edges', async t =
       [0, 10, 5, 100],
       true
     ),
-    [0, 0, 0],
     'unordered GPU-resident edges suppress accumulation without a readback'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0]);
+  expect(
     await runIrregularHistogram(
       device,
       Uint32Array.from([1, 3, 4, 7]),
@@ -289,30 +261,24 @@ test('GPUHistogram supports irregular literal and GPU-resident edges', async t =
       true,
       [0, 2, 10]
     ),
-    [1, 3],
     'rewriting GPU edges changes bins without recompiling the graph'
-  );
-  t.deepEqual(
+  ).toEqual([1, 3]);
+  expect(
     await runIrregularHistogram(device, new Float32Array(0), 'float32', [0, 1, 10]),
-    [0, 0],
     'an empty irregular histogram is cleared'
-  );
+  ).toEqual([0, 0]);
 
   const globalEdges = Uint32Array.from({length: 301}, (_, index) => index);
   const globalValues = Uint32Array.from({length: 301}, (_, index) => index);
-  t.deepEqual(
+  expect(
     await runIrregularHistogram(device, globalValues, 'uint32', globalEdges, true),
-    [...Array.from({length: 299}, () => 1), 2],
     'GPU edges support more than 256 bins through the global atomic path'
-  );
-  t.end();
+  ).toEqual([...Array.from({length: 299}, () => 1), 2]);
 });
 
-test('GPUHistogram reads interleaved scalar columns with explicit edges', async t => {
+it('GPUHistogram reads interleaved scalar columns with explicit edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -344,18 +310,15 @@ test('GPUHistogram reads interleaved scalar columns with explicit edges', async 
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
 
-  t.deepEqual(await readUint32(outputBuffer, 3), [1, 2, 1]);
+  expect(await readUint32(outputBuffer, 3)).toEqual([1, 2, 1]);
   compiled.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  t.end();
 });
 
-test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', async t => {
+it('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -366,17 +329,15 @@ test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', as
     4,
     [0, 3]
   );
-  t.deepEqual(literal.counts, [1, 1, 1, 2], 'every non-empty chunk contributes counts');
-  t.deepEqual(
+  expect(literal.counts, 'every non-empty chunk contributes counts').toEqual([1, 1, 1, 2]);
+  expect(
     literal.nodeOrder,
-    ['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local'],
     'one clear precedes ordered per-chunk accumulation and empty chunks keep their source index'
-  );
-  t.equal(
+  ).toEqual(['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local']);
+  expect(
     literal.logicalTransientBufferCount,
-    0,
     'a literal-domain histogram does not pack or concatenate input chunks'
-  );
+  ).toBe(0);
 
   const automatic = await runVectorHistogram(
     device,
@@ -389,30 +350,24 @@ test('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', as
     4,
     'auto'
   );
-  t.deepEqual(
+  expect(
     automatic.counts,
-    [1, 1, 0, 2],
     'automatic domain reduction spans all chunks and ignores non-finite values'
-  );
+  ).toEqual([1, 1, 0, 2]);
 
   const globalValues = [
     Uint32Array.from({length: 150}, (_, index) => index),
     Uint32Array.from({length: 150}, (_, index) => index + 150)
   ];
   const global = await runVectorHistogram(device, globalValues, 'uint32', 300, [0, 299]);
-  t.deepEqual(
-    global.counts,
-    Array.from({length: 300}, () => 1),
-    'the global atomic path accumulates every chunk'
+  expect(global.counts, 'the global atomic path accumulates every chunk').toEqual(
+    Array.from({length: 300}, () => 1)
   );
-  t.end();
 });
 
-test('GPUHistogram preserves vector chunks with irregular edges', async t => {
+it('GPUHistogram preserves vector chunks with irregular edges', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -422,30 +377,25 @@ test('GPUHistogram preserves vector chunks with irregular edges', async t => {
     'float32',
     [0, 1, 10, 100]
   );
-  t.deepEqual(result.counts, [2, 2, 2], 'every non-empty source chunk contributes counts');
-  t.deepEqual(
+  expect(result.counts, 'every non-empty source chunk contributes counts').toEqual([2, 2, 2]);
+  expect(
     result.nodeOrder,
-    [
-      'gpu-histogram-validate-edges',
-      'gpu-histogram-clear',
-      'gpu-histogram-chunk-0-edges-local',
-      'gpu-histogram-chunk-2-edges-local'
-    ],
     'edge validation and one clear precede ordered per-chunk accumulation'
-  );
-  t.equal(
+  ).toEqual([
+    'gpu-histogram-validate-edges',
+    'gpu-histogram-clear',
+    'gpu-histogram-chunk-0-edges-local',
+    'gpu-histogram-chunk-2-edges-local'
+  ]);
+  expect(
     result.logicalTransientBufferCount,
-    1,
     'GPU edges use only one graph-owned ordering flag'
-  );
-  t.end();
+  ).toBe(1);
 });
 
-test('GPUHistogram clears counts for every graph encoding and composes with reduction', async t => {
+it('GPUHistogram clears counts for every graph encoding and composes with reduction', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const values = Uint32Array.from([0, 1, 1, 2, 3, 3, 3]);
@@ -463,37 +413,32 @@ test('GPUHistogram clears counts for every graph encoding and composes with redu
   compiled.encode(commandEncoder, {parameters: undefined});
   compiled.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
-  t.deepEqual(await readUint32(countsBuffer, 4), [1, 2, 1, 3], 'second encoding resets output');
-  t.deepEqual(await readUint32(totalBuffer, 1), [7], 'reduced count equals accepted rows');
+  expect(await readUint32(countsBuffer, 4), 'second encoding resets output').toEqual([1, 2, 1, 3]);
+  expect(await readUint32(totalBuffer, 1), 'reduced count equals accepted rows').toEqual([7]);
   compiled.destroy();
-  t.notOk(inputBuffer.destroyed, 'compiled graph preserves imported input');
-  t.notOk(countsBuffer.destroyed, 'compiled graph preserves imported output');
+  expect(Boolean(inputBuffer.destroyed), 'compiled graph preserves imported input').toBe(false);
+  expect(Boolean(countsBuffer.destroyed), 'compiled graph preserves imported output').toBe(false);
   inputBuffer.destroy();
   countsBuffer.destroy();
   totalBuffer.destroy();
-  t.end();
 });
 
-test('GPUGroupAggregation counts dense keys with optional dynamic selection', async t => {
+it('GPUGroupAggregation counts dense keys with optional dynamic selection', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const keys = Uint32Array.from([0, 1, 3, 4, 0xffffffff, 1, 0]);
-  t.deepEqual(
+  expect(
     await runGroupAggregation(device, keys, 4),
-    [2, 2, 0, 1],
     'dense keys count into output rows and out-of-range keys are ignored'
-  );
-  t.deepEqual(
+  ).toEqual([2, 2, 0, 1]);
+  expect(
     await runGroupAggregation(device, keys, 4, Uint32Array.from([7, 0, 1, 1, 1, 1, 0])),
-    [1, 1, 0, 1],
     'nonzero mask rows contribute to their groups'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 0, 1]);
+  expect(
     await runGroupAggregation(
       device,
       keys,
@@ -501,48 +446,38 @@ test('GPUGroupAggregation counts dense keys with optional dynamic selection', as
       Uint32Array.from([7, 0, 1, 1, 1, 1, 0]),
       Uint32Array.from({length: keys.length}, () => 1)
     ),
-    [2, 2, 0, 1],
     'rewriting the selection changes counts without recompiling the graph'
-  );
-  t.deepEqual(
+  ).toEqual([2, 2, 0, 1]);
+  expect(
     await runGroupAggregation(device, new Uint32Array(0), 3),
-    [0, 0, 0],
     'empty input still clears every group'
-  );
+  ).toEqual([0, 0, 0]);
 
   const globalKeys = Uint32Array.from({length: 301}, (_, index) => index);
-  t.deepEqual(
+  expect(
     await runGroupAggregation(device, globalKeys, 300),
-    Array.from({length: 300}, () => 1),
     'more than 256 groups uses global atomics and ignores key 300'
-  );
-  t.end();
+  ).toEqual(Array.from({length: 300}, () => 1));
 });
 
-test('GPUGroupAggregation plans bounded multidimensional dispatches', t => {
-  t.deepEqual(
+it('GPUGroupAggregation plans bounded multidimensional dispatches', () => {
+  expect(
     getGPUGroupAggregationDispatchLayout(5 * 256, 4),
-    {x: 4, y: 2, z: 1},
     'workgroups spill from x into y at the device limit'
-  );
-  t.deepEqual(
+  ).toEqual({x: 4, y: 2, z: 1});
+  expect(
     getGPUGroupAggregationDispatchLayout(20 * 256, 4),
-    {x: 4, y: 4, z: 2},
     'larger chunks spill into the third dimension'
-  );
-  t.throws(
+  ).toEqual({x: 4, y: 4, z: 2});
+  expect(
     () => getGPUGroupAggregationDispatchLayout((4 * 4 * 4 + 1) * 256, 4),
-    /exceeding the 3D dispatch limit/,
     'chunks beyond the full 3D device limit are rejected before encoding'
-  );
-  t.end();
+  ).toThrow(/exceeding the 3D dispatch limit/);
 });
 
-test('GPUGroupAggregation computes filtered floating-point group statistics', async t => {
+it('GPUGroupAggregation computes filtered floating-point group statistics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -556,13 +491,21 @@ test('GPUGroupAggregation computes filtered floating-point group statistics', as
   const maximum = await run('max');
   const mean = await run('mean');
 
-  t.deepEqual(sum, [3, 5, -3, 0], 'sum accepts finite selected values with valid keys');
-  t.deepEqual(minimum.slice(0, 3), [-2, 1, -3], 'minimum retains each smallest value');
-  t.ok(Number.isNaN(minimum[3]), 'minimum marks a group with no finite values as NaN');
-  t.deepEqual(maximum.slice(0, 3), [5, 4, -3], 'maximum retains each largest value');
-  t.ok(Number.isNaN(maximum[3]), 'maximum marks a group with no finite values as NaN');
-  t.deepEqual(mean.slice(0, 3), [1.5, 2.5, -3], 'mean divides sums by accepted values');
-  t.ok(Number.isNaN(mean[3]), 'mean marks a group with no finite values as NaN');
+  expect(sum, 'sum accepts finite selected values with valid keys').toEqual([3, 5, -3, 0]);
+  expect(minimum.slice(0, 3), 'minimum retains each smallest value').toEqual([-2, 1, -3]);
+  expect(
+    Boolean(Number.isNaN(minimum[3])),
+    'minimum marks a group with no finite values as NaN'
+  ).toBe(true);
+  expect(maximum.slice(0, 3), 'maximum retains each largest value').toEqual([5, 4, -3]);
+  expect(
+    Boolean(Number.isNaN(maximum[3])),
+    'maximum marks a group with no finite values as NaN'
+  ).toBe(true);
+  expect(mean.slice(0, 3), 'mean divides sums by accepted values').toEqual([1.5, 2.5, -3]);
+  expect(Boolean(Number.isNaN(mean[3])), 'mean marks a group with no finite values as NaN').toBe(
+    true
+  );
 
   const emptyMean = await runGroupStatistic(
     device,
@@ -571,7 +514,9 @@ test('GPUGroupAggregation computes filtered floating-point group statistics', as
     3,
     'mean'
   );
-  t.ok(emptyMean.every(Number.isNaN), 'empty means finalize every group to NaN');
+  expect(Boolean(emptyMean.every(Number.isNaN)), 'empty means finalize every group to NaN').toBe(
+    true
+  );
   const minimumZero = await runGroupStatistic(
     device,
     Uint32Array.from([0, 0]),
@@ -586,16 +531,19 @@ test('GPUGroupAggregation computes filtered floating-point group statistics', as
     1,
     'max'
   );
-  t.ok(Object.is(minimumZero[0], -0), 'minimum preserves the ordered-float signed-zero contract');
-  t.ok(Object.is(maximumZero[0], 0), 'maximum preserves the ordered-float signed-zero contract');
-  t.end();
+  expect(
+    Boolean(Object.is(minimumZero[0], -0)),
+    'minimum preserves the ordered-float signed-zero contract'
+  ).toBe(true);
+  expect(
+    Boolean(Object.is(maximumZero[0], 0)),
+    'maximum preserves the ordered-float signed-zero contract'
+  ).toBe(true);
 });
 
-test('GPUGroupAggregation preserves aligned vector chunks', async t => {
+it('GPUGroupAggregation preserves aligned vector chunks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -605,21 +553,16 @@ test('GPUGroupAggregation preserves aligned vector chunks', async t => {
     [Uint32Array.from([1, 0]), new Uint32Array(0), Uint32Array.from([1, 1, 1])],
     4
   );
-  t.deepEqual(result.counts, [1, 1, 0, 1], 'aligned non-empty chunks share dense counts');
-  t.deepEqual(
-    result.nodeOrder,
-    [
-      'gpu-group-aggregation-clear',
-      'gpu-group-aggregation-chunk-0-local',
-      'gpu-group-aggregation-chunk-2-local'
-    ],
-    'one clear precedes ordered per-chunk accumulation'
-  );
-  t.equal(
+  expect(result.counts, 'aligned non-empty chunks share dense counts').toEqual([1, 1, 0, 1]);
+  expect(result.nodeOrder, 'one clear precedes ordered per-chunk accumulation').toEqual([
+    'gpu-group-aggregation-clear',
+    'gpu-group-aggregation-chunk-0-local',
+    'gpu-group-aggregation-chunk-2-local'
+  ]);
+  expect(
     result.logicalTransientBufferCount,
-    0,
     'group counting does not pack chunks or allocate scratch storage'
-  );
+  ).toBe(0);
 
   const mean = await runVectorGroupStatistic(
     device,
@@ -629,39 +572,33 @@ test('GPUGroupAggregation preserves aligned vector chunks', async t => {
     2,
     'mean'
   );
-  t.deepEqual(mean.values, [3, 7], 'weighted groups combine aligned selected chunks');
-  t.deepEqual(
+  expect(mean.values, 'weighted groups combine aligned selected chunks').toEqual([3, 7]);
+  expect(
     mean.nodeOrder,
-    [
-      'gpu-group-aggregation-initialize',
-      'gpu-group-aggregation-chunk-0-mean',
-      'gpu-group-aggregation-chunk-2-mean',
-      'gpu-group-aggregation-finalize'
-    ],
     'weighted vector aggregation initializes and finalizes once around non-empty chunks'
-  );
-  t.equal(mean.logicalTransientBufferCount, 1, 'mean owns one transient group-count buffer');
-  t.end();
+  ).toEqual([
+    'gpu-group-aggregation-initialize',
+    'gpu-group-aggregation-chunk-0-mean',
+    'gpu-group-aggregation-chunk-2-mean',
+    'gpu-group-aggregation-finalize'
+  ]);
+  expect(mean.logicalTransientBufferCount, 'mean owns one transient group-count buffer').toBe(1);
 });
 
-test('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic paths', async t => {
+it('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const positions = Float32Array.from([0, 0, 1, 0, 0, 1, 2, 2, 2, 2, -1, 0, Number.NaN, 1]);
-  t.deepEqual(
+  expect(
     await runGrid(device, positions, [2, 2], [0, 0, 2, 2]),
-    [1, 1, 1, 2],
     'row-major cells include exact maximum boundaries'
-  );
-  t.deepEqual(
+  ).toEqual([1, 1, 1, 2]);
+  expect(
     await runGrid(device, positions, [2, 2], [0, 0, 2, 2], true),
-    [1, 1, 1, 2],
     'GPU bounds view is accepted'
-  );
+  ).toEqual([1, 1, 1, 2]);
   const globalPositions = new Float32Array(17 * 17 * 2);
   for (let row = 0; row < 17; row++) {
     for (let column = 0; column < 17; column++) {
@@ -670,24 +607,19 @@ test('GPUGridBinning handles literal/GPU bounds, boundaries, and both atomic pat
       globalPositions[index * 2 + 1] = row;
     }
   }
-  t.deepEqual(
+  expect(
     await runGrid(device, globalPositions, [17, 17], [0, 0, 16, 16]),
-    Array.from({length: 289}, () => 1),
     'more than 256 cells uses the global atomic path'
-  );
-  t.deepEqual(
+  ).toEqual(Array.from({length: 289}, () => 1));
+  expect(
     await runGrid(device, new Float32Array(0), [2, 2], [0, 0, 1, 1]),
-    [0, 0, 0, 0],
     'empty grid is cleared'
-  );
-  t.end();
+  ).toEqual([0, 0, 0, 0]);
 });
 
-test('GPUGridBinning clears once and accumulates GPUVector chunks in order', async t => {
+it('GPUGridBinning clears once and accumulates GPUVector chunks in order', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -697,37 +629,37 @@ test('GPUGridBinning clears once and accumulates GPUVector chunks in order', asy
     [2, 2],
     [0, 0, 2, 2]
   );
-  t.deepEqual(result.counts, [1, 1, 1, 2], 'every non-empty position chunk contributes');
-  t.deepEqual(
+  expect(result.counts, 'every non-empty position chunk contributes').toEqual([1, 1, 1, 2]);
+  expect(
     result.nodeOrder,
-    ['gpu-grid-binning-clear', 'gpu-grid-binning-chunk-0-local', 'gpu-grid-binning-chunk-2-local'],
     'one clear precedes ordered accumulation and empty chunks keep their source index'
+  ).toEqual([
+    'gpu-grid-binning-clear',
+    'gpu-grid-binning-chunk-0-local',
+    'gpu-grid-binning-chunk-2-local'
+  ]);
+  expect(result.logicalTransientBufferCount, 'position chunks are not packed or concatenated').toBe(
+    0
   );
-  t.equal(result.logicalTransientBufferCount, 0, 'position chunks are not packed or concatenated');
-  t.end();
 });
 
-test('GPUGridAggregation sums finite weights with float32 atomics', async t => {
+it('GPUGridAggregation sums finite weights with float32 atomics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
   const positions = Float32Array.from([0, 0, 1, 0, 0, 1, 2, 2, 2, 2, -1, 0, Number.NaN, 1, 1, 1]);
   const weights = Float32Array.from([1.5, -2, 3, 4, 0.25, 100, 100, Number.POSITIVE_INFINITY]);
-  t.deepEqual(
+  expect(
     await runGridAggregation(device, positions, weights, [2, 2], [0, 0, 2, 2]),
-    [1.5, -2, 3, 4.25],
     'finite in-bounds weights contribute to row-major cell sums'
-  );
-  t.deepEqual(
+  ).toEqual([1.5, -2, 3, 4.25]);
+  expect(
     await runGridAggregation(device, positions, weights, [2, 2], [0, 0, 2, 2], true),
-    [1.5, -2, 3, 4.25],
     'GPU-resident bounds preserve weighted sums'
-  );
-  t.deepEqual(
+  ).toEqual([1.5, -2, 3, 4.25]);
+  expect(
     await runGridAggregation(
       device,
       new Float32Array(0),
@@ -735,10 +667,9 @@ test('GPUGridAggregation sums finite weights with float32 atomics', async t => {
       [2, 2],
       [0, 0, 1, 1]
     ),
-    [0, 0, 0, 0],
     'empty inputs still clear every sum'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0]);
+  expect(
     await runGridAggregation(
       device,
       Float32Array.from([0, 0, 0, 0]),
@@ -746,17 +677,13 @@ test('GPUGridAggregation sums finite weights with float32 atomics', async t => {
       [1, 1],
       [0, 0, 0, 0]
     ),
-    [Number.POSITIVE_INFINITY],
     'finite contributions may overflow their float32 cell sum'
-  );
-  t.end();
+  ).toEqual([Number.POSITIVE_INFINITY]);
 });
 
-test('GPUGridAggregation computes minimum, maximum, and mean cell statistics', async t => {
+it('GPUGridAggregation computes minimum, maximum, and mean cell statistics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -768,12 +695,12 @@ test('GPUGridAggregation computes minimum, maximum, and mean cell statistics', a
   const minimum = await run('min');
   const maximum = await run('max');
 
-  t.deepEqual(minimum.slice(0, 3), [-2, 4, -3], 'minimum retains the smallest finite weight');
-  t.ok(Number.isNaN(minimum[3]), 'minimum marks an empty cell with NaN');
-  t.deepEqual(maximum.slice(0, 3), [5, 4, -3], 'maximum retains the largest finite weight');
-  t.ok(Number.isNaN(maximum[3]), 'maximum marks an empty cell with NaN');
-  t.deepEqual(mean.slice(0, 3), [1.5, 4, -3], 'mean divides the float32 sum by accepted rows');
-  t.ok(Number.isNaN(mean[3]), 'mean marks an empty cell with NaN');
+  expect(minimum.slice(0, 3), 'minimum retains the smallest finite weight').toEqual([-2, 4, -3]);
+  expect(Boolean(Number.isNaN(minimum[3])), 'minimum marks an empty cell with NaN').toBe(true);
+  expect(maximum.slice(0, 3), 'maximum retains the largest finite weight').toEqual([5, 4, -3]);
+  expect(Boolean(Number.isNaN(maximum[3])), 'maximum marks an empty cell with NaN').toBe(true);
+  expect(mean.slice(0, 3), 'mean divides the float32 sum by accepted rows').toEqual([1.5, 4, -3]);
+  expect(Boolean(Number.isNaN(mean[3])), 'mean marks an empty cell with NaN').toBe(true);
 
   const emptyMean = await runGridAggregation(
     device,
@@ -784,7 +711,10 @@ test('GPUGridAggregation computes minimum, maximum, and mean cell statistics', a
     false,
     'mean'
   );
-  t.ok(emptyMean.every(Number.isNaN), 'an empty mean aggregation finalizes every cell to NaN');
+  expect(
+    Boolean(emptyMean.every(Number.isNaN)),
+    'an empty mean aggregation finalizes every cell to NaN'
+  ).toBe(true);
 
   const zeroPositions = Float32Array.from([0, 0, 0, 0]);
   const zeroWeights = Float32Array.from([0, -0]);
@@ -806,16 +736,19 @@ test('GPUGridAggregation computes minimum, maximum, and mean cell statistics', a
     false,
     'max'
   );
-  t.ok(Object.is(minimumZero[0], -0), 'minimum uses the ordered-float signed-zero contract');
-  t.ok(Object.is(maximumZero[0], 0), 'maximum uses the ordered-float signed-zero contract');
-  t.end();
+  expect(
+    Boolean(Object.is(minimumZero[0], -0)),
+    'minimum uses the ordered-float signed-zero contract'
+  ).toBe(true);
+  expect(
+    Boolean(Object.is(maximumZero[0], 0)),
+    'maximum uses the ordered-float signed-zero contract'
+  ).toBe(true);
 });
 
-test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => {
+it('GPUGridAggregation preserves paired GPUVector chunk topology', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -826,17 +759,15 @@ test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => 
     [2, 2],
     [0, 0, 2, 2]
   );
-  t.deepEqual(result.values, [1.25, 2.5, -3, 4.75], 'aligned chunks accumulate in source order');
-  t.deepEqual(
-    result.nodeOrder,
-    [
-      'gpu-grid-aggregation-clear',
-      'gpu-grid-aggregation-chunk-0-sum',
-      'gpu-grid-aggregation-chunk-2-sum'
-    ],
-    'one clear precedes each non-empty aligned chunk'
+  expect(result.values, 'aligned chunks accumulate in source order').toEqual([1.25, 2.5, -3, 4.75]);
+  expect(result.nodeOrder, 'one clear precedes each non-empty aligned chunk').toEqual([
+    'gpu-grid-aggregation-clear',
+    'gpu-grid-aggregation-chunk-0-sum',
+    'gpu-grid-aggregation-chunk-2-sum'
+  ]);
+  expect(result.logicalTransientBufferCount, 'paired chunks are not packed or concatenated').toBe(
+    0
   );
-  t.equal(result.logicalTransientBufferCount, 0, 'paired chunks are not packed or concatenated');
 
   const mean = await runVectorGridAggregation(
     device,
@@ -846,26 +777,22 @@ test('GPUGridAggregation preserves paired GPUVector chunk topology', async t => 
     [0, 0, 0, 0],
     'mean'
   );
-  t.deepEqual(mean.values, [3], 'mean combines sums and counts across aligned chunks');
-  t.deepEqual(
+  expect(mean.values, 'mean combines sums and counts across aligned chunks').toEqual([3]);
+  expect(
     mean.nodeOrder,
-    [
-      'gpu-grid-aggregation-initialize',
-      'gpu-grid-aggregation-chunk-0-mean',
-      'gpu-grid-aggregation-chunk-2-mean',
-      'gpu-grid-aggregation-finalize'
-    ],
     'mean initializes once, accumulates every non-empty chunk, and finalizes once'
-  );
-  t.equal(mean.logicalTransientBufferCount, 1, 'mean owns one transient cell-count buffer');
-  t.end();
+  ).toEqual([
+    'gpu-grid-aggregation-initialize',
+    'gpu-grid-aggregation-chunk-0-mean',
+    'gpu-grid-aggregation-chunk-2-mean',
+    'gpu-grid-aggregation-finalize'
+  ]);
+  expect(mean.logicalTransientBufferCount, 'mean owns one transient cell-count buffer').toBe(1);
 });
 
-test('GPU data analysis primitives validate layouts and ownership', async t => {
+it('GPU data analysis primitives validate layouts and ownership', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const graph = new GPUCommandGraph(device);
@@ -882,82 +809,72 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
   const input = graph.createDataView(inputHandle, {format: 'uint32', length: 4});
   const one = graph.createDataView(outputHandle, {format: 'uint32', length: 1});
   const two = graph.createDataView(outputHandle, {format: 'uint32', length: 2});
-  t.throws(
+  expect(
     () => new GPUReduction({input, output: two, operation: 'sum'}),
-    /must contain 1 row/,
     'scalar reduction requires one output row'
-  );
-  t.throws(
+  ).toThrow(/must contain 1 row/);
+  expect(
     () => new GPUReduction({input, output: one, operation: 'extent'}),
-    /must contain 2 row/,
     'extent requires two output rows'
-  );
-  t.throws(
+  ).toThrow(/must contain 2 row/);
+  expect(
     () => new GPUHistogram({input, output: two, domain: [2, 1]}),
-    /finite \[min, max\]/,
     'inverted literal histogram domain is rejected'
-  );
-  t.throws(
+  ).toThrow(/finite \[min, max\]/);
+  expect(
     () => new GPUHistogram({input, output: two, edges: [0, 1]}),
-    /output.length \+ 1/,
     'literal histogram edges must match the output size'
-  );
-  t.throws(
+  ).toThrow(/output.length \+ 1/);
+  expect(
     () => new GPUHistogram({input, output: two, edges: [0, 1, 1]}),
-    /strictly increasing/,
     'literal histogram edges must be strictly increasing'
-  );
+  ).toThrow(/strictly increasing/);
   const floatInput = graph.createDataView(inputHandle, {format: 'float32', length: 4});
-  t.throws(
+  expect(
     () =>
       new GPUHistogram({
         input: floatInput,
         output: two,
         edges: [16_777_216, 16_777_217, 16_777_218]
       }),
-    /strictly increasing/,
     'literal histogram edges must remain ordered after float32 conversion'
-  );
-  t.throws(
+  ).toThrow(/strictly increasing/);
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
         output: two,
         operation: 'median' as GPUGroupAggregationOperation
       }),
-    /operation must be count/,
     'unsupported group statistics are rejected'
-  );
-  t.throws(
+  ).toThrow(/operation must be count/);
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
         mask: graph.createDataView(inputHandle, {format: 'uint32', length: 3}),
         output: two
       }),
-    /lengths must match/,
     'group keys and masks require row alignment'
-  );
-  t.throws(
+  ).toThrow(/lengths must match/);
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
         output: graph.createDataView(outputHandle, {format: 'uint32', length: 0})
       }),
-    /at least one group/,
     'group output must define a nonempty key range'
-  );
-  t.throws(
+  ).toThrow(/at least one group/);
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
         output: graph.createDataView(inputHandle, {format: 'uint32', length: 2})
       }),
-    /separate buffers/,
     'group output cannot alias its keys'
-  );
+  ).toThrow(/separate buffers/);
   const floatGroupOutput = graph.createDataView(outputHandle, {format: 'float32', length: 2});
-  t.throws(
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
@@ -965,28 +882,25 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
         output: floatGroupOutput,
         operation: 'sum'
       }),
-    /lengths must match/,
     'group keys and floating-point values require row alignment'
-  );
-  t.throws(
+  ).toThrow(/lengths must match/);
+  expect(
     () =>
       new GPUGroupAggregation({
         keys: input,
         output: floatGroupOutput,
         operation: 'mean'
       } as never),
-    /requires values/,
     'weighted group statistics require an aligned value input'
-  );
+  ).toThrow(/requires values/);
   const positions = graph.createDataView(inputHandle, {format: 'float32x2', length: 4});
-  t.throws(
+  expect(
     () => new GPUGridBinning({positions, output: two, gridSize: [2, 2], bounds: [0, 0, 1, 1]}),
-    /output.length/,
     'grid output layout is validated'
-  );
+  ).toThrow(/output.length/);
   const weights = graph.createDataView(inputHandle, {format: 'float32', length: 3});
   const floatOutput = graph.createDataView(outputHandle, {format: 'float32', length: 4});
-  t.throws(
+  expect(
     () =>
       new GPUGridAggregation({
         positions,
@@ -995,10 +909,9 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
         gridSize: [2, 2],
         bounds: [0, 0, 1, 1]
       }),
-    /same number of rows/,
     'weighted grid inputs require row alignment'
-  );
-  t.throws(
+  ).toThrow(/same number of rows/);
+  expect(
     () =>
       new GPUGridAggregation({
         positions,
@@ -1008,10 +921,8 @@ test('GPU data analysis primitives validate layouts and ownership', async t => {
         gridSize: [2, 2],
         bounds: [0, 0, 1, 1]
       }),
-    /operation must be sum, min, max, or mean/,
-    'unsupported grid statistics are rejected'
-  );
-  t.end();
+    'weighted grid operations only support sum'
+  ).toThrow(/operation must be sum/);
 });
 
 type ScalarFormat = 'uint32' | 'sint32' | 'float32';

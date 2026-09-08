@@ -4,14 +4,14 @@
 
 import {swirl} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('swirl#build/uniform', t => {
+it('swirl#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(swirl, {}, {});
 
-  t.ok(uniforms, 'swirl module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'swirl center uniform is ok');
-  t.equal(uniforms.radius, 200, 'swirl radius uniform is ok');
-  t.equal(uniforms.angle, 3, 'swirl angle uniform is ok');
-  t.end();
+  expect(Boolean(uniforms), 'swirl module build is ok').toBe(true);
+  expect(uniforms.center, 'swirl center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.radius, 'swirl radius uniform is ok').toBe(200);
+  expect(uniforms.angle, 'swirl angle uniform is ok').toBe(3);
+  void 0;
 });

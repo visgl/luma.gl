@@ -12,8 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphPageRankToGraphWithDispatchLimit,
   getGPUGraphPageRankDispatchLayout
@@ -244,21 +243,18 @@ const pageRankScenarios: PageRankScenario[] = [
   }
 ];
 
-test('GPUGraphPageRank plans bounded three-dimensional pull and reduction dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphPageRankDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphPageRankDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphPageRankDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphPageRankDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphPageRankDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphPageRank plans bounded three-dimensional pull and reduction dispatch', () => {
+  expect(getGPUGraphPageRankDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphPageRankDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphPageRankDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphPageRankDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphPageRankDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of pageRankScenarios) {
-  test(`GPUGraphPageRank GPU analytics: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphPageRank GPU analytics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -267,25 +263,20 @@ for (const scenario of pageRankScenarios) {
     try {
       compilePageRank(fixture, scenario.maximumWorkgroups);
       executePageRank(fixture);
-      await assertPageRank(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertPageRank(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'rank evaluation preserves caller-owned source chunks and empty edge batches'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphPageRank reinitializes normalized scores after source updates without hidden GPU work', async tapeTest => {
+it('GPUGraphPageRank reinitializes normalized scores after source updates without hidden GPU work', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -306,38 +297,31 @@ test('GPUGraphPageRank reinitializes normalized scores after source updates with
 
   try {
     compilePageRank(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'topology and rank construction never submit work'
-    );
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'topology and rank construction never submit work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'PageRank never reads source edge columns back to the CPU'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executePageRank(fixture);
-    await assertPageRank(tapeTest, fixture, calculateExpectedPageRank(original));
+    await assertPageRank(fixture, calculateExpectedPageRank(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 1]));
     const updated = {...original, sourceChunks: [[9, 1], [], [2, 4]]};
     executePageRank(fixture);
-    await assertPageRank(tapeTest, fixture, calculateExpectedPageRank(updated));
-    tapeTest.equal(
+    await assertPageRank(fixture, calculateExpectedPageRank(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'repeated ranking preserves exact source chunk and physical buffer identity'
-    );
+    ).toBe(sourceBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Computes unweighted PageRank with exact dangling redistribution and per-step normalization. */
@@ -635,7 +619,6 @@ function executePageRank(fixture: PageRankExecutionFixture): void {
 }
 
 async function assertPageRank(
-  tapeTest: Test,
   fixture: PageRankExecutionFixture,
   expected: ExpectedPageRank
 ): Promise<void> {
@@ -651,60 +634,48 @@ async function assertPageRank(
       : Promise.resolve(undefined)
   ]);
 
-  tapeTest.equal(
-    scores.length,
-    expected.scores.length,
-    'one float32 score is published per vertex'
-  );
+  expect(scores.length, 'one float32 score is published per vertex').toBe(expected.scores.length);
   const largestScoreError = scores.reduce(
     (largest, score, vertexIndex) =>
       Math.max(largest, Math.abs(score - expected.scores[vertexIndex])),
     0
   );
-  tapeTest.ok(
-    largestScoreError <= SCORE_TOLERANCE,
+  expect(
+    Boolean(largestScoreError <= SCORE_TOLERANCE),
     `float32 reverse-pull ranks match the CPU oracle within ${SCORE_TOLERANCE}`
-  );
+  ).toBe(true);
   if (!expected.failed && scores.length > 0) {
-    tapeTest.ok(
-      scores.every(score => Number.isFinite(score) && score >= 0),
+    expect(
+      Boolean(scores.every(score => Number.isFinite(score) && score >= 0)),
       'every score is finite and nonnegative'
-    );
+    ).toBe(true);
     const rankMass = scores.reduce((sum, score) => sum + score, 0);
-    tapeTest.ok(
-      Math.abs(rankMass - 1) <= NORMALIZATION_TOLERANCE,
+    expect(
+      Boolean(Math.abs(rankMass - 1) <= NORMALIZATION_TOLERANCE),
       'dangling redistribution and float32 normalization preserve unit rank mass'
-    );
+    ).toBe(true);
   }
   if (residual) {
-    tapeTest.ok(
-      Math.abs(residual[0] - expected.residual) <= RESIDUAL_TOLERANCE,
+    expect(
+      Boolean(Math.abs(residual[0] - expected.residual) <= RESIDUAL_TOLERANCE),
       'optional residual equals the final normalized L1 PageRank delta'
-    );
+    ).toBe(true);
   }
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid graph edges are excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'forward capacity remains explicit'
+  expect(invalidEdgeCount[0], 'invalid graph edges are excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'forward capacity remains explicit').toBe(
+    Number(expected.forwardOverflow)
   );
   if (reverseOverflow) {
-    tapeTest.equal(
-      reverseOverflow[0],
-      Number(expected.reverseOverflow),
-      'reverse capacity remains explicit'
+    expect(reverseOverflow[0], 'reverse capacity remains explicit').toBe(
+      Number(expected.reverseOverflow)
     );
   }
   if (expected.failed) {
-    tapeTest.ok(
-      scores.every(score => score === 0),
+    expect(
+      Boolean(scores.every(score => score === 0)),
       'required CSR overflow fails closed with zero scores'
-    );
-    if (residual) tapeTest.equal(residual[0], 0, 'failed topology publishes a zero final residual');
+    ).toBe(true);
+    if (residual) expect(residual[0], 'failed topology publishes a zero final residual').toBe(0);
   }
 }
 
@@ -728,12 +699,12 @@ async function readFloat32Vector(vector: GPUVector<'float32'>): Promise<number[]
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: PageRankExecutionFixture): void {
+function destroyExecutionFixture(fixture: PageRankExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'graph-owned PageRank reduction scratch never destroys caller-owned physical buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

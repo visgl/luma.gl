@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device, type TextureFormat} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -18,11 +18,11 @@ import {
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPURaster gathers odd-width float textures with nodata, masks, offsets, and calibration', async testCase => {
+it('GPURaster gathers odd-width float textures with nodata, masks, offsets, and calibration', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -57,32 +57,38 @@ test('GPURaster gathers odd-width float textures with nodata, masks, offsets, an
   submitGraph(device, compiled, 'raster-float-gather');
   const values = await readFloat32(outputBuffer, 7);
   const validity = await readUint32(outputMaskBuffer, 7);
-  testCase.deepEqual(
-    validity.slice(1),
-    [1, 0, 0, 0, 1, 1],
-    'raw nodata, NaN, and input mask intersect'
+  expect(validity.slice(1), 'raw nodata, NaN, and input mask intersect').toEqual([
+    1, 0, 0, 0, 1, 1
+  ]);
+  expect(values[1], 'the first valid pixel is calibrated once').toBe(3);
+  expect(Boolean(Number.isNaN(values[2])), 'finite nodata becomes a canonical invalid float').toBe(
+    true
   );
-  testCase.equal(values[1], 3, 'the first valid pixel is calibrated once');
-  testCase.ok(Number.isNaN(values[2]), 'finite nodata becomes a canonical invalid float');
-  testCase.ok(Number.isNaN(values[3]), 'non-finite input is rejected');
-  testCase.ok(Number.isNaN(values[4]), 'masked pixels are rejected');
-  testCase.deepEqual(values.slice(5), [11, 13], 'odd-width rows remain tightly packed');
+  expect(Boolean(Number.isNaN(values[3])), 'non-finite input is rejected').toBe(true);
+  expect(Boolean(Number.isNaN(values[4])), 'masked pixels are rejected').toBe(true);
+  expect(values.slice(5), 'odd-width rows remain tightly packed').toEqual([11, 13]);
 
   compiled.destroy();
-  testCase.notOk(inputTexture.destroyed, 'compiled graph leaves borrowed input textures alive');
-  testCase.notOk(outputBuffer.destroyed, 'compiled graph leaves borrowed output buffers alive');
+  expect(
+    Boolean(inputTexture.destroyed),
+    'compiled graph leaves borrowed input textures alive'
+  ).toBe(false);
+  expect(
+    Boolean(outputBuffer.destroyed),
+    'compiled graph leaves borrowed output buffers alive'
+  ).toBe(false);
   inputTexture.destroy();
   inputMaskBuffer.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster preserves exact uint32 values and extracts one selected RGBA texture channel', async testCase => {
+it('GPURaster preserves exact uint32 values and extracts one selected RGBA texture channel', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -106,29 +112,26 @@ test('GPURaster preserves exact uint32 values and extracts one selected RGBA tex
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'raster-uint-gather');
-  testCase.deepEqual(
+  expect(
     await readUint32(outputBuffer, 3),
-    [16777217, 0, 4294967294],
     'uint32 samples above float32 precision survive without implicit conversion'
-  );
-  testCase.deepEqual(
-    await readUint32(outputMaskBuffer, 3),
-    [1, 0, 1],
-    'maximum uint32 nodata is exact'
-  );
+  ).toEqual([16777217, 0, 4294967294]);
+  expect(await readUint32(outputMaskBuffer, 3), 'maximum uint32 nodata is exact').toEqual([
+    1, 0, 1
+  ]);
 
   compiled.destroy();
   texture.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster preserves signed integer samples and the exact minimum signed nodata sentinel', async testCase => {
+it('GPURaster preserves signed integer samples and the exact minimum signed nodata sentinel', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -150,29 +153,27 @@ test('GPURaster preserves signed integer samples and the exact minimum signed no
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'raster-signed-gather');
-  testCase.deepEqual(
+  expect(
     await readInt32(outputBuffer, 4),
-    [0, -7, 0, 2147483647],
     'negative and maximum signed samples retain their exact integer representation'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, -7, 0, 2147483647]);
+  expect(
     await readUint32(outputMaskBuffer, 4),
-    [0, 1, 1, 1],
     'the minimum signed nodata sentinel is rejected without an overflowing WGSL literal'
-  );
+  ).toEqual([0, 1, 1, 1]);
 
   compiled.destroy();
   texture.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster composes gathered validity with a GPU-resident masked extent and histogram', async testCase => {
+it('GPURaster composes gathered validity with a GPU-resident masked extent and histogram', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -220,27 +221,24 @@ test('GPURaster composes gathered validity with a GPU-resident masked extent and
   const gatherIndex = compiled.stats.nodeOrder.indexOf('raster-gather');
   const extentIndex = compiled.stats.nodeOrder.indexOf('valid-extent-finalize');
   const histogramIndex = compiled.stats.nodeOrder.indexOf('valid-histogram-local');
-  testCase.ok(
-    gatherIndex !== -1 && extentIndex > gatherIndex && histogramIndex > extentIndex,
+  expect(
+    Boolean(gatherIndex !== -1 && extentIndex > gatherIndex && histogramIndex > extentIndex),
     'declared hazards order gathering, masked extent, and GPU-domain histogram accumulation'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiled, 'raster-masked-histogram');
-  testCase.deepEqual(
+  expect(
     await readUint32(validityBuffer, 6),
-    [1, 0, 1, 0, 0, 1],
     'finite nodata, source masks, and NaNs produce one shared canonical validity domain'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 0, 1, 0, 0, 1]);
+  expect(
     await readFloat32(extentBuffer, 2),
-    [1, 7],
     'the masked GPU extent excludes the finite nodata outlier'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 7]);
+  expect(
     await readUint32(histogramBuffer, 3),
-    [1, 1, 1],
     'GPU-resident domain and shared mask count only valid raster samples'
-  );
+  ).toEqual([1, 1, 1]);
 
   compiled.destroy();
   texture.destroy();
@@ -249,14 +247,14 @@ test('GPURaster composes gathered validity with a GPU-resident masked extent and
   validityBuffer.destroy();
   extentBuffer.destroy();
   histogramBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster reads an explicitly selected 2D-array texture layer', async testCase => {
+it('GPURaster reads an explicitly selected 2D-array texture layer', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -300,30 +298,26 @@ test('GPURaster reads an explicitly selected 2D-array texture layer', async test
 
   const compiled = graph.compile();
   submitGraph(device, compiled, 'raster-array-layer');
-  testCase.deepEqual(
-    await readFloat32(outputBuffer, 1),
-    [13],
-    'the selected array layer is sampled'
-  );
-  testCase.deepEqual(await readUint32(outputMaskBuffer, 1), [1], 'selected layers retain validity');
+  expect(await readFloat32(outputBuffer, 1), 'the selected array layer is sampled').toEqual([13]);
+  expect(await readUint32(outputMaskBuffer, 1), 'selected layers retain validity').toEqual([1]);
 
   compiled.destroy();
   texture.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster composes packed buffer-to-texture and texture-to-buffer passes in one graph', async testCase => {
+it('GPURaster composes packed buffer-to-texture and texture-to-buffer passes in one graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
   if (!device.getTextureFormatCapabilities('r32float').store) {
-    testCase.comment('r32float storage textures are unavailable');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -377,35 +371,35 @@ test('GPURaster composes packed buffer-to-texture and texture-to-buffer passes i
   }).addToGraph(graph);
 
   const compiled = graph.compile();
-  testCase.deepEqual(
-    compiled.stats.nodeOrder,
-    ['scatter', 'gather'],
-    'texture hazards order both passes'
-  );
+  expect(compiled.stats.nodeOrder, 'texture hazards order both passes').toEqual([
+    'scatter',
+    'gather'
+  ]);
   submitGraph(device, compiled, 'raster-round-trip');
   const values = await readFloat32(outputBuffer, 6);
-  testCase.equal(values[0], 2.5, 'integer calibration explicitly produces float32 samples');
-  testCase.ok(Number.isNaN(values[1]), 'raw integer nodata is rejected before calibration');
-  testCase.ok(Number.isNaN(values[2]), 'the source validity mask survives both passes');
-  testCase.deepEqual(values.slice(3), [4, 4.5, 5], 'all odd-width rows retain their order');
-  testCase.deepEqual(
-    await readUint32(outputMaskBuffer, 6),
-    [1, 0, 0, 1, 1, 1],
-    'masks stay aligned'
+  expect(values[0], 'integer calibration explicitly produces float32 samples').toBe(2.5);
+  expect(
+    Boolean(Number.isNaN(values[1])),
+    'raw integer nodata is rejected before calibration'
+  ).toBe(true);
+  expect(Boolean(Number.isNaN(values[2])), 'the source validity mask survives both passes').toBe(
+    true
   );
+  expect(values.slice(3), 'all odd-width rows retain their order').toEqual([4, 4.5, 5]);
+  expect(await readUint32(outputMaskBuffer, 6), 'masks stay aligned').toEqual([1, 0, 0, 1, 1, 1]);
 
   compiled.destroy();
-  testCase.notOk(
-    texture.destroyed,
+  expect(
+    Boolean(texture.destroyed),
     'caller-owned storage texture survives compiled graph destruction'
-  );
+  ).toBe(false);
   texture.destroy();
   sourceBuffer.destroy();
   sourceMaskBuffer.destroy();
   intermediateMaskBuffer.destroy();
   outputBuffer.destroy();
   outputMaskBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 function createTexture<Format extends TextureFormat>(

@@ -17,7 +17,7 @@ import {
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type OutputRecord<Format extends 'float32' | 'uint32'> = {
   view: GraphDataView<Format>;
@@ -89,11 +89,11 @@ const NO_DATA_VALUE = -999;
 const INTENSITY_SCALE = 0.5;
 const INTENSITY_OFFSET = 2;
 
-test('LuRaster tiled segmentation reproduces monolithic global-row-major labels and weighted region measurements', async testCase => {
+it('LuRaster tiled segmentation reproduces monolithic global-row-major labels and weighted region measurements', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -134,57 +134,53 @@ test('LuRaster tiled segmentation reproduces monolithic global-row-major labels 
   const forward = await runCrossTileScenario(device, scenario);
   const reversed = await runCrossTileScenario(device, {...scenario, reverseArrival: true});
 
-  testCase.equal(forward.converged, 1, 'every local and cross-tile equivalence converges');
-  testCase.equal(forward.overflow, 0, 'the bounded global region domain fits');
-  testCase.equal(forward.count, reference.count, 'merged global region count matches monolithic');
-  testCase.equal(forward.required, reference.count, 'exact required global count is published');
-  testCase.deepEqual(
+  expect(forward.converged, 'every local and cross-tile equivalence converges').toBe(1);
+  expect(forward.overflow, 'the bounded global region domain fits').toBe(0);
+  expect(forward.count, 'merged global region count matches monolithic').toBe(reference.count);
+  expect(forward.required, 'exact required global count is published').toBe(reference.count);
+  expect(
     forward.labels,
-    reference.labels,
     'global IDs exactly match monolithic row-major roots rather than tile-major prefixes'
-  );
-  testCase.deepEqual(
+  ).toEqual(reference.labels);
+  expect(
     forward.validity,
-    reference.validity,
     'masked seams and valid background retain independent pixel validity'
-  );
-  testCase.deepEqual(
+  ).toEqual(reference.validity);
+  expect(
     reversed.labels,
-    reference.labels,
     'reversing tile arrival does not change canonical global dense IDs'
-  );
-  testCase.equal(reversed.count, forward.count, 'arrival order does not change global count');
-  assertMeasurements(testCase, forward.measurements, reference.measurements, 'forward merge');
-  assertMeasurements(testCase, reversed.measurements, reference.measurements, 'reverse merge');
+  ).toEqual(reference.labels);
+  expect(reversed.count, 'arrival order does not change global count').toBe(forward.count);
+  assertMeasurements(forward.measurements, reference.measurements, 'forward merge');
+  assertMeasurements(reversed.measurements, reference.measurements, 'reverse merge');
 
-  testCase.equal(forward.labels[4], 2, 'an early-row EAST root precedes a later-row WEST root');
-  testCase.equal(forward.labels[7], 3, 'the later WEST root receives its true global rank');
-  testCase.ok(
-    forward.measurements.pixelCounts[2]! > forward.measurements.intensityCounts[2]!,
+  expect(forward.labels[4], 'an early-row EAST root precedes a later-row WEST root').toBe(2);
+  expect(forward.labels[7], 'the later WEST root receives its true global rank').toBe(3);
+  expect(
+    Boolean(forward.measurements.pixelCounts[2]! > forward.measurements.intensityCounts[2]!),
     'intensity holes never erase classified region geometry'
-  );
+  ).toBe(true);
   const centroid = getRasterRegionWorldCentroid(
     metadata,
     forward.measurements.centroidColumns[2]!,
     forward.measurements.centroidRows[2]!
   );
-  testCase.notEqual(
+  expect(
     centroid[0],
-    Math.fround(centroid[0]),
     'global merged moments keep large projected translations in JavaScript double precision'
-  );
-  testCase.ok(
-    forward.outputGuards.every(value => value === GUARD_VALUE),
+  ).not.toBe(Math.fround(centroid[0]));
+  expect(
+    Boolean(forward.outputGuards.every(value => value === GUARD_VALUE)),
     'globally relabeled and measured caller-owned buffer guards remain intact'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('LuRaster four-way tile junctions reconcile diagonal corner contacts only for eight-connectivity', async testCase => {
+it('LuRaster four-way tile junctions reconcile diagonal corner contacts only for eight-connectivity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -216,23 +212,20 @@ test('LuRaster four-way tile junctions reconcile diagonal corner contacts only f
     const scenario: CrossTileScenario = {...base, connectivity, reverseArrival: true};
     const reference = makeMonolithicReference(scenario);
     const actual = await runCrossTileScenario(device, scenario);
-    testCase.equal(actual.count, reference.count, `${connectivity}-connected global count`);
-    testCase.deepEqual(
+    expect(actual.count, `${connectivity}-connected global count`).toBe(reference.count);
+    expect(
       actual.labels,
-      reference.labels,
       `${connectivity}-connected exact monolithic labels across the four-core junction`
-    );
+    ).toEqual(reference.labels);
     assertMeasurements(
-      testCase,
       actual.measurements,
       reference.measurements,
       `${connectivity}-connected corner-region merge`
     );
-    testCase.equal(
+    expect(
       actual.count,
-      connectivity === 4 ? 6 : 3,
       `${connectivity}-connected diagonal-only corner contact has the declared topology`
-    );
+    ).toBe(connectivity === 4 ? 6 : 3);
   }
 
   const blockedValidity = makeValidity(foreground.length);
@@ -244,16 +237,16 @@ test('LuRaster four-way tile junctions reconcile diagonal corner contacts only f
   };
   const blockedReference = makeMonolithicReference(blockedScenario);
   const blocked = await runCrossTileScenario(device, blockedScenario);
-  testCase.deepEqual(blocked.labels, blockedReference.labels, 'nodata blocks the diagonal seam');
-  testCase.equal(blocked.validity[5], 0, 'the removed bridge remains missing, not background');
-  testCase.end();
+  expect(blocked.labels, 'nodata blocks the diagonal seam').toEqual(blockedReference.labels);
+  expect(blocked.validity[5], 'the removed bridge remains missing, not background').toBe(0);
+  void 0;
 });
 
-test('LuRaster cross-tile global capacity publishes exact demand and fails closed on exhausted local convergence', async testCase => {
+it('LuRaster cross-tile global capacity publishes exact demand and fails closed on exhausted local convergence', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -280,39 +273,39 @@ test('LuRaster cross-tile global capacity publishes exact demand and fails close
   };
   const reference = makeMonolithicReference({...scenario, capacity: 8});
   const bounded = await runCrossTileScenario(device, scenario);
-  testCase.equal(bounded.converged, 1, 'bounded discovery still converges');
-  testCase.equal(bounded.required, reference.count, 'exact demand survives bounded publication');
-  testCase.equal(bounded.count, 1, 'published global component count is capacity-clamped');
-  testCase.equal(bounded.overflow, 1, 'capacity truncation is explicit, never silent');
-  testCase.equal(bounded.labels[0], 1, 'the first canonical global component remains published');
-  testCase.equal(bounded.labels[4], 0, 'over-capacity foreground never aliases real background');
-  testCase.equal(bounded.validity[4], 0, 'dropped foreground is explicitly invalidated');
+  expect(bounded.converged, 'bounded discovery still converges').toBe(1);
+  expect(bounded.required, 'exact demand survives bounded publication').toBe(reference.count);
+  expect(bounded.count, 'published global component count is capacity-clamped').toBe(1);
+  expect(bounded.overflow, 'capacity truncation is explicit, never silent').toBe(1);
+  expect(bounded.labels[0], 'the first canonical global component remains published').toBe(1);
+  expect(bounded.labels[4], 'over-capacity foreground never aliases real background').toBe(0);
+  expect(bounded.validity[4], 'dropped foreground is explicitly invalidated').toBe(0);
 
   const zero = await runCrossTileScenario(device, {...scenario, capacity: 0});
-  testCase.equal(zero.count, 0, 'zero capacity publishes no global component');
-  testCase.equal(zero.required, reference.count, 'zero capacity still reports exact demand');
-  testCase.equal(zero.overflow, 1, 'zero capacity declares overflow for nonempty foreground');
+  expect(zero.count, 'zero capacity publishes no global component').toBe(0);
+  expect(zero.required, 'zero capacity still reports exact demand').toBe(reference.count);
+  expect(zero.overflow, 'zero capacity declares overflow for nonempty foreground').toBe(1);
 
   const unconverged = await runCrossTileScenario(device, {
     ...scenario,
     capacity: 8,
     maximumIterations: 1
   });
-  testCase.equal(unconverged.converged, 0, 'insufficient local rounds never publish valid roots');
-  testCase.equal(unconverged.count, 0, 'unverified global component count is cleared');
-  testCase.ok(
-    unconverged.labels.every(value => value === 0),
+  expect(unconverged.converged, 'insufficient local rounds never publish valid roots').toBe(0);
+  expect(unconverged.count, 'unverified global component count is cleared').toBe(0);
+  expect(
+    Boolean(unconverged.labels.every(value => value === 0)),
     'unverified labels are cleared'
-  );
-  testCase.ok(
-    unconverged.validity.every(value => value === 0),
+  ).toBe(true);
+  expect(
+    Boolean(unconverged.validity.every(value => value === 0)),
     'unverified foreground and background are globally invalidated'
-  );
-  testCase.ok(
-    unconverged.measurements.pixelCounts.every(value => value === 0),
+  ).toBe(true);
+  expect(
+    Boolean(unconverged.measurements.pixelCounts.every(value => value === 0)),
     'unverified region geometry is never fabricated'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
 async function runCrossTileScenario(
@@ -881,16 +874,13 @@ function makeEmptyReference(length: number): RegionReference {
 }
 
 function assertMeasurements(
-  testCase: Test,
   actual: RegionReference,
   expected: RegionReference,
   label: string
 ): void {
-  testCase.deepEqual(actual.pixelCounts, expected.pixelCounts, `${label}: exact geometry counts`);
-  testCase.deepEqual(
-    actual.intensityCounts,
-    expected.intensityCounts,
-    `${label}: valid intensity counts`
+  expect(actual.pixelCounts, `${label}: exact geometry counts`).toEqual(expected.pixelCounts);
+  expect(actual.intensityCounts, `${label}: valid intensity counts`).toEqual(
+    expected.intensityCounts
   );
   for (const property of [
     'intensitySums',
@@ -907,12 +897,15 @@ function assertMeasurements(
       const value = actual[property][index]!;
       const reference = expected[property][index]!;
       if (Number.isNaN(reference)) {
-        testCase.ok(Number.isNaN(value), `${label}: ${property}[${index}] remains invalid`);
+        expect(
+          Boolean(Number.isNaN(value)),
+          `${label}: ${property}[${index}] remains invalid`
+        ).toBe(true);
       } else {
-        testCase.ok(
-          Math.abs(value - reference) <= 0.0001 * Math.max(1, Math.abs(reference)),
+        expect(
+          Boolean(Math.abs(value - reference) <= 0.0001 * Math.max(1, Math.abs(reference))),
           `${label}: ${property}[${index}] matches the monolithic weighted reference`
-        );
+        ).toBe(true);
       }
     }
   }

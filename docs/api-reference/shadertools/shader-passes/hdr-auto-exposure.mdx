@@ -3,7 +3,7 @@ import {DeferredRenderingExample} from '@site/src/examples';
 # HDR Auto Exposure
 
 Continuously meter scene luminance and adapt camera exposure entirely on the GPU.
-`createHDRAutoExposureShaderPassPipeline` uses a center-weighted logarithmic luminance pyramid,
+`createHDRAutoExposureCompositeShaderPass` uses a center-weighted logarithmic luminance pyramid,
 persistent exposure history, and independent brightening and darkening response speeds.
 
 <DeferredRenderingExample embedded showStats={false} />
@@ -12,7 +12,7 @@ persistent exposure history, and independent brightening and darkening response 
 
 | Property | Value |
 | --- | --- |
-| Export | `createHDRAutoExposureShaderPassPipeline` |
+| Export | `createHDRAutoExposureCompositeShaderPass` |
 | Backend | WebGPU |
 | Render passes | Seven: extraction, four reductions, adaptation, and application |
 | Persistent state | One GPU-owned exposure-history texture |
@@ -23,16 +23,16 @@ persistent exposure history, and independent brightening and darkening response 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  createBloomShaderPassPipeline,
-  createHDRAutoExposureShaderPassPipeline,
+  createBloomCompositeShaderPass,
+  createHDRAutoExposureCompositeShaderPass,
   toneMapping
 } from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   colorFormat: 'rgba16float',
   shaderPasses: [
-    createHDRAutoExposureShaderPassPipeline({meteringScale: 0.25, initialExposure: 1}),
-    createBloomShaderPassPipeline({quality: 'high'}),
+    createHDRAutoExposureCompositeShaderPass({meteringScale: 0.25, initialExposure: 1}),
+    createBloomCompositeShaderPass({quality: 'high'}),
     toneMapping
   ]
 });

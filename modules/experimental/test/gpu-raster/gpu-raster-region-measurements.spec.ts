@@ -11,7 +11,7 @@ import {
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type ScalarFormat = 'uint32' | 'float32';
 
@@ -62,11 +62,11 @@ type RegionExecution = {
 
 const GUARD_VALUE = 4000000001;
 
-test('GPURaster region topology, finite calibrated intensities, rotated affine areas and local centroids stay independent', async testCase => {
+it('GPURaster region topology, finite calibrated intensities, rotated affine areas and local centroids stay independent', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -92,79 +92,64 @@ test('GPURaster region topology, finite calibrated intensities, rotated affine a
   });
   submitGraph(device, execution.compiled, 'submit-calibrated-rotated-regions');
 
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output.pixelCounts),
-    [3, 3, 2, 0],
     'region geometry counts valid dense members without treating zero background as region zero'
-  );
-  testCase.deepEqual(
+  ).toEqual([3, 3, 2, 0]);
+  expect(
     await readLogical(execution.output.intensityCounts),
-    [1, 1, 1, 0],
     'independent raw nodata, explicit source mask, NaN, and infinity reduce only intensity population'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1, 1, 0]);
+  expect(
     await readLogical(execution.output.intensitySums),
-    [3, 5, 11, 0],
     'float intensities apply raw * scale + offset exactly once before grouped sums'
-  );
-  await assertFinitePrefix(
-    testCase,
-    execution.output.intensityMinimums,
-    [3, 5, 11],
-    'intensity minimum'
-  );
-  await assertFinitePrefix(
-    testCase,
-    execution.output.intensityMaximums,
-    [3, 5, 11],
-    'intensity maximum'
-  );
-  await assertFinitePrefix(testCase, execution.output.intensityMeans, [3, 5, 11], 'intensity mean');
-  testCase.deepEqual(
+  ).toEqual([3, 5, 11, 0]);
+  await assertFinitePrefix(execution.output.intensityMinimums, [3, 5, 11], 'intensity minimum');
+  await assertFinitePrefix(execution.output.intensityMaximums, [3, 5, 11], 'intensity maximum');
+  await assertFinitePrefix(execution.output.intensityMeans, [3, 5, 11], 'intensity mean');
+  expect(
     await readLogical(execution.output.columnSums),
-    [2.5, 9.5, 2, 0],
     'area-grid column moments use pixel centers independently of intensity holes'
-  );
-  testCase.deepEqual(
+  ).toEqual([2.5, 9.5, 2, 0]);
+  expect(
     await readLogical(execution.output.rowSums),
-    [2.5, 3.5, 5, 0],
     'area-grid row moments preserve mergeable geometric partials'
-  );
+  ).toEqual([2.5, 3.5, 5, 0]);
   const centroidColumns = await readLogical(execution.output.centroidColumns);
   const centroidRows = await readLogical(execution.output.centroidRows);
-  assertClose(testCase, centroidColumns[0]!, 2.5 / 3, 'first local centroid column');
-  assertClose(testCase, centroidColumns[1]!, 9.5 / 3, 'second local centroid column');
-  assertClose(testCase, centroidColumns[2]!, 1, 'third local centroid column');
-  assertClose(testCase, centroidRows[0]!, 2.5 / 3, 'first local centroid row');
-  assertClose(testCase, centroidRows[1]!, 3.5 / 3, 'second local centroid row');
-  assertClose(testCase, centroidRows[2]!, 2.5, 'third local centroid row');
-  testCase.ok(Number.isNaN(centroidColumns[3]), 'empty centroid column is canonical NaN');
-  testCase.ok(Number.isNaN(centroidRows[3]), 'empty centroid row is canonical NaN');
-  testCase.deepEqual(
-    await readLogical(execution.output.areas),
-    [21, 21, 14, 0],
-    'affine determinant yields square coordinate units even for a geographic-degree CRS'
+  assertClose(centroidColumns[0]!, 2.5 / 3, 'first local centroid column');
+  assertClose(centroidColumns[1]!, 9.5 / 3, 'second local centroid column');
+  assertClose(centroidColumns[2]!, 1, 'third local centroid column');
+  assertClose(centroidRows[0]!, 2.5 / 3, 'first local centroid row');
+  assertClose(centroidRows[1]!, 3.5 / 3, 'second local centroid row');
+  assertClose(centroidRows[2]!, 2.5, 'third local centroid row');
+  expect(Boolean(Number.isNaN(centroidColumns[3])), 'empty centroid column is canonical NaN').toBe(
+    true
   );
+  expect(Boolean(Number.isNaN(centroidRows[3])), 'empty centroid row is canonical NaN').toBe(true);
+  expect(
+    await readLogical(execution.output.areas),
+    'affine determinant yields square coordinate units even for a geographic-degree CRS'
+  ).toEqual([21, 21, 14, 0]);
   const absoluteCentroid = getRasterRegionWorldCentroid(
     execution.metadata,
     centroidColumns[2]!,
     centroidRows[2]!
   );
-  testCase.deepEqual(
+  expect(
     absoluteCentroid,
-    [10000004.75, -19999994.25],
     'JavaScript double precision applies translated/sheared affine exactly once without tile-origin drift'
-  );
-  await assertAllGuards(testCase, execution, 'rotated calibrated region outputs');
-  destroyExecution(testCase, execution);
-  testCase.end();
+  ).toEqual([10000004.75, -19999994.25]);
+  await assertAllGuards(execution, 'rotated calibrated region outputs');
+  destroyExecution(execution);
+  void 0;
 });
 
-test('GPURaster point-pixel regions preserve signed-zero extrema, negative intensities, and exact local moments', async testCase => {
+it('GPURaster point-pixel regions preserve signed-zero extrema, negative intensities, and exact local moments', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -184,72 +169,68 @@ test('GPURaster point-pixel regions preserve signed-zero extrema, negative inten
   });
   submitGraph(device, execution.compiled, 'submit-point-grid-negative-regions');
 
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output.pixelCounts),
-    [2, 2, 1],
     'point-grid region populations ignore genuine background'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 2, 1]);
+  expect(
     await readLogical(execution.output.intensityCounts),
-    [2, 2, 1],
     'all finite point observations participate'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 2, 1]);
+  expect(
     await readLogical(execution.output.intensitySums),
-    [0, 2, 7],
     'negative floating intensities retain signed contributions'
-  );
+  ).toEqual([0, 2, 7]);
   const minimums = await readLogical(execution.output.intensityMinimums);
   const maximums = await readLogical(execution.output.intensityMaximums);
-  testCase.ok(Object.is(minimums[0], -0), 'ordered grouped minimum preserves negative zero');
-  testCase.ok(Object.is(maximums[0], 0), 'ordered grouped maximum preserves positive zero');
-  testCase.deepEqual(minimums.slice(1), [-2, 7], 'negative minimum and singleton are exact');
-  testCase.deepEqual(maximums.slice(1), [4, 7], 'positive maximum and singleton are exact');
-  testCase.deepEqual(
+  expect(
+    Boolean(Object.is(minimums[0], -0)),
+    'ordered grouped minimum preserves negative zero'
+  ).toBe(true);
+  expect(
+    Boolean(Object.is(maximums[0], 0)),
+    'ordered grouped maximum preserves positive zero'
+  ).toBe(true);
+  expect(minimums.slice(1), 'negative minimum and singleton are exact').toEqual([-2, 7]);
+  expect(maximums.slice(1), 'positive maximum and singleton are exact').toEqual([4, 7]);
+  expect(
     await readLogical(execution.output.intensityMeans),
-    [0, 1, 7],
     'means divide by valid intensity count'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 1, 7]);
+  expect(
     await readLogical(execution.output.columnSums),
-    [1, 2, 2],
     'point-grid columns use zero-centered pixel coordinates'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 2, 2]);
+  expect(
     await readLogical(execution.output.rowSums),
-    [0, 1, 1],
     'point-grid rows use zero-centered pixel coordinates'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 1, 1]);
+  expect(
     await readLogical(execution.output.centroidColumns),
-    [0.5, 1, 2],
     'point centroids omit the area-pixel half offset'
-  );
-  testCase.deepEqual(
+  ).toEqual([0.5, 1, 2]);
+  expect(
     await readLogical(execution.output.centroidRows),
-    [0, 0.5, 1],
     'point row centroids omit the area-pixel half offset'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0.5, 1]);
+  expect(
     await readLogical(execution.output.areas),
-    [12, 12, 6],
     'absolute rotated determinant handles sign and non-square pixels'
-  );
-  testCase.deepEqual(
+  ).toEqual([12, 12, 6]);
+  expect(
     getRasterRegionWorldCentroid(execution.metadata, 1, 0.5),
-    [19999999.125, -29999997.625],
     'large translations retain sub-unit coordinates beyond float32 precision'
-  );
-  await assertAllGuards(testCase, execution, 'point-pixel region outputs');
-  destroyExecution(testCase, execution);
-  testCase.end();
+  ).toEqual([19999999.125, -29999997.625]);
+  await assertAllGuards(execution, 'point-pixel region outputs');
+  destroyExecution(execution);
+  void 0;
 });
 
-test('GPURaster region replay fail-closes convergence, dense overflow and capacity before recovering clean rows', async testCase => {
+it('GPURaster region replay fail-closes convergence, dense overflow and capacity before recovering clean rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -264,62 +245,55 @@ test('GPURaster region replay fail-closes convergence, dense overflow and capaci
     capacity: 2
   });
   submitGraph(device, execution.compiled, 'submit-initial-valid-regions');
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output.pixelCounts),
-    [2, 2, 0],
     'initial bounded groups are valid'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 2, 0]);
+  expect(
     await readLogical(execution.output.intensitySums),
-    [3, 7, 0],
     'initial region sums are populated'
-  );
+  ).toEqual([3, 7, 0]);
 
   writeLogical(execution.overflow, [1]);
   submitGraph(device, execution.compiled, 'reencode-overflowed-regions');
-  await assertAllRegionsInvalid(testCase, execution, 'dense overflow');
+  await assertAllRegionsInvalid(execution, 'dense overflow');
 
   writeLogical(execution.overflow, [0]);
   writeLogical(execution.converged, [0]);
   submitGraph(device, execution.compiled, 'reencode-unconverged-regions');
-  await assertAllRegionsInvalid(testCase, execution, 'nonconverged dense roots');
+  await assertAllRegionsInvalid(execution, 'nonconverged dense roots');
 
   writeLogical(execution.converged, [1]);
   writeLogical(execution.componentCount, [3]);
   submitGraph(device, execution.compiled, 'reencode-out-of-capacity-regions');
-  await assertAllRegionsInvalid(testCase, execution, 'component count above configured capacity');
+  await assertAllRegionsInvalid(execution, 'component count above configured capacity');
 
   writeLogical(execution.componentCount, [1]);
   writeLogical(execution.labels, [0, 1, 1, 0, 0, 0]);
   writeLogical(execution.intensity, [9, 10, 20, 7, 8, 6]);
   submitGraph(device, execution.compiled, 'reencode-recovered-region');
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output.pixelCounts),
-    [2, 0, 0],
     'recovery removes all stale topological populations'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 0, 0]);
+  expect(
     await readLogical(execution.output.intensityCounts),
-    [2, 0, 0],
     'recovery removes all stale intensity populations'
-  );
-  testCase.deepEqual(
+  ).toEqual([2, 0, 0]);
+  expect(
     await readLogical(execution.output.intensitySums),
-    [30, 0, 0],
     'replacement observations become the only mergeable sum'
-  );
-  testCase.equal(
+  ).toEqual([30, 0, 0]);
+  expect(
     (await readLogical(execution.output.intensityMeans))[0],
-    15,
     'replacement mean is recomputed from current intensity count'
-  );
-  testCase.equal(
+  ).toBe(15);
+  expect(
     (await readLogical(execution.output.areas))[0],
-    2,
     'replacement affine area uses current topology only'
-  );
-  await assertAllGuards(testCase, execution, 'convergence-safe region replay');
-  destroyExecution(testCase, execution);
+  ).toBe(2);
+  await assertAllGuards(execution, 'convergence-safe region replay');
+  destroyExecution(execution);
 
   const zeroCapacity = makeExecution(device, {
     id: 'zero-active-region-capacity',
@@ -332,9 +306,9 @@ test('GPURaster region replay fail-closes convergence, dense overflow and capaci
     capacity: 0
   });
   submitGraph(device, zeroCapacity.compiled, 'submit-zero-region-capacity');
-  await assertAllRegionsInvalid(testCase, zeroCapacity, 'explicit zero active capacity');
-  destroyExecution(testCase, zeroCapacity);
-  testCase.end();
+  await assertAllRegionsInvalid(zeroCapacity, 'explicit zero active capacity');
+  destroyExecution(zeroCapacity);
+  void 0;
 });
 
 function makeExecution(device: Device, fixture: RegionFixture): RegionExecution {
@@ -542,35 +516,29 @@ async function readLogical(entry: GuardedBuffer): Promise<number[]> {
 }
 
 async function assertFinitePrefix(
-  testCase: Test,
   entry: GuardedBuffer<'float32'>,
   expected: readonly number[],
   label: string
 ): Promise<void> {
   const values = await readLogical(entry);
-  testCase.deepEqual(
+  expect(
     values.slice(0, expected.length),
-    [...expected],
     `${label} excludes invalid intensity observations`
-  );
-  testCase.ok(
-    Number.isNaN(values[expected.length]),
+  ).toEqual([...expected]);
+  expect(
+    Boolean(Number.isNaN(values[expected.length])),
     `${label} marks the empty trailing region NaN`
-  );
+  ).toBe(true);
 }
 
-function assertClose(testCase: Test, actual: number, expected: number, label: string): void {
-  testCase.ok(
-    Math.abs(actual - expected) < 0.00001,
+function assertClose(actual: number, expected: number, label: string): void {
+  expect(
+    Boolean(Math.abs(actual - expected) < 0.00001),
     `${label}: ${actual} is within float32 tolerance of ${expected}`
-  );
+  ).toBe(true);
 }
 
-async function assertAllRegionsInvalid(
-  testCase: Test,
-  execution: RegionExecution,
-  label: string
-): Promise<void> {
+async function assertAllRegionsInvalid(execution: RegionExecution, label: string): Promise<void> {
   const zeroNames = [
     'pixelCounts',
     'intensityCounts',
@@ -588,32 +556,27 @@ async function assertAllRegionsInvalid(
   ] as const;
   for (const name of zeroNames) {
     const values = await readLogical(execution.output[name]);
-    testCase.deepEqual(
-      values,
-      Array.from({length: values.length}, () => 0),
-      `${label}: ${name} clears every group`
+    expect(values, `${label}: ${name} clears every group`).toEqual(
+      Array.from({length: values.length}, () => 0)
     );
   }
   for (const name of nanNames) {
     const values = await readLogical(execution.output[name]);
-    testCase.ok(values.every(Number.isNaN), `${label}: ${name} marks every group invalid`);
+    expect(Boolean(values.every(Number.isNaN)), `${label}: ${name} marks every group invalid`).toBe(
+      true
+    );
   }
 }
 
-async function assertAllGuards(
-  testCase: Test,
-  execution: RegionExecution,
-  label: string
-): Promise<void> {
+async function assertAllGuards(execution: RegionExecution, label: string): Promise<void> {
   for (const entry of execution.owned) {
     const bytes = await entry.buffer.readAsync();
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-    testCase.deepEqual(
+    expect(
       Array.from(words.slice(0, entry.prefixLength)),
-      Array.from({length: entry.prefixLength}, () => GUARD_VALUE),
       `${label}: ${entry.buffer.id} preserves every physical prefix`
-    );
-    testCase.equal(words.at(-1), GUARD_VALUE, `${label}: ${entry.buffer.id} preserves its suffix`);
+    ).toEqual(Array.from({length: entry.prefixLength}, () => GUARD_VALUE));
+    expect(words.at(-1), `${label}: ${entry.buffer.id} preserves its suffix`).toBe(GUARD_VALUE);
   }
 }
 
@@ -627,10 +590,13 @@ function submitGraph(
   device.submit(encoder.finish());
 }
 
-function destroyExecution(testCase: Test, execution: RegionExecution): void {
+function destroyExecution(execution: RegionExecution): void {
   execution.compiled.destroy();
   for (const {buffer} of execution.owned) {
-    testCase.notOk(buffer.destroyed, 'region graph destruction does not destroy borrowed storage');
+    expect(
+      Boolean(buffer.destroyed),
+      'region graph destruction does not destroy borrowed storage'
+    ).toBe(false);
     buffer.destroy();
   }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {BufferLayout, ShaderLayout} from '@luma.gl/core';
 import {
   getVertexBufferLayout,
@@ -192,16 +192,16 @@ const splitBufferLayout: BufferLayout[] = [
   }
 ];
 
-test('WebGPU#getVertexBufferLayout', t => {
+it('WebGPU#getVertexBufferLayout', () => {
   for (const tc of TEST_CASES) {
     const vertexBufferLayout = getVertexBufferLayout(tc.shaderLayout, tc.bufferLayout);
-    t.deepEqual(vertexBufferLayout, tc.vertexBufferLayout);
+    expect(vertexBufferLayout, '').toEqual(tc.vertexBufferLayout);
     // t.comment(JSON.stringify(vertexBufferLayout));
   }
-  t.end();
+  void 0;
 });
 
-test('WebGPU#getVertexBufferLayout preserves explicit zero stride', t => {
+it('WebGPU#getVertexBufferLayout preserves explicit zero stride', () => {
   const constantLayout = getVertexBufferLayout(
     {
       attributes: [{name: 'colors', location: 0, type: 'vec4<f32>', stepMode: 'instance'}],
@@ -217,58 +217,52 @@ test('WebGPU#getVertexBufferLayout preserves explicit zero stride', t => {
     [{name: 'colors', format: 'unorm8x4'}]
   );
 
-  t.equal(constantLayout[0].arrayStride, 0, 'explicit zero remains zero');
-  t.equal(packedLayout[0].arrayStride, 4, 'omitted stride resolves to packed format size');
-  t.end();
+  expect(constantLayout[0].arrayStride, 'explicit zero remains zero').toBe(0);
+  expect(packedLayout[0].arrayStride, 'omitted stride resolves to packed format size').toBe(4);
+  void 0;
 });
 
-test('WebGPU#resolveVertexBufferLayouts splits oversized interleaved offsets into repeated bindings', t => {
+it('WebGPU#resolveVertexBufferLayouts splits oversized interleaved offsets into repeated bindings', () => {
   const {vertexBufferLayouts, resolvedSlots} = resolveVertexBufferLayouts(
     fp64ShaderLayout,
     splitBufferLayout
   );
 
-  t.equal(vertexBufferLayouts.length, 4, 'one logical layout expands into four WebGPU slots');
-  t.deepEqual(
+  expect(vertexBufferLayouts.length, 'one logical layout expands into four WebGPU slots').toBe(4);
+  expect(
     vertexBufferLayouts.map(layout => layout.arrayStride),
-    [24, 24, 24, 24],
     'expanded slots preserve the original stride'
-  );
-  t.deepEqual(
+  ).toEqual([24, 24, 24, 24]);
+  expect(
     vertexBufferLayouts.map(layout => layout.attributes[0]?.offset),
-    [0, 0, 0, 0],
     'expanded attributes are lowered to local offsets within a single stride'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0]);
+  expect(
     vertexBufferLayouts.map(layout => layout.attributes[0]?.shaderLocation),
-    [0, 1, 2, 3],
     'expanded slots remain ordered by shader location'
-  );
-  t.deepEqual(
+  ).toEqual([0, 1, 2, 3]);
+  expect(
     resolvedSlots,
-    [
-      {bufferName: 'instanceAttributes', shaderSlot: 0, bindingOffset: 0},
-      {bufferName: 'instanceAttributes', shaderSlot: 1, bindingOffset: 24},
-      {bufferName: 'instanceAttributes', shaderSlot: 2, bindingOffset: 48},
-      {bufferName: 'instanceAttributes', shaderSlot: 3, bindingOffset: 72}
-    ],
     'resolved slots record repeated bindings for the same logical buffer'
-  );
-  t.end();
+  ).toEqual([
+    {bufferName: 'instanceAttributes', shaderSlot: 0, bindingOffset: 0},
+    {bufferName: 'instanceAttributes', shaderSlot: 1, bindingOffset: 24},
+    {bufferName: 'instanceAttributes', shaderSlot: 2, bindingOffset: 48},
+    {bufferName: 'instanceAttributes', shaderSlot: 3, bindingOffset: 72}
+  ]);
+  void 0;
 });
 
-test('WebGPU#resolveVertexBufferLayouts preserves fp64-style high/low pairing across split bindings', t => {
+it('WebGPU#resolveVertexBufferLayouts preserves fp64-style high/low pairing across split bindings', () => {
   const {vertexBufferLayouts} = resolveVertexBufferLayouts(fp64ShaderLayout, splitBufferLayout);
 
-  t.deepEqual(
+  expect(
     vertexBufferLayouts.map(layout => layout.attributes[0]?.format),
-    ['float32x3', 'float32x3', 'float32x3', 'float32x3'],
     'each split slot keeps the original attribute format'
-  );
-  t.deepEqual(
+  ).toEqual(['float32x3', 'float32x3', 'float32x3', 'float32x3']);
+  expect(
     vertexBufferLayouts.map(layout => layout.attributes[0]?.shaderLocation),
-    [0, 1, 2, 3],
     'high and 64Low shader locations are preserved after splitting'
-  );
-  t.end();
+  ).toEqual([0, 1, 2, 3]);
+  void 0;
 });

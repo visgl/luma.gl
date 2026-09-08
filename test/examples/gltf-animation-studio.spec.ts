@@ -8,10 +8,10 @@ import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GLTFAnimationStudio} from '../../examples/showcase/gltf/gltf-animation-studio';
 
-test('Animation Studio renders expressive robot skinning and facial morphs on WebGL and WebGPU', async testCase => {
+it('Animation Studio renders expressive robot skinning and facial morphs on WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
     await load('/examples/showcase/scene/public/gltf/RobotExpressive.glb', GLTFLoader, {
       gltf: {loadImages: false}
@@ -55,20 +55,18 @@ test('Animation Studio renders expressive robot skinning and facial morphs on We
       studio.update(500);
       studio.update(900);
 
-      testCase.equal(scenegraphs.skins.bindings.length, 2, `${device.type} binds both robot skins`);
-      testCase.notDeepEqual(
+      expect(scenegraphs.skins.bindings.length, `${device.type} binds both robot skins`).toBe(2);
+      expect(
         Array.from(scenegraphs.skins.bindings[0].jointMatrices),
-        firstPose,
         `${device.type} updates a real 43-joint skin during crossfades`
-      );
+      ).not.toEqual(firstPose);
 
       const expression = studio.getState().morphTargets[0];
       studio.setMorphWeight(expression.identifier, 0.8);
-      testCase.equal(
+      expect(
         scenegraphs.gltfNodeIndexToNodeMap.get(expression.nodeIndex)?.userData['morphWeights']?.[0],
-        0.8,
         `${device.type} applies authored Angry facial morph`
-      );
+      ).toBe(0.8);
 
       const binding = scenegraphs.skins.bindings[0];
       const modelNode = binding.models[0];
@@ -87,7 +85,10 @@ test('Animation Studio renders expressive robot skinning and facial morphs on We
         clearColor: [0, 0, 0, 0],
         clearDepth: 1
       });
-      testCase.ok(modelNode.model.draw(renderPass), `${device.type} draws the animated robot`);
+      expect(
+        Boolean(modelNode.model.draw(renderPass)),
+        `${device.type} draws the animated robot`
+      ).toBe(true);
       renderPass.end();
       device.submit();
     } finally {
@@ -101,6 +102,6 @@ test('Animation Studio renders expressive robot skinning and facial morphs on We
     }
   }
 
-  testCase.ok(devices.length > 0, 'at least one live graphics backend is exercised');
-  testCase.end();
+  expect(Boolean(devices.length > 0), 'at least one live graphics backend is exercised').toBe(true);
+  void 0;
 });

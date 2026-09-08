@@ -16,7 +16,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 
 type GPUSortSourceSchema = {
@@ -30,11 +30,11 @@ type GPUSortFixture = {
   sourceBuffers: Buffer[];
 };
 
-test('GPUDataFrame stably sorts nullable floating-point batches without materializing source rows', async testContext => {
+it('GPUDataFrame stably sorts nullable floating-point batches without materializing source rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -43,16 +43,11 @@ test('GPUDataFrame stably sorts nullable floating-point batches without material
   const submitSpy = vi.spyOn(device, 'submit');
   const query = fixture.frame.sortBy('score');
 
-  testContext.equal(
+  expect(
     createBufferSpy.mock.calls.length,
-    0,
     'immutable sort planning allocates no GPU buffers'
-  );
-  testContext.equal(
-    submitSpy.mock.calls.length,
-    0,
-    'immutable sort planning submits no GPU commands'
-  );
+  ).toBe(0);
+  expect(submitSpy.mock.calls.length, 'immutable sort planning submits no GPU commands').toBe(0);
 
   const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
     id: 'gpu-dataframe-floating-point-stable-sort'
@@ -60,61 +55,50 @@ test('GPUDataFrame stably sorts nullable floating-point batches without material
   const compiled = query.compile(graph);
 
   try {
-    testContext.equal(
-      compiled.sortColumn,
-      'score',
-      'compiled sorting exposes its selected source column'
+    expect(compiled.sortColumn, 'compiled sorting exposes its selected source column').toBe(
+      'score'
     );
-    testContext.equal(compiled.direction, 'ascending', 'sortBy defaults to ascending order');
-    testContext.equal(compiled.nulls, 'last', 'null placement defaults to the final selected rows');
-    testContext.equal(compiled.nans, 'last', 'NaNs default to the end of the non-null values');
-    testContext.deepEqual(
+    expect(compiled.direction, 'sortBy defaults to ascending order').toBe('ascending');
+    expect(compiled.nulls, 'null placement defaults to the final selected rows').toBe('last');
+    expect(compiled.nans, 'NaNs default to the end of the non-null values').toBe('last');
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      [6, 0, 7],
       'sorting retains source record batches and does not fabricate a materialized table'
-    );
-    testContext.deepEqual(
+    ).toEqual([6, 0, 7]);
+    expect(
       compiled.dictionaries.category,
-      {values: ['economy', 'standard', 'premium'], ordered: false},
       'sorting keeps adapter-owned categorical dictionary metadata'
-    );
+    ).toEqual({values: ['economy', 'standard', 'premium'], ordered: false});
 
     fixture.frame.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => !buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => !buffer.destroyed)),
       'compiled sorts retain their owned source lease'
-    );
+    ).toBe(true);
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-float-sort-encode'});
     compiled.encode(commandEncoder);
-    testContext.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'sorting only records caller-owned graph commands'
-    );
+    expect(submitSpy.mock.calls.length, 'sorting only records caller-owned graph commands').toBe(0);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUSortedSourceRows(compiled.rowIndices, compiled.selectedCounts),
-      [[43, 40, 41, 44, 42, 45], [], [52, 47, 50, 51, 46, 48, 49]],
       'stable per-batch float sorting handles infinities, signed zeros, NaNs, nulls, and duplicate keys'
-    );
-    testContext.deepEqual(
+    ).toEqual([[43, 40, 41, 44, 42, 45], [], [52, 47, 50, 51, 46, 48, 49]]);
+    expect(
       await readGPUSortChunks(compiled.selectedCounts),
-      [[6], [0], [7]],
       'sorting retains each source batch independently, including explicit empty batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([[6], [0], [7]]);
+    expect(
       await readGPUSortChunks(compiled.selectionMask),
-      [[1, 1, 1, 1, 1, 1], [], [1, 1, 1, 1, 1, 1, 1]],
       'plain sorting includes explicit null and NaN rows while retaining source-row selection masks'
-    );
+    ).toEqual([[1, 1, 1, 1, 1, 1], [], [1, 1, 1, 1, 1, 1, 1]]);
 
     compiled.destroy();
-    testContext.ok(
-      fixture.sourceBuffers.every(buffer => buffer.destroyed),
+    expect(
+      Boolean(fixture.sourceBuffers.every(buffer => buffer.destroyed)),
       'owned source buffers release after the compiled sorting lease is destroyed'
-    );
+    ).toBe(true);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
@@ -122,14 +106,14 @@ test('GPUDataFrame stably sorts nullable floating-point batches without material
     submitSpy.mockRestore();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame orders nulls, NaNs, signed integers, and full-width unsigned values explicitly', async testContext => {
+it('GPUDataFrame orders nulls, NaNs, signed integers, and full-width unsigned values explicitly', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -165,26 +149,22 @@ test('GPUDataFrame orders nulls, NaNs, signed integers, and full-width unsigned 
     unsigned.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUSortedSourceRows(nullable.rowIndices, nullable.selectedCounts),
-      [[45, 42, 43, 40, 41, 44], [], [49, 52, 47, 50, 51, 46, 48]],
       'nulls sort outermost while NaNs sort first among remaining non-null values'
-    );
-    testContext.deepEqual(
+    ).toEqual([[45, 42, 43, 40, 41, 44], [], [49, 52, 47, 50, 51, 46, 48]]);
+    expect(
       await readGPUSortedSourceRows(descending.rowIndices, descending.selectedCounts),
-      [[44, 40, 41, 43, 42, 45], [], [46, 48, 50, 51, 47, 52, 49]],
       'descending floating order keeps signed-zero and duplicate source-row ties stable'
-    );
-    testContext.deepEqual(
+    ).toEqual([[44, 40, 41, 43, 42, 45], [], [46, 48, 50, 51, 47, 52, 49]]);
+    expect(
       await readGPUSortedSourceRows(signed.rowIndices, signed.selectedCounts),
-      [[41, 42, 43, 45, 40, 44], [], [48, 46, 50, 47, 52, 51, 49]],
       'signed bit transforms preserve full int32 ordering and stable duplicate ties'
-    );
-    testContext.deepEqual(
+    ).toEqual([[41, 42, 43, 45, 40, 44], [], [48, 46, 50, 47, 52, 51, 49]]);
+    expect(
       await readGPUSortedSourceRows(unsigned.rowIndices, unsigned.selectedCounts),
-      [[41, 44, 42, 43, 40, 45], [], [47, 50, 46, 48, 49, 51, 52]],
       'unsigned sorting supports the full uint32 domain without reserving null sentinels'
-    );
+    ).toEqual([[41, 44, 42, 43, 40, 45], [], [47, 50, 46, 48, 49, 51, 52]]);
   } finally {
     nullable.destroy();
     descending.destroy();
@@ -193,14 +173,14 @@ test('GPUDataFrame orders nulls, NaNs, signed integers, and full-width unsigned 
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered parameter updates', async testContext => {
+it('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered parameter updates', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -231,8 +211,8 @@ test('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered p
   );
 
   try {
-    testContext.equal(compiled.limit, 2, 'compiled top-K exposes its per-batch limit');
-    testContext.equal(compiled.direction, 'descending', 'top-K defaults to largest values first');
+    expect(compiled.limit, 'compiled top-K exposes its per-batch limit').toBe(2);
+    expect(compiled.direction, 'top-K defaults to largest values first').toBe('descending');
 
     const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-top-k-two-encodes'});
     compiled.encode(commandEncoder, {minimumScore: -1});
@@ -255,12 +235,11 @@ test('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered p
     compiled.encode(commandEncoder, {minimumScore: 2});
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await Promise.all(firstCounts.map(async buffer => (await readGPUSortBuffer(buffer, 1))[0])),
-      [2, 0, 2],
       'initial top-K clamps each preserved batch count independently'
-    );
-    testContext.deepEqual(
+    ).toEqual([2, 0, 2]);
+    expect(
       await Promise.all(
         firstMasks.map((buffer, batchIndex) =>
           buffer
@@ -268,19 +247,16 @@ test('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered p
             : Promise.resolve([])
         )
       ),
-      [[1, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]],
       'top-K source masks include exactly the selected sorted source rows'
-    );
-    testContext.deepEqual(
+    ).toEqual([[1, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]]);
+    expect(
       await readGPUSortedSourceRows(compiled.rowIndices, compiled.selectedCounts),
-      [[44], [], [46, 48]],
       'the same compiled graph updates ordered IDs after a stricter filter parameter'
-    );
-    testContext.deepEqual(
+    ).toEqual([[44], [], [46, 48]]);
+    expect(
       await readGPUSortChunks(compiled.selectionMask),
-      [[0, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]],
       'second-encode masks remain coherent with sorted IDs and clamped batch counts'
-    );
+    ).toEqual([[0, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]]);
   } finally {
     for (const buffer of firstCounts) buffer.destroy();
     for (const buffer of firstMasks) buffer?.destroy();
@@ -288,14 +264,14 @@ test('GPUDataFrame publishes filtered per-batch top-K rows and encoder-ordered p
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame supports zero, oversized, and preordered per-batch top-K limits', async testContext => {
+it('GPUDataFrame supports zero, oversized, and preordered per-batch top-K limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -323,31 +299,23 @@ test('GPUDataFrame supports zero, oversized, and preordered per-batch top-K limi
     ordered.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUSortChunks(empty.selectedCounts),
-      [[0], [0], [0]],
       'a zero top-K limit rejects every row while retaining every batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0], [0], [0]]);
+    expect(
       await readGPUSortChunks(empty.selectionMask),
-      [[0, 0, 0, 0, 0, 0], [], [0, 0, 0, 0, 0, 0, 0]],
       'a zero top-K limit clears every source-row selection mask'
-    );
-    testContext.deepEqual(
+    ).toEqual([[0, 0, 0, 0, 0, 0], [], [0, 0, 0, 0, 0, 0, 0]]);
+    expect(
       await readGPUSortChunks(oversized.selectedCounts),
-      [[6], [0], [7]],
       'an oversized per-batch limit retains all selected rows without padding'
-    );
-    testContext.equal(
-      ordered.direction,
-      'ascending',
-      'sorted-plan top-K preserves explicit direction'
-    );
-    testContext.deepEqual(
+    ).toEqual([[6], [0], [7]]);
+    expect(ordered.direction, 'sorted-plan top-K preserves explicit direction').toBe('ascending');
+    expect(
       await readGPUSortedSourceRows(ordered.rowIndices, ordered.selectedCounts),
-      [[41, 42], [], [48, 46]],
       'top-K applied to an existing ascending plan returns the smallest stable rows per batch'
-    );
+    ).toEqual([[41, 42], [], [48, 46]]);
   } finally {
     empty.destroy();
     oversized.destroy();
@@ -355,14 +323,14 @@ test('GPUDataFrame supports zero, oversized, and preordered per-batch top-K limi
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame sorts nullable derived columns and schema-only source tables', async testContext => {
+it('GPUDataFrame sorts nullable derived columns and schema-only source tables', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -412,29 +380,19 @@ test('GPUDataFrame sorts nullable derived columns and schema-only source tables'
     emptyGlobal.encode(commandEncoder);
     device.submit(commandEncoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUSortedSourceRows(derived.rowIndices, derived.selectedCounts),
-      [[45, 43, 40, 41, 44, 42], [], [52, 47, 50, 51, 46, 48, 49]],
       'nullable derived keys preserve null-first ordering, NaN-last placement, and stable ties'
-    );
-    testContext.deepEqual(
-      empty.table.batches,
-      [],
-      'schema-only sorts do not invent source batches'
-    );
-    testContext.deepEqual(
-      empty.selectedCounts.data,
-      [],
-      'schema-only sorts allocate no batch counts'
-    );
-    testContext.equal(
+    ).toEqual([[45, 43, 40, 41, 44, 42], [], [52, 47, 50, 51, 46, 48, 49]]);
+    expect(empty.table.batches, 'schema-only sorts do not invent source batches').toEqual([]);
+    expect(empty.selectedCounts.data, 'schema-only sorts allocate no batch counts').toEqual([]);
+    expect(
       empty.table.schema.metadata.get('dataset'),
-      'empty-sort',
       'schema-only sorted projections retain source metadata'
-    );
-    testContext.deepEqual(await readGPUSortChunks(emptyGlobal.globalSelectedCount), [[0]]);
-    testContext.equal(emptyGlobal.globalRowIndices.length, 0);
-    testContext.deepEqual(emptyGlobal.table.batches, []);
+    ).toBe('empty-sort');
+    expect(await readGPUSortChunks(emptyGlobal.globalSelectedCount), '').toEqual([[0]]);
+    expect(emptyGlobal.globalRowIndices.length, '').toBe(0);
+    expect(emptyGlobal.table.batches, '').toEqual([]);
   } finally {
     derived.destroy();
     empty.destroy();
@@ -443,14 +401,14 @@ test('GPUDataFrame sorts nullable derived columns and schema-only source tables'
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame globally sorts stable nullable floating-point keys across preserved batches', async testContext => {
+it('GPUDataFrame globally sorts stable nullable floating-point keys across preserved batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -472,45 +430,40 @@ test('GPUDataFrame globally sorts stable nullable floating-point keys across pre
     nullsFirst.encode(encoder);
     device.submit(encoder.finish());
 
-    testContext.deepEqual(
+    expect(
       await readGPUSortChunks(sorted.globalSelectedCount),
-      [[13]],
       'global ordering exposes one selected-row count across every preserved batch'
-    );
-    testContext.deepEqual(
+    ).toEqual([[13]]);
+    expect(
       await readGPUSortChunks(sorted.globalRowIndices),
-      [[103, 906, 901, 100, 101, 904, 905, 900, 902, 104, 102, 903, 105]],
       'global numeric sorting merges batches stably and preserves discontinuous source identities'
-    );
-    testContext.deepEqual(
+    ).toEqual([[103, 906, 901, 100, 101, 904, 905, 900, 902, 104, 102, 903, 105]]);
+    expect(
       await readGPUSortChunks(nullsFirst.globalRowIndices),
-      [[105, 102, 903, 103, 906, 901, 100, 101, 904, 905, 900, 902, 104]],
       'global null placement is absolute while NaNs remain independently ordered and stable'
-    );
-    testContext.deepEqual(
+    ).toEqual([[105, 102, 903, 103, 906, 901, 100, 101, 904, 905, 900, 902, 104]]);
+    expect(
       sorted.table.batches.map(batch => batch.numRows),
-      [6, 0, 7],
       'global permutation never concatenates or reorders original dataframe batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([6, 0, 7]);
+    expect(
       await readGPUSortChunks(sorted.selectedCounts),
-      [[6], [0], [7]],
       'global full sorting preserves the existing batch-aligned selection counts'
-    );
+    ).toEqual([[6], [0], [7]]);
   } finally {
     sorted.destroy();
     nullsFirst.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame applies one globally stable top-K and reconciles source-aligned batch masks', async testContext => {
+it('GPUDataFrame applies one globally stable top-K and reconciles source-aligned batch masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -541,32 +494,28 @@ test('GPUDataFrame applies one globally stable top-K and reconciles source-align
     empty.encode(encoder);
     device.submit(encoder.finish());
 
-    testContext.deepEqual(await readGPUSortChunks(highest.globalSelectedCount), [[4]]);
-    testContext.deepEqual(
+    expect(await readGPUSortChunks(highest.globalSelectedCount), '').toEqual([[4]]);
+    expect(
       await readGPUSortBuffer(getGPUSortBuffer(highest.globalRowIndices.data[0]), 4),
-      [44, 46, 48, 40],
       'one descending global bound selects the four largest rows across all batches'
-    );
-    testContext.deepEqual(
+    ).toEqual([44, 46, 48, 40]);
+    expect(
       await readGPUSortChunks(highest.selectionMask),
-      [[1, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]],
       'global top-K updates every original source-aligned selection mask'
-    );
-    testContext.deepEqual(await readGPUSortChunks(highest.selectedCounts), [[2], [0], [2]]);
-    testContext.deepEqual(
+    ).toEqual([[1, 0, 0, 0, 1, 0], [], [1, 0, 1, 0, 0, 0, 0]]);
+    expect(await readGPUSortChunks(highest.selectedCounts), '').toEqual([[2], [0], [2]]);
+    expect(
       await readGPUSortedSourceRows(highest.rowIndices, highest.selectedCounts),
-      [[40, 44], [], [46, 48]],
       'inherited batch-local row outputs remain coherent with the global selection'
-    );
+    ).toEqual([[40, 44], [], [46, 48]]);
 
-    testContext.deepEqual(await readGPUSortChunks(lowest.globalSelectedCount), [[3]]);
-    testContext.deepEqual(
+    expect(await readGPUSortChunks(lowest.globalSelectedCount), '').toEqual([[3]]);
+    expect(
       await readGPUSortBuffer(getGPUSortBuffer(lowest.globalRowIndices.data[0]), 3),
-      [41, 48, 42],
       'sorted-plan limiting preserves ascending full-width signed ordering across batches'
-    );
-    testContext.deepEqual(await readGPUSortChunks(empty.globalSelectedCount), [[0]]);
-    testContext.deepEqual(await readGPUSortChunks(empty.selectedCounts), [[0], [0], [0]]);
+    ).toEqual([41, 48, 42]);
+    expect(await readGPUSortChunks(empty.globalSelectedCount), '').toEqual([[0]]);
+    expect(await readGPUSortChunks(empty.selectedCounts), '').toEqual([[0], [0], [0]]);
   } finally {
     highest.destroy();
     lowest.destroy();
@@ -574,14 +523,14 @@ test('GPUDataFrame applies one globally stable top-K and reconciles source-align
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame globally orders filtered derived keys and preserves reusable query parameters', async testContext => {
+it('GPUDataFrame globally orders filtered derived keys and preserves reusable query parameters', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -600,31 +549,30 @@ test('GPUDataFrame globally orders filtered derived keys and preserves reusable 
     let encoder = device.createCommandEncoder({id: 'gpu-dataframe-global-parameter-first'});
     compiled.encode(encoder, {minimumSigned: 6});
     device.submit(encoder.finish());
-    testContext.deepEqual(await readGPUSortChunks(compiled.globalSelectedCount), [[2]]);
-    testContext.deepEqual(
+    expect(await readGPUSortChunks(compiled.globalSelectedCount), '').toEqual([[2]]);
+    expect(
       await readGPUSortBuffer(getGPUSortBuffer(compiled.globalRowIndices.data[0]), 2),
-      [40, 44],
       'global derived top-K retains stable source order among maximum signed-key ties'
-    );
+    ).toEqual([40, 44]);
 
     encoder = device.createCommandEncoder({id: 'gpu-dataframe-global-parameter-second'});
     compiled.encode(encoder, {minimumSigned: 0x7fffffff});
     device.submit(encoder.finish());
-    testContext.deepEqual(await readGPUSortChunks(compiled.globalSelectedCount), [[0]]);
-    testContext.deepEqual(await readGPUSortChunks(compiled.selectedCounts), [[0], [0], [0]]);
+    expect(await readGPUSortChunks(compiled.globalSelectedCount), '').toEqual([[0]]);
+    expect(await readGPUSortChunks(compiled.selectedCounts), '').toEqual([[0], [0], [0]]);
   } finally {
     compiled.destroy();
     fixture.frame.destroy();
   }
 
-  testContext.end();
+  void 0;
 });
 
-test('GPUDataFrame globally orders preserved batches through bounded three-dimensional sorting', async testContext => {
+it('GPUDataFrame globally orders preserved batches through bounded three-dimensional sorting', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testContext.comment('WebGPU is not available');
-    testContext.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -691,22 +639,23 @@ test('GPUDataFrame globally orders preserved batches through bounded three-dimen
       .sort((left, right) => right.score - left.score || left.ordinal - right.ordinal)
       .slice(0, 25)
       .map(row => row.sourceRow);
-    testContext.deepEqual(await readGPUSortChunks(compiled.globalSelectedCount), [[25]]);
-    testContext.deepEqual(
+    expect(await readGPUSortChunks(compiled.globalSelectedCount), '').toEqual([[25]]);
+    expect(
       await readGPUSortBuffer(getGPUSortBuffer(compiled.globalRowIndices.data[0]), 25),
-      expectedRows,
       'stable global top-K merges 1,025 discontiguous source rows without collapsing batches'
-    );
-    testContext.deepEqual(
+    ).toEqual(expectedRows);
+    expect(
       compiled.table.batches.map(batch => batch.numRows),
-      lengths
-    );
-    testContext.ok(
-      dispatch.mock.calls.some(
-        ([, horizontal, vertical, depth]) => horizontal === 2 && vertical === 2 && depth === 2
+      ''
+    ).toEqual(lengths);
+    expect(
+      Boolean(
+        dispatch.mock.calls.some(
+          ([, horizontal, vertical, depth]) => horizontal === 2 && vertical === 2 && depth === 2
+        )
       ),
       'the explicit cross-batch permutation uses bounded 2×2×2 GPU sorting'
-    );
+    ).toBe(true);
   } finally {
     compiled?.destroy();
     frame.destroy();
@@ -714,7 +663,7 @@ test('GPUDataFrame globally orders preserved batches through bounded three-dimen
     Object.defineProperty(device, 'limits', {configurable: true, value: originalLimits});
   }
 
-  testContext.end();
+  void 0;
 });
 
 function createGPUSortFixture(

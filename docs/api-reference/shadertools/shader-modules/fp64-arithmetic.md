@@ -14,16 +14,18 @@ Use it directly when you only need the arithmetic primitives and want to avoid
 including the full `fp64` function library.
 
 See [GPU Floating-Point Precision Techniques](/docs/api-guide/shaders/gpu-floating-point-precision)
-for the numerical guarantees and tradeoffs of classic and integer-assisted
+for the numerical guarantees and tradeoffs of classic, hybrid, and integer-assisted
 double-single, native and software binary64, fixed point, and exact deltas. The
 [Mandelbrot and compute benchmark](/examples/experimental/fp64) runs these
 paths on the active GPU.
 
 ## Live WebGPU benchmark
 
-The Mandelbrot views below compare native `f32` and double-single precision on
-your current device. Select **Run WebGPU benchmark** to measure native `f32`,
-automatic selection, classic double-single, and integer-controlled
+The Mandelbrot views below compare native `f32` and double-single precision.
+On Apple WebGPU, the live FP64 pane uses a hybrid path that reconstructs critical
+high-part residuals with integer operations while accumulating lower-order terms
+with native `f32`. Select **Run WebGPU benchmark** to measure native `f32`,
+automatic selection, classic, hybrid, and integer-controlled
 double-single across add, multiply, divide, and square-root workloads. Each
 result reports its measured GPU timestamp or queue-completion timing alongside
 numerical error; the benchmark runs only when requested.
@@ -59,17 +61,24 @@ and rounds each result back to the existing `vec2f` representation. This avoids
 depending on floating-point expressions that Metal may reassociate or contract.
 
 The selection is a shader define, so it can also be forced on for another
-adapter or disabled on Apple:
+adapter, replaced with the hybrid path, or disabled on Apple:
 
 ```ts
 const computation = new Computation(device, {
   // ...
   modules: [fp64arithmetic],
   defines: {
-    LUMA_FP64_INTEGER_ARITHMETIC: true // false overrides the Apple default
+    LUMA_FP64_INTEGER_ARITHMETIC: false, // overrides the Apple default
+    LUMA_FP64_HYBRID_ARITHMETIC: true
   }
 });
 ```
+
+Hybrid arithmetic reconstructs the high-high `twoSum` and `twoProd` residuals
+with integer operations, then accumulates the lower limbs and multiplication
+cross terms with native `f32`. It uses fewer integer decode, alignment, and
+rounding passes than the fully controlled path. It is intended as a throughput
+and precision compromise, not as an optimizer-independent correctness mode.
 
 The integer path favors correctness over throughput. It preserves the public
 double-single API and provides approximately 48 significand bits while both
@@ -117,9 +126,9 @@ representable in the `f32` exponent range. Terrestrial longitude/latitude,
 projected metre coordinates, and their local deltas are comfortably inside
 that range; this helper is not a general replacement for binary64 arithmetic.
 
-A full bitwise drop-in implementation of `fp64f32` arithmetic is intentionally
-not exposed. That approach is too expensive for iterative fragment shaders and
-can stress some GPU drivers.
+A full bitwise IEEE binary64 drop-in is intentionally not exposed. That approach
+is substantially more expensive than the double-single paths and can stress
+some GPU drivers.
 
 `aBits` and `bBits` use canonical high/low word order:
 

@@ -4,30 +4,29 @@
 
 import {checkType} from '@luma.gl/test-utils';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 checkType<ShaderModule>(dirlight);
 
-export function registerDirlightTests(test: TapeTestFunction): void {
-  test('shadertools#dirlight', t => {
-    t.deepEqual(
+export function registerDirlightTests(): void {
+  it('shadertools#dirlight', () => {
+    expect(
       dirlight.getUniforms(),
-      {lightDirection: [1, 1, 2]},
       'default dirlight uniforms use the exported default direction'
-    );
-    t.deepEqual(dirlight.getUniforms({}), {}, 'explicit empty dirlight props stay empty');
-    t.deepEqual(
+    ).toEqual({lightDirection: [1, 1, 2]});
+    expect(dirlight.getUniforms({}), 'explicit empty dirlight props stay empty').toEqual({});
+    expect(
       dirlight.getUniforms({lightDirection: [2, 3, 4]}),
-      {lightDirection: [2, 3, 4]},
       'custom lightDirection is preserved'
+    ).toEqual({lightDirection: [2, 3, 4]});
+    expect(dirlight.defaultUniforms.lightDirection, 'default uniforms remain exported').toEqual([
+      1, 1, 2
+    ]);
+    expect(dirlight.fs.includes('dirlight_filterColor'), 'fragment shader source is exported').toBe(
+      true
     );
-    t.deepEqual(
-      dirlight.defaultUniforms.lightDirection,
-      [1, 1, 2],
-      'default uniforms remain exported'
+    expect(dirlight.vs.includes('dirlight_setNormal'), 'vertex shader source is exported').toBe(
+      true
     );
-    t.ok(dirlight.fs.includes('dirlight_filterColor'), 'fragment shader source is exported');
-    t.ok(dirlight.vs.includes('dirlight_setNormal'), 'vertex shader source is exported');
-    t.end();
   });
 }

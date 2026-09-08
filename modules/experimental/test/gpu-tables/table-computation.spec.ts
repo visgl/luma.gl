@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTableComputation} from '@luma.gl/experimental/gpu-tables';
@@ -23,11 +23,11 @@ const COMPUTE_SHADER_LAYOUT = {
   bindings: [{name: 'values', type: 'storage', group: 0, location: 0}]
 } satisfies ComputeShaderLayout;
 
-test('GPUTableComputation binds inputVectors for storage compute', async t => {
+it('GPUTableComputation binds inputVectors for storage compute', async () => {
   const device = await getWebGPUTestDevice();
   if (!device || isSoftwareBackedDevice(device)) {
-    t.comment('Skipping GPUTableComputation storage test without hardware WebGPU');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -46,15 +46,13 @@ test('GPUTableComputation binds inputVectors for storage compute', async t => {
   device.submit();
 
   const computedValues = await readInt32GPUVector(values);
-  t.deepEqual(
-    Array.from(computedValues),
-    [6, 12, 18],
-    'dispatches with input vector storage bindings'
-  );
+  expect(Array.from(computedValues), 'dispatches with input vector storage bindings').toEqual([
+    6, 12, 18
+  ]);
 
   computation.destroy();
   values.destroy();
-  t.end();
+  void 0;
 });
 
 function isSoftwareBackedDevice(device: Device): boolean {

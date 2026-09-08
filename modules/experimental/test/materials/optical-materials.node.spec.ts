@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeShaderBlockLayout} from '@luma.gl/core';
 import {
   aBuffer,
@@ -123,234 +123,174 @@ const ILLUMINATED_OPTICAL_MATERIAL_SHADER = OPTICAL_MATERIAL_SHADER.replace(
     vec4<f32>(pointLightColor + causticColor, 0.0);`
   );
 
-test('optical material modules expose portable shared shader helpers', testCase => {
-  testCase.equal(glassMaterialPlugin.name, 'glassMaterial', 'glass plugin has a stable name');
-  testCase.deepEqual(glassMaterialPlugin.modules, [glassMaterial], 'glass plugin installs glass');
-  testCase.equal(
-    glassTransmissionPlugin.name,
-    'glassTransmission',
-    'rasterized transmission plugin has a stable name'
+it('optical material modules expose portable shared shader helpers', () => {
+  expect(glassMaterialPlugin.name, 'glass plugin has a stable name').toBe('glassMaterial');
+  expect(glassMaterialPlugin.modules, 'glass plugin installs glass').toEqual([glassMaterial]);
+  expect(glassTransmissionPlugin.name, 'rasterized transmission plugin has a stable name').toBe(
+    'glassTransmission'
   );
-  testCase.deepEqual(
+  expect(
     glassTransmissionPlugin.modules,
-    [glassTransmission],
     'rasterized transmission plugin installs its optional extension'
+  ).toEqual([glassTransmission]);
+  expect(reflectiveMaterialPlugin.name, 'reflective plugin has a stable name').toBe(
+    'reflectiveMaterial'
   );
-  testCase.equal(
-    reflectiveMaterialPlugin.name,
-    'reflectiveMaterial',
-    'reflective plugin has a stable name'
+  expect(reflectiveMaterialPlugin.modules, 'reflective plugin installs reflective shading').toEqual(
+    [reflectiveMaterial]
   );
-  testCase.deepEqual(
-    reflectiveMaterialPlugin.modules,
-    [reflectiveMaterial],
-    'reflective plugin installs reflective shading'
+  expect(emissiveMaterialPlugin.name, 'emissive plugin has a stable name').toBe('emissiveMaterial');
+  expect(emissiveMaterialPlugin.modules, 'emissive plugin installs emissive shading').toEqual([
+    emissiveMaterial
+  ]);
+  expect(opticalPointLightsPlugin.name, 'point-light plugin has a stable name').toBe(
+    'opticalPointLights'
   );
-  testCase.equal(
-    emissiveMaterialPlugin.name,
-    'emissiveMaterial',
-    'emissive plugin has a stable name'
-  );
-  testCase.deepEqual(
-    emissiveMaterialPlugin.modules,
-    [emissiveMaterial],
-    'emissive plugin installs emissive shading'
-  );
-  testCase.equal(
-    opticalPointLightsPlugin.name,
-    'opticalPointLights',
-    'point-light plugin has a stable name'
-  );
-  testCase.deepEqual(
+  expect(
     opticalPointLightsPlugin.modules,
-    [opticalPointLights],
     'point-light plugin installs local lighting explicitly'
+  ).toEqual([opticalPointLights]);
+  expect(opticalCausticsPlugin.name, 'caustic-lens plugin has a stable name').toBe(
+    'opticalCaustics'
   );
-  testCase.equal(
-    opticalCausticsPlugin.name,
-    'opticalCaustics',
-    'caustic-lens plugin has a stable name'
-  );
-  testCase.deepEqual(
+  expect(
     opticalCausticsPlugin.modules,
-    [opticalCaustics],
     'caustic-lens plugin installs focused lighting explicitly'
-  );
-  testCase.deepEqual(
-    glassMaterial.dependencies,
-    [opticalLighting],
-    'glass reuses shared optical lighting'
-  );
-  testCase.deepEqual(
+  ).toEqual([opticalCaustics]);
+  expect(glassMaterial.dependencies, 'glass reuses shared optical lighting').toEqual([
+    opticalLighting
+  ]);
+  expect(
     glassTransmission.dependencies,
-    [glassMaterial],
     'rasterized transmission composes the existing glass material'
-  );
-  testCase.deepEqual(
+  ).toEqual([glassMaterial]);
+  expect(
     reflectiveMaterial.dependencies,
-    [opticalLighting],
     'reflective shading reuses shared optical lighting'
-  );
-  testCase.deepEqual(
-    emissiveMaterial.dependencies,
-    [opticalLighting],
-    'emissive shading reuses shared optical lighting'
-  );
-  testCase.deepEqual(
+  ).toEqual([opticalLighting]);
+  expect(emissiveMaterial.dependencies, 'emissive shading reuses shared optical lighting').toEqual([
+    opticalLighting
+  ]);
+  expect(
     opticalPointLights.dependencies,
-    [opticalLighting],
     'point-light shading reuses shared optical lighting'
-  );
-  testCase.deepEqual(
-    opticalCaustics.dependencies,
-    [opticalLighting],
-    'caustic shading reuses shared optical lighting'
-  );
-  testCase.equal(MAX_OPTICAL_POINT_LIGHTS, 16, 'point lights have a portable fixed capacity');
-  testCase.equal(MAX_OPTICAL_CAUSTIC_LENSES, 8, 'focusing lenses have a portable fixed capacity');
-  testCase.match(opticalLighting.source, /fn opticalLighting_getFresnel/, 'WGSL helpers exist');
-  testCase.match(opticalLighting.fs, /float opticalLighting_getFresnel/, 'GLSL helpers exist');
-  testCase.match(
+  ).toEqual([opticalLighting]);
+  expect(opticalCaustics.dependencies, 'caustic shading reuses shared optical lighting').toEqual([
+    opticalLighting
+  ]);
+  expect(MAX_OPTICAL_POINT_LIGHTS, 'point lights have a portable fixed capacity').toBe(16);
+  expect(MAX_OPTICAL_CAUSTIC_LENSES, 'focusing lenses have a portable fixed capacity').toBe(8);
+  expect(opticalLighting.source, 'WGSL helpers exist').toMatch(/fn opticalLighting_getFresnel/);
+  expect(opticalLighting.fs, 'GLSL helpers exist').toMatch(/float opticalLighting_getFresnel/);
+  expect(
     opticalLighting.source,
-    /fn opticalLighting_getFilteredRoughness[\s\S]*?dpdx\(normal\)[\s\S]*?dpdy\(normal\)/,
     'WGSL widens subpixel highlights using screen-space normal derivatives'
+  ).toMatch(/fn opticalLighting_getFilteredRoughness[\s\S]*?dpdx\(normal\)[\s\S]*?dpdy\(normal\)/);
+  expect(opticalLighting.fs, 'GLSL uses matching geometric specular antialiasing').toMatch(
+    /float opticalLighting_getFilteredRoughness[\s\S]*?dFdx\(normal\)[\s\S]*?dFdy\(normal\)/
   );
-  testCase.match(
-    opticalLighting.fs,
-    /float opticalLighting_getFilteredRoughness[\s\S]*?dFdx\(normal\)[\s\S]*?dFdy\(normal\)/,
-    'GLSL uses matching geometric specular antialiasing'
+  expect(opticalLighting.source, 'WGSL exposes GGX microfacet highlights').toMatch(
+    /fn opticalLighting_getMicrofacetSpecular/
   );
-  testCase.match(
-    opticalLighting.source,
-    /fn opticalLighting_getMicrofacetSpecular/,
-    'WGSL exposes GGX microfacet highlights'
+  expect(opticalLighting.fs, 'GLSL exposes GGX microfacet highlights').toMatch(
+    /float opticalLighting_getMicrofacetSpecular/
   );
-  testCase.match(
-    opticalLighting.fs,
-    /float opticalLighting_getMicrofacetSpecular/,
-    'GLSL exposes GGX microfacet highlights'
+  expect(emissiveMaterial.source, 'WGSL emission exists').toMatch(/fn emissiveMaterial_getColor/);
+  expect(emissiveMaterial.fs, 'GLSL emission exists').toMatch(/vec4 emissiveMaterial_getColor/);
+  expect(emissiveMaterial.source, 'WGSL directional emission exists').toMatch(
+    /fn emissiveMaterial_getTrailColor/
   );
-  testCase.match(emissiveMaterial.source, /fn emissiveMaterial_getColor/, 'WGSL emission exists');
-  testCase.match(emissiveMaterial.fs, /vec4 emissiveMaterial_getColor/, 'GLSL emission exists');
-  testCase.match(
-    emissiveMaterial.source,
-    /fn emissiveMaterial_getTrailColor/,
-    'WGSL directional emission exists'
+  expect(emissiveMaterial.fs, 'GLSL directional emission exists').toMatch(
+    /vec4 emissiveMaterial_getTrailColor/
   );
-  testCase.match(
-    emissiveMaterial.fs,
-    /vec4 emissiveMaterial_getTrailColor/,
-    'GLSL directional emission exists'
+  expect(emissiveMaterial.source, 'WGSL trails fade toward the packet tail').toMatch(
+    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/
   );
-  testCase.match(
-    emissiveMaterial.source,
-    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/,
-    'WGSL trails fade toward the packet tail'
+  expect(emissiveMaterial.fs, 'GLSL trails fade toward the packet tail').toMatch(
+    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/
   );
-  testCase.match(
-    emissiveMaterial.fs,
-    /pow\(smoothstep\(0\.0, 1\.0, trailProgress\), 1\.5\)/,
-    'GLSL trails fade toward the packet tail'
+  expect(opticalPointLights.source, 'WGSL point-light helper exists').toMatch(
+    /fn opticalPointLights_getColor/
   );
-  testCase.match(
-    opticalPointLights.source,
-    /fn opticalPointLights_getColor/,
-    'WGSL point-light helper exists'
+  expect(opticalPointLights.fs, 'GLSL point-light helper exists').toMatch(
+    /vec3 opticalPointLights_getColor/
   );
-  testCase.match(
-    opticalPointLights.fs,
-    /vec3 opticalPointLights_getColor/,
-    'GLSL point-light helper exists'
+  expect(opticalCaustics.source, 'WGSL focused-light helper exists').toMatch(
+    /fn opticalCaustics_getColor/
   );
-  testCase.match(
-    opticalCaustics.source,
-    /fn opticalCaustics_getColor/,
-    'WGSL focused-light helper exists'
+  expect(opticalCaustics.fs, 'GLSL focused-light helper exists').toMatch(
+    /vec3 opticalCaustics_getColor/
   );
-  testCase.match(
-    opticalCaustics.fs,
-    /vec3 opticalCaustics_getColor/,
-    'GLSL focused-light helper exists'
-  );
-  testCase.end();
+  void 0;
 });
 
-test('optical materials retain defaults while applying partial updates', testCase => {
+it('optical materials retain defaults while applying partial updates', () => {
   const initialGlassUniforms = glassMaterial.getUniforms({});
-  testCase.deepEqual(
-    initialGlassUniforms,
-    {
-      viewportSize: [1, 1],
-      indexOfRefraction: 1.48,
-      roughness: 0.14,
-      dispersion: 0.33,
-      thickness: 1.05,
-      refractionStrength: 1,
-      reflectionStrength: 1,
-      fresnelStrength: 1,
-      clearcoatStrength: 0.7,
-      iridescenceStrength: 0.1,
-      internalReflectionStrength: 0.42,
-      transmissionStrength: 1
-    },
-    'glass uniforms expose stable defaults'
-  );
+  expect(initialGlassUniforms, 'glass uniforms expose stable defaults').toEqual({
+    viewportSize: [1, 1],
+    indexOfRefraction: 1.48,
+    roughness: 0.14,
+    dispersion: 0.33,
+    thickness: 1.05,
+    refractionStrength: 1,
+    reflectionStrength: 1,
+    fresnelStrength: 1,
+    clearcoatStrength: 0.7,
+    iridescenceStrength: 0.1,
+    internalReflectionStrength: 0.42,
+    transmissionStrength: 1
+  });
 
   const updatedGlassUniforms = glassMaterial.getUniforms(
     {indexOfRefraction: 1.6, thickness: 1.8},
     initialGlassUniforms
   );
-  testCase.equal(updatedGlassUniforms.indexOfRefraction, 1.6, 'glass refraction updates');
-  testCase.equal(updatedGlassUniforms.thickness, 1.8, 'glass thickness updates');
-  testCase.equal(updatedGlassUniforms.roughness, 0.14, 'glass roughness is retained');
-  testCase.equal(updatedGlassUniforms.refractionStrength, 1, 'lens distortion is retained');
-  testCase.equal(updatedGlassUniforms.clearcoatStrength, 0.7, 'glass clearcoat is retained');
+  expect(updatedGlassUniforms.indexOfRefraction, 'glass refraction updates').toBe(1.6);
+  expect(updatedGlassUniforms.thickness, 'glass thickness updates').toBe(1.8);
+  expect(updatedGlassUniforms.roughness, 'glass roughness is retained').toBe(0.14);
+  expect(updatedGlassUniforms.refractionStrength, 'lens distortion is retained').toBe(1);
+  expect(updatedGlassUniforms.clearcoatStrength, 'glass clearcoat is retained').toBe(0.7);
 
   const cinematicGlassUniforms = glassMaterial.getUniforms(
     {fresnelStrength: 1.4, iridescenceStrength: 0.25, transmissionStrength: 1.1},
     updatedGlassUniforms
   );
-  testCase.equal(cinematicGlassUniforms.fresnelStrength, 1.4, 'Fresnel edges are configurable');
-  testCase.equal(
+  expect(cinematicGlassUniforms.fresnelStrength, 'Fresnel edges are configurable').toBe(1.4);
+  expect(
     cinematicGlassUniforms.iridescenceStrength,
-    0.25,
     'spectral edge highlights are configurable'
+  ).toBe(0.25);
+  expect(cinematicGlassUniforms.transmissionStrength, 'glass transmission is configurable').toBe(
+    1.1
   );
-  testCase.equal(
-    cinematicGlassUniforms.transmissionStrength,
-    1.1,
-    'glass transmission is configurable'
-  );
-  testCase.equal(
+  expect(
     cinematicGlassUniforms.internalReflectionStrength,
-    0.42,
     'internal reflection is retained across partial updates'
-  );
+  ).toBe(0.42);
 
   const initialTransmissionUniforms = glassTransmission.getUniforms({});
-  testCase.deepEqual(
+  expect(
     initialTransmissionUniforms,
-    {
-      viewportSize: [1, 1],
-      depthRange: [0.1, 100],
-      environmentIntensity: 1,
-      environmentMipLevels: 1,
-      environmentPrefilterStrength: 0,
-      thicknessStrength: 1,
-      roughTransmissionStrength: 0,
-      spectralAbsorptionStrength: 0,
-      thinFilmThickness: 0,
-      thinFilmStrength: 0,
-      volumeScatteringStrength: 0,
-      contactShadowStrength: 0,
-      depthBias: 0.00008,
-      dynamicReflectionStrength: 0,
-      secondaryBounceStrength: 0,
-      faultDistortionStrength: 0,
-      time: 0
-    },
     'rasterized transmission exposes stable optical defaults'
-  );
+  ).toEqual({
+    viewportSize: [1, 1],
+    depthRange: [0.1, 100],
+    environmentIntensity: 1,
+    environmentMipLevels: 1,
+    environmentPrefilterStrength: 0,
+    thicknessStrength: 1,
+    roughTransmissionStrength: 0,
+    spectralAbsorptionStrength: 0,
+    thinFilmThickness: 0,
+    thinFilmStrength: 0,
+    volumeScatteringStrength: 0,
+    contactShadowStrength: 0,
+    depthBias: 0.00008,
+    dynamicReflectionStrength: 0,
+    secondaryBounceStrength: 0,
+    faultDistortionStrength: 0,
+    time: 0
+  });
   const updatedTransmissionUniforms = glassTransmission.getUniforms(
     {
       environmentIntensity: 1.6,
@@ -361,37 +301,30 @@ test('optical materials retain defaults while applying partial updates', testCas
     },
     initialTransmissionUniforms
   );
-  testCase.equal(
+  expect(
     updatedTransmissionUniforms.environmentIntensity,
-    1.6,
     'environment reflections remain adjustable'
-  );
-  testCase.equal(updatedTransmissionUniforms.environmentMipLevels, 9, 'probe mip capacity updates');
-  testCase.equal(
+  ).toBe(1.6);
+  expect(updatedTransmissionUniforms.environmentMipLevels, 'probe mip capacity updates').toBe(9);
+  expect(
     updatedTransmissionUniforms.environmentPrefilterStrength,
-    0.85,
     'roughness-selected environment filtering is configurable'
-  );
-  testCase.equal(
+  ).toBe(0.85);
+  expect(
     updatedTransmissionUniforms.contactShadowStrength,
-    0.4,
     'opaque-depth contact shadows are configurable'
-  );
-  testCase.equal(
+  ).toBe(0.4);
+  expect(
     updatedTransmissionUniforms.thicknessStrength,
-    1.25,
     'backface-derived thickness remains adjustable'
+  ).toBe(1.25);
+  expect(updatedTransmissionUniforms.depthBias, 'foreground-depth tolerance is retained').toBe(
+    0.00008
   );
-  testCase.equal(
-    updatedTransmissionUniforms.depthBias,
-    0.00008,
-    'foreground-depth tolerance is retained'
-  );
-  testCase.equal(
+  expect(
     updatedTransmissionUniforms.dynamicReflectionStrength,
-    0,
     'dynamic reflections remain opt-in for existing consumers'
-  );
+  ).toBe(0);
   const animatedTransmissionUniforms = glassTransmission.getUniforms(
     {
       dynamicReflectionStrength: 0.45,
@@ -406,406 +339,327 @@ test('optical materials retain defaults while applying partial updates', testCas
     },
     updatedTransmissionUniforms
   );
-  testCase.equal(
+  expect(
     animatedTransmissionUniforms.dynamicReflectionStrength,
-    0.45,
     'captured-scene reflections are configurable'
-  );
-  testCase.equal(
+  ).toBe(0.45);
+  expect(
     animatedTransmissionUniforms.secondaryBounceStrength,
-    0.7,
     'secondary internal reflections are configurable'
-  );
-  testCase.equal(
+  ).toBe(0.7);
+  expect(
     animatedTransmissionUniforms.faultDistortionStrength,
-    0.3,
     'fault-driven lens distortion is configurable'
-  );
-  testCase.equal(
+  ).toBe(0.3);
+  expect(
     animatedTransmissionUniforms.roughTransmissionStrength,
-    0.85,
     'thickness-aware rough transmission is configurable'
-  );
-  testCase.equal(
+  ).toBe(0.85);
+  expect(
     animatedTransmissionUniforms.spectralAbsorptionStrength,
-    0.42,
     'wavelength-dependent volume absorption is configurable'
-  );
-  testCase.equal(
+  ).toBe(0.42);
+  expect(
     animatedTransmissionUniforms.thinFilmThickness,
-    420,
     'thin-film coating thickness is configured in nanometers'
-  );
-  testCase.equal(
+  ).toBe(420);
+  expect(
     animatedTransmissionUniforms.thinFilmStrength,
-    0.22,
     'angular thin-film interference is configurable'
-  );
-  testCase.equal(
+  ).toBe(0.22);
+  expect(
     animatedTransmissionUniforms.volumeScatteringStrength,
-    0.38,
     'localized optical volume scattering is configurable'
-  );
-  testCase.equal(animatedTransmissionUniforms.time, 2.5, 'fault animation accepts a scene clock');
+  ).toBe(0.38);
+  expect(animatedTransmissionUniforms.time, 'fault animation accepts a scene clock').toBe(2.5);
   const retainedOpticalUniforms = glassTransmission.getUniforms(
     {environmentIntensity: 1.8},
     animatedTransmissionUniforms
   );
-  testCase.equal(
+  expect(
     retainedOpticalUniforms.roughTransmissionStrength,
-    0.85,
     'partial updates preserve rough transmission'
-  );
-  testCase.equal(
+  ).toBe(0.85);
+  expect(
     retainedOpticalUniforms.spectralAbsorptionStrength,
-    0.42,
     'partial updates preserve spectral volume absorption'
-  );
-  testCase.equal(
+  ).toBe(0.42);
+  expect(
     retainedOpticalUniforms.thinFilmThickness,
-    420,
     'partial updates preserve the coating thickness'
-  );
-  testCase.equal(
+  ).toBe(420);
+  expect(
     retainedOpticalUniforms.volumeScatteringStrength,
-    0.38,
     'partial updates preserve optical volume scattering'
-  );
-  testCase.equal(
+  ).toBe(0.38);
+  expect(
     retainedOpticalUniforms.environmentMipLevels,
-    9,
     'partial updates preserve the prefiltered environment pyramid'
-  );
-  testCase.equal(
+  ).toBe(9);
+  expect(
     retainedOpticalUniforms.contactShadowStrength,
-    0.4,
     'partial updates preserve contact-shadow strength'
-  );
+  ).toBe(0.4);
 
   const initialReflectiveUniforms = reflectiveMaterial.getUniforms({});
-  testCase.deepEqual(
-    initialReflectiveUniforms,
-    {roughness: 0.62, reflectionStrength: 0.32, specularStrength: 0.42, opacityScale: 1},
-    'reflective uniforms expose stable defaults'
-  );
+  expect(initialReflectiveUniforms, 'reflective uniforms expose stable defaults').toEqual({
+    roughness: 0.62,
+    reflectionStrength: 0.32,
+    specularStrength: 0.42,
+    opacityScale: 1
+  });
 
   const updatedReflectiveUniforms = reflectiveMaterial.getUniforms(
     {roughness: 0.35, opacityScale: 0.5},
     initialReflectiveUniforms
   );
-  testCase.equal(updatedReflectiveUniforms.roughness, 0.35, 'reflective roughness updates');
-  testCase.equal(updatedReflectiveUniforms.opacityScale, 0.5, 'reflective opacity updates');
-  testCase.equal(
+  expect(updatedReflectiveUniforms.roughness, 'reflective roughness updates').toBe(0.35);
+  expect(updatedReflectiveUniforms.opacityScale, 'reflective opacity updates').toBe(0.5);
+  expect(
     updatedReflectiveUniforms.specularStrength,
-    0.42,
     'reflective specular strength is retained'
-  );
+  ).toBe(0.42);
 
   const initialEmissiveUniforms = emissiveMaterial.getUniforms({});
-  testCase.deepEqual(
-    initialEmissiveUniforms,
-    {intensity: 1, rimStrength: 0.35},
-    'emissive uniforms expose stable defaults'
-  );
+  expect(initialEmissiveUniforms, 'emissive uniforms expose stable defaults').toEqual({
+    intensity: 1,
+    rimStrength: 0.35
+  });
 
   const updatedEmissiveUniforms = emissiveMaterial.getUniforms(
     {intensity: 2.5},
     initialEmissiveUniforms
   );
-  testCase.equal(updatedEmissiveUniforms.intensity, 2.5, 'emissive intensity updates');
-  testCase.equal(updatedEmissiveUniforms.rimStrength, 0.35, 'emissive rim strength is retained');
-  testCase.end();
+  expect(updatedEmissiveUniforms.intensity, 'emissive intensity updates').toBe(2.5);
+  expect(updatedEmissiveUniforms.rimStrength, 'emissive rim strength is retained').toBe(0.35);
+  void 0;
 });
 
-test('reflective materials follow the reflected view direction and preserve opaque alpha', testCase => {
-  testCase.match(
+it('reflective materials follow the reflected view direction and preserve opaque alpha', () => {
+  expect(
     reflectiveMaterial.source,
-    /let reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/,
     'WGSL environment reflections follow the camera-reflected view ray'
-  );
-  testCase.match(
+  ).toMatch(/let reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/);
+  expect(
     reflectiveMaterial.fs,
-    /vec3 reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/,
     'GLSL environment reflections follow the camera-reflected view ray'
+  ).toMatch(/vec3 reflectionDirection = reflect\(-viewDirection, normalFacingCamera\);/);
+  expect(reflectiveMaterial.source, 'WGSL samples the environment along the reflected ray').toMatch(
+    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/
   );
-  testCase.match(
+  expect(reflectiveMaterial.fs, 'GLSL samples the environment along the reflected ray').toMatch(
+    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/
+  );
+  expect(
     reflectiveMaterial.source,
-    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/,
-    'WGSL samples the environment along the reflected ray'
-  );
-  testCase.match(
-    reflectiveMaterial.fs,
-    /opticalLighting_sampleEnvironment\(\s*reflectionDirection,/,
-    'GLSL samples the environment along the reflected ray'
-  );
-  testCase.match(
-    reflectiveMaterial.source,
-    /let opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/,
     'WGSL reflective opacity supports the complete zero-to-one alpha range'
-  );
-  testCase.match(
+  ).toMatch(/let opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/);
+  expect(
     reflectiveMaterial.fs,
-    /float opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/,
     'GLSL reflective opacity supports the complete zero-to-one alpha range'
-  );
-  testCase.end();
+  ).toMatch(/float opacity = clamp\([\s\S]*?0\.0,\s*1\.0\s*\);/);
+  void 0;
 });
 
-test('glass materials compose portable clearcoat, spectral rims, and soft transmission', testCase => {
+it('glass materials compose portable clearcoat, spectral rims, and soft transmission', () => {
   for (const [shaderSource, language] of [
     [glassMaterial.source, 'WGSL'],
     [glassMaterial.fs, 'GLSL']
   ] as const) {
-    testCase.match(
-      shaderSource,
-      /glassMaterial_sampleTransmission/,
-      `${language} isolates reusable chromatic transmission sampling`
+    expect(shaderSource, `${language} isolates reusable chromatic transmission sampling`).toMatch(
+      /glassMaterial_sampleTransmission/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /rayDeflection = refractionDirection \+ viewDirection/,
       `${language} distorts the background using the actual refracted ray`
-    );
-    testCase.match(
+    ).toMatch(/rayDeflection = refractionDirection \+ viewDirection/);
+    expect(
       shaderSource,
-      /cameraRight/,
       `${language} projects refraction into camera-aligned screen coordinates`
+    ).toMatch(/cameraRight/);
+    expect(shaderSource, `${language} exposes adjustable lens distortion`).toMatch(
+      /refractionStrength/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /refractionStrength/,
-      `${language} exposes adjustable lens distortion`
-    );
-    testCase.match(
-      shaderSource,
-      /dispersionHalfSpread = \(indexOfRefraction - 1\.0\) \* 0\.025/,
       `${language} follows glTF's Abbe-number wavelength-dependent index-of-refraction model`
+    ).toMatch(/dispersionHalfSpread = \(indexOfRefraction - 1\.0\) \* 0\.025/);
+    expect(shaderSource, `${language} traces the lower-index red transmission ray`).toMatch(
+      /redRefractionDirection = refract/
     );
-    testCase.match(
-      shaderSource,
-      /redRefractionDirection = refract/,
-      `${language} traces the lower-index red transmission ray`
+    expect(shaderSource, `${language} traces the higher-index blue transmission ray`).toMatch(
+      /blueRefractionDirection = refract/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /blueRefractionDirection = refract/,
-      `${language} traces the higher-index blue transmission ray`
-    );
-    testCase.match(
-      shaderSource,
-      /transmissionCoverage/,
       `${language} preserves displaced background instead of blending it away`
+    ).toMatch(/transmissionCoverage/);
+    expect(shaderSource, `${language} shades glass with GGX microfacet highlights`).toMatch(
+      /opticalLighting_getMicrofacetSpecular/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /opticalLighting_getMicrofacetSpecular/,
-      `${language} shades glass with GGX microfacet highlights`
-    );
-    testCase.match(
-      shaderSource,
-      /opticalLighting_getFilteredRoughness/,
       `${language} prevents subpixel GGX highlights from sparkling or clipping`
-    );
-    testCase.match(shaderSource, /clearcoatStrength/, `${language} supports a clearcoat lobe`);
-    testCase.match(
+    ).toMatch(/opticalLighting_getFilteredRoughness/);
+    expect(shaderSource, `${language} supports a clearcoat lobe`).toMatch(/clearcoatStrength/);
+    expect(
       shaderSource,
-      /clearcoatFresnel/,
       `${language} computes the clearcoat's angular dielectric reflectance`
-    );
-    testCase.match(
+    ).toMatch(/clearcoatFresnel/);
+    expect(
       shaderSource,
-      /baseLayerEnergy/,
       `${language} attenuates the underlying layer when clearcoat reflects incoming light`
-    );
-    testCase.match(
+    ).toMatch(/baseLayerEnergy/);
+    expect(
       shaderSource,
-      /clearcoatEnvironment = environmentColor \* clearcoatFresnel/,
       `${language} restores clearcoat Fresnel energy as environment reflection`
-    );
-    testCase.match(
+    ).toMatch(/clearcoatEnvironment = environmentColor \* clearcoatFresnel/);
+    expect(
       shaderSource,
-      /clearcoatReflection = \(clearcoatEnvironment \+ clearcoatSpecular\)/,
       `${language} combines clearcoat environment and direct-light reflections`
-    );
-    testCase.match(
+    ).toMatch(/clearcoatReflection = \(clearcoatEnvironment \+ clearcoatSpecular\)/);
+    expect(
       shaderSource,
-      /clamp\(glassMaterial\.transmissionStrength, 0\.0, 1\.0\)/,
       `${language} prevents transmission from amplifying the captured background`
+    ).toMatch(/clamp\(glassMaterial\.transmissionStrength, 0\.0, 1\.0\)/);
+    expect(shaderSource, `${language} supports internal shell reflection`).toMatch(
+      /internalReflectionStrength/
     );
-    testCase.match(
-      shaderSource,
-      /internalReflectionStrength/,
-      `${language} supports internal shell reflection`
+    expect(shaderSource, `${language} supports restrained spectral rim interference`).toMatch(
+      /iridescenceStrength/
     );
-    testCase.match(
-      shaderSource,
-      /iridescenceStrength/,
-      `${language} supports restrained spectral rim interference`
+    expect(shaderSource, `${language} softens refraction according to surface roughness`).toMatch(
+      /softenedTransmission/
     );
-    testCase.match(
-      shaderSource,
-      /softenedTransmission/,
-      `${language} softens refraction according to surface roughness`
+    expect(shaderSource, `${language} adds camera-responsive studio-light reflections`).toMatch(
+      /studioRibbon/
     );
-    testCase.match(
-      shaderSource,
-      /studioRibbon/,
-      `${language} adds camera-responsive studio-light reflections`
-    );
-    testCase.match(shaderSource, /glassBody/, `${language} retains a visible tinted glass body`);
+    expect(shaderSource, `${language} retains a visible tinted glass body`).toMatch(/glassBody/);
   }
-  testCase.end();
+  void 0;
 });
 
-test('rasterized glass transmission composes thickness, depth, and environment maps', testCase => {
+it('rasterized glass transmission composes thickness, depth, and environment maps', () => {
   for (const [shaderSource, language] of [
     [glassTransmission.source, 'WGSL'],
     [glassTransmission.fs, 'GLSL']
   ] as const) {
-    testCase.match(shaderSource, /glassBackfaceTexture/, `${language} samples sphere backfaces`);
-    testCase.match(shaderSource, /glassSceneDepthTexture/, `${language} samples opaque depth`);
-    testCase.match(
-      shaderSource,
-      /glassEnvironmentTexture/,
-      `${language} samples a studio environment map`
+    expect(shaderSource, `${language} samples sphere backfaces`).toMatch(/glassBackfaceTexture/);
+    expect(shaderSource, `${language} samples opaque depth`).toMatch(/glassSceneDepthTexture/);
+    expect(shaderSource, `${language} samples a studio environment map`).toMatch(
+      /glassEnvironmentTexture/
     );
-    testCase.match(
-      shaderSource,
-      /glassTransmission_linearizeDepth/,
-      `${language} measures optical thickness in linear view depth`
+    expect(shaderSource, `${language} measures optical thickness in linear view depth`).toMatch(
+      /glassTransmission_linearizeDepth/
     );
-    testCase.match(shaderSource, /entryDirection = refract/, `${language} refracts at entry`);
-    testCase.match(shaderSource, /exitDirection = refract/, `${language} refracts at exit`);
-    testCase.match(
+    expect(shaderSource, `${language} refracts at entry`).toMatch(/entryDirection = refract/);
+    expect(shaderSource, `${language} refracts at exit`).toMatch(/exitDirection = refract/);
+    expect(
       shaderSource,
-      /redEntryDirection = refract[\s\S]*?blueEntryDirection = refract/,
       `${language} traces wavelength-dependent rays through the front glass surface`
-    );
-    testCase.match(
+    ).toMatch(/redEntryDirection = refract[\s\S]*?blueEntryDirection = refract/);
+    expect(
       shaderSource,
-      /redExitDirection = refract[\s\S]*?blueExitDirection = refract/,
       `${language} refracts every wavelength again at the rear glass boundary`
-    );
-    testCase.match(
+    ).toMatch(/redExitDirection = refract[\s\S]*?blueExitDirection = refract/);
+    expect(
       shaderSource,
-      /baseReflectance = pow\(\(indexOfRefraction - 1\.0\) \/ \(indexOfRefraction \+ 1\.0\), 2\.0\)/,
       `${language} derives dielectric Fresnel reflectance from the configured index of refraction`
+    ).toMatch(
+      /baseReflectance = pow\(\(indexOfRefraction - 1\.0\) \/ \(indexOfRefraction \+ 1\.0\), 2\.0\)/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /transmissionWeight = \(1\.0 - fresnel\)/,
       `${language} reserves reflected energy before transmitting the background`
-    );
-    testCase.match(
+    ).toMatch(/transmissionWeight = \(1\.0 - fresnel\)/);
+    expect(
       shaderSource,
-      /reflectionWeight = fresnel \* glassMaterial\.reflectionStrength/,
       `${language} weights environment reflections by the same angular Fresnel response`
+    ).toMatch(/reflectionWeight = fresnel \* glassMaterial\.reflectionStrength/);
+    expect(shaderSource, `${language} preserves opaque foreground geometry`).toMatch(
+      /foregroundOcclusion/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /foregroundOcclusion/,
-      `${language} preserves opaque foreground geometry`
-    );
-    testCase.match(
-      shaderSource,
-      /hasExitRay/,
       `${language} handles total internal reflection without ray marching`
+    ).toMatch(/hasExitRay/);
+    expect(shaderSource, `${language} reflects nearby captured-scene objects`).toMatch(
+      /reflectedSceneColor/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /reflectedSceneColor/,
-      `${language} reflects nearby captured-scene objects`
-    );
-    testCase.match(
-      shaderSource,
-      /dot\(reflectionDirection,\s*cameraRight\)/,
       `${language} projects dynamic scene reflections along the reflected view ray`
+    ).toMatch(/dot\(reflectionDirection,\s*cameraRight\)/);
+    expect(shaderSource, `${language} approximates a second internal environment bounce`).toMatch(
+      /secondaryDirection/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /secondaryDirection/,
-      `${language} approximates a second internal environment bounce`
-    );
-    testCase.match(
-      shaderSource,
-      /faultRipple/,
       `${language} confines animated distortion to warm fault-colored glass`
-    );
-    testCase.match(
+    ).toMatch(/faultRipple/);
+    expect(
       shaderSource,
-      /glassTransmission_sampleRoughTransmission/,
       `${language} filters transmission using optical thickness and surface roughness`
+    ).toMatch(/glassTransmission_sampleRoughTransmission/);
+    expect(shaderSource, `${language} applies wavelength-dependent volume absorption`).toMatch(
+      /glassTransmission_getSpectralAbsorption/
     );
-    testCase.match(
-      shaderSource,
-      /glassTransmission_getSpectralAbsorption/,
-      `${language} applies wavelength-dependent volume absorption`
+    expect(shaderSource, `${language} computes angular thin-film interference`).toMatch(
+      /glassTransmission_getThinFilm/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /glassTransmission_getThinFilm/,
-      `${language} computes angular thin-film interference`
-    );
-    testCase.match(
-      shaderSource,
-      /650\.0, 530\.0, 460\.0/,
       `${language} evaluates representative red, green, and blue wavelengths`
-    );
-    testCase.match(
+    ).toMatch(/650\.0, 530\.0, 460\.0/);
+    expect(
       shaderSource,
-      /volumeLightScattering/,
       `${language} scatters nearby colored lights inside the glass volume`
-    );
-    testCase.match(
+    ).toMatch(/volumeLightScattering/);
+    expect(
       shaderSource,
-      /opticalPointLights_getSpecularColor/,
       `${language} keeps local packet glints as front-surface reflections`
-    );
-    testCase.match(
+    ).toMatch(/opticalPointLights_getSpecularColor/);
+    expect(
       shaderSource,
-      /filteredEnvironment/,
       `${language} filters environment reflections for rough optical surfaces`
-    );
-    testCase.match(
+    ).toMatch(/filteredEnvironment/);
+    expect(
       shaderSource,
-      /glassTransmission_sampleEnvironmentAtRoughness/,
       `${language} samples explicit roughness-dependent reflection lobes`
+    ).toMatch(/glassTransmission_sampleEnvironmentAtRoughness/);
+    expect(shaderSource, `${language} selects initialized studio-environment mip levels`).toMatch(
+      /reflectionLevel/
     );
-    testCase.match(
+    expect(
       shaderSource,
-      /reflectionLevel/,
-      `${language} selects initialized studio-environment mip levels`
-    );
-    testCase.match(
-      shaderSource,
-      /glassTransmission_getContactShadow/,
       `${language} anchors translucent shells to nearby opaque geometry`
-    );
+    ).toMatch(/glassTransmission_getContactShadow/);
   }
   const glslEnvironmentSampleCalls = [
     ...glassTransmission.fs.matchAll(/(texture(?:Lod)?)\(\s*glassEnvironmentTexture/g)
   ];
-  testCase.ok(glslEnvironmentSampleCalls.length > 0, 'GLSL samples the environment texture');
-  testCase.ok(
-    glslEnvironmentSampleCalls.every(sampleCall => sampleCall[1] === 'textureLod'),
+  expect(
+    Boolean(glslEnvironmentSampleCalls.length > 0),
+    'GLSL samples the environment texture'
+  ).toBe(true);
+  expect(
+    Boolean(glslEnvironmentSampleCalls.every(sampleCall => sampleCall[1] === 'textureLod')),
     'GLSL uses explicit mip levels for prefiltered and legacy environment sampling'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('optical point lights pack and retain a bounded portable uniform array', testCase => {
+it('optical point lights pack and retain a bounded portable uniform array', () => {
   const initialUniforms = opticalPointLights.getUniforms({});
-  testCase.equal(initialUniforms.lightCount, 0, 'point lights start disabled');
-  testCase.equal(initialUniforms.intensity, 1, 'point lights expose a stable global intensity');
-  testCase.equal(
-    initialUniforms.lights.length,
-    MAX_OPTICAL_POINT_LIGHTS,
-    'default lights occupy every fixed uniform slot'
+  expect(initialUniforms.lightCount, 'point lights start disabled').toBe(0);
+  expect(initialUniforms.intensity, 'point lights expose a stable global intensity').toBe(1);
+  expect(initialUniforms.lights.length, 'default lights occupy every fixed uniform slot').toBe(
+    MAX_OPTICAL_POINT_LIGHTS
   );
-  testCase.ok(
-    initialUniforms.lights.every(light => light.intensity === 0),
+  expect(
+    Boolean(initialUniforms.lights.every(light => light.intensity === 0)),
     'unused light slots do not illuminate existing materials'
-  );
+  ).toBe(true);
 
   const suppliedLights = Array.from(
     {length: MAX_OPTICAL_POINT_LIGHTS + 2},
@@ -817,56 +671,50 @@ test('optical point lights pack and retain a bounded portable uniform array', te
   );
   const packedUniforms = opticalPointLights.getUniforms({lights: suppliedLights, intensity: 0.6});
 
-  testCase.equal(
-    packedUniforms.lightCount,
-    MAX_OPTICAL_POINT_LIGHTS,
-    'additional lights beyond the fixed capacity are ignored'
+  expect(packedUniforms.lightCount, 'additional lights beyond the fixed capacity are ignored').toBe(
+    MAX_OPTICAL_POINT_LIGHTS
   );
-  testCase.equal(packedUniforms.intensity, 0.6, 'global intensity is configurable');
-  testCase.deepEqual(
+  expect(packedUniforms.intensity, 'global intensity is configurable').toBe(0.6);
+  expect(
     packedUniforms.lights[0],
-    {position: [0, 1, 2], radius: 1, color: [1, 0, 0], intensity: 1},
     'point-light defaults are packed in portable field order'
-  );
-  testCase.deepEqual(
-    packedUniforms.lights[1],
-    {position: [1, 2, 3], radius: 3.5, color: [1, 1, 0], intensity: 2.5},
-    'per-light radius and intensity are preserved'
-  );
+  ).toEqual({position: [0, 1, 2], radius: 1, color: [1, 0, 0], intensity: 1});
+  expect(packedUniforms.lights[1], 'per-light radius and intensity are preserved').toEqual({
+    position: [1, 2, 3],
+    radius: 3.5,
+    color: [1, 1, 0],
+    intensity: 2.5
+  });
 
   const updatedUniforms = opticalPointLights.getUniforms({intensity: 1.4}, packedUniforms);
-  testCase.equal(updatedUniforms.intensity, 1.4, 'global intensity updates independently');
-  testCase.equal(updatedUniforms.lightCount, 16, 'partial updates preserve active lights');
-  testCase.equal(updatedUniforms.lights, packedUniforms.lights, 'packed light arrays are reused');
+  expect(updatedUniforms.intensity, 'global intensity updates independently').toBe(1.4);
+  expect(updatedUniforms.lightCount, 'partial updates preserve active lights').toBe(16);
+  expect(updatedUniforms.lights, 'packed light arrays are reused').toBe(packedUniforms.lights);
 
   const clearedUniforms = opticalPointLights.getUniforms({lights: []}, updatedUniforms);
-  testCase.equal(clearedUniforms.lightCount, 0, 'an explicit empty light list clears illumination');
-  testCase.ok(
-    clearedUniforms.lights.every(light => light.intensity === 0),
+  expect(clearedUniforms.lightCount, 'an explicit empty light list clears illumination').toBe(0);
+  expect(
+    Boolean(clearedUniforms.lights.every(light => light.intensity === 0)),
     'cleared light slots are reset'
-  );
-  testCase.match(
+  ).toBe(true);
+  expect(
     opticalPointLights.source,
-    /softSpecular/,
     'WGSL retains a broader packet reflection lobe on curved glass'
-  );
-  testCase.match(
+  ).toMatch(/softSpecular/);
+  expect(
     opticalPointLights.fs,
-    /softSpecular/,
     'GLSL retains a broader packet reflection lobe on curved glass'
-  );
-  testCase.end();
+  ).toMatch(/softSpecular/);
+  void 0;
 });
 
-test('optical caustics pack and retain a bounded portable lens array', testCase => {
+it('optical caustics pack and retain a bounded portable lens array', () => {
   const initialUniforms = opticalCaustics.getUniforms({});
-  testCase.equal(initialUniforms.lensCount, 0, 'focusing lenses start disabled');
-  testCase.equal(initialUniforms.intensity, 1, 'caustics expose a stable global intensity');
-  testCase.equal(initialUniforms.focus, 1, 'caustics expose a stable focus multiplier');
-  testCase.equal(
-    initialUniforms.lenses.length,
-    MAX_OPTICAL_CAUSTIC_LENSES,
-    'default lenses occupy every fixed uniform slot'
+  expect(initialUniforms.lensCount, 'focusing lenses start disabled').toBe(0);
+  expect(initialUniforms.intensity, 'caustics expose a stable global intensity').toBe(1);
+  expect(initialUniforms.focus, 'caustics expose a stable focus multiplier').toBe(1);
+  expect(initialUniforms.lenses.length, 'default lenses occupy every fixed uniform slot').toBe(
+    MAX_OPTICAL_CAUSTIC_LENSES
   );
 
   const suppliedLenses = Array.from(
@@ -883,39 +731,37 @@ test('optical caustics pack and retain a bounded portable lens array', testCase 
     focus: 1.4
   });
 
-  testCase.equal(
-    packedUniforms.lensCount,
-    MAX_OPTICAL_CAUSTIC_LENSES,
-    'additional lenses beyond the fixed capacity are ignored'
+  expect(packedUniforms.lensCount, 'additional lenses beyond the fixed capacity are ignored').toBe(
+    MAX_OPTICAL_CAUSTIC_LENSES
   );
-  testCase.equal(packedUniforms.intensity, 0.6, 'global caustic intensity is configurable');
-  testCase.equal(packedUniforms.focus, 1.4, 'caustic focus is configurable');
-  testCase.deepEqual(
+  expect(packedUniforms.intensity, 'global caustic intensity is configurable').toBe(0.6);
+  expect(packedUniforms.focus, 'caustic focus is configurable').toBe(1.4);
+  expect(
     packedUniforms.lenses[0],
-    {position: [0, 1, 2], radius: 1, color: [0, 1, 0], intensity: 1},
     'caustic-lens defaults are packed in portable field order'
-  );
-  testCase.deepEqual(
-    packedUniforms.lenses[1],
-    {position: [1, 2, 3], radius: 0.45, color: [1, 1, 0], intensity: 1.6},
-    'per-lens radius and intensity are preserved'
-  );
+  ).toEqual({position: [0, 1, 2], radius: 1, color: [0, 1, 0], intensity: 1});
+  expect(packedUniforms.lenses[1], 'per-lens radius and intensity are preserved').toEqual({
+    position: [1, 2, 3],
+    radius: 0.45,
+    color: [1, 1, 0],
+    intensity: 1.6
+  });
 
   const updatedUniforms = opticalCaustics.getUniforms({focus: 0.8}, packedUniforms);
-  testCase.equal(updatedUniforms.focus, 0.8, 'focus updates independently');
-  testCase.equal(updatedUniforms.lensCount, 8, 'partial updates preserve active lenses');
-  testCase.equal(updatedUniforms.lenses, packedUniforms.lenses, 'packed lens arrays are reused');
+  expect(updatedUniforms.focus, 'focus updates independently').toBe(0.8);
+  expect(updatedUniforms.lensCount, 'partial updates preserve active lenses').toBe(8);
+  expect(updatedUniforms.lenses, 'packed lens arrays are reused').toBe(packedUniforms.lenses);
 
   const clearedUniforms = opticalCaustics.getUniforms({lenses: []}, updatedUniforms);
-  testCase.equal(clearedUniforms.lensCount, 0, 'an explicit empty lens list clears caustics');
-  testCase.ok(
-    clearedUniforms.lenses.every(lens => lens.intensity === 0),
+  expect(clearedUniforms.lensCount, 'an explicit empty lens list clears caustics').toBe(0);
+  expect(
+    Boolean(clearedUniforms.lenses.every(lens => lens.intensity === 0)),
     'cleared lens slots are reset'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('optical materials expose matching WGSL and GLSL uniform layouts', testCase => {
+it('optical materials expose matching WGSL and GLSL uniform layouts', () => {
   for (const shaderModule of [
     emissiveMaterial,
     opticalPointLights,
@@ -928,34 +774,43 @@ test('optical materials expose matching WGSL and GLSL uniform layouts', testCase
       'fragment'
     );
 
-    testCase.ok(wgslValidation?.matches, `${shaderModule.name} WGSL uniform layout matches`);
-    testCase.ok(fragmentValidation?.matches, `${shaderModule.name} GLSL uniform layout matches`);
+    expect(
+      Boolean(wgslValidation?.matches),
+      `${shaderModule.name} WGSL uniform layout matches`
+    ).toBe(true);
+    expect(
+      Boolean(fragmentValidation?.matches),
+      `${shaderModule.name} GLSL uniform layout matches`
+    ).toBe(true);
   }
 
   const shaderBlockLayout = makeShaderBlockLayout(opticalPointLights.uniformTypes);
   const shaderBlockFieldNames = Object.keys(shaderBlockLayout.fields);
-  testCase.equal(shaderBlockLayout.byteLength, 528, '16 structured lights occupy 528 bytes');
-  testCase.deepEqual(
+  expect(shaderBlockLayout.byteLength, '16 structured lights occupy 528 bytes').toBe(528);
+  expect(
     shaderBlockFieldNames.slice(0, 6),
-    [
-      'lightCount',
-      'intensity',
-      'lights[0].position',
-      'lights[0].radius',
-      'lights[0].color',
-      'lights[0].intensity'
-    ],
     'uniform block keeps its explicit count and structured light field order'
-  );
-  testCase.deepEqual(
+  ).toEqual([
+    'lightCount',
+    'intensity',
+    'lights[0].position',
+    'lights[0].radius',
+    'lights[0].color',
+    'lights[0].intensity'
+  ]);
+  expect(
     shaderBlockFieldNames.slice(-4),
-    ['lights[15].position', 'lights[15].radius', 'lights[15].color', 'lights[15].intensity'],
     'uniform block includes the final fixed-capacity light'
-  );
-  testCase.end();
+  ).toEqual([
+    'lights[15].position',
+    'lights[15].radius',
+    'lights[15].color',
+    'lights[15].intensity'
+  ]);
+  void 0;
 });
 
-test('rasterized glass transmission assembles portable optical and depth bindings', testCase => {
+it('rasterized glass transmission assembles portable optical and depth bindings', () => {
   const assembler = new WGSLShaderAssembler();
   const transmissionShader = ILLUMINATED_OPTICAL_MATERIAL_SHADER.replace(
     'glassMaterial_getIlluminatedColor(',
@@ -975,29 +830,30 @@ test('rasterized glass transmission assembles portable optical and depth binding
   const reflectedShader = new WgslReflect(assembledShader.source);
   const textureNames = reflectedShader.textures.map(texture => texture.name);
 
-  testCase.equal(
+  expect(
     assembledShader.source.match(/fn glassMaterial_getColor\(/g)?.length,
-    1,
     'existing glass helpers are installed once'
-  );
-  testCase.match(
+  ).toBe(1);
+  expect(
     assembledShader.source,
-    /fn glassTransmission_getIlluminatedColor/,
     'rasterized transmission composes with local point lights'
-  );
-  testCase.ok(textureNames.includes('glassSceneDepthTexture'), 'opaque-depth binding is reflected');
-  testCase.ok(
-    textureNames.includes('glassBackfaceTexture'),
+  ).toMatch(/fn glassTransmission_getIlluminatedColor/);
+  expect(
+    Boolean(textureNames.includes('glassSceneDepthTexture')),
+    'opaque-depth binding is reflected'
+  ).toBe(true);
+  expect(
+    Boolean(textureNames.includes('glassBackfaceTexture')),
     'backface-normal and depth binding is reflected'
-  );
-  testCase.ok(
-    textureNames.includes('glassEnvironmentTexture'),
+  ).toBe(true);
+  expect(
+    Boolean(textureNames.includes('glassEnvironmentTexture')),
     'studio environment binding is reflected'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('existing optical materials compose without the optional point-light module', testCase => {
+it('existing optical materials compose without the optional point-light module', () => {
   const assembler = new WGSLShaderAssembler();
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1011,49 +867,46 @@ test('existing optical materials compose without the optional point-light module
     ...reflectedShader.samplers
   ];
 
-  testCase.equal(
+  expect(
     assembledShader.source.match(/fn opticalLighting_getFresnel\(/g)?.length,
-    1,
     'shared Fresnel helpers are emitted once'
-  );
-  testCase.ok(
-    resources.some(resource => resource.name === 'glassSceneColorTexture'),
+  ).toBe(1);
+  expect(
+    Boolean(resources.some(resource => resource.name === 'glassSceneColorTexture')),
     'glass scene-color texture is reflected'
-  );
-  testCase.ok(
-    resources.some(resource => resource.name === 'glassSceneColorTextureSampler'),
+  ).toBe(true);
+  expect(
+    Boolean(resources.some(resource => resource.name === 'glassSceneColorTextureSampler')),
     'glass scene-color sampler is reflected'
-  );
-  testCase.ok(
-    resources.some(resource => resource.name === 'glassMaterial'),
+  ).toBe(true);
+  expect(
+    Boolean(resources.some(resource => resource.name === 'glassMaterial')),
     'glass material uniforms are reflected'
-  );
-  testCase.ok(
-    resources.some(resource => resource.name === 'reflectiveMaterial'),
+  ).toBe(true);
+  expect(
+    Boolean(resources.some(resource => resource.name === 'reflectiveMaterial')),
     'reflective material uniforms are reflected'
-  );
-  testCase.notOk(
-    resources.some(resource => resource.name === 'opticalPointLights'),
+  ).toBe(true);
+  expect(
+    Boolean(resources.some(resource => resource.name === 'opticalPointLights')),
     'existing glass and reflective plugins do not install optional point lights'
-  );
-  testCase.notOk(
-    /fn glassMaterial_getIlluminatedColor/.test(assembledShader.source),
+  ).toBe(false);
+  expect(
+    Boolean(/fn glassMaterial_getIlluminatedColor/.test(assembledShader.source)),
     'illuminated glass is omitted until the light plugin is installed'
-  );
-  testCase.notOk(
-    /fn reflectiveMaterial_getIlluminatedColor/.test(assembledShader.source),
+  ).toBe(false);
+  expect(
+    Boolean(/fn reflectiveMaterial_getIlluminatedColor/.test(assembledShader.source)),
     'illuminated reflections are omitted until the light plugin is installed'
+  ).toBe(false);
+  expect(assembledShader.source, 'A-buffer composes').toMatch(/fn aBuffer_captureStraightColor/);
+  expect(assembledShader.source, 'weighted-blended OIT composes').toMatch(
+    /fn wboit_captureStraightColor/
   );
-  testCase.match(assembledShader.source, /fn aBuffer_captureStraightColor/, 'A-buffer composes');
-  testCase.match(
-    assembledShader.source,
-    /fn wboit_captureStraightColor/,
-    'weighted-blended OIT composes'
-  );
-  testCase.end();
+  void 0;
 });
 
-test('illuminated optical materials compose once with emission and transparency', testCase => {
+it('illuminated optical materials compose once with emission and transparency', () => {
   const assembler = new WGSLShaderAssembler();
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
@@ -1070,62 +923,50 @@ test('illuminated optical materials compose once with emission and transparency'
   });
   const reflectedShader = new WgslReflect(assembledShader.source);
 
-  testCase.equal(
+  expect(
     assembledShader.source.match(/fn opticalLighting_getFresnel\(/g)?.length,
-    1,
     'shared optical-lighting helpers remain deduplicated'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     assembledShader.source.match(/fn opticalPointLights_getColor\(/g)?.length,
-    1,
     'point-light helper is emitted once'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     assembledShader.source.match(/fn opticalCaustics_getColor\(/g)?.length,
-    1,
     'focused-light helper is emitted once'
+  ).toBe(1);
+  expect(assembledShader.source, 'illuminated glass helper is enabled').toMatch(
+    /fn glassMaterial_getIlluminatedColor/
   );
-  testCase.match(
-    assembledShader.source,
-    /fn glassMaterial_getIlluminatedColor/,
-    'illuminated glass helper is enabled'
+  expect(assembledShader.source, 'illuminated reflective helper is enabled').toMatch(
+    /fn reflectiveMaterial_getIlluminatedColor/
   );
-  testCase.match(
-    assembledShader.source,
-    /fn reflectiveMaterial_getIlluminatedColor/,
-    'illuminated reflective helper is enabled'
+  expect(assembledShader.source, 'emissive helper composes with optical materials').toMatch(
+    /fn emissiveMaterial_getColor/
   );
-  testCase.match(
+  expect(
     assembledShader.source,
-    /fn emissiveMaterial_getColor/,
-    'emissive helper composes with optical materials'
-  );
-  testCase.match(
-    assembledShader.source,
-    /fn emissiveMaterial_getTrailColor/,
     'directional emissive helper composes with optical materials'
+  ).toMatch(/fn emissiveMaterial_getTrailColor/);
+  expect(assembledShader.source, 'WGSL exposes a fixed 16-light uniform array').toMatch(
+    /lights: array<OpticalPointLightUniform, 16>/
   );
-  testCase.match(
-    assembledShader.source,
-    /lights: array<OpticalPointLightUniform, 16>/,
-    'WGSL exposes a fixed 16-light uniform array'
-  );
-  testCase.ok(
-    reflectedShader.uniforms.some(resource => resource.name === 'opticalPointLights'),
+  expect(
+    Boolean(reflectedShader.uniforms.some(resource => resource.name === 'opticalPointLights')),
     'point-light uniforms are reflected'
-  );
-  testCase.ok(
-    reflectedShader.uniforms.some(resource => resource.name === 'emissiveMaterial'),
+  ).toBe(true);
+  expect(
+    Boolean(reflectedShader.uniforms.some(resource => resource.name === 'emissiveMaterial')),
     'emissive material uniforms are reflected'
-  );
-  testCase.ok(
-    reflectedShader.uniforms.some(resource => resource.name === 'opticalCaustics'),
+  ).toBe(true);
+  expect(
+    Boolean(reflectedShader.uniforms.some(resource => resource.name === 'opticalCaustics')),
     'caustic-lens uniforms are reflected'
-  );
-  testCase.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('illuminated optical helpers assemble for GLSL', testCase => {
+it('illuminated optical helpers assemble for GLSL', () => {
   const assembler = new GLSLShaderAssembler();
   const assembledShader = assembler.assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
@@ -1171,31 +1012,21 @@ void main(void) {
     ]
   });
 
-  testCase.match(
-    assembledShader.fs,
-    /OpticalPointLightUniform lights\[16\]/,
-    'GLSL exposes a fixed 16-light uniform array'
+  expect(assembledShader.fs, 'GLSL exposes a fixed 16-light uniform array').toMatch(
+    /OpticalPointLightUniform lights\[16\]/
   );
-  testCase.match(
-    assembledShader.fs,
-    /vec4 glassMaterial_getIlluminatedColor/,
-    'GLSL illuminated glass composes'
+  expect(assembledShader.fs, 'GLSL illuminated glass composes').toMatch(
+    /vec4 glassMaterial_getIlluminatedColor/
   );
-  testCase.match(
-    assembledShader.fs,
-    /vec4 reflectiveMaterial_getIlluminatedColor/,
-    'GLSL illuminated reflections compose'
+  expect(assembledShader.fs, 'GLSL illuminated reflections compose').toMatch(
+    /vec4 reflectiveMaterial_getIlluminatedColor/
   );
-  testCase.match(assembledShader.fs, /vec4 emissiveMaterial_getColor/, 'GLSL emission composes');
-  testCase.match(
-    assembledShader.fs,
-    /vec4 emissiveMaterial_getTrailColor/,
-    'GLSL directional emission composes'
+  expect(assembledShader.fs, 'GLSL emission composes').toMatch(/vec4 emissiveMaterial_getColor/);
+  expect(assembledShader.fs, 'GLSL directional emission composes').toMatch(
+    /vec4 emissiveMaterial_getTrailColor/
   );
-  testCase.match(
-    assembledShader.fs,
-    /vec3 opticalCaustics_getColor/,
-    'GLSL focused lighting composes'
+  expect(assembledShader.fs, 'GLSL focused lighting composes').toMatch(
+    /vec3 opticalCaustics_getColor/
   );
-  testCase.end();
+  void 0;
 });

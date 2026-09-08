@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {TypedArrayConstructor} from '@math.gl/types';
 import {dataTypeDecoder} from '@luma.gl/core';
 
@@ -16,15 +16,14 @@ const ARRAY_TEST_CASES: {typedArray: TypedArrayConstructor}[] = [
   {typedArray: Float32Array}
 ];
 
-test('shadertypes#getDataType', t => {
+it('shadertypes#getDataType', () => {
   for (const {typedArray} of ARRAY_TEST_CASES) {
     const dataType = dataTypeDecoder.getDataType(typedArray);
     const result = dataTypeDecoder.getTypedArrayConstructor(dataType);
-    t.deepEqual(
+    expect(
       typedArray,
-      result,
-      `TypedArray '${typedArray.name}, => ${dataType} => ${result.name}`
-    );
+      `TypedArray '${typedArray.name}, () => ${dataType} => ${result.name}`
+    ).toEqual(result);
   }
-  t.end();
+  void 0;
 });

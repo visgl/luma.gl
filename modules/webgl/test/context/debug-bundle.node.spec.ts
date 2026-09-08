@@ -4,9 +4,9 @@
 
 import {resolve} from 'node:path';
 import esbuild from 'esbuild';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-test('WebGL debug tools stay outside the normal adapter bundle', async t => {
+it('WebGL debug tools stay outside the normal adapter bundle', async () => {
   const sourceAliases = {
     name: 'webgl-source-alias',
     setup(build: esbuild.PluginBuild): void {
@@ -31,17 +31,16 @@ test('WebGL debug tools stay outside the normal adapter bundle', async t => {
   });
   const bundledInputs = Object.keys(buildResult.metafile.inputs);
 
-  t.notOk(
+  expect(
     bundledInputs.some(path => path.endsWith('/webgl-developer-tools.ts')),
     'adapter bundle excludes WebGLDeveloperTools'
-  );
-  t.notOk(
+  ).toBe(false);
+  expect(
     bundledInputs.some(path => path.endsWith('/spector.ts')),
     'adapter bundle excludes Spector integration'
-  );
-  t.ok(
+  ).toBe(false);
+  expect(
     bundledInputs.some(path => path.endsWith('/debug-hooks.ts')),
     'adapter bundle retains only lightweight registration hooks'
-  );
-  t.end();
+  ).toBe(true);
 });

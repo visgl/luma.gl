@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
 import {getTestDevices} from '@luma.gl/test-utils';
 
-test('GPUSplatGraphRenderer progressively sorts preserved batches with one precompiled graph', async t => {
+it('GPUSplatGraphRenderer progressively sorts preserved batches with one precompiled graph', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     const firstBatch = makeGPUSplatData(device, makeProgressiveSplatSource([0.2, 0.8], 0));
@@ -28,77 +28,80 @@ test('GPUSplatGraphRenderer progressively sorts preserved batches with one preco
       clearColor: [0, 0, 0, 0]
     });
 
-    t.equal(renderer.compiledGraph, undefined, 'does not compile an empty anticipated graph');
+    expect(renderer.compiledGraph, 'does not compile an empty anticipated graph').toBe(undefined);
     renderer.appendData(firstBatch);
-    await verifyProgressiveFrame(t, device, renderer, [1, 0], [2, 3, 4, 5]);
+    await verifyProgressiveFrame(device, renderer, [1, 0], [2, 3, 4, 5]);
     const initialCompiledGraph = renderer.compiledGraph;
-    t.ok(initialCompiledGraph, 'compiles the graph when its first streamed batch is encoded');
-    t.ok(
-      (renderer.sortedIndexBuffer?.byteLength ?? 0) >= 6 * Uint32Array.BYTES_PER_ELEMENT,
+    expect(
+      Boolean(initialCompiledGraph),
+      'compiles the graph when its first streamed batch is encoded'
+    ).toBe(true);
+    expect(
+      Boolean((renderer.sortedIndexBuffer?.byteLength ?? 0) >= 6 * Uint32Array.BYTES_PER_ELEMENT),
       'reserves enough globally sorted records for the complete anticipated scene'
-    );
+    ).toBe(true);
 
     renderer.appendData(secondBatch);
-    await verifyProgressiveFrame(t, device, renderer, [1, 2, 3, 0], [4, 5]);
-    t.equal(
+    await verifyProgressiveFrame(device, renderer, [1, 2, 3, 0], [4, 5]);
+    expect(
       renderer.compiledGraph,
-      initialCompiledGraph,
       'binds the second independent source batch into the existing compiled graph'
-    );
+    ).toBe(initialCompiledGraph);
 
     renderer.appendData(thirdBatch);
-    t.equal(thirdBatch.colors.format, 'float32x4', 'preserves streamed HDR radiance as Float32');
-    t.equal(renderer.props.toneMapping, 'reinhard', 'automatically tone-maps streamed HDR colors');
-    await verifyProgressiveFrame(t, device, renderer, [4, 1, 2, 3, 0, 5]);
-    t.equal(
+    expect(thirdBatch.colors.format, 'preserves streamed HDR radiance as Float32').toBe(
+      'float32x4'
+    );
+    expect(renderer.props.toneMapping, 'automatically tone-maps streamed HDR colors').toBe(
+      'reinhard'
+    );
+    await verifyProgressiveFrame(device, renderer, [4, 1, 2, 3, 0, 5]);
+    expect(
       renderer.compiledGraph,
-      initialCompiledGraph,
       'reuses one compiled graph across all three progressive source uploads'
-    );
-    t.deepEqual(
+    ).toBe(initialCompiledGraph);
+    expect(
       renderer.batches.map(batch => batch.positions.data[0].buffer),
-      sourceBuffers,
       'projects the original caller-owned source allocations without repacking or copying'
-    );
-    t.equal(
+    ).toEqual(sourceBuffers);
+    expect(
       renderer.encode(device.commandEncoder),
-      undefined,
       'does not repeat GPU projection or global sorting after streaming and camera motion stop'
-    );
+    ).toBe(undefined);
 
     firstBatch.updateRows(0, {positions: new Float32Array([0, 0, 0.98])});
-    await verifyProgressiveFrame(t, device, renderer, [0, 4, 1, 2, 3, 5]);
-    t.equal(
+    await verifyProgressiveFrame(device, renderer, [0, 4, 1, 2, 3, 5]);
+    expect(
       renderer.compiledGraph,
-      initialCompiledGraph,
       'reprojects dynamic source updates without rebuilding the compiled command graph'
-    );
-    t.equal(
+    ).toBe(initialCompiledGraph);
+    expect(
       firstBatch.positions.data[0].buffer,
-      sourceBuffers[0],
       'retains the original dynamically updated source allocation'
-    );
-    t.equal(
+    ).toBe(sourceBuffers[0]);
+    expect(
       renderer.encode(device.commandEncoder),
-      undefined,
       'returns to an unchanged graph after encoding the updated source revision'
-    );
+    ).toBe(undefined);
 
     renderer.destroy();
     for (const sourceBuffer of sourceBuffers) {
-      t.notOk(sourceBuffer.destroyed, 'destroying graph slots never destroys borrowed source data');
+      expect(
+        Boolean(sourceBuffer.destroyed),
+        'destroying graph slots never destroys borrowed source data'
+      ).toBe(false);
     }
     firstBatch.destroy();
     secondBatch.destroy();
     thirdBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer sorts progressive culled rows and reserved slots after visible rows', async t => {
+it('GPUSplatGraphRenderer sorts progressive culled rows and reserved slots after visible rows', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     const firstSource = makeProgressiveSplatSource([0.2, 0.8, 0.4], 0);
@@ -116,33 +119,35 @@ test('GPUSplatGraphRenderer sorts progressive culled rows and reserved slots aft
     });
 
     renderer.appendData(firstBatch);
-    await verifyProgressiveFrame(t, device, renderer, [2, 0], [1, 3, 4, 5]);
+    await verifyProgressiveFrame(device, renderer, [2, 0], [1, 3, 4, 5]);
     const initialCompiledGraph = renderer.compiledGraph;
 
     renderer.appendData(secondBatch);
-    await verifyProgressiveFrame(t, device, renderer, [3, 2, 0], [1, 4, 5]);
-    t.equal(
+    await verifyProgressiveFrame(device, renderer, [3, 2, 0], [1, 4, 5]);
+    expect(
       renderer.compiledGraph,
-      initialCompiledGraph,
       'reuses reserved batch bindings while visibility changes between progressive frames'
-    );
+    ).toBe(initialCompiledGraph);
 
     renderer.destroy();
-    t.notOk(firstBatch.destroyed, 'retains first caller-owned batch after destroying placeholders');
-    t.notOk(
-      secondBatch.destroyed,
+    expect(
+      Boolean(firstBatch.destroyed),
+      'retains first caller-owned batch after destroying placeholders'
+    ).toBe(false);
+    expect(
+      Boolean(secondBatch.destroyed),
       'retains second caller-owned batch after destroying placeholders'
-    );
+    ).toBe(false);
     firstBatch.destroy();
     secondBatch.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer grows unknown progressive capacity geometrically', async t => {
+it('GPUSplatGraphRenderer grows unknown progressive capacity geometrically', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     const renderer = new GPUSplatGraphRenderer(device, {
@@ -158,7 +163,10 @@ test('GPUSplatGraphRenderer grows unknown progressive capacity geometrically', a
 
     for (const [batchIndex, batch] of streamedBatches.entries()) {
       renderer.appendData(batch);
-      t.ok(renderer.encode(device.commandEncoder), 'encodes each progressively available frame');
+      expect(
+        Boolean(renderer.encode(device.commandEncoder)),
+        'encodes each progressively available frame'
+      ).toBe(true);
       device.submit();
       if (renderer.compiledGraph) {
         compiledGraphs.add(renderer.compiledGraph);
@@ -166,39 +174,47 @@ test('GPUSplatGraphRenderer grows unknown progressive capacity geometrically', a
       const sortedRecordCapacity =
         (renderer.sortedIndexBuffer?.byteLength ?? 0) / Uint32Array.BYTES_PER_ELEMENT;
       sortedRecordCapacities.push(sortedRecordCapacity);
-      t.ok(sortedRecordCapacity >= batchIndex + 1, 'never sorts beyond allocated scene capacity');
+      expect(
+        Boolean(sortedRecordCapacity >= batchIndex + 1),
+        'never sorts beyond allocated scene capacity'
+      ).toBe(true);
     }
 
-    t.ok(
-      compiledGraphs.size < streamedBatches.length,
+    expect(
+      Boolean(compiledGraphs.size < streamedBatches.length),
       'geometric capacity growth avoids rebuilding the graph for every streamed batch'
-    );
-    t.ok(
-      sortedRecordCapacities[0] >= streamedBatches[0].length * 4,
+    ).toBe(true);
+    expect(
+      Boolean(sortedRecordCapacities[0] >= streamedBatches[0].length * 4),
       'unknown scene sizes reserve at least four times the first streamed batch length'
-    );
-    t.ok(
-      sortedRecordCapacities.every(
-        (capacity, capacityIndex) =>
-          capacityIndex === 0 || capacity >= sortedRecordCapacities[capacityIndex - 1]
+    ).toBe(true);
+    expect(
+      Boolean(
+        sortedRecordCapacities.every(
+          (capacity, capacityIndex) =>
+            capacityIndex === 0 || capacity >= sortedRecordCapacities[capacityIndex - 1]
+        )
       ),
       'progressive scene capacity never shrinks while source batches are appended'
-    );
+    ).toBe(true);
 
-    await verifySubmittedProgressiveBuffers(t, device, renderer, [5, 4, 3, 2, 1, 0]);
+    await verifySubmittedProgressiveBuffers(device, renderer, [5, 4, 3, 2, 1, 0]);
     renderer.destroy();
     for (const batch of streamedBatches) {
-      t.notOk(batch.destroyed, 'capacity growth retains caller ownership of every source batch');
+      expect(
+        Boolean(batch.destroyed),
+        'capacity growth retains caller ownership of every source batch'
+      ).toBe(false);
       batch.destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('GPUSplatGraphRenderer safely outgrows underestimated progressive scene hints', async t => {
+it('GPUSplatGraphRenderer safely outgrows underestimated progressive scene hints', async () => {
   const devices = await getTestDevices(['webgpu']);
-  t.ok(devices.length > 0, 'a browser WebGPU adapter is available');
+  expect(Boolean(devices.length > 0), 'a browser WebGPU adapter is available').toBe(true);
 
   for (const device of devices) {
     const streamedBatches = [0.2, 0.9, 0.4, 0.6].map((depth, rowIndex) =>
@@ -214,52 +230,53 @@ test('GPUSplatGraphRenderer safely outgrows underestimated progressive scene hin
     });
 
     renderer.appendData(streamedBatches[0]);
-    await verifyProgressiveFrame(t, device, renderer, [0]);
+    await verifyProgressiveFrame(device, renderer, [0]);
     const originalCompiledGraph = renderer.compiledGraph;
 
     renderer.appendData(streamedBatches[1]);
     renderer.appendData(streamedBatches[2]);
-    await verifyProgressiveFrame(t, device, renderer, [1, 2, 0], [3]);
+    await verifyProgressiveFrame(device, renderer, [1, 2, 0], [3]);
     const grownCompiledGraph = renderer.compiledGraph;
-    t.notEqual(
+    expect(
       grownCompiledGraph,
-      originalCompiledGraph,
       'rebuilds the underestimated graph once after accumulated source rows and slots overflow'
-    );
-    t.ok(
-      (renderer.sortedIndexBuffer?.byteLength ?? 0) >= 4 * Uint32Array.BYTES_PER_ELEMENT,
+    ).not.toBe(originalCompiledGraph);
+    expect(
+      Boolean((renderer.sortedIndexBuffer?.byteLength ?? 0) >= 4 * Uint32Array.BYTES_PER_ELEMENT),
       'geometrically reserves space beyond the underestimated initial scene capacity'
-    );
+    ).toBe(true);
 
     renderer.appendData(streamedBatches[3]);
-    await verifyProgressiveFrame(t, device, renderer, [1, 3, 2, 0]);
-    t.equal(
+    await verifyProgressiveFrame(device, renderer, [1, 3, 2, 0]);
+    expect(
       renderer.compiledGraph,
-      grownCompiledGraph,
       'reuses the grown graph when another streamed batch fits its expanded capacities'
-    );
+    ).toBe(grownCompiledGraph);
 
     renderer.destroy();
     for (const [batchIndex, sourceBuffer] of sourceBuffers.entries()) {
-      t.notOk(sourceBuffer.destroyed, 'growth never destroys a caller-owned source allocation');
+      expect(
+        Boolean(sourceBuffer.destroyed),
+        'growth never destroys a caller-owned source allocation'
+      ).toBe(false);
       streamedBatches[batchIndex].destroy();
     }
   }
 
-  t.end();
+  void 0;
 });
 
 async function verifyProgressiveFrame(
-  assertions: Test,
   device: Device,
   renderer: GPUSplatGraphRenderer,
   expectedVisibleIndices: readonly number[],
   expectedSentinelIndices: readonly number[] = []
 ): Promise<void> {
-  assertions.ok(renderer.encode(device.commandEncoder), 'encodes the newly appended batch');
+  expect(Boolean(renderer.encode(device.commandEncoder)), 'encodes the newly appended batch').toBe(
+    true
+  );
   device.submit();
   await verifySubmittedProgressiveBuffers(
-    assertions,
     device,
     renderer,
     expectedVisibleIndices,
@@ -268,14 +285,13 @@ async function verifyProgressiveFrame(
 }
 
 async function verifySubmittedProgressiveBuffers(
-  assertions: Test,
   device: Device,
   renderer: GPUSplatGraphRenderer,
   expectedVisibleIndices: readonly number[],
   expectedSentinelIndices: readonly number[] = []
 ): Promise<void> {
   if (isSoftwareBackedProgressiveDevice(device)) {
-    assertions.comment('Skipping progressive Gaussian splat readback on a software-backed adapter');
+    void 0;
     return;
   }
 
@@ -285,11 +301,10 @@ async function verifySubmittedProgressiveBuffers(
     commandBytes.byteOffset,
     commandBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
   );
-  assertions.deepEqual(
+  expect(
     Array.from(commandWords),
-    [4, expectedVisibleIndices.length, 0, 0],
     'GPU projection publishes the exact visible progressive instance count'
-  );
+  ).toEqual([4, expectedVisibleIndices.length, 0, 0]);
 
   const sortedIndexBytes = await renderer.sortedIndexBuffer!.readAsync();
   const sortedIndices = new Uint32Array(
@@ -297,22 +312,20 @@ async function verifySubmittedProgressiveBuffers(
     sortedIndexBytes.byteOffset,
     sortedIndexBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
   );
-  assertions.deepEqual(
+  expect(
     Array.from(sortedIndices.subarray(0, expectedVisibleIndices.length)),
-    expectedVisibleIndices,
     'globally sorts every visible progressive batch far-to-near with stable ties'
-  );
+  ).toEqual(expectedVisibleIndices);
   if (expectedSentinelIndices.length > 0) {
-    assertions.deepEqual(
+    expect(
       Array.from(
         sortedIndices.subarray(
           expectedVisibleIndices.length,
           expectedVisibleIndices.length + expectedSentinelIndices.length
         )
       ),
-      expectedSentinelIndices,
       'places culled rows and currently inactive reserved slots after every visible row'
-    );
+    ).toEqual(expectedSentinelIndices);
   }
 }
 

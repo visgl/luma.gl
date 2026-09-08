@@ -60,7 +60,7 @@ following fixed shader behavior:
 ## Composition and Cost
 
 The shader adds one fullscreen pass and samples the caller-supplied previous accumulation. Unlike
-named-history `ShaderPassPipeline` effects, the standalone pass does not allocate, clear, or
+named-history `CompositeShaderPass` effects, the standalone pass does not allocate, clear, or
 rotate history automatically. Use a cleared initial texture and explicitly avoid read/write aliasing.
 
 ## Related Effects

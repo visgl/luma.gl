@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   getEffectiveWebGPUFeatureLevel,
   getRequiredWebGPUFeatures,
@@ -12,18 +12,18 @@ import {
 } from '../../../src/adapter/webgpu-adapter';
 import {isHighDynamicRangeCanvasConfiguration} from '../../../src/adapter/webgpu-canvas-context';
 
-test('WebGPUAdapter imports from the ESM package entry without circular init errors', async t => {
-  t.plan(2);
+it('WebGPUAdapter imports from the ESM package entry without circular init errors', async () => {
+  void 0;
 
   // Import the local entry file directly to avoid workspace alias resolution mixing src/dist modules.
   // This regression is about entry-module initialization, not package alias behavior.
   const webgpuModule = await import('../../../src/index');
 
-  t.equal(webgpuModule.webgpuAdapter.type, 'webgpu', 'exports a WebGPU adapter instance');
-  t.equal(webgpuModule.WebGPUDevice.name, 'WebGPUDevice', 'exports the WebGPU device class');
+  expect(webgpuModule.webgpuAdapter.type, 'exports a WebGPU adapter instance').toBe('webgpu');
+  expect(webgpuModule.WebGPUDevice.name, 'exports the WebGPU device class').toBe('WebGPUDevice');
 });
 
-test('getRequiredWebGPULimits reads non-enumerable supported limits directly', t => {
+it('getRequiredWebGPULimits reads non-enumerable supported limits directly', () => {
   const supportedLimits = {} as GPUSupportedLimits;
   Object.defineProperties(supportedLimits, {
     maxBufferSize: {value: 4096, enumerable: false},
@@ -32,121 +32,104 @@ test('getRequiredWebGPULimits reads non-enumerable supported limits directly', t
 
   const requiredLimits = getRequiredWebGPULimits(supportedLimits);
 
-  t.deepEqual(Object.keys(supportedLimits), [], 'the test limits are not enumerable');
-  t.equal(requiredLimits.maxBufferSize, 4096, 'buffer size is still requested');
-  t.equal(
+  expect(Object.keys(supportedLimits), 'the test limits are not enumerable').toEqual([]);
+  expect(requiredLimits.maxBufferSize, 'buffer size is still requested').toBe(4096);
+  expect(
     requiredLimits.maxStorageBufferBindingSize,
-    2048,
     'storage binding size is still requested'
-  );
-  t.end();
+  ).toBe(2048);
+  void 0;
 });
 
-test('WebGPUAdapter feature level helpers map luma props to WebGPU requests', t => {
-  t.equal(getWebGPUFeatureLevel({}), 'core', 'defaults to core');
-  t.equal(getWebGPUFeatureLevel({featureLevel: 'max'}), 'max', 'explicit level is returned');
-  t.equal(
+it('WebGPUAdapter feature level helpers map luma props to WebGPU requests', () => {
+  expect(getWebGPUFeatureLevel({}), 'defaults to core').toBe('core');
+  expect(getWebGPUFeatureLevel({featureLevel: 'max'}), 'explicit level is returned').toBe('max');
+  expect(
     getWebGPUFeatureLevel({featureLevel: 'compatibility'}),
-    'compatibility',
     'compatibility level is returned'
-  );
-  t.equal(
+  ).toBe('compatibility');
+  expect(
     getWebGPUFeatureLevel({featureLevel: 'best-available'}),
-    'best-available',
     'best available level is returned'
-  );
+  ).toBe('best-available');
 
-  t.deepEqual(
+  expect(
     getWebGPURequestAdapterOptions({powerPreference: 'default'}),
-    {featureLevel: 'core'},
     'core requests core and omits default power preference'
-  );
-  t.deepEqual(
+  ).toEqual({featureLevel: 'core'});
+  expect(
     getWebGPURequestAdapterOptions({featureLevel: 'max', powerPreference: 'low-power'}),
-    {featureLevel: 'core', powerPreference: 'low-power'},
     'max requests a core adapter'
-  );
-  t.deepEqual(
+  ).toEqual({featureLevel: 'core', powerPreference: 'low-power'});
+  expect(
     getWebGPURequestAdapterOptions({featureLevel: 'compatibility'}),
-    {featureLevel: 'compatibility'},
     'compatibility requests a compatibility adapter'
-  );
-  t.deepEqual(
+  ).toEqual({featureLevel: 'compatibility'});
+  expect(
     getWebGPURequestAdapterOptions({featureLevel: 'best-available'}),
-    {featureLevel: 'compatibility'},
     'best available starts from a compatibility adapter'
-  );
+  ).toEqual({featureLevel: 'compatibility'});
 
-  t.end();
+  void 0;
 });
 
-test('WebGPUAdapter feature helpers keep requested profiles separate', t => {
+it('WebGPUAdapter feature helpers keep requested profiles separate', () => {
   const coreFeatures = new Set([
     'core-features-and-limits',
     'texture-compression-bc'
   ]) as GPUSupportedFeatures;
   const compatibilityFeatures = new Set(['texture-compression-bc']) as GPUSupportedFeatures;
 
-  t.deepEqual(
+  expect(
     getRequiredWebGPUFeatures(coreFeatures, 'core'),
-    [],
     'core does not request optional features'
-  );
-  t.deepEqual(
+  ).toEqual([]);
+  expect(
     getRequiredWebGPUFeatures(coreFeatures, 'core', [
       'subgroups',
       'texture-compression-bc',
       'subgroups'
     ]),
-    ['texture-compression-bc'],
     'core requests supported targeted features and ignores unsupported or duplicate entries'
-  );
-  t.deepEqual(
+  ).toEqual(['texture-compression-bc']);
+  expect(
     getRequiredWebGPUFeatures(coreFeatures, 'max'),
-    ['core-features-and-limits', 'texture-compression-bc'],
     'max requests all adapter features'
-  );
-  t.deepEqual(
+  ).toEqual(['core-features-and-limits', 'texture-compression-bc']);
+  expect(
     getRequiredWebGPUFeatures(coreFeatures, 'compatibility'),
-    [],
     'compatibility does not opt into core'
-  );
-  t.deepEqual(
+  ).toEqual([]);
+  expect(
     getRequiredWebGPUFeatures(coreFeatures, 'best-available'),
-    ['core-features-and-limits'],
     'best available opts into core when exposed'
-  );
-  t.deepEqual(
+  ).toEqual(['core-features-and-limits']);
+  expect(
     getRequiredWebGPUFeatures(compatibilityFeatures, 'best-available'),
-    [],
     'best available stays compatibility when core is unavailable'
-  );
+  ).toEqual([]);
 
-  t.equal(
+  expect(
     getEffectiveWebGPUFeatureLevel('compatibility', compatibilityFeatures),
-    'compatibility',
     'compatibility reports compatibility without the core feature'
-  );
-  t.equal(
+  ).toBe('compatibility');
+  expect(
     getEffectiveWebGPUFeatureLevel('compatibility', coreFeatures),
-    'core',
     'the created device feature identifies an upgraded core device'
-  );
-  t.equal(
+  ).toBe('core');
+  expect(
     getEffectiveWebGPUFeatureLevel('best-available', coreFeatures),
-    'core',
     'best available reports core after opting in'
-  );
-  t.equal(
+  ).toBe('core');
+  expect(
     getEffectiveWebGPUFeatureLevel('best-available', compatibilityFeatures),
-    'compatibility',
     'best available reports compatibility when core is unavailable'
-  );
+  ).toBe('compatibility');
 
-  t.end();
+  void 0;
 });
 
-test('isHighDynamicRangeCanvasConfiguration verifies accepted HDR presentation', t => {
+it('isHighDynamicRangeCanvasConfiguration verifies accepted HDR presentation', () => {
   const standardConfiguration = {
     format: 'rgba16float',
     toneMapping: {mode: 'standard'}
@@ -156,20 +139,17 @@ test('isHighDynamicRangeCanvasConfiguration verifies accepted HDR presentation',
     toneMapping: {mode: 'extended'}
   } as GPUCanvasConfigurationOut;
 
-  t.equal(
+  expect(
     isHighDynamicRangeCanvasConfiguration(standardConfiguration),
-    false,
     'floating-point presentation without extended tone mapping is not HDR'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     isHighDynamicRangeCanvasConfiguration(highDynamicRangeConfiguration),
-    true,
     'floating-point presentation with extended tone mapping is HDR'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     isHighDynamicRangeCanvasConfiguration(null),
-    false,
     'an unavailable configuration cannot verify HDR support'
-  );
-  t.end();
+  ).toBe(false);
+  void 0;
 });

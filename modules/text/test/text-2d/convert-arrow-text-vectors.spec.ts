@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   buildArrowTextGlyphTable,
   createArrowTextStorageState,
@@ -84,7 +84,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 }
 `;
 
-test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t => {
+it('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', () => {
   const labelTable = makeLabelTable();
   const texts = arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8());
   const result = buildArrowTextGlyphTable({
@@ -93,23 +93,23 @@ test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(result.table.numRows, 3, 'glyph table has one row per glyph');
-  t.deepEqual(result.glyphLayout.startIndices, [0, 2, 3], 'label start indices are retained');
-  t.deepEqual(
+  expect(result.table.numRows, 'glyph table has one row per glyph').toBe(3);
+  expect(result.glyphLayout.startIndices, 'label start indices are retained').toEqual([0, 2, 3]);
+  expect(
     Array.from(result.table.getChild('glyphOffsets')!.data[0]!.children[0]!.values as Float32Array),
-    [2, 6, 7, 6, 2, 6],
     'glyph offsets are generated from the mapping'
+  ).toEqual([2, 6, 7, 6, 2, 6]);
+  expect(result.table.getChild('positions')!.length, 'label positions repeat across glyphs').toBe(
+    3
   );
-  t.equal(result.table.getChild('positions')!.length, 3, 'label positions repeat across glyphs');
-  t.deepEqual(
+  expect(
     Array.from(result.table.getChild('rowIndices')!.data[0]!.values as Uint32Array),
-    [0, 0, 1],
     'source label row indices repeat across generated glyphs'
-  );
-  t.end();
+  ).toEqual([0, 0, 1]);
+  void 0;
 });
 
-test('buildArrowTextGlyphTable expands character color lists per glyph', t => {
+it('buildArrowTextGlyphTable expands character color lists per glyph', () => {
   const labelTable = new arrow.Table({
     positions: makeArrowPositions(2),
     colors: makeTextColorListVector(
@@ -123,15 +123,14 @@ test('buildArrowTextGlyphTable expands character color lists per glyph', t => {
     fontAtlas: FONT_ATLAS
   });
 
-  t.deepEqual(
+  expect(
     Array.from(result.table.getChild('colors')!.data[0]!.children[0]!.values as Uint8Array),
-    [255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255],
     'per-character color lists flatten to one FixedSizeList color per generated glyph'
-  );
-  t.end();
+  ).toEqual([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255]);
+  void 0;
 });
 
-test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
+it('buildArrowTextGlyphTable expands packed clip rectangles per glyph', () => {
   const clipRects = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     4,
@@ -144,17 +143,16 @@ test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
     fontAtlas: FONT_ATLAS
   });
 
-  t.deepEqual(
+  expect(
     Array.from(
       result.table.getChild('glyphClipRects')!.data[0]!.children[0]!.values as Float32Array
     ),
-    [0, 1, 12, -1, 0, 1, 12, -1, 3, 4, -1, 9],
     'packed i16x4 clip rectangles repeat for each generated glyph'
-  );
-  t.end();
+  ).toEqual([0, 1, 12, -1, 0, 1, 12, -1, 3, 4, -1, 9]);
+  void 0;
 });
 
-test('buildArrowTextGlyphTable expands nullable row colors with constant color fallback', t => {
+it('buildArrowTextGlyphTable expands nullable row colors with constant color fallback', () => {
   const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
   const colorData = new arrow.Data(
     colorType,
@@ -181,15 +179,14 @@ test('buildArrowTextGlyphTable expands nullable row colors with constant color f
     color: [10, 20, 30, 255]
   });
 
-  t.deepEqual(
+  expect(
     Array.from(result.table.getChild('colors')!.data[0]!.children[0]!.values as Uint8Array),
-    [255, 0, 0, 255, 255, 0, 0, 255, 10, 20, 30, 255],
     'null row colors expand to the constant color fallback'
-  );
-  t.end();
+  ).toEqual([255, 0, 0, 255, 255, 0, 0, 255, 10, 20, 30, 255]);
+  void 0;
 });
 
-test('convertArrowTextToAttribute uploads packed colors as normalized vectors', t => {
+it('convertArrowTextToAttribute uploads packed colors as normalized vectors', () => {
   const device = new NullDevice({});
   const positions = makeArrowPositions(2);
   const texts = makeArrowTexts(['AB', 'A']);
@@ -212,19 +209,18 @@ test('convertArrowTextToAttribute uploads packed colors as normalized vectors', 
     }
   });
 
-  t.equal(rowColorText.colors?.format, 'unorm8x4', 'row colors use normalized RGBA8');
-  t.equal(
+  expect(rowColorText.colors?.format, 'row colors use normalized RGBA8').toBe('unorm8x4');
+  expect(
     characterColorText.colors?.format,
-    'vertex-list<unorm8x4>',
     'character colors keep normalized variable-length RGBA8'
-  );
+  ).toBe('vertex-list<unorm8x4>');
 
   rowColorText.destroy();
   characterColorText.destroy();
-  t.end();
+  void 0;
 });
 
-test('packTextStorageClipRects preserves Float32 world-space clip lanes', t => {
+it('packTextStorageClipRects preserves Float32 world-space clip lanes', () => {
   const packedClipRects = packTextStorageClipRects(
     makeArrowFixedSizeListVector(
       new arrow.Float32(),
@@ -233,15 +229,14 @@ test('packTextStorageClipRects preserves Float32 world-space clip lanes', t => {
     )
   );
 
-  t.deepEqual(
+  expect(
     Array.from(packedClipRects),
-    [0, 1, 12, -1, -4, 8, -1, 9],
     'storage rows retain original world-space clip lanes'
-  );
-  t.end();
+  ).toEqual([0, 1, 12, -1, -4, 8, -1, 9]);
+  void 0;
 });
 
-test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance counts', t => {
+it('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance counts', () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const modelProps = convertArrowTextToAttributeModelProps(device, {
@@ -249,40 +244,35 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  t.equal(
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'sourceVectors'),
-    false,
     'model-ready attribute props do not expose Arrow source vectors'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'attributeState'),
-    true,
     'model-ready attribute props contain one prepared state object'
-  );
+  ).toBe(true);
   const renderTableFieldNames =
     modelProps.attributeState.modelProps.table?.schema.fields.map(field => field.name) ?? [];
-  t.deepEqual(
+  expect(
     renderTableFieldNames.filter(fieldName =>
       ['glyphOffsets', 'glyphFrames', 'glyphPages', 'glyphClipRects', 'rowIndices'].includes(
         fieldName
       )
     ),
-    [],
     'generated glyph attributes are supplied only by expandedGlyphVertexData'
-  );
+  ).toEqual([]);
   const model = new TextAttributeModel(device, modelProps);
 
-  t.equal(model.instanceCount, 3, 'instance count uses generated glyph rows');
-  t.deepEqual(
+  expect(model.instanceCount, 'instance count uses generated glyph rows').toBe(3);
+  expect(
     model.attributeState.glyphLayout.startIndices,
-    [0, 2, 3],
     'model exposes glyph start indices'
-  );
-  t.equal(
+  ).toEqual([0, 2, 3]);
+  expect(
     modelProps.attributeState.glyphTable.table.numRows,
-    3,
     'conversion state retains generated glyph table'
-  );
+  ).toBe(3);
 
   const updatedTextSource = makeArrowTexts(['A', 'A']);
   const updatedTexts = makeGpuTexts(device, updatedTextSource);
@@ -293,21 +283,20 @@ test('TextAttributeModel derives from GPUTableModel and rebuilds glyph instance 
     sourceVectors: {...textProps.sourceVectors, texts: updatedTextSource},
     fontAtlas: FONT_ATLAS
   });
-  t.equal(updatedModel.instanceCount, 2, 'rebuilt model uses updated text glyph count');
-  t.deepEqual(
+  expect(updatedModel.instanceCount, 'rebuilt model uses updated text glyph count').toBe(2);
+  expect(
     updatedModel.attributeState.glyphLayout.startIndices,
-    [0, 1, 2],
     'rebuilt model updates starts'
-  );
+  ).toEqual([0, 1, 2]);
 
   model.destroy();
   updatedModel.destroy();
   destroyGpuTextProps(textProps);
   updatedTexts.destroy();
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel accepts dictionary UTF-8 source vectors', async t => {
+it('TextAttributeModel accepts dictionary UTF-8 source vectors', async () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextDictionaryProps(device, ['AB', 'A', 'AB', null]);
   const model = createTextAttributeModel(device, {
@@ -322,76 +311,72 @@ test('TextAttributeModel accepts dictionary UTF-8 source vectors', async t => {
     25
   );
 
-  t.equal(model.instanceCount, 5, 'dictionary labels expand into repeated glyph instances');
-  t.deepEqual(
-    model.attributeState.glyphLayout.startIndices,
-    [0, 2, 3, 5, 5],
-    'null rows render empty'
-  );
-  t.deepEqual(
+  expect(model.instanceCount, 'dictionary labels expand into repeated glyph instances').toBe(5);
+  expect(model.attributeState.glyphLayout.startIndices, 'null rows render empty').toEqual([
+    0, 2, 3, 5, 5
+  ]);
+  expect(
     Array.from(expandedGlyphWords),
-    [
-      packSignedInt16Pair(2, 6),
-      packUint16Pair(0, 0),
-      packUint16Pair(4, 6),
-      0,
-      0,
-      packSignedInt16Pair(7, 6),
-      packUint16Pair(4, 0),
-      packUint16Pair(4, 6),
-      0,
-      0,
-      packSignedInt16Pair(2, 6),
-      packUint16Pair(0, 0),
-      packUint16Pair(4, 6),
-      0,
-      1,
-      packSignedInt16Pair(2, 6),
-      packUint16Pair(0, 0),
-      packUint16Pair(4, 6),
-      0,
-      2,
-      packSignedInt16Pair(7, 6),
-      packUint16Pair(4, 0),
-      packUint16Pair(4, 6),
-      0,
-      2
-    ],
     'direct model repeats row indices for each expanded dictionary glyph'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    packUint16Pair(0, 0),
+    packUint16Pair(4, 6),
+    0,
+    0,
+    packSignedInt16Pair(7, 6),
+    packUint16Pair(4, 0),
+    packUint16Pair(4, 6),
+    0,
+    0,
+    packSignedInt16Pair(2, 6),
+    packUint16Pair(0, 0),
+    packUint16Pair(4, 6),
+    0,
+    1,
+    packSignedInt16Pair(2, 6),
+    packUint16Pair(0, 0),
+    packUint16Pair(4, 6),
+    0,
+    2,
+    packSignedInt16Pair(7, 6),
+    packUint16Pair(4, 0),
+    packUint16Pair(4, 6),
+    0,
+    2
+  ]);
 
   model.destroy();
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel requires explicit CPU source vectors', t => {
+it('TextAttributeModel requires explicit CPU source vectors', () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const {sourceVectors, ...propsWithoutSourceVectors} = textProps;
 
-  t.throws(
+  expect(
     () =>
       createTextAttributeModel(device, {
         id: 'arrow-text-model-missing-sources-test',
         ...(propsWithoutSourceVectors as Omit<typeof textProps, 'sourceVectors'>),
         fontAtlas: FONT_ATLAS
       } as never),
-    /requires explicit sourceVectors/,
     'CPU source ownership is visible at the text model boundary'
-  );
+  ).toThrow(/requires explicit sourceVectors/);
 
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel rejects source batch alignment mismatches', t => {
+it('TextAttributeModel rejects source batch alignment mismatches', () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const firstChunk = makeArrowTexts(['AB']);
   const secondChunk = makeArrowTexts(['A']);
 
-  t.throws(
+  expect(
     () =>
       createTextAttributeModel(device, {
         id: 'arrow-text-model-source-batch-alignment-test',
@@ -402,15 +387,14 @@ test('TextAttributeModel rejects source batch alignment mismatches', t => {
         },
         fontAtlas: FONT_ATLAS
       }),
-    /batch count must match GPU batches/,
     'source vector batches stay explicitly aligned with GPU vector batches'
-  );
+  ).toThrow(/batch count must match GPU batches/);
 
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel interleaves expanded glyph vertex records', async t => {
+it('TextAttributeModel interleaves expanded glyph vertex records', async () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const model = createTextAttributeModel(device, {
@@ -428,44 +412,42 @@ test('TextAttributeModel interleaves expanded glyph vertex records', async t => 
     layout => layout.name === 'expandedGlyphVertexData'
   );
 
-  t.equal(expandedGlyphLayout?.byteStride, 20, 'expanded glyph records use a 20-byte stride');
-  t.deepEqual(
+  expect(expandedGlyphLayout?.byteStride, 'expanded glyph records use a 20-byte stride').toBe(20);
+  expect(
     expandedGlyphLayout?.attributes,
-    [
-      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
-      {attribute: 'glyphFrames', format: 'uint16x4', byteOffset: 4},
-      {attribute: 'glyphPages', format: 'uint16', byteOffset: 12}
-    ],
     'default render attributes read from the expanded glyph vertex data'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+    {attribute: 'glyphFrames', format: 'uint16x4', byteOffset: 4},
+    {attribute: 'glyphPages', format: 'uint16', byteOffset: 12}
+  ]);
+  expect(
     Array.from(expandedGlyphWords),
-    [
-      packSignedInt16Pair(2, 6),
-      packUint16Pair(0, 0),
-      packUint16Pair(4, 6),
-      0,
-      0,
-      packSignedInt16Pair(7, 6),
-      packUint16Pair(4, 0),
-      packUint16Pair(4, 6),
-      0,
-      0,
-      packSignedInt16Pair(2, 6),
-      packUint16Pair(0, 0),
-      packUint16Pair(4, 6),
-      0,
-      1
-    ],
     'expanded glyph records store generated offsets, inline frames, and source row ids'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    packUint16Pair(0, 0),
+    packUint16Pair(4, 6),
+    0,
+    0,
+    packSignedInt16Pair(7, 6),
+    packUint16Pair(4, 0),
+    packUint16Pair(4, 6),
+    0,
+    0,
+    packSignedInt16Pair(2, 6),
+    packUint16Pair(0, 0),
+    packUint16Pair(4, 6),
+    0,
+    1
+  ]);
 
   model.destroy();
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel splits expanded glyph vertex buffers by device limits', t => {
+it('TextAttributeModel splits expanded glyph vertex buffers by device limits', () => {
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 48});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
@@ -475,25 +457,23 @@ test('TextAttributeModel splits expanded glyph vertex buffers by device limits',
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(
+  expect(
     model.attributeState.renderBatches.length,
-    2,
     'generated glyph output splits into two render batches'
-  );
-  t.deepEqual(
+  ).toBe(2);
+  expect(
     model.attributeState.renderBatches.map(batch => batch.glyphCount),
-    [2, 1],
     'batching preserves whole source-label rows'
-  );
-  t.equal(model.table?.batches.length, 2, 'Arrow render rows split to matching GPU batches');
-  t.equal(model.instanceCount, 3, 'aggregate glyph count remains unchanged');
+  ).toEqual([2, 1]);
+  expect(model.table?.batches.length, 'Arrow render rows split to matching GPU batches').toBe(2);
+  expect(model.instanceCount, 'aggregate glyph count remains unchanged').toBe(3);
 
   model.destroy();
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel built-in fragment shader decodes SDF atlas alpha', t => {
+it('TextAttributeModel built-in fragment shader decodes SDF atlas alpha', () => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const model = createTextAttributeModel(device, {
@@ -502,18 +482,21 @@ test('TextAttributeModel built-in fragment shader decodes SDF atlas alpha', t =>
     fontAtlas: SDF_FONT_ATLAS
   });
 
-  t.ok(
-    model.fs.includes('uniform float textFontRenderMode;'),
+  expect(
+    Boolean(model.fs.includes('uniform float textFontRenderMode;')),
     'default shader exposes an SDF mode uniform'
-  );
-  t.ok(model.fs.includes('smoothstep('), 'default shader smooths sampled SDF alpha');
+  ).toBe(true);
+  expect(
+    Boolean(model.fs.includes('smoothstep(')),
+    'default shader smooths sampled SDF alpha'
+  ).toBe(true);
 
   model.destroy();
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel expands chunked UTF-8 GPUVector data', t => {
+it('TextAttributeModel expands chunked UTF-8 GPUVector data', () => {
   const device = new NullDevice({});
   const firstChunk = arrow.vectorFromArray(['AB'], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['A'], new arrow.Utf8());
@@ -529,20 +512,19 @@ test('TextAttributeModel expands chunked UTF-8 GPUVector data', t => {
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(textProps.texts.data.length, 2, 'GPUVector preserves both UTF-8 GPUData chunks');
-  t.equal(model.instanceCount, 3, 'glyph expansion spans every retained UTF-8 chunk');
-  t.deepEqual(
+  expect(textProps.texts.data.length, 'GPUVector preserves both UTF-8 GPUData chunks').toBe(2);
+  expect(model.instanceCount, 'glyph expansion spans every retained UTF-8 chunk').toBe(3);
+  expect(
     model.attributeState.glyphLayout.startIndices,
-    [0, 2, 3],
     'row starts cross chunk boundaries'
-  );
+  ).toEqual([0, 2, 3]);
 
   model.destroy();
   destroyGpuTextProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', t => {
+it('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', () => {
   const device = new NullDevice({});
   const firstBatch = makeStreamingTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeStreamingTextRecordBatch(['A'], new Float32Array([1, 1]));
@@ -558,11 +540,10 @@ test('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', t
     sourceVectors: firstSourceVectors,
     fontAtlas: FONT_ATLAS
   });
-  t.equal(
+  expect(
     model.attributeState.glyphLayout.glyphCount,
-    2,
     'starts from the first streamed text batch'
-  );
+  ).toBe(2);
 
   gpuTable.addBatch(
     makeGPURecordBatchFromArrowRecordBatch(device, secondBatch, {
@@ -576,23 +557,22 @@ test('TextAttributeModel rebuilds from streamed GPUTable-backed text batches', t
     sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch]),
     fontAtlas: FONT_ATLAS
   });
-  t.equal(
+  expect(
     rebuiltModel.attributeState.glyphLayout.glyphCount,
-    3,
     'rebuilt model includes every text batch'
-  );
+  ).toBe(3);
 
   model.destroy();
   rebuiltModel.destroy();
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel packs SDF alpha settings into the style config uniform', async t => {
+it('TextStorageModel packs SDF alpha settings into the style config uniform', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -602,16 +582,14 @@ test('TextStorageModel packs SDF alpha settings into the style config uniform', 
     ...textProps,
     fontAtlas: SDF_FONT_ATLAS
   });
-  t.equal(
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'sourceVectors'),
-    false,
     'model-ready storage props do not expose Arrow source vectors'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'storageState'),
-    true,
     'model-ready storage props contain one owning state object'
-  );
+  ).toBe(true);
   const model = new TextStorageModel(device, modelProps);
   const styleConfigBytes = await model.storageState.batches[0]!.styleConfigBuffer.readAsync();
   const styleConfigFloats = new Float32Array(
@@ -625,26 +603,26 @@ test('TextStorageModel packs SDF alpha settings into the style config uniform', 
     styleConfigBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.ok(
-    Math.abs(styleConfigFloats[16] - 0.75) < 1e-6,
+  expect(
+    Boolean(Math.abs(styleConfigFloats[16] - 0.75) < 1e-6),
     'style config stores TinySDF alpha edge threshold'
-  );
-  t.ok(
-    Math.abs(styleConfigFloats[17] - 0.07) < 1e-6,
+  ).toBe(true);
+  expect(
+    Boolean(Math.abs(styleConfigFloats[17] - 0.07) < 1e-6),
     'style config stores fragment smoothing width'
-  );
-  t.equal(styleConfigWords[18], 1, 'style config stores SDF font render mode');
+  ).toBe(true);
+  expect(styleConfigWords[18], 'style config stores SDF font render mode').toBe(1);
 
   model.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel interleaves compact glyph vertex records', async t => {
+it('TextStorageModel interleaves compact glyph vertex records', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -665,25 +643,29 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
     layout => layout.name === 'compactGlyphVertexData'
   );
 
-  t.equal(
+  expect(
     model.storageState.generatedRenderBufferByteLength,
-    24,
     'three glyphs keep the 8-byte record budget'
-  );
-  t.equal(generatedGlyphVertexLayout?.byteStride, 8, 'generated records use an 8-byte stride');
-  t.deepEqual(
+  ).toBe(24);
+  expect(generatedGlyphVertexLayout?.byteStride, 'generated records use an 8-byte stride').toBe(8);
+  expect(
     generatedGlyphVertexLayout?.attributes,
-    [
-      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
-      {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4}
-    ],
     'one interleaved buffer exposes glyph offset and id attributes'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+    {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4}
+  ]);
+  expect(
     Array.from(generatedGlyphVertexWords),
-    [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
     'generated records store packed offsets and glyph ids in order'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2,
+    packSignedInt16Pair(2, 6),
+    1
+  ]);
   const rowGlyphStartsBytes =
     await model.storageState.batches[0]!.rowGlyphStartsBuffer!.readAsync();
   const rowGlyphStarts = new Uint32Array(
@@ -694,19 +676,19 @@ test('TextStorageModel interleaves compact glyph vertex records', async t => {
   const renderConfigBytes =
     await model.storageState.renderBatches[0]!.storageRenderConfigBuffer.readAsync();
   const renderConfig = new Uint32Array(renderConfigBytes.buffer, renderConfigBytes.byteOffset, 4);
-  t.deepEqual(Array.from(rowGlyphStarts), [0, 2, 3], 'row glyph starts map glyphs back to rows');
-  t.deepEqual(Array.from(renderConfig), [0, 0, 2, 0], 'render config scopes row lookup');
+  expect(Array.from(rowGlyphStarts), 'row glyph starts map glyphs back to rows').toEqual([0, 2, 3]);
+  expect(Array.from(renderConfig), 'render config scopes row lookup').toEqual([0, 0, 2, 0]);
 
   model.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('createTextStorageStateFromGPUVectors prepares storage text without sourceVectors', async t => {
+it('createTextStorageStateFromGPUVectors prepares storage text without sourceVectors', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -724,28 +706,32 @@ test('createTextStorageStateFromGPUVectors prepares storage text without sourceV
     storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.equal(storageState.glyphCount, 3, 'GPUVector state reserves one glyph slot per UTF-8 byte');
-  t.equal(
-    storageState.glyphStream,
-    undefined,
-    'GPUVector state does not retain a CPU glyph stream'
+  expect(storageState.glyphCount, 'GPUVector state reserves one glyph slot per UTF-8 byte').toBe(3);
+  expect(storageState.glyphStream, 'GPUVector state does not retain a CPU glyph stream').toBe(
+    undefined
   );
-  t.deepEqual(
+  expect(
     Array.from(generatedGlyphVertexWords),
-    [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
     'GPUVector state generates the same compact glyph records'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2,
+    packSignedInt16Pair(2, 6),
+    1
+  ]);
 
   storageState.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', async t => {
+it('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -756,23 +742,21 @@ test('convertArrowTextToStorageState uses GPUVector path for fixed UTF-8 text', 
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(
-    storageState.glyphStream,
-    undefined,
-    'fixed plain UTF-8 input uses GPUVector preparation'
+  expect(storageState.glyphStream, 'fixed plain UTF-8 input uses GPUVector preparation').toBe(
+    undefined
   );
-  t.equal(storageState.glyphCount, 6, 'multi-byte labels match the GPU UTF-8 byte-slot path');
+  expect(storageState.glyphCount, 'multi-byte labels match the GPU UTF-8 byte-slot path').toBe(6);
 
   storageState.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('convertArrowTextToStorageState keeps the CPU fallback for dictionary text', async t => {
+it('convertArrowTextToStorageState keeps the CPU fallback for dictionary text', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -782,18 +766,21 @@ test('convertArrowTextToStorageState keeps the CPU fallback for dictionary text'
     ...textDictionaryProps,
     fontAtlas: FONT_ATLAS
   });
-  t.ok(dictionaryStorageState.glyphStream, 'dictionary text keeps CPU glyph expansion');
+  expect(
+    Boolean(dictionaryStorageState.glyphStream),
+    'dictionary text keeps CPU glyph expansion'
+  ).toBe(true);
 
   dictionaryStorageState.destroy();
   destroyTextStorageGpuProps(textDictionaryProps);
-  t.end();
+  void 0;
 });
 
-test('convertArrowTextToStorageState falls back when direct UTF-8 compute exceeds limits', async t => {
+it('convertArrowTextToStorageState falls back when direct UTF-8 compute exceeds limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -809,7 +796,10 @@ test('convertArrowTextToStorageState falls back when direct UTF-8 compute exceed
       ...textProps,
       fontAtlas: FONT_ATLAS
     });
-    t.ok(storageState.glyphStream, 'limited UTF-8 compute keeps CPU glyph expansion');
+    expect(
+      Boolean(storageState.glyphStream),
+      'limited UTF-8 compute keeps CPU glyph expansion'
+    ).toBe(true);
     storageState.destroy();
   } finally {
     destroyTextStorageGpuProps(textProps);
@@ -818,14 +808,14 @@ test('convertArrowTextToStorageState falls back when direct UTF-8 compute exceed
       value: originalMaxStorageBuffersPerShaderStage
     });
   }
-  t.end();
+  void 0;
 });
 
-test('TextRowIndexedStorageModel stores row indices in compact glyph records', async t => {
+it('TextRowIndexedStorageModel stores row indices in compact glyph records', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -836,11 +826,10 @@ test('TextRowIndexedStorageModel stores row indices in compact glyph records', a
     rowIndexColumn: true,
     fontAtlas: FONT_ATLAS
   });
-  t.equal(
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'sourceVectors'),
-    false,
     'model-ready row-indexed storage props do not expose Arrow source vectors'
-  );
+  ).toBe(false);
   const model = new TextRowIndexedStorageModel(device, modelProps);
   const glyphVertexBytes =
     await model.storageState.renderBatches[0]!.compactGlyphVertexData.readAsync();
@@ -853,47 +842,44 @@ test('TextRowIndexedStorageModel stores row indices in compact glyph records', a
     layout => layout.name === 'compactGlyphVertexData'
   );
 
-  t.equal(
+  expect(
     model.storageState.generatedRenderBufferByteLength,
-    36,
     'three glyphs keep a 12-byte record budget'
-  );
-  t.equal(generatedGlyphVertexLayout?.byteStride, 12, 'generated records use a 12-byte stride');
-  t.deepEqual(
+  ).toBe(36);
+  expect(generatedGlyphVertexLayout?.byteStride, 'generated records use a 12-byte stride').toBe(12);
+  expect(
     generatedGlyphVertexLayout?.attributes,
-    [
-      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
-      {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4},
-      {attribute: 'glyphRowIndices', format: 'uint32', byteOffset: 8}
-    ],
     'row-indexed records expose glyph offset, id, and source row attributes'
-  );
-  t.deepEqual(
+  ).toEqual([
+    {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+    {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4},
+    {attribute: 'glyphRowIndices', format: 'uint32', byteOffset: 8}
+  ]);
+  expect(
     Array.from(generatedGlyphVertexWords),
-    [
-      packSignedInt16Pair(2, 6),
-      1,
-      0,
-      packSignedInt16Pair(7, 6),
-      2,
-      0,
-      packSignedInt16Pair(2, 6),
-      1,
-      1
-    ],
     'generated records store source row indices next to glyph data'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    0,
+    packSignedInt16Pair(7, 6),
+    2,
+    0,
+    packSignedInt16Pair(2, 6),
+    1,
+    1
+  ]);
 
   model.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion', async t => {
+it('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -911,43 +897,40 @@ test('TextStorageModel accepts dictionary UTF-8 text through CPU glyph expansion
     model.storageState.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
 
-  t.equal(
+  expect(
     model.storageState.glyphCount,
-    5,
     'storage model expands repeated dictionary labels per row'
-  );
-  t.equal(
+  ).toBe(5);
+  expect(
     model.storageState.generatedRenderBufferByteLength,
-    40,
     'naive dictionary storage keeps one compact glyph record per visible glyph'
-  );
-  t.deepEqual(
+  ).toBe(40);
+  expect(
     Array.from(generatedGlyphVertexWords),
-    [
-      packSignedInt16Pair(2, 6),
-      1,
-      packSignedInt16Pair(7, 6),
-      2,
-      packSignedInt16Pair(2, 6),
-      1,
-      packSignedInt16Pair(2, 6),
-      1,
-      packSignedInt16Pair(7, 6),
-      2
-    ],
     'dictionary rows are copied into the regular compact glyph stream without row indices'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2,
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2
+  ]);
 
   model.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextDictionaryModel shares dictionary glyph records per batch', async t => {
+it('TextDictionaryModel shares dictionary glyph records per batch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -957,11 +940,10 @@ test('TextDictionaryModel shares dictionary glyph records per batch', async t =>
     ...textProps,
     fontAtlas: FONT_ATLAS
   });
-  t.equal(
+  expect(
     Object.prototype.hasOwnProperty.call(modelProps, 'sourceVectors'),
-    false,
     'model-ready dictionary props do not expose Arrow source vectors'
-  );
+  ).toBe(false);
   const model = new TextDictionaryModel(device, modelProps);
   const firstBatch = model.storageState.batches[0]!;
   const dictionaryGlyphRecordBytes = await firstBatch.dictionaryGlyphRecordsBuffer.readAsync();
@@ -977,43 +959,48 @@ test('TextDictionaryModel shares dictionary glyph records per batch', async t =>
     8
   );
 
-  t.equal(model.storageState.glyphCount, 5, 'visible glyph count still expands per row occurrence');
-  t.equal(
+  expect(
+    model.storageState.glyphCount,
+    'visible glyph count still expands per row occurrence'
+  ).toBe(5);
+  expect(
     model.storageState.dictionaryValueCount,
-    2,
     'dictionary batch keeps two unique string values'
-  );
-  t.equal(
+  ).toBe(2);
+  expect(
     model.storageState.dictionaryGlyphCount,
-    3,
     'shared dictionary glyph records store AB and A once'
-  );
-  t.equal(
+  ).toBe(3);
+  expect(
     model.storageState.generatedRenderBufferByteLength,
-    0,
     'dictionary model has no generated per-visible-glyph vertex buffer'
-  );
-  t.deepEqual(
+  ).toBe(0);
+  expect(
     Array.from(rowDictionaryRecords),
-    [0, 0, 1, 2, 0, 3, 0xffffffff, 5],
     'row dictionary records pack dictionary keys and glyph starts'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 1, 2, 0, 3, 0xffffffff, 5]);
+  expect(
     Array.from(dictionaryGlyphRecordWords),
-    [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
     'glyph offsets and ids are not duplicated for repeated dictionary values'
-  );
+  ).toEqual([
+    packSignedInt16Pair(2, 6),
+    1,
+    packSignedInt16Pair(7, 6),
+    2,
+    packSignedInt16Pair(2, 6),
+    1
+  ]);
 
   model.destroy();
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextDictionaryModel draws every dictionary source batch', async t => {
+it('TextDictionaryModel draws every dictionary source batch', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1066,28 +1053,28 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
   };
 
   try {
-    t.ok(model.draw({} as never), 'draws chunked dictionary text');
-    t.deepEqual(
+    expect(Boolean(model.draw({} as never)), 'draws chunked dictionary text').toBe(true);
+    expect(
       drawCalls.map(drawCall => drawCall.instanceCount),
-      [2, 1, 3],
       'uses each source batch glyph occurrence count'
-    );
-    t.deepEqual(
+    ).toEqual([2, 1, 3]);
+    expect(
       drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
+      'binds each batch dictionary render config buffer'
+    ).toEqual(
       model.storageState.renderBatches.map(
         renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer
-      ),
-      'binds each batch dictionary render config buffer'
+      )
     );
-    t.deepEqual(
+    expect(
       drawCalls.map(drawCall => drawCall.styleConfigBuffer),
-      model.storageState.batches.map(batch => batch.styleConfigBuffer.buffer),
       'binds each batch style config buffer'
-    );
-    t.deepEqual(
+    ).toEqual(model.storageState.batches.map(batch => batch.styleConfigBuffer.buffer));
+    expect(
       drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
-      model.storageState.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
       'binds each row storage batch'
+    ).toEqual(
+      model.storageState.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer))
     );
     const styleConfigRows = await Promise.all(
       model.storageState.batches.map(async batch => {
@@ -1103,29 +1090,28 @@ test('TextDictionaryModel draws every dictionary source batch', async t => {
         };
       })
     );
-    t.deepEqual(
+    expect(
       styleConfigRows,
-      [
-        {batchRowIndexBase: 0, rowStorageIndexBase: 0},
-        {batchRowIndexBase: 1, rowStorageIndexBase: 0},
-        {batchRowIndexBase: 2, rowStorageIndexBase: 0}
-      ],
       'style configs preserve global picking row base and per-buffer row storage offset'
-    );
+    ).toEqual([
+      {batchRowIndexBase: 0, rowStorageIndexBase: 0},
+      {batchRowIndexBase: 1, rowStorageIndexBase: 0},
+      {batchRowIndexBase: 2, rowStorageIndexBase: 0}
+    ]);
   } finally {
     privateModel._syncAttachmentFormats = syncAttachmentFormats;
     privateModel._updatePipeline = updatePipeline;
     model.destroy();
     destroyTextStorageGpuProps(textProps);
   }
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel rebuilds from streamed GPUTable-backed text batches', async t => {
+it('TextStorageModel rebuilds from streamed GPUTable-backed text batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const firstBatch = makeStreamingTextRecordBatch(['AB'], new Float32Array([0, 0]));
@@ -1156,24 +1142,25 @@ test('TextStorageModel rebuilds from streamed GPUTable-backed text batches', asy
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(rebuiltModel.storageState.glyphCount, 3, 'rebuilt storage text reads every UTF-8 batch');
-  t.equal(
-    rebuiltModel.storageState.batches.length,
-    2,
-    'rebuilt storage row bindings preserve chunk boundaries'
+  expect(rebuiltModel.storageState.glyphCount, 'rebuilt storage text reads every UTF-8 batch').toBe(
+    3
   );
+  expect(
+    rebuiltModel.storageState.batches.length,
+    'rebuilt storage row bindings preserve chunk boundaries'
+  ).toBe(2);
 
   model.destroy();
   rebuiltModel.destroy();
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async t => {
+it('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
@@ -1209,28 +1196,26 @@ test('TextStorageModel rebuilds dictionary GPUTable-backed text batches', async 
     fontAtlas: FONT_ATLAS
   });
 
-  t.equal(
+  expect(
     rebuiltModel.storageState.glyphCount,
-    5,
     'rebuilt storage expands dictionary text from all batches'
-  );
-  t.equal(
+  ).toBe(5);
+  expect(
     rebuiltModel.storageState.batches.length,
-    2,
     'rebuilt dictionary row bindings retain chunk boundaries'
-  );
+  ).toBe(2);
 
   model.destroy();
   rebuiltModel.destroy();
   gpuTable.destroy();
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel splits compact glyph buffers by device limits', async t => {
+it('TextStorageModel splits compact glyph buffers by device limits', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const originalMaxStorageBufferBindingSize = device.limits.maxStorageBufferBindingSize;
@@ -1247,26 +1232,22 @@ test('TextStorageModel splits compact glyph buffers by device limits', async t =
       fontAtlas: FONT_ATLAS
     });
 
-    t.equal(
+    expect(
       model.storageState.batches.length,
-      1,
       'row bindings remain in their original input batch'
-    );
-    t.equal(
+    ).toBe(1);
+    expect(
       model.storageState.renderBatches.length,
-      2,
       'generated glyph output splits into render batches'
-    );
-    t.deepEqual(
+    ).toBe(2);
+    expect(
       model.storageState.renderBatches.map(batch => batch.glyphCount),
-      [2, 1],
       'storage batching preserves whole source-label rows'
-    );
-    t.equal(
+    ).toEqual([2, 1]);
+    expect(
       model.storageState.generatedRenderBufferByteLength,
-      24,
       'aggregate generated byte accounting stays exact'
-    );
+    ).toBe(24);
 
     model.destroy();
     destroyTextStorageGpuProps(textProps);
@@ -1276,43 +1257,41 @@ test('TextStorageModel splits compact glyph buffers by device limits', async t =
       configurable: true
     });
   }
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel rejects non-WebGPU devices', t => {
+it('TextStorageModel rejects non-WebGPU devices', () => {
   const device = new NullDevice({});
 
-  t.throws(
+  expect(
     () => new TextStorageModel(device, {} as ConstructorParameters<typeof TextStorageModel>[1]),
-    /WebGPU-only/,
     'storage model reports its backend contract'
-  );
-  t.end();
+  ).toThrow(/WebGPU-only/);
+  void 0;
 });
 
-test('createArrowTextStorageState rejects non-WebGPU devices', t => {
+it('createArrowTextStorageState rejects non-WebGPU devices', () => {
   const device = new NullDevice({});
   const textProps = makeTextStorageGpuProps(device, ['AB', 'A']);
 
-  t.throws(
+  expect(
     () =>
       createArrowTextStorageState(device, {
         id: 'arrow-text-storage-state-test',
         ...textProps,
         fontAtlas: FONT_ATLAS
       }),
-    /WebGPU device/,
     'storage-state builder reports its backend contract'
-  );
+  ).toThrow(/WebGPU device/);
   destroyTextStorageGpuProps(textProps);
-  t.end();
+  void 0;
 });
 
-test('TextStorageModel rebuilds from updated Arrow conversion props', async t => {
+it('TextStorageModel rebuilds from updated Arrow conversion props', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1333,17 +1312,14 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
     fontAtlas: FONT_ATLAS
   });
 
-  t.notEqual(colorModel.storageState, storageState, 'color updates build a new storage state');
-  t.equal(
-    colorModel.storageState.glyphCount,
-    model.storageState.glyphCount,
-    'color updates preserve glyph count'
+  expect(colorModel.storageState, 'color updates build a new storage state').not.toBe(storageState);
+  expect(colorModel.storageState.glyphCount, 'color updates preserve glyph count').toBe(
+    model.storageState.glyphCount
   );
-  t.notEqual(
+  expect(
     colorModel.storageState.batches[0]!.styleConfigBuffer,
-    styleConfigBuffer,
     'color updates rebuild style config buffers'
-  );
+  ).not.toBe(styleConfigBuffer);
 
   const updatedTextSource = makeArrowTexts(['A', 'A']);
   const updatedTexts = makeGpuTexts(device, updatedTextSource);
@@ -1355,20 +1331,22 @@ test('TextStorageModel rebuilds from updated Arrow conversion props', async t =>
     fontAtlas: FONT_ATLAS
   });
 
-  t.notEqual(textModel.storageState, storageState, 'text updates build a new storage state');
-  t.notEqual(
+  expect(textModel.storageState, 'text updates build a new storage state').not.toBe(storageState);
+  expect(
     textModel.storageState.renderBatches[0]!.compactGlyphVertexData,
-    compactGlyphVertexData,
     'text updates rebuild compact glyph vertex data'
-  );
-  t.equal(textModel.storageState.glyphCount, 2, 'text updates reflect the replacement text source');
+  ).not.toBe(compactGlyphVertexData);
+  expect(
+    textModel.storageState.glyphCount,
+    'text updates reflect the replacement text source'
+  ).toBe(2);
 
   model.destroy();
   colorModel.destroy();
   textModel.destroy();
   destroyTextStorageGpuProps(textProps);
   updatedTexts.destroy();
-  t.end();
+  void 0;
 });
 
 function makeLabelTable(): arrow.Table {

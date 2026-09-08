@@ -30,6 +30,9 @@ export class GPUConstant<T extends VertexFormat = VertexFormat> {
 
   constructor({format, value}: GPUConstantProps<T>) {
     const formatInfo = getGPUVectorFormatInfo(format);
+    if (formatInfo.fixedSizeList) {
+      throw new Error('GPUConstant cannot represent fixed-size-list storage columns');
+    }
     const expectedConstructor = getGPUConstantTypedArrayConstructor(format);
     if (value.constructor !== expectedConstructor) {
       throw new Error(

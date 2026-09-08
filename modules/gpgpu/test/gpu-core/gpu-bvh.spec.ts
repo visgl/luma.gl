@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBVH,
@@ -13,20 +13,16 @@ import {
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {getGPUBVHDispatchLayout} from '../../src/gpu-core/gpu-bvh';
 
-test('GPUBVH plans multidimensional leaf-loading dispatches', t => {
-  t.deepEqual(
+it('GPUBVH plans multidimensional leaf-loading dispatches', () => {
+  expect(
     getGPUBVHDispatchLayout(2 ** 24 - 1, 65535),
-    {x: 65535, y: 2, z: 1},
     'the largest standard-binding 2D tree does not exceed the per-dimension limit'
-  );
-  t.end();
+  ).toEqual({x: 65535, y: 2, z: 1});
 });
 
-test('GPUBVH builds deterministic 2D topology and bounds', async t => {
+it('GPUBVH builds deterministic 2D topology and bounds', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -38,28 +34,28 @@ test('GPUBVH builds deterministic 2D topology and bounds', async t => {
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(
-    await readUint32(fixture.children, 14),
-    [
-      1, 2, 3, 4, 5, 6, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-      0xffffffff, 0xffffffff
-    ]
+  expect(await readUint32(fixture.children, 14)).toEqual([
+    1, 2, 3, 4, 5, 6, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0xffffffff
+  ]);
+  expect(await readUint32(fixture.leafIds, 4)).toEqual([0, 1, 2, 0xffffffff]);
+  expect(await readFloat32(fixture.nodeMinima, 2), 'root contains every valid leaf').toEqual([
+    -2, 0
+  ]);
+  expect(await readFloat32(fixture.nodeMaxima, 2)).toEqual([5, 6]);
+  expect(await readUint32(fixture.count, 1)).toEqual([3]);
+  expect(await readUint32(fixture.overflow, 1)).toEqual([0]);
+  expect(fixture.bvh.topology).toBe('complete-binary');
+  expect(fixture.bvh.updatePolicy).toBe('refit');
+  expect(fixture.bvh.strategy, 'small hierarchies select their strategy automatically').toBe(
+    'auto'
   );
-  t.deepEqual(await readUint32(fixture.leafIds, 4), [0, 1, 2, 0xffffffff]);
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 2), [-2, 0], 'root contains every valid leaf');
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 2), [5, 6]);
-  t.deepEqual(await readUint32(fixture.count, 1), [3]);
-  t.deepEqual(await readUint32(fixture.overflow, 1), [0]);
-  t.equal(fixture.bvh.topology, 'complete-binary');
-  t.equal(fixture.bvh.updatePolicy, 'refit');
-  t.equal(fixture.bvh.strategy, 'auto', 'small hierarchies select their strategy automatically');
-  t.equal(fixture.bvh.resolvedStrategy, 'fused', 'small hierarchies use one workgroup');
-  t.deepEqual(
+  expect(fixture.bvh.resolvedStrategy, 'small hierarchies use one workgroup').toBe('fused');
+  expect(
     fixture.compiled.stats.nodeOrder,
-    ['test-bvh-fused-refit'],
     'leaf loading and every parent level execute in one graph node'
-  );
-  t.deepEqual(fixture.bvh.stats, {
+  ).toEqual(['test-bvh-fused-refit']);
+  expect(fixture.bvh.stats).toEqual({
     dimension: 2,
     leafCapacity: 4,
     internalNodeCount: 3,
@@ -69,21 +65,17 @@ test('GPUBVH builds deterministic 2D topology and bounds', async t => {
   });
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUBVH refits 3D bounds while preserving stable IDs and reports capacity overflow', async t => {
+it('GPUBVH refits 3D bounds while preserving stable IDs and reports capacity overflow', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
-  t.equal(
+  expect(
     device.limits.maxStorageBuffersPerShaderStage,
-    8,
     'explicit stable IDs work within the default WebGPU CORE storage-buffer limit'
-  );
+  ).toBe(8);
 
   const fixture = createFixture(device, {
     dimension: 3,
@@ -96,41 +88,36 @@ test('GPUBVH refits 3D bounds while preserving stable IDs and reports capacity o
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 3), [-1, -2, 0]);
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 3), [6, 5, 7]);
-  t.deepEqual(
+  expect(await readFloat32(fixture.nodeMinima, 3)).toEqual([-1, -2, 0]);
+  expect(await readFloat32(fixture.nodeMaxima, 3)).toEqual([6, 5, 7]);
+  expect(
     await readUint32(fixture.leafIds, 6),
-    [0, 0, 10, 0xffffffff, 30, 40],
     'source and destination offsets preserve surrounding storage and the maximum stable ID'
-  );
-  t.deepEqual(await readUint32(fixture.count, 1), [5], 'count reports required leaf capacity');
-  t.deepEqual(await readUint32(fixture.overflow, 1), [1], 'the fifth leaf is not written');
+  ).toEqual([0, 0, 10, 0xffffffff, 30, 40]);
+  expect(await readUint32(fixture.count, 1), 'count reports required leaf capacity').toEqual([5]);
+  expect(await readUint32(fixture.overflow, 1), 'the fifth leaf is not written').toEqual([1]);
 
   fixture.minima.write(Float32Array.from([8, 8, 8, 2, 2, 2, -1, 3, 1, 4, -2, 0, 100, 100, 100]));
   fixture.maxima.write(Float32Array.from([9, 9, 9, 3, 4, 5, 0, 5, 2, 6, 0, 7, 101, 101, 101]));
   encode(device, fixture.compiled);
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 3), [-1, -2, 0]);
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 3), [9, 9, 9], 'root refits updated leaves');
-  t.deepEqual(
+  expect(await readFloat32(fixture.nodeMinima, 3)).toEqual([-1, -2, 0]);
+  expect(await readFloat32(fixture.nodeMaxima, 3), 'root refits updated leaves').toEqual([9, 9, 9]);
+  expect(
     await readUint32(fixture.leafIds, 4, fixture.leafIdsByteOffset),
-    [10, 0xffffffff, 30, 40],
     'identity is stable across repeated encoding'
-  );
-  t.equal(fixture.bvh.resolvedStrategy, 'fused', 'explicit source IDs preserve fused refits');
-  t.deepEqual(fixture.compiled.stats.nodeOrder, [
+  ).toEqual([10, 0xffffffff, 30, 40]);
+  expect(fixture.bvh.resolvedStrategy, 'explicit source IDs preserve fused refits').toBe('fused');
+  expect(fixture.compiled.stats.nodeOrder).toEqual([
     'test-bvh-fused-refit',
     'test-bvh-remap-source-ids'
   ]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUBVH fused and per-level strategies publish identical invalid and padded bounds', async t => {
+it('GPUBVH fused and per-level strategies publish identical invalid and padded bounds', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -147,61 +134,53 @@ test('GPUBVH fused and per-level strategies publish identical invalid and padded
   encode(device, perLevel.compiled);
 
   const nodeCount = bounds.leafCapacity * 2 - 1;
-  t.equal(fused.bvh.resolvedStrategy, 'fused');
-  t.equal(perLevel.bvh.resolvedStrategy, 'level');
-  t.equal(
+  expect(fused.bvh.resolvedStrategy).toBe('fused');
+  expect(perLevel.bvh.resolvedStrategy).toBe('level');
+  expect(
     fused.compiled.stats.nodeOrder.length,
-    2,
     'fused construction adds only the CORE-compatible source-ID remapping node'
-  );
-  t.equal(
+  ).toBe(2);
+  expect(
     perLevel.compiled.stats.nodeOrder.length,
-    5,
     'per-level construction adds only the CORE-compatible source-ID remapping node'
-  );
-  t.ok(
-    perLevel.compiled.stats.nodeOrder.indexOf('test-bvh-load-leaves') <
-      perLevel.compiled.stats.nodeOrder.indexOf('test-bvh-remap-source-ids'),
+  ).toBe(5);
+  expect(
+    Boolean(
+      perLevel.compiled.stats.nodeOrder.indexOf('test-bvh-load-leaves') <
+        perLevel.compiled.stats.nodeOrder.indexOf('test-bvh-remap-source-ids')
+    ),
     'the graph remaps explicit IDs only after their implicit leaf slots have been published'
-  );
-  t.deepEqual(
+  ).toBe(true);
+  expect(
     await readFloat32(fused.nodeMinima, nodeCount * bounds.dimension),
-    await readFloat32(perLevel.nodeMinima, nodeCount * bounds.dimension),
     'invalid and padded leaf minima reduce identically'
-  );
-  t.deepEqual(
+  ).toEqual(await readFloat32(perLevel.nodeMinima, nodeCount * bounds.dimension));
+  expect(
     await readFloat32(fused.nodeMaxima, nodeCount * bounds.dimension),
-    await readFloat32(perLevel.nodeMaxima, nodeCount * bounds.dimension),
     'invalid and padded leaf maxima reduce identically'
-  );
-  t.deepEqual(
+  ).toEqual(await readFloat32(perLevel.nodeMaxima, nodeCount * bounds.dimension));
+  expect(
     await readUint32(fused.children, nodeCount * 2),
-    await readUint32(perLevel.children, nodeCount * 2),
     'both strategies publish the same complete-binary child topology'
-  );
-  t.deepEqual(
+  ).toEqual(await readUint32(perLevel.children, nodeCount * 2));
+  expect(
     await readUint32(fused.leafIds, bounds.leafCapacity),
-    [91, 71, 63, 47, 35, 0xffffffff, 0xffffffff, 0xffffffff],
     'invalid bounds retain their explicit identities while padded leaves stay invalid'
-  );
-  t.deepEqual(
+  ).toEqual([91, 71, 63, 47, 35, 0xffffffff, 0xffffffff, 0xffffffff]);
+  expect(
     await readUint32(fused.leafIds, bounds.leafCapacity),
-    await readUint32(perLevel.leafIds, bounds.leafCapacity),
     'both strategies remap explicit source identities identically'
-  );
-  t.deepEqual(await readUint32(fused.count, 1), await readUint32(perLevel.count, 1));
-  t.deepEqual(await readUint32(fused.overflow, 1), await readUint32(perLevel.overflow, 1));
+  ).toEqual(await readUint32(perLevel.leafIds, bounds.leafCapacity));
+  expect(await readUint32(fused.count, 1)).toEqual(await readUint32(perLevel.count, 1));
+  expect(await readUint32(fused.overflow, 1)).toEqual(await readUint32(perLevel.overflow, 1));
 
   destroyFixture(fused);
   destroyFixture(perLevel);
-  t.end();
 });
 
-test('GPUBVH fuses empty singleton roots and the maximum portable small hierarchy', async t => {
+it('GPUBVH fuses empty singleton roots and the maximum portable small hierarchy', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -213,11 +192,11 @@ test('GPUBVH fuses empty singleton roots and the maximum portable small hierarch
   });
   encode(device, empty.compiled);
 
-  t.equal(empty.bvh.resolvedStrategy, 'fused');
-  t.deepEqual(await readUint32(empty.children, 2), [0xffffffff, 0xffffffff]);
-  t.deepEqual(await readUint32(empty.leafIds, 1), [0xffffffff]);
-  t.deepEqual(await readUint32(empty.count, 1), [0]);
-  t.deepEqual(await readUint32(empty.overflow, 1), [0]);
+  expect(empty.bvh.resolvedStrategy).toBe('fused');
+  expect(await readUint32(empty.children, 2)).toEqual([0xffffffff, 0xffffffff]);
+  expect(await readUint32(empty.leafIds, 1)).toEqual([0xffffffff]);
+  expect(await readUint32(empty.count, 1)).toEqual([0]);
+  expect(await readUint32(empty.overflow, 1)).toEqual([0]);
 
   const boundary = createFixture(device, {
     dimension: 2,
@@ -227,22 +206,19 @@ test('GPUBVH fuses empty singleton roots and the maximum portable small hierarch
   });
   encode(device, boundary.compiled);
 
-  t.equal(boundary.bvh.resolvedStrategy, 'fused');
-  t.deepEqual(boundary.compiled.stats.nodeOrder, ['test-bvh-fused-refit']);
-  t.deepEqual(await readFloat32(boundary.nodeMinima, 2), [-4, -2]);
-  t.deepEqual(await readFloat32(boundary.nodeMaxima, 2), [5, 9]);
-  t.deepEqual(await readUint32(boundary.count, 1), [3]);
+  expect(boundary.bvh.resolvedStrategy).toBe('fused');
+  expect(boundary.compiled.stats.nodeOrder).toEqual(['test-bvh-fused-refit']);
+  expect(await readFloat32(boundary.nodeMinima, 2)).toEqual([-4, -2]);
+  expect(await readFloat32(boundary.nodeMaxima, 2)).toEqual([5, 9]);
+  expect(await readUint32(boundary.count, 1)).toEqual([3]);
 
   destroyFixture(empty);
   destroyFixture(boundary);
-  t.end();
 });
 
-test('GPUBVH retains per-level construction when one workgroup cannot contain every leaf', async t => {
+it('GPUBVH retains per-level construction when one workgroup cannot contain every leaf', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -254,22 +230,19 @@ test('GPUBVH retains per-level construction when one workgroup cannot contain ev
   });
   encode(device, fixture.compiled);
 
-  t.equal(fixture.bvh.strategy, 'auto');
-  t.equal(
-    fixture.bvh.resolvedStrategy,
-    'level',
-    'large hierarchies avoid cross-workgroup barriers'
+  expect(fixture.bvh.strategy).toBe('auto');
+  expect(fixture.bvh.resolvedStrategy, 'large hierarchies avoid cross-workgroup barriers').toBe(
+    'level'
   );
-  t.equal(fixture.compiled.stats.nodeOrder.length, 9, 'one load and eight refit passes remain');
-  t.equal(fixture.compiled.stats.nodeOrder[0], 'test-bvh-load-leaves');
-  t.equal(fixture.compiled.stats.nodeOrder[8], 'test-bvh-refit-depth-0');
-  t.deepEqual(await readFloat32(fixture.nodeMinima, 2), [-3, -2]);
-  t.deepEqual(await readFloat32(fixture.nodeMaxima, 2), [6, 7]);
-  t.deepEqual(await readUint32(fixture.count, 1), [3]);
-  t.deepEqual(await readUint32(fixture.overflow, 1), [0]);
+  expect(fixture.compiled.stats.nodeOrder.length, 'one load and eight refit passes remain').toBe(9);
+  expect(fixture.compiled.stats.nodeOrder[0]).toBe('test-bvh-load-leaves');
+  expect(fixture.compiled.stats.nodeOrder[8]).toBe('test-bvh-refit-depth-0');
+  expect(await readFloat32(fixture.nodeMinima, 2)).toEqual([-3, -2]);
+  expect(await readFloat32(fixture.nodeMaxima, 2)).toEqual([6, 7]);
+  expect(await readUint32(fixture.count, 1)).toEqual([3]);
+  expect(await readUint32(fixture.overflow, 1)).toEqual([0]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
 type Fixture = {

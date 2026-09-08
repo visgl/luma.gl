@@ -238,6 +238,11 @@ export class WGSLShaderAssembler extends ShaderAssembler {
     return {
       LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS:
         platformInfo.type === 'webgpu' && (limits['maxStorageBuffersInVertexStage'] || 0) > 0,
+      // Native tan() does not provide enough precision on all WebGPU implementations.
+      LUMA_FP32_TAN_PRECISION_WORKAROUND:
+        platformInfo.type === 'webgpu' &&
+        platformInfo.gpu.toLowerCase() !== 'nvidia' &&
+        platformInfo.gpu.toLowerCase() !== 'amd',
       // Metal may reassociate the floating-point transforms used by classic
       // double-single arithmetic. The integer path makes each rounding point
       // explicit while preserving the public vec2<f32> representation.

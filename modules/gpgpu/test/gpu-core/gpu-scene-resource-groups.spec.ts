@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
@@ -20,36 +20,29 @@ const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const BOUNDS = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
 
-test('GPUSceneResourceGroups plans bounded multidimensional command dispatches', t => {
-  t.deepEqual(getGPUSceneResourceGroupDispatchLayout(0, 4), {x: 1, y: 1, z: 1});
-  t.deepEqual(
+it('GPUSceneResourceGroups plans bounded multidimensional command dispatches', () => {
+  expect(getGPUSceneResourceGroupDispatchLayout(0, 4)).toEqual({x: 1, y: 1, z: 1});
+  expect(
     getGPUSceneResourceGroupDispatchLayout(4 * 256, 4),
-    {x: 4, y: 1, z: 1},
     'one-dimensional dispatch remains valid at its exact limit'
-  );
-  t.deepEqual(
+  ).toEqual({x: 4, y: 1, z: 1});
+  expect(
     getGPUSceneResourceGroupDispatchLayout(4 * 256 + 1, 4),
-    {x: 4, y: 2, z: 1},
     'commands beyond the X workgroup limit spill into Y'
-  );
-  t.deepEqual(
+  ).toEqual({x: 4, y: 2, z: 1});
+  expect(
     getGPUSceneResourceGroupDispatchLayout(4 * 4 * 256 + 1, 4),
-    {x: 4, y: 4, z: 2},
     'commands beyond the XY workgroup limit spill into Z'
-  );
-  t.throws(
+  ).toEqual({x: 4, y: 4, z: 2});
+  expect(
     () => getGPUSceneResourceGroupDispatchLayout((4 * 4 * 4 + 1) * 256, 4),
-    /dispatch limit/,
     'capacities beyond all three supported dimensions fail before encoding'
-  );
-  t.end();
+  ).toThrow(/dispatch limit/);
 });
 
-test('GPUSceneResourceGroups preserves binding order and classifies regrouped commands', async t => {
+it('GPUSceneResourceGroups preserves binding order and classifies regrouped commands', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -105,7 +98,7 @@ test('GPUSceneResourceGroups preserves binding order and classifies regrouped co
     overflows: overflows.view,
     overflow: overflow.view
   });
-  t.deepEqual(groups.stats, {
+  expect(groups.stats).toEqual({
     groupCount: 3,
     commandCapacity: 5,
     maximumGroupCommandCount: 2,
@@ -115,17 +108,15 @@ test('GPUSceneResourceGroups preserves binding order and classifies regrouped co
   const compiled = graph.compile();
 
   encode(device, compiled);
-  t.deepEqual(
+  expect(
     await readUint32(counts.buffer, 3),
-    [2, 1, 0],
     'renderer-authored group order is stable and empty groups remain present'
-  );
-  t.deepEqual(
+  ).toEqual([2, 1, 0]);
+  expect(
     await readUint32(overflows.buffer, 3),
-    [0, 0, 1],
     'an active command targeting a zero-capacity group is reported on that group'
-  );
-  t.deepEqual(await readUint32(overflow.buffer, 1), [1], 'unknown groups remain observable');
+  ).toEqual([0, 0, 1]);
+  expect(await readUint32(overflow.buffer, 1), 'unknown groups remain observable').toEqual([1]);
 
   scene.mutate({
     remove: [13],
@@ -136,27 +127,27 @@ test('GPUSceneResourceGroups preserves binding order and classifies regrouped co
     ]
   });
   encode(device, compiled);
-  t.deepEqual(
+  expect(
     await readUint32(counts.buffer, 3),
-    [1, 2, 0],
     'changed group ownership reclassifies commands without rebuilding the compiled graph'
-  );
-  t.deepEqual(
+  ).toEqual([1, 2, 0]);
+  expect(
     await readUint32(overflows.buffer, 3),
-    [1, 0, 0],
     'geometry/resource mismatches are attributed to the owning group'
-  );
+  ).toEqual([1, 0, 0]);
 
   scene.mutate({update: [{id: 12, geometryId: 20}]});
   encode(device, compiled);
-  t.deepEqual(await readUint32(counts.buffer, 3), [2, 2, 0]);
-  t.deepEqual(await readUint32(overflows.buffer, 3), [0, 0, 0]);
-  t.deepEqual(await readUint32(overflow.buffer, 1), [0], 'overflow clears after regrouping');
+  expect(await readUint32(counts.buffer, 3)).toEqual([2, 2, 0]);
+  expect(await readUint32(overflows.buffer, 3)).toEqual([0, 0, 0]);
+  expect(await readUint32(overflow.buffer, 1), 'overflow clears after regrouping').toEqual([0]);
 
   visibilityBuffer.write(new Uint32Array(5));
   encode(device, compiled);
-  t.deepEqual(await readUint32(counts.buffer, 3), [0, 0, 0], 'all groups clear when draws vanish');
-  t.deepEqual(await readUint32(overflow.buffer, 1), [0]);
+  expect(await readUint32(counts.buffer, 3), 'all groups clear when draws vanish').toEqual([
+    0, 0, 0
+  ]);
+  expect(await readUint32(overflow.buffer, 1)).toEqual([0]);
 
   compiled.destroy();
   scene.destroy();
@@ -165,14 +156,11 @@ test('GPUSceneResourceGroups preserves binding order and classifies regrouped co
   for (const output of [required, published, drawOverflow, counts, overflows, overflow]) {
     output.buffer.destroy();
   }
-  t.end();
 });
 
-test('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics', async t => {
+it('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -197,7 +185,7 @@ test('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics',
     overflow: overflow.view
   };
 
-  t.throws(
+  expect(
     () =>
       new GPUSceneResourceGroups({
         ...shared,
@@ -206,10 +194,9 @@ test('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics',
           {id: 1, firstCommand: 1, commandCount: 1}
         ]
       }),
-    /unique IDs/,
     'one resource identity cannot have ambiguous binding groups'
-  );
-  t.throws(
+  ).toThrow(/unique IDs/);
+  expect(
     () =>
       new GPUSceneResourceGroups({
         ...shared,
@@ -218,42 +205,36 @@ test('GPUSceneResourceGroups rejects ambiguous windows and aliased diagnostics',
           {id: 2, firstCommand: 1, commandCount: 1}
         ]
       }),
-    /must not overlap/,
     'binding-group command windows must remain disjoint'
-  );
-  t.throws(
+  ).toThrow(/must not overlap/);
+  expect(
     () =>
       new GPUSceneResourceGroups({
         ...shared,
         groups: [{id: 1, firstCommand: 1, commandCount: 2}]
       }),
-    /bounded slot windows/,
     'renderer-owned windows cannot exceed command capacity'
-  );
-  t.throws(
+  ).toThrow(/bounded slot windows/);
+  expect(
     () =>
       new GPUSceneResourceGroups({
         ...shared,
         groups: [{id: 1, firstCommand: 0, commandCount: 1}],
         overflow: counts.view
       }),
-    /cannot overlap one another/,
     'global and per-group diagnostics cannot alias'
-  );
+  ).toThrow(/cannot overlap one another/);
 
   scene.destroy();
   commands.destroy();
   counts.buffer.destroy();
   overflows.buffer.destroy();
   overflow.buffer.destroy();
-  t.end();
 });
 
-test('GPUSceneResourceGroups classifies records inserted after graph compilation', async t => {
+it('GPUSceneResourceGroups classifies records inserted after graph compilation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -290,7 +271,7 @@ test('GPUSceneResourceGroups classifies records inserted after graph compilation
 
   const compiled = graph.compile();
   encode(device, compiled);
-  t.deepEqual(await readUint32(counts.buffer, 1), [0]);
+  expect(await readUint32(counts.buffer, 1)).toEqual([0]);
 
   scene.mutate({
     insert: [
@@ -299,9 +280,9 @@ test('GPUSceneResourceGroups classifies records inserted after graph compilation
     ]
   });
   encode(device, compiled);
-  t.deepEqual(await readUint32(counts.buffer, 1), [2]);
-  t.deepEqual(await readUint32(overflows.buffer, 1), [0]);
-  t.deepEqual(await readUint32(overflow.buffer, 1), [0]);
+  expect(await readUint32(counts.buffer, 1)).toEqual([2]);
+  expect(await readUint32(overflows.buffer, 1)).toEqual([0]);
+  expect(await readUint32(overflow.buffer, 1)).toEqual([0]);
 
   compiled.destroy();
   scene.destroy();
@@ -309,7 +290,6 @@ test('GPUSceneResourceGroups classifies records inserted after graph compilation
   for (const output of [required, published, drawOverflow, counts, overflows, overflow]) {
     output.buffer.destroy();
   }
-  t.end();
 });
 
 function makeOutput(

@@ -222,7 +222,7 @@ export function compileGPUDataFrameQuery<
       predicates,
       derivedColumns,
       selectedColumns,
-      extension?.allowEmptyPredicates === true
+      predicates.length === 0 || extension?.allowEmptyPredicates === true
     );
     validateGPUQueryBatchCapacity(retainedSource, graph);
     validateGPUQueryBindingCapacity(plan, graph);

@@ -49,7 +49,7 @@ describe('Tempest Ocean: Spectral Stormfront', () => {
         viewer.postprocessingRenderer.passRenderers.map(
           passRenderer => passRenderer.passDefinition.name
         )
-      ).toEqual(['bloomShaderPassPipeline', 'toneMapping']);
+      ).toEqual(['bloomCompositeShaderPass', 'toneMapping']);
 
       const frameStages: string[] = [];
       const encodeSimulation = viewer.simulation.encode.bind(viewer.simulation);

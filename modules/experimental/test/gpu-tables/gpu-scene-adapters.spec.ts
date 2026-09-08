@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
@@ -43,11 +43,11 @@ type CPUNode = {
   children?: CPUNode[];
 };
 
-test('GPU scene adapters preserve CPU identity and table batch topology without packing', async t => {
+it('GPU scene adapters preserve CPU identity and table batch topology without packing', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -74,8 +74,12 @@ test('GPU scene adapters preserve CPU identity and table batch topology without 
     getRecord: node => node.record ?? null,
     capacity: 3
   });
-  t.deepEqual(await readSceneIds(cpuScene), [10, 20], 'stable preorder visits shared nodes once');
-  t.equal(cpuScene.getRecordIndex(20), 1, 'CPU-adapted scenes retain mutable identity metadata');
+  expect(await readSceneIds(cpuScene), 'stable preorder visits shared nodes once').toEqual([
+    10, 20
+  ]);
+  expect(cpuScene.getRecordIndex(20), 'CPU-adapted scenes retain mutable identity metadata').toBe(
+    1
+  );
 
   const firstSource = new GPUScene(device, {records: [firstRecord]});
   const secondSource = new GPUScene(device, {records: [secondRecord]});
@@ -91,63 +95,69 @@ test('GPU scene adapters preserve CPU identity and table batch topology without 
     activeCounts: [1, 0, 1]
   });
 
-  t.deepEqual(
+  expect(
     adapted.partitions.map(partition => ({
       batchIndex: partition.batchIndex,
       firstRecord: partition.firstRecord,
       recordCount: partition.recordCount,
       hasScene: Boolean(partition.scene)
     })),
-    [
-      {batchIndex: 0, firstRecord: 0, recordCount: 1, hasScene: true},
-      {batchIndex: 1, firstRecord: 1, recordCount: 0, hasScene: false},
-      {batchIndex: 2, firstRecord: 1, recordCount: 1, hasScene: true}
-    ],
     'empty and uneven table batches retain their partition indices and global bases'
-  );
-  t.deepEqual(adapted.stats, {
+  ).toEqual([
+    {batchIndex: 0, firstRecord: 0, recordCount: 1, hasScene: true},
+    {batchIndex: 1, firstRecord: 1, recordCount: 0, hasScene: false},
+    {batchIndex: 2, firstRecord: 1, recordCount: 1, hasScene: true}
+  ]);
+  expect(adapted.stats, '').toEqual({
     batchCount: 3,
     sceneCount: 2,
     recordCount: 2,
     borrowedRecordByteLength: 256,
     ownedStateByteLength: 32
   });
-  t.equal(
+  expect(
     adapted.partitions[0]!.scene!.recordBuffer,
-    firstSource.recordBuffer,
     'the first table record allocation is borrowed directly'
-  );
-  t.notOk(adapted.partitions[0]!.scene!.mutable, 'opaque table storage is not CPU-mutable');
-  t.deepEqual(
+  ).toBe(firstSource.recordBuffer);
+  expect(
+    Boolean(adapted.partitions[0]!.scene!.mutable),
+    'opaque table storage is not CPU-mutable'
+  ).toBe(false);
+  expect(
     await readSceneRecordBytes(adapted.partitions[0]!.scene!),
-    (await readSceneRecordBytes(cpuScene)).slice(0, GPU_SCENE_RECORD_BYTE_LENGTH),
     'CPU and table adapters expose the same canonical record bytes'
-  );
-  t.deepEqual(
+  ).toEqual((await readSceneRecordBytes(cpuScene)).slice(0, GPU_SCENE_RECORD_BYTE_LENGTH));
+  expect(
     await readSceneIds(adapted.partitions[2]!.scene!),
-    [20],
     'later table partitions preserve their source records'
+  ).toEqual([20]);
+  expect(adapted.partitions[0]!.scene!.activeCount, 'producer-known active counts are exact').toBe(
+    1
   );
-  t.equal(adapted.partitions[0]!.scene!.activeCount, 1, 'producer-known active counts are exact');
 
   const firstStateBuffer = adapted.partitions[0]!.scene!.stateBuffer;
   adapted.destroy();
   adapted.destroy();
-  t.ok(firstStateBuffer.destroyed, 'the adapter-owned state allocation is released');
-  t.notOk(firstSource.recordBuffer.destroyed, 'table record storage remains borrowed');
+  expect(
+    Boolean(firstStateBuffer.destroyed),
+    'the adapter-owned state allocation is released'
+  ).toBe(true);
+  expect(Boolean(firstSource.recordBuffer.destroyed), 'table record storage remains borrowed').toBe(
+    false
+  );
 
   table.destroy();
   cpuScene.destroy();
   firstSource.destroy();
   secondSource.destroy();
-  t.end();
+  void 0;
 });
 
-test('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer groups after mutation', async t => {
+it('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer groups after mutation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -221,10 +231,10 @@ test('CPU scene hierarchies reuse generic visibility, indirect draws, and render
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readConsumerUint32(visibleRows.buffer, 3), [0, 2, 3]);
-  t.deepEqual(await readConsumerUint32(groupCounts.buffer, 2), [1, 2]);
-  t.deepEqual(await readConsumerUint32(published.buffer, 1), [3]);
-  t.equal(scene.getRecordIndex(40), 3, 'stable application identity differs from scene row');
+  expect(await readConsumerUint32(visibleRows.buffer, 3), '').toEqual([0, 2, 3]);
+  expect(await readConsumerUint32(groupCounts.buffer, 2), '').toEqual([1, 2]);
+  expect(await readConsumerUint32(published.buffer, 1), '').toEqual([3]);
+  expect(scene.getRecordIndex(40), 'stable application identity differs from scene row').toBe(3);
 
   const mutation = scene.mutate({remove: [30]});
   visibility.buffer.write(Uint32Array.from([1, 1, 0, 1]));
@@ -232,86 +242,82 @@ test('CPU scene hierarchies reuse generic visibility, indirect draws, and render
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.equal(mutation.uploadedByteLength, 20, 'CPU hierarchy updates publish explicit bounded cost');
-  t.deepEqual(await readConsumerUint32(visibleRows.buffer, 3), [0, 1, 3]);
-  t.deepEqual(await readConsumerUint32(groupCounts.buffer, 2), [2, 1]);
-  t.deepEqual(await readConsumerUint32(groupOverflows.buffer, 2), [0, 0]);
-  t.deepEqual(await readConsumerUint32(groupOverflow.buffer, 1), [0]);
-  const commandWords = await readConsumerUint32(commands.buffer, 16);
-  t.deepEqual(
-    [commandWords[1], commandWords[5], commandWords[9], commandWords[13]],
-    [1, 1, 0, 1],
-    'one compiled graph updates stable renderer-owned command slots without CPU draw selection'
+  expect(mutation.uploadedByteLength, 'CPU hierarchy updates publish explicit bounded cost').toBe(
+    20
   );
+  expect(await readConsumerUint32(visibleRows.buffer, 3), '').toEqual([0, 1, 3]);
+  expect(await readConsumerUint32(groupCounts.buffer, 2), '').toEqual([2, 1]);
+  expect(await readConsumerUint32(groupOverflows.buffer, 2), '').toEqual([0, 0]);
+  expect(await readConsumerUint32(groupOverflow.buffer, 1), '').toEqual([0]);
+  const commandWords = await readConsumerUint32(commands.buffer, 16);
+  expect(
+    [commandWords[1], commandWords[5], commandWords[9], commandWords[13]],
+    'one compiled graph updates stable renderer-owned command slots without CPU draw selection'
+  ).toEqual([1, 1, 0, 1]);
 
   compiled.destroy();
   commands.destroy();
   scene.destroy();
   for (const buffer of outputs) buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPU scene adapters reject ambiguous CPU and table storage contracts', async t => {
+it('GPU scene adapters reject ambiguous CPU and table storage contracts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
-  t.throws(
+  expect(
     () =>
       makeGPUSceneFromCPUScene(device, {
         roots: [],
         getRecord: () => null
       }),
-    /requires capacity/,
     'an empty CPU source needs an explicit allocation policy'
-  );
+  ).toThrow(/requires capacity/);
 
   const source = new GPUScene(device, {
     records: [{id: 1, bounds: {minimum: [0, 0, 0], maximum: [1, 1, 1]}}]
   });
   const invalidBatch = makeSceneBatch(source, 1, {objectId: 4});
   const invalidTable = new GPUTable({batches: [invalidBatch]});
-  t.throws(
+  expect(
     () => makeGPUScenePartitionsFromGPUTable(device, invalidTable, {activeCounts: [1]}),
-    /canonical scene record layout/,
     'columnar or shifted layouts are not silently packed'
-  );
-  t.throws(
+  ).toThrow(/canonical scene record layout/);
+  expect(
     () =>
       makeGPUScenePartitionsFromGPUTable(device, invalidTable, {
         columns: {objectId: 'flags'},
         activeCounts: [1]
       }),
-    /column names must be unique/,
     'one physical column cannot fill multiple scene roles'
-  );
+  ).toThrow(/column names must be unique/);
 
   const validTable = new GPUTable({batches: [makeSceneBatch(source, 1)]});
-  t.throws(
+  expect(
     () => makeGPUScenePartitionsFromGPUTable(device, validTable, {activeCounts: []}),
-    /exact active count per batch/,
     'opaque table records require producer-known active-count metadata'
-  );
-  t.throws(
+  ).toThrow(/exact active count per batch/);
+  expect(
     () => makeGPUScenePartitionsFromGPUTable(device, validTable, {activeCounts: [2]}),
-    /exact active count per batch/,
     'active counts cannot exceed their physical batch size'
-  );
+  ).toThrow(/exact active count per batch/);
 
   validTable.destroy();
   invalidTable.destroy();
   source.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPU scene table adapters preserve exact active counts for batches with holes', async t => {
+it('GPU scene table adapters preserve exact active counts for batches with holes', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -327,19 +333,18 @@ test('GPU scene table adapters preserve exact active counts for batches with hol
   const adapted = makeGPUScenePartitionsFromGPUTable(device, table, {activeCounts: [1]});
   const scene = adapted.partitions[0]!.scene!;
 
-  t.equal(scene.recordCount, 2, 'the physical prefix retains its inactive hole');
-  t.equal(scene.activeCount, 1, 'only the producer-known live row contributes to activeCount');
+  expect(scene.recordCount, 'the physical prefix retains its inactive hole').toBe(2);
+  expect(scene.activeCount, 'only the producer-known live row contributes to activeCount').toBe(1);
   const stateBytes = await scene.stateBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(new Uint32Array(stateBytes.buffer, stateBytes.byteOffset, 4)),
-    [2, 1, 0, 0],
     'GPU state distinguishes physical prefix length from exact live count'
-  );
+  ).toEqual([2, 1, 0, 0]);
 
   adapted.destroy();
   table.destroy();
   source.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSceneBatch(

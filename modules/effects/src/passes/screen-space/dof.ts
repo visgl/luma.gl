@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 const BLUR_SAMPLE_LIMIT = 20;
 
@@ -193,7 +193,7 @@ vec4 dof_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
  *
  * This pass samples scene color from `sourceTexture` and scene depth from `depthTexture`, then
  * computes a blur radius from reconstructed linear depth. It is designed to be driven by
- * {@link dofShaderPassPipeline}, which runs the pass twice with different internal
+ * {@link dofCompositeShaderPass}, which runs the pass twice with different internal
  * `texelOffset` values for horizontal and vertical blur.
  *
  * Callers are expected to provide:
@@ -227,8 +227,8 @@ export const dof = {
 } as const satisfies ShaderPass<DofProps & DofBindings, InternalDofUniforms, DofBindings>;
 
 /** Separable depth-of-field pipeline with horizontal and vertical blur passes. */
-export const dofShaderPassPipeline = {
-  name: 'dofShaderPassPipeline',
+export const dofCompositeShaderPass = {
+  name: 'dofCompositeShaderPass',
   renderTargets: {blurScratch: {}},
   steps: [
     {
@@ -244,4 +244,4 @@ export const dofShaderPassPipeline = {
       uniforms: {texelOffset: [0, 1]}
     }
   ]
-} as const satisfies ShaderPassPipeline<'blurScratch'>;
+} as const satisfies CompositeShaderPass<'blurScratch'>;

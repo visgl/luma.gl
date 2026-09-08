@@ -30,13 +30,25 @@ export type VertexList<Format extends VertexFormat = VertexFormat> = `vertex-lis
 export type ValueList<Format extends VertexFormat = VertexFormat> = `value-list<${Format}>`;
 
 /**
+ * Fixed-length rows of element values consumed through GPU storage bindings.
+ *
+ * `fixed-size-list<float32,768>` stores exactly 768 `float32` elements in every
+ * logical row. The list describes physical memory, not a shader vertex format.
+ */
+export type FixedSizeList<
+  Format extends VertexFormat = VertexFormat,
+  Size extends number = number
+> = `fixed-size-list<${Format},${Size}>`;
+
+/**
  * Memory-layout string used by GPUVector.
  *
  * Fixed formats reuse core `VertexFormat` strings. Variable-length
  * vertex-aligned formats use `vertex-list<${VertexFormat}>`; other
- * variable-length values use `value-list<${VertexFormat}>`.
+ * variable-length values use `value-list<${VertexFormat}>`. Storage-oriented
+ * fixed-length rows use `fixed-size-list<${VertexFormat},${number}>`.
  */
-export type GPUVectorFormat = VertexFormat | VertexList | ValueList;
+export type GPUVectorFormat = VertexFormat | VertexList | ValueList | FixedSizeList;
 
 /** Decoded memory-layout information for a GPUVector format string. */
 export type GPUVectorFormatInfo = {
@@ -48,6 +60,10 @@ export type GPUVectorFormatInfo = {
   vertexList: boolean;
   /** Whether this vector stores row-offset non-vertex value lists. */
   valueList: boolean;
+  /** Whether every logical row contains a fixed number of storage elements. */
+  fixedSizeList: boolean;
+  /** Number of elements in each fixed-size-list row, when applicable. */
+  listSize?: number;
   /** Component memory data type. */
   type: NormalizedDataType;
   /** Component memory data type without normalization. */
@@ -56,7 +72,9 @@ export type GPUVectorFormatInfo = {
   primitiveType: PrimitiveDataType;
   /** Number of scalar components per fixed row or list element. */
   components: 1 | 2 | 3 | 4;
-  /** Bytes occupied by one fixed row or list element. */
+  /** Bytes occupied by one scalar or vector element. */
+  elementByteLength: number;
+  /** Bytes occupied by one fixed row, or by one variable-length list element. */
   byteLength: number;
   /** Whether shader-visible values are integer values. */
   integer: boolean;
@@ -70,6 +88,7 @@ export type GPUVectorFormatInfo = {
 
 const VERTEX_LIST_FORMAT_REGEXP = /^vertex-list<([^<>]+)>$/;
 const VALUE_LIST_FORMAT_REGEXP = /^value-list<([^<>]+)>$/;
+const FIXED_SIZE_LIST_FORMAT_REGEXP = /^fixed-size-list<([^<>,]+),([1-9][0-9]*)>$/;
 
 /** Returns true when a GPUVector format describes row-offset vertex lists. */
 export function isVertexListGPUVectorFormat(format: string): format is VertexList {
@@ -81,11 +100,20 @@ export function isValueListGPUVectorFormat(format: string): format is ValueList 
   return VALUE_LIST_FORMAT_REGEXP.test(format);
 }
 
+/** Returns true when a GPUVector format describes canonical fixed-length rows. */
+export function isFixedSizeListGPUVectorFormat(format: string): format is FixedSizeList {
+  return Boolean(getFixedSizeListFormatParts(format));
+}
+
 /** Returns the fixed element memory format for fixed and variable-length vectors. */
 export function getGPUVectorElementFormat(format: GPUVectorFormat): VertexFormat {
   const vertexListMatch = VERTEX_LIST_FORMAT_REGEXP.exec(format);
   const valueListMatch = VALUE_LIST_FORMAT_REGEXP.exec(format);
-  const elementFormat = (vertexListMatch?.[1] ?? valueListMatch?.[1] ?? format) as VertexFormat;
+  const fixedSizeListFormat = getFixedSizeListFormatParts(format);
+  const elementFormat = (fixedSizeListFormat?.elementFormat ??
+    vertexListMatch?.[1] ??
+    valueListMatch?.[1] ??
+    format) as VertexFormat;
   try {
     vertexFormatDecoder.getVertexFormatInfo(elementFormat);
   } catch {
@@ -99,7 +127,12 @@ export function getGPUVectorFormatInfo(format: GPUVectorFormat): GPUVectorFormat
   const elementFormat = getGPUVectorElementFormat(format);
   const vertexList = isVertexListGPUVectorFormat(format);
   const valueList = isValueListGPUVectorFormat(format);
+  const fixedSizeListFormat = getFixedSizeListFormatParts(format);
   const vertexFormatInfo = vertexFormatDecoder.getVertexFormatInfo(elementFormat);
+  const byteLength = vertexFormatInfo.byteLength * (fixedSizeListFormat?.listSize ?? 1);
+  if (!Number.isSafeInteger(byteLength)) {
+    throw new Error(`Unsupported GPUVector format ${format}`);
+  }
   const type = vertexFormatInfo.type;
   const normalized = vertexFormatInfo.normalized;
   const primitiveType = getPrimitiveDataType(type, normalized);
@@ -109,11 +142,14 @@ export function getGPUVectorFormatInfo(format: GPUVectorFormat): GPUVectorFormat
     elementFormat,
     vertexList,
     valueList,
+    fixedSizeList: Boolean(fixedSizeListFormat),
+    ...(fixedSizeListFormat ? {listSize: fixedSizeListFormat.listSize} : {}),
     type,
     signedDataType: getSignedDataType(elementFormat, type),
     primitiveType,
     components: vertexFormatInfo.components,
-    byteLength: vertexFormatInfo.byteLength,
+    elementByteLength: vertexFormatInfo.byteLength,
+    byteLength,
     integer: vertexFormatInfo.integer,
     signed: vertexFormatInfo.signed,
     normalized,
@@ -127,6 +163,9 @@ export function isGPUVectorFormatCompatibleWithShaderType(
   shaderType: AttributeShaderType
 ): boolean {
   const formatInfo = getGPUVectorFormatInfo(format);
+  if (formatInfo.fixedSizeList) {
+    return false;
+  }
   const shaderTypeInfo = shaderTypeDecoder.getAttributeShaderTypeInfo(shaderType);
 
   if (formatInfo.components !== shaderTypeInfo.components) {
@@ -145,6 +184,34 @@ export function isGPUVectorFormatCompatibleWithShaderType(
     default:
       return false;
   }
+}
+
+function getFixedSizeListFormatParts(
+  format: string
+): {elementFormat: string; listSize: number} | undefined {
+  const fixedSizeListMatch = FIXED_SIZE_LIST_FORMAT_REGEXP.exec(format);
+  if (!fixedSizeListMatch) {
+    return undefined;
+  }
+  const listSize = Number(fixedSizeListMatch[2]);
+  if (!Number.isSafeInteger(listSize)) {
+    return undefined;
+  }
+  const elementFormat = fixedSizeListMatch[1];
+  try {
+    const elementFormatInfo = vertexFormatDecoder.getVertexFormatInfo(
+      elementFormat as VertexFormat
+    );
+    if (
+      !Number.isSafeInteger(listSize * elementFormatInfo.components) ||
+      !Number.isSafeInteger(listSize * elementFormatInfo.byteLength)
+    ) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return {elementFormat, listSize};
 }
 
 function getPrimitiveDataType(type: NormalizedDataType, normalized: boolean): PrimitiveDataType {

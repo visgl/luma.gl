@@ -101,9 +101,9 @@ export type {
 export {aBuffer, aBufferPlugin} from './oit/a-buffer';
 export type {
   ABufferResolveProps,
-  ABufferResolveShaderPassPipelineOptions
-} from './oit/a-buffer-resolve-shader-pass-pipeline';
-export {createABufferResolveShaderPassPipeline} from './oit/a-buffer-resolve-shader-pass-pipeline';
+  ABufferResolveCompositeShaderPassOptions
+} from './oit/a-buffer-resolve-composite-shader-pass';
+export {createABufferResolveCompositeShaderPass} from './oit/a-buffer-resolve-composite-shader-pass';
 export type {
   ABufferCaptureContext,
   ABufferRenderOptions,
@@ -118,11 +118,11 @@ export {
 } from './oit/a-buffer-renderer';
 export type {WBOITPass, WBOITShaderModuleProps, WBOITShaderModuleUniforms} from './oit/wboit';
 export {wboit, wboitPlugin} from './oit/wboit';
-export type {WBOITResolveBindings} from './oit/wboit-resolve-shader-pass-pipeline';
+export type {WBOITResolveBindings} from './oit/wboit-resolve-composite-shader-pass';
 export {
-  createWBOITResolveShaderPassPipeline,
+  createWBOITResolveCompositeShaderPass,
   wboitResolve
-} from './oit/wboit-resolve-shader-pass-pipeline';
+} from './oit/wboit-resolve-composite-shader-pass';
 export type {
   WBOITCapture,
   WBOITCaptureContext,
@@ -147,7 +147,7 @@ export type {
 export {ShadowMapRenderer} from './shadows/shadow-map-renderer';
 export {shadow} from './shadows/shadow';
 export type {ContactShadowProps} from './shadows/contact-shadow';
-export {createContactShadowShaderPassPipeline} from './shadows/contact-shadow';
+export {createContactShadowCompositeShaderPass} from './shadows/contact-shadow';
 
 export type {
   GBufferExtraColorAttachment,
@@ -174,12 +174,12 @@ export {
 } from './rendering/fft-bloom';
 export type {DeferredAmbientLightingProps} from './rendering/deferred-ambient-lighting';
 export {
-  createDeferredAmbientLightingShaderPassPipeline,
+  createDeferredAmbientLightingCompositeShaderPass,
   deferredAmbientLighting
 } from './rendering/deferred-ambient-lighting';
 export type {DeferredLightingProps, DeferredPointLight} from './rendering/deferred-lighting';
 export {
-  createDeferredLightingShaderPassPipeline,
+  createDeferredLightingCompositeShaderPass,
   deferredLighting,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
@@ -194,7 +194,7 @@ export type {
 export {
   ClusteredLightGrid,
   clusteredDeferredLighting,
-  createClusteredDeferredLightingShaderPassPipeline,
+  createClusteredDeferredLightingCompositeShaderPass,
   DEFAULT_CLUSTER_DIMENSIONS,
   DEFAULT_MAX_LIGHTS_PER_CLUSTER,
   MAX_CLUSTERED_POINT_LIGHTS

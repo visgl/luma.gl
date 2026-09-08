@@ -1,5 +1,10 @@
+import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
+
+const optionalTextureCompressorShim = fileURLToPath(
+  new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
+);
 
 const excludePatterns = [
   '**/*.disabled.*',
@@ -112,7 +117,7 @@ const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/gltf/test/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/scene/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
-  'modules/math-geoarrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
+  'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/gpgpu/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/experimental/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
@@ -155,7 +160,9 @@ const vitestConfig = getVitestConfig({
   overrides: {
     // Keep deck.gl in Vite's source graph so it shares this repository's luma.gl runtime.
     ssr: {noExternal: ['@deck.gl/core']},
-    optimizeDeps: {exclude: ['@deck.gl/core']}
+    // loaders.gl's optional writer peer must remain importable without installing its 33 MB CLI.
+    // Disabling discovery keeps Vite from restarting a CI shard when it first encounters zod.
+    optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}
   },
   projects: {
     node: {
@@ -222,6 +229,17 @@ const vitestConfig = getVitestConfig({
     excludeAfterRemap: true
   }
 });
+
+// getVitestConfig installs the repository's TypeScript path aliases before applying overrides.
+// Append the optional peer alias here so those source aliases remain available to browser tests.
+const configuredAliases = vitestConfig.resolve?.alias;
+vitestConfig.resolve = {
+  ...vitestConfig.resolve,
+  alias: [
+    ...(Array.isArray(configuredAliases) ? configuredAliases : []),
+    {find: 'texture-compressor', replacement: optionalTextureCompressorShim}
+  ]
+};
 
 // Vitest selects its sharding sequencer from the root test config before it groups files by
 // project. Project-level sequence settings only affect ordering after files have been sharded.

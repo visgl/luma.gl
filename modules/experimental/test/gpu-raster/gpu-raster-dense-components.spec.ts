@@ -6,7 +6,7 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {GPURasterDenseComponents} from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type DenseFixture = {
   id: string;
@@ -41,11 +41,11 @@ type DenseExecution = {
 
 const GUARD_VALUE = 4000000001;
 
-test('GPURaster dense representatives preserve real background and reject exact malformed unsigned roots', async testCase => {
+it('GPURaster dense representatives preserve real background and reject exact malformed unsigned roots', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -57,33 +57,27 @@ test('GPURaster dense representatives preserve real background and reject exact 
     validity: [1, 1, 1, 1, 0, 1, 1, 1, 1]
   });
   submitGraph(device, valid.compiled, 'submit-stable-dense-root-order');
-  testCase.deepEqual(
+  expect(
     await readLogical(valid.output),
-    [1, 1, 0, 2, 0, 2, 3, 0, 4],
     'minimum sparse roots map to stable contiguous identifiers in row-major representative order'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 1, 0, 2, 0, 2, 3, 0, 4]);
+  expect(
     await readLogical(valid.outputValidity),
-    [1, 1, 1, 1, 0, 1, 1, 1, 1],
     'valid zero background stays distinguishable from independently missing observations'
-  );
-  testCase.equal(
+  ).toEqual([1, 1, 1, 1, 0, 1, 1, 1, 1]);
+  expect(
     (await readLogical(valid.componentCount))[0],
-    4,
     'exact root count fits default capacity'
+  ).toBe(4);
+  expect((await readLogical(valid.overflow))[0], 'full-capacity execution does not overflow').toBe(
+    0
   );
-  testCase.equal(
-    (await readLogical(valid.overflow))[0],
-    0,
-    'full-capacity execution does not overflow'
-  );
-  testCase.equal(
+  expect(
     (await readLogical(valid.requiredComponentCount!))[0],
-    4,
     'optional unclamped total is exact'
-  );
-  await assertAllGuards(testCase, valid, 'stable dense root order');
-  destroyExecution(testCase, valid);
+  ).toBe(4);
+  await assertAllGuards(valid, 'stable dense root order');
+  destroyExecution(valid);
 
   const malformed = makeExecution(device, {
     id: 'malformed-exact-unsigned-roots',
@@ -94,36 +88,31 @@ test('GPURaster dense representatives preserve real background and reject exact 
     includeRequiredCount: false
   });
   submitGraph(device, malformed.compiled, 'submit-malformed-exact-unsigned-roots');
-  testCase.deepEqual(
+  expect(
     await readLogical(malformed.output),
-    [1, 0, 0, 0, 0, 2, 2, 0],
     'maximum uint32, out-of-range roots, and references to nonrepresentative slots fail closed'
-  );
-  testCase.deepEqual(
+  ).toEqual([1, 0, 0, 0, 0, 2, 2, 0]);
+  expect(
     await readLogical(malformed.outputValidity),
-    [1, 0, 0, 1, 0, 1, 1, 0],
     'invalid sparse references never alias an earlier prefix while genuine background remains valid'
+  ).toEqual([1, 0, 0, 1, 0, 1, 1, 0]);
+  expect((await readLogical(malformed.componentCount))[0], 'only valid canonical roots count').toBe(
+    2
   );
-  testCase.equal(
-    (await readLogical(malformed.componentCount))[0],
-    2,
-    'only valid canonical roots count'
-  );
-  testCase.equal(
+  expect(
     (await readLogical(malformed.overflow))[0],
-    0,
     'malformed observations do not inflate overflow'
-  );
-  await assertAllGuards(testCase, malformed, 'malformed root validation');
-  destroyExecution(testCase, malformed);
-  testCase.end();
+  ).toBe(0);
+  await assertAllGuards(malformed, 'malformed root validation');
+  destroyExecution(malformed);
+  void 0;
 });
 
-test('GPURaster hierarchical dense scans clamp maximal checkerboards at zero, partial, and full capacities', async testCase => {
+it('GPURaster hierarchical dense scans clamp maximal checkerboards at zero, partial, and full capacities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -169,43 +158,38 @@ test('GPURaster hierarchical dense scans clamp maximal checkerboards at zero, pa
         expectedValidity.push(accepted ? 1 : 0);
       }
     }
-    testCase.deepEqual(
+    expect(
       await readLogical(execution.output),
-      expectedLabels,
       `capacity ${capacity} publishes only deterministic identifiers that fit compact output bounds`
-    );
-    testCase.deepEqual(
+    ).toEqual(expectedLabels);
+    expect(
       await readLogical(execution.outputValidity),
-      expectedValidity,
       `capacity ${capacity} invalidates truncated foreground without hiding valid background`
-    );
-    testCase.equal(
+    ).toEqual(expectedValidity);
+    expect(
       (await readLogical(execution.componentCount))[0],
-      Math.min(canonicalRoots.length, capacity),
       `capacity ${capacity} publishes the bounded compact component count`
-    );
-    testCase.equal(
+    ).toBe(Math.min(canonicalRoots.length, capacity));
+    expect(
       (await readLogical(execution.overflow))[0],
-      Number(canonicalRoots.length > capacity),
       `capacity ${capacity} publishes explicit per-execution overflow`
-    );
-    testCase.equal(
+    ).toBe(Number(canonicalRoots.length > capacity));
+    expect(
       (await readLogical(execution.requiredComponentCount!))[0],
-      canonicalRoots.length,
       `capacity ${capacity} preserves the unclamped exact root count across scan block boundaries`
-    );
-    await assertAllGuards(testCase, execution, `hierarchical dense capacity ${capacity}`);
-    destroyExecution(testCase, execution);
+    ).toBe(canonicalRoots.length);
+    await assertAllGuards(execution, `hierarchical dense capacity ${capacity}`);
+    destroyExecution(execution);
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster dense graph replay clears convergence failures and resets count, overflow, validity, and roots', async testCase => {
+it('GPURaster dense graph replay clears convergence failures and resets count, overflow, validity, and roots', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -218,92 +202,74 @@ test('GPURaster dense graph replay clears convergence failures and resets count,
     capacity: 2
   });
   submitGraph(device, execution.compiled, 'submit-initial-dense-overflow');
-  testCase.deepEqual(
-    await readLogical(execution.output),
-    [1, 0, 2, 2, 0, 0],
-    'initial labels are capacity-bounded'
-  );
-  testCase.deepEqual(
+  expect(await readLogical(execution.output), 'initial labels are capacity-bounded').toEqual([
+    1, 0, 2, 2, 0, 0
+  ]);
+  expect(
     await readLogical(execution.outputValidity),
-    [1, 1, 1, 1, 0, 1],
     'only over-capacity foreground is withheld during successful convergence'
+  ).toEqual([1, 1, 1, 1, 0, 1]);
+  expect((await readLogical(execution.componentCount))[0], 'initial compact count is clamped').toBe(
+    2
   );
-  testCase.equal(
-    (await readLogical(execution.componentCount))[0],
-    2,
-    'initial compact count is clamped'
-  );
-  testCase.equal(
+  expect(
     (await readLogical(execution.overflow))[0],
-    1,
     'initial execution flags capacity overflow'
-  );
-  testCase.equal(
+  ).toBe(1);
+  expect(
     (await readLogical(execution.requiredComponentCount!))[0],
-    3,
     'initial exact total is retained'
-  );
+  ).toBe(3);
 
   writeLogical(execution.converged, [0]);
   submitGraph(device, execution.compiled, 'reencode-unconverged-dense-components');
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output),
-    [0, 0, 0, 0, 0, 0],
     'nonconvergence clears every previously published label'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(
     await readLogical(execution.outputValidity),
-    [0, 0, 0, 0, 0, 0],
     'nonconvergence also withholds otherwise valid background'
-  );
-  testCase.equal(
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(
     (await readLogical(execution.componentCount))[0],
-    0,
     'nonconvergence clears the bounded count'
+  ).toBe(0);
+  expect((await readLogical(execution.overflow))[0], 'nonconvergence clears stale overflow').toBe(
+    0
   );
-  testCase.equal(
-    (await readLogical(execution.overflow))[0],
-    0,
-    'nonconvergence clears stale overflow'
-  );
-  testCase.equal(
+  expect(
     (await readLogical(execution.requiredComponentCount!))[0],
-    0,
     'nonconvergence clears the optional unclamped total'
-  );
+  ).toBe(0);
 
   writeLogical(execution.input, [0, 2, 0, 4, 4, 0]);
   writeLogical(execution.inputValidity, [1, 1, 0, 1, 1, 1]);
   writeLogical(execution.converged, [1]);
   submitGraph(device, execution.compiled, 'reencode-recovered-dense-components');
-  testCase.deepEqual(
+  expect(
     await readLogical(execution.output),
-    [0, 1, 0, 2, 2, 0],
     'replay rebuilds canonical representatives and ranks from the replacement source'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 1, 0, 2, 2, 0]);
+  expect(
     await readLogical(execution.outputValidity),
-    [1, 1, 0, 1, 1, 1],
     'recovery preserves new masks and genuine background'
-  );
-  testCase.equal(
+  ).toEqual([1, 1, 0, 1, 1, 1]);
+  expect(
     (await readLogical(execution.componentCount))[0],
-    2,
     'recovery reports the replacement count'
-  );
-  testCase.equal(
+  ).toBe(2);
+  expect(
     (await readLogical(execution.overflow))[0],
-    0,
     'overflow is per-execution and never sticky'
-  );
-  testCase.equal(
+  ).toBe(0);
+  expect(
     (await readLogical(execution.requiredComponentCount!))[0],
-    2,
     'replacement exact totals never inherit prior roots'
-  );
-  await assertAllGuards(testCase, execution, 'convergence-safe dense replay');
-  destroyExecution(testCase, execution);
-  testCase.end();
+  ).toBe(2);
+  await assertAllGuards(execution, 'convergence-safe dense replay');
+  destroyExecution(execution);
+  void 0;
 });
 
 function makeExecution(device: Device, fixture: DenseFixture): DenseExecution {
@@ -417,22 +383,15 @@ async function readLogical(entry: GuardedBuffer): Promise<number[]> {
   return (await readGuarded(entry)).slice(entry.prefixLength, entry.prefixLength + entry.length);
 }
 
-async function assertAllGuards(
-  testCase: Test,
-  execution: DenseExecution,
-  label: string
-): Promise<void> {
+async function assertAllGuards(execution: DenseExecution, label: string): Promise<void> {
   for (const entry of execution.owned) {
     const values = await readGuarded(entry);
-    testCase.deepEqual(
+    expect(
       values.slice(0, entry.prefixLength),
-      Array.from({length: entry.prefixLength}, () => GUARD_VALUE),
       `${label}: ${entry.buffer.id} preserves its caller-owned offset prefix`
-    );
-    testCase.equal(
-      values.at(-1),
-      GUARD_VALUE,
-      `${label}: ${entry.buffer.id} preserves its caller-owned suffix`
+    ).toEqual(Array.from({length: entry.prefixLength}, () => GUARD_VALUE));
+    expect(values.at(-1), `${label}: ${entry.buffer.id} preserves its caller-owned suffix`).toBe(
+      GUARD_VALUE
     );
   }
 }
@@ -447,10 +406,13 @@ function submitGraph(
   device.submit(encoder.finish());
 }
 
-function destroyExecution(testCase: Test, execution: DenseExecution): void {
+function destroyExecution(execution: DenseExecution): void {
   execution.compiled.destroy();
   for (const {buffer} of execution.owned) {
-    testCase.notOk(buffer.destroyed, 'dense graph destruction never destroys borrowed GPU storage');
+    expect(
+      Boolean(buffer.destroyed),
+      'dense graph destruction never destroys borrowed GPU storage'
+    ).toBe(false);
     buffer.destroy();
   }
 }

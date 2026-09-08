@@ -3,7 +3,7 @@ import {DOFExample} from '@site/src/examples';
 # Depth of Field
 
 Keep a selected camera-space distance sharp while softening nearer and farther geometry.
-`dofShaderPassPipeline` reconstructs depth from the scene attachment and applies separable
+`dofCompositeShaderPass` reconstructs depth from the scene attachment and applies separable
 horizontal and vertical lens blur.
 
 <DOFExample embedded showStats={false} />
@@ -12,7 +12,7 @@ horizontal and vertical lens blur.
 
 | Property | Value |
 | --- | --- |
-| Exports | `dof` and `dofShaderPassPipeline` |
+| Exports | `dof` and `dofCompositeShaderPass` |
 | Backends | WebGPU and WebGL2 |
 | Render passes | Two separable depth-driven sampling passes |
 | Required binding | `depthTexture` |
@@ -22,10 +22,10 @@ horizontal and vertical lens blur.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {dofShaderPassPipeline} from '@luma.gl/effects';
+import {dofCompositeShaderPass} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [dofShaderPassPipeline]
+  shaderPasses: [dofCompositeShaderPass]
 });
 
 renderer.renderToScreen({

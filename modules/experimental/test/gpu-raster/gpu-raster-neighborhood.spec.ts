@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test, {type Test} from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -31,11 +31,11 @@ type NeighborhoodFixture = {
   offset?: number;
 };
 
-test('GPURasterNeighborhood matches edge/corner/one-pixel CPU oracles for every border mode', async testCase => {
+it('GPURasterNeighborhood matches edge/corner/one-pixel CPU oracles for every border mode', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -57,17 +57,11 @@ test('GPURasterNeighborhood matches edge/corner/one-pixel CPU oracles for every 
           borderMode === 'nodata' && sideLength === 1 ? 'ignore-renormalize' : 'propagate',
         normalize: true
       };
-      await assertMatchesOracle(
-        testCase,
-        device,
-        fixture,
-        `neighborhood-border-${borderMode}-${sideLength}`
-      );
+      await assertMatchesOracle(device, fixture, `neighborhood-border-${borderMode}-${sideLength}`);
     }
   }
 
   await assertMatchesOracle(
-    testCase,
     device,
     {
       width: 1,
@@ -82,14 +76,14 @@ test('GPURasterNeighborhood matches edge/corner/one-pixel CPU oracles for every 
     },
     'neighborhood-radius-zero'
   );
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterNeighborhood handles odd workgroups, nodata, calibrated samples, and strict/renormalized policies', async testCase => {
+it('GPURasterNeighborhood handles odd workgroups, nodata, calibrated samples, and strict/renormalized policies', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -118,37 +112,37 @@ test('GPURasterNeighborhood handles odd workgroups, nodata, calibrated samples, 
     normalize: true
   };
 
-  await assertMatchesOracle(testCase, device, {...fixture, noDataPolicy: 'propagate'}, 'strict');
+  await assertMatchesOracle(device, {...fixture, noDataPolicy: 'propagate'}, 'strict');
   const renormalized = await assertMatchesOracle(
-    testCase,
     device,
     {...fixture, noDataPolicy: 'ignore-renormalize'},
     'renormalized'
   );
   for (const index of [12, 35, 50, 67]) {
-    testCase.equal(renormalized.validity[index], 0, `invalid center ${index} remains invalid`);
-    testCase.ok(Number.isNaN(renormalized.values[index]), `invalid center ${index} publishes NaN`);
+    expect(renormalized.validity[index], `invalid center ${index} remains invalid`).toBe(0);
+    expect(
+      Boolean(Number.isNaN(renormalized.values[index])),
+      `invalid center ${index} publishes NaN`
+    ).toBe(true);
   }
 
   await assertMatchesOracle(
-    testCase,
     device,
     {...fixture, borderMode: 'nodata', noDataPolicy: 'ignore-renormalize'},
     'nodata-border-renormalized'
   );
-  testCase.end();
+  void 0;
 });
 
-test('GPURasterNeighborhood preserves raw signed/unsigned nodata and reusable borrowed buffers', async testCase => {
+it('GPURasterNeighborhood preserves raw signed/unsigned nodata and reusable borrowed buffers', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
   await assertMatchesOracle(
-    testCase,
     device,
     {
       width: 3,
@@ -189,29 +183,34 @@ test('GPURasterNeighborhood preserves raw signed/unsigned nodata and reusable bo
   const compiled = graph.compile();
   submitGraph(device, compiled, 'neighborhood-first-encoding');
   const firstValues = await readFloat32(outputBuffer, 4);
-  testCase.equal(firstValues[0], 0, 'output offset preserves the untouched prefix');
-  testCase.ok(Number.isNaN(firstValues[1]), 'signed minimum nodata is rejected exactly');
-  testCase.deepEqual(firstValues.slice(2), [10, 18], 'calibration precedes weighted convolution');
-  testCase.deepEqual(await readUint32(validityBuffer, 4), [0, 0, 1, 1], 'validity offset matches');
+  expect(firstValues[0], 'output offset preserves the untouched prefix').toBe(0);
+  expect(Boolean(Number.isNaN(firstValues[1])), 'signed minimum nodata is rejected exactly').toBe(
+    true
+  );
+  expect(firstValues.slice(2), 'calibration precedes weighted convolution').toEqual([10, 18]);
+  expect(await readUint32(validityBuffer, 4), 'validity offset matches').toEqual([0, 0, 1, 1]);
 
   sourceBuffer.write(Int32Array.from([77, 1, -2147483648, 3]));
   submitGraph(device, compiled, 'neighborhood-second-encoding');
   const secondValues = await readFloat32(outputBuffer, 4);
-  testCase.equal(secondValues[1], 6, 'compiled graph consumes updated borrowed source');
-  testCase.ok(Number.isNaN(secondValues[2]), 'updated raw nodata remains invalid');
-  testCase.equal(secondValues[3], 14, 'updated valid sample is recomputed');
+  expect(secondValues[1], 'compiled graph consumes updated borrowed source').toBe(6);
+  expect(Boolean(Number.isNaN(secondValues[2])), 'updated raw nodata remains invalid').toBe(true);
+  expect(secondValues[3], 'updated valid sample is recomputed').toBe(14);
 
   compiled.destroy();
-  testCase.notOk(sourceBuffer.destroyed, 'compiled graph never destroys borrowed input');
-  testCase.notOk(outputBuffer.destroyed, 'compiled graph never destroys caller-owned output');
+  expect(Boolean(sourceBuffer.destroyed), 'compiled graph never destroys borrowed input').toBe(
+    false
+  );
+  expect(Boolean(outputBuffer.destroyed), 'compiled graph never destroys caller-owned output').toBe(
+    false
+  );
   sourceBuffer.destroy();
   outputBuffer.destroy();
   validityBuffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 async function assertMatchesOracle(
-  testCase: Test,
   device: Device,
   fixture: NeighborhoodFixture,
   id: string
@@ -273,15 +272,18 @@ async function assertMatchesOracle(
     validity: await readUint32(outputValidityBuffer, fixture.values.length)
   };
   const expected = calculateNeighborhoodOracle(fixture);
-  testCase.deepEqual(result.validity, expected.validity, `${id}: validity matches CPU stencil`);
+  expect(result.validity, `${id}: validity matches CPU stencil`).toEqual(expected.validity);
   for (const [index, expectedValue] of expected.values.entries()) {
     if (Number.isNaN(expectedValue)) {
-      testCase.ok(Number.isNaN(result.values[index]), `${id}: pixel ${index} remains invalid`);
+      expect(
+        Boolean(Number.isNaN(result.values[index])),
+        `${id}: pixel ${index} remains invalid`
+      ).toBe(true);
     } else {
-      testCase.ok(
-        Math.abs(result.values[index] - expectedValue) <= 0.00002,
+      expect(
+        Boolean(Math.abs(result.values[index] - expectedValue) <= 0.00002),
         `${id}: pixel ${index} matches CPU stencil (${result.values[index]} versus ${expectedValue})`
-      );
+      ).toBe(true);
     }
   }
   compiled.destroy();

@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
@@ -14,124 +14,98 @@ import {
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUVirtualGeometrySelection publishes a stable bounded indirect frontier', async testCase => {
+it('GPUVirtualGeometrySelection publishes a stable bounded indirect frontier', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
   const fixture = createFixture(device, 2);
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readUint32(fixture.output, 2),
-    [101, 200],
     'stable node order retains the coarse second root before refined first-root children'
-  );
-  testCase.equal(
-    await readDrawCount(fixture.drawCommands),
-    2,
-    'indirect count is capacity-clamped'
-  );
-  testCase.deepEqual(
-    await readUint32(fixture.totalCount, 1),
-    [3],
-    'full frontier count is explicit'
-  );
-  testCase.deepEqual(await readUint32(fixture.overflow, 1), [1], 'truncation sets overflow');
+  ).toEqual([101, 200]);
+  expect(await readDrawCount(fixture.drawCommands), 'indirect count is capacity-clamped').toBe(2);
+  expect(await readUint32(fixture.totalCount, 1), 'full frontier count is explicit').toEqual([3]);
+  expect(await readUint32(fixture.overflow, 1), 'truncation sets overflow').toEqual([1]);
 
   fixture.maximumScreenSpaceError.write(Float32Array.of(200));
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readUint32(fixture.output, 2),
-    [100, 101],
     'a larger error tolerance selects both coarse roots'
-  );
-  testCase.equal(
-    await readDrawCount(fixture.drawCommands),
-    2,
-    'the indirect slot resets each encode'
-  );
-  testCase.deepEqual(await readUint32(fixture.totalCount, 1), [2]);
-  testCase.deepEqual(
-    await readUint32(fixture.overflow, 1),
-    [0],
-    'overflow clears when capacity fits'
-  );
+  ).toEqual([100, 101]);
+  expect(await readDrawCount(fixture.drawCommands), 'the indirect slot resets each encode').toBe(2);
+  expect(await readUint32(fixture.totalCount, 1)).toEqual([2]);
+  expect(await readUint32(fixture.overflow, 1), 'overflow clears when capacity fits').toEqual([0]);
 
   fixture.cameraPosition.write(Float32Array.of(8, 0, 30));
   fixture.maximumScreenSpaceError.write(Float32Array.of(100_000));
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readUint32(fixture.output, 2),
-    [100, 300],
     'camera-inside selection refines conservatively despite a large threshold'
-  );
-  testCase.deepEqual(await readUint32(fixture.totalCount, 1), [3]);
+  ).toEqual([100, 300]);
+  expect(await readUint32(fixture.totalCount, 1)).toEqual([3]);
 
-  testCase.ok(
-    fixture.compiled.stats.nodeOrder.includes('virtual-geometry-level-0') &&
-      fixture.compiled.stats.nodeOrder.includes('virtual-geometry-level-1'),
+  expect(
+    Boolean(
+      fixture.compiled.stats.nodeOrder.includes('virtual-geometry-level-0') &&
+        fixture.compiled.stats.nodeOrder.includes('virtual-geometry-level-1')
+    ),
     'the compiled graph exposes one ordered pass per breadth level'
-  );
-  testCase.ok(
-    fixture.compiled.stats.nodeOrder.some(id =>
-      id.startsWith('virtual-geometry-visibility-compact')
+  ).toBe(true);
+  expect(
+    Boolean(
+      fixture.compiled.stats.nodeOrder.some(id =>
+        id.startsWith('virtual-geometry-visibility-compact')
+      )
     ),
     'frontier publication reuses stable visibility compaction'
-  );
+  ).toBe(true);
 
-  testCase.equal(
+  expect(
     await destroyFixture(fixture),
-    2,
     'idempotent selector destruction leaves borrowed indirect-count storage alive'
-  );
-  testCase.end();
+  ).toBe(2);
 });
 
-test('GPUVirtualGeometrySelection culls roots and deduplicates convergent activation', async testCase => {
+it('GPUVirtualGeometrySelection culls roots and deduplicates convergent activation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
     return;
   }
 
   const fixture = createFixture(device, 6);
   fixture.frustumPlanes.write(makeBoxFrustum(0, 100));
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readSelectedIds(fixture),
-    [200, 201],
     'a rejected root activates no children while the visible root refines'
-  );
+  ).toEqual([200, 201]);
 
   fixture.frustumPlanes.write(makeBoxFrustum(100, 100));
   fixture.maximumScreenSpaceError.write(Float32Array.of(0));
   fixture.children.write(Uint32Array.from([2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0]));
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readSelectedIds(fixture),
-    [200, 201],
     'node-aligned activity prevents duplicate IDs across multiple roots'
-  );
-  testCase.deepEqual(await readUint32(fixture.overflow, 1), [0]);
+  ).toEqual([200, 201]);
+  expect(await readUint32(fixture.overflow, 1)).toEqual([0]);
 
   fixture.maximumScreenSpaceError.write(Float32Array.of(50));
   encode(device, fixture.compiled);
-  testCase.deepEqual(
+  expect(
     await readSelectedIds(fixture),
-    [101],
     'a coarse shared parent suppresses children requested by another refining parent'
-  );
+  ).toEqual([101]);
 
-  testCase.equal(
+  expect(
     await destroyFixture(fixture),
-    1,
     'destroying selector-owned storage does not destroy the draw command'
-  );
-  testCase.end();
+  ).toBe(1);
 });
 
 type Fixture = {

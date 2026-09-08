@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/test-utils';
 import {
   luma,
@@ -46,54 +46,55 @@ const unsupportedSource = /* WGSL */ `\
 @compute @workgroup_size(1) fn main() {}
 `;
 
-test('ComputePipeline#construct/delete', async t => {
+it('ComputePipeline#construct/delete', async () => {
   const webgpuDevices = await getWebGPUTestDevices();
 
   for (const webgpuDevice of webgpuDevices) {
     const label = webgpuDevice.info.featureLevel;
     const shader = webgpuDevice.createShader({source: sharedSource});
     const computePipeline = webgpuDevice.createComputePipeline({shader});
-    t.ok(
-      computePipeline instanceof ComputePipeline,
+    expect(
+      Boolean(computePipeline instanceof ComputePipeline),
       `${label}: ComputePipeline construction successful`
-    );
-    t.deepEqual(
+    ).toBe(true);
+    expect(
       computePipeline.shaderLayout.bindings,
-      [{name: 'data', type: 'storage', group: 2, location: 0}],
       `${label}: raw compute pipeline uses the lightweight WGSL scanner`
-    );
+    ).toEqual([{name: 'data', type: 'storage', group: 2, location: 0}]);
     computePipeline.destroy();
-    t.ok(computePipeline instanceof ComputePipeline, `${label}: ComputePipeline delete successful`);
+    expect(
+      Boolean(computePipeline instanceof ComputePipeline),
+      `${label}: ComputePipeline delete successful`
+    ).toBe(true);
     computePipeline.destroy();
-    t.ok(
-      computePipeline instanceof ComputePipeline,
+    expect(
+      Boolean(computePipeline instanceof ComputePipeline),
       `${label}: ComputePipeline repeated delete successful`
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('ComputePipeline requires a layout when lightweight WGSL scanning is unsafe', async t => {
+it('ComputePipeline requires a layout when lightweight WGSL scanning is unsafe', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   const shader = webgpuDevice.createShader({source: unsupportedSource});
-  t.throws(
+  expect(
     () => webgpuDevice.createComputePipeline({shader}),
-    /assertion failed/,
     'raw compute pipeline rejects WGSL that cannot be scanned safely'
-  );
+  ).toThrow(/assertion failed/);
 
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('ComputePipeline#compute', async t => {
+it('ComputePipeline#compute', async () => {
   const webgpuDevices = await getWebGPUTestDevices();
 
   for (const webgpuDevice of webgpuDevices) {
@@ -114,7 +115,7 @@ test('ComputePipeline#compute', async t => {
 
     workBuffer.write(new Int32Array([2]));
     const inputData = new Int32Array(await workBuffer.readAsync());
-    t.equal(inputData[0], 2, `${label}: Input data is correct`);
+    expect(inputData[0], `${label}: Input data is correct`).toBe(2);
 
     computePipeline.setBindings({data: workBuffer});
 
@@ -126,15 +127,15 @@ test('ComputePipeline#compute', async t => {
     webgpuDevice.submit();
 
     const computedData = new Int32Array(await workBuffer.readAsync());
-    t.equal(computedData[0], 4, `${label}: Computed data is correct`);
+    expect(computedData[0], `${label}: Computed data is correct`).toBe(4);
 
     computePipeline.destroy();
     shader.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test.skip('ComputePipeline bind-group creation respects WebGPU debug-scoped validation gating', async t => {
+it.skip('ComputePipeline bind-group creation respects WebGPU debug-scoped validation gating', async () => {
   const debugDevice = await getWebGPUTestDevice();
   const nonDebugDevice = await makeWebGPUComputeTestDevice(
     'webgpu-compute-test-device-nondebug',
@@ -142,42 +143,40 @@ test.skip('ComputePipeline bind-group creation respects WebGPU debug-scoped vali
   );
 
   if (!debugDevice || !nonDebugDevice) {
-    t.comment('WebGPU is not available');
+    void 0;
     nonDebugDevice?.destroy();
-    t.end();
+    void 0;
     return;
   }
 
   await runComputePipeline(debugDevice);
   const debugProfiler = getProfiler(debugDevice);
-  t.ok(
-    (debugProfiler.errorScopePushCount || 0) > 0,
+  expect(
+    Boolean((debugProfiler.errorScopePushCount || 0) > 0),
     'webgpu debug compute path records scoped validation for bind-group creation'
-  );
+  ).toBe(true);
 
   await runComputePipeline(nonDebugDevice);
   const nonDebugProfiler = getProfiler(nonDebugDevice);
-  t.equal(
+  expect(
     nonDebugProfiler.errorScopePushCount || 0,
-    0,
     'webgpu non-debug compute path skips scoped validation for bind-group creation'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     nonDebugProfiler.errorScopePopCount || 0,
-    0,
     'webgpu non-debug compute path skips scoped validation pop calls'
-  );
+  ).toBe(0);
 
   nonDebugDevice.destroy();
-  t.end();
+  void 0;
 });
 
-test('ComputePipeline bind-group cache only invalidates when binding identities change', async t => {
+it('ComputePipeline bind-group cache only invalidates when binding identities change', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -214,11 +213,10 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
     (computePipeline as any)._getBindingsByGroupWebGPU(),
     (computePipeline as any)._getBindGroupCacheKeysWebGPU()
   )[2];
-  t.equal(
+  expect(
     secondBindGroup,
-    firstBindGroup,
     'compute bind group is reused when binding object identities are unchanged'
-  );
+  ).toBe(firstBindGroup);
 
   computePipeline.setBindings({data: secondBuffer});
   const thirdBindGroup = bindGroupFactory.getBindGroups(
@@ -226,11 +224,10 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
     (computePipeline as any)._getBindingsByGroupWebGPU(),
     (computePipeline as any)._getBindGroupCacheKeysWebGPU()
   )[2];
-  t.notEqual(
+  expect(
     thirdBindGroup,
-    firstBindGroup,
     'compute bind group is rebuilt when a binding object identity changes'
-  );
+  ).not.toBe(firstBindGroup);
 
   computePipeline.setBindings({data: secondBuffer});
   const fourthBindGroup = bindGroupFactory.getBindGroups(
@@ -238,25 +235,24 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
     (computePipeline as any)._getBindingsByGroupWebGPU(),
     (computePipeline as any)._getBindGroupCacheKeysWebGPU()
   )[2];
-  t.equal(
+  expect(
     fourthBindGroup,
-    thirdBindGroup,
     'compute bind group is reused again after the rebuilt group is cached'
-  );
+  ).toBe(thirdBindGroup);
 
   secondBuffer.destroy();
   firstBuffer.destroy();
   computePipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('ComputePipeline cache differentiates explicit shader layouts for identical WGSL source', async t => {
+it('ComputePipeline cache differentiates explicit shader layouts for identical WGSL source', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -276,16 +272,15 @@ test('ComputePipeline cache differentiates explicit shader layouts for identical
     }
   });
 
-  t.notEqual(
+  expect(
     firstPipeline,
-    secondPipeline,
     'compute pipeline cache does not alias different explicit shader layouts'
-  );
+  ).not.toBe(secondPipeline);
 
   pipelineFactory.release(firstPipeline);
   pipelineFactory.release(secondPipeline);
   shader.destroy();
-  t.end();
+  void 0;
 });
 
 async function runComputePipeline(device: WebGPUDevice): Promise<void> {

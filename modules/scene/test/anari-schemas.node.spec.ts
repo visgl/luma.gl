@@ -6,28 +6,29 @@ import {
   ANARISceneSchema,
   ANARITextureSchema
 } from '@luma.gl/scene/schemas';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {PLAYGROUND_PRESETS} from '../../../examples/showcase/scene/playground-presets';
 
-test('ANARI scene schemas validate all complete showcase presets', testContext => {
+it('ANARI scene schemas validate all complete showcase presets', () => {
   for (const preset of PLAYGROUND_PRESETS) {
     const result = ANARISceneSchema.safeParse(preset.scene);
-    testContext.ok(result.success, `${preset.label} satisfies the shared ANARI scene schema`);
+    expect(Boolean(result.success), `${preset.label} satisfies the shared ANARI scene schema`).toBe(
+      true
+    );
   }
 
-  testContext.equal(
+  expect(
     ANARI_SCENE_JSON_SCHEMA.$id,
-    'https://luma.gl/schemas/anari-scene.json',
     'the generated JSON Schema exposes a stable editor identifier'
-  );
-  testContext.ok(
-    'properties' in ANARI_SCENE_JSON_SCHEMA,
+  ).toBe('https://luma.gl/schemas/anari-scene.json');
+  expect(
+    Boolean('properties' in ANARI_SCENE_JSON_SCHEMA),
     'the generated JSON Schema describes the retained scene object'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI renderer schemas validate graph-based ray tracing settings', testContext => {
+it('ANARI renderer schemas validate graph-based ray tracing settings', () => {
   const renderer = {
     '@@type': 'raytrace',
     samplesPerPixel: 4,
@@ -43,82 +44,86 @@ test('ANARI renderer schemas validate graph-based ray tracing settings', testCon
     exposure: 1.4
   };
 
-  testContext.ok(
-    ANARIRendererSchema.safeParse(renderer).success,
+  expect(
+    Boolean(ANARIRendererSchema.safeParse(renderer).success),
     'raytrace renderers accept bounded sampling and lighting controls'
-  );
-  testContext.ok(
-    ANARISceneSchema.safeParse({...PLAYGROUND_PRESETS[0].scene, renderer}).success,
+  ).toBe(true);
+  expect(
+    Boolean(ANARISceneSchema.safeParse({...PLAYGROUND_PRESETS[0].scene, renderer}).success),
     'complete retained scenes can declare the raytrace renderer'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, samplesPerPixel: 0}).success,
+  ).toBe(true);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, samplesPerPixel: 0}).success),
     'sample counts must be positive integers'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, maxBounces: -1}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, maxBounces: -1}).success),
     'bounce limits cannot be negative'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, progressive: 1}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, progressive: 1}).success),
     'progressive accumulation must be enabled with a boolean'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, resolutionScale: 0}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, resolutionScale: 0}).success),
     'the internal ray-tracing resolution must be greater than zero'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, resolutionScale: 1.1}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, resolutionScale: 1.1}).success),
     'the internal ray-tracing resolution cannot exceed the output resolution'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, minimumResolutionScale: -0.1}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, minimumResolutionScale: -0.1}).success),
     'adaptive resolution requires a positive minimum scale'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, targetFrameTimeMilliseconds: 0}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, targetFrameTimeMilliseconds: 0}).success),
     'the target frame-time budget must be positive'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 1.5}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 1.5}).success),
     'per-frame shadow work must be a nonnegative integer'
-  );
-  testContext.ok(
-    ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 0}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, shadowSamplesPerFrame: 0}).success),
     'zero keeps the backwards-compatible all-lights shadow path'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({...renderer, temporalReprojection: 1}).success,
+  ).toBe(true);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({...renderer, temporalReprojection: 1}).success),
     'temporal reprojection must be enabled with a boolean'
-  );
-  testContext.ok(
-    ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: true}).success,
+  ).toBe(false);
+  expect(
+    Boolean(
+      ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: true}).success
+    ),
     'forward renderers accept the raster temporal antialiasing control'
-  );
-  testContext.ok(
-    ANARIRendererSchema.safeParse({'@@type': 'deferred', temporalAntialiasing: false}).success,
+  ).toBe(true);
+  expect(
+    Boolean(
+      ANARIRendererSchema.safeParse({'@@type': 'deferred', temporalAntialiasing: false}).success
+    ),
     'deferred renderers accept the raster temporal antialiasing control'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: 1}).success,
+  ).toBe(true);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({'@@type': 'default', temporalAntialiasing: 1}).success),
     'raster temporal antialiasing must be enabled with a boolean'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({'@@type': 'default', samplesPerPixel: 4}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({'@@type': 'default', samplesPerPixel: 4}).success),
     'ray tracing controls are not silently accepted by forward renderers'
-  );
-  testContext.notOk(
-    ANARIRendererSchema.safeParse({'@@type': 'deferred', resolutionScale: 0.5}).success,
+  ).toBe(false);
+  expect(
+    Boolean(ANARIRendererSchema.safeParse({'@@type': 'deferred', resolutionScale: 0.5}).success),
     'adaptive ray-tracing controls are not silently accepted by deferred renderers'
-  );
-  testContext.ok(
-    JSON.stringify(ANARI_SCENE_JSON_SCHEMA).includes('raytrace'),
+  ).toBe(false);
+  expect(
+    Boolean(JSON.stringify(ANARI_SCENE_JSON_SCHEMA).includes('raytrace')),
     'the generated JSON Schema advertises the raytrace renderer subtype'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI renderer schemas validate presentation controls across every renderer subtype', testContext => {
+it('ANARI renderer schemas validate presentation controls across every renderer subtype', () => {
   const rendererSubtypes = [
     'default',
     'deferred',
@@ -129,46 +134,51 @@ test('ANARI renderer schemas validate presentation controls across every rendere
 
   for (const subtype of rendererSubtypes) {
     for (const toneMapMode of [0, 1, 2, 3] as const) {
-      testContext.ok(
-        ANARIRendererSchema.safeParse({
-          '@@type': subtype,
-          toneMapMode,
-          outputColorSpace: toneMapMode % 2 === 0 ? 'linear' : 'srgb'
-        }).success,
+      expect(
+        Boolean(
+          ANARIRendererSchema.safeParse({
+            '@@type': subtype,
+            toneMapMode,
+            outputColorSpace: toneMapMode % 2 === 0 ? 'linear' : 'srgb'
+          }).success
+        ),
         `${subtype} accepts portable presentation mode ${toneMapMode}`
-      );
+      ).toBe(true);
     }
 
-    testContext.ok(
-      ANARIRendererSchema.safeParse({'@@type': subtype}).success,
+    expect(
+      Boolean(ANARIRendererSchema.safeParse({'@@type': subtype}).success),
       `${subtype} retains automatic presentation defaults when controls are omitted`
-    );
+    ).toBe(true);
   }
 
   for (const toneMapMode of [-1, 4, 0.5, Number.NaN, '1', null]) {
-    testContext.notOk(
-      ANARIRendererSchema.safeParse({'@@type': 'raytrace', toneMapMode}).success,
+    expect(
+      Boolean(ANARIRendererSchema.safeParse({'@@type': 'raytrace', toneMapMode}).success),
       `unsupported tone-mapping selector ${String(toneMapMode)} is rejected`
-    );
+    ).toBe(false);
   }
 
   for (const outputColorSpace of ['display-p3', 'LINEAR', 1, null]) {
-    testContext.notOk(
-      ANARIRendererSchema.safeParse({'@@type': 'default', outputColorSpace}).success,
+    expect(
+      Boolean(ANARIRendererSchema.safeParse({'@@type': 'default', outputColorSpace}).success),
       `unsupported output color space ${String(outputColorSpace)} is rejected`
-    );
+    ).toBe(false);
   }
 
   const generatedSchema = JSON.stringify(ANARI_SCENE_JSON_SCHEMA);
-  testContext.ok(generatedSchema.includes('toneMapMode'), 'JSON Schema advertises tone mapping');
-  testContext.ok(
-    generatedSchema.includes('outputColorSpace'),
+  expect(
+    Boolean(generatedSchema.includes('toneMapMode')),
+    'JSON Schema advertises tone mapping'
+  ).toBe(true);
+  expect(
+    Boolean(generatedSchema.includes('outputColorSpace')),
     'JSON Schema advertises output color-space selection'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI scene schemas identify invalid properties and retained references', testContext => {
+it('ANARI scene schemas identify invalid properties and retained references', () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const materialIdentifier = Object.keys(scene.materials)[0];
   const surfaceIdentifier = Object.keys(scene.surfaces)[0];
@@ -176,30 +186,36 @@ test('ANARI scene schemas identify invalid properties and retained references', 
   scene.surfaces[surfaceIdentifier].geometry = 'missing-geometry';
 
   const result = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(result.success, 'invalid material values and scene references are rejected');
+  expect(Boolean(result.success), 'invalid material values and scene references are rejected').toBe(
+    false
+  );
   if (!result.success) {
-    testContext.ok(
-      result.error.issues.some(
-        issue => issue.path.join('.') === `materials.${materialIdentifier}.roughness`
+    expect(
+      Boolean(
+        result.error.issues.some(
+          issue => issue.path.join('.') === `materials.${materialIdentifier}.roughness`
+        )
       ),
       'the out-of-range material error identifies its exact JSON property'
-    );
-    testContext.ok(
-      result.error.issues.some(
-        issue => issue.path.join('.') === `surfaces.${surfaceIdentifier}.geometry`
+    ).toBe(true);
+    expect(
+      Boolean(
+        result.error.issues.some(
+          issue => issue.path.join('.') === `surfaces.${surfaceIdentifier}.geometry`
+        )
       ),
       'the missing retained geometry identifies its exact reference'
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI scene schemas reject duplicate instances and broken animated lights', testContext => {
+it('ANARI scene schemas reject duplicate instances and broken animated lights', () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const firstInstance = scene.instances?.[0];
   if (!firstInstance) {
-    testContext.fail('the showcase preset should expose retained instances');
-    testContext.end();
+    expect(false, 'the showcase preset should expose retained instances').toBe(true);
+    void 0;
     return;
   }
 
@@ -214,32 +230,36 @@ test('ANARI scene schemas reject duplicate instances and broken animated lights'
   ];
 
   const result = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(result.success, 'semantic validation rejects invalid retained identity');
+  expect(Boolean(result.success), 'semantic validation rejects invalid retained identity').toBe(
+    false
+  );
   if (!result.success) {
-    testContext.ok(
-      result.error.issues.some(issue => issue.message.includes('Duplicate instance')),
+    expect(
+      Boolean(result.error.issues.some(issue => issue.message.includes('Duplicate instance'))),
       'duplicate retained instance identifiers are reported'
-    );
-    testContext.ok(
-      result.error.issues.some(issue => issue.path.at(-1) === 'target'),
+    ).toBe(true);
+    expect(
+      Boolean(result.error.issues.some(issue => issue.path.at(-1) === 'target')),
       'animated-light follow errors identify the target property'
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI geometry schemas retain RGB vertex attributes', testContext => {
+it('ANARI geometry schemas retain RGB vertex attributes', () => {
   const result = ANARIGeometrySchema.safeParse({
     '@@type': 'triangle',
     'vertex.position': [0, 0, 0, 1, 0, 0, 0, 1, 0],
     'vertex.attribute0': [1, 0, 0, 0, 1, 0, 0, 0, 1]
   });
 
-  testContext.ok(result.success, 'packed linear RGB vertex colors remain editable in JSON');
-  testContext.end();
+  expect(Boolean(result.success), 'packed linear RGB vertex colors remain editable in JSON').toBe(
+    true
+  );
+  void 0;
 });
 
-test('ANARI scene schemas validate retained texture references and UVs', testContext => {
+it('ANARI scene schemas validate retained texture references and UVs', () => {
   const texture = ANARITextureSchema.safeParse({
     source: '/textures/brass.png',
     colorSpace: 'srgb',
@@ -261,42 +281,47 @@ test('ANARI scene schemas validate retained texture references and UVs', testCon
     scene.geometries[geometryIdentifier]['vertex.attribute1'] = [0, 0, 1, 0, 0, 1];
   }
 
-  testContext.ok(
-    texture.success,
+  expect(
+    Boolean(texture.success),
     'texture declarations accept authored color space, sampler filtering, and UV transforms'
-  );
-  testContext.ok(ANARISceneSchema.safeParse(scene).success, 'retained texture references validate');
+  ).toBe(true);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
+    'retained texture references validate'
+  ).toBe(true);
 
   scene.materials[materialIdentifier].baseColorTexture = 'missing-texture';
   const invalidScene = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(invalidScene.success, 'missing retained textures are rejected');
+  expect(Boolean(invalidScene.success), 'missing retained textures are rejected').toBe(false);
   if (!invalidScene.success) {
-    testContext.ok(
-      invalidScene.error.issues.some(
-        issue => issue.path.join('.') === `materials.${materialIdentifier}.baseColorTexture`
+    expect(
+      Boolean(
+        invalidScene.error.issues.some(
+          issue => issue.path.join('.') === `materials.${materialIdentifier}.baseColorTexture`
+        )
       ),
       'missing texture errors identify the exact material property'
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI texture schemas reject unsupported authored sampler settings', testContext => {
+it('ANARI texture schemas reject unsupported authored sampler settings', () => {
   for (const sampler of [
     {addressModeU: 'clamp-to-border'},
     {minFilter: 'cubic'},
     {mipmapFilter: 'bicubic'},
     {addressModeW: 'repeat'}
   ]) {
-    testContext.notOk(
-      ANARITextureSchema.safeParse({source: '/textures/invalid.png', sampler}).success,
+    expect(
+      Boolean(ANARITextureSchema.safeParse({source: '/textures/invalid.png', sampler}).success),
       'only supported portable glTF sampler settings survive strict JSON validation'
-    );
+    ).toBe(false);
   }
-  testContext.end();
+  void 0;
 });
 
-test('ANARI material schemas expose canonical PBR extension factors and alpha modes', testContext => {
+it('ANARI material schemas expose canonical PBR extension factors and alpha modes', () => {
   const material = ANARIMaterialSchema.safeParse({
     '@@type': 'physicallyBased',
     alphaMode: 'mask',
@@ -337,37 +362,48 @@ test('ANARI material schemas expose canonical PBR extension factors and alpha mo
     anisotropyTexture: 'anisotropy'
   });
 
-  testContext.ok(material.success, 'advanced PBR factors, image maps, and masked alpha validate');
-  testContext.notOk(
-    ANARIMaterialSchema.safeParse({
-      '@@type': 'physicallyBased',
-      alphaMode: 'mask',
-      alphaCutoff: 1.5
-    }).success,
+  expect(
+    Boolean(material.success),
+    'advanced PBR factors, image maps, and masked alpha validate'
+  ).toBe(true);
+  expect(
+    Boolean(
+      ANARIMaterialSchema.safeParse({
+        '@@type': 'physicallyBased',
+        alphaMode: 'mask',
+        alphaCutoff: 1.5
+      }).success
+    ),
     'masked alpha cutoffs remain constrained to the normalized range'
-  );
-  testContext.notOk(
-    ANARIMaterialSchema.safeParse({
-      '@@type': 'physicallyBased',
-      dispersion: -0.1
-    }).success,
+  ).toBe(false);
+  expect(
+    Boolean(
+      ANARIMaterialSchema.safeParse({
+        '@@type': 'physicallyBased',
+        dispersion: -0.1
+      }).success
+    ),
     'chromatic dispersion remains nonnegative without limiting artistic values above one'
-  );
-  testContext.notOk(
-    ANARIMaterialSchema.safeParse({
-      '@@type': 'physicallyBased',
-      scatterAnisotropy: 1.1
-    }).success,
+  ).toBe(false);
+  expect(
+    Boolean(
+      ANARIMaterialSchema.safeParse({
+        '@@type': 'physicallyBased',
+        scatterAnisotropy: 1.1
+      }).success
+    ),
     'draft scattering anisotropy remains within the physical normalized range'
-  );
-  testContext.ok(
-    ANARITextureSchema.safeParse({source: '/texture.png', textureCoordinateSet: 1}).success,
+  ).toBe(false);
+  expect(
+    Boolean(
+      ANARITextureSchema.safeParse({source: '/texture.png', textureCoordinateSet: 1}).success
+    ),
     'texture schemas preserve the selected canonical UV coordinate set'
-  );
-  testContext.end();
+  ).toBe(true);
+  void 0;
 });
 
-test('ANARI scene schemas validate advanced retained texture references', testContext => {
+it('ANARI scene schemas validate advanced retained texture references', () => {
   const scene = structuredClone(PLAYGROUND_PRESETS[0].scene);
   const materialIdentifier = Object.keys(scene.materials)[0];
   scene.textures = {advanced: {source: '/textures/advanced.png'}};
@@ -378,33 +414,43 @@ test('ANARI scene schemas validate advanced retained texture references', testCo
   scene.materials[materialIdentifier].diffuseTransmissionColorTexture = 'advanced';
   scene.materials[materialIdentifier].multiscatterColorTexture = 'advanced';
 
-  testContext.ok(ANARISceneSchema.safeParse(scene).success, 'advanced texture references resolve');
+  expect(
+    Boolean(ANARISceneSchema.safeParse(scene).success),
+    'advanced texture references resolve'
+  ).toBe(true);
   scene.materials[materialIdentifier].multiscatterColorTexture = 'missing-scatter';
   const invalidScatteringScene = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(
-    invalidScatteringScene.success,
+  expect(
+    Boolean(invalidScatteringScene.success),
     'missing draft-scattering textures are rejected'
-  );
+  ).toBe(false);
   if (!invalidScatteringScene.success) {
-    testContext.ok(
-      invalidScatteringScene.error.issues.some(
-        issue => issue.path.join('.') === `materials.${materialIdentifier}.multiscatterColorTexture`
+    expect(
+      Boolean(
+        invalidScatteringScene.error.issues.some(
+          issue =>
+            issue.path.join('.') === `materials.${materialIdentifier}.multiscatterColorTexture`
+        )
       ),
       'draft material texture errors identify the exact missing retained sampler'
-    );
+    ).toBe(true);
   }
   scene.materials[materialIdentifier].multiscatterColorTexture = 'advanced';
   scene.materials[materialIdentifier].iridescenceThicknessTexture = 'missing-advanced';
   const invalidScene = ANARISceneSchema.safeParse(scene);
-  testContext.notOk(invalidScene.success, 'missing advanced extension textures are rejected');
+  expect(Boolean(invalidScene.success), 'missing advanced extension textures are rejected').toBe(
+    false
+  );
   if (!invalidScene.success) {
-    testContext.ok(
-      invalidScene.error.issues.some(
-        issue =>
-          issue.path.join('.') === `materials.${materialIdentifier}.iridescenceThicknessTexture`
+    expect(
+      Boolean(
+        invalidScene.error.issues.some(
+          issue =>
+            issue.path.join('.') === `materials.${materialIdentifier}.iridescenceThicknessTexture`
+        )
       ),
       'advanced texture errors identify the exact missing material map'
-    );
+    ).toBe(true);
   }
-  testContext.end();
+  void 0;
 });

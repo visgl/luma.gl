@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {AnimationClipController, Animator} from '@luma.gl/engine';
+import {expect, it} from 'vitest';
 
 class TestClip extends AnimationClipController {
   localTimes: number[] = [];
@@ -13,27 +13,23 @@ class TestClip extends AnimationClipController {
   }
 }
 
-test('Animation#Animator clip controllers resolve local clip time from wall-clock ms', t => {
+it('Animation#Animator clip controllers resolve local clip time from wall-clock ms', () => {
   const clip = new TestClip({name: 'test-clip', startTime: 0.5, speed: 2});
 
   clip.setTime(1250);
 
-  t.deepEqual(clip.localTimes, [1.5], 'clip converts milliseconds to local seconds');
-  t.equal(clip.name, 'test-clip', 'clip exposes configured name');
-
-  t.end();
+  expect(clip.localTimes, 'clip converts milliseconds to local seconds').toEqual([1.5]);
+  expect(clip.name, 'clip exposes configured name').toBe('test-clip');
 });
 
-test('Animation#Animator skips paused clips and exposes compatibility aliases', t => {
+it('Animation#Animator skips paused clips and exposes compatibility aliases', () => {
   const activeClip = new TestClip({name: 'active'});
   const pausedClip = new TestClip({name: 'paused', playing: false});
   const animator = new Animator([activeClip, pausedClip]);
 
   animator.setTime(500);
 
-  t.deepEqual(activeClip.localTimes, [0.5], 'active clip advances');
-  t.deepEqual(pausedClip.localTimes, [], 'paused clip does not advance');
-  t.equal(animator.animations, animator.getAnimations(), 'animations alias matches clip list');
-
-  t.end();
+  expect(activeClip.localTimes, 'active clip advances').toEqual([0.5]);
+  expect(pausedClip.localTimes, 'paused clip does not advance').toEqual([]);
+  expect(animator.animations, 'animations alias matches clip list').toBe(animator.getAnimations());
 });

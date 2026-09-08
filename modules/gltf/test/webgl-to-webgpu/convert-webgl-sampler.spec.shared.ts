@@ -8,10 +8,10 @@ import {
 } from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
 import {GLEnum} from '@luma.gl/gltf/webgl-to-webgpu/gltf-webgl-constants';
 import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
-export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
-  test('pbr#convertSampler#minFilter', async t => {
+export function registerConvertWebGLSamplerTests(): void {
+  it('pbr#convertSampler#minFilter', () => {
     [
       GLEnum.NEAREST,
       GLEnum.LINEAR,
@@ -24,37 +24,33 @@ export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
 
-      t.equals(glValues.length, 1, 'Should return 1 value');
-      t.equals(glValues[0], minFilter, 'Value matches minFilter');
+      expect(glValues.length, 'Should return 1 value').toBe(1);
+      expect(glValues[0], 'Value matches minFilter').toBe(minFilter);
     });
 
-    t.deepEqual(convertSampler({}), {}, 'undefined sampler values are omitted');
-
-    t.end();
+    expect(convertSampler({}), 'undefined sampler values are omitted').toEqual({});
   });
 
-  test('pbr#convertSampler#magFilter', async t => {
+  it('pbr#convertSampler#magFilter', () => {
     [GLEnum.NEAREST, GLEnum.LINEAR].forEach(magFilter => {
       const props = convertSampler({magFilter});
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
 
-      t.equals(glValues.length, 1, 'Should return 1 value');
-      t.equals(glValues[0], magFilter, 'Value matches magFilter');
+      expect(glValues.length, 'Should return 1 value').toBe(1);
+      expect(glValues[0], 'Value matches magFilter').toBe(magFilter);
     });
-
-    t.end();
   });
 
-  test('pbr#convertSampler#wrap', async t => {
+  it('pbr#convertSampler#wrap', () => {
     [GLEnum.CLAMP_TO_EDGE, GLEnum.REPEAT, GLEnum.MIRRORED_REPEAT].forEach(wrap => {
       const props = convertSampler({wrapS: wrap, wrapT: wrap});
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
 
-      t.equals(glValues.length, 2, 'Should return 2 values');
-      t.equals(glValues[0], wrap, 'Value matches wrapT');
-      t.equals(glValues[1], wrap, 'Value matches wrapS');
+      expect(glValues.length, 'Should return 2 values').toBe(2);
+      expect(glValues[0], 'Value matches wrapT').toBe(wrap);
+      expect(glValues[1], 'Value matches wrapS').toBe(wrap);
     });
 
     const mixed = convertSampler({
@@ -63,22 +59,16 @@ export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
       minFilter: GLEnum.LINEAR_MIPMAP_LINEAR,
       magFilter: GLEnum.LINEAR
     });
-    t.deepEqual(
-      mixed,
-      {
-        addressModeU: 'repeat',
-        addressModeV: 'clamp-to-edge',
-        minFilter: 'linear',
-        mipmapFilter: 'linear',
-        magFilter: 'linear'
-      },
-      'mixed sampler props are converted without dropping fields'
-    );
-
-    t.end();
+    expect(mixed, 'mixed sampler props are converted without dropping fields').toEqual({
+      addressModeU: 'repeat',
+      addressModeV: 'clamp-to-edge',
+      minFilter: 'linear',
+      mipmapFilter: 'linear',
+      magFilter: 'linear'
+    });
   });
 
-  test('pbr#convertSampler preserves postprocessed loaders.gl sampler parameters', async t => {
+  it('pbr#convertSampler preserves postprocessed loaders.gl sampler parameters', () => {
     const sampler = convertSampler({
       parameters: {
         [GLEnum.TEXTURE_WRAP_S]: GLEnum.CLAMP_TO_EDGE,
@@ -88,29 +78,26 @@ export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
       }
     });
 
-    t.deepEqual(
+    expect(
       sampler,
-      {
-        addressModeU: 'clamp-to-edge',
-        addressModeV: 'mirror-repeat',
-        magFilter: 'nearest',
-        minFilter: 'nearest',
-        mipmapFilter: 'linear'
-      },
       'numeric postprocessed WebGL parameter keys preserve filtering and wrapping'
-    );
-    t.deepEqual(
+    ).toEqual({
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'mirror-repeat',
+      magFilter: 'nearest',
+      minFilter: 'nearest',
+      mipmapFilter: 'linear'
+    });
+    expect(
       convertSampler({
         wrapS: GLEnum.REPEAT,
         parameters: {[GLEnum.TEXTURE_WRAP_S]: GLEnum.CLAMP_TO_EDGE}
       }),
-      {addressModeU: 'repeat'},
       'explicit source glTF fields override postprocessed fallback values'
-    );
-    t.end();
+    ).toEqual({addressModeU: 'repeat'});
   });
 
-  test('pbr#convertSamplerToGLTF preserves every minification and mipmap combination', async t => {
+  it('pbr#convertSamplerToGLTF preserves every minification and mipmap combination', () => {
     for (const minFilter of [
       GLEnum.NEAREST,
       GLEnum.LINEAR,
@@ -119,14 +106,13 @@ export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
       GLEnum.NEAREST_MIPMAP_LINEAR,
       GLEnum.LINEAR_MIPMAP_LINEAR
     ]) {
-      t.equal(
+      expect(
         convertSamplerToGLTF(convertSampler({minFilter})).minFilter,
-        minFilter,
         'glTF filtering round-trips through canonical portable sampler props'
-      );
+      ).toBe(minFilter);
     }
 
-    t.deepEqual(
+    expect(
       convertSamplerToGLTF({
         addressModeU: 'clamp-to-edge',
         addressModeV: 'mirror-repeat',
@@ -134,14 +120,12 @@ export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
         minFilter: 'linear',
         mipmapFilter: 'nearest'
       }),
-      {
-        wrapS: GLEnum.CLAMP_TO_EDGE,
-        wrapT: GLEnum.MIRRORED_REPEAT,
-        magFilter: GLEnum.NEAREST,
-        minFilter: GLEnum.LINEAR_MIPMAP_NEAREST
-      },
       'authored portable sampler settings serialize into glTF WebGL enums'
-    );
-    t.end();
+    ).toEqual({
+      wrapS: GLEnum.CLAMP_TO_EDGE,
+      wrapT: GLEnum.MIRRORED_REPEAT,
+      magFilter: GLEnum.NEAREST,
+      minFilter: GLEnum.LINEAR_MIPMAP_NEAREST
+    });
   });
 }

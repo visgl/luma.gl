@@ -26,6 +26,14 @@ import {
 /** Compact CPU metadata required to reconstruct variable-width Arrow chunks after GPU readback. */
 export type GPUDataReadbackMetadata =
   | {
+      /** Metadata variant for nullable fixed-width numeric rows. */
+      kind: 'numeric';
+      /** Number of nullable rows in the source Arrow chunk. */
+      nullCount: number;
+      /** Copied row validity bitmap normalized to this data chunk. */
+      nullBitmap: Uint8Array;
+    }
+  | {
       /** Metadata variant for Arrow UTF-8 value bytes. */
       kind: 'utf8';
       /** Chunk-local Arrow value offsets normalized to the copied GPU byte range. */
@@ -48,6 +56,18 @@ export type GPUDataReadbackMetadata =
       nullBitmap?: Uint8Array;
       /** Number of flattened numeric value bytes to read back from the GPU buffer. */
       valueByteLength: number;
+    }
+  | {
+      /** Metadata variant for nullable fixed-size-list storage rows. */
+      kind: 'fixed-size-list';
+      /** Number of nullable parent rows in the source Arrow chunk. */
+      nullCount: number;
+      /** Optional copied parent validity bitmap normalized to this chunk. */
+      nullBitmap?: Uint8Array;
+      /** Number of nullable flattened child values in the uploaded rows. */
+      childNullCount: number;
+      /** Optional copied child validity bitmap normalized to this chunk. */
+      childNullBitmap?: Uint8Array;
     };
 
 type GPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
@@ -108,6 +128,10 @@ export function getArrowDataBufferSource<T extends AttributeArrowType>(
   data: Data<T>
 ): NumericArrowType['TArray'];
 export function getArrowDataBufferSource(data: Data): NumericArrowType['TArray'] {
+  if (DataType.isFixedSizeList(data.type)) {
+    return getArrowFixedSizeListDataBufferSource(data as Data<FixedSizeList<NumericArrowType>>);
+  }
+
   const {values, startElement, elementCount} = getArrowDataValueRange(data);
   if (values.length < elementCount) {
     throw new Error('Arrow data values are shorter than the logical upload length');
@@ -181,6 +205,15 @@ export function getArrowVariableLengthAttributeDataBufferSource(
 
 /** Copy compact variable-width reconstruction metadata without retaining Arrow value buffers. */
 export function getArrowGPUDataReadbackMetadata(data: Data): GPUDataReadbackMetadata | undefined {
+  if (DataType.isInt(data.type) || DataType.isFloat(data.type)) {
+    const nullBitmap = copyNormalizedArrowNullBitmap(data);
+    return nullBitmap ? {kind: 'numeric', nullCount: data.nullCount, nullBitmap} : undefined;
+  }
+
+  if (DataType.isFixedSizeList(data.type)) {
+    return getArrowFixedSizeListReadbackMetadata(data as Data<FixedSizeList<NumericArrowType>>);
+  }
+
   if (DataType.isUtf8(data.type)) {
     const values = getArrowUtf8DataBufferSource(data as Data<Utf8>);
     return {
@@ -206,6 +239,35 @@ export function getArrowGPUDataReadbackMetadata(data: Data): GPUDataReadbackMeta
   }
 
   return undefined;
+}
+
+/** Returns row validity for a fixed-size list, including nullable selected child coordinates. */
+export function getArrowFixedSizeListRowValidity(
+  data: Data<FixedSizeList<NumericArrowType>>,
+  dimensions = data.type.listSize
+): Uint32Array | undefined {
+  const childData = data.children[0] as Data<NumericArrowType> | undefined;
+  if (!childData) {
+    throw new Error('Arrow FixedSizeList data has no child values');
+  }
+  if (!Number.isSafeInteger(dimensions) || dimensions < 1 || dimensions > data.type.listSize) {
+    throw new Error('Arrow FixedSizeList validity dimensions must fit within the list width');
+  }
+  if (data.nullCount === 0 && childData.nullCount === 0) {
+    return undefined;
+  }
+
+  const parentChildOffset = getArrowFixedSizeListParentChildOffset(data, childData);
+  const validity = new Uint32Array(data.length);
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    let valid = isArrowDataValueValid(data, rowIndex);
+    for (let dimensionIndex = 0; valid && dimensionIndex < dimensions; dimensionIndex++) {
+      const childIndex = parentChildOffset + rowIndex * data.type.listSize + dimensionIndex;
+      valid = childIndex < childData.length && isArrowDataValueValid(childData, childIndex);
+    }
+    validity[rowIndex] = Number(valid);
+  }
+  return validity;
 }
 
 /** Returns a typed array that can be passed directly to `device.createBuffer()`. */
@@ -362,7 +424,140 @@ export async function readArrowGPUDataAsync<T extends DataType>(data: GPUData): 
     byteOffset: data.byteOffset,
     byteStride: data.byteStride
   });
-  return vector.data[0] as unknown as Data<T>;
+  const packedData = vector.data[0];
+  const metadata = data.readbackMetadata as GPUDataReadbackMetadata | undefined;
+  if (metadata?.kind === 'numeric') {
+    return new Data<T>(dataType, 0, data.length, metadata.nullCount, {
+      [BufferType.DATA]: packedData.values,
+      [BufferType.VALIDITY]: metadata.nullBitmap
+    });
+  }
+  if (DataType.isFixedSizeList(dataType) && metadata?.kind === 'fixed-size-list') {
+    return makeArrowNullableFixedSizeListData(
+      packedData as Data<FixedSizeList<NumericArrowType>>,
+      metadata
+    ) as unknown as Data<T>;
+  }
+  return packedData as unknown as Data<T>;
+}
+
+function getArrowFixedSizeListDataBufferSource(
+  data: Data<FixedSizeList<NumericArrowType>>
+): NumericArrowType['TArray'] {
+  const childData = data.children[0] as Data<NumericArrowType> | undefined;
+  const values = childData?.values as NumericArrowType['TArray'] | undefined;
+  if (!childData || !values) {
+    throw new Error('Arrow FixedSizeList data has no child values');
+  }
+
+  const rowStride = data.type.listSize;
+  const elementCount = data.length * rowStride;
+  const childValuesAlreadySliced =
+    values.length === elementCount || values.length <= childData.length;
+  const startElement = childValuesAlreadySliced
+    ? 0
+    : (childData.offset ?? 0) + data.offset * rowStride;
+  const availableElementCount = Math.max(
+    0,
+    Math.min(
+      elementCount,
+      values.length - startElement,
+      childData.length - (childValuesAlreadySliced ? 0 : data.offset * rowStride)
+    )
+  );
+  if (availableElementCount === elementCount) {
+    return values.subarray(startElement, startElement + elementCount) as NumericArrowType['TArray'];
+  }
+
+  for (
+    let rowIndex = Math.floor(availableElementCount / rowStride);
+    rowIndex < data.length;
+    rowIndex++
+  ) {
+    if (isArrowDataValueValid(data, rowIndex)) {
+      throw new Error('Arrow FixedSizeList child values are shorter than their logical row count');
+    }
+  }
+
+  const paddedValues = createTypedArrayLike(values, elementCount);
+  paddedValues.set(values.subarray(startElement, startElement + availableElementCount) as never);
+  return paddedValues;
+}
+
+function getArrowFixedSizeListReadbackMetadata(
+  data: Data<FixedSizeList<NumericArrowType>>
+): Extract<GPUDataReadbackMetadata, {kind: 'fixed-size-list'}> | undefined {
+  const childData = data.children[0] as Data<NumericArrowType> | undefined;
+  if (!childData) {
+    throw new Error('Arrow FixedSizeList data has no child values');
+  }
+  if (data.nullCount === 0 && childData.nullCount === 0) {
+    return undefined;
+  }
+
+  const flattenedLength = data.length * data.type.listSize;
+  const parentChildOffset = getArrowFixedSizeListParentChildOffset(data, childData);
+  const childNullBitmap = new Uint8Array(Math.ceil(flattenedLength / 8));
+  let childNullCount = 0;
+  for (let childIndex = 0; childIndex < flattenedLength; childIndex++) {
+    const sourceChildIndex = parentChildOffset + childIndex;
+    if (sourceChildIndex < childData.length && isArrowDataValueValid(childData, sourceChildIndex)) {
+      childNullBitmap[childIndex >> 3] |= 1 << (childIndex & 7);
+    } else {
+      childNullCount++;
+    }
+  }
+
+  return {
+    kind: 'fixed-size-list',
+    nullCount: data.nullCount,
+    nullBitmap: copyNormalizedArrowNullBitmap(data),
+    childNullCount,
+    ...(childNullCount > 0 ? {childNullBitmap} : {})
+  };
+}
+
+function getArrowFixedSizeListParentChildOffset(
+  data: Data<FixedSizeList<NumericArrowType>>,
+  childData: Data<NumericArrowType>
+): number {
+  const values = childData.values as NumericArrowType['TArray'];
+  const childValuesAlreadySliced =
+    values.length <= childData.length || values.length === data.length * data.type.listSize;
+  return childValuesAlreadySliced ? 0 : data.offset * data.type.listSize;
+}
+
+function isArrowDataValueValid(data: Data, valueIndex: number): boolean {
+  if (data.nullCount === 0 || !data.nullBitmap) {
+    return true;
+  }
+  const bitmapIndex = data.offset + valueIndex;
+  return ((data.nullBitmap[bitmapIndex >> 3] ?? 0) & (1 << (bitmapIndex & 7))) !== 0;
+}
+
+function makeArrowNullableFixedSizeListData(
+  data: Data<FixedSizeList<NumericArrowType>>,
+  metadata: Extract<GPUDataReadbackMetadata, {kind: 'fixed-size-list'}>
+): Data<FixedSizeList<NumericArrowType>> {
+  const packedChild = data.children[0] as Data<NumericArrowType>;
+  const child = new Data<NumericArrowType>(
+    packedChild.type,
+    0,
+    packedChild.length,
+    metadata.childNullCount,
+    {
+      [BufferType.DATA]: packedChild.values,
+      ...(metadata.childNullBitmap ? {[BufferType.VALIDITY]: metadata.childNullBitmap} : {})
+    }
+  );
+  return new Data<FixedSizeList<NumericArrowType>>(
+    data.type,
+    0,
+    data.length,
+    metadata.nullCount,
+    {...(metadata.nullBitmap ? {[BufferType.VALIDITY]: metadata.nullBitmap} : {})},
+    [child]
+  );
 }
 
 function getArrowDataValueRange(data: Data): {

@@ -1,0 +1,69 @@
+diff --git a/dist/lib/schema/convert-arrow-schema.js b/dist/lib/schema/convert-arrow-schema.js
+index d30b6a68072b37ae36d3da5200bb3ce365cf052b..c3e83598a375d49b247e01008140fc5bade5edc7 100644
+--- a/dist/lib/schema/convert-arrow-schema.js
++++ b/dist/lib/schema/convert-arrow-schema.js
+@@ -2,6 +2,8 @@
+ // SPDX-License-Identifier: MIT
+ // Copyright (c) vis.gl contributors
+ import * as arrow from 'apache-arrow';
++// Apache Arrow does not export LargeList in all supported runtime builds.
++const ArrowLargeList = arrow['Large' + 'List'];
+ /** Returns the variable-width view types exported by the installed Apache Arrow runtime. */
+ export function getArrowViewTypeSupport() {
+     const constructors = getArrowViewConstructors();
+@@ -198,7 +200,7 @@ export function serializeArrowType(arrowType) {
+                 type: 'list',
+                 children: [serializeArrowField(listField)]
+             };
+-        case arrow.LargeList:
++        case ArrowLargeList:
+             const largeListType = arrowType;
+             return {
+                 type: 'large-list',
+@@ -259,7 +261,10 @@ export function deserializeArrowType(dataType, options) {
+             }
+             case 'large-list': {
+                 const field = deserializeArrowField(dataType.children[0], options);
+-                return new arrow.LargeList(field);
++                if (!ArrowLargeList) {
++                    throw new Error('Apache Arrow LargeList is not available in this runtime');
++                }
++                return new ArrowLargeList(field);
+             }
+             case 'fixed-size-list': {
+                 const child = deserializeArrowField(dataType.children[0], options);
+diff --git a/src/lib/schema/convert-arrow-schema.ts b/src/lib/schema/convert-arrow-schema.ts
+index 830905133356d0754ca9f73bbb3fc9ad8efac866..51f8bf41ed743a86a005df3f89ecf9f703ed405c 100644
+--- a/src/lib/schema/convert-arrow-schema.ts
++++ b/src/lib/schema/convert-arrow-schema.ts
+@@ -5,6 +5,9 @@
+ import type {DataType, Field, KeyType, Schema, SchemaMetadata} from '@loaders.gl/schema';
+ import * as arrow from 'apache-arrow';
+ 
++// Apache Arrow does not export LargeList in all supported runtime builds.
++const ArrowLargeList = (arrow as typeof arrow & {LargeList?: typeof arrow.List}).LargeList;
++
+ type ArrowDictionaryKeyType =
+   | arrow.Int8
+   | arrow.Int16
+@@ -263,7 +266,7 @@ export function serializeArrowType(arrowType: arrow.DataType): DataType {
+         type: 'list',
+         children: [serializeArrowField(listField)]
+       };
+-    case arrow.LargeList:
++    case ArrowLargeList:
+       const largeListType = arrowType as arrow.LargeList;
+       return {
+         type: 'large-list',
+@@ -330,7 +333,10 @@ export function deserializeArrowType(
+       }
+       case 'large-list': {
+         const field = deserializeArrowField(dataType.children[0], options);
+-        return new arrow.LargeList(field);
++        if (!ArrowLargeList) {
++          throw new Error('Apache Arrow LargeList is not available in this runtime');
++        }
++        return new ArrowLargeList(field);
+       }
+       case 'fixed-size-list': {
+         const child = deserializeArrowField(dataType.children[0], options);

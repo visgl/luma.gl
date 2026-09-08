@@ -10,7 +10,7 @@ import {ANARISceneSchema} from '@luma.gl/scene/schemas';
 import {ModelNode} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
 import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
 
@@ -21,7 +21,7 @@ async function loadAnimatedMorphCube() {
   return postProcessGLTF(await parse(assetData, GLTFLoader, {gltf: {loadImages: false}}));
 }
 
-test('glTF AnimatedMorphCube updates GPU weights through the existing animator', async testContext => {
+it('glTF AnimatedMorphCube updates GPU weights through the existing animator', async () => {
   const source = await loadAnimatedMorphCube();
   const device = new NullDevice({});
   const scenegraphs = createScenegraphsFromGLTF(device, source);
@@ -35,13 +35,15 @@ test('glTF AnimatedMorphCube updates GPU weights through the existing animator',
     }
   });
 
-  testContext.equal(weightChannel?.sampler.input.length, 127, 'all authored keyframes are decoded');
-  testContext.equal(weightChannel?.sampler.output.length, 127, 'scalar weights become 127 vectors');
-  testContext.ok(
-    weightChannel?.sampler.output.every(weights => weights.length === 2),
+  expect(weightChannel?.sampler.input.length, 'all authored keyframes are decoded').toBe(127);
+  expect(weightChannel?.sampler.output.length, 'scalar weights become 127 vectors').toBe(127);
+  expect(
+    Boolean(weightChannel?.sampler.output.every(weights => weights.length === 2)),
     'both authored morph weights remain grouped at every keyframe'
+  ).toBe(true);
+  expect(Boolean(modelNode), 'the existing glTF scenegraph retains its morph-capable model').toBe(
+    true
   );
-  testContext.ok(modelNode, 'the existing glTF scenegraph retains its morph-capable model');
 
   if (modelNode && weightChannel && weightChannel.type === 'node') {
     const model = modelNode.model;
@@ -58,36 +60,38 @@ test('glTF AnimatedMorphCube updates GPU weights through the existing animator',
       weights.some((weight, index) => weight !== initialWeights[index])
     );
 
-    testContext.ok(changedKeyframe > 0, 'the real asset provides changing morph weights');
+    expect(Boolean(changedKeyframe > 0), 'the real asset provides changing morph weights').toBe(
+      true
+    );
     scenegraphs.animator.setTime(weightChannel.sampler.input[changedKeyframe] * 1000);
     const morphedBytes = await vertexBuffer.readAsync();
 
-    testContext.deepEqual(
+    expect(
       Array.from(morphedBytes),
-      Array.from(initialBytes),
       'immutable source vertices are not rewritten for every animation frame'
-    );
-    testContext.notDeepEqual(
+    ).toEqual(Array.from(initialBytes));
+    expect(
       Array.from(morphWeights.values),
-      initialGPUWeights,
       'the packed GPU morph weights carry the animated deformation state'
+    ).not.toEqual(initialGPUWeights);
+    expect(Boolean(morphWeights.data), 'the morph weight resource is retained by the model').toBe(
+      true
     );
-    testContext.ok(morphWeights.data, 'the morph weight resource is retained by the model');
-    testContext.ok(
-      morphWeights.packedTargetCount > 0,
+    expect(
+      Boolean(morphWeights.packedTargetCount > 0),
       'morph weights remain packed in vec4 groups'
-    );
-    testContext.equal(modelNode.model, model, 'the authored model and vertex layout remain stable');
+    ).toBe(true);
+    expect(modelNode.model, 'the authored model and vertex layout remain stable').toBe(model);
   }
 
   for (const scene of scenegraphs.scenes) {
     scene.destroy();
   }
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI imports AnimatedMorphCube and commits each changed retained geometry once', async testContext => {
+it('ANARI imports AnimatedMorphCube and commits each changed retained geometry once', async () => {
   const source = await loadAnimatedMorphCube();
   const description = await makeANARIJSONSceneFromGLTF(source, 'ANIMATED MORPH CUBE');
   const weightTrack = description.clips?.[0]?.tracks.find(
@@ -97,24 +101,25 @@ test('ANARI imports AnimatedMorphCube and commits each changed retained geometry
     geometry => geometry.morphTargets?.length
   );
 
-  testContext.equal(weightTrack?.times.length, 127, 'all source morph keyframes remain editable');
-  testContext.equal(weightTrack?.values[0].length, 2, 'both animated target weights survive');
-  testContext.equal(geometryDescription?.morphTargets?.length, 2, 'both authored targets survive');
-  testContext.ok(
-    geometryDescription?.morphTargets?.every(
-      target => target.POSITION && target.NORMAL && target.TANGENT
+  expect(weightTrack?.times.length, 'all source morph keyframes remain editable').toBe(127);
+  expect(weightTrack?.values[0].length, 'both animated target weights survive').toBe(2);
+  expect(geometryDescription?.morphTargets?.length, 'both authored targets survive').toBe(2);
+  expect(
+    Boolean(
+      geometryDescription?.morphTargets?.every(
+        target => target.POSITION && target.NORMAL && target.TANGENT
+      )
     ),
     'POSITION, NORMAL, and TANGENT deltas remain source-faithful'
-  );
-  testContext.equal(
+  ).toBe(true);
+  expect(
     (geometryDescription?.['vertex.tangent']?.length || 0) * 3,
-    (geometryDescription?.morphTargets?.[0].TANGENT?.length || 0) * 4,
     'base tangent handedness is retained alongside three-component tangent deltas'
-  );
-  testContext.ok(
-    ANARISceneSchema.safeParse(description).success,
+  ).toBe((geometryDescription?.morphTargets?.[0].TANGENT?.length || 0) * 4);
+  expect(
+    Boolean(ANARISceneSchema.safeParse(description).success),
     'the retained JSON remains valid'
-  );
+  ).toBe(true);
 
   const device = new ANARIDevice(new NullDevice({}));
   if (description.renderer) {
@@ -142,8 +147,13 @@ test('ANARI imports AnimatedMorphCube and commits each changed retained geometry
     }
   }
 
-  testContext.ok(retainedGeometry, 'the imported morph geometry becomes a retained ANARI handle');
-  testContext.ok(scene.animations, 'authored morph tracks use the shared animation scene');
+  expect(
+    Boolean(retainedGeometry),
+    'the imported morph geometry becomes a retained ANARI handle'
+  ).toBe(true);
+  expect(Boolean(scene.animations), 'authored morph tracks use the shared animation scene').toBe(
+    true
+  );
   if (retainedGeometry && weightTrack && scene.animations) {
     const startingWeights = retainedGeometry.getParameter('morphWeights') || [];
     const changedKeyframe = weightTrack.values.findIndex(weights =>
@@ -151,27 +161,31 @@ test('ANARI imports AnimatedMorphCube and commits each changed retained geometry
     );
     const originalVersion = retainedGeometry.version;
 
-    testContext.ok(changedKeyframe >= 0, 'the authored clip changes its initial retained weights');
+    expect(
+      Boolean(changedKeyframe >= 0),
+      'the authored clip changes its initial retained weights'
+    ).toBe(true);
     scene.animations.seek(weightTrack.times[changedKeyframe]);
-    testContext.deepEqual(
+    expect(
       retainedGeometry.getParameter('morphWeights'),
-      weightTrack.values[changedKeyframe],
       'scrubbing updates both retained target weights through the shared mixer'
-    );
-    testContext.equal(
+    ).toEqual(weightTrack.values[changedKeyframe]);
+    expect(
       retainedGeometry.version,
-      originalVersion + 1,
       'the changed geometry commits once for the entire animation frame'
-    );
-    testContext.ok(scene.frame.render().drawCount > 0, 'the imported retained morph scene renders');
+    ).toBe(originalVersion + 1);
+    expect(
+      Boolean(scene.frame.render().drawCount > 0),
+      'the imported retained morph scene renders'
+    ).toBe(true);
   }
 
   scene.destroy();
   device.destroy();
-  testContext.end();
+  void 0;
 });
 
-test('ANARI converts normalized glTF integer joint weights into retained float weights', async testContext => {
+it('ANARI converts normalized glTF integer joint weights into retained float weights', async () => {
   for (const [ArrayType, maximumWeight] of [
     [Uint8Array, 255],
     [Uint16Array, 65535]
@@ -198,21 +212,16 @@ test('ANARI converts normalized glTF integer joint weights into retained float w
       candidate => candidate['vertex.weight']?.length
     );
 
-    testContext.equal(
+    expect(
       geometry?.['vertex.weight']?.[0],
-      1,
       `${ArrayType.name} maximum weights normalize to 1`
-    );
-    testContext.equal(
-      geometry?.['vertex.weight']?.[1],
-      0,
-      `${ArrayType.name} zero weights remain 0`
-    );
-    testContext.ok(
-      geometry?.['vertex.joint']?.length,
+    ).toBe(1);
+    expect(geometry?.['vertex.weight']?.[1], `${ArrayType.name} zero weights remain 0`).toBe(0);
+    expect(
+      Boolean(geometry?.['vertex.joint']?.length),
       `${ArrayType.name} joint accessors remain retained`
-    );
+    ).toBe(true);
   }
 
-  testContext.end();
+  void 0;
 });

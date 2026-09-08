@@ -14,8 +14,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphModularityOptimizationToGraphWithDispatchLimit,
   getGPUGraphModularityOptimizationDispatchLayout
@@ -520,23 +519,19 @@ const optimizationScenarios: OptimizationScenario[] = [
   }
 ];
 
-test('GPUGraphModularityOptimization plans bounded three-dimensional graph dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphModularityOptimizationDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphModularityOptimizationDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphModularityOptimizationDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(
-    () => getGPUGraphModularityOptimizationDispatchLayout(2049, 2),
+it('GPUGraphModularityOptimization plans bounded three-dimensional graph dispatch', () => {
+  expect(getGPUGraphModularityOptimizationDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphModularityOptimizationDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphModularityOptimizationDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphModularityOptimizationDispatchLayout(2049, 2)).toThrow(
     /3D dispatch limit/
   );
-  tapeTest.end();
 });
 
 for (const scenario of optimizationScenarios) {
-  test(`GPUGraphModularityOptimization GPU: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphModularityOptimization GPU: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -545,44 +540,38 @@ for (const scenario of optimizationScenarios) {
     try {
       compileOptimization(fixture, scenario.maximumWorkgroups);
       executeOptimization(fixture);
-      await assertOptimization(tapeTest, fixture, expected, scenario);
-      tapeTest.deepEqual(
+      await assertOptimization(fixture, expected, scenario);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'optimization preserves all original ordered source chunks'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
       if (scenario.expectedLabels) {
-        tapeTest.deepEqual(
+        expect(
           expected.labels,
-          scenario.expectedLabels,
           'independent greedy modularity oracle confirms the documented stable labels'
-        );
+        ).toEqual(scenario.expectedLabels);
       }
       if (scenario.expectedScore !== undefined) {
-        tapeTest.ok(
-          Math.abs(expected.score - scenario.expectedScore) < SCORE_TOLERANCE,
+        expect(
+          Boolean(Math.abs(expected.score - scenario.expectedScore) < SCORE_TOLERANCE),
           `independent original-edge modularity oracle confirms documented score ${scenario.expectedScore}`
-        );
+        ).toBe(true);
       }
       if (scenario.expectedConvergence !== undefined) {
-        tapeTest.equal(expected.converged, scenario.expectedConvergence);
+        expect(expected.converged).toBe(scenario.expectedConvergence);
       }
       if (scenario.expectedValidity !== undefined) {
-        tapeTest.equal(expected.valid, scenario.expectedValidity);
+        expect(expected.valid).toBe(scenario.expectedValidity);
       }
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphModularityOptimization composes label propagation and baseline scoring on GPU', async tapeTest => {
+it('GPUGraphModularityOptimization composes label propagation and baseline scoring on GPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -626,41 +615,35 @@ test('GPUGraphModularityOptimization composes label propagation and baseline sco
     baseline.addToGraph(fixture.commandGraph);
     fixture.optimization.addToGraph(fixture.commandGraph);
     fixture.compiled = fixture.commandGraph.compile();
-    tapeTest.equal(submit.mock.calls.length, 0, 'GPU pipeline compilation never submits work');
-    tapeTest.equal(
+    expect(submit.mock.calls.length, 'GPU pipeline compilation never submits work').toBe(0);
+    expect(
       seedReadback.mock.calls.length,
-      0,
       'warm-start community assignments never pass through the CPU'
-    );
+    ).toBe(0);
     submit.mockRestore();
 
     executeOptimization(fixture);
-    await assertOptimization(tapeTest, fixture, expected, scenario);
+    await assertOptimization(fixture, expected, scenario);
     const [initialScore] = await readFloat32Vector(baselineScore);
     const [optimizedScore] = await readFloat32Vector(fixture.optimization.modularity);
-    tapeTest.ok(
-      optimizedScore + SCORE_TOLERANCE >= initialScore,
+    expect(
+      Boolean(optimizedScore + SCORE_TOLERANCE >= initialScore),
       'exact GPU-scored local-moving never reduces the label-propagation baseline quality'
-    );
-    tapeTest.equal(
+    ).toBe(true);
+    expect(
       seedReadback.mock.calls.length,
-      0,
       'modularity optimization consumes live caller-owned label propagation output entirely on GPU'
-    );
+    ).toBe(0);
   } finally {
     submit.mockRestore();
     seedReadback.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
-test('GPUGraphModularityOptimization rereads live edge columns and warm starts on each encoding', async tapeTest => {
+it('GPUGraphModularityOptimization rereads live edge columns and warm starts on each encoding', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -684,12 +667,12 @@ test('GPUGraphModularityOptimization rereads live edge columns and warm starts o
 
   try {
     compileOptimization(fixture);
-    tapeTest.equal(submit.mock.calls.length, 0, 'graph construction does not submit commands');
-    tapeTest.ok(sourceReadbacks.every(readback => readback.mock.calls.length === 0));
+    expect(submit.mock.calls.length, 'graph construction does not submit commands').toBe(0);
+    expect(Boolean(sourceReadbacks.every(readback => readback.mock.calls.length === 0))).toBe(true);
     submit.mockRestore();
 
     executeOptimization(fixture);
-    await assertOptimization(tapeTest, fixture, expectedInitial, initial);
+    await assertOptimization(fixture, expectedInitial, initial);
 
     const updated: OptimizationScenario = {
       ...initial,
@@ -702,18 +685,16 @@ test('GPUGraphModularityOptimization rereads live edge columns and warm starts o
       Uint32Array.from(updated.initialCommunities!)
     );
     executeOptimization(fixture);
-    await assertOptimization(tapeTest, fixture, calculateExpectedOptimization(updated), updated);
-    tapeTest.ok(
-      sourceReadbacks.every(readback => readback.mock.calls.length === 0),
+    await assertOptimization(fixture, calculateExpectedOptimization(updated), updated);
+    expect(
+      Boolean(sourceReadbacks.every(readback => readback.mock.calls.length === 0)),
       'repeated graph encoding consumes live edge and seed buffers without CPU synchronization'
-    );
+    ).toBe(true);
   } finally {
     submit.mockRestore();
     for (const readback of sourceReadbacks) readback.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Replays deterministic single-vertex modularity moves independently over original source rows. */
@@ -1172,7 +1153,6 @@ function executeOptimization(fixture: OptimizationExecutionFixture): void {
 }
 
 async function assertOptimization(
-  tapeTest: Test,
   fixture: OptimizationExecutionFixture,
   expected: ExpectedOptimization,
   scenario: OptimizationScenario
@@ -1183,51 +1163,42 @@ async function assertOptimization(
     readUint32Vector(fixture.topology.invalidEdgeCount),
     readUint32Vector(fixture.topology.forward.overflow)
   ]);
-  tapeTest.deepEqual(
+  expect(
     labels,
-    expected.labels,
     'GPU communities match an independent deterministic globally-best CPU local-moving oracle'
-  );
-  tapeTest.ok(
-    Math.abs(score[0] - expected.score) < SCORE_TOLERANCE,
+  ).toEqual(expected.labels);
+  expect(
+    Boolean(Math.abs(score[0] - expected.score) < SCORE_TOLERANCE),
     `exact GPU modularity ${score[0]} agrees with original-source CPU objective ${expected.score}`
-  );
-  tapeTest.equal(
-    invalidEdges[0],
-    expected.invalidEdgeCount,
-    'invalid source endpoints are excluded'
-  );
-  tapeTest.equal(
-    forwardOverflow[0],
-    Number(expected.forwardOverflow),
-    'CSR overflow stays explicit'
-  );
+  ).toBe(true);
+  expect(invalidEdges[0], 'invalid source endpoints are excluded').toBe(expected.invalidEdgeCount);
+  expect(forwardOverflow[0], 'CSR overflow stays explicit').toBe(Number(expected.forwardOverflow));
   if (expected.valid) {
-    tapeTest.ok(
-      score[0] + SCORE_TOLERANCE >= expected.initialScore,
+    expect(
+      Boolean(score[0] + SCORE_TOLERANCE >= expected.initialScore),
       'strictly positive accepted moves never lower the exact initial partition modularity'
-    );
+    ).toBe(true);
   } else {
-    tapeTest.equal(score[0], 0, 'undefined modularity never publishes a misleading partial score');
-    tapeTest.ok(
-      labels.every(label => label === INVALID_COMMUNITY),
+    expect(score[0], 'undefined modularity never publishes a misleading partial score').toBe(0);
+    expect(
+      Boolean(labels.every(label => label === INVALID_COMMUNITY)),
       'invalid graph states fail closed for every community label'
-    );
+    ).toBe(true);
   }
   if (fixture.optimization.converged) {
     const converged = await readUint32Vector(fixture.optimization.converged);
-    tapeTest.equal(converged[0], Number(expected.converged), 'local convergence is truthful');
+    expect(converged[0], 'local convergence is truthful').toBe(Number(expected.converged));
   }
   if (fixture.optimization.valid) {
     const validity = await readUint32Vector(fixture.optimization.valid);
-    tapeTest.equal(validity[0], Number(expected.valid), 'validity matches the exact scored graph');
+    expect(validity[0], 'validity matches the exact scored graph').toBe(Number(expected.valid));
   }
   if (fixture.topology.reverse) {
     const reverseOverflow = await readUint32Vector(fixture.topology.reverse.overflow);
-    tapeTest.equal(reverseOverflow[0], Number(expected.reverseOverflow));
+    expect(reverseOverflow[0]).toBe(Number(expected.reverseOverflow));
   }
   if (scenario.expectedLabels) {
-    tapeTest.deepEqual(labels, scenario.expectedLabels, 'documented stable tie-break labels match');
+    expect(labels, 'documented stable tie-break labels match').toEqual(scenario.expectedLabels);
   }
 }
 
@@ -1250,12 +1221,12 @@ async function readFloat32Vector(vector: GPUVector<'float32'>): Promise<number[]
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: OptimizationExecutionFixture): void {
+function destroyExecutionFixture(fixture: OptimizationExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying graph scratch never destroys caller-owned source or destination buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

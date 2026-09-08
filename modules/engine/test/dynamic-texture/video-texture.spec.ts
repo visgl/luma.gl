@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Device, SamplerProps, Texture} from '@luma.gl/core';
 import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {VideoTexture} from '../../src';
@@ -20,67 +20,80 @@ const EXTERNAL_TEXTURE_BINDING = {
   location: 0
 } as const;
 
-test('VideoTexture resolves copied VideoFrame bindings without owning frames', async t => {
+it('VideoTexture resolves copied VideoFrame bindings without owning frames', async () => {
   const device = await getNullTestDevice();
   const firstFrame = makeFakeVideoFrame(1);
   const videoTexture = new VideoTexture(device, {source: firstFrame.frame});
 
-  t.true(videoTexture.isReady, 'VideoFrame source is ready immediately');
+  expect(Boolean(videoTexture.isReady), 'VideoFrame source is ready immediately').toBe(true);
   const firstResolution = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
-  t.ok(firstResolution, 'ready frame resolves to copied texture');
+  expect(Boolean(firstResolution), 'ready frame resolves to copied texture').toBe(true);
   const firstTexture = firstResolution!;
   const firstGeneration = videoTexture.generation;
   const firstTimestamp = videoTexture.updateTimestamp;
 
   const sameFrameResolution = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
-  t.equal(sameFrameResolution, firstTexture, 'same frame reuses copied texture');
-  t.equal(videoTexture.generation, firstGeneration, 'same binding preserves generation');
+  expect(sameFrameResolution, 'same frame reuses copied texture').toBe(firstTexture);
+  expect(videoTexture.generation, 'same binding preserves generation').toBe(firstGeneration);
 
   const secondFrame = makeFakeVideoFrame(2);
   videoTexture.setSource(secondFrame.frame);
   const replacementGeneration = videoTexture.generation;
   const secondResolution = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
 
-  t.ok(replacementGeneration > firstGeneration, 'source replacement advances generation');
-  t.equal(secondResolution, firstTexture, 'same-size replacement frame reuses texture');
-  t.equal(
-    videoTexture.generation,
-    replacementGeneration,
-    'same-size content upload preserves binding generation'
+  expect(
+    Boolean(replacementGeneration > firstGeneration),
+    'source replacement advances generation'
+  ).toBe(true);
+  expect(secondResolution, 'same-size replacement frame reuses texture').toBe(firstTexture);
+  expect(videoTexture.generation, 'same-size content upload preserves binding generation').toBe(
+    replacementGeneration
   );
-  t.ok(videoTexture.updateTimestamp > firstTimestamp, 'replacement frame updates timestamp');
-  t.equal(firstFrame.closeCount, 0, 'replaced frame remains caller-owned');
+  expect(
+    Boolean(videoTexture.updateTimestamp > firstTimestamp),
+    'replacement frame updates timestamp'
+  ).toBe(true);
+  expect(firstFrame.closeCount, 'replaced frame remains caller-owned').toBe(0);
 
   videoTexture.destroy();
-  t.equal(secondFrame.closeCount, 0, 'destroy does not close caller-owned frame');
-  t.end();
+  expect(secondFrame.closeCount, 'destroy does not close caller-owned frame').toBe(0);
+  void 0;
 });
 
-test('VideoTexture waits for HTMLVideoElement current frame data', async t => {
+it('VideoTexture waits for HTMLVideoElement current frame data', async () => {
   const device = await getNullTestDevice();
   const video = makeFakeVideoElement();
   const videoTexture = new VideoTexture(device, {source: video as HTMLVideoElement});
 
-  t.false(videoTexture.isReady, 'video without current frame is not ready');
+  expect(Boolean(videoTexture.isReady), 'video without current frame is not ready').toBe(false);
 
   video.videoWidth = 4;
   video.videoHeight = 2;
   video.readyState = 2;
 
-  t.true(videoTexture.isReady, 'video becomes ready with dimensions and current frame');
-  t.ok(videoTexture.resolveTextureBinding(TEXTURE_BINDING), 'ready video resolves binding');
+  expect(
+    Boolean(videoTexture.isReady),
+    'video becomes ready with dimensions and current frame'
+  ).toBe(true);
+  expect(
+    Boolean(videoTexture.resolveTextureBinding(TEXTURE_BINDING)),
+    'ready video resolves binding'
+  ).toBe(true);
   const firstTimestamp = videoTexture.updateTimestamp;
   video.currentTime = 1;
-  t.ok(videoTexture.updateTimestamp > firstTimestamp, 'new video time updates timestamp');
+  expect(
+    Boolean(videoTexture.updateTimestamp > firstTimestamp),
+    'new video time updates timestamp'
+  ).toBe(true);
 
   videoTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('VideoTexture copies successive browser VideoFrames', async t => {
+it('VideoTexture copies successive browser VideoFrames', async () => {
   if (typeof document === 'undefined' || typeof VideoFrame === 'undefined') {
-    t.pass('browser VideoFrame smoke test requires browser WebCodecs');
-    t.end();
+    expect(Boolean('browser VideoFrame smoke test requires browser WebCodecs'), '').toBe(true);
+    void 0;
     return;
   }
 
@@ -88,9 +101,9 @@ test('VideoTexture copies successive browser VideoFrames', async t => {
   canvas.width = 1;
   canvas.height = 1;
   const context = canvas.getContext('2d');
-  t.ok(context, '2D canvas context is available');
+  expect(Boolean(context), '2D canvas context is available').toBe(true);
   if (!context) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -103,10 +116,8 @@ test('VideoTexture copies successive browser VideoFrames', async t => {
 
   try {
     const texture = videoTexture.resolveTextureBinding(TEXTURE_BINDING) as Texture;
-    t.deepEquals(
-      device.readPixelsToArrayWebGL(texture),
-      new Uint8Array([255, 0, 0, 255]),
-      'first browser VideoFrame is copied'
+    expect(device.readPixelsToArrayWebGL(texture), 'first browser VideoFrame is copied').toEqual(
+      new Uint8Array([255, 0, 0, 255])
     );
 
     context.fillStyle = '#0000ff';
@@ -114,29 +125,31 @@ test('VideoTexture copies successive browser VideoFrames', async t => {
     secondFrame = new VideoFrame(canvas, {timestamp: 2});
     videoTexture.setSource(secondFrame);
     videoTexture.resolveTextureBinding(TEXTURE_BINDING);
-    t.deepEquals(
+    expect(
       device.readPixelsToArrayWebGL(texture),
-      new Uint8Array([0, 0, 255, 255]),
       'next browser VideoFrame replaces copied pixels'
-    );
+    ).toEqual(new Uint8Array([0, 0, 255, 255]));
   } finally {
     videoTexture.destroy();
     secondFrame?.close();
     firstFrame.close();
   }
 
-  t.end();
+  void 0;
 });
 
-test('VideoTexture resolves native WebGPU external bindings from browser VideoFrames', async t => {
+it('VideoTexture resolves native WebGPU external bindings from browser VideoFrames', async () => {
   if (
     typeof document === 'undefined' ||
     typeof VideoFrame === 'undefined' ||
     typeof navigator === 'undefined' ||
     !navigator.gpu
   ) {
-    t.pass('native external texture smoke test requires browser WebGPU and WebCodecs');
-    t.end();
+    expect(
+      Boolean('native external texture smoke test requires browser WebGPU and WebCodecs'),
+      ''
+    ).toBe(true);
+    void 0;
     return;
   }
 
@@ -148,86 +161,83 @@ test('VideoTexture resolves native WebGPU external bindings from browser VideoFr
   const videoTexture = new VideoTexture(device, {source: frame});
 
   try {
-    t.ok(
-      videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
+    expect(
+      Boolean(videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING)),
       'browser VideoFrame resolves to native WebGPU external binding'
-    );
+    ).toBe(true);
   } finally {
     videoTexture.destroy();
     frame.close();
   }
 
-  t.end();
+  void 0;
 });
 
-test('VideoTexture uses lightweight assertions for runtime sources', async t => {
+it('VideoTexture uses lightweight assertions for runtime sources', async () => {
   const device = await getNullTestDevice();
 
-  t.throws(
+  expect(
     () => new VideoTexture(device, {source: null as unknown as VideoFrame}),
-    /luma.gl assertion failed/,
     'constructor asserts unsupported sources'
-  );
+  ).toThrow(/luma.gl assertion failed/);
 
   const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
-  t.throws(
+  expect(
     () => videoTexture.setSource({} as VideoFrame),
-    /luma.gl assertion failed/,
     'setSource asserts unsupported sources'
-  );
+  ).toThrow(/luma.gl assertion failed/);
 
   videoTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('VideoTexture recreates resized copied textures and updates samplers', t => {
+it('VideoTexture recreates resized copied textures and updates samplers', () => {
   const {device, textures} = makeFakeCopiedTextureDevice();
   const videoTexture = new VideoTexture(device, {
     source: makeFakeVideoFrame(1, 2, 2).frame
   });
 
   const firstTexture = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
-  t.equal(textures.length, 1, 'first resolution creates a copied texture');
-  t.equal(textures[0]!.copyCount, 1, 'first resolution copies one frame');
+  expect(textures.length, 'first resolution creates a copied texture').toBe(1);
+  expect(textures[0]!.copyCount, 'first resolution copies one frame').toBe(1);
 
   videoTexture.resolveTextureBinding(TEXTURE_BINDING);
-  t.equal(textures[0]!.copyCount, 1, 'same frame does not copy again');
+  expect(textures[0]!.copyCount, 'same frame does not copy again').toBe(1);
 
   const sampler: SamplerProps = {magFilter: 'nearest'};
   videoTexture.setSampler(sampler);
-  t.equal(textures[0]!.sampler, sampler, 'sampler updates the existing copied texture');
+  expect(textures[0]!.sampler, 'sampler updates the existing copied texture').toBe(sampler);
 
   videoTexture.setSource(makeFakeVideoFrame(2, 4, 3).frame);
   const secondTexture = videoTexture.resolveTextureBinding(TEXTURE_BINDING);
 
-  t.notEqual(secondTexture, firstTexture, 'size changes replace the copied texture');
-  t.equal(textures.length, 2, 'size change creates one replacement texture');
-  t.equal(textures[0]!.destroyCount, 1, 'size change destroys the previous copied texture');
-  t.equal(textures[1]!.width, 4, 'replacement texture uses new width');
-  t.equal(textures[1]!.height, 3, 'replacement texture uses new height');
+  expect(secondTexture, 'size changes replace the copied texture').not.toBe(firstTexture);
+  expect(textures.length, 'size change creates one replacement texture').toBe(2);
+  expect(textures[0]!.destroyCount, 'size change destroys the previous copied texture').toBe(1);
+  expect(textures[1]!.width, 'replacement texture uses new width').toBe(4);
+  expect(textures[1]!.height, 'replacement texture uses new height').toBe(3);
 
   videoTexture.destroy();
-  t.equal(textures[1]!.destroyCount, 1, 'destroy releases the replacement copied texture');
+  expect(textures[1]!.destroyCount, 'destroy releases the replacement copied texture').toBe(1);
   videoTexture.destroy();
-  t.equal(textures[1]!.destroyCount, 1, 'destroy is idempotent');
-  t.end();
+  expect(textures[1]!.destroyCount, 'destroy is idempotent').toBe(1);
+  void 0;
 });
 
-test('VideoTexture preserves copied frame failures', t => {
+it('VideoTexture preserves copied frame failures', () => {
   const {device} = makeFakeCopiedTextureDevice({throwOnCopy: true});
   const videoTexture = new VideoTexture(device, {source: makeFakeVideoFrame(1).frame});
 
-  t.throws(
+  expect(
     () => videoTexture.resolveTextureBinding(TEXTURE_BINDING),
-    /source cannot be copied/,
     'copied frame errors surface without a verbose wrapper'
-  );
+  ).toThrow(/source cannot be copied/);
 
   videoTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('VideoTexture reacquires native WebGPU external textures per resolution', t => {
+it('VideoTexture reacquires native WebGPU external textures per resolution', () => {
   const {device, externalTextures} = makeSuccessfulFakeWebGPUDevice();
   const frame = makeFakeVideoFrame(1);
   const videoTexture = new VideoTexture(device, {source: frame.frame});
@@ -237,39 +247,46 @@ test('VideoTexture reacquires native WebGPU external textures per resolution', t
   const firstGeneration = videoTexture.generation;
   const secondExternalTexture = videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING);
 
-  t.notEqual(
-    secondExternalTexture,
-    firstExternalTexture,
-    'each resolution acquires a fresh binding'
+  expect(secondExternalTexture, 'each resolution acquires a fresh binding').not.toBe(
+    firstExternalTexture
   );
-  t.equal(externalTextures.length, 2, 'two native external textures are acquired');
-  t.equal(externalTextures[0]!.destroyCount, 1, 'reacquisition releases the previous wrapper');
-  t.ok(firstGeneration > initialGeneration, 'first external binding advances generation');
-  t.ok(videoTexture.generation > firstGeneration, 'fresh external binding advances generation');
+  expect(externalTextures.length, 'two native external textures are acquired').toBe(2);
+  expect(externalTextures[0]!.destroyCount, 'reacquisition releases the previous wrapper').toBe(1);
+  expect(
+    Boolean(firstGeneration > initialGeneration),
+    'first external binding advances generation'
+  ).toBe(true);
+  expect(
+    Boolean(videoTexture.generation > firstGeneration),
+    'fresh external binding advances generation'
+  ).toBe(true);
 
   const sampler: SamplerProps = {minFilter: 'nearest'};
   videoTexture.setSampler(sampler);
-  t.equal(externalTextures[1]!.sampler, sampler, 'sampler updates the current external binding');
+  expect(externalTextures[1]!.sampler, 'sampler updates the current external binding').toBe(
+    sampler
+  );
 
   videoTexture.destroy();
-  t.equal(externalTextures[1]!.destroyCount, 1, 'destroy releases the current external binding');
-  t.equal(frame.closeCount, 0, 'destroy leaves external VideoFrame source caller-owned');
-  t.end();
+  expect(externalTextures[1]!.destroyCount, 'destroy releases the current external binding').toBe(
+    1
+  );
+  expect(frame.closeCount, 'destroy leaves external VideoFrame source caller-owned').toBe(0);
+  void 0;
 });
 
-test('VideoTexture preserves native WebGPU external import failures', t => {
+it('VideoTexture preserves native WebGPU external import failures', () => {
   const videoTexture = new VideoTexture(makeFakeWebGPUDevice(), {
     source: makeFakeVideoFrame(1).frame
   });
 
-  t.throws(
+  expect(
     () => videoTexture.resolveTextureBinding(EXTERNAL_TEXTURE_BINDING),
-    /native external textures unavailable/,
     'native external import failures surface without a copied fallback'
-  );
+  ).toThrow(/native external textures unavailable/);
 
   videoTexture.destroy();
-  t.end();
+  void 0;
 });
 
 function makeFakeVideoFrame(

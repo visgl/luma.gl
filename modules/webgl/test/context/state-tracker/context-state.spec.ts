@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
@@ -30,16 +30,16 @@ export function stringifyTypedArray(v: unknown) {
   return JSON.stringify(v);
 }
 
-test('WebGL#state', async t => {
-  t.ok(getGLParameters, 'getGLParameters imported ok');
-  t.ok(setGLParameters, 'setGLParameters imported ok');
-  t.ok(withGLParameters, 'withGLParameters imported ok');
-  t.ok(resetGLParameters, 'resetGLParameters imported ok');
-  t.ok(GL_PARAMETERS, 'TEST_EXPORTS ok');
-  t.end();
+it('WebGL#state', async () => {
+  expect(Boolean(getGLParameters), 'getGLParameters imported ok').toBe(true);
+  expect(Boolean(setGLParameters), 'setGLParameters imported ok').toBe(true);
+  expect(Boolean(withGLParameters), 'withGLParameters imported ok').toBe(true);
+  expect(Boolean(resetGLParameters), 'resetGLParameters imported ok').toBe(true);
+  expect(Boolean(GL_PARAMETERS), 'TEST_EXPORTS ok').toBe(true);
+  void 0;
 });
 
-test('WebGLState#getGLParameters (WebGL)', async t => {
+it('WebGLState#getGLParameters (WebGL)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);
@@ -47,16 +47,16 @@ test('WebGLState#getGLParameters (WebGL)', async t => {
 
   for (const setting in GL_PARAMETERS) {
     const value = parameters[setting];
-    t.ok(
-      value !== undefined,
+    expect(
+      Boolean(value !== undefined),
       `${webglDevice.getGLKey(setting)}: got a value ${stringifyTypedArray(value)}`
-    );
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
+it('WebGLState#setGLParameters (Mixing enum and function style keys)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);
@@ -66,17 +66,16 @@ test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t
 
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     const value = parameters[key];
-    t.deepEqual(
+    expect(
       value,
-      ENUM_STYLE_SETTINGS_SET1[key],
       `got expected value ${stringifyTypedArray(value)} for key: ${webglDevice.getGLKey(key)}`
-    );
+    ).toEqual(ENUM_STYLE_SETTINGS_SET1[key]);
   }
-  t.end();
+  void 0;
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters))', async t => {
+it('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters))', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const expectedValues = {
@@ -112,23 +111,27 @@ test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters
 
   for (const key in expectedValues) {
     const value = actualParameters[key];
-    t.deepEqual(
+    expect(
       value,
-      expectedValues[key],
       `got expected value ${stringifyTypedArray(value)} for key: ${webglDevice.getGLKey(key)}`
-    );
+    ).toEqual(expectedValues[key]);
   }
-  t.end();
+  void 0;
 });
 
-test('WebGLState#withGLParameters', async t => {
+it('WebGLState#withGLParameters', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const checkParameters = expected => {
     const parameters = getGLParameters(webglDevice.gl);
     for (const key in expected) {
       const value = parameters[key];
-      t.deepEqual(value, expected[key], `got expected value ${stringifyTypedArray(value)}`);
+      const normalizedValue = ArrayBuffer.isView(value)
+        ? Array.from(value as ArrayLike<number>)
+        : value;
+      expect(normalizedValue, `got expected value ${stringifyTypedArray(value)}`).toEqual(
+        expected[key]
+      );
     }
   };
 
@@ -165,7 +168,7 @@ test('WebGLState#withGLParameters', async t => {
     [GL.BLEND]: false
   });
 
-  t.throws(
+  expect(
     () =>
       withGLParameters(
         webglDevice.gl,
@@ -184,7 +187,7 @@ test('WebGLState#withGLParameters', async t => {
         }
       ),
     'Operation throws error'
-  );
+  ).toThrow();
 
   // Parameters should be restored
   checkParameters({
@@ -192,10 +195,10 @@ test('WebGLState#withGLParameters', async t => {
     [GL.BLEND]: false
   });
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#withGLParameters: recursive', async t => {
+it('WebGLState#withGLParameters: recursive', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);
@@ -212,17 +215,16 @@ test('WebGLState#withGLParameters: recursive', async t => {
   let blendState = parameters[GL.BLEND];
   let blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
   let blendEquation = parameters[GL.BLEND_EQUATION_RGB];
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
-  t.deepEqual(
-    blendFuncSrcRGB,
-    GL.ONE_MINUS_SRC_ALPHA,
-    `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`
+  expect(
+    Array.from(clearColor as Float32Array),
+    `got expected value ${stringifyTypedArray(clearColor)}`
+  ).toEqual([0, 0, 0, 0]);
+  expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(false);
+  expect(blendFuncSrcRGB, `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`).toEqual(
+    GL.ONE_MINUS_SRC_ALPHA
   );
-  t.deepEqual(
-    blendEquation,
-    GL.FUNC_ADD,
-    `got expected value ${stringifyTypedArray(blendEquation)}`
+  expect(blendEquation, `got expected value ${stringifyTypedArray(blendEquation)}`).toEqual(
+    GL.FUNC_ADD
   );
   withGLParameters(
     webglDevice.gl,
@@ -237,23 +239,20 @@ test('WebGLState#withGLParameters: recursive', async t => {
       blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
       blendEquation = parameters[GL.BLEND_EQUATION_RGB];
       // Verify changed state
-      t.deepEqual(
-        clearColor,
-        [0, 1, 0, 1],
+      expect(
+        Array.from(clearColor as Float32Array),
         `got expected value ${stringifyTypedArray(clearColor)}`
-      );
-      t.deepEqual(blendState, true, `got expected value ${stringifyTypedArray(blendState)}`);
+      ).toEqual([0, 1, 0, 1]);
+      expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(true);
       // Verify un-changed state
-      t.deepEqual(
+      expect(
         blendFuncSrcRGB,
-        GL.ONE_MINUS_SRC_ALPHA,
         `got expected un changed value ${stringifyTypedArray(blendFuncSrcRGB)}`
-      );
-      t.deepEqual(
+      ).toEqual(GL.ONE_MINUS_SRC_ALPHA);
+      expect(
         blendEquation,
-        GL.FUNC_ADD,
         `got expected un changed value ${stringifyTypedArray(blendEquation)}`
-      );
+      ).toEqual(GL.FUNC_ADD);
 
       withGLParameters(
         webglDevice.gl,
@@ -268,37 +267,30 @@ test('WebGLState#withGLParameters: recursive', async t => {
           blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
           blendEquation = parameters[GL.BLEND_EQUATION_RGB];
           // Verify un-changed state
-          t.deepEqual(
-            clearColor,
-            [0, 1, 0, 1],
+          expect(
+            Array.from(clearColor as Float32Array),
             `got expected value ${stringifyTypedArray(clearColor)}`
-          );
-          t.deepEqual(blendState, true, `got expected value ${stringifyTypedArray(blendState)}`);
+          ).toEqual([0, 1, 0, 1]);
+          expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(true);
           // Verify changed state
-          t.deepEqual(
+          expect(
             blendFuncSrcRGB,
-            GL.ZERO,
             `got expected changed value ${stringifyTypedArray(blendFuncSrcRGB)}`
-          );
-          t.deepEqual(
+          ).toEqual(GL.ZERO);
+          expect(
             blendEquation,
-            GL.FUNC_SUBTRACT,
             `got expected changed value ${stringifyTypedArray(blendEquation)}`
-          );
+          ).toEqual(GL.FUNC_SUBTRACT);
         }
       );
       parameters = getGLParameters(webglDevice.gl);
       blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
       blendEquation = parameters[GL.BLEND_EQUATION_RGB];
-      t.deepEqual(
-        blendFuncSrcRGB,
-        GL.ONE_MINUS_SRC_ALPHA,
-        `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`
+      expect(blendFuncSrcRGB, `got expected value ${stringifyTypedArray(blendFuncSrcRGB)}`).toEqual(
+        GL.ONE_MINUS_SRC_ALPHA
       );
-      t.deepEqual(
-        blendEquation,
-        GL.FUNC_ADD,
-        `got expected value ${stringifyTypedArray(blendEquation)}`
+      expect(blendEquation, `got expected value ${stringifyTypedArray(blendEquation)}`).toEqual(
+        GL.FUNC_ADD
       );
     }
   );
@@ -308,24 +300,24 @@ test('WebGLState#withGLParameters: recursive', async t => {
   blendState = parameters[GL.BLEND];
   blendFuncSrcRGB = parameters[GL.BLEND_SRC_RGB];
   blendEquation = parameters[GL.BLEND_EQUATION_RGB];
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
-  t.deepEqual(
+  expect(
+    Array.from(clearColor as Float32Array),
+    `got expected value ${stringifyTypedArray(clearColor)}`
+  ).toEqual([0, 0, 0, 0]);
+  expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(false);
+  expect(
     blendFuncSrcRGB,
-    GL.ONE_MINUS_SRC_ALPHA,
     `got expected initial value ${stringifyTypedArray(blendFuncSrcRGB)}`
-  );
-  t.deepEqual(
-    blendEquation,
-    GL.FUNC_ADD,
-    `got expected initial value ${stringifyTypedArray(blendEquation)}`
+  ).toEqual(GL.ONE_MINUS_SRC_ALPHA);
+  expect(blendEquation, `got expected initial value ${stringifyTypedArray(blendEquation)}`).toEqual(
+    GL.FUNC_ADD
   );
 
-  t.end();
+  void 0;
 });
 
 // EXT_blend_minmax
-test('WebGLState#BlendEquationMinMax', async t => {
+it('WebGLState#BlendEquationMinMax', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   // Verify if state set is scuccessful, we could be just returning the value from cache.
@@ -363,20 +355,19 @@ test('WebGLState#BlendEquationMinMax', async t => {
     // eslint-disable-next-line @typescript-eslint/no-for-in-array
     for (const state in expected) {
       const value = actualParameters[state];
-      t.equal(
+      expect(
         value,
-        expected[state],
         `WebGL : expected value, ${webglDevice.getGLKey(value)} received for ${webglDevice.getGLKey(
           state
         )}`
-      );
+      ).toBe(expected[state]);
     }
   }
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#bindFramebuffer', async t => {
+it('WebGLState#bindFramebuffer', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
@@ -394,15 +385,15 @@ test('WebGLState#bindFramebuffer', async t => {
     GL.DRAW_FRAMEBUFFER_BINDING
   ];
   // NOTE: DRAW_FRAMEBUFFER_BINDING and FRAMEBUFFER_BINDING are same enums
-  t.equal(fbHandle, framebuffer.handle, 'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING');
+  expect(fbHandle, 'FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING').toBe(
+    framebuffer.handle
+  );
 
   fbHandle = getGLParameters(webglDevice.gl, [GL.READ_FRAMEBUFFER_BINDING])[
     GL.READ_FRAMEBUFFER_BINDING
   ];
-  t.equal(
-    fbHandle,
-    framebuffer.handle,
-    'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING'
+  expect(fbHandle, 'FRAMEBUFFER binding should also set READ_FRAMEBUFFER_BINDING').toBe(
+    framebuffer.handle
   );
 
   webglDevice.gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, framebufferTwo.handle);
@@ -410,43 +401,35 @@ test('WebGLState#bindFramebuffer', async t => {
   fbHandle = getGLParameters(webglDevice.gl, [GL.DRAW_FRAMEBUFFER_BINDING])[
     GL.DRAW_FRAMEBUFFER_BINDING
   ];
-  t.equal(
-    fbHandle,
-    framebufferTwo.handle,
-    'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING'
+  expect(fbHandle, 'DRAW_FRAMEBUFFER binding should set DRAW_FRAMEBUFFER_BINDING').toBe(
+    framebufferTwo.handle
   );
 
   fbHandle = getGLParameters(webglDevice.gl, [GL.READ_FRAMEBUFFER_BINDING])[
     GL.READ_FRAMEBUFFER_BINDING
   ];
-  t.equal(
-    fbHandle,
-    framebuffer.handle,
-    'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING'
+  expect(fbHandle, 'DRAW_FRAMEBUFFER binding should NOT set READ_FRAMEBUFFER_BINDING').toBe(
+    framebuffer.handle
   );
 
   webglDevice.gl.bindFramebuffer(GL.READ_FRAMEBUFFER, framebufferThree.handle);
   fbHandle = getGLParameters(webglDevice.gl, [GL.DRAW_FRAMEBUFFER_BINDING])[
     GL.DRAW_FRAMEBUFFER_BINDING
   ];
-  t.equal(
-    fbHandle,
-    framebufferTwo.handle,
-    'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING'
+  expect(fbHandle, 'READ_FRAMEBUFFER binding should NOT set DRAW_FRAMEBUFFER_BINDING').toBe(
+    framebufferTwo.handle
   );
 
   fbHandle = getGLParameters(webglDevice.gl, [GL.READ_FRAMEBUFFER_BINDING])[
     GL.READ_FRAMEBUFFER_BINDING
   ];
-  t.equal(
-    fbHandle,
-    framebufferThree.handle,
-    'READ_FRAMEBUFFER binding should set READ_FRAMEBUFFER_BINDING'
+  expect(fbHandle, 'READ_FRAMEBUFFER binding should set READ_FRAMEBUFFER_BINDING').toBe(
+    framebufferThree.handle
   );
-  t.end();
+  void 0;
 });
 
-test('WebGLState#withGLParameters framebuffer', async t => {
+it('WebGLState#withGLParameters framebuffer', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const framebufferOne = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
@@ -457,35 +440,31 @@ test('WebGLState#withGLParameters framebuffer', async t => {
 
   let fbHandle;
   fbHandle = getGLParameters(webglDevice.gl, GL.FRAMEBUFFER_BINDING);
-  t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
+  expect(fbHandle, 'Initial draw frambuffer binding should be null').toBe(null);
 
   withGLParameters(webglDevice.gl, {framebuffer: framebufferOne}, () => {
     fbHandle = getGLParameters(webglDevice.gl, GL.FRAMEBUFFER_BINDING);
-    t.deepEqual(fbHandle, framebufferOne.handle, 'withGLParameters should bind framebuffer');
+    expect(fbHandle, 'withGLParameters should bind framebuffer').toEqual(framebufferOne.handle);
 
     withGLParameters(webglDevice.gl, {framebuffer: framebufferTwo}, () => {
       fbHandle = getGLParameters(webglDevice.gl, GL.FRAMEBUFFER_BINDING);
-      t.deepEqual(
-        fbHandle,
-        framebufferTwo.handle,
-        'Inner withGLParameters should bind framebuffer'
+      expect(fbHandle, 'Inner withGLParameters should bind framebuffer').toEqual(
+        framebufferTwo.handle
       );
     });
 
     fbHandle = getGLParameters(webglDevice.gl, GL.FRAMEBUFFER_BINDING);
-    t.deepEqual(
-      fbHandle,
-      framebufferOne.handle,
-      'Inner withGLParameters should restore draw framebuffer binding'
+    expect(fbHandle, 'Inner withGLParameters should restore draw framebuffer binding').toEqual(
+      framebufferOne.handle
     );
   });
   fbHandle = getGLParameters(webglDevice.gl, GL.FRAMEBUFFER_BINDING);
-  t.deepEqual(fbHandle, null, 'withGLParameters should restore framebuffer bidning');
+  expect(fbHandle, 'withGLParameters should restore framebuffer bidning').toEqual(null);
 
-  t.end();
+  void 0;
 });
 
-test('WebGLState#withGLParameters empty parameters object', async t => {
+it('WebGLState#withGLParameters empty parameters object', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);
@@ -497,20 +476,29 @@ test('WebGLState#withGLParameters empty parameters object', async t => {
 
   let clearColor = getGLParameters(webglDevice.gl, GL.COLOR_CLEAR_VALUE);
   let blendState = getGLParameters(webglDevice.gl, GL.BLEND);
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
+  expect(
+    Array.from(clearColor as Float32Array),
+    `got expected value ${stringifyTypedArray(clearColor)}`
+  ).toEqual([0, 0, 0, 0]);
+  expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(false);
 
   withGLParameters(webglDevice.gl, {}, () => {
     clearColor = getGLParameters(webglDevice.gl, GL.COLOR_CLEAR_VALUE);
     blendState = getGLParameters(webglDevice.gl, GL.BLEND);
-    t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-    t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
+    expect(
+      Array.from(clearColor as Float32Array),
+      `got expected value ${stringifyTypedArray(clearColor)}`
+    ).toEqual([0, 0, 0, 0]);
+    expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(false);
   });
 
   clearColor = getGLParameters(webglDevice.gl, GL.COLOR_CLEAR_VALUE);
   blendState = getGLParameters(webglDevice.gl, GL.BLEND);
-  t.deepEqual(clearColor, [0, 0, 0, 0], `got expected value ${stringifyTypedArray(clearColor)}`);
-  t.deepEqual(blendState, false, `got expected value ${stringifyTypedArray(blendState)}`);
+  expect(
+    Array.from(clearColor as Float32Array),
+    `got expected value ${stringifyTypedArray(clearColor)}`
+  ).toEqual([0, 0, 0, 0]);
+  expect(blendState, `got expected value ${stringifyTypedArray(blendState)}`).toEqual(false);
 
-  t.end();
+  void 0;
 });

@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer, Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for clustered participating-media integration. */
-export type ClusteredVolumetricLightingShaderPassPipelineOptions = {
+export type ClusteredVolumetricLightingCompositeShaderPassOptions = {
   /** Fractional integration, history, and denoising resolution. Defaults to full resolution. */
   resolutionScale?: number;
 };
@@ -697,9 +697,9 @@ fn clusteredVolumetricComposite_sampleColor(
 >;
 
 /** Creates clustered participating-media integration, temporal stabilization, and composition. */
-export function createClusteredVolumetricLightingShaderPassPipeline(
-  options: ClusteredVolumetricLightingShaderPassPipelineOptions = {}
-): ShaderPassPipeline<
+export function createClusteredVolumetricLightingCompositeShaderPass(
+  options: ClusteredVolumetricLightingCompositeShaderPassOptions = {}
+): CompositeShaderPass<
   | 'clusteredVolumeRaw'
   | 'clusteredVolumeHistory'
   | 'clusteredVolumeDepthHistory'
@@ -708,7 +708,7 @@ export function createClusteredVolumetricLightingShaderPassPipeline(
 > {
   const scale = options.resolutionScale ?? 1;
   return {
-    name: 'clusteredVolumetricLightingShaderPassPipeline',
+    name: 'clusteredVolumetricLightingCompositeShaderPass',
     renderTargets: {
       clusteredVolumeRaw: {scale: [scale, scale], format: 'rgba16float'},
       clusteredVolumeHistory: {

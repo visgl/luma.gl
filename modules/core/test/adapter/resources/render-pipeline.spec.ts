@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, _getDefaultBindGroupFactory} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -56,12 +56,12 @@ const UNSUPPORTED_RENDER_SOURCE = /* WGSL */ `
 }
 `;
 
-test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shaders', async t => {
+it('RenderPipeline can infer an empty shader layout for builtin-only WGSL shaders', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -72,40 +72,41 @@ test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shad
     topology: 'triangle-list'
   });
 
-  t.deepEqual(renderPipeline.shaderLayout.attributes, [], 'builtin-only WGSL infers no attributes');
-  t.deepEqual(renderPipeline.shaderLayout.bindings, [], 'builtin-only WGSL infers no bindings');
+  expect(renderPipeline.shaderLayout.attributes, 'builtin-only WGSL infers no attributes').toEqual(
+    []
+  );
+  expect(renderPipeline.shaderLayout.bindings, 'builtin-only WGSL infers no bindings').toEqual([]);
 
   renderPipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('RenderPipeline requires a layout when lightweight WGSL scanning is unsafe', async t => {
+it('RenderPipeline requires a layout when lightweight WGSL scanning is unsafe', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
   const shader = webgpuDevice.createShader({source: UNSUPPORTED_RENDER_SOURCE});
-  t.throws(
+  expect(
     () => webgpuDevice.createRenderPipeline({vs: shader, fs: shader}),
-    /assertion failed/,
     'raw render pipeline rejects WGSL that cannot be scanned safely'
-  );
+  ).toThrow(/assertion failed/);
 
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('RenderPipeline bind-group cache only invalidates when binding identities change', async t => {
+it('RenderPipeline bind-group cache only invalidates when binding identities change', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -115,11 +116,10 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
     fs: shader
   });
 
-  t.deepEqual(
+  expect(
     renderPipeline.shaderLayout.bindings,
-    [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}],
     'raw render pipeline uses the lightweight WGSL scanner'
-  );
+  ).toEqual([{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}]);
 
   const firstBuffer = webgpuDevice.createBuffer({
     id: 'first-uniform-buffer',
@@ -146,11 +146,10 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
     (renderPipeline as any)._getBindingsByGroupWebGPU(),
     (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
   )[3];
-  t.equal(
+  expect(
     secondBindGroup,
-    firstBindGroup,
     'render bind group is reused when binding object identities are unchanged'
-  );
+  ).toBe(firstBindGroup);
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
   const thirdBindGroup = bindGroupFactory.getBindGroups(
@@ -158,11 +157,10 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
     (renderPipeline as any)._getBindingsByGroupWebGPU(),
     (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
   )[3];
-  t.notEqual(
+  expect(
     thirdBindGroup,
-    firstBindGroup,
     'render bind group is rebuilt when a binding object identity changes'
-  );
+  ).not.toBe(firstBindGroup);
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
   const fourthBindGroup = bindGroupFactory.getBindGroups(
@@ -170,25 +168,24 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
     (renderPipeline as any)._getBindingsByGroupWebGPU(),
     (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
   )[3];
-  t.equal(
+  expect(
     fourthBindGroup,
-    thirdBindGroup,
     'render bind group is reused again after the rebuilt group is cached'
-  );
+  ).toBe(thirdBindGroup);
 
   secondBuffer.destroy();
   firstBuffer.destroy();
   renderPipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('RenderPass owns pipeline, bindings, vertex array, and draw state', async t => {
+it('RenderPass owns pipeline, bindings, vertex array, and draw state', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -214,16 +211,15 @@ test('RenderPass owns pipeline, bindings, vertex array, and draw state', async t
     .getCurrentFramebuffer({depthStencilFormat: false});
   const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
 
-  t.throws(
+  expect(
     () => renderPass.setBindings({colorUniforms: uniformBuffer}),
-    /setPipeline.*must be called before setBindings/,
     'bindings require an active render pipeline'
-  );
+  ).toThrow(/setPipeline.*must be called before setBindings/);
 
   renderPass.setPipeline(renderPipeline);
   renderPass.setBindings({3: {colorUniforms: uniformBuffer}});
   renderPass.setVertexArray(vertexArray);
-  t.equal(renderPass.draw({vertexCount: 3}), true, 'render pass issues the draw');
+  expect(renderPass.draw({vertexCount: 3}), 'render pass issues the draw').toBe(true);
 
   renderPass.end();
   webgpuDevice.submit();
@@ -231,15 +227,15 @@ test('RenderPass owns pipeline, bindings, vertex array, and draw state', async t
   uniformBuffer.destroy();
   renderPipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('RenderPipeline creates a depth attachment descriptor when an explicit WebGPU depth format is supplied', async t => {
+it('RenderPipeline creates a depth attachment descriptor when an explicit WebGPU depth format is supplied', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -252,33 +248,30 @@ test('RenderPipeline creates a depth attachment descriptor when an explicit WebG
     depthStencilAttachmentFormat: 'depth24plus'
   }) as unknown as {descriptor?: GPURenderPipelineDescriptor | null; destroy(): void};
 
-  t.equal(
+  expect(
     renderPipeline.descriptor?.depthStencil?.format,
-    'depth24plus',
     'explicit depth attachment formats are preserved even when depth writes are disabled'
-  );
-  t.equal(
+  ).toBe('depth24plus');
+  expect(
     renderPipeline.descriptor?.depthStencil?.depthWriteEnabled,
-    false,
     'explicit depth attachment formats default depthWriteEnabled to false'
-  );
-  t.equal(
+  ).toBe(false);
+  expect(
     renderPipeline.descriptor?.depthStencil?.depthCompare,
-    'less-equal',
     'explicit depth attachment formats default depthCompare'
-  );
+  ).toBe('less-equal');
 
   renderPipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });
 
-test('WebGPU RenderPipeline skips draw when marked errored', async t => {
+it('WebGPU RenderPipeline skips draw when marked errored', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -293,7 +286,7 @@ test('WebGPU RenderPipeline skips draw when marked errored', async t => {
   });
 
   renderPipeline.linkStatus = 'error';
-  t.ok(renderPipeline.isErrored, 'render pipeline reports errored state');
+  expect(Boolean(renderPipeline.isErrored), 'render pipeline reports errored state').toBe(true);
 
   const vertexArray = webgpuDevice.createVertexArray({
     shaderLayout: renderPipeline.shaderLayout,
@@ -304,16 +297,15 @@ test('WebGPU RenderPipeline skips draw when marked errored', async t => {
     .getCurrentFramebuffer({depthStencilFormat: false});
   const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
 
-  t.equal(
+  expect(
     renderPipeline.draw({renderPass, vertexArray, vertexCount: 3}),
-    false,
     'errored render pipeline draw is skipped'
-  );
+  ).toBe(false);
 
   renderPass.end();
   renderPass.destroy();
   vertexArray.destroy();
   renderPipeline.destroy();
   shader.destroy();
-  t.end();
+  void 0;
 });

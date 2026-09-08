@@ -9,7 +9,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 The renderer owns the per-frame linked-list buffers and runs two stages:
 
 - one or more translucent capture slices,
-- a fullscreen `ShaderPassPipeline` resolve for each captured slice.
+- a fullscreen `CompositeShaderPass` resolve for each captured slice.
 
 ## Usage
 
@@ -103,7 +103,7 @@ export type ABufferRenderOptions = {
 storage buffers. `getABufferSlicePlan(...)` exposes the renderer's bounded-memory allocation
 calculation for diagnostics and tests.
 
-`createABufferResolveShaderPassPipeline({maxFragmentsPerPixel})` exposes the same one-slice
+`createABufferResolveCompositeShaderPass({maxFragmentsPerPixel})` exposes the same one-slice
 fullscreen resolve used internally by `ABufferRenderer`. The renderer invokes it once per captured
 slice so storage buffers can be reused without allocating full-frame fragment storage.
 
@@ -119,7 +119,7 @@ For each horizontal slice, the renderer:
 1. Clears linked-list heads and allocation counters.
 2. Captures visible translucent fragments after sampling opaque depth.
 3. Reads at most `maxFragmentsPerPixel` records per pixel.
-4. Runs `createABufferResolveShaderPassPipeline()` to sort records back-to-front and composite
+4. Runs `createABufferResolveCompositeShaderPass()` to sort records back-to-front and composite
    premultiplied color over the previous slice result.
 
 If storage capacity is exhausted, additional fragments are dropped. If a pixel contains more than

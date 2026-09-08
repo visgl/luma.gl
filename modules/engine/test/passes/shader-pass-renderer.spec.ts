@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {Buffer, CommandEncoder, Texture} from '@luma.gl/core';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import {Buffer, CommandEncoder, Texture, type Device} from '@luma.gl/core';
+import {supportsComputeOptimization} from '../../src/passes/shader-pass-renderer';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -159,7 +160,7 @@ vec4 stagedColor_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoor
   ]
 };
 
-const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+const stagedPipeline: CompositeShaderPass<'extract' | 'blurred'> = {
   name: 'stagedPipeline',
   renderTargets: {
     extract: {},
@@ -189,7 +190,57 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   ]
 };
 
-const tintPipeline: ShaderPassPipeline<'scratch'> = {
+it('ShaderPassRenderer compute optimization requires storage-capable output formats', () => {
+  const compositeShaderPass: CompositeShaderPass<'output'> = {
+    name: 'storage-capability-gate',
+    renderTargets: {output: {format: 'bgra8unorm', storage: true}},
+    steps: [],
+    compute: {
+      name: 'storage-capability-compute',
+      source: '',
+      uniformModule: 'storageCapability',
+      uniformBinding: 'storageCapabilityUniforms',
+      uniformNames: [],
+      uniforms: {},
+      input: 'original',
+      outputs: {outputTexture: 'output'},
+      replacedPasses: [],
+      workgroupSize: [8, 8]
+    }
+  };
+  let supportsStorage = false;
+  const device = {
+    type: 'webgpu',
+    preferredColorFormat: 'bgra8unorm',
+    limits: {
+      maxStorageTexturesPerShaderStage: 4,
+      maxComputeWorkgroupSizeX: 256,
+      maxComputeWorkgroupSizeY: 256,
+      maxComputeInvocationsPerWorkgroup: 256
+    },
+    getTextureFormatCapabilities: (format: 'bgra8unorm') => ({
+      format,
+      create: true,
+      render: true,
+      filter: true,
+      blend: true,
+      store: supportsStorage
+    })
+  } as unknown as Device;
+
+  expect(
+    supportsComputeOptimization(device, compositeShaderPass),
+    'unsupported storage format selects the render-pass fallback'
+  ).toBe(false);
+  supportsStorage = true;
+  expect(
+    supportsComputeOptimization(device, compositeShaderPass),
+    'storage-capable format enables the compute optimization'
+  ).toBe(true);
+  void 0;
+});
+
+const tintPipeline: CompositeShaderPass<'scratch'> = {
   name: 'tintPipeline',
   renderTargets: {scratch: {}},
   steps: [
@@ -218,7 +269,7 @@ const invalidOutputPass: ShaderPass = {
   passes: [{sampler: true, output: 'missing' as any}]
 };
 
-const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
+const selfAliasingPipeline: CompositeShaderPass<'scratch'> = {
   name: 'selfAliasing',
   renderTargets: {scratch: {}},
   steps: [
@@ -230,7 +281,7 @@ const selfAliasingPipeline: ShaderPassPipeline<'scratch'> = {
   ]
 };
 
-const reusedTargetPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+const reusedTargetPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
   name: 'reusedTarget',
   renderTargets: {
     extract: {sampler: {minFilter: 'linear', magFilter: 'linear'}},
@@ -263,7 +314,7 @@ const reusedTargetPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
   ]
 };
 
-const indirectlyAliasingPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+const indirectlyAliasingPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
   name: 'indirectlyAliasing',
   renderTargets: {
     extract: {},
@@ -278,7 +329,7 @@ const indirectlyAliasingPipeline: ShaderPassPipeline<'extract' | 'reconstructed'
   ]
 };
 
-const historyPipeline: ShaderPassPipeline<'historyColor'> = {
+const historyPipeline: CompositeShaderPass<'historyColor'> = {
   name: 'historyPipeline',
   renderTargets: {
     historyColor: {lifetime: 'history', initialize: 'original'}
@@ -297,17 +348,17 @@ const historyPipeline: ShaderPassPipeline<'historyColor'> = {
   ]
 };
 
-const reservedTargetPipeline: ShaderPassPipeline<'original'> = {
+const reservedTargetPipeline: CompositeShaderPass<'original'> = {
   name: 'reservedTarget',
   renderTargets: {original: {}},
   steps: [{shaderPass: copyPass}]
 };
 
-test('ShaderPassRenderer uses the configured previous-chain color format', async t => {
+it('ShaderPassRenderer uses the configured previous-chain color format', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -316,28 +367,26 @@ test('ShaderPassRenderer uses the configured previous-chain color format', async
     colorFormat: 'rgba16float'
   });
 
-  t.equal(
+  expect(
     renderer.swapFramebuffers.current.colorAttachments[0]?.texture.props.format,
-    'rgba16float',
     'current previous-chain texture keeps the requested HDR format'
-  );
-  t.equal(
+  ).toBe('rgba16float');
+  expect(
     renderer.swapFramebuffers.next.colorAttachments[0]?.texture.props.format,
-    'rgba16float',
     'next previous-chain texture keeps the requested HDR format'
-  );
+  ).toBe('rgba16float');
 
   renderer.destroy();
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer#renderToTexture', async t => {
+it('ShaderPassRenderer#renderToTexture', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
       continue; // eslint-disable-line no-continue
     }
-    t.comment(`Testing ${device.type}`);
+    void 0;
     const sourceTexture = new DynamicTexture(device, {
       id: 'source-texture',
       usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
@@ -347,7 +396,7 @@ test('ShaderPassRenderer#renderToTexture', async t => {
     await sourceTexture.ready;
 
     const pixels1 = await readPixels(sourceTexture.texture);
-    t.deepEqual(Array.from(pixels1), [255, 0, 0, 255], 'initialization success');
+    expect(Array.from(pixels1), 'initialization success').toEqual([255, 0, 0, 255]);
 
     const shaderInputs = new ShaderInputs({invert: invertPass});
     const renderer = new ShaderPassRenderer(device, {
@@ -356,18 +405,18 @@ test('ShaderPassRenderer#renderToTexture', async t => {
     });
     const output = renderer.renderToTexture({sourceTexture});
 
-    t.ok(output, 'produces output texture');
+    expect(Boolean(output), 'produces output texture').toBe(true);
 
     const pixelsOut = await readPixels(output!);
-    t.deepEqual(Array.from(pixelsOut), [0, 255, 255, 255], 'applies filter');
+    expect(Array.from(pixelsOut), 'applies filter').toEqual([0, 255, 255, 255]);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer applies runtime uniforms and accepts Texture inputs', async t => {
+it('ShaderPassRenderer applies runtime uniforms and accepts Texture inputs', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -395,22 +444,20 @@ test('ShaderPassRenderer applies runtime uniforms and accepts Texture inputs', a
       }
     });
 
-    t.ok(output, 'produces output texture from plain Texture input');
+    expect(Boolean(output), 'produces output texture from plain Texture input').toBe(true);
 
     const pixelsOut = await readPixels(output!);
-    t.deepEqual(
-      Array.from(pixelsOut),
-      [255, 128, 0, 255],
-      'applies runtime uniforms on top of pass defaults'
-    );
+    expect(Array.from(pixelsOut), 'applies runtime uniforms on top of pass defaults').toEqual([
+      255, 128, 0, 255
+    ]);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer resolves module-scoped default bindings and lets draw bindings override them', async t => {
+it('ShaderPassRenderer resolves module-scoped default bindings and lets draw bindings override them', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -449,33 +496,31 @@ test('ShaderPassRenderer resolves module-scoped default bindings and lets draw b
     });
 
     const defaultOutput = renderer.renderToTexture({sourceTexture});
-    t.ok(defaultOutput, 'renders using module-scoped default bindings');
-    t.deepEqual(
+    expect(Boolean(defaultOutput), 'renders using module-scoped default bindings').toBe(true);
+    expect(
       Array.from(await readPixels(defaultOutput!)),
-      [255, 255, 0, 255],
       'uses the default binding stored in shaderInputs'
-    );
+    ).toEqual([255, 255, 0, 255]);
 
     const overrideOutput = renderer.renderToTexture({
       sourceTexture,
       bindings: {tintTexture: overrideTintTexture.texture}
     });
-    t.ok(overrideOutput, 'renders using per-draw binding overrides');
-    t.deepEqual(
+    expect(Boolean(overrideOutput), 'renders using per-draw binding overrides').toBe(true);
+    expect(
       Array.from(await readPixels(overrideOutput!)),
-      [255, 0, 255, 255],
       'per-draw bindings override the stored module default'
-    );
+    ).toEqual([255, 0, 255, 255]);
 
     renderer.destroy();
     sourceTexture.destroy();
     defaultTintTexture.destroy();
     overrideTintTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer resolves module-scoped bindings inside ShaderPassPipeline steps', async t => {
+it('ShaderPassRenderer resolves module-scoped bindings inside CompositeShaderPass steps', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -508,18 +553,17 @@ test('ShaderPassRenderer resolves module-scoped bindings inside ShaderPassPipeli
     });
 
     const output = renderer.renderToTexture({sourceTexture});
-    t.ok(output, 'renders a pipeline using module-scoped bindings');
-    t.deepEqual(
+    expect(Boolean(output), 'renders a pipeline using module-scoped bindings').toBe(true);
+    expect(
       Array.from(await readPixels(output!)),
-      [255, 255, 0, 255],
       'pipeline steps read shaderInputs bindings from the correct pass module'
-    );
+    ).toEqual([255, 255, 0, 255]);
 
     renderer.destroy();
     sourceTexture.destroy();
     tintTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
 async function readPixels(texture: Texture): Promise<Uint8Array> {
@@ -537,7 +581,7 @@ async function readPixels(texture: Texture): Promise<Uint8Array> {
   }
 }
 
-test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
+it('ShaderPassRenderer reuses BackgroundTextureModel', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -560,15 +604,15 @@ test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
     renderer.renderToTexture({sourceTexture});
     renderer.renderToTexture({sourceTexture});
 
-    t.equal(renderer.textureModel, firstModel, 'reuses existing BackgroundTextureModel');
+    expect(renderer.textureModel, 'reuses existing BackgroundTextureModel').toBe(firstModel);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer accepts its previous output as the next source', async t => {
+it('ShaderPassRenderer accepts its previous output as the next source', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     const sourceTexture = new DynamicTexture(device, {
@@ -588,19 +632,18 @@ test('ShaderPassRenderer accepts its previous output as the next source', async 
     const secondOutput = renderer.renderToTexture({sourceTexture: firstOutput!});
     device.submit();
 
-    t.deepEqual(
+    expect(
       Array.from(await readPixels(secondOutput!)),
-      device.preferredColorFormat.startsWith('bgra') ? [0, 0, 255, 255] : [255, 0, 0, 255],
       `${device.type} safely reuses ping-pong output as the next input`
-    );
+    ).toEqual(device.preferredColorFormat.startsWith('bgra') ? [0, 0, 255, 255] : [255, 0, 0, 255]);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer supports explicit texture orientation', async t => {
+it('ShaderPassRenderer supports explicit texture orientation', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     const renderer = new ShaderPassRenderer(device, {
@@ -609,19 +652,20 @@ test('ShaderPassRenderer supports explicit texture orientation', async t => {
       flipY: false
     });
 
-    t.equal(renderer.textureModel.flipY, false, `${device.type} disables fullscreen Y flipping`);
-    t.equal(
-      renderer.passRenderers[0].subPassExecutions[0].subPassRenderer.flipY,
-      false,
-      `${device.type} disables shader-subpass Y flipping`
+    expect(renderer.textureModel.flipY, `${device.type} disables fullscreen Y flipping`).toBe(
+      false
     );
+    expect(
+      renderer.passRenderers[0].subPassExecutions[0].subPassRenderer.flipY,
+      `${device.type} disables shader-subpass Y flipping`
+    ).toBe(false);
 
     renderer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
+it('ShaderPassRenderer supports CompositeShaderPass targets', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -642,40 +686,40 @@ test('ShaderPassRenderer supports ShaderPassPipeline targets', async t => {
     });
     const output = renderer.renderToTexture({sourceTexture});
 
-    t.ok(output, 'produces output texture for staged pipeline');
+    expect(Boolean(output), 'produces output texture for staged pipeline').toBe(true);
 
     const pixelsOut = await readPixels(output!);
-    t.deepEqual(
+    expect(
       Array.from(pixelsOut),
-      [255, 128, 0, 255],
       'reads a pipeline target in a later step and writes back to previous'
-    );
+    ).toEqual([255, 128, 0, 255]);
 
     renderer.resize([4, 4]);
     const pipelineTargets = renderer.passRenderers[0].renderTargets as Record<
       string,
       {texture: Texture}
     >;
-    t.equal(pipelineTargets.extract.texture.width, 4, 'resizes full-size pipeline target width');
-    t.equal(pipelineTargets.blurred.texture.height, 2, 'resizes scaled pipeline target height');
-    t.equal(
-      pipelineTargets.blurred.texture.sampler?.props.minFilter,
-      'linear',
-      'applies named target sampler configuration'
+    expect(pipelineTargets.extract.texture.width, 'resizes full-size pipeline target width').toBe(
+      4
     );
+    expect(pipelineTargets.blurred.texture.height, 'resizes scaled pipeline target height').toBe(2);
+    expect(
+      pipelineTargets.blurred.texture.sampler?.props.minFilter,
+      'applies named target sampler configuration'
+    ).toBe('linear');
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer reuses compatible transient targets without double destruction', async t => {
+it('ShaderPassRenderer reuses compatible transient targets without double destruction', async () => {
   const devices = await getTestDevices();
   const device = devices.find(candidate => candidate.type !== 'webgpu');
   if (!device) {
-    t.comment('WebGL is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -694,41 +738,38 @@ test('ShaderPassRenderer reuses compatible transient targets without double dest
   });
 
   const targets = renderer.passRenderers[0].renderTargets;
-  t.equal(
-    targets.extract,
-    targets.reconstructed,
-    'logical target names share one owned allocation'
+  expect(targets.extract, 'logical target names share one owned allocation').toBe(
+    targets.reconstructed
   );
   const output = renderer.renderToTexture({sourceTexture});
-  t.deepEqual(
+  expect(
     Array.from(await readPixels(output!)),
-    [0, 255, 255, 255],
     'expired contents can be replaced by a later non-overlapping pass'
-  );
+  ).toEqual([0, 255, 255, 255]);
 
   const previousTexture = targets.extract.texture;
   renderer.resize([4, 4]);
-  t.ok(previousTexture.destroyed, 'resizing releases the old allocation');
-  t.equal(
-    targets.extract.texture,
-    targets.reconstructed.texture,
-    'resizing preserves target reuse'
+  expect(Boolean(previousTexture.destroyed), 'resizing releases the old allocation').toBe(true);
+  expect(targets.extract.texture, 'resizing preserves target reuse').toBe(
+    targets.reconstructed.texture
   );
-  t.equal(targets.extract.texture.width, 4, 'the shared allocation receives the new size');
+  expect(targets.extract.texture.width, 'the shared allocation receives the new size').toBe(4);
 
   const sharedTexture = targets.extract.texture;
   renderer.destroy();
-  t.ok(sharedTexture.destroyed, 'renderer destruction releases the shared allocation');
-  t.equal(
+  expect(
+    Boolean(sharedTexture.destroyed),
+    'renderer destruction releases the shared allocation'
+  ).toBe(true);
+  expect(
     activeTextureCount.count,
-    texturesBeforeRenderer,
     'all renderer-owned texture allocations are released exactly once'
-  );
+  ).toBe(texturesBeforeRenderer);
   sourceTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer supports persistent history targets', async t => {
+it('ShaderPassRenderer supports persistent history targets', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -749,80 +790,73 @@ test('ShaderPassRenderer supports persistent history targets', async t => {
     });
 
     const firstOutput = renderer.renderToTexture({sourceTexture});
-    t.deepEqual(
+    expect(
       Array.from(await readPixels(firstOutput!)),
-      [0, 255, 255, 255],
       'first frame reads initialized history'
-    );
+    ).toEqual([0, 255, 255, 255]);
 
     const secondOutput = renderer.renderToTexture({sourceTexture});
-    t.deepEqual(
+    expect(
       Array.from(await readPixels(secondOutput!)),
-      [255, 0, 0, 255],
       'second frame reads previous successful output'
-    );
+    ).toEqual([255, 0, 0, 255]);
 
     const resetOutput = renderer.renderToTexture({sourceTexture, resetHistory: true});
-    t.deepEqual(
+    expect(
       Array.from(await readPixels(resetOutput!)),
-      [0, 255, 255, 255],
       'explicit reset reinitializes history'
-    );
+    ).toEqual([0, 255, 255, 255]);
 
     const historyTarget = renderer.passRenderers[0].renderTargets.historyColor.texture;
     renderer.resize([historyTarget.width + 1, historyTarget.height + 1]);
     const resizedOutput = renderer.renderToTexture({sourceTexture});
-    t.deepEqual(
+    expect(
       Array.from(await readPixels(resizedOutput!)).slice(0, 4),
-      [0, 255, 255, 255],
       'resize resets history'
-    );
+    ).toEqual([0, 255, 255, 255]);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
+it('ShaderPassRenderer validates CompositeShaderPass routing', async () => {
   const devices = await getTestDevices();
   const webglDevice = devices.find(device => device.type !== 'webgpu');
-  t.ok(webglDevice, 'has a test device');
+  expect(Boolean(webglDevice), 'has a test device').toBe(true);
 
   if (!webglDevice) {
-    t.end();
+    void 0;
     return;
   }
 
-  t.throws(
+  expect(
     () =>
       new ShaderPassRenderer(webglDevice, {
         shaderPasses: [invalidInputPass],
         shaderInputs: new ShaderInputs({invalidInput: invalidInputPass})
       }),
-    /unknown input source "missing"/,
     'throws on unknown input source outside a pipeline'
-  );
+  ).toThrow(/unknown input source "missing"/);
 
-  t.throws(
+  expect(
     () =>
       new ShaderPassRenderer(webglDevice, {
         shaderPasses: [invalidOutputPass],
         shaderInputs: new ShaderInputs({invalidOutput: invalidOutputPass})
       }),
-    /unknown output target "missing"/,
     'throws on unknown output target outside a pipeline'
-  );
+  ).toThrow(/unknown output target "missing"/);
 
-  t.throws(
+  expect(
     () =>
       new ShaderPassRenderer(webglDevice, {
         shaderPasses: [reservedTargetPipeline],
         shaderInputs: new ShaderInputs({copy: copyPass})
       }),
-    /render target name "original" is reserved/,
     'throws on reserved pipeline target names'
-  );
+  ).toThrow(/render target name "original" is reserved/);
 
   for (const [description, alias] of [
     ['unknown target', {aliasFor: 'missing'}],
@@ -830,20 +864,19 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
     ['mismatched sampler', {aliasFor: 'extract', sampler: {minFilter: 'linear' as const}}],
     ['persistent history', {aliasFor: 'extract', lifetime: 'history' as const}]
   ] as const) {
-    const invalidAliasPipeline: ShaderPassPipeline<'extract' | 'reconstructed'> = {
+    const invalidAliasPipeline: CompositeShaderPass<'extract' | 'reconstructed'> = {
       name: 'invalidTargetAlias',
       renderTargets: {extract: {}, reconstructed: alias},
       steps: [{shaderPass: copyPass}]
     };
-    t.throws(
+    expect(
       () =>
         new ShaderPassRenderer(webglDevice, {
           shaderPasses: [invalidAliasPipeline],
           shaderInputs: new ShaderInputs({copy: copyPass})
         }),
-      /target alias/,
       `rejects ${description} aliases`
-    );
+    ).toThrow(/target alias/);
   }
 
   const sourceTexture = new DynamicTexture(webglDevice, {
@@ -858,29 +891,27 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
     shaderPasses: [selfAliasingPipeline],
     shaderInputs: new ShaderInputs({copy: copyPass})
   });
-  t.throws(
+  expect(
     () => aliasingRenderer.renderToTexture({sourceTexture}),
-    /cannot read and write render target "scratch"/,
     'throws on self-aliasing pipeline target'
-  );
+  ).toThrow(/cannot read and write render target "scratch"/);
 
   const indirectAliasRenderer = new ShaderPassRenderer(webglDevice, {
     shaderPasses: [indirectlyAliasingPipeline],
     shaderInputs: new ShaderInputs({combine: combinePass})
   });
-  t.throws(
+  expect(
     () => indirectAliasRenderer.renderToTexture({sourceTexture}),
-    /cannot sample from the render target it is writing to/,
     'rejects aliased targets sampled through a secondary texture binding'
-  );
+  ).toThrow(/cannot sample from the render target it is writing to/);
 
   aliasingRenderer.destroy();
   indirectAliasRenderer.destroy();
   sourceTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer calls BackgroundTextureModel.predraw before drawing', async t => {
+it('ShaderPassRenderer calls BackgroundTextureModel.predraw before drawing', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -909,21 +940,21 @@ test('ShaderPassRenderer calls BackgroundTextureModel.predraw before drawing', a
     renderer.renderToTexture({sourceTexture});
     renderer.renderToScreen({sourceTexture});
 
-    t.equal(predrawCallCount, 2, `${device.type} prepares background model before each pass`);
+    expect(predrawCallCount, `${device.type} prepares background model before each pass`).toBe(2);
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer encodes into a caller-owned command encoder', async t => {
+it('ShaderPassRenderer encodes into a caller-owned command encoder', async () => {
   const devices = await getTestDevices();
   const device = devices.find(candidate => candidate.type !== 'webgpu');
-  t.ok(device, 'has a test device');
+  expect(Boolean(device), 'has a test device').toBe(true);
 
   if (!device) {
-    t.end();
+    void 0;
     return;
   }
 
@@ -944,11 +975,10 @@ test('ShaderPassRenderer encodes into a caller-owned command encoder', async t =
     const foreignCommandEncoder = foreignDevice.createCommandEncoder({
       id: 'shader-pass-foreign-encoder'
     });
-    t.throws(
+    expect(
       () => renderer.encodeToTexture(foreignCommandEncoder, {sourceTexture}),
-      /must belong to the renderer device/,
       'rejects a command encoder from another device'
-    );
+    ).toThrow(/must belong to the renderer device/);
     foreignCommandEncoder.destroy();
   }
   const commandEncoder = device.createCommandEncoder({id: 'shader-pass-explicit-encoder'});
@@ -967,30 +997,28 @@ test('ShaderPassRenderer encodes into a caller-owned command encoder', async t =
 
   const rendered = renderer.encodeToScreen(commandEncoder, {sourceTexture});
 
-  t.ok(rendered, 'encodes the pass chain and presentation');
-  t.equal(
+  expect(Boolean(rendered), 'encodes the pass chain and presentation').toBe(true);
+  expect(
     renderPassCount,
-    3,
     'opens seed, shader, and presentation passes on the supplied encoder'
-  );
-  t.equal(
+  ).toBe(3);
+  expect(
     observedEncoders.filter(observedCommandEncoder => observedCommandEncoder === commandEncoder)
       .length,
-    2,
     'prepares source seeding and presentation on the supplied encoder'
-  );
+  ).toBe(2);
 
   commandEncoder.destroy();
   renderer.destroy();
   sourceTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer submits caller-owned WebGPU command encoders', async t => {
+it('ShaderPassRenderer submits caller-owned WebGPU command encoders', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1012,19 +1040,18 @@ test('ShaderPassRenderer submits caller-owned WebGPU command encoders', async t 
   const commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
 
-  t.ok(outputTexture, 'encodes an output texture');
-  t.deepEqual(
+  expect(Boolean(outputTexture), 'encodes an output texture').toBe(true);
+  expect(
     Array.from(await readPixels(outputTexture!)),
-    [0, 255, 255, 255],
     'submitted custom encoder produces the expected pixels'
-  );
+  ).toEqual([0, 255, 255, 255]);
 
   renderer.destroy();
   sourceTexture.destroy();
-  t.end();
+  void 0;
 });
 
-test('ShaderPassRenderer prepares each subpass before drawing', async t => {
+it('ShaderPassRenderer prepares each subpass before drawing', async () => {
   const devices = await getTestDevices();
   for (const device of devices) {
     if (device.type === 'webgpu') {
@@ -1057,14 +1084,12 @@ test('ShaderPassRenderer prepares each subpass before drawing', async t => {
 
     renderer.renderToTexture({sourceTexture});
 
-    t.equal(
-      prepareCallCount,
-      subPassRenderers.length,
-      `${device.type} prepares each subpass before beginRenderPass`
+    expect(prepareCallCount, `${device.type} prepares each subpass before beginRenderPass`).toBe(
+      subPassRenderers.length
     );
 
     renderer.destroy();
     sourceTexture.destroy();
   }
-  t.end();
+  void 0;
 });

@@ -1,13 +1,13 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import type {BufferLayout} from '@luma.gl/core';
 import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/gpgpu/gpu-data';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('GPUDataView validates and derives packed and strided ranges', t => {
+it('GPUDataView validates and derives packed and strided ranges', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 64});
   const packed = new GPUDataView({buffer, format: 'float32x2', length: 3});
@@ -25,29 +25,26 @@ test('GPUDataView validates and derives packed and strided ranges', t => {
     byteOffset: buffer.byteLength
   });
 
-  t.equal(packed.byteStride, 8, 'defaults stride to the format byte length');
-  t.equal(packed.elementByteLength, 8, 'derives the element byte length');
-  t.equal(packed.byteLength, 24, 'derives the packed occupied byte length');
-  t.equal(strided.elementByteLength, 12, 'derives a strided element payload');
-  t.equal(strided.byteLength, 28, 'includes inter-row padding in the occupied byte length');
-  t.equal(empty.byteLength, 0, 'accepts an empty view at the end of the buffer');
+  expect(packed.byteStride, 'defaults stride to the format byte length').toBe(8);
+  expect(packed.elementByteLength, 'derives the element byte length').toBe(8);
+  expect(packed.byteLength, 'derives the packed occupied byte length').toBe(24);
+  expect(strided.elementByteLength, 'derives a strided element payload').toBe(12);
+  expect(strided.byteLength, 'includes inter-row padding in the occupied byte length').toBe(28);
+  expect(empty.byteLength, 'accepts an empty view at the end of the buffer').toBe(0);
 
-  t.throws(
+  expect(
     () => new GPUDataView({buffer, format: 'uint32', length: -1}),
-    /length must be a non-negative safe integer/,
     'rejects negative lengths'
-  );
-  t.throws(
+  ).toThrow(/length must be a non-negative safe integer/);
+  expect(
     () => new GPUDataView({buffer, format: 'uint32', length: 1, byteOffset: -1}),
-    /byteOffset must be a non-negative safe integer/,
     'rejects negative offsets'
-  );
-  t.throws(
+  ).toThrow(/byteOffset must be a non-negative safe integer/);
+  expect(
     () => new GPUDataView({buffer, format: 'float32x2', length: 2, byteStride: 4}),
-    /smaller than float32x2 byte length/,
     'rejects overlapping values'
-  );
-  t.throws(
+  ).toThrow(/smaller than float32x2 byte length/);
+  expect(
     () =>
       new GPUDataView({
         buffer,
@@ -55,10 +52,9 @@ test('GPUDataView validates and derives packed and strided ranges', t => {
         length: Number.MAX_SAFE_INTEGER,
         byteStride: Number.MAX_SAFE_INTEGER
       }),
-    /byte range must use safe integers/,
     'rejects unsafe computed ranges'
-  );
-  t.throws(
+  ).toThrow(/byte range must use safe integers/);
+  expect(
     () =>
       new GPUDataView({
         buffer,
@@ -67,15 +63,13 @@ test('GPUDataView validates and derives packed and strided ranges', t => {
         byteOffset: 48,
         byteStride: 16
       }),
-    /exceeds its backing buffer/,
     'rejects ranges beyond the backing buffer'
-  );
+  ).toThrow(/exceeds its backing buffer/);
 
   buffer.destroy();
-  t.end();
 });
 
-test('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', t => {
+it('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', () => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 40});
   const bufferLayout: BufferLayout = {
@@ -101,14 +95,14 @@ test('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', t =
     byteOffset: 4
   });
 
-  t.equal(positions.buffer, buffer, 'positions borrow the source buffer');
-  t.equal(featureIds.buffer, buffer, 'feature ids borrow the same source buffer');
-  t.equal(positions.format, 'float32x3', 'preserves the attribute format');
-  t.equal(positions.byteOffset, 4, 'applies the base and attribute offsets');
-  t.equal(featureIds.byteOffset, 16, 'applies the second attribute offset');
-  t.equal(featureIds.byteStride, 16, 'applies the interleaved row stride');
+  expect(positions.buffer, 'positions borrow the source buffer').toBe(buffer);
+  expect(featureIds.buffer, 'feature ids borrow the same source buffer').toBe(buffer);
+  expect(positions.format, 'preserves the attribute format').toBe('float32x3');
+  expect(positions.byteOffset, 'applies the base and attribute offsets').toBe(4);
+  expect(featureIds.byteOffset, 'applies the second attribute offset').toBe(16);
+  expect(featureIds.byteStride, 'applies the interleaved row stride').toBe(16);
 
-  t.throws(
+  expect(
     () =>
       makeGPUDataViewFromAttribute({
         buffer,
@@ -116,10 +110,9 @@ test('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', t =
         attributeName: 'missing',
         length: 1
       }),
-    /does not contain attribute "missing"/,
     'rejects missing attributes'
-  );
-  t.throws(
+  ).toThrow(/does not contain attribute "missing"/);
+  expect(
     () =>
       makeGPUDataViewFromAttribute({
         buffer,
@@ -127,10 +120,9 @@ test('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', t =
         attributeName: 'positions',
         length: 1
       }),
-    /requires byteStride/,
     'requires an explicit interleaved stride'
-  );
-  t.throws(
+  ).toThrow(/requires byteStride/);
+  expect(
     () =>
       makeGPUDataViewFromAttribute({
         buffer,
@@ -141,10 +133,8 @@ test('makeGPUDataViewFromAttribute exposes borrowed interleaved attributes', t =
         attributeName: 'positions',
         length: 1
       }),
-    /requires a format/,
     'rejects attributes without runtime format metadata'
-  );
+  ).toThrow(/requires a format/);
 
   buffer.destroy();
-  t.end();
 });

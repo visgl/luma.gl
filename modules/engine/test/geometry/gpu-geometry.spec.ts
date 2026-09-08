@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {
   ConeGeometry,
   CubeGeometry,
@@ -25,57 +25,56 @@ const BUILT_IN_GEOMETRY_TESTS = [
   {name: 'TruncatedConeGeometry', Geometry: TruncatedConeGeometry}
 ];
 
-test('CubeGeometry exposes stable face indices for indexed and non-indexed cubes', t => {
+it('CubeGeometry exposes stable face indices for indexed and non-indexed cubes', () => {
   const indexedCube = new CubeGeometry({indices: true});
   const nonIndexedCube = new CubeGeometry({indices: false});
 
-  t.ok(indexedCube.attributes.faceIndex, 'indexed cube includes faceIndex');
-  t.deepEqual(
+  expect(indexedCube.attributes.faceIndex, 'indexed cube includes faceIndex').toBeTruthy();
+  expect(
     indexedCube.attributes.faceIndex?.value,
-    new Uint32Array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5]),
     'indexed cube stores one semantic face id per duplicated vertex'
+  ).toEqual(
+    new Uint32Array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
   );
-  t.ok(nonIndexedCube.attributes.faceIndex, 'non-indexed cube includes faceIndex');
-  t.deepEqual(
+  expect(nonIndexedCube.attributes.faceIndex, 'non-indexed cube includes faceIndex').toBeTruthy();
+  expect(
     nonIndexedCube.attributes.faceIndex?.value,
+    'non-indexed cube preserves semantic face ids across its vertex block order'
+  ).toEqual(
     new Uint32Array([
       3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 1,
       1, 1, 1, 1, 1
-    ]),
-    'non-indexed cube preserves semantic face ids across its vertex block order'
+    ])
   );
-
-  t.end();
 });
 
-test('makeGPUGeometry interleaves built-in geometry attributes', async t => {
+it('makeGPUGeometry interleaves built-in geometry attributes', async () => {
   const device = await getWebGLTestDevice();
 
   for (const {name, Geometry} of BUILT_IN_GEOMETRY_TESTS) {
     const gpuGeometry = makeGPUGeometry(device, new Geometry());
     const bufferLayout = gpuGeometry.bufferLayout[0];
 
-    t.deepEqual(
-      Object.keys(gpuGeometry.attributes),
-      ['geometry'],
-      `${name}: has one vertex buffer`
-    );
-    t.is(gpuGeometry.bufferLayout.length, 1, `${name}: has one buffer layout`);
-    t.is(bufferLayout.name, 'geometry', `${name}: buffer layout is named geometry`);
-    t.ok(bufferLayout.attributes?.length, `${name}: buffer layout maps geometry attributes`);
-    t.ok(gpuGeometry.indices, `${name}: keeps index buffer`);
+    expect(Object.keys(gpuGeometry.attributes), `${name}: has one vertex buffer`).toEqual([
+      'geometry'
+    ]);
+    expect(gpuGeometry.bufferLayout.length, `${name}: has one buffer layout`).toBe(1);
+    expect(bufferLayout.name, `${name}: buffer layout is named geometry`).toBe('geometry');
+    expect(
+      bufferLayout.attributes?.length,
+      `${name}: buffer layout maps geometry attributes`
+    ).toBeTruthy();
+    expect(gpuGeometry.indices, `${name}: keeps index buffer`).toBeTruthy();
 
     gpuGeometry.destroy();
   }
-
-  t.end();
 });
 
-test('makeGPUGeometry interleaves cube geometry into one vertex buffer', async t => {
+it('makeGPUGeometry interleaves cube geometry into one vertex buffer', async () => {
   const device = await getWebGLTestDevice();
   const gpuGeometry = makeGPUGeometry(device, new CubeGeometry({indices: true}));
 
-  t.deepEqual(gpuGeometry.bufferLayout, [
+  expect(gpuGeometry.bufferLayout).toEqual([
     {
       name: 'geometry',
       stepMode: 'vertex',
@@ -88,14 +87,11 @@ test('makeGPUGeometry interleaves cube geometry into one vertex buffer', async t
       ]
     }
   ]);
-  t.is(
-    gpuGeometry.attributes.geometry.byteLength,
-    24 * 36,
-    'cube has one interleaved vertex buffer'
+  expect(gpuGeometry.attributes.geometry.byteLength, 'cube has one interleaved vertex buffer').toBe(
+    24 * 36
   );
-  t.is(gpuGeometry.vertexCount, 36, 'indexed cube draw count is preserved');
-  t.ok(gpuGeometry.indices, 'indexed cube keeps index buffer');
+  expect(gpuGeometry.vertexCount, 'indexed cube draw count is preserved').toBe(36);
+  expect(gpuGeometry.indices, 'indexed cube keeps index buffer').toBeTruthy();
 
   gpuGeometry.destroy();
-  t.end();
 });

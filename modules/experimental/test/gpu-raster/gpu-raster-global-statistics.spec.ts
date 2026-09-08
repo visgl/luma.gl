@@ -13,7 +13,7 @@ import {
   type GPURasterGlobalAccumulator
 } from '@luma.gl/experimental/gpu-raster';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from '../../../../test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type GlobalFormat = 'float32' | 'uint32';
 type GlobalSamples = Float32Array | Uint32Array;
@@ -33,11 +33,11 @@ type GuardedAccumulator = {
   overflow: GuardedGlobalBuffer;
 };
 
-test('GPURaster global replay preserves offset guards, empty neutrality, and exact percentile endpoints', async testCase => {
+it('GPURaster global replay preserves offset guards, empty neutrality, and exact percentile endpoints', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -109,43 +109,36 @@ test('GPURaster global replay preserves offset guards, empty neutrality, and exa
   const compiled = graph.compile();
   submitGraph(device, compiled, 'submit-offset-backed-global');
 
-  testCase.deepEqual(
+  expect(
     await readGuarded(persistent.extent),
-    [floatGuard(), floatGuard(), 3, 11, floatGuard()],
     'first valid tile replaces finite empty extrema without touching neighboring bytes'
-  );
-  testCase.deepEqual(
+  ).toEqual([floatGuard(), floatGuard(), 3, 11, floatGuard()]);
+  expect(
     await readGuarded(persistent.count),
-    [unsignedGuard(), 2, unsignedGuard()],
     'only finite, unmasked, raw non-nodata observations contribute'
-  );
-  testCase.deepEqual(
+  ).toEqual([unsignedGuard(), 2, unsignedGuard()]);
+  expect(
     await readGuarded(persistent.sum),
-    [floatGuard(), floatGuard(), floatGuard(), 14, floatGuard()],
     'per-tile calibration contributes once and preserves offset-backed sum guards'
-  );
-  testCase.deepEqual(
+  ).toEqual([floatGuard(), floatGuard(), floatGuard(), 14, floatGuard()]);
+  expect(
     await readGuarded(persistent.histogram),
-    [unsignedGuard(), unsignedGuard(), 1, 0, 0, 1, unsignedGuard()],
     'replay bins calibrated observations against the final GPU-resident domain'
-  );
-  testCase.deepEqual(
+  ).toEqual([unsignedGuard(), unsignedGuard(), 1, 0, 0, 1, unsignedGuard()]);
+  expect(
     await readGuarded(persistent.overflow),
-    [unsignedGuard(), 0, unsignedGuard()],
     'ordinary graph-only replay leaves sticky overflow clear'
-  );
+  ).toEqual([unsignedGuard(), 0, unsignedGuard()]);
   for (const result of percentiles) {
     const expected = result.percentile === 0 ? 3 : result.percentile === 1 ? 11 : 4;
-    testCase.equal(
+    expect(
       (await readLogical(result.output))[0],
-      expected,
       'zero and one are exact extrema while interior estimates select bin centers'
-    );
-    testCase.deepEqual(
+    ).toBe(expected);
+    expect(
       await readGuarded(result.outputValidity),
-      [unsignedGuard(), unsignedGuard(), unsignedGuard(), 1, unsignedGuard()],
       'valid percentile flags respect their logical byte offset'
-    );
+    ).toEqual([unsignedGuard(), unsignedGuard(), unsignedGuard(), 1, unsignedGuard()]);
   }
 
   const empty = new GPUCommandGraph(device, {id: 'empty-global-replay'});
@@ -182,48 +175,43 @@ test('GPURaster global replay preserves offset guards, empty neutrality, and exa
   const compiledEmpty = empty.compile();
   submitGraph(device, compiledEmpty, 'submit-empty-global');
 
-  testCase.deepEqual(
+  expect(
     await readLogical(persistent.extent),
-    [0, 0],
     'all-invalid datasets preserve a finite neutral domain'
-  );
-  testCase.deepEqual(
+  ).toEqual([0, 0]);
+  expect(
     await readLogical(persistent.histogram),
-    [0, 0, 0, 0],
     'all-invalid replay never manufactures a histogram observation'
-  );
-  testCase.equal(
+  ).toEqual([0, 0, 0, 0]);
+  expect(
     (await readLogical(persistent.count))[0],
-    0,
     'all-invalid tiles preserve an empty global population'
-  );
-  testCase.ok(
-    Number.isNaN((await readLogical(invalidOutput))[0]),
+  ).toBe(0);
+  expect(
+    Boolean(Number.isNaN((await readLogical(invalidOutput))[0])),
     'empty percentiles publish an explicit floating invalid result'
-  );
-  testCase.equal(
-    (await readLogical(invalidValidity))[0],
-    0,
-    'empty percentiles publish zero validity'
+  ).toBe(true);
+  expect((await readLogical(invalidValidity))[0], 'empty percentiles publish zero validity').toBe(
+    0
   );
 
   compiledEmpty.destroy();
   compiled.destroy();
   for (const {buffer} of owned) {
-    testCase.notOk(
-      buffer.destroyed,
+    expect(
+      Boolean(buffer.destroyed),
       'graph destruction preserves caller-owned offset-backed storage'
-    );
+    ).toBe(false);
     buffer.destroy();
   }
-  testCase.end();
+  void 0;
 });
 
-test('GPURaster global merges preserve independent sum/count/bin overflow flags and atomic saturation', async testCase => {
+it('GPURaster global merges preserve independent sum/count/bin overflow flags and atomic saturation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -261,30 +249,26 @@ test('GPURaster global merges preserve independent sum/count/bin overflow flags 
   const compiledSum = sumGraph.compile();
   submitGraph(device, compiledSum, 'submit-floating-sum-overflow');
 
-  testCase.equal(
+  expect(
     (await readLogical(persistent.overflow))[0],
-    4,
     'a nonfinite floating sum publishes its independent sticky bit'
-  );
-  testCase.equal(
+  ).toBe(4);
+  expect(
     (await readLogical(persistent.sum))[0],
-    previousSum,
     'floating overflow retains the last finite caller-owned sum'
-  );
-  testCase.equal(
+  ).toBe(previousSum);
+  expect(
     (await readLogical(persistent.count))[0],
-    2,
     'floating overflow does not silently corrupt the exact valid population'
-  );
-  testCase.equal(
+  ).toBe(2);
+  expect(
     (await readLogical(sumValidity))[0],
-    0,
     'a floating overflow invalidates downstream percentile results'
-  );
-  testCase.ok(
-    Number.isNaN((await readLogical(sumOutput))[0]),
+  ).toBe(0);
+  expect(
+    Boolean(Number.isNaN((await readLogical(sumOutput))[0])),
     'floating overflow publishes an explicit invalid percentile'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiledReset, 'reset-before-atomic-overflow');
   writeLogical(persistent.extent, [0, 1]);
@@ -338,48 +322,42 @@ test('GPURaster global merges preserve independent sum/count/bin overflow flags 
   const compiledAtomic = atomicGraph.compile();
   submitGraph(device, compiledAtomic, 'submit-independent-atomic-overflow');
 
-  testCase.equal(
+  expect(
     (await readLogical(persistent.count))[0],
-    0xffffffff,
     'global population saturates without allocating billions of samples'
-  );
-  testCase.deepEqual(
+  ).toBe(0xffffffff);
+  expect(
     await readLogical(persistent.histogram),
-    [0xffffffff, 0, 0, 0xffffffff],
     'concurrent independent bins saturate rather than wrap'
-  );
-  testCase.equal(
+  ).toEqual([0xffffffff, 0, 0, 0xffffffff]);
+  expect(
     (await readLogical(persistent.overflow))[0],
-    3,
     'atomic histogram flags preserve the previously published count overflow'
-  );
-  testCase.equal(
+  ).toBe(3);
+  expect(
     (await readLogical(atomicValidity))[0],
-    0,
     'either saturated statistic invalidates percentile consumption'
-  );
-  testCase.ok(
-    Number.isNaN((await readLogical(atomicOutput))[0]),
+  ).toBe(0);
+  expect(
+    Boolean(Number.isNaN((await readLogical(atomicOutput))[0])),
     'saturated populations never masquerade as valid quantiles'
-  );
+  ).toBe(true);
 
   submitGraph(device, compiledReset, 'final-explicit-global-reset');
-  testCase.deepEqual(
+  expect(
     await readLogical(persistent.histogram),
-    [0, 0, 0, 0],
     'only explicit dataset reset clears every saturated persistent bin'
-  );
-  testCase.equal(
+  ).toEqual([0, 0, 0, 0]);
+  expect(
     (await readLogical(persistent.overflow))[0],
-    0,
     'explicit dataset reset clears all independent sticky bits'
-  );
+  ).toBe(0);
 
   compiledAtomic.destroy();
   compiledSum.destroy();
   compiledReset.destroy();
   for (const {buffer} of owned) buffer.destroy();
-  testCase.end();
+  void 0;
 });
 
 function makeAccumulator(

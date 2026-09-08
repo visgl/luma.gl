@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -16,11 +16,9 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-test('GPUPointSpatialFilter gives indexed and unindexed 2D visibility the same exact result', async t => {
+it('GPUPointSpatialFilter gives indexed and unindexed 2D visibility the same exact result', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -36,37 +34,31 @@ test('GPUPointSpatialFilter gives indexed and unindexed 2D visibility the same e
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readVisible(fixture.indexed), [1], 'grid candidates are refined exactly');
-  t.deepEqual(
+  expect(await readVisible(fixture.indexed), 'grid candidates are refined exactly').toEqual([1]);
+  expect(
     await readVisible(fixture.unindexed),
-    [1],
     'the full scan provides the same exact visibility oracle'
-  );
-  t.deepEqual(
+  ).toEqual([1]);
+  expect(
     await readUint32(fixture.candidateCount, 1),
-    [2],
     'the broad phase visits only points in intersecting cells'
-  );
-  t.deepEqual(await readUint32(fixture.indexed.overflow, 1), [0]);
+  ).toEqual([2]);
+  expect(await readUint32(fixture.indexed.overflow, 1)).toEqual([0]);
 
   fixture.query.write(Float32Array.from([1.5, 1.5, 0.6]));
   encode(device, fixture.compiled);
-  t.deepEqual((await readVisible(fixture.indexed)).sort(sortNumbers), [5, 6]);
-  t.deepEqual(
+  expect((await readVisible(fixture.indexed)).sort(sortNumbers)).toEqual([5, 6]);
+  expect(
     (await readVisible(fixture.unindexed)).sort(sortNumbers),
-    [5, 6],
     'query updates preserve indexed/unindexed equivalence without recompiling'
-  );
+  ).toEqual([5, 6]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUPointSpatialFilter composes 3D bounds candidates with selection visibility', async t => {
+it('GPUPointSpatialFilter composes 3D bounds candidates with selection visibility', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -83,23 +75,21 @@ test('GPUPointSpatialFilter composes 3D bounds candidates with selection visibil
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(await readVisible(fixture.indexed), [0], 'selection intersects exact spatial mask');
-  t.deepEqual(await readVisible(fixture.unindexed), [0], '3D indexed and scan paths agree');
-  t.deepEqual(
+  expect(await readVisible(fixture.indexed), 'selection intersects exact spatial mask').toEqual([
+    0
+  ]);
+  expect(await readVisible(fixture.unindexed), '3D indexed and scan paths agree').toEqual([0]);
+  expect(
     await readUint32(fixture.indexed.mask, 6),
-    [1, 0, 0, 0, 0, 0],
     'visibility publishes the composed canonical mask'
-  );
+  ).toEqual([1, 0, 0, 0, 0, 0]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
-test('GPUPointSpatialFilter compares large radii without squared-distance overflow', async t => {
+it('GPUPointSpatialFilter compares large radii without squared-distance overflow', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -113,19 +103,16 @@ test('GPUPointSpatialFilter compares large radii without squared-distance overfl
   });
   encode(device, fixture.compiled);
 
-  t.deepEqual(
+  expect(
     await readVisible(fixture.indexed),
-    [],
     'indexed refinement rejects the distant point'
-  );
-  t.deepEqual(
+  ).toEqual([]);
+  expect(
     await readVisible(fixture.unindexed),
-    [],
     'the exact full scan rejects inf-squared false positives'
-  );
+  ).toEqual([]);
 
   destroyFixture(fixture);
-  t.end();
 });
 
 type ResultBuffers = {

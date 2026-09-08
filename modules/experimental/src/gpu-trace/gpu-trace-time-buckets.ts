@@ -402,7 +402,9 @@ fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32
   let firstBucket = min(u32(max(floor((start - domainMinimum) / bucketDuration), 0.0)), BUCKET_COUNT - 1u);
   let lastTime = max(start, end - max(abs(end), 1.0) * 1e-7);
   let lastBucket = min(u32(max(floor((lastTime - domainMinimum) / bucketDuration), 0.0)), BUCKET_COUNT - 1u);
-  for (var bucketIndex = firstBucket; bucketIndex <= lastBucket; bucketIndex++) {
+  // BUCKET_COUNT is an independent safety bound for every storage access. Do not rely solely on
+  // float-to-u32 endpoint conversion: an inclusive u32 loop can wrap and keep a GPU queue resident.
+  for (var bucketIndex = firstBucket; bucketIndex < BUCKET_COUNT; bucketIndex++) {
     let bucketStart = domainMinimum + f32(bucketIndex) * bucketDuration;
     let bucketEnd = bucketStart + bucketDuration;
     let overlap = max(0.0, min(end, bucketEnd) - max(start, bucketStart));
@@ -410,6 +412,7 @@ fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32
       atomicAdd(&${countTarget}[COUNT_OUTPUT_OFFSET + bucketIndex], 1u);
       atomicAddFloat(&${durationTarget}[DURATION_OUTPUT_OFFSET + bucketIndex], overlap);
     }
+    if (bucketIndex >= lastBucket) { break; }
   }
 }`;
   addComputationPass(graph, {

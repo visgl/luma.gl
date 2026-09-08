@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,18 +10,15 @@ import {
   type GPUFiniteDifference2DOperator
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
 
 const WIDTH = 9;
 const HEIGHT = 7;
 const DX = 0.25;
 const DY = 0.4;
 
-test('GPUFiniteDifference2D matches analytic scalar derivatives including boundaries', async t => {
+it('GPUFiniteDifference2D matches analytic scalar derivatives including boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const scalar = sampleScalar((x, y) => 2 + 3 * x - 4 * y + 0.5 * x * x + 2 * y * y);
@@ -29,28 +27,24 @@ test('GPUFiniteDifference2D matches analytic scalar derivatives including bounda
   for (let index = 0; index < WIDTH * HEIGHT; index++) {
     const x = (index % WIDTH) * DX;
     const y = Math.floor(index / WIDTH) * DY;
-    close(t, gradient[index * 2], 3 + x, 0.0001, `gradient x ${index}`);
-    close(t, gradient[index * 2 + 1], -4 + 4 * y, 0.0001, `gradient y ${index}`);
-    close(t, laplacian[index], 5, 0.0002, `laplacian ${index}`);
+    close(gradient[index * 2], 3 + x, 0.0001, `gradient x ${index}`);
+    close(gradient[index * 2 + 1], -4 + 4 * y, 0.0001, `gradient y ${index}`);
+    close(laplacian[index], 5, 0.0002, `laplacian ${index}`);
   }
-  t.end();
 });
 
-test('GPUFiniteDifference2D matches rotational divergence and curl identities', async t => {
+it('GPUFiniteDifference2D matches rotational divergence and curl identities', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const vector = sampleVector((x, y) => [-2 * y + 0.25 * x, 2 * x - 0.25 * y]);
   const divergence = await runOperator(device, 'divergence', vector);
   const curl = await runOperator(device, 'curl', vector);
   for (let index = 0; index < WIDTH * HEIGHT; index++) {
-    close(t, divergence[index], 0, 0.00002, `divergence ${index}`);
-    close(t, curl[index], 4, 0.00002, `curl ${index}`);
+    close(divergence[index], 0, 0.00002, `divergence ${index}`);
+    close(curl[index], 4, 0.00002, `curl ${index}`);
   }
-  t.end();
 });
 
 async function runOperator(
@@ -119,12 +113,9 @@ function sampleVector(sample: (x: number, y: number) => readonly [number, number
   return values;
 }
 
-function close(
-  t: {ok(value: unknown, message?: string): void},
-  actual: number,
-  expected: number,
-  epsilon: number,
-  label: string
-): void {
-  t.ok(Math.abs(actual - expected) <= epsilon, `${label}: ${actual} ~= ${expected}`);
+function close(actual: number, expected: number, epsilon: number, label: string): void {
+  expect(
+    Boolean(Math.abs(actual - expected) <= epsilon),
+    `${label}: ${actual} ~= ${expected}`
+  ).toBe(true);
 }

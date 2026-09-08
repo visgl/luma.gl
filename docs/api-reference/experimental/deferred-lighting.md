@@ -42,7 +42,7 @@ limit.
 import {Buffer} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {
-  createDeferredLightingShaderPassPipeline,
+  createDeferredLightingCompositeShaderPass,
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
@@ -64,7 +64,7 @@ const pointLights = device.createBuffer({
 });
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [createDeferredLightingShaderPassPipeline()]
+  shaderPasses: [createDeferredLightingCompositeShaderPass()]
 });
 
 renderer.renderToScreen({
@@ -108,7 +108,7 @@ Its uniforms are `inverseProjectionMatrix`, `ambientColor`,
 `directionalLightDirectionView`, `directionalLightColor`, `directionalLightIntensity`, and
 `pointLightCount`.
 
-### `createDeferredLightingShaderPassPipeline(): ShaderPassPipeline`
+### `createDeferredLightingCompositeShaderPass(): CompositeShaderPass`
 
 Returns a one-step pipeline that reads the current `previous` color and writes the lighting result
 back into `previous`. Put it before SSAO, reflections, temporal accumulation, bloom, and tone

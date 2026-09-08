@@ -49,7 +49,7 @@ See [GPU table structure and lifecycle](/docs/api-reference/experimental/gpu-tab
 | Arrow polygon rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported polygon rows and preserve source-row identity for interaction. |
 | Arrow text rendering | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Render supported string and dictionary-encoded label columns. |
 | Source-row picking | Experimental | WebGPU + WebGL2 | `@luma.gl/arrow` | Map visible geometry and labels back to their original Arrow rows. |
-| GeoArrow tessellation | Experimental | WebGPU + WebGL2 | `@math.gl/geoarrow` | Handle supported mixed geometry, polygon holes, coordinate layouts, and worker-assisted tessellation. |
+| GeoArrow tessellation | Experimental | WebGPU + WebGL2 | `@math.gl/geoarrow` with `@luma.gl/arrow` adaptation | Handle supported mixed geometry, polygon holes, coordinate layouts, and renderer color expansion. |
 | deck.gl Arrow layers | Experimental | WebGPU + WebGL2 | `@deck.gl-community/arrow-layers` | Connect Arrow-backed paths, polygons, and text to compatible visualization layers. |
 | Text and glyph atlases | Experimental | WebGPU + WebGL2 | `@luma.gl/text` | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping. |
 | Dictionary-compressed labels | Experimental | WebGPU | `@luma.gl/text` | Reuse repeated label values through WebGPU storage-based text strategies. |

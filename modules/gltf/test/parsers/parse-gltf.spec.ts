@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
@@ -59,7 +59,7 @@ function collectVertexCounts(scenes: GroupNode[]): number[] {
   return vertexCounts;
 }
 
-test('gltf#getVertexCount - single POSITION attribute', t => {
+it('gltf#getVertexCount - single POSITION attribute', () => {
   const attributes = {
     POSITION: {
       value: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -67,32 +67,32 @@ test('gltf#getVertexCount - single POSITION attribute', t => {
     }
   };
 
-  t.equals(testGetVertexCount(attributes), 3, 'Should calculate correct vertex count');
-  t.end();
+  expect(testGetVertexCount(attributes), 'Should calculate correct vertex count').toBe(3);
+  void 0;
 });
 
-test('gltf#getVertexCount - multiple attributes', t => {
+it('gltf#getVertexCount - multiple attributes', () => {
   const attributes = {
     POSITION: {value: new Float32Array(12), size: 3},
     NORMAL: {value: new Float32Array(12), size: 3}
   };
 
-  t.equals(testGetVertexCount(attributes), 4, 'Should return consistent vertex count');
-  t.end();
+  expect(testGetVertexCount(attributes), 'Should return consistent vertex count').toBe(4);
+  void 0;
 });
 
 // loaders.gl uses 'components' (derived from glTF accessor.type: "VEC3" -> 3)
 // while luma.gl uses 'size'. This test ensures compatibility with loaders.gl output.
-test('gltf#getVertexCount - components instead of size', t => {
+it('gltf#getVertexCount - components instead of size', () => {
   const attributes = {
     POSITION: {value: new Float32Array(9), components: 3}
   };
 
-  t.equals(testGetVertexCount(attributes), 3, 'Should handle components attribute');
-  t.end();
+  expect(testGetVertexCount(attributes), 'Should handle components attribute').toBe(3);
+  void 0;
 });
 
-test('gltf#getVertexCount - non-float typed array', t => {
+it('gltf#getVertexCount - non-float typed array', () => {
   const attributes = {
     POSITION: {
       value: new Uint16Array([0, 32767, 65535, 1000, 2000, 3000]),
@@ -100,29 +100,26 @@ test('gltf#getVertexCount - non-float typed array', t => {
     }
   };
 
-  t.equals(testGetVertexCount(attributes), 2, 'Should handle quantized data');
-  t.end();
+  expect(testGetVertexCount(attributes), 'Should handle quantized data').toBe(2);
+  void 0;
 });
 
-test('gltf#getVertexCount - empty attributes throws', t => {
-  t.throws(
-    () => testGetVertexCount({}),
-    /Could not determine vertex count from attributes/,
-    'Should throw for empty attributes'
+it('gltf#getVertexCount - empty attributes throws', () => {
+  expect(() => testGetVertexCount({}), 'Should throw for empty attributes').toThrow(
+    /Could not determine vertex count from attributes/
   );
-  t.end();
+  void 0;
 });
 
-test('gltf#getVertexCount - null attributes skipped', t => {
-  t.throws(
+it('gltf#getVertexCount - null attributes skipped', () => {
+  expect(
     () => testGetVertexCount({POSITION: null, NORMAL: undefined}),
-    /Could not determine vertex count from attributes/,
     'Should throw when all attributes are null/undefined'
-  );
-  t.end();
+  ).toThrow(/Could not determine vertex count from attributes/);
+  void 0;
 });
 
-test('gltf#parseGLTF - box.glb integration', async t => {
+it('gltf#parseGLTF - box.glb integration', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
@@ -131,18 +128,18 @@ test('gltf#parseGLTF - box.glb integration', async t => {
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
 
-    t.ok(result.scenes, 'Should create scenes');
-    t.ok(result.scenes.length > 0, 'Should have at least one scene');
-    t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 36, 'Vertex count should be 36 (from indices)');
+    expect(Boolean(result.scenes), 'Should create scenes').toBe(true);
+    expect(Boolean(result.scenes.length > 0), 'Should have at least one scene').toBe(true);
+    expect(Boolean(vertexCounts.length > 0), 'Should have at least one model').toBe(true);
+    expect(vertexCounts[0], 'Vertex count should be 36 (from indices)').toBe(36);
   } finally {
     webglDevice.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF - non-indexed geometry', async t => {
+it('gltf#parseGLTF - non-indexed geometry', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
@@ -153,19 +150,19 @@ test('gltf#parseGLTF - non-indexed geometry', async t => {
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
 
-    t.notOk(primitive?.indices, 'Primitive should not have indices');
-    t.ok(result.scenes, 'Should create scenes from non-indexed glTF');
-    t.ok(result.scenes.length > 0, 'Should have at least one scene');
-    t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
+    expect(Boolean(primitive?.indices), 'Primitive should not have indices').toBe(false);
+    expect(Boolean(result.scenes), 'Should create scenes from non-indexed glTF').toBe(true);
+    expect(Boolean(result.scenes.length > 0), 'Should have at least one scene').toBe(true);
+    expect(Boolean(vertexCounts.length > 0), 'Should have at least one model').toBe(true);
+    expect(vertexCounts[0], 'Vertex count should be 24 (from POSITION attribute)').toBe(24);
   } finally {
     webglDevice.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
+it('gltf#parseGLTF - KHR_mesh_quantization point cloud', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
@@ -178,28 +175,28 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
 
-    t.ok(
-      extensions.includes('KHR_mesh_quantization'),
+    expect(
+      Boolean(extensions.includes('KHR_mesh_quantization')),
       'File should use KHR_mesh_quantization extension'
-    );
-    t.ok(positionAccessor?.normalized, 'POSITION should be normalized');
-    t.ok(
-      positionAccessor?.value instanceof Uint16Array,
+    ).toBe(true);
+    expect(Boolean(positionAccessor?.normalized), 'POSITION should be normalized').toBe(true);
+    expect(
+      Boolean(positionAccessor?.value instanceof Uint16Array),
       'POSITION should use Uint16Array (quantized)'
-    );
-    t.notOk(primitive?.indices, 'Point cloud should not have indices');
-    t.ok(result.scenes, 'Should create scenes from quantized glTF');
-    t.ok(result.scenes.length > 0, 'Should have at least one scene');
-    t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
+    ).toBe(true);
+    expect(Boolean(primitive?.indices), 'Point cloud should not have indices').toBe(false);
+    expect(Boolean(result.scenes), 'Should create scenes from quantized glTF').toBe(true);
+    expect(Boolean(result.scenes.length > 0), 'Should have at least one scene').toBe(true);
+    expect(Boolean(vertexCounts.length > 0), 'Should have at least one model').toBe(true);
+    expect(vertexCounts[0], 'Vertex count should be 24 (from POSITION attribute)').toBe(24);
   } finally {
     webglDevice.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
+it('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
@@ -212,27 +209,27 @@ test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
 
-    t.notOk(
-      extensions.includes('KHR_mesh_quantization'),
+    expect(
+      Boolean(extensions.includes('KHR_mesh_quantization')),
       'File should NOT use KHR_mesh_quantization extension'
-    );
-    t.ok(
-      positionAccessor?.value instanceof Float32Array,
+    ).toBe(false);
+    expect(
+      Boolean(positionAccessor?.value instanceof Float32Array),
       'POSITION should use Float32Array (non-quantized)'
-    );
-    t.ok(primitive?.indices, 'Mesh should have indices');
-    t.ok(result.scenes, 'Should create scenes from non-quantized glTF');
-    t.ok(result.scenes.length > 0, 'Should have at least one scene');
-    t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+    ).toBe(true);
+    expect(Boolean(primitive?.indices), 'Mesh should have indices').toBe(true);
+    expect(Boolean(result.scenes), 'Should create scenes from non-quantized glTF').toBe(true);
+    expect(Boolean(result.scenes.length > 0), 'Should have at least one scene').toBe(true);
+    expect(Boolean(vertexCounts.length > 0), 'Should have at least one model').toBe(true);
+    expect(vertexCounts[0], 'Vertex count should be 3072 (from indices)').toBe(3072);
   } finally {
     webglDevice.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
+it('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
@@ -246,29 +243,32 @@ test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
 
-    t.ok(
-      extensions.includes('KHR_mesh_quantization'),
+    expect(
+      Boolean(extensions.includes('KHR_mesh_quantization')),
       'File should use KHR_mesh_quantization extension'
-    );
-    t.ok(normalAccessor?.normalized, 'NORMAL should be normalized');
-    t.ok(normalAccessor?.value instanceof Int8Array, 'NORMAL should use Int8Array (snorm8x3)');
-    t.ok(
-      positionAccessor?.value instanceof Uint16Array,
+    ).toBe(true);
+    expect(Boolean(normalAccessor?.normalized), 'NORMAL should be normalized').toBe(true);
+    expect(
+      Boolean(normalAccessor?.value instanceof Int8Array),
+      'NORMAL should use Int8Array (snorm8x3)'
+    ).toBe(true);
+    expect(
+      Boolean(positionAccessor?.value instanceof Uint16Array),
       'POSITION should use Uint16Array (uint16x3)'
-    );
-    t.ok(primitive?.indices, 'Mesh should have indices');
-    t.ok(result.scenes, 'Should create scenes from quantized glTF');
-    t.ok(result.scenes.length > 0, 'Should have at least one scene');
-    t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+    ).toBe(true);
+    expect(Boolean(primitive?.indices), 'Mesh should have indices').toBe(true);
+    expect(Boolean(result.scenes), 'Should create scenes from quantized glTF').toBe(true);
+    expect(Boolean(result.scenes.length > 0), 'Should have at least one scene').toBe(true);
+    expect(Boolean(vertexCounts.length > 0), 'Should have at least one model').toBe(true);
+    expect(vertexCounts[0], 'Vertex count should be 3072 (from indices)').toBe(3072);
   } finally {
     webglDevice.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF resolves extension textures for shared materials', t => {
+it('gltf#parseGLTF resolves extension textures for shared materials', () => {
   const material = {
     id: 'material-0',
     extensions: {
@@ -344,13 +344,16 @@ test('gltf#parseGLTF resolves extension textures for shared materials', t => {
   const {materials} = parseGLTF(device, gltf, {});
   const bindings = materials[0].getBindings();
 
-  t.ok(bindings.pbr_clearcoatSampler, 'shared material owns clearcoat sampler binding');
+  expect(
+    Boolean(bindings.pbr_clearcoatSampler),
+    'shared material owns clearcoat sampler binding'
+  ).toBe(true);
 
   materials.forEach(parsedMaterial => parsedMaterial.destroy());
-  t.end();
+  void 0;
 });
 
-test('gltf#parseGLTF routes IBL bindings onto model shader inputs', t => {
+it('gltf#parseGLTF routes IBL bindings onto model shader inputs', () => {
   const material = {
     id: 'material-0',
     pbrMetallicRoughness: {
@@ -444,27 +447,25 @@ test('gltf#parseGLTF routes IBL bindings onto model shader inputs', t => {
 
   const bindingValues = firstModelNode?.model.shaderInputs.getBindingValues();
 
-  t.ok(firstModelNode, 'scene contains a model node');
-  t.equal(
+  expect(Boolean(firstModelNode), 'scene contains a model node').toBe(true);
+  expect(
     bindingValues.pbr_diffuseEnvSampler,
-    diffuseTexture,
     'diffuse IBL texture is routed to model bindings'
-  );
-  t.equal(
+  ).toBe(diffuseTexture);
+  expect(
     bindingValues.pbr_specularEnvSampler,
-    specularTexture,
     'specular IBL texture is routed to model bindings'
-  );
-  t.equal(bindingValues.pbr_brdfLUT, brdfTexture, 'BRDF LUT is routed to model bindings');
-  t.notOk(
-    materials[0].getBindings().pbr_diffuseEnvSampler,
+  ).toBe(specularTexture);
+  expect(bindingValues.pbr_brdfLUT, 'BRDF LUT is routed to model bindings').toBe(brdfTexture);
+  expect(
+    Boolean(materials[0].getBindings().pbr_diffuseEnvSampler),
     'IBL bindings are not stranded on the material bind group'
-  );
+  ).toBe(false);
 
   firstModelNode.model.destroy();
   materials.forEach(parsedMaterial => parsedMaterial.destroy());
   diffuseTexture.destroy();
   specularTexture.destroy();
   brdfTexture.destroy();
-  t.end();
+  void 0;
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   DrawCommandBuffer,
@@ -31,11 +31,11 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const BUFFER_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 
-test('GPUTraceScene preserves canonical trace topology and projects stable generic scene rows', async t => {
+it('GPUTraceScene preserves canonical trace topology and projects stable generic scene rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -53,21 +53,23 @@ test('GPUTraceScene preserves canonical trace topology and projects stable gener
     geometryId: 12
   });
 
-  t.equal(trace.scene.recordCount, 3, 'every source span has one generic scene record');
-  t.notOk(trace.scene.mutable, 'borrowed canonical records do not invent CPU mutation metadata');
-  t.deepEqual(
+  expect(trace.scene.recordCount, 'every source span has one generic scene record').toBe(3);
+  expect(
+    Boolean(trace.scene.mutable),
+    'borrowed canonical records do not invent CPU mutation metadata'
+  ).toBe(false);
+  expect(
     trace.partitions.map(({firstSpan, spanCount}) => ({firstSpan, spanCount})),
-    [
-      {firstSpan: 0, spanCount: 1},
-      {firstSpan: 1, spanCount: 0},
-      {firstSpan: 1, spanCount: 2}
-    ],
     'empty and uneven source batches retain stable global row offsets'
-  );
-  t.deepEqual(await readUint32(trace.buffers.outgoingOffsets), [0, 2, 3, 3]);
-  t.deepEqual(await readUint32(trace.buffers.outgoingNeighbors), [1, 2, 2]);
-  t.deepEqual(await readUint32(trace.buffers.incomingOffsets), [0, 0, 1, 3]);
-  t.deepEqual(await readUint32(trace.buffers.incomingNeighbors), [0, 0, 1]);
+  ).toEqual([
+    {firstSpan: 0, spanCount: 1},
+    {firstSpan: 1, spanCount: 0},
+    {firstSpan: 1, spanCount: 2}
+  ]);
+  expect(await readUint32(trace.buffers.outgoingOffsets), '').toEqual([0, 2, 3, 3]);
+  expect(await readUint32(trace.buffers.outgoingNeighbors), '').toEqual([1, 2, 2]);
+  expect(await readUint32(trace.buffers.incomingOffsets), '').toEqual([0, 0, 1, 3]);
+  expect(await readUint32(trace.buffers.incomingNeighbors), '').toEqual([0, 0, 1]);
 
   const sceneBytes = await trace.scene.recordBuffer.readAsync();
   const sceneWords = new Uint32Array(
@@ -81,51 +83,58 @@ test('GPUTraceScene preserves canonical trace topology and projects stable gener
     sceneBytes.byteLength / 4
   );
   const recordWords = GPU_SCENE_RECORD_BYTE_LENGTH / Uint32Array.BYTES_PER_ELEMENT;
-  t.deepEqual(
+  expect(
     [0, 1, 2].map(index => sceneWords[index * recordWords]),
-    [101, 205, 309],
     'scene identity follows stable source IDs rather than row positions'
-  );
-  t.deepEqual(
+  ).toEqual([101, 205, 309]);
+  expect(
     [sceneWords[3], sceneWords[4], sceneWords[recordWords + 3], sceneWords[recordWords + 4]],
-    [12, 0, 12, 1],
     'geometry identity and command slots remain explicit renderer references'
-  );
-  t.deepEqual(
+  ).toEqual([12, 0, 12, 1]);
+  expect(
     [sceneFloats[8], sceneFloats[9], sceneFloats[12], sceneFloats[13]],
-    [10, 2, 14, 3],
     'time and lane become generic axis-aligned scene bounds'
-  );
+  ).toEqual([10, 2, 14, 3]);
 
   const graph = new GPUCommandGraph(device, {id: 'trace-scene-source-test'});
   const view = trace.importToGraph(graph);
-  t.equal(view.startTimes.byteStride, 32, 'typed temporal views borrow canonical packed rows');
-  t.equal(view.processIds.byteOffset, 16, 'process membership retains its source field offset');
-  t.equal(view.threadIds.byteOffset, 20, 'thread membership retains its source field offset');
-  t.equal(view.linkDestinations.byteStride, 16, 'dependencies preserve their packed record layout');
-  t.equal(view.scene.objectIds.length, 3, 'scene and canonical views share global row identity');
-  t.equal(trace.stats.partitionCount, 3);
-  t.equal(trace.stats.linkCount, 3);
-  t.equal(
+  expect(view.startTimes.byteStride, 'typed temporal views borrow canonical packed rows').toBe(32);
+  expect(view.processIds.byteOffset, 'process membership retains its source field offset').toBe(16);
+  expect(view.threadIds.byteOffset, 'thread membership retains its source field offset').toBe(20);
+  expect(view.linkDestinations.byteStride, 'dependencies preserve their packed record layout').toBe(
+    16
+  );
+  expect(view.scene.objectIds.length, 'scene and canonical views share global row identity').toBe(
+    3
+  );
+  expect(trace.stats.partitionCount, '').toBe(3);
+  expect(trace.stats.linkCount, '').toBe(3);
+  expect(
     trace.stats.totalByteLength,
-    trace.stats.canonicalByteLength + trace.stats.topologyByteLength + trace.stats.sceneByteLength,
     'allocation accounting exposes the full trace-to-scene projection cost'
+  ).toBe(
+    trace.stats.canonicalByteLength + trace.stats.topologyByteLength + trace.stats.sceneByteLength
   );
 
   const sourceBuffer = trace.buffers.spans;
   const sceneBuffer = trace.scene.recordBuffer;
   trace.destroy();
   trace.destroy();
-  t.ok(sourceBuffer.destroyed, 'canonical allocations are released exactly once');
-  t.ok(sceneBuffer.destroyed, 'projected generic scene allocations are released exactly once');
-  t.end();
+  expect(Boolean(sourceBuffer.destroyed), 'canonical allocations are released exactly once').toBe(
+    true
+  );
+  expect(
+    Boolean(sceneBuffer.destroyed),
+    'projected generic scene allocations are released exactly once'
+  ).toBe(true);
+  void 0;
 });
 
-test('GPUTraceScene feeds shared visibility, indirect draws, and renderer resource groups', async t => {
+it('GPUTraceScene feeds shared visibility, indirect draws, and renderer resource groups', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -175,13 +184,13 @@ test('GPUTraceScene feeds shared visibility, indirect draws, and renderer resour
   const encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(await readUint32(counts.buffer), [1, 1]);
-  t.deepEqual(await readUint32(required.buffer), [2]);
-  t.deepEqual(await readUint32(published.buffer), [2]);
-  t.deepEqual(await readUint32(overflow.buffer), [0]);
+  expect(await readUint32(counts.buffer), '').toEqual([1, 1]);
+  expect(await readUint32(required.buffer), '').toEqual([2]);
+  expect(await readUint32(published.buffer), '').toEqual([2]);
+  expect(await readUint32(overflow.buffer), '').toEqual([0]);
   const commandWords = await readUint32(commands.buffer);
-  t.deepEqual([commandWords[1], commandWords[5], commandWords[9]], [1, 0, 1]);
-  t.deepEqual([commandWords[3], commandWords[11]], [0, 2]);
+  expect([commandWords[1], commandWords[5], commandWords[9]], '').toEqual([1, 0, 1]);
+  expect([commandWords[3], commandWords[11]], '').toEqual([0, 2]);
 
   compiled.destroy();
   commands.destroy();
@@ -197,14 +206,14 @@ test('GPUTraceScene feeds shared visibility, indirect draws, and renderer resour
   ]) {
     output.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceAggregation composes selection-aware counts and duration statistics', async t => {
+it('GPUTraceAggregation composes selection-aware counts and duration statistics', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -250,17 +259,15 @@ test('GPUTraceAggregation composes selection-aware counts and duration statistic
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readUint32(processCounts.buffer), [1, 1], 'selection masks source rows');
-  t.deepEqual(
+  expect(await readUint32(processCounts.buffer), 'selection masks source rows').toEqual([1, 1]);
+  expect(
     await readFloat32(groupDurationSums.buffer),
-    [0, 0, 0, 0, 4, 8],
     'duration sums remain aligned with dense renderer-group identities'
-  );
-  t.deepEqual(
+  ).toEqual([0, 0, 0, 0, 4, 8]);
+  expect(
     await readFloat32(processDurationMeans.buffer),
-    [3, 8],
     'duration means reuse canonical duration values without CPU expansion'
-  );
+  ).toEqual([3, 8]);
 
   compiled.destroy();
   trace.destroy();
@@ -268,14 +275,14 @@ test('GPUTraceAggregation composes selection-aware counts and duration statistic
   processCounts.buffer.destroy();
   groupDurationSums.buffer.destroy();
   processDurationMeans.buffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTraceTemporalIndex publishes one stable guarded candidate selection', async t => {
+it('GPUTraceTemporalIndex publishes one stable guarded candidate selection', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -331,7 +338,7 @@ test('GPUTraceTemporalIndex publishes one stable guarded candidate selection', a
       candidateCount: candidateCount.view
     }
   });
-  t.deepEqual(temporalIndex.stats, {batchCount: 5, levelCount: 1, maximumNodeCount: 5});
+  expect(temporalIndex.stats, '').toEqual({batchCount: 5, levelCount: 1, maximumNodeCount: 5});
   temporalIndex.addToGraph(graph);
   const compiled = graph.compile();
 
@@ -339,20 +346,18 @@ test('GPUTraceTemporalIndex publishes one stable guarded candidate selection', a
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(
+  expect(
     (await readUint32(candidates.buffer)).slice(0, (await readUint32(candidateCount.buffer))[0]),
-    [1, 2],
     'guard padding and enabled groups conservatively retain intersecting leaf batches'
-  );
+  ).toEqual([1, 2]);
   writeTemporalQuery(queryBuffer, [7, 13, 0], 0b111);
   encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(
+  expect(
     (await readUint32(candidates.buffer)).slice(0, (await readUint32(candidateCount.buffer))[0]),
-    [1, 2, 3],
     'changing the guarded query republishes the same stable output in source order'
-  );
+  ).toEqual([1, 2, 3]);
 
   compiled.destroy();
   for (const resource of [
@@ -367,14 +372,14 @@ test('GPUTraceTemporalIndex publishes one stable guarded candidate selection', a
     resource.buffer.destroy();
   }
   queryBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTraceTemporalIndexBuilder rebuilds only dirty persistent partitions', async t => {
+it('GPUTraceTemporalIndexBuilder rebuilds only dirty persistent partitions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -435,7 +440,7 @@ test('GPUTraceTemporalIndexBuilder rebuilds only dirty persistent partitions', a
     dirtyPartitions: dirtyPartitions.view,
     validationErrors: validationErrors.view
   });
-  t.deepEqual(builder.stats, {
+  expect(builder.stats, '').toEqual({
     batchCount: 4,
     nodeCount: 2,
     levelCount: 1,
@@ -450,12 +455,14 @@ test('GPUTraceTemporalIndexBuilder rebuilds only dirty persistent partitions', a
 
   let builtWords = await readUint32(hierarchy.buffer);
   let builtFloats = new Float32Array(Uint32Array.from(builtWords).buffer);
-  t.deepEqual(Array.from(builtFloats.slice(0, 3)), [0, 5, 3]);
-  t.deepEqual(builtWords.slice(6, 8), [1, 4]);
-  t.deepEqual(Array.from(builtFloats.slice(8, 11)), [10, 18, 6]);
-  t.deepEqual(builtWords.slice(14, 16), [4, 8]);
-  t.deepEqual(await readUint32(dirtyPartitions.buffer), [0, 0], 'processed partitions clear');
-  t.deepEqual(await readUint32(validationErrors.buffer), [0], 'valid topology reports no errors');
+  expect(Array.from(builtFloats.slice(0, 3)), '').toEqual([0, 5, 3]);
+  expect(builtWords.slice(6, 8), '').toEqual([1, 4]);
+  expect(Array.from(builtFloats.slice(8, 11)), '').toEqual([10, 18, 6]);
+  expect(builtWords.slice(14, 16), '').toEqual([4, 8]);
+  expect(await readUint32(dirtyPartitions.buffer), 'processed partitions clear').toEqual([0, 0]);
+  expect(await readUint32(validationErrors.buffer), 'valid topology reports no errors').toEqual([
+    0
+  ]);
 
   const updatedRow = new Uint32Array(6);
   const updatedFloats = new Float32Array(updatedRow.buffer);
@@ -469,22 +476,22 @@ test('GPUTraceTemporalIndexBuilder rebuilds only dirty persistent partitions', a
 
   builtWords = await readUint32(hierarchy.buffer);
   builtFloats = new Float32Array(Uint32Array.from(builtWords).buffer);
-  t.deepEqual(Array.from(builtFloats.slice(0, 3)), [0, 5, 3], 'clean partition is preserved');
-  t.deepEqual(Array.from(builtFloats.slice(8, 11)), [10, 24, 12], 'dirty summary updates');
-  t.deepEqual(builtWords.slice(14, 16), [3, 10], 'dirty lane bounds update');
+  expect(Array.from(builtFloats.slice(0, 3)), 'clean partition is preserved').toEqual([0, 5, 3]);
+  expect(Array.from(builtFloats.slice(8, 11)), 'dirty summary updates').toEqual([10, 24, 12]);
+  expect(builtWords.slice(14, 16), 'dirty lane bounds update').toEqual([3, 10]);
 
   compiled.destroy();
   for (const output of [batches, hierarchy, dirtyPartitions, validationErrors]) {
     output.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceMipmapBoundaries matches monotonic lower bounds across sorted segments', async t => {
+it('GPUTraceMipmapBoundaries matches monotonic lower bounds across sorted segments', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -527,7 +534,7 @@ test('GPUTraceMipmapBoundaries matches monotonic lower bounds across sorted segm
     output: output.view,
     validationErrors: validationErrors.view
   });
-  t.deepEqual(boundaries.stats, {
+  expect(boundaries.stats, '').toEqual({
     segmentCount: 3,
     maximumPixelCount: 64,
     boundariesPerTile: 8,
@@ -542,12 +549,11 @@ test('GPUTraceMipmapBoundaries matches monotonic lower bounds across sorted segm
     device.submit(encoder.finish());
   };
   encode();
-  t.deepEqual(
+  expect(
     await readUint32(output.buffer),
-    getMipmapBoundaryOracle(startValues, segmentOffsets, 0, 20, 64),
     'binary tile seeds and forward gallops match independent lower bounds'
-  );
-  t.deepEqual(await readUint32(validationErrors.buffer), [0]);
+  ).toEqual(getMipmapBoundaryOracle(startValues, segmentOffsets, 0, 20, 64));
+  expect(await readUint32(validationErrors.buffer), '').toEqual([0]);
 
   domain.buffer.write(new Float32Array([3, 10]));
   pixelCount.buffer.write(new Uint32Array([12]));
@@ -556,38 +562,38 @@ test('GPUTraceMipmapBoundaries matches monotonic lower bounds across sorted segm
   const dynamicExpected = getMipmapBoundaryOracle(startValues, segmentOffsets, 3, 10, 12);
   for (let segmentIndex = 0; segmentIndex < 3; segmentIndex++) {
     const outputOffset = segmentIndex * 65;
-    t.deepEqual(
+    expect(
       dynamicOutput.slice(outputOffset, outputOffset + 13),
-      dynamicExpected.slice(outputOffset, outputOffset + 13),
       `dynamic query preserves segment ${segmentIndex} lower bounds`
-    );
+    ).toEqual(dynamicExpected.slice(outputOffset, outputOffset + 13));
   }
 
   domain.buffer.write(new Float32Array([0, 0]));
   encode();
-  t.equal((await readUint32(validationErrors.buffer))[0] & 1, 1, 'invalid domains are reported');
+  expect((await readUint32(validationErrors.buffer))[0] & 1, 'invalid domains are reported').toBe(
+    1
+  );
 
   domain.buffer.write(new Float32Array([0, 20]));
   segments.buffer.write(new Uint32Array([0, 256, 255, 261]));
   encode();
-  t.equal(
+  expect(
     (await readUint32(validationErrors.buffer))[0] & 2,
-    2,
     'non-monotonic segment offsets are reported'
-  );
+  ).toBe(2);
 
   compiled.destroy();
   for (const resource of [starts, segments, domain, pixelCount, output, validationErrors]) {
     resource.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceLaneIndexBuilder preserves canonical IDs in lane/time order', async t => {
+it('GPUTraceLaneIndexBuilder preserves canonical IDs in lane/time order', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -656,7 +662,7 @@ test('GPUTraceLaneIndexBuilder preserves canonical IDs in lane/time order', asyn
       validationErrors: validationErrors.view
     }
   });
-  t.deepEqual(builder.stats, {spanCount: 8, laneCount: 3, sortCount: 2});
+  expect(builder.stats, '').toEqual({spanCount: 8, laneCount: 3, sortCount: 2});
   builder.addToGraph(graph);
   new GPUTraceLaneIndexBuilder({
     id: 'compact-lane-index',
@@ -680,26 +686,25 @@ test('GPUTraceLaneIndexBuilder preserves canonical IDs in lane/time order', asyn
   };
 
   encode();
-  t.deepEqual(await readUint32(sortedSpanIds.buffer), [1, 3, 6, 5, 2, 0, 7, 4]);
-  t.deepEqual(await readFloat32(sortedStarts.buffer), [-1, 2, 4, 0, 2, 5, 3, 7]);
-  t.deepEqual(await readFloat32(sortedDurations.buffer), [1, 1, 1, 1, 2, 2, 2, 2]);
-  t.deepEqual(await readUint32(laneOffsets.buffer), [0, 3, 6, 8]);
-  t.deepEqual(await readUint32(validationErrors.buffer), [0]);
-  t.deepEqual(await readUint32(compactSpanIds.buffer), [1, 3, 6, 5, 2, 0, 7, 4]);
-  t.deepEqual(await readUint32(compactLaneOffsets.buffer), [0, 3, 6, 8]);
-  t.deepEqual(await readUint32(compactValidationErrors.buffer), [0]);
+  expect(await readUint32(sortedSpanIds.buffer), '').toEqual([1, 3, 6, 5, 2, 0, 7, 4]);
+  expect(await readFloat32(sortedStarts.buffer), '').toEqual([-1, 2, 4, 0, 2, 5, 3, 7]);
+  expect(await readFloat32(sortedDurations.buffer), '').toEqual([1, 1, 1, 1, 2, 2, 2, 2]);
+  expect(await readUint32(laneOffsets.buffer), '').toEqual([0, 3, 6, 8]);
+  expect(await readUint32(validationErrors.buffer), '').toEqual([0]);
+  expect(await readUint32(compactSpanIds.buffer), '').toEqual([1, 3, 6, 5, 2, 0, 7, 4]);
+  expect(await readUint32(compactLaneOffsets.buffer), '').toEqual([0, 3, 6, 8]);
+  expect(await readUint32(compactValidationErrors.buffer), '').toEqual([0]);
 
   sourceWords[4 * 3 + 2] = 9;
   sourceFloats[4 * 3] = Number.NaN;
   sourceFloats[0 * 3 + 1] = -1;
   sourceBuffer.write(sourceWords);
   encode();
-  t.equal(
+  expect(
     (await readUint32(validationErrors.buffer))[0],
-    1 | 2 | 4,
     'invalid time, lane, and duration rows are reported together'
-  );
-  t.deepEqual(await readUint32(laneOffsets.buffer), [0, 3, 6, 7], 'invalid lanes are excluded');
+  ).toBe(1 | 2 | 4);
+  expect(await readUint32(laneOffsets.buffer), 'invalid lanes are excluded').toEqual([0, 3, 6, 7]);
 
   compiled.destroy();
   sourceBuffer.destroy();
@@ -715,14 +720,14 @@ test('GPUTraceLaneIndexBuilder preserves canonical IDs in lane/time order', asyn
   ]) {
     output.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', async t => {
+it('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -788,7 +793,7 @@ test('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', 
     output: maximumDurationTree.view,
     validationErrors: maximumTreeValidation.view
   });
-  t.deepEqual(maximumTreeBuilder.stats, {
+  expect(maximumTreeBuilder.stats, '').toEqual({
     spanCount: 9,
     laneCount: 2,
     leafCapacity: 8,
@@ -813,7 +818,7 @@ test('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', 
     output: output.view,
     validationErrors: validationErrors.view
   });
-  t.deepEqual(mipmap.stats, {
+  expect(mipmap.stats, '').toEqual({
     laneCount: 2,
     sourceSpanCount: 9,
     orderedSpanCount: 9,
@@ -847,28 +852,27 @@ test('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', 
 
   encode();
   const tree = await readUint32(maximumDurationTree.buffer);
-  t.equal(tree[1], 0, 'lane zero tree root selects its longest secondary-index row');
-  t.equal(tree[17], 7, 'lane one tree root selects its longest secondary-index row');
-  t.deepEqual(await readUint32(maximumTreeValidation.buffer), [0]);
-  t.deepEqual(
-    await readUint32(output.buffer),
-    [10, 13, 0xffffffff, 0xffffffff, 14, 20, 23, 23, 22, 0xffffffff]
-  );
-  t.deepEqual(await readUint32(validationErrors.buffer), [0]);
-  t.deepEqual(
+  expect(tree[1], 'lane zero tree root selects its longest secondary-index row').toBe(0);
+  expect(tree[17], 'lane one tree root selects its longest secondary-index row').toBe(7);
+  expect(await readUint32(maximumTreeValidation.buffer), '').toEqual([0]);
+  expect(await readUint32(output.buffer), '').toEqual([
+    10, 13, 0xffffffff, 0xffffffff, 14, 20, 23, 23, 22, 0xffffffff
+  ]);
+  expect(await readUint32(validationErrors.buffer), '').toEqual([0]);
+  expect(
     await readUint32(filteredOutput.buffer),
-    [10, 13, 0xffffffff, 0xffffffff, 14, 20, 21, 0xffffffff, 22, 0xffffffff],
     'filtering happens before each pixel chooses its longest canonical span'
-  );
-  t.deepEqual(await readUint32(filteredValidationErrors.buffer), [0]);
+  ).toEqual([10, 13, 0xffffffff, 0xffffffff, 14, 20, 21, 0xffffffff, 22, 0xffffffff]);
+  expect(await readUint32(filteredValidationErrors.buffer), '').toEqual([0]);
 
   pixelCount.buffer.write(Uint32Array.of(2));
   encode();
-  t.deepEqual(
+  expect(
     await readUint32(output.buffer),
-    [10, 13, 0xffffffff, 0xffffffff, 0xffffffff, 20, 23, 0xffffffff, 0xffffffff, 0xffffffff],
     'inactive fixed-capacity cells are cleared when viewport width decreases'
-  );
+  ).toEqual([
+    10, 13, 0xffffffff, 0xffffffff, 0xffffffff, 20, 23, 0xffffffff, 0xffffffff, 0xffffffff
+  ]);
 
   compiled.destroy();
   for (const resource of [
@@ -886,14 +890,14 @@ test('GPUTracePixelMipmap selects longest non-overlapping span per lane/pixel', 
   ]) {
     resource.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', async t => {
+it('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -929,7 +933,7 @@ test('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', a
       summary: summary.view
     }
   });
-  t.deepEqual(criticalPath.stats, {
+  expect(criticalPath.stats, '').toEqual({
     spanCount: 7,
     pointerJumpPassCount: 4,
     maximumCriticalPathLength: 7
@@ -944,11 +948,14 @@ test('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', a
     device.submit(stepEncoder.finish());
     executionStepCount++;
   }
-  t.ok(executionStepCount > 1, 'critical analysis can advance through bounded graph steps');
+  expect(
+    Boolean(executionStepCount > 1),
+    'critical analysis can advance through bounded graph steps'
+  ).toBe(true);
 
-  t.deepEqual(await readFloat32(pathDurations.buffer), [2, 5, 10, 9, 1, 5, 10]);
-  t.deepEqual(await readFloat32(slackDurations.buffer), [8, 5, 0, 1, 9, 5, 0]);
-  t.deepEqual(await readUint32(criticalPredecessors.buffer), [
+  expect(await readFloat32(pathDurations.buffer), '').toEqual([2, 5, 10, 9, 1, 5, 10]);
+  expect(await readFloat32(slackDurations.buffer), '').toEqual([8, 5, 0, 1, 9, 5, 0]);
+  expect(await readUint32(criticalPredecessors.buffer), '').toEqual([
     GPU_SCENE_INVALID_REFERENCE,
     0,
     1,
@@ -957,22 +964,22 @@ test('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', a
     4,
     5
   ]);
-  t.deepEqual(await readUint32(rootIndices.buffer), [0, 0, 0, 0, 4, 4, 4]);
-  t.deepEqual(await readUint32(hopCounts.buffer), [0, 1, 2, 1, 0, 1, 2]);
-  t.deepEqual(await readUint32(criticalMask.buffer), [1, 1, 1, 0, 0, 0, 0]);
+  expect(await readUint32(rootIndices.buffer), '').toEqual([0, 0, 0, 0, 4, 4, 4]);
+  expect(await readUint32(hopCounts.buffer), '').toEqual([0, 1, 2, 1, 0, 1, 2]);
+  expect(await readUint32(criticalMask.buffer), '').toEqual([1, 1, 1, 0, 0, 0, 0]);
   let summaryWords = await readUint32(summary.buffer);
-  t.equal(new Float32Array(Uint32Array.from([summaryWords[0]]).buffer)[0], 10);
-  t.deepEqual(summaryWords.slice(1), [2, 2, 0], 'ties choose the lowest stable endpoint');
+  expect(new Float32Array(Uint32Array.from([summaryWords[0]]).buffer)[0], '').toBe(10);
+  expect(summaryWords.slice(1), 'ties choose the lowest stable endpoint').toEqual([2, 2, 0]);
 
   parents.buffer.write(Uint32Array.from([1, 0, 99, 0, GPU_SCENE_INVALID_REFERENCE, 4, 5]));
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
   summaryWords = await readUint32(summary.buffer);
-  t.equal(summaryWords[1], 6, 'cyclic paths are excluded from endpoint selection');
-  t.equal(summaryWords[3] & 1, 1, 'invalid parents are reported');
-  t.equal(summaryWords[3] & 4, 4, 'cycles are reported');
-  t.deepEqual(await readUint32(criticalMask.buffer), [0, 0, 0, 0, 1, 1, 1]);
+  expect(summaryWords[1], 'cyclic paths are excluded from endpoint selection').toBe(6);
+  expect(summaryWords[3] & 1, 'invalid parents are reported').toBe(1);
+  expect(summaryWords[3] & 4, 'cycles are reported').toBe(4);
+  expect(await readUint32(criticalMask.buffer), '').toEqual([0, 0, 0, 0, 1, 1, 1]);
 
   compiled.destroy();
   for (const resource of [
@@ -988,14 +995,14 @@ test('GPUTraceCriticalPath resolves, ranks, and masks canonical parent paths', a
   ]) {
     resource.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceComparison publishes aligned aggregate deltas and stable regressions', async t => {
+it('GPUTraceComparison publishes aligned aggregate deltas and stable regressions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1061,39 +1068,39 @@ test('GPUTraceComparison publishes aligned aggregate deltas and stable regressio
       summary: summary.view
     }
   });
-  t.deepEqual(comparison.stats, {groupCount: 3});
+  expect(comparison.stats, '').toEqual({groupCount: 3});
   comparison.addToGraph(graph);
   const compiled = graph.compile();
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(await readFloat32(countDeltas.buffer), [20, -20, 0]);
-  t.deepEqual(await readFloat32(durationDeltas.buffer), [2, -2, 4]);
+  expect(await readFloat32(countDeltas.buffer), '').toEqual([20, -20, 0]);
+  expect(await readFloat32(durationDeltas.buffer), '').toEqual([2, -2, 4]);
   const actualRatios = await readFloat32(durationRatios.buffer);
-  t.ok(Math.abs(actualRatios[0] - 1.2) < 0.0001);
-  t.ok(Math.abs(actualRatios[1] - 0.8) < 0.0001);
-  t.ok(
-    Math.abs(actualRatios[2] - 4000) < 0.001,
+  expect(Boolean(Math.abs(actualRatios[0] - 1.2) < 0.0001), '').toBe(true);
+  expect(Boolean(Math.abs(actualRatios[1] - 0.8) < 0.0001), '').toBe(true);
+  expect(
+    Boolean(Math.abs(actualRatios[2] - 4000) < 0.001),
     'zero baseline means use the explicit duration floor'
-  );
+  ).toBe(true);
   const actualErrorDeltas = await readFloat32(errorRateDeltas.buffer);
-  t.ok(Math.abs(actualErrorDeltas[0]) < 0.0001);
-  t.ok(Math.abs(actualErrorDeltas[1] - 0.3) < 0.0001);
-  t.ok(Math.abs(actualErrorDeltas[2]) < 0.0001);
-  t.deepEqual(await readUint32(regressionMask.buffer), [0, 1, 1]);
+  expect(Boolean(Math.abs(actualErrorDeltas[0]) < 0.0001), '').toBe(true);
+  expect(Boolean(Math.abs(actualErrorDeltas[1] - 0.3) < 0.0001), '').toBe(true);
+  expect(Boolean(Math.abs(actualErrorDeltas[2]) < 0.0001), '').toBe(true);
+  expect(await readUint32(regressionMask.buffer), '').toEqual([0, 1, 1]);
   let summaryWords = await readUint32(summary.buffer);
-  t.equal(summaryWords[0], 2);
-  t.equal(summaryWords[2], 2, 'largest stable group regression is selected');
-  t.equal(summaryWords[3], 0);
+  expect(summaryWords[0], '').toBe(2);
+  expect(summaryWords[2], 'largest stable group regression is selected').toBe(2);
+  expect(summaryWords[3], '').toBe(0);
 
   baselineErrorRates.buffer.write(new Float32Array([0.05, 2, 0]));
   encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
   summaryWords = await readUint32(summary.buffer);
-  t.equal(summaryWords[3] & 2, 2, 'invalid baseline summaries are reported');
-  t.equal((await readUint32(regressionMask.buffer))[1], 0, 'invalid groups cannot regress');
+  expect(summaryWords[3] & 2, 'invalid baseline summaries are reported').toBe(2);
+  expect((await readUint32(regressionMask.buffer))[1], 'invalid groups cannot regress').toBe(0);
 
   compiled.destroy();
   for (const resource of [
@@ -1113,14 +1120,14 @@ test('GPUTraceComparison publishes aligned aggregate deltas and stable regressio
   ]) {
     resource.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceAnomalyScoring matches an explicit peer-policy CPU oracle', async t => {
+it('GPUTraceAnomalyScoring matches an explicit peer-policy CPU oracle', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1159,7 +1166,7 @@ test('GPUTraceAnomalyScoring matches an explicit peer-policy CPU oracle', async 
     maximumRowsPerPass: 2,
     output: {scores: scores.view, anomalyMask: anomalyMask.view, summary: summary.view}
   });
-  t.deepEqual(scoring.stats, {spanCount: 6, groupCount: 2, chunkCount: 1});
+  expect(scoring.stats, '').toEqual({spanCount: 6, groupCount: 2, chunkCount: 1});
   scoring.addToGraph(graph);
   const compiled = graph.compile();
   const execution = compiled.createExecution({maximumInvocationCount: 2});
@@ -1170,30 +1177,35 @@ test('GPUTraceAnomalyScoring matches an explicit peer-policy CPU oracle', async 
     device.submit(stepEncoder.finish());
     executionStepCount++;
   }
-  t.ok(executionStepCount > 1, 'anomaly scoring can advance through bounded graph steps');
+  expect(
+    Boolean(executionStepCount > 1),
+    'anomaly scoring can advance through bounded graph steps'
+  ).toBe(true);
 
   const expectedScores = [0.2, 1.2, 6.8, 0.4, 4.6, 0.4];
   const actualScores = await readFloat32(scores.buffer);
-  t.ok(
-    actualScores.every((score, index) => Math.abs(score - expectedScores[index]) < 0.0001),
+  expect(
+    Boolean(actualScores.every((score, index) => Math.abs(score - expectedScores[index]) < 0.0001)),
     'scores match the duration-z plus error-delta CPU oracle'
-  );
-  t.deepEqual(await readUint32(anomalyMask.buffer), [0, 0, 1, 0, 1, 0]);
+  ).toBe(true);
+  expect(await readUint32(anomalyMask.buffer), '').toEqual([0, 0, 1, 0, 1, 0]);
   let summaryWords = await readUint32(summary.buffer);
-  t.equal(summaryWords[0], 2, 'summary counts thresholded anomalies');
-  t.ok(
-    Math.abs(new Float32Array(Uint32Array.from([summaryWords[1]]).buffer)[0] - 6.8) < 0.0001,
+  expect(summaryWords[0], 'summary counts thresholded anomalies').toBe(2);
+  expect(
+    Boolean(
+      Math.abs(new Float32Array(Uint32Array.from([summaryWords[1]]).buffer)[0] - 6.8) < 0.0001
+    ),
     'summary retains the maximum score'
-  );
-  t.deepEqual(summaryWords.slice(2), [2, 0], 'maximum index is stable and inputs validate');
+  ).toBe(true);
+  expect(summaryWords.slice(2), 'maximum index is stable and inputs validate').toEqual([2, 0]);
 
   groups.buffer.write(Uint32Array.from([0, 0, 7, 1, 1, 1]));
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
   summaryWords = await readUint32(summary.buffer);
-  t.equal(summaryWords[3] & 1, 1, 'out-of-range peer groups are reported');
-  t.equal((await readUint32(anomalyMask.buffer))[2], 0, 'invalid rows cannot become anomalies');
+  expect(summaryWords[3] & 1, 'out-of-range peer groups are reported').toBe(1);
+  expect((await readUint32(anomalyMask.buffer))[2], 'invalid rows cannot become anomalies').toBe(0);
 
   compiled.destroy();
   for (const resource of [
@@ -1209,14 +1221,14 @@ test('GPUTraceAnomalyScoring matches an explicit peer-policy CPU oracle', async 
   ]) {
     resource.buffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('GPUTraceTemporalIndex expands hierarchy nodes into one conservative selection', async t => {
+it('GPUTraceTemporalIndex expands hierarchy nodes into one conservative selection', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1357,7 +1369,7 @@ test('GPUTraceTemporalIndex expands hierarchy nodes into one conservative select
       candidateCount: candidateCount.view
     }
   });
-  t.deepEqual(temporalIndex.stats, {batchCount: 8, levelCount: 3, maximumNodeCount: 4});
+  expect(temporalIndex.stats, '').toEqual({batchCount: 8, levelCount: 3, maximumNodeCount: 4});
   temporalIndex.addToGraph(graph);
   const compiled = graph.compile();
 
@@ -1365,29 +1377,26 @@ test('GPUTraceTemporalIndex expands hierarchy nodes into one conservative select
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(
+  expect(
     (await readUint32(candidates.buffer)).slice(0, (await readUint32(candidateCount.buffer))[0]),
-    [2, 3, 4, 5],
     'fine nodes expand into stable source-ordered leaf ranges'
-  );
+  ).toEqual([2, 3, 4, 5]);
   writeTemporalQuery(queryBuffer, [4.5, 10.5, 0], 0b11, 0, [4, 5]);
   encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(
+  expect(
     (await readUint32(candidates.buffer)).slice(0, (await readUint32(candidateCount.buffer))[0]),
-    [4, 5],
     'hierarchy nodes outside the vertical viewport are rejected'
-  );
+  ).toEqual([4, 5]);
   writeTemporalQuery(queryBuffer, [4.5, 10.5, 0], 0b11, 1);
   encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
-  t.deepEqual(
+  expect(
     (await readUint32(candidates.buffer)).slice(0, (await readUint32(candidateCount.buffer))[0]),
-    [0, 1, 2, 3, 4, 5, 6, 7],
     'coarse selection remains conservative and source ordered'
-  );
+  ).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   compiled.destroy();
   for (const resource of [
     leafMinimumTimes,
@@ -1408,14 +1417,14 @@ test('GPUTraceTemporalIndex expands hierarchy nodes into one conservative select
     resource.buffer.destroy();
   }
   queryBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', async t => {
+it('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1466,29 +1475,27 @@ test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', as
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  t.deepEqual(
+  expect(
     await readUint32(counts.buffer),
-    [1, 0, 1, 1],
     'each selected interval contributes to every intersected bucket'
-  );
-  t.deepEqual(
+  ).toEqual([1, 0, 1, 1]);
+  expect(
     await readFloat32(durations.buffer),
-    [4, 0, 5, 3],
     'duration contributions are clipped exactly at bucket boundaries'
-  );
-  t.deepEqual(roundValues(await readFloat32(concurrency.buffer)), [0.8, 0, 1, 0.6]);
-  t.deepEqual(roundValues(await readFloat32(utilization.buffer)), [0.4, 0, 0.5, 0.3]);
-  t.deepEqual(await readFloat32(idleLaneTime.buffer), [6, 10, 5, 7]);
+  ).toEqual([4, 0, 5, 3]);
+  expect(roundValues(await readFloat32(concurrency.buffer)), '').toEqual([0.8, 0, 1, 0.6]);
+  expect(roundValues(await readFloat32(utilization.buffer)), '').toEqual([0.4, 0, 0.5, 0.3]);
+  expect(await readFloat32(idleLaneTime.buffer), '').toEqual([6, 10, 5, 7]);
 
   domainBuffer.write(Float32Array.of(10, 20));
   const updatedEncoder = device.createCommandEncoder();
   compiled.encode(updatedEncoder, {parameters: undefined});
   device.submit(updatedEncoder.finish());
-  t.deepEqual(await readUint32(counts.buffer), [1, 1, 0, 0], 'GPU domains update in place');
-  t.deepEqual(await readFloat32(durations.buffer), [2.5, 1.5, 0, 0]);
-  t.deepEqual(roundValues(await readFloat32(concurrency.buffer)), [1, 0.6, 0, 0]);
-  t.deepEqual(roundValues(await readFloat32(utilization.buffer)), [0.5, 0.3, 0, 0]);
-  t.deepEqual(await readFloat32(idleLaneTime.buffer), [2.5, 3.5, 5, 5]);
+  expect(await readUint32(counts.buffer), 'GPU domains update in place').toEqual([1, 1, 0, 0]);
+  expect(await readFloat32(durations.buffer), '').toEqual([2.5, 1.5, 0, 0]);
+  expect(roundValues(await readFloat32(concurrency.buffer)), '').toEqual([1, 0.6, 0, 0]);
+  expect(roundValues(await readFloat32(utilization.buffer)), '').toEqual([0.5, 0.3, 0, 0]);
+  expect(await readFloat32(idleLaneTime.buffer), '').toEqual([2.5, 3.5, 5, 5]);
 
   const sharedGraph = new GPUCommandGraph(device, {id: 'trace-time-buckets-shared-output-test'});
   const sharedSource = trace.importToGraph(sharedGraph);
@@ -1520,7 +1527,7 @@ test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', as
   sharedCompiled.encode(sharedEncoder, {parameters: undefined});
   device.submit(sharedEncoder.finish());
   const sharedBytes = await sharedOutputBuffer.readAsync();
-  t.deepEqual(
+  expect(
     Array.from(
       new Uint32Array(
         sharedBytes.buffer,
@@ -1528,10 +1535,9 @@ test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', as
         4
       )
     ),
-    [2, 0, 1, 1],
     'shared result buffers avoid writable storage binding aliasing across alignment pages'
-  );
-  t.deepEqual(
+  ).toEqual([2, 0, 1, 1]);
+  expect(
     Array.from(
       new Float32Array(
         sharedBytes.buffer,
@@ -1539,8 +1545,8 @@ test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', as
         4
       )
     ),
-    [6, 0, 5, 3]
-  );
+    ''
+  ).toEqual([6, 0, 5, 3]);
 
   compiled.destroy();
   sharedCompiled.destroy();
@@ -1553,14 +1559,14 @@ test('GPUTraceTimeBuckets clips selected intervals at trace-time boundaries', as
   idleLaneTime.buffer.destroy();
   domainBuffer.destroy();
   sharedOutputBuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test('GPUTraceScene rejects ambiguous identity, ownership, topology, and source partitions', async t => {
+it('GPUTraceScene rejects ambiguous identity, ownership, topology, and source partitions', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
   const source = {
@@ -1572,37 +1578,39 @@ test('GPUTraceScene rejects ambiguous identity, ownership, topology, and source 
 
   const duplicate = makeSpans();
   duplicate[14] = duplicate[6]!;
-  t.throws(() => new GPUTraceScene(device, {...source, spans: duplicate}), /identity/);
-  t.throws(
+  expect(() => new GPUTraceScene(device, {...source, spans: duplicate}), '').toThrow(/identity/);
+  expect(
     () => new GPUTraceScene(device, {...source, parents: Uint32Array.from([4, 0, 1])}),
+    ''
+  ).toThrow(/identity, or ownership/);
+  expect(() => new GPUTraceScene(device, {...source, processCount: 1}), '').toThrow(
     /identity, or ownership/
   );
-  t.throws(() => new GPUTraceScene(device, {...source, processCount: 1}), /identity, or ownership/);
-  t.throws(
+  expect(
     () =>
       new GPUTraceScene(device, {
         ...source,
         links: Uint32Array.from([0, 4, 0, 0])
       }),
-    /endpoints/
-  );
-  t.throws(
+    ''
+  ).toThrow(/endpoints/);
+  expect(
     () =>
       new GPUTraceScene(device, {
         ...source,
         partitions: [{firstSpan: 1, spanCount: 2}]
       }),
-    /contiguous/
-  );
-  t.throws(
+    ''
+  ).toThrow(/contiguous/);
+  expect(
     () =>
       new GPUTraceScene(device, {
         ...source,
         outgoing: {offsets: Uint32Array.from([0, 1, 0, 0]), neighbors: new Uint32Array(0)}
       }),
-    /monotonic/
-  );
-  t.throws(
+    ''
+  ).toThrow(/monotonic/);
+  expect(
     () =>
       new GPUTraceScene(device, {
         ...source,
@@ -1612,9 +1620,8 @@ test('GPUTraceScene rejects ambiguous identity, ownership, topology, and source 
           neighbors: Uint32Array.from([2])
         }
       }),
-    /source edge order/,
     'precomputed adjacency cannot silently contradict canonical dependency links'
-  );
+  ).toThrow(/source edge order/);
 
   const empty = new GPUTraceScene(device, {
     spans: new Uint32Array(0),
@@ -1625,10 +1632,12 @@ test('GPUTraceScene rejects ambiguous identity, ownership, topology, and source 
   });
   const graph = new GPUCommandGraph(device);
   const emptyView = empty.importToGraph(graph);
-  t.equal(emptyView.linkFlags.length, 0, 'empty dependencies still expose complete typed views');
-  t.equal(emptyView.startTimes.length, 0, 'empty spans retain a valid minimal allocation');
+  expect(emptyView.linkFlags.length, 'empty dependencies still expose complete typed views').toBe(
+    0
+  );
+  expect(emptyView.startTimes.length, 'empty spans retain a valid minimal allocation').toBe(0);
   empty.destroy();
-  t.end();
+  void 0;
 });
 
 function makeSpans(): Uint32Array {

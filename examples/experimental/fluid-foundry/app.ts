@@ -18,7 +18,7 @@ import {
   ShaderPassRenderer,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
@@ -465,7 +465,7 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: 'rgba16float', resolutionScale: 0.68}),
+        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.68}),
         toneMapping
       ],
       colorFormat: 'rgba16float'

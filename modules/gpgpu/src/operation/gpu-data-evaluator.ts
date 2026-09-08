@@ -705,14 +705,14 @@ function getRowsFromValue(
   return result;
 }
 
-/** Input accepted by leaf operations that normalize one fixed-width value view into an evaluator. */
+/** Input accepted by operations that normalize one fixed-width value or constant into an evaluator. */
 export type GPUDataEvaluatorInput = GPUDataEvaluator | GPUData | GPUDataView | number | number[];
 
 /**
- * Returns one evaluator, adapting `GPUData` inputs when needed.
+ * Returns one evaluator, adapting GPU data and constant inputs when needed.
  *
- * @param input - Existing evaluator, fixed-width `GPUData`, or borrowed `GPUDataView`.
- * @returns One `GPUDataEvaluator` for leaf GPGPU operations.
+ * @param input - Existing evaluator, fixed-width GPU data, or a scalar or row constant.
+ * @returns One `GPUDataEvaluator` for GPGPU operations.
  */
 export function getGPUDataEvaluator(input: GPUDataEvaluatorInput): GPUDataEvaluator {
   if (input instanceof GPUDataEvaluator) {

@@ -20,14 +20,14 @@ GTAO additionally supports `composition: 'ambient-only'` with an explicit
 
 Notable exports include:
 
-- `bloom`, `bloomShaderPassPipeline`, and `createBloomShaderPassPipeline`
+- `bloom`, `bloomCompositeShaderPass`, and `createBloomCompositeShaderPass`
 - `toneMapping`, `ToneMappingProps`, and `ToneMappingUniforms`
-- `dof` and `dofShaderPassPipeline`
-- `createGTAOShaderPassPipeline`, `createSSGIShaderPassPipeline`, and
-  `createSSRShaderPassPipeline`
-- `createClusteredVolumetricLightingShaderPassPipeline` for light-driven participating media;
-  `createVolumetricFogShaderPassPipeline` remains the simpler, lower-cost height-fog option.
-- `createHDRAutoExposureShaderPassPipeline` for center-weighted GPU luminance metering and
+- `dof` and `dofCompositeShaderPass`
+- `createGTAOCompositeShaderPass`, `createSSGICompositeShaderPass`, and
+  `createSSRCompositeShaderPass`
+- `createClusteredVolumetricLightingCompositeShaderPass` for light-driven participating media;
+  `createVolumetricFogCompositeShaderPass` remains the simpler, lower-cost height-fog option.
+- `createHDRAutoExposureCompositeShaderPass` for center-weighted GPU luminance metering and
   temporally adapted exposure.
 
 The [Visualization City](https://luma.gl/examples/experimental/advanced-effects) example
@@ -37,7 +37,7 @@ deferred lighting, higher-quality ambient visibility, diffuse bounce, specular r
 participating-media scattering. Shared effects such as SSR use the same exported implementation
 in both scenes.
 
-`createBloomShaderPassPipeline` builds an HDR bloom pyramid with quality presets from two to five
+`createBloomCompositeShaderPass` builds an HDR bloom pyramid with quality presets from two to five
 levels. `exposure` and photographic `exposureCompensation` adjust the scene-referred threshold as
 `threshold / (exposure * 2 ** exposureCompensation)`. Choose normalized nine-tap tent filtering or
 four-fetch bicubic B-spline reconstruction with `reconstruction`. `scatter`, `softKnee`,
@@ -98,18 +98,18 @@ buffers and 45 steady-state compute dispatches. Setting `guardBand: 0` uses a 51
 
 Keep the scene and bloom chain in `rgba16float` when unclamped highlight radiance is required.
 The existing deck.gl `PostProcessEffect` accepts shader-pass modules rather than named-target
-`ShaderPassPipeline` graphs; its default postprocessing buffers currently use `rgba8unorm`.
+`CompositeShaderPass` graphs; its default postprocessing buffers currently use `rgba8unorm`.
 
 `toneMapping` applies an ACES filmic curve after exposure and preserves the source alpha channel.
 Place it after bloom or other HDR effects so bright highlights roll off before presentation:
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [
-    createBloomShaderPassPipeline({
+    createBloomCompositeShaderPass({
       quality: 'high',
       threshold: 0.8,
       exposure: 1,

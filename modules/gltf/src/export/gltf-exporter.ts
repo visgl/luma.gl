@@ -258,7 +258,15 @@ class GLTFExportWriter {
       ? GLBWriter.encodeSync(
           {
             json: document,
-            ...(binary.byteLength > 0 ? {binary} : {})
+            // loaders.gl alpha.4's GLB parser expects the legacy v2 BIN chunk to exist even when
+            // the JSON has no buffer definition. An empty chunk preserves the JSON contract.
+            buffers: [
+              {
+                arrayBuffer: binary.buffer as ArrayBuffer,
+                byteOffset: binary.byteOffset,
+                byteLength: binary.byteLength
+              }
+            ]
           },
           {}
         )

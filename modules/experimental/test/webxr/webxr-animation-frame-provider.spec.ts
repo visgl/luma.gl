@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {WebXRAnimationFrameProvider} from '../../src';
 
-test('webxr#WebXRAnimationFrameProvider delegates to XRSession', t => {
+it('webxr#WebXRAnimationFrameProvider delegates to XRSession', () => {
   let scheduledCallback: XRFrameRequestCallback | null = null;
   let cancelledAnimationFrameId: number | null = null;
   const session = {
@@ -20,9 +20,9 @@ test('webxr#WebXRAnimationFrameProvider delegates to XRSession', t => {
   const animationFrameProvider = new WebXRAnimationFrameProvider(session);
   const callback = () => {};
 
-  t.equal(animationFrameProvider.requestAnimationFrame(callback), 7, 'delegates frame request');
-  t.ok(scheduledCallback, 'registers XR callback');
+  expect(animationFrameProvider.requestAnimationFrame(callback), 'delegates frame request').toBe(7);
+  expect(Boolean(scheduledCallback), 'registers XR callback').toBe(true);
   animationFrameProvider.cancelAnimationFrame(7);
-  t.equal(cancelledAnimationFrameId, 7, 'delegates frame cancellation');
-  t.end();
+  expect(cancelledAnimationFrameId, 'delegates frame cancellation').toBe(7);
+  void 0;
 });

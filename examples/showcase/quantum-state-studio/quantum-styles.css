@@ -72,7 +72,7 @@
 .quantum-gate:last-child::after { display: none; }.quantum-gate span { color: #e9f7ff; font-size: 11px; font-weight: 750; }.quantum-gate small { color: #7090ab; font-size: 8px; }
 .quantum-gate.active { border-color: #72e4ff; background: rgb(28 92 133 / 86%); box-shadow: 0 0 22px rgb(74 218 255 / 22%), inset 0 0 14px rgb(109 224 255 / 12%); }
 .quantum-gate.initial { color: #f0b3ff; }
-footer { position: absolute; left: 34px; right: 34px; bottom: 15px; display: flex; justify-content: space-between; color: #526981; font: 9px ui-monospace, SFMono-Regular, monospace; letter-spacing: .03em; }
+.quantum-interface footer { position: absolute; left: 34px; right: 34px; bottom: 15px; display: flex; justify-content: space-between; color: #526981; font: 9px ui-monospace, SFMono-Regular, monospace; letter-spacing: .03em; }
 .explain-region { position: absolute; z-index: 1; border: 1px solid transparent; border-radius: 18px; outline: none; pointer-events: auto; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
 .explain-region::after { position: absolute; top: 9px; right: 10px; display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid rgb(110 220 255 / 25%); border-radius: 50%; background: rgb(5 17 38 / 64%); color: rgb(139 229 255 / 62%); content: 'i'; font: 700 9px ui-serif, Georgia, serif; opacity: .58; box-shadow: 0 0 16px rgb(72 216 255 / 8%); transition: opacity 160ms ease, box-shadow 160ms ease; }
 .explain-region:hover, .explain-region:focus-visible { border-color: rgb(98 223 255 / 26%); background: rgb(50 178 224 / 2.5%); box-shadow: inset 0 0 48px rgb(67 205 255 / 4%); }

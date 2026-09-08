@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {webgl2Adapter} from '@luma.gl/webgl';
+import {expect, it} from 'vitest';
 
 // TODO - duplicates core spec?
-test('WebGLDevice#lost (Promise)', async t => {
+it('WebGLDevice#lost (Promise)', async () => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
   // Wrap in a promise to make sure tape waits for us
   await new Promise<void>(resolve => {
     setTimeout(() => {
       void device.lost.then(cause => {
-        t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
-        t.end();
+        expect(cause.reason, `Context lost: ${cause.message}`).toBe('destroyed');
         resolve();
       });
     }, 0);
@@ -24,11 +23,10 @@ test('WebGLDevice#lost (Promise)', async t => {
   device.destroy();
 });
 
-test('WebGLDevice#destroy marks the device lost', async t => {
+it('WebGLDevice#destroy marks the device lost', async () => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
-  t.equal(device.isLost, false, 'device starts active');
+  expect(device.isLost, 'device starts active').toBe(false);
   device.destroy();
-  t.equal(device.isLost, true, 'destroy synchronously marks the device lost');
-  t.end();
+  expect(device.isLost, 'destroy synchronously marks the device lost').toBe(true);
 });

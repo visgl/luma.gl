@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 type MotionBlurUniforms = {strength: number; sampleCount: number};
 type MotionBlurBindings = {depthTexture?: Texture; velocityTexture?: Texture};
@@ -53,9 +53,9 @@ fn motionBlur_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createMotionBlurShaderPassPipeline(): ShaderPassPipeline {
+export function createMotionBlurCompositeShaderPass(): CompositeShaderPass {
   return {
-    name: 'motionBlurShaderPassPipeline',
+    name: 'motionBlurCompositeShaderPass',
     steps: [{shaderPass: motionBlurPass, output: 'previous'}]
   };
 }

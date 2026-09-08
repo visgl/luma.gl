@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {copyPass} from './copy-pass';
 
 type FogUniforms = {
@@ -72,9 +72,9 @@ fn volumetricFog_sampleColor(
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createVolumetricFogShaderPassPipeline(): ShaderPassPipeline<'fogHistory'> {
+export function createVolumetricFogCompositeShaderPass(): CompositeShaderPass<'fogHistory'> {
   return {
-    name: 'volumetricFogShaderPassPipeline',
+    name: 'volumetricFogCompositeShaderPass',
     renderTargets: {fogHistory: {lifetime: 'history', initialize: 'original'}},
     steps: [
       {

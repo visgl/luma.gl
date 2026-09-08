@@ -13,7 +13,7 @@ import {
 } from '@luma.gl/experimental';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 
 type LightingParityTarget = {
   color: Texture;
@@ -27,11 +27,11 @@ type LightingParityRenderer = {
   renderer: SceneRenderer | DeferredSceneRenderer | RayTracingSceneRenderer;
 };
 
-test('forward, deferred, and ray tracing honor the same incoming directional-light hemisphere', async testCase => {
+it('forward, deferred, and ray tracing honor the same incoming directional-light hemisphere', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -53,28 +53,26 @@ test('forward, deferred, and ray tracing honor the same incoming directional-lig
       const frontPixel = await readLightingParityPixel(target.color, 17, 14);
 
       if (id === 'ray-tracing') {
-        testCase.equal(
+        expect(
           frontStatistics.rayTracing?.internalWidth,
-          width,
           'ray tracing derives its odd internal width from the supplied framebuffer'
-        );
-        testCase.equal(
+        ).toBe(width);
+        expect(
           frontStatistics.rayTracing?.internalHeight,
-          height,
           'ray tracing derives its odd internal height from the supplied framebuffer'
-        );
-        testCase.ok(
-          frontStatistics.rayTracing?.graph?.topology,
+        ).toBe(height);
+        expect(
+          Boolean(frontStatistics.rayTracing?.graph?.topology),
           'the first ray-traced frame exposes encoded mesh-topology work'
-        );
-        testCase.ok(
-          frontStatistics.rayTracing?.graph?.acceleration,
+        ).toBe(true);
+        expect(
+          Boolean(frontStatistics.rayTracing?.graph?.acceleration),
           'the first ray-traced frame exposes encoded TLAS construction'
-        );
-        testCase.ok(
-          frontStatistics.rayTracing?.graph?.trace.nodeCount,
+        ).toBe(true);
+        expect(
+          Boolean(frontStatistics.rayTracing?.graph?.trace.nodeCount),
           'the first ray-traced frame exposes encoded tracing and presentation work'
-        );
+        ).toBe(true);
       }
 
       options.lights = [makeIncomingDirectionalLight([0, 0, 1])];
@@ -82,28 +80,25 @@ test('forward, deferred, and ray tracing honor the same incoming directional-lig
       device.submit();
       const backPixel = await readLightingParityPixel(target.color, 17, 14);
 
-      testCase.ok(
-        frontPixel[0] > backPixel[0] + 15,
+      expect(
+        Boolean(frontPixel[0] > backPixel[0] + 15),
         `${id} illuminates the camera-facing hemisphere only for incoming negative-Z light ` +
           `(${frontPixel[0]} versus ${backPixel[0]})`
-      );
+      ).toBe(true);
 
       if (id === 'ray-tracing') {
-        testCase.equal(
+        expect(
           backStatistics.rayTracing?.graph?.topology,
-          undefined,
           'light-only changes do not encode mesh-topology work'
-        );
-        testCase.equal(
+        ).toBe(undefined);
+        expect(
           backStatistics.rayTracing?.graph?.acceleration,
-          undefined,
           'light-only changes do not rebuild the TLAS'
-        );
-        testCase.equal(
+        ).toBe(undefined);
+        expect(
           backStatistics.rayTracing?.graph?.refit,
-          undefined,
           'light-only changes do not refit the TLAS'
-        );
+        ).toBe(undefined);
       }
 
       options.lights = [makeIncomingDirectionalLight([-1, 0, -0.35])];
@@ -118,14 +113,14 @@ test('forward, deferred, and ray tracing honor the same incoming directional-lig
       const leftIlluminatedLeftPixel = await readLightingParityPixel(target.color, 13, 14);
       const leftIlluminatedRightPixel = await readLightingParityPixel(target.color, 21, 14);
 
-      testCase.ok(
-        rightIlluminatedRightPixel[0] > rightIlluminatedLeftPixel[0] + 5,
+      expect(
+        Boolean(rightIlluminatedRightPixel[0] > rightIlluminatedLeftPixel[0] + 5),
         `${id} places positive-X illumination on the visible right hemisphere`
-      );
-      testCase.ok(
-        leftIlluminatedLeftPixel[0] > leftIlluminatedRightPixel[0] + 5,
+      ).toBe(true);
+      expect(
+        Boolean(leftIlluminatedLeftPixel[0] > leftIlluminatedRightPixel[0] + 5),
         `${id} mirrors highlights when the incoming light direction is reversed`
-      );
+      ).toBe(true);
     }
   } finally {
     for (const {renderer} of renderers) {
@@ -134,14 +129,14 @@ test('forward, deferred, and ray tracing honor the same incoming directional-lig
     target.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('forward, deferred, and ray tracing add multiple independently colored ambient lights', async testCase => {
+it('forward, deferred, and ray tracing add multiple independently colored ambient lights', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -176,15 +171,19 @@ test('forward, deferred, and ray tracing add multiple independently colored ambi
       device.submit();
       const pixel = await readLightingParityPixel(target.color, 17, 14);
 
-      testCase.ok(pixel[0] > 10, `${id} retains the first independently colored ambient light`);
-      testCase.ok(pixel[1] > 10, `${id} adds the second independently colored ambient light`);
-      testCase.ok(pixel[2] < 5, `${id} does not introduce unlit blue ambient radiance`);
-      testCase.equal(options.lights[0], redAmbientLight, `${id} preserves the first source light`);
-      testCase.equal(
-        options.lights[1],
-        greenAmbientLight,
-        `${id} preserves the second source light`
+      expect(
+        Boolean(pixel[0] > 10),
+        `${id} retains the first independently colored ambient light`
+      ).toBe(true);
+      expect(
+        Boolean(pixel[1] > 10),
+        `${id} adds the second independently colored ambient light`
+      ).toBe(true);
+      expect(Boolean(pixel[2] < 5), `${id} does not introduce unlit blue ambient radiance`).toBe(
+        true
       );
+      expect(options.lights[0], `${id} preserves the first source light`).toBe(redAmbientLight);
+      expect(options.lights[1], `${id} preserves the second source light`).toBe(greenAmbientLight);
     }
   } finally {
     for (const {renderer} of renderers) {
@@ -193,14 +192,14 @@ test('forward, deferred, and ray tracing add multiple independently colored ambi
     target.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('ray tracing renders linear HDR into caller-owned depthless offscreen targets', async testCase => {
+it('ray tracing renders linear HDR into caller-owned depthless offscreen targets', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -238,25 +237,22 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
       8
     );
 
-    testCase.equal(
+    expect(
       highDynamicRangeStatistics.rayTracing?.internalWidth,
-      19,
       'a depthless HDR framebuffer controls the odd internal width'
-    );
-    testCase.equal(
+    ).toBe(19);
+    expect(
       highDynamicRangeStatistics.rayTracing?.internalHeight,
-      17,
       'a depthless HDR framebuffer controls the odd internal height'
-    );
-    testCase.ok(
-      highDynamicRangePixel[0] > 1,
+    ).toBe(17);
+    expect(
+      Boolean(highDynamicRangePixel[0] > 1),
       `linear rgba16float presentation preserves unclamped radiance (${highDynamicRangePixel[0]})`
-    );
-    testCase.deepEqual(
+    ).toBe(true);
+    expect(
       getLightingParityPresentation(renderer, options.id),
-      {colorFormat: 'rgba16float', toneMapMode: 0, outputEncoding: 0},
       'floating-point attachments default to untonemapped linear presentation'
-    );
+    ).toEqual({colorFormat: 'rgba16float', toneMapMode: 0, outputEncoding: 0});
 
     const originalTraceGraph = getLightingParityTraceGraph(renderer, options.id);
     options.framebuffer = replacementHighDynamicRangeTarget.framebuffer;
@@ -268,15 +264,14 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
       8
     );
 
-    testCase.equal(
+    expect(
       getLightingParityTraceGraph(renderer, options.id),
-      originalTraceGraph,
       'a compatible caller-owned framebuffer swap reuses the compiled trace graph'
-    );
-    testCase.ok(
-      replacementPixel[0] > 1,
+    ).toBe(originalTraceGraph);
+    expect(
+      Boolean(replacementPixel[0] > 1),
       'a compatible retained graph binds the replacement HDR target without losing radiance'
-    );
+    ).toBe(true);
 
     options.toneMapMode = 1;
     renderer.render(options);
@@ -288,15 +283,14 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
       8
     );
 
-    testCase.notEqual(
+    expect(
       toneMappedGraph,
-      originalTraceGraph,
       'an explicit tone-map override recompiles the presentation graph'
-    );
-    testCase.ok(
-      toneMappedPixel[0] > 0 && toneMappedPixel[0] < 1,
+    ).not.toBe(originalTraceGraph);
+    expect(
+      Boolean(toneMappedPixel[0] > 0 && toneMappedPixel[0] < 1),
       `Reinhard presentation maps HDR radiance into the unit interval (${toneMappedPixel[0]})`
-    );
+    ).toBe(true);
 
     options.outputColorSpace = 'srgb';
     renderer.render(options);
@@ -308,15 +302,14 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
       8
     );
 
-    testCase.notEqual(
+    expect(
       encodedGraph,
-      toneMappedGraph,
       'an explicit output-color-space override recompiles the presentation graph'
-    );
-    testCase.ok(
-      encodedPixel[0] > toneMappedPixel[0],
+    ).not.toBe(toneMappedGraph);
+    expect(
+      Boolean(encodedPixel[0] > toneMappedPixel[0]),
       'explicit sRGB presentation applies the canonical transfer function after tone mapping'
-    );
+    ).toBe(true);
 
     delete options.toneMapMode;
     delete options.outputColorSpace;
@@ -325,25 +318,22 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
     device.submit();
     const standardPixel = await readLightingParityPixel(standardTarget.color, 11, 7);
 
-    testCase.equal(
+    expect(
       standardStatistics.rayTracing?.internalWidth,
-      23,
       'changing the caller-owned framebuffer updates internal width'
-    );
-    testCase.equal(
+    ).toBe(23);
+    expect(
       standardStatistics.rayTracing?.internalHeight,
-      15,
       'changing the caller-owned framebuffer updates internal height'
-    );
-    testCase.ok(
-      standardPixel[0] > 200,
+    ).toBe(15);
+    expect(
+      Boolean(standardPixel[0] > 200),
       'changing the target format rebuilds presentation for the bounded normalized attachment'
-    );
-    testCase.deepEqual(
+    ).toBe(true);
+    expect(
       getLightingParityPresentation(renderer, options.id),
-      {colorFormat: 'rgba8unorm', toneMapMode: 2, outputEncoding: 1},
       'normalized linear attachments default to Khronos Neutral plus one exact sRGB transfer'
-    );
+    ).toEqual({colorFormat: 'rgba8unorm', toneMapMode: 2, outputEncoding: 1});
 
     if (hardwareSRGBTarget) {
       options.framebuffer = hardwareSRGBTarget.framebuffer;
@@ -351,15 +341,14 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
       device.submit();
       const hardwareSRGBPixel = await readLightingParityPixel(hardwareSRGBTarget.color, 11, 7);
 
-      testCase.deepEqual(
+      expect(
         getLightingParityPresentation(renderer, options.id),
-        {colorFormat: 'rgba8unorm-srgb', toneMapMode: 2, outputEncoding: 0},
         'hardware-sRGB attachments avoid a second shader-side transfer function'
-      );
-      testCase.ok(
-        Math.abs(hardwareSRGBPixel[0] - standardPixel[0]) <= 3,
+      ).toEqual({colorFormat: 'rgba8unorm-srgb', toneMapMode: 2, outputEncoding: 0});
+      expect(
+        Boolean(Math.abs(hardwareSRGBPixel[0] - standardPixel[0]) <= 3),
         'hardware-sRGB and explicitly encoded linear attachments produce matching physical pixels'
-      );
+      ).toBe(true);
     }
   } finally {
     renderer.destroy();
@@ -369,14 +358,14 @@ test('ray tracing renders linear HDR into caller-owned depthless offscreen targe
     hardwareSRGBTarget?.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
-test('ray tracing without temporal accumulation renders deterministic one-sample pixels', async testCase => {
+it('ray tracing without temporal accumulation renders deterministic one-sample pixels', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    testCase.comment('WebGPU is not available');
-    testCase.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -409,14 +398,14 @@ test('ray tracing without temporal accumulation renders deterministic one-sample
       )
     );
 
-    testCase.ok(
-      referencePixels.some(pixel => pixel[0] > 25),
+    expect(
+      Boolean(referencePixels.some(pixel => pixel[0] > 25)),
       'the deterministic reference includes a visibly lit center sample'
-    );
-    testCase.ok(
-      initialStatistics.rayTracing?.graph?.acceleration,
+    ).toBe(true);
+    expect(
+      Boolean(initialStatistics.rayTracing?.graph?.acceleration),
       'the initial deterministic frame builds its scene acceleration'
-    );
+    ).toBe(true);
 
     for (let frameIndex = 1; frameIndex <= 4; frameIndex++) {
       const frameStatistics = renderer.render(options);
@@ -427,33 +416,29 @@ test('ray tracing without temporal accumulation renders deterministic one-sample
         )
       );
 
-      testCase.deepEqual(
+      expect(
         currentPixels.map(pixel => Array.from(pixel)),
-        referencePixels.map(pixel => Array.from(pixel)),
         `frame ${frameIndex} preserves exact center and silhouette bytes with temporal AA disabled`
-      );
-      testCase.equal(
+      ).toEqual(referencePixels.map(pixel => Array.from(pixel)));
+      expect(
         frameStatistics.rayTracing?.accumulatedSamples,
-        1,
         `frame ${frameIndex} reports exactly one unaccumulated sample`
-      );
-      testCase.equal(
+      ).toBe(1);
+      expect(
         frameStatistics.rayTracing?.graph?.nodeCount,
-        frameStatistics.rayTracing?.graph?.trace.nodeCount,
         `frame ${frameIndex} records only the steady-state tracing stage`
-      );
-      testCase.equal(
+      ).toBe(frameStatistics.rayTracing?.graph?.trace.nodeCount);
+      expect(
         frameStatistics.rayTracing?.graph?.acceleration,
-        undefined,
         `frame ${frameIndex} does not rebuild an unchanged scene`
-      );
+      ).toBe(undefined);
     }
   } finally {
     renderer.destroy();
     target.destroy();
   }
 
-  testCase.end();
+  void 0;
 });
 
 function getLightingParityTraceGraph(

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -32,7 +32,7 @@ fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f 
 }
 `;
 
-test('Computation#construct/delete', async t => {
+it('Computation#construct/delete', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     let reflectionCount = 0;
@@ -49,26 +49,33 @@ test('Computation#construct/delete', async t => {
       webgpuDevice.getShaderLayout = originalGetShaderLayout;
     }
 
-    t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
-    t.equal(
+    expect(
+      Boolean(computation instanceof Computation),
+      'ComputePipeline construction successful'
+    ).toBe(true);
+    expect(
       reflectionCount,
-      0,
       'computation scans bindings without resolving unrelated vertex entry points'
+    ).toBe(0);
+    computation.destroy();
+    expect(Boolean(computation instanceof Computation), 'ComputePipeline delete successful').toBe(
+      true
     );
     computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline delete successful');
-    computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline repeated delete successful');
+    expect(
+      Boolean(computation instanceof Computation),
+      'ComputePipeline repeated delete successful'
+    ).toBe(true);
   }
-  t.end();
+  void 0;
 });
 
-test('Computation#compute', async t => {
+it('Computation#compute', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     if (isSoftwareBackedDevice(webgpuDevice)) {
-      t.comment('Skipping WebGPU compute test on a software-backed adapter');
-      t.end();
+      void 0;
+      void 0;
       return;
     }
 
@@ -87,7 +94,7 @@ test('Computation#compute', async t => {
 
     workBuffer.write(new Int32Array([2]));
     const inputData = new Int32Array(await workBuffer.readAsync());
-    t.equal(inputData[0], 2, 'Input data is correct');
+    expect(inputData[0], 'Input data is correct').toBe(2);
 
     computation.setBindings({data: workBuffer});
 
@@ -98,19 +105,19 @@ test('Computation#compute', async t => {
     webgpuDevice.submit();
 
     const computedData = new Int32Array(await workBuffer.readAsync());
-    t.equal(computedData[0], 4, 'Computed data is correct');
+    expect(computedData[0], 'Computed data is correct').toBe(4);
 
     computation.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Computation#dispatchIndirect', async t => {
+it('Computation#dispatchIndirect', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     if (isSoftwareBackedDevice(webgpuDevice)) {
-      t.comment('Skipping WebGPU indirect compute test on a software-backed adapter');
-      t.end();
+      void 0;
+      void 0;
       return;
     }
 
@@ -141,7 +148,7 @@ test('Computation#dispatchIndirect', async t => {
       computedBytes.byteOffset,
       computedBytes.byteLength / Int32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(Array.from(computedData), [2, 4, 6, 8], 'GPU-written dimensions drive dispatch');
+    expect(Array.from(computedData), 'GPU-written dimensions drive dispatch').toEqual([2, 4, 6, 8]);
 
     const offsetWorkBuffer = webgpuDevice.createBuffer({
       data: new Int32Array([1, 2, 3, 4]),
@@ -163,21 +170,20 @@ test('Computation#dispatchIndirect', async t => {
       offsetComputedBytes.byteOffset,
       offsetComputedBytes.byteLength / Int32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(offsetComputedData),
-      [2, 2, 3, 4],
       'nonzero byte offset selects the requested dispatch record'
-    );
+    ).toEqual([2, 2, 3, 4]);
 
     computation.destroy();
     workBuffer.destroy();
     offsetWorkBuffer.destroy();
     dispatchBuffer.destroy();
   }
-  t.end();
+  void 0;
 });
 
-test('Computation#plugins assemble WGSL contributions', async t => {
+it('Computation#plugins assemble WGSL contributions', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {
@@ -197,23 +203,22 @@ test('Computation#plugins assemble WGSL contributions', async t => {
       ]
     });
 
-    t.ok(
-      computation.source.includes('const COMPUTE_PLUGIN_MARKER: i32 = 1;'),
+    expect(
+      Boolean(computation.source.includes('const COMPUTE_PLUGIN_MARKER: i32 = 1;')),
       'WGSL computation plugin injection is assembled'
-    );
+    ).toBe(true);
     computation.destroy();
 
-    t.throws(
+    expect(
       () =>
         new Computation(webgpuDevice, {
           source,
           plugins: [{name: 'vertex-input-plugin', vertexInputs: {filterValues: 'f32'}}]
         }),
-      /does not support ShaderPlugin vertex inputs/,
       'compute pipelines reject plugin vertex inputs'
-    );
+    ).toThrow(/does not support ShaderPlugin vertex inputs/);
 
-    t.throws(
+    expect(
       () =>
         new Computation(webgpuDevice, {
           source,
@@ -224,11 +229,10 @@ test('Computation#plugins assemble WGSL contributions', async t => {
             }
           ]
         }),
-      /does not support ShaderPlugin vertex inputs or varyings/,
       'compute pipelines reject plugin varyings'
-    );
+    ).toThrow(/does not support ShaderPlugin vertex inputs or varyings/);
   }
-  t.end();
+  void 0;
 });
 
 function isSoftwareBackedDevice(device: Device): boolean {

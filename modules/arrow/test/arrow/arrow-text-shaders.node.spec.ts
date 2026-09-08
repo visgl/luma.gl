@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {getArrowTextRenderModules} from '@luma.gl/arrow';
 import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -22,7 +22,7 @@ const WEBGPU_PLATFORM_INFO: PlatformInfo = {
   features: new Set()
 };
 
-test('Arrow text storage WGSL shaders resolve application auto bindings', t => {
+it('Arrow text storage WGSL shaders resolve application auto bindings', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   const modules = getArrowTextRenderModules(new NullDevice({}));
 
@@ -36,21 +36,19 @@ test('Arrow text storage WGSL shaders resolve application auto bindings', t => {
       source,
       modules
     });
-    t.notOk(
-      assembledShader.source.includes('@binding(auto)'),
+    expect(
+      Boolean(assembledShader.source.includes('@binding(auto)')),
       `${label} shader has no unresolved auto bindings`
-    );
-    t.match(
-      assembledShader.source,
-      /@group\(0\) @binding\(\d+\) var<uniform> textViewport/,
-      `${label} textViewport binding is materialized`
+    ).toBe(false);
+    expect(assembledShader.source, `${label} textViewport binding is materialized`).toMatch(
+      /@group\(0\) @binding\(\d+\) var<uniform> textViewport/
     );
   }
 
-  t.end();
+  void 0;
 });
 
-test('Arrow attribute text WGSL exposes a vertex transform hook before returning', t => {
+it('Arrow attribute text WGSL exposes a vertex transform hook before returning', () => {
   const shaderAssembler = configureArrowTextShaderAssembler(new WGSLShaderAssembler(), 'wgsl');
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WEBGPU_PLATFORM_INFO,
@@ -68,7 +66,10 @@ test('Arrow attribute text WGSL exposes a vertex transform hook before returning
   const injectionIndex = assembledShader.source.indexOf('(*outputs).Position.x += 1.0;');
   const returnIndex = assembledShader.source.indexOf('return outputs;', injectionIndex);
 
-  t.ok(injectionIndex >= 0, 'host vertex transform is assembled');
-  t.ok(returnIndex > injectionIndex, 'host vertex transform executes before the vertex return');
-  t.end();
+  expect(Boolean(injectionIndex >= 0), 'host vertex transform is assembled').toBe(true);
+  expect(
+    Boolean(returnIndex > injectionIndex),
+    'host vertex transform executes before the vertex return'
+  ).toBe(true);
+  void 0;
 });

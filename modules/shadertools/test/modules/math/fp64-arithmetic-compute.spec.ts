@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -307,11 +307,11 @@ const INTEGER_PRIMITIVE_CASES: IntegerPrimitiveCase[] = [
   ...makeWideExponentPrimitiveCases(64)
 ];
 
-test('fp64 WGSL#sub_fp64u32_to_f32', async tapeTest => {
+it('fp64 WGSL#sub_fp64u32_to_f32', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    tapeTest.comment('WebGPU unavailable, skipping fp64u32 subtraction diagnostics');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -379,15 +379,11 @@ test('fp64 WGSL#sub_fp64u32_to_f32', async tapeTest => {
     );
     for (let index = 0; index < FP64U32_SUBTRACT_CASES.length; index++) {
       const fp64u32SubtractCase = FP64U32_SUBTRACT_CASES[index];
-      tapeTest.equal(
-        resultBits[index],
-        expectedBits[index],
-        `${fp64u32SubtractCase.label} rounded to expected f32 bits`
+      expect(resultBits[index], `${fp64u32SubtractCase.label} rounded to expected f32 bits`).toBe(
+        expectedBits[index]
       );
       if (resultBits[index] !== expectedBits[index]) {
-        tapeTest.comment(
-          `  expected=0x${expectedBits[index].toString(16)} result=0x${resultBits[index].toString(16)}`
-        );
+        void 0;
       }
     }
   } finally {
@@ -397,19 +393,19 @@ test('fp64 WGSL#sub_fp64u32_to_f32', async tapeTest => {
     resultBuffer.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
-test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async tapeTest => {
+it('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    tapeTest.comment('WebGPU unavailable, skipping fp64u32 double-single subtraction diagnostics');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(webgpuDevice)) {
-    tapeTest.comment('Skipping slow fp64 integer subtraction on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -500,15 +496,11 @@ test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async
       resultBytes.byteLength / Int32Array.BYTES_PER_ELEMENT
     );
     for (let index = 0; index < coordinateCases.length; index++) {
-      tapeTest.equal(
-        resultBits[index * 4],
-        expectedBits[index * 2],
-        `${coordinateCases[index].label} high limb is exact`
+      expect(resultBits[index * 4], `${coordinateCases[index].label} high limb is exact`).toBe(
+        expectedBits[index * 2]
       );
-      tapeTest.equal(
-        resultBits[index * 4 + 1],
-        expectedBits[index * 2 + 1],
-        `${coordinateCases[index].label} low limb is exact`
+      expect(resultBits[index * 4 + 1], `${coordinateCases[index].label} low limb is exact`).toBe(
+        expectedBits[index * 2 + 1]
       );
       const expectedValue =
         bitcastUint32ToFloat32(expectedBits[index * 2]) +
@@ -520,16 +512,14 @@ test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async
           : expectedValue < 0
             ? -1
             : 0;
-      tapeTest.equal(
+      expect(
         signedResults[index * 4 + 2],
-        expectedSign,
         `${coordinateCases[index].label} has normalized sign`
-      );
-      tapeTest.equal(
+      ).toBe(expectedSign);
+      expect(
         signedResults[index * 4 + 3],
-        expectedSign,
         `${coordinateCases[index].label} compares against zero`
-      );
+      ).toBe(expectedSign);
     }
   } finally {
     computation.destroy();
@@ -538,19 +528,19 @@ test('fp64 WGSL#sub_fp64u32_to_fp64 preserves binary64 coordinate deltas', async
     resultBuffer.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
-test('fp64 WGSL#normalize, classify, sign, and compare double-single values', async tapeTest => {
+it('fp64 WGSL#normalize, classify, sign, and compare double-single values', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    tapeTest.comment('WebGPU unavailable, skipping fp64 comparison diagnostics');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(webgpuDevice)) {
-    tapeTest.comment('Skipping slow fp64 integer classification on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -744,36 +734,30 @@ test('fp64 WGSL#normalize, classify, sign, and compare double-single values', as
         for (let index = 0; index < comparisonCases.length; index++) {
           const comparisonCase = comparisonCases[index];
           const resultOffset = index * 8;
-          tapeTest.equal(
+          expect(
             resultBits[resultOffset],
-            comparisonCase.normalizedBits[0],
             `${arithmeticMode.label} ${comparisonCase.label} normalized high limb`
-          );
-          tapeTest.equal(
+          ).toBe(comparisonCase.normalizedBits[0]);
+          expect(
             resultBits[resultOffset + 1],
-            comparisonCase.normalizedBits[1],
             `${arithmeticMode.label} ${comparisonCase.label} normalized low limb`
-          );
-          tapeTest.equal(
+          ).toBe(comparisonCase.normalizedBits[1]);
+          expect(
             signedResults[resultOffset + 2],
-            comparisonCase.sign,
             `${arithmeticMode.label} ${comparisonCase.label} sign`
-          );
-          tapeTest.equal(
+          ).toBe(comparisonCase.sign);
+          expect(
             signedResults[resultOffset + 3],
-            comparisonCase.comparison,
             `${arithmeticMode.label} ${comparisonCase.label} comparison`
-          );
-          tapeTest.equal(
+          ).toBe(comparisonCase.comparison);
+          expect(
             resultBits[resultOffset + 4],
-            comparisonCase.finite,
             `${arithmeticMode.label} ${comparisonCase.label} finite classification`
-          );
-          tapeTest.equal(
+          ).toBe(comparisonCase.finite);
+          expect(
             resultBits[resultOffset + 5],
-            comparisonCase.nan,
             `${arithmeticMode.label} ${comparisonCase.label} nan classification`
-          );
+          ).toBe(comparisonCase.nan);
         }
       } finally {
         computation.destroy();
@@ -784,14 +768,14 @@ test('fp64 WGSL#normalize, classify, sign, and compare double-single values', as
     inputBuffer.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
-test('fp64 WGSL#integer twoSum and twoProd preserve exact residual bits', async tapeTest => {
+it('fp64 WGSL#integer twoSum and twoProd preserve exact residual bits', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL integer primitive tests');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -840,14 +824,13 @@ test('fp64 WGSL#integer twoSum and twoProd preserve exact residual bits', async 
         getCompilationInfo: () => Promise<readonly {message: string; type: string}[]>;
       }
     ).getCompilationInfo();
-    for (const message of compilationMessages.filter(message => message.type === 'error')) {
-      tapeTest.comment(`WGSL compilation error: ${message.message}`);
+    for (const _message of compilationMessages.filter(message => message.type === 'error')) {
+      void 0;
     }
-    tapeTest.equal(
+    expect(
       compilationMessages.filter(message => message.type === 'error').length,
-      0,
       'integer fp64 WGSL compiles without errors'
-    );
+    ).toBe(0);
 
     computation.setBindings({inputData: inputBuffer, resultData: resultBuffer});
     computation.updateShaderInputs();
@@ -867,11 +850,10 @@ test('fp64 WGSL#integer twoSum and twoProd preserve exact residual bits', async 
       const label = INTEGER_PRIMITIVE_CASES[index].label;
       for (let component = 0; component < 4; component++) {
         const resultIndex = index * 4 + component;
-        tapeTest.equal(
+        expect(
           resultBits[resultIndex],
-          expectedResults[resultIndex],
           `${label} ${['sum high', 'sum low', 'product high', 'product low'][component]} bits`
-        );
+        ).toBe(expectedResults[resultIndex]);
       }
     }
   } finally {
@@ -880,19 +862,19 @@ test('fp64 WGSL#integer twoSum and twoProd preserve exact residual bits', async 
     resultBuffer.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
-test('fp64 WGSL#integer division and square root preserve subnormal limbs', async tapeTest => {
+it('fp64 WGSL#integer division and square root preserve subnormal limbs', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL subnormal limb tests');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(webgpuDevice)) {
-    tapeTest.comment('Skipping slow fp64 integer division and square root on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -930,27 +912,27 @@ test('fp64 WGSL#integer division and square root preserve subnormal limbs', asyn
       'square-root subnormal correction'
     ];
     for (let index = 0; index < expectedBits.length; index++) {
-      tapeTest.equal(resultBits[index], expectedBits[index], `${labels[index]} bits`);
+      expect(resultBits[index], `${labels[index]} bits`).toBe(expectedBits[index]);
     }
   } finally {
     computation.destroy();
     resultBuffer.destroy();
   }
 
-  tapeTest.end();
+  void 0;
 });
 
 for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
-  test(`fp64 WGSL#${arithmeticOperation.name}`, async tapeTest => {
+  it(`fp64 WGSL#${arithmeticOperation.name}`, async () => {
     const webgpuDevice = await getWebGPUTestDevice();
     if (!webgpuDevice) {
-      tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL arithmetic tests');
-      tapeTest.end();
+      void 0;
+      void 0;
       return;
     }
     if (isSoftwareBackedDevice(webgpuDevice)) {
-      tapeTest.comment('Skipping slow fp64 integer arithmetic on software WebGPU');
-      tapeTest.end();
+      void 0;
+      void 0;
       return;
     }
 
@@ -1028,22 +1010,18 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
           expectedValue === 0 ? absoluteError : absoluteError / Math.abs(expectedValue);
         const withinTolerance = expectedValue === 0 ? absoluteError === 0 : relativeError <= 1e-11;
 
-        tapeTest.ok(
-          Number.isFinite(resultHigh) && Number.isFinite(resultLow),
+        expect(
+          Boolean(Number.isFinite(resultHigh) && Number.isFinite(resultLow)),
           `${arithmeticOperation.name} ${arithmeticCase.label} has finite limbs`
-        );
-        tapeTest.ok(
-          withinTolerance,
+        ).toBe(true);
+        expect(
+          Boolean(withinTolerance),
           `${arithmeticOperation.name} ${arithmeticCase.label} within tolerance ` +
             `(expected=${expectedValue}, result=${result64}, relativeError=${relativeError})`
-        );
+        ).toBe(true);
         if (!withinTolerance) {
-          tapeTest.comment(
-            `  ${arithmeticOperation.name} ${arithmeticCase.label} expected=${expectedValue} result=${result64}`
-          );
-          tapeTest.comment(
-            `  hiLo=[${resultHigh}, ${resultLow}] absoluteError=${absoluteError} relativeError=${relativeError}`
-          );
+          void 0;
+          void 0;
         }
       }
     } finally {
@@ -1053,21 +1031,21 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
       resultBuffer.destroy();
     }
 
-    tapeTest.end();
+    void 0;
   });
 }
 
 for (const helperOperation of HELPER_OPERATIONS) {
-  test(`fp64 WGSL helper#${helperOperation.name}`, async tapeTest => {
+  it(`fp64 WGSL helper#${helperOperation.name}`, async () => {
     const webgpuDevice = await getWebGPUTestDevice();
     if (!webgpuDevice) {
-      tapeTest.comment('WebGPU unavailable, skipping fp64 WGSL helper tests');
-      tapeTest.end();
+      void 0;
+      void 0;
       return;
     }
     if (isSoftwareBackedDevice(webgpuDevice)) {
-      tapeTest.comment('Skipping slow fp64 integer helpers on software WebGPU');
-      tapeTest.end();
+      void 0;
+      void 0;
       return;
     }
 
@@ -1136,32 +1114,28 @@ for (const helperOperation of HELPER_OPERATIONS) {
         const resultLow = resultData[index * 2 + 1];
         const result64 = resultHigh + resultLow;
         const absoluteError = Math.abs(expectedValue - result64);
-        const relativeError = expectedValue === 0 ? absoluteError : absoluteError / expectedValue;
+        const _relativeError = expectedValue === 0 ? absoluteError : absoluteError / expectedValue;
 
-        tapeTest.ok(
-          Number.isFinite(resultHigh) && Number.isFinite(resultLow),
+        expect(
+          Boolean(Number.isFinite(resultHigh) && Number.isFinite(resultLow)),
           `${helperOperation.name} ${helperCase.label} produced finite hi/lo`
-        );
-        tapeTest.ok(
-          equals(expectedValue, result64),
+        ).toBe(true);
+        expect(
+          Boolean(equals(expectedValue, result64)),
           `${helperOperation.name} ${helperCase.label} recombined result within tolerance`
-        );
+        ).toBe(true);
         if (helperCase.expectNonZeroLowPart) {
-          tapeTest.ok(
-            resultLow !== 0,
+          expect(
+            Boolean(resultLow !== 0),
             `${helperOperation.name} ${helperCase.label} retained a non-zero low part`
-          );
+          ).toBe(true);
         }
         if (
           !equals(expectedValue, result64) ||
           (helperCase.expectNonZeroLowPart && resultLow === 0)
         ) {
-          tapeTest.comment(
-            `  ${helperOperation.name} ${helperCase.label} expected=${expectedValue} result=${result64}`
-          );
-          tapeTest.comment(
-            `  hiLo=[${resultHigh}, ${resultLow}] absoluteError=${absoluteError} relativeError=${relativeError}`
-          );
+          void 0;
+          void 0;
         }
       }
     } finally {
@@ -1171,7 +1145,7 @@ for (const helperOperation of HELPER_OPERATIONS) {
       resultBuffer.destroy();
     }
 
-    tapeTest.end();
+    void 0;
   });
 }
 

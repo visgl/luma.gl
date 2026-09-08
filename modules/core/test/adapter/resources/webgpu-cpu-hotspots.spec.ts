@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {Device, RenderPassProps} from '@luma.gl/core';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
@@ -53,16 +53,18 @@ type BenchmarkSummary = {
   profiler: CpuHotspotProfiler;
 };
 
-test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit framebuffer paths', async t => {
+it('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit framebuffer paths', async () => {
   const webglDevice = await getWebGLTestDevice();
   const webgpuDevice = await getWebGPUTestDevice();
 
-  const webglDefaultSummary = measureScenario(webglDevice, () => renderEmptyFrame(webglDevice, {}));
-  t.comment(formatSummary('webgl default canvas', webglDefaultSummary));
+  const _webglDefaultSummary = measureScenario(webglDevice, () =>
+    renderEmptyFrame(webglDevice, {})
+  );
+  void 0;
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -79,126 +81,110 @@ test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit fra
     renderEmptyFrame(webgpuDevice, {framebuffer: explicitFramebuffer})
   );
 
-  t.comment(formatSummary('webgpu default canvas', webgpuDefaultSummary));
-  t.comment(formatSummary('webgpu explicit framebuffer', webgpuExplicitSummary));
+  void 0;
+  void 0;
 
-  t.equal(
+  expect(
     webgpuDefaultSummary.profiler.defaultFramebufferRenderPassCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records default-framebuffer render passes'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.explicitFramebufferRenderPassCount || 0,
-    0,
     'webgpu default canvas path does not record explicit-framebuffer render passes'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuDefaultSummary.profiler.framebufferAcquireCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records framebuffer acquisition per frame'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.currentTextureAcquireCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records GPUCanvasContext.getCurrentTexture() per frame'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.transientCanvasTextureCreates || 0,
-    0,
     'webgpu default canvas path reuses the cached swapchain texture wrapper after warmup'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuDefaultSummary.profiler.transientCanvasTextureViewCreates || 0,
-    0,
     'webgpu default canvas path reuses the cached texture view wrapper after warmup'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuDefaultSummary.profiler.transientCanvasSamplerCreates || 0,
-    0,
     'webgpu default canvas path does not allocate transient sampler wrappers after warmup'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuDefaultSummary.profiler.transientCanvasFramebufferCreates || 0,
-    0,
     'webgpu default canvas path reuses the cached framebuffer wrapper after warmup'
-  );
+  ).toBe(0);
 
-  t.equal(
+  expect(
     webgpuExplicitSummary.profiler.defaultFramebufferRenderPassCount || 0,
-    0,
     'webgpu explicit framebuffer path does not record default-framebuffer render passes'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuExplicitSummary.profiler.explicitFramebufferRenderPassCount,
-    MEASURED_FRAME_COUNT,
     'webgpu explicit framebuffer path records explicit-framebuffer render passes'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuExplicitSummary.profiler.framebufferAcquireCount || 0,
-    0,
     'webgpu explicit framebuffer path bypasses default framebuffer acquisition'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuExplicitSummary.profiler.currentTextureAcquireCount || 0,
-    0,
     'webgpu explicit framebuffer path bypasses current texture acquisition'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuExplicitSummary.profiler.transientCanvasResourceCreates || 0,
-    0,
     'webgpu explicit framebuffer path does not create transient default-canvas wrappers'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     webgpuDefaultSummary.profiler.textureViewReinitializeCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records texture view reinitialization per frame after warmup'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.renderPassDescriptorAssemblyCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records render-pass descriptor assembly per frame'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.renderPassBeginCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records beginRenderPass timing per frame'
-  );
+  ).toBe(MEASURED_FRAME_COUNT);
 
-  t.ok(
-    (webgpuDefaultSummary.profiler.statsBookkeepingTimeMs || 0) >= 0,
+  expect(
+    Boolean((webgpuDefaultSummary.profiler.statsBookkeepingTimeMs || 0) >= 0),
     'webgpu default canvas path records stats bookkeeping time'
-  );
-  t.ok(
-    (webgpuDefaultSummary.profiler.errorScopeTimeMs || 0) >= 0,
+  ).toBe(true);
+  expect(
+    Boolean((webgpuDefaultSummary.profiler.errorScopeTimeMs || 0) >= 0),
     'webgpu default canvas path records error-scope overhead'
-  );
-  t.ok(
-    webgpuDefaultSummary.averageFrameTimeMs >= 0 && webgpuExplicitSummary.averageFrameTimeMs >= 0,
+  ).toBe(true);
+  expect(
+    Boolean(
+      webgpuDefaultSummary.averageFrameTimeMs >= 0 && webgpuExplicitSummary.averageFrameTimeMs >= 0
+    ),
     'benchmark reports average CPU frame time for both WebGPU paths'
-  );
-  t.equal(
+  ).toBe(true);
+  expect(
     webgpuDefaultSummary.profiler.queueSubmitCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records queue.submit timing per frame'
-  );
-  t.equal(
+  ).toBe(MEASURED_FRAME_COUNT);
+  expect(
     webgpuDefaultSummary.profiler.commandBufferDestroyCount,
-    MEASURED_FRAME_COUNT,
     'webgpu default canvas path records command buffer destroy timing per frame'
-  );
+  ).toBe(MEASURED_FRAME_COUNT);
 
   explicitFramebuffer.destroy();
-  t.end();
+  void 0;
 });
 
-test.skip('WebGPU error-scope profiler only records scoped validation in debug mode', async t => {
+it.skip('WebGPU error-scope profiler only records scoped validation in debug mode', async () => {
   const debugDevice = await getWebGPUTestDevice();
   const nonDebugDevice = await makeWebGPUHotspotTestDevice('webgpu-hotspot-nondebug', false);
 
   if (!debugDevice || !nonDebugDevice) {
-    t.comment('WebGPU is not available');
+    void 0;
     nonDebugDevice?.destroy();
-    t.end();
+    void 0;
     return;
   }
 
@@ -207,37 +193,34 @@ test.skip('WebGPU error-scope profiler only records scoped validation in debug m
     renderEmptyFrame(nonDebugDevice, {})
   );
 
-  t.ok(
-    (debugSummary.profiler.errorScopePushCount || 0) > 0,
+  expect(
+    Boolean((debugSummary.profiler.errorScopePushCount || 0) > 0),
     'webgpu debug device records pushErrorScope calls'
-  );
-  t.ok(
-    (debugSummary.profiler.errorScopePopCount || 0) > 0,
+  ).toBe(true);
+  expect(
+    Boolean((debugSummary.profiler.errorScopePopCount || 0) > 0),
     'webgpu debug device records popErrorScope calls'
-  );
-  t.ok(
-    (debugSummary.profiler.errorScopeTimeMs || 0) >= 0,
+  ).toBe(true);
+  expect(
+    Boolean((debugSummary.profiler.errorScopeTimeMs || 0) >= 0),
     'webgpu debug device records scoped validation time'
-  );
+  ).toBe(true);
 
-  t.equal(
+  expect(
     nonDebugSummary.profiler.errorScopePushCount || 0,
-    0,
     'webgpu non-debug device does not record pushErrorScope calls'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     nonDebugSummary.profiler.errorScopePopCount || 0,
-    0,
     'webgpu non-debug device does not record popErrorScope calls'
-  );
-  t.equal(
+  ).toBe(0);
+  expect(
     nonDebugSummary.profiler.errorScopeTimeMs || 0,
-    0,
     'webgpu non-debug device does not record scoped validation time'
-  );
+  ).toBe(0);
 
   nonDebugDevice.destroy();
-  t.end();
+  void 0;
 });
 
 function measureScenario(device: Device, renderFrame: () => void): BenchmarkSummary {
@@ -283,7 +266,7 @@ function getProfiler(device: Device): CpuHotspotProfiler {
   return device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler;
 }
 
-function formatSummary(name: string, summary: BenchmarkSummary): string {
+function _formatSummary(name: string, summary: BenchmarkSummary): string {
   const {profiler} = summary;
   return [
     name,

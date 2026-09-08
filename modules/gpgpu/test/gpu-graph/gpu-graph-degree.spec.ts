@@ -13,8 +13,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-graph';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import test, {type Test} from 'test/utils/vitest-tape';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphDegreeToGraphWithDispatchLimit,
   getGPUGraphDegreeDispatchLayout
@@ -148,21 +147,18 @@ const degreeScenarios: DegreeScenario[] = [
   }
 ];
 
-test('GPUGraphDegree plans bounded three-dimensional direct dispatch', tapeTest => {
-  tapeTest.deepEqual(getGPUGraphDegreeDispatchLayout(0, 2), {x: 1, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphDegreeDispatchLayout(512, 2), {x: 2, y: 1, z: 1});
-  tapeTest.deepEqual(getGPUGraphDegreeDispatchLayout(513, 2), {x: 2, y: 2, z: 1});
-  tapeTest.deepEqual(getGPUGraphDegreeDispatchLayout(1025, 2), {x: 2, y: 2, z: 2});
-  tapeTest.throws(() => getGPUGraphDegreeDispatchLayout(2049, 2), /3D dispatch limit/);
-  tapeTest.end();
+it('GPUGraphDegree plans bounded three-dimensional direct dispatch', () => {
+  expect(getGPUGraphDegreeDispatchLayout(0, 2)).toEqual({x: 1, y: 1, z: 1});
+  expect(getGPUGraphDegreeDispatchLayout(512, 2)).toEqual({x: 2, y: 1, z: 1});
+  expect(getGPUGraphDegreeDispatchLayout(513, 2)).toEqual({x: 2, y: 2, z: 1});
+  expect(getGPUGraphDegreeDispatchLayout(1025, 2)).toEqual({x: 2, y: 2, z: 2});
+  expect(() => getGPUGraphDegreeDispatchLayout(2049, 2)).toThrow(/3D dispatch limit/);
 });
 
 for (const scenario of degreeScenarios) {
-  test(`GPUGraphDegree GPU metrics: ${scenario.name}`, async tapeTest => {
+  it(`GPUGraphDegree GPU metrics: ${scenario.name}`, async () => {
     const device = await getWebGPUTestDevice();
     if (!device) {
-      tapeTest.comment('WebGPU is not available');
-      tapeTest.end();
       return;
     }
 
@@ -171,25 +167,20 @@ for (const scenario of degreeScenarios) {
     try {
       compileMetrics(fixture, scenario.maximumWorkgroups);
       executeMetrics(fixture);
-      await assertDegrees(tapeTest, fixture, expected);
-      tapeTest.deepEqual(
+      await assertDegrees(fixture, expected);
+      expect(
         fixture.graph.sourceVertices.data.map(chunk => chunk.length),
-        scenario.sourceChunks.map(chunk => chunk.length),
         'degree evaluation preserves original source chunks and empty batches'
-      );
+      ).toEqual(scenario.sourceChunks.map(chunk => chunk.length));
     } finally {
-      destroyExecutionFixture(tapeTest, fixture);
+      destroyExecutionFixture(fixture);
     }
-
-    tapeTest.end();
   });
 }
 
-test('GPUGraphDegree recomputes incoming degrees after source updates without hidden execution', async tapeTest => {
+it('GPUGraphDegree recomputes incoming degrees after source updates without hidden execution', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
     return;
   }
 
@@ -212,38 +203,31 @@ test('GPUGraphDegree recomputes incoming degrees after source updates without hi
 
   try {
     compileMetrics(fixture);
-    tapeTest.equal(
-      submitSpy.mock.calls.length,
-      0,
-      'construction and compilation never submit work'
-    );
-    tapeTest.ok(
-      sourceReadbackSpies.every(spy => spy.mock.calls.length === 0),
+    expect(submitSpy.mock.calls.length, 'construction and compilation never submit work').toBe(0);
+    expect(
+      Boolean(sourceReadbackSpies.every(spy => spy.mock.calls.length === 0)),
       'topology and degree construction never read source buffers back'
-    );
+    ).toBe(true);
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
 
     executeMetrics(fixture);
-    await assertDegrees(tapeTest, fixture, calculateExpectedDegrees(original));
+    await assertDegrees(fixture, calculateExpectedDegrees(original));
 
     const sourceBuffer = fixture.graph.sourceVertices.data[0].buffer as Buffer;
     sourceBuffer.write(Uint32Array.from([9, 9]));
     const updated = {...original, sourceChunks: [[9, 9], [], [2, 3, 4]]};
     executeMetrics(fixture);
-    await assertDegrees(tapeTest, fixture, calculateExpectedDegrees(updated));
-    tapeTest.equal(
+    await assertDegrees(fixture, calculateExpectedDegrees(updated));
+    expect(
       fixture.graph.sourceVertices.data[0].buffer,
-      sourceBuffer,
       'source updates preserve caller-owned source buffer identity'
-    );
+    ).toBe(sourceBuffer);
   } finally {
     submitSpy.mockRestore();
     for (const sourceReadbackSpy of sourceReadbackSpies) sourceReadbackSpy.mockRestore();
-    destroyExecutionFixture(tapeTest, fixture);
+    destroyExecutionFixture(fixture);
   }
-
-  tapeTest.end();
 });
 
 /** Counts original valid graph edges rather than relying on bounded neighbor storage. */
@@ -480,7 +464,6 @@ function executeMetrics(fixture: DegreeExecutionFixture): void {
 }
 
 async function assertDegrees(
-  tapeTest: Test,
   fixture: DegreeExecutionFixture,
   expected: ExpectedDegrees
 ): Promise<void> {
@@ -494,25 +477,15 @@ async function assertDegrees(
     readUint32Vector(selectedAdjacency.count),
     readUint32Vector(selectedAdjacency.overflow)
   ]);
-  tapeTest.deepEqual(
-    values,
-    expected.values,
-    'vertex degrees match the complete CPU edge reference'
+  expect(values, 'vertex degrees match the complete CPU edge reference').toEqual(expected.values);
+  expect(invalidEdgeCount[0], 'invalid graph endpoints are excluded').toBe(
+    expected.invalidEdgeCount
   );
-  tapeTest.equal(
-    invalidEdgeCount[0],
-    expected.invalidEdgeCount,
-    'invalid graph endpoints are excluded'
+  expect(adjacencyCount[0], 'CSR records the exact edge count').toBe(
+    expected.selectedAdjacencyCount
   );
-  tapeTest.equal(
-    adjacencyCount[0],
-    expected.selectedAdjacencyCount,
-    'CSR records the exact edge count'
-  );
-  tapeTest.equal(
-    overflow[0],
-    Number(expected.selectedAdjacencyCount > selectedAdjacency.neighbors.length),
-    'degree remains exact even when selected neighbor storage overflows'
+  expect(overflow[0], 'degree remains exact even when selected neighbor storage overflows').toBe(
+    Number(expected.selectedAdjacencyCount > selectedAdjacency.neighbors.length)
   );
 }
 
@@ -526,12 +499,12 @@ async function readUint32Vector(vector: GPUVector<'uint32'>): Promise<number[]> 
   return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, vector.length));
 }
 
-function destroyExecutionFixture(tapeTest: Test, fixture: DegreeExecutionFixture): void {
+function destroyExecutionFixture(fixture: DegreeExecutionFixture): void {
   fixture.compiled?.destroy();
   for (const vector of fixture.vectors) vector.destroy();
-  tapeTest.ok(
-    fixture.buffers.every(buffer => !buffer.destroyed),
+  expect(
+    Boolean(fixture.buffers.every(buffer => !buffer.destroyed)),
     'destroying graph-owned scratch and borrowed vectors preserves all caller-owned buffers'
-  );
+  ).toBe(true);
   for (const buffer of fixture.buffers) buffer.destroy();
 }

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {Device, Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {expect, it} from 'vitest';
 
 const VS = /* glsl */ `\
 #version 300 es
@@ -28,7 +28,7 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback#constructor/destroy', async t => {
+it('WebGL#TransformFeedback#constructor/destroy', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const buffer1 = webglDevice.createBuffer({byteLength: 16});
@@ -40,18 +40,16 @@ test('WebGL#TransformFeedback#constructor/destroy', async t => {
     buffers: {outValue: buffer2}
   });
 
-  t.pass('TransformFeedback construction successful');
+  expect(tf).toBeTruthy();
 
   tf.destroy();
-  t.pass('TransformFeedback destroy successful');
+  expect(tf).toBeTruthy();
 
   tf.destroy();
-  t.pass('TransformFeedback repeated destroy successful');
-
-  t.end();
+  expect(tf).toBeTruthy();
 });
 
-test('WebGL#TransformFeedback#setBuffers', async t => {
+it('WebGL#TransformFeedback#setBuffers', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const buffer1 = webglDevice.createBuffer({byteLength: 100});
@@ -65,25 +63,17 @@ test('WebGL#TransformFeedback#setBuffers', async t => {
   });
 
   transformFeedback.setBuffers({0: buffer1, 1: buffer2});
-  t.deepEqual(
-    transformFeedback.buffers,
-    {
-      0: {buffer: buffer1, byteOffset: 0, byteLength: 100},
-      1: {buffer: buffer2, byteOffset: 0, byteLength: 200}
-    },
-    'set by index, 2 buffers'
-  );
+  expect(transformFeedback.buffers, 'set by index, 2 buffers').toEqual({
+    0: {buffer: buffer1, byteOffset: 0, byteLength: 100},
+    1: {buffer: buffer2, byteOffset: 0, byteLength: 200}
+  });
 
   transformFeedback.setBuffers({0: buffer3, 1: buffer2, 2: buffer1});
-  t.deepEqual(
-    transformFeedback.buffers,
-    {
-      0: {buffer: buffer3, byteOffset: 0, byteLength: 300},
-      1: {buffer: buffer2, byteOffset: 0, byteLength: 200},
-      2: {buffer: buffer1, byteOffset: 0, byteLength: 100}
-    },
-    'set by index, 3 buffers'
-  );
+  expect(transformFeedback.buffers, 'set by index, 3 buffers').toEqual({
+    0: {buffer: buffer3, byteOffset: 0, byteLength: 300},
+    1: {buffer: buffer2, byteOffset: 0, byteLength: 200},
+    2: {buffer: buffer1, byteOffset: 0, byteLength: 100}
+  });
 
   /* Generates unused buffer warnings that pollutes log
   transformFeedback.setBuffers({inValue: buffer1, outValue: buffer2, otherValue: buffer3});
@@ -101,11 +91,9 @@ test('WebGL#TransformFeedback#setBuffers', async t => {
     'set by name, 2 buffers unused'
   );
   */
-
-  t.end();
 });
 
-test('WebGL#TransformFeedback#capture', async t => {
+it('WebGL#TransformFeedback#capture', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   // TODO(v9) Test writing with offset into output buffer.
@@ -133,13 +121,9 @@ test('WebGL#TransformFeedback#capture', async t => {
   const outBytes = await outBuffer.readAsync(byteOffset, byteLength);
   const outArray = new Float32Array(outBytes.buffer, outBytes.byteOffset, vertexCount);
 
-  t.deepEqual(
-    Array.from(outArray),
-    Array.from(inArray).map(x => x * 2),
-    'transform feedback output'
+  expect(Array.from(outArray), 'transform feedback output').toEqual(
+    Array.from(inArray).map(x => x * 2)
   );
-
-  t.end();
 });
 
 /**

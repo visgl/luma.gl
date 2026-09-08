@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {depthAwareBlur} from './depth-aware-blur';
 import {depthHelpers} from './screen-space-shader-helpers';
 
-export type SSAOShaderPassPipelineOptions = {
+export type SSAOCompositeShaderPassOptions = {
   normalSource?: 'reconstruct-from-depth' | 'normal-texture';
   /** Fractional intermediate framebuffer resolution. Defaults to full resolution. */
   resolutionScale?: number;
@@ -97,9 +97,9 @@ export const ssaoEvaluate = {
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
 
-export function createSSAOShaderPassPipeline(
-  options: SSAOShaderPassPipelineOptions = {}
-): ShaderPassPipeline<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
+export function createSSAOCompositeShaderPass(
+  options: SSAOCompositeShaderPassOptions = {}
+): CompositeShaderPass<'ssaoRaw' | 'ssaoScratch' | 'ssaoBlurred'> {
   const scale = options.resolutionScale ?? 1;
   const useNormalTexture = options.normalSource === 'normal-texture' ? 1 : 0;
   const evaluateInputs: Record<string, 'previous'> = {sourceTexture: 'previous'};
@@ -107,7 +107,7 @@ export function createSSAOShaderPassPipeline(
     evaluateInputs['normalTexture'] = 'previous';
   }
   return {
-    name: 'ssaoShaderPassPipeline',
+    name: 'ssaoCompositeShaderPass',
     renderTargets: {
       ssaoRaw: {scale: [scale, scale], format: 'rgba8unorm'},
       ssaoScratch: {scale: [scale, scale], format: 'rgba8unorm'},

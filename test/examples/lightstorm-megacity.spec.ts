@@ -11,7 +11,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import LightstormMegacityAnimationLoopTemplate from '../../examples/showcase/lightstorm-megacity/app';
 import {
-  createLightstormDeferredLightingShaderPassPipeline,
+  createLightstormDeferredLightingCompositeShaderPass,
   LIGHTSTORM_LIGHT_MARKER_SHADER,
   LIGHTSTORM_RENDER_SHADER
 } from '../../examples/showcase/lightstorm-megacity/lightstorm-shaders';
@@ -86,8 +86,8 @@ describe('Lightstorm Megacity', () => {
         )
       ).toEqual(
         state.sceneColorFormat === 'rgba16float'
-          ? ['lightstormDeferredLightingShaderPassPipeline', 'ssrShaderPassPipeline']
-          : ['lightstormDeferredLightingShaderPassPipeline']
+          ? ['lightstormDeferredLightingCompositeShaderPass', 'ssrCompositeShaderPass']
+          : ['lightstormDeferredLightingCompositeShaderPass']
       );
 
       viewer.onRender({
@@ -289,7 +289,7 @@ describe('Lightstorm Megacity', () => {
       });
       resourcesToDestroy.push(clusteredLightGrid);
       const deferredLightingRenderer = new ShaderPassRenderer(device, {
-        shaderPasses: [createLightstormDeferredLightingShaderPassPipeline('rgba8unorm')],
+        shaderPasses: [createLightstormDeferredLightingCompositeShaderPass('rgba8unorm')],
         colorFormat: 'rgba8unorm'
       });
       resourcesToDestroy.push(deferredLightingRenderer);

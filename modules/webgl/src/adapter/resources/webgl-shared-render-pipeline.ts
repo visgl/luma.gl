@@ -3,14 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/webgl/constants';
-import {
-  SharedRenderPipeline,
-  log,
-  type ShaderLayout,
-  type SharedRenderPipelineProps
-} from '@luma.gl/core';
+import {SharedRenderPipeline, log, type SharedRenderPipelineProps} from '@luma.gl/core';
 
-import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
 import {isGLSamplerType} from '../converters/webgl-shadertypes';
 import type {WebGLDevice} from '../webgl-device';
 import type {WEBGLShader} from './webgl-shader';
@@ -22,7 +16,6 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
   readonly handle: WebGLProgram;
   readonly vs: WEBGLShader;
   readonly fs: WEBGLShader;
-  introspectedLayout: ShaderLayout = {attributes: [], bindings: [], uniforms: []};
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
 
   constructor(
@@ -48,12 +41,6 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     }
 
     this._linkShaders();
-    // Introspection happens after linking to build wrapper-facing layout metadata.
-    // It is not a prerequisite for deciding whether a shared `WebGLProgram` can be
-    // reused; that decision must remain based on the shared-pipeline cache key alone.
-    log.time(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
-    this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
-    log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
   }
 
   override destroy(): void {

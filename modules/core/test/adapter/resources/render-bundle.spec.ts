@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -10,12 +10,12 @@ function getResourceCount(device: Device, resourceType: string): number {
   return device.statsManager.getStats('Resource Counts').get(`${resourceType} Active`).count;
 }
 
-test('Render bundles record reusable WebGPU commands', async t => {
+it('Render bundles record reusable WebGPU commands', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -33,28 +33,22 @@ test('Render bundles record reusable WebGPU commands', async t => {
     colorAttachmentFormats: ['rgba8unorm'],
     depthStencilAttachmentFormat: 'depth24plus'
   });
-  t.equal(
+  expect(
     getResourceCount(webgpuDevice, 'RenderBundleEncoders'),
-    renderBundleEncodersActive + 1,
     'createRenderBundleEncoder tracks an active encoder'
-  );
+  ).toBe(renderBundleEncodersActive + 1);
 
   const renderBundle = renderBundleEncoder.finish();
-  t.equal(renderBundle.id, renderBundleEncoder.id, 'bundle inherits the encoder id');
-  t.equal(
-    renderBundle.userData,
-    renderBundleEncoder.userData,
-    'bundle inherits the encoder userData'
+  expect(renderBundle.id, 'bundle inherits the encoder id').toBe(renderBundleEncoder.id);
+  expect(renderBundle.userData, 'bundle inherits the encoder userData').toBe(
+    renderBundleEncoder.userData
   );
-  t.equal(
+  expect(
     getResourceCount(webgpuDevice, 'RenderBundleEncoders'),
-    renderBundleEncodersActive,
     'finish releases the active encoder'
-  );
-  t.equal(
-    getResourceCount(webgpuDevice, 'RenderBundles'),
-    renderBundlesActive + 1,
-    'finish tracks an active bundle'
+  ).toBe(renderBundleEncodersActive);
+  expect(getResourceCount(webgpuDevice, 'RenderBundles'), 'finish tracks an active bundle').toBe(
+    renderBundlesActive + 1
   );
 
   const renderPass = webgpuDevice.beginRenderPass({
@@ -69,58 +63,50 @@ test('Render bundles record reusable WebGPU commands', async t => {
   renderBundle.destroy();
   framebuffer.destroy();
 
-  t.equal(
+  expect(
     getResourceCount(webgpuDevice, 'RenderBundles'),
-    renderBundlesActive,
     'destroy releases the active bundle'
-  );
-  t.throws(
-    // @ts-expect-error RenderPass setup properties are not valid for a RenderBundleEncoder.
+  ).toBe(renderBundlesActive);
+  expect(
     () => webgpuDevice.createRenderBundleEncoder({clearColor: [0, 0, 0, 0]}),
-    /RenderBundleEncoder does not support render pass props/,
     'render bundle encoder rejects render-pass setup props'
-  );
-  t.throws(
+  ).toThrow(/RenderBundleEncoder does not support render pass props/);
+  expect(
     () => webgpuDevice.createRenderBundleEncoder({sampleCount: 4}),
-    /RenderBundleEncoder currently only supports sampleCount 1/,
     'render bundle encoder rejects unsupported multisampling'
-  );
+  ).toThrow(/RenderBundleEncoder currently only supports sampleCount 1/);
 
-  t.end();
+  void 0;
 });
 
-test('Render bundles are WebGPU only', async t => {
+it('Render bundles are WebGPU only', async () => {
   for (const device of await getTestDevices(['webgl', 'null'])) {
-    t.throws(
+    expect(
       () => device.createRenderBundleEncoder(),
-      /Render bundles are only supported in WebGPU/,
       `${device.type} cannot create render bundles`
-    );
+    ).toThrow(/Render bundles are only supported in WebGPU/);
 
     const renderPass = device.beginRenderPass({
       clearColor: false,
       clearDepth: false,
       clearStencil: false
     });
-    t.throws(
+    expect(
       () => renderPass.executeBundles([]),
-      /Render bundles are only supported in WebGPU/,
       `${device.type} cannot execute render bundles`
-    );
+    ).toThrow(/Render bundles are only supported in WebGPU/);
     const indirectBuffer = device.createBuffer({byteLength: 20, usage: Buffer.INDIRECT});
-    t.throws(
+    expect(
       () => renderPass.drawIndirect(indirectBuffer),
-      /Indirect drawing is only supported in WebGPU/,
       `${device.type} cannot draw indirectly`
-    );
-    t.throws(
+    ).toThrow(/Indirect drawing is only supported in WebGPU/);
+    expect(
       () => renderPass.drawIndexedIndirect(indirectBuffer),
-      /Indirect drawing is only supported in WebGPU/,
       `${device.type} cannot draw indexed indirectly`
-    );
+    ).toThrow(/Indirect drawing is only supported in WebGPU/);
     indirectBuffer.destroy();
     renderPass.end();
   }
 
-  t.end();
+  void 0;
 });

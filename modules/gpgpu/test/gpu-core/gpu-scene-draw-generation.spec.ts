@@ -1,8 +1,8 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   CompiledGPUCommandGraph,
@@ -18,11 +18,9 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 const BOUNDS = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;
 
-test('GPUSceneDrawGeneration publishes deterministic bounded commands and re-encodes visibility', async t => {
+it('GPUSceneDrawGeneration publishes deterministic bounded commands and re-encodes visibility', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -65,7 +63,7 @@ test('GPUSceneDrawGeneration publishes deterministic bounded commands and re-enc
     overflow: overflow.view
   });
   generation.addToGraph(graph);
-  t.deepEqual(generation.stats, {
+  expect(generation.stats).toEqual({
     recordCount: 6,
     recordCapacity: 6,
     commandCapacity: 4,
@@ -76,25 +74,24 @@ test('GPUSceneDrawGeneration publishes deterministic bounded commands and re-enc
 
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(
+  expect(
     await readDrawWords(commands),
-    [3, 1, 10, 1, 4, 0, 20, 0, 5, 1, 30, 0, 6, 0, 40, 0],
     'the lowest scene row owns collisions and static geometry fields remain unchanged'
-  );
-  t.deepEqual(
+  ).toEqual([3, 1, 10, 1, 4, 0, 20, 0, 5, 1, 30, 0, 6, 0, 40, 0]);
+  expect(
     await readDiagnostics(required.buffer, published.buffer, overflow.buffer),
-    [4, 2, 1],
     'out-of-range and colliding requests report required, published, and overflow state'
-  );
+  ).toEqual([4, 2, 1]);
 
   visibilityBuffer.write(new Uint32Array([0, 0, 1, 0, 1, 1]));
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(
+  expect(
     await readDrawWords(commands),
-    [3, 0, 10, 0, 4, 1, 20, 5, 5, 1, 30, 2, 6, 0, 40, 0],
     'parameter-only visibility changes clear and republish the same compiled graph'
-  );
-  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [2, 2, 0]);
+  ).toEqual([3, 0, 10, 0, 4, 1, 20, 5, 5, 1, 30, 2, 6, 0, 40, 0]);
+  expect(await readDiagnostics(required.buffer, published.buffer, overflow.buffer)).toEqual([
+    2, 2, 0
+  ]);
 
   compiled.destroy();
   scene.destroy();
@@ -103,14 +100,11 @@ test('GPUSceneDrawGeneration publishes deterministic bounded commands and re-enc
   required.buffer.destroy();
   published.buffer.destroy();
   overflow.buffer.destroy();
-  t.end();
 });
 
-test('GPUSceneDrawGeneration supports indexed commands, inactive rows, and validation', async t => {
+it('GPUSceneDrawGeneration supports indexed commands, inactive rows, and validation', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -138,23 +132,25 @@ test('GPUSceneDrawGeneration supports indexed commands, inactive rows, and valid
   const compiled = graph.compile();
 
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(
+  expect(
     await readDrawWords(commands),
-    [36, 1, 2, 0xffffffff, 0],
     'indexed geometry fields and signed baseVertex bits survive publication'
-  );
-  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [1, 1, 0]);
+  ).toEqual([36, 1, 2, 0xffffffff, 0]);
+  expect(await readDiagnostics(required.buffer, published.buffer, overflow.buffer)).toEqual([
+    1, 1, 0
+  ]);
 
   scene.mutate({remove: [20]});
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(
+  expect(
     await readDrawWords(commands),
-    [36, 0, 2, 0xffffffff, 0],
     'inactive rows clear their prior command without CPU draw selection'
-  );
-  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [0, 0, 0]);
+  ).toEqual([36, 0, 2, 0xffffffff, 0]);
+  expect(await readDiagnostics(required.buffer, published.buffer, overflow.buffer)).toEqual([
+    0, 0, 0
+  ]);
 
-  t.throws(
+  expect(
     () =>
       new GPUSceneDrawGeneration({
         scene: sceneView,
@@ -163,9 +159,8 @@ test('GPUSceneDrawGeneration supports indexed commands, inactive rows, and valid
         publishedCount: published.view,
         overflow: overflow.view
       }),
-    /outputs cannot overlap/,
     'diagnostics cannot alias writable indirect commands'
-  );
+  ).toThrow(/outputs cannot overlap/);
 
   compiled.destroy();
   scene.destroy();
@@ -173,14 +168,11 @@ test('GPUSceneDrawGeneration supports indexed commands, inactive rows, and valid
   required.buffer.destroy();
   published.buffer.destroy();
   overflow.buffer.destroy();
-  t.end();
 });
 
-test('GPUSceneDrawGeneration discovers inserted records across the full scene capacity', async t => {
+it('GPUSceneDrawGeneration discovers inserted records across the full scene capacity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -206,12 +198,14 @@ test('GPUSceneDrawGeneration discovers inserted records across the full scene ca
     overflow: overflow.view
   });
   generation.addToGraph(graph);
-  t.equal(generation.stats.recordCount, 0, 'the imported active prefix starts empty');
-  t.equal(generation.stats.recordCapacity, 2, 'dispatch spans the reserved record capacity');
+  expect(generation.stats.recordCount, 'the imported active prefix starts empty').toBe(0);
+  expect(generation.stats.recordCapacity, 'dispatch spans the reserved record capacity').toBe(2);
 
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [0, 0, 0]);
+  expect(await readDiagnostics(required.buffer, published.buffer, overflow.buffer)).toEqual([
+    0, 0, 0
+  ]);
 
   scene.mutate({
     insert: [
@@ -220,8 +214,10 @@ test('GPUSceneDrawGeneration discovers inserted records across the full scene ca
     ]
   });
   await encodeAndSubmit(device, compiled);
-  t.deepEqual(await readDrawWords(commands), [3, 1, 0, 0, 4, 1, 0, 1]);
-  t.deepEqual(await readDiagnostics(required.buffer, published.buffer, overflow.buffer), [2, 2, 0]);
+  expect(await readDrawWords(commands)).toEqual([3, 1, 0, 0, 4, 1, 0, 1]);
+  expect(await readDiagnostics(required.buffer, published.buffer, overflow.buffer)).toEqual([
+    2, 2, 0
+  ]);
 
   compiled.destroy();
   scene.destroy();
@@ -229,14 +225,11 @@ test('GPUSceneDrawGeneration discovers inserted records across the full scene ca
   required.buffer.destroy();
   published.buffer.destroy();
   overflow.buffer.destroy();
-  t.end();
 });
 
-test('GPUSceneDrawGeneration rejects devices without indirect-first-instance', async t => {
+it('GPUSceneDrawGeneration rejects devices without indirect-first-instance', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device || device.features.has('indirect-first-instance')) {
-    t.comment('A WebGPU device without indirect-first-instance is not available');
-    t.end();
     return;
   }
 
@@ -257,18 +250,16 @@ test('GPUSceneDrawGeneration rejects devices without indirect-first-instance', a
     overflow: overflow.view
   });
 
-  t.throws(
+  expect(
     () => generation.addToGraph(graph),
-    /indirect-first-instance/,
     'nonzero first-instance publication requires the optional WebGPU feature'
-  );
+  ).toThrow(/indirect-first-instance/);
 
   scene.destroy();
   commands.destroy();
   required.buffer.destroy();
   published.buffer.destroy();
   overflow.buffer.destroy();
-  t.end();
 });
 
 function makeScalar(

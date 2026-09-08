@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -13,7 +12,7 @@ import {
   type GraphDataView
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {vi} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {addGPUSegmentedBVHToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
 
 const SOURCE_GAP = -123_456;
@@ -22,15 +21,13 @@ const OUTPUT_GAP = 0xdeadbeef;
 const INVALID_NODE = 0xffffffff;
 const MAXIMUM_FLOAT32 = new Float32Array([3.402823466e38])[0];
 
-test('GPUSegmentedBVH refits mixed packed 2D and 3D hierarchies within CORE limits', async t => {
+it('GPUSegmentedBVH refits mixed packed 2D and 3D hierarchies within CORE limits', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
-  t.equal(device.limits.maxStorageBuffersPerShaderStage, 8, 'uses the standard CORE limit');
+  expect(device.limits.maxStorageBuffersPerShaderStage, 'uses the standard CORE limit').toBe(8);
   const capacities = [1, 1, 2, 4, 8, 16, 32, 64, 128];
   const sourceCounts = [0, 1, 3, 3, 5, 9, 17, 33, 65];
 
@@ -40,32 +37,28 @@ test('GPUSegmentedBVH refits mixed packed 2D and 3D hierarchies within CORE limi
 
     try {
       encodeFixture(device, compiled);
-      await assertFixture(t, fixture, `${dimension}D`);
-      t.deepEqual(
+      await assertFixture(fixture, `${dimension}D`);
+      expect(
         compiled.stats.nodeOrder,
+        `${dimension}D mixed independent trees use at most eight CORE graph nodes`
+      ).toEqual(
         [1, 2, 4, 8, 16, 32, 64, 128].map(
           leafCapacity => `segmented-bvh-fused-refit-${leafCapacity}`
-        ),
-        `${dimension}D mixed independent trees use at most eight CORE graph nodes`
+        )
       );
-      t.equal(
+      expect(
         compiled.stats.logicalTransientBufferCount,
-        0,
         `${dimension}D hierarchy descriptors allocate no GPU scratch`
-      );
+      ).toBe(0);
     } finally {
       destroyFixture(fixture, compiled);
     }
   }
-
-  t.end();
 });
 
-test('GPUSegmentedBVH refits 96 independent four-leaf trees in one eight-binding dispatch', async t => {
+it('GPUSegmentedBVH refits 96 independent four-leaf trees in one eight-binding dispatch', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -80,31 +73,31 @@ test('GPUSegmentedBVH refits 96 independent four-leaf trees in one eight-binding
 
   try {
     encodeFixture(device, compiled);
-    await assertFixture(t, fixture, '96-tree');
+    await assertFixture(fixture, '96-tree');
     const source = dispatch.mock.instances.at(-1)?.source ?? '';
 
-    t.deepEqual(compiled.stats.nodeOrder, ['segmented-bvh-fused-refit-4']);
-    t.equal(dispatch.mock.calls.length, 1, 'all 96 independent hierarchies require one dispatch');
-    t.deepEqual(dispatch.mock.calls[0].slice(1), [96, 1, 1], 'one workgroup handles each tree');
-    t.ok(source.includes('@workgroup_size(4)'), 'only four lanes wake for each four-leaf tree');
-    t.equal(
-      (source.match(/@group\(0\) @binding\(/g) ?? []).length,
-      8,
-      'the batched hierarchy consumes exactly the CORE storage-buffer limit'
+    expect(compiled.stats.nodeOrder).toEqual(['segmented-bvh-fused-refit-4']);
+    expect(dispatch.mock.calls.length, 'all 96 independent hierarchies require one dispatch').toBe(
+      1
     );
+    expect(dispatch.mock.calls[0].slice(1), 'one workgroup handles each tree').toEqual([96, 1, 1]);
+    expect(
+      Boolean(source.includes('@workgroup_size(4)')),
+      'only four lanes wake for each four-leaf tree'
+    ).toBe(true);
+    expect(
+      (source.match(/@group\(0\) @binding\(/g) ?? []).length,
+      'the batched hierarchy consumes exactly the CORE storage-buffer limit'
+    ).toBe(8);
   } finally {
     dispatch.mockRestore();
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
-test('GPUSegmentedBVH bounds singleton hierarchy workgroups across all three dispatch dimensions', async t => {
+it('GPUSegmentedBVH bounds singleton hierarchy workgroups across all three dispatch dimensions', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -115,29 +108,29 @@ test('GPUSegmentedBVH bounds singleton hierarchy workgroups across all three dis
 
   try {
     encodeFixture(device, compiled);
-    await assertFixture(t, fixture, 'bounded singleton');
-    t.deepEqual(dispatch.mock.calls[0].slice(1), [2, 2, 2], 'workgroups span three dimensions');
-    t.ok(
-      (dispatch.mock.instances.at(-1)?.source ?? '').includes('@workgroup_size(1)'),
+    await assertFixture(fixture, 'bounded singleton');
+    expect(dispatch.mock.calls[0].slice(1), 'workgroups span three dimensions').toEqual([2, 2, 2]);
+    expect(
+      Boolean((dispatch.mock.instances.at(-1)?.source ?? '').includes('@workgroup_size(1)')),
       'singleton roots use exactly one invocation per workgroup'
-    );
-    t.ok(
-      (dispatch.mock.instances.at(-1)?.source ?? '').includes('if (segmentIndex >= SEGMENT_COUNT)'),
+    ).toBe(true);
+    expect(
+      Boolean(
+        (dispatch.mock.instances.at(-1)?.source ?? '').includes(
+          'if (segmentIndex >= SEGMENT_COUNT)'
+        )
+      ),
       'surplus padded workgroups do not touch caller-owned output gaps'
-    );
+    ).toBe(true);
   } finally {
     dispatch.mockRestore();
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
-test('GPUSegmentedBVH refits caller-owned source changes without rebuilding the graph', async t => {
+it('GPUSegmentedBVH refits caller-owned source changes without rebuilding the graph', async () => {
   const device = await getWebGPUTestDevice('core');
   if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
 
@@ -146,7 +139,7 @@ test('GPUSegmentedBVH refits caller-owned source changes without rebuilding the 
 
   try {
     encodeFixture(device, compiled);
-    await assertFixture(t, fixture, 'initial refit');
+    await assertFixture(fixture, 'initial refit');
 
     const segment = fixture.segments[1];
     const minimumIndex = (fixture.minimaPrefix + segment.sourceOffset) * fixture.dimension;
@@ -158,22 +151,19 @@ test('GPUSegmentedBVH refits caller-owned source changes without rebuilding the 
     updateExpectedOutputs(fixture);
 
     encodeFixture(device, compiled);
-    await assertFixture(t, fixture, 'updated refit');
-    t.deepEqual(
+    await assertFixture(fixture, 'updated refit');
+    expect(
       Array.from(
         fixture.expectedNodeMinima.subarray(
           (fixture.nodeMinimaPrefix + segment.nodeOffset) * fixture.dimension,
           (fixture.nodeMinimaPrefix + segment.nodeOffset + 1) * fixture.dimension
         )
       ),
-      [-800, -700, -600],
       'the unchanged graph updates the corresponding independent hierarchy root'
-    );
+    ).toEqual([-800, -700, -600]);
   } finally {
     destroyFixture(fixture, compiled);
   }
-
-  t.end();
 });
 
 type SegmentedBVHFixture = {
@@ -505,11 +495,7 @@ function encodeFixture(device: Device, compiled: CompiledGPUCommandGraph): void 
   device.submit(commandEncoder.finish());
 }
 
-async function assertFixture(
-  testCase: Parameters<Parameters<typeof test>[1]>[0],
-  fixture: SegmentedBVHFixture,
-  label: string
-): Promise<void> {
+async function assertFixture(fixture: SegmentedBVHFixture, label: string): Promise<void> {
   const [minima, maxima, children, leafIds, counts, overflows] = await Promise.all([
     readFloat32(fixture.nodeMinimaBuffer),
     readFloat32(fixture.nodeMaximaBuffer),
@@ -518,35 +504,25 @@ async function assertFixture(
     readUint32(fixture.countsBuffer),
     readUint32(fixture.overflowsBuffer)
   ]);
-  testCase.deepEqual(
+  expect(
     minima,
-    Array.from(fixture.expectedNodeMinima),
     `${label} packed minima preserve gaps, invalid leaves, and independent roots`
-  );
-  testCase.deepEqual(
+  ).toEqual(Array.from(fixture.expectedNodeMinima));
+  expect(
     maxima,
-    Array.from(fixture.expectedNodeMaxima),
     `${label} packed maxima preserve gaps, invalid leaves, and independent roots`
+  ).toEqual(Array.from(fixture.expectedNodeMaxima));
+  expect(children, `${label} complete-binary children stay local to each packed hierarchy`).toEqual(
+    Array.from(fixture.expectedNodeChildren)
   );
-  testCase.deepEqual(
-    children,
-    Array.from(fixture.expectedNodeChildren),
-    `${label} complete-binary children stay local to each packed hierarchy`
+  expect(leafIds, `${label} padded leaves are invalid and populated identities are local`).toEqual(
+    Array.from(fixture.expectedLeafIds)
   );
-  testCase.deepEqual(
-    leafIds,
-    Array.from(fixture.expectedLeafIds),
-    `${label} padded leaves are invalid and populated identities are local`
+  expect(counts, `${label} metadata publishes the full count and preserves every gap`).toEqual(
+    Array.from(fixture.expectedCounts)
   );
-  testCase.deepEqual(
-    counts,
-    Array.from(fixture.expectedCounts),
-    `${label} metadata publishes the full count and preserves every gap`
-  );
-  testCase.deepEqual(
-    overflows,
-    Array.from(fixture.expectedOverflows),
-    `${label} independent overflow flags preserve every gap`
+  expect(overflows, `${label} independent overflow flags preserve every gap`).toEqual(
+    Array.from(fixture.expectedOverflows)
   );
 }
 

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
 import {createBrowserContext} from '@luma.gl/webgl/context/helpers/create-browser-context';
+import {expect, it} from 'vitest';
 
 type ListenerMap = Record<string, Set<EventListener>>;
 
@@ -45,7 +45,7 @@ function createMockCanvas(
   return {canvas, dispatchEvent, getListenerCount};
 }
 
-test('createBrowserContext captures creation errors', t => {
+it('createBrowserContext captures creation errors', () => {
   const mock = createMockCanvas(() => {
     mock.dispatchEvent('webglcontextcreationerror', {
       statusMessage: 'Mock GPU unavailable'
@@ -53,25 +53,22 @@ test('createBrowserContext captures creation errors', t => {
     return null;
   });
 
-  t.throws(
+  expect(
     () =>
       createBrowserContext(
         mock.canvas,
         {onContextLost: () => {}, onContextRestored: () => {}},
         {failIfMajorPerformanceCaveat: true}
       ),
-    /Failed to create WebGL context: Mock GPU unavailable/,
     'throws with captured status message'
-  );
-  t.equals(
+  ).toThrow(/Failed to create WebGL context: Mock GPU unavailable/);
+  expect(
     mock.getListenerCount('webglcontextcreationerror'),
-    0,
     'creation listener removed after failure'
-  );
-  t.end();
+  ).toBe(0);
 });
 
-test('createBrowserContext falls back to software renderer', t => {
+it('createBrowserContext falls back to software renderer', () => {
   const gl = {} as WebGL2RenderingContext & {luma?: Record<string, unknown>};
   let creationCalls = 0;
   const mock = createMockCanvas((_type, attributes) => {
@@ -88,23 +85,19 @@ test('createBrowserContext falls back to software renderer', t => {
     {failIfMajorPerformanceCaveat: false}
   );
 
-  t.equals(context, gl, 'returns context from second creation attempt');
-  t.equals(creationCalls, 2, 'attempts creation twice before succeeding');
-  t.equals(
+  expect(context, 'returns context from second creation attempt').toBe(gl);
+  expect(creationCalls, 'attempts creation twice before succeeding').toBe(2);
+  expect(
     (gl.luma as {softwareRenderer?: boolean} | undefined)?.softwareRenderer,
-    true,
     'marks context as software renderer'
-  );
-  t.equals(
+  ).toBe(true);
+  expect(
     mock.getListenerCount('webglcontextcreationerror'),
-    0,
     'creation listener removed after success'
-  );
-  t.equals(mock.getListenerCount('webglcontextlost'), 1, 'context lost listener registered');
-  t.equals(
+  ).toBe(0);
+  expect(mock.getListenerCount('webglcontextlost'), 'context lost listener registered').toBe(1);
+  expect(
     mock.getListenerCount('webglcontextrestored'),
-    1,
     'context restored listener registered'
-  );
-  t.end();
+  ).toBe(1);
 });

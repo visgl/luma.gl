@@ -1,3 +1,4 @@
+import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
@@ -9,13 +10,12 @@ import {
   GPU_TRANSPOSE_TILE_SIZE,
   makeGPUTransposeStats
 } from '@luma.gl/gpgpu/gpu-core';
-import test from 'test/utils/vitest-tape';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUTransposeShaderSource} from '../../src/gpu-core/gpu-transpose';
 
-test('GPUTranspose publishes a rectangular tiled plan', testCase => {
+it('GPUTranspose publishes a rectangular tiled plan', () => {
   const stats = makeGPUTransposeStats(17, 35);
-  testCase.deepEqual(stats, {
+  expect(stats).toEqual({
     rows: 17,
     columns: 35,
     elementCount: 595,
@@ -24,29 +24,24 @@ test('GPUTranspose publishes a rectangular tiled plan', testCase => {
     tileCount: 6,
     workgroupSize: [16, 16, 1]
   });
-  testCase.ok(Object.isFrozen(stats), 'stats are immutable');
-  testCase.ok(Object.isFrozen(stats.workgroupSize), 'workgroup size is immutable');
-  testCase.equal(GPU_TRANSPOSE_TILE_SIZE, 16, 'tile dimension is explicit');
-  testCase.deepEqual(
-    makeGPUTransposeStats(0, 23),
-    {
-      rows: 0,
-      columns: 23,
-      elementCount: 0,
-      tileRowCount: 0,
-      tileColumnCount: 2,
-      tileCount: 0,
-      workgroupSize: [16, 16, 1]
-    },
-    'zero rows produce an empty plan'
-  );
-  testCase.throws(() => makeGPUTransposeStats(-1, 2), /rows must be a non-negative/);
-  testCase.throws(() => makeGPUTransposeStats(2.5, 2), /rows must be a non-negative/);
-  testCase.throws(() => makeGPUTransposeStats(0x100000000, 2), /uint32 index range/);
-  testCase.end();
+  expect(Boolean(Object.isFrozen(stats)), 'stats are immutable').toBe(true);
+  expect(Boolean(Object.isFrozen(stats.workgroupSize)), 'workgroup size is immutable').toBe(true);
+  expect(GPU_TRANSPOSE_TILE_SIZE, 'tile dimension is explicit').toBe(16);
+  expect(makeGPUTransposeStats(0, 23), 'zero rows produce an empty plan').toEqual({
+    rows: 0,
+    columns: 23,
+    elementCount: 0,
+    tileRowCount: 0,
+    tileColumnCount: 2,
+    tileCount: 0,
+    workgroupSize: [16, 16, 1]
+  });
+  expect(() => makeGPUTransposeStats(-1, 2)).toThrow(/rows must be a non-negative/);
+  expect(() => makeGPUTransposeStats(2.5, 2)).toThrow(/rows must be a non-negative/);
+  expect(() => makeGPUTransposeStats(0x100000000, 2)).toThrow(/uint32 index range/);
 });
 
-test('GPUTranspose validates packed capacity, format, aliasing, and graph ownership', testCase => {
+it('GPUTranspose validates packed capacity, format, aliasing, and graph ownership', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -61,25 +56,22 @@ test('GPUTranspose validates packed capacity, format, aliasing, and graph owners
   const input = graph.createDataView(inputHandle, {format: 'float32', length: 12});
   const output = graph.createDataView(outputHandle, {format: 'float32', length: 12});
   const transpose = new GPUTranspose({input, output, rows: 3, columns: 4});
-  testCase.doesNotThrow(() => transpose.addToGraph(graph), 'valid transpose adds one graph node');
+  expect(() => transpose.addToGraph(graph), 'valid transpose adds one graph node').not.toThrow();
 
   const shortOutput = graph.createDataView(outputHandle, {format: 'float32', length: 11});
-  testCase.throws(
-    () => new GPUTranspose({input, output: shortOutput, rows: 3, columns: 4}),
+  expect(() => new GPUTranspose({input, output: shortOutput, rows: 3, columns: 4})).toThrow(
     /output must contain at least/
   );
   const integerOutput = graph.createDataView(outputHandle, {format: 'uint32', length: 12});
-  testCase.throws(
-    () => new GPUTranspose({input, output: integerOutput as never, rows: 3, columns: 4}),
-    /formats must match/
-  );
+  expect(
+    () => new GPUTranspose({input, output: integerOutput as never, rows: 3, columns: 4})
+  ).toThrow(/formats must match/);
   const stridedInput = graph.createDataView(inputHandle, {
     format: 'float32',
     length: 6,
     byteStride: 8
   });
-  testCase.throws(
-    () => new GPUTranspose({input: stridedInput, output, rows: 2, columns: 3}),
+  expect(() => new GPUTranspose({input: stridedInput, output, rows: 2, columns: 3})).toThrow(
     /must be packed/
   );
   const overlappingOutput = graph.createDataView(inputHandle, {
@@ -87,8 +79,7 @@ test('GPUTranspose validates packed capacity, format, aliasing, and graph owners
     length: 12,
     byteOffset: 4
   });
-  testCase.throws(
-    () => new GPUTranspose({input, output: overlappingOutput, rows: 2, columns: 3}),
+  expect(() => new GPUTranspose({input, output: overlappingOutput, rows: 2, columns: 3})).toThrow(
     /separate buffers/
   );
 
@@ -100,7 +91,7 @@ test('GPUTranspose validates packed capacity, format, aliasing, and graph owners
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32', length: 12});
   const crossGraphTranspose = new GPUTranspose({input, output: otherOutput, rows: 3, columns: 4});
-  testCase.throws(() => crossGraphTranspose.addToGraph(graph), /different GPUCommandGraph/);
+  expect(() => crossGraphTranspose.addToGraph(graph)).toThrow(/different GPUCommandGraph/);
 
   const emptyGraph = new GPUCommandGraph(makeSupportDevice());
   const emptyInputHandle = emptyGraph.importBuffer({
@@ -119,16 +110,11 @@ test('GPUTranspose validates packed capacity, format, aliasing, and graph owners
     emptyGraph
   );
   const compiledEmptyGraph = emptyGraph.compile();
-  testCase.equal(
-    compiledEmptyGraph.stats.nodeOrder.length,
-    0,
-    'empty transpose adds no graph node'
-  );
+  expect(compiledEmptyGraph.stats.nodeOrder.length, 'empty transpose adds no graph node').toBe(0);
   compiledEmptyGraph.destroy();
-  testCase.end();
 });
 
-test('GPUTranspose shader uses padded workgroup tiles and bounded tile indexing', testCase => {
+it('GPUTranspose shader uses padded workgroup tiles and bounded tile indexing', () => {
   const graph = new GPUCommandGraph(makeSupportDevice());
   const inputHandle = graph.importBuffer({
     id: 'input',
@@ -146,20 +132,16 @@ test('GPUTranspose shader uses padded workgroup tiles and bounded tile indexing'
   const source = getGPUTransposeShaderSource(transpose, {x: 6, y: 1, z: 1});
   const reflection = new WgslReflect(source);
 
-  testCase.deepEqual(
+  expect(
     reflection.entry.compute.map(entry => entry.name),
-    ['main'],
     'shader exposes one compute entry point'
+  ).toEqual(['main']);
+  expect(source, 'tile is padded by one column').toMatch(/array<array<i32, 17>, 16>/);
+  expect(source, 'tile load is synchronized before writing').toMatch(/workgroupBarrier/);
+  expect(source, 'partial bounded dispatch workgroups are guarded').toMatch(/tileIndex >= 6u/);
+  expect(source, 'rectangular output stride uses rows').toMatch(
+    /outputRow \* ROWS \+ outputColumn/
   );
-  testCase.match(source, /array<array<i32, 17>, 16>/, 'tile is padded by one column');
-  testCase.match(source, /workgroupBarrier/, 'tile load is synchronized before writing');
-  testCase.match(source, /tileIndex >= 6u/, 'partial bounded dispatch workgroups are guarded');
-  testCase.match(
-    source,
-    /outputRow \* ROWS \+ outputColumn/,
-    'rectangular output stride uses rows'
-  );
-  testCase.end();
 });
 
 function makeSupportDevice(): Device {

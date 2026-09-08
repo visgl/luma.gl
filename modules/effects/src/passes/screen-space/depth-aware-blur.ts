@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 
 export type DepthAwareBlurProps = {
   direction?: [number, number];
@@ -82,8 +82,8 @@ export const depthAwareBlur = {
   DepthAwareBlurBindings
 >;
 
-export const depthAwareBlurShaderPassPipeline = {
-  name: 'depthAwareBlurShaderPassPipeline',
+export const depthAwareBlurCompositeShaderPass = {
+  name: 'depthAwareBlurCompositeShaderPass',
   renderTargets: {depthAwareBlurScratch: {}},
   steps: [
     {
@@ -99,4 +99,4 @@ export const depthAwareBlurShaderPassPipeline = {
       uniforms: {direction: [0, 1]}
     }
   ]
-} satisfies ShaderPassPipeline<'depthAwareBlurScratch'>;
+} satisfies CompositeShaderPass<'depthAwareBlurScratch'>;

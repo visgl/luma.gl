@@ -757,10 +757,15 @@ function accessorToJsArray2D(
 }
 
 /** Preserve manually appended float accessors without duplicating loaders.gl postprocessing. */
-function resolveAnimationAccessor(
-  accessor: GLTFAccessorPostprocessed
-): Pick<GLTFAccessorPostprocessed, 'value' | 'components'> {
+function resolveAnimationAccessor(accessor: GLTFAccessorPostprocessed): {
+  value: Exclude<GLTFAccessorPostprocessed['value'], BigInt64Array | BigUint64Array>;
+  components: number;
+} {
   if (accessor.value) {
+    assert(
+      !(accessor.value instanceof BigInt64Array) && !(accessor.value instanceof BigUint64Array),
+      'glTF animation accessors cannot use BigInt component arrays'
+    );
     return {value: accessor.value, components: accessor.components};
   }
 

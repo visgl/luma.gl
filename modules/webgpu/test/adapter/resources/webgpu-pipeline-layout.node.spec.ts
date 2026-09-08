@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import type {BindingDeclaration} from '@luma.gl/core';
 import {getWebGPUBindingVisibility} from '../../../src/adapter/resources/webgpu-pipeline-layout';
 
-test('WebGPUPipelineLayout uses valid default visibility for writable storage buffers', t => {
+it('WebGPUPipelineLayout uses valid default visibility for writable storage buffers', () => {
   const writableStorage: BindingDeclaration = {
     name: 'fragments',
     type: 'storage',
@@ -20,21 +20,18 @@ test('WebGPUPipelineLayout uses valid default visibility for writable storage bu
     location: 1
   };
 
-  t.equal(
+  expect(
     getWebGPUBindingVisibility(writableStorage),
-    0x2 | 0x4,
     'writable storage defaults to fragment and compute visibility'
-  );
-  t.equal(
+  ).toBe(0x2 | 0x4);
+  expect(
     getWebGPUBindingVisibility({...writableStorage, visibility: 0x2}),
-    0x2,
     'explicit visibility remains authoritative'
-  );
-  t.equal(
+  ).toBe(0x2);
+  expect(
     getWebGPUBindingVisibility(readOnlyStorage),
-    0x1 | 0x2 | 0x4,
     'read-only storage retains all-stage default visibility'
-  );
+  ).toBe(0x1 | 0x2 | 0x4);
 
-  t.end();
+  void 0;
 });

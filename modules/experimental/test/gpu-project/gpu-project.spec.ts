@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   compileProjectionPlan,
@@ -19,7 +19,7 @@ import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 type Coordinates = readonly [number, number];
 
-test('packProjectionPlan rounds subnormal float32 bounds inward', tapeTest => {
+it('packProjectionPlan rounds subnormal float32 bounds inward', () => {
   const plan = compileProjectionPlan({
     projection: (coordinates: number[]): number[] => [...coordinates],
     bounds: [0, 0, 1, 1],
@@ -35,24 +35,22 @@ test('packProjectionPlan rounds subnormal float32 bounds inward', tapeTest => {
   const boundsWordOffset =
     plan.patches.length * PROJECTION_PATCH_WORD_LENGTH + PROJECTION_PLAN_BOUNDS_WORD_LENGTH - 4;
 
-  tapeTest.equal(
+  expect(
     packedPlan[boundsWordOffset],
-    1,
     'a positive minimum rounds up to the least positive float32'
-  );
-  tapeTest.equal(
+  ).toBe(1);
+  expect(
     packedPlan[boundsWordOffset + 3],
-    0x80000001,
     'a negative maximum rounds down to the least negative float32'
-  );
-  tapeTest.end();
+  ).toBe(0x80000001);
+  void 0;
 });
 
-test('GPUProjection writes origin-relative f32 positions and honors nonzero view offsets', async tapeTest => {
+it('GPUProjection writes origin-relative f32 positions and honors nonzero view offsets', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -98,37 +96,35 @@ test('GPUProjection writes origin-relative f32 positions and honors nonzero view
     const coordinate = [positions[pointIndex * 2], positions[pointIndex * 2 + 1]] as const;
     const expected = evaluateProjectionPlan(plan, coordinate);
     assertClose(
-      tapeTest,
       actual[pointIndex * 2],
       expected[0] - plan.destinationOrigin[0],
       2e-5,
       `point ${pointIndex} retains a local x coordinate`
     );
     assertClose(
-      tapeTest,
       actual[pointIndex * 2 + 1],
       expected[1] - plan.destinationOrigin[1],
       2e-5,
       `point ${pointIndex} retains a local y coordinate`
     );
   }
-  tapeTest.ok(
-    actual.every(value => Math.abs(value) < 10),
+  expect(
+    Boolean(actual.every(value => Math.abs(value) < 10)),
     'million-meter destination origins are not rounded back into Float32 output'
-  );
+  ).toBe(true);
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection preserves Float32 positions around fractional binary64 source origins', async tapeTest => {
+it('GPUProjection preserves Float32 positions around fractional binary64 source origins', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -153,20 +149,14 @@ test('GPUProjection preserves Float32 positions around fractional binary64 sourc
   const outputBuffer = createOutputBuffer(device, 2);
   const graph = new GPUCommandGraph(device, {id: 'gpu-project-float32-fractional-source-origins'});
 
-  tapeTest.equal(
-    plan.patches[0].sourceOrigin[0],
-    sourceOrigin[0],
-    'x origin retains binary64 precision'
+  expect(plan.patches[0].sourceOrigin[0], 'x origin retains binary64 precision').toBe(
+    sourceOrigin[0]
   );
-  tapeTest.equal(
-    plan.patches[0].sourceOrigin[1],
-    sourceOrigin[1],
-    'y origin retains binary64 precision'
+  expect(plan.patches[0].sourceOrigin[1], 'y origin retains binary64 precision').toBe(
+    sourceOrigin[1]
   );
-  tapeTest.equal(
-    findProjectionPatch(plan, position),
-    0,
-    'representable Float32 position is in bounds'
+  expect(findProjectionPatch(plan, position), 'representable Float32 position is in bounds').toBe(
+    0
   );
 
   const contributor = new GPUProjection({
@@ -186,51 +176,37 @@ test('GPUProjection preserves Float32 positions around fractional binary64 sourc
   const actual = await readFloat32(outputBuffer, 2);
   const expected = evaluateProjectionPlan(plan, position);
   assertClose(
-    tapeTest,
     actual[0],
     expected[0] - plan.destinationOrigin[0],
     1e-6,
     'x position subtracts both Float32 source-origin limbs'
   );
   assertClose(
-    tapeTest,
     actual[1],
     expected[1] - plan.destinationOrigin[1],
     1e-6,
     'y position subtracts both Float32 source-origin limbs'
   );
-  assertClose(
-    tapeTest,
-    actual[0],
-    0.15,
-    1e-6,
-    'valid x position is not rejected at the patch edge'
-  );
-  assertClose(
-    tapeTest,
-    actual[1],
-    0.15,
-    1e-6,
-    'valid y position is not rejected at the patch edge'
-  );
+  assertClose(actual[0], 0.15, 1e-6, 'valid x position is not rejected at the patch edge');
+  assertClose(actual[1], 0.15, 1e-6, 'valid y position is not rejected at the patch edge');
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection subtracts raw binary64 origins before converting local offsets to f32', async tapeTest => {
+it('GPUProjection subtracts raw binary64 origins before converting local offsets to f32', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -270,40 +246,38 @@ test('GPUProjection subtracts raw binary64 origins before converting local offse
   for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
     const expected = evaluateProjectionPlan(plan, points[pointIndex]);
     assertClose(
-      tapeTest,
       actual[pointIndex * 2],
       expected[0] - plan.destinationOrigin[0],
       1e-8,
       `binary64 point ${pointIndex} preserves its local x offset`
     );
     assertClose(
-      tapeTest,
       actual[pointIndex * 2 + 1],
       expected[1] - plan.destinationOrigin[1],
       1e-8,
       `binary64 point ${pointIndex} preserves its local y offset`
     );
   }
-  tapeTest.notEqual(actual[0], 0, 'a sub-f32-ULP easting offset survives projection');
-  tapeTest.notEqual(actual[1], 0, 'a sub-f32-ULP northing offset survives projection');
+  expect(actual[0], 'a sub-f32-ULP easting offset survives projection').not.toBe(0);
+  expect(actual[1], 'a sub-f32-ULP northing offset survives projection').not.toBe(0);
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection accepts inclusive binary64 patch endpoints after Float32 normalization', async tapeTest => {
+it('GPUProjection accepts inclusive binary64 patch endpoints after Float32 normalization', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -327,15 +301,11 @@ test('GPUProjection accepts inclusive binary64 patch endpoints after Float32 nor
   const outputBuffer = createOutputBuffer(device, points.length * 2);
   const graph = new GPUCommandGraph(device, {id: 'gpu-project-inclusive-binary64-endpoints'});
 
-  tapeTest.equal(
-    findProjectionPatch(plan, points[0]),
-    0,
-    'minimum source endpoint belongs to the patch'
+  expect(findProjectionPatch(plan, points[0]), 'minimum source endpoint belongs to the patch').toBe(
+    0
   );
-  tapeTest.equal(
-    findProjectionPatch(plan, points[1]),
-    0,
-    'maximum source endpoint belongs to the patch'
+  expect(findProjectionPatch(plan, points[1]), 'maximum source endpoint belongs to the patch').toBe(
+    0
   );
 
   const contributor = new GPUProjection({
@@ -356,43 +326,37 @@ test('GPUProjection accepts inclusive binary64 patch endpoints after Float32 nor
   for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
     const expected = evaluateProjectionPlan(plan, points[pointIndex]);
     assertClose(
-      tapeTest,
       actual[pointIndex * 2],
       expected[0] - plan.destinationOrigin[0],
       1e-6,
       `inclusive binary64 endpoint ${pointIndex} retains its x coordinate`
     );
     assertClose(
-      tapeTest,
       actual[pointIndex * 2 + 1],
       expected[1] - plan.destinationOrigin[1],
       1e-6,
       `inclusive binary64 endpoint ${pointIndex} retains its y coordinate`
     );
-    tapeTest.notEqual(
-      actual[pointIndex * 2],
-      0,
-      `inclusive endpoint ${pointIndex} is not rejected`
-    );
+    expect(actual[pointIndex * 2], `inclusive endpoint ${pointIndex} is not rejected`).not.toBe(0);
   }
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection rejects outer-domain positions without removing patch seam tolerance', async tapeTest => {
+it('GPUProjection rejects outer-domain positions without removing patch seam tolerance', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   const softwareBackedDevice = isSoftwareBackedDevice(device);
   if (softwareBackedDevice) {
-    tapeTest.comment('Skipping slow raw binary64 projection variants on software WebGPU');
+    void 0;
   }
 
   const minimum = -500_000_000;
@@ -490,25 +454,22 @@ test('GPUProjection rejects outer-domain positions without removing patch seam t
     for (let pointIndex = 0; pointIndex < 4; pointIndex++) {
       const expected = evaluateProjectionPlan(plan, points[pointIndex]);
       assertClose(
-        tapeTest,
         actual[pointIndex * 2],
         expected[0] - plan.destinationOrigin[0],
         1e-6,
         `${name} accepts inclusive x endpoint ${pointIndex}`
       );
       assertClose(
-        tapeTest,
         actual[pointIndex * 2 + 1],
         expected[1] - plan.destinationOrigin[1],
         1e-6,
         `${name} accepts inclusive y endpoint ${pointIndex}`
       );
     }
-    tapeTest.deepEqual(
+    expect(
       actual.slice(8),
-      new Array((points.length - 4) * 2).fill(0),
       `${name} rejects coordinates beyond exact exterior bounds and non-finite inputs`
-    );
+    ).toEqual(new Array((points.length - 4) * 2).fill(0));
   }
 
   compiled.destroy();
@@ -523,14 +484,14 @@ test('GPUProjection rejects outer-domain positions without removing patch seam t
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection compares Float32 positions against exact fractional binary64 bounds', async tapeTest => {
+it('GPUProjection compares Float32 positions against exact fractional binary64 bounds', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -564,26 +525,25 @@ test('GPUProjection compares Float32 positions against exact fractional binary64
   device.submit(encoder.finish());
 
   const actual = await readFloat32(outputBuffer, points.length * 2);
-  assertProjectedPoints(tapeTest, plan, points.slice(0, 2), actual.slice(0, 4));
-  tapeTest.notEqual(actual[0], 0, 'negative zero equals the positive-zero lower boundary');
-  tapeTest.deepEqual(
+  assertProjectedPoints(plan, points.slice(0, 2), actual.slice(0, 4));
+  expect(actual[0], 'negative zero equals the positive-zero lower boundary').not.toBe(0);
+  expect(
     actual.slice(4),
-    [0, 0, 0, 0],
     'Float32 values immediately outside unrounded binary64 bounds produce zero rows'
-  );
+  ).toEqual([0, 0, 0, 0]);
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection automatically selects different adaptive patches for mixed rows', async tapeTest => {
+it('GPUProjection automatically selects different adaptive patches for mixed rows', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -611,24 +571,24 @@ test('GPUProjection automatically selects different adaptive patches for mixed r
   device.submit(encoder.finish());
 
   const actual = await readFloat32(outputBuffer, points.length * 2);
-  tapeTest.ok(
-    new Set(points.map(point => findProjectionPatch(plan, point))).size > 1,
+  expect(
+    Boolean(new Set(points.map(point => findProjectionPatch(plan, point))).size > 1),
     'the source rows span multiple polynomial patches'
-  );
-  assertProjectedPoints(tapeTest, plan, points, actual);
+  ).toBe(true);
+  assertProjectedPoints(plan, points, actual);
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection preserves empty vector chunks and honors explicit mixed patch IDs', async tapeTest => {
+it('GPUProjection preserves empty vector chunks and honors explicit mixed patch IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -666,33 +626,31 @@ test('GPUProjection preserves empty vector chunks and honors explicit mixed patc
   compiled.encode(encoder, {parameters: undefined});
   device.submit(encoder.finish());
 
-  tapeTest.deepEqual(
+  expect(
     positionVector.view.data.map(chunk => chunk.length),
-    [1, 0, 2],
     'source chunk topology remains intact'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([1, 0, 2]);
+  expect(
     patchIdVector.view.data.map(chunk => chunk.length),
-    [1, 0, 2],
     'patch IDs preserve source-aligned chunks'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([1, 0, 2]);
+  expect(
     outputVector.view.data.map(chunk => chunk.length),
-    [1, 0, 2],
     'output chunks preserve the empty source batch'
-  );
-  tapeTest.equal(
+  ).toEqual([1, 0, 2]);
+  expect(
     compiled.stats.nodeOrder.filter(nodeId => nodeId.startsWith('chunked-projection')).length,
-    2,
     'only nonempty input chunks contribute compute passes'
+  ).toBe(2);
+  expect(Boolean(new Set(patchIds).size > 1), 'explicit IDs select different local patches').toBe(
+    true
   );
-  tapeTest.ok(new Set(patchIds).size > 1, 'explicit IDs select different local patches');
 
   const actual = [
     ...(await readFloat32(outputVector.buffers[0], 2)),
     ...(await readFloat32(outputVector.buffers[2], 4))
   ];
-  assertProjectedPoints(tapeTest, plan, points, actual);
+  assertProjectedPoints(plan, points, actual);
 
   compiled.destroy();
   contributor.destroy();
@@ -703,14 +661,14 @@ test('GPUProjection preserves empty vector chunks and honors explicit mixed patc
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection writes deterministic zero rows for invalid coordinates and patch IDs', async tapeTest => {
+it('GPUProjection writes deterministic zero rows for invalid coordinates and patch IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -767,18 +725,16 @@ test('GPUProjection writes deterministic zero rows for invalid coordinates and p
 
   const automaticOutput = await readFloat32(automaticOutputBuffer, 8);
   const explicitOutput = await readFloat32(explicitOutputBuffer, 8);
-  assertProjectedPoints(tapeTest, plan, [validCoordinate], automaticOutput.slice(0, 2));
-  assertProjectedPoints(tapeTest, plan, [validCoordinate], explicitOutput.slice(0, 2));
-  tapeTest.deepEqual(
+  assertProjectedPoints(plan, [validCoordinate], automaticOutput.slice(0, 2));
+  assertProjectedPoints(plan, [validCoordinate], explicitOutput.slice(0, 2));
+  expect(
     automaticOutput.slice(2),
-    [0, 0, 0, 0, 0, 0],
     'out-of-domain, NaN, and infinite coordinates produce zero rows'
-  );
-  tapeTest.deepEqual(
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(
     explicitOutput.slice(2),
-    [0, 0, 0, 0, 0, 0],
     'mismatched IDs, out-of-range IDs, and out-of-domain coordinates produce zero rows'
-  );
+  ).toEqual([0, 0, 0, 0, 0, 0]);
 
   compiled.destroy();
   automaticContributor.destroy();
@@ -792,14 +748,14 @@ test('GPUProjection writes deterministic zero rows for invalid coordinates and p
   ]) {
     buffer.destroy();
   }
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection rejects source and output handles sharing physical storage', async tapeTest => {
+it('GPUProjection rejects source and output handles sharing physical storage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -817,26 +773,21 @@ test('GPUProjection rejects source and output handles sharing physical storage',
   const positions = importView(graph, 'position-handle', sharedBuffer, 'float32x2', 1);
   const output = importView(graph, 'output-handle', sharedBuffer, 'float32x2', 1, 256);
 
-  tapeTest.notEqual(
-    positions.buffer,
-    output.buffer,
-    'source and output use distinct graph handles'
-  );
-  tapeTest.throws(
+  expect(positions.buffer, 'source and output use distinct graph handles').not.toBe(output.buffer);
+  expect(
     () => new GPUProjection({positions, output, plan}),
-    /output.*positions.*overlap/,
     'source and output cannot share a physical buffer behind distinct graph handles'
-  );
+  ).toThrow(/output.*positions.*overlap/);
 
   sharedBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection rejects legacy packed plans without the bounds trailer', async tapeTest => {
+it('GPUProjection rejects legacy packed plans without the bounds trailer', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -864,23 +815,22 @@ test('GPUProjection rejects legacy packed plans without the bounds trailer', asy
     legacyPlanWordLength
   );
 
-  tapeTest.throws(
+  expect(
     () => new GPUProjection({positions, output, plan, planBuffer}),
-    /plan buffer is smaller than its packed projection plan/,
     'legacy patch-only storage must be repacked with the source-bounds trailer'
-  );
+  ).toThrow(/plan buffer is smaller than its packed projection plan/);
 
   positionBuffer.destroy();
   outputBuffer.destroy();
   legacyPlanBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection rejects caller-owned plan and output handles sharing physical storage', async tapeTest => {
+it('GPUProjection rejects caller-owned plan and output handles sharing physical storage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -902,23 +852,22 @@ test('GPUProjection rejects caller-owned plan and output handles sharing physica
   const planBuffer = importView(graph, 'plan-handle', sharedBuffer, 'uint32', packedPlan.length);
   const output = importView(graph, 'output-handle', sharedBuffer, 'float32x2', 1, 256);
 
-  tapeTest.notEqual(planBuffer.buffer, output.buffer, 'plan and output use distinct graph handles');
-  tapeTest.throws(
+  expect(planBuffer.buffer, 'plan and output use distinct graph handles').not.toBe(output.buffer);
+  expect(
     () => new GPUProjection({positions, output, plan, planBuffer}),
-    /output.*plan.*overlap/,
     'caller-owned plan and output cannot share a physical buffer behind distinct graph handles'
-  );
+  ).toThrow(/output.*plan.*overlap/);
 
   positionBuffer.destroy();
   sharedBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage', async tapeTest => {
+it('GPUProjection rejects updates to caller-owned plans without COPY_DST usage', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -950,12 +899,11 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   });
 
   contributor.addToGraph(graph);
-  tapeTest.throws(
+  expect(
     () => contributor.updatePlan(updatedPlan),
-    /COPY_DST/,
     'caller-owned plan updates require writable GPU storage'
-  );
-  tapeTest.equal(contributor.plan, initialPlan, 'a rejected update preserves the current CPU plan');
+  ).toThrow(/COPY_DST/);
+  expect(contributor.plan, 'a rejected update preserves the current CPU plan').toBe(initialPlan);
 
   const invalidBounds = [
     [0, 0, Number.POSITIVE_INFINITY, 1],
@@ -964,16 +912,14 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   ] as const;
   for (const bounds of invalidBounds) {
     const invalidPlan = {...updatedPlan, bounds};
-    tapeTest.throws(
+    expect(
       () => contributor.updatePlan(invalidPlan),
-      /finite, increasing source bounds/,
       'plan updates reject non-finite or unordered source bounds'
-    );
-    tapeTest.throws(
+    ).toThrow(/finite, increasing source bounds/);
+    expect(
       () => new GPUProjection({positions, output, plan: invalidPlan}),
-      /finite, increasing source bounds/,
       'construction rejects non-finite or unordered source bounds'
-    );
+    ).toThrow(/finite, increasing source bounds/);
   }
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder({id: 'gpu-project-rejected-plan-update-encoding'});
@@ -981,14 +927,12 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   device.submit(encoder.finish());
   const actual = await readFloat32(outputBuffer, 2);
   assertClose(
-    tapeTest,
     actual[0],
     0.25,
     1e-6,
     'rejected updates preserve the packed projection plan and exact x bounds'
   );
   assertClose(
-    tapeTest,
     actual[1],
     0,
     1e-6,
@@ -1000,14 +944,14 @@ test('GPUProjection rejects updates to caller-owned plans without COPY_DST usage
   readOnlyPlanBuffer.destroy();
   positionBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection updates caller-owned packed plans without rebuilding its graph', async tapeTest => {
+it('GPUProjection updates caller-owned packed plans without rebuilding its graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1065,54 +1009,43 @@ test('GPUProjection updates caller-owned packed plans without rebuilding its gra
   const firstEncoder = device.createCommandEncoder({id: 'gpu-project-initial-plan-encoding'});
   compiled.encode(firstEncoder, {parameters: undefined});
   device.submit(firstEncoder.finish());
-  assertProjectedPoints(
-    tapeTest,
-    initialPlan,
-    points,
-    await readFloat32(outputBuffer, points.length * 2)
-  );
+  assertProjectedPoints(initialPlan, points, await readFloat32(outputBuffer, points.length * 2));
 
   contributor.updatePlan(updatedPlan);
-  tapeTest.equal(contributor.plan, updatedPlan, 'the contributor exposes the updated CPU plan');
+  expect(contributor.plan, 'the contributor exposes the updated CPU plan').toBe(updatedPlan);
   const secondEncoder = device.createCommandEncoder({id: 'gpu-project-updated-plan-encoding'});
   compiled.encode(secondEncoder, {parameters: undefined});
   device.submit(secondEncoder.finish());
-  assertProjectedPoints(
-    tapeTest,
-    updatedPlan,
-    points,
-    await readFloat32(outputBuffer, points.length * 2)
-  );
-  tapeTest.deepEqual(
+  assertProjectedPoints(updatedPlan, points, await readFloat32(outputBuffer, points.length * 2));
+  expect(
     compiled.stats.nodeOrder,
-    initialNodeOrder,
     'plan updates reuse the existing command graph topology'
-  );
+  ).toEqual(initialNodeOrder);
 
   compiled.destroy();
   contributor.destroy();
   contributor.destroy();
-  tapeTest.equal(planBuffer.destroyed, false, 'caller-owned packed plan remains allocated');
-  tapeTest.equal(inputBuffer.destroyed, false, 'caller-owned source remains allocated');
-  tapeTest.equal(outputBuffer.destroyed, false, 'caller-owned destination remains allocated');
-  tapeTest.throws(() => contributor.updatePlan(initialPlan), /destroyed/);
+  expect(planBuffer.destroyed, 'caller-owned packed plan remains allocated').toBe(false);
+  expect(inputBuffer.destroyed, 'caller-owned source remains allocated').toBe(false);
+  expect(outputBuffer.destroyed, 'caller-owned destination remains allocated').toBe(false);
+  expect(() => contributor.updatePlan(initialPlan), '').toThrow(/destroyed/);
 
   planBuffer.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection updates exact global bounds without rebuilding its graph', async tapeTest => {
+it('GPUProjection updates exact global bounds without rebuilding its graph', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1157,46 +1090,40 @@ test('GPUProjection updates exact global bounds without rebuilding its graph', a
   const initialEncoder = device.createCommandEncoder({id: 'gpu-project-initial-global-bounds'});
   compiled.encode(initialEncoder, {parameters: undefined});
   device.submit(initialEncoder.finish());
-  tapeTest.deepEqual(
+  expect(
     await readFloat32(outputBuffer, points.length * 2),
-    [-0.5, 0.5, 1, 1, 1, 1, 0, 0],
     'initial bounds accept both signed zeros and reject coordinates outside their upper edges'
-  );
+  ).toEqual([-0.5, 0.5, 1, 1, 1, 1, 0, 0]);
 
   contributor.updatePlan(updatedPlan);
   const updatedEncoder = device.createCommandEncoder({id: 'gpu-project-updated-global-bounds'});
   compiled.encode(updatedEncoder, {parameters: undefined});
   device.submit(updatedEncoder.finish());
-  tapeTest.deepEqual(
+  expect(
     await readFloat32(outputBuffer, points.length * 2),
-    [0, 0, -1, -1, -1, -1, 0.5, -0.5],
     'shifted bounds reject old coordinates while still accepting both signed zeros'
-  );
-  tapeTest.deepEqual(
-    compiled.stats.nodeOrder,
-    nodeOrder,
-    'shifted bounds reuse the compiled graph'
-  );
+  ).toEqual([0, 0, -1, -1, -1, -1, 0.5, -0.5]);
+  expect(compiled.stats.nodeOrder, 'shifted bounds reuse the compiled graph').toEqual(nodeOrder);
 
   compiled.destroy();
   contributor.destroy();
-  tapeTest.equal(planBuffer.destroyed, false, 'caller-owned plan survives contributor destruction');
+  expect(planBuffer.destroyed, 'caller-owned plan survives contributor destruction').toBe(false);
   planBuffer.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection retains tolerant raw-binary64 assignment at internal patch seams', async tapeTest => {
+it('GPUProjection retains tolerant raw-binary64 assignment at internal patch seams', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow raw binary64 projection shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1227,8 +1154,8 @@ test('GPUProjection retains tolerant raw-binary64 assignment at internal patch s
     plan
   });
 
-  tapeTest.equal(plan.patches.length, 4, 'the curved plan subdivides into four patches');
-  tapeTest.equal(patchId, 0, 'the inclusive CPU lookup selects the lower-left seam patch');
+  expect(plan.patches.length, 'the curved plan subdivides into four patches').toBe(4);
+  expect(patchId, 'the inclusive CPU lookup selects the lower-left seam patch').toBe(0);
   contributor.addToGraph(graph);
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder({id: 'gpu-project-internal-seam-encoding'});
@@ -1236,22 +1163,22 @@ test('GPUProjection retains tolerant raw-binary64 assignment at internal patch s
   device.submit(encoder.finish());
 
   const actual = await readFloat32(outputBuffer, 2);
-  assertProjectedPoints(tapeTest, plan, [point], actual);
-  tapeTest.notEqual(actual[1], 0, 'the accepted seam row is distinct from the zero sentinel');
+  assertProjectedPoints(plan, [point], actual);
+  expect(actual[1], 'the accepted seam row is distinct from the zero sentinel').not.toBe(0);
 
   compiled.destroy();
   contributor.destroy();
   inputBuffer.destroy();
   patchIdBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUProjection keeps strict bounds coupled to per-encoding plan overrides', async tapeTest => {
+it('GPUProjection keeps strict bounds coupled to per-encoding plan overrides', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -1308,8 +1235,8 @@ test('GPUProjection keeps strict bounds coupled to per-encoding plan overrides',
   });
   device.submit(initialEncoder.finish());
   const initialOutput = await readFloat32(outputBuffer, points.length * 2);
-  assertProjectedPoints(tapeTest, initialPlan, [points[0]], initialOutput.slice(0, 2));
-  tapeTest.deepEqual(initialOutput.slice(2), [0, 0], 'initial override rejects shifted rows');
+  assertProjectedPoints(initialPlan, [points[0]], initialOutput.slice(0, 2));
+  expect(initialOutput.slice(2), 'initial override rejects shifted rows').toEqual([0, 0]);
 
   const shiftedEncoder = device.createCommandEncoder({id: 'gpu-project-shifted-override-encoding'});
   compiled.encode(shiftedEncoder, {
@@ -1318,8 +1245,8 @@ test('GPUProjection keeps strict bounds coupled to per-encoding plan overrides',
   });
   device.submit(shiftedEncoder.finish());
   const shiftedOutput = await readFloat32(outputBuffer, points.length * 2);
-  tapeTest.deepEqual(shiftedOutput.slice(0, 2), [0, 0], 'shifted override rejects initial rows');
-  assertProjectedPoints(tapeTest, shiftedPlan, [points[1]], shiftedOutput.slice(2));
+  expect(shiftedOutput.slice(0, 2), 'shifted override rejects initial rows').toEqual([0, 0]);
+  assertProjectedPoints(shiftedPlan, [points[1]], shiftedOutput.slice(2));
 
   compiled.destroy();
   contributor.destroy();
@@ -1327,7 +1254,7 @@ test('GPUProjection keeps strict bounds coupled to per-encoding plan overrides',
   shiftedPlanBuffer.destroy();
   inputBuffer.destroy();
   outputBuffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
 function makeCurvedProjectionPlan(): ReturnType<typeof compileProjectionPlan> {
@@ -1344,7 +1271,6 @@ function makeCurvedProjectionPlan(): ReturnType<typeof compileProjectionPlan> {
 }
 
 function assertProjectedPoints(
-  tapeTest: {ok(value: unknown, message?: string): void},
   plan: ReturnType<typeof compileProjectionPlan>,
   points: readonly Coordinates[],
   actual: readonly number[]
@@ -1352,14 +1278,12 @@ function assertProjectedPoints(
   for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
     const expected = evaluateProjectionPlan(plan, points[pointIndex]);
     assertClose(
-      tapeTest,
       actual[pointIndex * 2],
       expected[0] - plan.destinationOrigin[0],
       plan.tolerance + 1e-5,
       `mixed patch point ${pointIndex} matches its local x projection`
     );
     assertClose(
-      tapeTest,
       actual[pointIndex * 2 + 1],
       expected[1] - plan.destinationOrigin[1],
       plan.tolerance + 1e-5,
@@ -1486,12 +1410,9 @@ function encodeFloat64Points(points: readonly Coordinates[]): Uint32Array {
   return new Uint32Array(values.buffer);
 }
 
-function assertClose(
-  tapeTest: {ok(value: unknown, message?: string): void},
-  actual: number,
-  expected: number,
-  tolerance: number,
-  message: string
-): void {
-  tapeTest.ok(Math.abs(actual - expected) <= tolerance, `${message}: ${actual} versus ${expected}`);
+function assertClose(actual: number, expected: number, tolerance: number, message: string): void {
+  expect(
+    Boolean(Math.abs(actual - expected) <= tolerance),
+    `${message}: ${actual} versus ${expected}`
+  ).toBe(true);
 }

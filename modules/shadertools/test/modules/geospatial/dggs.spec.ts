@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import type {Test} from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -23,25 +22,38 @@ const INT64_POSITIVE = 17n;
 // WGSL f32 sin/cos may differ by up to 2^-11 radians, about 0.028 degrees.
 const DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;
 
-test('shadertools#dggs exports WGSL helpers', t => {
-  t.equal(dggs.name, 'dggs', 'module has expected name');
-  t.ok(dggs.source?.includes('dggs_i64_less'), 'exports Int64 helper functions');
-  t.ok(dggs.source?.includes('dggs_h3_get_resolution'), 'exports H3 decoder helpers');
-  t.ok(dggs.source?.includes('dggs_h3_get_boundary_point'), 'exports H3 boundary helpers');
-  t.ok(
-    dggs.source?.includes('dggs_h3_get_boundary_point_fp64_split'),
-    'exports fp64-split boundary helpers'
+it('shadertools#dggs exports WGSL helpers', () => {
+  expect(dggs.name, 'module has expected name').toBe('dggs');
+  expect(Boolean(dggs.source?.includes('dggs_i64_less')), 'exports Int64 helper functions').toBe(
+    true
   );
-  t.ok(dggs.source?.includes('dggs_s2_get_face'), 'exports S2 decoder helpers');
-  t.ok(dggs.source?.includes('dggs_a5_get_boundary_point'), 'exports A5 boundary helpers');
-  t.end();
+  expect(
+    Boolean(dggs.source?.includes('dggs_h3_get_resolution')),
+    'exports H3 decoder helpers'
+  ).toBe(true);
+  expect(
+    Boolean(dggs.source?.includes('dggs_h3_get_boundary_point')),
+    'exports H3 boundary helpers'
+  ).toBe(true);
+  expect(
+    Boolean(dggs.source?.includes('dggs_h3_get_boundary_point_fp64_split')),
+    'exports fp64-split boundary helpers'
+  ).toBe(true);
+  expect(Boolean(dggs.source?.includes('dggs_s2_get_face')), 'exports S2 decoder helpers').toBe(
+    true
+  );
+  expect(
+    Boolean(dggs.source?.includes('dggs_a5_get_boundary_point')),
+    'exports A5 boundary helpers'
+  ).toBe(true);
+  void 0;
 });
 
-test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
+it('shadertools#dggs WGSL decodes H3, S2, and A5 words', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping DGGS WGSL compute test');
-    t.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -143,67 +155,59 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
       resultBytes.byteOffset,
       resultBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(
+    expect(
       Array.from(resultWords.slice(0, 33)),
-      Array.from(expectedResult.slice(0, 33)),
       'decodes expected integer fields before A5 boundary coordinates'
-    );
+    ).toEqual(Array.from(expectedResult.slice(0, 33)));
     assertFloat32WordClose(
-      t,
       resultWords[33]!,
       -120.09849548339844,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 boundary longitude'
     );
     assertFloat32WordClose(
-      t,
       resultWords[34]!,
       40.015132904052734,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 boundary latitude'
     );
-    t.deepEqual(
+    expect(
       Array.from(resultWords.slice(35, 41)),
-      Array.from(expectedResult.slice(35, 41)),
       'decodes expected reflected A5 integer fields'
-    );
+    ).toEqual(Array.from(expectedResult.slice(35, 41)));
     assertFloat32WordClose(
-      t,
       resultWords[41]!,
       -74.28097534179688,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes reflected A5 boundary longitude'
     );
     assertFloat32WordClose(
-      t,
       resultWords[42]!,
       44.1791877746582,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes reflected A5 boundary latitude'
     );
     assertFloat32WordClose(
-      t,
       resultWords[43]!,
       -120.09849548339844,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 fp64-split boundary longitude high component'
     );
     assertFloat32WordClose(
-      t,
       resultWords[44]!,
       40.015132904052734,
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 fp64-split boundary latitude high component'
     );
-    t.equal(resultWords[45], 0, 'decodes A5 fp64-split boundary longitude low component');
-    t.equal(resultWords[46], 0, 'decodes A5 fp64-split boundary latitude low component');
+    expect(resultWords[45], 'decodes A5 fp64-split boundary longitude low component').toBe(0);
+    expect(resultWords[46], 'decodes A5 fp64-split boundary latitude low component').toBe(0);
   } finally {
     computation.destroy();
     inputBuffer.destroy();
     resultBuffer.destroy();
   }
 
-  t.end();
+  void 0;
 });
 
 const DGGS_TEST_SHADER = /* wgsl */ `\
@@ -321,15 +325,14 @@ function getFloat32Value(bits: number): number {
 }
 
 function assertFloat32WordClose(
-  t: Test,
   actualBits: number,
   expectedValue: number,
   tolerance: number,
   message: string
 ): void {
   const actualValue = getFloat32Value(actualBits);
-  t.ok(
-    Math.abs(actualValue - expectedValue) <= tolerance,
+  expect(
+    Boolean(Math.abs(actualValue - expectedValue) <= tolerance),
     `${message} (${actualValue} ~= ${expectedValue})`
-  );
+  ).toBe(true);
 }

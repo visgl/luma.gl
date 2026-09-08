@@ -18,6 +18,7 @@ import {getTextureFormatDefinition} from './texture-format-table';
 const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
 const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
+const WEBGPU_CREATE_FILTER = 1 | 4;
 // biome-ignore format: preserve layout
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
@@ -64,6 +65,15 @@ export class TextureFormatDecoder {
   /**  "static" capabilities of a texture format. @note Needs to be adjusted against current device */
   getCapabilities(format: TextureFormat): TextureFormatCapabilities {
     return getTextureFormatCapabilities(format);
+  }
+
+  /** Returns the compact WebGPU capability mask stored in the canonical format table. */
+  getWebGPUCapabilities(format: TextureFormat): number {
+    const definition = getTextureFormatDefinition(format);
+    if (definition.webgpu !== undefined) {
+      return definition.webgpu;
+    }
+    return this.isCompressed(format) && !format.endsWith('-webgl') ? WEBGPU_CREATE_FILTER : 0;
   }
 
   /** Computes the memory layout for a texture, in particular including row byte alignment */
@@ -225,6 +235,7 @@ function getTextureFormatInfoUsingTable(format: TextureFormat): TextureFormatInf
   delete info.filter;
   delete info.blend;
   delete info.store;
+  delete info.webgpu;
 
   const formatInfo: TextureFormatInfo = {
     ...info,

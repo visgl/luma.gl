@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -14,11 +14,11 @@ import {
 
 const {outside, inside, boundary, uncertain} = GPU_POINT_IN_POLYGON_CLASSIFICATION;
 
-test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', async tapeTest => {
+it('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -207,7 +207,7 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
     output: outputView
   }).addToGraph(graph);
 
-  tapeTest.throws(
+  expect(
     () =>
       new GPUPairwisePointInPolygon({
         points: pointView,
@@ -217,9 +217,9 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
         ringOffsets: ringOffsetView,
         output: importView(graph, 'short-output', buffers.output, 'uint32', points.length - 1)
       }),
-    /output.length must equal points.length/
-  );
-  tapeTest.throws(
+    ''
+  ).toThrow(/output.length must equal points.length/);
+  expect(
     () =>
       new GPUPairwisePointInPolygon({
         points: pointView,
@@ -235,9 +235,9 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
         ringOffsets: ringOffsetView,
         output: outputView
       }),
-    /geometryOffsets.length must equal points.length \+ 1/
-  );
-  tapeTest.throws(
+    ''
+  ).toThrow(/geometryOffsets.length must equal points.length \+ 1/);
+  expect(
     () =>
       new GPUPairwisePointInPolygon({
         points: pointView,
@@ -247,14 +247,14 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
         ringOffsets: ringOffsetView,
         output: importView(graph, 'aliased-output', buffers.points, 'uint32', points.length)
       }),
-    /output and points must not overlap/
-  );
+    ''
+  ).toThrow(/output and points must not overlap/);
 
   if (isSoftwareBackedDevice(device)) {
     // SwiftShader still exceeds the 60-second test budget after predicate-only source specialization.
-    tapeTest.comment('Skipping precise f32 point-in-polygon execution on software WebGPU');
+    void 0;
     for (const buffer of Object.values(buffers)) buffer.destroy();
-    tapeTest.end();
+    void 0;
     return;
   }
 
@@ -262,24 +262,24 @@ test('GPUPairwisePointInPolygon classifies f32 polygons and malformed inputs', a
   encode(device, compiled);
   const classifications = await readUint32(buffers.output, points.length);
   for (let index = 0; index < cases.length; index++) {
-    assertPointInPolygonConformance(tapeTest, classifications[index], cases[index]);
+    assertPointInPolygonConformance(classifications[index], cases[index]);
   }
 
   compiled.destroy();
   for (const buffer of Object.values(buffers)) buffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
-test('GPUPairwisePointInPolygon preserves raw binary64 deltas and explicit ambiguity', async tapeTest => {
+it('GPUPairwisePointInPolygon preserves raw binary64 deltas and explicit ambiguity', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
-    tapeTest.comment('WebGPU is not available');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
   if (isSoftwareBackedDevice(device)) {
-    tapeTest.comment('Skipping slow integer fp64 point-in-polygon shader on software WebGPU');
-    tapeTest.end();
+    void 0;
+    void 0;
     return;
   }
 
@@ -382,12 +382,12 @@ test('GPUPairwisePointInPolygon preserves raw binary64 deltas and explicit ambig
   encode(device, compiled);
   const classifications = await readUint32(buffers.output, points.length);
   for (let index = 0; index < cases.length; index++) {
-    assertPointInPolygonConformance(tapeTest, classifications[index], cases[index]);
+    assertPointInPolygonConformance(classifications[index], cases[index]);
   }
 
   compiled.destroy();
   for (const buffer of Object.values(buffers)) buffer.destroy();
-  tapeTest.end();
+  void 0;
 });
 
 type Point = readonly [number, number];
@@ -401,17 +401,13 @@ type PointInPolygonCase = {
   allowUncertain?: boolean;
 };
 
-function assertPointInPolygonConformance(
-  tapeTest: {equal: (actual: unknown, expected: unknown, message?: string) => void},
-  actual: number,
-  testCase: PointInPolygonCase
-): void {
+function assertPointInPolygonConformance(actual: number, testCase: PointInPolygonCase): void {
   const expected = getPointInPolygonClassification(testCase.point, testCase.geometry);
   if (testCase.allowUncertain && actual === uncertain) {
-    tapeTest.equal(actual, uncertain, `${testCase.name} is explicitly classified as ambiguous`);
+    expect(actual, `${testCase.name} is explicitly classified as ambiguous`).toBe(uncertain);
     return;
   }
-  tapeTest.equal(actual, expected, `${testCase.name} matches the deterministic CPU oracle`);
+  expect(actual, `${testCase.name} matches the deterministic CPU oracle`).toBe(expected);
 }
 
 function getPointInPolygonClassification(point: Point, geometry: Geometry): number {

@@ -7,11 +7,11 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {ANARIDevice} from '@luma.gl/scene';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
-import test from 'test/utils/vitest-tape';
+import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/showcase/scene/gltf-to-anari';
 import {createANARIJSONScene} from '../../../examples/showcase/scene/playground-scene';
 
-test('glTF SimpleSkin renders automatically animated retained joints on WebGL and WebGPU', async testContext => {
+it('glTF SimpleSkin renders automatically animated retained joints on WebGL and WebGPU', async () => {
   const asset = await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
     gltf: {loadImages: false}
   });
@@ -30,7 +30,7 @@ test('glTF SimpleSkin renders automatically animated retained joints on WebGL an
   for (const graphicsDevice of devices) {
     const scenegraphs = createScenegraphsFromGLTF(graphicsDevice, source);
     const binding = scenegraphs.skins.getBinding(0);
-    testContext.equal(binding?.joints.length, 2, `${graphicsDevice.type} binds authored joints`);
+    expect(binding?.joints.length, `${graphicsDevice.type} binds authored joints`).toBe(2);
     scenegraphs.animator.setTime(500);
 
     const device = new ANARIDevice(graphicsDevice);
@@ -42,12 +42,13 @@ test('glTF SimpleSkin renders automatically animated retained joints on WebGL an
       const after = scene.frame.render();
       graphicsDevice.submit();
 
-      testContext.ok(before.drawCount > 0, `${graphicsDevice.type} draws the authored skin`);
-      testContext.equal(
-        after.drawCount,
-        before.drawCount,
-        `${graphicsDevice.type} draws its animated pose without rebuilding the scene`
+      expect(Boolean(before.drawCount > 0), `${graphicsDevice.type} draws the authored skin`).toBe(
+        true
       );
+      expect(
+        after.drawCount,
+        `${graphicsDevice.type} draws its animated pose without rebuilding the scene`
+      ).toBe(before.drawCount);
     } finally {
       scene.destroy();
       device.destroy();
@@ -57,6 +58,6 @@ test('glTF SimpleSkin renders automatically animated retained joints on WebGL an
     }
   }
 
-  testContext.ok(devices.length > 0, 'at least one live graphics backend is exercised');
-  testContext.end();
+  expect(Boolean(devices.length > 0), 'at least one live graphics backend is exercised').toBe(true);
+  void 0;
 });

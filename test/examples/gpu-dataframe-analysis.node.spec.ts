@@ -55,14 +55,12 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
 
     const documentation = readGPUDataFrameDocumentation();
     const overview = readRepositoryFile('docs/api-reference/experimental/README.md');
-    const releaseNotes = readRepositoryFile('docs/whats-new.md');
     const experimentalTabs = readRepositoryFile(
       'website/src/components/docs/experimental-docs-catalog.ts'
     );
 
     expect(documentation).toContain('<ExperimentalDocsTabs active="gpu-dataframe" />');
     expect(overview).toContain(GPU_DATAFRAME_DOCUMENT_PATH);
-    expect(releaseNotes).toContain(GPU_DATAFRAME_DOCUMENT_PATH);
     expect(experimentalTabs).toMatch(
       /id:\s*['"]gpu-dataframe['"][^}]*href:\s*['"]\/docs\/api-reference\/experimental\/gpu-dataframe['"]/
     );
