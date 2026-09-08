@@ -21,6 +21,10 @@ import {
   type ParquetDeltaLengthByteArrayPlan
 } from './parquet-delta-length-byte-array';
 import {
+  parseParquetDeltaByteArrayPlan,
+  type ParquetDeltaByteArrayPlan
+} from './parquet-delta-byte-array';
+import {
   parseParquetPlainByteArrayPlan,
   type ParquetPlainByteArrayPlan
 } from './parquet-plain-byte-array';
@@ -154,6 +158,13 @@ export type GPUParquetValuePlan =
       decodedByteLength: number;
     }>
   | Readonly<{
+      kind: 'rle-boolean';
+      valueCount: number;
+      decodedByteLength: number;
+      runPlan: ParquetRleBitPackedRunPlan;
+      runDescriptors: GPUParquetUploadSection;
+    }>
+  | Readonly<{
       kind: 'plain-byte-array';
       valueCount: number;
       decodedByteLength: number;
@@ -183,6 +194,14 @@ export type GPUParquetValuePlan =
       deltaPlan: ParquetDeltaLengthByteArrayPlan;
       miniBlockDescriptors: GPUParquetUploadSection;
       payload: GPUParquetUploadSection;
+    }>
+  | Readonly<{
+      kind: 'delta-byte-array';
+      valueCount: number;
+      decodedByteLength: number;
+      deltaPlan: ParquetDeltaByteArrayPlan;
+      prefixMiniBlockDescriptors: GPUParquetUploadSection;
+      suffixMiniBlockDescriptors: GPUParquetUploadSection;
     }>
   | Readonly<{
       kind: 'dictionary-fixed' | 'dictionary-byte-array';
@@ -226,6 +245,7 @@ export type CPUParquetPageFallbackPlan = Readonly<{
     | 'unsupported-encoding'
     | 'unsupported-physical-type'
     | 'missing-dictionary'
+    | 'missing-output-capacity'
     | 'variable-dictionary-output';
   detail: string;
   page: ParquetEncodedPage;
@@ -248,6 +268,15 @@ export type GPUParquetEncodedPageBatchPlanOptions = Readonly<{
   minimumGPUByteLength?: number;
   /** Compression codecs retained by loaders.gl and accepted by this adapter. */
   compressionCodecs?: readonly ('SNAPPY' | 'LZ4_RAW')[];
+  /**
+   * Returns an exact decoded byte length for a variable-width page when metadata outside the
+   * encoded payload already provides it. Enables bounded `DELTA_BYTE_ARRAY` reconstruction without
+   * a GPU allocation/readback round trip.
+   */
+  getPageOutputByteLength?: (
+    column: LoadersGLParquetEncodedColumnChunk,
+    page: LoadersGLParquetEncodedPage
+  ) => number | undefined;
   /** Throws instead of returning a mixed plan when any page needs CPU work. */
   requireGPU?: boolean;
 }>;
@@ -305,6 +334,7 @@ export function planGPUParquetEncodedPageBatch(
           pageIndex,
           minimumGPUByteLength,
           compressionCodecs,
+          options.getPageOutputByteLength,
           upload,
           dictionaries[columnIndex],
           dictionaryErrors[columnIndex]
@@ -425,6 +455,7 @@ function planPage(
   pageIndex: number,
   minimumGPUByteLength: number,
   compressionCodecs: ReadonlySet<string>,
+  getPageOutputByteLength: GPUParquetEncodedPageBatchPlanOptions['getPageOutputByteLength'],
   upload: GPUParquetUploadBuilder,
   dictionary: GPUParquetDictionaryPlan | undefined,
   dictionaryError: PlannerError | undefined
@@ -477,6 +508,7 @@ function planPage(
     physicalValueCount,
     sections.decodedValuesByteLength,
     Boolean(compression),
+    getPageOutputByteLength,
     upload,
     dictionary,
     dictionaryError
@@ -607,6 +639,7 @@ function planValues(
   valueCount: number,
   decodedValuesByteLength: number,
   isCompressed: boolean,
+  getPageOutputByteLength: GPUParquetEncodedPageBatchPlanOptions['getPageOutputByteLength'],
   upload: GPUParquetUploadBuilder,
   dictionary: GPUParquetDictionaryPlan | undefined,
   dictionaryError: PlannerError | undefined
@@ -692,6 +725,16 @@ function planValues(
       `Compressed ${encoding} control headers require CPU decompression before GPU planning`
     );
   }
+  if (encoding === 'RLE' && physicalType === 'BOOLEAN') {
+    const runPlan = parseParquetRleBitPackedRunPlan(encoded, 1, valueCount);
+    return Object.freeze({
+      kind: 'rle-boolean' as const,
+      valueCount,
+      decodedByteLength: multiplyUint32(valueCount, 4, 'RLE BOOLEAN output'),
+      runPlan,
+      runDescriptors: upload.add(runPlan.runDescriptors, 'boolean RLE descriptors')
+    });
+  }
   if (encoding === 'DELTA_BINARY_PACKED' && physicalType === 'INT32') {
     const deltaPlan = parseParquetDeltaBinaryPackedPlan(encoded);
     validatePlannedValueCount(deltaPlan.valueCount, valueCount, encoding);
@@ -729,6 +772,32 @@ function planValues(
       payload: upload.add(
         encoded.subarray(deltaPlan.payloadByteOffset),
         'delta length byte-array payload'
+      )
+    });
+  }
+  if (encoding === 'DELTA_BYTE_ARRAY' && physicalType === 'BYTE_ARRAY') {
+    const pageOutputByteLength = getPageOutputByteLength?.(column, page);
+    if (pageOutputByteLength === undefined) {
+      throw makePlannerError(
+        'missing-output-capacity',
+        'DELTA_BYTE_ARRAY requires an exact decoded byte length from getPageOutputByteLength'
+      );
+    }
+    validateUint32(pageOutputByteLength, 'DELTA_BYTE_ARRAY output byte length');
+    const deltaPlan = parseParquetDeltaByteArrayPlan(encoded);
+    validatePlannedValueCount(deltaPlan.prefixLengthPlan.valueCount, valueCount, encoding);
+    return Object.freeze({
+      kind: 'delta-byte-array' as const,
+      valueCount,
+      decodedByteLength: pageOutputByteLength,
+      deltaPlan,
+      prefixMiniBlockDescriptors: upload.add(
+        deltaPlan.prefixLengthPlan.miniBlockDescriptors,
+        'delta byte-array prefix descriptors'
+      ),
+      suffixMiniBlockDescriptors: upload.add(
+        deltaPlan.suffixLengthPlan.miniBlockDescriptors,
+        'delta byte-array suffix descriptors'
       )
     });
   }
