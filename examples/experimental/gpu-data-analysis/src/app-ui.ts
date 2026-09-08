@@ -18,8 +18,10 @@ export type ExampleElements = {
   groups: HTMLElement;
   heatmap: HTMLElement;
   histogram: HTMLElement;
+  gpuDataFrameAdjustment: HTMLInputElement;
   gpuDataFrameExecution: HTMLElement;
   gpuDataFrameExpression: HTMLElement;
+  gpuDataFrameMultiplier: HTMLSelectElement;
   gpuDataFramePreview: HTMLElement;
   gpuDataFrameRate: HTMLElement;
   gpuDataFrameResult: HTMLElement;
@@ -53,8 +55,10 @@ export function getElements(root: HTMLElement): ExampleElements {
     groups: get('[data-groups]'),
     heatmap: get('[data-heatmap]'),
     histogram: get('[data-histogram]'),
+    gpuDataFrameAdjustment: get('[data-gpu-dataframe-adjustment]'),
     gpuDataFrameExecution: get('[data-gpu-dataframe-execution]'),
     gpuDataFrameExpression: get('[data-gpu-dataframe-expression]'),
+    gpuDataFrameMultiplier: get('[data-gpu-dataframe-multiplier]'),
     gpuDataFramePreview: get('[data-gpu-dataframe-preview]'),
     gpuDataFrameRate: get('[data-gpu-dataframe-rate]'),
     gpuDataFrameResult: get('[data-gpu-dataframe-result]'),
