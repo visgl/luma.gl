@@ -8,6 +8,8 @@ Rebuild an image as rotated, offset print-screen patterns for its individual col
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

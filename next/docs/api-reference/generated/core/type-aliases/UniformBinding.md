@@ -2,7 +2,7 @@
 
 > **UniformBinding** = `object`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:219](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L219)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:228](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L228)
 
 Describes a uniform (sampler etc) binding for a program
 
@@ -12,7 +12,7 @@ Describes a uniform (sampler etc) binding for a program
 
 > **isArray**: `boolean`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:224](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L224)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:233](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L233)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:224](https://github
 
 > **location**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:220](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L220)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L229)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:220](https://github
 
 > **name**: `string`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L221)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:230](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L230)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:221](https://github
 
 > **size**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:222](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L222)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L231)
 
 ***
 
@@ -44,4 +44,4 @@ Defined in: [modules/core/src/adapter/types/shader-layout.ts:222](https://github
 
 > **type**: `number`
 
-Defined in: [modules/core/src/adapter/types/shader-layout.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L223)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:232](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L232)

@@ -39,10 +39,12 @@ import {
 } from './local-loaders';
 import {GaussianSplatRADSceneController} from './rad-scene';
 import {makeGaussianSplatRenderProfile, type GaussianSplatRenderProfile} from './render-profile';
+import {getExampleRuntimeEnvironment} from '../../example-support';
 import {
   createGaussianSplatRADWorkerDecoder,
   type GaussianSplatRADWorkerDecoder
 } from './rad-worker-decoder';
+import {makeGaussianSplatInfoHtml} from './app-ui';
 
 export const title = 'Gaussian Splats';
 export const description =
@@ -81,6 +83,7 @@ type GaussianSplatRADQualityMode = 'interactive' | 'settling' | 'settled';
 type GaussianSplatCameraState = {
   yaw: number;
   pitch: number;
+  roll: number;
   distance: number;
   target: readonly [number, number, number];
   viewportWidth: number;
@@ -92,70 +95,6 @@ type GaussianSplatCameraFrame = {
   forward: [number, number, number];
   right: [number, number, number];
 };
-
-/** Shared controls rendered inside both the website InfoBox and the standalone showcase. */
-export function makeGaussianSplatInfoHtml(): string {
-  return `
-<section data-gaussian-splats-panel style="display:grid;gap:13px;min-width:248px;max-width:310px">
-  <div data-gaussian-splats-description style="font-size:12px;line-height:1.55;opacity:.8">
-    Four independent GPU batches reveal a chromatic observatory of rotated, anisotropic Gaussians.
-    Drag to orbit; scroll to zoom.
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:12px">
-    <span>Visible splats</span><strong data-gaussian-splats-count>0 / 0</strong>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:12px">
-    <span>Source batches</span><strong data-gaussian-splats-batches>0 / ${GAUSSIAN_SPLAT_BATCH_COUNT}</strong>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:12px">
-    <span>Backend</span><strong data-gaussian-splats-backend>Detecting…</strong>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:12px">
-    <span>Pipeline</span><strong data-gaussian-splats-pipeline>Preparing…</strong>
-  </div>
-  <div data-gaussian-splats-pipeline-error hidden role="status" style="font-size:11px;line-height:1.45;color:#ffd08a"></div>
-  <div style="display:flex;justify-content:space-between;font-size:12px">
-    <span>Source</span><strong data-gaussian-splats-source>Synthetic</strong>
-  </div>
-  <label data-gaussian-splats-execution-control hidden style="gap:5px;font-size:12px">
-    <span>Execution pipeline</span>
-    <div data-gaussian-splats-execution></div>
-  </label>
-  <label data-gaussian-splats-scene-control hidden style="gap:5px;font-size:12px">
-    <span>Gaussian splat scene</span>
-    <div data-gaussian-splats-scene></div>
-  </label>
-  <div data-gaussian-splats-progress hidden aria-live="polite" style="gap:5px;font-size:12px">
-    <strong data-gaussian-splats-progress-status>Preparing scene…</strong>
-    <div style="display:flex;align-items:center;gap:7px">
-      <progress data-gaussian-splats-progress-bar max="1" style="flex:1;min-width:0;height:8px"></progress>
-      <span data-gaussian-splats-progress-complete hidden aria-hidden="true" style="color:#82e5ad;font-size:12px;line-height:1">✓</span>
-    </div>
-    <span data-gaussian-splats-progress-detail style="opacity:.75"></span>
-  </div>
-  <div data-gaussian-splats-rad-diagnostics hidden aria-live="polite" style="font-size:11px;line-height:1.45;opacity:.75"></div>
-  <div data-gaussian-splats-load-error hidden role="alert" style="font-size:12px;line-height:1.45;color:#ff9ba5"></div>
-  <label style="display:grid;gap:5px;font-size:12px">
-    <span>Transparency ordering</span>
-    <div data-gaussian-splats-sort></div>
-  </label>
-  <label style="display:grid;gap:5px;font-size:12px">
-    <span>Gaussian radius <strong data-gaussian-splats-radius-value>1.35×</strong></span>
-    <input data-gaussian-splats-radius type="range" min="0.4" max="2.8" step="0.05" value="1.35" />
-  </label>
-  <label style="display:grid;gap:5px;font-size:12px">
-    <span>Opacity <strong data-gaussian-splats-opacity-value>90%</strong></span>
-    <input data-gaussian-splats-opacity type="range" min="0.15" max="1.5" step="0.05" value="0.9" />
-  </label>
-  <label style="display:flex;align-items:center;gap:8px;font-size:12px">
-    <input data-gaussian-splats-orbit type="checkbox" checked /> Cinematic orbit
-  </label>
-  <details data-gaussian-splats-graph-details hidden style="font-size:12px">
-    <summary style="cursor:pointer">GPU graph inspector</summary>
-    <div data-gaussian-splats-graph-inspector style="margin-top:9px"></div>
-  </details>
-</section>`;
-}
 
 /** Uses GPU graph execution only on WebGPU unless the explicit CPU comparison is requested. */
 export function getGaussianSplatExecutionMode(
@@ -224,13 +163,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   }: AnimationProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}) {
     super();
     this.device = device;
-    this.renderProfile = makeGaussianSplatRenderProfile({
-      coarsePointer:
-        typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(pointer: coarse)').matches,
-      maxTouchPoints: typeof navigator === 'undefined' ? 0 : navigator.maxTouchPoints
-    });
+    this.renderProfile = makeGaussianSplatRenderProfile(
+      getExampleRuntimeEnvironment(window, navigator)
+    );
     this.executionMode = getGaussianSplatExecutionMode(
       device.type,
       typeof window === 'undefined' ? '' : window.location.search
@@ -344,6 +279,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       maxPitch: 1.32,
       rotateSpeed: -0.006,
       pitchSpeed: -0.005,
+      enableRotate: true,
       autoRotate: this.autoOrbit,
       autoRotateSpeed: 0.12,
       onInteractionStart: this.handleCameraInteraction
@@ -394,10 +330,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const cameraPitch =
       (this.orbitControls?.pitch ?? this.cameraHomePitch) +
       (this.autoOrbit ? Math.sin(elapsedTimeMilliseconds * 0.00022) * 0.11 : 0);
+    const cameraRoll = this.orbitControls?.roll ?? 0;
     const cameraDistance = this.orbitControls?.distance ?? this.cameraHomeDistance;
     const cameraState: GaussianSplatCameraState = {
       yaw: cameraYaw,
       pitch: cameraPitch,
+      roll: cameraRoll,
       distance: cameraDistance,
       target: this.cameraTarget,
       viewportWidth: Math.max(width, 1),
@@ -701,10 +639,13 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
   private updateRendererCamera(cameraState: GaussianSplatCameraState): void {
     const cosinePitch = Math.cos(cameraState.pitch);
+    const sinePitch = Math.sin(cameraState.pitch);
+    const cosineYaw = Math.cos(cameraState.yaw);
+    const sineYaw = Math.sin(cameraState.yaw);
     const horizontalDistance = cosinePitch * cameraState.distance;
-    const forwardDistance = Math.cos(cameraState.yaw) * horizontalDistance;
-    const rightDistance = Math.sin(cameraState.yaw) * horizontalDistance;
-    const upwardDistance = Math.sin(cameraState.pitch) * cameraState.distance;
+    const forwardDistance = cosineYaw * horizontalDistance;
+    const rightDistance = sineYaw * horizontalDistance;
+    const upwardDistance = sinePitch * cameraState.distance;
     const cameraPosition: [number, number, number] = [
       cameraState.target[0] +
         this.cameraFrame.forward[0] * forwardDistance +
@@ -718,6 +659,26 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         this.cameraFrame.forward[2] * forwardDistance +
         this.cameraFrame.right[2] * rightDistance +
         this.cameraFrame.up[2] * upwardDistance
+    ];
+    const cameraRight: [number, number, number] = [
+      this.cameraFrame.right[0] * cosineYaw - this.cameraFrame.forward[0] * sineYaw,
+      this.cameraFrame.right[1] * cosineYaw - this.cameraFrame.forward[1] * sineYaw,
+      this.cameraFrame.right[2] * cosineYaw - this.cameraFrame.forward[2] * sineYaw
+    ];
+    const cameraUp: [number, number, number] = [
+      this.cameraFrame.up[0] * cosinePitch -
+        (this.cameraFrame.forward[0] * cosineYaw + this.cameraFrame.right[0] * sineYaw) * sinePitch,
+      this.cameraFrame.up[1] * cosinePitch -
+        (this.cameraFrame.forward[1] * cosineYaw + this.cameraFrame.right[1] * sineYaw) * sinePitch,
+      this.cameraFrame.up[2] * cosinePitch -
+        (this.cameraFrame.forward[2] * cosineYaw + this.cameraFrame.right[2] * sineYaw) * sinePitch
+    ];
+    const cosineRoll = Math.cos(cameraState.roll);
+    const sineRoll = Math.sin(cameraState.roll);
+    const rolledCameraUp: [number, number, number] = [
+      cameraUp[0] * cosineRoll + cameraRight[0] * sineRoll,
+      cameraUp[1] * cosineRoll + cameraRight[1] * sineRoll,
+      cameraUp[2] * cosineRoll + cameraRight[2] * sineRoll
     ];
     const near = this.localLoadersConfiguration
       ? Math.max(Math.min(cameraState.distance * 0.02, this.cameraSceneRadius * 0.05), 0.001)
@@ -734,7 +695,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const viewMatrix = new Matrix4().lookAt({
       eye: cameraPosition,
       center: cameraState.target,
-      up: this.cameraFrame.up
+      up: rolledCameraUp
     });
     const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
     const cameraProps: Pick<SplatRendererProps, 'modelViewProjectionMatrix' | 'viewportSize'> = {
@@ -877,6 +838,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     const minimumCameraDistance = Math.max(this.cameraSceneRadius * 0.02, 0.025);
     this.orbitControls?.setProps({
       target: this.cameraTarget,
+      roll: 0,
       distance: fittedDistance,
       minDistance: this.localLoadersConfiguration?.camera
         ? Math.min(minimumCameraDistance, fittedDistance * 0.5)
@@ -910,10 +872,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     if (this.localLoadersConfiguration && descriptionElement) {
       descriptionElement.textContent =
         this.localLoadersConfiguration.sceneId === 'coit'
-          ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; scroll to zoom.'
+          ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; pinch to zoom and twist to roll.'
           : this.localLoadersConfiguration.loaderMode === 'local'
-            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; scroll to zoom.'
-            : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; scroll to zoom.';
+            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; pinch to zoom and twist to roll.'
+            : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; pinch to zoom and twist to roll.';
     }
 
     if (this.device.type === 'webgpu' && executionControl && executionElement) {
@@ -1302,6 +1264,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     this.orbitControls?.setProps({
       yaw: this.cameraHomeYaw,
       pitch: this.cameraHomePitch,
+      roll: 0,
       distance: this.cameraHomeDistance
     });
   };
@@ -1355,6 +1318,7 @@ function hasSameCameraState(
     previousCameraState &&
       cameraState.yaw === previousCameraState.yaw &&
       cameraState.pitch === previousCameraState.pitch &&
+      cameraState.roll === previousCameraState.roll &&
       cameraState.distance === previousCameraState.distance &&
       cameraState.viewportWidth === previousCameraState.viewportWidth &&
       cameraState.viewportHeight === previousCameraState.viewportHeight &&

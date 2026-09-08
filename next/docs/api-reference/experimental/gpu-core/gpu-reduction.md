@@ -81,7 +81,7 @@ All intermediate views are graph-owned transients. Their declared node uses let 
 
 **GPUReduction - Benchmark**
 
-**33.55M** uint32 elements/dispatch ·<!-- --> **131,072** reduction blocks
+**65,536** uint32 elements/dispatch ·<!-- --> **256** reduction blocks
 
 | Implementation        | Supported | Barriers | GPU median | Relative | Element throughput |
 | --------------------- | --------- | -------- | ---------- | -------- | ------------------ |
@@ -91,9 +91,11 @@ All intermediate views are graph-owned transients. Their declared node uses let 
 * Each round sums 256 generated uint32 inputs using the workgroup-local operation at the center of a GPUReduction level.
 * Throughput is input elements reduced per second.
 
-Workgroups4,096 (4096)Rounds32
+Workgroups256Rounds1
 
 Run benchmark
+
+Mobile quality · smallest workload
 
 ### What the benchmark measures[​](#what-the-benchmark-measures "Direct link to What the benchmark measures")
 

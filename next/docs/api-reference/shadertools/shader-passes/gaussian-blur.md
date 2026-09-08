@@ -8,6 +8,8 @@ Soften an image with a smooth, bell-shaped Gaussian kernel. `gaussianBlur` appli
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

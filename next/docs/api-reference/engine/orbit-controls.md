@@ -2,7 +2,7 @@
 
 [Workflow](https://luma.gl/next/docs/api-guide/engine/interactivity.md)[OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md)[PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md)
 
-`OrbitControls` adds pointer-driven orbiting, wheel and pinch zoom, optional panning, automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
+`OrbitControls` adds pointer-driven orbiting, optional two-finger camera roll, wheel and pinch zoom, optional panning, automatic orbiting, and configurable camera bounds to an HTML canvas. The controls maintain a camera position and up direction around a target without depending on a specific renderer, scene graph, or GPU backend.
 
 ## Usage[​](#usage "Direct link to Usage")
 
@@ -49,7 +49,7 @@ function render(timeMilliseconds: number): void {
 
     center: controls.props.target,
 
-    up: [0, 1, 0]
+    up: controls.getUpDirection()
 
   });
 
@@ -91,6 +91,8 @@ type OrbitControlsProps = {
 
   pitch?: number;
 
+  roll?: number;
+
   minDistance?: number;
 
   maxDistance?: number;
@@ -106,6 +108,8 @@ type OrbitControlsProps = {
   zoomSpeed?: number;
 
   enabled?: boolean;
+
+  enableRotate?: boolean;
 
   enableZoom?: boolean;
 
@@ -128,6 +132,7 @@ type OrbitControlsProps = {
 | `distance`           | `10`                  | Initial distance from the orbit target, in world-space units.                                                                               |
 | `yaw`                | `0`                   | Initial horizontal orbit angle in radians.                                                                                                  |
 | `pitch`              | `0.25`                | Initial vertical orbit angle in radians.                                                                                                    |
+| `roll`               | `0`                   | Initial rotation of the camera up axis around the viewing direction, in radians.                                                            |
 | `minDistance`        | `1`                   | Minimum distance from the target.                                                                                                           |
 | `maxDistance`        | `100`                 | Maximum distance from the target.                                                                                                           |
 | `minPitch`           | `-Math.PI / 2 + 0.01` | Lowest allowed pitch angle in radians.                                                                                                      |
@@ -136,6 +141,7 @@ type OrbitControlsProps = {
 | `pitchSpeed`         | `rotateSpeed`         | Optional vertical rotation applied per CSS pixel. Negative values invert the vertical drag direction.                                       |
 | `zoomSpeed`          | `0.001`               | Exponential wheel-zoom sensitivity.                                                                                                         |
 | `enabled`            | `true`                | Whether pointer, touch, wheel, and automatic camera interactions are active.                                                                |
+| `enableRotate`       | `false`               | Whether a two-finger twist can rotate the camera up axis. Orbiting remains enabled when this is `false`.                                    |
 | `enableZoom`         | `true`                | Whether mouse-wheel and two-finger pinch gestures can change the camera distance.                                                           |
 | `enablePan`          | `false`               | Whether Shift-dragging and two-finger touch movement can pan the orbit target.                                                              |
 | `panSpeed`           | `0.0018`              | Target movement per CSS pixel, scaled by the current camera distance.                                                                       |
@@ -160,6 +166,10 @@ Current horizontal orbit angle in radians. Applications can read or adjust this 
 ### `pitch: number`[​](#pitch-number "Direct link to pitch-number")
 
 Current vertical orbit angle in radians. Pointer interaction and `setProps()` clamp this value between `minPitch` and `maxPitch`.
+
+### `roll: number`[​](#roll-number "Direct link to roll-number")
+
+Current rotation of the camera up axis around its viewing direction, in radians. Two-finger twist gestures update this value when `enableRotate` is enabled.
 
 ### `distance: number`[​](#distance-number "Direct link to distance-number")
 
@@ -203,6 +213,10 @@ Returns the current world-space camera position computed from `target`, `yaw`, `
 
 At `yaw: 0` and `pitch: 0`, the camera is positioned on the positive Z side of its target. Positive pitch moves the camera upward.
 
+### `getUpDirection(): OrbitPosition`[​](#getupdirection-orbitposition "Direct link to getupdirection-orbitposition")
+
+Returns the normalized camera up direction derived from the current yaw, pitch, and roll. Pass this value as the `up` direction when building a view matrix so two-finger rotation is visible.
+
 ### `setProps(props: OrbitControlsProps): void`[​](#setpropsprops-orbitcontrolsprops-void "Direct link to setpropsprops-orbitcontrolsprops-void")
 
 Updates the orbit configuration without replacing the controls or reattaching event listeners.
@@ -223,7 +237,7 @@ controls.setProps({
 });
 ```
 
-Changing `yaw`, `pitch`, or `distance` through `setProps()` also updates the configured camera pose used by `reset()`.
+Changing `yaw`, `pitch`, `roll`, or `distance` through `setProps()` also updates the configured camera pose used by `reset()`.
 
 ### `setAutoRotate(autoRotate: boolean): void`[​](#setautorotateautorotate-boolean-void "Direct link to setautorotateautorotate-boolean-void")
 
@@ -235,7 +249,7 @@ controls.setAutoRotate(false);
 
 ### `reset(): void`[​](#reset-void "Direct link to reset-void")
 
-Restores the configured yaw, pitch, and distance. The restored pitch and distance respect the current configured bounds.
+Restores the configured yaw, pitch, roll, and distance. The restored pitch and distance respect the current configured bounds.
 
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 
@@ -246,6 +260,7 @@ Removes all pointer and wheel listeners, releases active pointer capture, and re
 * Drag with the primary mouse button, one touch pointer, or a pen pointer to orbit the target.
 * Scroll the wheel to zoom. Wheel deltas are bounded before applying exponential zoom so large trackpad or mouse events cannot produce an excessive distance jump.
 * Pinch two touch points apart to zoom in or together to zoom out. Pinch distance respects the same configured bounds as wheel zoom.
+* Set `enableRotate: true` to twist two touch points and roll the camera up axis around the viewing direction. Rotation uses the shortest change in touch angle when the gesture crosses the `-pi`/`pi` boundary. Single-pointer yaw and pitch orbiting remain available regardless of this option.
 * Set `enablePan: true` to pan with Shift-dragging or by moving the midpoint of a two-finger touch gesture.
 * Pointer capture keeps every active touch or pointer associated with the canvas, even outside its bounds.
 * Releasing one finger resumes one-pointer orbiting without a positional jump; `pointercancel`, disabling controls, and `destroy()` release the relevant captures.

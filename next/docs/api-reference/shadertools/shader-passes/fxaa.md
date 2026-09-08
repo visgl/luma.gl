@@ -8,6 +8,8 @@ Reduce jagged high-contrast image edges with Fast Approximate Anti-Aliasing. `fx
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

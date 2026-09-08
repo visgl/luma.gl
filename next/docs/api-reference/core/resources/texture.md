@@ -200,6 +200,8 @@ The example below uploads procedural volume data to a `3d` texture and samples t
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

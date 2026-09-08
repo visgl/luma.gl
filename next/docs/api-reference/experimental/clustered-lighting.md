@@ -18,6 +18,8 @@ The first implementation intentionally keeps the contract small and composable:
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -82,6 +82,8 @@ Use the interactive playground to compare wrapping, filtering, mipmaps, LOD clam
 
 InfoSource
 
+Mobile
+
 ```
 // Loading source…
 ```

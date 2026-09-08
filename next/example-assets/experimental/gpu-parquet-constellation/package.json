@@ -1,0 +1,28 @@
+{
+  "name": "luma.gl-examples-experimental-gpu-parquet-constellation",
+  "version": "9.4.0-alpha.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "generate-fixture": "node --experimental-strip-types generate-fixture.mjs",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "~5.0.0-alpha.5",
+    "@loaders.gl/parquet": "~5.0.0-alpha.5",
+    "@luma.gl/core": "9.4.0-alpha.4",
+    "@luma.gl/engine": "9.4.0-alpha.4",
+    "@luma.gl/gpgpu": "9.4.0-alpha.4",
+    "@luma.gl/shadertools": "9.4.0-alpha.4",
+    "@luma.gl/webgpu": "9.4.0-alpha.4",
+    "apache-arrow": "^21.1.0",
+    "compress-utils": "^0.8.0"
+  },
+  "devDependencies": {
+    "parquet-wasm": "^0.7.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}

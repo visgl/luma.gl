@@ -8,6 +8,8 @@ Convert scene-linear high-dynamic-range lighting into display-ready color with a
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -8,6 +8,8 @@ Blend neighboring pixels with a linearly weighted pyramid kernel. `triangleBlur`
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

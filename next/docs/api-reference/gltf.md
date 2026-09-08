@@ -16,6 +16,8 @@ Physical materials · animated characters · standards-native glTF
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

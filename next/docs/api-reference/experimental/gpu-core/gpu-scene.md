@@ -14,6 +14,8 @@ The class is deliberately a storage contract, not a scene graph. A game-engine h
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

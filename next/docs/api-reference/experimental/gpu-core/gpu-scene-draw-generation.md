@@ -14,6 +14,8 @@ This is useful when visibility changes much more often than geometry or pipeline
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

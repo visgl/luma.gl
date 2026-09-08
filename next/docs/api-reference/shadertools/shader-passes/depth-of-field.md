@@ -8,6 +8,8 @@ Keep a selected camera-space distance sharp while softening nearer and farther g
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

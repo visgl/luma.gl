@@ -8,6 +8,8 @@ Rotate the image palette and control overall color intensity without changing th
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -8,6 +8,8 @@ Place an adjustable circular magnifying lens over the current image. `magnify` s
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

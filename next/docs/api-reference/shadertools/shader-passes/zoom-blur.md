@@ -8,6 +8,8 @@ Pull image samples toward a chosen focal point to suggest rapid zoom, radial mot
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

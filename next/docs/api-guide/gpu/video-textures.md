@@ -16,6 +16,8 @@ InfoSource
 
 Use camera
 
+Mobile
+
 ```
 // Loading source…
 ```

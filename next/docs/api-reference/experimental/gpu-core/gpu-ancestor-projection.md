@@ -14,6 +14,8 @@ In the live trace explorer, collapsing a process or excluding a classification c
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

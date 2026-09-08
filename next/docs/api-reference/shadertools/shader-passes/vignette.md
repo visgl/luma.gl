@@ -8,6 +8,8 @@ Darken the image perimeter with a smooth radial falloff. `vignette` concentrates
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

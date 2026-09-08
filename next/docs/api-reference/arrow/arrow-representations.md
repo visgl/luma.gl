@@ -27,18 +27,18 @@ Semantic notes:
 Implementation notes:
 
 * Direct position rows can be consumed as row-aligned attributes or storage rows.
-* Float64 positions preserve source precision in Arrow, then adapters repack to Float32, origin-relative Float32, or word-pair storage at conversion boundaries.
+* Float64 positions preserve source precision in Arrow, then adapters repack to Float32, origin-relative Float32, high/residual-low Float32, or word-pair storage at conversion boundaries. The generic WebGPU planner uploads binary64 bytes unchanged and runs `fround()` on the GPU for the high/low form.
 
 ### Colors[​](#colors "Direct link to Colors")
 
 | Semantic data                        | Supported | Recommended Arrow column    |
 | ------------------------------------ | --------- | --------------------------- |
 | Normalized RGBA row colors           | ✅        | `FixedSizeList<Uint8, 4>`   |
-| Normalized RGB row colors            | ❌        | `FixedSizeList<Uint8, 3>`   |
+| Normalized RGB row colors            | ✅        | `FixedSizeList<Uint8, 3>`   |
 | Compact scene-linear/HDR RGBA colors | ✅        | `FixedSizeList<Float16, 4>` |
-| Compact scene-linear/HDR RGB colors  | ❌        | `FixedSizeList<Float16, 3>` |
+| Compact scene-linear/HDR RGB colors  | ✅        | `FixedSizeList<Float16, 3>` |
 | Scene-linear/HDR RGBA colors         | ✅        | `FixedSizeList<Float32, 4>` |
-| Scene-linear/HDR RGB colors          | ❌        | `FixedSizeList<Float32, 3>` |
+| Scene-linear/HDR RGB colors          | ✅        | `FixedSizeList<Float32, 3>` |
 
 Semantic notes:
 
@@ -49,7 +49,7 @@ Semantic notes:
 Implementation notes:
 
 * Float16 RGBA is the compact scene-linear/HDR form when bandwidth and memory matter more than Float32 precision.
-* RGB source colors are planned but not currently supported by the semantic color adapters. Intended expansion is RGB to RGBA with alpha `255` for `Uint8` and alpha `1.0` for `Float16` and `Float32`.
+* `convertArrowColors()` and `convertColors()` accept normalized Uint8, Float16, and Float32 RGB/RGBA sources and materialize normalized Uint8 RGBA. RGB receives alpha `255`; floating-point channels are clamped to `[0, 1]`, scaled, and rounded. Use the original Float16 or Float32 RGBA representation instead when scene-linear or HDR values outside `[0, 1]` must be preserved.
 
 ### Scalars[​](#scalars "Direct link to Scalars")
 
@@ -57,7 +57,7 @@ Implementation notes:
 | ---------------------- | --------- | ------------------------------------------------- |
 | Numeric scalars        | ✅        | `Float32`, `Int32`, or `Uint32`                   |
 | High-precision scalars | ✅        | `Float64`                                         |
-| Boolean flags          | ❌        | `Bool` as source, `Uint8` or `Uint32` for GPU use |
+| Boolean flags          | ✅        | `Bool` as source, repacked to `Uint8` for GPU use |
 
 Semantic notes:
 
@@ -65,8 +65,8 @@ Semantic notes:
 
 Implementation notes:
 
-* Float64 scalar columns are accepted as source data, then repacked before generic rendering because shaders do not have a portable `f64` vertex attribute path.
-* Arrow Bool is bit-packed; adapters should repack flags before shader-facing use.
+* Float64 scalar columns are accepted as source data, then repacked before generic rendering because shaders do not have a portable `f64` vertex attribute path. WebGPU performs one high/residual-low split pass without CPU value conversion; other devices use a chunk-preserving CPU fallback.
+* Arrow Bool is bit-packed; `convertArrowToGPUVector()` repacks it into nullable, chunk-preserving `Uint8` rows before shader-facing use.
 
 ### Matrices[​](#matrices "Direct link to Matrices")
 
@@ -140,7 +140,7 @@ Implementation notes:
 | Paths                  | ✅        | `List<FixedSizeList<Float32, 2 \| 3 \| 4>>`           |
 | High-precision paths   | ✅        | `List<FixedSizeList<Float64, 2 \| 3 \| 4>>`           |
 | Path row colors        | ✅        | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>`       |
-| Path row RGB colors    | ❌        | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>`       |
+| Path row RGB colors    | ✅        | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>`       |
 | Path vertex colors     | ✅        | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
 | Path vertex RGB colors | ❌        | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 3>>` |
 
@@ -155,7 +155,7 @@ Implementation notes:
 
 * Path coordinates are encoded as flattened coordinate values plus list offsets.
 * Float64 path rows preserve precise coordinates in Arrow, then adapters convert per-row Float32 deltas plus retained origins before rendering.
-* RGB source colors are planned but not currently supported.
+* Fixed-width row RGB colors normalize through the shared planner and receive an opaque alpha channel. Nested per-vertex RGB expansion remains deferred.
 
 ### Text[​](#text "Direct link to Text")
 
@@ -164,7 +164,7 @@ Implementation notes:
 | Text labels               | ✅        | `Utf8` or `Utf8View`                                  |
 | Repeated text labels      | ✅        | `Dictionary<Utf8>` or `Dictionary<Utf8View>`          |
 | Text row colors           | ✅        | `FixedSizeList<Uint8 \| Float16 \| Float32, 4>`       |
-| Text row RGB colors       | ❌        | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>`       |
+| Text row RGB colors       | ✅        | `FixedSizeList<Uint8 \| Float16 \| Float32, 3>`       |
 | Text character colors     | ✅        | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 4>>` |
 | Text character RGB colors | ❌        | `List<FixedSizeList<Uint8 \| Float16 \| Float32, 3>>` |
 
@@ -178,4 +178,4 @@ Semantic notes:
 Implementation notes:
 
 * Text adapters own UTF-8 layout, glyph expansion, dictionary lookup, and null handling.
-* RGB source colors are planned but not currently supported.
+* Fixed-width row RGB colors normalize through the shared planner and receive an opaque alpha channel. Nested per-character RGB expansion remains deferred.

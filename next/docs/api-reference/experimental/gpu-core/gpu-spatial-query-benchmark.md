@@ -8,13 +8,15 @@ Dataset size
 
 <!-- -->
 
-65,536 points (65536)
+16,384 points (16384)
 
 ### Live luSpatial: CPU vs. WebGPU
 
 Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
 
 Run live CPU and WebGPU spatial benchmark
+
+Mobile quality · smallest workload
 
 This opt-in benchmark runs a deterministic CPU bounds scan, the actual `GPUPointSpatialQuery` scan, and the same query against a reusable `GPUGridIndex`. Every GPU result must match the complete CPU-selected ID set. Grid construction is reported separately because its cost must be amortized across repeated queries; the timed GPU paths include graph encoding, submission, and a completion fence, not merely CPU-side command submission.
 

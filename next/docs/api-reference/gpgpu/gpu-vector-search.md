@@ -126,13 +126,15 @@ luVS is an independently implemented, MIT-licensed luma.gl WebGPU module. No cuV
 
 Run the benchmark explicitly to compare the same deterministic vectors on your browser's CPU and WebGPU adapter. Dataset size, dimensions, query count, K, selection density, IVF list count, and probe count are configurable. The exact GPU paths are checked against an independent CPU oracle; the approximate IVF-flat path reports recall\@K against exact search.
 
-Dataset rows2,048 (2048)Dimensions128Queries4Nearest neighbors (K)10Selected rows (%)25IVF lists8IVF probes2
+Dataset rows512Dimensions32Queries1Nearest neighbors (K)1Selected rows (%)5IVF lists4IVF probes1
 
 ### Live luVS: exact and approximate embedding search
 
 Compare independently verified CPU exact, WebGPU exact, filtered WebGPU exact, and filtered IVF-flat search over the same deterministic Float32 embedding chunks.
 
 Run live CPU and WebGPU vector benchmark
+
+Mobile quality · smallest workload
 
 GPU query measurements include command encoding, submission, and an explicit completion fence. Initial upload, IVF training/index construction, and correctness readback are reported separately. Warmups precede repeated measured runs, and displayed query times are medians. Results depend on the current browser, WebGPU adapter, data dimensions, filtering, thermal conditions, and workload.
 

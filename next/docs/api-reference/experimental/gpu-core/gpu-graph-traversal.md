@@ -14,6 +14,8 @@ The scene-backed trace explorer demonstrates why bounded traversal matters: sele
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -12,6 +12,8 @@ The result is a reusable receiver-lighting contribution, not a replacement scene
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

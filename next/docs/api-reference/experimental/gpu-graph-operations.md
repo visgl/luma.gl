@@ -24,6 +24,8 @@ GPU-native topology, analytics, selection, and progressive force layout
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```
@@ -74,13 +76,15 @@ A network diagram can demonstrate an algorithm without explaining its cost. This
 
 This local demonstration includes the six graph-analysis workloads standardized by the<!-- --> [Graph Data Council](https://ldbcouncil.org/) <!-- -->in its<!-- --> [Graphalytics benchmark](https://ldbcouncil.org/benchmarks/graphalytics/). Its small synthetic datasets and local CPU checks are not an official benchmark submission, certification, or cross-platform performance claim.
 
-Graph datasetScale-free (scale-free)Vertices128
+Graph datasetScale-free (scale-free)Vertices32
 
 ### Live CPU versus WebGPU graph analytics
 
 Run the same weighted graph through real CPU and GPU adjacency, neighborhood search, shortest paths, weak components, communities, local clustering, PageRank, and two force layouts.
 
 Run graph benchmark on this device
+
+Mobile quality · smallest workload
 
 Select a graph family and 32, 64, 128, or 256 vertices, then explicitly start the benchmark. No benchmark GPU work runs during page rendering or hydration. A WebGPU-capable browser, supported adapter, and secure origin are required; unavailable hardware never produces simulated measurements.
 

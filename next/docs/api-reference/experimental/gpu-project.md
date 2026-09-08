@@ -48,13 +48,15 @@ This benchmark runs locally in your browser when you click the button. Every imp
 
 [View source](https://github.com/visgl/luma.gl/tree/master/website/src/components/docs/projection-benchmark.tsx)[Inspect graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md#instrumentation-and-autotuning)
 
-Coordinates per run16,384 (16384)
+Coordinates per run4,096 (4096)
 
 ### Live CPU versus WebGPU projection
 
 Project the same deterministic WGS84 coordinates into Web Mercator using direct CPU calls, compiled CPU patches, and four real WebGPU execution paths.
 
 Run projection benchmark
+
+Mobile quality · smallest workload
 
 The GPU measurements synchronize each submission before stopping the timer. They include submission and completion, but exclude source uploads, command-graph compilation, correctness readback, and validation. Where the device supports timestamp queries, the results also include compute-pass-only throughput. Every GPU path must agree with its source-format CPU oracle before results are shown.
 

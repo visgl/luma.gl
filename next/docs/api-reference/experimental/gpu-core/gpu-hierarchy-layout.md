@@ -14,6 +14,8 @@ The live trace viewer demonstrates the motivating interaction directly: collapsi
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -18,6 +18,8 @@ GPUFFT2D displacement · HDR whitecaps
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

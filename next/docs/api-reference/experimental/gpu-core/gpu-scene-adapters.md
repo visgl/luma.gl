@@ -17,6 +17,8 @@ This distinction matters because CPU scene graphs and GPU tables have opposite s
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

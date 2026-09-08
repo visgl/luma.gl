@@ -18,11 +18,13 @@ This benchmark runs locally on the reader's WebGPU adapter. It validates every r
 
 Decode a repeated, globally distributed set of valid H3 or A5 indexes with the public command-graph primitive. Correctness checks, upload, compilation, and readback stay outside measured submissions.
 
-Ready to decode **262,144** <!-- -->H3<!-- --> indexes into **normalized vectors**.
+Ready to decode **16,384** <!-- -->H3<!-- --> indexes into **normalized vectors**.
 
-GridH3 (h3)OutputUnit vector (unit-vector)Cells262,144 (262144)
+GridH3 (h3)OutputUnit vector (unit-vector)Cells16,384 (16384)
 
 Run cell projection benchmark
+
+Mobile quality · smallest workload
 
 Benchmark input is already resident when timing begins. Upload, shader compilation, and validation readback are deliberately excluded. That makes the result representative of a projection pass inside a larger GPU pipeline, not a claim about end-to-end file ingestion.
 

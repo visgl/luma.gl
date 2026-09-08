@@ -16,6 +16,8 @@ This is useful for map tiles that move between material buckets, simulation obje
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

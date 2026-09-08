@@ -8,6 +8,8 @@ Extract image contours by comparing neighborhood frequencies at different blur w
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

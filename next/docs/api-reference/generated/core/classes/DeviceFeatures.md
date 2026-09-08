@@ -1,6 +1,6 @@
 # Class: DeviceFeatures
 
-Defined in: [modules/core/src/adapter/device.ts:248](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L248)
+Defined in: [modules/core/src/adapter/device.ts:261](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L261)
 
 Set-like class for features (lets apps check for WebGL / WebGPU extensions)
 
@@ -10,7 +10,7 @@ Set-like class for features (lets apps check for WebGL / WebGPU extensions)
 
 > **new DeviceFeatures**(`features?`, `disabledFeatures`): `DeviceFeatures`
 
-Defined in: [modules/core/src/adapter/device.ts:252](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L252)
+Defined in: [modules/core/src/adapter/device.ts:265](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L265)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -32,7 +32,7 @@ Defined in: [modules/core/src/adapter/device.ts:252](https://github.com/visgl/lu
 
 > **\[iterator]**(): `IterableIterator`<[`DeviceFeature`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceFeature.md)>
 
-Defined in: [modules/core/src/adapter/device.ts:260](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L260)
+Defined in: [modules/core/src/adapter/device.ts:273](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L273)
 
 #### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -44,7 +44,7 @@ Defined in: [modules/core/src/adapter/device.ts:260](https://github.com/visgl/lu
 
 > **has**(`feature`): `boolean`
 
-Defined in: [modules/core/src/adapter/device.ts:264](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L264)
+Defined in: [modules/core/src/adapter/device.ts:277](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/device.ts#L277)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 

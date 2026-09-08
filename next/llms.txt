@@ -194,7 +194,7 @@ Find the curated and generated API references for every stable and experimental 
 From v10
 
 - [Overview](https://luma.gl/next/docs/api-reference/arrow.md): From v10
-- [Arrow Table Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md): Arrow Vector Factories
+- [Arrow Table Conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md): Universal Arrow-to-GPU Planning
 - [Arrow Representations](https://luma.gl/next/docs/api-reference/arrow/arrow-representations.md): From v10
 - [Arrow Utilities](https://luma.gl/next/docs/api-reference/arrow/arrow-utils.md): From v10
 - [deck.gl v10 API Directions](https://luma.gl/next/docs/api-reference/arrow/deck-target-api.md): From v10
@@ -282,7 +282,7 @@ Render models with geometry and shader inputs, manage redraw and interaction, an
 - [GPUGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/gpu-geometry.md): GPUGeometry is the GPU-backed counterpart to Geometry.
 - [loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md): A simple small utility to load images from URLs. The loaded ImageBitmaps can be used to create textures.
 - [Model](https://luma.gl/next/docs/api-reference/engine/model.md): Model is the main engine-level rendering class in luma.gl.
-- [OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, wheel and pinch zoom, optional panning, automatic rotation, and configurable camera bounds to an HTML canvas. The controls maintain a camera position around a target without depending on a specific renderer, scene graph, or GPU backend.
+- [OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md): OrbitControls adds pointer-driven orbiting, optional two-finger camera roll, wheel and pinch zoom, optional panning, automatic orbiting, and configurable camera bounds to an HTML canvas. The controls maintain a camera position and up direction around a target without depending on a specific renderer, scene graph, or GPU backend.
 - [ShaderPassRenderer](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md): ShaderPassRenderer applies one or more ShaderPass or CompositeShaderPass definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 - [PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md): PickingManager manages an offscreen picking framebuffer and the shader-input updates needed for luma.gl's engine picking modules.
 - [GroupNode](https://luma.gl/next/docs/api-reference/engine/scenegraph/group-node.md): GroupNode extends ScenegraphNode with child-node management and traversal helpers.
@@ -318,6 +318,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPUConvolution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-convolution.md): Overview
 - [GPUFFT1D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft1d.md): Overview
 - [GPUFFT2D](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-fft2d.md): Overview
+- [GPUFlagOffsets](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-flag-offsets.md): Overview
 - [GPUGallopingSearch](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md): Overview
 - [GPUGraphTraversal](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md): Overview
 - [GPUGridAggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation.md): Overview
@@ -339,7 +340,9 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [GPUScene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-adapters.md): Overview
 - [GPUSceneDrawGeneration](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md): Overview
 - [GPUSceneResourceGroups](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md): Overview
+- [GPUSegmentOffsets](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segment-offsets.md): Overview
 - [GPUSegmentedBVH](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-bvh.md): Overview
+- [GPUSegmentedLayout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md): Overview
 - [GPUSegmentedSort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-sort.md): Overview
 - [GPUSort](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-sort.md): Overview
 - [GPU spatial query benchmark](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark.md): Run on your device
@@ -419,9 +422,9 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: CommandEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md): Defined in145
 - [Abstract Class: ComputePass](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md): Defined in20
 - [Abstract Class: ComputePipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md): Defined in28
-- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in502
-- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in248
-- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in96
+- [Abstract Class: Device](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md): Defined in515
+- [Class: DeviceFeatures](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceFeatures.md): Defined in261
+- [Abstract Class: DeviceLimits](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceLimits.md): Defined in109
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
 - [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
@@ -432,7 +435,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: RenderBundle](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundle.md): Defined in53
 - [Abstract Class: RenderBundleEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder.md): Defined in75
 - [Abstract Class: RenderPass](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPass.md): Defined in102
-- [Abstract Class: RenderPipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in74
+- [Abstract Class: RenderPipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in82
 - [Abstract Class: Resource<Props>](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md): Defined in97
 - [Abstract Class: Sampler](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md): Defined in47
 - [Abstract Class: Shader](https://luma.gl/next/docs/api-reference/generated/core/classes/Shader.md): Defined in34
@@ -529,6 +532,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: DepthStencilParameters](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DepthStencilParameters.md): DepthStencilParameters = object
 - [Type Alias: DeviceFeature](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceFeature.md): DeviceFeature = WebGPUDeviceFeature \| WebGLDeviceFeature \| WebGLCompressedTextureFeatures \| BrowserDeviceFeature
 - [Type Alias: DeviceInfo](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceInfo.md): DeviceInfo = object
+- [Type Alias: DeviceLostInfo](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceLostInfo.md): DeviceLostInfo = object
 - [Type Alias: DeviceProps](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceProps.md): DeviceProps = object
 - [Type Alias: DeviceTextureFormatCapabilities](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceTextureFormatCapabilities.md): DeviceTextureFormatCapabilities = object
 - [Type Alias: ExternalImage](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalImage.md): ExternalImage = ImageBitmap \| ImageData \| HTMLImageElement \| HTMLVideoElement \| VideoFrame \| HTMLCanvasElement \| OffscreenCanvas
@@ -596,7 +600,9 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: TypedArrayConstructorT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArrayConstructorT.md): TypedArrayConstructorT\ = T extends "uint8" ? Uint8ArrayConstructor T extends "unorm8" ? Uint8ArrayConstructor T extends "uint16" ? Uint16ArrayConstructor T extends "unorm16" ? Uint16ArrayConstructor T extends "uint32" ? Uint32ArrayConstructor ... extends ... ? ... : ...
 - [Type Alias: UniformBinding](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformBinding.md): UniformBinding = object
 - [Type Alias: UniformBlockBinding](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformBlockBinding.md): UniformBlockBinding = object
+- [Type Alias: UniformBlockLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformBlockLayout.md): UniformBlockLayout = object
 - [Type Alias: UniformBufferBindingLayout](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformBufferBindingLayout.md): UniformBufferBindingLayout = object
+- [Type Alias: UniformInfo](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformInfo.md): UniformInfo = object
 - [Type Alias: UniformValue](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/UniformValue.md): UniformValue = number \| boolean \| Readonly\
 - [Type Alias: VariableShaderType](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VariableShaderType.md): VariableShaderType = "i32" \| "u32" \| "f32" \| "f16" \| ` vec2  \|  vec3  \|  vec4  \|  mat2x2  \|  mat2x3  \|  mat2x4  \|  mat3x2  \|  mat3x3  \|  mat3x4  \|  mat4x2  \|  mat4x3  \|  mat4x4 `
 - [Type Alias: VariableShaderTypeT<T>](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VariableShaderTypeT.md): VariableShaderTypeT\ = T extends VariableShaderTypeAlias ? VariableShaderTypeAliasMap\[T\] : T

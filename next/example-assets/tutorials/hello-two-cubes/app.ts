@@ -17,79 +17,9 @@ export const description = 'Shows usage of multiple uniform buffers.';
 //   uniformTypes: {'modelViewProjectionMatrix': 'mat4x4<f32>'}
 // }
 
-const WGSL_SHADER = /* WGSL */ `\
-struct Uniforms {
-  modelViewProjectionMatrix : mat4x4<f32>,
-};
-@group(0) @binding(auto) var<uniform> app : Uniforms;
-
-struct VertexInputs {
-  @location(0) positions : vec4<f32>,
-  @location(1) texCoords : vec2<f32>
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) fragUV : vec2<f32>,
-  @location(1) fragPosition: vec4<f32>,
-}
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix * inputs.positions;
-  outputs.fragUV = inputs.texCoords;
-  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return inputs.fragPosition;
-}
-`;
+const {WGSL_SHADER, VS_GLSL, FS_GLSL} = getShaderSources();
 
 // GLSL
-
-const VS_GLSL = /* glsl */ `\
-#version 300 es
-#define SHADER_NAME cube-vs
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-} app;
-
-layout(location=0) in vec3 positions;
-layout(location=1) in vec2 texCoords;
-
-out vec2 fragUV;
-out vec4 fragPosition;
-
-void main() {
-  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
-  fragUV = texCoords;
-  fragPosition = vec4(positions, 1.);
-}
-`;
-
-const FS_GLSL = /* glsl */ `\
-#version 300 es
-#define SHADER_NAME cube-fs
-precision highp float;
-
-uniform appUniforms {
-  mat4 modelViewProjectionMatrix;
-} app;
-
-in vec2 fragUV;
-in vec4 fragPosition;
-
-layout (location=0) out vec4 fragColor;
-
-void main() {
-  fragColor = fragPosition;
-}
-`;
 
 const UNIFORM_BUFFER_SIZE = 4 * 16; // 4x4 matrix
 
@@ -172,4 +102,80 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cubeModel.draw(renderPass);
     renderPass.end();
   }
+}
+
+function getShaderSources() {
+  const WGSL_SHADER = /* WGSL */ `\
+struct Uniforms {
+  modelViewProjectionMatrix : mat4x4<f32>,
+};
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  @location(0) positions : vec4<f32>,
+  @location(1) texCoords : vec2<f32>
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragUV : vec2<f32>,
+  @location(1) fragPosition: vec4<f32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.modelViewProjectionMatrix * inputs.positions;
+  outputs.fragUV = inputs.texCoords;
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return inputs.fragPosition;
+}
+`;
+
+  const VS_GLSL = /* glsl */ `\
+#version 300 es
+#define SHADER_NAME cube-vs
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+} app;
+
+layout(location=0) in vec3 positions;
+layout(location=1) in vec2 texCoords;
+
+out vec2 fragUV;
+out vec4 fragPosition;
+
+void main() {
+  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+  fragUV = texCoords;
+  fragPosition = vec4(positions, 1.);
+}
+`;
+
+  const FS_GLSL = /* glsl */ `\
+#version 300 es
+#define SHADER_NAME cube-fs
+precision highp float;
+
+uniform appUniforms {
+  mat4 modelViewProjectionMatrix;
+} app;
+
+in vec2 fragUV;
+in vec4 fragPosition;
+
+layout (location=0) out vec4 fragColor;
+
+void main() {
+  fragColor = fragPosition;
+}
+`;
+
+  return {WGSL_SHADER, VS_GLSL, FS_GLSL} as const;
 }

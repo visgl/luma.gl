@@ -8,6 +8,8 @@ Rotate image samples around a configurable circular focal region. `swirl` create
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

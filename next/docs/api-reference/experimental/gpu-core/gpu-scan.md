@@ -1,6 +1,6 @@
 # GPUScan
 
-[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
+[Scan](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scan.md)[Galloping Search](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-galloping-search.md)[Compaction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md)[Segmented Layout](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-segmented-layout.md)[Masks](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-mask.md)[Visibility](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md)[Virtual Geometry](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -100,7 +100,7 @@ The standalone subgroup scan reduces block-local synchronization, but its global
 
 **GPUScan compute benchmark**
 
-**33.55M** uint32 elements/dispatch ·<!-- --> **131,072** local scan blocks
+**65,536** uint32 elements/dispatch ·<!-- --> **256** local scan blocks
 
 | Implementation        | Supported | Barriers | GPU median | Relative | Element throughput |
 | --------------------- | --------- | -------- | ---------- | -------- | ------------------ |
@@ -110,6 +110,8 @@ The standalone subgroup scan reduces block-local synchronization, but its global
 * Each round applies the 256-element exclusive prefix operation used inside GPUScan.
 * Throughput is uint32 input elements processed per second.
 
-Workgroups4,096 (4096)Rounds32
+Workgroups256Rounds1
 
 Run benchmark
+
+Mobile quality · smallest workload

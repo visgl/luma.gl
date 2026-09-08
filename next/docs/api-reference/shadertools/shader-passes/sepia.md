@@ -8,6 +8,8 @@ Blend a warm, reddish-brown photographic treatment into the source image. `sepia
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

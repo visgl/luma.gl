@@ -8,6 +8,8 @@ Smooth noisy screen-space results without bleeding across foreground/background 
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

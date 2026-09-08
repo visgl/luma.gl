@@ -326,6 +326,8 @@ Use the interactive playground to compare blend operations, source and destinati
 
 InfoSource
 
+Mobile
+
 ```
 // Loading source…
 ```

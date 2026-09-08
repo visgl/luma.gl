@@ -20,6 +20,7 @@ import {
   type AlgebraicVarietyPreset
 } from './algebraic-varieties';
 import {buildImplicitSurfaceShader} from './implicit-surface-shader';
+import {ALGEBRAIC_VARIETIES_INFO_HTML} from './app-ui';
 
 type ImplicitSurfaceUniforms = {
   inverseViewProjectionMatrix: Matrix4;
@@ -38,17 +39,11 @@ const implicitSurface: ShaderModule<ImplicitSurfaceUniforms> = {
   }
 };
 
-const INFO_HTML = `\
-<section class="variety-info">
-  <p>Real algebraic surfaces are evaluated and intersected directly in WGSL—there is no mesh and the polynomial is not treated as an SDF.</p>
-  <p>Drag to orbit · wheel to zoom · <strong>1–9, 0</strong> presets · <strong>S</strong> singularities · <strong>R</strong> reset</p>
-  <div class="variety-badges"><span>WebGPU</span><span>analytic gradients</span><span>HDR lighting</span><span>hybrid root refinement</span></div>
-</section>`;
 const IDLE_PRESET_INTERVAL_MILLISECONDS = 15_000;
 
 /** WebGPU showcase for ray-intersected real algebraic surfaces. */
 export default class AlgebraicVarietiesAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = ALGEBRAIC_VARIETIES_INFO_HTML;
 
   readonly device: Device;
   readonly model: ClipSpace;

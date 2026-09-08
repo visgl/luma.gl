@@ -8,6 +8,8 @@ Explore reusable image-processing filters, cinematic lens effects, temporal reco
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

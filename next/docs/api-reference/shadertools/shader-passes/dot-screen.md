@@ -8,6 +8,8 @@ Convert source-image luminance into a rotated monochrome dot pattern. `dotScreen
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

@@ -30,11 +30,13 @@ Choose **A5** below to measure the public A5 adapter. The source set spans repre
 
 Decode a repeated, globally distributed set of valid H3 or A5 indexes with the public command-graph primitive. Correctness checks, upload, compilation, and readback stay outside measured submissions.
 
-Ready to decode **262,144** <!-- -->H3<!-- --> indexes into **normalized vectors**.
+Ready to decode **16,384** <!-- -->H3<!-- --> indexes into **normalized vectors**.
 
-GridH3 (h3)OutputUnit vector (unit-vector)Cells262,144 (262144)
+GridH3 (h3)OutputUnit vector (unit-vector)Cells16,384 (16384)
 
 Run cell projection benchmark
+
+Mobile quality · smallest workload
 
 ## Shared by design[​](#shared-by-design "Direct link to Shared by design")
 

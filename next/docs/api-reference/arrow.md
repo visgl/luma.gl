@@ -12,6 +12,8 @@ Apache Arrow utilities for luma.gl.
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

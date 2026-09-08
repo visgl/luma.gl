@@ -8,6 +8,8 @@ Gather colored diffuse light bouncing between surfaces that are visible in the c
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

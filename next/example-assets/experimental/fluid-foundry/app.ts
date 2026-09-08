@@ -21,6 +21,7 @@ import {
 import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/experimental';
 import type {ShaderModule} from '@luma.gl/shadertools';
+import {FLUID_FOUNDRY_INFO_HTML} from './app-ui';
 
 const PARTICLE_COUNT = 12_288;
 const GRID_SIZE: readonly [number, number] = [96, 64];
@@ -78,274 +79,11 @@ export type FoundryNozzleCycleState = {
   cycleIndex: number;
 };
 
-const NOZZLE_EMITTER_SHADER = /* wgsl */ `\
-struct MLSMPMParticleState {
-  position: vec2f,
-  velocity: vec2f,
-  affineColumn0: vec2f,
-  affineColumn1: vec2f,
-  deformationPadding: vec4f,
-};
-
-struct FoundryNozzleEmitterUniforms {
-  particleRange: vec4f,
-  nozzle: vec4f,
-};
-
-@group(0) @binding(0) var<storage, read_write> particles: array<MLSMPMParticleState>;
-@group(0) @binding(1) var<uniform> uniforms: FoundryNozzleEmitterUniforms;
-
-fn random01(value: u32) -> f32 {
-  var state = value * 747796405u + 2891336453u;
-  state = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-  state = (state >> 22u) ^ state;
-  return f32(state) / 4294967296.0;
-}
-
-@compute @workgroup_size(${NOZZLE_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
-  let emittedParticleIndex = globalInvocationId.x;
-  let emitCount = u32(uniforms.particleRange.y);
-  if (emittedParticleIndex >= emitCount) {
-    return;
-  }
-
-  let particleIndex = u32(uniforms.particleRange.x) + emittedParticleIndex;
-  let sequenceIndex = u32(uniforms.particleRange.z) + emittedParticleIndex;
-  let nozzleIndex = u32(uniforms.particleRange.w);
-  let randomX = random01(sequenceIndex * 2u + nozzleIndex * 104729u);
-  let randomY = random01(sequenceIndex * 2u + 1u + nozzleIndex * 130363u);
-  let centerX = uniforms.nozzle.x;
-  let streamHalfWidth = uniforms.nozzle.y;
-  let downwardSpeed = uniforms.nozzle.z;
-  let lateralSpeed = uniforms.nozzle.w;
-
-  var particle: MLSMPMParticleState;
-  particle.position = vec2f(
-    centerX + (randomX * 2.0 - 1.0) * streamHalfWidth,
-    0.955 - randomY * 0.028
-  );
-  particle.velocity = vec2f(
-    lateralSpeed * (0.55 + randomY * 0.45) + (randomX - 0.5) * 0.035,
-    -downwardSpeed * (0.9 + randomY * 0.2)
-  );
-  particle.affineColumn0 = vec2f(0.0);
-  particle.affineColumn1 = vec2f(0.0);
-  particle.deformationPadding = vec4f(1.0, 0.0, 0.0, 0.0);
-  particles[particleIndex] = particle;
-}
-`;
-
-const PARTICLE_SPLAT_SHADER = /* wgsl */ `\
-struct MLSMPMParticleState {
-  position: vec2f,
-  velocity: vec2f,
-  affineColumn0: vec2f,
-  affineColumn1: vec2f,
-  deformationPadding: vec4f,
-};
-
-@group(0) @binding(0) var<storage, read> particles: array<MLSMPMParticleState>;
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) localPosition: vec2f,
-  @location(1) velocityMagnitude: f32,
-  @location(2) deformation: f32,
-};
-
-@vertex fn vertexMain(
-  @builtin(vertex_index) vertexIndex: u32,
-  @builtin(instance_index) instanceIndex: u32
-) -> FragmentInputs {
-  let corners = array<vec2f, 6>(
-    vec2f(-1.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0),
-    vec2f(-1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0)
-  );
-  let particle = particles[instanceIndex];
-  let corner = corners[vertexIndex];
-  let speed = length(particle.velocity);
-  let radius = 0.0112;
-  let clipPosition = particle.position * 2.0 - vec2f(1.0) + corner * radius * 2.0;
-  var output: FragmentInputs;
-  output.position = vec4f(clipPosition, 0.0, 1.0);
-  output.localPosition = corner;
-  output.velocityMagnitude = speed;
-  output.deformation = particle.deformationPadding.x;
-  return output;
-}
-
-@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let radiusSquared = dot(inputs.localPosition, inputs.localPosition);
-  if (radiusSquared > 1.0) {
-    discard;
-  }
-  let density = exp(-radiusSquared * 3.1);
-  let energeticDensity = density * (0.25 + min(inputs.velocityMagnitude, 2.0) * 0.45);
-  return vec4f(density, energeticDensity, density * inputs.deformation, density);
-}
-`;
-
-const COMPOSITE_SHADER = /* wgsl */ `\
-struct FluidFoundrySceneUniforms {
-  time: f32,
-  aspect: f32,
-  densityScale: f32,
-  interaction: f32,
-  nozzleActivity: vec2f,
-};
-@group(0) @binding(auto) var<uniform> fluidFoundryScene: FluidFoundrySceneUniforms;
-@group(0) @binding(0) var fluidDensityTexture: texture_2d<f32>;
-@group(0) @binding(1) var fluidDensitySampler: sampler;
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-};
-
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> FragmentInputs {
-  let positions = array<vec2f, 3>(
-    vec2f(-1.0, -1.0),
-    vec2f(3.0, -1.0),
-    vec2f(-1.0, 3.0)
-  );
-  let position = positions[vertexIndex];
-  var output: FragmentInputs;
-  output.position = vec4f(position, 0.0, 1.0);
-  output.uv = position * 0.5 + vec2f(0.5);
-  return output;
-}
-
-fn roundedBoxDistance(position: vec2f, halfSize: vec2f, radius: f32) -> f32 {
-  let offset = abs(position) - halfSize + vec2f(radius);
-  return length(max(offset, vec2f(0.0))) + min(max(offset.x, offset.y), 0.0) - radius;
-}
-
-fn getBrickColor(uv: vec2f) -> vec3f {
-  let brickScale = vec2f(9.0, 13.0);
-  let brickCoordinate = uv * brickScale;
-  let row = floor(brickCoordinate.y);
-  let staggered = vec2f(brickCoordinate.x + 0.5 * (row - 2.0 * floor(row * 0.5)), brickCoordinate.y);
-  let cell = fract(staggered);
-  let edge = min(min(cell.x, 1.0 - cell.x), min(cell.y, 1.0 - cell.y));
-  let mortar = 1.0 - smoothstep(0.035, 0.075, edge);
-  let variation = 0.72 + 0.16 * sin(dot(floor(staggered), vec2f(12.9898, 78.233)));
-  let brick = vec3f(0.075, 0.055, 0.052) * variation;
-  return mix(brick, vec3f(0.018, 0.022, 0.03), mortar);
-}
-
-fn sampleFluid(uv: vec2f) -> vec4f {
-  return textureSampleLevel(fluidDensityTexture, fluidDensitySampler, uv, 0.0);
-}
-
-@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let uv = inputs.uv;
-  let centered = uv * 2.0 - vec2f(1.0);
-  let vignette = 1.0 - smoothstep(0.45, 1.42, length(centered));
-  var color = getBrickColor(uv) * (0.45 + vignette * 0.7);
-
-  let furnaceDistance = roundedBoxDistance(centered - vec2f(0.0, 0.08), vec2f(0.36, 0.5), 0.06);
-  let furnaceGlow = exp(-max(furnaceDistance, 0.0) * 9.0);
-  color += vec3f(0.12, 0.038, 0.012) * furnaceGlow;
-
-  let primaryNozzleDistance = roundedBoxDistance(
-    centered - vec2f(-0.14, 0.84), vec2f(0.04, 0.22), 0.012
-  );
-  let secondaryNozzleDistance = roundedBoxDistance(
-    centered - vec2f(0.13, 0.84), vec2f(0.032, 0.22), 0.01
-  );
-  let primaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, primaryNozzleDistance);
-  let secondaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, secondaryNozzleDistance);
-  let primaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(primaryNozzleDistance));
-  let secondaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(secondaryNozzleDistance));
-  color = mix(color, vec3f(0.16, 0.21, 0.24), max(primaryNozzleBody, secondaryNozzleBody));
-  color += vec3f(0.2, 0.5, 0.66) * (primaryNozzleEdge + secondaryNozzleEdge) * 0.26;
-  color += vec3f(0.42, 1.15, 2.6) *
-    (primaryNozzleEdge * fluidFoundryScene.nozzleActivity.x +
-      secondaryNozzleEdge * fluidFoundryScene.nozzleActivity.y);
-  let primaryLip = 1.0 - smoothstep(
-    -0.002, 0.006,
-    roundedBoxDistance(centered - vec2f(-0.14, 0.62), vec2f(0.052, 0.018), 0.007)
-  );
-  let secondaryLip = 1.0 - smoothstep(
-    -0.002, 0.006,
-    roundedBoxDistance(centered - vec2f(0.13, 0.62), vec2f(0.043, 0.018), 0.007)
-  );
-  color += vec3f(0.16, 0.36, 0.46) * max(primaryLip, secondaryLip) * 0.65;
-  color += vec3f(0.5, 1.35, 3.2) *
-    (primaryLip * fluidFoundryScene.nozzleActivity.x +
-      secondaryLip * fluidFoundryScene.nozzleActivity.y);
-
-  let vesselPosition = vec2f(centered.x * fluidFoundryScene.aspect / 0.82, centered.y / 0.88);
-  let vesselDistance = roundedBoxDistance(vesselPosition, vec2f(0.66, 0.86), 0.08);
-  let vesselInterior = 1.0 - smoothstep(-0.006, 0.012, vesselDistance);
-  let vesselFrame = 1.0 - smoothstep(0.018, 0.044, abs(vesselDistance));
-  let fluidUv = vec2f(vesselPosition.x / 1.32 + 0.5, 0.5 - vesselPosition.y / 1.72);
-  let fluidInside = select(0.0, 1.0, all(fluidUv >= vec2f(0.0)) && all(fluidUv <= vec2f(1.0)));
-  var surface = 0.0;
-  if (vesselInterior * fluidInside > 0.0) {
-    let densityData = sampleFluid(clamp(fluidUv, vec2f(0.0), vec2f(1.0)));
-    let density = densityData.x * fluidFoundryScene.densityScale;
-    surface = (1.0 - exp(-density * 0.22)) * vesselInterior;
-
-    let textureSize = vec2f(textureDimensions(fluidDensityTexture));
-    let texel = vec2f(1.0) / textureSize;
-    let densityLeft = sampleFluid(clamp(fluidUv - vec2f(texel.x, 0.0), vec2f(0.0), vec2f(1.0))).x;
-    let densityRight = sampleFluid(clamp(fluidUv + vec2f(texel.x, 0.0), vec2f(0.0), vec2f(1.0))).x;
-    let densityDown = sampleFluid(clamp(fluidUv - vec2f(0.0, texel.y), vec2f(0.0), vec2f(1.0))).x;
-    let densityUp = sampleFluid(clamp(fluidUv + vec2f(0.0, texel.y), vec2f(0.0), vec2f(1.0))).x;
-    let normal = normalize(vec3f(
-      (densityLeft - densityRight) * 0.42,
-      (densityDown - densityUp) * 0.42,
-      0.16
-    ));
-    let lightDirection = normalize(vec3f(-0.42, 0.7, 0.58));
-    let halfDirection = normalize(lightDirection + vec3f(0.0, 0.0, 1.0));
-    let diffuse = max(dot(normal, lightDirection), 0.0);
-    let specular = pow(max(dot(normal, halfDirection), 0.0), 34.0);
-    let edge = pow(1.0 - max(normal.z, 0.0), 2.4);
-    let speed = densityData.y / max(densityData.x, 0.0001);
-    let deformation = densityData.z / max(densityData.x, 0.0001);
-    let coldMetal = vec3f(0.018, 0.16, 0.25);
-    let hotMetal = vec3f(0.22, 0.92, 1.55);
-    let induction = 0.5 + 0.5 * sin(
-      fluidFoundryScene.time * 2.4 + fluidUv.y * 15.0 + fluidUv.x * 4.0
-    );
-    let metalColor = mix(coldMetal, hotMetal, clamp(speed * 0.55 + induction * 0.22, 0.0, 1.0));
-    let fluidColor = metalColor * (0.16 + diffuse * 0.78) +
-      vec3f(2.8, 2.1, 1.15) * specular +
-      vec3f(0.18, 0.85, 2.5) * edge * (0.4 + fluidFoundryScene.interaction * 0.45) +
-      vec3f(0.35, 0.08, 0.025) * max(1.0 - deformation, 0.0);
-    color = mix(color, fluidColor, surface);
-  }
-
-  let glassEdge = vesselFrame * (0.3 + surface * 0.7);
-  color += vec3f(0.15, 0.44, 0.78) * glassEdge;
-  let clampBand = 1.0 - smoothstep(0.025, 0.055, abs(abs(vesselPosition.x) - 0.78));
-  color += vec3f(0.12, 0.08, 0.045) * clampBand * smoothstep(0.72, 0.98, abs(vesselPosition.y));
-  let floorGlow = exp(-abs(centered.y + 0.92) * 28.0) * exp(-abs(centered.x) * 1.8);
-  color += vec3f(0.22, 0.055, 0.012) * floorGlow;
-  color *= 0.42 + vignette * 0.72;
-  return vec4f(max(color, vec3f(0.0)), 1.0);
-}
-`;
-
-const INFO_HTML = `
-<style>
-  .fluid-foundry-info { font: 13px/1.45 system-ui, sans-serif; }
-  .fluid-foundry-info p { margin: 0; color: inherit; opacity: .82; }
-  .fluid-foundry-info strong { color: #a9ecff; }
-  .fluid-foundry-badges { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
-  .fluid-foundry-badge { padding: 4px 7px; border: 1px solid rgb(98 211 255 / 25%); border-radius: 99px; color: #dff8ff; background: rgb(17 97 126 / 18%); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-</style>
-<section class="fluid-foundry-info">
-  <p><strong>12,288 particles</strong> exchange mass and momentum through a WebGPU MLS-MPM grid, then become a shaded HDR liquid surface without CPU readback. Watch the pressure-charged recirculation spouts, click repeatedly to build a surge, drag to steer, or press <strong>R</strong> to reset.</p>
-  <div class="fluid-foundry-badges"><span class="fluid-foundry-badge">WebGPU compute</span><span class="fluid-foundry-badge">Cyclic spouts</span><span class="fluid-foundry-badge">HDR liquid metal</span></div>
-</section>`;
+const {NOZZLE_EMITTER_SHADER, PARTICLE_SPLAT_SHADER, COMPOSITE_SHADER} = getShaderSources();
 
 /** WebGPU MLS-MPM simulation staged as an interactive HDR liquid-metal press. */
 export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = FLUID_FOUNDRY_INFO_HTML;
 
   readonly device: Device;
   readonly simulation: MLSMPMFluidSimulation;
@@ -857,4 +595,264 @@ function createSceneTarget(device: Device, width: number, height: number): Scene
       colorAttachments: [texture]
     })
   };
+}
+
+function getShaderSources() {
+  const NOZZLE_EMITTER_SHADER = /* wgsl */ `\
+  struct MLSMPMParticleState {
+    position: vec2f,
+    velocity: vec2f,
+    affineColumn0: vec2f,
+    affineColumn1: vec2f,
+    deformationPadding: vec4f,
+  };
+
+  struct FoundryNozzleEmitterUniforms {
+    particleRange: vec4f,
+    nozzle: vec4f,
+  };
+
+  @group(0) @binding(0) var<storage, read_write> particles: array<MLSMPMParticleState>;
+  @group(0) @binding(1) var<uniform> uniforms: FoundryNozzleEmitterUniforms;
+
+  fn random01(value: u32) -> f32 {
+    var state = value * 747796405u + 2891336453u;
+    state = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    state = (state >> 22u) ^ state;
+    return f32(state) / 4294967296.0;
+  }
+
+  @compute @workgroup_size(${NOZZLE_WORKGROUP_SIZE})
+  fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+    let emittedParticleIndex = globalInvocationId.x;
+    let emitCount = u32(uniforms.particleRange.y);
+    if (emittedParticleIndex >= emitCount) {
+      return;
+    }
+
+    let particleIndex = u32(uniforms.particleRange.x) + emittedParticleIndex;
+    let sequenceIndex = u32(uniforms.particleRange.z) + emittedParticleIndex;
+    let nozzleIndex = u32(uniforms.particleRange.w);
+    let randomX = random01(sequenceIndex * 2u + nozzleIndex * 104729u);
+    let randomY = random01(sequenceIndex * 2u + 1u + nozzleIndex * 130363u);
+    let centerX = uniforms.nozzle.x;
+    let streamHalfWidth = uniforms.nozzle.y;
+    let downwardSpeed = uniforms.nozzle.z;
+    let lateralSpeed = uniforms.nozzle.w;
+
+    var particle: MLSMPMParticleState;
+    particle.position = vec2f(
+      centerX + (randomX * 2.0 - 1.0) * streamHalfWidth,
+      0.955 - randomY * 0.028
+    );
+    particle.velocity = vec2f(
+      lateralSpeed * (0.55 + randomY * 0.45) + (randomX - 0.5) * 0.035,
+      -downwardSpeed * (0.9 + randomY * 0.2)
+    );
+    particle.affineColumn0 = vec2f(0.0);
+    particle.affineColumn1 = vec2f(0.0);
+    particle.deformationPadding = vec4f(1.0, 0.0, 0.0, 0.0);
+    particles[particleIndex] = particle;
+  }
+  `;
+
+  const PARTICLE_SPLAT_SHADER = /* wgsl */ `\
+  struct MLSMPMParticleState {
+    position: vec2f,
+    velocity: vec2f,
+    affineColumn0: vec2f,
+    affineColumn1: vec2f,
+    deformationPadding: vec4f,
+  };
+
+  @group(0) @binding(0) var<storage, read> particles: array<MLSMPMParticleState>;
+
+  struct FragmentInputs {
+    @builtin(position) position: vec4f,
+    @location(0) localPosition: vec2f,
+    @location(1) velocityMagnitude: f32,
+    @location(2) deformation: f32,
+  };
+
+  @vertex fn vertexMain(
+    @builtin(vertex_index) vertexIndex: u32,
+    @builtin(instance_index) instanceIndex: u32
+  ) -> FragmentInputs {
+    let corners = array<vec2f, 6>(
+      vec2f(-1.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0),
+      vec2f(-1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0)
+    );
+    let particle = particles[instanceIndex];
+    let corner = corners[vertexIndex];
+    let speed = length(particle.velocity);
+    let radius = 0.0112;
+    let clipPosition = particle.position * 2.0 - vec2f(1.0) + corner * radius * 2.0;
+    var output: FragmentInputs;
+    output.position = vec4f(clipPosition, 0.0, 1.0);
+    output.localPosition = corner;
+    output.velocityMagnitude = speed;
+    output.deformation = particle.deformationPadding.x;
+    return output;
+  }
+
+  @fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+    let radiusSquared = dot(inputs.localPosition, inputs.localPosition);
+    if (radiusSquared > 1.0) {
+      discard;
+    }
+    let density = exp(-radiusSquared * 3.1);
+    let energeticDensity = density * (0.25 + min(inputs.velocityMagnitude, 2.0) * 0.45);
+    return vec4f(density, energeticDensity, density * inputs.deformation, density);
+  }
+  `;
+
+  const COMPOSITE_SHADER = /* wgsl */ `\
+  struct FluidFoundrySceneUniforms {
+    time: f32,
+    aspect: f32,
+    densityScale: f32,
+    interaction: f32,
+    nozzleActivity: vec2f,
+  };
+  @group(0) @binding(auto) var<uniform> fluidFoundryScene: FluidFoundrySceneUniforms;
+  @group(0) @binding(0) var fluidDensityTexture: texture_2d<f32>;
+  @group(0) @binding(1) var fluidDensitySampler: sampler;
+
+  struct FragmentInputs {
+    @builtin(position) position: vec4f,
+    @location(0) uv: vec2f,
+  };
+
+  @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> FragmentInputs {
+    let positions = array<vec2f, 3>(
+      vec2f(-1.0, -1.0),
+      vec2f(3.0, -1.0),
+      vec2f(-1.0, 3.0)
+    );
+    let position = positions[vertexIndex];
+    var output: FragmentInputs;
+    output.position = vec4f(position, 0.0, 1.0);
+    output.uv = position * 0.5 + vec2f(0.5);
+    return output;
+  }
+
+  fn roundedBoxDistance(position: vec2f, halfSize: vec2f, radius: f32) -> f32 {
+    let offset = abs(position) - halfSize + vec2f(radius);
+    return length(max(offset, vec2f(0.0))) + min(max(offset.x, offset.y), 0.0) - radius;
+  }
+
+  fn getBrickColor(uv: vec2f) -> vec3f {
+    let brickScale = vec2f(9.0, 13.0);
+    let brickCoordinate = uv * brickScale;
+    let row = floor(brickCoordinate.y);
+    let staggered = vec2f(brickCoordinate.x + 0.5 * (row - 2.0 * floor(row * 0.5)), brickCoordinate.y);
+    let cell = fract(staggered);
+    let edge = min(min(cell.x, 1.0 - cell.x), min(cell.y, 1.0 - cell.y));
+    let mortar = 1.0 - smoothstep(0.035, 0.075, edge);
+    let variation = 0.72 + 0.16 * sin(dot(floor(staggered), vec2f(12.9898, 78.233)));
+    let brick = vec3f(0.075, 0.055, 0.052) * variation;
+    return mix(brick, vec3f(0.018, 0.022, 0.03), mortar);
+  }
+
+  fn sampleFluid(uv: vec2f) -> vec4f {
+    return textureSampleLevel(fluidDensityTexture, fluidDensitySampler, uv, 0.0);
+  }
+
+  @fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+    let uv = inputs.uv;
+    let centered = uv * 2.0 - vec2f(1.0);
+    let vignette = 1.0 - smoothstep(0.45, 1.42, length(centered));
+    var color = getBrickColor(uv) * (0.45 + vignette * 0.7);
+
+    let furnaceDistance = roundedBoxDistance(centered - vec2f(0.0, 0.08), vec2f(0.36, 0.5), 0.06);
+    let furnaceGlow = exp(-max(furnaceDistance, 0.0) * 9.0);
+    color += vec3f(0.12, 0.038, 0.012) * furnaceGlow;
+
+    let primaryNozzleDistance = roundedBoxDistance(
+      centered - vec2f(-0.14, 0.84), vec2f(0.04, 0.22), 0.012
+    );
+    let secondaryNozzleDistance = roundedBoxDistance(
+      centered - vec2f(0.13, 0.84), vec2f(0.032, 0.22), 0.01
+    );
+    let primaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, primaryNozzleDistance);
+    let secondaryNozzleBody = 1.0 - smoothstep(-0.004, 0.004, secondaryNozzleDistance);
+    let primaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(primaryNozzleDistance));
+    let secondaryNozzleEdge = 1.0 - smoothstep(0.004, 0.014, abs(secondaryNozzleDistance));
+    color = mix(color, vec3f(0.16, 0.21, 0.24), max(primaryNozzleBody, secondaryNozzleBody));
+    color += vec3f(0.2, 0.5, 0.66) * (primaryNozzleEdge + secondaryNozzleEdge) * 0.26;
+    color += vec3f(0.42, 1.15, 2.6) *
+      (primaryNozzleEdge * fluidFoundryScene.nozzleActivity.x +
+        secondaryNozzleEdge * fluidFoundryScene.nozzleActivity.y);
+    let primaryLip = 1.0 - smoothstep(
+      -0.002, 0.006,
+      roundedBoxDistance(centered - vec2f(-0.14, 0.62), vec2f(0.052, 0.018), 0.007)
+    );
+    let secondaryLip = 1.0 - smoothstep(
+      -0.002, 0.006,
+      roundedBoxDistance(centered - vec2f(0.13, 0.62), vec2f(0.043, 0.018), 0.007)
+    );
+    color += vec3f(0.16, 0.36, 0.46) * max(primaryLip, secondaryLip) * 0.65;
+    color += vec3f(0.5, 1.35, 3.2) *
+      (primaryLip * fluidFoundryScene.nozzleActivity.x +
+        secondaryLip * fluidFoundryScene.nozzleActivity.y);
+
+    let vesselPosition = vec2f(centered.x * fluidFoundryScene.aspect / 0.82, centered.y / 0.88);
+    let vesselDistance = roundedBoxDistance(vesselPosition, vec2f(0.66, 0.86), 0.08);
+    let vesselInterior = 1.0 - smoothstep(-0.006, 0.012, vesselDistance);
+    let vesselFrame = 1.0 - smoothstep(0.018, 0.044, abs(vesselDistance));
+    let fluidUv = vec2f(vesselPosition.x / 1.32 + 0.5, 0.5 - vesselPosition.y / 1.72);
+    let fluidInside = select(0.0, 1.0, all(fluidUv >= vec2f(0.0)) && all(fluidUv <= vec2f(1.0)));
+    var surface = 0.0;
+    if (vesselInterior * fluidInside > 0.0) {
+      let densityData = sampleFluid(clamp(fluidUv, vec2f(0.0), vec2f(1.0)));
+      let density = densityData.x * fluidFoundryScene.densityScale;
+      surface = (1.0 - exp(-density * 0.22)) * vesselInterior;
+
+      let textureSize = vec2f(textureDimensions(fluidDensityTexture));
+      let texel = vec2f(1.0) / textureSize;
+      let densityLeft = sampleFluid(clamp(fluidUv - vec2f(texel.x, 0.0), vec2f(0.0), vec2f(1.0))).x;
+      let densityRight = sampleFluid(clamp(fluidUv + vec2f(texel.x, 0.0), vec2f(0.0), vec2f(1.0))).x;
+      let densityDown = sampleFluid(clamp(fluidUv - vec2f(0.0, texel.y), vec2f(0.0), vec2f(1.0))).x;
+      let densityUp = sampleFluid(clamp(fluidUv + vec2f(0.0, texel.y), vec2f(0.0), vec2f(1.0))).x;
+      let normal = normalize(vec3f(
+        (densityLeft - densityRight) * 0.42,
+        (densityDown - densityUp) * 0.42,
+        0.16
+      ));
+      let lightDirection = normalize(vec3f(-0.42, 0.7, 0.58));
+      let halfDirection = normalize(lightDirection + vec3f(0.0, 0.0, 1.0));
+      let diffuse = max(dot(normal, lightDirection), 0.0);
+      let specular = pow(max(dot(normal, halfDirection), 0.0), 34.0);
+      let edge = pow(1.0 - max(normal.z, 0.0), 2.4);
+      let speed = densityData.y / max(densityData.x, 0.0001);
+      let deformation = densityData.z / max(densityData.x, 0.0001);
+      let coldMetal = vec3f(0.018, 0.16, 0.25);
+      let hotMetal = vec3f(0.22, 0.92, 1.55);
+      let induction = 0.5 + 0.5 * sin(
+        fluidFoundryScene.time * 2.4 + fluidUv.y * 15.0 + fluidUv.x * 4.0
+      );
+      let metalColor = mix(coldMetal, hotMetal, clamp(speed * 0.55 + induction * 0.22, 0.0, 1.0));
+      let fluidColor = metalColor * (0.16 + diffuse * 0.78) +
+        vec3f(2.8, 2.1, 1.15) * specular +
+        vec3f(0.18, 0.85, 2.5) * edge * (0.4 + fluidFoundryScene.interaction * 0.45) +
+        vec3f(0.35, 0.08, 0.025) * max(1.0 - deformation, 0.0);
+      color = mix(color, fluidColor, surface);
+    }
+
+    let glassEdge = vesselFrame * (0.3 + surface * 0.7);
+    color += vec3f(0.15, 0.44, 0.78) * glassEdge;
+    let clampBand = 1.0 - smoothstep(0.025, 0.055, abs(abs(vesselPosition.x) - 0.78));
+    color += vec3f(0.12, 0.08, 0.045) * clampBand * smoothstep(0.72, 0.98, abs(vesselPosition.y));
+    let floorGlow = exp(-abs(centered.y + 0.92) * 28.0) * exp(-abs(centered.x) * 1.8);
+    color += vec3f(0.22, 0.055, 0.012) * floorGlow;
+    color *= 0.42 + vignette * 0.72;
+    return vec4f(max(color, vec3f(0.0)), 1.0);
+  }
+  `;
+
+  return {
+    NOZZLE_EMITTER_SHADER,
+    PARTICLE_SPLAT_SHADER,
+    COMPOSITE_SHADER
+  } as const;
 }

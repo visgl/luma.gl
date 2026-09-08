@@ -8,6 +8,8 @@ Integrate participating-media illumination from the same directional and cluster
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```

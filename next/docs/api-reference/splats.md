@@ -18,6 +18,8 @@ Progressive HDR Gaussian splat rendering
 
 InfoSource
 
+Mobile quality
+
 ```
 // Loading source…
 ```
