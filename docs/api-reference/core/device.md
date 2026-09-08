@@ -70,7 +70,7 @@ Specifies props to use when luma creates the device.
 | ------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `id?: string` | `null` | Optional string id, mainly intended for debugging. |
 | `createCanvasContext?: CanvasContextProps` \| `true` | [CanvasContexProps][canvas-context-props] | Create a default `CanvasContext` for the new `Device`. `true` creates a context with default props. |
-| `powerPreference?: string` | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'` (WebGL). |
+| `powerPreference?: string` | `'default'` | `'default' \| 'high-performance' \| 'low-power'`. WebGPU omits the request hint when this is `'default'`. |
 | `featureLevel?: 'core' \| 'max' \| 'compatibility' \| 'best-available'` | `'core'` | WebGPU feature/limit profile to request. `'core'` is the portable default; `'max'` requests every supported adapter feature and limit; `'compatibility'` opts into compatibility mode; `'best-available'` upgrades a compatibility adapter to core when available. WebGL and null devices ignore this prop. |
 | `optionalFeatures?: WebGPUDeviceFeature[]` | `[]` | WebGPU device features to request in addition to the selected profile. Unsupported entries are ignored. Use this for targeted capabilities such as `'subgroups'` without enabling the full `'max'` profile. |
 | `xrCompatible?: boolean` | `false` | Request a WebGPU adapter that can present frames to a WebXR session. Standard adapter requests remain unchanged unless this is enabled. |
@@ -93,6 +93,8 @@ Specifies props to use when luma creates the device.
 :::tip
 Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
+
+`device.lost` preserves whether loss was intentional (`destroyed`) or unexpected (`unknown`).
 
 #### Internal caching props
 
