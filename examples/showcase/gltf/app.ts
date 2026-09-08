@@ -29,7 +29,7 @@ import GLTFCatalogApp, {
 } from './gltf-catalog-app';
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemo} from './gltf-extension-demos';
 import {GLTF_STUDIO_DEFAULT_VARIANT, type GLTFAnimationStudioState} from './gltf-animation-studio';
-import {GLTF_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
+import {GLTF_ANIMATION_STUDIO_ASSETS, getGLTFStudioAsset} from './gltf-studio-assets';
 
 const PBR_ENVIRONMENT_BASE_URL =
   'https://raw.githubusercontent.com/uber-common/deck.gl-data/master/luma.gl/examples/gltf';
@@ -178,13 +178,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
     const selectedModelOption = getInitialModelOption(this.modelOptions, currentModelName);
     this.selectedModelValue = encodeModelOption(selectedModelOption);
     this.syncSettingsPanel();
-    if (
-      this.extensionName !== ALL_EXTENSIONS_FILTER &&
-      this.extensionName !== STUDIO_ASSETS_FILTER
-    ) {
-      this.loadModelOption(selectedModelOption);
-    }
     return () => {};
+  }
+
+  override getInitialModelReference(currentModelName: string): GLTFModelReference {
+    return getInitialModelOption(this.modelOptions, currentModelName);
   }
 
   override drawBackground(renderPass: RenderPass): void {
@@ -541,10 +539,12 @@ function getModelOptionsForExtension(
 ): ShowcaseModelMenuOption[] {
   if (extensionName === STUDIO_ASSETS_FILTER) {
     const availableNames = new Set(allModels.map(model => model.name));
-    return GLTF_STUDIO_ASSETS.filter(asset => availableNames.has(asset.name)).map(asset => ({
-      ...asset.model,
-      label: asset.label
-    }));
+    return GLTF_ANIMATION_STUDIO_ASSETS.filter(asset => availableNames.has(asset.name)).map(
+      asset => ({
+        ...asset.model,
+        label: asset.label
+      })
+    );
   }
   if (extensionName === ALL_EXTENSIONS_FILTER) {
     return allModels;

@@ -18,6 +18,7 @@ import {
   ExampleSettingsPanelManager,
   getChangedSetting,
   makeExamplePanelHostHtml,
+  makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
 
@@ -271,9 +272,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   private makePanel(): Panel {
-    return new ColumnPanel({
-      id: 'api-render-bundles-controls',
-      title: 'Render Bundles',
+    const infoPanel = new ColumnPanel({
+      id: 'api-render-bundles-info',
+      title: 'Info',
       panels: [
         makeHtmlCustomPanel({
           id: 'api-render-bundles-description',
@@ -318,9 +319,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
               this.modeElement = null;
             };
           }
-        }),
-        this.settingsPanel.makePanel()
+        })
       ]
+    });
+    return makeExampleTabbedPanel({
+      id: 'api-render-bundles-controls',
+      title: 'Render Bundles',
+      panels: [infoPanel, this.settingsPanel.makePanel()]
     });
   }
 

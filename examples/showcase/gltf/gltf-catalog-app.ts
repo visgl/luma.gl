@@ -310,20 +310,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           : models.find(model => model.name === this.getDefaultModelName())?.name ||
             models[0]?.name ||
             initialModelName;
-        if (!this.referenceCaptureOptions) {
-          window.localStorage[modelStorageKey] = currentModelName;
-        }
         const cleanupModelMenu = this.initializeModelMenus(models, currentModelName);
         this.cleanupCallbacks.push(cleanupModelMenu);
-        this.loadGLTF(
-          this.referenceCaptureOptions
-            ? {
-                name: this.referenceCaptureOptions.modelName,
-                variant: this.referenceCaptureOptions.variant,
-                fileName: this.referenceCaptureOptions.fileName
-              }
-            : currentModelName
-        );
+        const initialModelReference = this.referenceCaptureOptions
+          ? {
+              name: this.referenceCaptureOptions.modelName,
+              variant: this.referenceCaptureOptions.variant,
+              fileName: this.referenceCaptureOptions.fileName
+            }
+          : this.getInitialModelReference(currentModelName);
+        if (!this.referenceCaptureOptions) {
+          window.localStorage[modelStorageKey] =
+            typeof initialModelReference === 'string'
+              ? initialModelReference
+              : initialModelReference.name;
+        }
+        this.loadGLTF(initialModelReference);
       })
       .catch(error => {
         log.error(
@@ -385,6 +387,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.loadGLTF(modelName);
       window.localStorage[this.getModelStorageKey()] = modelName;
     });
+  }
+
+  getInitialModelReference(currentModelName: string): string | GLTFModelReference {
+    return currentModelName;
   }
 
   getDefaultCameraTilt(_modelReference: Required<GLTFModelReference>): number {
