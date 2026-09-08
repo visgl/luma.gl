@@ -80,6 +80,15 @@ const INFO_BOX_CHROME_STYLE = `
 [data-info-box-appearance='cinematic'] [data-luma-example-source] .token.comment {
   color: var(--luma-example-text-muted) !important;
 }
+[data-info-box-appearance='cinematic'] [data-luma-example-info-content] pre {
+  background: var(--luma-example-surface) !important;
+  color: var(--luma-example-text) !important;
+}
+[data-info-box-appearance='cinematic'] [data-luma-example-info-content] :not(pre) > code {
+  background: var(--luma-example-surface-raised) !important;
+  border: 1px solid var(--luma-example-border) !important;
+  color: var(--luma-example-text) !important;
+}
 @media (prefers-reduced-motion: reduce) {
   [data-info-box-appearance] [data-luma-example-chrome-action] {
     transition: none;
@@ -631,6 +640,7 @@ function InfoBoxView(props: InfoBoxViewProps) {
         ) : null}
         <div
           ref={infoContentRef}
+          data-luma-example-info-content=""
           hidden={!hasPanelTabs && activeTab !== 'info'}
           aria-hidden={!hasPanelTabs && activeTab !== 'info'}
           style={{minWidth: 0, minHeight: 0, flex: '1 1 auto', overflow: 'auto'}}

@@ -10,13 +10,7 @@
     "items": [
       "showcase/gaussian-splat-viewer",
       "showcase/gaussian-splats",
-      "showcase/gltf",
       "showcase/instancing",
-      {
-        "type": "doc",
-        "id": "experimental/scene-playground",
-        "label": "Scene Playground"
-      },
       "showcase/globe",
       "showcase/packet-spraying",
       {
@@ -33,6 +27,12 @@
         "type": "doc",
         "id": "showcase/persistence",
         "label": "Effects: Persistence"
+      },
+      "showcase/gltf",
+      {
+        "type": "doc",
+        "id": "experimental/scene-playground",
+        "label": "Scene Playground"
       }
     ]
   },

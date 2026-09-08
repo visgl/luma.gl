@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ColumnPanel, type Panel, type SettingsSchema} from '@deck.gl-community/panels';
-import {ExampleSettingsPanelManager, makeHtmlCustomPanel} from '../../example-panels';
+import {
+  ExampleSettingsPanelManager,
+  makeExampleTabbedPanel,
+  makeHtmlCustomPanel
+} from '../../example-panels';
 
 export const DEFAULT_DRAW_COUNT = 5000;
 const DRAW_COUNT_OPTIONS = [1000, DEFAULT_DRAW_COUNT, 10000];
@@ -16,9 +20,9 @@ export class RenderBundlesUI {
   private modeElement: HTMLElement | null = null;
 
   constructor(settingsPanel: ExampleSettingsPanelManager, drawCount: number) {
-    this.panel = new ColumnPanel({
-      id: 'api-render-bundles-controls',
-      title: 'Render Bundles',
+    const infoPanel = new ColumnPanel({
+      id: 'api-render-bundles-info',
+      title: 'Info',
       panels: [
         makeHtmlCustomPanel({
           id: 'api-render-bundles-description',
@@ -62,9 +66,13 @@ export class RenderBundlesUI {
               this.modeElement = null;
             };
           }
-        }),
-        settingsPanel.makePanel()
+        })
       ]
+    });
+    this.panel = makeExampleTabbedPanel({
+      id: 'api-render-bundles-controls',
+      title: 'Render Bundles',
+      panels: [infoPanel, settingsPanel.makePanel()]
     });
   }
 
