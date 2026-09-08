@@ -1,21 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-  <!-- luma-example-support -->
-  <meta name="luma-example-id" content="showcase/billion-point-spatial-atlas" />
-  <meta name="luma-example-backends" content="webgpu" />
-  <meta name="luma-example-mobile" content="reduced" />
-  <meta name="luma-example-mobile-profile" content="large-data" />
-  <script type="module" data-luma-example-support-bootstrap>
-    import {installStandaloneExampleSupport} from '../../example-support.ts';
-    const exampleSupport = installStandaloneExampleSupport();
-    if (!exampleSupport.supported) {
-      document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
-        .forEach(script => script.remove());
-    }
-  </script>
-  <!-- /luma-example-support -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
@@ -48,7 +33,7 @@
       #example-panel-host button { max-width: 100%; }
       [data-error] { max-width: 42rem; margin: 12vh auto; padding: 1.5rem; font: 16px/1.5 system-ui; }
     </style>
-</head>
+  </head>
   <body>
     <noscript>This WebGPU demonstration requires JavaScript.</noscript>
     <aside id="atlas-panel-shell" aria-label="Spatial Atlas controls and pipeline inspector">

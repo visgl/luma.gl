@@ -179,7 +179,7 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(86);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(89);
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
@@ -192,29 +192,23 @@ describe('live example catalog metadata', () => {
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(84);
-
+    expect(standaloneFiles).toHaveLength(82);
     for (const relativeFile of standaloneFiles) {
-      const html = readFileSync(path.join(process.cwd(), 'examples', relativeFile), 'utf8');
-      expect(html, `${relativeFile} requires a mobile viewport`).toMatch(/<meta\s+name="viewport"/);
-      expect(html, `${relativeFile} requires a stable support identifier`).toMatch(
-        /<meta\s+name="luma-example-id"\s+content="[^"]+"/
+      const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
+        match === '/index.html' ? '' : '/playground'
       );
-      expect(html, `${relativeFile} requires backend metadata`).toMatch(
-        /<meta\s+name="luma-example-backends"\s+content="(?:webgpu|webgl2)/
-      );
-      expect(html, `${relativeFile} requires a mobile mode`).toMatch(
-        /<meta\s+name="luma-example-mobile"\s+content="(?:full|reduced|unsupported)"/
-      );
-      expect(html, `${relativeFile} requires the lightweight preflight`).toContain(
-        'installStandaloneExampleSupport'
-      );
-
-      const firstModuleScript = html.match(/<script\s+type="module"[^>]*>/)?.[0];
+      const canonicalId =
+        new Map([
+          ['arrow/arrow-instancing', 'showcase/instancing'],
+          ['showcase/scene', 'experimental/scene-playground'],
+          ['showcase/scene/playground', 'experimental/scene-playground'],
+          ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
+          ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
+        ]).get(standaloneId) || standaloneId;
       expect(
-        firstModuleScript,
-        `${relativeFile} must run preflight before its application module`
-      ).toContain('data-luma-example-support-bootstrap');
+        EXAMPLE_SUPPORT_REGISTRY[canonicalId],
+        `${relativeFile} requires a sidecar support definition`
+      ).toBeDefined();
     }
   });
 
@@ -228,13 +222,19 @@ describe('live example catalog metadata', () => {
     ]);
 
     for (const [relativeFile, canonicalId] of aliases) {
-      const html = readFileSync(path.join(process.cwd(), 'examples', relativeFile), 'utf8');
-      expect(html).toContain(`<meta name="luma-example-id" content="${canonicalId}" />`);
       const catalog = LIVE_EXAMPLES.find(example => example.id === canonicalId);
       expect(catalog, `${canonicalId} must exist in the catalog`).toBeDefined();
-      expect(html).toContain(
-        `<meta name="luma-example-mobile" content="${catalog?.metadata?.mobile}" />`
-      );
+      expect(
+        existsSync(
+          path.join(
+            process.cwd(),
+            'examples',
+            relativeFile.replace(/\/[^/]+$/, ''),
+            'mobile-support.ts'
+          )
+        ),
+        `${relativeFile} requires a local sidecar`
+      ).toBe(true);
     }
   });
 

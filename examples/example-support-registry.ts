@@ -3,6 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ExampleSupportDefinition} from './example-support';
+import standaloneSupport0 from './api/texture-compressed/mobile-support';
+import standaloneSupport1 from './integrations/hello-react/mobile-support';
+import standaloneSupport2 from './showcase/algebraic-varieties/mobile-support';
 import support0 from './showcase/gaussian-splat-viewer/mobile-support';
 import support1 from './showcase/gaussian-splats/mobile-support';
 import support2 from './showcase/instancing/mobile-support';
@@ -178,6 +181,9 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/luspatial-taxi': support82,
   'deck/gpu-graph-explorer': support83,
   'deck/gpu-culled-trace': support84,
+  'api/texture-compressed': standaloneSupport0,
+  'integrations/hello-react': standaloneSupport1,
+  'showcase/algebraic-varieties': standaloneSupport2,
   'homepage/instancing': support2
 };
 
