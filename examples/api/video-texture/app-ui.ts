@@ -10,22 +10,22 @@ WebGL samples the copied <code>sampler2D</code> path; WebGPU samples the native
 </p>
 `;
 
-type VideoScrubberProps = {
+type VideoScrubberCallbacks = {
   onPlay: (fromTime: number) => void;
   onPause: () => void;
   onSeek: (timeSeconds: number) => void;
 };
 
 export class VideoScrubber {
-  private readonly props: VideoScrubberProps;
+  private readonly callbacks: VideoScrubberCallbacks;
   private container: HTMLDivElement | null = null;
   private scrubber: HTMLInputElement | null = null;
   private timeDisplay: HTMLSpanElement | null = null;
   private playButton: HTMLButtonElement | null = null;
   private isPlaying = false;
 
-  constructor(props: VideoScrubberProps) {
-    this.props = props;
+  constructor(callbacks: VideoScrubberCallbacks) {
+    this.callbacks = callbacks;
   }
 
   show(duration: number): void {
@@ -85,9 +85,9 @@ export class VideoScrubber {
       'background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;';
     this.playButton.addEventListener('click', () => {
       if (this.isPlaying) {
-        this.props.onPause();
+        this.callbacks.onPause();
       } else {
-        this.props.onPlay(Number(this.scrubber?.value ?? 0));
+        this.callbacks.onPlay(Number(this.scrubber?.value ?? 0));
       }
     });
 
@@ -98,7 +98,7 @@ export class VideoScrubber {
     this.scrubber.style.cssText = 'width:320px;cursor:pointer;';
     this.scrubber.addEventListener('input', () => {
       const timeSeconds = Number(this.scrubber!.value);
-      this.props.onSeek(timeSeconds);
+      this.callbacks.onSeek(timeSeconds);
       this.setTime(timeSeconds);
     });
 
