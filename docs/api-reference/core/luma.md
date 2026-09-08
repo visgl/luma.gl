@@ -138,11 +138,10 @@ To create a Device instance, the application calls `luma.createDevice()`.
 Unless a device `type` is specified a `Device` will be created using the `'best-available'` adapter.
 luma.gl favors WebGPU over WebGL adapters, whenever WebGPU is available.
 
-When `debug` is enabled in a browser and device creation fails, luma.gl displays the error beside
-the first canvas in the document. Applications can style or fade the `#luma-device-error` element
-with CSS. To enable debugging from a browser URL, including on a mobile device, append the `debug`
-query parameter (for example, `?debug`). An explicit `debug` prop passed to `createDevice()` takes
-precedence over this default.
+When `debug` is enabled in a browser and device creation fails, luma.gl displays the error in a
+browser alert. To enable debugging from a browser URL, including on a mobile device, append the
+`debug` query parameter (for example, `?debug`). An explicit `debug` prop passed to
+`createDevice()` takes precedence over this default.
 
 Note: A specific device type is available and supported if both of the following are true:
 1. The backend module has been registered

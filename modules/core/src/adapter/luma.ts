@@ -92,23 +92,18 @@ export class Luma {
   /** Creates a device. Asynchronously. */
   async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
     const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
-    clearDeviceCreationError();
-
-    const adapter = this.selectAdapter(props.type, props.adapters);
-    if (!adapter) {
-      const error = new Error(ERROR_MESSAGE);
-      if (props.debug) displayDeviceCreationError(error);
-      throw error;
-    }
 
     try {
+      const adapter = this.selectAdapter(props.type, props.adapters);
+      if (!adapter) {
+        throw new Error(ERROR_MESSAGE);
+      }
+
       // Wait for page to load so that CanvasContext's can access the DOM.
       if (props.waitForPageLoad) {
         await adapter.pageLoaded;
       }
-      const device = await adapter.create(props);
-      clearDeviceCreationError();
-      return device;
+      return await adapter.create(props);
     } catch (error) {
       if (props.debug) displayDeviceCreationError(error);
       throw error;
@@ -240,21 +235,9 @@ export class Luma {
 }
 
 function displayDeviceCreationError(error: unknown): void {
-  if (typeof document === 'undefined') return;
-  const canvas = document.querySelector('canvas');
-  if (!canvas) return;
-
-  clearDeviceCreationError();
-  const errorElement = document.createElement('div');
-  errorElement.id = 'luma-device-error';
-  errorElement.setAttribute('role', 'alert');
-  errorElement.textContent = error instanceof Error ? error.message : String(error);
-  canvas.after(errorElement);
-}
-
-function clearDeviceCreationError(): void {
-  if (typeof document === 'undefined') return;
-  document.getElementById('luma-device-error')?.remove();
+  if (typeof alert === 'undefined') return;
+  // biome-ignore lint/suspicious/noAlert: debug device errors must be visible without developer tools.
+  alert(error instanceof Error ? error.message : String(error));
 }
 
 /**

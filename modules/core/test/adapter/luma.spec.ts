@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {nullAdapter} from '@luma.gl/test-utils';
 import {luma, type Adapter} from '@luma.gl/core';
 
@@ -33,9 +33,8 @@ it('luma#createDevice', async () => {
   void 0;
 });
 
-it('luma#createDevice displays debug failures beside a page canvas', async () => {
-  const canvas = document.createElement('canvas');
-  document.body.prepend(canvas);
+it('luma#createDevice alerts browser users to debug failures', async () => {
+  const alertSpy = vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
   const adapter = {
     type: 'webgpu',
     pageLoaded: Promise.resolve(),
@@ -45,47 +44,18 @@ it('luma#createDevice displays debug failures beside a page canvas', async () =>
   } as unknown as Adapter;
 
   try {
-    await luma.createDevice({
-      type: 'webgpu',
-      adapters: [adapter],
-      debug: true,
-      waitForPageLoad: false
-    });
-  } catch {
-    // Expected device creation failure.
+    await expect(
+      luma.createDevice({
+        type: 'webgpu',
+        adapters: [adapter],
+        debug: true,
+        waitForPageLoad: false
+      })
+    ).rejects.toThrow('WebGPU unavailable');
+    expect(alertSpy, 'the native error is shown').toHaveBeenCalledWith('WebGPU unavailable');
+  } finally {
+    alertSpy.mockRestore();
   }
-
-  const errorElement = document.getElementById('luma-device-error');
-  expect(errorElement?.previousElementSibling, 'the error is displayed beside the canvas').toBe(
-    canvas
-  );
-  expect(errorElement?.getAttribute('role'), 'the error is announced accessibly').toBe('alert');
-  expect(errorElement?.textContent, 'the native error is shown').toBe('WebGPU unavailable');
-
-  try {
-    await luma.createDevice({
-      type: 'webgpu',
-      adapters: [adapter],
-      debug: true,
-      waitForPageLoad: false
-    });
-  } catch {
-    // Expected repeated device creation failure.
-  }
-  expect(
-    document.querySelectorAll('#luma-device-error').length,
-    'repeated failures replace the existing error'
-  ).toBe(1);
-
-  const device = await luma.createDevice({
-    type: 'null',
-    adapters: [nullAdapter],
-    debug: true,
-    waitForPageLoad: false
-  });
-  expect(document.getElementById('luma-device-error'), 'success clears stale errors').toBeNull();
-  device.destroy();
-  canvas.remove();
 });
 
 it('luma#registerAdapters', async () => {
