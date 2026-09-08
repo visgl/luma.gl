@@ -81,7 +81,7 @@ export function LiveBenchmarkPanel({
       {description ? <p className="luma-live-benchmark__description">{description}</p> : null}
 
       {unsupportedReason ? (
-        <p aria-live="polite" style={{marginBottom: 0}}>
+        <p role="alert" style={{marginBottom: 0}}>
           {unsupportedReason}
         </p>
       ) : null}
@@ -117,12 +117,19 @@ export function LiveBenchmarkPanel({
           {isRunning ? 'Running…' : runLabel}
         </button>
       </div>
+      <small data-luma-example-mobile-badge="">Mobile quality · smallest workload</small>
     </>
   );
 
   if (collapsible) {
     return (
-      <details className="luma-live-benchmark" data-live-benchmark="true">
+      <details
+        className="luma-live-benchmark"
+        data-live-benchmark="true"
+        data-luma-example-mobile-mode="reduced"
+        data-luma-example-quality-profile="large-data"
+        data-luma-example-state={getBenchmarkState(unsupportedReason, error, isRunning, results)}
+      >
         <summary className="luma-live-benchmark__summary">
           <strong>{title}</strong>
         </summary>
@@ -136,9 +143,24 @@ export function LiveBenchmarkPanel({
       aria-label={title}
       className="luma-live-benchmark luma-live-benchmark--panel"
       data-live-benchmark="true"
+      data-luma-example-mobile-mode="reduced"
+      data-luma-example-quality-profile="large-data"
+      data-luma-example-state={getBenchmarkState(unsupportedReason, error, isRunning, results)}
     >
       <h3>{title}</h3>
       {content}
     </section>
   );
+}
+
+function getBenchmarkState(
+  unsupportedReason: string | undefined,
+  error: string | null,
+  isRunning: boolean,
+  results: ReactNode
+): 'loading' | 'running' | 'unsupported' | 'failed' {
+  if (unsupportedReason) return 'unsupported';
+  if (error) return 'failed';
+  if (isRunning || !results) return 'loading';
+  return 'running';
 }

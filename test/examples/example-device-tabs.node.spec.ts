@@ -111,7 +111,7 @@ describe('high-density mobile example rendering', () => {
         mobile: true,
         width: 200
       })
-    ).toBe(true);
+    ).toBe(2);
   });
 
   test('prevents large 3x phone canvases from exhausting tab memory', () => {

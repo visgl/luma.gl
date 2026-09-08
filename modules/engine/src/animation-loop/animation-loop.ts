@@ -358,8 +358,14 @@ export class AnimationLoop {
     if (!this._running) {
       return;
     }
-    this.redraw(time, animationFrame ?? null);
-    this._requestAnimationFrame();
+    try {
+      this.redraw(time, animationFrame ?? null);
+      this._requestAnimationFrame();
+    } catch (error) {
+      const renderError = error instanceof Error ? error : new Error(String(error));
+      this.reportError(renderError);
+      this.stop();
+    }
   }
 
   // Called on each frame, can be overridden to call onRender multiple times

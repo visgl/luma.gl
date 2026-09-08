@@ -1,6 +1,10 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {useDocsSidebar, useDocsVersion} from '@docusaurus/plugin-content-docs/client';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import type {
+  ExampleMobileMode,
+  ExampleMobileQualityProfile
+} from '../../../examples/example-support';
 import {ExampleCard} from './example-card';
 import styles from './examples-index.module.css';
 
@@ -14,6 +18,8 @@ type ExampleCustomProps = {
   difficulty?: ExampleDifficulty;
   display?: ExampleDisplay;
   maturity?: ExampleMaturity;
+  mobile?: ExampleMobileMode;
+  mobileProfile?: ExampleMobileQualityProfile;
   topics?: string[];
 };
 
@@ -43,6 +49,8 @@ type CatalogItem = SidebarDocItem & {
   difficulty: ExampleDifficulty;
   display: ExampleDisplay;
   maturity: ExampleMaturity;
+  mobile: ExampleMobileMode;
+  mobileProfile: ExampleMobileQualityProfile;
   topics: string[];
 };
 
@@ -232,6 +240,7 @@ export function ExamplesIndex({getThumbnail}: ExamplesIndexProps) {
                   highDynamicRange={item.display === 'hdr-capable'}
                   difficulty={item.difficulty}
                   maturity={item.maturity}
+                  mobile={item.mobile}
                   topics={item.topics}
                 />
               );
@@ -310,6 +319,8 @@ function normalizeItem(
     difficulty: customProps.difficulty || getDefaultDifficulty(category),
     display: customProps.display || 'standard',
     maturity: customProps.maturity || getDefaultMaturity(category),
+    mobile: customProps.mobile || 'full',
+    mobileProfile: customProps.mobileProfile || 'standard',
     topics: customProps.topics || [topic]
   };
 }

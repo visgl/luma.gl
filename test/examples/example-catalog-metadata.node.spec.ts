@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {existsSync, readFileSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
@@ -18,6 +18,9 @@ type ExampleCatalogMetadata = {
   difficulty?: string;
   display?: string;
   maturity?: string;
+  mobile?: string;
+  mobileProfile?: string;
+  mobileUnsupportedReason?: string;
   topics?: string[];
 };
 
@@ -59,6 +62,8 @@ describe('live example catalog metadata', () => {
         backends: ['webgpu', 'webgl2'],
         difficulty: 'tutorial',
         maturity: 'stable',
+        mobile: 'full',
+        mobileProfile: 'standard',
         topics: ['fundamentals', 'rendering', 'geometry', 'shaders']
       }
     });
@@ -105,7 +110,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES.length).toBeGreaterThan(0);
+    expect(LIVE_EXAMPLES).toHaveLength(85);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -124,12 +129,93 @@ describe('live example catalog metadata', () => {
         ['stable', 'experimental'].includes(metadata?.maturity || ''),
         `${id} has an invalid maturity`
       ).toBe(true);
+      expect(
+        ['full', 'reduced', 'unsupported'].includes(metadata?.mobile || ''),
+        `${id} has an invalid mobile mode`
+      ).toBe(true);
+      expect(
+        ['standard', 'effects', 'large-data', 'simulation', 'dense'].includes(
+          metadata?.mobileProfile || ''
+        ),
+        `${id} has an invalid mobile quality profile`
+      ).toBe(true);
+      if (metadata?.mobile === 'full') {
+        expect(metadata.mobileProfile, `${id} full mobile support uses standard quality`).toBe(
+          'standard'
+        );
+      }
+      if (metadata?.mobile === 'reduced') {
+        expect(metadata.mobileProfile, `${id} reduced mode requires a reduced profile`).not.toBe(
+          'standard'
+        );
+      }
+      if (metadata?.mobile === 'unsupported') {
+        expect(
+          metadata.mobileUnsupportedReason?.trim(),
+          `${id} desktop-only mode requires a user-facing reason`
+        ).toBeTruthy();
+      }
       expect(metadata?.topics?.length, `${id} requires at least two topics`).toBeGreaterThanOrEqual(
         2
       );
       expect(metadata?.topics?.length, `${id} allows at most five topics`).toBeLessThanOrEqual(5);
       expect(new Set(metadata?.topics).size, `${id} has duplicate topics`).toBe(
         metadata?.topics?.length
+      );
+    }
+  });
+
+  test('keeps mobile support metadata local and the runtime policy free of application imports', () => {
+    const supportPolicy = readFileSync(
+      path.join(process.cwd(), 'examples/example-support.ts'),
+      'utf8'
+    );
+    expect(supportPolicy).not.toMatch(/(?:import|export).*\/app['"]/);
+    expect(supportPolicy).not.toContain('website/src/examples');
+
+    const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
+    expect(standaloneFiles).toHaveLength(84);
+
+    for (const relativeFile of standaloneFiles) {
+      const html = readFileSync(path.join(process.cwd(), 'examples', relativeFile), 'utf8');
+      expect(html, `${relativeFile} requires a mobile viewport`).toMatch(/<meta\s+name="viewport"/);
+      expect(html, `${relativeFile} requires a stable support identifier`).toMatch(
+        /<meta\s+name="luma-example-id"\s+content="[^"]+"/
+      );
+      expect(html, `${relativeFile} requires backend metadata`).toMatch(
+        /<meta\s+name="luma-example-backends"\s+content="(?:webgpu|webgl2)/
+      );
+      expect(html, `${relativeFile} requires a mobile mode`).toMatch(
+        /<meta\s+name="luma-example-mobile"\s+content="(?:full|reduced|unsupported)"/
+      );
+      expect(html, `${relativeFile} requires the lightweight preflight`).toContain(
+        'installStandaloneExampleSupport'
+      );
+
+      const firstModuleScript = html.match(/<script\s+type="module"[^>]*>/)?.[0];
+      expect(
+        firstModuleScript,
+        `${relativeFile} must run preflight before its application module`
+      ).toContain('data-luma-example-support-bootstrap');
+    }
+  });
+
+  test('resolves standalone aliases to the same canonical support definitions', () => {
+    const aliases = new Map([
+      ['arrow/arrow-instancing/index.html', 'showcase/instancing'],
+      ['showcase/scene/index.html', 'experimental/scene-playground'],
+      ['showcase/scene/playground.html', 'experimental/scene-playground'],
+      ['tutorials/hello-instanced-cubes/index.html', 'tutorials/instanced-cubes'],
+      ['tutorials/hello-two-cubes/index.html', 'tutorials/two-cubes']
+    ]);
+
+    for (const [relativeFile, canonicalId] of aliases) {
+      const html = readFileSync(path.join(process.cwd(), 'examples', relativeFile), 'utf8');
+      expect(html).toContain(`<meta name="luma-example-id" content="${canonicalId}" />`);
+      const catalog = LIVE_EXAMPLES.find(example => example.id === canonicalId);
+      expect(catalog, `${canonicalId} must exist in the catalog`).toBeDefined();
+      expect(html).toContain(
+        `<meta name="luma-example-mobile" content="${catalog?.metadata?.mobile}" />`
       );
     }
   });
@@ -222,6 +308,21 @@ function readLiveExamples(): LiveExample[] {
 
   visit(tableOfContents, []);
   return liveExamples;
+}
+
+function findStandaloneHtmlFiles(directory: string, relativeDirectory = ''): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, {withFileTypes: true})) {
+    if (entry.name === 'dist' || entry.name === 'node_modules') continue;
+    const entryPath = path.join(directory, entry.name);
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findStandaloneHtmlFiles(entryPath, relativePath));
+    } else if (entry.name === 'index.html' || entry.name === 'playground.html') {
+      files.push(relativePath);
+    }
+  }
+  return files;
 }
 
 function readLiveExample(id: string, categories: string[]): LiveExample {

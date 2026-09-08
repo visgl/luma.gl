@@ -48,14 +48,14 @@ afterEach(() => {
 
 describe('published Gaussian splat viewer', () => {
   test('uses conservative RAD budgets on coarse-pointer mobile devices', () => {
-    expect(makeGaussianSplatRenderProfile({coarsePointer: true, maxTouchPoints: 5})).toEqual({
+    expect(makeGaussianSplatRenderProfile({handheld: true})).toEqual({
       isMobile: true,
       maxConcurrentPageLoads: 2,
       maxDecodeWorkers: 1,
       maxResidentSplatCount: 250_000,
       maxTraversalRows: 2047
     });
-    expect(makeGaussianSplatRenderProfile({coarsePointer: false, maxTouchPoints: 5})).toEqual({
+    expect(makeGaussianSplatRenderProfile({handheld: false})).toEqual({
       isMobile: false,
       maxConcurrentPageLoads: 4,
       maxDecodeWorkers: 2,
