@@ -9,6 +9,7 @@ import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@lum
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {Matrix4} from '@math.gl/core';
 import {Input, ALL_FORMATS, BlobSource, VideoSampleSink} from 'mediabunny';
+import {VIDEO_TEXTURE_INFO_HTML, VideoScrubber} from './app-ui';
 
 export const title = 'Video Texture';
 export const description = 'Wraps a live video texture around a rotating cylinder.';
@@ -35,128 +36,12 @@ type MediabunnySource = {
 
 const VIDEO_URL = 'https://assets.mixkit.co/videos/188/188-720.mp4';
 
-const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    modelMatrix: 'mat4x4<f32>',
-    modelViewProjectionMatrix: 'mat4x4<f32>',
-    time: 'f32',
-    videoFlipX: 'f32'
-  }
-};
-
-const source = /* wgsl */ `\
-struct AppUniforms {
-  modelMatrix: mat4x4<f32>,
-  modelViewProjectionMatrix: mat4x4<f32>,
-  time: f32,
-  videoFlipX: f32,
-};
-
-@group(0) @binding(auto) var<uniform> app : AppUniforms;
-@group(0) @binding(auto) var videoTexture : texture_external;
-@group(0) @binding(auto) var videoTextureSampler : sampler;
-
-struct VertexInputs {
-  @location(0) positions : vec3<f32>,
-  @location(1) normals : vec3<f32>,
-  @location(2) texCoords : vec2<f32>,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) normal : vec3<f32>,
-  @location(1) uv : vec2<f32>,
-};
-
-@vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
-  outputs.normal = normalize((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
-  outputs.uv = inputs.texCoords;
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let videoUv = vec2<f32>(
-    mix(inputs.uv.x, 1.0 - inputs.uv.x, app.videoFlipX),
-    1.0 - inputs.uv.y
-  );
-  let videoColor = textureSampleBaseClampToEdge(
-    videoTexture,
-    videoTextureSampler,
-    videoUv
-  ).rgb;
-  let rim = pow(1.0 - abs(dot(normalize(inputs.normal), vec3<f32>(0.0, 0.0, 1.0))), 2.5);
-  let scan = 0.88 + 0.12 * sin(inputs.uv.y * 90.0 - app.time * 5.0);
-  let beaconColor = videoColor * scan + vec3<f32>(0.1, 0.55, 1.0) * rim;
-  return vec4<f32>(beaconColor, 1.0);
-}
-`;
-
-const vs = /* glsl */ `\
-#version 300 es
-
-in vec3 positions;
-in vec3 normals;
-in vec2 texCoords;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float videoFlipX;
-} app;
-
-out vec3 vNormal;
-out vec2 vUV;
-
-void main(void) {
-  gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
-  vNormal = normalize(vec3(app.modelMatrix * vec4(normals, 0.0)));
-  vUV = texCoords;
-}
-`;
-
-const fs = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-uniform sampler2D videoTexture;
-
-uniform appUniforms {
-  mat4 modelMatrix;
-  mat4 modelViewProjectionMatrix;
-  float time;
-  float videoFlipX;
-} app;
-
-in vec3 vNormal;
-in vec2 vUV;
-
-out vec4 fragColor;
-
-void main(void) {
-  vec2 videoUv = vec2(mix(vUV.x, 1.0 - vUV.x, app.videoFlipX), 1.0 - vUV.y);
-  vec3 videoColor = texture(videoTexture, videoUv).rgb;
-  float rim = pow(1.0 - abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0))), 2.5);
-  float scan = 0.88 + 0.12 * sin(vUV.y * 90.0 - app.time * 5.0);
-  vec3 beaconColor = videoColor * scan + vec3(0.1, 0.55, 1.0) * rim;
-  fragColor = vec4(beaconColor, 1.0);
-}
-`;
+const {app, source, vs, fs} = getShaderSources();
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static current: AppAnimationLoopTemplate | null = null;
 
-  static info = `\
-	<p>
-	Wraps a live <code>VideoTexture</code> around a rotating <code>CylinderGeometry</code>.
-	WebGL samples the copied <code>sampler2D</code> path; WebGPU samples the native
-	<code>texture_external</code> path when the browser supports it.
-	</p>
-`;
+  static info = VIDEO_TEXTURE_INFO_HTML;
 
   readonly modelMatrix = new Matrix4();
   readonly modelViewProjectionMatrix = new Matrix4();
@@ -172,10 +57,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   private _isFinalized = false;
   private _videoFlipX = 0;
   private _mediabunnySource: MediabunnySource | null = null;
-  private _scrubberContainer: HTMLDivElement | null = null;
-  private _scrubber: HTMLInputElement | null = null;
-  private _timeDisplay: HTMLSpanElement | null = null;
-  private _playButton: HTMLButtonElement | null = null;
+  private readonly _scrubber = new VideoScrubber({
+    onPlay: fromTime => this._startPlayback(fromTime),
+    onPause: () => this._stopPlayback(),
+    onSeek: timeSeconds => {
+      this._stopPlayback();
+      void this._seekMediabunny(timeSeconds);
+    }
+  });
   private _seekGeneration = 0;
   private _playing = false;
   private _playbackAbort: AbortController | null = null;
@@ -225,7 +114,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this._teardownMediabunny();
     this.videoSource?.destroy();
     this.uniformStore.destroy();
-    this._scrubberContainer?.remove();
+    this._scrubber.destroy();
   }
 
   onRender({device, aspect, tick}: AnimationProps): void {
@@ -320,7 +209,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.videoTexture.setSource(cameraVideoSource.video);
     this._videoFlipX = 1;
     previousVideoSource?.destroy();
-    this._hideScrubber();
+    this._scrubber.hide();
   }
 
   async useMediabunny(): Promise<void> {
@@ -349,7 +238,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.videoSource = null;
 
     this._videoFlipX = 0;
-    this._showScrubber(duration);
+    this._scrubber.show(duration);
     await this._seekMediabunny(0);
   }
 
@@ -383,7 +272,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (!src) return;
 
     this._playing = true;
-    if (this._playButton) this._playButton.textContent = '⏸';
+    this._scrubber.setPlaying(true);
     const abort = new AbortController();
     this._playbackAbort = abort;
 
@@ -413,14 +302,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         this.videoTexture.setSource(frame);
         previousFrame?.close();
 
-        if (this._scrubber) {
-          this._scrubber.value = String(sample.timestamp);
-          this._updateTimeDisplay(sample.timestamp);
-        }
+        this._scrubber.setTime(sample.timestamp);
       }
       if (!abort.signal.aborted) {
         this._playing = false;
-        if (this._playButton) this._playButton.textContent = '▶';
+        this._scrubber.setPlaying(false);
       }
     })();
   }
@@ -429,7 +315,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this._playbackAbort?.abort();
     this._playbackAbort = null;
     this._playing = false;
-    if (this._playButton) this._playButton.textContent = '▶';
+    this._scrubber.setPlaying(false);
   }
 
   private _teardownMediabunny(): void {
@@ -439,65 +325,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this._mediabunnySource.input.dispose();
       this._mediabunnySource = null;
     }
-  }
-
-  private _showScrubber(duration: number): void {
-    if (!this._scrubberContainer) {
-      this._scrubberContainer = document.createElement('div');
-      this._scrubberContainer.style.cssText =
-        'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
-        'display:flex;align-items:center;gap:10px;padding:8px 16px;' +
-        'background:rgba(0,0,0,0.75);border-radius:8px;z-index:1000;';
-
-      this._playButton = document.createElement('button');
-      this._playButton.textContent = '▶';
-      this._playButton.style.cssText =
-        'background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 4px;';
-      this._playButton.addEventListener('click', () => {
-        if (this._playing) {
-          this._stopPlayback();
-        } else {
-          const fromTime = Number(this._scrubber?.value ?? 0);
-          this._startPlayback(fromTime);
-        }
-      });
-
-      this._scrubber = document.createElement('input');
-      this._scrubber.type = 'range';
-      this._scrubber.min = '0';
-      this._scrubber.step = 'any';
-      this._scrubber.style.cssText = 'width:320px;cursor:pointer;';
-      this._scrubber.addEventListener('input', () => {
-        this._stopPlayback();
-        const timeSec = Number(this._scrubber!.value);
-        this._seekMediabunny(timeSec);
-        this._updateTimeDisplay(timeSec);
-      });
-
-      this._timeDisplay = document.createElement('span');
-      this._timeDisplay.style.cssText = 'color:#fff;font:12px monospace;min-width:80px;';
-
-      this._scrubberContainer.append(this._playButton, this._scrubber, this._timeDisplay);
-      document.body.appendChild(this._scrubberContainer);
-    }
-    this._scrubber!.max = String(duration);
-    this._scrubber!.value = '0';
-    this._updateTimeDisplay(0);
-    this._scrubberContainer.style.display = 'flex';
-  }
-
-  private _hideScrubber(): void {
-    if (this._scrubberContainer) {
-      this._scrubberContainer.style.display = 'none';
-    }
-  }
-
-  private _updateTimeDisplay(timeSec: number): void {
-    if (!this._timeDisplay) return;
-    const m = Math.floor(timeSec / 60);
-    const s = Math.floor(timeSec % 60);
-    const ms = Math.floor((timeSec % 1) * 100);
-    this._timeDisplay.textContent = `${m}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
   }
 }
 
@@ -680,4 +507,120 @@ function drawProceduralVideoFrame(
   orbGradient.addColorStop(1, 'rgba(85, 247, 255, 0)');
   context.fillStyle = orbGradient;
   context.fillRect(orbX - 140, orbY - 140, 280, 280);
+}
+
+function getShaderSources() {
+  const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
+    uniformTypes: {
+      modelMatrix: 'mat4x4<f32>',
+      modelViewProjectionMatrix: 'mat4x4<f32>',
+      time: 'f32',
+      videoFlipX: 'f32'
+    }
+  };
+
+  const source = /* wgsl */ `\
+  struct AppUniforms {
+    modelMatrix: mat4x4<f32>,
+    modelViewProjectionMatrix: mat4x4<f32>,
+    time: f32,
+    videoFlipX: f32,
+  };
+
+  @group(0) @binding(auto) var<uniform> app : AppUniforms;
+  @group(0) @binding(auto) var videoTexture : texture_external;
+  @group(0) @binding(auto) var videoTextureSampler : sampler;
+
+  struct VertexInputs {
+    @location(0) positions : vec3<f32>,
+    @location(1) normals : vec3<f32>,
+    @location(2) texCoords : vec2<f32>,
+  };
+
+  struct FragmentInputs {
+    @builtin(position) Position : vec4<f32>,
+    @location(0) normal : vec3<f32>,
+    @location(1) uv : vec2<f32>,
+  };
+
+  @vertex
+  fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+    var outputs : FragmentInputs;
+    outputs.Position = app.modelViewProjectionMatrix * vec4<f32>(inputs.positions, 1.0);
+    outputs.normal = normalize((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
+    outputs.uv = inputs.texCoords;
+    return outputs;
+  }
+
+  @fragment
+  fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+    let videoUv = vec2<f32>(
+      mix(inputs.uv.x, 1.0 - inputs.uv.x, app.videoFlipX),
+      1.0 - inputs.uv.y
+    );
+    let videoColor = textureSampleBaseClampToEdge(
+      videoTexture,
+      videoTextureSampler,
+      videoUv
+    ).rgb;
+    let rim = pow(1.0 - abs(dot(normalize(inputs.normal), vec3<f32>(0.0, 0.0, 1.0))), 2.5);
+    let scan = 0.88 + 0.12 * sin(inputs.uv.y * 90.0 - app.time * 5.0);
+    let beaconColor = videoColor * scan + vec3<f32>(0.1, 0.55, 1.0) * rim;
+    return vec4<f32>(beaconColor, 1.0);
+  }
+  `;
+
+  const vs = /* glsl */ `\
+  #version 300 es
+
+  in vec3 positions;
+  in vec3 normals;
+  in vec2 texCoords;
+
+  uniform appUniforms {
+    mat4 modelMatrix;
+    mat4 modelViewProjectionMatrix;
+    float time;
+    float videoFlipX;
+  } app;
+
+  out vec3 vNormal;
+  out vec2 vUV;
+
+  void main(void) {
+    gl_Position = app.modelViewProjectionMatrix * vec4(positions, 1.0);
+    vNormal = normalize(vec3(app.modelMatrix * vec4(normals, 0.0)));
+    vUV = texCoords;
+  }
+  `;
+
+  const fs = /* glsl */ `\
+  #version 300 es
+  precision highp float;
+
+  uniform sampler2D videoTexture;
+
+  uniform appUniforms {
+    mat4 modelMatrix;
+    mat4 modelViewProjectionMatrix;
+    float time;
+    float videoFlipX;
+  } app;
+
+  in vec3 vNormal;
+  in vec2 vUV;
+
+  out vec4 fragColor;
+
+  void main(void) {
+    vec2 videoUv = vec2(mix(vUV.x, 1.0 - vUV.x, app.videoFlipX), 1.0 - vUV.y);
+    vec3 videoColor = texture(videoTexture, videoUv).rgb;
+    float rim = pow(1.0 - abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0))), 2.5);
+    float scan = 0.88 + 0.12 * sin(vUV.y * 90.0 - app.time * 5.0);
+    vec3 beaconColor = videoColor * scan + vec3(0.1, 0.55, 1.0) * rim;
+    fragColor = vec4(beaconColor, 1.0);
+  }
+  `;
+
+  return {app, source, vs, fs} as const;
 }
