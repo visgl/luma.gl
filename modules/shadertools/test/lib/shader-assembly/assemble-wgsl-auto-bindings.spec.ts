@@ -21,6 +21,7 @@ const PLATFORM_INFO: PlatformInfo = {
 };
 
 const FP64_INTEGER_MARKER = 'fn fp64_two_sum_integer_bits';
+const FP64_HYBRID_MARKER = 'let crossTerms = prevent_fp64_optimization';
 const FP64_CLASSIC_MARKER = 'let splitValue = prevent_fp64_optimization';
 const FP64_PREDICATE_MARKERS = ['fn twoSum', 'fn twoSub', 'fn mul_fp64', 'fn sub_fp64'] as const;
 const FP64_GENERIC_VALUE_MARKERS = [
@@ -127,6 +128,19 @@ test('assembleWGSLShader#selects optimizer-independent fp64 arithmetic', t => {
     disabledSource.includes(FP64_INTEGER_MARKER),
     'false override removes integer arithmetic'
   );
+
+  const hybridSource = shaderAssembler.assembleWGSLShader({
+    platformInfo: {...PLATFORM_INFO, gpu: 'apple'},
+    source: APP_WGSL,
+    modules: [fp64arithmetic],
+    defines: {
+      LUMA_FP64_HYBRID_ARITHMETIC: true,
+      LUMA_FP64_INTEGER_ARITHMETIC: false
+    }
+  }).source;
+  t.ok(hybridSource.includes(FP64_INTEGER_MARKER), 'hybrid mode retains integer primitives');
+  t.ok(hybridSource.includes(FP64_HYBRID_MARKER), 'callers can select hybrid arithmetic');
+  t.notOk(hybridSource.includes(FP64_CLASSIC_MARKER), 'hybrid mode omits classic arithmetic');
 
   t.end();
 });

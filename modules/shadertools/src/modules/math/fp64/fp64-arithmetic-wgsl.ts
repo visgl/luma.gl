@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {fp64arithmeticWGSLInteger} from './fp64-arithmetic-wgsl-integer';
+import {fp64arithmeticWGSLHybrid} from './fp64-arithmetic-wgsl-hybrid';
 
 /** WGSL source for fp64 arithmetic helpers and raw binary64 subtraction. */
 export const fp64arithmeticWGSL = /* wgsl */ `\
@@ -631,6 +632,9 @@ fn prevent_fp64_optimization(value: f32) -> f32 {
 #ifdef LUMA_FP64_INTEGER_ARITHMETIC
 ${fp64arithmeticWGSLInteger}
 #else
+#ifdef LUMA_FP64_HYBRID_ARITHMETIC
+${fp64arithmeticWGSLHybrid}
+#else
 fn split(a: f32) -> vec2f {
   let splitValue = prevent_fp64_optimization(fp64arithmetic.SPLIT + fp64_runtime_zero());
   let t = prevent_fp64_optimization(a * splitValue);
@@ -814,6 +818,7 @@ fn sqrt_fp64(a: vec2f) -> vec2f {
   return sum_fp64(vec2f(yn, 0.0), prod);
 #endif
 }
+#endif
 #endif
 #endif
 

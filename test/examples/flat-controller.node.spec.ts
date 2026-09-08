@@ -151,6 +151,29 @@ describe('FlatController', () => {
 
     controller.destroy();
   });
+
+  test('rejects non-finite wheel input before publishing view state', () => {
+    const canvasTarget = new EventTarget();
+    const canvas = Object.assign(canvasTarget, {
+      style: {cursor: '', touchAction: ''},
+      getBoundingClientRect: () => ({left: 0, top: 0, width: 100, height: 100})
+    }) as unknown as HTMLCanvasElement;
+    let interactionCount = 0;
+    let viewChangeCount = 0;
+    const controller = new FlatController(canvas, {
+      getView: () => ({xMin: 25, xMax: 75, yMin: 0, yMax: 100}),
+      getBounds: () => ({xMin: 0, xMax: 100, yMin: 0, yMax: 100}),
+      onInteractionStart: () => interactionCount++,
+      onViewChange: () => viewChangeCount++
+    });
+
+    canvas.dispatchEvent(makeWheelEvent(50, Number.NaN));
+    canvas.dispatchEvent(makeWheelEvent(Number.POSITIVE_INFINITY, 100));
+    expect(interactionCount).toBe(0);
+    expect(viewChangeCount).toBe(0);
+
+    controller.destroy();
+  });
 });
 
 function makePointerEvent(

@@ -23,6 +23,15 @@ it('WebGLDevice#lost (Promise)', async () => {
   device.destroy();
 });
 
+it('WebGLDevice#lost classifies external context loss as unknown', async () => {
+  const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
+
+  device.canvasContext.canvas.dispatchEvent(new Event('webglcontextlost'));
+
+  await expect(device.lost).resolves.toMatchObject({reason: 'unknown'});
+  device.destroy();
+});
+
 it('WebGLDevice#destroy marks the device lost', async () => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 

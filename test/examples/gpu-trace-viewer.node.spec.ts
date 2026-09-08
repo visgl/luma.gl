@@ -1030,8 +1030,13 @@ test('GPU trace adaptive LOD shaders parse as WGSL', t => {
   );
   t.match(
     getCandidateDensityShader(spanChunk),
-    /for \(var bin = firstBin; bin <= lastBin; bin\+\+\)/,
-    'density aggregation preserves long-span coverage across bins'
+    /for \(var bin = firstBin; bin < DENSITY_BIN_COUNT; bin\+\+\)/,
+    'density aggregation has a fixed upper bound while preserving long-span coverage'
+  );
+  t.match(
+    getCandidateDensityShader(spanChunk),
+    /densityKey < arrayLength\(&densityBins\)/,
+    'density aggregation guards every zoom-derived storage access'
   );
   t.match(
     getCandidateDensityShader(spanChunk),

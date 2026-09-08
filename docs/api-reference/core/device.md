@@ -252,10 +252,12 @@ True if the device is already lost (GPU is disconnected).
 ### lost
 
 ```typescript
-lost: Promise<{reason: 'destroyed'; message: string}>;
+lost: Promise<DeviceLostInfo>;
 ```
 
-Promise that resolves with an error message if the device is lost (GPU is disconnected).
+Promise that resolves when the underlying device is lost. `reason` is `'destroyed'` for an
+application-initiated loss and `'unknown'` for every unexpected or platform-initiated loss.
+`message` is implementation-defined diagnostic text and must not be parsed by applications.
 
 :::info
 GPU disconnections normally happen when the computer goes to sleep but it can also happen

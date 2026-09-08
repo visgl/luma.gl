@@ -29,6 +29,8 @@ const config = getDocusaurusConfig({
 
   search: 'local',
   customCss: ['./src/custom.css'],
+  // The shared website package deep-merges this field and currently requires an object.
+  webpackConfig: {resolve: {}},
   navbarItems: [
     {
       to: '/showcase',

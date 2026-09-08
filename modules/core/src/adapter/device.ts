@@ -92,6 +92,19 @@ export type WebGPUFeatureLevel = 'core' | 'max' | 'compatibility' | 'best-availa
 /** Effective WebGPU feature level reported by a created WebGPU device. */
 export type WebGPUDeviceFeatureLevel = Exclude<WebGPUFeatureLevel, 'best-available'>;
 
+/**
+ * Information supplied when a device is lost.
+ *
+ * The reason values intentionally mirror WebGPU. `destroyed` means an
+ * application-initiated loss and `unknown` means any unexpected or
+ * platform-initiated loss. The message is diagnostic text and must not be
+ * parsed by applications.
+ */
+export type DeviceLostInfo = {
+  readonly reason: 'unknown' | 'destroyed';
+  readonly message: string;
+};
+
 /** Limits for a device (max supported sizes of resources, max number of bindings etc) */
 export abstract class DeviceLimits {
   /** max number of TextureDimension1D */
@@ -661,8 +674,8 @@ export abstract class Device {
   /** `true` if device is already lost */
   abstract get isLost(): boolean;
 
-  /** Promise that resolves when device is lost */
-  abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
+  /** Promise that resolves when the underlying device or context is lost. */
+  abstract readonly lost: Promise<DeviceLostInfo>;
 
   /**
    * Trigger device loss.
