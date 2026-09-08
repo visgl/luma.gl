@@ -9,6 +9,7 @@ import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {INFO_HTML, showError} from './app-ui';
 
 const MODEL_URL =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CesiumMan/glTF/CesiumMan.gltf';
@@ -36,15 +37,6 @@ const lightSources = {
     }
   ]
 } as const satisfies LightingProps;
-
-const INFO_HTML = `\
-<p>
-  Minimal glTF loading example using <code>@loaders.gl/gltf</code> and
-  <code>@luma.gl/gltf</code>.
-</p>
-<p>Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
-<div id="error" style="color: #b00020; margin-top: 8px;"></div>
-`;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
@@ -184,24 +176,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     renderPass.end();
   }
-}
-
-function showError(error?: unknown): void {
-  const errorDiv = document.getElementById('error') as HTMLDivElement | null;
-  if (!errorDiv) {
-    return;
-  }
-
-  errorDiv.textContent = error ? `Error loading model: ${getErrorMessage(error)}` : '';
-  errorDiv.style.display = error ? 'block' : 'none';
-}
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
