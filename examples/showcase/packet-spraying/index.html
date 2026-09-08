@@ -1,7 +1,29 @@
 <!doctype html>
 <head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="showcase/packet-spraying" />
+  <meta name="luma-example-backends" content="webgpu,webgl2" />
+  <meta name="luma-example-mobile" content="reduced" />
+  <meta name="luma-example-mobile-profile" content="effects" />
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = await installStandaloneExampleSupport();
+    if (!exampleSupport.supported) {
+      document
+        .querySelectorAll('[data-luma-example-deferred]')
+        .forEach(script => script.remove());
+    } else {
+      document.querySelectorAll('[data-luma-example-deferred]').forEach(script => {
+        const activeScript = script.cloneNode(true);
+        activeScript.type = 'module';
+        activeScript.removeAttribute('data-luma-example-deferred');
+        script.replaceWith(activeScript);
+      });
+    }
+  </script>
+  <!-- /luma-example-support -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script type="module">
+  <script type="luma-example-module" data-luma-example-deferred>
     import {luma} from '@luma.gl/core';
     import {makeAnimationLoop} from '@luma.gl/engine';
     import {webgl2Adapter} from '@luma.gl/webgl';

@@ -26,6 +26,10 @@ for (const relativeHtmlFile of htmlFiles) {
   const supportBlock = makeSupportBlock(catalogId, definition);
   const absoluteHtmlFile = path.join(EXAMPLE_DIRECTORY, relativeHtmlFile);
   let html = readFileSync(absoluteHtmlFile, 'utf8').replace(SUPPORT_BLOCK_PATTERN, '\n');
+  html = html.replace(
+    /<script\b([^>]*\btype=["'])module(["'][^>]*)>/gi,
+    '<script$1luma-example-module$2 data-luma-example-deferred>'
+  );
 
   if (!/<meta\s+name=["']viewport["']/i.test(html)) {
     const viewport = '  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n';
@@ -76,8 +80,15 @@ function makeSupportBlock(catalogId, definition) {
     const exampleSupport = await installStandaloneExampleSupport();
     if (!exampleSupport.supported) {
       document
-        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
+        .querySelectorAll('[data-luma-example-deferred]')
         .forEach(script => script.remove());
+    } else {
+      document.querySelectorAll('[data-luma-example-deferred]').forEach(script => {
+        const activeScript = script.cloneNode(true);
+        activeScript.type = 'module';
+        activeScript.removeAttribute('data-luma-example-deferred');
+        script.replaceWith(activeScript);
+      });
     }
   </script>
   <!-- /luma-example-support -->`;
