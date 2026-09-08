@@ -141,3 +141,29 @@ it('WEBGLRenderPass flushes deferred default canvas resize', async () => {
   renderPass.end();
   device.destroy();
 });
+
+it('WEBGLRenderPass resizes the default framebuffer after an external canvas resize', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+  canvasContext.setDrawingBufferSize(300, 150);
+  new WEBGLRenderPass(device, {}).end();
+  const framebuffer = canvasContext.getCurrentFramebuffer();
+
+  expect(framebuffer.width, 'framebuffer follows the luma-driven resize').toBe(300);
+
+  // Another library owning the canvas (for example a basemap) has already resized it.
+  canvas.width = 640;
+  canvas.height = 480;
+  canvasContext.setDrawingBufferSize(640, 480);
+
+  expect(framebuffer.width, 'framebuffer is unchanged before default render pass').toBe(300);
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(framebuffer.width, 'default render pass resizes framebuffer width').toBe(640);
+  expect(framebuffer.height, 'default render pass resizes framebuffer height').toBe(480);
+
+  renderPass.end();
+  device.destroy();
+});
