@@ -71,9 +71,9 @@ export type GPUParquetNestedColumnDepthLayout = Readonly<{
 export type GPUParquetNestedColumnLayoutResult = Readonly<{
   /** Leaf presence flags aligned with encoded level slots. */
   validity: GraphVectorView<'uint32'>;
-  /** Exclusive dense physical-value indices aligned with encoded level slots. */
+  /** Page-local exclusive physical-value indices aligned with encoded level slots. */
   valueOffsets: GraphVectorView<'uint32'>;
-  /** One non-null value count for the complete chunked column. */
+  /** One non-null value count per input page chunk, including empty chunks. */
   nonNullValueCounts: GraphVectorView<'uint32'>;
   /** One result for every requested schema depth, in input order. */
   depths: readonly GPUParquetNestedColumnDepthLayout[];
@@ -82,8 +82,9 @@ export type GPUParquetNestedColumnLayoutResult = Readonly<{
 /**
  * Materializes a required, optional, list, or nested-list Parquet column without CPU readback.
  *
- * The operation preserves the input `GraphVectorView` page topology for slot-aligned streams while
- * scans carry offsets across page boundaries. Each requested schema depth receives one global
+ * The operation preserves the input `GraphVectorView` page topology for slot-aligned streams.
+ * Leaf value offsets and counts restart for each page so that they index the page-sized decoded
+ * value chunks emitted by Parquet readers. Each requested schema depth instead receives one global
  * list-offset stream, so a repeated row that begins on one page and continues on the next remains
  * one row. Returned transient views can be connected directly to later graph nodes; adapters that
  * require durable `GPUData`/`GPUVector` objects should copy chosen views into caller-owned buffers.
@@ -107,11 +108,16 @@ export class GPUParquetNestedColumnLayout {
     const {definitionLevels, repetitionLevels} = this.props;
     const validity = createOutputVector(graph, `${this.id}-validity`, definitionLevels);
     const valueOffsets = createOutputVector(graph, `${this.id}-value-offsets`, definitionLevels);
-    const nonNullValueCount = createTransientView(
-      graph,
-      `${this.id}-non-null-value-count`,
-      'uint32',
-      1
+    const nonNullValueCounts = makeVector(
+      `${this.id}-non-null-value-counts`,
+      definitionLevels.data.map((_, chunkIndex) =>
+        createTransientView(
+          graph,
+          `${this.id}-non-null-value-count-chunk-${chunkIndex}`,
+          'uint32',
+          1
+        )
+      )
     );
     const depthOutputs = this.props.depths.map(depth => ({
       elementFlags: createOutputVector(
@@ -184,12 +190,14 @@ export class GPUParquetNestedColumnLayout {
       }
     }
 
-    new GPUFlagOffsets({
-      id: `${this.id}-leaf-values`,
-      flags: validity,
-      offsets: valueOffsets,
-      count: nonNullValueCount
-    }).addToGraph(graph);
+    for (let chunkIndex = 0; chunkIndex < validity.data.length; chunkIndex++) {
+      new GPUFlagOffsets({
+        id: `${this.id}-leaf-values-chunk-${chunkIndex}`,
+        flags: validity.data[chunkIndex],
+        offsets: valueOffsets.data[chunkIndex],
+        count: nonNullValueCounts.data[chunkIndex]
+      }).addToGraph(graph);
+    }
     for (let depthIndex = 0; depthIndex < this.props.depths.length; depthIndex++) {
       const depth = this.props.depths[depthIndex];
       const output = depthOutputs[depthIndex];
@@ -213,7 +221,7 @@ export class GPUParquetNestedColumnLayout {
     return Object.freeze({
       validity,
       valueOffsets,
-      nonNullValueCounts: makeVector(`${this.id}-non-null-value-counts`, [nonNullValueCount]),
+      nonNullValueCounts,
       depths: Object.freeze(
         this.props.depths.map((depth, depthIndex) => {
           const output = depthOutputs[depthIndex];

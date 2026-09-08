@@ -30,7 +30,9 @@ export type GPULZByteDescriptorPlan = Readonly<{
 }>;
 
 /**
- * Converts `[outputOffset, byteLength, literalSourceOffset, matchOffset]` spans into GPU records.
+ * Converts four-word `[outputOffset, byteLength, literalSourceOffset, matchOffset]` spans into
+ * five-word `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]` GPU
+ * records. Use `GPU_LZ_BYTE_DESCRIPTOR_WORDS` when allocating or indexing the returned records.
  *
  * A copy becomes a direct compressed-input gather when its source cycle is contained by one prior
  * direct descriptor. Other copies retain their compact backreference. Planning remains one record

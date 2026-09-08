@@ -62,6 +62,7 @@ it('GPUParquetNestedColumnLayout preserves page chunks and materializes two dept
   }).addToGraph(graph);
 
   expect(result.validity.data.map(chunk => chunk.length)).toEqual([6, 4, 0]);
+  expect(result.nonNullValueCounts.data.map(chunk => chunk.length)).toEqual([1, 1, 1]);
   expect(result.depths[0].listOffsets.data.map(chunk => chunk.length)).toEqual([11]);
 
   const readbacks = new Map<GraphDataView<'uint32'>, Buffer>();
@@ -120,8 +121,10 @@ it('GPUParquetNestedColumnLayout preserves page chunks and materializes two dept
     expect(await read(result.validity.data[0])).toEqual([1, 1, 0, 1, 0, 1]);
     expect(await read(result.validity.data[1])).toEqual([1, 0, 1, 0]);
     expect(await read(result.valueOffsets.data[0])).toEqual([0, 1, 2, 2, 3, 3]);
-    expect(await read(result.valueOffsets.data[1])).toEqual([4, 5, 5, 6]);
-    expect(await read(result.nonNullValueCounts.data[0])).toEqual([6]);
+    expect(await read(result.valueOffsets.data[1])).toEqual([0, 1, 1, 2]);
+    expect(await read(result.nonNullValueCounts.data[0])).toEqual([4]);
+    expect(await read(result.nonNullValueCounts.data[1])).toEqual([2]);
+    expect(await read(result.nonNullValueCounts.data[2])).toEqual([0]);
     expect((await read(result.depths[0].listOffsets.data[0])).slice(0, 7)).toEqual([
       0, 3, 4, 7, 7, 8, 9
     ]);
