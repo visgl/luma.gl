@@ -121,6 +121,11 @@ export function getGLTFStudioAssets(
 
 export const GLTF_STUDIO_ASSETS = getGLTFStudioAssets();
 
+/** Curated subset whose source files contain authored animation data. */
+export const GLTF_ANIMATION_STUDIO_ASSETS = GLTF_STUDIO_ASSETS.filter(
+  asset => asset.category === 'animation'
+);
+
 export function getGLTFStudioAsset(name: string): GLTFStudioAsset | undefined {
   return GLTF_STUDIO_ASSETS.find(asset => asset.name === name);
 }

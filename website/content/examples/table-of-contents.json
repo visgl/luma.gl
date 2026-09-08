@@ -8,15 +8,15 @@
     "type": "category",
     "label": "Showcase",
     "items": [
-      "showcase/gltf",
       "showcase/instancing",
+      "showcase/globe",
+      "showcase/packet-spraying",
+      "showcase/gltf",
       {
         "type": "doc",
         "id": "experimental/scene-playground",
         "label": "Scene Playground"
-      },
-      "showcase/globe",
-      "showcase/packet-spraying"
+      }
     ]
   },
   {
