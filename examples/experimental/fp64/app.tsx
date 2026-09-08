@@ -259,15 +259,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         canvasRef: this.canvasRefs[index],
         description: visualization.description,
         kind: visualization.kind,
-        overlayLines: getOverlayLines(
-          selectedPreset,
-          currentZoomLabel,
-          visualization.kind,
-          this.device,
-          selectedArithmeticMode,
-          fp64RenderTiming,
-          renderWidth
-        ),
+        overlayLines,
         title: visualization.title
       }))
     });

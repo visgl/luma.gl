@@ -1,4 +1,5 @@
 import React, {useState, type CSSProperties} from 'react';
+import {getExampleMobileLabel, type ExampleMobileMode} from '../../../examples/example-support';
 import styles from './example-card.module.css';
 
 type ExampleCardBackend = 'webgpu' | 'webgl2';
@@ -14,6 +15,7 @@ export type ExampleCardProps = {
   imageScale?: number;
   imageUrl: string;
   maturity?: string;
+  mobile?: ExampleMobileMode;
   title: string;
   topics?: readonly string[];
 };
@@ -35,6 +37,7 @@ export function ExampleCard({
   imageScale = 1,
   imageUrl,
   maturity,
+  mobile = 'reduced',
   title,
   topics = []
 }: ExampleCardProps): React.JSX.Element {
@@ -120,6 +123,17 @@ export function ExampleCard({
         <p className={styles.description}>{description}</p>
 
         <div className={styles.metadata} aria-label="Example details">
+          <span
+            className={`${styles.metadataBadge} ${
+              mobile === 'unsupported'
+                ? styles.desktopOnly
+                : mobile === 'reduced'
+                  ? styles.mobileReduced
+                  : styles.mobile
+            }`}
+          >
+            {getExampleMobileLabel(mobile)}
+          </span>
           <span className={styles.metadataBadge}>{formatCardLabel(difficulty)}</span>
           {visibleTopics.map(topic => (
             <span className={styles.metadataBadge} key={topic}>

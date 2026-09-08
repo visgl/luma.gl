@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {existsSync, readFileSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
+import {EXAMPLE_SUPPORT_REGISTRY} from '../../examples/example-support-registry';
 
 type ExampleSidebarEntry =
   | string
@@ -18,6 +19,9 @@ type ExampleCatalogMetadata = {
   difficulty?: string;
   display?: string;
   maturity?: string;
+  mobile?: string;
+  mobileProfile?: string;
+  mobileUnsupportedReason?: string;
   topics?: string[];
 };
 
@@ -88,6 +92,8 @@ describe('live example catalog metadata', () => {
         backends: ['webgpu', 'webgl2'],
         difficulty: 'tutorial',
         maturity: 'stable',
+        mobile: 'full',
+        mobileProfile: 'standard',
         topics: ['fundamentals', 'rendering', 'geometry', 'shaders']
       }
     });
@@ -132,7 +138,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES.length).toBeGreaterThan(0);
+    expect(LIVE_EXAMPLES).toHaveLength(54);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -151,6 +157,32 @@ describe('live example catalog metadata', () => {
         ['stable', 'experimental'].includes(metadata?.maturity || ''),
         `${id} has an invalid maturity`
       ).toBe(true);
+      expect(
+        ['full', 'reduced', 'unsupported'].includes(metadata?.mobile || ''),
+        `${id} has an invalid mobile mode`
+      ).toBe(true);
+      expect(
+        ['standard', 'effects', 'large-data', 'simulation', 'dense'].includes(
+          metadata?.mobileProfile || ''
+        ),
+        `${id} has an invalid mobile quality profile`
+      ).toBe(true);
+      if (metadata?.mobile === 'full') {
+        expect(metadata.mobileProfile, `${id} full mobile support uses standard quality`).toBe(
+          'standard'
+        );
+      }
+      if (metadata?.mobile === 'reduced') {
+        expect(metadata.mobileProfile, `${id} reduced mode requires a reduced profile`).not.toBe(
+          'standard'
+        );
+      }
+      if (metadata?.mobile === 'unsupported') {
+        expect(
+          metadata.mobileUnsupportedReason?.trim(),
+          `${id} desktop-only mode requires a user-facing reason`
+        ).toBeTruthy();
+      }
       expect(metadata?.topics?.length, `${id} requires at least two topics`).toBeGreaterThanOrEqual(
         2
       );
@@ -158,6 +190,78 @@ describe('live example catalog metadata', () => {
       expect(new Set(metadata?.topics).size, `${id} has duplicate topics`).toBe(
         metadata?.topics?.length
       );
+    }
+  });
+
+  test('keeps mobile support metadata local and the runtime policy free of application imports', () => {
+    const supportPolicy = readFileSync(
+      path.join(process.cwd(), 'examples/example-support.ts'),
+      'utf8'
+    );
+    const supportRegistry = readFileSync(
+      path.join(process.cwd(), 'examples/example-support-registry.ts'),
+      'utf8'
+    );
+    expect(supportPolicy).not.toMatch(/(?:import|export).*\/app['"]/);
+    expect(supportPolicy).not.toContain('website/src/examples');
+    expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
+
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(81);
+    for (const example of LIVE_EXAMPLES) {
+      expect(
+        EXAMPLE_SUPPORT_REGISTRY[example.id],
+        `${example.id} requires a sidecar`
+      ).toBeDefined();
+      expect(
+        existsSync(path.join(process.cwd(), 'examples', example.id, 'mobile-support.ts')),
+        `${example.id} requires a local mobile-support.ts sidecar`
+      ).toBe(true);
+    }
+
+    const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
+    expect(standaloneFiles).toHaveLength(75);
+    for (const relativeFile of standaloneFiles) {
+      const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
+        match === '/index.html' ? '' : '/playground'
+      );
+      const canonicalId =
+        new Map([
+          ['arrow/arrow-instancing', 'showcase/instancing'],
+          ['showcase/scene', 'experimental/scene-playground'],
+          ['showcase/scene/playground', 'experimental/scene-playground'],
+          ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
+          ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
+        ]).get(standaloneId) || standaloneId;
+      expect(
+        EXAMPLE_SUPPORT_REGISTRY[canonicalId],
+        `${relativeFile} requires a sidecar support definition`
+      ).toBeDefined();
+    }
+  });
+
+  test('resolves standalone aliases to the same canonical support definitions', () => {
+    const aliases = new Map([
+      ['arrow/arrow-instancing/index.html', 'showcase/instancing'],
+      ['showcase/scene/index.html', 'experimental/scene-playground'],
+      ['showcase/scene/playground.html', 'experimental/scene-playground'],
+      ['tutorials/hello-instanced-cubes/index.html', 'tutorials/instanced-cubes'],
+      ['tutorials/hello-two-cubes/index.html', 'tutorials/two-cubes']
+    ]);
+
+    for (const [relativeFile, canonicalId] of aliases) {
+      const catalog = LIVE_EXAMPLES.find(example => example.id === canonicalId);
+      expect(catalog, `${canonicalId} must exist in the catalog`).toBeDefined();
+      expect(
+        existsSync(
+          path.join(
+            process.cwd(),
+            'examples',
+            relativeFile.replace(/\/[^/]+$/, ''),
+            'mobile-support.ts'
+          )
+        ),
+        `${relativeFile} requires a local sidecar`
+      ).toBe(true);
     }
   });
 
@@ -255,6 +359,21 @@ function readLiveExamples(): LiveExample[] {
   return liveExamples;
 }
 
+function findStandaloneHtmlFiles(directory: string, relativeDirectory = ''): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, {withFileTypes: true})) {
+    if (entry.name === 'dist' || entry.name === 'node_modules') continue;
+    const entryPath = path.join(directory, entry.name);
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findStandaloneHtmlFiles(entryPath, relativePath));
+    } else if (entry.name === 'index.html' || entry.name === 'playground.html') {
+      files.push(relativePath);
+    }
+  }
+  return files;
+}
+
 function readLiveExample(id: string, categories: string[]): LiveExample {
   const exampleSource = readFileSync(path.join(EXAMPLES_DIRECTORY, `${id}.mdx`), 'utf8');
   const frontmatter = exampleSource.match(/^---\n([\s\S]*?)\n---/);
@@ -263,5 +382,16 @@ function readLiveExample(id: string, categories: string[]): LiveExample {
   }
 
   const metadata = parse(frontmatter[1]) as {sidebar_custom_props?: ExampleCatalogMetadata};
-  return {id, categories, metadata: metadata.sidebar_custom_props};
+  const supportDefinition = EXAMPLE_SUPPORT_REGISTRY[id];
+  return {
+    id,
+    categories,
+    metadata: {
+      ...metadata.sidebar_custom_props,
+      backends: supportDefinition?.requirements?.backends.slice(),
+      mobile: supportDefinition?.mobileMode,
+      mobileProfile: supportDefinition?.mobileProfile,
+      mobileUnsupportedReason: supportDefinition?.unsupportedReason
+    }
+  };
 }

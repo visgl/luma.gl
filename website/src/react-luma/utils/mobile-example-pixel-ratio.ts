@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-const MAX_HIGH_DENSITY_MOBILE_PIXEL_RATIO = 2;
-const MAX_HIGH_DENSITY_MOBILE_PIXEL_COUNT = 1_500_000;
-const MOBILE_EXAMPLE_MEDIA_QUERY =
-  '(max-width: 700px), (max-height: 500px) and (pointer: coarse)';
+import {
+  getMobileExamplePixelRatio as getSharedMobileExamplePixelRatio,
+  MOBILE_EXAMPLE_MEDIA_QUERY
+} from '../../../../examples/example-support';
 
 type MobileExamplePixelRatioOptions = {
   devicePixelRatio: number;
@@ -28,20 +28,10 @@ export function getMobileExamplePixelRatio({
   mobile,
   width
 }: MobileExamplePixelRatioOptions): true | number {
-  const canvasPixelCount = Math.max(width, 1) * Math.max(height, 1);
-  if (
-    !mobile ||
-    devicePixelRatio <= MAX_HIGH_DENSITY_MOBILE_PIXEL_RATIO ||
-    canvasPixelCount * devicePixelRatio ** 2 <= MAX_HIGH_DENSITY_MOBILE_PIXEL_COUNT
-  ) {
-    return true;
-  }
-
-  return Math.max(
-    1,
-    Math.min(
-      MAX_HIGH_DENSITY_MOBILE_PIXEL_RATIO,
-      Math.sqrt(MAX_HIGH_DENSITY_MOBILE_PIXEL_COUNT / canvasPixelCount)
-    )
-  );
+  return getSharedMobileExamplePixelRatio({
+    devicePixelRatio,
+    handheld: mobile,
+    viewportHeight: height,
+    viewportWidth: width
+  });
 }

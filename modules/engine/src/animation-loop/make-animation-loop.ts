@@ -62,7 +62,9 @@ export function makeAnimationLoop(
         // biome-ignore lint/suspicious/noConsole: fallback logging before rendering the in-canvas error banner.
         console.error(error);
         renderLoop = null;
-        setError(animationProps.animationLoop.device, error as Error);
+        const initializationError = error instanceof Error ? error : new Error(String(error));
+        setError(animationProps.animationLoop.device, initializationError);
+        animationProps.animationLoop.reportError(initializationError);
         animationProps.animationLoop.stop();
         return null;
       }

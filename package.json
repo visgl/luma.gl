@@ -41,6 +41,8 @@
     "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",
     "test-gpu-raster-package": "node ./scripts/verify-experimental-gpu-raster-package.mjs",
     "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
+    "examples:synchronize-mobile-support": "node ./scripts/examples/synchronize-mobile-support-metadata.mjs",
+    "examples:test-mobile": "node ./scripts/playwright/mobile-example-smoke.mjs",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "yarn website:build",
     "website:build": "yarn workspace website-docusaurus build",
@@ -48,7 +50,7 @@
     "website-debug": "node ./scripts/playwright/website-playwright.mjs",
     "gltf:reference-evidence": "node ./scripts/gltf-reference/capture-reference-evidence.mjs",
     "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
-    "playwright:install": "playwright install chromium",
+    "playwright:install": "playwright install chromium webkit",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
