@@ -224,15 +224,12 @@ export type StandaloneExampleSupport = {
 };
 
 /** Installs the standalone-page support state without importing any example application code. */
-export function installStandaloneExampleSupport(): StandaloneExampleSupport {
+export async function installStandaloneExampleSupport(): Promise<StandaloneExampleSupport> {
   const documentElement = document.documentElement;
   const definition = readStandaloneExampleDefinition(document);
   const environment = getExampleRuntimeEnvironment(window, navigator);
   const capabilities: ExampleCapabilities = {
-    backends: [
-      ...('gpu' in navigator ? (['webgpu'] as const) : []),
-      ...('WebGL2RenderingContext' in window ? (['webgl2'] as const) : [])
-    ]
+    backends: await getAvailableStandaloneBackends()
   };
   const preflight = preflightExampleSupport(definition, environment, capabilities);
   const quality = getExampleMobileQuality(definition, environment);
@@ -275,6 +272,24 @@ export function installStandaloneExampleSupport(): StandaloneExampleSupport {
   }
 
   return {supported: preflight.supported, reportFailed, reportRunning};
+}
+
+async function getAvailableStandaloneBackends(): Promise<ExampleBackend[]> {
+  const backends: ExampleBackend[] = [];
+  if ('WebGL2RenderingContext' in window) {
+    backends.push('webgl2');
+  }
+  if ('gpu' in navigator) {
+    try {
+      const gpu = (navigator as Navigator & {gpu?: GPU}).gpu;
+      if (gpu && (await gpu.requestAdapter())) {
+        backends.push('webgpu');
+      }
+    } catch {
+      // A present-but-unusable WebGPU API should not pass the standalone preflight.
+    }
+  }
+  return backends;
 }
 
 function readStandaloneExampleDefinition(currentDocument: Document): ExampleSupportDefinition {

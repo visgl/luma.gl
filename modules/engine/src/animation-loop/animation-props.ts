@@ -32,4 +32,7 @@ export type AnimationProps = {
   /** Experimental v10 work-in-progress frame payload from a custom animation frame provider. */
   animationFrame: unknown | null;
   _mousePosition?: [number, number] | null; // [offsetX, offsetY],
+
+  /** Optional application-provided quality settings for adaptive renderers. */
+  mobileQuality?: Readonly<Record<string, boolean | number>>;
 };
