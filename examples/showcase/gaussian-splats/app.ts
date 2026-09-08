@@ -39,6 +39,7 @@ import {
 } from './local-loaders';
 import {GaussianSplatRADSceneController} from './rad-scene';
 import {makeGaussianSplatRenderProfile, type GaussianSplatRenderProfile} from './render-profile';
+import {getExampleRuntimeEnvironment} from '../../example-support';
 import {
   createGaussianSplatRADWorkerDecoder,
   type GaussianSplatRADWorkerDecoder
@@ -162,13 +163,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   }: AnimationProps & {defaultScene?: GaussianSplatSourceCatalogEntry['id']}) {
     super();
     this.device = device;
-    this.renderProfile = makeGaussianSplatRenderProfile({
-      coarsePointer:
-        typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(pointer: coarse)').matches,
-      maxTouchPoints: typeof navigator === 'undefined' ? 0 : navigator.maxTouchPoints
-    });
+    this.renderProfile = makeGaussianSplatRenderProfile(
+      getExampleRuntimeEnvironment(window, navigator)
+    );
     this.executionMode = getGaussianSplatExecutionMode(
       device.type,
       typeof window === 'undefined' ? '' : window.location.search

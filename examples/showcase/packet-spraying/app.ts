@@ -144,6 +144,7 @@ import {
 } from './network';
 import {makeStudioEnvironmentMipLevels} from './optics';
 import {makeNetworkRenderProfile, type NetworkRenderProfile} from './render-profile';
+import {getExampleRuntimeEnvironment} from '../../example-support';
 import {NetworkStoryController} from './story-controller';
 import {
   DEFAULT_NETWORK_HDR_HIGHLIGHT_BOOST,
@@ -778,13 +779,7 @@ export default class PacketSprayingAnimationLoopTemplate extends AnimationLoopTe
       this.orbit = Math.max(0, Math.min(Number(requestedOrbit), 0.5));
     }
 
-    this.renderProfile = makeNetworkRenderProfile({
-      coarsePointer:
-        typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches,
-      maxTouchPoints: navigator.maxTouchPoints ?? 0,
-      viewportHeight: window.innerHeight,
-      viewportWidth: window.innerWidth
-    });
+    this.renderProfile = makeNetworkRenderProfile(getExampleRuntimeEnvironment(window, navigator));
     this.sceneColorFormat = getSceneColorFormat(device, this.renderProfile);
     this.dynamicRangeOptions = {
       deviceType: device.type,

@@ -146,7 +146,7 @@ describe('GPU projection live benchmark documentation', () => {
       selectedDevice,
       expect.objectContaining({
         projection: projectionProvider,
-        coordinateCount: 16_384,
+        coordinateCount: 4_096,
         warmupIterations: 1,
         measuredIterations: 3
       })
@@ -179,7 +179,7 @@ describe('GPU projection live benchmark documentation', () => {
     expect(createDevice).toHaveBeenCalledWith('webgpu-core');
     expect(runGPUProjectionBenchmark).toHaveBeenCalledWith(
       requestedDevice,
-      expect.objectContaining({coordinateCount: 16_384})
+      expect.objectContaining({coordinateCount: 4_096})
     );
   });
 });

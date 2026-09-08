@@ -26,6 +26,7 @@ import {
   makeGraphExplorerDataset
 } from '../../../examples/experimental/gpu-graph-explorer/graph-data';
 import {getExampleThumbnailPath} from '../../../website/src/example-thumbnails';
+import {getExampleSupportDefinition} from '../../../examples/example-support-registry';
 
 type ExampleContentsEntry = {
   type: string;
@@ -300,7 +301,9 @@ describe('optional GPU Graph deck.gl gallery and API guide', () => {
       .split(',')
       .map(topic => topic.trim());
 
-    expect(examplePage).toContain('backends: [webgpu]');
+    expect(getExampleSupportDefinition('deck/gpu-graph-explorer')?.requirements?.backends).toEqual([
+      'webgpu'
+    ]);
     expect(examplePage).toContain('<DeckGPUGraphExplorerExample />');
     expect(topics?.length).toBeGreaterThanOrEqual(2);
     expect(topics?.length).toBeLessThanOrEqual(5);

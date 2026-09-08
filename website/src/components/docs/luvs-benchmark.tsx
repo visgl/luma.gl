@@ -19,13 +19,13 @@ const IVF_PROBE_COUNTS = [1, 2, 4, 8, 16] as const;
 /** Compares real CPU, exact WebGPU, filtered WebGPU, and IVF-flat embedding searches. */
 export function LuvsBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
-  const [datasetRowCount, setDatasetRowCount] = useState(2_048);
-  const [dimensions, setDimensions] = useState(128);
-  const [queryCount, setQueryCount] = useState(4);
-  const [resultCount, setResultCount] = useState(10);
-  const [filterPercentage, setFilterPercentage] = useState(25);
-  const [listCount, setListCount] = useState(8);
-  const [probeCount, setProbeCount] = useState(2);
+  const [datasetRowCount, setDatasetRowCount] = useState<number>(DATASET_ROW_COUNTS[0]);
+  const [dimensions, setDimensions] = useState<number>(EMBEDDING_DIMENSIONS[0]);
+  const [queryCount, setQueryCount] = useState<number>(QUERY_COUNTS[0]);
+  const [resultCount, setResultCount] = useState<number>(RESULT_COUNTS[0]);
+  const [filterPercentage, setFilterPercentage] = useState<number>(FILTER_PERCENTAGES[0]);
+  const [listCount, setListCount] = useState<number>(IVF_LIST_COUNTS[0]);
+  const [probeCount, setProbeCount] = useState<number>(IVF_PROBE_COUNTS[0]);
   const [unsupportedReason, setUnsupportedReason] = useState<string>();
   const identifier = useId();
 

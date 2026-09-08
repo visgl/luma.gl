@@ -6,6 +6,7 @@ import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 import {parse} from 'yaml';
+import {getExampleSupportDefinition} from '../../examples/example-support-registry';
 
 type ExampleSidebarEntry =
   | string
@@ -183,17 +184,12 @@ describe('GPGPU example catalog navigation', () => {
         `${exampleIdentifier} must not remain duplicated in WebGPU`
       ).toBe(false);
 
-      const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
-      expect(frontmatter, `${exampleIdentifier} must declare example metadata`).not.toBeNull();
-
-      const metadata = parse(frontmatter![1]) as {
-        sidebar_custom_props?: {backends?: string[]; topics?: string[]};
-      };
-
       expect(
-        metadata.sidebar_custom_props?.backends,
+        getExampleSupportDefinition(exampleIdentifier)?.requirements?.backends,
         `${exampleIdentifier} requires a WebGPU device`
       ).toEqual(['webgpu']);
+      const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
+      const metadata = parse(frontmatter![1]) as {sidebar_custom_props?: {topics?: string[]}};
       expect(
         metadata.sidebar_custom_props?.topics,
         `${exampleIdentifier} must remain discoverable as GPU compute`

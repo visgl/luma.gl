@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export type GaussianSplatRenderEnvironment = {
-  coarsePointer: boolean;
-  maxTouchPoints: number;
-};
+import type {ExampleRuntimeEnvironment} from '../../example-support';
+
+export type GaussianSplatRenderEnvironment = Pick<ExampleRuntimeEnvironment, 'handheld'>;
 
 export type GaussianSplatRenderProfile = {
   isMobile: boolean;
@@ -17,10 +16,9 @@ export type GaussianSplatRenderProfile = {
 
 /** Keeps mobile decoding, residency, and main-thread hierarchy work within conservative budgets. */
 export function makeGaussianSplatRenderProfile({
-  coarsePointer,
-  maxTouchPoints
+  handheld
 }: GaussianSplatRenderEnvironment): GaussianSplatRenderProfile {
-  const isMobile = coarsePointer && maxTouchPoints > 0;
+  const isMobile = handheld;
   return isMobile
     ? {
         isMobile,
