@@ -20,7 +20,9 @@ monotonic `UINT32` sequence uses `DELTA_BINARY_PACKED`. DataPageV2 and multiple 
 exercise page-batch planning and composable value decoders rather than a convenient PLAIN-only
 fixture. The fixture is checked in so file generation does not pollute the measured decode paths.
 
-The columns are deliberately uncompressed. That isolates the GPU-suitable column encodings and
+The columns are deliberately uncompressed. The infobox reports the codecs found in page metadata,
+compressed and decoded page-payload sizes, and their ratio so a regenerated Snappy or LZ4_RAW
+fixture cannot silently present itself as an encoding-only comparison. Uncompressed data isolates the GPU-suitable column encodings and
 makes the comparison useful: the generic Snappy/LZ4_RAW resolver trades parallel performance for
 compact descriptors and fully deterministic overlapping-copy semantics, so descriptor searches
 and irregular backreference chains can dominate this workload. Tests with an LZ4_RAW version of
@@ -39,7 +41,9 @@ Arrow arrays before luma.gl uploads five materialized columns. Keeping this comp
 the main thread makes UI responsiveness measurable. A production application can instead use a
 loaders.gl worker, trading worker startup, memory, and transfer costs against main-thread work.
 
-Use **Compare CPU → GPU** after the fixture is built. **Preparation latency** includes page access,
+The initial load automatically prepares CPU and GPU results, leaves the GPU scene active, and
+populates both measurement columns. Use **Compare CPU → GPU** to repeat the full comparison after
+the fixture is built. **Preparation latency** includes page access,
 planning, decoding, buffer creation, and render-graph preparation. **First decode execution** narrows
 that down to the CPU source read and decode, or to GPU command submission through queue completion
 after compilation. The GPU path retains its compiled graph and immutable input buffer, so the

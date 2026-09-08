@@ -123,6 +123,11 @@
             "id": "showcase/raster-lab",
             "label": "GPURaster: Satellite Raster Lab"
           },
+          {
+            "type": "doc",
+            "id": "experimental/gpu-parquet-constellation",
+            "label": "GPU Parse: Parquet Constellation"
+          },
           "showcase/billion-point-spatial-atlas",
           "experimental/gpt-2"
         ]

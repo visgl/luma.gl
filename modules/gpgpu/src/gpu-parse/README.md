@@ -33,6 +33,8 @@ These `@luma.gl/gpgpu/gpu-core` operations were extracted because they are usefu
 | --- | --- | --- |
 | `GPUScan` | lengths, flags, or deltas need prefix sums | inclusive or exclusive uint32 prefixes |
 | `GPUScanUint64` | split low/high words need an inclusive 64-bit prefix sum | modulo-2^64 low/high prefixes with carry propagation |
+| `GPUFlagOffsets` | one binary flag stream needs stable dense indices and a GPU count | exclusive offsets and one scalar count |
+| `GPUSegmentOffsets` | logical-element offsets need list/group boundaries | segment indices, list-style offsets, and segment count |
 | `GPUSegmentedLayout` | format-specific classification has produced value, element, and segment-start flags | dense value/element offsets, segment indices, list-style segment offsets, and scalar counts |
 | `GPUCompaction` | flagged uint32 values must be packed while preserving order | compacted values and the accepted count |
 | `GPUUint32Gather` | rows must be selected or reordered by indices | one uint32 per index; invalid indices use a fallback |
@@ -42,7 +44,10 @@ These `@luma.gl/gpgpu/gpu-core` operations were extracted because they are usefu
 `GPUByteRangeGather` dispatches one invocation per output word, avoiding races when adjacent bytes
 share a packed `uint32` destination.
 
-`GPUSegmentedLayout` deliberately starts after format parsing. Its three slot-aligned inputs are
+`GPUFlagOffsets` and `GPUSegmentOffsets` are the smaller pieces to use when several nesting depths
+share one leaf-validity stream. `GPUParquetNestedColumnLayout` scans that leaf stream once, then
+composes the two primitives for each requested depth. `GPUSegmentedLayout` remains the convenient
+single-depth operation and deliberately starts after format parsing. Its three slot-aligned inputs are
 binary flags: whether a slot owns a physical value, represents a logical element, and begins a new
 segment after the implicit first segment. Use it for null/value offsets, list offsets, or grouped
 sequences. Compose `GPUCompaction` when the physical values themselves must be packed, or consume
@@ -94,6 +99,7 @@ unless a function explicitly documents an isolated slice.
 | `GPUParquetDeltaLengthByteArrayDecoder` | BYTE_ARRAY uses delta lengths | delta decoder + exclusive scan; payload stays zero-copy |
 | `GPUParquetDeltaByteArrayDecoder` | BYTE_ARRAY uses prefix compression | two delta decoders + two scans + prefix reconstruction |
 | `GPUParquetLevelLayout` | decoded levels must become null/value and repeated-row layout | Parquet classification followed by generic `GPUSegmentedLayout` materialization |
+| `GPUParquetNestedColumnLayout` | required, optional, list, or nested-list levels must preserve page chunks | one shared leaf layout plus element/row/list offsets for every requested schema depth |
 | `GPULZ4RawDecompressor` | a page body uses LZ4_RAW | semantic wrapper over `GPULZByteDecompressor` |
 | `GPUSnappyDecompressor` | a Parquet page body uses raw Snappy | semantic wrapper over `GPULZByteDecompressor` |
 | `addGPUParquetEncodedPageBatchToGraph` | a loaders.gl page-batch plan should become executable GPU work | decompression, level decoding, value decoding, dictionary reuse, and result graph views |
@@ -153,10 +159,19 @@ An all-null page has zero physical values and therefore a known empty result. Th
   use `parseParquetRleBitPackedRunPlan`.
 - Deprecated standalone BIT_PACKED is a different, MSB-first encoding. Use
   `parseParquetBitPackedRunPlan` and `GPUParquetBitPackedDecoder`, not the hybrid decoder.
-- After level expansion, use `GPUParquetLevelLayout` once per repeated ancestor that needs offsets.
-  It classifies Parquet definition/repetition levels into binary flags, then composes
-  `GPUSegmentedLayout`. The generic operation keeps null/value offsets and repeated-row assembly
-  GPU-resident and exposes intermediate flags and indices for custom nested-layout composition.
+- After level expansion, use `GPUParquetLevelLayout` for one scalar or repeated depth. It classifies
+  Parquet definition/repetition levels into binary flags, then composes `GPUSegmentedLayout`.
+- Use `GPUParquetNestedColumnLayout` when one column has multiple requested schema depths or page
+  chunks must remain explicit. It accepts matching definition/repetition `GraphVectorView`s, scans
+  leaf validity once per page, and composes `GPUFlagOffsets` plus `GPUSegmentOffsets` per depth.
+  Required, optional, list, and nested-list layouts differ only in their schema-derived definition
+  and repetition thresholds. Returned vectors retain page-local offsets and can feed later graph
+  nodes without readback.
+
+The nested operation allocates public results as graph transients with storage and copy-source
+usage. Keep them transient when the consumer is in the same graph. If results must outlive the
+compiled graph, copy selected chunks to imported caller-owned buffers and wrap those buffers as
+`GPUData`/`GPUVector` in the adapter; do not concatenate page terminals implicitly.
 
 ### Compression
 
@@ -296,12 +311,12 @@ incremental. Each tranche below has a useful stopping point and does not require
 | --- | --- | --- | --- |
 | 3. Close inexpensive adapter gaps | Complete | Loader-selected preserved compression or CPU-decompressed encoded pages; automatic bounded `DELTA_BYTE_ARRAY`; variable dictionaries; decompressed V1 level framing; RLE BOOLEAN values | Common supported encodings no longer fall back for adapter-only gaps; no GPU metadata parser was introduced |
 | 4. Extract generic materialization primitives | Complete | `GPUSegmentedLayout` owns validity/value and segment offsets; existing `GPUCompaction`, gathers, and scatter operations own payload movement | Another columnar format can materialize offsets and values without importing Parquet-specific classes |
-| 5. Assemble nested GPU columns | Selective | Compose multiple definition/repetition depths into validity, row, and list offsets; expose chunk-preserving `GPUData`/`GPUVector` results without adding Arrow to `@luma.gl/gpgpu` | Common required, optional, list, and nested-list columns can remain GPU-resident through their consumer boundary |
+| 5. Assemble nested GPU columns | Graph-native complete | `GPUParquetNestedColumnLayout` composes multiple definition/repetition depths into chunk-preserving validity, row, and list-offset `GraphVectorView`s; imported output buffers can be wrapped as `GPUData`/`GPUVector` without Arrow | Common required, optional, list, and nested-list columns remain GPU-resident through an in-graph or caller-owned-buffer consumer boundary |
 | 6. Streaming and throughput | Measure first | Reuse compiled graph templates, pool upload/output buffers, batch compatible pages and columns, add backpressure, and benchmark CPU/GPU crossover thresholds | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
 | 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
 | 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
 
-The intended next step is whichever of tranches 5–7 is justified by an actual consumer.
+The intended next step is measured streaming work or conformance coverage from tranches 6–7.
 Tranche 8 is not a completeness checklist.
 
 ### Roadmap stop line
@@ -316,7 +331,7 @@ bottleneck after GPU value decoding is enabled.
 ## Boundaries
 
 The package does not parse Thrift metadata, decrypt pages, evaluate logical type annotations, build
-complete multi-column record batches, or construct Arrow arrays. `GPUParquetLevelLayout`
-materializes one repeated depth at a time; callers still compose those depths according to the
-schema. A planned input/output region uses uint32 indices and must fit below 4 GiB; callers should
+complete multi-column record batches, or construct Arrow arrays. `GPUParquetNestedColumnLayout`
+materializes schema depths supplied by the caller but does not infer them from Parquet schema
+metadata. A planned input/output region uses uint32 indices and must fit below 4 GiB; callers should
 preserve page and batch boundaries for larger data.

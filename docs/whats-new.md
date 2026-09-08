@@ -8,8 +8,8 @@ Target Release Date: Q3, 2026
 
 **General**
 
-- **GPU-native columnar parsing and indexing** - Composable Parquet parsing and H3 and A5 cell
-  projection add new optional `@luma.gl/gpgpu` workflows.
+- **GPU-native columnar parsing and indexing** - Composable Parquet parsing, chunk-preserving nested
+  column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
 - **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL
   expressions and feed batch-preserving GPU evaluation and rendering.
 

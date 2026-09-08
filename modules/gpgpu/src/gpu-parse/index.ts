@@ -85,6 +85,13 @@ export {
   type GPUParquetLevelLayoutProps
 } from './parquet/gpu-parquet-level-layout';
 export {
+  GPUParquetNestedColumnLayout,
+  type GPUParquetNestedColumnDepth,
+  type GPUParquetNestedColumnDepthLayout,
+  type GPUParquetNestedColumnLayoutProps,
+  type GPUParquetNestedColumnLayoutResult
+} from './parquet/gpu-parquet-nested-column-layout';
+export {
   PARQUET_DELTA_BINARY_PACKED_DESCRIPTOR_WORDS,
   parseParquetDeltaBinaryPackedPlan,
   type ParquetDeltaBinaryPackedPlan
