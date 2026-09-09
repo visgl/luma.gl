@@ -337,6 +337,20 @@ it('Model#draw', async () => {
   void 0;
 });
 
+it('Model.createAsync prepares a WebGPU render pipeline and vertex array', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) return;
+
+  const model = await Model.createAsync(webgpuDevice, {
+    id: 'async-webgpu-model',
+    source: DUMMY_WGSL,
+    vertexCount: 1
+  });
+  expect(model.pipeline).toBeDefined();
+  expect(model.vertexArray).toBeDefined();
+  model.destroy();
+});
+
 it('Model#draw skips implicit predraw on WebGPU', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 

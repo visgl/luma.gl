@@ -45,7 +45,8 @@ populates both measurement columns. Use **Compare CPU → GPU** to repeat the fu
 the fixture is built. **Preparation latency** includes page access,
 planning, decoding, buffer creation, and render-graph preparation. **First decode execution** narrows
 that down to the CPU source read and decode, or to GPU command submission through queue completion
-after compilation. The GPU path retains its compiled graph and immutable input buffer, so the
+after `await graph.compileAsync()` has prepared the graph's independent pipelines in parallel. The
+GPU path retains its compiled graph and immutable input buffer, so the
 comparison immediately submits it again and reports **Reused graph execution** separately. Selecting
 GPU and choosing **Decode and display** also reuses the graph. **Longest frame** records the largest
 animation gap while the old constellation remains active, making main-thread stalls visible. Results

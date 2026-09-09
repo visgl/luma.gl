@@ -77,6 +77,36 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
  * - accepts modules and performs shader transpilation
  */
 export class Computation {
+  /**
+   * Creates a computation while allowing the backend to compile its pipeline asynchronously.
+   *
+   * Use this factory when several independent computations can be prepared together. Calling the
+   * constructor remains the synchronous compatibility path.
+   */
+  static async createAsync(device: Device, props: ComputationProps): Promise<Computation> {
+    const ownsCompilation = !PipelineFactory.getAsyncCompilation(device);
+    const asyncCompilation = ownsCompilation
+      ? PipelineFactory.beginAsyncCompilation(device)
+      : PipelineFactory.getAsyncCompilation(device)!;
+    let computation: Computation;
+    try {
+      computation = new Computation(device, props);
+    } finally {
+      if (ownsCompilation) PipelineFactory.endAsyncCompilation(device, asyncCompilation);
+    }
+    try {
+      if (ownsCompilation) {
+        await asyncCompilation.finish();
+      } else {
+        await computation._pipelineInitialization;
+      }
+      return computation;
+    } catch (error) {
+      computation.destroy();
+      throw error;
+    }
+  }
+
   static defaultProps: Required<ComputationProps> = {
     ...ComputePipeline.defaultProps,
     id: 'unnamed',
@@ -110,7 +140,7 @@ export class Computation {
   bindings: Record<string, Binding> = {};
 
   /** The underlying GPU pipeline. */
-  pipeline: ComputePipeline;
+  pipeline!: ComputePipeline;
   /** Assembled compute shader source */
   source: string;
   /** the underlying compiled compute shader */
@@ -129,6 +159,7 @@ export class Computation {
   private props: Required<ComputationProps>;
 
   private _destroyed = false;
+  private _pipelineInitialization?: Promise<ComputePipeline>;
 
   constructor(device: Device, props: ComputationProps) {
     if (device.type !== 'webgpu') {
@@ -209,7 +240,13 @@ export class Computation {
 
     // Create the pipeline
     // @note order is important
-    this.pipeline = this._updatePipeline();
+    const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
+    if (asyncCompilation) {
+      this._pipelineInitialization = this._updatePipelineAsync();
+      asyncCompilation.add(this._pipelineInitialization);
+    } else {
+      this.pipeline = this._updatePipeline();
+    }
 
     // Apply any dynamic settings that will not trigger pipeline change
     if (props.bindings) {
@@ -219,8 +256,8 @@ export class Computation {
 
   destroy(): void {
     if (this._destroyed) return;
-    this.pipelineFactory.release(this.pipeline);
-    this.shaderFactory.release(this.shader);
+    if (this.pipeline) this.pipelineFactory.release(this.pipeline);
+    if (this.shader) this.shaderFactory.release(this.shader);
     this._uniformStore.destroy();
     this._destroyed = true;
   }
@@ -345,35 +382,52 @@ export class Computation {
   }
 
   _updatePipeline(): ComputePipeline {
-    if (this._pipelineNeedsUpdate) {
-      let prevShader: Shader | null = null;
-      if (this.pipeline) {
-        log.log(
-          1,
-          `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
-        )();
-        prevShader = this.shader;
-      }
-
-      this._pipelineNeedsUpdate = false;
-
-      this.shader = this.shaderFactory.createShader({
-        id: `${this.id}-fragment`,
-        stage: 'compute',
-        source: this.source,
-        debugShaders: this.props.debugShaders
-      });
-
-      this.pipeline = this.pipelineFactory.createComputePipeline({
-        ...this.props,
-        shader: this.shader
-      });
-
-      if (prevShader) {
-        this.shaderFactory.release(prevShader);
-      }
+    const update = this._preparePipelineUpdate();
+    if (update) {
+      this.pipeline = this.pipelineFactory.createComputePipeline(update.props);
+      this._finishPipelineUpdate(update.previousShader);
     }
     return this.pipeline;
+  }
+
+  /** Creates or replaces the pipeline through the backend's asynchronous compilation path. */
+  async _updatePipelineAsync(): Promise<ComputePipeline> {
+    const update = this._preparePipelineUpdate();
+    if (update) {
+      try {
+        this.pipeline = await this.pipelineFactory.createComputePipelineAsync(update.props);
+      } catch (error) {
+        this.shaderFactory.release(this.shader);
+        this.shader = update.previousShader!;
+        this._pipelineNeedsUpdate = 'asynchronous pipeline creation failed';
+        throw error;
+      }
+      this._finishPipelineUpdate(update.previousShader);
+    }
+    return this.pipeline;
+  }
+
+  private _preparePipelineUpdate(): {
+    props: ComputePipelineProps;
+    previousShader: Shader | null;
+  } | null {
+    if (!this._pipelineNeedsUpdate) return null;
+    const previousShader = this.pipeline ? this.shader : null;
+    if (this.pipeline) {
+      log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+    }
+    this._pipelineNeedsUpdate = false;
+    this.shader = this.shaderFactory.createShader({
+      id: `${this.id}-fragment`,
+      stage: 'compute',
+      source: this.source,
+      debugShaders: this.props.debugShaders
+    });
+    return {props: {...this.props, shader: this.shader}, previousShader};
+  }
+
+  private _finishPipelineUpdate(previousShader: Shader | null): void {
+    if (previousShader) this.shaderFactory.release(previousShader);
   }
 
   /** Throttle draw call logging */

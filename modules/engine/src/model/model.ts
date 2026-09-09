@@ -180,6 +180,31 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
  * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
+  /** Creates a model while allowing the backend to compile its render pipeline asynchronously. */
+  static async createAsync(device: Device, props: ModelProps): Promise<Model> {
+    const ownsCompilation = !PipelineFactory.getAsyncCompilation(device);
+    const asyncCompilation = ownsCompilation
+      ? PipelineFactory.beginAsyncCompilation(device)
+      : PipelineFactory.getAsyncCompilation(device)!;
+    let model: Model;
+    try {
+      model = new Model(device, props);
+    } finally {
+      if (ownsCompilation) PipelineFactory.endAsyncCompilation(device, asyncCompilation);
+    }
+    try {
+      if (ownsCompilation) {
+        await asyncCompilation.finish();
+      } else {
+        await model._pipelineInitialization;
+      }
+      return model;
+    } catch (error) {
+      model.destroy();
+      throw error;
+    }
+  }
+
   static defaultProps: Required<ModelProps> = {
     ...RenderPipeline.defaultProps,
     source: undefined!,
@@ -276,13 +301,13 @@ export class Model {
    * @note not implemented: if bufferLayout is updated, vertex array has to be rebuilt!
    * @todo - allow application to define multiple vertex arrays?
    * */
-  vertexArray: VertexArray;
+  vertexArray!: VertexArray;
 
   /** TransformFeedback, WebGL 2 only. */
   transformFeedback: TransformFeedback | null = null;
 
   /** The underlying GPU "program". @note May be recreated if parameters change */
-  pipeline: RenderPipeline;
+  pipeline!: RenderPipeline;
 
   /** ShaderInputs instance */
   // @ts-expect-error Assigned in function called by constructor
@@ -310,6 +335,7 @@ export class Model {
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
   private _bindingTable: ShaderBindingDebugRow[] = [];
+  private _pipelineInitialization?: Promise<void>;
 
   get [Symbol.toStringTag](): string {
     return 'Model';
@@ -459,56 +485,47 @@ export class Model {
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
     this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
 
-    // Create the pipeline
-    // @note order is important
-    this.pipeline = this._updatePipeline();
+    const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
+    if (asyncCompilation) {
+      this._pipelineInitialization = this._initializePipelineAsync(props);
+      asyncCompilation.add(this._pipelineInitialization);
+    } else {
+      this.pipeline = this._updatePipeline();
+      this._initializePipelineResources(props);
+    }
+  }
 
-    this.vertexArray = device.createVertexArray({
+  private async _initializePipelineAsync(props: ModelProps): Promise<void> {
+    await this._updatePipelineAsync();
+    this._initializePipelineResources(props);
+  }
+
+  private _initializePipelineResources(props: ModelProps): void {
+    this.vertexArray = this.device.createVertexArray({
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
-
-    // Now we can apply geometry attributes
-    if (this._gpuGeometry) {
-      this._setGeometryAttributes(this._gpuGeometry);
-    }
-
-    // Apply any dynamic settings that will not trigger pipeline change
-    if ('isInstanced' in props) {
-      this.isInstanced = props.isInstanced;
-    }
-
-    if (props.instanceCount) {
-      this.setInstanceCount(props.instanceCount);
-    }
-    if (props.vertexCount) {
-      this.setVertexCount(props.vertexCount);
-    }
-    if (props.indexBuffer) {
-      this.setIndexBuffer(props.indexBuffer);
-    }
-    if (props.attributes) {
-      this.setAttributes(props.attributes);
-    }
-    if (props.constantAttributes) {
-      this.setConstantAttributes(props.constantAttributes);
-    }
-    if (props.bindings) {
-      this.setBindings(props.bindings);
-    }
-    if (props.transformFeedback) {
-      this.transformFeedback = props.transformFeedback;
-    }
+    if (this._gpuGeometry) this._setGeometryAttributes(this._gpuGeometry);
+    if ('isInstanced' in props) this.isInstanced = props.isInstanced;
+    if (props.instanceCount) this.setInstanceCount(props.instanceCount);
+    if (props.vertexCount) this.setVertexCount(props.vertexCount);
+    if (props.indexBuffer) this.setIndexBuffer(props.indexBuffer);
+    if (props.attributes) this.setAttributes(props.attributes);
+    if (props.constantAttributes) this.setConstantAttributes(props.constantAttributes);
+    if (props.bindings) this.setBindings(props.bindings);
+    if (props.transformFeedback) this.transformFeedback = props.transformFeedback;
   }
 
   destroy(): void {
     if (!this._destroyed) {
       // Release pipeline before we destroy the shaders used by the pipeline
-      this.pipelineFactory.release(this.pipeline);
-      // Release the shaders
-      this.shaderFactory.release(this.pipeline.vs);
-      if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
-        this.shaderFactory.release(this.pipeline.fs);
+      if (this.pipeline) {
+        this.pipelineFactory.release(this.pipeline);
+        // Release the shaders
+        this.shaderFactory.release(this.pipeline.vs);
+        if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
+          this.shaderFactory.release(this.pipeline.fs);
+        }
       }
       this._uniformStore.destroy();
       // TODO - mark resource as managed and destroyIfManaged() ?
@@ -1097,40 +1114,64 @@ export class Model {
 
   /** Update pipeline if needed */
   _updatePipeline(): RenderPipeline {
-    if (this._pipelineNeedsUpdate) {
-      let prevShaderVs: Shader | null = null;
-      let prevShaderFs: Shader | null = null;
-      if (this.pipeline) {
-        log.log(
-          1,
-          `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`
-        )();
-        prevShaderVs = this.pipeline.vs;
-        prevShaderFs = this.pipeline.fs;
+    const update = this._preparePipelineUpdate();
+    if (update) {
+      this.pipeline = this.pipelineFactory.createRenderPipeline(update.props);
+      this._finishPipelineUpdate(update);
+    }
+    return this.pipeline;
+  }
+
+  /** Creates or replaces the render pipeline through the backend's asynchronous compilation path. */
+  async _updatePipelineAsync(): Promise<RenderPipeline> {
+    const update = this._preparePipelineUpdate();
+    if (update) {
+      try {
+        this.pipeline = await this.pipelineFactory.createRenderPipelineAsync(update.props);
+      } catch (error) {
+        this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        this._pipelineNeedsUpdate = 'asynchronous pipeline creation failed';
+        throw error;
       }
+      this._finishPipelineUpdate(update);
+    }
+    return this.pipeline;
+  }
 
-      this._pipelineNeedsUpdate = false;
+  private _preparePipelineUpdate(): {
+    props: RenderPipelineProps;
+    vertexShader: Shader;
+    fragmentShader: Shader | null;
+    previousVertexShader: Shader | null;
+    previousFragmentShader: Shader | null;
+  } | null {
+    if (!this._pipelineNeedsUpdate) return null;
+    const previousVertexShader = this.pipeline?.vs ?? null;
+    const previousFragmentShader = this.pipeline?.fs ?? null;
+    if (this.pipeline) {
+      log.log(1, `Model ${this.id}: Recreating pipeline because "${this._pipelineNeedsUpdate}".`)();
+    }
+    this._pipelineNeedsUpdate = false;
 
-      const vs = this.shaderFactory.createShader({
-        id: `${this.id}-vertex`,
-        stage: 'vertex',
-        source: this.source || this.vs,
+    const vertexShader = this.shaderFactory.createShader({
+      id: `${this.id}-vertex`,
+      stage: 'vertex',
+      source: this.source || this.vs,
+      debugShaders: this.props.debugShaders
+    });
+    let fragmentShader: Shader | null = null;
+    if (this.source) {
+      fragmentShader = vertexShader;
+    } else if (this.fs) {
+      fragmentShader = this.shaderFactory.createShader({
+        id: `${this.id}-fragment`,
+        stage: 'fragment',
+        source: this.fs,
         debugShaders: this.props.debugShaders
       });
-
-      let fs: Shader | null = null;
-      if (this.source) {
-        fs = vs;
-      } else if (this.fs) {
-        fs = this.shaderFactory.createShader({
-          id: `${this.id}-fragment`,
-          stage: 'fragment',
-          source: this.source || this.fs,
-          debugShaders: this.props.debugShaders
-        });
-      }
-
-      this.pipeline = this.pipelineFactory.createRenderPipeline({
+    }
+    return {
+      props: {
         ...this.props,
         bindings: undefined,
         bufferLayout: this.bufferLayout,
@@ -1139,21 +1180,35 @@ export class Model {
         topology: this.topology,
         parameters: this.parameters,
         bindGroups: undefined,
-        vs,
-        fs
-      });
+        vs: vertexShader,
+        fs: fragmentShader
+      },
+      vertexShader,
+      fragmentShader,
+      previousVertexShader,
+      previousFragmentShader
+    };
+  }
 
-      this._attributeInfos = getAttributeInfosFromLayouts(
-        this.pipeline.shaderLayout,
-        this.bufferLayout
-      );
+  private _finishPipelineUpdate(update: {
+    previousVertexShader: Shader | null;
+    previousFragmentShader: Shader | null;
+  }): void {
+    this._attributeInfos = getAttributeInfosFromLayouts(
+      this.pipeline.shaderLayout,
+      this.bufferLayout
+    );
+    this._releasePipelineShaders(update.previousVertexShader, update.previousFragmentShader);
+  }
 
-      if (prevShaderVs) this.shaderFactory.release(prevShaderVs);
-      if (prevShaderFs && prevShaderFs !== prevShaderVs) {
-        this.shaderFactory.release(prevShaderFs);
-      }
+  private _releasePipelineShaders(
+    vertexShader: Shader | null,
+    fragmentShader: Shader | null
+  ): void {
+    if (vertexShader) this.shaderFactory.release(vertexShader);
+    if (fragmentShader && fragmentShader !== vertexShader) {
+      this.shaderFactory.release(fragmentShader);
     }
-    return this.pipeline;
   }
 
   /** Throttle draw call logging */

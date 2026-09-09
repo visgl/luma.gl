@@ -611,6 +611,10 @@ export type GPUCommandGraphComputeNode<Parameters> = GPUCommandGraphNodeBase<
   type: 'compute';
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphComputeExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphComputeExecutable<Parameters>>;
 };
 
 /** Render node compiled once and encoded into a graph-owned render pass. */
@@ -623,6 +627,10 @@ export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase<
   attachments?: GraphRenderPassAttachments;
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphRenderExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphRenderExecutable<Parameters>>;
 };
 
 /** Copy or pass-independent node compiled once and encoded directly on the command encoder. */
@@ -633,6 +641,10 @@ export type GPUCommandGraphCopyNode<Parameters> = GPUCommandGraphNodeBase<
   type: 'copy';
   /** Creates reusable node resources and the encode callback. */
   compile: (context: GPUCommandGraphCompileContext) => GPUCommandGraphCopyExecutable<Parameters>;
+  /** Creates reusable node resources through asynchronous backend compilation when available. */
+  compileAsync?: (
+    context: GPUCommandGraphCompileContext
+  ) => Promise<GPUCommandGraphCopyExecutable<Parameters>>;
 };
 
 /** Any node accepted by a `GPUCommandGraph`. */

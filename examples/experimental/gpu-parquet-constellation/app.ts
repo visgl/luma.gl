@@ -438,7 +438,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             ])
           ) as Record<ParquetConstellationColumn, GraphBufferHandle>;
           this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
-          compiledDecode = decodeGraph.compile();
+          compiledDecode = await decodeGraph.compileAsync();
           const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
           const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode, signal);
           return this.createPreparedScene(

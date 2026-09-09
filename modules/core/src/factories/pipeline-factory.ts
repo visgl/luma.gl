@@ -14,6 +14,36 @@ import type {CoreModuleState} from './core-module-state';
 export type PipelineFactoryProps = RenderPipelineProps;
 
 type CacheItem<ResourceT extends Resource<any>> = {resource: ResourceT; useCount: number};
+type PendingCacheItem<ResourceT extends Resource<any>> = {
+  promise: Promise<ResourceT>;
+  useCount: number;
+};
+
+const asyncCompilationByDevice = new WeakMap<Device, AsyncPipelineCompilation>();
+
+/** Collects pipeline promises started during one synchronous resource-construction phase. */
+export class AsyncPipelineCompilation {
+  private readonly promises: Promise<unknown>[] = [];
+  private closed = false;
+
+  /** @internal Registers work that must finish before the compiled owner can be used. */
+  add(promise: Promise<unknown>): void {
+    if (this.closed) {
+      throw new Error('Cannot add a pipeline after the asynchronous compilation phase has closed');
+    }
+    this.promises.push(promise);
+  }
+
+  /** @internal Stops collecting new pipelines and waits for every registered pipeline in parallel. */
+  async finish(): Promise<void> {
+    this.closed = true;
+    const results = await Promise.allSettled(this.promises);
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure?.status === 'rejected') {
+      throw failure.reason;
+    }
+  }
+}
 
 /**
  * Efficiently creates / caches pipelines
@@ -28,12 +58,46 @@ export class PipelineFactory {
     return moduleData.defaultPipelineFactory;
   }
 
+  /**
+   * Opens a synchronous construction scope that collects asynchronous pipeline work.
+   *
+   * Orchestrators use this while constructing several independent pipeline owners. The scope must
+   * be closed before yielding back to the event loop.
+   *
+   * @internal
+   */
+  static beginAsyncCompilation(device: Device): AsyncPipelineCompilation {
+    if (asyncCompilationByDevice.has(device)) {
+      throw new Error('An asynchronous pipeline compilation scope is already active');
+    }
+    const compilation = new AsyncPipelineCompilation();
+    asyncCompilationByDevice.set(device, compilation);
+    return compilation;
+  }
+
+  /** @internal Returns the construction scope currently collecting pipelines for this device. */
+  static getAsyncCompilation(device: Device): AsyncPipelineCompilation | undefined {
+    return asyncCompilationByDevice.get(device);
+  }
+
+  /** @internal Closes a construction scope before its promises are awaited. */
+  static endAsyncCompilation(device: Device, compilation: AsyncPipelineCompilation): void {
+    if (asyncCompilationByDevice.get(device) !== compilation) {
+      throw new Error('The asynchronous pipeline compilation scope is not active');
+    }
+    asyncCompilationByDevice.delete(device);
+  }
+
   readonly device: Device;
 
   private _hashCounter: number = 0;
   private readonly _hashes: Record<string, number> = {};
   private readonly _renderPipelineCache: Record<string, CacheItem<RenderPipeline>> = {};
   private readonly _computePipelineCache: Record<string, CacheItem<ComputePipeline>> = {};
+  private readonly _pendingRenderPipelineCache: Record<string, PendingCacheItem<RenderPipeline>> =
+    {};
+  private readonly _pendingComputePipelineCache: Record<string, PendingCacheItem<ComputePipeline>> =
+    {};
   private readonly _sharedRenderPipelineCache: Record<string, CacheItem<SharedRenderPipeline>> = {};
 
   get [Symbol.toStringTag](): string {
@@ -100,6 +164,58 @@ export class PipelineFactory {
     return pipeline;
   }
 
+  /**
+   * Asynchronously returns a render pipeline matching the supplied props.
+   *
+   * Concurrent requests for an equivalent pipeline share one pending backend compilation.
+   */
+  async createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline> {
+    if (!this.device.props._cachePipelines) {
+      return await this.device.createRenderPipelineAsync(props);
+    }
+
+    const allProps: Required<RenderPipelineProps> = {...RenderPipeline.defaultProps, ...props};
+    const hash = this._hashRenderPipeline(allProps);
+    const cachedItem = this._renderPipelineCache[hash];
+    if (cachedItem) {
+      cachedItem.useCount++;
+      return cachedItem.resource;
+    }
+
+    const pendingItem = this._pendingRenderPipelineCache[hash];
+    if (pendingItem) {
+      pendingItem.useCount++;
+      return await pendingItem.promise;
+    }
+
+    const item: PendingCacheItem<RenderPipeline> = {
+      promise: undefined!,
+      useCount: 1
+    };
+    const sharedRenderPipeline =
+      this.device.type === 'webgl' && this.device.props._sharePipelines
+        ? this.createSharedRenderPipeline(allProps)
+        : undefined;
+    item.promise = this.device
+      .createRenderPipelineAsync({
+        ...allProps,
+        id: allProps.id ? `${allProps.id}-cached` : uid('unnamed-cached'),
+        _sharedRenderPipeline: sharedRenderPipeline
+      })
+      .then(pipeline => {
+        pipeline.hash = hash;
+        this._renderPipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
+        delete this._pendingRenderPipelineCache[hash];
+        return pipeline;
+      })
+      .catch(error => {
+        delete this._pendingRenderPipelineCache[hash];
+        throw error;
+      });
+    this._pendingRenderPipelineCache[hash] = item;
+    return await item.promise;
+  }
+
   /** Return a ComputePipeline matching supplied props. Reuses an equivalent pipeline if already created. */
   createComputePipeline(props: ComputePipelineProps): ComputePipeline {
     if (!this.device.props._cachePipelines) {
@@ -133,6 +249,53 @@ export class PipelineFactory {
     }
 
     return pipeline;
+  }
+
+  /**
+   * Asynchronously returns a compute pipeline matching the supplied props.
+   *
+   * Concurrent requests for an equivalent pipeline share one pending backend compilation.
+   */
+  async createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline> {
+    if (!this.device.props._cachePipelines) {
+      return await this.device.createComputePipelineAsync(props);
+    }
+
+    const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
+    const hash = this._hashComputePipeline(allProps);
+    const cachedItem = this._computePipelineCache[hash];
+    if (cachedItem) {
+      cachedItem.useCount++;
+      return cachedItem.resource;
+    }
+
+    const pendingItem = this._pendingComputePipelineCache[hash];
+    if (pendingItem) {
+      pendingItem.useCount++;
+      return await pendingItem.promise;
+    }
+
+    const item: PendingCacheItem<ComputePipeline> = {
+      promise: undefined!,
+      useCount: 1
+    };
+    item.promise = this.device
+      .createComputePipelineAsync({
+        ...allProps,
+        id: allProps.id ? `${allProps.id}-cached` : undefined
+      })
+      .then(pipeline => {
+        pipeline.hash = hash;
+        this._computePipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
+        delete this._pendingComputePipelineCache[hash];
+        return pipeline;
+      })
+      .catch(error => {
+        delete this._pendingComputePipelineCache[hash];
+        throw error;
+      });
+    this._pendingComputePipelineCache[hash] = item;
+    return await item.promise;
   }
 
   release(pipeline: RenderPipeline | ComputePipeline): void {
