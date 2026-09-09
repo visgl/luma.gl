@@ -103,6 +103,7 @@ unless a function explicitly documents an isolated slice.
 | `GPULZ4RawDecompressor` | a page body uses LZ4_RAW | semantic wrapper over `GPULZByteDecompressor` |
 | `GPUSnappyDecompressor` | a Parquet page body uses raw Snappy | semantic wrapper over `GPULZByteDecompressor` |
 | `addGPUParquetEncodedPageBatchToGraph` | a loaders.gl page-batch plan should become executable GPU work | decompression, level decoding, value decoding, dictionary reuse, and result graph views |
+| `GPUParquetEncodedPageBatchStream` | repeated page batches have one stable decode layout | a fixed pool of upload buffers, compiled decode/consumer graphs, and FIFO backpressure |
 
 ## Common recipes
 
@@ -269,6 +270,53 @@ controlled pipelines.
 CPU decoding remains the loaders.gl default. `readPages()` is the explicit opt-in, and mixed
 CPU/GPU execution remains caller-owned because loaders.gl should not depend on luma.gl.
 
+### Reusing a decode layout across a stream
+
+Use `GPUParquetEncodedPageBatchStream` when repeated `readPages()` results have the same page and
+decoder layout. The template fixes page order, value counts, section offsets, encodings, descriptor
+capacities, and shader control values. Later batches may replace payload and descriptor contents,
+but a layout change requires another stream or the one-shot adapter. `isCompatible()` makes that
+boundary explicit.
+
+Each slot owns its upload buffer, compiled graph, graph transients, and the output returned by
+`configureGraph`. Set `slotCount` to the number of batches that may be in flight. Use `tryAcquire()`
+when an application should drop work or choose CPU decoding under pressure; use `acquire()` for FIFO
+backpressure. A ticket must be encoded once and released only after the submitted work, a dependent
+readback, or an application-owned GPU completion promise settles:
+
+```ts
+const templatePlan = planGPUParquetEncodedPageBatch(firstEncodedBatch, {requireGPU: true});
+const stream = new GPUParquetEncodedPageBatchStream(device, templatePlan, {
+  slotCount: 2,
+  configureGraph: ({graph, batch, slotIndex}) => {
+    // Add rendering, filtering, table materialization, or copies to slot-owned output buffers.
+    return addConsumerToGraph(graph, batch, slotIndex);
+  },
+  destroyOutput: output => output.destroy()
+});
+
+for await (const encodedBatch of source.readPages(readOptions)) {
+  const plan = planGPUParquetEncodedPageBatch(encodedBatch, {requireGPU: true});
+  const ticket = await stream.acquire(plan);
+  const commandEncoder = device.createCommandEncoder();
+  ticket.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  await ticket.releaseWhen(getSubmittedWorkCompletion());
+}
+
+stream.destroy();
+```
+
+`releaseWhen()` releases even when its promise rejects, then propagates the rejection. Use
+`cancel()` only for a reservation that was never encoded. Destroying a stream rejects queued
+acquisitions immediately; active slots are destroyed when their tickets finish. The stream does
+not submit commands or infer when GPU work is complete, because submission and synchronization
+remain application-owned.
+
+This operation removes repeated graph construction and pipeline-cache lookup from the steady-state
+path and bounds reusable GPU memory. It does not promise that every Parquet row group has the same
+layout, batch dissimilar shapes together, or decide the CPU/GPU crossover threshold.
+
 ## Conformance and hardening
 
 The adapter tests real V1 and V2 pages emitted by loaders.gl's Parquet writer, including nullable,
@@ -313,12 +361,12 @@ incremental. Each tranche below has a useful stopping point and does not require
 | 3. Close inexpensive adapter gaps | Complete | Loader-selected preserved compression or CPU-decompressed encoded pages; automatic bounded `DELTA_BYTE_ARRAY`; variable dictionaries; decompressed V1 level framing; RLE BOOLEAN values | Common supported encodings no longer fall back for adapter-only gaps; no GPU metadata parser was introduced |
 | 4. Extract generic materialization primitives | Complete | `GPUSegmentedLayout` owns validity/value and segment offsets; existing `GPUCompaction`, gathers, and scatter operations own payload movement | Another columnar format can materialize offsets and values without importing Parquet-specific classes |
 | 5. Assemble nested GPU columns | Graph-native complete | `GPUParquetNestedColumnLayout` composes multiple definition/repetition depths into chunk-preserving validity, row, and list-offset `GraphVectorView`s; imported output buffers can be wrapped as `GPUData`/`GPUVector` without Arrow | Common required, optional, list, and nested-list columns remain GPU-resident through an in-graph or caller-owned-buffer consumer boundary |
-| 6. Streaming and throughput | Measure first | Reuse compiled graph templates, pool upload/output buffers, batch compatible pages and columns, add backpressure, and benchmark CPU/GPU crossover thresholds | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
+| 6. Streaming and throughput | Foundation complete; measure next | `GPUParquetEncodedPageBatchStream` reuses exact-layout compiled graphs, pools upload/output buffers, and provides fixed-capacity FIFO backpressure; compatible-page batching and CPU/GPU crossover benchmarks remain | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
 | 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
 | 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
 
-The intended next step is measured streaming work or conformance coverage from tranches 6–7.
-Tranche 8 is not a completeness checklist.
+The intended next step is representative crossover and sustained-throughput measurement for tranche
+6, or conformance coverage from tranche 7. Tranche 8 is not a completeness checklist.
 
 ### Roadmap stop line
 
