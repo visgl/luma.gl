@@ -66,6 +66,11 @@ compiled.encode(encoder, {parameters: undefined});
 device.submit(encoder.finish());
 ```
 
+With math.gl 5, `from` and `to` can also be compatible CRS definitions from `@math.gl/crs`,
+including PROJJSON objects. `@math.gl/proj4` checks whether each definition is executable by
+proj4js; `gpu-project` then samples that provider on the CPU and evaluates the resulting local
+approximation on the GPU. CRS metadata alone does not perform a transformation.
+
 `bounds` are `[minimumX, minimumY, maximumX, maximumY]` in the source
 coordinate system. `tolerance` is expressed in the destination coordinate
 system's units; when the destination is a meter-based CRS, `0.01` requests a

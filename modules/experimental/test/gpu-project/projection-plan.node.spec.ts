@@ -4,6 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 
+import {Proj4Projection} from '@math.gl/proj4';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
 import {
@@ -119,6 +120,68 @@ describe('dependency-free Web Mercator projection provider', () => {
 });
 
 describe('CPU projection plan compilation', () => {
+  test('accepts math.gl 5 PROJJSON CRS definitions through Proj4Projection', () => {
+    const wgs84: NonNullable<ConstructorParameters<typeof Proj4Projection>[0]['from']> = {
+      type: 'GeographicCRS',
+      name: 'WGS 84',
+      datum: {
+        type: 'GeodeticReferenceFrame',
+        name: 'World Geodetic System 1984',
+        ellipsoid: {
+          name: 'WGS 84',
+          semi_major_axis: 6_378_137,
+          inverse_flattening: 298.257223563
+        }
+      },
+      coordinate_system: {
+        subtype: 'ellipsoidal',
+        axis: [
+          {name: 'Geodetic longitude', abbreviation: 'lon', direction: 'east', unit: 'degree'},
+          {name: 'Geodetic latitude', abbreviation: 'lat', direction: 'north', unit: 'degree'}
+        ]
+      },
+      id: {authority: 'EPSG', code: 4326}
+    };
+    const webMercator: NonNullable<ConstructorParameters<typeof Proj4Projection>[0]['to']> = {
+      type: 'ProjectedCRS',
+      name: 'WGS 84 / Pseudo-Mercator',
+      base_crs: wgs84,
+      conversion: {
+        name: 'Popular Visualisation Pseudo-Mercator',
+        method: {name: 'Popular Visualisation Pseudo Mercator'},
+        parameters: [
+          {name: 'Latitude of natural origin', value: 0, unit: 'degree'},
+          {name: 'Longitude of natural origin', value: 0, unit: 'degree'},
+          {name: 'Scale factor at natural origin', value: 1, unit: 'unity'},
+          {name: 'False easting', value: 0, unit: 'metre'},
+          {name: 'False northing', value: 0, unit: 'metre'}
+        ]
+      },
+      coordinate_system: {
+        subtype: 'Cartesian',
+        axis: [
+          {name: 'Easting', abbreviation: 'E', direction: 'east', unit: 'metre'},
+          {name: 'Northing', abbreviation: 'N', direction: 'north', unit: 'metre'}
+        ]
+      },
+      id: {authority: 'EPSG', code: 3857}
+    };
+    const projection = new Proj4Projection({from: wgs84, to: webMercator});
+    const plan = compileProjectionPlan({
+      projection,
+      bounds: [-122.45, 37.75, -122.4, 37.8],
+      degree: 3,
+      tolerance: 0.01
+    });
+    const coordinate = [-122.4194, 37.7749] as const;
+    const expected = projection.project([...coordinate]);
+    const actual = evaluateProjectionPlan(plan, coordinate);
+
+    expect(plan.maxError).toBeLessThanOrEqual(plan.tolerance);
+    expect(actual[0]).toBeCloseTo(expected[0], 2);
+    expect(actual[1]).toBeCloseTo(expected[1], 2);
+  });
+
   test('accepts object projection providers and preserves their receiver', () => {
     class AffineProjection {
       readonly translation: readonly [number, number] = [12_345, -67_890];
