@@ -5265,10 +5265,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@math.gl/core@npm:5.0.0-alpha.5":
+  version: 5.0.0-alpha.5
+  resolution: "@math.gl/core@npm:5.0.0-alpha.5"
+  dependencies:
+    "@math.gl/types": "npm:5.0.0-alpha.5"
+  checksum: 10c0/2a0de21791d4b373b2faed95dba05c62d1355b370a8f82a800f3b7239559e59674a388072eada1199afa1ef38b3388bb0494ddd1239ac8b32ca6d08ce31bd52f
+  languageName: node
+  linkType: hard
+
 "@math.gl/crs@npm:5.0.0-alpha.4":
   version: 5.0.0-alpha.4
   resolution: "@math.gl/crs@npm:5.0.0-alpha.4"
   checksum: 10c0/9e0c540e04e0bcd7b9667f7187c32e252d6032df3c75775fc9758c31cce00fd1da91b45bc5f17a0c17b76a02a706ccb347be95ce5fe4b12169d6373b9c2542eb
+  languageName: node
+  linkType: hard
+
+"@math.gl/crs@npm:5.0.0-alpha.5":
+  version: 5.0.0-alpha.5
+  resolution: "@math.gl/crs@npm:5.0.0-alpha.5"
+  checksum: 10c0/9dae800428e37b7386eda1e4b03acef55f031b3196f3de6772d276502a29234007126d6533de2e1a48f705fa2c6d3bec76812b34ada21ba6afcbb75add554963
   languageName: node
   linkType: hard
 
@@ -5343,6 +5359,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@math.gl/proj4@npm:~5.0.0-alpha.5":
+  version: 5.0.0-alpha.5
+  resolution: "@math.gl/proj4@npm:5.0.0-alpha.5"
+  dependencies:
+    "@math.gl/core": "npm:5.0.0-alpha.5"
+    "@math.gl/crs": "npm:5.0.0-alpha.5"
+    proj4: "npm:2.21.0"
+  checksum: 10c0/9f6b022b6165f09e714b3670f2bdd728ace349bc739decfd7005b27caa574d6ffa253602bc4d9c6f2d49541fc4d8abb35b6529c799cb9a01521b4f947a46f4c9
+  languageName: node
+  linkType: hard
+
 "@math.gl/sun@npm:^4.1.0":
   version: 4.1.0
   resolution: "@math.gl/sun@npm:4.1.0"
@@ -5361,6 +5388,13 @@ __metadata:
   version: 5.0.0-alpha.4
   resolution: "@math.gl/types@npm:5.0.0-alpha.4"
   checksum: 10c0/f4e0d05803909650e52d12dba30f93d25b5031006a7bb1c0d03650f9c27f82d8b8b920348892e41979ac5c070b920420bf1d4b8aeab2de1e865fdec1b8c68acd
+  languageName: node
+  linkType: hard
+
+"@math.gl/types@npm:5.0.0-alpha.5":
+  version: 5.0.0-alpha.5
+  resolution: "@math.gl/types@npm:5.0.0-alpha.5"
+  checksum: 10c0/b5ce7e8e0d2991dec31728892ace470703d8693991e0117150f7a8caa8c6193db90093ac67ff51056d301686bb9a739236f6bed9545836e86d2f1698bcf73c7d
   languageName: node
   linkType: hard
 
@@ -16419,6 +16453,7 @@ __metadata:
     "@math.gl/dggs-geohash": "npm:^4.1.0"
     "@math.gl/dggs-quadkey": "npm:^4.1.0"
     "@math.gl/dggs-s2": "npm:^4.1.0"
+    "@math.gl/proj4": "npm:~5.0.0-alpha.5"
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/bench": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
@@ -17019,6 +17054,13 @@ __metadata:
   version: 1.1.2
   resolution: "methods@npm:1.1.2"
   checksum: 10c0/bdf7cc72ff0a33e3eede03708c08983c4d7a173f91348b4b1e4f47d4cdbf734433ad971e7d1e8c77247d9e5cd8adb81ea4c67b0a2db526b758b2233d7814b8b2
+  languageName: node
+  linkType: hard
+
+"mgrs@npm:1.0.0":
+  version: 1.0.0
+  resolution: "mgrs@npm:1.0.0"
+  checksum: 10c0/a360853be5a3b4f4734dbf0a193851c08039ccb6077362ab0f890cccd170ef88b59585129757da9fea4d7a313d7dc3ee88f37f594fc1ae3e4e8efc5353144d77
   languageName: node
   linkType: hard
 
@@ -20152,6 +20194,21 @@ __metadata:
   version: 3.0.0
   resolution: "proggy@npm:3.0.0"
   checksum: 10c0/b4265664405e780edf7a164b2424bb59fc7bd3ab917365c88c6540e5f3bedcbbfb1a534da9c6a4a5570f374a41ef6942e9a4e862dc3ea744798b6c7be63e4351
+  languageName: node
+  linkType: hard
+
+"proj4@npm:2.21.0":
+  version: 2.21.0
+  resolution: "proj4@npm:2.21.0"
+  dependencies:
+    mgrs: "npm:1.0.0"
+    wkt-parser: "npm:^1.5.5"
+  peerDependencies:
+    geotiff: "*"
+  peerDependenciesMeta:
+    geotiff:
+      optional: true
+  checksum: 10c0/7a4c5d160492636114ecb3719191734dc2b0094b421b9139466a363e479cd907c63ac35a10277f3b7a4649470c8f02446acd45cc6155829364c2fa0ae2d91aae
   languageName: node
   linkType: hard
 
@@ -23904,6 +23961,13 @@ __metadata:
   version: 2.0.1
   resolution: "wildcard@npm:2.0.1"
   checksum: 10c0/08f70cd97dd9a20aea280847a1fe8148e17cae7d231640e41eb26d2388697cbe65b67fd9e68715251c39b080c5ae4f76d71a9a69fa101d897273efdfb1b58bf7
+  languageName: node
+  linkType: hard
+
+"wkt-parser@npm:^1.5.5":
+  version: 1.5.6
+  resolution: "wkt-parser@npm:1.5.6"
+  checksum: 10c0/67f938ffb6a1721dbc733823677327ff858a0a1f2f0d224e2ecbdf9e879f27764434dd6e44c89a2e94e3d37cc6e5f9874f878e4a1b1e2fd29a1279be38c322ca
   languageName: node
   linkType: hard
 

@@ -104,6 +104,11 @@ coordinate system uses meters.
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
+With math.gl 5, `Proj4Projection` also accepts compatible CRS definitions from `@math.gl/crs`,
+including PROJJSON objects. Use `checkProj4CRSCompatibility()` when a broader CRS metadata object
+may include unsupported vertical or compound components; CRS metadata by itself does not transform
+coordinates.
+
 ```ts
 import {
   compileProjectionPlan,

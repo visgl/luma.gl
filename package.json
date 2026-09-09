@@ -64,6 +64,7 @@
     "@math.gl/dggs-geohash": "^4.1.0",
     "@math.gl/dggs-quadkey": "^4.1.0",
     "@math.gl/dggs-s2": "^4.1.0",
+    "@math.gl/proj4": "~5.0.0-alpha.5",
     "@probe.gl/bench": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",
     "@probe.gl/stats-widget": "^4.1.1",
