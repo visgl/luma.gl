@@ -77,6 +77,25 @@ describe('example lifecycle', () => {
     await waitForLifecycleQueue();
     expect(events).toEqual(['start first', 'stop first']);
   });
+
+  it('reports startup errors before stopping the failed session', async () => {
+    const events: string[] = [];
+    startExclusiveExample({
+      start: () => {
+        events.push('start');
+        throw new Error('startup failed');
+      },
+      stop: () => {
+        events.push('stop');
+      },
+      onError: error => {
+        events.push(`error: ${(error as Error).message}`);
+      }
+    });
+
+    await waitForLifecycleQueue();
+    expect(events).toEqual(['start', 'error: startup failed', 'stop']);
+  });
 });
 
 async function waitForLifecycleQueue(): Promise<void> {

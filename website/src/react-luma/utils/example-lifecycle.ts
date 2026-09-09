@@ -49,8 +49,9 @@ export function startExclusiveExample(example: ExclusiveExample): () => void {
     try {
       await session.start();
     } catch (error) {
+      session.onError(error);
       await stopExampleSession(session);
-      throw error;
+      return;
     }
 
     if (session.stopRequested) {
