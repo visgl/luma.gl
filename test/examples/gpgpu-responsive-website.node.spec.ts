@@ -11,6 +11,10 @@ const LUMA_EXAMPLE_PATH = path.join(
   process.cwd(),
   'website/src/react-luma/components/luma-example.tsx'
 );
+const EXAMPLE_LIFECYCLE_PATH = path.join(
+  process.cwd(),
+  'website/src/react-luma/utils/example-lifecycle.ts'
+);
 const EXAMPLE_CATALOG_PATH = path.join(process.cwd(), 'website/src/components/examples-index.tsx');
 const EXAMPLE_CARD_PATH = path.join(process.cwd(), 'website/src/components/example-card.tsx');
 const HOMEPAGE_SOURCE_PATH = path.join(process.cwd(), 'website/src/pages/index.jsx');
@@ -117,23 +121,18 @@ describe('responsive GPGPU website examples', () => {
   });
 
   test('serializes template finalization after asynchronous initialization', () => {
-    const lifecycleSource = readFileSync(LUMA_EXAMPLE_PATH, 'utf8');
-    const cleanupOffset = lifecycleSource.lastIndexOf('return () => {\n      isCancelled = true;');
-    const queuedCleanupOffset = lifecycleSource.indexOf(
-      'currentLumaExampleTask = currentLumaExampleTask',
-      cleanupOffset
+    const exampleSource = readFileSync(LUMA_EXAMPLE_PATH, 'utf8');
+    const lifecycleSource = readFileSync(EXAMPLE_LIFECYCLE_PATH, 'utf8');
+    const stopPreviousOffset = lifecycleSource.indexOf(
+      'await stopExampleSession(activeExampleSession)'
     );
-    const serializedDestroyOffset = lifecycleSource.indexOf(
-      'animationLoop.destroy()',
-      queuedCleanupOffset
-    );
-    const immediateCleanupSource = lifecycleSource.slice(cleanupOffset, queuedCleanupOffset);
+    const startNextOffset = lifecycleSource.indexOf('await session.start()');
 
-    expect(cleanupOffset).toBeGreaterThan(0);
-    expect(queuedCleanupOffset).toBeGreaterThan(cleanupOffset);
-    expect(serializedDestroyOffset).toBeGreaterThan(queuedCleanupOffset);
-    expect(immediateCleanupSource).not.toContain('animationLoop?.stop()');
-    expect(immediateCleanupSource).toContain('canvasContainer.replaceChildren()');
+    expect(exampleSource).toContain('startExclusiveExample({');
+    expect(exampleSource).toContain('canvasContainer.replaceChildren()');
+    expect(exampleSource).toContain('animationLoop.destroy()');
+    expect(stopPreviousOffset).toBeGreaterThan(0);
+    expect(startNextOffset).toBeGreaterThan(stopPreviousOffset);
   });
 
   test('keeps DOM-only compute examples from inserting presentation canvases into the page', () => {

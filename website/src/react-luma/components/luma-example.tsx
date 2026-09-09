@@ -22,8 +22,13 @@ import {
 } from '../utils/hdr-screenshot-capture';
 import {getMobileExamplePixelRatio} from '../utils/mobile-example-pixel-ratio';
 import {
-  getExampleMobileQuality,
+  EXAMPLE_NAVIGATION_END_EVENT,
+  EXAMPLE_NAVIGATION_START_EVENT,
+  startExclusiveExample
+} from '../utils/example-lifecycle';
+import {
   getExampleMobileLabel,
+  getExampleMobileQuality,
   getExampleMobileUnsupportedReason,
   getExampleRuntimeEnvironment,
   type ExampleMobileMode,
@@ -43,8 +48,6 @@ import {
   type DeviceType,
   useStore
 } from '../store/device-store';
-
-let currentLumaExampleTask: Promise<void> = Promise.resolve();
 
 export type {HDRScreenshotCapture} from '../utils/hdr-screenshot-capture';
 
@@ -213,13 +216,18 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   const [isImmersive, setIsImmersive] = useState(true);
+  const [isNavigationPending, setIsNavigationPending] = useState(false);
   const supportDefinition = useResolvedExampleSupportDefinition(props);
   const runtimeEnvironment = useExampleRuntimeEnvironment();
   const mobileUnsupportedReason = getExampleMobileUnsupportedReason(
     supportDefinition,
     runtimeEnvironment
   );
-  const runtimeState = mobileUnsupportedReason ? 'unsupported' : props.runtimeState || 'running';
+  const runtimeState = mobileUnsupportedReason
+    ? 'unsupported'
+    : isNavigationPending
+      ? 'loading'
+      : props.runtimeState || 'running';
   const embeddedHeight = props.embeddedHeight ?? 560;
   const embeddedStyle: CSSProperties | undefined = props.embedded
     ? {
@@ -227,6 +235,17 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
         minHeight: embeddedHeight === 'auto' ? 0 : embeddedHeight
       }
     : undefined;
+
+  useEffect(() => {
+    const handleNavigationStart = () => setIsNavigationPending(true);
+    const handleNavigationEnd = () => setIsNavigationPending(false);
+    window.addEventListener(EXAMPLE_NAVIGATION_START_EVENT, handleNavigationStart);
+    window.addEventListener(EXAMPLE_NAVIGATION_END_EVENT, handleNavigationEnd);
+    return () => {
+      window.removeEventListener(EXAMPLE_NAVIGATION_START_EVENT, handleNavigationStart);
+      window.removeEventListener(EXAMPLE_NAVIGATION_END_EVENT, handleNavigationEnd);
+    };
+  }, []);
 
   return (
     <div
@@ -257,9 +276,12 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
           message={mobileUnsupportedReason}
           state="unsupported"
         />
-      ) : (
+      ) : isNavigationPending ? null : (
         props.children
       )}
+      {runtimeState === 'loading' && !isNavigationPending ? (
+        <ExampleLoadingIndicator embedded={props.embedded} />
+      ) : null}
       {!props.embedded ? (
         <button
           data-luma-example-fullscreen-toggle=""
@@ -665,53 +687,57 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       }
     };
 
-    currentLumaExampleTask = currentLumaExampleTask
-      .then(() => {
-        if (isCancelled) {
-          return;
+    const stopExclusiveExample = startExclusiveExample({
+      start: asyncCreateLoop,
+      stop: () => {
+        isCancelled = true;
+        captureController?.finalize();
+        removeBrowserCaptureFunction();
+        window.removeEventListener('resize', updateMobileDrawingBufferResolution);
+        // Never leave the shared canvas showing the outgoing example while teardown is queued.
+        canvasContainer.replaceChildren();
+
+        if (animationLoop) {
+          // destroy() synchronously finalizes the template after start() has settled.
+          if (!effectiveDevice.isLost) {
+            effectiveDevice.submit();
+          }
+          animationLoop.destroy();
+          animationLoop = null;
         }
 
-        return asyncCreateLoop();
-      })
-      .catch(error => {
+        clearActiveCpuHotspotProfilerDevice(effectiveDevice);
+        defaultCanvasContext.setProps({useDevicePixels: previousUseDevicePixels});
+        if (deviceCanvas instanceof HTMLCanvasElement) {
+          delete deviceCanvas.dataset.lumaExamplePixelRatio;
+        }
+        getCanvasContainer().appendChild(deviceCanvas as HTMLCanvasElement);
+      },
+      onError: error => {
         if (!isCancelled) {
           setStartupErrorMessage(getErrorMessage(error));
           setHasRendered(false);
           logError(`Example startup failed for ${effectiveDeviceType}`, error);
         }
-      });
+      }
+    });
+
+    let hasRequestedStop = false;
+    const stopExample = () => {
+      if (hasRequestedStop) {
+        return;
+      }
+      hasRequestedStop = true;
+      isCancelled = true;
+      canvasContainer.replaceChildren();
+      window.removeEventListener(EXAMPLE_NAVIGATION_START_EVENT, stopExample);
+      stopExclusiveExample();
+    };
+    window.addEventListener(EXAMPLE_NAVIGATION_START_EVENT, stopExample);
 
     return () => {
-      isCancelled = true;
-      captureController?.finalize();
-      removeBrowserCaptureFunction();
-      window.removeEventListener('resize', updateMobileDrawingBufferResolution);
-      // Route transitions must stop displaying the outgoing example immediately, even when its
-      // asynchronous initialization is still ahead of cleanup in the serialized task queue.
-      canvasContainer.replaceChildren();
-
-      currentLumaExampleTask = currentLumaExampleTask
-        .then(() => {
-          if (animationLoop) {
-            // destroy() synchronously finalizes the template, so it must remain serialized after
-            // animationLoop.start() and its asynchronous onInitialize() have settled.
-            if (!effectiveDevice.isLost) {
-              effectiveDevice.submit();
-            }
-            animationLoop.destroy();
-            animationLoop = null;
-          }
-
-          clearActiveCpuHotspotProfilerDevice(effectiveDevice);
-          defaultCanvasContext.setProps({useDevicePixels: previousUseDevicePixels});
-          if (deviceCanvas instanceof HTMLCanvasElement) {
-            delete deviceCanvas.dataset.lumaExamplePixelRatio;
-          }
-          getCanvasContainer().appendChild(deviceCanvas as HTMLCanvasElement);
-        })
-        .catch(error => {
-          logError(`Example cleanup failed for ${effectiveDeviceType}`, error);
-        });
+      window.removeEventListener(EXAMPLE_NAVIGATION_START_EVENT, stopExample);
+      stopExample();
     };
   }, [
     effectiveDeviceType,
@@ -970,6 +996,21 @@ function ExampleStatusMessage({
         </strong>
         <span>{message}</span>
       </div>
+    </div>
+  );
+}
+
+export function ExampleLoadingIndicator({embedded}: {embedded?: boolean}): React.JSX.Element {
+  return (
+    <div
+      className={`luma-example-loading${embedded ? ' luma-example-loading--embedded' : ''}`}
+      data-luma-example-status="loading"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="luma-example-loading-spinner" aria-hidden="true" />
+      <strong>Loading example</strong>
+      <span>Preparing GPU resources…</span>
     </div>
   );
 }
