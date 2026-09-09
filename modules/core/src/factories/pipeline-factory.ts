@@ -19,31 +19,7 @@ type PendingCacheItem<ResourceT extends Resource<any>> = {
   useCount: number;
 };
 
-const asyncCompilationByDevice = new WeakMap<Device, AsyncPipelineCompilation>();
-
-/** Collects pipeline promises started during one synchronous resource-construction phase. */
-export class AsyncPipelineCompilation {
-  private readonly promises: Promise<unknown>[] = [];
-  private closed = false;
-
-  /** @internal Registers work that must finish before the compiled owner can be used. */
-  add(promise: Promise<unknown>): void {
-    if (this.closed) {
-      throw new Error('Cannot add a pipeline after the asynchronous compilation phase has closed');
-    }
-    this.promises.push(promise);
-  }
-
-  /** @internal Stops collecting new pipelines and waits for every registered pipeline in parallel. */
-  async finish(): Promise<void> {
-    this.closed = true;
-    const results = await Promise.allSettled(this.promises);
-    const failure = results.find(result => result.status === 'rejected');
-    if (failure?.status === 'rejected') {
-      throw failure.reason;
-    }
-  }
-}
+const asyncCompilationByDevice = new WeakMap<Device, Promise<unknown>[]>();
 
 /**
  * Efficiently creates / caches pipelines
@@ -66,22 +42,22 @@ export class PipelineFactory {
    *
    * @internal
    */
-  static beginAsyncCompilation(device: Device): AsyncPipelineCompilation {
+  static beginAsyncCompilation(device: Device): Promise<unknown>[] {
     if (asyncCompilationByDevice.has(device)) {
       throw new Error('An asynchronous pipeline compilation scope is already active');
     }
-    const compilation = new AsyncPipelineCompilation();
+    const compilation: Promise<unknown>[] = [];
     asyncCompilationByDevice.set(device, compilation);
     return compilation;
   }
 
   /** @internal Returns the construction scope currently collecting pipelines for this device. */
-  static getAsyncCompilation(device: Device): AsyncPipelineCompilation | undefined {
+  static getAsyncCompilation(device: Device): Promise<unknown>[] | undefined {
     return asyncCompilationByDevice.get(device);
   }
 
   /** @internal Closes a construction scope before its promises are awaited. */
-  static endAsyncCompilation(device: Device, compilation: AsyncPipelineCompilation): void {
+  static endAsyncCompilation(device: Device, compilation: Promise<unknown>[]): void {
     if (asyncCompilationByDevice.get(device) !== compilation) {
       throw new Error('The asynchronous pipeline compilation scope is not active');
     }
@@ -176,51 +152,22 @@ export class PipelineFactory {
 
     const allProps: Required<RenderPipelineProps> = {...RenderPipeline.defaultProps, ...props};
     const hash = this._hashRenderPipeline(allProps);
-    const cachedItem = this._renderPipelineCache[hash];
-    if (cachedItem) {
-      cachedItem.useCount++;
-      return cachedItem.resource;
-    }
-
-    const pendingItem = this._pendingRenderPipelineCache[hash];
-    if (pendingItem) {
-      pendingItem.useCount++;
-      return await pendingItem.promise;
-    }
-
-    const item: PendingCacheItem<RenderPipeline> = {
-      promise: undefined!,
-      useCount: 1
-    };
-    const sharedRenderPipeline =
-      this.device.type === 'webgl' && this.device.props._sharePipelines
-        ? this.createSharedRenderPipeline(allProps)
-        : undefined;
-    item.promise = this.device
-      .createRenderPipelineAsync({
-        ...allProps,
-        id: allProps.id ? `${allProps.id}-cached` : uid('unnamed-cached'),
-        _sharedRenderPipeline: sharedRenderPipeline
-      })
-      .then(pipeline => {
-        delete this._pendingRenderPipelineCache[hash];
-        const cachedItem = this._renderPipelineCache[hash];
-        if (cachedItem) {
-          cachedItem.useCount += item.useCount;
-          pipeline.destroy();
-          this.releaseSharedRenderPipeline(pipeline);
-          return cachedItem.resource;
-        }
-        pipeline.hash = hash;
-        this._renderPipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
-        return pipeline;
-      })
-      .catch(error => {
-        delete this._pendingRenderPipelineCache[hash];
-        throw error;
-      });
-    this._pendingRenderPipelineCache[hash] = item;
-    return await item.promise;
+    return await this._createPipelineAsync(
+      this._renderPipelineCache,
+      this._pendingRenderPipelineCache,
+      hash,
+      () => {
+        const sharedRenderPipeline =
+          this.device.type === 'webgl' && this.device.props._sharePipelines
+            ? this.createSharedRenderPipeline(allProps)
+            : undefined;
+        return this.device.createRenderPipelineAsync({
+          ...allProps,
+          id: allProps.id ? `${allProps.id}-cached` : uid('unnamed-cached'),
+          _sharedRenderPipeline: sharedRenderPipeline
+        });
+      }
+    );
   }
 
   /** Return a ComputePipeline matching supplied props. Reuses an equivalent pipeline if already created. */
@@ -270,45 +217,16 @@ export class PipelineFactory {
 
     const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
     const hash = this._hashComputePipeline(allProps);
-    const cachedItem = this._computePipelineCache[hash];
-    if (cachedItem) {
-      cachedItem.useCount++;
-      return cachedItem.resource;
-    }
-
-    const pendingItem = this._pendingComputePipelineCache[hash];
-    if (pendingItem) {
-      pendingItem.useCount++;
-      return await pendingItem.promise;
-    }
-
-    const item: PendingCacheItem<ComputePipeline> = {
-      promise: undefined!,
-      useCount: 1
-    };
-    item.promise = this.device
-      .createComputePipelineAsync({
-        ...allProps,
-        id: allProps.id ? `${allProps.id}-cached` : undefined
-      })
-      .then(pipeline => {
-        delete this._pendingComputePipelineCache[hash];
-        const cachedItem = this._computePipelineCache[hash];
-        if (cachedItem) {
-          cachedItem.useCount += item.useCount;
-          pipeline.destroy();
-          return cachedItem.resource;
-        }
-        pipeline.hash = hash;
-        this._computePipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
-        return pipeline;
-      })
-      .catch(error => {
-        delete this._pendingComputePipelineCache[hash];
-        throw error;
-      });
-    this._pendingComputePipelineCache[hash] = item;
-    return await item.promise;
+    return await this._createPipelineAsync(
+      this._computePipelineCache,
+      this._pendingComputePipelineCache,
+      hash,
+      () =>
+        this.device.createComputePipelineAsync({
+          ...allProps,
+          id: allProps.id ? `${allProps.id}-cached` : undefined
+        })
+    );
   }
 
   release(pipeline: RenderPipeline | ComputePipeline): void {
@@ -365,6 +283,48 @@ export class PipelineFactory {
   }
 
   // PRIVATE
+
+  private async _createPipelineAsync<ResourceT extends RenderPipeline | ComputePipeline>(
+    cache: Record<string, CacheItem<ResourceT>>,
+    pendingCache: Record<string, PendingCacheItem<ResourceT>>,
+    hash: string,
+    create: () => Promise<ResourceT>
+  ): Promise<ResourceT> {
+    const cachedItem = cache[hash];
+    if (cachedItem) {
+      cachedItem.useCount++;
+      return cachedItem.resource;
+    }
+    const pendingItem = pendingCache[hash];
+    if (pendingItem) {
+      pendingItem.useCount++;
+      return await pendingItem.promise;
+    }
+
+    const item: PendingCacheItem<ResourceT> = {promise: undefined!, useCount: 1};
+    item.promise = create()
+      .then(pipeline => {
+        delete pendingCache[hash];
+        const synchronousItem = cache[hash];
+        if (synchronousItem) {
+          synchronousItem.useCount += item.useCount;
+          pipeline.destroy();
+          if (pipeline instanceof RenderPipeline) {
+            this.releaseSharedRenderPipeline(pipeline);
+          }
+          return synchronousItem.resource;
+        }
+        pipeline.hash = hash;
+        cache[hash] = {resource: pipeline, useCount: item.useCount};
+        return pipeline;
+      })
+      .catch(error => {
+        delete pendingCache[hash];
+        throw error;
+      });
+    pendingCache[hash] = item;
+    return await item.promise;
+  }
 
   /** Destroy a cached pipeline, removing it from the cache if configured to do so. */
   private _destroyPipeline(pipeline: RenderPipeline | ComputePipeline): boolean {

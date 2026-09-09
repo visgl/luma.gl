@@ -96,7 +96,7 @@ export class Computation {
     }
     try {
       if (ownsCompilation) {
-        await asyncCompilation.finish();
+        await Promise.all(asyncCompilation);
       } else {
         await computation._pipelineInitialization;
       }
@@ -243,7 +243,7 @@ export class Computation {
     const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
     if (asyncCompilation) {
       this._pipelineInitialization = this._updatePipelineAsync();
-      asyncCompilation.add(this._pipelineInitialization);
+      asyncCompilation.push(this._pipelineInitialization);
     } else {
       this.pipeline = this._updatePipeline();
     }

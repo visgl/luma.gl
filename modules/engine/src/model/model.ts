@@ -194,7 +194,7 @@ export class Model {
     }
     try {
       if (ownsCompilation) {
-        await asyncCompilation.finish();
+        await Promise.all(asyncCompilation);
       } else {
         await model._pipelineInitialization;
       }
@@ -488,7 +488,7 @@ export class Model {
     const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
     if (asyncCompilation) {
       this._pipelineInitialization = this._initializePipelineAsync(props);
-      asyncCompilation.add(this._pipelineInitialization);
+      asyncCompilation.push(this._pipelineInitialization);
     } else {
       this.pipeline = this._updatePipeline();
       this._initializePipelineResources(props);

@@ -228,16 +228,14 @@ export async function compileGPUCommandGraphAsync<Parameters>(
         : node.compile({device: props.device})
     }));
     PipelineFactory.endAsyncCompilation(props.device, asyncPipelineCompilation);
-    const [results, pipelineResult] = await Promise.all([
+    const [results, pipelineResults] = await Promise.all([
       Promise.allSettled(nodeCompilationPromises),
-      asyncPipelineCompilation.finish().then(
-        () => ({status: 'fulfilled' as const}),
-        reason => ({status: 'rejected' as const, reason})
-      )
+      Promise.allSettled(asyncPipelineCompilation)
     ]);
     const compiledNodes: CompiledNode<Parameters>[] = [];
+    const pipelineFailure = pipelineResults.find(result => result.status === 'rejected');
     let compilationError: unknown =
-      pipelineResult.status === 'rejected' ? pipelineResult.reason : undefined;
+      pipelineFailure?.status === 'rejected' ? pipelineFailure.reason : undefined;
     for (const result of results) {
       if (result.status === 'fulfilled') {
         compiledNodes.push(result.value);
