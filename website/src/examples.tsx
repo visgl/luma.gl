@@ -5,6 +5,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   DeviceTabs,
   ExampleHeader,
+  ExampleLoadingIndicator,
   ExamplePage,
   getCanvasContainer,
   InfoBox,
@@ -24,6 +25,7 @@ import type {GPGPUShowcaseHandle} from '../../examples/v10/gpgpu/src/app';
 import type {ExternalWebGLContextHandle} from '../../examples/integrations/external-context/app';
 import type {GaussianSplatSourceCatalogEntry} from '../../examples/showcase/gaussian-splats/local-loaders';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
+import {startExclusiveExample} from './react-luma/utils/example-lifecycle';
 
 const exampleConfig = {};
 
@@ -357,45 +359,49 @@ function DeckArrowLayerCanvas({
     if (!(deviceCanvas instanceof HTMLCanvasElement)) {
       throw new Error('Website Deck examples require the shared device canvas to be an HTMLCanvasElement');
     }
-    Object.assign(deviceCanvas.style, {
-      display: 'block',
-      position: 'absolute',
-      inset: '0',
-      width: '100%',
-      height: '100%'
-    });
-    container.replaceChildren(deviceCanvas);
-
     let isFinalized = false;
     let deck: DeckExampleHandle | null = null;
-    void device.lost.then(loss => {
-      if (!isFinalized && loss.reason !== 'destroyed') {
-        setErrorMessage(loss.message || 'The graphics device was lost while this example ran.');
-        setRuntimeState('failed');
-      }
-    });
-    void Promise.resolve(createDeck(container, {device}))
-      .then(createdDeck => {
-        if (isFinalized) {
-          createdDeck.finalize();
-          return;
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        Object.assign(deviceCanvas.style, {
+          display: 'block',
+          position: 'absolute',
+          inset: '0',
+          width: '100%',
+          height: '100%'
+        });
+        container.replaceChildren(deviceCanvas);
+        void device.lost.then(loss => {
+          if (!isFinalized && loss.reason !== 'destroyed') {
+            setErrorMessage(loss.message || 'The graphics device was lost while this example ran.');
+            setRuntimeState('failed');
+          }
+        });
+        deck = await createDeck(container, {device});
+        if (!isFinalized) {
+          setRuntimeState('running');
         }
-        deck = createdDeck;
-        setRuntimeState('running');
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isFinalized = true;
+        deck?.finalize();
+        deck = null;
+        container.replaceChildren();
+        getCanvasContainer().appendChild(deviceCanvas);
+      },
+      onError: error => {
         if (!isFinalized) {
           setErrorMessage(getErrorMessage(error));
           setRuntimeState('failed');
           logError(`Failed to initialize ${panel.id} Deck example`, error);
         }
-      });
+      }
+    });
 
     return () => {
       isFinalized = true;
-      deck?.finalize();
       container.replaceChildren();
-      getCanvasContainer().appendChild(deviceCanvas);
+      stopExclusiveExample();
     };
   }, [createDeck, device, panel.id]);
 
@@ -403,6 +409,7 @@ function DeckArrowLayerCanvas({
     <div data-luma-example-state={runtimeState} style={{position: 'absolute', inset: 0}}>
       <div ref={containerRef} style={{position: 'absolute', inset: 0, overflow: 'hidden'}} />
       <DeckArrowLayerPanel {...panel} />
+      {runtimeState === 'loading' ? <ExampleLoadingIndicator /> : null}
       {errorMessage ? (
         <div role="alert" style={{position: 'absolute', inset: 20, zIndex: 30}}>
           {errorMessage}
@@ -1231,6 +1238,7 @@ export const ArrowDggsPolygonsExample: React.FC = props => (
 
 export const GPGPUExample: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
 
@@ -1239,31 +1247,41 @@ export const GPGPUExample: React.FC = () => {
       return;
     }
 
-    let isCancelled = false;
     let handle: GPGPUShowcaseHandle | null = null;
     setErrorMessage(null);
-    void loadGPGPUShowcaseExample()
-      .then(({initializeGPGPUShowcase}) => {
+    setIsRunning(false);
+    let isCancelled = false;
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPGPUShowcase} = await loadGPGPUShowcaseExample();
         if (!isCancelled) {
           handle = initializeGPGPUShowcase({device});
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPGPU example', error);
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, [deviceType, device]);
 
   return (
     <ExamplePage
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
       style={{background: '#f7f8fb', overflow: 'hidden'}}
     >
       <style>{GPGPU_EXAMPLE_STYLE}</style>
@@ -1336,26 +1354,36 @@ export const GPGPUExample: React.FC = () => {
 /** Docusaurus wrapper for the graph-native paired GPU sort example. */
 export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, ...props}) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
     let handle: GPUSortExampleHandle | null = null;
-    void loadGPUSortExample()
-      .then(({initializeGPUSortExample}) => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPUSortExample} = await loadGPUSortExample();
         if (!isCancelled) {
           handle = initializeGPUSortExample();
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPU sort example', error);
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
@@ -1363,7 +1391,7 @@ export const GPUSortExample: React.FC<WebsiteExampleProps> = ({embeddedHeight, .
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
       style={{background: '#f7f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-sort-app" />
@@ -1382,25 +1410,35 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
   ...props
 }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
     let handle: GPUDataAnalysisExampleHandle | null = null;
-    void loadGPUDataAnalysisExample()
-      .then(({initializeGPUDataAnalysisExample}) => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {initializeGPUDataAnalysisExample} = await loadGPUDataAnalysisExample();
         if (!isCancelled) {
           handle = initializeGPUDataAnalysisExample();
+          setIsRunning(true);
         }
-      })
-      .catch(error => {
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        handle?.destroy();
+        handle = null;
+      },
+      onError: error => {
         if (!isCancelled) {
           setErrorMessage(getErrorMessage(error));
           logError('Failed to initialize GPU data-analysis example', error);
         }
-      });
+      }
+    });
     return () => {
       isCancelled = true;
-      handle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
@@ -1408,7 +1446,7 @@ export const GPUDataAnalysisExample: React.FC<WebsiteExampleProps> = ({
     <ExamplePage
       {...props}
       embeddedHeight={embeddedHeight ?? (props.embedded ? 720 : undefined)}
-      runtimeState={errorMessage ? 'failed' : 'running'}
+      runtimeState={errorMessage ? 'failed' : isRunning ? 'running' : 'loading'}
       style={{background: '#f6f8fb', overflow: 'auto', ...props.style}}
     >
       <main id="gpu-data-analysis-app" />
@@ -2309,6 +2347,7 @@ export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
 export const ExternalContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -2317,32 +2356,42 @@ export const ExternalContextExample: React.FC = () => {
     let isCancelled = false;
     let exampleHandle: ExternalWebGLContextHandle | null = null;
 
-    loadExternalContextExample()
-      .then(({default: initializeExternalWebGLContext}) =>
-        initializeExternalWebGLContext({container})
-      )
-      .then(instance => {
+    const stopExclusiveExample = startExclusiveExample({
+      start: async () => {
+        const {default: initializeExternalWebGLContext} = await loadExternalContextExample();
+        const instance = await initializeExternalWebGLContext({container});
         if (isCancelled) {
           instance.destroy();
           return;
         }
         exampleHandle = instance;
-      })
-      .catch(caughtError => {
+        setIsRunning(true);
+      },
+      stop: () => {
+        isCancelled = true;
+        setIsRunning(false);
+        exampleHandle?.destroy();
+        exampleHandle = null;
+      },
+      onError: caughtError => {
         if (!isCancelled) {
           logError('External WebGL context example failed', caughtError);
           setError(getErrorMessage(caughtError));
         }
-      });
+      }
+    });
 
     return () => {
       isCancelled = true;
-      exampleHandle?.destroy();
+      stopExclusiveExample();
     };
   }, []);
 
   return (
-    <ExamplePage runtimeState={error ? 'failed' : 'running'} style={{minHeight: '640px'}}>
+    <ExamplePage
+      runtimeState={error ? 'failed' : isRunning ? 'running' : 'loading'}
+      style={{minHeight: '640px'}}
+    >
       <div
         className="integration-example-page"
         style={{position: 'relative', width: '100%', minHeight: '640px'}}

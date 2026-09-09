@@ -42,11 +42,12 @@ loaders.gl worker, trading worker startup, memory, and transfer costs against ma
 
 The initial load automatically prepares CPU and GPU results, leaves the GPU scene active, and
 populates both measurement columns. Use **Compare CPU → GPU** to repeat the full comparison after
-the fixture is built. **Cold preparation** includes page access, planning, decoding, buffer creation,
-and render-graph preparation. **Graph compile** isolates the synchronous luma.gl graph compilation,
-transient allocation, shader creation, and WebGPU pipeline creation calls. A browser or driver may
-still finish pipeline compilation lazily, so **Cold decode execution** reports the first GPU command
-submission through queue completion separately. The timing uses an asynchronous
+the fixture is built. The emphasized **Parquet → render-ready** row is the top-line comparison: it
+starts after file fetch and ends when decoded columns are resident in buffers that can drive the
+render. **Graph + pipeline preparation** isolates `await graph.compileAsync()`, including
+transient allocation, shader creation, and parallel preparation of the graph's independent WebGPU
+pipelines. A browser or driver may still defer additional work, so **Decode stage (first run)** reports
+the first GPU command submission through queue completion separately. The timing uses an asynchronous
 `GPUQueue.onSubmittedWorkDone()` wait rather than blocking or polling the JavaScript thread.
 
 The GPU path retains its compiled graph and immutable input buffer. It submits one unmeasured

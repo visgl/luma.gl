@@ -417,6 +417,16 @@ createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 
 Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`RenderPipelineProps`](./resources/render-pipeline.md#renderpipelineprops) for available options.
 
+### createRenderPipelineAsync
+
+```typescript
+createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline>
+```
+
+Creates a render pipeline through the backend's asynchronous compilation path. On WebGPU this uses
+the native `GPUDevice.createRenderPipelineAsync()` API; synchronous backends return an already
+resolved promise.
+
 ### createComputePipeline
 
 <DocumentationBadges>
@@ -429,6 +439,15 @@ createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
 Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
+
+### createComputePipelineAsync
+
+```typescript
+createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline>
+```
+
+Creates a compute pipeline through the backend's asynchronous compilation path. Start independent
+calls together and await them with `Promise.all()` when minimizing WebGPU preparation latency.
 
 ### createRenderBundleEncoder
 

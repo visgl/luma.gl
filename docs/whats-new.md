@@ -25,6 +25,9 @@ Target Release Date: Q3, 2026
 - **Fixed-size-list GPU columns** - First-class `fixed-size-list<float32,768>` formats describe arbitrary fixed-width storage rows without inventing unsupported vertex formats; vectors retain logical table-row counts, flattened element counts, preserved batches, and caller-owned storage.
 - **GPU vector similarity and clustering** - The optional [`@luma.gl/gpgpu/gpu-vector-search`](/docs/api-reference/gpgpu/gpu-vector-search) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
 - **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
+- **Parallel command-graph preparation** - `await GPUCommandGraph.compileAsync()` starts independent
+  compute and render pipeline compilations together, resolves only when graph-owned pipelines are
+  ready, and leaves command submission and warm-up execution to the application.
 - **Reusable GPU Parquet streams** - Fixed-capacity page-batch streams reuse exact-layout compiled decode graphs and pooled upload/output storage, with explicit FIFO backpressure and application-owned submission completion.
 - **Reusable command-graph inspection** - `GPUCommandGraphInspector` collects bounded whole-graph and per-node CPU/GPU timing summaries, compile-time allocation statistics, and device capabilities for application-owned diagnostic UIs.
 - **Flat GPU scene records** - `GPUScene` owns or borrows a fixed-capacity, table-independent draw database with stable IDs, bounds, transforms, grouping, geometry references, command slots, and typed command-graph views. Validated mutation transactions add bounded insert, patch, removal, stable compaction, overflow, move reporting, and exact queue-write costs without introducing a CPU scene hierarchy.
@@ -47,6 +50,9 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/engine**
 
+- **Awaitable pipeline creation** - `Computation.createAsync()` and `Model.createAsync()` expose
+  native asynchronous WebGPU pipeline creation for application loading phases, backed by
+  cache-aware asynchronous `Device` and `PipelineFactory` methods.
 - **Pinch-roll orbit controls** - Two-pointer gestures can roll the camera while preserving the
   existing pan, orbit, and zoom interactions.
 

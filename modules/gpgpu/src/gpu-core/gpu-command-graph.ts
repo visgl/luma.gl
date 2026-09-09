@@ -25,6 +25,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-data';
 import {
   compileGPUCommandGraph,
+  compileGPUCommandGraphAsync,
   getBufferHandle,
   getTextureHandle,
   isGraphBufferUse,
@@ -926,6 +927,34 @@ export class GPUCommandGraph<Parameters = void> {
     this.compiled = true;
     return new CompiledGPUCommandGraph(
       compileGPUCommandGraph({
+        device: this.device,
+        id: this.id,
+        buffers: this.buffers,
+        textures: this.textures,
+        externalTextures: this.externalTextures,
+        nodes: this.nodes
+      })
+    );
+  }
+
+  /**
+   * Compiles graph resources with asynchronous backend pipeline creation.
+   *
+   * Every node's asynchronous compile callback is started before compilation waits for any one
+   * node. This lets independent WebGPU pipelines compile concurrently. Nodes that do not provide
+   * an asynchronous callback use their existing synchronous compile callback.
+   *
+   * Compilation freezes this graph immediately. A graph can be compiled only once, including when
+   * asynchronous compilation rejects.
+   *
+   * @returns An executable graph whose pipelines are ready before the promise resolves.
+   */
+  async compileAsync(): Promise<CompiledGPUCommandGraph<Parameters>> {
+    this.assertMutable();
+    assertDeviceAvailable(this.device, 'compilation');
+    this.compiled = true;
+    return new CompiledGPUCommandGraph(
+      await compileGPUCommandGraphAsync({
         device: this.device,
         id: this.id,
         buffers: this.buffers,

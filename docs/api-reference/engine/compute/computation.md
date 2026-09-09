@@ -18,7 +18,7 @@ It plays the same role for compute work that [`Model`](/docs/api-reference/engin
 ```typescript
 import {Computation} from '@luma.gl/engine';
 
-const computation = new Computation(device, {
+const computation = await Computation.createAsync(device, {
   source: COMPUTE_SHADER_SOURCE,
   bindings: {
     inputBuffer,
@@ -78,6 +78,13 @@ Current `ShaderInputs` instance.
 ### `constructor(device: Device, props: ComputationProps)`
 
 Creates a computation wrapper for one WebGPU device. Throws on non-WebGPU devices.
+
+### `Computation.createAsync(device: Device, props: ComputationProps): Promise<Computation>`
+
+Creates the same computation through the device's asynchronous compute-pipeline path. Use this in
+an application loading phase, especially when several computations can be started together with
+`Promise.all()`. The returned computation is fully ready to dispatch. `GPUCommandGraph.compileAsync()`
+uses this behavior automatically for computations constructed by graph nodes.
 
 ### `destroy(): void`
 

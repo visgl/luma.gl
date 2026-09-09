@@ -784,8 +784,28 @@ or create a device with the 'debug: true' prop.`;
   /** Create a render pipeline (aka program) */
   abstract createRenderPipeline(props: RenderPipelineProps): RenderPipeline;
 
+  /**
+   * Create a render pipeline asynchronously when the backend supports it.
+   *
+   * The default implementation preserves compatibility with synchronous backends. WebGPU
+   * implementations override this method to use `GPUDevice.createRenderPipelineAsync()`.
+   */
+  async createRenderPipelineAsync(props: RenderPipelineProps): Promise<RenderPipeline> {
+    return this.createRenderPipeline(props);
+  }
+
   /** Create a compute pipeline (aka program). WebGPU only. */
   abstract createComputePipeline(props: ComputePipelineProps): ComputePipeline;
+
+  /**
+   * Create a compute pipeline asynchronously when the backend supports it.
+   *
+   * The default implementation preserves compatibility with synchronous backends. WebGPU
+   * implementations override this method to use `GPUDevice.createComputePipelineAsync()`.
+   */
+  async createComputePipelineAsync(props: ComputePipelineProps): Promise<ComputePipeline> {
+    return this.createComputePipeline(props);
+  }
 
   /**
    * Creates an encoder for reusable WebGPU draw commands.

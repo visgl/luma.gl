@@ -9,9 +9,11 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 ## Overview
 
 `GPUCommandGraph<Parameters>` declares fixed-capacity WebGPU buffer and texture resources plus
-ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` that owns
-transient resources and node state but borrows every import. Render nodes can resolve multisampled
-attachments and consume explicitly numbered, frame-scoped swapchain and external-image bindings.
+ordered compute, render, and copy nodes. `compile()` returns a `CompiledGPUCommandGraph` through the
+legacy synchronous pipeline-creation path. `await compileAsync()` prepares independent pipelines in
+parallel where the backend supports it. Both forms return a graph that owns transient resources and
+node state but borrows every import. Render nodes can resolve multisampled attachments and consume
+explicitly numbered, frame-scoped swapchain and external-image bindings.
 
 See [Choosing a GPU Data-Processing API](/docs/api-guide/gpu/gpu-data-processing) for guidance on
 when to use a command graph, portable GPGPU evaluators, or lower-level compute helpers.
@@ -51,17 +53,31 @@ graph.addComputePass({
   compile: ({device}) => makeExecutableNode(device)
 });
 
-const compiled = graph.compile();
+const compiled = await graph.compileAsync();
 const encoding = compiled.encode(device.commandEncoder, {parameters: {time}});
 console.log(encoding.stats.cpuEncodeTimeMilliseconds);
 ```
 
 ## Lifecycle and ownership
 
-A graph definition is mutable until `compile()` is called. Compilation freezes the definition,
+A graph definition is mutable until `compile()` or `compileAsync()` is called. Compilation freezes the definition,
 infers a stable node order, plans transient allocation reuse, creates physical transients, and calls
 each node's `compile` callback once. The returned `CompiledGPUCommandGraph` can then be encoded
 repeatedly with different parameters and compatible imported-resource replacements.
+
+Prefer `compileAsync()` for WebGPU graphs with multiple shader pipelines. It begins every independent
+compute and render pipeline compilation before awaiting completion, and its promise resolves only
+when all node executables are ready to encode. This moves compilation latency behind an explicit
+awaitable preparation boundary and gives the browser and driver an opportunity to compile pipelines
+concurrently. It does not submit commands, execute a warm-up decode, or wait for queue work. Use the
+synchronous `compile()` only when immediate construction is required or when measuring compatibility
+with an older integration.
+
+Node callbacks that construct `Computation` or `Model` instances need no special handling: the graph
+collects their asynchronous pipeline work automatically. A custom node that prepares some other
+asynchronous resource can provide `compileAsync(context)` alongside its required synchronous
+`compile(context)` callback. `compileAsync()` prefers that callback for the node; `compile()` always
+uses the synchronous callback.
 
 Imported buffers, textures, external textures, `GPUData`, and `GPUVector` chunks are borrowed. The
 compiled graph owns only node-created resources, physical transients, and cached texture
@@ -421,7 +437,8 @@ output. A node cannot combine graph-managed attachments with a callback-provided
 ## Node APIs and graph commands
 
 A graph command is a reusable description of GPU work, not a second command queue or a hidden
-submission API. `compile()` prepares node executables once; `encode(commandEncoder, options)`
+submission API. `compile()` or `await compileAsync()` prepares node executables once;
+`encode(commandEncoder, options)`
 records them into the application's existing `CommandEncoder`; the application decides when to
 submit that encoder. This distinction lets analytics, rendering, and explicitly requested
 readback share one dependency-ordered execution without taking ownership of the frame loop.
