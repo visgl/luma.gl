@@ -301,7 +301,9 @@ for await (const encodedBatch of source.readPages(readOptions)) {
   const commandEncoder = device.createCommandEncoder();
   ticket.encode(commandEncoder, {parameters: undefined});
   device.submit(commandEncoder.finish());
-  await ticket.releaseWhen(getSubmittedWorkCompletion());
+  const fence = device.createFence();
+  await ticket.releaseWhen(fence.signaled);
+  fence.destroy();
 }
 
 stream.destroy();
