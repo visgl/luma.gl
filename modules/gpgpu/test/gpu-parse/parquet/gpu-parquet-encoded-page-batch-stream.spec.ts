@@ -50,7 +50,12 @@ it('GPUParquetEncodedPageBatchStream reuses slots with explicit backpressure', a
     expect(stream.isCompatible(secondPlan)).toBe(true);
     expect(stream.isCompatible(incompatiblePlan)).toBe(false);
     expect(stream.stats.slotCount).toBe(1);
-    expect(stream.stats.graphNodeCountPerSlot).toBeGreaterThan(1);
+    expect(stream.stats.graphNodeCounts).toHaveLength(1);
+    expect(stream.stats.graphNodeCounts[0]).toBeGreaterThan(1);
+    expect(stream.stats.transientByteLengths).toHaveLength(1);
+    expect(stream.stats.pooledUploadAndTransientByteLength).toBe(
+      stream.stats.uploadByteLengthPerSlot + stream.stats.transientByteLengths[0]
+    );
 
     const firstTicket = stream.tryAcquire(firstPlan)!;
     expect(firstTicket).not.toBeNull();
@@ -75,6 +80,42 @@ it('GPUParquetEncodedPageBatchStream reuses slots with explicit backpressure', a
     stream.destroy();
   }
   expect(outputBuffers[0].destroyed).toBe(true);
+});
+
+it('GPUParquetEncodedPageBatchStream requires explicit discard after an encode error', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const values = new Uint8Array(new Float32Array([1, 2]).buffer);
+  const plan = planGPUParquetEncodedPageBatch(makeBatch(values));
+  const stream = new GPUParquetEncodedPageBatchStream(device, plan, {
+    slotCount: 1,
+    configureGraph: ({graph}) => {
+      graph.addCopyPass({
+        id: 'throw-after-earlier-decode-nodes',
+        resources: [],
+        compile: () => ({
+          encode: () => {
+            throw new Error('intentional encode failure');
+          }
+        })
+      });
+    }
+  });
+
+  try {
+    const ticket = stream.tryAcquire(plan)!;
+    const commandEncoder = device.createCommandEncoder({id: 'failed-stream-encoder'});
+    expect(() => ticket.encode(commandEncoder, {parameters: undefined})).toThrow(
+      /intentional encode failure/
+    );
+    expect(() => ticket.cancel()).toThrow(/unused/);
+    expect(stream.availableSlotCount).toBe(0);
+    ticket.discard();
+    expect(stream.availableSlotCount).toBe(1);
+  } finally {
+    stream.destroy();
+  }
 });
 
 async function executeTicket(

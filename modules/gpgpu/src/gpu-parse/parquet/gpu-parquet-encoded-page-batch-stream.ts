@@ -45,10 +45,15 @@ export type GPUParquetEncodedPageBatchStreamProps<Parameters, Output> = Readonly
 
 /** Static allocation and graph-size measurements for a prepared stream. */
 export type GPUParquetEncodedPageBatchStreamStats = Readonly<{
+  /** Number of independently reusable slots. */
   slotCount: number;
-  graphNodeCountPerSlot: number;
+  /** Compiled node count for each slot, in slot-index order. */
+  graphNodeCounts: readonly number[];
+  /** Capacity of every slot's packed upload buffer. */
   uploadByteLengthPerSlot: number;
-  transientByteLengthPerSlot: number;
+  /** Physical graph-transient allocation for each slot, in slot-index order. */
+  transientByteLengths: readonly number[];
+  /** Exact upload plus graph-transient allocation across every slot. */
   pooledUploadAndTransientByteLength: number;
 }>;
 
@@ -66,7 +71,7 @@ type StreamWaiter<Parameters, Output> = {
   reject: (error: unknown) => void;
 };
 
-type StreamTicketState = 'reserved' | 'encoded' | 'completing' | 'released';
+type StreamTicketState = 'reserved' | 'encoding' | 'encoded' | 'completing' | 'released';
 
 /**
  * One exclusive reservation in a {@link GPUParquetEncodedPageBatchStream}.
@@ -106,6 +111,7 @@ export class GPUParquetEncodedPageBatchStreamTicket<Parameters, Output> {
     if (this.state !== 'reserved') {
       throw new Error('GPU Parquet stream ticket has already been encoded or released');
     }
+    this.state = 'encoding';
     const encoding = this.slot.compiled.encode(commandEncoder, options);
     this.state = 'encoded';
     return encoding;
@@ -118,8 +124,10 @@ export class GPUParquetEncodedPageBatchStreamTicket<Parameters, Output> {
    * is safe only when the encoded command buffer was deliberately not submitted.
    */
   async releaseWhen(completion: PromiseLike<unknown>): Promise<void> {
-    if (this.state !== 'encoded') {
-      throw new Error('GPU Parquet stream ticket must be encoded before completion is attached');
+    if (this.state !== 'encoding' && this.state !== 'encoded') {
+      throw new Error(
+        'GPU Parquet stream ticket must begin encoding before completion is attached'
+      );
     }
     this.state = 'completing';
     try {
@@ -133,6 +141,19 @@ export class GPUParquetEncodedPageBatchStreamTicket<Parameters, Output> {
   cancel(): void {
     if (this.state !== 'reserved') {
       throw new Error('Only an unused GPU Parquet stream ticket can be cancelled');
+    }
+    this.release();
+  }
+
+  /**
+   * Releases a ticket after `encode()` threw and the command encoder will be discarded.
+   *
+   * A failed graph encode may already have recorded commands. Never call this method if that
+   * encoder can be finished or submitted; attach its completion to `releaseWhen()` instead.
+   */
+  discard(): void {
+    if (this.state !== 'encoding') {
+      throw new Error('Only a failed GPU Parquet stream encoding can be discarded');
     }
     this.release();
   }
@@ -201,16 +222,19 @@ export class GPUParquetEncodedPageBatchStream<Parameters = void, Output = unknow
       throw error;
     }
     this.availableSlots = [...this.slots];
-    const firstSlotStats = this.slots[0].compiled.stats;
     const uploadByteLengthPerSlot = Math.max(templatePlan.uploadData.byteLength, 4);
-    const transientByteLengthPerSlot = firstSlotStats.physicalTransientResourceBytes;
+    const graphNodeCounts = this.slots.map(slot => slot.compiled.stats.nodeOrder.length);
+    const transientByteLengths = this.slots.map(
+      slot => slot.compiled.stats.physicalTransientResourceBytes
+    );
     this.stats = Object.freeze({
       slotCount,
-      graphNodeCountPerSlot: firstSlotStats.nodeOrder.length,
+      graphNodeCounts: Object.freeze(graphNodeCounts),
       uploadByteLengthPerSlot,
-      transientByteLengthPerSlot,
+      transientByteLengths: Object.freeze(transientByteLengths),
       pooledUploadAndTransientByteLength:
-        slotCount * (uploadByteLengthPerSlot + transientByteLengthPerSlot)
+        slotCount * uploadByteLengthPerSlot +
+        transientByteLengths.reduce((sum, byteLength) => sum + byteLength, 0)
     });
     void device.lost.then(() => this.destroy());
   }

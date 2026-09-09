@@ -310,10 +310,17 @@ stream.destroy();
 ```
 
 `releaseWhen()` releases even when its promise rejects, then propagates the rejection. Use
-`cancel()` only for a reservation that was never encoded. Destroying a stream rejects queued
-acquisitions immediately; active slots are destroyed when their tickets finish. The stream does
-not submit commands or infer when GPU work is complete, because submission and synchronization
-remain application-owned.
+`cancel()` only for a reservation that was never encoded. If `encode()` throws, earlier graph nodes
+may already have recorded commands, so the slot remains reserved: call `discard()` only when the
+command encoder will never be submitted, or pass submitted partial work's completion to
+`releaseWhen()`. Destroying a stream rejects queued acquisitions immediately; active slots are
+destroyed when their tickets finish. The stream does not submit commands or infer when GPU work is
+complete, because submission and synchronization remain application-owned.
+
+`stats.graphNodeCounts` and `stats.transientByteLengths` retain one value per slot because
+`configureGraph` may legally use `slotIndex` to build different consumers. The pooled byte total
+sums every slot rather than extrapolating from slot zero. Caller-owned output allocations remain
+outside that byte count, although `slotCount` still bounds how many outputs can exist.
 
 This operation removes repeated graph construction and pipeline-cache lookup from the steady-state
 path and bounds reusable GPU memory. It does not promise that every Parquet row group has the same
