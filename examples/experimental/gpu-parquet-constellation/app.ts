@@ -795,10 +795,10 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     element.innerHTML = `<div style="margin-bottom:9px">
       ${formatBytes(this.parquetBytes?.byteLength ?? 0)} fixture · ${this.fetchMilliseconds.toFixed(1)} ms fetch · ${formatCount(PAGE_SIZE)}-row write batches
     </div>
-    <table style="width:100%;border-collapse:collapse;text-align:right">
+    <table style="width:100%;border-collapse:collapse;text-align:right;font-size:12px;line-height:1.25">
       <thead><tr><th style="text-align:left"></th><th>GPU path</th><th>CPU path</th></tr></thead>
       <tbody>
-        <tr style="border-top:1px solid #334155;border-bottom:1px solid #334155"><th style="padding:5px 0;text-align:left">Parquet → render-ready</th><td style="font-weight:700">${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td style="font-weight:700">${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="padding:2px 0;text-align:left">Parquet → render-ready</th><td style="font-weight:700">${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td style="font-weight:700">${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">Graph + pipeline preparation</th><td>${formatMetric(gpuMeasurement, value => `${value.graphCompileMilliseconds.toFixed(1)} ms`)}</td><td>n/a</td></tr>
         <tr><th style="text-align:left;font-weight:normal">Decode stage (first run)</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">GPU decode (warmed median, ${WARMED_DECODE_SAMPLE_COUNT} runs)</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
