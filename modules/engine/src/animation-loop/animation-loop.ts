@@ -32,6 +32,9 @@ const defaultAnimationFrameProvider: AnimationFrameProvider = {
 export type AnimationLoopProps = {
   device: Device | Promise<Device>;
 
+  /** Optional application-provided quality settings for adaptive renderers. */
+  mobileQuality?: Readonly<Record<string, boolean | number>>;
+
   onAddHTML?: (div: HTMLDivElement) => string; // innerHTML
   onInitialize?: (animationProps: AnimationProps) => Promise<unknown>;
   /** Encode a frame. Return false when no GPU work was encoded to skip device submission. */
@@ -47,6 +50,10 @@ export type AnimationLoopProps = {
   animationFrameProvider?: AnimationFrameProvider;
 };
 
+type ResolvedAnimationLoopProps = Omit<Required<AnimationLoopProps>, 'mobileQuality'> & {
+  mobileQuality?: AnimationLoopProps['mobileQuality'];
+};
+
 export type MutableAnimationLoopProps = {
   // view parameters
   autoResizeViewport?: boolean;
@@ -58,6 +65,7 @@ export type MutableAnimationLoopProps = {
 export class AnimationLoop {
   static defaultAnimationLoopProps = {
     device: null!,
+    mobileQuality: undefined,
 
     onAddHTML: () => '',
     onInitialize: async () => null,
@@ -73,12 +81,12 @@ export class AnimationLoop {
     // view parameters
     autoResizeViewport: false,
     animationFrameProvider: defaultAnimationFrameProvider
-  } as const satisfies Readonly<Required<AnimationLoopProps>>;
+  } as const satisfies Readonly<ResolvedAnimationLoopProps>;
 
   device: Device | null = null;
   canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 
-  props: Required<AnimationLoopProps>;
+  props: ResolvedAnimationLoopProps;
   animationProps: AnimationProps | null = null;
   timeline: Timeline | null = null;
   stats: Stats;
@@ -439,7 +447,8 @@ export class AnimationLoop {
 
       // Experimental
       animationFrame: null,
-      _mousePosition: null // Event props
+      _mousePosition: null, // Event props
+      mobileQuality: this.props.mobileQuality
     };
   }
 

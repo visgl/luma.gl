@@ -42,13 +42,17 @@ loaders.gl worker, trading worker startup, memory, and transfer costs against ma
 
 The initial load automatically prepares CPU and GPU results, leaves the GPU scene active, and
 populates both measurement columns. Use **Compare CPU → GPU** to repeat the full comparison after
-the fixture is built. **Preparation latency** includes page access,
-planning, decoding, buffer creation, and render-graph preparation. **First decode execution** narrows
-that down to the CPU source read and decode, or to GPU command submission through queue completion
-after `await graph.compileAsync()` has prepared the graph's independent pipelines in parallel. The
-GPU path retains its compiled graph and immutable input buffer, so the
-comparison immediately submits it again and reports **Reused graph execution** separately. Selecting
-GPU and choosing **Decode and display** also reuses the graph. **Longest frame** records the largest
-animation gap while the old constellation remains active, making main-thread stalls visible. Results
-depend on the browser, GPU, row count, and whether shader pipelines are warm; they are an experiment,
-not a fixed performance claim.
+the fixture is built. The emphasized **Parquet → render-ready** row is the top-line comparison: it
+starts after file fetch and ends when decoded columns are resident in buffers that can drive the
+render. **Graph + pipeline preparation** isolates `await graph.compileAsync()`, including
+transient allocation, shader creation, and parallel preparation of the graph's independent WebGPU
+pipelines. A browser or driver may still defer additional work, so **Decode stage (first run)** reports
+the first GPU command submission through queue completion separately. The timing uses an asynchronous
+`GPUQueue.onSubmittedWorkDone()` wait rather than blocking or polling the JavaScript thread.
+
+The GPU path retains its compiled graph and immutable input buffer. It submits one unmeasured
+warm-up, yields two animation frames, then reports the median of three subsequent submissions as
+**Warmed graph median**. Selecting GPU and choosing **Decode and display** repeats that protocol.
+**Longest frame** records the largest animation gap while the old constellation remains active,
+making main-thread stalls visible. Results depend on the browser, GPU, row count, and cache state;
+they are an experiment, not a fixed performance claim.

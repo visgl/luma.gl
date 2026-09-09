@@ -30,6 +30,7 @@ export const description =
 
 const ROW_COUNT = 600_000;
 const PAGE_SIZE = 65_536;
+const WARMED_DECODE_SAMPLE_COUNT = 3;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const UNIFORM_BYTE_LENGTH = 8 * Float32Array.BYTES_PER_ELEMENT;
 const PARQUET_FIXTURES = {
@@ -46,7 +47,7 @@ const INFO_HTML = `<div data-parquet-panel style="display:grid;gap:12px;min-widt
     <label>Decoder <select data-decode-mode><option value="gpu" selected>GPU command graph</option><option value="cpu">CPU on main thread</option></select></label>
     <button type="button" data-run-selected>Decode and display</button>
     <button type="button" data-compare>Compare CPU → GPU</button>
-    <small>The old scene keeps animating during a switch. “Longest frame” exposes main-thread stalls as well as total preparation latency.</small>
+    <small>The old scene keeps animating during a switch. Cold timings expose startup cost; warmed GPU timing follows an unmeasured submission and reports a median.</small>
   </div>
   <div><strong>Measurements</strong><div data-parquet-status style="margin-top:7px">Waiting for WebGPU…</div><div data-parquet-measurements style="margin-top:10px"></div></div>
 </div>`;
@@ -64,9 +65,11 @@ type PreparedScene = {
   gpuDecoder?: {
     compiled: CompiledGPUCommandGraph<undefined>;
     inputBuffer: Buffer;
+    lzCopyDetails: LZCopyDetails;
   };
   uploadByteLength: number;
   decodeGraphNodeCount: number;
+  graphCompileMilliseconds: number;
   decodeExecutionMilliseconds: number;
 };
 
@@ -75,8 +78,17 @@ type DecodeMeasurement = {
   longestFrameMilliseconds: number;
   uploadByteLength: number;
   graphNodeCount: number;
+  graphCompileMilliseconds: number;
   decodeExecutionMilliseconds: number;
   reusedGraphExecutionMilliseconds?: number;
+  lzCopyDetails?: LZCopyDetails;
+};
+
+type LZCopyDetails = {
+  directCopyCount: number;
+  recursiveCopyCount: number;
+  directCopyByteLength: number;
+  recursiveCopyByteLength: number;
 };
 
 type CompressionDetails = {
@@ -322,7 +334,9 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         longestFrameMilliseconds: this.longestPreparationFrameMilliseconds,
         uploadByteLength: nextScene.uploadByteLength,
         graphNodeCount: nextScene.decodeGraphNodeCount,
-        decodeExecutionMilliseconds: nextScene.decodeExecutionMilliseconds
+        graphCompileMilliseconds: nextScene.graphCompileMilliseconds,
+        decodeExecutionMilliseconds: nextScene.decodeExecutionMilliseconds,
+        lzCopyDetails: nextScene.gpuDecoder?.lzCopyDetails
       };
       this.destroyScene();
       this.scene = nextScene;
@@ -376,6 +390,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             buffers,
             PARQUET_CONSTELLATION_COLUMNS.length * ROW_COUNT * UINT32_BYTE_LENGTH,
             0,
+            0,
             decodeExecutionMilliseconds
           );
         } catch (error) {
@@ -403,6 +418,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         this.compressionDetails = getCompressionDetails(batch.columns);
         this.updateCompressionDetails();
         const plan = planGPUParquetEncodedPageBatch(batch);
+        const lzCopyDetails = getLZCopyDetails(plan.pages);
         if (plan.cpuFallbackPageCount > 0) {
           throw new Error(`${plan.cpuFallbackPageCount} Parquet pages require CPU fallback`);
         }
@@ -438,15 +454,18 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             ])
           ) as Record<ParquetConstellationColumn, GraphBufferHandle>;
           this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
+          const graphCompileStartedAt = performance.now();
           compiledDecode = await decodeGraph.compileAsync();
+          const graphCompileMilliseconds = performance.now() - graphCompileStartedAt;
           const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
           const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode, signal);
           return this.createPreparedScene(
             buffers,
             plan.uploadData.byteLength,
             decodeGraphNodeCount,
+            graphCompileMilliseconds,
             decodeExecutionMilliseconds,
-            {compiled: compiledDecode, inputBuffer}
+            {compiled: compiledDecode, inputBuffer, lzCopyDetails}
           );
         } catch (error) {
           compiledDecode?.destroy();
@@ -535,6 +554,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     buffers: Record<ParquetConstellationColumn, Buffer>,
     uploadByteLength: number,
     decodeGraphNodeCount: number,
+    graphCompileMilliseconds: number,
     decodeExecutionMilliseconds: number,
     gpuDecoder?: PreparedScene['gpuDecoder']
   ): PreparedScene {
@@ -545,6 +565,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       gpuDecoder,
       uploadByteLength,
       decodeGraphNodeCount,
+      graphCompileMilliseconds,
       decodeExecutionMilliseconds
     };
   }
@@ -556,16 +577,24 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     this.preparationActive = true;
     this.preparationStartedAt = performance.now();
     this.longestPreparationFrameMilliseconds = 0;
-    this.setStatus('Reusing the compiled GPU graph for another decode submission…');
+    this.setStatus('Warming the compiled GPU graph before repeated timing…');
     await nextAnimationFrame();
     try {
-      const executionMilliseconds = await this.executeGPUDecode(gpuDecoder.compiled, signal);
+      await this.executeGPUDecode(gpuDecoder.compiled, signal);
+      await nextAnimationFrame();
+      await nextAnimationFrame();
+      const samples: number[] = [];
+      for (let sampleIndex = 0; sampleIndex < WARMED_DECODE_SAMPLE_COUNT; sampleIndex++) {
+        samples.push(await this.executeGPUDecode(gpuDecoder.compiled, signal));
+        await nextAnimationFrame();
+      }
       await nextAnimationFrame();
       signal.throwIfAborted();
       if (preparationVersion !== this.preparationVersion) return;
+      const executionMilliseconds = getMedian(samples);
       measurement.reusedGraphExecutionMilliseconds = executionMilliseconds;
       this.setStatus(
-        `GPU reused its compiled ${measurement.graphNodeCount}-node graph in ${executionMilliseconds.toFixed(1)} ms.`
+        `GPU warmed once, then reused its compiled ${measurement.graphNodeCount}-node graph in a ${executionMilliseconds.toFixed(1)} ms median of ${WARMED_DECODE_SAMPLE_COUNT}.`
       );
       this.updateMeasurements();
     } finally {
@@ -767,16 +796,19 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       ${formatBytes(this.parquetBytes?.byteLength ?? 0)} fixture · ${this.fetchMilliseconds.toFixed(1)} ms fetch · ${formatCount(PAGE_SIZE)}-row write batches
     </div>
     <table style="width:100%;border-collapse:collapse;text-align:right">
-      <thead><tr><th style="text-align:left"></th><th>GPU</th><th>CPU</th></tr></thead>
+      <thead><tr><th style="text-align:left"></th><th>GPU path</th><th>CPU path</th></tr></thead>
       <tbody>
-        <tr><th style="text-align:left;font-weight:normal">Preparation latency</th><td>${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">First decode execution</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Reused graph execution</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">GPU upload</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Decode graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>${formatMetric(cpuMeasurement, value => String(value.graphNodeCount))}</td></tr>
+        <tr style="border-top:1px solid #334155;border-bottom:1px solid #334155"><th style="padding:5px 0;text-align:left">Parquet → render-ready</th><td style="font-weight:700">${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td style="font-weight:700">${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Graph + pipeline preparation</th><td>${formatMetric(gpuMeasurement, value => `${value.graphCompileMilliseconds.toFixed(1)} ms`)}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Decode stage (first run)</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">GPU decode (warmed median, ${WARMED_DECODE_SAMPLE_COUNT} runs)</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Main-thread longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Bytes uploaded to GPU</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">GPU command graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">LZ copies: direct / recursive</th><td>${formatMetric(gpuMeasurement, value => (value.lzCopyDetails ? `${formatCount(value.lzCopyDetails.directCopyCount)} / ${formatCount(value.lzCopyDetails.recursiveCopyCount)}` : 'n/a'))}</td><td>n/a</td></tr>
       </tbody>
     </table>
+    <div style="margin-top:7px;font-size:11px;line-height:1.35;color:#94a3b8">Headline excludes fetch and ends with decoded columns resident in renderable GPU buffers. The GPU decode stage is graph execution; the CPU stage is loader decode plus Arrow construction.</div>
     <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · ${this.compressionDetails?.summary ?? 'compression pending'} · dictionary off</div>`;
   }
 }
@@ -812,6 +844,33 @@ function getCompressionDetails(
   }
   const summary = Array.from(codecCounts, ([codec, count]) => `${count} × ${codec}`).join(' · ');
   return {summary, compressedByteLength, uncompressedByteLength};
+}
+
+function getLZCopyDetails(
+  pages: readonly {
+    mode: string;
+    compression?: {
+      directCopyCount: number;
+      recursiveCopyCount: number;
+      directCopyByteLength: number;
+      recursiveCopyByteLength: number;
+    };
+  }[]
+): LZCopyDetails {
+  const details: LZCopyDetails = {
+    directCopyCount: 0,
+    recursiveCopyCount: 0,
+    directCopyByteLength: 0,
+    recursiveCopyByteLength: 0
+  };
+  for (const page of pages) {
+    if (page.mode !== 'gpu' || !page.compression) continue;
+    details.directCopyCount += page.compression.directCopyCount;
+    details.recursiveCopyCount += page.compression.recursiveCopyCount;
+    details.directCopyByteLength += page.compression.directCopyByteLength;
+    details.recursiveCopyByteLength += page.compression.recursiveCopyByteLength;
+  }
+  return details;
 }
 
 function getFloat32Column(
@@ -864,6 +923,11 @@ function nextAnimationFrame(): Promise<void> {
 
 function waitForMilliseconds(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function getMedian(values: readonly number[]): number {
+  const sortedValues = [...values].sort((left, right) => left - right);
+  return sortedValues[Math.floor(sortedValues.length / 2)];
 }
 
 function formatCount(value: number): string {

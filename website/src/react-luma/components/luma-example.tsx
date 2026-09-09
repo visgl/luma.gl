@@ -22,6 +22,7 @@ import {
 } from '../utils/hdr-screenshot-capture';
 import {getMobileExamplePixelRatio} from '../utils/mobile-example-pixel-ratio';
 import {
+  getExampleMobileQuality,
   getExampleMobileLabel,
   getExampleMobileUnsupportedReason,
   getExampleRuntimeEnvironment,
@@ -620,6 +621,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         {
           stats: luma.stats.get('GPU Time and Memory'),
           device: effectiveDevice,
+          mobileQuality: getExampleMobileQuality(
+            supportDefinition,
+            getExampleRuntimeEnvironment(window, navigator)
+          ),
           autoResizeViewport: true,
           autoResizeDrawingBuffer: true,
           onAfterRender: animationProps => {
