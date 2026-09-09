@@ -19,7 +19,11 @@ import {
   type TaxiPointSource
 } from '../../showcase/billion-point-spatial-atlas/taxi-source';
 import {ArrowDeck} from '../arrow-deck';
-import {type DeckExampleDeviceOptions, getDeckExampleProps} from '../deck-example-device';
+import {
+  type DeckExampleDeviceOptions,
+  getDeckExampleProps,
+  installLegacyDeckShaderAssemblerCompatibility
+} from '../deck-example-device';
 import {
   assertLongitudeLatitudeTaxiMetadata,
   type LuSpatialTaxiData,
@@ -62,7 +66,7 @@ export type LuSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
 };
 
 /** Creates the WebGPU-only luSpatial taxi explorer with a synchronized MapLibre basemap. */
-export function createLuSpatialTaxiDeck(
+export function createGPUSpatialTaxiDeck(
   parent?: HTMLDivElement,
   options: LuSpatialTaxiDeckOptions = {}
 ) {
@@ -108,6 +112,7 @@ export function createLuSpatialTaxiDeck(
   let activeLayers: LuSpatialPointLayer[] = [];
   let queryRadiusKilometres = 0.35;
   let taxiDataRevision = 0;
+  let restoreShaderAssembler: (() => void) | null = null;
 
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
   const loadingIndicator = createLoadingIndicator(container);
@@ -175,6 +180,15 @@ export function createLuSpatialTaxiDeck(
     style: {background: 'transparent'},
     layers: [],
     effects: [],
+    onDeviceInitialized: initializedDevice => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
+    },
+    onError: error => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = null;
+      throw error;
+    },
     getTooltip: info => (taxiData ? getTooltip(taxiData, info) : null),
     onClick: (info: PickingInfo) => {
       const coordinate = info.coordinate;
@@ -383,6 +397,8 @@ export function createLuSpatialTaxiDeck(
       })();
     },
     onFinalize: () => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = null;
       finalized = true;
       generationController.abort();
       sourceLoadController?.abort(new Error('luSpatial taxi explorer finalized'));

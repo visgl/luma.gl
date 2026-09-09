@@ -43,6 +43,7 @@
     "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
     "examples:synchronize-mobile-support": "node ./scripts/examples/synchronize-mobile-support-metadata.mjs",
     "examples:test-mobile": "node ./scripts/playwright/mobile-example-smoke.mjs",
+    "examples:test-device-compat": "node --experimental-test-module-mocks --test ./examples/deck/*.test.mjs",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "yarn website:build",
     "website:build": "yarn workspace website-docusaurus build",
