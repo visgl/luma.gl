@@ -4,12 +4,13 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout} from './gpu-dispatch-utils';
-import {GPUScan} from './gpu-scan';
+import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
+  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
 
@@ -20,9 +21,9 @@ export type GPUFlagOffsetsProps = {
   /** Prefix for generated graph node IDs. */
   id?: string;
   /** Packed zero-or-one flags. */
-  flags: GraphDataView<'uint32'>;
+  flags: GPUScanInput;
   /** Exclusive dense index for every flag. */
-  offsets: GraphDataView<'uint32'>;
+  offsets: GPUScanInput;
   /** Single uint32 receiving the number of set flags. */
   count: GraphDataView<'uint32'>;
 };
@@ -47,7 +48,7 @@ export class GPUFlagOffsets {
   /** Adds one exclusive scan and one scalar publication pass to a command graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const {flags, offsets, count} = this.props;
-    for (const view of [flags, offsets, count]) {
+    for (const view of [...getChunks(flags), ...getChunks(offsets), count]) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
@@ -69,6 +70,8 @@ function addCountPass<Parameters>(
   props: Readonly<GPUFlagOffsetsProps>
 ): void {
   const hasValues = props.flags.length > 0;
+  const flagChunk = hasValues ? getLastNonEmptyChunk(props.flags) : undefined;
+  const offsetChunk = hasValues ? getLastNonEmptyChunk(props.offsets) : undefined;
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUFlagOffsetsCount',
     1,
@@ -76,9 +79,9 @@ function addCountPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = hasValues
-    ? `const LAST_INDEX: u32 = ${props.flags.length - 1}u;
-const FLAG_OFFSET: u32 = ${getViewElementOffset(props.flags)}u;
-const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.offsets)}u;
+    ? `const LAST_INDEX: u32 = ${flagChunk!.length - 1}u;
+const FLAG_OFFSET: u32 = ${getViewElementOffset(flagChunk!)}u;
+const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsetChunk!)}u;
 const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
 @group(0) @binding(0) var<storage, read> flags: array<u32>;
 @group(0) @binding(1) var<storage, read> offsets: array<u32>;
@@ -97,8 +100,8 @@ fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
 }`;
   const resources = hasValues
     ? [
-        {name: 'flags', view: props.flags, usage: 'storage-read' as const},
-        {name: 'offsets', view: props.offsets, usage: 'storage-read' as const},
+        {name: 'flags', view: flagChunk!, usage: 'storage-read' as const},
+        {name: 'offsets', view: offsetChunk!, usage: 'storage-read' as const},
         {name: 'count', view: props.count, usage: 'storage-write' as const}
       ]
     : [{name: 'count', view: props.count, usage: 'storage-write' as const}];
@@ -142,14 +145,37 @@ fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
 }
 
 function validateConfiguration(props: Readonly<GPUFlagOffsetsProps>): void {
-  for (const [name, view] of Object.entries({
-    flags: props.flags,
-    offsets: props.offsets,
-    count: props.count
-  })) {
-    validatePackedUint32View(view, `${props.id} ${name}`);
+  for (const view of getChunks(props.flags)) {
+    validatePackedUint32View(view, `${props.id} flags`);
   }
-  if (props.offsets.length < props.flags.length || props.count.length < 1) {
+  for (const view of getChunks(props.offsets)) {
+    validatePackedUint32View(view, `${props.id} offsets`);
+  }
+  validatePackedUint32View(props.count, `${props.id} count`);
+  const flagsAreVector = props.flags instanceof GraphVectorView;
+  if (flagsAreVector !== props.offsets instanceof GraphVectorView) {
+    throw new Error(`${props.id} flags and offsets must both be data views or vector views`);
+  }
+  if (props.flags instanceof GraphVectorView && props.offsets instanceof GraphVectorView) {
+    validateMatchingVectorTopology(props.flags, props.offsets, `${props.id} offsets`);
+  } else if (props.offsets.length < props.flags.length) {
+    throw new Error(`${props.id} offsets must contain at least flags.length rows`);
+  }
+  if (props.count.length < 1) {
     throw new Error(`${props.id} result views are too short`);
   }
+}
+
+function getChunks(input: GPUScanInput): readonly GraphDataView<'uint32'>[] {
+  return input instanceof GraphVectorView ? input.data : [input];
+}
+
+function getLastNonEmptyChunk(input: GPUScanInput): GraphDataView<'uint32'> {
+  const chunks = getChunks(input);
+  for (let chunkIndex = chunks.length - 1; chunkIndex >= 0; chunkIndex--) {
+    if (chunks[chunkIndex].length > 0) {
+      return chunks[chunkIndex];
+    }
+  }
+  throw new Error('Non-empty GPUFlagOffsets input requires a non-empty chunk');
 }

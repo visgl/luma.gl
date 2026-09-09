@@ -12,6 +12,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/gpgpu**
+
+- `GPULZByteDecompressor` descriptors now contain five uint32 words per record:
+  `[outputOffset, byteLength, literalSourceOffset, literalPeriod, matchOffset]`. Code that creates
+  descriptor buffers directly must add `literalPeriod` and use `GPU_LZ_BYTE_DESCRIPTOR_WORDS` when
+  allocating and indexing them. Prefer `planGPULZByteDescriptors()` to convert the unchanged
+  four-word parser spans into GPU descriptors.
+
 **@luma.gl/shadertools**
 
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
