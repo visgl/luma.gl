@@ -5,7 +5,14 @@
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-import {luma, PipelineFactory} from '@luma.gl/core';
+import {
+  luma,
+  PipelineFactory,
+  type ComputePipeline,
+  type ComputePipelineProps,
+  type RenderPipeline,
+  type RenderPipelineProps
+} from '@luma.gl/core';
 import {webgl2Adapter, type WebGLDevice} from '@luma.gl/webgl';
 
 const vsSource = /* glsl */ `\
@@ -77,6 +84,21 @@ const webgpuRenderSource = /* wgsl */ `
 
 @fragment fn fragmentAlternateMain() -> @location(0) vec4<f32> {
   return fragmentMain();
+}
+`;
+
+const webgpuComputeSource = /* wgsl */ `
+@compute @workgroup_size(1) fn main() {}
+`;
+
+const webgpuAsyncRenderSource = /* wgsl */ `
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  let x = f32(i32(vertexIndex) - 1);
+  return vec4<f32>(x, select(-1.0, 1.0, vertexIndex == 2u), 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
 }
 `;
 
@@ -357,6 +379,82 @@ it('PipelineFactory#caching with WebGPU attachment formats', async () => {
   shader.destroy();
 
   void 0;
+});
+
+it('PipelineFactory preserves a synchronous compute cache entry when async compilation finishes', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice?.props._cachePipelines) {
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shader = webgpuDevice.createShader({source: webgpuComputeSource});
+  const props: ComputePipelineProps = {shader, shaderLayout: {bindings: []}};
+  const originalCreateComputePipelineAsync =
+    webgpuDevice.createComputePipelineAsync.bind(webgpuDevice);
+  let releaseCompilation!: () => void;
+  const compilationGate = new Promise<void>(resolve => (releaseCompilation = resolve));
+  let discardedPipeline: ComputePipeline | undefined;
+  webgpuDevice.createComputePipelineAsync = async asyncProps => {
+    await compilationGate;
+    discardedPipeline = await originalCreateComputePipelineAsync(asyncProps);
+    return discardedPipeline;
+  };
+
+  try {
+    const asynchronousPipelinePromise = pipelineFactory.createComputePipelineAsync(props);
+    const synchronousPipeline = pipelineFactory.createComputePipeline(props);
+    releaseCompilation();
+    const asynchronousPipeline = await asynchronousPipelinePromise;
+
+    expect(asynchronousPipeline).toBe(synchronousPipeline);
+    expect(discardedPipeline?.destroyed).toBe(true);
+    expect(() => pipelineFactory.release(synchronousPipeline)).not.toThrow();
+    expect(() => pipelineFactory.release(asynchronousPipeline)).not.toThrow();
+  } finally {
+    webgpuDevice.createComputePipelineAsync = originalCreateComputePipelineAsync;
+    shader.destroy();
+  }
+});
+
+it('PipelineFactory preserves a synchronous render cache entry when async compilation finishes', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice?.props._cachePipelines) {
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shader = webgpuDevice.createShader({source: webgpuAsyncRenderSource});
+  const props: RenderPipelineProps = {
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list'
+  };
+  const originalCreateRenderPipelineAsync =
+    webgpuDevice.createRenderPipelineAsync.bind(webgpuDevice);
+  let releaseCompilation!: () => void;
+  const compilationGate = new Promise<void>(resolve => (releaseCompilation = resolve));
+  let discardedPipeline: RenderPipeline | undefined;
+  webgpuDevice.createRenderPipelineAsync = async asyncProps => {
+    await compilationGate;
+    discardedPipeline = await originalCreateRenderPipelineAsync(asyncProps);
+    return discardedPipeline;
+  };
+
+  try {
+    const asynchronousPipelinePromise = pipelineFactory.createRenderPipelineAsync(props);
+    const synchronousPipeline = pipelineFactory.createRenderPipeline(props);
+    releaseCompilation();
+    const asynchronousPipeline = await asynchronousPipelinePromise;
+
+    expect(asynchronousPipeline).toBe(synchronousPipeline);
+    expect(discardedPipeline?.handle).toBe(null);
+    expect(() => pipelineFactory.release(synchronousPipeline)).not.toThrow();
+    expect(() => pipelineFactory.release(asynchronousPipeline)).not.toThrow();
+  } finally {
+    webgpuDevice.createRenderPipelineAsync = originalCreateRenderPipelineAsync;
+    shader.destroy();
+  }
 });
 
 it('PipelineFactory#caching with explicit WebGPU depth attachments when depth writes are disabled', async () => {

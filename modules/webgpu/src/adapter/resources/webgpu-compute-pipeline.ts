@@ -20,6 +20,28 @@ const EMPTY_BIND_GROUPS: BindingsByGroup = {};
 
 /** Creates a new compute pipeline when parameters change */
 export class WebGPUComputePipeline extends ComputePipeline {
+  /** Creates the native pipeline through WebGPU's asynchronous compilation entry point. */
+  static async createAsync(
+    device: WebGPUDevice,
+    props: ComputePipelineProps
+  ): Promise<WebGPUComputePipeline> {
+    if (props.handle) {
+      return new WebGPUComputePipeline(device, props);
+    }
+    const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
+    const webgpuShader = allProps.shader as WebGPUShader;
+    const handle = await device.handle.createComputePipelineAsync({
+      label: allProps.id,
+      compute: {
+        module: webgpuShader.handle,
+        entryPoint: allProps.entryPoint,
+        constants: allProps.constants
+      },
+      layout: 'auto'
+    });
+    return new WebGPUComputePipeline(device, {...allProps, handle});
+  }
+
   readonly device: WebGPUDevice;
   readonly handle: GPUComputePipeline;
 

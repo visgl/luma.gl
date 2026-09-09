@@ -221,12 +221,24 @@ export class WebGPUDevice extends Device {
     return new WebGPURenderPipeline(this, props);
   }
 
+  override async createRenderPipelineAsync(
+    props: RenderPipelineProps
+  ): Promise<WebGPURenderPipeline> {
+    return await WebGPURenderPipeline.createAsync(this, props);
+  }
+
   createFramebuffer(props: FramebufferProps): WebGPUFramebuffer {
     return new WebGPUFramebuffer(this, props);
   }
 
   createComputePipeline(props: ComputePipelineProps): WebGPUComputePipeline {
     return new WebGPUComputePipeline(this, props);
+  }
+
+  override async createComputePipelineAsync(
+    props: ComputePipelineProps
+  ): Promise<WebGPUComputePipeline> {
+    return await WebGPUComputePipeline.createAsync(this, props);
   }
 
   /** Creates an encoder for reusable WebGPU draw commands. */

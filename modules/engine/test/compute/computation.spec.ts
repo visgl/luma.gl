@@ -70,6 +70,15 @@ it('Computation#construct/delete', async () => {
   void 0;
 });
 
+it('Computation.createAsync prepares a WebGPU compute pipeline', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) return;
+
+  const computation = await Computation.createAsync(webgpuDevice, {source});
+  expect(computation.pipeline).toBeDefined();
+  computation.destroy();
+});
+
 it('Computation#compute', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {

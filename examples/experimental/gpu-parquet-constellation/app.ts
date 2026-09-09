@@ -455,7 +455,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
           ) as Record<ParquetConstellationColumn, GraphBufferHandle>;
           this.addDecodedPageCopies(decodeGraph, batch.columns, decoded.pages, destinationHandles);
           const graphCompileStartedAt = performance.now();
-          compiledDecode = decodeGraph.compile();
+          compiledDecode = await decodeGraph.compileAsync();
           const graphCompileMilliseconds = performance.now() - graphCompileStartedAt;
           const decodeGraphNodeCount = compiledDecode.stats.nodeOrder.length;
           const decodeExecutionMilliseconds = await this.executeGPUDecode(compiledDecode, signal);
@@ -795,19 +795,20 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
     element.innerHTML = `<div style="margin-bottom:9px">
       ${formatBytes(this.parquetBytes?.byteLength ?? 0)} fixture · ${this.fetchMilliseconds.toFixed(1)} ms fetch · ${formatCount(PAGE_SIZE)}-row write batches
     </div>
-    <table style="width:100%;border-collapse:collapse;text-align:right">
-      <thead><tr><th style="text-align:left"></th><th>GPU</th><th>CPU</th></tr></thead>
+    <table style="width:100%;border-collapse:collapse;text-align:right;font-size:12px;line-height:1.25">
+      <thead><tr><th style="text-align:left"></th><th>GPU path</th><th>CPU path</th></tr></thead>
       <tbody>
-        <tr><th style="text-align:left;font-weight:normal">Cold preparation</th><td>${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Graph compile</th><td>${formatMetric(gpuMeasurement, value => `${value.graphCompileMilliseconds.toFixed(1)} ms`)}</td><td>n/a</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Cold decode execution</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Warmed graph median (${WARMED_DECODE_SAMPLE_COUNT})</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">GPU upload</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Decode graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>${formatMetric(cpuMeasurement, value => String(value.graphNodeCount))}</td></tr>
-        <tr><th style="text-align:left;font-weight:normal">Direct / recursive LZ copies</th><td>${formatMetric(gpuMeasurement, value => (value.lzCopyDetails ? `${formatCount(value.lzCopyDetails.directCopyCount)} / ${formatCount(value.lzCopyDetails.recursiveCopyCount)}` : 'n/a'))}</td><td>n/a</td></tr>
+        <tr><th style="padding:2px 0;text-align:left">Parquet → render-ready</th><td style="font-weight:700">${formatMetric(gpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td><td style="font-weight:700">${formatMetric(cpuMeasurement, value => `${value.elapsedMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Graph + pipeline preparation</th><td>${formatMetric(gpuMeasurement, value => `${value.graphCompileMilliseconds.toFixed(1)} ms`)}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Decode stage (first run)</th><td>${formatMetric(gpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.decodeExecutionMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">GPU decode (warmed median, ${WARMED_DECODE_SAMPLE_COUNT} runs)</th><td>${formatMetric(gpuMeasurement, value => (value.reusedGraphExecutionMilliseconds === undefined ? '—' : `${value.reusedGraphExecutionMilliseconds.toFixed(1)} ms`))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Main-thread longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Bytes uploaded to GPU</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">GPU command graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">LZ copies: direct / recursive</th><td>${formatMetric(gpuMeasurement, value => (value.lzCopyDetails ? `${formatCount(value.lzCopyDetails.directCopyCount)} / ${formatCount(value.lzCopyDetails.recursiveCopyCount)}` : 'n/a'))}</td><td>n/a</td></tr>
       </tbody>
     </table>
+    <div style="margin-top:7px;font-size:11px;line-height:1.35;color:#94a3b8">Headline excludes fetch and ends with decoded columns resident in renderable GPU buffers. The GPU decode stage is graph execution; the CPU stage is loader decode plus Arrow construction.</div>
     <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · ${this.compressionDetails?.summary ?? 'compression pending'} · dictionary off</div>`;
   }
 }
