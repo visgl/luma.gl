@@ -37,6 +37,14 @@ export {
   type GPUParquetInt64PageValues
 } from './parquet/gpu-parquet-encoded-page-batch';
 export {
+  GPUParquetEncodedPageBatchStream,
+  GPUParquetEncodedPageBatchStreamTicket,
+  getGPUParquetEncodedPageBatchLayoutKey,
+  type GPUParquetEncodedPageBatchStreamGraphContext,
+  type GPUParquetEncodedPageBatchStreamProps,
+  type GPUParquetEncodedPageBatchStreamStats
+} from './parquet/gpu-parquet-encoded-page-batch-stream';
+export {
   GPUParquetByteStreamSplitDecoder,
   GPU_PARQUET_BYTE_STREAM_SPLIT_WORKGROUP_SIZE,
   getGPUParquetByteStreamSplitShaderSource,
