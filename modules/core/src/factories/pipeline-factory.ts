@@ -203,9 +203,16 @@ export class PipelineFactory {
         _sharedRenderPipeline: sharedRenderPipeline
       })
       .then(pipeline => {
+        delete this._pendingRenderPipelineCache[hash];
+        const cachedItem = this._renderPipelineCache[hash];
+        if (cachedItem) {
+          cachedItem.useCount += item.useCount;
+          pipeline.destroy();
+          this.releaseSharedRenderPipeline(pipeline);
+          return cachedItem.resource;
+        }
         pipeline.hash = hash;
         this._renderPipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
-        delete this._pendingRenderPipelineCache[hash];
         return pipeline;
       })
       .catch(error => {
@@ -285,9 +292,15 @@ export class PipelineFactory {
         id: allProps.id ? `${allProps.id}-cached` : undefined
       })
       .then(pipeline => {
+        delete this._pendingComputePipelineCache[hash];
+        const cachedItem = this._computePipelineCache[hash];
+        if (cachedItem) {
+          cachedItem.useCount += item.useCount;
+          pipeline.destroy();
+          return cachedItem.resource;
+        }
         pipeline.hash = hash;
         this._computePipelineCache[hash] = {resource: pipeline, useCount: item.useCount};
-        delete this._pendingComputePipelineCache[hash];
         return pipeline;
       })
       .catch(error => {
