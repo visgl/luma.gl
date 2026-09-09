@@ -20,7 +20,7 @@ export {
 } from './components/device-info';
 
 // Examples
-export {ExamplePage, ExampleStage} from './components/luma-example';
+export {ExampleLoadingIndicator, ExamplePage, ExampleStage} from './components/luma-example';
 export {ExampleHeader} from './components/luma-example';
 export type {
   ExampleDisplayProps,

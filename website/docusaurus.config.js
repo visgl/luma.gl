@@ -223,6 +223,14 @@ module.exports = {
       }
       return plugin;
     }),
+    function exampleNavigationLifecycle() {
+      return {
+        name: 'example-navigation-lifecycle',
+        getClientModules() {
+          return [path.resolve(__dirname, 'src/client-modules/example-navigation.ts')];
+        }
+      };
+    },
     [
       '@signalwire/docusaurus-plugin-llms-txt',
       {

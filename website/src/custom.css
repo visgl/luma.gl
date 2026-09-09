@@ -2573,6 +2573,60 @@ html[data-theme="dark"] .markdown .docs-arrow-structure__detail {
   padding-bottom: 0.5rem;
 }
 
+/* Loading surfaces cover stale shared-canvas pixels until the next example renders. */
+.luma-example-loading,
+.luma-example-navigation-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.7rem;
+  padding: 2rem;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(14, 165, 233, 0.16), transparent 28rem),
+    #07101d;
+  color: #f1f5f9;
+  text-align: center;
+}
+
+.luma-example-navigation-loading {
+  position: fixed;
+  z-index: 1000;
+}
+
+.luma-example-loading--embedded {
+  border-radius: inherit;
+}
+
+.luma-example-loading strong,
+.luma-example-navigation-loading strong {
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+}
+
+.luma-example-loading > span:last-child,
+.luma-example-navigation-loading > span:last-child {
+  color: #aebed0;
+  font-size: 0.86rem;
+}
+
+.luma-example-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(125, 211, 252, 0.24);
+  border-top-color: #7dd3fc;
+  border-radius: 50%;
+  animation: luma-example-loading-spin 800ms linear infinite;
+}
+
+@keyframes luma-example-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Premium example navigation is scoped to the examples plugin route shell only. */
 body:has([data-luma-example-route]) .theme-doc-sidebar-container {
   --luma-example-sidebar-accent: #0369a1;
@@ -2666,6 +2720,10 @@ html[data-theme="dark"]
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .luma-example-loading-spinner {
+    animation: none;
+  }
+
   body:has([data-luma-example-route]) .theme-doc-sidebar-container .menu__link {
     transition: none;
   }
