@@ -4,6 +4,10 @@ This maintainer roadmap tracks the phased development and graduation of GPU Core
 [user-facing GPU Core guide](../../docs/api-reference/experimental/gpu-core/README.md)
 documents shipped behavior, constraints, and reference pages.
 
+The provider-driven projection contributor uses these command-graph contracts but has a separate
+[GPU Project roadmap](./gpu-project-roadmap.md) covering CRS planning, greater-than-Float32
+precision, native projection operations, and inline shader composition.
+
 ## Phased roadmap
 
 The command-graph foundation and hierarchical-trace, analysis, texture, picking, and spatial

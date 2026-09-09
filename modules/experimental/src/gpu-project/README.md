@@ -12,6 +12,10 @@ Float32 operations and origin-relative precision.
 This supports projection families understood by the provider without separately
 implementing every projection, datum, or coordinate reference system in WGSL.
 
+The [GPU Project implementation roadmap](../../../../dev-docs/roadmaps/gpu-project-roadmap.md)
+tracks the planned precision tiers, operation compiler, native projection families, datum support,
+and graduation tranches.
+
 ## Attribution and licensing
 
 GPU Project is inspired by
