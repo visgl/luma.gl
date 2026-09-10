@@ -386,7 +386,8 @@ export function getGPUParquetEncodedPageBatchLayoutKey(
     {
       uploadByteLength: plan.uploadData.byteLength,
       dictionaries: plan.dictionaries,
-      pages: plan.pages
+      pages: plan.pages,
+      lzByteStreamSplitBatch: plan.lzByteStreamSplitBatch
     },
     (_key, value) =>
       ArrayBuffer.isView(value)

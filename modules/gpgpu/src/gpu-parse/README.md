@@ -40,6 +40,7 @@ These `@luma.gl/gpgpu/gpu-core` operations were extracted because they are usefu
 | `GPUUint32Gather` | rows must be selected or reordered by indices | one uint32 per index; invalid indices use a fallback |
 | `GPUByteRangeGather` | variable byte ranges must be concatenated | packed bytes from source offsets, lengths, and output offsets |
 | `GPULZByteDecompressor` | a format parser can describe literals and backreferences | race-free packed bytes, including overlapping LZ copies |
+| `GPULZByteBatchDecompressor` | many independent LZ streams share one upload | runtime-described, word-aligned outputs from one dispatch |
 
 `GPUByteRangeGather` dispatches one invocation per output word, avoiding races when adjacent bytes
 share a packed `uint32` destination.
@@ -86,6 +87,7 @@ unless a function explicitly documents an isolated slice.
 | Operation | Use when | Composition or output |
 | --- | --- | --- |
 | `GPUParquetByteStreamSplitDecoder` | numeric or fixed values use BYTE_STREAM_SPLIT | value-major physical bytes |
+| `GPUParquetByteStreamSplitBatchDecoder` | many page-major byte streams share one aggregate buffer | runtime-described value-major physical bytes from one dispatch |
 | `GPUParquetPlainBooleanDecoder` | BOOLEAN uses PLAIN | LSB-first bits expanded to uint32 rows |
 | `GPUParquetPlainByteArrayDecoder` | BYTE_ARRAY uses PLAIN | adapter over `GPUByteRangeGather` |
 | `GPUParquetRleBitPackedDecoder` | levels, booleans, or dictionary indices use the hybrid encoding | one uint32 per value, using hybrid LSB-first ordering |
@@ -186,6 +188,26 @@ Both supported codecs use CPU planning plus the same `GPULZByteDecompressor` GPU
 Use the codec-specific GPU wrapper when operation names and metrics should retain codec semantics;
 use `GPULZByteDecompressor` directly when another byte-oriented LZ format can produce the same
 descriptor contract.
+
+`GPULZByteBatchDecompressor` plus `GPUParquetByteStreamSplitBatchDecoder` is the throughput path for
+compressed `BYTE_STREAM_SPLIT`. Both operations consume the same eight-word runtime jobs. The first
+resolves every Snappy and LZ4_RAW page sequentially into one word-aligned aggregate; the second
+restores all page byte planes into one final aggregate. The automatic page-batch adapter selects
+this pair whenever at least one compressed byte-stream-split page is present. Many pages therefore
+share two commands instead of creating two commands and two pipeline instances per page.
+Definition and repetition levels remain independent because DataPageV2 exposes those sections
+separately.
+
+The adapter retains the standalone per-page operations when the aggregate upload or output would
+exceed the device's `maxStorageBufferBindingSize`, so batching never makes an otherwise valid set of
+pages invalid. Compressed pages with no physical values remain no-op GPU pages and are omitted from
+the shared jobs.
+
+Use the standalone codec wrapper plus `GPUParquetByteStreamSplitDecoder` when one page is isolated,
+when the decompressed bytes have another consumer, or when the operations do not share one upload.
+The batched decompressor intentionally accepts the generic LZ descriptor contract rather than
+parsing codec tokens in WGSL, so it adds no second Snappy or LZ4 implementation. Its job records are
+runtime data and can be replaced when a reusable graph slot receives its next compatible upload.
 
 Codec support is a capability statement, not a performance promise. The generic resolver favors
 compact descriptors and deterministic overlapping-copy semantics; binary descriptor searches and
@@ -370,12 +392,13 @@ incremental. Each tranche below has a useful stopping point and does not require
 | 3. Close inexpensive adapter gaps | Complete | Loader-selected preserved compression or CPU-decompressed encoded pages; automatic bounded `DELTA_BYTE_ARRAY`; variable dictionaries; decompressed V1 level framing; RLE BOOLEAN values | Common supported encodings no longer fall back for adapter-only gaps; no GPU metadata parser was introduced |
 | 4. Extract generic materialization primitives | Complete | `GPUSegmentedLayout` owns validity/value and segment offsets; existing `GPUCompaction`, gathers, and scatter operations own payload movement | Another columnar format can materialize offsets and values without importing Parquet-specific classes |
 | 5. Assemble nested GPU columns | Graph-native complete | `GPUParquetNestedColumnLayout` composes multiple definition/repetition depths into chunk-preserving validity, row, and list-offset `GraphVectorView`s; imported output buffers can be wrapped as `GPUData`/`GPUVector` without Arrow | Common required, optional, list, and nested-list columns remain GPU-resident through an in-graph or caller-owned-buffer consumer boundary |
-| 6. Streaming and throughput | Foundation complete; measure next | `GPUParquetEncodedPageBatchStream` reuses exact-layout compiled graphs, pools upload/output buffers, and provides fixed-capacity FIFO backpressure; compatible-page batching and CPU/GPU crossover benchmarks remain | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
+| 6. Streaming and throughput | Compatible-page batching complete; measure next | `GPUParquetEncodedPageBatchStream` reuses exact-layout compiled graphs and pooled storage; compressed `BYTE_STREAM_SPLIT` pages now share one runtime-described LZ dispatch and one byte restoration dispatch; capacity-class graph reuse and CPU/GPU crossover benchmarks remain | Sustained row-group streaming has bounded memory and published evidence for when GPU deferral pays off |
 | 7. Conformance and hardening | Ongoing | Add files from multiple Parquet writers, differential CPU/GPU decoding, planner fuzzing, malformed/truncated inputs, empty/all-null pages, large offsets, and maximum-width stress cases | Every automatic path is covered by independent writer fixtures and corruption tests; fallbacks remain distinguishable from malformed data |
 | 8. Demand-driven format additions | Optional | Evaluate ALP and focused logical conversions such as DECIMAL or legacy INT96 only when real datasets justify them | A new operation has a bounded layout, a reusable primitive where possible, fixtures, benchmarks, and a documented CPU fallback |
 
 The intended next step is representative crossover and sustained-throughput measurement for tranche
-6, or conformance coverage from tranche 7. Tranche 8 is not a completeness checklist.
+6, followed by capacity-class graph reuse only where those measurements show layout churn. Tranche
+8 is not a completeness checklist.
 
 ### Roadmap stop line
 

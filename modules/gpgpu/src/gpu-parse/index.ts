@@ -24,6 +24,7 @@ export {
   type GPUParquetEncodedPageBatchPlan,
   type GPUParquetEncodedPageBatchPlanOptions,
   type GPUParquetLevelPlan,
+  type GPUParquetLZByteStreamSplitBatchPlan,
   type GPUParquetUploadSection,
   type GPUParquetValuePlan
 } from './parquet/parquet-encoded-page-batch';
@@ -52,6 +53,13 @@ export {
   type GPUParquetByteStreamSplitDecoderProps,
   type GPUParquetByteStreamSplitStats
 } from './parquet/gpu-parquet-byte-stream-split-decoder';
+export {
+  GPUParquetByteStreamSplitBatchDecoder,
+  GPU_PARQUET_BYTE_STREAM_SPLIT_BATCH_WORKGROUP_SIZE,
+  getGPUParquetByteStreamSplitBatchShaderSource,
+  type GPUParquetByteStreamSplitBatchDecoderProps,
+  type GPUParquetByteStreamSplitBatchStats
+} from './parquet/gpu-parquet-byte-stream-split-batch-decoder';
 export {
   PARQUET_RLE_RUN_DESCRIPTOR_WORDS,
   parseParquetRleBitPackedRunPlan,
