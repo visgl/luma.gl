@@ -375,6 +375,10 @@ jobs:
         run: |
           yarn examples:typecheck
 
+      - name: Test example device-compatibility shims
+        run: |
+          yarn examples:test-device-compat
+
       - name: Synchronize website example assets
         run: node website/scripts/sync-example-assets.mjs
 

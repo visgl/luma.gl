@@ -35,7 +35,7 @@ export function getDeckExampleProps({device, deviceType = 'webgpu'}: DeckExample
   return device ? {device} : {deviceProps: getDeckExampleDeviceProps(deviceType)};
 }
 
-/** Bridges exactly one legacy Deck assembler call while preserving strict language separation. */
+/** Bridges legacy no-argument Deck assembler calls while preserving strict language separation. */
 export function installLegacyDeckShaderAssemblerCompatibility(device: Device): () => void {
   const original = ShaderAssembler.getDefaultShaderAssembler;
   let restored = false;
@@ -58,8 +58,8 @@ export function installLegacyDeckShaderAssemblerCompatibility(device: Device): (
   ): GLSLShaderAssembler | WGSLShaderAssembler {
     if (shaderLanguage === undefined) {
       // TODO: Remove after deck.gl forwards its known shading language to luma.gl.
-      // Restore before forwarding so later user calls retain strict explicit-language behavior.
-      restore();
+      // Deck.gl calls this without an explicit language on every render and pick, so the
+      // patch must stay installed until the caller explicitly invokes the returned `restore`.
       return device.info.shadingLanguage === 'wgsl'
         ? original.call(ShaderAssembler, 'wgsl')
         : original.call(ShaderAssembler, 'glsl');

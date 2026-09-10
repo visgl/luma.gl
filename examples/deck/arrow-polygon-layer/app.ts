@@ -9,7 +9,11 @@ import {
   type ArrowPolygonDataSourceUpdate
 } from '../../arrow/arrow-polygons/arrow-polygon-data-source';
 import {ArrowDeck} from '../arrow-deck';
-import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
+import {
+  getDeckExampleProps,
+  installLegacyDeckShaderAssemblerCompatibility,
+  type DeckExampleDeviceOptions
+} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
 
 /** Creates the standalone or website-hosted Deck polygon-layer example. */
@@ -20,6 +24,7 @@ export function createArrowPolygonLayerDeck(
   let activeUpdate: ArrowPolygonDataSourceUpdate | null = null;
   let animationSeconds = 0;
   let lastAnimationMilliseconds: number | null = null;
+  let restoreShaderAssembler: (() => void) | null = null;
 
   const deck = new ArrowDeck({
     parent,
@@ -28,6 +33,15 @@ export function createArrowPolygonLayerDeck(
     initialViewState: {target: [0, 0], zoom: 9},
     getTooltip: getArrowLayerTooltip,
     layers: [],
+    onDeviceInitialized: initializedDevice => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
+    },
+    onError: error => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = null;
+      throw error;
+    },
     onLoad: ({device}) => dataSource.initialize(device),
     onBeforeRender: ({deck}) => {
       const timeMilliseconds = performance.now();
@@ -41,7 +55,11 @@ export function createArrowPolygonLayerDeck(
         });
       }
     },
-    onFinalize: () => dataSource.finalize()
+    onFinalize: () => {
+      restoreShaderAssembler?.();
+      restoreShaderAssembler = null;
+      dataSource.finalize();
+    }
   });
   const dataSource = new ArrowPolygonDataSource({
     onDataUpdated: update => {
