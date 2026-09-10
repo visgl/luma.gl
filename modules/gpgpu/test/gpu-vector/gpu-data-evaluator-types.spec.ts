@@ -34,6 +34,12 @@ export function checkGPUDataEvaluatorTypes(
   const evaluatorFromInput = getGPUDataEvaluator(float32x3Vector.data[0]);
   evaluatorFromInput satisfies GPUDataEvaluator<'float32x3'>;
 
+  const scalarConstantFromInput = getGPUDataEvaluator(1);
+  scalarConstantFromInput satisfies GPUDataEvaluator;
+
+  const vectorConstantFromInput = getGPUDataEvaluator([1, 2]);
+  vectorConstantFromInput satisfies GPUDataEvaluator;
+
   const evaluatedVector = evaluatorFromData.evaluate(device);
   evaluatedVector satisfies Promise<GPUVector<'float32x3'>>;
 
