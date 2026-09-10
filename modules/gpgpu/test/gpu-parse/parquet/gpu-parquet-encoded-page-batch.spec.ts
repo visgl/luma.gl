@@ -26,6 +26,8 @@ it('loaders.gl encoded pages batch Snappy, levels, and values in one graph', asy
   const batch = makeBatch(Uint8Array.from([4, 1, ...snappyValues]));
   const plan = planGPUParquetEncodedPageBatch(batch);
   expect(plan.gpuPageCount).toBe(1);
+  expect(plan.lzByteStreamSplitBatch?.pageIndices).toEqual([0]);
+  expect(plan.lzByteStreamSplitBatch?.jobs.byteLength).toBe(8 * Uint32Array.BYTES_PER_ELEMENT);
   expect(plan.pages[0].mode).toBe('gpu');
   if (plan.pages[0].mode === 'gpu') {
     expect(plan.pages[0].compression?.codec).toBe('SNAPPY');
@@ -49,6 +51,12 @@ it('loaders.gl encoded pages batch Snappy, levels, and values in one graph', asy
   );
   addReadbackCopy(graph, page.definitionLevels!, levelReadback, 'definition-levels');
   const compiled = graph.compile();
+  expect(compiled.stats.nodeOrder).toContain('gpu-parquet-loader-batch-test-parquet-lz-byte-batch');
+  expect(compiled.stats.nodeOrder).toContain(
+    'gpu-parquet-loader-batch-test-parquet-byte-stream-split-batch'
+  );
+  expect(compiled.stats.nodeOrder).not.toContain('parquet-0-0-snappy');
+  expect(compiled.stats.nodeOrder).not.toContain('parquet-0-0-byte-stream-split');
 
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-loader-batch-encoder'});
@@ -111,6 +119,174 @@ it('compressed PLAIN page outputs remain available for graph readback', async ()
     compiled.destroy();
     inputBuffer.destroy();
     readback.destroy();
+  }
+});
+
+it('loaders.gl LZ4_RAW BYTE_STREAM_SPLIT values use the two-pass batch path', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const expectedValues = new Uint8Array(new Float32Array([3, 5]).buffer);
+  const byteStreamSplit = encodeByteStreamSplit(expectedValues, 2, 4);
+  const lz4Values = Uint8Array.from([0x80, ...byteStreamSplit]);
+  const plan = planGPUParquetEncodedPageBatch(
+    repeatOnlyPage(
+      makeBatch(Uint8Array.from([4, 1, ...lz4Values]), 'BYTE_STREAM_SPLIT', 'LZ4_RAW'),
+      2
+    )
+  );
+  expect(plan.lzByteStreamSplitBatch?.pageIndices).toEqual([0, 1]);
+
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-lz4-batch-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  const readbacks = result.pages.map((page, pageIndex) => {
+    const decodedPage = page as GPUParquetDecodedPage;
+    const readback = createReadbackBuffer(device, expectedValues.byteLength);
+    addReadbackCopy(
+      graph,
+      decodedPage.values.layout === 'split-uint64'
+        ? decodedPage.values.low
+        : decodedPage.values.values,
+      readback,
+      `lz4-values-${pageIndex}`
+    );
+    return readback;
+  });
+  const compiled = graph.compile();
+  expect(compiled.stats.nodeOrder.filter(nodeId => nodeId.endsWith('-lz-byte-batch'))).toHaveLength(
+    1
+  );
+  expect(
+    compiled.stats.nodeOrder.filter(nodeId => nodeId.endsWith('-byte-stream-split-batch'))
+  ).toHaveLength(1);
+  expect(compiled.stats.nodeOrder.some(nodeId => nodeId.includes('-lz4-raw'))).toBe(false);
+
+  try {
+    const commandEncoder = device.createCommandEncoder({id: 'gpu-parquet-lz4-batch-encoder'});
+    compiled.encode(commandEncoder, {parameters: undefined});
+    device.submit(commandEncoder.finish());
+    const results = await Promise.all(readbacks.map(readback => readback.readAsync()));
+    for (const resultData of results) {
+      expect(
+        Array.from(
+          new Uint8Array(resultData.buffer, resultData.byteOffset, expectedValues.byteLength)
+        )
+      ).toEqual(Array.from(expectedValues));
+    }
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
+    for (const readback of readbacks) readback.destroy();
+  }
+});
+
+it('compressed BYTE_STREAM_SPLIT batching retains per-page decoding at storage limits', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const lz4RepeatedZeroes = Uint8Array.from([0x1f, 0, 1, 0, 255, 125]);
+  const originalBatch = makeBatch(lz4RepeatedZeroes, 'BYTE_STREAM_SPLIT', 'LZ4_RAW');
+  const originalColumn = originalBatch.columns[0];
+  const originalPage = originalColumn.pages[0];
+  const batch = repeatOnlyPage(
+    {
+      ...originalBatch,
+      rowGroup: {...originalBatch.rowGroup, rowCount: 100, uncompressedByteLength: 400},
+      columns: [
+        {
+          ...originalColumn,
+          maxDefinitionLevel: 0,
+          valueCount: 100,
+          pages: [
+            {
+              ...originalPage,
+              valueCount: 100,
+              nonNullValueCount: 100,
+              definitionLevels: {byteOffset: 0, byteLength: 0},
+              values: {byteOffset: 0, byteLength: lz4RepeatedZeroes.byteLength},
+              compressedByteLength: lz4RepeatedZeroes.byteLength,
+              uncompressedByteLength: 400
+            }
+          ]
+        }
+      ]
+    },
+    2
+  );
+  const plan = planGPUParquetEncodedPageBatch(batch);
+  expect(plan.lzByteStreamSplitBatch?.outputByteLength).toBe(800);
+  expect(plan.uploadData.byteLength).toBeLessThanOrEqual(512);
+
+  await withReducedStorageBindingLimit(device, 512, async () => {
+    const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+    const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-binding-limit-test'});
+    addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+    const compiled = graph.compile();
+    try {
+      expect(compiled.stats.nodeOrder.some(nodeId => nodeId.endsWith('-lz-byte-batch'))).toBe(
+        false
+      );
+      expect(compiled.stats.nodeOrder.filter(nodeId => nodeId.endsWith('-lz4-raw'))).toHaveLength(
+        2
+      );
+    } finally {
+      compiled.destroy();
+      inputBuffer.destroy();
+    }
+  });
+});
+
+it('zero-value compressed BYTE_STREAM_SPLIT pages remain no-op GPU pages', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const batch = makeBatch(Uint8Array.from([0]));
+  const column = batch.columns[0];
+  const page = column.pages[0];
+  const emptyBatch: ParquetEncodedPageBatch = {
+    ...batch,
+    rowGroup: {...batch.rowGroup, rowCount: 0, uncompressedByteLength: 0, uncompressedSize: 0},
+    columns: [
+      {
+        ...column,
+        maxDefinitionLevel: 0,
+        valueCount: 0,
+        pages: [
+          {
+            ...page,
+            valueCount: 0,
+            nonNullValueCount: 0,
+            definitionLevels: {byteOffset: 0, byteLength: 0},
+            values: {byteOffset: 0, byteLength: 1},
+            compressedByteLength: 1,
+            uncompressedByteLength: 0
+          }
+        ]
+      }
+    ]
+  };
+  const plan = planGPUParquetEncodedPageBatch(emptyBatch);
+  expect(plan.lzByteStreamSplitBatch).toBeUndefined();
+
+  const inputBuffer = createGPUParquetEncodedPageBatchInputBuffer(device, plan);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-parquet-empty-bss-test'});
+  const result = addGPUParquetEncodedPageBatchToGraph(graph, plan, inputBuffer);
+  expect(result.pages[0].mode).toBe('gpu');
+  const compiled = graph.compile();
+  try {
+    expect(compiled.stats.nodeOrder.some(nodeId => nodeId.includes('byte-stream-split'))).toBe(
+      false
+    );
+  } finally {
+    compiled.destroy();
+    inputBuffer.destroy();
   }
 });
 
@@ -281,7 +457,8 @@ it('loaders.gl empty DELTA_BYTE_ARRAY values produce an empty GPU graph result',
 
 function makeBatch(
   data: Uint8Array,
-  encoding: 'PLAIN' | 'BYTE_STREAM_SPLIT' = 'BYTE_STREAM_SPLIT'
+  encoding: 'PLAIN' | 'BYTE_STREAM_SPLIT' = 'BYTE_STREAM_SPLIT',
+  compression: 'SNAPPY' | 'LZ4_RAW' = 'SNAPPY'
 ): ParquetEncodedPageBatch {
   return {
     shape: 'parquet-encoded-pages',
@@ -304,7 +481,7 @@ function makeBatch(
         physicalType: 'FLOAT',
         maxRepetitionLevel: 0,
         maxDefinitionLevel: 1,
-        compression: 'SNAPPY',
+        compression,
         valueCount: 2,
         pages: [
           {
@@ -313,7 +490,7 @@ function makeBatch(
             encoding,
             repetitionLevelEncoding: 'RLE',
             definitionLevelEncoding: 'RLE',
-            compression: 'SNAPPY',
+            compression,
             compressionState: 'compressed',
             valueCount: 2,
             nonNullValueCount: 2,
@@ -328,6 +505,66 @@ function makeBatch(
       }
     ]
   };
+}
+
+function repeatOnlyPage(
+  batch: ParquetEncodedPageBatch,
+  pageCount: number
+): ParquetEncodedPageBatch {
+  const column = batch.columns[0];
+  const page = column.pages[0];
+  return {
+    ...batch,
+    rowGroup: {
+      ...batch.rowGroup,
+      rowCount: batch.rowGroup.rowCount * pageCount
+    },
+    columns: [
+      {
+        ...column,
+        valueCount: column.valueCount * pageCount,
+        pages: Array.from({length: pageCount}, (_, pageIndex) => ({
+          ...page,
+          pageOrdinal: pageIndex
+        }))
+      }
+    ]
+  };
+}
+
+async function withReducedStorageBindingLimit<Result>(
+  device: Device,
+  maximumStorageBufferBindingSize: number,
+  callback: () => Promise<Result>
+): Promise<Result> {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(device, 'limits');
+  const originalLimits = device.limits;
+  Object.defineProperty(device, 'limits', {
+    configurable: true,
+    enumerable: originalDescriptor?.enumerable ?? true,
+    writable: true,
+    value: new Proxy(originalLimits, {
+      get(target, property) {
+        return property === 'maxStorageBufferBindingSize'
+          ? maximumStorageBufferBindingSize
+          : Reflect.get(target, property, target);
+      }
+    })
+  });
+  try {
+    return await callback();
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(device, 'limits', originalDescriptor);
+    } else {
+      Object.defineProperty(device, 'limits', {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: originalLimits
+      });
+    }
+  }
 }
 
 function makeDictionaryBatch(): ParquetEncodedPageBatch {

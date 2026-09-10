@@ -5,6 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
+  GPULZByteBatchDecompressor,
   createTransientView,
   type GraphBufferHandle,
   type GraphDataView
@@ -13,6 +14,7 @@ import {GPULZ4RawDecompressor} from '../compression/gpu-lz4-raw-decompressor';
 import {GPUSnappyDecompressor} from '../compression/gpu-snappy-decompressor';
 import {GPUParquetBitPackedDecoder} from './gpu-parquet-bit-packed-decoder';
 import {GPUParquetByteArrayDictionaryDecoder} from './gpu-parquet-byte-array-dictionary-decoder';
+import {GPUParquetByteStreamSplitBatchDecoder} from './gpu-parquet-byte-stream-split-batch-decoder';
 import {GPUParquetByteStreamSplitDecoder} from './gpu-parquet-byte-stream-split-decoder';
 import {GPUParquetDeltaBinaryPackedDecoder} from './gpu-parquet-delta-binary-packed-decoder';
 import {GPUParquetDeltaBinaryPackedInt64Decoder} from './gpu-parquet-delta-binary-packed-int64-decoder';
@@ -28,6 +30,7 @@ import type {
   GPUParquetDecodedPagePlan,
   GPUParquetDictionaryPlan,
   GPUParquetEncodedPageBatchPlan,
+  GPUParquetLZByteStreamSplitBatchPlan,
   GPUParquetLevelPlan,
   GPUParquetUploadSection,
   GPUParquetValuePlan
@@ -125,30 +128,131 @@ export function addGPUParquetEncodedPageBatchToGraph<Parameters>(
       );
     }
   }
-  const pages = plan.pages.map(page =>
-    page.mode === 'cpu-fallback' ? page : addPageToGraph(graph, inputHandle, page, dictionaries)
+  const batchedByteStreamSplitValues =
+    plan.lzByteStreamSplitBatch &&
+    canUseLZByteStreamSplitBatch(
+      graph.device,
+      plan.uploadData.byteLength,
+      plan.lzByteStreamSplitBatch
+    )
+      ? addLZByteStreamSplitBatchToGraph(
+          graph,
+          inputHandle,
+          plan.uploadData.byteLength,
+          plan.lzByteStreamSplitBatch
+        )
+      : new Map<number, GraphDataView<'uint32'>>();
+  const pages = plan.pages.map((page, pageIndex) =>
+    page.mode === 'cpu-fallback'
+      ? page
+      : addPageToGraph(
+          graph,
+          inputHandle,
+          page,
+          dictionaries,
+          batchedByteStreamSplitValues.get(pageIndex)
+        )
   );
   return Object.freeze({inputBuffer, pages: Object.freeze(pages)});
+}
+
+function canUseLZByteStreamSplitBatch(
+  device: Device,
+  uploadByteLength: number,
+  plan: GPUParquetLZByteStreamSplitBatchPlan
+): boolean {
+  const maximumBindingByteLength = device.limits.maxStorageBufferBindingSize;
+  return (
+    uploadByteLength <= maximumBindingByteLength &&
+    plan.outputByteLength <= maximumBindingByteLength &&
+    plan.pageIndices.length <= device.limits.maxComputeWorkgroupsPerDimension
+  );
+}
+
+function addLZByteStreamSplitBatchToGraph<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  inputHandle: GraphBufferHandle,
+  uploadByteLength: number,
+  plan: GPUParquetLZByteStreamSplitBatchPlan
+): Map<number, GraphDataView<'uint32'>> {
+  const upload = graph.createDataView(inputHandle, {
+    format: 'uint32',
+    length: Math.ceil(uploadByteLength / Uint32Array.BYTES_PER_ELEMENT)
+  });
+  const jobs = createUploadView(graph, inputHandle, plan.jobs);
+  const byteStreamSplit = createTransientPackedBytes(
+    graph,
+    `${graph.id}-parquet-lz-byte-stream-split-input`,
+    plan.outputByteLength
+  );
+  const output = createTransientPackedBytes(
+    graph,
+    `${graph.id}-parquet-lz-byte-stream-split-output`,
+    plan.outputByteLength,
+    Buffer.STORAGE | Buffer.COPY_SRC
+  );
+  new GPULZByteBatchDecompressor({
+    id: `${graph.id}-parquet-lz-byte-batch`,
+    upload,
+    jobs,
+    output: byteStreamSplit,
+    jobCount: plan.pageIndices.length,
+    outputByteLength: plan.outputByteLength,
+    maximumOutputWordCount: plan.maximumOutputWordCount
+  }).addToGraph(graph);
+  new GPUParquetByteStreamSplitBatchDecoder({
+    id: `${graph.id}-parquet-byte-stream-split-batch`,
+    input: byteStreamSplit,
+    jobs,
+    output,
+    jobCount: plan.pageIndices.length,
+    outputByteLength: plan.outputByteLength,
+    maximumOutputWordCount: plan.maximumOutputWordCount
+  }).addToGraph(graph);
+
+  const values = new Map<number, GraphDataView<'uint32'>>();
+  for (let jobIndex = 0; jobIndex < plan.pageIndices.length; jobIndex++) {
+    const outputSection = plan.outputs[jobIndex];
+    values.set(
+      plan.pageIndices[jobIndex],
+      graph.createDataView(output.buffer, {
+        format: 'uint32',
+        length: Math.ceil(outputSection.byteLength / Uint32Array.BYTES_PER_ELEMENT),
+        byteOffset: outputSection.byteOffset
+      })
+    );
+  }
+  return values;
 }
 
 function addPageToGraph<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   inputHandle: GraphBufferHandle,
   plan: GPUParquetDecodedPagePlan,
-  dictionaries: ReadonlyMap<GPUParquetDictionaryPlan, GPUParquetGraphDictionary>
+  dictionaries: ReadonlyMap<GPUParquetDictionaryPlan, GPUParquetGraphDictionary>,
+  batchedByteStreamSplitValues: GraphDataView<'uint32'> | undefined
 ): GPUParquetDecodedPage {
   const id = `parquet-${plan.columnIndex}-${plan.pageOrdinal}`;
   const encodedValues = createUploadView(graph, inputHandle, plan.encodedValues);
-  const valueInput = plan.compression
-    ? addDecompressionToGraph(graph, inputHandle, plan.compression, id)
-    : encodedValues;
+  const valueInput =
+    batchedByteStreamSplitValues ??
+    (plan.compression
+      ? addDecompressionToGraph(graph, inputHandle, plan.compression, id)
+      : encodedValues);
   const repetitionLevels = plan.repetitionLevels
     ? addLevelToGraph(graph, inputHandle, plan.repetitionLevels, `${id}-repetition`)
     : undefined;
   const definitionLevels = plan.definitionLevels
     ? addLevelToGraph(graph, inputHandle, plan.definitionLevels, `${id}-definition`)
     : undefined;
-  const values = addValuesToGraph(graph, inputHandle, valueInput, plan.values, id, dictionaries);
+  const values = batchedByteStreamSplitValues
+    ? Object.freeze({
+        layout: 'packed-bytes' as const,
+        values: batchedByteStreamSplitValues,
+        valueCount: plan.values.valueCount,
+        byteLength: plan.values.decodedByteLength
+      })
+    : addValuesToGraph(graph, inputHandle, valueInput, plan.values, id, dictionaries);
   return Object.freeze({mode: 'gpu' as const, plan, values, repetitionLevels, definitionLevels});
 }
 
