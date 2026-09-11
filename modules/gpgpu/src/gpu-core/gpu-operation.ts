@@ -4,6 +4,32 @@
 
 import {GPUCommandGraph, type GPUCommandGraphContributor} from './gpu-command-graph';
 
+/** One named logical input or output visible to planners and inspectors. */
+export type GPUOperationResource = {
+  /** Human-readable role such as `matrix`, `vector`, `solution`, or `spectrum`. */
+  name: string;
+  /** Optional semantic kind such as `scalar`, `vector`, `matrix`, `csr-matrix`, or `field2d`. */
+  kind?: string;
+  /** Optional element/value format when meaningful. */
+  format?: string;
+  /** Optional logical dimensions. */
+  shape?: readonly number[];
+};
+
+/** Static workload metadata that describes problem size without prescribing execution strategy. */
+export type GPUOperationWorkload = Readonly<Record<string, number | string | boolean>>;
+
+/** Declarative requirements that may constrain legal execution strategies. */
+export type GPUOperationConstraints = Readonly<Record<string, number | string | boolean>>;
+
+/** Semantic metadata carried by an operation before it lowers into command nodes. */
+export type GPUOperationMetadata = {
+  inputs?: readonly GPUOperationResource[];
+  outputs?: readonly GPUOperationResource[];
+  workload?: GPUOperationWorkload;
+  constraints?: GPUOperationConstraints;
+};
+
 /**
  * Semantic unit of GPU computation.
  *
@@ -12,16 +38,12 @@ import {GPUCommandGraph, type GPUCommandGraphContributor} from './gpu-command-gr
  * future planners inspect and transform intent before or while lowering.
  */
 export interface GPUOperation extends GPUCommandGraphContributor {
-  /** Stable semantic identity used by inspectors and planners. */
   readonly id: string;
-  /** Operation family independent of the concrete command nodes emitted while lowering. */
   readonly type: string;
+  readonly metadata?: GPUOperationMetadata;
 }
 
-/** A contributor accepted during migration even when it does not yet expose semantic metadata. */
 export type GPUOperationContributor = GPUOperation | GPUCommandGraphContributor;
-
-/** Construction convenience accepted by `GPUCommandGraph.add()`. Nested arrays are flattened. */
 export type GPUOperationLike = GPUOperationContributor | readonly GPUOperationLike[];
 
 /**
@@ -35,20 +57,24 @@ export class GPUCompositeOperation implements GPUOperation {
   readonly id: string;
   readonly type = 'composite';
   readonly operations: readonly GPUOperationContributor[];
+  readonly metadata?: GPUOperationMetadata;
 
   constructor(
     props:
       | readonly GPUOperationContributor[]
-      | {id?: string; operations: readonly GPUOperationContributor[]}
+      | {
+          id?: string;
+          operations: readonly GPUOperationContributor[];
+          metadata?: GPUOperationMetadata;
+        }
   ) {
     const normalized = Array.isArray(props) ? {operations: props} : props;
     this.id = normalized.id ?? 'gpu-composite-operation';
     this.operations = Object.freeze([...normalized.operations]);
+    this.metadata = normalized.metadata;
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    // Lower children directly. Calling graph.add() here would incorrectly register every child as
-    // a top-level operation in addition to this preserved semantic composite.
     for (const operation of this.operations) operation.addToGraph(graph);
   }
 }
@@ -57,13 +83,15 @@ export class GPUCompositeOperation implements GPUOperation {
 export type GPUOperationTree = {
   id: string;
   type: string;
+  metadata?: GPUOperationMetadata;
   children?: readonly GPUOperationTree[];
 };
 
 const graphOperations = new WeakMap<GPUCommandGraph<unknown>, GPUOperationContributor[]>();
 
-/** Returns a stable semantic snapshot of operations added to a graph. */
-export function getGPUCommandGraphOperationTree(graph: GPUCommandGraph<unknown>): readonly GPUOperationTree[] {
+export function getGPUCommandGraphOperationTree(
+  graph: GPUCommandGraph<unknown>
+): readonly GPUOperationTree[] {
   return Object.freeze((graphOperations.get(graph) ?? []).map(getOperationTree));
 }
 
@@ -72,10 +100,17 @@ function getOperationTree(operation: GPUOperationContributor): GPUOperationTree 
     return Object.freeze({
       id: operation.id,
       type: operation.type,
+      ...(operation.metadata ? {metadata: operation.metadata} : {}),
       children: Object.freeze(operation.operations.map(getOperationTree))
     });
   }
-  if (isGPUOperation(operation)) return Object.freeze({id: operation.id, type: operation.type});
+  if (isGPUOperation(operation)) {
+    return Object.freeze({
+      id: operation.id,
+      type: operation.type,
+      ...(operation.metadata ? {metadata: operation.metadata} : {})
+    });
+  }
   return Object.freeze({
     id: operation.constructor?.name ?? 'gpu-command-graph-contributor',
     type: 'contributor'
@@ -87,7 +122,10 @@ export function isGPUOperation(operation: GPUOperationContributor): operation is
   return typeof candidate.id === 'string' && typeof candidate.type === 'string';
 }
 
-function addOperationLike<Parameters>(graph: GPUCommandGraph<Parameters>, operation: GPUOperationLike): void {
+function addOperationLike<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  operation: GPUOperationLike
+): void {
   if (Array.isArray(operation)) {
     for (const child of operation) addOperationLike(graph, child);
     return;
@@ -103,21 +141,11 @@ function addOperationLike<Parameters>(graph: GPUCommandGraph<Parameters>, operat
 
 declare module './gpu-command-graph' {
   interface GPUCommandGraph<Parameters = void> {
-    /**
-     * Adds semantic operations to the graph and lowers them into command nodes.
-     *
-     * Arrays are construction sugar and flatten into sibling operations. A
-     * `GPUCompositeOperation` retains its semantic identity in the operation tree.
-     */
     add(operation: GPUOperationLike): this;
-
-    /** Semantic operation hierarchy added through `add()`. */
     readonly operations: readonly GPUOperationTree[];
   }
 }
 
-// Install the additive operation API without changing existing pass/contributor contracts. This
-// compatibility bridge can move directly into GPUCommandGraph once the operation IR lands.
 if (!GPUCommandGraph.prototype.add) {
   GPUCommandGraph.prototype.add = function <Parameters>(
     this: GPUCommandGraph<Parameters>,
