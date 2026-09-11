@@ -6,37 +6,80 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 ## Overview
 
-`GPUSpMV` multiplies a sparse matrix in compressed sparse row (CSR) form by a dense `float32` vector entirely inside the GPU command graph.
+**SpMV** means sparse matrix-vector multiplication: `y = A x` where `A` stores only its nonzero entries. `GPUSpMV` performs this operation for a CSR matrix entirely inside the GPU command graph.
 
-## Motivation
+## Dense MatVec vs sparse SpMV
 
-Dense `GPUMatVec` establishes the linear-operator role for ordinary matrices. Sparse numerical methods need the same operation without storing or reading zeros. SpMV is the canonical CSR execution primitive and is central to iterative sparse solvers, graph-derived linear systems, discretized PDEs and many scientific workloads.
+For a dense matrix:
 
-Adding SpMV also connects two previously separate parts of the GPU roadmap: offset-delimited irregular data and numerical linear algebra.
+```text
+A = [10  0 20]
+    [ 0 30  0]
+    [40  0 50]
+```
+
+ordinary matrix-vector multiplication conceptually evaluates every matrix position, including zeros. Sparse storage keeps only:
+
+```text
+rowOffsets    = [0,2,3,5]
+columnIndices = [0,2,1,0,2]
+values        = [10,20,30,40,50]
+```
+
+SpMV then visits only those five stored entries.
+
+For:
+
+```text
+x = [1, 2, 3]
+```
+
+we compute:
+
+```text
+y[0] = 10*x[0] + 20*x[2] = 70
+y[1] = 30*x[1]           = 60
+y[2] = 40*x[0] + 50*x[2] = 190
+
+result = [70, 60, 190]
+```
+
+So SpMV is not a different mathematical multiplication; it is a representation-aware way to compute the same `Ax` while avoiding explicit zeros.
+
+## How CSR maps to the operation
+
+Each CSR row is an offset-delimited segment:
+
+```text
+row 0 -> entries [0,2)
+row 1 -> entries [2,3)
+row 2 -> entries [3,5)
+```
+
+For each stored entry `i` in row `r`:
+
+```text
+column = columnIndices[i]
+contribution = values[i] * x[column]
+y[r] += contribution
+```
+
+This can be viewed as **indirect gather + multiply + segmented reduction**:
+
+```text
+columnIndices ──▶ gather x[column]
+                       │
+values ────────────────×
+                       │
+                 reduce by CSR row
+                       │
+                       ▼
+                       y
+```
+
+That connection is important: sparse numerical compute reuses the same irregular-data concepts as the rest of the GPU graph library.
 
 ## Contract
-
-The matrix is supplied as three packed views:
-
-```text
-rowOffsets    uint32[rows + 1]
-columnIndices uint32[nnz]
-values        float32[nnz]
-```
-
-Matrix row `r` owns the offset-delimited range:
-
-```text
-[rowOffsets[r], rowOffsets[r + 1])
-```
-
-Each entry `i` contributes:
-
-```text
-values[i] * vector[columnIndices[i]]
-```
-
-to the output for that row.
 
 ```ts
 new GPUSpMV({
@@ -49,54 +92,42 @@ new GPUSpMV({
 }).addToGraph(graph);
 ```
 
-`output.length` defines the matrix row count. `vector.length` must equal `columns`. Empty matrix rows naturally produce zero.
+`output.length` defines the row count; `vector.length` equals the matrix column count. Empty rows naturally produce zero. CSR offsets are assumed monotonic and valid without CPU readback.
 
-The primitive assumes GPU-resident CSR invariants such as monotonic offsets and valid terminal offsets. It bounds-checks column indices in the baseline kernel but does not force CPU readback to validate the representation.
+## Why SpMV matters
 
-## Composition
-
-The sparse construction and execution path becomes:
+Large sparse systems appear in graph-derived linear algebra, finite-element/finite-difference discretizations, optimization and iterative solvers. In algorithms such as conjugate gradient, the dominant operation each iteration is often:
 
 ```text
-COO generation
-     ↓
-sort / canonicalize
-     ↓
+p ──▶ A p
+```
+
+which is exactly SpMV.
+
+```text
+COO construction
+      ↓
 GPUCOOToCSR
-     ↓
+      ↓
 CSR matrix
-     ↓
-  GPUSpMV
-     ↓
-GPUElementwise / GPUReduction
-     ↓
+      ↓
+   GPUSpMV
+      ↓
+dot + vector updates
+      ↓
 iterative solver
 ```
 
-This is enough infrastructure to begin constructing conjugate-gradient and related solver graphs once dot products and scalar-coefficient updates are formalized.
-
 ## Execution strategy
 
-The baseline assigns one 256-thread workgroup to each sparse row. Lanes stride through that row's nonzeros, compute `value * x[column]` partials, then reduce the partial sums in workgroup memory.
-
-This maps naturally to medium and wide rows and parallels the dense `GPUMatVec` reduction structure. Unlike dense matvec, however, sparse row lengths can vary dramatically.
+The baseline assigns one 256-thread workgroup per sparse row. Lanes stride through the row's nonzeros, compute `value * x[column]` partials, then reduce them in workgroup memory.
 
 ## Performance notes
 
-SpMV is generally memory-bandwidth and access-pattern limited. The matrix values and column indices are streamed, while accesses into the dense vector are indirect. Sparse row-length distributions strongly affect utilization.
+SpMV is usually memory/access-pattern limited. Matrix values and column indices stream sequentially, while `x[column]` is an indirect access. Row lengths may vary from zero to thousands of entries, so no single scheduling strategy is optimal.
 
-One-workgroup-per-row is therefore a portable baseline, not a universal optimum. Future strategy selection should consider short-row subgroup kernels, multiple rows per workgroup, very-long-row splitting, subgroup reductions and row-length bucketing. The command graph/autotuner can eventually choose among strategies using matrix statistics rather than exposing those choices in the public API.
+Future strategies should include subgroup processing for short rows, multiple rows per workgroup, long-row splitting, row-length bucketing and autotuned selection. These strategies can preserve the CSR API.
 
-## Relationship to graph processing
+## Relationship to graphs
 
-CSR matrices and graph adjacency structures share the same offset-delimited shape. A weighted graph adjacency list can often be interpreted directly as a sparse matrix: row offsets identify each vertex's outgoing edge segment, column indices identify neighboring vertices, and values provide edge weights.
-
-The sparse numerical layer should reuse that structural commonality without forcing graph algorithms and linear algebra into the same high-level API.
-
-## Limitations and roadmap
-
-The first implementation supports CSR `float32` values and a dense `float32` vector. It does not yet support transpose SpMV, multiple right-hand sides, alternative sparse layouts, `float16`, mixed precision or symmetric-matrix specialization.
-
-Next numerical steps include reusable dot/norm operations and a conjugate-gradient solver graph. Performance work should add representative sparse matrices and row-distribution benchmarks before proliferating alternative storage formats.
-
-Once the lightweight engine `Kernel` abstraction lands, this primitive should use it instead of `Computation`.
+A weighted graph adjacency list has the same structural arrays: row offsets identify a vertex's edge segment, column indices identify neighbors, and values are edge weights. Sparse algebra and graph processing can therefore share low-level offset-delimited infrastructure while retaining distinct high-level APIs.
