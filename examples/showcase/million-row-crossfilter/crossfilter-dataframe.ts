@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUCommandGraph, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGroupAggregation} from '@luma.gl/gpgpu/gpu-core';
 import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
@@ -14,6 +16,7 @@ export type CrossfilterDataFrameSchema = {
   risk: 'float32';
   hour: 'float32';
   category: 'uint32';
+  selected: 'uint32';
 };
 
 export type CrossfilterDataFrameColumns = {
@@ -23,61 +26,41 @@ export type CrossfilterDataFrameColumns = {
   risk: GPUData<'float32'>;
   hour: GPUData<'float32'>;
   category: GPUData<'uint32'>;
+  selected: GPUData<'uint32'>;
 };
 
 /**
  * Creates a dataframe view over the exact GPUData chunks used by the linked crossfilter showcase.
  *
  * The vectors borrow their chunks, so creating the dataframe allocates no GPU storage and does not
- * duplicate the million resident rows. This deliberately establishes GPUDataFrame as the semantic
- * source layer while GPUCrossfilter continues to provide the specialized linked-view controller.
+ * duplicate the million resident rows. The live Crossfilter selection mask is represented as the
+ * `selected` uint32 column, allowing general dataframe-style analytics to consume linked-view state
+ * without introducing a special crossfilter-only mask contract.
  */
 export function createCrossfilterDataFrame(
   columns: CrossfilterDataFrameColumns
 ): GPUDataFrame<CrossfilterDataFrameSchema> {
+  const makeVector = <Format extends 'float32' | 'uint32'>(
+    name: string,
+    format: Format,
+    data: GPUData<Format>
+  ) =>
+    new GPUVector({
+      type: 'data',
+      name,
+      format,
+      data: [data],
+      ownsData: false
+    });
+
   const vectors = {
-    longitude: new GPUVector({
-      type: 'data',
-      name: 'longitude',
-      format: 'float32',
-      data: [columns.longitude],
-      ownsData: false
-    }),
-    latitude: new GPUVector({
-      type: 'data',
-      name: 'latitude',
-      format: 'float32',
-      data: [columns.latitude],
-      ownsData: false
-    }),
-    value: new GPUVector({
-      type: 'data',
-      name: 'value',
-      format: 'float32',
-      data: [columns.value],
-      ownsData: false
-    }),
-    risk: new GPUVector({
-      type: 'data',
-      name: 'risk',
-      format: 'float32',
-      data: [columns.risk],
-      ownsData: false
-    }),
-    hour: new GPUVector({
-      type: 'data',
-      name: 'hour',
-      format: 'float32',
-      data: [columns.hour],
-      ownsData: false
-    }),
-    category: new GPUVector({
-      type: 'data',
-      name: 'category',
-      format: 'uint32',
-      data: [columns.category],
-      ownsData: false
-    })
+    longitude: makeVector('longitude', 'float32', columns.longitude),
+    latitude: makeVector('latitude', 'float32', columns.latitude),
+    value: makeVector('value', 'float32', columns.value),
+    risk: makeVector('risk', 'float32', columns.risk),
+    hour: makeVector('hour', 'float32', columns.hour),
+    category: makeVector('category', 'uint32', columns.category),
+    selected: makeVector('selected', 'uint32', columns.selected)
   };
 
   return new GPUDataFrame<CrossfilterDataFrameSchema>({
@@ -87,4 +70,40 @@ export function createCrossfilterDataFrame(
     },
     ownership: 'owned'
   });
+}
+
+/**
+ * Adds a dense category count driven by the dataframe's live `selected` column.
+ *
+ * This is intentionally a shared-graph contribution rather than `GPUDataFrameQuery.compile()`: the
+ * current query compiler owns final graph compilation, while this showcase needs Crossfilter,
+ * analytics, and rendering-facing resources to coexist in one reusable command graph. The helper
+ * establishes the semantic/data ownership boundary now and can later lower through GPUProgram
+ * without changing the hero's storage or interaction contracts.
+ */
+export function addCrossfilterDataFrameCategoryCount<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  dataFrame: GPUDataFrame<CrossfilterDataFrameSchema>,
+  selectionMask: GraphDataView<'uint32'>,
+  output: GraphDataView<'uint32'>
+): void {
+  const category = dataFrame.column('category');
+  if (!(category instanceof GPUVector)) {
+    throw new Error('Crossfilter dataframe category column must be a GPUVector');
+  }
+  const categoryView = graph.importGPUVector('crossfilter-dataframe-category', category).data[0];
+  if (selectionMask.length !== dataFrame.numRows) {
+    throw new Error('Crossfilter dataframe selection mask must match the dataframe row count');
+  }
+  if (output.length !== CROSS_FILTER_CATEGORY_NAMES.length) {
+    throw new Error('Crossfilter dataframe category output must match the category dictionary');
+  }
+
+  new GPUGroupAggregation({
+    id: 'crossfilter-dataframe-category-count',
+    keys: categoryView,
+    mask: selectionMask,
+    output,
+    operation: 'count'
+  }).addToGraph(graph);
 }
