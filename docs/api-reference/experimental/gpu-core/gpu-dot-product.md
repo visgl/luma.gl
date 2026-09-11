@@ -4,59 +4,111 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 <GPUCoreDocsTabs active="reduction" />
 
-## Overview
+## Dot product
 
-`GPUDotProduct` and `GPUVectorNorm` provide canonical scalar reductions for packed `float32` vectors. Dot product computes `sum(a[i] * b[i])`; vector norm computes the Euclidean/L2 norm `sqrt(sum(x[i] * x[i]))`.
+The dot product multiplies corresponding vector elements and sums the products:
 
-## Motivation
+```text
+a = [1, 2, 3]
+b = [4, 5, 6]
 
-General reduction can compute sums, but numerical algorithms repeatedly need these two compound reductions. Treating them as named graph operations makes intent visible to the command graph and avoids private multiply-then-reduce or square-then-reduce kernels with unnecessary intermediate buffers.
+       1*4 + 2*5 + 3*6
+              ↓
+a · b =       32
+```
 
-They complete the minimal vector algebra needed to begin composing iterative linear solvers with `GPUElementwise`, `GPUMatVec`, and `GPUSpMV`.
+Formally:
+
+```text
+a · b = Σ a[i] b[i]
+```
+
+It turns two vectors into one scalar. Geometrically it also measures directional alignment: orthogonal vectors have dot product zero. In numerical algorithms it appears constantly in projections, residual calculations and iterative solvers.
+
+A dot product can be viewed computationally as:
+
+```text
+a ─┐
+   × elementwise ─▶ [products] ─▶ sum reduction ─▶ scalar
+b ─┘
+```
+
+`GPUDotProduct` fuses those stages so the intermediate product vector need not be materialized.
+
+## Vector norm
+
+The Euclidean or L2 norm is the ordinary geometric length of a vector:
+
+```text
+x = [3, 4]
+
+||x||₂ = sqrt(3² + 4²) = 5
+```
+
+Formally:
+
+```text
+||x||₂ = sqrt(x · x)
+       = sqrt(Σ x[i]²)
+```
+
+For solver residuals, the norm answers a useful question: **how large is the remaining error vector?**
+
+```text
+residual r
+    ↓
+r · r
+    ↓
+sqrt
+    ↓
+||r||₂
+```
+
+## Why these are GPU scalars
+
+Both operations consume potentially huge vectors but produce exactly one value. That scalar should remain GPU-resident when it feeds later work:
+
+```text
+GPUVector r ─▶ GPUDotProduct ─▶ GPU scalar rr
+                                      │
+                                      ▼
+                              solver coefficient
+                                      │
+                                      ▼
+                                vector update
+```
+
+Reading the scalar to JavaScript between solver stages would introduce synchronization.
 
 ## Contract
-
-Both primitives consume packed `float32` views and write one caller-owned `float32` result row.
 
 ```ts
 new GPUDotProduct({left: x, right: y, output: dot}).addToGraph(graph);
 new GPUVectorNorm({input: residual, output: norm}).addToGraph(graph);
 ```
 
-Inputs remain GPU-resident; neither operation submits work or performs CPU readback.
+The initial contract uses packed `float32` vectors and writes one caller-owned `float32` result row.
 
-## Composition
+## Solver composition
 
-The important target is a solver graph:
+Conjugate gradient uses dot products directly:
 
 ```text
-GPUSpMV / GPUMatVec
-        ↓
-GPUElementwise residual update
-        ↓
-GPUDotProduct / GPUVectorNorm
-        ↓
-solver scalar state
-        ↓
-next vector update
+rr   = r · r
+pAp  = p · (A p)
+alpha = rr / pAp
 ```
 
-For conjugate gradient, dot products provide terms such as `r·r` and `p·Ap`; norm provides a natural convergence diagnostic. A solver should be able to keep these scalar values GPU-resident and feed them into later graph nodes rather than forcing a JavaScript synchronization point every iteration.
+and can use the residual norm as a convergence diagnostic:
 
-## Why named operations?
+```text
+||r||₂ < tolerance
+```
 
-A dot product is mathematically elementwise multiply followed by reduction, and an L2 norm is square, reduce, then square-root. Materializing those intermediate vectors is wasteful. Named operations allow a single kernel today and give a future graph compiler enough semantic information to recognize equivalent compositions and fuse them automatically.
+This is why dot/norm operations are more than convenience wrappers: they connect vector computation to GPU-resident scalar state and graph control.
 
 ## Performance notes
 
-The baseline uses one 256-thread workgroup. Lanes stride across the entire vector and then perform a workgroup-tree reduction. This avoids intermediate storage and is a useful baseline, but very large vectors will eventually require hierarchical reduction across multiple workgroups for greater parallelism.
+The baseline uses one 256-thread workgroup. Lanes stride across the vector and perform a workgroup-tree reduction. Very large vectors eventually need hierarchical multi-workgroup reduction and subgroup collectives.
 
-Future implementations should share reduction infrastructure with `GPUReduction`, use subgroup collectives when available, and choose strategies based on vector length. Numerically sensitive workloads may also require explicit accumulation-policy choices rather than silently changing precision or reduction order.
-
-## Limitations and roadmap
-
-The initial contract is `float32` only and defines L2 norm only. It does not expose normalization, cosine similarity, L1/L-infinity norms or mixed precision; several of those already overlap with vector-search functionality and should be unified rather than duplicated.
-
-The next roadmap milestone is a graph-native conjugate-gradient solver composed from sparse/dense matvec, elementwise updates and these scalar reductions. The critical architectural requirement is keeping iteration state GPU-resident.
-
-Once the lightweight engine `Kernel` abstraction lands, these primitives should use it instead of `Computation`.
+Floating-point addition is not associative, so parallel reduction order can produce small numerical differences. Tests should use tolerances rather than bitwise equality.
