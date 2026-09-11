@@ -15,7 +15,7 @@ const loweringStacks = new WeakMap<object, GPUCommandGraphComputeLowering[]>();
  *
  * This is the supported lowering seam between semantic/compiler code and execution-level
  * contributors. It replaces ad-hoc replacement of `graph.addComputePass` while legacy execution
- * primitives are migrated to direct node factories.
+ * primitives are migrated to direct node factories. Scopes compose from outer to inner.
  */
 export function withGPUCommandGraphComputeLowering<Parameters, Result>(
   graph: GPUCommandGraph<Parameters>,
@@ -36,7 +36,7 @@ export function withGPUCommandGraphComputeLowering<Parameters, Result>(
   }
 }
 
-/** @internal Called by GPUCommandGraph.addComputePass before node insertion. */
+/** @internal Called by GPUCommandGraph immediately before compute-node insertion. */
 export function applyGPUCommandGraphComputeLowering<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
