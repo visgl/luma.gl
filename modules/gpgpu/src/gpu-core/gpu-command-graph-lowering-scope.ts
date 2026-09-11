@@ -14,13 +14,12 @@ export type GPUCommandGraphComputeLowering<Parameters = void> = (
 ) => Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>;
 
 /**
- * GPUCommandGraph used by backend compilers that need to decorate compute nodes during lowering.
- *
- * Unlike the earlier compiler prototype, this never replaces graph methods at runtime. The
- * lowering stack is ordinary instance state and `addComputePass()` is overridden once.
+ * GPUCommandGraph used by backend compilers that decorate compute nodes during lowering.
+ * Lowering scopes are ordinary instance state; graph methods are never replaced at runtime.
  */
 export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<Parameters> {
   private readonly computeLowerings: GPUCommandGraphComputeLowering<Parameters>[] = [];
+  private loweringsSuspended = 0;
 
   constructor(
     device: Device,
@@ -33,11 +32,16 @@ export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<
     node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
   ): void {
     let lowered = node;
-    for (const lowering of this.computeLowerings) lowered = lowering(lowered);
+    if (this.loweringsSuspended === 0) {
+      // Inner scopes realize concrete execution details first; outer scopes can then inspect them.
+      for (let index = this.computeLowerings.length - 1; index >= 0; index--) {
+        lowered = this.computeLowerings[index](lowered);
+      }
+    }
     super.addComputePass(lowered);
   }
 
-  /** Applies one or more compiler-owned node transforms for the duration of `callback`. */
+  /** Applies a compiler-owned node transform for the duration of `callback`. */
   withComputeLowering<Result>(
     lowering: GPUCommandGraphComputeLowering<Parameters>,
     callback: () => Result
@@ -47,6 +51,16 @@ export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<
       return callback();
     } finally {
       this.computeLowerings.pop();
+    }
+  }
+
+  /** Emits compiler-support nodes without recursively applying the surrounding semantic scopes. */
+  withoutComputeLowering<Result>(callback: () => Result): Result {
+    this.loweringsSuspended++;
+    try {
+      return callback();
+    } finally {
+      this.loweringsSuspended--;
     }
   }
 }
