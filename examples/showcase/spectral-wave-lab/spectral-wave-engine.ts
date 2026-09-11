@@ -1,0 +1,154 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {Buffer, type Device} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
+import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+
+const WORKGROUP_SIZE = 256;
+const TWO_PI = 2 * Math.PI;
+
+export type SpectralWaveLabStats = {
+  resolution: number;
+  elementCount: number;
+  fftPasses: number;
+  fftDispatchesPerFrame: number;
+  workgroupSize: readonly [number, number, number];
+  domainSize: number;
+  waveSpeed: number;
+};
+
+/**
+ * Exact-in-time Fourier evolution of the periodic 2D wave equation
+ *
+ *   ∂²u/∂t² = c² Δu
+ *
+ * with zero initial velocity. If û₀(k) is the FFT of the initial displacement then
+ *
+ *   û(k,t) = û₀(k) cos(c |k| t).
+ *
+ * One forward FFT captures û₀. Every frame evolves each Fourier mode independently and one inverse
+ * FFT reconstructs the real-space field. The visible field therefore comes directly from the GPU
+ * spectral solution rather than from a procedural rendering approximation.
+ */
+export class SpectralWaveEngine {
+  readonly device: Device;
+  readonly resolution: number;
+  readonly domainSize: number;
+  readonly waveSpeed: number;
+  readonly initialSpatial: Buffer;
+  readonly initialSpectrum: Buffer;
+  readonly evolvedSpectrum: Buffer;
+  readonly field: Buffer;
+  readonly stats: SpectralWaveLabStats;
+
+  private readonly fft: GPUFFT2D;
+  private readonly evolve: Computation;
+  private readonly parameters: Buffer;
+  private initialized = false;
+
+  constructor(device: Device, props: {resolution?: number; domainSize?: number; waveSpeed?: number} = {}) {
+    if (device.type !== 'webgpu') throw new Error('Spectral Wave Lab requires WebGPU.');
+    this.device = device;
+    this.resolution = props.resolution ?? 256;
+    this.domainSize = props.domainSize ?? 12;
+    this.waveSpeed = props.waveSpeed ?? 1.35;
+    if (!Number.isInteger(this.resolution) || this.resolution < 32 || this.resolution > 1024 || (this.resolution & (this.resolution - 1)) !== 0) {
+      throw new Error('Spectral Wave Lab resolution must be a power of two from 32 through 1024.');
+    }
+    const initial = makeInitialField(this.resolution, this.domainSize);
+    const byteLength = initial.byteLength;
+    this.initialSpatial = device.createBuffer({id:'spectral-wave-initial-spatial',data:initial,usage:Buffer.STORAGE|Buffer.COPY_DST});
+    this.initialSpectrum = device.createBuffer({id:'spectral-wave-initial-spectrum',byteLength,usage:Buffer.STORAGE});
+    this.evolvedSpectrum = device.createBuffer({id:'spectral-wave-evolved-spectrum',byteLength,usage:Buffer.STORAGE});
+    this.field = device.createBuffer({id:'spectral-wave-field',byteLength,usage:Buffer.STORAGE|Buffer.COPY_SRC});
+    this.parameters = device.createBuffer({id:'spectral-wave-parameters',byteLength:16,usage:Buffer.UNIFORM|Buffer.COPY_DST});
+    this.fft = new GPUFFT2D(device,{id:'spectral-wave-fft',width:this.resolution,height:this.resolution});
+    this.evolve = new Computation(device,{
+      id:'spectral-wave-evolve',
+      source: EVOLVE_SHADER,
+      shaderLayout:{bindings:[
+        {name:'initialSpectrum',type:'read-only-storage',group:0,location:0},
+        {name:'evolvedSpectrum',type:'storage',group:0,location:1},
+        {name:'parameters',type:'uniform',group:0,location:2}
+      ]}
+    });
+    this.stats = Object.freeze({
+      resolution:this.resolution,
+      elementCount:this.resolution*this.resolution,
+      fftPasses:this.fft.stats.passCount,
+      fftDispatchesPerFrame:this.fft.stats.dispatchCountPerEncode,
+      workgroupSize:this.fft.stats.workgroupSize,
+      domainSize:this.domainSize,
+      waveSpeed:this.waveSpeed
+    });
+  }
+
+  /** Records spectral evolution and reconstruction into the device's current command encoder. */
+  encode(timeSeconds: number): Buffer {
+    if (!Number.isFinite(timeSeconds)) throw new Error('Spectral Wave Lab time must be finite.');
+    const encoder = this.device.commandEncoder;
+    if (!this.initialized) {
+      this.fft.encode(encoder,{inputBuffer:this.initialSpatial,outputBuffer:this.initialSpectrum,direction:'forward'});
+      this.initialized = true;
+    }
+    this.parameters.write(makeParameters(timeSeconds,this.waveSpeed,this.domainSize,this.resolution));
+    this.evolve.predraw(encoder);
+    const pass=encoder.beginComputePass({id:'spectral-wave-evolve'});
+    this.evolve.setBindings({initialSpectrum:this.initialSpectrum,evolvedSpectrum:this.evolvedSpectrum,parameters:this.parameters});
+    this.evolve.dispatch(pass,Math.ceil(this.stats.elementCount/WORKGROUP_SIZE),1,1);
+    pass.end();
+    this.fft.encode(encoder,{inputBuffer:this.evolvedSpectrum,outputBuffer:this.field,direction:'inverse'});
+    return this.field;
+  }
+
+  destroy(): void {
+    this.fft.destroy();
+    this.evolve.destroy();
+    this.parameters.destroy();
+    this.initialSpatial.destroy();
+    this.initialSpectrum.destroy();
+    this.evolvedSpectrum.destroy();
+    this.field.destroy();
+  }
+}
+
+function makeInitialField(resolution:number,domainSize:number):Float32Array{
+  const complex=new Float32Array(resolution*resolution*2);
+  const disturbances=[
+    {x:-2.2,y:-1.0,amplitude:1.0,sigma:0.72},
+    {x:2.1,y:1.3,amplitude:-0.82,sigma:0.9},
+    {x:0.2,y:2.6,amplitude:0.58,sigma:0.55}
+  ];
+  for(let iy=0;iy<resolution;iy++){
+    const y=((iy/resolution)-0.5)*domainSize;
+    for(let ix=0;ix<resolution;ix++){
+      const x=((ix/resolution)-0.5)*domainSize;
+      let value=0;
+      for(const d of disturbances){const dx=x-d.x,dy=y-d.y;value+=d.amplitude*Math.exp(-(dx*dx+dy*dy)/(2*d.sigma*d.sigma));}
+      complex[2*(iy*resolution+ix)]=value;
+    }
+  }
+  return complex;
+}
+
+function makeParameters(time:number,waveSpeed:number,domainSize:number,resolution:number):ArrayBuffer{
+  const data=new ArrayBuffer(16);const f32=new Float32Array(data);const u32=new Uint32Array(data);
+  f32[0]=time;f32[1]=waveSpeed;f32[2]=domainSize;u32[3]=resolution;return data;
+}
+
+const EVOLVE_SHADER=`
+struct Parameters {time:f32,waveSpeed:f32,domainSize:f32,resolution:u32};
+@group(0) @binding(0) var<storage,read> initialSpectrum:array<vec2f>;
+@group(0) @binding(1) var<storage,read_write> evolvedSpectrum:array<vec2f>;
+@group(0) @binding(2) var<uniform> parameters:Parameters;
+fn signedFrequency(index:u32,n:u32)->f32{let i=i32(index);let half=i32(n/2u);return f32(select(i,i-i32(n),i>half));}
+@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) gid:vec3u){
+  let count=parameters.resolution*parameters.resolution;let index=gid.x;if(index>=count){return;}
+  let x=index%parameters.resolution;let y=index/parameters.resolution;
+  let kx=${TWO_PI}*signedFrequency(x,parameters.resolution)/parameters.domainSize;
+  let ky=${TWO_PI}*signedFrequency(y,parameters.resolution)/parameters.domainSize;
+  let omega=parameters.waveSpeed*sqrt(kx*kx+ky*ky);
+  evolvedSpectrum[index]=initialSpectrum[index]*cos(omega*parameters.time);
+}`;
