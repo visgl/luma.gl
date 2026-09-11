@@ -19,14 +19,23 @@ import {
 const WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
 
-export type GPUElementwiseOperation = 'copy' | 'add' | 'subtract' | 'multiply' | 'min' | 'max';
+export type GPUElementwiseOperation =
+  | 'copy'
+  | 'add'
+  | 'subtract'
+  | 'multiply'
+  | 'multiply-add'
+  | 'min'
+  | 'max';
 
 export type GPUElementwiseProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
   /** First packed scalar input. */
   input: GraphDataView<T>;
-  /** Second packed scalar input required by binary operations. */
+  /** Second packed scalar input required by binary and ternary operations. */
   inputB?: GraphDataView<T>;
+  /** Third packed scalar input required by `multiply-add`. */
+  inputC?: GraphDataView<T>;
   /** Caller-owned packed scalar output. */
   output: GraphDataView<T>;
   /** Operation applied independently to every row. */
@@ -36,13 +45,15 @@ export type GPUElementwiseProps<T extends GPUScalarFormat = GPUScalarFormat> = {
 /**
  * Applies one scalar operation independently to each packed GPU row.
  *
- * `copy` is unary. `add`, `subtract`, `multiply`, `min`, and `max` are binary and require `inputB`.
- * All inputs and output must have identical format and logical length.
+ * `copy` is unary. `add`, `subtract`, `multiply`, `min`, and `max` are binary.
+ * `multiply-add` is ternary and computes `a * b + c`. All inputs and output must have identical
+ * format and logical length.
  */
 export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
   readonly input: GraphDataView<T>;
   readonly inputB?: GraphDataView<T>;
+  readonly inputC?: GraphDataView<T>;
   readonly output: GraphDataView<T>;
   readonly operation: GPUElementwiseOperation;
 
@@ -50,6 +61,7 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     this.id = props.id ?? 'gpu-elementwise';
     this.input = props.input;
     this.inputB = props.inputB;
+    this.inputC = props.inputC;
     this.output = props.output;
     this.operation = props.operation;
 
@@ -58,24 +70,52 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     if (this.input.format !== this.output.format || this.input.length !== this.output.length) {
       throw new Error(`${this.id} input and output must have matching format and length`);
     }
-    const isBinary = this.operation !== 'copy';
-    if (isBinary && !this.inputB) {
+
+    const isUnary = this.operation === 'copy';
+    const isTernary = this.operation === 'multiply-add';
+    if (!isUnary && !this.inputB) {
       throw new Error(`${this.id} ${this.operation} requires inputB`);
     }
-    if (this.inputB) {
-      validatePackedView(this.inputB, SCALAR_FORMATS, `${this.id} inputB`);
-      if (this.inputB.format !== this.input.format || this.inputB.length !== this.input.length) {
-        throw new Error(`${this.id} inputB must match input format and length`);
+    if (isTernary && !this.inputC) {
+      throw new Error(`${this.id} multiply-add requires inputC`);
+    }
+    if (!isTernary && this.inputC) {
+      throw new Error(`${this.id} inputC is only valid for multiply-add`);
+    }
+
+    for (const [name, input] of [
+      ['inputB', this.inputB],
+      ['inputC', this.inputC]
+    ] as const) {
+      if (!input) continue;
+      validatePackedView(input, SCALAR_FORMATS, `${this.id} ${name}`);
+      if (input.format !== this.input.format || input.length !== this.input.length) {
+        throw new Error(`${this.id} ${name} must match input format and length`);
       }
     }
-    if (!['copy', 'add', 'subtract', 'multiply', 'min', 'max'].includes(this.operation)) {
+
+    if (
+      !['copy', 'add', 'subtract', 'multiply', 'multiply-add', 'min', 'max'].includes(
+        this.operation
+      )
+    ) {
       throw new Error(`${this.id} unsupported operation ${this.operation}`);
     }
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    const views = this.inputB ? [this.input, this.inputB, this.output] : [this.input, this.output];
-    if (views.some(view => view.buffer.graph !== graph)) {
+    const resources = [
+      {name: 'inputValues', view: this.input, usage: 'storage-read' as const},
+      ...(this.inputB
+        ? [{name: 'inputBValues', view: this.inputB, usage: 'storage-read' as const}]
+        : []),
+      ...(this.inputC
+        ? [{name: 'inputCValues', view: this.inputC, usage: 'storage-read' as const}]
+        : []),
+      {name: 'outputValues', view: this.output, usage: 'storage-write' as const}
+    ];
+
+    if (resources.some(resource => resource.view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (this.output.length === 0) return;
@@ -87,16 +127,6 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
     const source = makeShaderSource(this, dispatchLayout);
-    const resources = this.inputB
-      ? [
-          {name: 'inputValues', view: this.input, usage: 'storage-read' as const},
-          {name: 'inputBValues', view: this.inputB, usage: 'storage-read' as const},
-          {name: 'outputValues', view: this.output, usage: 'storage-write' as const}
-        ]
-      : [
-          {name: 'inputValues', view: this.input, usage: 'storage-read' as const},
-          {name: 'outputValues', view: this.output, usage: 'storage-write' as const}
-        ];
 
     graph.addComputePass({
       id: this.id,
@@ -106,7 +136,8 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
         maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
         maximumInvocationCount:
           dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * WORKGROUP_SIZE,
-        readByteLength: this.input.length * 4 * (this.inputB ? 2 : 1),
+        readByteLength:
+          this.input.length * 4 * (1 + Number(Boolean(this.inputB)) + Number(Boolean(this.inputC))),
         writeByteLength: this.output.length * 4
       },
       resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
@@ -150,18 +181,31 @@ function makeShaderSource(
         ? 'i32'
         : 'f32';
   const expression = getExpression(elementwise.operation);
-  const inputB = elementwise.inputB
-    ? `const INPUT_B_OFFSET: u32 = ${getViewElementOffset(elementwise.inputB)}u;\n@group(0) @binding(1) var<storage, read> inputBValues: array<${shaderType}>;`
-    : '';
-  const outputBinding = elementwise.inputB ? 2 : 1;
-  const bLoad = elementwise.inputB ? 'let b = inputBValues[INPUT_B_OFFSET + index];' : '';
+  let binding = 1;
+  const optionalInputs: string[] = [];
+  const optionalLoads: string[] = [];
+
+  if (elementwise.inputB) {
+    optionalInputs.push(
+      `const INPUT_B_OFFSET: u32 = ${getViewElementOffset(elementwise.inputB)}u;`,
+      `@group(0) @binding(${binding++}) var<storage, read> inputBValues: array<${shaderType}>;`
+    );
+    optionalLoads.push('let b = inputBValues[INPUT_B_OFFSET + index];');
+  }
+  if (elementwise.inputC) {
+    optionalInputs.push(
+      `const INPUT_C_OFFSET: u32 = ${getViewElementOffset(elementwise.inputC)}u;`,
+      `@group(0) @binding(${binding++}) var<storage, read> inputCValues: array<${shaderType}>;`
+    );
+    optionalLoads.push('let c = inputCValues[INPUT_C_OFFSET + index];');
+  }
 
   return `const LENGTH: u32 = ${elementwise.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(elementwise.input)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(elementwise.output)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
-${inputB}
-@group(0) @binding(${outputBinding}) var<storage, read_write> outputValues: array<${shaderType}>;
+${optionalInputs.join('\n')}
+@group(0) @binding(${binding}) var<storage, read_write> outputValues: array<${shaderType}>;
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3u,
@@ -170,18 +214,26 @@ fn main(
   ${getBoundedInvocationIndexSource(dispatchLayout, WORKGROUP_SIZE)}
   if (index >= LENGTH) { return; }
   let a = inputValues[INPUT_OFFSET + index];
-  ${bLoad}
+  ${optionalLoads.join('\n  ')}
   outputValues[OUTPUT_OFFSET + index] = ${expression};
 }`;
 }
 
 function getExpression(operation: GPUElementwiseOperation): string {
   switch (operation) {
-    case 'copy': return 'a';
-    case 'add': return 'a + b';
-    case 'subtract': return 'a - b';
-    case 'multiply': return 'a * b';
-    case 'min': return 'min(a, b)';
-    case 'max': return 'max(a, b)';
+    case 'copy':
+      return 'a';
+    case 'add':
+      return 'a + b';
+    case 'subtract':
+      return 'a - b';
+    case 'multiply':
+      return 'a * b';
+    case 'multiply-add':
+      return 'a * b + c';
+    case 'min':
+      return 'min(a, b)';
+    case 'max':
+      return 'max(a, b)';
   }
 }
