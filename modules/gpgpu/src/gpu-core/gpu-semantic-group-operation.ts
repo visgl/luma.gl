@@ -6,7 +6,7 @@ import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
 import type {GPUProgramVector} from './gpu-program-value';
 
 /** Semantic dense uint32 group count over a source-aligned uint32 selection mask. */
-export class GPUProgramGroupCount implements GPUOperation {
+export class GroupCount implements GPUOperation {
   readonly type = 'group-count';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;
@@ -19,7 +19,7 @@ export class GPUProgramGroupCount implements GPUOperation {
       output: GPUProgramVector<'uint32'>;
     }
   ) {
-    this.id = props.id ?? 'gpu-group-count';
+    this.id = props.id ?? 'group-count';
     if (props.keys.length !== props.mask.length) {
       throw new Error(`${this.id} keys and mask lengths must match`);
     }
@@ -38,3 +38,6 @@ export class GPUProgramGroupCount implements GPUOperation {
     });
   }
 }
+
+/** @deprecated Prefer GroupCount. */
+export {GroupCount as GPUProgramGroupCount};
