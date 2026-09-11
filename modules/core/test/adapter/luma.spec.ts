@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {nullAdapter} from '@luma.gl/test-utils';
-import {luma} from '@luma.gl/core';
+import {luma, type Adapter} from '@luma.gl/core';
 
 it('luma#attachDevice', async () => {
   const device = await luma.attachDevice(null, {adapters: [nullAdapter]});
@@ -31,6 +31,31 @@ it('luma#createDevice', async () => {
   expect(device.info.vendor, 'info.vendor ok').toBe('no one');
   expect(device.info.renderer, 'info.renderer ok').toBe('none');
   void 0;
+});
+
+it('luma#createDevice alerts browser users to debug failures', async () => {
+  const alertSpy = vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
+  const adapter = {
+    type: 'webgpu',
+    pageLoaded: Promise.resolve(),
+    create: async () => {
+      throw new Error('WebGPU unavailable');
+    }
+  } as unknown as Adapter;
+
+  try {
+    await expect(
+      luma.createDevice({
+        type: 'webgpu',
+        adapters: [adapter],
+        debug: true,
+        waitForPageLoad: false
+      })
+    ).rejects.toThrow('WebGPU unavailable');
+    expect(alertSpy, 'the native error is shown').toHaveBeenCalledWith('WebGPU unavailable');
+  } finally {
+    alertSpy.mockRestore();
+  }
 });
 
 it('luma#registerAdapters', async () => {

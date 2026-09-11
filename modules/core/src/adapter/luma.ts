@@ -93,17 +93,21 @@ export class Luma {
   async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
     const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
 
-    const adapter = this.selectAdapter(props.type, props.adapters);
-    if (!adapter) {
-      throw new Error(ERROR_MESSAGE);
-    }
+    try {
+      const adapter = this.selectAdapter(props.type, props.adapters);
+      if (!adapter) {
+        throw new Error(ERROR_MESSAGE);
+      }
 
-    // Wait for page to load so that CanvasContext's can access the DOM.
-    if (props.waitForPageLoad) {
-      await adapter.pageLoaded;
+      // Wait for page to load so that CanvasContext's can access the DOM.
+      if (props.waitForPageLoad) {
+        await adapter.pageLoaded;
+      }
+      return await adapter.create(props);
+    } catch (error) {
+      if (props.debug) displayDeviceCreationError(error);
+      throw error;
     }
-
-    return await adapter.create(props);
   }
 
   /**
@@ -228,6 +232,12 @@ export class Luma {
 
     return null;
   }
+}
+
+function displayDeviceCreationError(error: unknown): void {
+  if (typeof alert === 'undefined') return;
+  // biome-ignore lint/suspicious/noAlert: debug device errors must be visible without developer tools.
+  alert(error instanceof Error ? error.message : String(error));
 }
 
 /**
