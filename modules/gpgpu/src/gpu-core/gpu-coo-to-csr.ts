@@ -1,0 +1,81 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {Binding} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
+import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {getViewBinding, getViewElementOffset, validatePackedUint32View, validatePackedView} from './graph-data-view-utils';
+
+const WORKGROUP_SIZE = 256;
+
+export type GPUCOOToCSRProps = {
+  id?: string;
+  /** COO row indices, sorted nondecreasing by row. */
+  rowIndices: GraphDataView<'uint32'>;
+  /** COO column indices in the same entry order. */
+  columnIndices: GraphDataView<'uint32'>;
+  /** COO values in the same entry order. */
+  values: GraphDataView<'float32'>;
+  /** Matrix row count. */
+  rows: number;
+  /** Caller-owned CSR row offsets, length rows + 1. */
+  rowOffsets: GraphDataView<'uint32'>;
+  /** Caller-owned CSR column indices, length nnz. */
+  outputColumnIndices: GraphDataView<'uint32'>;
+  /** Caller-owned CSR values, length nnz. */
+  outputValues: GraphDataView<'float32'>;
+};
+
+/** Converts row-sorted COO entries into CSR without CPU readback. */
+export class GPUCOOToCSR {
+  readonly id: string;
+  readonly props: GPUCOOToCSRProps;
+
+  constructor(props: GPUCOOToCSRProps) {
+    this.id = props.id ?? 'gpu-coo-to-csr';
+    this.props = props;
+    validatePackedUint32View(props.rowIndices, `${this.id} rowIndices`);
+    validatePackedUint32View(props.columnIndices, `${this.id} columnIndices`);
+    validatePackedView(props.values, ['float32'], `${this.id} values`);
+    validatePackedUint32View(props.rowOffsets, `${this.id} rowOffsets`);
+    validatePackedUint32View(props.outputColumnIndices, `${this.id} outputColumnIndices`);
+    validatePackedView(props.outputValues, ['float32'], `${this.id} outputValues`);
+    const nnz = props.rowIndices.length;
+    if (props.columnIndices.length !== nnz || props.values.length !== nnz) throw new Error(`${this.id} COO arrays must have equal length`);
+    if (!Number.isInteger(props.rows) || props.rows < 0) throw new Error(`${this.id} rows must be a non-negative integer`);
+    if (props.rowOffsets.length !== props.rows + 1) throw new Error(`${this.id} rowOffsets length must equal rows + 1`);
+    if (props.outputColumnIndices.length !== nnz || props.outputValues.length !== nnz) throw new Error(`${this.id} CSR entry outputs must have length nnz`);
+  }
+
+  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    const p = this.props;
+    const views = [p.rowIndices,p.columnIndices,p.values,p.rowOffsets,p.outputColumnIndices,p.outputValues];
+    if (views.some(view => view.buffer.graph !== graph)) throw new Error(`${this.id} views must belong to target graph`);
+    addCopyEntriesPass(graph, this);
+    addOffsetsPass(graph, this);
+  }
+}
+
+function addCopyEntriesPass<Parameters>(graph: GPUCommandGraph<Parameters>, conversion: GPUCOOToCSR): void {
+  const p=conversion.props; const nnz=p.rowIndices.length; if(nnz===0)return;
+  const groups=Math.ceil(nnz/WORKGROUP_SIZE);
+  const source=`const NNZ:u32=${nnz}u;const COL_IN:u32=${getViewElementOffset(p.columnIndices)}u;const VAL_IN:u32=${getViewElementOffset(p.values)}u;const COL_OUT:u32=${getViewElementOffset(p.outputColumnIndices)}u;const VAL_OUT:u32=${getViewElementOffset(p.outputValues)}u;
+@group(0) @binding(0) var<storage,read> columns:array<u32>;@group(0) @binding(1) var<storage,read> values:array<f32>;@group(0) @binding(2) var<storage,read_write> outColumns:array<u32>;@group(0) @binding(3) var<storage,read_write> outValues:array<f32>;
+@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) id:vec3u){let i=id.x;if(i>=NNZ){return;}outColumns[COL_OUT+i]=columns[COL_IN+i];outValues[VAL_OUT+i]=values[VAL_IN+i];}`;
+  addPass(graph,`${conversion.id}-copy`,source,groups,[{name:'columns',view:p.columnIndices,usage:'storage-read'},{name:'values',view:p.values,usage:'storage-read'},{name:'outColumns',view:p.outputColumnIndices,usage:'storage-write'},{name:'outValues',view:p.outputValues,usage:'storage-write'}]);
+}
+
+function addOffsetsPass<Parameters>(graph: GPUCommandGraph<Parameters>, conversion: GPUCOOToCSR): void {
+  const p=conversion.props; const nnz=p.rowIndices.length; const groups=Math.ceil((p.rows+1)/WORKGROUP_SIZE);
+  const source=`const ROWS:u32=${p.rows}u;const NNZ:u32=${nnz}u;const ROW_IN:u32=${getViewElementOffset(p.rowIndices)}u;const OFF_OUT:u32=${getViewElementOffset(p.rowOffsets)}u;
+@group(0) @binding(0) var<storage,read> rowsIn:array<u32>;@group(0) @binding(1) var<storage,read_write> offsets:array<u32>;
+fn lowerBound(target:u32)->u32{var lo=0u;var hi=NNZ;loop{if(lo>=hi){break;}let mid=lo+(hi-lo)/2u;if(rowsIn[ROW_IN+mid]<target){lo=mid+1u;}else{hi=mid;}}return lo;}
+@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) id:vec3u){let row=id.x;if(row>ROWS){return;}offsets[OFF_OUT+row]=lowerBound(row);}`;
+  addPass(graph,`${conversion.id}-offsets`,source,groups,[{name:'rowsIn',view:p.rowIndices,usage:'storage-read'},{name:'offsets',view:p.rowOffsets,usage:'storage-write'}]);
+}
+
+type Resource={name:string;view:GraphDataView;usage:'storage-read'|'storage-write'};
+function addPass<Parameters>(graph:GPUCommandGraph<Parameters>,id:string,source:string,groups:number,resources:Resource[]):void{
+  graph.addComputePass({id,workload:{operation:'GPUCOOToCSR',commandCount:1,maximumWorkgroupCount:groups,maximumInvocationCount:groups*WORKGROUP_SIZE,readByteLength:0,writeByteLength:0},resources:resources.map(r=>({buffer:r.view,usage:r.usage})),compile:({device})=>{const computation=new Computation(device,{id,source,shaderLayout:{bindings:resources.map((r,location)=>({name:r.name,type:r.usage==='storage-read'?'read-only-storage':'storage',group:0,location}))}});return{encode:({computePass,getBuffer})=>{const bindings:Record<string,Binding>={};for(const r of resources)bindings[r.name]=getViewBinding(r.view,getBuffer);computation.setBindings(bindings);computation.dispatch(computePass,groups,1,1);},destroy:()=>computation.destroy()};}});
+}
