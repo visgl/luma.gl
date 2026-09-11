@@ -2,48 +2,51 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraph, GPUCommandGraphComputeNode} from './gpu-command-graph';
+import type {Device} from '@luma.gl/core';
+import {
+  GPUCommandGraph,
+  type GPUCommandGraphComputeNode
+} from './gpu-command-graph';
+import type {GPUCommandGraphAutotuner} from './gpu-command-graph-autotuner';
 
-export type GPUCommandGraphComputeLowering = <Parameters>(
+export type GPUCommandGraphComputeLowering<Parameters = void> = (
   node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
 ) => Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>;
 
-const loweringStacks = new WeakMap<object, GPUCommandGraphComputeLowering[]>();
-
 /**
- * Applies an explicit compiler-owned transform to compute nodes emitted during `callback`.
+ * GPUCommandGraph used by backend compilers that need to decorate compute nodes during lowering.
  *
- * This is the supported lowering seam between semantic/compiler code and execution-level
- * contributors. It replaces ad-hoc replacement of `graph.addComputePass` while legacy execution
- * primitives are migrated to direct node factories. Scopes compose from outer to inner.
+ * Unlike the earlier compiler prototype, this never replaces graph methods at runtime. The
+ * lowering stack is ordinary instance state and `addComputePass()` is overridden once.
  */
-export function withGPUCommandGraphComputeLowering<Parameters, Result>(
-  graph: GPUCommandGraph<Parameters>,
-  lowering: GPUCommandGraphComputeLowering,
-  callback: () => Result
-): Result {
-  let stack = loweringStacks.get(graph);
-  if (!stack) {
-    stack = [];
-    loweringStacks.set(graph, stack);
-  }
-  stack.push(lowering);
-  try {
-    return callback();
-  } finally {
-    stack.pop();
-    if (stack.length === 0) loweringStacks.delete(graph);
-  }
-}
+export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<Parameters> {
+  private readonly computeLowerings: GPUCommandGraphComputeLowering<Parameters>[] = [];
 
-/** @internal Called by GPUCommandGraph immediately before compute-node insertion. */
-export function applyGPUCommandGraphComputeLowering<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
-): Omit<GPUCommandGraphComputeNode<Parameters>, 'type'> {
-  const stack = loweringStacks.get(graph);
-  if (!stack?.length) return node;
-  let lowered = node;
-  for (const lowering of stack) lowered = lowering(lowered);
-  return lowered;
+  constructor(
+    device: Device,
+    props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}
+  ) {
+    super(device, props);
+  }
+
+  override addComputePass(
+    node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
+  ): void {
+    let lowered = node;
+    for (const lowering of this.computeLowerings) lowered = lowering(lowered);
+    super.addComputePass(lowered);
+  }
+
+  /** Applies one or more compiler-owned node transforms for the duration of `callback`. */
+  withComputeLowering<Result>(
+    lowering: GPUCommandGraphComputeLowering<Parameters>,
+    callback: () => Result
+  ): Result {
+    this.computeLowerings.push(lowering);
+    try {
+      return callback();
+    } finally {
+      this.computeLowerings.pop();
+    }
+  }
 }
