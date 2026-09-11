@@ -6,11 +6,15 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 ## Overview
 
-`GPUValueArena` packs many small GPU-produced values into one graph-managed storage buffer. Each logical value receives a typed slot and stable byte offset, while operations can bind the shared arena instead of consuming a separate storage-buffer binding for every scalar.
+A `GPUCommandGraph` has one default `GPUValueArena` for small GPU-produced values. Algorithms declare logical values first; once declarations are complete, the arena is sealed and materializes **one exactly-sized transient storage buffer** for the graph.
+
+The central invariant is:
+
+> **Logical value count must not imply storage-binding count.**
 
 ## Why an arena?
 
-Numerical and control algorithms produce values that are logically scalars:
+Numerical and control algorithms produce many values that are logically scalars:
 
 ```text
 rr      = r · r
@@ -20,113 +24,157 @@ beta    = newRR / rr
 active  = residual > tolerance
 ```
 
-These values must remain on the GPU if an iterative command graph is to avoid CPU synchronization. Representing every scalar as an independent storage buffer would be simple, but WebGPU exposes a deliberately limited number of storage-buffer bindings per shader stage. A solver or graph algorithm could therefore exhaust binding capacity with tiny four-byte resources long before it exhausted GPU memory or arithmetic capacity.
+They must remain GPU-resident to avoid CPU synchronization. Giving every four-byte scalar its own storage buffer would waste one of WebGPU's limited storage-buffer bindings for each value.
 
-The arena separates **logical values** from **physical bindings**:
-
-```text
-logical GPU values
-
-rr        f32 ─┐
-pDotQ     f32 ─┤
-alpha     f32 ─┤
-beta      f32 ─┼──▶ GPUValueArena ───▶ one storage buffer
-active    u32 ─┘
-```
-
-A slot is not a buffer. It is a typed range inside the arena buffer.
-
-## Representation
-
-The initial arena uses 32-bit scalar slots:
+Instead the graph packs them together:
 
 ```text
-byte offset
-    0   ┌───────────────┐
-        │ rr      f32   │
-    4   ├───────────────┤
-        │ pDotQ   f32   │
-    8   ├───────────────┤
-        │ alpha   f32   │
-   12   ├───────────────┤
-        │ beta    f32   │
-   16   ├───────────────┤
-        │ active  u32   │
-   20   └───────────────┘
+CG declares:       rr, pDotQ, alpha, beta
+control declares:  active, iteration
+other nodes:       counters / small state
+                         │
+                         ▼
+                  graph value arena
+                         │
+                         ▼
+              one storage-buffer binding
 ```
 
-Each allocation returns metadata containing the format, byte offset, and a one-row `GraphDataView`. The view lets existing graph resource/hazard machinery reason about the value while all slots still alias the same underlying graph buffer.
+## Graph ownership
+
+The normal API does not ask each algorithm to create or size an arena. Every contributor obtains the graph's shared arena:
 
 ```ts
-const values = new GPUValueArena(graph, {
-  id: 'cg-state',
-  byteLength: 256
-});
+const values = getGPUValueArena(graph);
 
-const rr = values.allocate('rr', 'float32');
-const alpha = values.allocate('alpha', 'float32');
-const active = values.allocate('active', 'uint32');
+const rr = values.allocate('cg-rr', 'float32');
+const alpha = values.allocate('cg-alpha', 'float32');
+const active = values.allocate('cg-active', 'uint32');
 ```
+
+Repeated calls to `getGPUValueArena(graph)` return the same arena. Algorithms therefore contribute logical value requirements to one graph-wide packing problem rather than creating solver-, sorting-, or control-specific buffers.
+
+## Two-phase layout
+
+The arena separates **declaration** from **physical allocation**.
+
+During graph construction, values receive stable packed offsets:
+
+```text
+rr          f32  @  0
+pDotQ       f32  @  4
+alpha       f32  @  8
+beta        f32  @ 12
+active      u32  @ 16
+iteration   u32  @ 20
+```
+
+No capacity is guessed by the caller. Once all values have been declared:
+
+```ts
+const binding = values.seal();
+```
+
+sealing creates one transient graph buffer whose byte length is exactly the packed requirement:
+
+```text
+0    ┌───────────────┐
+     │ rr      f32   │
+4    ├───────────────┤
+     │ pDotQ   f32   │
+8    ├───────────────┤
+     │ alpha   f32   │
+12   ├───────────────┤
+     │ beta    f32   │
+16   ├───────────────┤
+     │ active  u32   │
+20   ├───────────────┤
+     │ iteration u32 │
+24   └───────────────┘
+
+arena.byteLength = 24
+```
+
+No further values may be declared after sealing because that would invalidate offsets and the physical allocation.
+
+## Logical slots and graph views
+
+A declared `GPUValueSlot<T>` is logical metadata:
+
+```text
+(id, format, byteOffset)
+```
+
+It is deliberately not a buffer. After sealing, `getView(slot)` produces a one-row `GraphDataView<T>` into the shared arena buffer so existing graph resource and hazard machinery can consume the value.
+
+All such views share the same underlying `GraphBufferHandle`. Current hazards are therefore conservatively buffer-granular; this is correct even before the compiler learns arena subranges.
 
 ## Arena versus uniform parameters
 
-Not every scalar belongs in this arena.
+Not every scalar belongs in the value arena:
 
 ```text
 CPU-known constant       → WGSL literal / override where appropriate
-CPU-updated parameter    → uniform/parameter storage
-GPU-produced value       → GPUValueArena
+CPU-updated parameter    → uniform / parameter machinery
+GPU-produced value       → graph GPUValueArena
 ```
 
-For example, an application-provided timestep is naturally a CPU parameter. Conjugate-gradient `alpha`, by contrast, is produced by GPU dot products and scalar division during execution and must remain GPU-resident.
+An application timestep is naturally a CPU parameter. Conjugate-gradient `alpha`, by contrast, is produced from GPU dot products during execution and belongs in GPU-resident graph state.
 
-The public operation layer should eventually accept logical scalar operands without requiring callers to care whether their physical representation is a constant, uniform parameter, or arena slot.
+The eventual operation API should accept logical scalar operands without forcing callers to care which physical representation supplies them.
 
 ## Relationship to GPUScalar
 
-`GPUValueArena` is deliberately the physical substrate, not the final scalar API. A following `GPUScalar<T>` abstraction can be a first-class graph value backed by an arena slot:
+`GPUValueArena` is the physical packing substrate, not the final mathematical API. A following `GPUScalar<T>` abstraction can refer to a graph value slot:
 
 ```text
 GPUScalar<float32>
        │
-       └── arena + byteOffset + format
+       └── graph value slot
+              │
+              └── shared GPUValueArena @ byteOffset
 ```
 
-This ordering avoids baking “one scalar equals one storage buffer” into the graph API before binding pressure is addressed.
-
-## Why `GPUValueArena`, not `GPUScalarArena`?
-
-The same packed storage can eventually hold more than mathematical scalars: counters, convergence flags, compact metadata, indirect-dispatch parameters and other small GPU-produced control values. `GPUValueArena` names the physical mechanism without prematurely restricting its role.
-
-The initial PR intentionally allocates scalar-sized slots only. Small structs or arrays should be added only when concrete consumers establish their layout requirements.
-
-## Graph and lifetime semantics
-
-The first implementation creates one transient `GraphBufferHandle` through `GPUCommandGraph`. Slots have stable offsets for the lifetime of the graph and share that handle. Because graph hazards are currently buffer-granular, accesses to different slots conservatively alias; this is correct but may reduce scheduling freedom.
-
-A future compiler can understand arena subranges and lifetimes more precisely, potentially reuse dead slots, coalesce arenas, or promote selected values into other physical representations without changing their logical APIs.
+That keeps scalar semantics independent from storage-buffer allocation.
 
 ## Binding model
 
-The key design goal is to let a kernel consume several logical values through one arena binding:
+A kernel that consumes several logical graph values should bind the arena once:
 
 ```wgsl
 @group(0) @binding(0)
-var<storage, read_write> values: array<u32>;
+var<storage, read_write> graphValues: array<u32>;
 ```
 
-Generated/accessor code can load the appropriate word and bitcast it according to slot format. Later work may provide typed WGSL helpers so individual operations do not hand-code arena offsets.
+Generated accessors can load or store the appropriate word and bitcast according to logical format. Ten, one hundred, or more logical graph values can therefore remain one storage-buffer binding for a kernel that needs access to the arena.
 
-The first PR establishes allocation and graph representation; scalar arithmetic and generated WGSL accessors follow separately.
+## Future: lifetime-based packing
+
+The initial layout is deliberately simple: every declared value receives a unique stable four-byte slot. The graph compiler can eventually use producer/consumer lifetimes to reuse physical slots whose live ranges do not overlap:
+
+```text
+logical A:  ─────────┐
+                     X dead
+logical B:             ───────────
+
+physical offset 12:  [ A ][ B ]
+```
+
+This is analogous to register allocation. It can shrink the arena without changing `GPUScalar` or algorithm APIs. That optimization should follow real lifetime information rather than complicating the first representation.
+
+## Why `GPUValueArena`, not `GPUScalarArena`?
+
+The same packed state can hold mathematical scalars, counters, convergence flags, compact metadata, indirect-dispatch dimensions and similar small GPU-produced control values. The name describes the physical mechanism without restricting its eventual uses.
 
 ## Roadmap
 
-1. packed `GPUValueArena` with typed 32-bit slots
-2. first-class `GPUScalar<T>` logical values backed by arena slots
-3. scalar arithmetic (`add`, `multiply`, `divide`, `sqrt`, comparisons)
-4. scalar broadcast into `GPUElementwise` / MADD
-5. GPU convergence/control values
-6. complete GPU-resident conjugate-gradient execution
-7. compiler lifetime analysis and slot reuse where worthwhile
+1. graph-owned, exactly-sized `GPUValueArena`
+2. first-class `GPUScalar<T>` logical values
+3. generated WGSL arena access helpers
+4. scalar arithmetic and comparisons
+5. scalar constants/broadcast in `GPUElementwise` / MADD
+6. GPU convergence/control integration
+7. complete GPU-resident conjugate-gradient execution
+8. compiler lifetime analysis and slot reuse
 
-The central invariant is that **logical value count must not imply storage-binding count**.
+The graph should own the packing problem; algorithms should only declare the values they need.
