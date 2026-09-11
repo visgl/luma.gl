@@ -13,7 +13,7 @@ import {GPUScalarConstant} from './gpu-scalar-constant';
 import {GPUVectorScalarMADD} from './gpu-elementwise-scalar';
 
 export type GPUJacobiPCGProps={id?:string;rowOffsets:GraphDataView<'uint32'>;columnIndices:GraphDataView<'uint32'>;values:GraphDataView<'float32'>;rhs:GraphDataView<'float32'>;solution:GraphDataView<'float32'>;columns:number;iterations:number;spmvStatistics?:GPUAdaptiveSpMVProps['statistics']};
-export type GPUJacobiPCGResult={residualSquared:GPUScalar<'float32'>;initialResidualSquared:GPUScalar<'float32'>;spmvStrategy:string};
+export type GPUJacobiPCGResult={residualSquared:GPUScalar<'float32'>;initialResidualSquared:GPUScalar<'float32'>;spmvStrategy:string;iterations:number};
 
 /** Graph-composed fixed-iteration Jacobi-preconditioned conjugate gradient solver. */
 export class GPUJacobiPCG{
@@ -45,6 +45,6 @@ export class GPUJacobiPCG{
       new GPUScalarCompute({id:`${prefix}-rho-copy`,operation:'copy',left:rhoNew,output:rho}).addToGraph(graph);
     }
     new GPUFloat32HierarchicalReduction({id:`${this.id}-final-rr`,input:r,map:'square',output:residualSquared}).addToGraph(graph);
-    return{residualSquared,initialResidualSquared,spmvStrategy};
+    return{residualSquared,initialResidualSquared,spmvStrategy,iterations};
   }
 }
