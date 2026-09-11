@@ -4,19 +4,67 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 <GPUCoreDocsTabs active="reduction" />
 
-## Overview
+## What is matrix multiplication?
 
-`GPUMatMul` multiplies two dense row-major `float32` matrices using a tiled WebGPU compute kernel and contributes the work to a `GPUCommandGraph`.
+Matrix multiplication combines two matrices by taking dot products between rows of `A` and columns of `B`:
 
-## Motivation
+```text
+C = A B
+```
 
-Matrix multiplication is a foundational dense-compute primitive, but unlike simple elementwise arithmetic it is only useful as infrastructure if the implementation reuses data effectively. A naive kernel reloads matrix values from storage for each output element and leaves much of the GPU's arithmetic capability waiting on memory.
+If `A` is M×K and `B` is K×N, the result `C` is M×N:
 
-`GPUMatMul` therefore starts with workgroup tiling rather than a serial correctness kernel. It establishes a graph-native GEMM substrate for numerical transforms, batched scientific workloads and future compute pipelines while leaving room for device-specific optimization.
+```text
+C[row,col] = Σ A[row,k] * B[k,col]
+```
+
+Example:
+
+```text
+A = [1 2]    B = [5 6]
+    [3 4]        [7 8]
+
+C = [1*5+2*7   1*6+2*8] = [19 22]
+    [3*5+4*7   3*6+4*8]   [43 50]
+```
+
+The operation is often called **GEMM** (general matrix-matrix multiplication) in numerical libraries. GEMM is foundational because many dense numerical, scientific and ML workloads reduce to large amounts of matrix multiplication.
+
+## Why tiling matters on a GPU
+
+A naive implementation computes each output independently and repeatedly reloads the same A/B values from storage memory. Matrix multiplication has enormous data reuse, so good GPU kernels load a small block—or **tile**—once into fast workgroup memory and reuse it for many multiply-adds.
+
+Conceptually:
+
+```text
+A                         B
+┌──────────────┐          ┌──────────────┐
+│   A tile     │          │   B tile     │
+└──────┬───────┘          └──────┬───────┘
+       └──────────┬──────────────┘
+                  ▼
+          workgroup memory
+                  │
+        many multiply-adds
+                  │
+                  ▼
+              C tile
+```
+
+The baseline uses 16×16 tiles. Each workgroup computes one 16×16 region of C and walks across K in 16-value slices.
+
+```text
+K dimension
+A row tiles:  [ A0 ][ A1 ][ A2 ] ...
+                 ×     ×     ×
+B col tiles:  [ B0 ][ B1 ][ B2 ] ...
+                 │     │     │
+                 └── accumulate ──▶ C tile
+```
+
+This is the first major difference between GEMM and simpler elementwise GPU operations: execution strategy is fundamental to useful performance.
 
 ## Contract
-
-The first API deliberately uses explicit dimensions rather than introducing a tensor framework. `left` is a packed row-major MxK `float32` matrix, `right` is a packed row-major KxN matrix, and `output` is a caller-owned packed row-major MxN matrix.
 
 ```ts
 new GPUMatMul({
@@ -29,46 +77,37 @@ new GPUMatMul({
 }).addToGraph(graph);
 ```
 
-The mathematical operation is `C[M,N] = A[M,K] * B[K,N]`. Input and output buffers remain GPU-resident and caller-owned. Output aliasing with either input is rejected.
+All matrices are initially packed row-major `float32`. Edge tiles are bounds-checked, so dimensions need not be multiples of 16.
 
-## Execution strategy
-
-The baseline kernel uses 16x16 workgroups. Each workgroup computes one 16x16 output tile. For every 16-wide slice of K, lanes cooperatively load one tile from A and one from B into workgroup memory, synchronize, accumulate products from the shared tiles, then advance to the next K tile.
+## Relationship to MatVec
 
 ```text
-A tile 16x16 ─┐
-              ├─ workgroup memory ─ multiply/accumulate ─ C tile 16x16
-B tile 16x16 ─┘
+GPUMatVec: matrix × vector → vector
+GPUMatMul: matrix × matrix → matrix
 ```
 
-Out-of-range lanes on edge tiles contribute zero, so M, K and N do not need to be multiples of 16.
+MatVec is frequently memory-bandwidth dominated. GEMM has much greater arithmetic reuse and can become compute-bound when tiling and blocking are effective.
 
-## Composition
+## Performance strategy
 
-Dense matrix multiplication extends the numerical layer established by `GPUElementwise` and `GPUMatVec`:
+A fixed 16×16 tile is a portable baseline, not a universal optimum. Performance depends on tile dimensions, per-thread output blocking, vectorized loads, workgroup-memory behavior, register pressure, matrix shape and GPU architecture.
+
+This makes GEMM a strong target for Jarnevon autotuning:
 
 ```text
-GPUElementwise ─┐
-GPUMatVec       ├─ dense numerical substrate
-GPUMatMul       ┘
-        ↓
-transforms / solvers / simulation / data analysis
+matrix shape + device limits
+            ↓
+      strategy candidates
+  8×8 / 16×16 / asymmetric
+  subgroup / blocked / vectorized
+            ↓
+         autotuner
+            ↓
+       selected kernel
 ```
 
-Higher-level operations should compose these primitives rather than embedding private matrix kernels when the standard layout and semantics are sufficient.
+Benchmarks should cover square, tall/skinny, short-K and non-aligned matrices rather than reporting one headline dimension.
 
-## Performance notes
+## Scope
 
-A fixed 16x16 tile is a portable baseline, not a claim of universally optimal GEMM performance. Competitive matrix multiplication is highly device-sensitive. Tile dimensions, per-thread output blocking, vectorized loads, workgroup-memory bank behavior, register pressure and matrix aspect ratio all affect throughput.
-
-The command graph already has device/workload inspection and autotuning concepts, making GEMM an attractive future strategy-selection workload. Candidate kernels can include 8x8, 16x16 and asymmetric tiles, multiple output elements per invocation, subgroup-assisted variants and specialized small-matrix paths.
-
-Benchmarks should report dimensions and shape classes rather than one square-matrix number. Important cases include square matrices, tall/skinny matrices, short K, and sizes that do not align to tile boundaries.
-
-## Limitations and roadmap
-
-The initial API supports packed row-major `float32` only. It does not yet expose transpose flags, batching, strided matrices, `float16`, mixed accumulation precision, bias/activation fusion or arbitrary matrix views.
-
-Likely follow-ups are benchmark coverage, device strategy selection, `float16` variants where supported, batched matmul, and explicit layout/transpose support driven by real workloads. Sparse matrix multiplication belongs in a separate sparse substrate rather than complicating this dense primitive.
-
-Once the lightweight engine `Kernel` abstraction lands, this primitive should use it instead of `Computation`.
+The initial API deliberately avoids a tensor framework. Future additions such as transpose flags, batching, `float16`, mixed precision and richer layouts should be driven by demonstrated workloads. Sparse multiplication belongs to the CSR/SpMV substrate rather than complicating dense GEMM.
