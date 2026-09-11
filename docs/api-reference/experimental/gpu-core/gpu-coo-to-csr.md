@@ -2,15 +2,19 @@
 
 ## Overview
 
-`GPUCOOToCSR` converts row-sorted coordinate-list sparse entries into compressed sparse row arrays entirely on the GPU.
+`GPUCOOToCSR` converts a sparse matrix from coordinate (COO) representation into compressed sparse row (CSR) representation entirely on the GPU.
 
-## Motivation
+## What changes during COO → CSR?
 
-COO is convenient while constructing sparse data because every entry carries an explicit row and column. CSR is better for row-oriented execution because rows become offset-delimited segments. A GPU-resident conversion lets construction flow directly into sparse numerical or graph execution without downloading row structure to JavaScript.
+Consider:
 
-## Contract
+```text
+A = [10  0 20]
+    [ 0 30  0]
+    [40  0 50]
+```
 
-The initial operation consumes row-sorted COO arrays:
+COO explicitly stores a row number for every nonzero:
 
 ```text
 rowIndices    = [0,0,1,2,2]
@@ -18,7 +22,7 @@ columnIndices = [0,2,1,0,2]
 values        = [10,20,30,40,50]
 ```
 
-and produces:
+CSR removes `rowIndices` and replaces them with N+1 row boundaries:
 
 ```text
 rowOffsets    = [0,2,3,5]
@@ -26,7 +30,55 @@ columnIndices = [0,2,1,0,2]
 values        = [10,20,30,40,50]
 ```
 
-Rows are described by offset-delimited ranges `[rowOffsets[r], rowOffsets[r + 1])`.
+Visually:
+
+```text
+COO rows:      [0,0 | 1 | 2,2]
+                    ↓ compress row identity
+CSR offsets:   [0,   2,  3,    5]
+```
+
+Nothing about the mathematical matrix changes. Only its indexing representation changes.
+
+## Why convert?
+
+COO is easy to construct because every entry is independent. CSR is efficient for row-oriented execution because all entries for row `r` are immediately available as:
+
+```text
+[rowOffsets[r], rowOffsets[r + 1])
+```
+
+This makes conversion a natural boundary between construction and execution:
+
+```text
+generate entries
+      ↓
+     COO
+      ↓
+sort/canonicalize
+      ↓
+ GPUCOOToCSR
+      ↓
+     CSR
+      ↓
+SpMV / graph / solver
+```
+
+## Empty rows
+
+Offset-delimited representation handles empty rows without special records. If row 1 contains no entries:
+
+```text
+rowOffsets = [0, 2, 2, 5]
+                       ↑
+               [2,2) is empty
+```
+
+Repeated offsets therefore have useful semantics and are not malformed data.
+
+## Contract
+
+The initial operation requires COO entries sorted nondecreasing by row:
 
 ```ts
 new GPUCOOToCSR({
@@ -40,48 +92,39 @@ new GPUCOOToCSR({
 }).addToGraph(graph);
 ```
 
-The initial primitive deliberately requires COO entries already sorted nondecreasing by row. Sorting and duplicate-coordinate canonicalization are separate concerns and can be composed before conversion.
+Sorting and duplicate-coordinate canonicalization are separate operations. Duplicate `(row,column)` entries are preserved by conversion.
 
 ## Execution strategy
 
-The conversion has two independent GPU stages. The entry arrays are copied into CSR entry order, which is already correct because the COO input is row-sorted. Row offsets are then generated in parallel: each output boundary computes the lower bound of its row number in the sorted COO row-index array.
-
-This produces correct offsets for empty rows as well as populated rows. For example, repeated equal offsets naturally represent empty rows.
-
-## Composition
-
-The intended sparse construction pipeline is:
+Because input is row-sorted, column/value arrays are already in CSR entry order and can be copied directly. Each CSR boundary independently finds the first COO entry whose row is at least that boundary's row number—a lower-bound search.
 
 ```text
-raw COO entries
-      ↓
-sort by row / column
-      ↓
-canonicalize duplicates if required
-      ↓
-GPUCOOToCSR
-      ↓
-GPUCSRMatrix
-      ↓
-GPUSpMV / graph / solver operations
+sorted COO row indices
+[0 0 0 2 2 4]
+ ↑     ↑   ↑ ↑
+row0  row1 row3 row5 boundaries
 ```
 
-The lower-bound baseline intentionally keeps this PR independent of the proposed RLE/segmented PRs. Once those primitives land, an alternative conversion strategy can be benchmarked using boundary detection, run-length encoding and scan. The public COO-to-CSR contract need not change.
+Rows missing from COO naturally map to repeated boundaries.
 
-## Semantics and validation
+## Alternative composition
 
-`rowIndices`, `columnIndices` and `values` must have equal logical length. `rowOffsets` must contain `rows + 1` entries. CSR column/value outputs must have capacity equal to the COO nonzero count.
+Once the general grouping primitives land, row offsets can also be viewed as a grouping problem:
 
-The primitive assumes GPU-resident row indices are sorted and in range. It does not read them back for host validation. Duplicate `(row,column)` entries are preserved; merging duplicates is a separate canonicalization operation.
+```text
+sorted row IDs
+      ↓
+run boundaries / RLE
+      ↓
+run lengths
+      ↓
+scan
+      ↓
+row offsets
+```
+
+The lower-bound implementation is a simple independent baseline. RLE/scan may reduce traffic for some shapes and should be benchmarked rather than assumed superior.
 
 ## Performance notes
 
-The initial row-offset implementation performs one binary lower-bound search per row, giving approximately `O(rows log nnz)` row-index reads. This is attractive as a simple parallel baseline and handles empty rows naturally.
-
-For very large row counts, a boundary/RLE/scan construction may reduce memory traffic. That alternative should be evaluated against the baseline rather than assumed faster: sparse shape, row distribution and GPU memory behavior all matter.
-
-## Roadmap
-
-The immediate consumer is `GPUSpMV`. Future work can add a canonicalization helper, benchmark lower-bound versus RLE/scan offset construction, and support additional sparse value formats where justified.
-
-Once the lightweight `Kernel` abstraction lands, this primitive should use it instead of `Computation`.
+The baseline performs one binary search per row, approximately `O(rows log nnz)` row-index reads. It remains entirely GPU-resident and handles populated and empty rows uniformly.
