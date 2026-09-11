@@ -4,20 +4,21 @@
 
 import type {Device} from '@luma.gl/core';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
+import {selectGPUStrategy} from './gpu-strategy';
 
 export type GPUReductionStrategy={workgroupSize:64|128|256;elementsPerThread:1|2|4|8;elementsPerWorkgroup:number;useSubgroups:boolean;firstLevelWorkgroups:number};
+type ReductionShapeId='wg64'|'wg128'|'wg256';
 
-/**
- * Selects a reduction shape from workload size and device capabilities.
- *
- * More elements per thread amortize dispatch and hierarchy overhead on large inputs while smaller
- * workloads retain enough workgroups for parallelism. Subgroups remain an orthogonal intra-group
- * acceleration rather than changing public reduction semantics.
- */
+/** Selects reduction execution shape through the common Jarnevon strategy contract. */
 export function getAdaptiveGPUReductionStrategy(device:Device,length:number):GPUReductionStrategy{
   if(!Number.isSafeInteger(length)||length<1)throw new Error('reduction length must be positive');
   const maxInvocations=device.limits.maxComputeInvocationsPerWorkgroup??256;
-  const workgroupSize=(maxInvocations>=256?256:maxInvocations>=128?128:64) as 64|128|256;
+  const decision=selectGPUStrategy<ReductionShapeId,{length:number},{workgroupSize:64|128|256}>({device,workload:{length},candidates:[
+    {id:'wg64',score:()=>length<4096?100:30,reason:()=>`small reduction favors 64-thread workgroups`,createDetails:()=>({workgroupSize:64})},
+    {id:'wg128',isSupported:()=>maxInvocations>=128,score:()=>length>=4096&&length<65536?110:60,reason:()=>`medium reduction favors 128-thread workgroups`,createDetails:()=>({workgroupSize:128})},
+    {id:'wg256',isSupported:()=>maxInvocations>=256,score:()=>length>=65536?120:70,reason:()=>`large reduction favors 256-thread workgroups`,createDetails:()=>({workgroupSize:256})}
+  ]});
+  const workgroupSize=decision.details.workgroupSize;
   let elementsPerThread:1|2|4|8=1;
   if(length>=workgroupSize*4096)elementsPerThread=8;else if(length>=workgroupSize*1024)elementsPerThread=4;else if(length>=workgroupSize*256)elementsPerThread=2;
   const elementsPerWorkgroup=workgroupSize*elementsPerThread;
@@ -25,6 +26,4 @@ export function getAdaptiveGPUReductionStrategy(device:Device,length:number):GPU
   const useSubgroups=getGPUShaderSubgroupStrategy(device,{requiresSubgroupId:true})==='subgroups';
   return Object.freeze({workgroupSize,elementsPerThread,elementsPerWorkgroup,useSubgroups,firstLevelWorkgroups});
 }
-
-/** Returns hierarchy lengths using a selected adaptive reduction shape. */
 export function getAdaptiveGPUReductionLevels(length:number,strategy:GPUReductionStrategy):number[]{const levels:number[]=[];let current=length;do{current=Math.ceil(current/strategy.elementsPerWorkgroup);levels.push(current);}while(current>1);return levels;}
