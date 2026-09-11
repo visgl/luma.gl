@@ -6,10 +6,10 @@ import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
 import type {GPUProgramVector, GPUProgramVectorFormat} from './gpu-program-value';
 import type {GPUReductionOperation} from './gpu-reduction';
 
-export type GPUProgramHistogramDomain = readonly [number, number];
+export type HistogramDomain = readonly [number, number];
 
 /** Semantic equal-width histogram over a logical vector with an optional selection mask. */
-export class GPUProgramHistogram<T extends GPUProgramVectorFormat = GPUProgramVectorFormat>
+export class Histogram<T extends GPUProgramVectorFormat = GPUProgramVectorFormat>
   implements GPUOperation
 {
   readonly type = 'histogram';
@@ -21,11 +21,11 @@ export class GPUProgramHistogram<T extends GPUProgramVectorFormat = GPUProgramVe
       id?: string;
       input: GPUProgramVector<T>;
       output: GPUProgramVector<'uint32'>;
-      domain: GPUProgramHistogramDomain;
+      domain: HistogramDomain;
       mask?: GPUProgramVector<'uint32'>;
     }
   ) {
-    this.id = props.id ?? 'gpu-histogram';
+    this.id = props.id ?? 'histogram';
     if (props.output.length <= 0) throw new Error(`${this.id} requires at least one histogram bin`);
     if (props.mask && props.mask.length !== props.input.length) {
       throw new Error(`${this.id} input and mask lengths must match`);
@@ -50,7 +50,7 @@ export class GPUProgramHistogram<T extends GPUProgramVectorFormat = GPUProgramVe
 }
 
 /** Semantic scalar reduction over a logical vector with an optional selection mask. */
-export class GPUProgramReduction<T extends GPUProgramVectorFormat = GPUProgramVectorFormat>
+export class Reduction<T extends GPUProgramVectorFormat = GPUProgramVectorFormat>
   implements GPUOperation
 {
   readonly type = 'reduction';
@@ -66,7 +66,7 @@ export class GPUProgramReduction<T extends GPUProgramVectorFormat = GPUProgramVe
       mask?: GPUProgramVector<'uint32'>;
     }
   ) {
-    this.id = props.id ?? 'gpu-reduction';
+    this.id = props.id ?? 'reduction';
     if (props.mask && props.mask.length !== props.input.length) {
       throw new Error(`${this.id} input and mask lengths must match`);
     }
@@ -91,3 +91,10 @@ export class GPUProgramReduction<T extends GPUProgramVectorFormat = GPUProgramVe
     });
   }
 }
+
+/** @deprecated Prefer Histogram. */
+export {Histogram as GPUProgramHistogram};
+/** @deprecated Prefer Reduction. */
+export {Reduction as GPUProgramReduction};
+/** @deprecated Prefer HistogramDomain. */
+export type GPUProgramHistogramDomain = HistogramDomain;
