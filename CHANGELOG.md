@@ -2,6 +2,10 @@
 
 ## v9.4
 
+### v9.4.1
+
+- fix(core): resize the default framebuffer after an external canvas resize (#3178)
+
 ### v9.4.0
 
 Version 9.4 expands luma.gl with portable GPU data processing and a broad experimental stack for
