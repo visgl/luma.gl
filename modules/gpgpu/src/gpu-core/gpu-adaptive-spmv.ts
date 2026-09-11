@@ -6,6 +6,11 @@ import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
+  addGPUCommandNodes,
+  createGPUComputeCommandNode,
+  type GPUCommandNode
+} from './gpu-command-node';
+import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -35,7 +40,7 @@ export type GPUAdaptiveSpMVProps = {
 /**
  * Strategy-selecting CSR sparse matrix-vector multiplication: `output = matrix * vector`.
  *
- * The public operation remains stable while execution adapts between scalar rows, subgroup rows,
+ * The public primitive remains stable while execution adapts between scalar rows, subgroup rows,
  * workgroup rows and a two-pass long-row path.
  */
 export class GPUAdaptiveSpMV {
@@ -87,42 +92,41 @@ export class GPUAdaptiveSpMV {
     });
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
     const {rowOffsets, columnIndices, values, vector, output} = this.props;
     for (const view of [rowOffsets, columnIndices, values, vector, output]) {
       if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to target graph`);
     }
-    if (output.length === 0) return;
+    if (output.length === 0) return [];
 
     const decision = this.getStrategy(graph);
     switch (decision.id) {
       case 'scalar-row':
-        addSinglePass(graph, this, decision.id, makeScalarRowShader(this, decision.details.workgroupSize),
-          Math.ceil(output.length / decision.details.rowsPerWorkgroup));
-        return;
+        return [makeSinglePassNode(graph, this, decision.id, makeScalarRowShader(this, decision.details.workgroupSize), Math.ceil(output.length / decision.details.rowsPerWorkgroup))];
       case 'subgroup-row':
-        addSinglePass(graph, this, decision.id, makeSubgroupRowShader(this, decision.details.workgroupSize),
-          Math.ceil(output.length / decision.details.rowsPerWorkgroup));
-        return;
+        return [makeSinglePassNode(graph, this, decision.id, makeSubgroupRowShader(this, decision.details.workgroupSize), Math.ceil(output.length / decision.details.rowsPerWorkgroup))];
       case 'workgroup-row':
-        addSinglePass(graph, this, decision.id, makeWorkgroupRowShader(this, decision.details.workgroupSize), output.length);
-        return;
+        return [makeSinglePassNode(graph, this, decision.id, makeWorkgroupRowShader(this, decision.details.workgroupSize), output.length)];
       case 'long-row':
-        addLongRowPasses(graph, this, decision.details.workgroupSize, decision.details.workgroupsPerLongRow);
-        return;
+        return makeLongRowNodes(graph, this, decision.details.workgroupSize, decision.details.workgroupsPerLongRow);
     }
+  }
+
+  /** @deprecated Prefer getCommandNodes(). */
+  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+    addGPUCommandNodes(graph, this.getCommandNodes(graph));
   }
 }
 
-function addSinglePass<Parameters>(
+function makeSinglePassNode<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   spmv: GPUAdaptiveSpMV,
   strategy: GPUSpMVStrategyId,
   source: string,
   workgroupCount: number
-): void {
+): GPUCommandNode<Parameters> {
   const {rowOffsets, columnIndices, values, vector, output} = spmv.props;
-  graph.addComputePass({
+  return createGPUComputeCommandNode<Parameters>({
     id: `${spmv.id}-${strategy}`,
     workload: {
       operation: `GPUSpMV:${strategy}`,
@@ -156,18 +160,18 @@ function addSinglePass<Parameters>(
   });
 }
 
-function addLongRowPasses<Parameters>(
+function makeLongRowNodes<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   spmv: GPUAdaptiveSpMV,
   workgroupSize: number,
   workgroupsPerRow: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
   const rows = spmv.props.output.length;
   const partials = createTransientView(graph, `${spmv.id}-long-row-partials`, 'float32', rows * workgroupsPerRow);
   const partialSource = makeLongRowPartialShader(spmv, workgroupSize, workgroupsPerRow);
   const reduceSource = makeLongRowFinalizeShader(spmv, workgroupsPerRow);
 
-  graph.addComputePass({
+  const partialNode = createGPUComputeCommandNode<Parameters>({
     id: `${spmv.id}-long-row-partials`,
     workload: {
       operation: 'GPUSpMV:long-row-partials',
@@ -203,7 +207,7 @@ function addLongRowPasses<Parameters>(
     }
   });
 
-  graph.addComputePass({
+  const finalizeNode = createGPUComputeCommandNode<Parameters>({
     id: `${spmv.id}-long-row-finalize`,
     workload: {
       operation: 'GPUSpMV:long-row-finalize',
@@ -235,6 +239,8 @@ function addLongRowPasses<Parameters>(
       };
     }
   });
+
+  return [partialNode, finalizeNode];
 }
 
 function getSpMVBindings() {
