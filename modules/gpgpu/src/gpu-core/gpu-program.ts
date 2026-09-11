@@ -9,35 +9,40 @@ import {
   type GPUOperationTree,
   type GPUProgramOperation
 } from './gpu-operation';
+import {GPUProgramScalar, type GPUProgramScalarFormat} from './gpu-program-value';
 
-/**
- * Backend-independent semantic GPU program.
- *
- * GPUProgram owns operation intent and hierarchy only. It deliberately has no Device, Buffer,
- * dispatch, binding, command encoder, or command-graph API. A GPUProgramCompiler lowers the same
- * program into a backend execution graph.
- */
+/** Backend-independent semantic GPU program. */
 export class GPUProgram {
   readonly id: string;
   private readonly programOperations: GPUProgramOperation[] = [];
+  private readonly programScalars = new Map<string, GPUProgramScalar>();
 
   constructor(props: {id?: string} = {}) {
     this.id = props.id ?? 'gpu-program';
   }
 
-  /** Adds semantic operations. Arrays are construction sugar and flatten at the program root. */
   add(operation: GPUOperationLike): this {
     this.assertOperationLike(operation);
     this.addOperationLike(operation);
     return this;
   }
 
-  /** Root semantic operations in insertion order. */
+  /** Declares backend-independent scalar state used by predicates and scalar operations. */
+  scalar<T extends GPUProgramScalarFormat>(id: string, format: T): GPUProgramScalar<T> {
+    if (this.programScalars.has(id)) throw new Error(`${this.id} scalar "${id}" already exists`);
+    const scalar = new GPUProgramScalar(id, format);
+    this.programScalars.set(id, scalar);
+    return scalar;
+  }
+
+  get scalars(): readonly GPUProgramScalar[] {
+    return Object.freeze([...this.programScalars.values()]);
+  }
+
   get operations(): readonly GPUProgramOperation[] {
     return Object.freeze([...this.programOperations]);
   }
 
-  /** Immutable inspector-friendly semantic hierarchy. */
   get operationTree(): readonly GPUOperationTree[] {
     return Object.freeze(this.programOperations.map(getGPUOperationTree));
   }
@@ -61,7 +66,6 @@ export class GPUProgram {
   }
 }
 
-/** Convenience helper for explicit semantic grouping. */
 export function composite(
   operations: readonly GPUProgramOperation[],
   props: {id?: string} = {}
