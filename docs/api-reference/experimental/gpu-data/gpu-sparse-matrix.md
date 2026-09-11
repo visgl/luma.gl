@@ -1,14 +1,22 @@
 # GPU sparse matrices
 
-## Overview
+## What is a sparse matrix?
 
-`GPUCOOMatrix` and `GPUCSRMatrix` are lightweight views over GPU-resident sparse matrix data. They define representation and shape only; conversion, multiplication and other algorithms remain separate graph operations.
+A sparse matrix contains mostly zeros. For example:
 
-This separation lets sparse data structures participate in the same GPU data model as the rest of luma.gl without coupling storage to one execution strategy.
+```text
+A = [10  0 20]
+    [ 0 30  0]
+    [40  0 50]
+```
 
-## COO: construction-oriented representation
+A dense representation stores all nine values. A sparse representation stores only the five nonzero entries plus enough indexing information to recover their positions. For large matrices arising from graphs, meshes, PDE discretizations and optimization problems, avoiding the zeros can reduce storage and memory traffic dramatically.
 
-Coordinate format stores one `(row, column, value)` triple for every nonzero matrix entry:
+`GPUCOOMatrix` and `GPUCSRMatrix` represent the same sparse matrix in two different ways. They define GPU-resident data and shape only; conversion and numerical operations remain separate graph operations.
+
+## COO: coordinate format
+
+COO stores every nonzero explicitly as `(row, column, value)`:
 
 ```text
 rowIndices    = [0, 0, 1, 2, 2]
@@ -16,7 +24,7 @@ columnIndices = [0, 2, 1, 0, 2]
 values        = [10,20,30,40,50]
 ```
 
-This describes:
+which means:
 
 ```text
 (0,0)=10  (0,2)=20
@@ -24,23 +32,26 @@ This describes:
 (2,0)=40  (2,2)=50
 ```
 
-COO is intentionally simple and is well suited to construction pipelines. Entries can be generated, compacted, concatenated, sorted by `(row,column)`, and optionally merged before conversion to a row-oriented representation.
+or visually:
 
-```ts
-const matrix = new GPUCOOMatrix({
-  rows: 3,
-  columns: 3,
-  rowIndices,
-  columnIndices,
-  values
-});
+```text
+      col 0  col 1  col 2
+row 0   10      0     20
+row 1    0     30      0
+row 2   40      0     50
 ```
 
-The data structure does not require entries to be sorted and does not currently define duplicate-coordinate semantics. Algorithms that require canonical COO should establish those properties explicitly.
+COO is convenient during construction because entries are independent records. GPU pipelines can generate, compact, concatenate and sort entries without first building row metadata.
 
-## CSR: execution-oriented row representation
+```ts
+const matrix = new GPUCOOMatrix({rows: 3, columns: 3, rowIndices, columnIndices, values});
+```
 
-Compressed sparse row format removes the repeated row index and describes each row as an offset-delimited segment:
+COO does not inherently require sorting. Duplicate coordinates can also exist; canonicalization may sort by `(row,column)` and merge duplicates when an algorithm requires that property.
+
+## CSR: compressed sparse row format
+
+CSR reorganizes the same entries by row and removes the repeated row index:
 
 ```text
 rowOffsets    = [0, 2, 3, 5]
@@ -48,90 +59,86 @@ columnIndices = [0, 2, 1, 0, 2]
 values        = [10,20,30,40,50]
 ```
 
-Row `r` owns the half-open range:
+The offsets divide the column/value arrays into rows:
 
 ```text
-[rowOffsets[r], rowOffsets[r + 1])
+entries       = [0,2 | 1 | 0,2]
+values        = [10,20|30|40,50]
+rowOffsets    = [0,   2,  3,    5]
 ```
 
-Therefore the example contains:
+Row `r` owns `[rowOffsets[r], rowOffsets[r + 1])`. Thus row 0 uses entries `[0,2)`, row 1 `[2,3)`, and row 2 `[3,5)`.
+
+This is an example of the general **offset-delimited segment** representation used throughout the GPU graph library. Repeated offsets represent empty rows:
 
 ```text
-row 0 -> entries [0,2)
-row 1 -> entries [2,3)
-row 2 -> entries [3,5)
+rowOffsets = [0, 2, 2, 5]
+                    ↑
+              row 1 is empty
 ```
-
-This is the same general offset-delimited-segment representation used by segmented GPU primitives and variable-length columnar data. CSR is one important application of that pattern; the generic segmented APIs deliberately do not use sparse-matrix terminology.
 
 ```ts
-const matrix = new GPUCSRMatrix({
-  rows: 3,
-  columns: 3,
-  rowOffsets,
-  columnIndices,
-  values
-});
+const matrix = new GPUCSRMatrix({rows: 3, columns: 3, rowOffsets, columnIndices, values});
 ```
 
-`rowOffsets.length` must equal `rows + 1`, while `columnIndices` and `values` contain one row for each stored nonzero.
+## COO vs CSR
 
-## Why both?
+They are not competing mathematical formats; they favor different phases:
 
-COO and CSR optimize different stages of a sparse workflow:
+```text
+                    easy to generate
+                          │
+                          ▼
+                         COO
+                    (row,col,value)
+                          │
+                  sort / canonicalize
+                          │
+                          ▼
+                         CSR
+              (row offsets + col + value)
+                          │
+                    row execution
+                          ▼
+                SpMV / graphs / solvers
+```
+
+COO spends one row index per nonzero but makes entries explicit. CSR stores only `rows + 1` row offsets and makes all entries belonging to a row contiguous, which is valuable for row-oriented GPU algorithms.
+
+## Connection to graphs
+
+A weighted graph adjacency list has almost the same shape as CSR:
+
+```text
+rowOffsets    -> where each vertex's neighbors begin/end
+columnIndices -> neighboring vertex IDs
+values        -> edge weights
+```
+
+This structural commonality is why sparse linear algebra and graph processing can share low-level offset-delimited infrastructure without sharing the same high-level API.
+
+## Sparse construction pipeline
 
 ```text
 entry generation
       ↓
-     COO
+GPUCOOMatrix
       ↓
-sort / canonicalize / merge
+sort by row/column
       ↓
-  COO -> CSR
+optional duplicate merge
       ↓
-     CSR
+GPUCOOToCSR
       ↓
-SpMV / graph / solver operations
+GPUCSRMatrix
+      ↓
+GPUSpMV / solver operations
 ```
 
-COO makes individual sparse entries explicit, which is convenient during construction. CSR groups those entries by row, avoiding a stored row index per nonzero and making row-oriented execution such as sparse matrix-vector multiplication efficient.
-
-## Composition with GPU primitives
-
-The Jarnevon primitive vocabulary should make sparse construction increasingly compositional:
-
-```text
-GPUCompact / GPUScatter
-          ↓
-         COO
-          ↓
-       GPUSort
-          ↓
-GPURunLengthEncode(rows)
-          ↓
- offset construction
-          ↓
-         CSR
-```
-
-A future `GPUCOOToCSR` graph operation can package that workflow while reusing the underlying primitives rather than introducing an unrelated sparse conversion subsystem.
-
-Similarly, `GPUSpMV` can consume `GPUCSRMatrix` and a dense vector while remaining an algorithm separate from the storage representation.
+RLE, scan and segmented primitives can provide reusable pieces of this construction pipeline.
 
 ## Validation and semantics
 
-The lightweight data structures validate host-visible shape relationships only. They do not read GPU memory back to verify that row/column indices are in bounds, that CSR offsets are monotonic, or that the terminal offset equals the nonzero count. Producers are responsible for establishing those GPU-resident invariants.
+The data structures validate host-visible shape relationships only. They do not read GPU memory back to verify index bounds, monotonic CSR offsets, or terminal offset values. Producers establish those GPU-resident invariants.
 
-The initial value format is `float32` and indices/offsets are `uint32`. Additional value types should be driven by concrete sparse workloads.
-
-## Roadmap
-
-The intended progression is:
-
-1. `GPUCOOMatrix` / `GPUCSRMatrix` representation
-2. graph-native `GPUCOOToCSR`
-3. `GPUSpMV`
-4. sparse solver composition
-5. additional sparse operations only where they share reusable infrastructure
-
-This keeps the sparse layer focused: representation first, then composable graph operations, rather than embedding execution policy into matrix containers.
+The initial value format is `float32`; indices and offsets are `uint32`.
