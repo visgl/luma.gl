@@ -4,45 +4,56 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 ## Overview
 
-`GPURunLengthEncode` turns an ordered `uint32` sequence into one row per contiguous run: the run value, its length, and a scalar count describing the valid output prefix. `GPUUnique` exposes the same ordered-run contract for callers interested primarily in distinct adjacent values.
+`GPURunLengthEncode` (RLE) replaces each contiguous run of equal values with the value and the run length. `GPUUnique` exposes the corresponding distinct adjacent values.
 
-## Motivation
+## What is run-length encoding?
 
-Sorting is only the first half of many GPU grouping pipelines. Once equal keys are adjacent, downstream work needs explicit group boundaries before it can aggregate values, build CSR-style offsets, or emit one record per key. Without a reusable RLE primitive, group-by, histogram-like workflows, graph adjacency construction and columnar dictionary operations each tend to grow their own boundary detection and prefix-scan kernels.
-
-RLE supplies that missing bridge:
+Given ordered values:
 
 ```text
-sort keys
-   ↓
-run-length encode
-   ↓
-unique keys + run lengths / boundaries
-   ↓
-segmented reduction
-   ↓
-grouped aggregates
+input = [2, 2, 2, 5, 5, 9, 9, 9, 9]
 ```
+
+RLE describes the same run structure as:
+
+```text
+values  = [2, 5, 9]
+lengths = [3, 2, 4]
+```
+
+The operation is about **adjacent runs**, not global uniqueness. For example:
+
+```text
+input  = [2, 2, 5, 2]
+values = [2, 5, 2]
+```
+
+If global grouping is desired, sort by key first so equal keys become adjacent.
+
+## Why RLE matters for GPU grouping
+
+Sorting puts equal keys together, but downstream algorithms still need to know where each group starts and ends. RLE turns adjacency into explicit group metadata:
+
+```text
+unsorted keys
+     ↓
+   GPUSort
+     ↓
+[2,2,2,5,5,9,9,9,9]
+     ↓
+GPURunLengthEncode
+     ↓
+values  [2,5,9]
+lengths [3,2,4]
+     ↓
+offset-delimited groups / segmented reduction
+```
+
+For the example, run lengths `[3,2,4]` correspond to offsets `[0,3,5,9]`. Those offsets can describe the same groups to segmented operations and are structurally identical to the offset-delimited representation used by lists and CSR rows.
 
 ## Contract
 
-Input must be an ordered packed `GraphDataView<'uint32'>`. Equal adjacent values form a run. `values` and `lengths` are caller-owned capacity buffers; only the prefix described by `count` is valid.
-
-For:
-
-```text
-[2, 2, 2, 7, 7, 9]
-```
-
-RLE produces:
-
-```text
-values  = [2, 7, 9, ...]
-lengths = [3, 2, 1, ...]
-count   = 3
-```
-
-The operation preserves first-occurrence order. It does not sort the input. Compose it after `GPUSort` when global uniqueness/grouping by key is required.
+Input is an ordered packed `uint32` vector. `values` and `lengths` are caller-owned capacity buffers; only the prefix described by `count` is valid.
 
 ```ts
 new GPURunLengthEncode({
@@ -53,20 +64,30 @@ new GPURunLengthEncode({
 }).addToGraph(graph);
 ```
 
-Empty input writes `count = 0`.
+The operation preserves first-occurrence order and does not sort input. Empty input writes `count = 0`.
 
 ## Composition
 
-The implementation deliberately composes existing graph machinery: one pass identifies run starts, `GPUScan` converts those flags into dense run indices, and a materialization pass publishes run values, lengths and the final count. This keeps run indexing consistent with the same scan substrate used by compaction and segmented layout.
+```text
+sort
+ ↓
+RLE / unique
+ ↓
+run lengths
+ ↓
+offset construction
+ ↓
+GPUSegmentedReduction / GPUSegmentedScan
+ ↓
+grouped results
+```
 
-The resulting metadata is useful for constructing CSR-style segment offsets and is intended to compose directly with `GPUSegmentedReduction` for GPU group-by pipelines.
+The implementation uses a boundary-detection pass, `GPUScan` to assign dense run indices, then materialization of values, lengths and count.
+
+## GPUUnique
+
+`GPUUnique` answers the simpler question “what are the distinct adjacent run values?” while retaining the same equality and ordering semantics. It should not introduce a second definition of uniqueness. A future optimized path may skip run-length materialization when only values are required.
 
 ## Performance notes
 
-The initial implementation prioritizes a clear reusable contract. Boundary detection and scan are parallel. Run-length materialization may perform additional work around run boundaries; future implementations can specialize length publication using explicit start offsets or subgroup operations without changing the public API.
-
-For unsorted data with few downstream grouped operations, a hash aggregation may be cheaper than sort + RLE. RLE is strongest when keys are already ordered, stable ordering matters, or the resulting run structure is reused by multiple consumers.
-
-## Relationship to GPUUnique
-
-`GPUUnique` is intentionally aligned with RLE rather than inventing a second notion of equality or ordering. A future value-only optimized path may avoid materializing lengths when they are not requested, while retaining the same adjacent-run semantics.
+Boundary detection and scan are parallel. RLE is strongest when keys are already ordered, stable ordering matters, or group structure is reused. For unsorted data used only once, a hash aggregation may be cheaper than sort + RLE.
