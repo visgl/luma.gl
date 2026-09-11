@@ -6,25 +6,39 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 
 ## Overview
 
-`GPUSegmentedReduction` computes one scalar aggregate for every contiguous segment in a packed GPU
-vector. Segments are described by CSR-style offsets, making the primitive a natural consumer of
-columnar list offsets, group boundaries, adjacency lists, and `GPUSegmentedLayout` output.
+`GPUSegmentedReduction` computes one scalar aggregate for every contiguous segment in a packed GPU vector. Segments are described by **offset-delimited segments**, a general representation shared by grouped data, adjacency lists, Arrow-style lists and CSR sparse matrices.
 
-## Motivation
+## What is an offset-delimited segment?
 
-`GPUReduction` answers a global question such as “what is the sum of this column?”. Many GPU data
-pipelines instead need the same aggregate independently for thousands of variable-length groups:
-counts or totals per category, weights per graph vertex, statistics per Arrow list row, or one value
-per spatial bucket. Downloading boundaries or values to JavaScript defeats the command graph's
-GPU-resident dataflow.
+Many logical lists can be packed back-to-back into one flat GPU buffer. A second array stores the boundary of each list:
 
-Segmented reduction makes that operation a reusable graph primitive rather than requiring each
-higher-level algorithm to grow another private reduction kernel.
+```text
+values  = [10, 20 | 30, 40, 50 | 60, 70]
+offsets = [0,     2,           5,      7]
+```
+
+Segment `s` owns the half-open range `[offsets[s], offsets[s + 1])`. The final offset closes the last segment, so N segments require N+1 offsets. Repeated offsets represent empty segments.
+
+This pattern is sometimes encountered as the row-offset part of CSR sparse matrices, but segmented primitives use the more general term **offset-delimited segments** because no matrix is required.
+
+## What is segmented reduction?
+
+A normal reduction combines an entire vector into one result. A segmented reduction performs the same reduction independently inside every segment:
+
+```text
+values  = [10, 20 | 30, 40, 50 | 60, 70]
+                 sum each segment
+                         ↓
+output  = [30, 120, 130]
+```
+
+For `min` the same input produces `[10, 30, 60]`; for `max`, `[20, 50, 70]`.
+
+This is useful for totals per group, edge-weight totals per graph vertex, statistics per variable-length list, and values per spatial bucket.
 
 ## Contract
 
-Given packed input values and offsets `[o0, o1, ... oN]`, output row `i` reduces the half-open range
-`input[oi..o(i+1))`.
+Given offsets `[o0, o1, ... oN]`, output row `i` reduces `input[oi..o(i+1))`.
 
 ```ts
 new GPUSegmentedReduction({
@@ -35,48 +49,28 @@ new GPUSegmentedReduction({
 }).addToGraph(graph);
 ```
 
-The initial implementation accepts packed `uint32`, `sint32`, and `float32` scalar values and
-supports `sum`, `min`, and `max`. `segmentOffsets.length` must equal `output.length + 1`.
+The initial implementation accepts packed `uint32`, `sint32`, and `float32` values and supports `sum`, `min`, and `max`. `segmentOffsets.length` must equal `output.length + 1`. Empty segments produce zero.
 
-Offsets are expected to be monotonically nondecreasing, begin within the input, and terminate no
-later than `input.length`. Those semantic properties are normally guaranteed by the producer of the
-offsets; the GPU primitive does not read them back for host validation.
-
-Empty segments produce zero. This gives list/group pipelines a stable output row for every segment,
-including segments with no values.
+Offsets are expected to be monotonically nondecreasing and within input bounds. These GPU-resident invariants are normally guaranteed by the producer rather than validated through CPU readback.
 
 ## Composition
 
-A common grouped pipeline is:
-
 ```text
-keys / boundaries
-      ↓
-segment offsets
-      ↓
-GPUSegmentedReduction
-      ↓
-one aggregate per group
+sort / RLE / grouping / adjacency construction
+                     ↓
+              segment offsets
+                     ↓
+          GPUSegmentedReduction
+                     ↓
+           one aggregate per group
 ```
 
-`GPUSegmentedLayout` can materialize dense segment offsets from slot-aligned segment-start flags.
-Those offsets can feed `GPUSegmentedReduction` directly. CSR graph adjacency offsets are another
-natural source: reducing edge weights by adjacency segment produces one aggregate per vertex.
+`GPUSegmentedLayout` can materialize offsets from segment-start flags. CSR row offsets are another natural source: reducing edge weights by each adjacency segment produces one aggregate per vertex.
 
-This primitive complements rather than replaces `GPUReduction`: use `GPUReduction` for one global
-aggregate and `GPUSegmentedReduction` when the same operation must be applied independently to many
-contiguous ranges.
+Use `GPUReduction` for one global aggregate and `GPUSegmentedReduction` when the same operation must run independently over many contiguous ranges.
 
 ## Performance notes
 
-The first implementation assigns one 256-thread workgroup to each segment. Threads stride through
-the segment and then perform a workgroup-tree reduction. This is efficient for many small and
-medium variable-length segments and keeps scheduling simple and deterministic.
+The first implementation assigns one 256-thread workgroup to each segment. Threads stride through the segment and perform a workgroup-tree reduction. This is effective for many small and medium segments.
 
-Very large or highly skewed segments may benefit from a future hierarchical strategy that assigns
-multiple workgroups to one segment and merges partials. A future subgroup path can also reduce
-workgroup barriers on devices exposing WebGPU subgroup operations. Those optimizations can preserve
-the same graph contract.
-
-The primitive performs no CPU readback and contributes one ordinary compute node to the command
-graph. Inputs and outputs remain caller-owned GPU resources.
+Very large or highly skewed segments may need hierarchical multi-workgroup partials; subgroup operations can reduce barrier cost. Those optimizations preserve the offset-delimited API.
