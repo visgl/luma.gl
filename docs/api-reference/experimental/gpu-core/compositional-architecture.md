@@ -15,20 +15,15 @@ The same primitives recur across numerical computing, sparse algebra, graph proc
 
    scan       reduction       sort        gather/scatter
     │             │            │               │
-    │             │            │               │
     ├──────┐      ├─────┐      ├──────┐        ├────────┐
-    │      │      │     │      │      │        │        │
     ▼      ▼      ▼     ▼      ▼      ▼        ▼        ▼
 compact  offsets  dot  norm   RLE   group-by  COO     routing
-    │      │       │     │      │      │        │        │
     │      │       └──┬──┘      └──┬───┘        │        │
-    │      │          │            │            │        │
     ▼      ▼          ▼            ▼            ▼        ▼
 filtered segmented  solvers     analytics    COO→CSR   graph work
  data    data                       │            │
             │                       │            ▼
             ├──────────────┐        │           CSR
-            │              │        │            │
             ▼              ▼        ▼            ▼
         Arrow lists   adjacency   summaries     SpMV
             │              │                     │
@@ -76,18 +71,15 @@ min/max     = reduce with different combine semantics
 extent      = paired min/max reduction
 ```
 
-For large inputs, the physical execution is hierarchical:
+For large inputs, physical execution is hierarchical:
 
 ```text
 1,000,000 values
-      │
-      ▼
+      ↓
 ~3907 workgroup partials
-      │
-      ▼
+      ↓
 ~16 partials
-      │
-      ▼
+      ↓
 1 result
 ```
 
@@ -99,9 +91,7 @@ Sorting is similarly foundational:
 
 ```text
 COO entries ── sort(row,column) ── RLE rows ── offsets ── CSR
-
 keys ───────── sort ────────────── RLE ─────── grouped runs
-
 records ────── sort ────────────── boundaries ─ segmented reduction
 ```
 
@@ -109,7 +99,7 @@ records ────── sort ────────────── bound
 
 ## GPU scalar state
 
-Iterative and GPU-driven algorithms also share small state:
+Iterative and GPU-driven algorithms share small state:
 
 ```text
 CG coefficients       alpha, beta
@@ -124,16 +114,31 @@ These should not become separate storage-buffer bindings. They are logical value
 ```text
 GPUValueArena
 ┌────────────────────────────┐
-│ alpha       f32            │
-│ beta        f32            │
-│ residual²   f32            │
-│ active      u32            │
-│ iteration   u32            │
+│ alpha       f32     @ 0    │
+│ beta        f32     @ 4    │
+│ residual²   f32     @ 8    │
+│ active      u32     @ 12   │
+│ iteration   u32     @ 16   │
 └────────────────────────────┘
           one physical arena
 ```
 
 The distinction is important: a `GPUScalar` is a logical graph value, not a physical buffer.
+
+### Stable offsets are intentional
+
+Small arena values use monotonic allocation and retain the same offset for the lifetime of the graph. We deliberately do **not** recycle scalar slots merely because two logical values are live at different times.
+
+The memory saving would normally be negligible: even 1,000 32-bit values occupy only about 4 KB. Stable offsets, however, make generated WGSL, preflight reports, traces, debugger inspection, and failure diagnostics substantially easier to understand:
+
+```text
+alpha       always @ 0
+beta        always @ 4
+residual²   always @ 8
+active      always @ 12
+```
+
+The arena exists primarily to solve **binding pressure**, not scalar-memory pressure. Many logical values share one storage-buffer binding while remaining individually inspectable.
 
 ## Conjugate gradient as a composition test
 
@@ -194,29 +199,35 @@ reduction       dot/norm             degree/weight sums
 
 This convergence is intentional. It is one reason the GPU core should remain focused on reusable execution patterns rather than domain-specific naming.
 
-## Physical reuse beneath logical reuse
+## Physical reuse belongs where memory is large
 
-The command graph can also reuse storage. Consider two temporary scalars:
-
-```text
-node:     0 1 2 3 4 5 6 7 8
-alpha:        ├───────┤
-temp:                   ├─────┤
-```
-
-Their lifetimes do not overlap, so they can share one physical arena slot:
+Lifetime-based aliasing is valuable, but the useful target is large transient storage rather than tiny arena values.
 
 ```text
-logical values                 physical arena
-
-alpha  ───────┐
-              ├──────────────▶ slot 3
-laterTemp ────┘
+reduction scratch       tens of KB or more
+sort scratch            hundreds of KB / MB
+FFT temporaries         MB
+solver vectors          MB
 ```
 
-This is analogous to register allocation at graph-resource scale. The application should reason about logical values; the compiler should increasingly own packing, lifetime analysis, and physical reuse.
+For example:
 
-The same principle can later extend beyond the small-value arena to transient vectors and algorithm scratch.
+```text
+node:       0 1 2 3 4 5 6 7 8
+sort temp:    ├───────┤
+FFT temp:               ├─────┤
+```
+
+If two large transient resources cannot overlap in execution, the graph compiler may eventually map them onto the same physical allocation. Saving megabytes can justify the additional aliasing complexity.
+
+This gives the architecture two deliberately different policies:
+
+```text
+small GPU values       → stable monotonic arena slots
+large transient data   → candidate for lifetime-based physical reuse
+```
+
+Debuggability wins when memory savings are trivial; memory planning wins when savings are material.
 
 ## Optimization leverage
 
@@ -229,7 +240,7 @@ subgroup reduction       → reduction, dot, norm, CG, analytics
 segmented kernels        → CSR, graphs, Arrow lists, group-by
 sort/RLE                 → sparse construction, grouping, analytics
 arena packing            → solvers, counters, conditions, indirect work
-lifetime reuse           → every graph with transient state
+transient buffer reuse   → memory-heavy graph pipelines
 fusion                   → elementwise chains, solvers, transforms
 adaptive dispatch        → SpMV, reductions, scans, irregular workloads
 ```
