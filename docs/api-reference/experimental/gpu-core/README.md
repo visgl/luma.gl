@@ -15,92 +15,172 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
 
 ## Overview
 
-GPU Core is luma.gl's experimental semantic GPU programming and execution layer for WebGPU.
-Applications normally describe reusable GPU work as operations in a `GPUProgram`; a backend
-transform turns that program into a `GPUCommandGraph`, and graph compilation prepares the reusable
-execution plan.
-
-```text
-GPUProgram
-  └─ GPU operations
-        ↓ transform()
-GPUCommandGraph
-  └─ command nodes
-        ↓ compile()
-CompiledGPUCommandGraph
-        ↓ encode()
-WebGPU command encoder
-```
-
-The operation layer is the primary API. It is where analytical, numerical, selection, and dataflow
-intent belongs: histograms, reductions, grouped aggregation, sparse matrix work, sorting, and other
-composable GPU operations. The command graph is the lower-level execution representation used for
-resource hazards, transient allocation, scheduling, conditions, indirect work, and inspection.
-
-GPU Core does not own command submission or the application frame loop. Intermediate datasets can
-remain GPU-resident while the application retains control of synchronization, frame pacing,
-readback, cancellation, and publication.
-
-## Start with operations
-
-For new application code, prefer composing a semantic program rather than manually assembling the
-passes used to implement an algorithm.
+GPU Core provides one composable vocabulary for GPU work. Applications build a `GPUProgram` by
+adding analytical operations, reusable GPU primitives, control flow, or concrete command nodes in the
+same ordered program.
 
 ```ts
 const program = new GPUProgram({id: 'analytics'});
 
 program.add([
-  new GPUHistogram({
-    input: values,
-    mask: selection,
-    output: bins,
-    domain: [0, 100]
-  }),
-  new GPUGroupAggregation({
-    keys: categories,
-    mask: selection,
-    output: categoryCounts,
-    operation: 'count'
-  })
+  histogram,
+  reduction,
+  scan,
+  customComputeCommand,
+  renderCommand
 ]);
+```
 
-compiler.transform(program, graph, {
-  views: {
-    values: valueView,
-    selection: selectionMask,
-    bins: histogramOutput,
-    categories: categoryView,
-    categoryCounts: categoryOutput
-  }
-});
+Some program items carry high-level intent and transform into several command nodes. Others are
+already concrete commands and pass through unchanged. Users do not need to separate those categories
+before composing them.
 
+```text
+GPUProgram
+  ├─ analytics and algorithms
+  ├─ reusable primitives
+  ├─ control flow
+  └─ concrete commands
+             ↓ transform()
+GPUCommandGraph
+             ↓ compile()
+CompiledGPUCommandGraph
+             ↓ encode()
+WebGPU command encoder
+```
+
+The useful question for application code is therefore usually **"can I add this to my program?"**,
+not which internal representation layer owns it.
+
+## Things you can add
+
+The catalog is organized by capability. Representation level is secondary implementation metadata.
+
+### Analysis and aggregation
+
+- `GPUHistogram` — histogram selected or complete scalar data.
+- `GPUReduction` — sum, min, max, mean, extent, and other scalar reductions.
+- `GPUGroupAggregation` — dense grouped count/sum/min/max/mean.
+- `GPUTopK` — bounded ranking when only the leading rows matter.
+
+### Selection and data movement
+
+- masks and filtering operations
+- `GPUScan`
+- compaction and gather/scatter primitives
+- stable selection/index workflows
+- explicit copy commands when a concrete copy is exactly what the program needs
+
+### Sorting, indexing, and joins
+
+- `GPUSort` and batch-preserving sort operations
+- hash/index construction primitives
+- join and lookup operations
+
+### Numerical and scientific compute
+
+- sparse matrix operations such as SpMV
+- FFT and transform operations
+- vector and scalar compute primitives
+- reusable domain algorithms that retain useful semantic intent
+
+### Spatial, raster, and visualization pipelines
+
+- raster transforms and statistics
+- geospatial projection and distance operations
+- trace analysis operations
+- visibility, culling, and indirect rendering workflows
+
+### Control flow
+
+- GPU conditionals
+- bounded loops
+- composites that group program items without implying synchronization
+
+### Custom execution
+
+Advanced users can add concrete `GPUCommandNode`s directly:
+
+- compute command nodes
+- copy command nodes
+- render command nodes
+
+A command node already describes execution work, resources, and hazards, so `transform()` passes it
+through instead of wrapping it in a redundant semantic operation.
+
+## Mixed composition
+
+Programs intentionally allow high-level and concrete work to coexist:
+
+```ts
+program.add([
+  new GPUHistogram({...}),
+  new GPUReduction({...}),
+  customComputeCommand,
+  new GPUGroupAggregation({...}),
+  copyCommand
+]);
+```
+
+This keeps one composition API while allowing each abstraction to live at its natural level.
+Algorithms with useful meaning remain operations or reusable primitives. A one-off compute, copy, or
+render command does not need a semantic wrapper merely to participate in a program.
+
+The backend transform behaves conceptually as follows:
+
+```text
+semantic/reusable operation ──► transform/decompose ──► command node(s)
+concrete command node       ───────────────────────────► pass through
+```
+
+This is also the migration direction for older `addToGraph()` contributors: preserve reusable
+algorithmic primitives, eliminate thin duplicate wrappers, and converge composition on
+`GPUProgram.add()`.
+
+## A note on categories
+
+Documentation may label an item as an **operation**, **primitive**, or **command** when that distinction
+helps explain optimization or extension behavior, but these labels do not define separate user-facing
+API catalogs. All program-addable items are documented alongside related capabilities.
+
+For example, a reduction may be useful both as a directly chosen primitive and as a building block
+inside a histogram with an automatic domain. A custom compute command is already concrete. Both can
+appear next to each other in a program.
+
+## Transform and execution
+
+`transform()` converts the program into a mutable `GPUCommandGraph`. High-level operations may
+expand, specialize, fuse, or otherwise change shape before execution. Concrete command nodes pass
+through.
+
+```ts
+compiler.transform(program, graph, bindings);
 const executable = graph.compile();
 ```
 
-The exact set of semantic operations is experimental and expanding. The important architectural
-contract is stable: **compose operations, transform to commands, compile the command graph**.
+The command graph remains public for inspection and advanced execution control, but ordinary users
+should not need a mirrored command-level version of every algorithm. The execution vocabulary should
+stay much smaller than the program vocabulary.
 
-## When to use the command graph directly
+## When to work directly with the command graph
 
-`GPUCommandGraph` remains public because advanced applications and framework authors need explicit
-control over execution. Use it directly when implementing a reusable operation, integrating custom
-compute/render/copy work, inspecting hazards, managing indirect dispatch, or building infrastructure
-below the semantic operation layer.
+Use `GPUCommandGraph` directly when implementing infrastructure below `GPUProgram`, inspecting
+resource hazards and scheduling, integrating execution machinery that cannot yet participate in the
+program model, or debugging transformed output.
 
-Most application documentation should not require choosing between an "operation version" and a
-"command version" of every algorithm. Execution helpers are implementation machinery; operation
-pages are the primary conceptual reference.
+For application pipelines, prefer `GPUProgram.add()` so analytical operations, primitives, and custom
+commands share one composition surface.
 
 ## The WebGPU capabilities underneath
 
 A handful of WebGPU capabilities make the architecture practical:
 
-- **Compute shaders and storage buffers** let one operation produce general-purpose GPU data for the
-  next operation without returning it to JavaScript.
+- **Compute shaders and storage buffers** let one program item produce general-purpose GPU data for
+  another without returning it to JavaScript.
 - **GPU-writable indirect draw and dispatch arguments** let later work consume GPU-produced counts
   without CPU synchronization.
-- **Explicit resource uses and command encoding** let the command graph derive hazards, compatible
-  transient allocations, and a reusable schedule.
+- **Explicit resource uses and command encoding** let the transformed command graph derive hazards,
+  compatible transient allocations, and a reusable schedule.
 
 ```text
 GPU-resident source data
@@ -119,10 +199,10 @@ rendering, picking, or small readback
 <div className="gpu-core-reading-paths">
   <article className="gpu-core-reading-path">
     <span>Application developer</span>
-    <strong>I want to build a GPU pipeline</strong>
+    <strong>I want to compose GPU work</strong>
     <ol>
-      <li>Programs and operations</li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/recipes">GPU operation recipes</a></li>
+      <li><a href="#things-you-can-add">Things you can add</a></li>
+      <li><a href="/docs/api-reference/experimental/gpu-core/recipes">GPU recipes</a></li>
       <li><a href="/docs/api-reference/experimental/gpu-dataframe">GPU Dataframe</a></li>
     </ol>
   </article>
@@ -136,8 +216,8 @@ rendering, picking, or small readback
     </ol>
   </article>
   <article className="gpu-core-reading-path">
-    <span>Framework author</span>
-    <strong>I need execution-level control</strong>
+    <span>Advanced / framework</span>
+    <strong>I need to inspect execution</strong>
     <ol>
       <li><a href="/docs/api-reference/experimental/gpu-core/concepts">Execution model</a></li>
       <li><a href="/docs/api-reference/experimental/gpu-core/gpu-command-graph">Command graph API</a></li>
@@ -148,9 +228,8 @@ rendering, picking, or small readback
 
 ## Live execution anatomy
 
-The teaching model below exposes intermediate values that production operations normally keep
-inside GPU buffers. Use it to understand what the semantic layer eventually transforms into; it is
-not the recommended amount of command-level code for ordinary application analytics.
+The teaching model below exposes intermediate values normally hidden beneath program items. It is
+useful for understanding transformed execution, not as a requirement for composing an application.
 
 <GPUExampleCard
   demonstrates={['mask', 'scan', 'stable compaction', 'indirect drawing']}
@@ -166,15 +245,18 @@ not the recommended amount of command-level code for ordinary application analyt
 
 <GPUCorePipelineTutorial compact />
 
-## API layers
+## Internal architecture at a glance
 
-| Layer | Primary concepts | Typical audience |
-| --- | --- | --- |
-| Semantic | `GPUProgram`, `GPUOperation`, `GPUHistogram`, `GPUReduction`, `GPUGroupAggregation` | Application and library authors |
-| Transform | backend compiler, validation, planning, optimization | Framework and backend authors |
-| Execution | `GPUCommandGraph`, `GPUCommandNode`, resource views, conditions | Advanced applications and infrastructure |
-| Executable | `CompiledGPUCommandGraph`, encoding, timing, inspection | Frame-loop and runtime integration |
+The mixed catalog does not remove the internal distinction between semantic intent and execution.
+It simply keeps that distinction out of the primary navigation.
 
-The remainder of the GPU Core reference documents execution primitives where they are useful to
-operation implementers. Those primitives are not intended to form a second mirrored application
-API.
+```text
+rich program vocabulary
+        ↓ transform / optimize
+small command-node vocabulary
+        ↓ compile / schedule
+WebGPU
+```
+
+That asymmetry is deliberate: adding new GPU algorithms should usually expand the program catalog
+without requiring a matching expansion of command-node types.
