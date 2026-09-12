@@ -28,13 +28,16 @@ export interface GPUOperation {
 }
 
 /**
- * One item accepted by GPUProgram.
+ * Reusable graph-native GPU algorithm that can be added directly to a program.
  *
- * Semantic operations are transformed by a backend. Concrete command nodes are already at the
- * execution level and pass through unchanged. GPUCommandGraphContributor is retained only as a
- * migration bridge for existing addToGraph()-based algorithms.
+ * A primitive already owns graph-level resource views and knows how to expand itself into command
+ * graph work. Unlike a concrete GPUCommandNode it may expand into many nodes; unlike a semantic
+ * GPUOperation it does not require a backend-specific semantic transform before doing so.
  */
-export type GPUProgramOperation = GPUOperation | GPUCommandNode<any> | GPUCommandGraphContributor;
+export type GPUProgramPrimitive = GPUCommandGraphContributor;
+
+/** One item accepted by GPUProgram. */
+export type GPUProgramOperation = GPUOperation | GPUProgramPrimitive | GPUCommandNode<any>;
 export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
@@ -72,8 +75,14 @@ export function isGPUCommandNode(operation: GPUProgramOperation): operation is G
   return candidate.type === 'compute' || candidate.type === 'render' || candidate.type === 'copy';
 }
 
+export function isGPUProgramPrimitive(
+  operation: GPUProgramOperation
+): operation is GPUProgramPrimitive {
+  return !isGPUCommandNode(operation) && typeof (operation as GPUProgramPrimitive).addToGraph === 'function';
+}
+
 export function isGPUOperation(operation: GPUProgramOperation): operation is GPUOperation {
-  if (isGPUCommandNode(operation)) return false;
+  if (isGPUCommandNode(operation) || isGPUProgramPrimitive(operation)) return false;
   const candidate = operation as Partial<GPUOperation>;
   return typeof candidate.id === 'string' && typeof candidate.type === 'string';
 }
@@ -90,22 +99,18 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
   if (isGPUCommandNode(operation)) {
     return Object.freeze({id: operation.id, type: `command:${operation.type}`});
   }
-  if (isGPUOperation(operation)) {
+  if (isGPUProgramPrimitive(operation)) {
     return Object.freeze({
-      id: operation.id,
-      type: operation.type,
-      ...(operation.metadata ? {metadata: operation.metadata} : {})
+      id: 'id' in operation && typeof operation.id === 'string' ? operation.id : operation.constructor?.name ?? 'gpu-primitive',
+      type: 'primitive'
     });
   }
   return Object.freeze({
-    id: operation.constructor?.name ?? 'gpu-command-graph-contributor',
-    type: 'legacy-contributor'
+    id: operation.id,
+    type: operation.type,
+    ...(operation.metadata ? {metadata: operation.metadata} : {})
   });
 }
 
-/** @internal Migration guard for existing addToGraph-based algorithms. */
-export function isGPUCommandGraphContributor(
-  operation: GPUProgramOperation
-): operation is GPUCommandGraphContributor {
-  return !isGPUCommandNode(operation) && typeof (operation as GPUCommandGraphContributor).addToGraph === 'function';
-}
+/** @deprecated Prefer isGPUProgramPrimitive. */
+export const isGPUCommandGraphContributor = isGPUProgramPrimitive;
