@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUCommandGraphContributor} from './gpu-command-graph';
+import type {GPUCommandNode} from './gpu-command-node';
 
 export type GPUOperationResource = {
   name: string;
@@ -19,21 +20,21 @@ export type GPUOperationMetadata = {
   constraints?: GPUOperationConstraints;
 };
 
-/**
- * Semantic unit in a GPUProgram.
- *
- * Operations describe intent and contain no execution-graph mutation API. Backends lower them
- * through GPUProgramCompiler. Legacy GPUCommandGraphContributor objects remain accepted by the
- * compiler only as a migration bridge while existing algorithms acquire semantic operation forms.
- */
+/** Semantic unit in a GPUProgram. */
 export interface GPUOperation {
   readonly id: string;
   readonly type: string;
   readonly metadata?: GPUOperationMetadata;
 }
 
-/** Transitional input accepted by GPUProgram while existing algorithms migrate to GPUOperation. */
-export type GPUProgramOperation = GPUOperation | GPUCommandGraphContributor;
+/**
+ * One item accepted by GPUProgram.
+ *
+ * Semantic operations are transformed by a backend. Concrete command nodes are already at the
+ * execution level and pass through unchanged. GPUCommandGraphContributor is retained only as a
+ * migration bridge for existing addToGraph()-based algorithms.
+ */
+export type GPUProgramOperation = GPUOperation | GPUCommandNode<any> | GPUCommandGraphContributor;
 export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
@@ -66,7 +67,13 @@ export type GPUOperationTree = {
   children?: readonly GPUOperationTree[];
 };
 
+export function isGPUCommandNode(operation: GPUProgramOperation): operation is GPUCommandNode<any> {
+  const candidate = operation as Partial<GPUCommandNode<any>>;
+  return candidate.type === 'compute' || candidate.type === 'render' || candidate.type === 'copy';
+}
+
 export function isGPUOperation(operation: GPUProgramOperation): operation is GPUOperation {
+  if (isGPUCommandNode(operation)) return false;
   const candidate = operation as Partial<GPUOperation>;
   return typeof candidate.id === 'string' && typeof candidate.type === 'string';
 }
@@ -79,6 +86,9 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
       ...(operation.metadata ? {metadata: operation.metadata} : {}),
       children: Object.freeze(operation.operations.map(getGPUOperationTree))
     });
+  }
+  if (isGPUCommandNode(operation)) {
+    return Object.freeze({id: operation.id, type: `command:${operation.type}`});
   }
   if (isGPUOperation(operation)) {
     return Object.freeze({
@@ -97,5 +107,5 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
 export function isGPUCommandGraphContributor(
   operation: GPUProgramOperation
 ): operation is GPUCommandGraphContributor {
-  return typeof (operation as GPUCommandGraphContributor).addToGraph === 'function';
+  return !isGPUCommandNode(operation) && typeof (operation as GPUCommandGraphContributor).addToGraph === 'function';
 }
