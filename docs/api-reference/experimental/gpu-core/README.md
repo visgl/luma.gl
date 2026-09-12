@@ -15,124 +15,221 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
 
 ## Overview
 
-GPU Core is the experimental WebGPU dataflow and scheduling layer in
-`@luma.gl/gpgpu/gpu-core`.
-Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies,
-conditions, and work estimates. A compiled graph allocates compatible transient resources, orders
-read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
+GPU Core provides one composable vocabulary for GPU work. Applications build a `GPUProgram` by
+adding analytical operations, reusable GPU primitives, control flow, or concrete command nodes in the
+same ordered program.
 
-GPU Core does not own command submission or the application frame loop. This makes it suitable for
-GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback
-without synchronizing the source dataset through JavaScript.
+```ts
+const program = new GPUProgram({id: 'analytics'});
 
-### The small WebGPU leap behind GPU Core
+program.add([
+  histogram,
+  reduction,
+  scan,
+  customComputeCommand,
+  renderCommand
+]);
+```
 
-:::note
+Some program items carry high-level intent and transform into several command nodes. Others are
+already concrete commands and pass through unchanged. Users do not need to separate those categories
+before composing them.
 
-For a WebGL developer, the architecture can look more exotic than it is. A handful of WebGPU
-capabilities supply the missing links:
+```text
+GPUProgram
+  ├─ analytics and algorithms
+  ├─ reusable primitives
+  ├─ control flow
+  └─ concrete commands
+             ↓ transform()
+GPUCommandGraph
+             ↓ compile()
+CompiledGPUCommandGraph
+             ↓ encode()
+WebGPU command encoder
+```
 
-- **Compute shaders and storage buffers** let one stage produce general-purpose data that another
-  stage consumes without encoding the data as textures or returning it to JavaScript.
-- **GPU-writable indirect draw and dispatch arguments** let a later stage consume a GPU-produced
-  count without waiting for a CPU readback.
-- **Explicit resource uses and command encoding** make the reads, writes, and execution boundaries
-  concrete enough for GPU Core to derive hazards, allocations, and a reusable schedule.
+The useful question for application code is therefore usually **"can I add this to my program?"**,
+not which internal representation layer owns it.
 
-WebGL can approximate individual pieces with textures or transform feedback. What it lacks is the
-straightforward, general chain from compute-produced data to data-dependent compute and rendering.
+## Things you can add
 
-:::
+The catalog is organized by capability. Representation level is secondary implementation metadata.
+
+### Analysis and aggregation
+
+- `GPUHistogram` — histogram selected or complete scalar data.
+- `GPUReduction` — sum, min, max, mean, extent, and other scalar reductions.
+- `GPUGroupAggregation` — dense grouped count/sum/min/max/mean.
+- `GPUTopK` — bounded ranking when only the leading rows matter.
+
+### Selection and data movement
+
+- masks and filtering operations
+- `GPUScan`
+- compaction and gather/scatter primitives
+- stable selection/index workflows
+- explicit copy commands when a concrete copy is exactly what the program needs
+
+### Sorting, indexing, and joins
+
+- `GPUSort` and batch-preserving sort operations
+- hash/index construction primitives
+- join and lookup operations
+
+### Numerical and scientific compute
+
+- sparse matrix operations such as SpMV
+- FFT and transform operations
+- vector and scalar compute primitives
+- reusable domain algorithms that retain useful semantic intent
+
+### Spatial, raster, and visualization pipelines
+
+- raster transforms and statistics
+- geospatial projection and distance operations
+- trace analysis operations
+- visibility, culling, and indirect rendering workflows
+
+### Control flow
+
+- GPU conditionals
+- bounded loops
+- composites that group program items without implying synchronization
+
+### Custom execution
+
+Advanced users can add concrete `GPUCommandNode`s directly:
+
+- compute command nodes
+- copy command nodes
+- render command nodes
+
+A command node already describes execution work, resources, and hazards, so `transform()` passes it
+through instead of wrapping it in a redundant semantic operation.
+
+## Mixed composition
+
+Programs intentionally allow high-level and concrete work to coexist:
+
+```ts
+program.add([
+  new GPUHistogram({...}),
+  new GPUReduction({...}),
+  customComputeCommand,
+  new GPUGroupAggregation({...}),
+  copyCommand
+]);
+```
+
+This keeps one composition API while allowing each abstraction to live at its natural level.
+Algorithms with useful meaning remain operations or reusable primitives. A one-off compute, copy, or
+render command does not need a semantic wrapper merely to participate in a program.
+
+The backend transform behaves conceptually as follows:
+
+```text
+semantic/reusable operation ──► transform/decompose ──► command node(s)
+concrete command node       ───────────────────────────► pass through
+```
+
+This is also the migration direction for older `addToGraph()` contributors: preserve reusable
+algorithmic primitives, eliminate thin duplicate wrappers, and converge composition on
+`GPUProgram.add()`.
+
+## A note on categories
+
+Documentation may label an item as an **operation**, **primitive**, or **command** when that distinction
+helps explain optimization or extension behavior, but these labels do not define separate user-facing
+API catalogs. All program-addable items are documented alongside related capabilities.
+
+For example, a reduction may be useful both as a directly chosen primitive and as a building block
+inside a histogram with an automatic domain. A custom compute command is already concrete. Both can
+appear next to each other in a program.
+
+## Transform and execution
+
+`transform()` converts the program into a mutable `GPUCommandGraph`. High-level operations may
+expand, specialize, fuse, or otherwise change shape before execution. Concrete command nodes pass
+through.
+
+```ts
+compiler.transform(program, graph, bindings);
+const executable = graph.compile();
+```
+
+The command graph remains public for inspection and advanced execution control, but ordinary users
+should not need a mirrored command-level version of every algorithm. The execution vocabulary should
+stay much smaller than the program vocabulary.
+
+## When to work directly with the command graph
+
+Use `GPUCommandGraph` directly when implementing infrastructure below `GPUProgram`, inspecting
+resource hazards and scheduling, integrating execution machinery that cannot yet participate in the
+program model, or debugging transformed output.
+
+For application pipelines, prefer `GPUProgram.add()` so analytical operations, primitives, and custom
+commands share one composition surface.
+
+## The WebGPU capabilities underneath
+
+A handful of WebGPU capabilities make the architecture practical:
+
+- **Compute shaders and storage buffers** let one program item produce general-purpose GPU data for
+  another without returning it to JavaScript.
+- **GPU-writable indirect draw and dispatch arguments** let later work consume GPU-produced counts
+  without CPU synchronization.
+- **Explicit resource uses and command encoding** let the transformed command graph derive hazards,
+  compatible transient allocations, and a reusable schedule.
 
 ```text
 GPU-resident source data
         ↓
 selection and transformation
         ↓
-scan, compaction, sorting, or aggregation
+scan, compaction, sorting, aggregation
         ↓
 bounded output and indirect commands
         ↓
 rendering, picking, or small readback
 ```
 
-## When to use it
-
-Use GPU Core when an application needs several GPU operations to share resources and execute as one
-repeatable plan. It is especially useful when intermediate data should remain GPU-resident, output
-sizes are bounded but data-dependent, later work consumes indirect counts, or work must be
-conditional, measured, or spread across frames.
-
-Prefer direct luma.gl commands for a small fixed pass sequence that does not benefit from shared
-allocation, hazard analysis, work planning, or graph inspection.
-
 ## Choose a learning path
-
-You do not need to read the complete API reference before building a graph. Start with the path
-closest to the problem you are solving; each one is deliberately three short stops.
 
 <div className="gpu-core-reading-paths">
   <article className="gpu-core-reading-path">
-    <span>New to GPU compute</span>
-    <strong>I know WebGL, not compute</strong>
+    <span>Application developer</span>
+    <strong>I want to compose GPU work</strong>
     <ol>
-      <li><a href="#the-small-webgpu-leap-behind-gpu-core">The WebGPU leap</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/tutorial">First graph</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/recipes">GPU Core cookbook</a></li>
+      <li><a href="#things-you-can-add">Things you can add</a></li>
+      <li><a href="/docs/api-reference/experimental/gpu-core/recipes">GPU recipes</a></li>
+      <li><a href="/docs/api-reference/experimental/gpu-dataframe">GPU Dataframe</a></li>
     </ol>
   </article>
   <article className="gpu-core-reading-path">
-    <span>Raw WebGPU experience</span>
-    <strong>I already record compute passes</strong>
+    <span>Data visualization</span>
+    <strong>I need interactive GPU analytics</strong>
     <ol>
-      <li><a href="/docs/api-reference/experimental/gpu-core/tutorial#translate-familiar-webgpu-concepts">Responsibility map</a></li>
+      <li><a href="/docs/api-reference/experimental/gpu-core/recipes#aggregate-a-selection">Aggregate a selection</a></li>
+      <li><a href="/docs/api-reference/experimental/gpu-dataframe-operations">Dataframe operations</a></li>
+      <li>Million-row linked-view showcase</li>
+    </ol>
+  </article>
+  <article className="gpu-core-reading-path">
+    <span>Advanced / framework</span>
+    <strong>I need to inspect execution</strong>
+    <ol>
       <li><a href="/docs/api-reference/experimental/gpu-core/concepts">Execution model</a></li>
       <li><a href="/docs/api-reference/experimental/gpu-core/gpu-command-graph">Command graph API</a></li>
-    </ol>
-  </article>
-  <article className="gpu-core-reading-path">
-    <span>Application pipeline</span>
-    <strong>I need GPU-resident visualization</strong>
-    <ol>
-      <li><a href="/docs/api-reference/experimental/gpu-core/recipes#select-compact-and-render">Selection recipe</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/draw-command-buffer">Indirect drawing</a></li>
-      <li><a href="/examples/experimental/gpu-frustum-culling">Frustum example</a></li>
-    </ol>
-  </article>
-  <article className="gpu-core-reading-path">
-    <span>Data analysis</span>
-    <strong>I need dataframe-style operations</strong>
-    <ol>
-      <li><a href="/docs/api-reference/experimental/gpu-core/recipes#aggregate-a-selection">Aggregation recipe</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-dataframe">GPU Dataframe overview</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-dataframe-operations">GPU Dataframe operations</a></li>
-    </ol>
-  </article>
-  <article className="gpu-core-reading-path">
-    <span>Reusable operation</span>
-    <strong>I want to contribute a subgraph</strong>
-    <ol>
-      <li><a href="/docs/api-reference/experimental/gpu-core/concepts#composition-levels">Composition levels</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/recipes#package-a-reusable-operation">Contributor recipe</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/gpu-command-graph#extension-libraries">Extension contracts</a></li>
-    </ol>
-  </article>
-  <article className="gpu-core-reading-path">
-    <span>Diagnosis</span>
-    <strong>I need to explain cost or failure</strong>
-    <ol>
       <li><a href="/docs/api-reference/experimental/gpu-core/concepts#instrumentation-and-autotuning">Instrumentation</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/gpu-command-graph#gpucommandgraphinspector">Graph inspector</a></li>
-      <li><a href="/docs/api-reference/experimental/gpu-core/concepts#capacity-validation-and-failure-behavior">Validation</a></li>
     </ol>
   </article>
 </div>
 
-## Live example
+## Live execution anatomy
 
-This small interactive pipeline exposes the intermediate values normally kept inside GPU buffers.
-Click source rows, then inspect how mask, exclusive scan, stable scatter, and an indirect draw fit
-together.
+The teaching model below exposes intermediate values normally hidden beneath program items. It is
+useful for understanding transformed execution, not as a requirement for composing an application.
 
 <GPUExampleCard
   demonstrates={['mask', 'scan', 'stable compaction', 'indirect drawing']}
@@ -148,110 +245,18 @@ together.
 
 <GPUCorePipelineTutorial compact />
 
-## Quick start
+## Internal architecture at a glance
 
-```ts
-import {GPUCommandGraph, GPUScan} from '@luma.gl/gpgpu/gpu-core';
+The mixed catalog does not remove the internal distinction between semantic intent and execution.
+It simply keeps that distinction out of the primary navigation.
 
-const graph = new GPUCommandGraph(device, {id: 'prefix-sum'});
-const input = graph.importBuffer(
-  {id: 'input', byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
-  inputBuffer
-);
-const output = graph.importBuffer(
-  {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
-  outputBuffer
-);
-const values = graph.createDataView(input, {format: 'uint32', length});
-const prefixes = graph.createDataView(output, {format: 'uint32', length});
-
-new GPUScan({id: 'scan', input: values, output: prefixes}).addToGraph(graph);
-
-const compiledGraph = graph.compile();
-const commandEncoder = device.createCommandEncoder();
-compiledGraph.encode(commandEncoder, {parameters: undefined});
-device.submit(commandEncoder.finish());
+```text
+rich program vocabulary
+        ↓ transform / optimize
+small command-node vocabulary
+        ↓ compile / schedule
+WebGPU
 ```
 
-Contributors add resources and nodes but do not compile or submit the graph. The application retains
-control of synchronization, frame pacing, readback, cancellation, and publication.
-
-## Core concepts and data model
-
-- **Logical resources** describe buffers, textures, views, ownership, and intended uses.
-- **Nodes** declare compute, copy, or render work plus every resource range they read or write.
-- **Contributors** add reusable operations without taking over graph lifecycle.
-- **Compilation** derives hazards, execution order, physical allocation, and diagnostics.
-- **Encoding** records the immutable compiled plan using current parameters and imported resources.
-- **Bounded outputs** combine fixed-capacity storage with counts or indirect command records.
-
-See [Execution and composition](/docs/api-reference/experimental/gpu-core/concepts) for resource ownership, hazard scheduling, conditions,
-resumable execution, budgeting, instrumentation, and autotuning. See
-[`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph) for the construction, compilation, and encoding API.
-The [GPU Core cookbook](/docs/api-reference/experimental/gpu-core/recipes) maps common
-application outcomes to the operations that compose them.
-
-## GPU Core feature card
-
-| Capability | What it enables | Public surface |
-| --- | --- | --- |
-| **Declarative graph** | One schedule for GPU preparation, analysis, indirect drawing, and picking | `GPUCommandGraph` and graph contributors |
-| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/experimental` |
-| **GPU-driven output** | Bounded counts, compacted IDs, and indirect commands without source-data readback | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer` |
-| **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset | `GraphVectorView` and chunk-aware contributors |
-| **Conditional execution** | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch | CPU predicates and GPU indirect conditions |
-| **Multi-frame execution** | Large immutable plans can advance in bounded resumable steps | `planExecution()` and resumable execution |
-| **Adaptive budgets** | Measured queue time can tune bounded step sizes | `GPUCommandGraphExecutionBudgetController` |
-| **Kernel autotuning** | Equivalent supported kernels can be selected per adapter and workload | `GPUCommandGraphAutotuner` |
-| **Instrumentation** | Encode time, GPU timing, work estimates, allocations, dispatches, draws, and custom counters | `GPUCommandGraphInspector` and timing reports |
-| **Hazard scheduling** | RAW, WAR, and WAW dependencies derive from resource uses | Compiled schedule diagnostics |
-| **Transient reuse** | Compatible resources share allocations when lifetimes do not overlap | Allocation plan and reuse statistics |
-| **Validation** | Binding aliases, device limits, unsupported features, and incomplete estimates fail before submission | Compilation and preflight reports |
-| **Explicit ownership** | Applications retain submission, readback cadence, cancellation, and UI publication | Compile-and-encode lifecycle |
-
-## Examples
-
-- [GPU Sort](/examples/experimental/gpu-sort) compares graph-native segmented and unsegmented GPU
-  sorting while reporting the selected execution path and measured throughput.
-- [GPU Trace Viewer](/examples/experimental/gpu-trace-viewer) combines hierarchy, selection,
-  indexing, aggregation, dependency traversal, picking, and indirect rendering while preserving
-  canonical span identity.
-- [GPU Data Analysis](/examples/experimental/gpu-data-analysis) composes reductions, histograms,
-  filtered aggregations, and grid bins.
-- [GPU Frustum Culling](/examples/experimental/gpu-frustum-culling) compacts visible scene instances
-  and writes an indirect draw count.
-- [Vector Field Lab](/examples/showcase/vector-field-lab) composes analytic volume sampling with
-  3D gradient, divergence, curl, and Laplacian nodes and ray marches their outputs directly.
-
-## Operations and API index
-
-| Family | Operations |
-| --- | --- |
-| Graph execution | [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph), `CompiledGPUCommandGraph`, `GPUCommandGraphExecution`, `GPUCommandGraphExecutionBudgetController`, `GPUCommandGraphAutotuner`, `GPUCommandGraphInspector`, `GraphExternalTextureHandle`, [`GPUTextureHistory`](/docs/api-reference/experimental/gpu-core/gpu-texture-history), [`GPUReadbackRing`](/docs/api-reference/experimental/gpu-core/gpu-readback-ring), [`DrawCommandBuffer`](/docs/api-reference/experimental/gpu-core/draw-command-buffer) |
-| Data movement | `GPUUint32Gather` selects or reorders packed uint32 rows; `GPUByteRangeGather` concatenates variable byte ranges; `GPULZByteDecompressor` resolves literal and backreference spans for format-specific LZ decoders. These contribute bounded graph-native compute operations. |
-| Selection and compaction | [`GPUScan`](/docs/api-reference/experimental/gpu-core/gpu-scan), `GPUScanUint64` for exceptional split-word inclusive 64-bit prefixes, [`GPUGallopingSearch`](/docs/api-reference/experimental/gpu-core/gpu-galloping-search), [`GPUCompaction`](/docs/api-reference/experimental/gpu-core/gpu-compaction), [`GPUFlagOffsets`](/docs/api-reference/experimental/gpu-core/gpu-flag-offsets), [`GPUSegmentOffsets`](/docs/api-reference/experimental/gpu-core/gpu-segment-offsets), [`GPUSegmentedLayout`](/docs/api-reference/experimental/gpu-core/gpu-segmented-layout), `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, [`GPUMask`](/docs/api-reference/experimental/gpu-core/gpu-mask), [`GPUVisibilityWorkflow`](/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow), [`GPUVirtualGeometrySelection`](/docs/api-reference/experimental/gpu-core/gpu-virtual-geometry-selection) |
-| Hierarchies and traversal | [`GPUHierarchyLayout`](/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout), [`GPUGraphTraversal`](/docs/api-reference/experimental/gpu-core/gpu-graph-traversal), [`GPUAncestorProjection`](/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection) |
-| Sorting and aggregation | [`GPUSort`](/docs/api-reference/experimental/gpu-core/gpu-sort), `GPUBatchSort`, [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-core/gpu-segmented-sort), [`GPUFFT2D`](/docs/api-reference/experimental/gpu-core/gpu-fft2d), [`GPUReduction`](/docs/api-reference/experimental/gpu-core/gpu-reduction), [`GPUHistogram`](/docs/api-reference/experimental/gpu-core/gpu-histogram), [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) |
-| Sampled fields | `GPUFiniteDifference2D` and `GPUFiniteDifference3D` for gradient, divergence, curl, and Laplacian evaluation with explicit spacing and boundary policy |
-| Spatial indexing | [`GPUGridBinning`](/docs/api-reference/experimental/gpu-core/gpu-grid-binning), [`GPUGridAggregation`](/docs/api-reference/experimental/gpu-core/gpu-grid-aggregation), [`GPUGridIndex`](/docs/api-reference/experimental/gpu-core/gpu-grid-index), [`GPUGridIndexQuery`](/docs/api-reference/experimental/gpu-core/gpu-grid-index-query), [`GPUPointSpatialFilter`](/docs/api-reference/experimental/gpu-core/gpu-point-spatial-filter), [`GPUBVH`](/docs/api-reference/experimental/gpu-core/gpu-bvh), [`GPUSegmentedBVH`](/docs/api-reference/experimental/gpu-core/gpu-segmented-bvh), [`GPUBVHQuery`](/docs/api-reference/experimental/gpu-core/gpu-bvh-query) |
-| GPU scenes | [`GPUScene`](/docs/api-reference/experimental/gpu-core/gpu-scene), [scene adapters](/docs/api-reference/experimental/gpu-core/gpu-scene-adapters), [draw generation](/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation), [resource groups](/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups), [`GPUIndexPickingTarget`](/docs/api-reference/experimental/gpu-core/gpu-index-picking-target) |
-| Hash indexes and joins | [`GPUHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-hash-index), [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index), [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join), [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) |
-
-Trace-domain algorithms are indexed from the
-[`@luma.gl/experimental/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
-
-## Limits and compatibility
-
-- GPU Core is experimental and requires WebGPU.
-- Compiled graph topology and capacities are immutable; parameters and compatible imports may vary.
-- Capacity-dependent outputs report truncation or incomplete results instead of reallocating.
-- Device features and limits are checked during construction, compilation, or explicit preflight.
-- Readback and queue submission remain explicit application responsibilities.
-
-## Related modules
-
-- [`@luma.gl/experimental/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
-- [GPU Graph](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
-- [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
-- [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
-- [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines Arrow-independent GPU data containers.
+That asymmetry is deliberate: adding new GPU algorithms should usually expand the program catalog
+without requiring a matching expansion of command-node types.

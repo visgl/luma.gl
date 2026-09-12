@@ -1,47 +1,62 @@
 ---
-title: 'Million-Row Crossfilter Explorer'
-description: Brush one million GPU-resident points with GPUCrossfilter across linked maps, scatterplots, histograms, and categorical distributions without CPU readback.
+title: 'Million-Row DataFrame Crossfilter'
+description: Explore one million GPU-resident dataframe rows across linked maps, scatterplots, histograms, and categorical distributions without source-row CPU readback.
 sidebar_custom_props:
   backends: [webgpu]
   difficulty: advanced
   maturity: experimental
-  topics: [compute, data, crossfilter, gpgpu, rendering]
+  topics: [compute, data, dataframe, crossfilter, gpgpu, rendering]
 ---
 
 import {MillionRowCrossfilterExample} from '@site/src/examples';
 
 <MillionRowCrossfilterExample />
 
-The Million-Row Crossfilter Explorer turns one million GPU-resident records into
-an interactive, linked-view dashboard. A geographic map, a detailed scatterplot,
-three histograms for value, risk, and hour, and categorical cohorts all describe
-the same source rows. Brush the map to update every other view, select a
-histogram range to narrow the visible points, or apply a preset brush to inspect
-a meaningful slice immediately. Multiple active dimensions intersect without
-moving those rows back to the CPU.
+The Million-Row DataFrame Crossfilter turns one million GPU-resident records into an interactive analytical dashboard. A geographic map, scatterplot, value/risk/hour histograms, and categorical cohorts all describe the same source rows. Brush any linked view and the other distributions update without downloading the resident table to JavaScript.
 
-The example is built on the optional `@luma.gl/experimental/gpu-crossfilter` entry
-point. Each dimension evaluates its current range or rectangular bounds into a
-source-aligned GPU mask. `GPUCrossfilter` combines those masks, updates linked
-histograms and grouped summaries, and publishes compacted, stable source-row
-identifiers for downstream consumers on one reusable `GPUCommandGraph`. The map
-and scatterplot renderer draws source rows directly using the shared,
-source-aligned selection mask, preserving dimmed context around matching rows.
+The source is represented once as a `GPUDataFrame`. Its typed columns borrow the same GPU storage consumed by `GPUCrossfilter` and the renderer: creating the dataframe does not upload, repack, or duplicate the million rows. The dataframe supplies the general analytical model—typed columns, dictionaries, expressions, grouping, aggregation, sorting, joins, and future query planning—while `GPUCrossfilter` remains the specialized linked-selection controller.
 
-Histogram and categorical views exclude their own selection when presenting an
-available distribution. This preserves the familiar crossfilter interaction:
-dragging a histogram brush keeps the surrounding population visible while the
-map, scatterplot, and unrelated distributions update immediately. Views that
-need their own predicate can opt in explicitly.
+```text
+GPUDataFrame
+  longitude latitude value risk hour category
+                 |
+                 | shared GPU storage
+                 v
+GPUCrossfilter ---- linked selection masks
+      |             histograms / groups / visibility
+      v
+GPUCommandGraph ---- reusable execution
+      |
+      +---- map
+      +---- scatterplot
+      +---- histograms
+      +---- categorical cohorts
+```
 
-The million-point figure describes resident source records, not a claim that
-every record survives every brush or is redrawn in every pass. Source columns,
-dimension predicates, selected-row masks, grouped aggregates, histogram bins,
-and compacted visible identifiers stay on the GPU. Pointer interactions update
-only small selection-control buffers; the previously compiled command graph can
-then be encoded again without rebuilding source storage or synchronizing the
-complete dataset. Only the displayed histogram bins, grouped counts, and
-selected-row total are copied into one compact summary readback. The map and
-scatterplot redraw when selection or layout changes, keeping the GPU queue
-available for interactive filtering instead of continuously redrawing static
-million-point clouds.
+Each crossfilter dimension evaluates its current range or rectangular bounds into a source-aligned GPU mask. `GPUCrossfilter` combines those masks, updates linked histograms and grouped summaries, and publishes compacted stable source-row identifiers on one reusable `GPUCommandGraph`. The map and scatterplot draw directly from the shared source buffers and selection mask, preserving dimmed context around matching rows.
+
+Histogram and categorical views exclude their own selection when presenting an available distribution. This preserves familiar crossfilter interaction: dragging a histogram brush keeps the surrounding population visible while the map, scatterplot, and unrelated distributions update immediately.
+
+The million-row figure describes resident source records, not a claim that every record survives every brush or is redrawn in every pass. Source columns, dimension predicates, selected-row masks, grouped aggregates, histogram bins, and compacted visible identifiers stay on the GPU. Pointer interactions update only small selection-control buffers. Only displayed histogram bins, grouped counts, and the selected-row total are copied into one compact summary readback.
+
+## Why DataFrame + Crossfilter?
+
+This example deliberately connects two layers that previously appeared as separate demonstrations. Crossfilter is excellent at continuously recomputing linked selections. DataFrame is the broader semantic surface for big-data applications. Sharing one resident table gives future analytical pipelines a natural path from dataframe operations into program lowering and command-node execution without turning `GPUCommandGraph` into a query engine.
+
+The intended architecture is:
+
+```text
+GPUDataFrame query / linked-view semantics
+                 |
+                 v
+             GPUProgram
+                 |
+          backend lowering
+                 v
+         GPUCommandNode[]
+                 |
+                 v
+         GPUCommandGraph
+```
+
+The current showcase establishes the zero-copy shared-data boundary. Subsequent iterations can move dataframe filtering, grouping, top-K, joins, and derived expressions through the same semantic program/compiler path while retaining the existing interactive visual experience.
