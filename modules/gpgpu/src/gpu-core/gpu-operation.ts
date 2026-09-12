@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphContributor} from './gpu-command-graph';
+import type {GPUCommandGraph} from './gpu-command-graph';
 import type {GPUCommandNode} from './gpu-command-node';
 
 export type GPUOperationResource = {
@@ -28,16 +28,20 @@ export interface GPUOperation {
 }
 
 /**
- * Reusable graph-native GPU algorithm that can be added directly to a program.
+ * Reusable graph-native GPU algorithm that can be added directly to a GPUProgram.
  *
- * A primitive already owns graph-level resource views and knows how to expand itself into command
- * graph work. Unlike a concrete GPUCommandNode it may expand into many nodes; unlike a semantic
- * GPUOperation it does not require a backend-specific semantic transform before doing so.
+ * Primitives may allocate graph-owned transient resources while describing their execution, but
+ * they return concrete command nodes rather than mutating the graph schedule. This keeps one
+ * algorithm abstraction usable both directly and inside GPUProgram without an addToGraph()
+ * compatibility layer or a duplicate semantic wrapper.
  */
-export type GPUProgramPrimitive = GPUCommandGraphContributor;
+export interface GPUProgramPrimitive<Parameters = void> {
+  readonly id: string;
+  getCommandNodes(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[];
+}
 
 /** One item accepted by GPUProgram. */
-export type GPUProgramOperation = GPUOperation | GPUProgramPrimitive | GPUCommandNode<any>;
+export type GPUProgramOperation = GPUOperation | GPUProgramPrimitive<any> | GPUCommandNode<any>;
 export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
@@ -77,8 +81,12 @@ export function isGPUCommandNode(operation: GPUProgramOperation): operation is G
 
 export function isGPUProgramPrimitive(
   operation: GPUProgramOperation
-): operation is GPUProgramPrimitive {
-  return !isGPUCommandNode(operation) && typeof (operation as GPUProgramPrimitive).addToGraph === 'function';
+): operation is GPUProgramPrimitive<any> {
+  return (
+    !isGPUCommandNode(operation) &&
+    typeof (operation as Partial<GPUProgramPrimitive<any>>).id === 'string' &&
+    typeof (operation as Partial<GPUProgramPrimitive<any>>).getCommandNodes === 'function'
+  );
 }
 
 export function isGPUOperation(operation: GPUProgramOperation): operation is GPUOperation {
@@ -100,10 +108,7 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
     return Object.freeze({id: operation.id, type: `command:${operation.type}`});
   }
   if (isGPUProgramPrimitive(operation)) {
-    return Object.freeze({
-      id: 'id' in operation && typeof operation.id === 'string' ? operation.id : operation.constructor?.name ?? 'gpu-primitive',
-      type: 'primitive'
-    });
+    return Object.freeze({id: operation.id, type: 'primitive'});
   }
   return Object.freeze({
     id: operation.id,
@@ -111,6 +116,3 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
     ...(operation.metadata ? {metadata: operation.metadata} : {})
   });
 }
-
-/** @deprecated Prefer isGPUProgramPrimitive. */
-export const isGPUCommandGraphContributor = isGPUProgramPrimitive;
