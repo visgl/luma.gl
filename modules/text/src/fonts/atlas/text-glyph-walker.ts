@@ -39,7 +39,7 @@ export type TextRowMetrics = {
 };
 
 /**
- * Walks one line of text using the canonical atlas layout semantics.
+ * Walks one line of text using the canonical CPU atlas layout semantics.
  *
  * Glyph callbacks receive unaligned offsets. Apply the returned anchor and baseline offsets when
  * writing final glyph positions. Keeping alignment as a row result lets compact encoders avoid a

@@ -9,7 +9,7 @@ import {
   buildSdfFontAtlas,
   type BitmapFontAtlasSettings,
   type FontAtlas
-} from '../../src';
+} from '../../src/fonts';
 
 function createFontAtlasSettings(
   fontFamily: string,
@@ -32,7 +32,7 @@ function assertCommonFontAtlasShape(fontAtlas: FontAtlas, label: string): void {
   expect(Object.keys(fontAtlas.mapping), `${label} maps requested glyphs`).toEqual(['A', 'B']);
 }
 
-it('bitmap and SDF builders return the common FontAtlas format', () => {
+it('fonts subpath bitmap and SDF builders return the common FontAtlas format', () => {
   if (!isBrowser()) {
     void 0;
     return;

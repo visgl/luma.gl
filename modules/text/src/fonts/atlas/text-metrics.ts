@@ -25,7 +25,7 @@ export type FontAtlasTextMetricsOptions = {
   missingCharacterWidth?: number;
 };
 
-/** Measures one line using the same metrics, kerning, and alignment as atlas text layout. */
+/** Measures one line using the CPU metrics, kerning, and alignment of atlas text layout. */
 export function measureFontAtlasText(
   text: string,
   fontAtlas: FontAtlas,

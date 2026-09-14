@@ -4,7 +4,6 @@
 // Adapted from deck.gl text atlas utilities under the MIT License.
 
 /* global document, ImageData, OffscreenCanvas */
-import {log} from '@luma.gl/core';
 import {buildMapping} from './text-utils';
 import type {FontAtlas, FontAtlasRenderSettings} from './font-atlas';
 import {LRUCache} from './lru-cache';
@@ -12,7 +11,7 @@ import {LRUCache} from './lru-cache';
 /** Character collection accepted by browser-backed font atlas builders. */
 export type FontAtlasCharacterSet = Set<string> | string[] | string;
 
-/** Shared browser font and packing options used by bitmap and SDF builders. */
+/** Shared browser font and packing options used by dependency-free bitmap and SDF builders. */
 export type BrowserFontAtlasSettings = {
   /** CSS font-family expression used by canvas text measurement. */
   fontFamily?: string;
@@ -69,7 +68,9 @@ let cache = new LRUCache<FontAtlas>(CACHE_LIMIT);
 
 /** Increases the process-wide generated atlas LRU capacity. */
 export function setFontAtlasCacheLimit(limit: number): void {
-  log.assert(Number.isFinite(limit) && limit >= CACHE_LIMIT, 'Invalid cache limit');
+  if (!Number.isFinite(limit) || limit < CACHE_LIMIT) {
+    throw new Error(`Font atlas cache limit must be at least ${CACHE_LIMIT}`);
+  }
   cache = new LRUCache(limit);
 }
 

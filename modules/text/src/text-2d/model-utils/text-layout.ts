@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {FontAtlas} from '../atlas/font-atlas';
-import {getCharacterAtlasPage, getCharacterLayoutOffset, type Character} from '../atlas/text-utils';
-import {walkTextGlyphs} from '../atlas/text-glyph-walker';
+import type {FontAtlas} from '../../fonts/atlas/font-atlas';
+import {
+  getCharacterAtlasPage,
+  getCharacterLayoutOffset,
+  type Character
+} from '../../fonts/atlas/text-utils';
+import {walkTextGlyphs} from '../../fonts/atlas/text-glyph-walker';
 import type {
   GpuExpandedTextStream,
   GpuTextDictionaryCompressedStream,

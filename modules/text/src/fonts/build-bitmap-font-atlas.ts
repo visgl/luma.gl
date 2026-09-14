@@ -13,7 +13,7 @@ import type {FontAtlas} from './atlas/font-atlas';
 export type BitmapFontAtlasSettings = BrowserFontAtlasSettings;
 
 /**
- * Builds a browser-font bitmap atlas in the common {@link FontAtlas} format.
+ * Builds a browser-font bitmap atlas on the CPU in the common {@link FontAtlas} format.
  *
  * Repeated calls with the same font settings reuse the generated canvas. Supplying additional
  * characters incrementally extends that canvas and its mapping.

@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getExternalImageSize, type ExternalImage} from '@luma.gl/core';
-import {loadImageBitmap} from '@luma.gl/engine';
-import type {FontAtlas, FontAtlasRenderSettings} from './atlas/font-atlas';
+import type {FontAtlas, FontAtlasPage, FontAtlasRenderSettings} from './atlas/font-atlas';
 import {createTextKerning, type CharacterMapping, type TextKerningPair} from './atlas/text-utils';
 
 /** Glyph metrics and atlas placement read from a BMFont JSON descriptor. */
@@ -80,14 +78,14 @@ export type BmFontMsdfData = {
 };
 
 /**
- * Builds a {@link FontAtlas} from parsed BMFont MSDF metadata and decoded image pages.
+ * Builds a {@link FontAtlas} on the CPU from parsed BMFont MSDF metadata and decoded image pages.
  *
  * The builder validates the MSDF encoding, page count, page dimensions, and each glyph's page
  * reference before returning the renderer-independent atlas contract.
  */
 export function buildMsdfFontAtlas(props: {
   data: BmFontMsdfData;
-  pages: readonly ExternalImage[];
+  pages: readonly FontAtlasPage[];
 }): FontAtlas {
   const {data, pages} = props;
   assertMsdfDescriptor(data, pages);
@@ -147,13 +145,11 @@ export async function loadMsdfFontAtlas(
   }
   const data = (await response.json()) as BmFontMsdfData;
   const pageUrls = data.pages.map(page => _resolveMsdfFontPageUrl(page, url));
-  const pages = await Promise.all(
-    pageUrls.map(pageUrl => loadImageBitmap(pageUrl, {crossOrigin: options?.crossOrigin}))
-  );
+  const pages = await Promise.all(pageUrls.map(pageUrl => loadFontAtlasImage(pageUrl, options)));
   return buildMsdfFontAtlas({data, pages});
 }
 
-function assertMsdfDescriptor(data: BmFontMsdfData, pages: readonly ExternalImage[]): void {
+function assertMsdfDescriptor(data: BmFontMsdfData, pages: readonly FontAtlasPage[]): void {
   if (data.distanceField?.fieldType !== 'msdf') {
     throw new Error('MSDF font descriptor must declare distanceField.fieldType as "msdf"');
   }
@@ -167,7 +163,7 @@ function assertMsdfDescriptor(data: BmFontMsdfData, pages: readonly ExternalImag
     throw new Error('MSDF font descriptor page metadata does not match loaded atlas pages');
   }
   for (const page of pages) {
-    const {width, height} = getExternalImageSize(page);
+    const {width, height} = getFontAtlasPageSize(page);
     if (width !== data.common.scaleW || height !== data.common.scaleH) {
       throw new Error('MSDF font atlas pages must match common.scaleW/common.scaleH');
     }
@@ -178,6 +174,49 @@ function assertMsdfDescriptor(data: BmFontMsdfData, pages: readonly ExternalImag
       throw new Error(`MSDF glyph ${character.id} references missing atlas page ${page}`);
     }
   }
+}
+
+async function loadFontAtlasImage(
+  url: string,
+  options?: {crossOrigin?: string}
+): Promise<ImageBitmap> {
+  const image = new Image();
+  image.crossOrigin = options?.crossOrigin || 'anonymous';
+  image.src = url;
+
+  try {
+    await image.decode();
+  } catch (error) {
+    throw createFontAtlasImageError('decode', url, error);
+  }
+
+  try {
+    return await createImageBitmap(image);
+  } catch (error) {
+    throw createFontAtlasImageError('create', url, error);
+  }
+}
+
+function createFontAtlasImageError(phase: 'decode' | 'create', url: string, error: unknown): Error {
+  const reason = error instanceof Error ? error.message : String(error);
+  const message =
+    phase === 'decode'
+      ? `Could not decode font atlas page "${url}": ${reason}`
+      : `Could not create font atlas page "${url}": ${reason}`;
+  return new Error(message, {cause: error});
+}
+
+function getFontAtlasPageSize(page: FontAtlasPage): {width: number; height: number} {
+  if ('naturalWidth' in page) {
+    return {width: page.naturalWidth, height: page.naturalHeight};
+  }
+  if ('videoWidth' in page) {
+    return {width: page.videoWidth, height: page.videoHeight};
+  }
+  if ('displayWidth' in page) {
+    return {width: page.displayWidth, height: page.displayHeight};
+  }
+  return {width: page.width, height: page.height};
 }
 
 /** @internal */
