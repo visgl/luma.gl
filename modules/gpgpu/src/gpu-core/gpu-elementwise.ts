@@ -5,10 +5,7 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {
-  getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
-} from './gpu-dispatch-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {
   getViewBinding,
   getViewElementOffset,
