@@ -1,4 +1,8 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPUScalar
+
+<GPUOperationContract operation="gpu-scalar" />
 
 ## Overview
 

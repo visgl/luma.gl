@@ -1,4 +1,10 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Transient buffer lifetime reuse
+
+<GPUOperationContract operation="gpu-transient-lifetimes" />
+
+## Overview
 
 Large GPU algorithms frequently need scratch buffers that are never live at the same time. A sort workspace may be dead before an FFT temporary is needed; hierarchical reduction partials disappear before a later solver phase.
 

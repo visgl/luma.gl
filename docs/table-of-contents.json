@@ -400,6 +400,20 @@
               },
               {
                 "type": "category",
+                "label": "Compute Foundations",
+                "items": [
+                  "api-reference/experimental/gpu-core/compositional-architecture",
+                  "api-reference/experimental/gpu-core/gpu-value-arena",
+                  "api-reference/experimental/gpu-core/gpu-value-arena-finalization",
+                  "api-reference/experimental/gpu-core/gpu-scalar",
+                  "api-reference/experimental/gpu-core/gpu-scalar-operation",
+                  "api-reference/experimental/gpu-core/gpu-reduction-substrate",
+                  "api-reference/experimental/gpu-core/gpu-cg-integration",
+                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes"
+                ]
+              },
+              {
+                "type": "category",
                 "label": "Graph Execution",
                 "items": [
                   "api-reference/experimental/gpu-core/concepts",
