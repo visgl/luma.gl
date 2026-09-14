@@ -10,13 +10,15 @@ import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
 /** Hierarchical dot product that scales beyond one workgroup and writes directly to GPUScalar. */
 export class GPUDotProductHierarchical {
   readonly id: string;
-  constructor(readonly props: {
-    id?: string;
-    left: GraphDataView<'float32'>;
-    right: GraphDataView<'float32'>;
-    output: GPUScalar<'float32'>;
-    gate?: GPUScalarDispatchGate;
-  }) {
+  constructor(
+    readonly props: {
+      id?: string;
+      left: GraphDataView<'float32'>;
+      right: GraphDataView<'float32'>;
+      output: GPUScalar<'float32'>;
+      gate?: GPUScalarDispatchGate;
+    }
+  ) {
     this.id = props.id ?? 'gpu-dot-product-hierarchical';
   }
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
@@ -34,12 +36,14 @@ export class GPUDotProductHierarchical {
 /** Hierarchical squared L2 norm: output = sum(x*x). Avoids sqrt when convergence uses norm². */
 export class GPUVectorNormSquaredHierarchical {
   readonly id: string;
-  constructor(readonly props: {
-    id?: string;
-    input: GraphDataView<'float32'>;
-    output: GPUScalar<'float32'>;
-    gate?: GPUScalarDispatchGate;
-  }) {
+  constructor(
+    readonly props: {
+      id?: string;
+      input: GraphDataView<'float32'>;
+      output: GPUScalar<'float32'>;
+      gate?: GPUScalarDispatchGate;
+    }
+  ) {
     this.id = props.id ?? 'gpu-vector-norm-squared-hierarchical';
   }
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {

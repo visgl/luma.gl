@@ -1,6 +1,12 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # WebGPU runtime control-flow lowering
 
+## Overview
+
 WebGPU has indirect compute dispatch but no executable graph loop or device-side command launch. Jarnevon therefore lowers semantic runtime control flow into a bounded command sequence whose individual compute dispatches are enabled or disabled entirely on the GPU.
+
+<GPUOperationContract operation="webgpu-runtime-control" />
 
 ## Logical predicate state
 

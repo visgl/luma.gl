@@ -66,6 +66,7 @@ type PreparedScene = {
     compiled: CompiledGPUCommandGraph<undefined>;
     inputBuffer: Buffer;
     lzCopyDetails: LZCopyDetails;
+    batchedPageCount: number;
   };
   uploadByteLength: number;
   decodeGraphNodeCount: number;
@@ -82,7 +83,14 @@ type DecodeMeasurement = {
   decodeExecutionMilliseconds: number;
   reusedGraphExecutionMilliseconds?: number;
   lzCopyDetails?: LZCopyDetails;
+  batchedPageCount: number;
+  outputValidation?: OutputValidation;
 };
+
+type OutputValidation = Readonly<{
+  byteLength: number;
+  milliseconds: number;
+}>;
 
 type LZCopyDetails = {
   directCopyCount: number;
@@ -326,24 +334,37 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
       signal.throwIfAborted();
       if (preparationVersion !== this.preparationVersion) {
         destroyPreparedScene(nextScene);
+        nextScene = null;
         return;
       }
       const elapsedMilliseconds = performance.now() - this.preparationStartedAt;
-      this.measurements[mode] = {
+      const measurement: DecodeMeasurement = {
         elapsedMilliseconds,
         longestFrameMilliseconds: this.longestPreparationFrameMilliseconds,
         uploadByteLength: nextScene.uploadByteLength,
         graphNodeCount: nextScene.decodeGraphNodeCount,
         graphCompileMilliseconds: nextScene.graphCompileMilliseconds,
         decodeExecutionMilliseconds: nextScene.decodeExecutionMilliseconds,
-        lzCopyDetails: nextScene.gpuDecoder?.lzCopyDetails
+        lzCopyDetails: nextScene.gpuDecoder?.lzCopyDetails,
+        batchedPageCount: nextScene.gpuDecoder?.batchedPageCount ?? 0
       };
+      this.measurements[mode] = measurement;
+      if (mode === 'gpu' && this.scene && !this.scene.gpuDecoder) {
+        this.setStatus('Checking every CPU and GPU output byte before displaying the GPU scene…');
+        measurement.outputValidation = await comparePreparedSceneOutputs(this.scene, nextScene);
+        signal.throwIfAborted();
+        if (preparationVersion !== this.preparationVersion) {
+          destroyPreparedScene(nextScene);
+          nextScene = null;
+          return;
+        }
+      }
       this.destroyScene();
       this.scene = nextScene;
       nextScene = null;
       this.selectedMode = mode;
       this.setStatus(
-        `${mode === 'gpu' ? 'GPU' : 'CPU'} decoded ${formatCount(ROW_COUNT)} rows; the same buffers now drive the animated render.`
+        `${mode === 'gpu' ? 'GPU' : 'CPU'} decoded ${formatCount(ROW_COUNT)} rows${measurement.outputValidation ? ' with an exact CPU/GPU output match' : ''}; the same buffers now drive the animated render.`
       );
       this.updateMeasurements();
     } finally {
@@ -428,7 +449,7 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             this.device.createBuffer({
               id: `gpu-${column}`,
               byteLength: ROW_COUNT * UINT32_BYTE_LENGTH,
-              usage: Buffer.STORAGE | Buffer.COPY_DST
+              usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
             })
           ])
         ) as Record<ParquetConstellationColumn, Buffer>;
@@ -465,7 +486,12 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
             decodeGraphNodeCount,
             graphCompileMilliseconds,
             decodeExecutionMilliseconds,
-            {compiled: compiledDecode, inputBuffer, lzCopyDetails}
+            {
+              compiled: compiledDecode,
+              inputBuffer,
+              lzCopyDetails,
+              batchedPageCount: plan.lzByteStreamSplitBatch?.pageIndices.length ?? 0
+            }
           );
         } catch (error) {
           compiledDecode?.destroy();
@@ -547,7 +573,11 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
   }
 
   private createColumnBuffer(id: string, data: Float32Array | Uint32Array): Buffer {
-    return this.device.createBuffer({id, data, usage: Buffer.STORAGE | Buffer.COPY_DST});
+    return this.device.createBuffer({
+      id,
+      data,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+    });
   }
 
   private createPreparedScene(
@@ -805,10 +835,12 @@ export default class GPUParquetConstellationAnimationLoopTemplate extends Animat
         <tr><th style="text-align:left;font-weight:normal">Main-thread longest frame</th><td>${formatMetric(gpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td><td>${formatMetric(cpuMeasurement, value => `${value.longestFrameMilliseconds.toFixed(1)} ms`)}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">Bytes uploaded to GPU</th><td>${formatMetric(gpuMeasurement, value => formatBytes(value.uploadByteLength))}</td><td>${formatMetric(cpuMeasurement, value => formatBytes(value.uploadByteLength))}</td></tr>
         <tr><th style="text-align:left;font-weight:normal">GPU command graph nodes</th><td>${formatMetric(gpuMeasurement, value => String(value.graphNodeCount))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">Batched compressed pages</th><td>${formatMetric(gpuMeasurement, value => formatCount(value.batchedPageCount))}</td><td>n/a</td></tr>
+        <tr><th style="text-align:left;font-weight:normal">CPU/GPU decoded output</th><td>${formatMetric(gpuMeasurement, value => (value.outputValidation ? `Exact match · ${formatBytes(value.outputValidation.byteLength)}` : 'not compared'))}</td><td>reference</td></tr>
         <tr><th style="text-align:left;font-weight:normal">LZ copies: direct / recursive</th><td>${formatMetric(gpuMeasurement, value => (value.lzCopyDetails ? `${formatCount(value.lzCopyDetails.directCopyCount)} / ${formatCount(value.lzCopyDetails.recursiveCopyCount)}` : 'n/a'))}</td><td>n/a</td></tr>
       </tbody>
     </table>
-    <div style="margin-top:7px;font-size:11px;line-height:1.35;color:#94a3b8">Headline excludes fetch and ends with decoded columns resident in renderable GPU buffers. The GPU decode stage is graph execution; the CPU stage is loader decode plus Arrow construction.</div>
+    <div style="margin-top:7px;font-size:11px;line-height:1.35;color:#94a3b8">Headline excludes fetch and exact-output validation, and ends with decoded columns resident in renderable GPU buffers. The GPU decode stage is graph execution; the CPU stage is loader decode plus Arrow construction.</div>
     <div style="margin-top:10px;font:11px/1.5 ui-monospace,monospace">4 × BYTE_STREAM_SPLIT FLOAT<br>1 × DELTA_BINARY_PACKED UINT32<br>DataPageV2 · ${this.compressionDetails?.summary ?? 'compression pending'} · dictionary off</div>`;
   }
 }
@@ -899,6 +931,34 @@ function isParquetConstellationColumn(
   value: string | undefined
 ): value is ParquetConstellationColumn {
   return PARQUET_CONSTELLATION_COLUMNS.includes(value as ParquetConstellationColumn);
+}
+
+async function comparePreparedSceneOutputs(
+  cpuScene: PreparedScene,
+  gpuScene: PreparedScene
+): Promise<OutputValidation> {
+  const startedAt = performance.now();
+  let byteLength = 0;
+  for (const columnName of PARQUET_CONSTELLATION_COLUMNS) {
+    const [cpuBytes, gpuBytes] = await Promise.all([
+      cpuScene.buffers[columnName].readAsync(),
+      gpuScene.buffers[columnName].readAsync()
+    ]);
+    if (cpuBytes.byteLength !== gpuBytes.byteLength) {
+      throw new Error(
+        `${columnName} CPU/GPU byte lengths differ: ${cpuBytes.byteLength} !== ${gpuBytes.byteLength}`
+      );
+    }
+    for (let byteIndex = 0; byteIndex < cpuBytes.byteLength; byteIndex++) {
+      if (cpuBytes[byteIndex] !== gpuBytes[byteIndex]) {
+        throw new Error(
+          `${columnName} CPU/GPU output differs at byte ${byteIndex}: ${cpuBytes[byteIndex]} !== ${gpuBytes[byteIndex]}`
+        );
+      }
+    }
+    byteLength += cpuBytes.byteLength;
+  }
+  return Object.freeze({byteLength, milliseconds: performance.now() - startedAt});
 }
 
 function destroyPreparedScene(scene: PreparedScene): void {

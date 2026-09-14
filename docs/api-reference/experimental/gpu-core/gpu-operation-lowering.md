@@ -1,4 +1,13 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU operation lowering
+
+## Overview
+
+Operation lowering preserves the relationship between semantic operations and the command nodes
+selected by a backend compiler.
+
+<GPUOperationContract operation="gpu-operation-lowering" />
 
 ## Why preserve lowering provenance?
 

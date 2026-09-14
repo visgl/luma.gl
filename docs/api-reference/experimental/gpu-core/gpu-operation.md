@@ -1,6 +1,12 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU operation IR
 
+## Overview
+
 `GPUCommandGraph` has historically been built by asking reusable algorithms to immediately contribute compute, render and copy nodes through `addToGraph()`. That remains a useful lowering mechanism, but command nodes are already too concrete to represent the semantic program that produced them.
+
+<GPUOperationContract operation="gpu-operation" />
 
 The operation IR introduces a small layer above command nodes:
 

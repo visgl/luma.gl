@@ -67,6 +67,9 @@ export type GPUCoreDocsTabId =
   | 'command-graph'
   | 'texture-history'
   | 'scan'
+  | 'segmented-scan'
+  | 'scatter'
+  | 'gather'
   | 'galloping-search'
   | 'compaction'
   | 'flag-offsets'
@@ -85,6 +88,11 @@ export type GPUCoreDocsTabId =
   | 'fft2d'
   | 'convolution'
   | 'reduction'
+  | 'segmented-reduction'
+  | 'run-length-encode'
+  | 'elementwise'
+  | 'matvec'
+  | 'matmul'
   | 'histogram'
   | 'grid-binning'
   | 'grid-aggregation'
@@ -236,6 +244,9 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   'command-graph': {id: 'command-graph', label: 'Command Graph', href: '/docs/api-reference/experimental/gpu-core/gpu-command-graph'},
   'texture-history': {id: 'texture-history', label: 'Texture History', href: '/docs/api-reference/experimental/gpu-core/gpu-texture-history'},
   scan: {id: 'scan', label: 'Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-scan'},
+  'segmented-scan': {id: 'segmented-scan', label: 'Segmented Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-scan'},
+  scatter: {id: 'scatter', label: 'Scatter', href: '/docs/api-reference/experimental/gpu-core/gpu-scatter'},
+  gather: {id: 'gather', label: 'Gather', href: '/docs/api-reference/experimental/gpu-core/gpu-gather'},
   'galloping-search': {id: 'galloping-search', label: 'Galloping Search', href: '/docs/api-reference/experimental/gpu-core/gpu-galloping-search'},
   compaction: {id: 'compaction', label: 'Compaction', href: '/docs/api-reference/experimental/gpu-core/gpu-compaction'},
   'flag-offsets': {id: 'flag-offsets', label: 'Flag Offsets', href: '/docs/api-reference/experimental/gpu-core/gpu-flag-offsets'},
@@ -254,6 +265,11 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   fft2d: {id: 'fft2d', label: 'FFT 2D', href: '/docs/api-reference/experimental/gpu-core/gpu-fft2d'},
   convolution: {id: 'convolution', label: 'Convolution', href: '/docs/api-reference/experimental/gpu-core/gpu-convolution'},
   reduction: {id: 'reduction', label: 'Reduction', href: '/docs/api-reference/experimental/gpu-core/gpu-reduction'},
+  'segmented-reduction': {id: 'segmented-reduction', label: 'Segmented Reduction', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-reduction'},
+  'run-length-encode': {id: 'run-length-encode', label: 'RLE and Unique', href: '/docs/api-reference/experimental/gpu-core/gpu-run-length-encode'},
+  elementwise: {id: 'elementwise', label: 'Elementwise', href: '/docs/api-reference/experimental/gpu-core/gpu-elementwise'},
+  matvec: {id: 'matvec', label: 'MatVec', href: '/docs/api-reference/experimental/gpu-core/gpu-matvec'},
+  matmul: {id: 'matmul', label: 'MatMul', href: '/docs/api-reference/experimental/gpu-core/gpu-matmul'},
   histogram: {id: 'histogram', label: 'Histogram', href: '/docs/api-reference/experimental/gpu-core/gpu-histogram'},
   'group-aggregation': {id: 'group-aggregation', label: 'Group Aggregation', href: '/docs/api-reference/experimental/gpu-core/gpu-group-aggregation'},
   'grid-binning': {id: 'grid-binning', label: 'Grid Binning', href: '/docs/api-reference/experimental/gpu-core/gpu-grid-binning'},
@@ -287,10 +303,12 @@ function getGPUCoreTabs(
 export const GPU_CORE_DOCS_TAB_GROUPS: readonly DocsTabGroup<GPUCoreDocsTabId>[] = [
   {id: 'learning', label: 'Learn GPU Core', tabs: getGPUCoreTabs(['overview', 'tutorial', 'recipes', 'concepts'])},
   {id: 'graph-execution', label: 'Graph execution', tabs: getGPUCoreTabs(['command-graph', 'texture-history', 'readback-ring', 'draw-command-buffer'])},
-  {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['scan', 'galloping-search', 'compaction', 'segmented-layout', 'mask', 'visibility-workflow', 'virtual-geometry'])},
+  {id: 'data-movement', label: 'Data movement', tabs: getGPUCoreTabs(['scan', 'segmented-scan', 'scatter', 'gather'])},
+  {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['galloping-search', 'compaction', 'segmented-layout', 'mask', 'visibility-workflow', 'virtual-geometry'])},
   {id: 'hierarchies-and-traversal', label: 'Hierarchies and traversal', tabs: getGPUCoreTabs(['hierarchy-layout', 'graph-traversal', 'ancestor-projection'])},
   {id: 'sorting-and-transforms', label: 'Sorting and transforms', tabs: getGPUCoreTabs(['sort', 'segmented-sort', 'transpose', 'fft1d', 'fft2d', 'convolution'])},
-  {id: 'aggregation', label: 'Aggregation', tabs: getGPUCoreTabs(['reduction', 'histogram', 'group-aggregation'])},
+  {id: 'aggregation', label: 'Aggregation', tabs: getGPUCoreTabs(['reduction', 'segmented-reduction', 'run-length-encode', 'histogram', 'group-aggregation'])},
+  {id: 'dense-compute', label: 'Dense compute', tabs: getGPUCoreTabs(['elementwise', 'matvec', 'matmul'])},
   {id: 'spatial-grids', label: 'Spatial grids', tabs: getGPUCoreTabs(['grid-binning', 'grid-aggregation', 'grid-index', 'grid-index-query', 'point-spatial-filter'])},
   {id: 'spatial-hierarchies', label: 'Spatial hierarchies', tabs: getGPUCoreTabs(['bvh', 'segmented-bvh', 'bvh-query', 'spatial-benchmark'])},
   {id: 'gpu-scenes', label: 'GPU scenes', tabs: getGPUCoreTabs(['scene', 'scene-adapters', 'scene-draw-generation', 'scene-resource-groups', 'index-picking'])},

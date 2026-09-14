@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GraphDataView} from './gpu-command-graph';
-import {getGPUValueArena, type GPUValueArena, type GPUValueFormat, type GPUValueSlot} from './gpu-value-arena';
+import {
+  getGPUValueArena,
+  type GPUValueArena,
+  type GPUValueFormat,
+  type GPUValueSlot
+} from './gpu-value-arena';
 import type {GPUCommandGraph} from './gpu-command-graph';
 
 /** First-class logical scalar backed by one slot in a graph-owned GPUValueArena. */
@@ -51,9 +56,12 @@ export function createGPUScalar<Parameters, T extends GPUValueFormat>(
 /** WGSL type corresponding to one arena scalar format. */
 export function getGPUScalarWGSLType(format: GPUValueFormat): 'f32' | 'u32' | 'i32' {
   switch (format) {
-    case 'float32': return 'f32';
-    case 'uint32': return 'u32';
-    case 'sint32': return 'i32';
+    case 'float32':
+      return 'f32';
+    case 'uint32':
+      return 'u32';
+    case 'sint32':
+      return 'i32';
   }
 }
 
@@ -61,15 +69,15 @@ export function getGPUScalarWGSLType(format: GPUValueFormat): 'f32' | 'u32' | 'i
  * Generates one WGSL load expression for a scalar stored in an arena bound as `arenaExpression`.
  * The arena is represented as `array<u32>` so all scalar formats share one physical binding.
  */
-export function getGPUScalarWGSLLoad(
-  scalar: GPUScalar,
-  arenaExpression = 'gpuValues'
-): string {
+export function getGPUScalarWGSLLoad(scalar: GPUScalar, arenaExpression = 'gpuValues'): string {
   const word = `${arenaExpression}[${scalar.wordOffset}u]`;
   switch (scalar.format) {
-    case 'float32': return `bitcast<f32>(${word})`;
-    case 'uint32': return word;
-    case 'sint32': return `bitcast<i32>(${word})`;
+    case 'float32':
+      return `bitcast<f32>(${word})`;
+    case 'uint32':
+      return word;
+    case 'sint32':
+      return `bitcast<i32>(${word})`;
   }
 }
 
@@ -81,13 +89,20 @@ export function getGPUScalarWGSLStore(
 ): string {
   const target = `${arenaExpression}[${scalar.wordOffset}u]`;
   switch (scalar.format) {
-    case 'float32': return `${target} = bitcast<u32>(${valueExpression});`;
-    case 'uint32': return `${target} = ${valueExpression};`;
-    case 'sint32': return `${target} = bitcast<u32>(${valueExpression});`;
+    case 'float32':
+      return `${target} = bitcast<u32>(${valueExpression});`;
+    case 'uint32':
+      return `${target} = ${valueExpression};`;
+    case 'sint32':
+      return `${target} = bitcast<u32>(${valueExpression});`;
   }
 }
 
 /** Standard WGSL declaration for a read/write packed value arena binding. */
-export function getGPUValueArenaWGSLBinding(group: number, binding: number, name = 'gpuValues'): string {
+export function getGPUValueArenaWGSLBinding(
+  group: number,
+  binding: number,
+  name = 'gpuValues'
+): string {
   return `@group(${group}) @binding(${binding}) var<storage, read_write> ${name}: array<u32>;`;
 }

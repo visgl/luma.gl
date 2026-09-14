@@ -1,4 +1,13 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU operation metadata
+
+## Overview
+
+Operation metadata describes logical inputs, outputs, workload, and constraints without prescribing
+a backend execution strategy.
+
+<GPUOperationContract operation="gpu-operation-metadata" />
 
 ## Why operations need metadata
 

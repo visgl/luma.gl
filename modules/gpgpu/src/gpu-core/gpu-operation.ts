@@ -52,7 +52,17 @@ export class GPUCompositeOperation implements GPUOperation {
           metadata?: GPUOperationMetadata;
         }
   ) {
-    const normalized = Array.isArray(props) ? {operations: props} : props;
+    const normalized: {
+      id?: string;
+      operations: readonly GPUProgramOperation[];
+      metadata?: GPUOperationMetadata;
+    } = Array.isArray(props)
+      ? {operations: props as readonly GPUProgramOperation[]}
+      : (props as {
+          id?: string;
+          operations: readonly GPUProgramOperation[];
+          metadata?: GPUOperationMetadata;
+        });
     this.id = normalized.id ?? 'gpu-composite-operation';
     this.operations = Object.freeze([...normalized.operations]);
     this.metadata = normalized.metadata;

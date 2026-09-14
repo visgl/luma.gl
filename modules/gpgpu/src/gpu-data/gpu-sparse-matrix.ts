@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUDataView} from './gpu-data';
+import type {GPUDataView} from './gpu-data-view';
 
 export type GPUCOOMatrixProps = {
   rows: number;
@@ -20,13 +20,21 @@ export class GPUCOOMatrix {
   readonly values: GPUDataView<'float32'>;
   constructor(props: GPUCOOMatrixProps) {
     validateShape(props.rows, props.columns, 'GPUCOOMatrix');
-    if (props.rowIndices.length !== props.columnIndices.length || props.rowIndices.length !== props.values.length) {
+    if (
+      props.rowIndices.length !== props.columnIndices.length ||
+      props.rowIndices.length !== props.values.length
+    ) {
       throw new Error('GPUCOOMatrix rowIndices, columnIndices and values must have equal length');
     }
-    this.rows = props.rows; this.columns = props.columns; this.rowIndices = props.rowIndices;
-    this.columnIndices = props.columnIndices; this.values = props.values;
+    this.rows = props.rows;
+    this.columns = props.columns;
+    this.rowIndices = props.rowIndices;
+    this.columnIndices = props.columnIndices;
+    this.values = props.values;
   }
-  get nonZeroCount(): number { return this.values.length; }
+  get nonZeroCount(): number {
+    return this.values.length;
+  }
 }
 
 export type GPUCSRMatrixProps = {
@@ -45,15 +53,24 @@ export class GPUCSRMatrix {
   readonly values: GPUDataView<'float32'>;
   constructor(props: GPUCSRMatrixProps) {
     validateShape(props.rows, props.columns, 'GPUCSRMatrix');
-    if (props.rowOffsets.length !== props.rows + 1) throw new Error('GPUCSRMatrix rowOffsets length must equal rows + 1');
-    if (props.columnIndices.length !== props.values.length) throw new Error('GPUCSRMatrix columnIndices and values must have equal length');
-    this.rows = props.rows; this.columns = props.columns; this.rowOffsets = props.rowOffsets;
-    this.columnIndices = props.columnIndices; this.values = props.values;
+    if (props.rowOffsets.length !== props.rows + 1)
+      throw new Error('GPUCSRMatrix rowOffsets length must equal rows + 1');
+    if (props.columnIndices.length !== props.values.length)
+      throw new Error('GPUCSRMatrix columnIndices and values must have equal length');
+    this.rows = props.rows;
+    this.columns = props.columns;
+    this.rowOffsets = props.rowOffsets;
+    this.columnIndices = props.columnIndices;
+    this.values = props.values;
   }
-  get nonZeroCount(): number { return this.values.length; }
+  get nonZeroCount(): number {
+    return this.values.length;
+  }
 }
 
 function validateShape(rows: number, columns: number, name: string): void {
-  if (!Number.isInteger(rows) || rows < 0) throw new Error(`${name} rows must be a non-negative integer`);
-  if (!Number.isInteger(columns) || columns < 0) throw new Error(`${name} columns must be a non-negative integer`);
+  if (!Number.isInteger(rows) || rows < 0)
+    throw new Error(`${name} rows must be a non-negative integer`);
+  if (!Number.isInteger(columns) || columns < 0)
+    throw new Error(`${name} columns must be a non-negative integer`);
 }

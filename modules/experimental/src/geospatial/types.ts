@@ -16,6 +16,9 @@ export type GPUFloat32Positions = GraphDataView<'float32x2'> | GraphVectorView<'
  */
 export type GPUFloat64Positions = GraphDataView<'uint32x4'> | GraphVectorView<'uint32x4'>;
 
+/** Absolute `[xHigh, xLow, yHigh, yLow]` double-single positions. */
+export type GPUDoubleSinglePositions = GraphDataView<'float32x4'> | GraphVectorView<'float32x4'>;
+
 /** Packed local or raw binary64 two-dimensional positions. */
 export type GPUGeospatialPositions = GPUFloat32Positions | GPUFloat64Positions;
 

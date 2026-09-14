@@ -10,6 +10,7 @@ export type {
   ProjectionDegree,
   ProjectionPatch,
   ProjectionPlan,
+  ProjectionPrecision,
   ProjectionProvider
 } from './types';
 
@@ -29,4 +30,10 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
-export type {GPUProjectionPatchIds, GPUProjectionProps} from './gpu-projection';
+export type {
+  GPUProjectionDoubleSingleProps,
+  GPUProjectionLocalFloat32Props,
+  GPUProjectionPatchIds,
+  GPUProjectionProps,
+  GPUProjectionValidity
+} from './gpu-projection';

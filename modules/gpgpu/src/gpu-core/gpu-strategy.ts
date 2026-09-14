@@ -35,14 +35,16 @@ export function selectGPUStrategy<Id extends string, Workload, Details>(props: {
   candidates: readonly GPUStrategyCandidate<Id, Workload, Details>[];
   preferredId?: Id;
 }): GPUStrategyDecision<Id, Details> {
-  if (props.candidates.length === 0) throw new Error('GPU strategy candidate list must not be empty');
+  if (props.candidates.length === 0)
+    throw new Error('GPU strategy candidate list must not be empty');
   const context = {device: props.device, workload: props.workload};
   const supported = props.candidates.filter(candidate => candidate.isSupported?.(context) ?? true);
   if (supported.length === 0) throw new Error('no supported GPU strategy candidate');
 
   if (props.preferredId) {
     const preferred = supported.find(candidate => candidate.id === props.preferredId);
-    if (!preferred) throw new Error(`preferred GPU strategy "${props.preferredId}" is not supported`);
+    if (!preferred)
+      throw new Error(`preferred GPU strategy "${props.preferredId}" is not supported`);
     return freezeDecision(preferred, context);
   }
 

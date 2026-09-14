@@ -5,7 +5,10 @@
 /** Concrete direct-dispatch geometry retained outside the public command-node contract. */
 export type GPUComputeDispatchWorkgroups = readonly [number, number, number];
 
-const dispatchGeometry = new WeakMap<object, GPUComputeDispatchWorkgroups>();
+type GPUComputeDispatchMetadata = {
+  /** @internal Exact direct-dispatch geometry used while lowering semantic operations. */
+  dispatchWorkgroups?: GPUComputeDispatchWorkgroups;
+};
 
 /**
  * Annotates a compute-node descriptor with the direct workgroup geometry its encode callback emits.
@@ -17,18 +20,26 @@ export function setGPUComputeDispatchWorkgroups<T extends object>(
   workgroups: GPUComputeDispatchWorkgroups
 ): T {
   const [x, y, z] = workgroups;
-  for (const [name, value] of [['x', x], ['y', y], ['z', z]] as const) {
+  for (const [name, value] of [
+    ['x', x],
+    ['y', y],
+    ['z', z]
+  ] as const) {
     if (!Number.isSafeInteger(value) || value < 0) {
-      throw new Error(`compute dispatch ${name} workgroup count must be a non-negative safe integer`);
+      throw new Error(
+        `compute dispatch ${name} workgroup count must be a non-negative safe integer`
+      );
     }
   }
-  dispatchGeometry.set(node, Object.freeze([x, y, z]));
-  return node;
+  return {
+    ...node,
+    dispatchWorkgroups: Object.freeze([x, y, z])
+  };
 }
 
 /** @internal Returns exact direct-dispatch geometry when an operation supplied it. */
 export function getGPUComputeDispatchWorkgroups(
   node: object
 ): GPUComputeDispatchWorkgroups | undefined {
-  return dispatchGeometry.get(node);
+  return (node as GPUComputeDispatchMetadata).dispatchWorkgroups;
 }

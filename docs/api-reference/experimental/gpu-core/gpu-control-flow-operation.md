@@ -1,8 +1,14 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU operation control flow
+
+## Overview
 
 `GPUConditionalOperation` and `GPULoopOperation` add **structured control-flow semantics** to the GPU operation IR.
 
 The important distinction is that an operation describes the program while lowering decides how that program executes.
+
+<GPUOperationContract operation="gpu-control-flow-operation" />
 
 ```text
 GPULoopOperation

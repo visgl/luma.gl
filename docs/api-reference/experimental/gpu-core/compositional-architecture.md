@@ -1,4 +1,8 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Compositional GPU architecture
+
+<GPUOperationContract operation="compositional-architecture" />
 
 ## Overview
 

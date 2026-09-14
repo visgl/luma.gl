@@ -3,10 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphComputeNode
-} from './gpu-command-graph';
+import {GPUCommandGraph, type GPUCommandGraphComputeNode} from './gpu-command-graph';
 import type {GPUCommandGraphAutotuner} from './gpu-command-graph-autotuner';
 
 export type GPUCommandGraphComputeLowering<Parameters = void> = (
@@ -21,16 +18,11 @@ export class GPUCommandLoweringGraph<Parameters = void> extends GPUCommandGraph<
   private readonly computeLowerings: GPUCommandGraphComputeLowering<Parameters>[] = [];
   private loweringsSuspended = 0;
 
-  constructor(
-    device: Device,
-    props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}
-  ) {
+  constructor(device: Device, props: {id?: string; autotuner?: GPUCommandGraphAutotuner} = {}) {
     super(device, props);
   }
 
-  override addComputePass(
-    node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>
-  ): void {
+  override addComputePass(node: Omit<GPUCommandGraphComputeNode<Parameters>, 'type'>): void {
     let lowered = node;
     if (this.loweringsSuspended === 0) {
       // Inner scopes realize concrete execution details first; outer scopes can then inspect them.
