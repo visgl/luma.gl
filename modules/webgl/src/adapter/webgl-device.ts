@@ -192,13 +192,16 @@ export class WebGLDevice extends Device {
       createBrowserContext(
         this.canvasContext.canvas,
         {
-          onContextLost: (_event: Event) =>
-            this._resolveContextLost?.({
+          onContextLost: (_event: Event) => {
+            const loss: DeviceLostInfo = {
               reason: this._lossWasRequested ? 'destroyed' : 'unknown',
               message: this._lossWasRequested
                 ? 'Application triggered context loss'
                 : 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-            }),
+            };
+            this._lossWasRequested = false;
+            this._resolveContextLost?.(loss);
+          },
           onContextRestored: (_event: Event) => {
             // biome-ignore lint/suspicious/noConsole: debug-only context restore notification.
             console.log('WebGL context restored');
@@ -521,6 +524,7 @@ export class WebGLDevice extends Device {
       reason: 'destroyed',
       message: 'Application triggered context loss'
     });
+    this._lossWasRequested = false;
     return deviceLossTriggered;
   }
 

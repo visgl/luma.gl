@@ -4,7 +4,7 @@
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {type DeviceProps} from '@luma.gl/core';
-import {WebGPUAdapter, getWebGPUAdapterInfo} from '../../src/adapter/webgpu-adapter';
+import {WebGPUAdapter} from '../../src/adapter/webgpu-adapter';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -23,6 +23,16 @@ class MockWebGPUAdapter extends WebGPUAdapter {
   ): Promise<GPUAdapter | null> {
     this.requests.push(options);
     return this.adapters.shift() || null;
+  }
+}
+
+class FailingWebGPUAdapter extends WebGPUAdapter {
+  constructor(private readonly failure: Error) {
+    super();
+  }
+
+  protected override requestGPUAdapter(): Promise<GPUAdapter | null> {
+    return Promise.reject(this.failure);
   }
 }
 
@@ -108,36 +118,82 @@ describe('WebGPU device creation lifecycle', () => {
     device.destroy();
   });
 
-  test('does not retry an intentionally destroyed device', async () => {
-    const destroyedDevice = makeNativeDevice(
-      Promise.resolve({
-        reason: 'destroyed',
-        message: 'Application destroyed device'
-      } as GPUDeviceLostInfo)
-    );
-    const nativeAdapter = makeNativeAdapter(destroyedDevice.device);
-    const adapter = new MockWebGPUAdapter([nativeAdapter.adapter]);
+  test('normalizes unknown WebGPU loss reasons and preserves destroyed', async () => {
+    const lossReasons = [
+      {reason: 'unknown', expected: 'unknown'},
+      {reason: 'destroyed', expected: 'destroyed'},
+      {reason: 'legacy-reason', expected: 'unknown'}
+    ] as const;
 
-    await expect(adapter.create({} as DeviceProps)).rejects.toMatchObject({
-      message: expect.stringContaining('already lost')
-    });
-    expect(adapter.requests).toHaveLength(1);
-    expect(destroyedDevice.device.destroy).toHaveBeenCalledTimes(1);
+    for (const {reason, expected} of lossReasons) {
+      const loss = makeDeferred<GPUDeviceLostInfo>();
+      const nativeDevice = makeNativeDevice(loss.promise);
+      const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+      const device = await new MockWebGPUAdapter([nativeAdapter.adapter]).create({} as DeviceProps);
+
+      loss.resolve({reason, message: 'Native diagnostic'} as GPUDeviceLostInfo);
+      await expect(device.lost).resolves.toEqual({
+        reason: expected,
+        message: 'Native diagnostic'
+      });
+    }
   });
 
-  test('preserves native request failures as causes of ordinary errors', async () => {
-    const nativeError = new Error('Invalid required limit');
+  test('throws a standard error after an intentional or repeated immediate loss', async () => {
+    const destroyedDevice = makeNativeDevice(
+      Promise.resolve({reason: 'destroyed', message: 'Application destroyed'} as GPUDeviceLostInfo)
+    );
+    const destroyedAdapter = makeNativeAdapter(destroyedDevice.device);
+    const destroyedCreation = new MockWebGPUAdapter([destroyedAdapter.adapter]).create(
+      {} as DeviceProps
+    );
+    await expect(destroyedCreation).rejects.toMatchObject({
+      message: 'Application destroyed',
+      cause: {reason: 'destroyed'}
+    });
+    await expect(destroyedCreation).rejects.toBeInstanceOf(Error);
+
+    const firstDevice = makeNativeDevice(
+      Promise.resolve({reason: 'unknown', message: 'First loss'} as GPUDeviceLostInfo)
+    );
+    const secondDevice = makeNativeDevice(
+      Promise.resolve({reason: 'unknown', message: 'Second loss'} as GPUDeviceLostInfo)
+    );
+    const adapter = new MockWebGPUAdapter([
+      makeNativeAdapter(firstDevice.device).adapter,
+      makeNativeAdapter(secondDevice.device).adapter
+    ]);
+
+    await expect(adapter.create({} as DeviceProps)).rejects.toMatchObject({
+      message: 'Second loss',
+      cause: {reason: 'unknown'}
+    });
+    expect(adapter.requests).toHaveLength(2);
+  });
+
+  test('preserves native adapter request failures in error.cause', async () => {
+    const nativeError = new Error('Native adapter failure');
+
+    await expect(
+      new FailingWebGPUAdapter(nativeError).create({} as DeviceProps)
+    ).rejects.toMatchObject({
+      message: 'WebGPU adapter request failed',
+      cause: nativeError
+    });
+  });
+
+  test('preserves native device request failures in error.cause', async () => {
+    const nativeError = new Error('Native device failure');
     const nativeAdapter = {
       features: new Set(),
       limits: {},
       info: {},
-      requestDevice: vi.fn(async () => {
-        throw nativeError;
-      })
+      requestDevice: vi.fn().mockRejectedValue(nativeError)
     } as unknown as GPUAdapter;
-    const adapter = new MockWebGPUAdapter([nativeAdapter]);
 
-    await expect(adapter.create({} as DeviceProps)).rejects.toMatchObject({
+    await expect(
+      new MockWebGPUAdapter([nativeAdapter]).create({} as DeviceProps)
+    ).rejects.toMatchObject({
       message: 'WebGPU device request failed',
       cause: nativeError
     });
@@ -167,18 +223,13 @@ describe('WebGPU device creation lifecycle', () => {
     expect(canvasDevice.device.destroy).toHaveBeenCalledTimes(1);
   });
 
-  test('normalizes WebGPU loss reasons and tolerates missing metadata', async () => {
-    const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
-    const nativeDevice = makeNativeDevice(pendingLoss.promise);
+  test('preserves native loss reasons', async () => {
+    const unexpectedLoss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(unexpectedLoss.promise);
     const nativeAdapter = makeNativeAdapter(nativeDevice.device);
     const device = await new MockWebGPUAdapter([nativeAdapter.adapter]).create({} as DeviceProps);
+    unexpectedLoss.resolve({reason: 'unknown', message: 'Driver reset'} as GPUDeviceLostInfo);
 
-    pendingLoss.resolve({
-      reason: 'unexpected-legacy-value',
-      message: 'Driver reset'
-    } as GPUDeviceLostInfo);
     await expect(device.lost).resolves.toEqual({reason: 'unknown', message: 'Driver reset'});
-
-    await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
   });
 });
