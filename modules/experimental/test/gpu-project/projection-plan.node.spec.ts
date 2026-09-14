@@ -7,6 +7,7 @@ import {readFileSync} from 'node:fs';
 import {Proj4Projection} from '@math.gl/proj4';
 import * as experimentalModule from '@luma.gl/experimental';
 import * as projectionModule from '@luma.gl/experimental/gpu-project';
+import type {GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   compileProjectionPlan,
   createWebMercatorProjection,
@@ -18,7 +19,8 @@ import {
   WEB_MERCATOR_EARTH_RADIUS,
   WEB_MERCATOR_MAX_LATITUDE
 } from '@luma.gl/experimental/gpu-project';
-import {describe, expect, test} from 'vitest';
+import type {GPUProjectionProps, ProjectionPlan} from '@luma.gl/experimental/gpu-project';
+import {describe, expect, expectTypeOf, test} from 'vitest';
 
 const GPU_PROJECT_RUNTIME_EXPORTS = [
   'GPUProjection',
@@ -36,7 +38,45 @@ const GPU_PROJECT_RUNTIME_EXPORTS = [
 const EARTH_RADIUS_METERS = 6_378_137;
 const DEGREES_TO_RADIANS = Math.PI / 180;
 
+/** Compile-time coverage for precision-discriminated projection outputs. */
+export function checkGPUProjectionTypes(
+  plan: ProjectionPlan,
+  positions: GraphDataView<'uint32x4'>,
+  localOutput: GraphDataView<'float32x2'>,
+  doubleSingleOutput: GraphDataView<'float32x4'>,
+  validity: GraphDataView<'uint32'>
+): void {
+  ({positions, output: localOutput, plan}) satisfies GPUProjectionProps;
+  ({
+    precision: 'double-single',
+    positions,
+    output: doubleSingleOutput,
+    validity,
+    plan
+  }) satisfies GPUProjectionProps;
+
+  // @ts-expect-error double-single mode requires a float32x4 output.
+  const invalidDoubleSingleOutput: GPUProjectionProps = {
+    precision: 'double-single',
+    positions,
+    output: localOutput,
+    plan
+  };
+  // @ts-expect-error local Float32 mode requires a float32x2 output.
+  const invalidLocalOutput: GPUProjectionProps = {
+    precision: 'local-f32',
+    positions,
+    output: doubleSingleOutput,
+    plan
+  };
+  void [invalidDoubleSingleOutput, invalidLocalOutput];
+}
+
 describe('@luma.gl/experimental/gpu-project package boundary', () => {
+  test('correlates precision modes with their output formats', () => {
+    expectTypeOf(checkGPUProjectionTypes).toBeFunction();
+  });
+
   test('publishes an optional, side-effect-free projection subpath', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
@@ -293,6 +333,8 @@ describe('CPU projection plan compilation', () => {
     expect(plan.patches).toHaveLength(1);
     expect(patch.coefficientsX).toBeInstanceOf(Float32Array);
     expect(patch.coefficientsY).toBeInstanceOf(Float32Array);
+    expect(patch.doubleSingleCoefficientsX).toBeInstanceOf(Float64Array);
+    expect(patch.doubleSingleCoefficientsY).toBeInstanceOf(Float64Array);
     expect(patch.coefficientsX).toHaveLength(10);
     expect(patch.coefficientsY).toHaveLength(10);
     for (let coefficientIndex = 0; coefficientIndex < 10; coefficientIndex++) {
@@ -412,6 +454,35 @@ describe('CPU projection plan compilation', () => {
         maxDepth: 2
       })
     ).toThrow(/tolerance/);
+
+    const precisePlan = compileProjectionPlan({
+      projection: (coordinates: number[]): number[] => [...coordinates],
+      bounds: [0, 0, 1_000_000, 1],
+      degree: 1,
+      tolerance: 1e-4,
+      maxDepth: 2,
+      precision: 'double-single'
+    });
+    expect(precisePlan.precision).toBe('double-single');
+    expect(precisePlan.maxError).toBe(precisePlan.doubleSingleMaxError);
+    expect(precisePlan.doubleSingleMaxError).toBeLessThanOrEqual(precisePlan.tolerance);
+  });
+
+  test('validates Float32 double-single inputs with shader-equivalent split-origin subtraction', () => {
+    const sourceOrigin = 1_209_248.0383019687;
+    expect(() =>
+      compileProjectionPlan({
+        projection: (coordinates: number[]): number[] => [
+          (coordinates[0] - sourceOrigin) * 50_000,
+          (coordinates[1] - sourceOrigin) * 50_000
+        ],
+        bounds: [sourceOrigin - 1, sourceOrigin - 1, sourceOrigin + 1, sourceOrigin + 1],
+        degree: 1,
+        tolerance: 1e-4,
+        maxDepth: 0,
+        precision: 'double-single'
+      })
+    ).toThrow(/tolerance/);
   });
 
   test('packs canonical binary64 origins, stable patch records, and exact plan bounds', () => {
@@ -432,7 +503,7 @@ describe('CPU projection plan compilation', () => {
     const patch = plan.patches[0];
     const boundsWordOffset = plan.patches.length * PROJECTION_PATCH_WORD_LENGTH;
 
-    expect(PROJECTION_PATCH_WORD_LENGTH).toBe(40);
+    expect(PROJECTION_PATCH_WORD_LENGTH).toBe(64);
     expect(PROJECTION_PLAN_BOUNDS_WORD_LENGTH).toBe(12);
     expect(packed).toBeInstanceOf(Uint32Array);
     expect(packed.length).toBe(boundsWordOffset + PROJECTION_PLAN_BOUNDS_WORD_LENGTH);
@@ -458,6 +529,24 @@ describe('CPU projection plan compilation', () => {
     expect(bytes.getFloat32(14 * 4, true)).toBe(Math.fround(patch.sourceOrigin[1]));
     expect(bytes.getFloat64(16 * 4, true)).toBe(patch.destinationOrigin[0]);
     expect(bytes.getFloat64(18 * 4, true)).toBe(patch.destinationOrigin[1]);
+    for (let coefficientIndex = 0; coefficientIndex < 10; coefficientIndex++) {
+      const coefficientX = patch.doubleSingleCoefficientsX[coefficientIndex] ?? 0;
+      const coefficientY = patch.doubleSingleCoefficientsY[coefficientIndex] ?? 0;
+      expect(bytes.getFloat32((20 + coefficientIndex) * 4, true)).toBe(Math.fround(coefficientX));
+      expect(bytes.getFloat32((30 + coefficientIndex) * 4, true)).toBe(Math.fround(coefficientY));
+      expect(bytes.getFloat32((40 + coefficientIndex) * 4, true)).toBe(
+        Math.fround(coefficientX - Math.fround(coefficientX))
+      );
+      expect(bytes.getFloat32((50 + coefficientIndex) * 4, true)).toBe(
+        Math.fround(coefficientY - Math.fround(coefficientY))
+      );
+    }
+    expect(bytes.getFloat32(60 * 4, true)).toBe(
+      Math.fround(patch.sourceScale[0] - Math.fround(patch.sourceScale[0]))
+    );
+    expect(bytes.getFloat32(61 * 4, true)).toBe(
+      Math.fround(patch.sourceScale[1] - Math.fround(patch.sourceScale[1]))
+    );
     for (let boundIndex = 0; boundIndex < plan.bounds.length; boundIndex++) {
       expect(bytes.getFloat64((boundsWordOffset + boundIndex * 2) * 4, true)).toBe(
         plan.bounds[boundIndex]

@@ -69,6 +69,7 @@ export type GPUCoreDocsTabId =
   | 'scan'
   | 'segmented-scan'
   | 'scatter'
+  | 'gather'
   | 'galloping-search'
   | 'compaction'
   | 'flag-offsets'
@@ -245,6 +246,7 @@ const GPU_CORE_DOCS_TABS: Record<GPUCoreDocsTabId, DocsTab<GPUCoreDocsTabId>> = 
   scan: {id: 'scan', label: 'Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-scan'},
   'segmented-scan': {id: 'segmented-scan', label: 'Segmented Scan', href: '/docs/api-reference/experimental/gpu-core/gpu-segmented-scan'},
   scatter: {id: 'scatter', label: 'Scatter', href: '/docs/api-reference/experimental/gpu-core/gpu-scatter'},
+  gather: {id: 'gather', label: 'Gather', href: '/docs/api-reference/experimental/gpu-core/gpu-gather'},
   'galloping-search': {id: 'galloping-search', label: 'Galloping Search', href: '/docs/api-reference/experimental/gpu-core/gpu-galloping-search'},
   compaction: {id: 'compaction', label: 'Compaction', href: '/docs/api-reference/experimental/gpu-core/gpu-compaction'},
   'flag-offsets': {id: 'flag-offsets', label: 'Flag Offsets', href: '/docs/api-reference/experimental/gpu-core/gpu-flag-offsets'},
@@ -301,7 +303,7 @@ function getGPUCoreTabs(
 export const GPU_CORE_DOCS_TAB_GROUPS: readonly DocsTabGroup<GPUCoreDocsTabId>[] = [
   {id: 'learning', label: 'Learn GPU Core', tabs: getGPUCoreTabs(['overview', 'tutorial', 'recipes', 'concepts'])},
   {id: 'graph-execution', label: 'Graph execution', tabs: getGPUCoreTabs(['command-graph', 'texture-history', 'readback-ring', 'draw-command-buffer'])},
-  {id: 'data-movement', label: 'Data movement', tabs: getGPUCoreTabs(['scan', 'segmented-scan', 'scatter'])},
+  {id: 'data-movement', label: 'Data movement', tabs: getGPUCoreTabs(['scan', 'segmented-scan', 'scatter', 'gather'])},
   {id: 'selection-and-compaction', label: 'Selection and compaction', tabs: getGPUCoreTabs(['galloping-search', 'compaction', 'segmented-layout', 'mask', 'visibility-workflow', 'virtual-geometry'])},
   {id: 'hierarchies-and-traversal', label: 'Hierarchies and traversal', tabs: getGPUCoreTabs(['hierarchy-layout', 'graph-traversal', 'ancestor-projection'])},
   {id: 'sorting-and-transforms', label: 'Sorting and transforms', tabs: getGPUCoreTabs(['sort', 'segmented-sort', 'transpose', 'fft1d', 'fft2d', 'convolution'])},

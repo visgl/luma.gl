@@ -106,7 +106,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
-    this.fs = props.fs as WebGPUShader;
+    this.fs = (props.fs as WebGPUShader | null) || null;
     this._bindingsByGroup =
       props.bindGroups || normalizeBindingsByGroup(this.shaderLayout, props.bindings);
     this._bindGroupCacheKeysByGroup = createBindGroupCacheKeys(this._bindingsByGroup);
@@ -202,23 +202,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
-    // Populate color targets
-    // TODO - at the moment blend and write mask are only set on the first target
-    const targets: (GPUColorTargetState | null)[] = [];
-    if (this.props.colorAttachmentFormats) {
-      for (const format of this.props.colorAttachmentFormats) {
-        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
-      }
-    } else {
-      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
-    }
-
-    // Set up the fragment stage
-    const fragment: GPUFragmentState = {
-      module: (this.props.fs as WebGPUShader).handle,
-      entryPoint: this.props.fragmentEntryPoint || 'main',
-      targets
-    };
+    const fragment = this._getFragmentState();
 
     const layout = this.device.createPipelineLayout({
       shaderLayout: this.shaderLayout
@@ -227,7 +211,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
-      fragment,
+      ...(fragment && {fragment}),
       primitive: {
         topology: this.props.topology
       },
@@ -247,8 +231,33 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    if (!fragment) {
+      delete descriptor.fragment;
+    }
 
     return descriptor;
+  }
+
+  private _getFragmentState(): GPUFragmentState | undefined {
+    if (!this.props.fs) {
+      return undefined;
+    }
+
+    // TODO - at the moment blend and write mask are only set on the first target
+    const targets: (GPUColorTargetState | null)[] = [];
+    if (this.props.colorAttachmentFormats) {
+      for (const format of this.props.colorAttachmentFormats) {
+        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
+      }
+    } else {
+      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
+    }
+
+    return {
+      module: (this.props.fs as WebGPUShader).handle,
+      entryPoint: this.props.fragmentEntryPoint || 'main',
+      targets
+    };
   }
 }
 
