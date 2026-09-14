@@ -129,6 +129,66 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Planner bookkeeping versus reduced peak GPU memory for heavyweight scratch.',
     mistake: 'Do not recycle tiny arena slots when stable offsets are more valuable than negligible savings.'
   },
+  'gpu-strategy-selection': {
+    problem: 'Select a deterministic GPU implementation from workload and device capabilities.',
+    readsWrites: 'Consumes CPU-known workload metadata and device features; it touches no GPU resources.',
+    ownership: 'Candidates and workload metadata remain caller-owned.',
+    output: 'One immutable strategy decision with identifier, score, reason, and details.',
+    work: 'Evaluates each supported candidate once during graph construction.',
+    chunks: 'Chunk behavior is defined by the selected operation implementation.',
+    execution: 'Selection precedes graph compilation and performs no encoding or submission.',
+    neighborhood: 'workload + device → strategy selector → operation-specific graph contributor.',
+    cost: 'Linear CPU work in the small candidate list.',
+    mistake: 'Do not hide strategy selection inside a public API that changes the operation contract.'
+  },
+  'gpu-adaptive-reduction': {
+    problem: 'Choose an efficient reduction hierarchy for the input size and device.',
+    readsWrites: 'The selected reduction reads packed values and writes partials plus a scalar result.',
+    ownership: COMMON.callerOwned,
+    output: 'The same reduction result independent of the chosen execution strategy.',
+    work: 'Linear input work with strategy-selected workgroup size and elements per thread.',
+    chunks: 'Operates on explicit packed views; cross-chunk reduction remains explicit.',
+    execution: 'Strategy selection is CPU-side; contributed reduction work remains graph-managed.',
+    neighborhood: 'input shape + device → reduction strategy → hierarchical reduction.',
+    cost: 'Memory traffic and hierarchy depth, tuned against available parallelism.',
+    mistake: 'Do not assume the largest workgroup or most elements per thread is always fastest.'
+  },
+  'gpu-adaptive-spmv-execution': {
+    problem: 'Multiply a CSR matrix by a dense vector using a row-shape-aware execution family.',
+    readsWrites: 'Reads CSR offsets, columns, values, and the input vector; writes one value per row.',
+    ownership: COMMON.callerOwned,
+    output: 'A dense float32 vector with one matrix-vector product result per CSR row.',
+    work: 'Linear nonzero traversal plus optional long-row partial reduction.',
+    chunks: 'Consumes one explicit CSR domain and one packed dense vector.',
+    execution: 'Selects scalar, subgroup, workgroup, or long-row graph passes before compilation.',
+    neighborhood: 'CSR matrix + vector → GPUAdaptiveSpMV → iterative sparse solver.',
+    cost: 'Nonzero count, row imbalance, memory locality, and reduction strategy dominate.',
+    mistake: 'Do not use one row kernel shape for both tiny and extremely long sparse rows.'
+  },
+  'gpu-coo-to-csr': {
+    problem: 'Convert row-sorted COO entries into offset-delimited CSR rows on the GPU.',
+    readsWrites: 'Reads COO row, column, and value arrays; writes CSR offsets, columns, and values.',
+    ownership: COMMON.callerOwned,
+    output: 'CSR structure preserving sorted entry order, empty rows, and duplicate coordinates.',
+    work: 'Linear entry copies plus one lower-bound search per output row boundary.',
+    chunks: 'Consumes one explicit COO domain and produces one explicit CSR domain.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'sorted COO → GPUCOOToCSR → adaptive SpMV or sparse solver.',
+    cost: 'Entry copies plus rows times logarithmic row-boundary search.',
+    mistake: 'Do not pass unsorted COO rows or assume duplicate coordinates are merged.'
+  },
+  'gpu-preconditioned-conjugate-gradient': {
+    problem: 'Accelerate conjugate-gradient convergence with a reusable preconditioner.',
+    readsWrites: 'Reads sparse matrix and residual state; writes preconditioned vectors and solver scalars.',
+    ownership: 'Caller-owned matrix and solution surround graph-owned iterative scratch.',
+    output: 'A fixed-budget approximate solution with GPU-resident convergence control.',
+    work: 'One preconditioner application plus sparse products and reductions per iteration.',
+    chunks: 'Uses explicit packed solver vectors and a single CSR matrix domain.',
+    execution: 'Later iterations can be disabled by GPU indirect convergence gates.',
+    neighborhood: 'CSR matrix + right-hand side + preconditioner → PCG → solution vector.',
+    cost: 'Iteration count times SpMV, preconditioner, vector-update, and reduction costs.',
+    mistake: 'Do not choose a preconditioner whose application costs more than the iterations it saves.'
+  },
   'gpu-texture-history': {
     problem: 'Retain temporal texture state without sampling and writing one physical texture simultaneously.',
     readsWrites: 'A graph reads the previous role and writes the current role; advance() swaps them.',

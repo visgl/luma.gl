@@ -414,6 +414,18 @@
               },
               {
                 "type": "category",
+                "label": "Sparse Numerics",
+                "items": [
+                  "api-reference/experimental/gpu-data/gpu-sparse-matrix",
+                  "api-reference/experimental/gpu-core/gpu-strategy-selection",
+                  "api-reference/experimental/gpu-core/gpu-adaptive-reduction",
+                  "api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution",
+                  "api-reference/experimental/gpu-core/gpu-coo-to-csr",
+                  "api-reference/experimental/gpu-core/gpu-preconditioned-conjugate-gradient"
+                ]
+              },
+              {
+                "type": "category",
                 "label": "Graph Execution",
                 "items": [
                   "api-reference/experimental/gpu-core/concepts",
