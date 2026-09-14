@@ -12,11 +12,7 @@ import {
 } from '@deck.gl-community/arrow-layers';
 import {Buffer} from '@luma.gl/core';
 import {ArrowDeck} from '../arrow-deck';
-import {
-  getDeckExampleProps,
-  installLegacyDeckShaderAssemblerCompatibility,
-  type DeckExampleDeviceOptions
-} from '../deck-example-device';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {
   GRAPH_EXPLORER_LINEAR_LAYOUT_VERTEX_COUNT,
   GRAPH_EXPLORER_MAX_VISIBLE_EDGES,
@@ -77,7 +73,6 @@ export function createGPUGraphExplorerDeck(
   let rebuildGeneration = 0;
   let rebuildFrame: number | null = null;
   let draggedVertex: number | null = null;
-  let restoreShaderAssembler: (() => void) | null = null;
   let deck: ArrowDeck<OrthographicView>;
   const controls = createExplorerControls(container, {
     getEffect: () => effect,
@@ -124,15 +119,6 @@ export function createGPUGraphExplorerDeck(
     pickAsync: 'auto',
     layers: [],
     effects: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-    },
-    onError: error => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      throw error;
-    },
     getTooltip: info => getVertexTooltip(info, effect),
     onClick: info => {
       effect?.setSelectedVertex(info.picked && info.index >= 0 ? info.index : null);
@@ -168,8 +154,6 @@ export function createGPUGraphExplorerDeck(
       rebuildGraph(initialDataset, loadedDeck);
     },
     onFinalize: () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
       activeDevice = null;
       rebuildGeneration++;
       if (rebuildFrame !== null) cancelAnimationFrame(rebuildFrame);

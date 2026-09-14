@@ -5,11 +5,7 @@
 import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowPathLayer} from '@deck.gl-community/arrow-layers';
 import {ArrowDeck} from '../arrow-deck';
-import {
-  getDeckExampleProps,
-  installLegacyDeckShaderAssemblerCompatibility,
-  type DeckExampleDeviceOptions
-} from '../deck-example-device';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
 import {ArrowPathDataSource, type ArrowPathDataSourceUpdate} from './arrow-path-data-source';
 import {MEASURE_SWEEP_DURATION} from '../../arrow/arrow-lines/arrow-line-data';
@@ -21,7 +17,6 @@ export function createArrowPathLayerDeck(
 ) {
   let activeUpdate: ArrowPathDataSourceUpdate | null = null;
   let animationStartMilliseconds: number | null = null;
-  let restoreShaderAssembler: (() => void) | null = null;
 
   const deck = new ArrowDeck({
     parent,
@@ -31,15 +26,6 @@ export function createArrowPathLayerDeck(
     controller: true,
     getTooltip: getArrowLayerTooltip,
     layers: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-    },
-    onError: error => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      throw error;
-    },
     onLoad: ({device}) => dataSource.initialize(device),
     onBeforeRender: ({deck}) => {
       const update = activeUpdate;
@@ -52,11 +38,7 @@ export function createArrowPathLayerDeck(
         setPathLayer(deck, update, currentTime);
       }
     },
-    onFinalize: () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      dataSource.finalize();
-    }
+    onFinalize: () => dataSource.finalize()
   });
 
   const dataSource = new ArrowPathDataSource({

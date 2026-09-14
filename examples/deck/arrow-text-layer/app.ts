@@ -6,11 +6,7 @@ import {Deck, OrthographicView} from '@deck.gl/core';
 import {ArrowTextLayer} from '@deck.gl-community/arrow-layers';
 import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
 import {ArrowDeck} from '../arrow-deck';
-import {
-  getDeckExampleProps,
-  installLegacyDeckShaderAssemblerCompatibility,
-  type DeckExampleDeviceOptions
-} from '../deck-example-device';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {getArrowLayerTooltip} from '../arrow-layer-tooltip';
 import {LABEL_FIELD_WIDTH} from '../../arrow/arrow-text-2d/arrow-text-data';
 import {ArrowTextDataSource, type ArrowTextDataSourceUpdate} from './arrow-text-data-source';
@@ -39,7 +35,6 @@ export function createArrowTextLayerDeck(
   let activeUpdate: ArrowTextDataSourceUpdate | null = null;
   let animationSeconds = 0;
   let lastAnimationMilliseconds: number | null = null;
-  let restoreShaderAssembler: (() => void) | null = null;
 
   const deck = new ArrowDeck({
     parent,
@@ -49,15 +44,6 @@ export function createArrowTextLayerDeck(
     controller: true,
     getTooltip: getArrowLayerTooltip,
     layers: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-    },
-    onError: error => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      throw error;
-    },
     onLoad: ({device}) => dataSource.initialize(device),
     onBeforeRender: ({deck}) => {
       const timeMilliseconds = performance.now();
@@ -74,11 +60,7 @@ export function createArrowTextLayerDeck(
         });
       }
     },
-    onFinalize: () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      dataSource.finalize();
-    }
+    onFinalize: () => dataSource.finalize()
   });
 
   const dataSource = new ArrowTextDataSource({

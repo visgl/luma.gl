@@ -19,11 +19,7 @@ import {
   type TaxiPointSource
 } from '../../showcase/billion-point-spatial-atlas/taxi-source';
 import {ArrowDeck} from '../arrow-deck';
-import {
-  type DeckExampleDeviceOptions,
-  getDeckExampleProps,
-  installLegacyDeckShaderAssemblerCompatibility
-} from '../deck-example-device';
+import {type DeckExampleDeviceOptions, getDeckExampleProps} from '../deck-example-device';
 import {
   assertLongitudeLatitudeTaxiMetadata,
   type LuSpatialTaxiData,
@@ -112,7 +108,6 @@ export function createGPUSpatialTaxiDeck(
   let activeLayers: LuSpatialPointLayer[] = [];
   let queryRadiusKilometres = 0.35;
   let taxiDataRevision = 0;
-  let restoreShaderAssembler: (() => void) | null = null;
 
   if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
   const loadingIndicator = createLoadingIndicator(container);
@@ -180,15 +175,6 @@ export function createGPUSpatialTaxiDeck(
     style: {background: 'transparent'},
     layers: [],
     effects: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-    },
-    onError: error => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      throw error;
-    },
     getTooltip: info => (taxiData ? getTooltip(taxiData, info) : null),
     onClick: (info: PickingInfo) => {
       const coordinate = info.coordinate;
@@ -397,8 +383,6 @@ export function createGPUSpatialTaxiDeck(
       })();
     },
     onFinalize: () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
       finalized = true;
       generationController.abort();
       sourceLoadController?.abort(new Error('luSpatial taxi explorer finalized'));
