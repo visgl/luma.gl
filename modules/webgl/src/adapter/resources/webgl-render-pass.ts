@@ -320,7 +320,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     if (this.props.clearColor !== false && this.props.clearColors === undefined) {
       clearMask |= GL.COLOR_BUFFER_BIT;
-      glParameters.clearColor = this.props.clearColor;
+      glParameters.clearColor = this.props.clearColor as GLParameters['clearColor'];
     }
     if (this.props.clearDepth !== false) {
       clearMask |= GL.DEPTH_BUFFER_BIT;

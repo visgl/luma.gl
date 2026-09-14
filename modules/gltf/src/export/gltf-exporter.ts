@@ -258,6 +258,7 @@ class GLTFExportWriter {
       ? GLBWriter.encodeSync(
           {
             json: document,
+            binChunks: [],
             ...(binary.byteLength > 0 ? {binary} : {})
           },
           {}

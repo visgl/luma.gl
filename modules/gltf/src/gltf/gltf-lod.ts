@@ -245,12 +245,17 @@ function simplifyGLTFMesh(
     for (const semantic of ['NORMAL', 'TEXCOORD_0', 'TEXCOORD_1', 'JOINTS_0', 'WEIGHTS_0']) {
       const attribute = primitive.attributes[semantic];
       if (attribute) {
-        attributes.push({values: attribute.value, size: attribute.components});
+        attributes.push({
+          // glTF accessors only support numeric component types, although loaders.gl's shared
+          // BigTypedArray type also includes bigint arrays.
+          values: attribute.value as ArrayLike<number>,
+          size: attribute.components
+        });
       }
     }
 
     const simplified = simplifyMesh({
-      positions: positions.value,
+      positions: positions.value as ArrayLike<number>,
       indices: sourceIndices,
       targetRatio,
       attributes,

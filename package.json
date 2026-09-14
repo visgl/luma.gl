@@ -54,9 +54,9 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-alpha.1",
-    "@loaders.gl/gltf": "~5.0.0-alpha.1",
-    "@loaders.gl/polyfills": "~5.0.0-alpha.1",
+    "@loaders.gl/core": "^5.0.0-alpha.5",
+    "@loaders.gl/gltf": "^5.0.0-alpha.5",
+    "@loaders.gl/polyfills": "^5.0.0-alpha.5",
     "@math.gl/dggs-geohash": "^4.1.0",
     "@math.gl/dggs-quadkey": "^4.1.0",
     "@math.gl/dggs-s2": "^4.1.0",
@@ -92,12 +92,12 @@
   "packageExtensions": {
     "@loaders.gl/gltf@~5.0.0-alpha.1": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.1"
+        "@loaders.gl/core": "^5.0.0-alpha.5"
       }
     },
     "@loaders.gl/images@~5.0.0-alpha.1": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.1"
+        "@loaders.gl/core": "^5.0.0-alpha.5"
       }
     }
   },
@@ -106,7 +106,7 @@
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/types": "^4.1.0",
+    "@math.gl/types": "^5.0.0-alpha.5",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

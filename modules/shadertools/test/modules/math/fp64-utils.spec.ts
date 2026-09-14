@@ -4,7 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {fp64} from '@luma.gl/shadertools';
-import {_Pose as Pose} from '@math.gl/core';
+import {Pose} from '@math.gl/core';
 
 test('fp64#fp64LowPart', t => {
   const x = Math.PI;

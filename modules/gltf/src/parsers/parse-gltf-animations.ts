@@ -727,7 +727,7 @@ function accessorToJsArray1D(
 
   const {value: array, components} = resolveAnimationAccessor(accessor);
   assert(components === 1, 'accessorToJsArray1D must have exactly 1 component');
-  const result = Array.from(array);
+  const result = Array.from(array, Number);
 
   accessorCache.set(accessor, result);
   return result;
@@ -749,7 +749,7 @@ function accessorToJsArray2D(
 
   // Slice array
   for (let i = 0; i < array.length; i += components) {
-    result.push(Array.from(array.slice(i, i + components)));
+    result.push(Array.from(array.slice(i, i + components), Number));
   }
 
   accessorCache.set(accessor, result);

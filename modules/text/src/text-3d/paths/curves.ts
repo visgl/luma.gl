@@ -43,7 +43,7 @@ export class LineCurve extends Curve<Vector2> {
 
   /** Returns a point on the line for the given t. */
   override getPoint(t: number, target = new Vector2()): Vector2 {
-    return target.copy(this.v2).sub(this.v1).multiplyScalar(t).add(this.v1);
+    return target.copy(this.v2).subtract(this.v1).multiplyByScalar(t).add(this.v1);
   }
 }
 
