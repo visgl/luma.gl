@@ -22,25 +22,41 @@ export function makePoissonLabPanelHtml(metrics: PoissonLabMetrics): string {
 </div>
 <div data-panel="engineering" hidden>
 <div class="poisson-explainer"><strong>From PDE to sparse linear algebra</strong><br/>The five-point finite-difference stencil couples each interior grid point only to its four neighbors. Discretizing <strong>−Δu=f</strong> therefore produces a sparse symmetric positive-definite system <strong>Au=b</strong>, ideal for preconditioned conjugate gradient. The graph composes CSR SpMV, reductions, GPU scalars, Jacobi preconditioning and vector updates rather than hiding the solve in one monolithic shader.</div>
-${metric('Grid',`${metrics.resolution} × ${metrics.resolution}`)}
-${metric('Unknowns',metrics.unknowns.toLocaleString())}
-${metric('CSR nonzeros',metrics.nonZeros.toLocaleString())}
-${metric('Graph nodes',String(metrics.graphNodes))}
-${metric('SpMV strategy',metrics.spmvStrategy)}
-${metric('Preconditioner',metrics.preconditioner)}
-${metric('Iterations',formatNullable(metrics.iterations))}
-${metric('Relative residual',formatScientific(metrics.relativeResidual))}
-${metric('Relative solution error',formatScientific(metrics.relativeError))}
+${metric('Grid', `${metrics.resolution} × ${metrics.resolution}`)}
+${metric('Unknowns', metrics.unknowns.toLocaleString())}
+${metric('CSR nonzeros', metrics.nonZeros.toLocaleString())}
+${metric('Graph nodes', String(metrics.graphNodes))}
+${metric('SpMV strategy', metrics.spmvStrategy)}
+${metric('Preconditioner', metrics.preconditioner)}
+${metric('Iterations', formatNullable(metrics.iterations))}
+${metric('Relative residual', formatScientific(metrics.relativeResidual))}
+${metric('Relative solution error', formatScientific(metrics.relativeError))}
 <div class="poisson-proof"><strong>Correctness contract</strong><br/>Residual answers “did we solve the discrete linear system?” Solution error answers “does that solution agree with the known analytical PDE solution?” Both remain explicitly unavailable until measured from the real GPU solver. The showcase never substitutes simulated convergence metrics.</div>
 </div></div>`;
 }
 
-export function bindPoissonLabPanel(root: HTMLElement, onMode: (mode: PoissonLabMode) => void): void {
-  const buttons=[...root.querySelectorAll<HTMLButtonElement>('[data-mode]')];
-  const panels=[...root.querySelectorAll<HTMLElement>('[data-panel]')];
-  for(const button of buttons){button.onclick=()=>{const mode=button.dataset.mode as PoissonLabMode;for(const item of buttons)item.dataset.active=String(item===button);for(const panel of panels)panel.hidden=panel.dataset.panel!==mode;onMode(mode);};}
+export function bindPoissonLabPanel(
+  root: HTMLElement,
+  onMode: (mode: PoissonLabMode) => void
+): void {
+  const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-mode]')];
+  const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
+  for (const button of buttons) {
+    button.onclick = () => {
+      const mode = button.dataset.mode as PoissonLabMode;
+      for (const item of buttons) item.dataset.active = String(item === button);
+      for (const panel of panels) panel.hidden = panel.dataset.panel !== mode;
+      onMode(mode);
+    };
+  }
 }
 
-function metric(label:string,value:string):string{return `<div class="poisson-metric"><span>${label}</span><span class="poisson-value">${value}</span></div>`;}
-function formatNullable(value:number|null):string{return value===null?'not yet published':String(value);}
-function formatScientific(value:number|null):string{return value===null?'not yet measured':value.toExponential(3);}
+function metric(label: string, value: string): string {
+  return `<div class="poisson-metric"><span>${label}</span><span class="poisson-value">${value}</span></div>`;
+}
+function formatNullable(value: number | null): string {
+  return value === null ? 'not yet published' : String(value);
+}
+function formatScientific(value: number | null): string {
+  return value === null ? 'not yet measured' : value.toExponential(3);
+}

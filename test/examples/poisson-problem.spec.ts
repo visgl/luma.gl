@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeManufacturedPoissonProblem, relativePoissonResidual} from '../../examples/showcase/poisson-lab/poisson-problem';
+import {describe, expect, test} from 'vitest';
+import {
+  makeManufacturedPoissonProblem,
+  relativePoissonResidual
+} from '../../examples/showcase/poisson-lab/poisson-problem';
 
 describe('Poisson Lab manufactured problem', () => {
   test('builds a square symmetric five-point CSR system with positive diagonal', () => {
@@ -13,17 +17,18 @@ describe('Poisson Lab manufactured problem', () => {
     expect(problem.rowOffsets[n]).toBe(problem.values.length);
 
     const entries = new Map<string, number>();
-    for (let row=0; row<n; row++) {
+    for (let row = 0; row < n; row++) {
       let diagonal = 0;
-      for (let i=problem.rowOffsets[row]; i<problem.rowOffsets[row+1]; i++) {
-        const column=problem.columnIndices[i]; const value=problem.values[i];
+      for (let i = problem.rowOffsets[row]; i < problem.rowOffsets[row + 1]; i++) {
+        const column = problem.columnIndices[i];
+        const value = problem.values[i];
         entries.set(`${row}:${column}`, value);
-        if(column===row) diagonal=value;
+        if (column === row) diagonal = value;
       }
       expect(diagonal).toBeGreaterThan(0);
     }
-    for (const [key,value] of entries) {
-      const [row,column]=key.split(':').map(Number);
+    for (const [key, value] of entries) {
+      const [row, column] = key.split(':').map(Number);
       expect(entries.get(`${column}:${row}`)).toBeCloseTo(value, 5);
     }
   });
