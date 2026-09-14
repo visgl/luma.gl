@@ -303,7 +303,6 @@ export class Computation {
     // Any caching needs to be done inside the pipeline functions
     this.pipeline.setBindings(this.bindings);
     computePass.setPipeline(this.pipeline);
-    // @ts-expect-error ComputePass implementations expose binding application internally.
     computePass.setBindings({});
   }
 
