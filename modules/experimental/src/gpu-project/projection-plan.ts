@@ -531,7 +531,8 @@ function fitProjectionPolynomial(
           sourceOrigin,
           sourceScale,
           context.degree,
-          reference
+          reference,
+          'binary64'
         )
       );
 
@@ -573,7 +574,8 @@ function fitProjectionPolynomial(
             sourceOrigin,
             sourceScale,
             context.degree,
-            float32Reference
+            float32Reference,
+            'float32'
           )
         );
       }
@@ -625,13 +627,13 @@ function getDoubleSingleProjectionEvaluationError(
   sourceOrigin: ProjectionCoordinates,
   sourceScale: ProjectionCoordinates,
   degree: ProjectionDegree,
-  reference: ProjectionCoordinates
+  reference: ProjectionCoordinates,
+  sourceFormat: 'binary64' | 'float32'
 ): number {
-  const normalized = normalizeDoubleSingleProjectionCoordinates(
-    coordinates,
-    sourceOrigin,
-    sourceScale
-  );
+  const normalized =
+    sourceFormat === 'float32'
+      ? normalizeFloat32DoubleSingleProjectionCoordinates(coordinates, sourceOrigin, sourceScale)
+      : normalizeDoubleSingleProjectionCoordinates(coordinates, sourceOrigin, sourceScale);
   const projectedX = evaluateDoubleSinglePolynomial(coefficientsX, normalized, degree);
   const projectedY = evaluateDoubleSinglePolynomial(coefficientsY, normalized, degree);
   const resultX = sumDoubleSingle(splitDoubleSingle(destinationOrigin[0]), projectedX);
@@ -733,6 +735,25 @@ function normalizeDoubleSingleProjectionCoordinates(
 ): readonly [DoubleSingle, DoubleSingle] {
   const sourceOffsetX = splitDoubleSingle(coordinates[0] - sourceOrigin[0]);
   const sourceOffsetY = splitDoubleSingle(coordinates[1] - sourceOrigin[1]);
+  return [
+    divideDoubleSingle(sourceOffsetX, splitDoubleSingle(sourceScale[0])),
+    divideDoubleSingle(sourceOffsetY, splitDoubleSingle(sourceScale[1]))
+  ];
+}
+
+function normalizeFloat32DoubleSingleProjectionCoordinates(
+  coordinates: ProjectionCoordinates,
+  sourceOrigin: ProjectionCoordinates,
+  sourceScale: ProjectionCoordinates
+): readonly [DoubleSingle, DoubleSingle] {
+  const sourceOffsetX = subtractDoubleSingle(
+    [Math.fround(coordinates[0]), 0],
+    splitDoubleSingle(sourceOrigin[0])
+  );
+  const sourceOffsetY = subtractDoubleSingle(
+    [Math.fround(coordinates[1]), 0],
+    splitDoubleSingle(sourceOrigin[1])
+  );
   return [
     divideDoubleSingle(sourceOffsetX, splitDoubleSingle(sourceScale[0])),
     divideDoubleSingle(sourceOffsetY, splitDoubleSingle(sourceScale[1]))

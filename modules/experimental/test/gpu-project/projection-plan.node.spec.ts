@@ -468,6 +468,23 @@ describe('CPU projection plan compilation', () => {
     expect(precisePlan.doubleSingleMaxError).toBeLessThanOrEqual(precisePlan.tolerance);
   });
 
+  test('validates Float32 double-single inputs with shader-equivalent split-origin subtraction', () => {
+    const sourceOrigin = 1_209_248.0383019687;
+    expect(() =>
+      compileProjectionPlan({
+        projection: (coordinates: number[]): number[] => [
+          (coordinates[0] - sourceOrigin) * 50_000,
+          (coordinates[1] - sourceOrigin) * 50_000
+        ],
+        bounds: [sourceOrigin - 1, sourceOrigin - 1, sourceOrigin + 1, sourceOrigin + 1],
+        degree: 1,
+        tolerance: 1e-4,
+        maxDepth: 0,
+        precision: 'double-single'
+      })
+    ).toThrow(/tolerance/);
+  });
+
   test('packs canonical binary64 origins, stable patch records, and exact plan bounds', () => {
     const sourceOrigin = [20_000_000.125, 30_000_000.375] as const;
     const projection = (coordinates: number[]): number[] => [
