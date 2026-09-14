@@ -12,7 +12,11 @@ import {
 } from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
-import {getViewBinding, getViewElementOffset, validatePackedUint32View} from './graph-data-view-utils';
+import {
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-data-view-utils';
 
 const SCATTER_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;

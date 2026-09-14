@@ -3,8 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, GPUScatter} from '@luma.gl/gpgpu/gpu-core';
+import {Buffer} from '@luma.gl/core';
+import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
+import {GPUScatter} from '../../src/gpu-core/gpu-scatter';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -12,11 +13,7 @@ it('GPUScatter scatters fixed-width float rows and ignores invalid destinations'
   const device = await getWebGPUTestDevice();
   if (!device) return;
 
-  const sourceData = new Float32Array([
-    1, 2, 3,
-    4, 5, 6,
-    7, 8, 9
-  ]);
+  const sourceData = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const indicesData = new Uint32Array([2, 0, 99]);
   const sourceBuffer = device.createBuffer({data: sourceData, usage: Buffer.STORAGE});
   const indicesBuffer = device.createBuffer({data: indicesData, usage: Buffer.STORAGE});
@@ -49,10 +46,7 @@ it('GPUScatter scatters fixed-width float rows and ignores invalid destinations'
 
     const bytes = await outputBuffer.readAsync();
     expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 12))).toEqual([
-      4, 5, 6,
-      0, 0, 0,
-      1, 2, 3,
-      0, 0, 0
+      4, 5, 6, 0, 0, 0, 1, 2, 3, 0, 0, 0
     ]);
   } finally {
     compiled.destroy();
