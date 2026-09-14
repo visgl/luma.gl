@@ -145,6 +145,14 @@ export type {
   GPULZByteDescriptorPlan
 } from './gpu-lz-byte-decompressor';
 export {
+  GPULZByteBatchDecompressor,
+  GPU_LZ_BYTE_BATCH_JOB_WORDS,
+  GPU_LZ_BYTE_BATCH_WORKGROUP_SIZE,
+  getGPULZByteBatchDecompressorShaderSource,
+  type GPULZByteBatchDecompressorProps,
+  type GPULZByteBatchDecompressorStats
+} from './gpu-lz-byte-batch-decompressor';
+export {
   runGPUWorkgroupScanBenchmark,
   summarizeGPUWorkgroupScanBenchmarkSamples
 } from './gpu-workgroup-scan-benchmark';
