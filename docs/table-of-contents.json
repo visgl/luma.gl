@@ -414,6 +414,20 @@
               },
               {
                 "type": "category",
+                "label": "Semantic Programs",
+                "items": [
+                  "api-reference/experimental/gpu-core/gpu-operation",
+                  "api-reference/experimental/gpu-core/gpu-operation-metadata",
+                  "api-reference/experimental/gpu-core/gpu-control-flow-operation",
+                  "api-reference/experimental/gpu-core/gpu-operation-lowering",
+                  "api-reference/experimental/gpu-core/gpu-program",
+                  "api-reference/experimental/gpu-core/gpu-program-lowering",
+                  "api-reference/experimental/gpu-core/webgpu-runtime-control",
+                  "api-reference/experimental/gpu-core/gpu-program-pcg"
+                ]
+              },
+              {
+                "type": "category",
                 "label": "Sparse Numerics",
                 "items": [
                   "api-reference/experimental/gpu-data/gpu-sparse-matrix",
