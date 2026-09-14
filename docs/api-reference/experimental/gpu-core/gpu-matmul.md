@@ -1,10 +1,13 @@
 import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 
 # GPUMatMul
 
-<GPUCoreDocsTabs active="reduction" />
+<GPUCoreDocsTabs active="matmul" />
 
-## What is matrix multiplication?
+## Overview
+
+<GPUOperationContract operation="gpu-matmul" />
 
 Matrix multiplication combines two matrices by taking dot products between rows of `A` and columns of `B`:
 
