@@ -5,7 +5,11 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {getViewBinding, getViewElementOffset, validatePackedUint32View} from './graph-data-view-utils';
+import {
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-data-view-utils';
 
 const WORKGROUP_SIZE = 256;
 
@@ -39,24 +43,67 @@ export class GPUSegmentedScan {
     validatePackedUint32View(this.input, `${this.id} input`);
     validatePackedUint32View(this.segmentOffsets, `${this.id} segmentOffsets`);
     validatePackedUint32View(this.output, `${this.id} output`);
-    if (this.output.length !== this.input.length) throw new Error(`${this.id} output length must match input length`);
-    if (this.segmentOffsets.length < 1) throw new Error(`${this.id} segmentOffsets must contain at least the terminal offset`);
-    if (!['exclusive', 'inclusive'].includes(this.mode)) throw new Error(`${this.id} mode must be exclusive or inclusive`);
-    if (this.output.buffer === this.input.buffer || this.output.buffer === this.segmentOffsets.buffer) throw new Error(`${this.id} output must use a separate buffer`);
+    if (this.output.length !== this.input.length)
+      throw new Error(`${this.id} output length must match input length`);
+    if (this.segmentOffsets.length < 1)
+      throw new Error(`${this.id} segmentOffsets must contain at least the terminal offset`);
+    if (!['exclusive', 'inclusive'].includes(this.mode))
+      throw new Error(`${this.id} mode must be exclusive or inclusive`);
+    if (
+      this.output.buffer === this.input.buffer ||
+      this.output.buffer === this.segmentOffsets.buffer
+    )
+      throw new Error(`${this.id} output must use a separate buffer`);
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const view of [this.input, this.segmentOffsets, this.output]) {
-      if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to target graph`);
+      if (view.buffer.graph !== graph)
+        throw new Error(`${this.id} views must belong to target graph`);
     }
     const segmentCount = this.segmentOffsets.length - 1;
     if (segmentCount === 0) return;
     const source = makeShaderSource(this);
     graph.addComputePass({
       id: this.id,
-      workload: {operation:'GPUSegmentedScan',commandCount:1,maximumWorkgroupCount:segmentCount,maximumInvocationCount:segmentCount*WORKGROUP_SIZE,readByteLength:this.input.length*4+this.segmentOffsets.length*4,writeByteLength:this.output.length*4},
-      resources:[{buffer:this.input,usage:'storage-read'},{buffer:this.segmentOffsets,usage:'storage-read'},{buffer:this.output,usage:'storage-write'}],
-      compile:({device})=>{const computation=new Computation(device,{id:this.id,source,shaderLayout:{bindings:[{name:'inputValues',type:'read-only-storage',group:0,location:0},{name:'segmentOffsets',type:'read-only-storage',group:0,location:1},{name:'outputValues',type:'storage',group:0,location:2}]}});return{encode:({computePass,getBuffer})=>{const bindings:Record<string,Binding>={inputValues:getViewBinding(this.input,getBuffer),segmentOffsets:getViewBinding(this.segmentOffsets,getBuffer),outputValues:getViewBinding(this.output,getBuffer)};computation.setBindings(bindings);computation.dispatch(computePass,segmentCount,1,1);},destroy:()=>computation.destroy()};}
+      workload: {
+        operation: 'GPUSegmentedScan',
+        commandCount: 1,
+        maximumWorkgroupCount: segmentCount,
+        maximumInvocationCount: segmentCount * WORKGROUP_SIZE,
+        readByteLength: this.input.length * 4 + this.segmentOffsets.length * 4,
+        writeByteLength: this.output.length * 4
+      },
+      resources: [
+        {buffer: this.input, usage: 'storage-read'},
+        {buffer: this.segmentOffsets, usage: 'storage-read'},
+        {buffer: this.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: this.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'segmentOffsets', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputValues', type: 'storage', group: 0, location: 2}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputValues: getViewBinding(this.input, getBuffer),
+              segmentOffsets: getViewBinding(this.segmentOffsets, getBuffer),
+              outputValues: getViewBinding(this.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, segmentCount, 1, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
     });
   }
 }
