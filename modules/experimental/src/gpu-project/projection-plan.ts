@@ -10,11 +10,12 @@ import type {
   ProjectionDegree,
   ProjectionPatch,
   ProjectionPlan,
+  ProjectionPrecision,
   ProjectionProvider
 } from './types';
 
 /** Number of uint32 words occupied by one stable packed GPU projection-patch record. */
-export const PROJECTION_PATCH_WORD_LENGTH = 40;
+export const PROJECTION_PATCH_WORD_LENGTH = 64;
 
 /** Number of uint32 words occupied by the source-bounds trailer in a packed projection plan. */
 export const PROJECTION_PLAN_BOUNDS_WORD_LENGTH = 12;
@@ -29,15 +30,22 @@ const MAXIMUM_SUBDIVISION_DEPTH = 16;
 const VALIDATION_SAMPLE_COUNT = 11;
 const PIVOT_EPSILON = 1e-13;
 
+type DoubleSingle = readonly [high: number, low: number];
+
 type PolynomialFit = {
   coefficientsX: Float32Array;
   coefficientsY: Float32Array;
+  doubleSingleCoefficientsX: Float64Array;
+  doubleSingleCoefficientsY: Float64Array;
   maxError: number;
+  float32MaxError: number;
+  doubleSingleMaxError: number;
 };
 
 type ProjectionCompilerContext = {
   project: (coordinates: ProjectionCoordinates) => [number, number];
   destinationOrigin: ProjectionCoordinates;
+  precision: ProjectionPrecision;
   degree: ProjectionDegree;
   tolerance: number;
   maxDepth: number;
@@ -49,9 +57,8 @@ type ProjectionCompilerContext = {
 /**
  * Compiles an arbitrary CPU projection into adaptive, provider-independent local polynomials.
  *
- * Provider evaluation and origin subtraction use JavaScript binary64. Coefficients, normalized
- * inputs, and validation arithmetic explicitly round to float32 so the measured error reflects
- * the companion WebGPU evaluator instead of an unrealistically precise CPU-only polynomial.
+ * Provider evaluation and fitting use JavaScript binary64. Validation simulates the selected
+ * local Float32 or double-single GPU evaluator so accepted patches reflect their execution mode.
  *
  * @throws When options are invalid, a provider produces invalid coordinates, or the requested
  * tolerance cannot be achieved within the configured subdivision or patch limits.
@@ -61,6 +68,7 @@ export function compileProjectionPlan(options: CompileProjectionPlanOptions): Pr
     projection,
     bounds,
     tolerance = DEFAULT_TOLERANCE,
+    precision = 'local-f32',
     maxDepth = DEFAULT_MAXIMUM_DEPTH,
     degree = 3,
     sampleCount = DEFAULT_SAMPLE_COUNT,
@@ -71,6 +79,7 @@ export function compileProjectionPlan(options: CompileProjectionPlanOptions): Pr
     projection,
     bounds,
     tolerance,
+    precision,
     maxDepth,
     degree,
     sampleCount,
@@ -83,6 +92,7 @@ export function compileProjectionPlan(options: CompileProjectionPlanOptions): Pr
   const context: ProjectionCompilerContext = {
     project,
     destinationOrigin,
+    precision,
     degree,
     tolerance,
     maxDepth,
@@ -94,12 +104,21 @@ export function compileProjectionPlan(options: CompileProjectionPlanOptions): Pr
   compileProjectionPatch(context, bounds, 0);
 
   return {
+    precision,
     bounds: [...bounds],
     destinationOrigin,
     patches,
     degree,
     tolerance,
-    maxError: patches.reduce((maximum, patch) => Math.max(maximum, patch.maxError), 0)
+    maxError: patches.reduce((maximum, patch) => Math.max(maximum, patch.maxError), 0),
+    float32MaxError: patches.reduce(
+      (maximum, patch) => Math.max(maximum, patch.float32MaxError),
+      0
+    ),
+    doubleSingleMaxError: patches.reduce(
+      (maximum, patch) => Math.max(maximum, patch.doubleSingleMaxError),
+      0
+    )
   };
 }
 
@@ -118,8 +137,8 @@ export function findProjectionPatch(
 /**
  * Evaluates one compiled plan and returns an absolute destination coordinate.
  *
- * GPU output remains relative to `plan.destinationOrigin`; CPU evaluation restores the selected
- * patch origin with binary64 arithmetic so callers can compare directly with provider output.
+ * Local Float32 GPU output remains relative to `plan.destinationOrigin`; double-single GPU output
+ * is absolute. CPU evaluation always returns an absolute coordinate for direct provider comparison.
  */
 export function evaluateProjectionPlan(
   plan: ProjectionPlan,
@@ -134,7 +153,7 @@ export function evaluateProjectionPlan(
   if (!patch || !containsProjectionCoordinates(patch.bounds, coordinates)) {
     throw new Error('projection patch ID does not cover the supplied source coordinates');
   }
-  const offset = evaluateProjectionPatchOffset(patch, coordinates);
+  const offset = evaluateProjectionPatchOffset(patch, coordinates, plan.precision);
   return [patch.destinationOrigin[0] + offset[0], patch.destinationOrigin[1] + offset[1]];
 }
 
@@ -142,8 +161,9 @@ export function evaluateProjectionPlan(
  * Packs the stable, little-endian GPU patch ABI followed by the plan's source-bounds trailer.
  *
  * Each record contains source and destination binary64 origin words, source normalization,
- * the patch's destination offset from the plan origin, degree, and two padded coefficient sets.
- * The trailer contains four exact binary64 bounds plus four inward-rounded float32 bounds.
+ * the patch's destination offset from the plan origin, degree, Float32 coefficient highs,
+ * double-single coefficient and scale lows, and reserved padding. The trailer contains four exact
+ * binary64 bounds plus four inward-rounded float32 bounds.
  * Updating an imported GPU plan buffer with the result does not require recompiling its graph.
  */
 export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
@@ -209,17 +229,33 @@ export function packProjectionPlan(plan: ProjectionPlan): Uint32Array {
       coefficientIndex < MAXIMUM_COEFFICIENT_COUNT;
       coefficientIndex++
     ) {
+      const coefficientX = patch.doubleSingleCoefficientsX[coefficientIndex] ?? 0;
+      const coefficientY = patch.doubleSingleCoefficientsY[coefficientIndex] ?? 0;
+      const coefficientHighX = Math.fround(coefficientX);
+      const coefficientHighY = Math.fround(coefficientY);
+      dataView.setFloat32((wordOffset + 20 + coefficientIndex) * 4, coefficientHighX, true);
+      dataView.setFloat32((wordOffset + 30 + coefficientIndex) * 4, coefficientHighY, true);
       dataView.setFloat32(
-        (wordOffset + 20 + coefficientIndex) * 4,
-        patch.coefficientsX[coefficientIndex] ?? 0,
+        (wordOffset + 40 + coefficientIndex) * 4,
+        coefficientX - coefficientHighX,
         true
       );
       dataView.setFloat32(
-        (wordOffset + 30 + coefficientIndex) * 4,
-        patch.coefficientsY[coefficientIndex] ?? 0,
+        (wordOffset + 50 + coefficientIndex) * 4,
+        coefficientY - coefficientHighY,
         true
       );
     }
+    dataView.setFloat32(
+      (wordOffset + 60) * 4,
+      patch.sourceScale[0] - Math.fround(patch.sourceScale[0]),
+      true
+    );
+    dataView.setFloat32(
+      (wordOffset + 61) * 4,
+      patch.sourceScale[1] - Math.fround(patch.sourceScale[1]),
+      true
+    );
   }
 
   for (let boundIndex = 0; boundIndex < plan.bounds.length; boundIndex++) {
@@ -274,12 +310,14 @@ function validateCompilerOptions(options: {
   projection: ProjectionProvider;
   bounds: ProjectionBounds;
   tolerance: number;
+  precision: ProjectionPrecision;
   maxDepth: number;
   degree: ProjectionDegree;
   sampleCount: number;
   maxPatches: number;
 }): void {
-  const {projection, bounds, tolerance, maxDepth, degree, sampleCount, maxPatches} = options;
+  const {projection, bounds, tolerance, precision, maxDepth, degree, sampleCount, maxPatches} =
+    options;
   const hasProjectionFunction =
     typeof projection === 'function' ||
     (typeof projection === 'object' &&
@@ -299,6 +337,9 @@ function validateCompilerOptions(options: {
   }
   if (!Number.isFinite(tolerance) || tolerance <= 0) {
     throw new Error('projection tolerance must be a positive finite number');
+  }
+  if (precision !== 'local-f32' && precision !== 'double-single') {
+    throw new Error('projection precision must be local-f32 or double-single');
   }
   if (!Number.isSafeInteger(maxDepth) || maxDepth < 0 || maxDepth > MAXIMUM_SUBDIVISION_DEPTH) {
     throw new Error('projection maxDepth must be an integer between 0 and 16');
@@ -371,8 +412,12 @@ function compileProjectionPatch(
       destinationOrigin,
       coefficientsX: fit.coefficientsX,
       coefficientsY: fit.coefficientsY,
+      doubleSingleCoefficientsX: fit.doubleSingleCoefficientsX,
+      doubleSingleCoefficientsY: fit.doubleSingleCoefficientsY,
       degree: context.degree,
-      maxError: fit.maxError
+      maxError: fit.maxError,
+      float32MaxError: fit.float32MaxError,
+      doubleSingleMaxError: fit.doubleSingleMaxError
     });
     return;
   }
@@ -419,7 +464,10 @@ function fitProjectionPolynomial(
         sourceOrigin[0] + normalizedX * sourceScale[0],
         sourceOrigin[1] + normalizedY * sourceScale[1]
       ];
-      const normalizedSource = normalizeProjectionCoordinates(source, sourceOrigin, sourceScale);
+      const normalizedSource =
+        context.precision === 'double-single'
+          ? normalizeProjectionCoordinatesBinary64(source, sourceOrigin, sourceScale)
+          : normalizeProjectionCoordinates(source, sourceOrigin, sourceScale);
       fillPolynomialBasis(basis, normalizedSource, context.degree);
       const projected = context.project(source);
       const offsetX = projected[0] - destinationOrigin[0];
@@ -437,13 +485,12 @@ function fitProjectionPolynomial(
     }
   }
 
-  const coefficientsX = Float32Array.from(
-    solveLinearSystem(matrix, destinationX, coefficientCount)
-  );
-  const coefficientsY = Float32Array.from(
-    solveLinearSystem(matrix, destinationY, coefficientCount)
-  );
-  let maximumError = 0;
+  const doubleSingleCoefficientsX = solveLinearSystem(matrix, destinationX, coefficientCount);
+  const doubleSingleCoefficientsY = solveLinearSystem(matrix, destinationY, coefficientCount);
+  const coefficientsX = Float32Array.from(doubleSingleCoefficientsX);
+  const coefficientsY = Float32Array.from(doubleSingleCoefficientsY);
+  let float32MaximumError = 0;
+  let doubleSingleMaximumError = 0;
 
   for (let rowIndex = 0; rowIndex < VALIDATION_SAMPLE_COUNT; rowIndex++) {
     const normalizedY = -1 + (2 * rowIndex) / (VALIDATION_SAMPLE_COUNT - 1);
@@ -463,14 +510,27 @@ function fitProjectionPolynomial(
       ];
       const reference = context.project(source);
       const normalizedSource = normalizeProjectionCoordinates(source, sourceOrigin, sourceScale);
-      maximumError = Math.max(
-        maximumError,
-        getProjectionEvaluationError(
+      float32MaximumError = Math.max(
+        float32MaximumError,
+        getFloat32ProjectionEvaluationError(
           context,
           destinationOrigin,
           coefficientsX,
           coefficientsY,
           normalizedSource,
+          reference
+        )
+      );
+      doubleSingleMaximumError = Math.max(
+        doubleSingleMaximumError,
+        getDoubleSingleProjectionEvaluationError(
+          destinationOrigin,
+          doubleSingleCoefficientsX,
+          doubleSingleCoefficientsY,
+          source,
+          sourceOrigin,
+          sourceScale,
+          context.degree,
           reference
         )
       );
@@ -492,9 +552,9 @@ function fitProjectionPolynomial(
           sourceOrigin,
           sourceScale
         );
-        maximumError = Math.max(
-          maximumError,
-          getProjectionEvaluationError(
+        float32MaximumError = Math.max(
+          float32MaximumError,
+          getFloat32ProjectionEvaluationError(
             context,
             destinationOrigin,
             coefficientsX,
@@ -503,14 +563,37 @@ function fitProjectionPolynomial(
             float32Reference
           )
         );
+        doubleSingleMaximumError = Math.max(
+          doubleSingleMaximumError,
+          getDoubleSingleProjectionEvaluationError(
+            destinationOrigin,
+            doubleSingleCoefficientsX,
+            doubleSingleCoefficientsY,
+            float32Source,
+            sourceOrigin,
+            sourceScale,
+            context.degree,
+            float32Reference
+          )
+        );
       }
     }
   }
 
-  return {coefficientsX, coefficientsY, maxError: maximumError};
+  const maxError =
+    context.precision === 'double-single' ? doubleSingleMaximumError : float32MaximumError;
+  return {
+    coefficientsX,
+    coefficientsY,
+    doubleSingleCoefficientsX,
+    doubleSingleCoefficientsY,
+    maxError,
+    float32MaxError: float32MaximumError,
+    doubleSingleMaxError: doubleSingleMaximumError
+  };
 }
 
-function getProjectionEvaluationError(
+function getFloat32ProjectionEvaluationError(
   context: ProjectionCompilerContext,
   destinationOrigin: ProjectionCoordinates,
   coefficientsX: Float32Array,
@@ -532,6 +615,28 @@ function getProjectionEvaluationError(
     gpuLocalX - (reference[0] - context.destinationOrigin[0]),
     gpuLocalY - (reference[1] - context.destinationOrigin[1])
   );
+}
+
+function getDoubleSingleProjectionEvaluationError(
+  destinationOrigin: ProjectionCoordinates,
+  coefficientsX: Float64Array,
+  coefficientsY: Float64Array,
+  coordinates: ProjectionCoordinates,
+  sourceOrigin: ProjectionCoordinates,
+  sourceScale: ProjectionCoordinates,
+  degree: ProjectionDegree,
+  reference: ProjectionCoordinates
+): number {
+  const normalized = normalizeDoubleSingleProjectionCoordinates(
+    coordinates,
+    sourceOrigin,
+    sourceScale
+  );
+  const projectedX = evaluateDoubleSinglePolynomial(coefficientsX, normalized, degree);
+  const projectedY = evaluateDoubleSinglePolynomial(coefficientsY, normalized, degree);
+  const resultX = sumDoubleSingle(splitDoubleSingle(destinationOrigin[0]), projectedX);
+  const resultY = sumDoubleSingle(splitDoubleSingle(destinationOrigin[1]), projectedY);
+  return Math.hypot(resultX[0] + resultX[1] - reference[0], resultY[0] + resultY[1] - reference[1]);
 }
 
 function solveLinearSystem(
@@ -589,8 +694,27 @@ function solveLinearSystem(
 
 function evaluateProjectionPatchOffset(
   patch: ProjectionPatch,
-  coordinates: ProjectionCoordinates
+  coordinates: ProjectionCoordinates,
+  precision: ProjectionPrecision
 ): [number, number] {
+  if (precision === 'double-single') {
+    const normalized = normalizeDoubleSingleProjectionCoordinates(
+      coordinates,
+      patch.sourceOrigin,
+      patch.sourceScale
+    );
+    const projectedX = evaluateDoubleSinglePolynomial(
+      patch.doubleSingleCoefficientsX,
+      normalized,
+      patch.degree
+    );
+    const projectedY = evaluateDoubleSinglePolynomial(
+      patch.doubleSingleCoefficientsY,
+      normalized,
+      patch.degree
+    );
+    return [projectedX[0] + projectedX[1], projectedY[0] + projectedY[1]];
+  }
   const normalized = normalizeProjectionCoordinates(
     coordinates,
     patch.sourceOrigin,
@@ -602,6 +726,19 @@ function evaluateProjectionPatchOffset(
   ];
 }
 
+function normalizeDoubleSingleProjectionCoordinates(
+  coordinates: ProjectionCoordinates,
+  sourceOrigin: ProjectionCoordinates,
+  sourceScale: ProjectionCoordinates
+): readonly [DoubleSingle, DoubleSingle] {
+  const sourceOffsetX = splitDoubleSingle(coordinates[0] - sourceOrigin[0]);
+  const sourceOffsetY = splitDoubleSingle(coordinates[1] - sourceOrigin[1]);
+  return [
+    divideDoubleSingle(sourceOffsetX, splitDoubleSingle(sourceScale[0])),
+    divideDoubleSingle(sourceOffsetY, splitDoubleSingle(sourceScale[1]))
+  ];
+}
+
 function normalizeProjectionCoordinates(
   coordinates: ProjectionCoordinates,
   sourceOrigin: ProjectionCoordinates,
@@ -610,6 +747,17 @@ function normalizeProjectionCoordinates(
   return [
     Math.fround(Math.fround(coordinates[0] - sourceOrigin[0]) / Math.fround(sourceScale[0])),
     Math.fround(Math.fround(coordinates[1] - sourceOrigin[1]) / Math.fround(sourceScale[1]))
+  ];
+}
+
+function normalizeProjectionCoordinatesBinary64(
+  coordinates: ProjectionCoordinates,
+  sourceOrigin: ProjectionCoordinates,
+  sourceScale: ProjectionCoordinates
+): [number, number] {
+  return [
+    (coordinates[0] - sourceOrigin[0]) / sourceScale[0],
+    (coordinates[1] - sourceOrigin[1]) / sourceScale[1]
   ];
 }
 
@@ -666,6 +814,83 @@ function evaluatePolynomial(
   const yLinear = addFloat32Product(normalizedY, yQuadratic, yLinearX);
   const xContribution = addFloat32Product(normalizedX, xLinear, coefficient(0));
   return addFloat32Product(normalizedY, yLinear, xContribution);
+}
+
+function evaluateDoubleSinglePolynomial(
+  coefficients: Float64Array,
+  normalized: readonly [DoubleSingle, DoubleSingle],
+  degree: ProjectionDegree
+): DoubleSingle {
+  const [normalizedX, normalizedY] = normalized;
+  const coefficientCount = getCoefficientCount(degree);
+  const coefficient = (index: number): DoubleSingle =>
+    splitDoubleSingle(index < coefficientCount ? coefficients[index] : 0);
+  const multiplyAdd = (
+    multiplier: DoubleSingle,
+    multiplicand: DoubleSingle,
+    addend: DoubleSingle
+  ): DoubleSingle => sumDoubleSingle(addend, multiplyDoubleSingle(multiplier, multiplicand));
+
+  const xQuadratic = multiplyAdd(normalizedX, coefficient(6), coefficient(3));
+  const xLinear = multiplyAdd(normalizedX, xQuadratic, coefficient(1));
+  const mixedLinear = multiplyAdd(normalizedX, coefficient(7), coefficient(4));
+  const yQuadraticX = multiplyAdd(normalizedX, coefficient(8), coefficient(5));
+  const yQuadratic = multiplyAdd(normalizedY, coefficient(9), yQuadraticX);
+  const yLinearX = multiplyAdd(normalizedX, mixedLinear, coefficient(2));
+  const yLinear = multiplyAdd(normalizedY, yQuadratic, yLinearX);
+  const xContribution = multiplyAdd(normalizedX, xLinear, coefficient(0));
+  return multiplyAdd(normalizedY, yLinear, xContribution);
+}
+
+function splitDoubleSingle(value: number): DoubleSingle {
+  const high = Math.fround(value);
+  return [high, Math.fround(value - high)];
+}
+
+function quickTwoSum(left: number, right: number): DoubleSingle {
+  const sum = Math.fround(left + right);
+  return [sum, Math.fround(right - Math.fround(sum - left))];
+}
+
+function twoSum(left: number, right: number): DoubleSingle {
+  const sum = Math.fround(left + right);
+  const virtualRight = Math.fround(sum - left);
+  const leftError = Math.fround(left - Math.fround(sum - virtualRight));
+  const rightError = Math.fround(right - virtualRight);
+  return [sum, Math.fround(leftError + rightError)];
+}
+
+function twoProduct(left: number, right: number): DoubleSingle {
+  const product = Math.fround(left * right);
+  return [product, Math.fround(left * right - product)];
+}
+
+function sumDoubleSingle(left: DoubleSingle, right: DoubleSingle): DoubleSingle {
+  let sum = twoSum(left[0], right[0]);
+  const lowSum = twoSum(left[1], right[1]);
+  sum = [sum[0], Math.fround(sum[1] + lowSum[0])];
+  sum = quickTwoSum(sum[0], sum[1]);
+  sum = [sum[0], Math.fround(sum[1] + lowSum[1])];
+  return quickTwoSum(sum[0], sum[1]);
+}
+
+function subtractDoubleSingle(left: DoubleSingle, right: DoubleSingle): DoubleSingle {
+  return sumDoubleSingle(left, [-right[0], -right[1]]);
+}
+
+function multiplyDoubleSingle(left: DoubleSingle, right: DoubleSingle): DoubleSingle {
+  let product = twoProduct(left[0], right[0]);
+  product = [product[0], Math.fround(product[1] + Math.fround(left[0] * right[1]))];
+  product = quickTwoSum(product[0], product[1]);
+  product = [product[0], Math.fround(product[1] + Math.fround(left[1] * right[0]))];
+  return quickTwoSum(product[0], product[1]);
+}
+
+function divideDoubleSingle(dividend: DoubleSingle, divisor: DoubleSingle): DoubleSingle {
+  const reciprocalHigh = Math.fround(1 / divisor[0]);
+  const quotient = multiplyDoubleSingle(dividend, [reciprocalHigh, 0]);
+  const remainderHigh = subtractDoubleSingle(dividend, multiplyDoubleSingle(divisor, quotient))[0];
+  return sumDoubleSingle(quotient, twoProduct(reciprocalHigh, remainderHigh));
 }
 
 function addFloat32Product(left: number, right: number, addend: number): number {
