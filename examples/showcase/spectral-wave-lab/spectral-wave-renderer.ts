@@ -73,4 +73,79 @@ export class SpectralWaveRenderer {
     this.uniforms.destroy();
   }
 }
-const SHADER = `struct Uniforms{viewProjection:mat4x4f;resolution:f32;heightScale:f32;texel:f32;pad:f32};@group(0)@binding(0)var<storage,read>field:array<vec2f>;@group(0)@binding(1)var<uniform>uniforms:Uniforms;struct VOut{@builtin(position)position:vec4f;@location(0)height:f32;@location(1)normal:vec3f;};fn value(x:u32,y:u32)->f32{return field[y*u32(uniforms.resolution)+x].x;}@vertex fn vs(@builtin(vertex_index)vid:u32)->VOut{let n=u32(uniforms.resolution);let cell=vid/6u;let corner=vid%6u;let cx=cell%(n-1u);let cy=cell/(n-1u);var ox=0u;var oy=0u;switch corner{case 0u:{ox=0u;oy=0u;}case 1u:{ox=1u;oy=0u;}case 2u:{ox=1u;oy=1u;}case 3u:{ox=0u;oy=0u;}case 4u:{ox=1u;oy=1u;}default:{ox=0u;oy=1u;}}let x=cx+ox;let y=cy+oy;let h=value(x,y);let xm=select(x-1u,x,x==0u);let xp=min(x+1u,n-1u);let ym=select(y-1u,y,y==0u);let yp=min(y+1u,n-1u);let dx=(value(xp,y)-value(xm,y))*uniforms.heightScale;let dz=(value(x,yp)-value(x,ym))*uniforms.heightScale;let normal=normalize(vec3f(-dx,2,-dz));let uv=vec2f(f32(x),f32(y))/f32(n-1u);let world=vec3f((uv.x-.5)*7.5,h*uniforms.heightScale,(uv.y-.5)*7.5);var o:VOut;o.position=uniforms.viewProjection*vec4f(world,1);o.height=h;o.normal=normal;return o;}@fragment fn fs(in:VOut)->@location(0)vec4f{let light=normalize(vec3f(-.35,.8,.45));let diffuse=.22+.78*max(dot(in.normal,light),0);let magnitude=clamp(abs(in.height)*1.7,0,1);let base=mix(vec3f(.015,.025,.07),select(vec3f(1,.18,.52),vec3f(.12,.62,1),in.height>=0),magnitude);let contour=.72+.28*smoothstep(.1,.55,abs(fract(in.height*9)-.5));return vec4f(base*diffuse*contour,1);}`;
+const SHADER = `
+struct Uniforms {
+  viewProjection: mat4x4f,
+  resolution: f32,
+  heightScale: f32,
+  texel: f32,
+  pad: f32,
+};
+
+@group(0) @binding(0) var<storage, read> field: array<vec2f>;
+@group(0) @binding(1) var<uniform> uniforms: Uniforms;
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) height: f32,
+  @location(1) normal: vec3f,
+};
+
+fn getValue(x: u32, y: u32) -> f32 {
+  return field[y * u32(uniforms.resolution) + x].x;
+}
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  let resolution = u32(uniforms.resolution);
+  let cell = vertexIndex / 6u;
+  let corner = vertexIndex % 6u;
+  let cellX = cell % (resolution - 1u);
+  let cellY = cell / (resolution - 1u);
+  var offsetX = 0u;
+  var offsetY = 0u;
+  switch corner {
+    case 0u: { offsetX = 0u; offsetY = 0u; }
+    case 1u: { offsetX = 1u; offsetY = 0u; }
+    case 2u: { offsetX = 1u; offsetY = 1u; }
+    case 3u: { offsetX = 0u; offsetY = 0u; }
+    case 4u: { offsetX = 1u; offsetY = 1u; }
+    default: { offsetX = 0u; offsetY = 1u; }
+  }
+  let x = cellX + offsetX;
+  let y = cellY + offsetY;
+  let height = getValue(x, y);
+  let previousX = select(x - 1u, x, x == 0u);
+  let nextX = min(x + 1u, resolution - 1u);
+  let previousY = select(y - 1u, y, y == 0u);
+  let nextY = min(y + 1u, resolution - 1u);
+  let deltaX = (getValue(nextX, y) - getValue(previousX, y)) * uniforms.heightScale;
+  let deltaZ = (getValue(x, nextY) - getValue(x, previousY)) * uniforms.heightScale;
+  let normal = normalize(vec3f(-deltaX, 2.0, -deltaZ));
+  let uv = vec2f(f32(x), f32(y)) / f32(resolution - 1u);
+  let world = vec3f(
+    (uv.x - 0.5) * 7.5,
+    height * uniforms.heightScale,
+    (uv.y - 0.5) * 7.5
+  );
+  var output: VertexOutput;
+  output.position = uniforms.viewProjection * vec4f(world, 1.0);
+  output.height = height;
+  output.normal = normal;
+  return output;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let light = normalize(vec3f(-0.35, 0.8, 0.45));
+  let diffuse = 0.22 + 0.78 * max(dot(input.normal, light), 0.0);
+  let magnitude = clamp(abs(input.height) * 1.7, 0.0, 1.0);
+  let base = mix(
+    vec3f(0.015, 0.025, 0.07),
+    select(vec3f(1.0, 0.18, 0.52), vec3f(0.12, 0.62, 1.0), input.height >= 0.0),
+    magnitude
+  );
+  let contour = 0.72 + 0.28 * smoothstep(0.1, 0.55, abs(fract(input.height * 9.0) - 0.5));
+  return vec4f(base * diffuse * contour, 1.0);
+}
+`;

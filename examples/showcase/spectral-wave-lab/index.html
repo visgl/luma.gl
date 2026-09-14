@@ -106,7 +106,7 @@
         const device = await luma.createDevice({
           id: 'spectral-wave-lab',
           adapters: [webgpuAdapter],
-          createCanvasContext: true,
+          createCanvasContext: {canvas: 'canvas'},
           waitForPageLoad: false
         });
         await makeAnimationLoop(SpectralWaveLab, {device}).start();

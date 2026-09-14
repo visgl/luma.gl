@@ -56,9 +56,55 @@ export class SpectralViewRenderer {
 }
 
 const SHADER = `
-struct Uniforms{resolution:u32;time:f32;pad0:f32;pad1:f32};
-@group(0)@binding(0)var<storage,read>spectrum:array<vec2f>;@group(0)@binding(1)var<uniform>uniforms:Uniforms;
-struct VOut{@builtin(position)position:vec4f;@location(0)uv:vec2f;};
-@vertex fn vs(@builtin(vertex_index)i:u32)->VOut{var p=array<vec2f,3>(vec2f(-1,-1),vec2f(3,-1),vec2f(-1,3));var o:VOut;o.position=vec4f(p[i],0,1);o.uv=p[i]*.5+.5;return o;}
-fn shiftedIndex(x:u32,n:u32)->u32{return(x+n/2u)%n;}
-@fragment fn fs(in:VOut)->@location(0)vec4f{let n=uniforms.resolution;let x=min(u32(clamp(in.uv.x,0.0,.999999)*f32(n)),n-1u);let y=min(u32(clamp(in.uv.y,0.0,.999999)*f32(n)),n-1u);let z=spectrum[shiftedIndex(y,n)*n+shiftedIndex(x,n)];let energy=dot(z,z);let level=clamp(log2(1.0+energy)*.11,0.0,1.0);let center=length(in.uv-.5);let grid=.93+.07*cos(center*120.0);let cold=vec3f(.015,.035,.09);let hot=vec3f(1.0,.38,.08);let color=mix(cold,hot,pow(level,.58))*grid;return vec4f(color,1);}`;
+struct Uniforms {
+  resolution: u32,
+  time: f32,
+  pad0: f32,
+  pad1: f32,
+};
+
+@group(0) @binding(0) var<storage, read> spectrum: array<vec2f>;
+@group(0) @binding(1) var<uniform> uniforms: Uniforms;
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+};
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  let positions = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+  var output: VertexOutput;
+  output.position = vec4f(positions[vertexIndex], 0.0, 1.0);
+  output.uv = positions[vertexIndex] * 0.5 + 0.5;
+  return output;
+}
+
+fn getShiftedIndex(index: u32, resolution: u32) -> u32 {
+  return (index + resolution / 2u) % resolution;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let resolution = uniforms.resolution;
+  let x = min(
+    u32(clamp(input.uv.x, 0.0, 0.999999) * f32(resolution)),
+    resolution - 1u
+  );
+  let y = min(
+    u32(clamp(input.uv.y, 0.0, 0.999999) * f32(resolution)),
+    resolution - 1u
+  );
+  let value = spectrum[
+    getShiftedIndex(y, resolution) * resolution + getShiftedIndex(x, resolution)
+  ];
+  let energy = dot(value, value);
+  let level = clamp(log2(1.0 + energy) * 0.11, 0.0, 1.0);
+  let center = length(input.uv - 0.5);
+  let grid = 0.93 + 0.07 * cos(center * 120.0);
+  let cold = vec3f(0.015, 0.035, 0.09);
+  let hot = vec3f(1.0, 0.38, 0.08);
+  let color = mix(cold, hot, pow(level, 0.58)) * grid;
+  return vec4f(color, 1.0);
+}
+`;
