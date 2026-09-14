@@ -1,6 +1,12 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU program lowering
 
+## Overview
+
 `GPUProgram` is semantic. A backend compiler owns every decision that turns those semantics into executable work.
+
+<GPUOperationContract operation="gpu-program-lowering" />
 
 ```text
 GPUProgram

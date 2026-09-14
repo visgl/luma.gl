@@ -1,4 +1,8 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU execution strategies
+
+<GPUOperationContract operation="gpu-strategy-selection" />
 
 ## Overview
 

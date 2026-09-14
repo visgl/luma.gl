@@ -12,6 +12,9 @@ export type ProjectionBounds = readonly [number, number, number, number];
 /** Polynomial degrees supported by the portable WebGPU projection evaluator. */
 export type ProjectionDegree = 1 | 2 | 3;
 
+/** Arithmetic and output precision selected when compiling and executing a projection plan. */
+export type ProjectionPrecision = 'local-f32' | 'double-single';
+
 /**
  * Existing projection-library interface accepted without introducing a runtime dependency.
  *
@@ -41,14 +44,24 @@ export type ProjectionPatch = {
   readonly coefficientsX: Float32Array;
   /** Float32 coefficients using the same triangular ordering as {@link coefficientsX}. */
   readonly coefficientsY: Float32Array;
+  /** Binary64 fitting coefficients split into double-single limbs by the packed GPU plan. */
+  readonly doubleSingleCoefficientsX: Float64Array;
+  /** Binary64 fitting coefficients using the same ordering as {@link doubleSingleCoefficientsX}. */
+  readonly doubleSingleCoefficientsY: Float64Array;
   /** Maximum total degree retained by both coefficient vectors. */
   readonly degree: ProjectionDegree;
-  /** Largest Euclidean destination error observed on the independent validation grid. */
+  /** Largest validation error for the selected precision mode. */
   readonly maxError: number;
+  /** Largest validation error produced by the local Float32 evaluator. */
+  readonly float32MaxError: number;
+  /** Largest validation error produced by the simulated double-single evaluator. */
+  readonly doubleSingleMaxError: number;
 };
 
 /** Provider-independent projection program consumed by CPU and GPU evaluators. */
 export type ProjectionPlan = {
+  /** Arithmetic and output precision against which patch acceptance was validated. */
+  readonly precision: ProjectionPrecision;
   /** Inclusive source-coordinate domain covered collectively by the patches. */
   readonly bounds: ProjectionBounds;
   /** Binary64 destination origin shared by float32 GPU output rows. */
@@ -59,8 +72,12 @@ export type ProjectionPlan = {
   readonly degree: ProjectionDegree;
   /** Requested maximum destination error, expressed in destination coordinate units. */
   readonly tolerance: number;
-  /** Largest sampled float32 output error, including rounding relative to the shared origin. */
+  /** Largest sampled output error for the selected precision mode. */
   readonly maxError: number;
+  /** Largest sampled local Float32 output error. */
+  readonly float32MaxError: number;
+  /** Largest sampled absolute double-single output error. */
+  readonly doubleSingleMaxError: number;
 };
 
 /** Controls adaptive approximation of an arbitrary CPU projection provider. */
@@ -71,6 +88,8 @@ export type CompileProjectionPlanOptions = {
   bounds: ProjectionBounds;
   /** Maximum Euclidean destination error. Defaults to `0.01`. */
   tolerance?: number;
+  /** Arithmetic and output precision used to accept patches. Defaults to `local-f32`. */
+  precision?: ProjectionPrecision;
   /** Maximum quadtree subdivision depth. Defaults to `8`. */
   maxDepth?: number;
   /** Polynomial degree. Defaults to `3`. */

@@ -15,7 +15,7 @@ import {
   buildTextGpuGlyphDefinitions,
   type TextDictionaryCodePointSource
 } from '../../src/text-2d/experimental';
-import {createTextKerning} from '../../src/text-2d/atlas/text-utils';
+import {createTextKerning} from '../../src/fonts/atlas/text-utils';
 
 const FONT_ATLAS: FontAtlas = {
   baselineOffset: 1,

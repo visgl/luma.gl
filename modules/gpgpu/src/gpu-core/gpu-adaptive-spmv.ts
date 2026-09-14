@@ -92,23 +92,55 @@ export class GPUAdaptiveSpMV {
     });
   }
 
-  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
     const {rowOffsets, columnIndices, values, vector, output} = this.props;
     for (const view of [rowOffsets, columnIndices, values, vector, output]) {
-      if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to target graph`);
+      if (view.buffer.graph !== graph)
+        throw new Error(`${this.id} views must belong to target graph`);
     }
     if (output.length === 0) return [];
 
     const decision = this.getStrategy(graph);
     switch (decision.id) {
       case 'scalar-row':
-        return [makeSinglePassNode(graph, this, decision.id, makeScalarRowShader(this, decision.details.workgroupSize), Math.ceil(output.length / decision.details.rowsPerWorkgroup))];
+        return [
+          makeSinglePassNode(
+            graph,
+            this,
+            decision.id,
+            makeScalarRowShader(this, decision.details.workgroupSize),
+            Math.ceil(output.length / decision.details.rowsPerWorkgroup)
+          )
+        ];
       case 'subgroup-row':
-        return [makeSinglePassNode(graph, this, decision.id, makeSubgroupRowShader(this, decision.details.workgroupSize), Math.ceil(output.length / decision.details.rowsPerWorkgroup))];
+        return [
+          makeSinglePassNode(
+            graph,
+            this,
+            decision.id,
+            makeSubgroupRowShader(this, decision.details.workgroupSize),
+            Math.ceil(output.length / decision.details.rowsPerWorkgroup)
+          )
+        ];
       case 'workgroup-row':
-        return [makeSinglePassNode(graph, this, decision.id, makeWorkgroupRowShader(this, decision.details.workgroupSize), output.length)];
+        return [
+          makeSinglePassNode(
+            graph,
+            this,
+            decision.id,
+            makeWorkgroupRowShader(this, decision.details.workgroupSize),
+            output.length
+          )
+        ];
       case 'long-row':
-        return makeLongRowNodes(graph, this, decision.details.workgroupSize, decision.details.workgroupsPerLongRow);
+        return makeLongRowNodes(
+          graph,
+          this,
+          decision.details.workgroupSize,
+          decision.details.workgroupsPerLongRow
+        );
     }
   }
 
@@ -133,7 +165,8 @@ function makeSinglePassNode<Parameters>(
       commandCount: 1,
       maximumWorkgroupCount: workgroupCount,
       maximumInvocationCount: workgroupCount * 256,
-      readByteLength: (rowOffsets.length + columnIndices.length + values.length + vector.length) * 4,
+      readByteLength:
+        (rowOffsets.length + columnIndices.length + values.length + vector.length) * 4,
       writeByteLength: output.length * 4
     },
     resources: [
@@ -167,7 +200,12 @@ function makeLongRowNodes<Parameters>(
   workgroupsPerRow: number
 ): readonly GPUCommandNode<Parameters>[] {
   const rows = spmv.props.output.length;
-  const partials = createTransientView(graph, `${spmv.id}-long-row-partials`, 'float32', rows * workgroupsPerRow);
+  const partials = createTransientView(
+    graph,
+    `${spmv.id}-long-row-partials`,
+    'float32',
+    rows * workgroupsPerRow
+  );
   const partialSource = makeLongRowPartialShader(spmv, workgroupSize, workgroupsPerRow);
   const reduceSource = makeLongRowFinalizeShader(spmv, workgroupsPerRow);
 
@@ -178,7 +216,12 @@ function makeLongRowNodes<Parameters>(
       commandCount: 1,
       maximumWorkgroupCount: rows * workgroupsPerRow,
       maximumInvocationCount: rows * workgroupsPerRow * workgroupSize,
-      readByteLength: (spmv.props.rowOffsets.length + spmv.props.columnIndices.length + spmv.props.values.length + spmv.props.vector.length) * 4,
+      readByteLength:
+        (spmv.props.rowOffsets.length +
+          spmv.props.columnIndices.length +
+          spmv.props.values.length +
+          spmv.props.vector.length) *
+        4,
       writeByteLength: partials.length * 4
     },
     resources: [
@@ -192,13 +235,18 @@ function makeLongRowNodes<Parameters>(
       const computation = new Computation(device, {
         id: `${spmv.id}-long-row-partials`,
         source: partialSource,
-        shaderLayout: {bindings: [...getSpMVBindings().slice(0, 4), {name: 'partials', type: 'storage', group: 0, location: 4}]}
+        shaderLayout: {
+          bindings: [
+            ...getSpMVBindings().slice(0, 4),
+            {name: 'partials', type: 'storage', group: 0, location: 4}
+          ]
+        }
       });
       return {
         encode: ({computePass, getBuffer}) => {
           const bindings = getSpMVResolvedBindings(spmv, getBuffer);
-          delete bindings.outputValues;
-          bindings.partials = getViewBinding(partials, getBuffer);
+          delete bindings['outputValues'];
+          bindings['partials'] = getViewBinding(partials, getBuffer);
           computation.setBindings(bindings);
           computation.dispatch(computePass, rows * workgroupsPerRow, 1, 1);
         },
@@ -217,15 +265,20 @@ function makeLongRowNodes<Parameters>(
       readByteLength: partials.length * 4,
       writeByteLength: rows * 4
     },
-    resources: [{buffer: partials, usage: 'storage-read'}, {buffer: spmv.props.output, usage: 'storage-write'}],
+    resources: [
+      {buffer: partials, usage: 'storage-read'},
+      {buffer: spmv.props.output, usage: 'storage-write'}
+    ],
     compile: ({device}) => {
       const computation = new Computation(device, {
         id: `${spmv.id}-long-row-finalize`,
         source: reduceSource,
-        shaderLayout: {bindings: [
-          {name: 'partials', type: 'read-only-storage', group: 0, location: 0},
-          {name: 'outputValues', type: 'storage', group: 0, location: 1}
-        ]}
+        shaderLayout: {
+          bindings: [
+            {name: 'partials', type: 'read-only-storage', group: 0, location: 0},
+            {name: 'outputValues', type: 'storage', group: 0, location: 1}
+          ]
+        }
       });
       return {
         encode: ({computePass, getBuffer}) => {
@@ -253,7 +306,10 @@ function getSpMVBindings() {
   ];
 }
 
-function getSpMVResolvedBindings(spmv: GPUAdaptiveSpMV, getBuffer: (buffer: any) => any): Record<string, Binding> {
+function getSpMVResolvedBindings(
+  spmv: GPUAdaptiveSpMV,
+  getBuffer: (buffer: any) => any
+): Record<string, Binding> {
   return {
     rowOffsets: getViewBinding(spmv.props.rowOffsets, getBuffer),
     columnIndices: getViewBinding(spmv.props.columnIndices, getBuffer),
@@ -309,7 +365,11 @@ var<workgroup> partials:array<f32,${workgroupSize}>;
 }`;
 }
 
-function makeLongRowPartialShader(spmv: GPUAdaptiveSpMV, workgroupSize: number, workgroupsPerRow: number): string {
+function makeLongRowPartialShader(
+  spmv: GPUAdaptiveSpMV,
+  workgroupSize: number,
+  workgroupsPerRow: number
+): string {
   return `${sharedConstants(spmv)}
 @group(0) @binding(4) var<storage,read_write> partials:array<f32>;
 var<workgroup> scratch:array<f32,${workgroupSize}>;

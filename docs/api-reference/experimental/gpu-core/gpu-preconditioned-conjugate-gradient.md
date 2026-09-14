@@ -1,4 +1,10 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Preconditioned conjugate gradient
+
+<GPUOperationContract operation="gpu-preconditioned-conjugate-gradient" />
+
+## Overview
 
 Conjugate gradient (CG) solves sparse symmetric positive-definite systems `Ax = b`. Preconditioned conjugate gradient (PCG) applies an inexpensive approximation to `A^-1` so that the transformed problem converges in fewer iterations.
 

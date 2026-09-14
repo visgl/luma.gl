@@ -18,7 +18,9 @@ export type GPUProgramCompilationSummary = {
 };
 
 /** Compact semantic/backend summary suitable for examples, diagnostics and future inspector UI. */
-export function inspectGPUProgramCompilation(compilation: GPUProgramCompilation): GPUProgramCompilationSummary {
+export function inspectGPUProgramCompilation(
+  compilation: GPUProgramCompilation
+): GPUProgramCompilationSummary {
   const decisions = compilation.lowering.decisions.map(
     decision => `${decision.operationId}: ${decision.lowering} — ${decision.reason}`
   );

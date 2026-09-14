@@ -31,7 +31,7 @@ const DEFAULT_SDF_FONT_ATLAS_SETTINGS: Required<
 };
 
 /**
- * Builds a browser-font signed-distance-field atlas in the common {@link FontAtlas} format.
+ * Builds a browser-font signed-distance-field atlas on the CPU in the common {@link FontAtlas} format.
  *
  * Font measurement and packing are shared with the bitmap builder; only glyph rasterization and
  * the attached fragment sampling settings differ.

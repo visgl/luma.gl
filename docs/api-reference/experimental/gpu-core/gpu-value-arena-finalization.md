@@ -1,4 +1,8 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU value arena materialization
+
+<GPUOperationContract operation="gpu-value-arena-finalization" />
 
 ## Overview
 

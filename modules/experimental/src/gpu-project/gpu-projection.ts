@@ -28,41 +28,64 @@ import {
   validateMatchingRows,
   validateRowView
 } from '../geospatial/geospatial-utils';
-import type {GPUFloat32Positions, GPUGeospatialPositions} from '../geospatial/types';
+import type {
+  GPUDoubleSinglePositions,
+  GPUFloat32Positions,
+  GPUGeospatialPositions
+} from '../geospatial/types';
 import {
   packProjectionPlan,
   PROJECTION_PATCH_WORD_LENGTH,
   PROJECTION_PLAN_BOUNDS_WORD_LENGTH
 } from './projection-plan';
-import type {ProjectionPlan} from './types';
+import type {ProjectionPlan, ProjectionPrecision} from './types';
 
 /** Optional per-row plan-patch IDs, preserving the source vector's ordered chunk topology. */
 export type GPUProjectionPatchIds = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Input, destination, and optional caller-owned plan storage for a GPU projection contributor. */
-export type GPUProjectionProps = {
+/** Optional per-row validity values: one for projected rows and zero for rejected rows. */
+export type GPUProjectionValidity = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+
+type GPUProjectionBaseProps = {
   /** Prefix used for generated graph-node and internally owned plan-buffer identifiers. */
   id?: string;
   /** Packed float32 positions or raw binary64 positions stored as uint32x4 rows. */
   positions: GPUGeospatialPositions;
-  /** Caller-owned float32 results relative to `plan.destinationOrigin`. */
-  output: GPUFloat32Positions;
   /** Provider-independent adaptive projection program compiled on the CPU. */
   plan: ProjectionPlan;
   /** Optional explicit patch index per position; omission performs source-domain lookup. */
   patchIds?: GPUProjectionPatchIds;
+  /** Optional caller-owned validity rows: one for projected rows and zero for rejected rows. */
+  validity?: GPUProjectionValidity;
   /** Optional initialized packed projection-plan storage created with {@link packProjectionPlan}. */
   planBuffer?: GraphDataView<'uint32'>;
 };
 
+/** Origin-relative Float32 projection output. */
+export type GPUProjectionLocalFloat32Props = GPUProjectionBaseProps & {
+  precision?: 'local-f32';
+  /** Caller-owned Float32 results relative to `plan.destinationOrigin`. */
+  output: GPUFloat32Positions;
+};
+
+/** Absolute double-single projection output backed by the fp64 arithmetic shader module. */
+export type GPUProjectionDoubleSingleProps = GPUProjectionBaseProps & {
+  precision: 'double-single';
+  /** Caller-owned `[xHigh, xLow, yHigh, yLow]` double-single results. */
+  output: GPUDoubleSinglePositions;
+};
+
+/** Input, precision-specific output, and optional plan storage for a projection contributor. */
+export type GPUProjectionProps = GPUProjectionLocalFloat32Props | GPUProjectionDoubleSingleProps;
+
 /**
  * Adds a provider-independent, precision-aware projection stage to a WebGPU command graph.
  *
- * Raw binary64 inputs are translated relative to their patch origin using integer-backed binary64
- * subtraction before conversion to float32. Destination rows stay relative to the shared binary64
- * `plan.destinationOrigin`; adding that origin back into a float32 shader would lose the recovered
- * precision. Existing source chunks, empty chunks, and physical-buffer ownership are preserved.
- * Non-finite positions, positions outside the plan, and invalid patch IDs produce `[0, 0]`.
+ * `local-f32` results stay relative to the shared binary64 `plan.destinationOrigin`.
+ * `double-single` uses the optimizer-resistant fp64 arithmetic module for source normalization,
+ * polynomial evaluation, and absolute `[xHigh, xLow, yHigh, yLow]` results. Existing source chunks,
+ * empty chunks, and physical-buffer ownership are preserved. Rejected rows produce zero output and
+ * write zero to an optional validity column.
  *
  * Plans live in storage buffers instead of generated shader constants. {@link updatePlan} can
  * replace an equally sized plan without recompiling the surrounding command graph.
@@ -72,10 +95,14 @@ export class GPUProjection implements GPUCommandGraphContributor {
   readonly id: string;
   /** Source rows, potentially containing raw binary64 coordinates. */
   readonly positions: GPUGeospatialPositions;
-  /** Local destination rows relative to {@link plan}.destinationOrigin. */
-  readonly output: GPUFloat32Positions;
+  /** Arithmetic and output precision used by this contributor. */
+  readonly precision: ProjectionPrecision;
+  /** Precision-specific caller-owned destination rows. */
+  readonly output: GPUFloat32Positions | GPUDoubleSinglePositions;
   /** Optional per-row explicit patch IDs. */
   readonly patchIds?: GPUProjectionPatchIds;
+  /** Optional per-row validity output. */
+  readonly validity?: GPUProjectionValidity;
   /** Optional initialized caller-owned packed projection plan. */
   readonly planBuffer?: GraphDataView<'uint32'>;
 
@@ -88,14 +115,23 @@ export class GPUProjection implements GPUCommandGraphContributor {
   constructor(props: GPUProjectionProps) {
     this.id = props.id ?? 'gpu-projection';
     this.positions = props.positions;
+    this.precision = props.precision ?? 'local-f32';
     this.output = props.output;
     this.projectionPlan = props.plan;
     this.patchIds = props.patchIds;
+    this.validity = props.validity;
     this.planBuffer = props.planBuffer;
 
     validateProjectionPlan(props.plan, this.id);
+    if (props.plan.precision !== this.precision) {
+      throw new Error(`${this.id} precision must match its compiled projection plan`);
+    }
     validateRowView(this.positions, POSITION_FORMATS, `${this.id} positions`);
-    validateRowView(this.output, ['float32x2'], `${this.id} output`);
+    validateRowView(
+      this.output,
+      [this.precision === 'double-single' ? 'float32x4' : 'float32x2'],
+      `${this.id} output`
+    );
     validateMatchingRows(this.positions, this.output, `${this.id} positions and output`);
 
     const inputs: Array<readonly [string, GPUGeospatialPositions | GPUProjectionPatchIds]> = [
@@ -105,6 +141,10 @@ export class GPUProjection implements GPUCommandGraphContributor {
       validateRowView(this.patchIds, ['uint32'], `${this.id} patch IDs`);
       validateMatchingRows(this.positions, this.patchIds, `${this.id} positions and patch IDs`);
       inputs.push(['patch IDs', this.patchIds]);
+    }
+    if (this.validity) {
+      validateRowView(this.validity, ['uint32'], `${this.id} validity`);
+      validateMatchingRows(this.positions, this.validity, `${this.id} positions and validity`);
     }
 
     if (this.planBuffer) {
@@ -118,10 +158,13 @@ export class GPUProjection implements GPUCommandGraphContributor {
       }
       inputs.push(['plan buffer', this.planBuffer]);
     }
-    validateDisjointGeospatialViews(this.id, inputs, [['output', this.output]]);
+    validateDisjointGeospatialViews(this.id, inputs, [
+      ['output', this.output],
+      ...(this.validity ? ([['validity', this.validity]] as const) : [])
+    ]);
   }
 
-  /** Current plan; GPU output rows are relative to its binary64 destination origin. */
+  /** Current plan; local Float32 output rows are relative to its binary64 destination origin. */
   get plan(): ProjectionPlan {
     return this.projectionPlan;
   }
@@ -135,6 +178,9 @@ export class GPUProjection implements GPUCommandGraphContributor {
   updatePlan(plan: ProjectionPlan): void {
     this.assertAvailable();
     validateProjectionPlan(plan, this.id);
+    if (plan.precision !== this.precision) {
+      throw new Error(`${this.id} updated projection plan must retain its precision`);
+    }
     if (plan.patches.length !== this.projectionPlan.patches.length) {
       throw new Error(`${this.id} updated projection plan must retain the same patch count`);
     }
@@ -161,12 +207,17 @@ export class GPUProjection implements GPUCommandGraphContributor {
     if (this.hasRegisteredGraph) {
       throw new Error(`${this.id} projection contributor has already been added to a graph`);
     }
-    const views: Array<GPUGeospatialPositions | GPUFloat32Positions | GPUProjectionPatchIds> = [
-      this.positions,
-      this.output
-    ];
+    const views: Array<
+      | GPUGeospatialPositions
+      | GPUFloat32Positions
+      | GPUDoubleSinglePositions
+      | GPUProjectionPatchIds
+    > = [this.positions, this.output];
     if (this.patchIds) {
       views.push(this.patchIds);
+    }
+    if (this.validity) {
+      views.push(this.validity);
     }
     assertGraphOwnership(graph, views, this.id);
     if (this.planBuffer && this.planBuffer.buffer.graph !== graph) {
@@ -177,6 +228,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
     const inputChunks = getRowChunks(this.positions);
     const outputChunks = getRowChunks(this.output);
     const patchIdChunks = this.patchIds ? getRowChunks(this.patchIds) : undefined;
+    const validityChunks = this.validity ? getRowChunks(this.validity) : undefined;
 
     for (let chunkIndex = 0; chunkIndex < inputChunks.length; chunkIndex++) {
       const input = inputChunks[chunkIndex];
@@ -188,6 +240,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
         input,
         output: outputChunks[chunkIndex],
         patchIds: patchIdChunks?.[chunkIndex],
+        validity: validityChunks?.[chunkIndex],
         plan: planView
       });
     }
@@ -227,12 +280,13 @@ export class GPUProjection implements GPUCommandGraphContributor {
     options: {
       chunkIndex: number;
       input: GraphDataView<'float32x2' | 'uint32x4'>;
-      output: GraphDataView<'float32x2'>;
+      output: GraphDataView<'float32x2' | 'float32x4'>;
       patchIds?: GraphDataView<'uint32'>;
+      validity?: GraphDataView<'uint32'>;
       plan: GraphDataView<'uint32'>;
     }
   ): void {
-    const {chunkIndex, input, output, patchIds, plan} = options;
+    const {chunkIndex, input, output, patchIds, validity, plan} = options;
     const inputSource = getPositionReadSource('positions', input);
     const dispatchLayout = getGeospatialDispatchLayout(
       input.length,
@@ -252,16 +306,22 @@ export class GPUProjection implements GPUCommandGraphContributor {
       resources.push({buffer: patchIds, usage: 'storage-read'});
       bindings['projectionPatchIds'] = patchIds;
     }
+    if (validity) {
+      resources.push({buffer: validity, usage: 'storage-write'});
+      bindings['projectionValidity'] = validity;
+    }
 
     const source = getProjectionShaderSource({
       precise: inputSource.precise,
+      doubleSingle: this.precision === 'double-single',
       inputDeclaration: inputSource.declaration,
       readPosition: inputSource.read('index'),
       elementCount: input.length,
       patchCount: this.projectionPlan.patches.length,
-      outputOffset: getViewElementOffset(output) / 2,
+      outputOffset: getViewElementOffset(output) / (this.precision === 'double-single' ? 4 : 2),
       planOffset: getViewElementOffset(plan),
       patchIdOffset: patchIds ? getViewElementOffset(patchIds) : undefined,
+      validityOffset: validity ? getViewElementOffset(validity) : undefined,
       invocationIndexSource: getGeospatialInvocationIndexSource(dispatchLayout)
     });
 
@@ -271,7 +331,7 @@ export class GPUProjection implements GPUCommandGraphContributor {
       resources,
       bindings,
       dispatchLayout,
-      precise: inputSource.precise
+      precise: inputSource.precise || this.precision === 'double-single'
     });
   }
 
@@ -296,6 +356,7 @@ function validateProjectionPlan(plan: ProjectionPlan, id: string): void {
     throw new Error(`${id} projection plan must contain finite, increasing source bounds`);
   }
   if (
+    (plan.precision !== 'local-f32' && plan.precision !== 'double-single') ||
     plan.patches.some(
       (patch, patchIndex) =>
         patch.id !== patchIndex ||
@@ -304,7 +365,11 @@ function validateProjectionPlan(plan: ProjectionPlan, id: string): void {
         !patch.sourceScale.every(
           (scale: number) =>
             scale > 0 && Number.isFinite(Math.fround(scale)) && Math.fround(scale) > 0
-        )
+        ) ||
+        !(patch.doubleSingleCoefficientsX instanceof Float64Array) ||
+        !(patch.doubleSingleCoefficientsY instanceof Float64Array) ||
+        !patch.doubleSingleCoefficientsX.every(Number.isFinite) ||
+        !patch.doubleSingleCoefficientsY.every(Number.isFinite)
     )
   ) {
     throw new Error(`${id} projection plan must contain finite, consecutively numbered patches`);
@@ -316,6 +381,7 @@ function validateProjectionPlan(plan: ProjectionPlan, id: string): void {
 
 function getProjectionShaderSource(options: {
   precise: boolean;
+  doubleSingle: boolean;
   inputDeclaration: string;
   readPosition: string;
   elementCount: number;
@@ -323,10 +389,12 @@ function getProjectionShaderSource(options: {
   outputOffset: number;
   planOffset: number;
   patchIdOffset?: number;
+  validityOffset?: number;
   invocationIndexSource: string;
 }): string {
   const {
     precise,
+    doubleSingle,
     inputDeclaration,
     readPosition,
     elementCount,
@@ -334,6 +402,7 @@ function getProjectionShaderSource(options: {
     outputOffset,
     planOffset,
     patchIdOffset,
+    validityOffset,
     invocationIndexSource
   } = options;
   const positionType = precise ? 'RawPoint' : 'vec2f';
@@ -410,6 +479,143 @@ fn compareFiniteBinary64(firstBits: vec2u, secondBits: vec2u) -> i32 {
     patchIdOffset === undefined
       ? 'findProjectionPatch(position)'
       : 'projectionPatchIds[PATCH_ID_OFFSET + index]';
+  const validityDeclaration =
+    validityOffset === undefined
+      ? ''
+      : `const VALIDITY_OFFSET: u32 = ${validityOffset}u;
+@group(0) @binding(auto) var<storage, read_write> projectionValidity: array<u32>;`;
+  const writeInvalid = `outputPositions[OUTPUT_OFFSET + index] = ${
+    doubleSingle ? 'vec4f(0.0)' : 'vec2f(0.0)'
+  };${
+    validityOffset === undefined ? '' : '\n    projectionValidity[VALIDITY_OFFSET + index] = 0u;'
+  }`;
+  const writeValidity =
+    validityOffset === undefined ? '' : 'projectionValidity[VALIDITY_OFFSET + index] = 1u;';
+  const doubleSingleSourceOffset = precise
+    ? `let originX = vec2u(projectionPlanWord(patchIndex, 1u), projectionPlanWord(patchIndex, 0u));
+  let originY = vec2u(projectionPlanWord(patchIndex, 3u), projectionPlanWord(patchIndex, 2u));
+  return ProjectionPointFP64(
+    sub_fp64u32_to_fp64(position.x, originX),
+    sub_fp64u32_to_fp64(position.y, originY)
+  );`
+    : `let sourceOriginX = vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, 13u)),
+    bitcast<f32>(projectionPlanWord(patchIndex, 10u))
+  );
+  let sourceOriginY = vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, 14u)),
+    bitcast<f32>(projectionPlanWord(patchIndex, 11u))
+  );
+  return ProjectionPointFP64(
+    sub_fp64(vec2f(position.x, 0.0), sourceOriginX),
+    sub_fp64(vec2f(position.y, 0.0), sourceOriginY)
+  );`;
+  const doubleSingleFunctions = doubleSingle
+    ? `struct ProjectionPointFP64 { x: vec2f, y: vec2f }
+
+fn projectionSourceOffsetFP64(
+  position: ${positionType},
+  patchIndex: u32
+) -> ProjectionPointFP64 {
+  ${doubleSingleSourceOffset}
+}
+
+fn normalizeProjectionPositionFP64(
+  position: ${positionType},
+  patchIndex: u32
+) -> ProjectionPointFP64 {
+  let sourceOffset = projectionSourceOffsetFP64(position, patchIndex);
+  let sourceScaleX = vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, 4u)),
+    bitcast<f32>(projectionPlanWord(patchIndex, 60u))
+  );
+  let sourceScaleY = vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, 5u)),
+    bitcast<f32>(projectionPlanWord(patchIndex, 61u))
+  );
+  return ProjectionPointFP64(
+    div_fp64(sourceOffset.x, sourceScaleX),
+    div_fp64(sourceOffset.y, sourceScaleY)
+  );
+}
+
+fn projectionCoefficientFP64(
+  patchIndex: u32,
+  highOffset: u32,
+  lowOffset: u32,
+  coefficientIndex: u32
+) -> vec2f {
+  return vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, highOffset + coefficientIndex)),
+    bitcast<f32>(projectionPlanWord(patchIndex, lowOffset + coefficientIndex))
+  );
+}
+
+fn projectionMultiplyAddFP64(multiplier: vec2f, multiplicand: vec2f, addend: vec2f) -> vec2f {
+  return sum_fp64(addend, mul_fp64(multiplier, multiplicand));
+}
+
+fn evaluateProjectionPolynomialFP64(
+  patchIndex: u32,
+  highOffset: u32,
+  lowOffset: u32,
+  normalized: ProjectionPointFP64
+) -> vec2f {
+  let coefficient0 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 0u);
+  let coefficient1 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 1u);
+  let coefficient2 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 2u);
+  let coefficient3 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 3u);
+  let coefficient4 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 4u);
+  let coefficient5 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 5u);
+  let coefficient6 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 6u);
+  let coefficient7 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 7u);
+  let coefficient8 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 8u);
+  let coefficient9 = projectionCoefficientFP64(patchIndex, highOffset, lowOffset, 9u);
+
+  let xQuadratic = projectionMultiplyAddFP64(normalized.x, coefficient6, coefficient3);
+  let xLinear = projectionMultiplyAddFP64(normalized.x, xQuadratic, coefficient1);
+  let mixedLinear = projectionMultiplyAddFP64(normalized.x, coefficient7, coefficient4);
+  let yQuadraticX = projectionMultiplyAddFP64(normalized.x, coefficient8, coefficient5);
+  let yQuadratic = projectionMultiplyAddFP64(normalized.y, coefficient9, yQuadraticX);
+  let yLinearX = projectionMultiplyAddFP64(normalized.x, mixedLinear, coefficient2);
+  let yLinear = projectionMultiplyAddFP64(normalized.y, yQuadratic, yLinearX);
+  let xContribution = projectionMultiplyAddFP64(normalized.x, xLinear, coefficient0);
+  return projectionMultiplyAddFP64(normalized.y, yLinear, xContribution);
+}
+
+fn projectionDestinationOriginFP64(patchIndex: u32, wordOffset: u32) -> vec2f {
+  let value = vec2u(
+    projectionPlanWord(patchIndex, wordOffset + 1u),
+    projectionPlanWord(patchIndex, wordOffset)
+  );
+  return sub_fp64u32_to_fp64(value, vec2u(0u));
+}`
+    : '';
+  const writeResult = doubleSingle
+    ? `let normalizedFP64 = normalizeProjectionPositionFP64(position, patchIndex);
+  let projectedX = sum_fp64(
+    projectionDestinationOriginFP64(patchIndex, 16u),
+    evaluateProjectionPolynomialFP64(patchIndex, 20u, 40u, normalizedFP64)
+  );
+  let projectedY = sum_fp64(
+    projectionDestinationOriginFP64(patchIndex, 18u),
+    evaluateProjectionPolynomialFP64(patchIndex, 30u, 50u, normalizedFP64)
+  );
+  outputPositions[OUTPUT_OFFSET + index] = vec4f(
+    projectedX.x,
+    projectedX.y,
+    projectedY.x,
+    projectedY.y
+  );`
+    : `let normalized = normalizeProjectionPosition(position, patchIndex);
+  let destinationOffset = vec2f(
+    bitcast<f32>(projectionPlanWord(patchIndex, 6u)),
+    bitcast<f32>(projectionPlanWord(patchIndex, 7u))
+  );
+  outputPositions[OUTPUT_OFFSET + index] = destinationOffset + vec2f(
+    evaluateProjectionPolynomial(patchIndex, 20u, normalized),
+    evaluateProjectionPolynomial(patchIndex, 30u, normalized)
+  );`;
 
   return /* wgsl */ `
 ${precise ? RAW_POINT_WGSL : ''}
@@ -423,8 +629,11 @@ const INVALID_PATCH: u32 = 0xffffffffu;
 
 ${inputDeclaration}
 @group(0) @binding(auto) var<storage, read> projectionPlans: array<u32>;
-@group(0) @binding(auto) var<storage, read_write> outputPositions: array<vec2f>;
+@group(0) @binding(auto) var<storage, read_write> outputPositions: array<${
+    doubleSingle ? 'vec4f' : 'vec2f'
+  }>;
 ${patchIdDeclaration}
+${validityDeclaration}
 
 fn projectionPlanWord(patchIndex: u32, wordIndex: u32) -> u32 {
   return projectionPlans[PLAN_OFFSET + patchIndex * PATCH_WORD_LENGTH + wordIndex];
@@ -500,6 +709,8 @@ fn evaluateProjectionPolynomial(
   return xContribution + normalized.y * yLinear;
 }
 
+${doubleSingleFunctions}
+
 @compute @workgroup_size(${GEOSPATIAL_WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3<u32>,
@@ -509,26 +720,19 @@ fn main(
   if (index >= ELEMENT_COUNT) { return; }
   let position = ${readPosition};
   if (!(${finitePosition})) {
-    outputPositions[OUTPUT_OFFSET + index] = vec2f(0.0);
+    ${writeInvalid}
     return;
   }
   if (!projectionPlanContains(position)) {
-    outputPositions[OUTPUT_OFFSET + index] = vec2f(0.0);
+    ${writeInvalid}
     return;
   }
   let patchIndex = ${selectedPatch};
   if (patchIndex >= PATCH_COUNT || !projectionPatchContains(position, patchIndex)) {
-    outputPositions[OUTPUT_OFFSET + index] = vec2f(0.0);
+    ${writeInvalid}
     return;
   }
-  let normalized = normalizeProjectionPosition(position, patchIndex);
-  let destinationOffset = vec2f(
-    bitcast<f32>(projectionPlanWord(patchIndex, 6u)),
-    bitcast<f32>(projectionPlanWord(patchIndex, 7u))
-  );
-  outputPositions[OUTPUT_OFFSET + index] = destinationOffset + vec2f(
-    evaluateProjectionPolynomial(patchIndex, 20u, normalized),
-    evaluateProjectionPolynomial(patchIndex, 30u, normalized)
-  );
+  ${writeResult}
+  ${writeValidity}
 }`;
 }

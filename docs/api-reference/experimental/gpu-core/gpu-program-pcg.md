@@ -1,6 +1,12 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Semantic conjugate gradient
 
+## Overview
+
 The conjugate-gradient program is the first end-to-end pressure test of the semantic GPU program layer. The solver itself contains no WebGPU buffers, command nodes, bindings, WGSL, dispatch counts, or indirect-command implementation details.
+
+<GPUOperationContract operation="gpu-program-pcg" />
 
 ```text
 GPUProgram

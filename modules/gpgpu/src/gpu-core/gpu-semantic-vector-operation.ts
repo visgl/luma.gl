@@ -41,7 +41,8 @@ export class GPUProgramDotProduct implements GPUOperation {
     }
   ) {
     this.id = props.id ?? 'gpu-dot-product';
-    if (props.left.length !== props.right.length) throw new Error(`${this.id} vector lengths must match`);
+    if (props.left.length !== props.right.length)
+      throw new Error(`${this.id} vector lengths must match`);
     this.metadata = Object.freeze({workload: Object.freeze({elements: props.left.length})});
   }
 }

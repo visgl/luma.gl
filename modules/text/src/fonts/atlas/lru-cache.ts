@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-/** Minimal insertion-ordered LRU cache used by font atlas generation. */
+/** Minimal insertion-ordered LRU cache owned by font atlas generation. */
 export class LRUCache<ValueT> {
   private readonly cache = new Map<string, ValueT>();
   private readonly limit: number;

@@ -1,4 +1,10 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPUCOOToCSR
+
+<GPUOperationContract operation="gpu-coo-to-csr" />
+
+## Overview
 
 `GPUCOOToCSR` converts row-sorted COO entries into CSR entirely on the GPU.
 

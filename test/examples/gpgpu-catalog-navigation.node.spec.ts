@@ -95,7 +95,7 @@ describe('GPGPU example catalog navigation', () => {
       id: 'showcase/million-row-crossfilter',
       label: 'GPUCrossfilter: Million-Row Crossfilter Explorer'
     });
-    expect(crossfilterExampleSource).toContain("title: 'Million-Row Crossfilter Explorer'");
+    expect(crossfilterExampleSource).toContain("title: 'Million-Row DataFrame Crossfilter'");
     expect(crossfilterExampleSource).toContain('<MillionRowCrossfilterExample />');
     expect(
       existsSync(

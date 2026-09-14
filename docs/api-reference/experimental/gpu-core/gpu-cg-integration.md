@@ -1,4 +1,8 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPU-resident solver integration
+
+<GPUOperationContract operation="gpu-cg-integration" />
 
 ## Overview
 

@@ -1,8 +1,11 @@
 import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 
 # GPU scalar operations
 
 <GPUCoreDocsTabs active="reduction" />
+
+<GPUOperationContract operation="gpu-scalar-operation" />
 
 ## Overview
 

@@ -1,10 +1,13 @@
 import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 
 # GPU reduction substrate
 
 <GPUCoreDocsTabs active="reduction" />
 
-## Why reductions need a hierarchy
+<GPUOperationContract operation="gpu-reduction-substrate" />
+
+## Overview
 
 A reduction combines many values into fewer values, usually one. A 256-thread workgroup can efficiently combine a few hundred values, but a real GPU vector may contain millions:
 

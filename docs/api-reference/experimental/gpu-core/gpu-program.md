@@ -1,6 +1,12 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # GPUProgram
 
+## Overview
+
 `GPUProgram` is Jarnevon's backend-independent semantic intermediate representation. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
+
+<GPUOperationContract operation="gpu-program" />
 
 ```text
 GPUProgram                       semantic / portable
@@ -49,6 +55,12 @@ const graph = compilation.graph;
 ```
 
 Arrays are root-level construction sugar. `GPUCompositeOperation` preserves semantic grouping.
+
+The public semantic value and operation types are `GPUProgramScalar`, `GPUProgramVector`,
+`GPUProgramScalarLiteral`, `GPUProgramScalarOperation`, `GPUProgramVectorMADD`,
+`GPUProgramDotProduct`, `GPUProgramCSRMatrix`, and `GPUProgramSpMV`. The WebGPU
+`GPUProgramCompiler` lowers these built-ins through its `GPUOperationLoweringRegistry`; custom
+semantic operation types can register an equally explicit backend lowering.
 
 ## Hard boundary
 
