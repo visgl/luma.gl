@@ -5,7 +5,13 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {getViewBinding, getViewElementOffset, validatePackedUint32View, validatePackedView, type GPUScalarFormat} from './graph-data-view-utils';
+import {
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View,
+  validatePackedView,
+  type GPUScalarFormat
+} from './graph-data-view-utils';
 
 const WORKGROUP_SIZE = 256;
 const SCALAR_FORMATS = ['uint32', 'sint32', 'float32'] as const;
@@ -48,14 +54,18 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
     if (!['sum', 'min', 'max'].includes(this.operation)) {
       throw new Error(`${this.id} operation must be sum, min, or max`);
     }
-    if (this.output.buffer === this.input.buffer || this.output.buffer === this.segmentOffsets.buffer) {
+    if (
+      this.output.buffer === this.input.buffer ||
+      this.output.buffer === this.segmentOffsets.buffer
+    ) {
       throw new Error(`${this.id} output must use a separate buffer`);
     }
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const view of [this.input, this.segmentOffsets, this.output]) {
-      if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to target graph`);
+      if (view.buffer.graph !== graph)
+        throw new Error(`${this.id} views must belong to target graph`);
     }
     if (this.output.length === 0) return;
 
@@ -79,11 +89,13 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
         const computation = new Computation(device, {
           id: this.id,
           source,
-          shaderLayout: {bindings: [
-            {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'segmentOffsets', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'outputValues', type: 'storage', group: 0, location: 2}
-          ]}
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'segmentOffsets', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputValues', type: 'storage', group: 0, location: 2}
+            ]
+          }
         });
         return {
           encode: ({computePass, getBuffer}) => {
@@ -103,13 +115,34 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
 }
 
 function makeShaderSource(reduction: GPUSegmentedReduction): string {
-  const type = reduction.input.format === 'uint32' ? 'u32' : reduction.input.format === 'sint32' ? 'i32' : 'f32';
-  const identity = reduction.operation === 'sum'
-    ? (type === 'f32' ? '0.0' : '0')
-    : reduction.operation === 'min'
-      ? (type === 'f32' ? '3.402823466e+38' : type === 'u32' ? '0xffffffffu' : '2147483647')
-      : (type === 'f32' ? '-3.402823466e+38' : type === 'u32' ? '0u' : '-2147483648');
-  const combine = reduction.operation === 'sum' ? 'a + b' : reduction.operation === 'min' ? 'min(a, b)' : 'max(a, b)';
+  const type =
+    reduction.input.format === 'uint32'
+      ? 'u32'
+      : reduction.input.format === 'sint32'
+        ? 'i32'
+        : 'f32';
+  const identity =
+    reduction.operation === 'sum'
+      ? type === 'f32'
+        ? '0.0'
+        : '0'
+      : reduction.operation === 'min'
+        ? type === 'f32'
+          ? '3.402823466e+38'
+          : type === 'u32'
+            ? '0xffffffffu'
+            : '2147483647'
+        : type === 'f32'
+          ? '-3.402823466e+38'
+          : type === 'u32'
+            ? '0u'
+            : '-2147483648';
+  const combine =
+    reduction.operation === 'sum'
+      ? 'a + b'
+      : reduction.operation === 'min'
+        ? 'min(a, b)'
+        : 'max(a, b)';
   return `const INPUT_OFFSET: u32 = ${getViewElementOffset(reduction.input)}u;
 const SEGMENT_OFFSET: u32 = ${getViewElementOffset(reduction.segmentOffsets)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(reduction.output)}u;
