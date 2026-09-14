@@ -87,12 +87,13 @@ fn getShiftedIndex(index: u32, resolution: u32) -> u32 {
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   let resolution = uniforms.resolution;
+  let spectralCoordinate = (input.uv - 0.5) * 0.18 + 0.5;
   let x = min(
-    u32(clamp(input.uv.x, 0.0, 0.999999) * f32(resolution)),
+    u32(clamp(spectralCoordinate.x, 0.0, 0.999999) * f32(resolution)),
     resolution - 1u
   );
   let y = min(
-    u32(clamp(input.uv.y, 0.0, 0.999999) * f32(resolution)),
+    u32(clamp(spectralCoordinate.y, 0.0, 0.999999) * f32(resolution)),
     resolution - 1u
   );
   let value = spectrum[

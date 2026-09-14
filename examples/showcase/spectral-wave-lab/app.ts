@@ -3,13 +3,21 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, type AnimationProps} from '@luma.gl/engine';
-import {SpectralWaveEngine} from './spectral-wave-engine';
+import {AccordeonPanel} from '@deck.gl-community/panels';
+import {
+  ExamplePanelManager,
+  makeExamplePanelHostHtml,
+  makeHtmlCustomPanel
+} from '../../example-panels';
+import {SpectralWaveEngine, type SpectralWaveLabStats} from './spectral-wave-engine';
 import {SpectralWaveRenderer} from './spectral-wave-renderer';
 import {SpectralViewRenderer} from './spectral-view-renderer';
 export default class SpectralWaveLab extends AnimationLoopTemplate {
+  static info = makeExamplePanelHostHtml();
   engine!: SpectralWaveEngine;
   physical!: SpectralWaveRenderer;
   fourier!: SpectralViewRenderer;
+  panels?: ExamplePanelManager;
   override async onInitialize({device}: AnimationProps): Promise<void> {
     if (device.type !== 'webgpu') {
       throw new Error('Spectral Wave Lab requires WebGPU');
@@ -21,7 +29,8 @@ export default class SpectralWaveLab extends AnimationLoopTemplate {
       this.engine.evolvedSpectrum,
       this.engine.resolution
     );
-    writeInfo(this.engine);
+    this.panels = new ExamplePanelManager({panel: makeInfoPanel(this.engine.stats)});
+    this.panels.mount();
   }
   override onRender({device, tick}: AnimationProps): void {
     const time = tick / 60;
@@ -45,14 +54,28 @@ export default class SpectralWaveLab extends AnimationLoopTemplate {
     pass2.end();
   }
   override onFinalize(): void {
+    this.panels?.finalize();
     this.fourier?.destroy();
     this.physical?.destroy();
     this.engine?.destroy();
   }
 }
-function writeInfo(engine: SpectralWaveEngine): void {
-  const e = document.getElementById('info');
-  if (!e) return;
-  const s = engine.stats;
-  e.innerHTML = `<h1>Spectral Lab — Two Views of One Wave</h1><p><strong>Left: physical space.</strong> The height field is the wave as you would observe it: peaks, troughs and interference spreading through the domain.</p><p><strong>Right: Fourier space.</strong> The glowing map is the same state expressed as spatial frequencies. The center represents long wavelengths; farther from the center are progressively finer structures. Brightness shows spectral energy.</p><p>The important idea is that these are <em>not two simulations</em>. They are two representations of the same GPU state, connected every frame by a 2D inverse FFT.</p><div class="equation">∂²u/∂t² = c²Δu<br>û(k,t) = û₀(k) cos(c|k|t)</div><p>In physical space the Laplacian couples neighboring points. In Fourier space it becomes multiplication by −|k|², so every Fourier mode evolves independently. The right-hand view lets you literally watch that simplification.</p><h2>Follow the dynamics</h2><p>As rings collide on the left, look for where their energy lives on the right. Broad structures concentrate near the spectral center; sharp features populate higher spatial frequencies. Interference that looks complicated in physical space is simply the superposition of independent modes.</p><h2>Engineering</h2><dl><dt>Grid</dt><dd>${s.resolution} × ${s.resolution}</dd><dt>Fourier modes</dt><dd>${s.elementCount.toLocaleString()}</dd><dt>FFT passes</dt><dd>${s.fftPasses}</dd><dt>FFT dispatches/frame</dt><dd>${s.fftDispatchesPerFrame}</dd><dt>Wave speed</dt><dd>${s.waveSpeed}</dd></dl><p class="foot">One forward FFT captures the initial disturbance. Each frame evolves the spectrum analytically, renders that spectrum directly, inverse-transforms it, and renders the resulting physical field. Compute and visualization share the same GPU buffers.</p>`;
+
+function makeInfoPanel(stats: SpectralWaveLabStats): AccordeonPanel {
+  return new AccordeonPanel({
+    id: 'spectral-wave-lab-info',
+    title: 'Spectral Lab — Two Views of One Wave',
+    panels: [
+      makeHtmlCustomPanel({
+        id: 'spectral-wave-lab-guide',
+        title: 'Guide',
+        html: `<p><strong>Left: physical space.</strong> Peaks, troughs, and interference evolve across the wave surface.</p><p><strong>Right: Fourier space.</strong> A magnified low-frequency window shows the same state as independent spatial modes. Brightness represents spectral energy.</p><p>These are <em>not two simulations</em>. A 2D inverse FFT connects both views every frame.</p><p><code>∂²u/∂t² = c²Δu</code><br><code>û(k,t) = û₀(k) cos(c|k|t)</code></p>`
+      }),
+      makeHtmlCustomPanel({
+        id: 'spectral-wave-lab-engineering',
+        title: 'Engineering',
+        html: `<dl><dt>Grid</dt><dd>${stats.resolution} × ${stats.resolution}</dd><dt>Fourier modes</dt><dd>${stats.elementCount.toLocaleString()}</dd><dt>FFT passes</dt><dd>${stats.fftPasses}</dd><dt>FFT dispatches/frame</dt><dd>${stats.fftDispatchesPerFrame}</dd><dt>Wave speed</dt><dd>${stats.waveSpeed}</dd></dl><p>One forward FFT captures the initial disturbance. Each frame evolves the spectrum analytically, renders it directly, inverse-transforms it, and renders the physical field from the same GPU buffers.</p>`
+      })
+    ]
+  });
 }

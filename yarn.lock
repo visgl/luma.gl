@@ -16227,9 +16227,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-spectral-wave-lab@workspace:examples/showcase/spectral-wave-lab"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:9.4.0-alpha.4"
     "@luma.gl/engine": "npm:9.4.0-alpha.4"
     "@luma.gl/gpgpu": "npm:9.4.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.4.0-alpha.4"
     "@luma.gl/webgpu": "npm:9.4.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^6.0.3"

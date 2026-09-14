@@ -18,44 +18,16 @@
         position: absolute;
         inset: 0;
       }
-      #info {
-        position: absolute;
+      #example-panel-shell {
+        position: fixed;
         z-index: 2;
         left: 22px;
         top: 22px;
         width: min(390px, calc(100vw - 44px));
-        box-sizing: border-box;
-        padding: 20px 22px;
-        color: #e9f3ff;
-        background: rgb(3 8 22 / 78%);
-        border: 1px solid rgb(126 190 255 / 20%);
-        border-radius: 12px;
-        backdrop-filter: blur(14px);
-        font: 14px/1.5 system-ui, -apple-system, sans-serif;
-        box-shadow: 0 18px 60px rgb(0 0 0 / 35%);
-      }
-      h1 {
-        font-size: 23px;
-        margin: 0 0 10px;
-        letter-spacing: -0.02em;
-      }
-      h2 {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #8fcaff;
-        margin: 18px 0 7px;
-      }
-      p {
-        margin: 9px 0;
-      }
-      .equation {
-        font: 15px/1.65 ui-monospace, SFMono-Regular, monospace;
-        color: #9ed7ff;
-        padding: 10px 12px;
-        background: rgb(55 130 220 / 10%);
-        border-radius: 7px;
-        margin: 12px 0;
+        max-height: calc(100vh - 44px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
       }
       dl {
         display: grid;
@@ -63,37 +35,27 @@
         gap: 4px 14px;
         margin: 0;
       }
-      dt {
-        color: #91a6bd;
-      }
       dd {
         margin: 0;
         font-variant-numeric: tabular-nums;
       }
-      .foot {
-        font-size: 12px;
-        color: #8da0b5;
-      }
       @media (width <= 650px) {
-        #info {
+        #example-panel-shell {
           left: 12px;
           top: 12px;
           width: calc(100vw - 24px);
-          max-height: 46vh;
-          overflow: auto;
-          padding: 14px 16px;
-        }
-        h1 {
-          font-size: 19px;
+          max-height: calc(50vh - 12px);
         }
       }
     </style>
   </head>
   <body>
     <canvas id="canvas"></canvas>
-    <aside id="info">Loading Spectral Wave Lab…</aside>
+    <aside id="example-panel-shell" data-info-box-appearance="cinematic">
+      <div id="example-panel-host" data-example-panel-host></div>
+    </aside>
     <script type="module">
-      const info = document.querySelector('#info');
+      const panelHost = document.querySelector('#example-panel-host');
 
       try {
         const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: SpectralWaveLab}] =
@@ -112,8 +74,8 @@
         await makeAnimationLoop(SpectralWaveLab, {device}).start();
       } catch (error) {
         console.error('Spectral Wave Lab failed to start.', error);
-        info.textContent = error instanceof Error ? error.stack || error.message : String(error);
-        info.style.whiteSpace = 'pre-wrap';
+        panelHost.textContent = error instanceof Error ? error.stack || error.message : String(error);
+        panelHost.style.whiteSpace = 'pre-wrap';
       }
     </script>
   </body>
