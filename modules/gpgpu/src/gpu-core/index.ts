@@ -133,6 +133,8 @@ export {GPUUint32Gather} from './gpu-uint32-gather';
 export type {GPUUint32GatherProps} from './gpu-uint32-gather';
 export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
+export {GPUGather} from './gpu-gather';
+export type {GPUGatherFormat, GPUGatherProps} from './gpu-gather';
 export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
