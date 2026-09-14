@@ -165,4 +165,3 @@ accepted.
 - `@math.gl/crs` and `@math.gl/proj4` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
 - Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.
-
