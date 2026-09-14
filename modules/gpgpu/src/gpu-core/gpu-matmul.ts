@@ -52,9 +52,12 @@ export class GPUMatMul {
         throw new Error(`${this.id} ${name} must be a non-negative integer`);
       }
     }
-    if (this.left.length !== this.m * this.k) throw new Error(`${this.id} left length must equal m * k`);
-    if (this.right.length !== this.k * this.n) throw new Error(`${this.id} right length must equal k * n`);
-    if (this.output.length !== this.m * this.n) throw new Error(`${this.id} output length must equal m * n`);
+    if (this.left.length !== this.m * this.k)
+      throw new Error(`${this.id} left length must equal m * k`);
+    if (this.right.length !== this.k * this.n)
+      throw new Error(`${this.id} right length must equal k * n`);
+    if (this.output.length !== this.m * this.n)
+      throw new Error(`${this.id} output length must equal m * n`);
     if (this.output.buffer === this.left.buffer || this.output.buffer === this.right.buffer) {
       throw new Error(`${this.id} output must use a separate buffer`);
     }
@@ -62,7 +65,8 @@ export class GPUMatMul {
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const view of [this.left, this.right, this.output]) {
-      if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to the target graph`);
+      if (view.buffer.graph !== graph)
+        throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (this.m === 0 || this.n === 0) return;
 
@@ -88,11 +92,13 @@ export class GPUMatMul {
         const computation = new Computation(device, {
           id: this.id,
           source,
-          shaderLayout: {bindings: [
-            {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'outputValues', type: 'storage', group: 0, location: 2}
-          ]}
+          shaderLayout: {
+            bindings: [
+              {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputValues', type: 'storage', group: 0, location: 2}
+            ]
+          }
         });
         return {
           encode: ({computePass, getBuffer}) => {
