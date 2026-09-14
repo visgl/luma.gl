@@ -1,4 +1,10 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Adaptive CSR SpMV execution
+
+<GPUOperationContract operation="gpu-adaptive-spmv-execution" />
+
+## Overview
 
 `GPUAdaptiveSpMV` keeps sparse matrix-vector multiplication expressed as one operation while selecting an execution family appropriate to the matrix shape and device.
 

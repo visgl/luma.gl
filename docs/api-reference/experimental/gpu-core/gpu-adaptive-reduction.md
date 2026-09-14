@@ -1,4 +1,10 @@
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
+
 # Adaptive GPU reductions
+
+<GPUOperationContract operation="gpu-adaptive-reduction" />
+
+## Overview
 
 A reduction maps many values to fewer partial values until one result remains. There is no single best hierarchy shape for every input size or GPU.
 
