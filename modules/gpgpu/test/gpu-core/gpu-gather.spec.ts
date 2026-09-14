@@ -4,8 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUGather} from '../../src/gpu-core/gpu-gather';
+import {GPUCommandGraph, GPUGather} from '@luma.gl/gpgpu/gpu-core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 

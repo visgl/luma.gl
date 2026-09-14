@@ -117,6 +117,18 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Memory bandwidth and row width dominate; duplicate destinations may contend.',
     mistake: 'Do not expect deterministic results when multiple source rows target one destination.'
   },
+  'gpu-gather': {
+    problem: 'Select or reorder packed fixed-width rows through uint32 source indices.',
+    readsWrites: 'Reads source rows and indices; writes caller-provided destination rows.',
+    ownership: COMMON.callerOwned,
+    output: 'One destination row per index, with out-of-range indices producing zero-filled rows.',
+    work: 'One invocation per output row and one 32-bit-word copy loop per row.',
+    chunks: 'Consumes explicit packed views; callers preserve chunk boundaries by invoking per chunk.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'source rows + source indices → GPUGather → selected or reordered packed rows.',
+    cost: 'Memory bandwidth, index locality, and row width dominate.',
+    mistake: 'Do not use typed gather for variable-length rows or formats whose byte length is not word-aligned.'
+  },
   'gpu-run-length-encode': {
     problem: 'Turn adjacent equal uint32 values into ordered run values and lengths.',
     readsWrites: 'Reads ordered values; writes bounded run values, lengths, and a valid-run count.',

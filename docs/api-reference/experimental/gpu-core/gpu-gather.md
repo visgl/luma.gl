@@ -1,8 +1,11 @@
 import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
+import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 
 # GPUGather
 
 <GPUCoreDocsTabs active="gather" />
+
+<GPUOperationContract operation="gpu-gather" />
 
 ## Overview
 
