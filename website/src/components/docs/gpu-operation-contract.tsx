@@ -69,6 +69,18 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'The complete input and hierarchy summaries are processed even when the final count is small.',
     mistake: 'Do not confuse exclusive output positions with inclusive cumulative totals.'
   },
+  'gpu-segmented-scan': {
+    problem: 'Compute independent prefix sums over offset-delimited packed segments.',
+    readsWrites: 'Reads packed uint32 values and segment offsets; writes source-aligned prefixes.',
+    ownership: COMMON.callerOwned,
+    output: 'One exclusive or inclusive prefix per input row, reset at each segment boundary.',
+    work: 'One workgroup per segment in the baseline implementation.',
+    chunks: 'Consumes one packed value domain with explicit CSR-style offsets.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'segment offsets + values → GPUSegmentedScan → local ranks or offsets.',
+    cost: 'Large or highly skewed segments limit parallelism in the baseline kernel.',
+    mistake: 'Do not omit the terminal offset or assume prefixes continue across segments.'
+  },
   'gpu-galloping-search': {
     problem: 'Resolve many ordered lower-bound queries while reusing locality between neighbors.',
     readsWrites: 'Reads sorted values, optional order, queries, and segments; writes lower bounds and validation bits.',
@@ -92,6 +104,30 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     neighborhood: 'mask and IDs → GPUCompaction → indirect compute, drawing, or dense analysis.',
     cost: 'Scan and scatter visit the input domain even when the compacted result is small.',
     mistake: 'Do not treat unused output capacity beyond the GPU-written count as valid rows.'
+  },
+  'gpu-scatter': {
+    problem: 'Place packed fixed-width source rows at uint32-selected destination indices.',
+    readsWrites: 'Reads source rows and indices; writes caller-provided destination rows.',
+    ownership: COMMON.callerOwned,
+    output: 'A fixed-capacity destination with out-of-range indices ignored.',
+    work: 'One invocation per index and one 32-bit-word copy loop per source row.',
+    chunks: 'Consumes explicit packed views; callers preserve chunk boundaries by invoking per chunk.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'source rows + destination indices → GPUScatter → sparse or reordered output.',
+    cost: 'Memory bandwidth and row width dominate; duplicate destinations may contend.',
+    mistake: 'Do not expect deterministic results when multiple source rows target one destination.'
+  },
+  'gpu-run-length-encode': {
+    problem: 'Turn adjacent equal uint32 values into ordered run values and lengths.',
+    readsWrites: 'Reads ordered values; writes bounded run values, lengths, and a valid-run count.',
+    ownership: COMMON.callerOwned,
+    output: 'Only the prefix named by count is valid; first-occurrence order is preserved.',
+    work: 'Boundary detection, an exclusive scan, and run materialization over the input.',
+    chunks: 'Runs are local to the supplied packed view unless callers explicitly bridge chunks.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'sorted keys → GPURunLengthEncode → segment metadata or grouped aggregation.',
+    cost: 'The whole ordered input is visited even when it contains few runs.',
+    mistake: 'Do not confuse adjacent-run uniqueness with global uniqueness on unsorted input.'
   },
   'gpu-flag-offsets': {
     problem: 'Turn one packed binary flag stream into stable dense indices and a count.',
@@ -273,6 +309,42 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Source extent and memory bandwidth dominate.',
     mistake: 'Do not swap dimensions without also allocating the transposed destination shape.'
   },
+  'gpu-elementwise': {
+    problem: 'Apply one canonical arithmetic operation independently to every packed scalar row.',
+    readsWrites: 'Reads one to three matching scalar inputs; writes one source-aligned output.',
+    ownership: COMMON.callerOwned,
+    output: 'One value per input row in the shared uint32, sint32, or float32 format.',
+    work: 'One bounded invocation per row with no cross-row communication.',
+    chunks: 'Consumes matching packed views; callers invoke per durable chunk when needed.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'vectors and coefficients → GPUElementwise → residuals, updates, or dense operators.',
+    cost: 'Usually memory-bandwidth bound; graph fusion can avoid intermediate traffic.',
+    mistake: 'Do not mix formats, lengths, or omit the third input for multiply-add.'
+  },
+  'gpu-matvec': {
+    problem: 'Apply one packed row-major float32 matrix to a packed float32 vector.',
+    readsWrites: 'Reads matrix rows and one shared vector; writes one scalar per matrix row.',
+    ownership: COMMON.callerOwned,
+    output: 'Exactly rows float32 values for an explicit rows-by-columns matrix.',
+    work: 'One workgroup reduction per matrix row in the baseline implementation.',
+    chunks: 'Requires one packed matrix and vector domain with explicit dimensions.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'row-major matrix + vector → GPUMatVec → elementwise update or reduction.',
+    cost: 'Matrix bandwidth and column count dominate; the vector is reused across rows.',
+    mistake: 'Do not supply column-major storage or dimensions inconsistent with buffer lengths.'
+  },
+  'gpu-matmul': {
+    problem: 'Multiply packed row-major float32 matrices with explicit M, K, and N dimensions.',
+    readsWrites: 'Reads M-by-K and K-by-N matrices; writes one M-by-N destination matrix.',
+    ownership: COMMON.callerOwned,
+    output: 'One exact row-major float32 result under the documented accumulation order.',
+    work: 'A tiled two-dimensional dispatch with cooperative workgroup-memory reuse.',
+    chunks: 'Requires three packed matrix domains; batching and chunking are explicit higher-level work.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'dense matrices → GPUMatMul → dense numerical or machine-learning graph stages.',
+    cost: 'M×K×N arithmetic with performance governed by tile reuse and matrix shape.',
+    mistake: 'Do not swap K/N dimensions or assume transpose and batched layouts are implicit.'
+  },
   'gpu-fft1d': {
     problem: 'Compute one bounded out-of-place complex transform along packed rows.',
     readsWrites: 'Reads complex row values; writes transformed values through graph-owned scratch.',
@@ -440,6 +512,18 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     neighborhood: 'values + optional mask → GPUReduction → statistic, condition, or small readback.',
     cost: 'Bandwidth and summary pass count; only the final output is small.',
     mistake: 'Do not assume floating-point reductions are bitwise order-independent.'
+  },
+  'gpu-segmented-reduction': {
+    problem: 'Reduce packed scalar values independently over offset-delimited segments.',
+    readsWrites: 'Reads values and CSR-style offsets; writes one sum, minimum, or maximum per segment.',
+    ownership: COMMON.callerOwned,
+    output: 'One scalar per segment; empty segments produce zero.',
+    work: 'One workgroup reduction per segment in the baseline implementation.',
+    chunks: 'Consumes one packed value domain with explicit segment boundaries.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'segment offsets + values → GPUSegmentedReduction → grouped aggregates.',
+    cost: 'Segment count and skew determine utilization; very long segments serialize across one workgroup.',
+    mistake: 'Do not provide fewer or more than output.length + 1 segment offsets.'
   },
   'gpu-scene-adapters': {
     problem: 'Populate one flat GPUScene contract from CPU hierarchies or GPU-native table sources.',
