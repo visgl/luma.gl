@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ExternalImage} from '@luma.gl/core';
 import type {CharacterMapping, TextKerning} from './text-utils';
+
+/** Browser image data accepted as one renderer-independent font atlas page. */
+export type FontAtlasPage = TexImageSource;
 
 /** Sampling algorithm used to recover glyph coverage from an atlas page. */
 export type FontAtlasRenderMode = 'bitmap' | 'sdf' | 'msdf';
@@ -45,7 +47,7 @@ export type FontAtlas = {
   /** Sampling parameters that travel with the atlas instead of renderer-specific props. */
   renderSettings: FontAtlasRenderSettings;
   /** One or more equally sized image pages. Glyph mappings select pages by array layer. */
-  pages: readonly ExternalImage[];
+  pages: readonly FontAtlasPage[];
   /** Width of every atlas page in pixels. */
   width: number;
   /** Height of every atlas page in pixels. */

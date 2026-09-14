@@ -19,7 +19,7 @@ export type Character = {
   advance: number;
 };
 
-/** Unicode character to glyph frame and advance mapping. */
+/** Unicode character to renderer-independent glyph frame and advance mapping. */
 export type CharacterMapping = Record<string, Character>;
 
 /** One pair-kerning adjustment expressed as Unicode code points and font units. */

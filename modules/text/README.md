@@ -1,6 +1,8 @@
 # @luma.gl/text
 
-Experimental 2D text utilities for luma.gl. The package contains:
+Experimental 2D text utilities for luma.gl. CPU-side font preparation is isolated in the
+`@luma.gl/text/fonts` subpath, while rendering APIs remain on the package root. The package
+contains:
 
 - `FontAtlas`, the normalized glyph metrics, image pages, and sampling settings used by
   atlas-backed text.
@@ -19,10 +21,10 @@ import {
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
 import {
-  buildSdfFontAtlas,
   GPUTextResources,
   TextRenderer
 } from '@luma.gl/text';
+import {buildSdfFontAtlas} from '@luma.gl/text/fonts';
 
 const sourceVectors = {
   positions: makeArrowFixedSizeListVector(
@@ -83,9 +85,10 @@ data supports an automatic-selection heuristic.
 render batch counts, preparation time, retained bytes, and transient compute-input bytes without
 exposing implementation buffers.
 
-Atlas-backed text consumes the common `FontAtlas` format. Build generated browser-font atlases
-with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`. Build or load BMFont JSON MSDF atlases
-with `buildMsdfFontAtlas()` or `loadMsdfFontAtlas()`.
+Atlas-backed text consumes the common `FontAtlas` format. Import CPU-side atlas preparation from
+`@luma.gl/text/fonts`: build generated browser-font atlases with `buildBitmapFontAtlas()` or
+`buildSdfFontAtlas()`, and build or load BMFont JSON MSDF atlases with `buildMsdfFontAtlas()` or
+`loadMsdfFontAtlas()`. These APIs remain re-exported from `@luma.gl/text` for compatibility.
 
 Text input vector support:
 

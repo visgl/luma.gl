@@ -4,7 +4,7 @@
 
 import {type Buffer} from '@luma.gl/core';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
-import type {FontAtlasRenderSettings} from '../atlas/font-atlas';
+import type {FontAtlasRenderSettings} from '../../fonts/atlas/font-atlas';
 import type {GpuExpandedTextStream, GpuTextDictionaryCompressedStream} from './gpu-text-types';
 
 export type TextStorageBuffer = Buffer | DynamicBuffer;
