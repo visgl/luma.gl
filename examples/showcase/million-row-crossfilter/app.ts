@@ -65,7 +65,7 @@ const HISTOGRAM_PRESENTATION: Record<CrossfilterHistogramDimension, {label: stri
   {
     value: {label: 'Transaction value', unit: '$'},
     risk: {label: 'Risk probability', unit: '%'},
-    hour: {label: 'Local time', unit: 'h'}
+    hour: {label: 'Transaction hour', unit: 'h'}
   };
 
 const CROSSFILTER_PRESETS: Record<CrossfilterPresetIdentifier, CrossfilterPresetSelection> = {
