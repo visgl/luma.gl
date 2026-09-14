@@ -1,0 +1,26 @@
+---
+title: 'Spectral Dynamics Lab'
+description: Watch one GPU-resident wave evolve simultaneously in physical and Fourier space.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, simulation, fft]
+---
+
+import {SpectralWaveLabExample} from '@site/src/examples';
+
+<SpectralWaveLabExample />
+
+Spectral Dynamics Lab presents two synchronized views of the same GPU-resident state. The physical
+view renders the height field as an illuminated surface, while the Fourier view magnifies the
+low-frequency spectrum that drives the visible motion.
+
+The initial disturbance is transformed once with `GPUFFT2D`. Every frame then evolves each complex
+Fourier coefficient analytically according to the wave equation, renders the spectrum directly,
+and performs a two-dimensional inverse FFT to reconstruct the physical field. Both views consume
+the resulting storage buffers without reading the full simulation back to JavaScript.
+
+The shared luma.gl panel explains the relationship between the views and exposes the simulation's
+grid, transform, and dispatch statistics. Its sections can be expanded independently, and the
+website InfoBox can be collapsed or resized without covering the visualization.

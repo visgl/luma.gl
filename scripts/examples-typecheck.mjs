@@ -50,6 +50,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'showcase/packet-spraying',
   'showcase/persistence',
   'showcase/raster-lab',
+  'showcase/spectral-wave-lab',
   'tutorials/hello-instanced-cubes',
   'tutorials/hello-instancing',
   'tutorials/hello-triangle',
@@ -66,7 +67,8 @@ const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'api/multi-canvas',
   'experimental/fp64',
   'showcase/scene',
-  'showcase/raster-lab'
+  'showcase/raster-lab',
+  'showcase/spectral-wave-lab'
 ]);
 
 const SHARED_COMPILER_OPTIONS = {
