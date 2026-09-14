@@ -5,6 +5,8 @@
 import {
   Buffer,
   ComputePass,
+  type Bindings,
+  type BindingsByGroup,
   type CommandEncoder,
   type ComputePassProps,
   type ComputePipeline,
@@ -489,6 +491,8 @@ class RecordingComputePass extends ComputePass {
   }
 
   override setPipeline(_pipeline: ComputePipeline): void {}
+
+  override setBindings(_bindings: Bindings | BindingsByGroup): void {}
 
   override dispatch(x: number, y = 1, z = 1): void {
     this.events.push(`dispatch:${x}:${y}:${z}`);

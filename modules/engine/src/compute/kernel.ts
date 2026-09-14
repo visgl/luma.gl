@@ -140,10 +140,7 @@ export class Kernel {
   }
 
   private _setPipeline(computePass: ComputePass, bindings: Record<string, Binding> = {}): void {
-    this.pipeline.setBindings(bindings);
     computePass.setPipeline(this.pipeline);
-    // ComputePass implementations apply bindings from the selected pipeline internally.
-    // @ts-expect-error Internal binding application mirrors Computation/Model behavior.
-    computePass.setBindings({});
+    computePass.setBindings(bindings);
   }
 }
