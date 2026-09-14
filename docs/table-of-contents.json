@@ -330,6 +330,7 @@
               "api-reference/engine/passes/shader-pass-renderer",
               "api-reference/engine/compute/swap",
               "api-reference/engine/compute/computation",
+              "api-reference/engine/compute/kernel",
               "api-reference/engine/compute/buffer-transform",
               "api-reference/engine/compute/texture-transform"
             ]
@@ -399,6 +400,20 @@
               },
               {
                 "type": "category",
+                "label": "Compute Foundations",
+                "items": [
+                  "api-reference/experimental/gpu-core/compositional-architecture",
+                  "api-reference/experimental/gpu-core/gpu-value-arena",
+                  "api-reference/experimental/gpu-core/gpu-value-arena-finalization",
+                  "api-reference/experimental/gpu-core/gpu-scalar",
+                  "api-reference/experimental/gpu-core/gpu-scalar-operation",
+                  "api-reference/experimental/gpu-core/gpu-reduction-substrate",
+                  "api-reference/experimental/gpu-core/gpu-cg-integration",
+                  "api-reference/experimental/gpu-core/gpu-transient-lifetimes"
+                ]
+              },
+              {
+                "type": "category",
                 "label": "Graph Execution",
                 "items": [
                   "api-reference/experimental/gpu-core/concepts",
@@ -413,8 +428,10 @@
                 "label": "Selection and Compaction",
                 "items": [
                   "api-reference/experimental/gpu-core/gpu-scan",
+                  "api-reference/experimental/gpu-core/gpu-segmented-scan",
                   "api-reference/experimental/gpu-core/gpu-galloping-search",
                   "api-reference/experimental/gpu-core/gpu-compaction",
+                  "api-reference/experimental/gpu-core/gpu-scatter",
                   "api-reference/experimental/gpu-core/gpu-flag-offsets",
                   "api-reference/experimental/gpu-core/gpu-segment-offsets",
                   "api-reference/experimental/gpu-core/gpu-segmented-layout",
@@ -447,8 +464,19 @@
                   "api-reference/experimental/gpu-core/gpu-fft2d",
                   "api-reference/experimental/gpu-core/gpu-convolution",
                   "api-reference/experimental/gpu-core/gpu-reduction",
+                      "api-reference/experimental/gpu-core/gpu-segmented-reduction",
+                      "api-reference/experimental/gpu-core/gpu-run-length-encode",
                       "api-reference/experimental/gpu-core/gpu-histogram",
                       "api-reference/experimental/gpu-core/gpu-group-aggregation"
+                    ]
+                  },
+                  {
+                    "type": "category",
+                    "label": "Dense Compute",
+                    "items": [
+                      "api-reference/experimental/gpu-core/gpu-elementwise",
+                      "api-reference/experimental/gpu-core/gpu-matvec",
+                      "api-reference/experimental/gpu-core/gpu-matmul"
                     ]
                   },
                   {

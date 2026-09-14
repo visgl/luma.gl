@@ -121,6 +121,20 @@ export type GPUParquetCompressionPlan = Readonly<{
   outputByteLength: number;
 }>;
 
+/** Runtime metadata for one two-pass batch of compressed `BYTE_STREAM_SPLIT` pages. */
+export type GPUParquetLZByteStreamSplitBatchPlan = Readonly<{
+  /** Eight-word decode records stored in the page-batch upload. */
+  jobs: GPUParquetUploadSection;
+  /** Indices into `GPUParquetEncodedPageBatchPlan.pages`, in runtime job order. */
+  pageIndices: readonly number[];
+  /** Word-aligned final output range for every job, in runtime job order. */
+  outputs: readonly GPUParquetUploadSection[];
+  /** Total byte capacity occupied by the aggregate output. */
+  outputByteLength: number;
+  /** Largest final output word count among the jobs. */
+  maximumOutputWordCount: number;
+}>;
+
 /** RLE or legacy BIT_PACKED work for one definition- or repetition-level stream. */
 export type GPUParquetLevelPlan = Readonly<{
   encoding: 'RLE' | 'BIT_PACKED';
@@ -272,6 +286,8 @@ export type GPUParquetEncodedPageBatchPlan = Readonly<{
   uploadData: Uint8Array;
   dictionaries: readonly (GPUParquetDictionaryPlan | undefined)[];
   pages: readonly (GPUParquetDecodedPagePlan | CPUParquetPageFallbackPlan)[];
+  /** Shared runtime batch for compressed byte-stream-split pages, when present. */
+  lzByteStreamSplitBatch?: GPUParquetLZByteStreamSplitBatchPlan;
   gpuPageCount: number;
   cpuFallbackPageCount: number;
 }>;
@@ -373,14 +389,77 @@ export function planGPUParquetEncodedPageBatch(
   }
 
   const gpuPageCount = pages.filter(page => page.mode === 'gpu').length;
+  const lzByteStreamSplitBatch = planLZByteStreamSplitBatch(pages, upload);
   return Object.freeze({
     shape: 'gpu-parquet-page-batch-plan' as const,
     source: batch,
     uploadData: upload.finish(),
     dictionaries: Object.freeze(dictionaries),
     pages: Object.freeze(pages),
+    lzByteStreamSplitBatch,
     gpuPageCount,
     cpuFallbackPageCount: pages.length - gpuPageCount
+  });
+}
+
+function planLZByteStreamSplitBatch(
+  pages: readonly (GPUParquetDecodedPagePlan | CPUParquetPageFallbackPlan)[],
+  upload: GPUParquetUploadBuilder
+): GPUParquetLZByteStreamSplitBatchPlan | undefined {
+  const pageIndices: number[] = [];
+  const outputs: GPUParquetUploadSection[] = [];
+  const jobWords: number[] = [];
+  let outputByteLength = 0;
+  let maximumOutputWordCount = 0;
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    const page = pages[pageIndex];
+    if (
+      page.mode !== 'gpu' ||
+      !page.compression ||
+      page.values.kind !== 'byte-stream-split' ||
+      page.values.decodedByteLength === 0
+    ) {
+      continue;
+    }
+    if (page.compression.outputByteLength !== page.values.decodedByteLength) {
+      throw new Error('Compressed BYTE_STREAM_SPLIT byte lengths do not match');
+    }
+    const alignedOutputByteOffset = Math.ceil(outputByteLength / 4) * 4;
+    const nextOutputByteLength = alignedOutputByteOffset + page.values.decodedByteLength;
+    if (!Number.isSafeInteger(nextOutputByteLength) || nextOutputByteLength > 0xffffffff) {
+      throw new Error('Batched Parquet BYTE_STREAM_SPLIT output exceeds uint32');
+    }
+    const output = Object.freeze({
+      byteOffset: alignedOutputByteOffset,
+      byteLength: page.values.decodedByteLength
+    });
+    pageIndices.push(pageIndex);
+    outputs.push(output);
+    jobWords.push(
+      page.compression.input.byteOffset,
+      page.compression.descriptors.byteOffset / 4,
+      alignedOutputByteOffset,
+      page.values.decodedByteLength,
+      page.compression.descriptorCount,
+      page.values.valueCount,
+      page.values.byteWidth,
+      0
+    );
+    outputByteLength = nextOutputByteLength;
+    maximumOutputWordCount = Math.max(
+      maximumOutputWordCount,
+      Math.ceil(page.values.decodedByteLength / 4)
+    );
+  }
+
+  if (pageIndices.length === 0) return undefined;
+  return Object.freeze({
+    jobs: upload.add(Uint32Array.from(jobWords), 'batched byte-stream-split jobs'),
+    pageIndices: Object.freeze(pageIndices),
+    outputs: Object.freeze(outputs),
+    outputByteLength: Math.ceil(outputByteLength / 4) * 4,
+    maximumOutputWordCount
   });
 }
 
