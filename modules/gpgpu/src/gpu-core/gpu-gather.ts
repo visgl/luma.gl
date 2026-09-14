@@ -12,13 +12,20 @@ import {
 } from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
-import {getViewBinding, getViewElementOffset, validatePackedUint32View} from './graph-data-view-utils';
+import {
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedUint32View
+} from './graph-data-view-utils';
 
 const GATHER_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
 /** Fixed-width graph data formats accepted by {@link GPUGather}. */
-export type GPUGatherFormat = Exclude<GPUVectorFormat, `vertex-list<${string}>` | `value-list<${string}>`>;
+export type GPUGatherFormat = Exclude<
+  GPUVectorFormat,
+  `vertex-list<${string}>` | `value-list<${string}>`
+>;
 
 /** Properties for one graph-native indexed gather. */
 export type GPUGatherProps<T extends GPUGatherFormat = GPUGatherFormat> = {

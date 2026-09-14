@@ -15,12 +15,7 @@ it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', a
     return;
   }
 
-  const source = new Float32Array([
-    1, 2, 3,
-    4, 5, 6,
-    7, 8, 9,
-    10, 11, 12
-  ]);
+  const source = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const indices = Uint32Array.from([2, 0, 3, 99]);
   const sourceBuffer = device.createBuffer({
     id: 'gather-source',
@@ -48,7 +43,12 @@ it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', a
   );
   const outputView = graph.importGPUData(
     'output',
-    new GPUData({buffer: outputBuffer, format: 'float32x3', length: indices.length, ownsBuffer: false})
+    new GPUData({
+      buffer: outputBuffer,
+      format: 'float32x3',
+      length: indices.length,
+      ownsBuffer: false
+    })
   );
 
   new GPUGather({source: sourceView, indices: indexView, output: outputView}).addToGraph(graph);
@@ -58,10 +58,7 @@ it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', a
     await encodeAndSubmit(device, compiled, 'typed-gather');
     const bytes = await outputBuffer.readAsync(0, outputBuffer.byteLength);
     expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 12))).toEqual([
-      7, 8, 9,
-      1, 2, 3,
-      10, 11, 12,
-      0, 0, 0
+      7, 8, 9, 1, 2, 3, 10, 11, 12, 0, 0, 0
     ]);
   } finally {
     compiled.destroy();
