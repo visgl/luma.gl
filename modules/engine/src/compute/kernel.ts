@@ -81,7 +81,6 @@ export class Kernel {
   shader: Shader;
   pipeline!: ComputePipeline;
 
-  private readonly props: KernelProps;
   private _pipelineInitialization?: Promise<ComputePipeline>;
   private _destroyed = false;
 
@@ -89,37 +88,35 @@ export class Kernel {
     if (device.type !== 'webgpu') {
       throw new Error('Kernel is only supported in WebGPU');
     }
+    const {source, pipelineFactory, shaderFactory, debugShaders, ...pipelineProps} = props;
+
     this.device = device;
     this.id = props.id ?? 'kernel';
-    this.source = props.source;
-    this.props = props;
-    this.pipelineFactory =
-      props.pipelineFactory ?? PipelineFactory.getDefaultPipelineFactory(device);
-    this.shaderFactory = props.shaderFactory ?? ShaderFactory.getDefaultShaderFactory(device);
+    this.source = source;
+    this.pipelineFactory = pipelineFactory ?? PipelineFactory.getDefaultPipelineFactory(device);
+    this.shaderFactory = shaderFactory ?? ShaderFactory.getDefaultShaderFactory(device);
     this.shader = this.shaderFactory.createShader({
       id: `${this.id}-compute`,
       stage: 'compute',
       source: this.source,
-      debugShaders: props.debugShaders
+      debugShaders
     });
 
-    const pipelineProps: ComputePipelineProps = {...props, shader: this.shader};
-    delete (pipelineProps as KernelProps).source;
-    delete (pipelineProps as KernelProps).pipelineFactory;
-    delete (pipelineProps as KernelProps).shaderFactory;
-    delete (pipelineProps as KernelProps).debugShaders;
+    const computePipelineProps: ComputePipelineProps = {...pipelineProps, shader: this.shader};
 
     const asyncCompilation = PipelineFactory.getAsyncCompilation(device);
     if (asyncCompilation) {
-      this._pipelineInitialization = this.pipelineFactory.createComputePipelineAsync(pipelineProps);
+      const pipelineInitialization =
+        this.pipelineFactory.createComputePipelineAsync(computePipelineProps);
+      this._pipelineInitialization = pipelineInitialization;
       asyncCompilation.push(
-        this._pipelineInitialization.then(pipeline => {
+        pipelineInitialization.then(pipeline => {
           this.pipeline = pipeline;
           return pipeline;
         })
       );
     } else {
-      this.pipeline = this.pipelineFactory.createComputePipeline(pipelineProps);
+      this.pipeline = this.pipelineFactory.createComputePipeline(computePipelineProps);
     }
   }
 

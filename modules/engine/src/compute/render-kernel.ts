@@ -10,13 +10,7 @@ import type {
   Shader,
   VertexArray
 } from '@luma.gl/core';
-import {
-  Buffer,
-  Device,
-  PipelineFactory,
-  RenderPipeline,
-  ShaderFactory
-} from '@luma.gl/core';
+import {Buffer, Device, PipelineFactory, RenderPipeline, ShaderFactory} from '@luma.gl/core';
 
 /** Properties for a lightweight immutable WebGPU render kernel. */
 export type RenderKernelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
@@ -104,51 +98,56 @@ export class RenderKernel {
       throw new Error('RenderKernel is only supported in WebGPU');
     }
 
+    const {
+      vertexSource,
+      fragmentSource,
+      pipelineFactory,
+      shaderFactory,
+      debugShaders,
+      ...pipelineProps
+    } = props;
+
     this.device = device;
     this.id = props.id ?? 'render-kernel';
-    this.vertexSource = props.vertexSource;
-    this.fragmentSource = props.fragmentSource;
-    this.pipelineFactory =
-      props.pipelineFactory ?? PipelineFactory.getDefaultPipelineFactory(device);
-    this.shaderFactory = props.shaderFactory ?? ShaderFactory.getDefaultShaderFactory(device);
+    this.vertexSource = vertexSource;
+    this.fragmentSource = fragmentSource;
+    this.pipelineFactory = pipelineFactory ?? PipelineFactory.getDefaultPipelineFactory(device);
+    this.shaderFactory = shaderFactory ?? ShaderFactory.getDefaultShaderFactory(device);
 
     this.vertexShader = this.shaderFactory.createShader({
       id: `${this.id}-vertex`,
       stage: 'vertex',
       source: this.vertexSource,
-      debugShaders: props.debugShaders
+      debugShaders
     });
     this.fragmentShader = this.fragmentSource
       ? this.shaderFactory.createShader({
           id: `${this.id}-fragment`,
           stage: 'fragment',
           source: this.fragmentSource,
-          debugShaders: props.debugShaders
+          debugShaders
         })
       : null;
 
-    const pipelineProps: RenderPipelineProps = {
-      ...props,
+    const renderPipelineProps: RenderPipelineProps = {
+      ...pipelineProps,
       vs: this.vertexShader,
       fs: this.fragmentShader
     };
-    delete (pipelineProps as RenderKernelProps).vertexSource;
-    delete (pipelineProps as RenderKernelProps).fragmentSource;
-    delete (pipelineProps as RenderKernelProps).pipelineFactory;
-    delete (pipelineProps as RenderKernelProps).shaderFactory;
-    delete (pipelineProps as RenderKernelProps).debugShaders;
 
     const asyncCompilation = PipelineFactory.getAsyncCompilation(device);
     if (asyncCompilation) {
-      this._pipelineInitialization = this.pipelineFactory.createRenderPipelineAsync(pipelineProps);
+      const pipelineInitialization =
+        this.pipelineFactory.createRenderPipelineAsync(renderPipelineProps);
+      this._pipelineInitialization = pipelineInitialization;
       asyncCompilation.push(
-        this._pipelineInitialization.then(pipeline => {
+        pipelineInitialization.then(pipeline => {
           this.pipeline = pipeline;
           return pipeline;
         })
       );
     } else {
-      this.pipeline = this.pipelineFactory.createRenderPipeline(pipelineProps);
+      this.pipeline = this.pipelineFactory.createRenderPipeline(renderPipelineProps);
     }
   }
 

@@ -330,6 +330,7 @@
               "api-reference/engine/passes/shader-pass-renderer",
               "api-reference/engine/compute/swap",
               "api-reference/engine/compute/computation",
+              "api-reference/engine/compute/kernel",
               "api-reference/engine/compute/buffer-transform",
               "api-reference/engine/compute/texture-transform"
             ]
