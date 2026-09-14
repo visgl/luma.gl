@@ -43,17 +43,24 @@ export class GPUMatVec {
     validatePackedView(this.matrix, ['float32'], `${this.id} matrix`);
     validatePackedView(this.vector, ['float32'], `${this.id} vector`);
     validatePackedView(this.output, ['float32'], `${this.id} output`);
-    if (!Number.isInteger(this.rows) || this.rows < 0) throw new Error(`${this.id} rows must be a non-negative integer`);
-    if (!Number.isInteger(this.columns) || this.columns < 0) throw new Error(`${this.id} columns must be a non-negative integer`);
-    if (this.matrix.length !== this.rows * this.columns) throw new Error(`${this.id} matrix length must equal rows * columns`);
-    if (this.vector.length !== this.columns) throw new Error(`${this.id} vector length must equal columns`);
-    if (this.output.length !== this.rows) throw new Error(`${this.id} output length must equal rows`);
-    if (this.output.buffer === this.matrix.buffer || this.output.buffer === this.vector.buffer) throw new Error(`${this.id} output must use a separate buffer`);
+    if (!Number.isInteger(this.rows) || this.rows < 0)
+      throw new Error(`${this.id} rows must be a non-negative integer`);
+    if (!Number.isInteger(this.columns) || this.columns < 0)
+      throw new Error(`${this.id} columns must be a non-negative integer`);
+    if (this.matrix.length !== this.rows * this.columns)
+      throw new Error(`${this.id} matrix length must equal rows * columns`);
+    if (this.vector.length !== this.columns)
+      throw new Error(`${this.id} vector length must equal columns`);
+    if (this.output.length !== this.rows)
+      throw new Error(`${this.id} output length must equal rows`);
+    if (this.output.buffer === this.matrix.buffer || this.output.buffer === this.vector.buffer)
+      throw new Error(`${this.id} output must use a separate buffer`);
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     for (const view of [this.matrix, this.vector, this.output]) {
-      if (view.buffer.graph !== graph) throw new Error(`${this.id} views must belong to the target graph`);
+      if (view.buffer.graph !== graph)
+        throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (this.rows === 0) return;
 
@@ -77,11 +84,13 @@ export class GPUMatVec {
         const computation = new Computation(device, {
           id: this.id,
           source,
-          shaderLayout: {bindings: [
-            {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'vectorValues', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'outputValues', type: 'storage', group: 0, location: 2}
-          ]}
+          shaderLayout: {
+            bindings: [
+              {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'vectorValues', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputValues', type: 'storage', group: 0, location: 2}
+            ]
+          }
         });
         return {
           encode: ({computePass, getBuffer}) => {
