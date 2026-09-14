@@ -268,6 +268,90 @@ it('GPUProjection subtracts raw binary64 origins before converting local offsets
   void 0;
 });
 
+it('GPUProjection evaluates and returns absolute double-single positions with validity', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    void 0;
+    void 0;
+    return;
+  }
+  if (isSoftwareBackedDevice(device)) {
+    void 0;
+    void 0;
+    return;
+  }
+
+  const sourceOrigin: Coordinates = [20_000_000.125, 30_000_000.375];
+  const projection = (coordinates: number[]): number[] => {
+    const horizontal = coordinates[0] - sourceOrigin[0];
+    const vertical = coordinates[1] - sourceOrigin[1];
+    return [(horizontal + 2) * 50_000_000.125, (vertical + 2) * -37_500_000.25];
+  };
+  const plan = compileProjectionPlan({
+    projection,
+    bounds: [sourceOrigin[0] - 2, sourceOrigin[1] - 2, sourceOrigin[0] + 2, sourceOrigin[1] + 2],
+    degree: 1,
+    tolerance: 1e-5,
+    precision: 'double-single'
+  });
+  const points: Coordinates[] = [
+    [sourceOrigin[0] + 2 ** -20, sourceOrigin[1] - 2 ** -18],
+    [sourceOrigin[0] - 2, sourceOrigin[1] - 2],
+    [sourceOrigin[0] + 3, sourceOrigin[1]]
+  ];
+  const inputBuffer = createBuffer(device, encodeFloat64Points(points));
+  const outputBuffer = createOutputBuffer(device, points.length * 4);
+  const validityBuffer = createOutputBuffer(device, points.length);
+  const graph = new GPUCommandGraph(device, {id: 'gpu-project-double-single'});
+
+  const contributor = new GPUProjection({
+    precision: 'double-single',
+    positions: importView(graph, 'raw-positions', inputBuffer, 'uint32x4', points.length),
+    output: importView(graph, 'precise-output', outputBuffer, 'float32x4', points.length),
+    validity: importView(graph, 'validity', validityBuffer, 'uint32', points.length),
+    plan
+  });
+  contributor.addToGraph(graph);
+
+  const compiled = graph.compile();
+  const encoder = device.createCommandEncoder({id: 'gpu-project-double-single-encoding'});
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+
+  const actual = await readFloat32(outputBuffer, points.length * 4);
+  const validity = await readUint32(validityBuffer, points.length);
+  for (let pointIndex = 0; pointIndex < 2; pointIndex++) {
+    const expected = projection([...points[pointIndex]]);
+    assertClose(
+      actual[pointIndex * 4] + actual[pointIndex * 4 + 1],
+      expected[0],
+      1e-5,
+      `double-single point ${pointIndex} retains absolute x precision`
+    );
+    assertClose(
+      actual[pointIndex * 4 + 2] + actual[pointIndex * 4 + 3],
+      expected[1],
+      1e-5,
+      `double-single point ${pointIndex} retains absolute y precision`
+    );
+  }
+  expect(actual[1], 'the x low limb carries precision below the Float32 spacing').not.toBe(0);
+  expect(actual[3], 'the y low limb carries precision below the Float32 spacing').not.toBe(0);
+  expect(actual.slice(8), 'the rejected row has deterministic zero output').toEqual([0, 0, 0, 0]);
+  expect(
+    actual.slice(4, 8).every(value => Math.abs(value) <= plan.tolerance),
+    'a legitimate absolute zero remains within the compiled error contract'
+  ).toBe(true);
+  expect(validity, 'a valid zero remains distinguishable from a rejected row').toEqual([1, 1, 0]);
+
+  compiled.destroy();
+  contributor.destroy();
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  validityBuffer.destroy();
+  void 0;
+});
+
 it('GPUProjection accepts inclusive binary64 patch endpoints after Float32 normalization', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -1399,6 +1483,11 @@ async function readFloat32(
 ): Promise<number[]> {
   const bytes = await buffer.readAsync(byteOffset, length * Float32Array.BYTES_PER_ELEMENT);
   return Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, length));
+}
+
+async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
+  const bytes = await buffer.readAsync(0, length * Uint32Array.BYTES_PER_ELEMENT);
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
 }
 
 function encodeFloat64Points(points: readonly Coordinates[]): Uint32Array {
