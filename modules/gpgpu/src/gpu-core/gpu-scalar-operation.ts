@@ -4,14 +4,18 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph} from './gpu-command-graph';
+import type {GPUCommandGraph} from './gpu-command-graph';
+import {
+  addGPUCommandNodes,
+  createGPUComputeCommandNode,
+  type GPUComputeCommandNode
+} from './gpu-command-node';
 import {
   GPUScalar,
   getGPUScalarWGSLLoad,
   getGPUScalarWGSLStore,
   getGPUValueArenaWGSLBinding
 } from './gpu-scalar';
-
 export type GPUScalarArithmeticOperation =
   | 'copy'
   | 'add'
@@ -36,7 +40,6 @@ export type GPUScalarOperationProps = {
   right?: GPUScalar;
   output: GPUScalar;
 };
-
 /** Arithmetic/comparison over arena-backed graph-native scalars. */
 export class GPUScalarCompute {
   readonly id: string;
@@ -52,7 +55,9 @@ export class GPUScalarCompute {
     this.output = props.output;
     validateOperation(this);
   }
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUComputeCommandNode<Parameters>[] {
     const arena = this.left.arena;
     if (this.right && this.right.arena !== arena)
       throw new Error(`${this.id} operands must belong to the same GPUValueArena`);
@@ -62,33 +67,40 @@ export class GPUScalarCompute {
       throw new Error(`${this.id} scalars must belong to the target graph`);
     const buffer = arena.buffer;
     const source = makeShaderSource(this);
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUScalarCompute',
-        commandCount: 1,
-        maximumWorkgroupCount: 1,
-        maximumInvocationCount: 1,
-        readByteLength: this.right ? 8 : 4,
-        writeByteLength: 4
-      },
-      resources: [{buffer, usage: 'storage-write'}],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {bindings: [{name: 'gpuValues', type: 'storage', group: 0, location: 0}]}
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {gpuValues: getBuffer(buffer)};
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, 1, 1, 1);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    return [
+      createGPUComputeCommandNode({
+        id: this.id,
+        workload: {
+          operation: 'GPUScalarCompute',
+          commandCount: 1,
+          maximumWorkgroupCount: 1,
+          maximumInvocationCount: 1,
+          readByteLength: this.right ? 8 : 4,
+          writeByteLength: 4
+        },
+        resources: [{buffer, usage: 'storage-write'}],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {bindings: [{name: 'gpuValues', type: 'storage', group: 0, location: 0}]}
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {gpuValues: getBuffer(buffer)};
+              computation.setBindings(bindings);
+              computation.dispatch(computePass, 1, 1, 1);
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    ];
+  }
+  /** @deprecated Compatibility construction helper. Prefer getCommandNodes(). */ addToGraph<
+    Parameters
+  >(graph: GPUCommandGraph<Parameters>): void {
+    addGPUCommandNodes(graph, this.getCommandNodes(graph));
   }
 }
 function validateOperation(operation: GPUScalarCompute): void {
@@ -112,8 +124,7 @@ function makeShaderSource(operation: GPUScalarCompute): string {
   const left = getGPUScalarWGSLLoad(operation.left);
   const right = operation.right ? getGPUScalarWGSLLoad(operation.right) : undefined;
   const expression = getExpression(operation.operation, left, right);
-  const store = getGPUScalarWGSLStore(operation.output, expression);
-  return `${getGPUValueArenaWGSLBinding(0, 0)}\n@compute @workgroup_size(1) fn main(){${store}}`;
+  return `${getGPUValueArenaWGSLBinding(0, 0)}\n@compute @workgroup_size(1) fn main(){${getGPUScalarWGSLStore(operation.output, expression)}}`;
 }
 function getExpression(operation: GPUScalarOperation, left: string, right?: string): string {
   switch (operation) {

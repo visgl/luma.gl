@@ -25,10 +25,10 @@ binary64 semantics.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
 polynomial patches, and evaluates them over chunk-preserving GPU vectors. Inputs may be
-`float32x2` or raw binary64 `uint32x4`; raw binary64 inputs use integer-backed subtraction from a
-patch origin before narrowing. Results are currently `float32x2` positions relative to a shared
-binary64 destination origin. This preserves useful source deltas but does not provide greater than
-Float32 projection arithmetic or output precision.
+`float32x2` or raw binary64 `uint32x4`. The default `local-f32` mode emits `float32x2` positions
+relative to a shared binary64 destination origin. The `double-single` mode evaluates normalization
+and the fitted polynomial with the fp64 arithmetic shader module, then emits absolute `float32x4`
+high/low coordinate limbs. Both modes can publish a separate caller-owned validity column.
 
 The repository already contains the portable building blocks for the next precision tier:
 integer-controlled double-single add, subtract, multiply, divide, square root, comparison, and raw
@@ -126,7 +126,7 @@ accepted.
 | Tranche | Outcome | Entry dependency | Measurable exit | Status | Cost |
 | --- | --- | --- | --- | --- | :---: |
 | P.0 — Adaptive graph baseline | Provider-driven local polynomial plans, Float32 and raw binary64 input, chunk preservation, explicit graph contribution, and correctness-gated benchmarks | GPU command graph and FP64 helpers | Existing node and WebGPU tests cover plan compilation, both input encodings, patch assignment, ownership, and benchmark correctness | Implemented | Complete |
-| P.1 — Precision and validity ABI | Add double-single `float32x4` result mode, split plan origins and coefficients, double-single polynomial evaluation, and explicit row validity | P.0 and integer-controlled FP64 arithmetic | Adversarial large-origin tests demonstrate more than 24 significant bits through the result; CPU-oracle error stays within the declared destination-unit tolerance; valid zero and invalid rows are distinguishable | Planned | Large |
+| P.1 — Precision and validity ABI | Add double-single `float32x4` result mode, split plan origins and coefficients, double-single polynomial evaluation, and explicit row validity | P.0 and integer-controlled FP64 arithmetic | Adversarial large-origin tests demonstrate more than 24 significant bits through the result; CPU-oracle error stays within the declared destination-unit tolerance; valid zero and invalid rows are distinguishable | Implemented | Complete |
 | P.2 — Projection program and shader interface | Introduce typed invertible operation IR, static WGSL specialization, stable parameter blocks, and one compiled object consumable inline or as a graph contributor | P.1 precision/failure contracts | Forward/inverse operation tests pass; graph and inline paths agree; shader output contains no per-row dynamic operation dispatch; updates do not cause hidden submit/readback | Planned | Large |
 | P.3 — math.gl 5 CRS planner | Lower supported explicit PROJJSON and PROJ pipeline metadata; normalize axis, units, ellipsoid, and conversion parameters; retain provider approximation for opaque or unsupported definitions | P.2 operation IR and public math.gl 5 CRS APIs | Supported definitions produce inspectable operation programs; unsupported definitions report a deterministic reason and either use the adaptive backend or decline; no private proj4js imports | Planned | Large |
 | P.4 — cuProj parity core | Add native axis swap, degree/radian conversion, angular normalization, prime-meridian adjustment, affine scale/offset, Web Mercator, and sixth-order Transverse Mercator/UTM forward and inverse | P.2 and operation provenance policy | All WGS84 UTM zones and both directions match the PROJ/math.gl CPU oracle over central, boundary, polar-limit, and invalid domains; Float32 analytic and double-single adaptive tiers are benchmarked separately | Planned | Large |
@@ -165,4 +165,3 @@ accepted.
 - `@math.gl/crs` and `@math.gl/proj4` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
 - Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.
-

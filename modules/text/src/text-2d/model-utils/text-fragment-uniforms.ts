@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {FontAtlasRenderSettings} from '../atlas/font-atlas';
+import type {FontAtlasRenderSettings} from '../../fonts/atlas/font-atlas';
 
 /** Uniform values consumed by bitmap, SDF, and MSDF fragment shader branches. */
 export type FontAtlasShaderProps = {

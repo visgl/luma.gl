@@ -149,13 +149,13 @@ it('Kernel forwards pipeline props, records dispatches, and releases resources o
   });
 
   kernel.dispatch(computePass, {bindings: {data: dataBuffer}, x: 2, y: 3, z: 4});
-  expect(pipeline.setBindings).toHaveBeenLastCalledWith({data: dataBuffer});
+  expect(pipeline.setBindings).not.toHaveBeenCalled();
   expect(setPipeline).toHaveBeenLastCalledWith(pipeline);
-  expect(setBindings).toHaveBeenLastCalledWith({});
+  expect(setBindings).toHaveBeenLastCalledWith({data: dataBuffer});
   expect(dispatch).toHaveBeenLastCalledWith(2, 3, 4);
 
   kernel.dispatchIndirect(computePass, {indirectBuffer});
-  expect(pipeline.setBindings).toHaveBeenLastCalledWith({});
+  expect(setBindings).toHaveBeenLastCalledWith({});
   expect(dispatchIndirect).toHaveBeenLastCalledWith(indirectBuffer, 0);
 
   kernel.dispatchIndirect(computePass, {indirectBuffer, indirectOffset: 12});

@@ -122,23 +122,51 @@ const plan = compileProjectionPlan({
 });
 ```
 
-## Preserve coordinate precision
+## Choose coordinate precision
 
-`GPUProjection` accepts two source storage formats:
+`GPUProjection` accepts two source storage formats and two execution modes:
 
 | Source format | Storage | Precision contract |
 | --- | --- | --- |
 | `float32x2` | Two GPU Float32 values | Fast native source coordinates |
-| `uint32x4` | Native low/high Uint32 words of two JavaScript Float64 values | Exact binary64 transport and subtraction before Float32 local evaluation |
+| `uint32x4` | Native low/high Uint32 words of two JavaScript Float64 values | Exact binary64 transport into local Float32 or double-single evaluation |
 
 For binary64 coordinates, the shader subtracts each patch's source origin before converting the
 remaining local offset to Float32. This preserves small differences between large eastings or
 northings that would disappear if the original coordinates were converted directly to Float32.
 
-The output is `float32x2` relative to `plan.destinationOrigin`. Keep that origin in JavaScript
-Float64, combine it with a camera-relative origin, or preserve local coordinates through downstream
-GPU work. Adding a large global origin back into a Float32 output would discard the recovered
-precision.
+The default `local-f32` mode writes `float32x2` output relative to `plan.destinationOrigin`. Keep
+that origin in JavaScript Float64, combine it with a camera-relative origin, or preserve local
+coordinates through downstream GPU work. Adding a large global origin back into a Float32 output
+would discard the recovered precision.
+
+Set `precision: 'double-single'` on both the plan compiler and `GPUProjection` to use the
+optimizer-resistant `fp64arithmetic` shader module for source normalization and polynomial
+evaluation. This mode writes absolute `float32x4` rows ordered as
+`[xHigh, xLow, yHigh, yLow]`:
+
+```ts
+const plan = compileProjectionPlan({
+  projection,
+  bounds: [580_000, 4_085_000, 600_000, 4_105_000],
+  tolerance: 0.01,
+  precision: 'double-single'
+});
+
+new GPUProjection({
+  precision: 'double-single',
+  positions: sourcePositions,
+  output: absoluteDoubleSinglePositions,
+  validity: projectedPositionValidity,
+  plan
+}).addToGraph(graph);
+```
+
+Double-single carries up to approximately 48 significant bits while values remain in the normal
+Float32 exponent range. It is not IEEE-754 binary64: it improves significand precision without
+providing binary64's exponent range or exact rounding semantics. `plan.maxError` reports the
+validation error for the selected mode; `float32MaxError` and `doubleSingleMaxError` expose both
+simulated paths for inspection.
 
 ## Adaptive patches and explicit assignment
 
@@ -161,24 +189,28 @@ new GPUProjection({
 The live benchmark compares both selection strategies for both source formats. This makes the
 cost of additional patches and the benefit of preassigned IDs directly observable on the active GPU.
 
-Source positions, optional patch IDs, and output positions must preserve identical row counts and
-chunk boundaries. Invalid coordinates, positions outside the exact plan bounds, and invalid patch
-IDs produce a deterministic local output of `[0, 0]`.
+Source positions, optional patch IDs, output positions, and optional `uint32` validity rows must
+preserve identical row counts and chunk boundaries. Invalid coordinates, positions outside the
+exact plan bounds, and invalid patch IDs produce deterministic zero output. When `validity` is
+provided, projected rows receive `1` and rejected rows receive `0`, so a legitimate zero coordinate
+is unambiguous.
 
 ## Core concepts and data model
 
 - A JavaScript projection provider owns coordinate-reference-system semantics.
 - `compileProjectionPlan()` approximates that provider with adaptive polynomial patches.
 - GPU execution selects a patch per coordinate or consumes caller-provided patch IDs.
-- Binary64 source words preserve local precision before Float32 evaluation.
-- Output coordinates remain relative to an explicit destination origin.
+- Binary64 source words preserve local precision before either evaluation mode.
+- Local Float32 output remains relative to an explicit destination origin; double-single output is
+  absolute high/low pairs.
+- Optional validity rows distinguish rejected inputs from legitimate zero coordinates.
 
 ## Operations and API index
 
 | Export | Responsibility |
 | --- | --- |
 | `compileProjectionPlan()` | Samples and subdivides a bounded projection into adaptive patches |
-| `GPUProjection` | Adds projection work to a caller-owned command graph |
+| `GPUProjection` | Adds local Float32 or fp64-backed double-single projection work to a caller-owned command graph |
 | `createWebMercatorProjection()` | Provides a zero-dependency WGS84-to-Web-Mercator provider |
 | Benchmark exports | Measure CPU and explicitly synchronized GPU projection paths |
 
@@ -186,8 +218,10 @@ IDs produce a deterministic local output of `[0, 0]`.
 
 - GPU Project is experimental and WebGPU-only.
 - Plans cover explicit source bounds and polynomial degrees 1–3.
-- Output is `float32x2` relative to `destinationOrigin`; adding a large global origin in Float32
-  discards recovered precision.
+- `local-f32` output is `float32x2` relative to `destinationOrigin`; `double-single` output is
+  absolute `float32x4` high/low pairs.
+- Double-single improves significand precision but does not implement IEEE-754 binary64 range or
+  semantics.
 - Projection providers, plan compilation, assignment policy, submission, and fallback are
   application-owned.
 

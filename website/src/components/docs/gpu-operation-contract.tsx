@@ -33,6 +33,102 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Compilation is reusable; recompile only when topology, capacities, formats, or requirements change.',
     mistake: 'Do not encode, submit, or map hidden work inside a contributor.'
   },
+  'gpu-operation': {
+    problem: 'Describe GPU work semantically before selecting concrete backend commands.',
+    readsWrites: 'Operations name logical inputs and outputs through metadata or typed properties.',
+    ownership: 'Semantic operations own no GPU resources and perform no command submission.',
+    output: 'An inspectable operation tree that a backend compiler can lower.',
+    work: 'Metadata describes logical work; the selected lowering determines physical commands.',
+    chunks: 'Logical shapes remain explicit and are not implicitly combined or repacked.',
+    execution: 'A GPUProgramCompiler selects and records the executable realization.',
+    neighborhood: 'application intent → GPUOperation tree → backend lowering → command graph.',
+    cost: 'Semantic construction is CPU-only; execution cost belongs to the chosen lowering.',
+    mistake: 'Do not embed WebGPU resources or dispatch policy in a semantic operation.'
+  },
+  'gpu-operation-metadata': {
+    problem: 'Expose logical workload and constraints without decoding shaders or bindings.',
+    readsWrites: 'Names logical inputs and outputs rather than concrete graph buffer uses.',
+    ownership: 'Metadata is immutable descriptive state owned by its operation.',
+    output: 'Planner-readable input, output, workload, and constraint records.',
+    work: 'Reports problem size while leaving command counts and dispatch geometry to lowering.',
+    chunks: 'Shape metadata describes logical data; physical chunk handling remains explicit.',
+    execution: 'Consumed during planning and inspection, with no GPU work of its own.',
+    neighborhood: 'GPUOperation metadata → planner decisions → backend lowering report.',
+    cost: 'Small CPU-side records retained for diagnostics and planning.',
+    mistake: 'Do not encode a selected workgroup shape as backend-independent workload metadata.'
+  },
+  'gpu-control-flow-operation': {
+    problem: 'Represent bounded loops and conditional branches in a backend-independent program.',
+    readsWrites: 'Predicates reference logical uint32 scalar state; child operations declare data use.',
+    ownership: 'Control operations own semantic hierarchy but no buffers or command submission.',
+    output: 'A bounded operation subtree with explicit predicate and iteration semantics.',
+    work: 'Maximum iterations provide a static upper bound for backend planning.',
+    chunks: 'Child operations retain their declared logical shapes and chunk behavior.',
+    execution: 'WebGPU lowers runtime predicates to bounded GPU-gated indirect dispatch sequences.',
+    neighborhood: 'logical predicate + operation body → control-flow lowering → conditioned nodes.',
+    cost: 'Bounded lowering may materialize commands for every possible iteration.',
+    mistake: 'Do not model an unbounded device loop or read predicates back between iterations.'
+  },
+  'gpu-operation-lowering': {
+    problem: 'Retain which semantic operation produced each executable command node.',
+    readsWrites: 'Records identities and paths without changing declared graph resource uses.',
+    ownership: 'The compiler owns the immutable provenance report.',
+    output: 'Operation paths paired with lowered command-node identifiers and types.',
+    work: 'One small provenance record per emitted semantic command node.',
+    chunks: 'Does not alter logical or physical data partitioning.',
+    execution: 'Produced during lowering and consumed by inspectors and planners.',
+    neighborhood: 'operation tree → command-node emission → lowering report and diagnostics.',
+    cost: 'Linear CPU bookkeeping in the number of lowered nodes.',
+    mistake: 'Do not discard semantic identity once a backend command is selected.'
+  },
+  'gpu-program': {
+    problem: 'Compose typed semantic GPU state and operations independently of an execution backend.',
+    readsWrites: 'Operations reference program-owned logical scalars and vectors.',
+    ownership: 'The program owns semantic declarations; compiled graphs own backend transients.',
+    output: 'An immutable-view operation tree and typed logical value inventory.',
+    work: 'Program construction performs no GPU work; lowering determines the command workload.',
+    chunks: 'Vectors preserve their declared length and format without implicit packing.',
+    execution: 'GPUProgramCompiler validates bindings and lowers the program for WebGPU.',
+    neighborhood: 'typed logical values + operations → GPUProgram → backend compiler.',
+    cost: 'CPU-only semantic construction plus backend-specific compilation cost.',
+    mistake: 'Do not treat GPUProgram as an executable command graph or submission owner.'
+  },
+  'gpu-program-lowering': {
+    problem: 'Map semantic operation types to backend-specific executable realizations.',
+    readsWrites: 'Resolves logical values into backend views and preserves operation resource intent.',
+    ownership: 'The backend compiler owns its registry, capabilities, and lowering decisions.',
+    output: 'A command graph plus immutable value, provenance, and decision reports.',
+    work: 'Visits the bounded semantic tree and emits the selected command nodes.',
+    chunks: 'Lowerers must explicitly preserve or transform logical storage boundaries.',
+    execution: 'WebGPU lowering uses command nodes; another backend may choose native graph forms.',
+    neighborhood: 'GPUProgram + bindings + capabilities → lowering registry → executable graph.',
+    cost: 'Linear planning overhead plus backend pipeline compilation.',
+    mistake: 'Do not let semantic operations mutate a backend graph directly.'
+  },
+  'webgpu-runtime-control': {
+    problem: 'Execute bounded semantic predicates without CPU readback on WebGPU.',
+    readsWrites: 'Gate updates read logical predicate scalars and write indirect dispatch arguments.',
+    ownership: 'The compiled graph owns gate buffers; logical predicate state remains program-owned.',
+    output: 'Conditioned compute nodes whose direct dispatches become GPU-controlled indirect work.',
+    work: 'One small gate update per conditioned command plus the enabled command workload.',
+    chunks: 'Conditioning changes execution only and does not repack data.',
+    execution: 'Compiler support nodes run outside semantic predicate decoration scopes.',
+    neighborhood: 'uint32 predicate → dispatch gate → conditioned compute command.',
+    cost: 'Adds bounded gate dispatches while avoiding queue synchronization and readback.',
+    mistake: 'Do not infer exact dispatch geometry from a workload estimate.'
+  },
+  'gpu-program-pcg': {
+    problem: 'Express preconditioned conjugate gradient as one portable semantic GPU program.',
+    readsWrites: 'Reads external CSR and vector state while updating logical solver vectors and scalars.',
+    ownership: 'External inputs remain caller-owned; compiler-created scratch and gates are graph-owned.',
+    output: 'A bounded approximate solution with GPU-resident convergence state.',
+    work: 'Initialization plus bounded iterations of SpMV, reductions, scalar math, and vector updates.',
+    chunks: 'The baseline program uses explicit dense vectors and one CSR matrix domain.',
+    execution: 'WebGPU lowers convergence to a bounded GPU-gated command sequence.',
+    neighborhood: 'CSR system + solver settings → semantic PCG → backend command graph.',
+    cost: 'Maximum iterations bound graph size; active work falls after convergence.',
+    mistake: 'Do not synchronize residual state through the CPU between solver iterations.'
+  },
   'compositional-architecture': {
     problem: 'Compose higher-level GPU algorithms from a shared set of execution primitives.',
     readsWrites: 'Each composed contributor declares its own resource reads and writes to the graph.',
@@ -272,6 +368,18 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     neighborhood: 'source rows + destination indices → GPUScatter → sparse or reordered output.',
     cost: 'Memory bandwidth and row width dominate; duplicate destinations may contend.',
     mistake: 'Do not expect deterministic results when multiple source rows target one destination.'
+  },
+  'gpu-gather': {
+    problem: 'Select or reorder packed fixed-width rows through uint32 source indices.',
+    readsWrites: 'Reads source rows and indices; writes caller-provided destination rows.',
+    ownership: COMMON.callerOwned,
+    output: 'One destination row per index, with out-of-range indices producing zero-filled rows.',
+    work: 'One invocation per output row and one 32-bit-word copy loop per row.',
+    chunks: 'Consumes explicit packed views; callers preserve chunk boundaries by invoking per chunk.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'source rows + source indices → GPUGather → selected or reordered packed rows.',
+    cost: 'Memory bandwidth, index locality, and row width dominate.',
+    mistake: 'Do not use typed gather for variable-length rows or formats whose byte length is not word-aligned.'
   },
   'gpu-run-length-encode': {
     problem: 'Turn adjacent equal uint32 values into ordered run values and lengths.',

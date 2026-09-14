@@ -4,6 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
 export type {
+  GPUDoubleSinglePositions,
   GPUFloat32Positions,
   GPUFloat64Positions,
   GPUGeospatialPositions,

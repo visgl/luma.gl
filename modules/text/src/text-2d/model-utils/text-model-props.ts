@@ -9,7 +9,7 @@ import {
   type GPUInputSchema,
   type GPUInputVectors
 } from '@luma.gl/experimental/gpu-tables';
-import type {FontAtlas} from '../atlas/font-atlas';
+import type {FontAtlas} from '../../fonts/atlas/font-atlas';
 
 const TEXT_DICTIONARY_INDEX_FORMATS = [
   'sint8',

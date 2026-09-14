@@ -133,6 +133,8 @@ export {GPUUint32Gather} from './gpu-uint32-gather';
 export type {GPUUint32GatherProps} from './gpu-uint32-gather';
 export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
+export {GPUGather} from './gpu-gather';
+export type {GPUGatherFormat, GPUGatherProps} from './gpu-gather';
 export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
@@ -542,3 +544,77 @@ export type {
   DispatchCommand,
   DispatchCommandBufferProps
 } from './dispatch-command-buffer';
+
+export {
+  addGPUCommandNode,
+  addGPUCommandNodes,
+  createGPUComputeCommandNode,
+  createGPUCopyCommandNode,
+  createGPURenderCommandNode
+} from './gpu-command-node';
+export type {
+  GPUCommandNode,
+  GPUCommandNodeProducer,
+  GPUCommandNodeType,
+  GPUComputeCommandNode,
+  GPUCopyCommandNode,
+  GPURenderCommandNode
+} from './gpu-command-node';
+export {
+  getGPUOperationTree,
+  GPUCompositeOperation,
+  isGPUCommandGraphContributor,
+  isGPUOperation
+} from './gpu-operation';
+export type {
+  GPUOperation,
+  GPUOperationConstraints,
+  GPUOperationLike,
+  GPUOperationMetadata,
+  GPUOperationResource,
+  GPUOperationTree,
+  GPUOperationWorkload,
+  GPUProgramOperation
+} from './gpu-operation';
+export {
+  GPUConditionalOperation,
+  GPULoopOperation,
+  isGPUControlFlowOperation
+} from './gpu-control-flow-operation';
+export type {
+  GPUControlFlowLowering,
+  GPUOperationPredicate
+} from './gpu-control-flow-operation';
+export {composite, GPUProgram} from './gpu-program';
+export {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
+export type {GPUProgramScalarFormat, GPUProgramVectorFormat} from './gpu-program-value';
+export {GPUProgramCompiler} from './gpu-program-compiler';
+export type {
+  GPUProgramBindings,
+  GPUProgramCompilation,
+  GPUProgramLoweredNode,
+  GPUProgramLoweringReport
+} from './gpu-program-compiler';
+export {GPUOperationLoweringRegistry} from './gpu-program-lowering';
+export type {
+  GPUOperationLowerer,
+  GPUOperationLoweringContext,
+  GPUOperationLoweringDecision,
+  GPUProgramBackendCapabilities
+} from './gpu-program-lowering';
+export {inspectGPUProgramCompilation} from './gpu-program-inspector';
+export type {GPUProgramCompilationSummary} from './gpu-program-inspector';
+export {validateGPUProgram} from './gpu-program-validation';
+export type {
+  GPUProgramValidationIssue,
+  GPUProgramValidationReport
+} from './gpu-program-validation';
+export {GPUProgramScalarLiteral} from './gpu-semantic-state-operation';
+export {
+  GPUProgramScalarOperation,
+  scalarArithmetic,
+  scalarCompare
+} from './gpu-semantic-scalar-operation';
+export {GPUProgramDotProduct, GPUProgramVectorMADD} from './gpu-semantic-vector-operation';
+export {GPUProgramCSRMatrix, GPUProgramSpMV} from './gpu-semantic-spmv';
+export {createGPUConjugateGradientProgram} from './gpu-conjugate-gradient-program';
