@@ -5,12 +5,16 @@
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {describe, expect, it, vi} from 'vitest';
 
-const testState = vi.hoisted(() => ({
-  device: {info: {shadingLanguage: 'wgsl'}},
-  consumeLegacyCall: true,
-  assemblerDuringInitialization: null as ShaderAssembler | null,
-  finalizeCallCount: 0
-}));
+const testState = vi.hoisted(() => {
+  // Node workers reuse modules; reload ArrowDeck after installing this file's Deck mock.
+  vi.resetModules();
+  return {
+    device: {info: {shadingLanguage: 'wgsl'}},
+    consumeLegacyCall: true,
+    assemblerDuringInitialization: null as ShaderAssembler | null,
+    finalizeCallCount: 0
+  };
+});
 
 vi.mock('@deck.gl/core', () => ({
   Deck: class {
