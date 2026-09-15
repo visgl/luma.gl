@@ -327,40 +327,32 @@ class GPUDataAnalysisExample {
         'float32',
         GROUP_COUNT
       );
-      graph.add(
+      graph.add([
         new GPUReduction({
           id: 'extent',
           input: valuesImport,
           output: extent,
           operation: 'extent'
-        })
-      );
-      graph.add(
+        }),
         new GPUHistogram({
           id: 'histogram',
           input: valuesImport,
           output: histogram,
           ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
-        })
-      );
-      graph.add(
+        }),
         new GPUScan({
           id: 'cumulative-histogram',
           input: histogram,
           output: cumulativeHistogram,
           mode: 'inclusive'
-        })
-      );
-      graph.add(
+        }),
         new GPUGridBinning({
           id: 'grid',
           positions: positionsImport,
           output: grid,
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        })
-      );
-      graph.add(
+        }),
         new GPUGridAggregation({
           id: 'grid-weight-sums',
           positions: positionsImport,
@@ -368,9 +360,7 @@ class GPUDataAnalysisExample {
           output: gridWeightSums,
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        })
-      );
-      graph.add(
+        }),
         new GPUGridAggregation({
           id: 'grid-weight-minimums',
           positions: positionsImport,
@@ -379,9 +369,7 @@ class GPUDataAnalysisExample {
           operation: 'min',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        })
-      );
-      graph.add(
+        }),
         new GPUGridAggregation({
           id: 'grid-weight-maximums',
           positions: positionsImport,
@@ -390,9 +378,7 @@ class GPUDataAnalysisExample {
           operation: 'max',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        })
-      );
-      graph.add(
+        }),
         new GPUGridAggregation({
           id: 'grid-weight-means',
           positions: positionsImport,
@@ -401,26 +387,20 @@ class GPUDataAnalysisExample {
           operation: 'mean',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        })
-      );
-      graph.add(
+        }),
         new GPUScan({
           id: 'cumulative-grid-rows',
           input: grid,
           output: cumulativeGrid,
           mode: 'inclusive',
           segmentFlags: gridSegmentFlags
-        })
-      );
-      graph.add(
+        }),
         new GPUGroupAggregation({
           id: 'group-counts',
           keys: groupKeysImport,
           mask: selectionImport,
           output: groupCounts
-        })
-      );
-      graph.add(
+        }),
         new GPUGroupAggregation({
           id: 'group-means',
           keys: groupKeysImport,
@@ -429,7 +409,7 @@ class GPUDataAnalysisExample {
           output: groupMeans,
           operation: 'mean'
         })
-      );
+      ]);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

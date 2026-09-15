@@ -119,34 +119,28 @@ export class VectorFieldEngine {
       boundary: 'one-sided' as const
     };
     new GPUVectorFieldSampler3D({scalar, vector, resolution: this.resolution}).addToGraph(graph);
-    graph.add(
+    graph.add([
       new GPUFiniteDifference3D({
         id: 'field-gradient',
         ...common,
         operator: 'gradient',
         input: scalar,
         output: gradient
-      })
-    );
-    graph.add(
+      }),
       new GPUFiniteDifference3D({
         id: 'field-laplacian',
         ...common,
         operator: 'laplacian',
         input: scalar,
         output: laplacian
-      })
-    );
-    graph.add(
+      }),
       new GPUFiniteDifference3D({
         id: 'field-divergence',
         ...common,
         operator: 'divergence',
         input: vector,
         output: divergence
-      })
-    );
-    graph.add(
+      }),
       new GPUFiniteDifference3D({
         id: 'field-curl',
         ...common,
@@ -154,7 +148,7 @@ export class VectorFieldEngine {
         input: vector,
         output: curl
       })
-    );
+    ]);
     return graph.compile();
   }
 }

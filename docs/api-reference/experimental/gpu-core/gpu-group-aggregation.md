@@ -87,20 +87,21 @@ uses one graph-owned transient `uint32` count per group and divides after all ch
 ## Usage
 
 ```ts
-graph.add(new GPUGroupAggregation({
-  keys: serviceCodes,
-  mask: visibleRequests,
-  output: requestCountsByService,
-  operation: 'count'
-}));
-
-graph.add(new GPUGroupAggregation({
-  keys: serviceCodes,
-  values: requestLatencies,
-  mask: visibleRequests,
-  output: meanLatencyByService,
-  operation: 'mean'
-}));
+graph.add([
+  new GPUGroupAggregation({
+    keys: serviceCodes,
+    mask: visibleRequests,
+    output: requestCountsByService,
+    operation: 'count'
+  }),
+  new GPUGroupAggregation({
+    keys: serviceCodes,
+    values: requestLatencies,
+    mask: visibleRequests,
+    output: meanLatencyByService,
+    operation: 'mean'
+  })
+]);
 ```
 
 ## Constructor

@@ -256,15 +256,13 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         };
       }
     });
-    graph.add(
+    graph.add([
       new GPUVisibilityWorkflow({
         id: 'scene-graph-visible-rows',
         predicates: [{kind: 'bounds', mask: visibility.view}],
         output: visibleRows.view,
         count: visibleCount.view
-      })
-    );
-    graph.add(
+      }),
       new GPUSceneDrawGeneration({
         id: 'scene-graph-draw-generation',
         scene: source,
@@ -273,9 +271,7 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         requiredCount: requiredCount.view,
         publishedCount: publishedCount.view,
         overflow: drawOverflow.view
-      })
-    );
-    graph.add(
+      }),
       new GPUSceneResourceGroups({
         id: 'scene-graph-resource-groups',
         scene: source,
@@ -290,7 +286,7 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         overflows: groupOverflows.view,
         overflow: groupOverflow.view
       })
-    );
+    ]);
     graph.addComputePass({
       id: 'scene-graph-picking',
       resources: [
