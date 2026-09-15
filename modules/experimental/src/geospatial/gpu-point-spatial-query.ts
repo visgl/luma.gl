@@ -5,12 +5,7 @@
 
 import {type Binding, Buffer} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
@@ -114,7 +109,7 @@ export type GPUPointSpatialQueryProps = {
  * Polygon tests use f32 even/odd fill semantics and include points on a ring boundary; they do not
  * provide a robust-topology or four-state classification result.
  */
-export class GPUPointSpatialQuery implements GPUCommandGraphContributor {
+export class GPUPointSpatialQuery {
   readonly id: string;
   readonly positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
   readonly sourceIds?: GraphDataView<'uint32'>;

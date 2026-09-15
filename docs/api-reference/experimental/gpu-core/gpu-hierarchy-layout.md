@@ -44,7 +44,7 @@ not choose styling or animation.
 ```ts
 import {GPUHierarchyLayout} from '@luma.gl/gpgpu/gpu-core';
 
-new GPUHierarchyLayout({
+graph.add(new GPUHierarchyLayout({
   id: 'process-thread-layout',
   parentStates: processExpansionFlags,
   childStates: threadExpansionFlags,
@@ -54,7 +54,7 @@ new GPUHierarchyLayout({
   expandedChildHeight: 4,
   collapsedChildHeight: 1,
   collapsedParentHeight: 1
-}).addToGraph(graph);
+}));
 ```
 
 Inputs and outputs may be packed `GraphDataView<'uint32'>` values or ordered

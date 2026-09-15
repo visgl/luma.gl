@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -14,7 +15,7 @@ import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
 import {
-  addGPUGridIndexToGraphWithDispatchLimit,
+  getGPUGridIndexCommandNodesWithDispatchLimit,
   getGPUGridIndexDispatchLayout,
   getGPUGridIndexInvocationIndexSource
 } from '../../src/gpu-core/gpu-grid-index-internals';
@@ -333,7 +334,7 @@ it('GPUGridIndex preserves vector chunks and rebuilds after input updates', asyn
     bounds: [0, 0, 2, 2],
     ...importIndexOutputs(graph, outputs, 4, 4)
   });
-  index.addToGraph(graph);
+  graph.add(index);
   const compiled = graph.compile();
 
   encode(device, compiled);
@@ -408,9 +409,16 @@ async function runGridIndex(
     ...importIndexOutputs(graph, outputs, cellCount, capacity)
   });
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    index.addToGraph(graph);
+    graph.add(index);
   } else {
-    addGPUGridIndexToGraphWithDispatchLimit(index, graph, options.maxComputeWorkgroupsPerDimension);
+    addGPUCommandNodes(
+      graph,
+      getGPUGridIndexCommandNodesWithDispatchLimit(
+        index,
+        graph,
+        options.maxComputeWorkgroupsPerDimension
+      )
+    );
   }
   const compiled = graph.compile();
   encode(device, compiled);

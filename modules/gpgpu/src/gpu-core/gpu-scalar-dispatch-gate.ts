@@ -5,11 +5,7 @@
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferHandle} from './gpu-command-graph';
-import {
-  addGPUCommandNodes,
-  createGPUComputeCommandNode,
-  type GPUCommandNode
-} from './gpu-command-node';
+import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
 
 /** Reusable indirect-dispatch gate controlled by one uint32 GPUScalar (zero = disabled). */
@@ -82,10 +78,6 @@ export class GPUScalarDispatchGate {
         }
       })
     ];
-  }
-  /** @deprecated Prefer getUpdateCommandNodes(). */
-  addUpdateToGraph<Parameters>(graph: GPUCommandGraph<Parameters>, id = `${this.id}-update`): void {
-    addGPUCommandNodes(graph, this.getUpdateCommandNodes(graph, id));
   }
   get condition() {
     return {

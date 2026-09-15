@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -57,7 +52,7 @@ export type GPURasterBandMathProps = {
  * Native-format nodata sentinels and source masks are resolved before independent float32
  * calibration. Invalid, nonfinite, or unstable samples remain separate from the output validity.
  */
-export class GPURasterBandMath implements GPUCommandGraphContributor {
+export class GPURasterBandMath {
   readonly id: string;
   readonly width: number;
   readonly height: number;

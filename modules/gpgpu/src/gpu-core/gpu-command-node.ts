@@ -23,6 +23,13 @@ export interface GPUCommandNodeProducer<Parameters = void> {
   getCommandNodes(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[];
 }
 
+/** A concrete command, a leaf primitive, or a recursively composed group of execution nodes. */
+export type GPUNode<Parameters = void> =
+  | GPUCommandNode<Parameters>
+  | GPUCommandNodeProducer<Parameters>
+  | {getNodes(): readonly GPUNode<Parameters>[]}
+  | readonly GPUNode<Parameters>[];
+
 /** Adds one already-constructed execution node to a command graph. */
 export function addGPUCommandNode<Parameters>(
   graph: GPUCommandGraph<Parameters>,

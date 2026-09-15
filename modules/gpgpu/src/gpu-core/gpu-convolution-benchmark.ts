@@ -339,17 +339,19 @@ function makeGPUConvolutionBenchmarkPath(
     length: kernelWidth * kernelHeight
   });
   const output = graph.createDataView(outputHandle, {format: 'float32', length: elementCount});
-  new GPUConvolution({
-    id: `${id}-${strategy}`,
-    input,
-    kernel,
-    output,
-    width,
-    height,
-    kernelWidth,
-    kernelHeight,
-    strategy
-  }).addToGraph(graph);
+  graph.add(
+    new GPUConvolution({
+      id: `${id}-${strategy}`,
+      input,
+      kernel,
+      output,
+      width,
+      height,
+      kernelWidth,
+      kernelHeight,
+      strategy
+    })
+  );
   return {strategy, nodeCount, outputBuffer, compiled: graph.compile()};
 }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -10,7 +11,7 @@ import {
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
 } from './gpu-dispatch-utils';
-import {addGPUScanToGraphWithDispatchLimit, GPUScan} from './gpu-scan';
+import {getGPUScanCommandNodesWithDispatchLimit, GPUScan} from './gpu-scan';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 import {
   createTransientView,
@@ -63,7 +64,7 @@ type BitonicStage = {
  *
  * @remarks
  * The operation is out-of-place. Inputs and outputs are caller-owned graph views, while all
- * implementation scratch is graph-owned. `addToGraph()` only records work; the caller retains
+ * implementation scratch is graph-owned. `getCommandNodes()` only records work; the caller retains
  * control of graph compilation, command encoding, submission, and optional readback.
  */
 export class GPUSort {
@@ -145,21 +146,29 @@ export class GPUSort {
    * Empty inputs add no nodes; one-row inputs add one copy pass. This method does not compile,
    * encode, submit, or read back commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUSortToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUSortCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds one stable sort while propagating an explicit bounded dispatch limit. @internal */
-export function addGPUSortToGraphWithDispatchLimit<Parameters>(
+export function getGPUSortCommandNodesWithDispatchLimit<Parameters>(
   sort: GPUSort,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const view of [sort.keys, sort.values, sort.outputKeys, sort.outputValues]) {
     if (view.buffer.graph !== graph) {
       throw new Error(`${sort.id} views must belong to the target graph`);
@@ -167,11 +176,11 @@ export function addGPUSortToGraphWithDispatchLimit<Parameters>(
   }
 
   if (sort.keys.length === 0) {
-    return;
+    return nodes;
   }
   if (sort.keys.length === 1) {
-    addCopyPairPass(graph, sort);
-    return;
+    nodes.push(...addCopyPairPass(graph, sort));
+    return nodes;
   }
 
   const dispatchLayout = getBoundedDispatchLayout(
@@ -182,10 +191,12 @@ export function addGPUSortToGraphWithDispatchLimit<Parameters>(
   );
 
   if (sort.resolvedAlgorithm === 'bitonic') {
-    addBitonicSort(graph, sort, dispatchLayout, maxComputeWorkgroupsPerDimension);
+    nodes.push(...addBitonicSort(graph, sort, dispatchLayout, maxComputeWorkgroupsPerDimension));
   } else {
-    addRadixSort(graph, sort, dispatchLayout, maxComputeWorkgroupsPerDimension);
+    nodes.push(...addRadixSort(graph, sort, dispatchLayout, maxComputeWorkgroupsPerDimension));
   }
+
+  return nodes;
 }
 
 /** Enforces out-of-place writes and distinct writable destinations. */
@@ -209,7 +220,8 @@ function addCopyPairPass<Parameters>(
   inputValues: GraphDataView<'uint32'> = sort.values,
   identifier = 'copy-pair',
   dispatchLayout: GPUBoundedDispatchLayout = {x: 1, y: 1, z: 1}
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${sort.keys.length}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(inputKeys)}u;
@@ -230,23 +242,27 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   outputKeys[OUTPUT_KEYS_OFFSET + index] = keys[KEYS_OFFSET + index];
   outputValues[OUTPUT_VALUES_OFFSET + index] = values[VALUES_OFFSET + index];
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-${identifier}`,
-    source,
-    resources: [
-      {buffer: inputKeys, usage: 'storage-read'},
-      {buffer: inputValues, usage: 'storage-read'},
-      {buffer: sort.outputKeys, usage: 'storage-write'},
-      {buffer: sort.outputValues, usage: 'storage-write'}
-    ],
-    bindings: {
-      keys: inputKeys,
-      values: inputValues,
-      outputKeys: sort.outputKeys,
-      outputValues: sort.outputValues
-    },
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-${identifier}`,
+      source,
+      resources: [
+        {buffer: inputKeys, usage: 'storage-read'},
+        {buffer: inputValues, usage: 'storage-read'},
+        {buffer: sort.outputKeys, usage: 'storage-write'},
+        {buffer: sort.outputValues, usage: 'storage-write'}
+      ],
+      bindings: {
+        keys: inputKeys,
+        values: inputValues,
+        outputKeys: sort.outputKeys,
+        outputValues: sort.outputValues
+      },
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds padded-index initialization, every bitonic stage, and the final stable gather. */
@@ -255,11 +271,12 @@ function addBitonicSort<Parameters>(
   sort: GPUSort,
   dispatchLayout: GPUBoundedDispatchLayout,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const paddedLength = getNextPowerOfTwo(sort.keys.length);
   if (paddedLength <= BITONIC_WORKGROUP_SIZE) {
-    addLocalBitonicSortPass(graph, sort, paddedLength);
-    return;
+    nodes.push(...addLocalBitonicSortPass(graph, sort, paddedLength));
+    return nodes;
   }
   const paddedDispatchLayout = getBoundedDispatchLayout(
     'GPUSort bitonic',
@@ -279,23 +296,29 @@ function addBitonicSort<Parameters>(
     'uint32',
     paddedLength
   );
-  addBitonicInitializePass(graph, sort, indicesA, paddedLength, paddedDispatchLayout);
+  nodes.push(
+    ...addBitonicInitializePass(graph, sort, indicesA, paddedLength, paddedDispatchLayout)
+  );
 
   let currentIndices = indicesA;
   let nextIndices = indicesB;
   for (const stage of getBitonicStages(paddedLength)) {
-    addBitonicStagePass(
-      graph,
-      sort,
-      currentIndices,
-      nextIndices,
-      paddedLength,
-      stage,
-      paddedDispatchLayout
+    nodes.push(
+      ...addBitonicStagePass(
+        graph,
+        sort,
+        currentIndices,
+        nextIndices,
+        paddedLength,
+        stage,
+        paddedDispatchLayout
+      )
     );
     [currentIndices, nextIndices] = [nextIndices, currentIndices];
   }
-  addBitonicGatherPass(graph, sort, currentIndices, dispatchLayout);
+  nodes.push(...addBitonicGatherPass(graph, sort, currentIndices, dispatchLayout));
+
+  return nodes;
 }
 
 /** Sorts one complete stable bitonic network in workgroup memory with one graph dispatch. */
@@ -303,7 +326,8 @@ function addLocalBitonicSortPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   sort: GPUSort,
   paddedLength: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const descending = sort.direction === 'descending';
   const useSubgroups =
     getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
@@ -339,23 +363,27 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
 ) {
 ${useSubgroups ? getSubgroupLocalBitonicShader() : getPortableLocalBitonicShader()}
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-bitonic-local`,
-    source,
-    resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: sort.values, usage: 'storage-read'},
-      {buffer: sort.outputKeys, usage: 'storage-write'},
-      {buffer: sort.outputValues, usage: 'storage-write'}
-    ],
-    bindings: {
-      keys: sort.keys,
-      values: sort.values,
-      outputKeys: sort.outputKeys,
-      outputValues: sort.outputValues
-    },
-    dispatchLayout: {x: 1, y: 1, z: 1}
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-bitonic-local`,
+      source,
+      resources: [
+        {buffer: sort.keys, usage: 'storage-read'},
+        {buffer: sort.values, usage: 'storage-read'},
+        {buffer: sort.outputKeys, usage: 'storage-write'},
+        {buffer: sort.outputValues, usage: 'storage-write'}
+      ],
+      bindings: {
+        keys: sort.keys,
+        values: sort.values,
+        outputKeys: sort.outputKeys,
+        outputValues: sort.outputValues
+      },
+      dispatchLayout: {x: 1, y: 1, z: 1}
+    })
+  );
+
+  return nodes;
 }
 
 /** Emits the original shared-memory sorting network for CORE WebGPU devices. */
@@ -454,7 +482,8 @@ function addBitonicInitializePass<Parameters>(
   indices: GraphDataView<'uint32'>,
   paddedLength: number,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const INVALID_INDEX: u32 = ${INVALID_INDEX}u;
 const LOGICAL_LENGTH: u32 = ${sort.keys.length}u;
@@ -471,13 +500,17 @@ const INDICES_OFFSET: u32 = ${getViewElementOffset(indices)}u;
     indices[INDICES_OFFSET + index] = select(INVALID_INDEX, index, index < LOGICAL_LENGTH);
   }
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-bitonic-initialize`,
-    source,
-    resources: [{buffer: indices, usage: 'storage-write'}],
-    bindings: {indices},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-bitonic-initialize`,
+      source,
+      resources: [{buffer: indices, usage: 'storage-write'}],
+      bindings: {indices},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds one compare/exchange stage of the stable bitonic sorting network. */
@@ -489,7 +522,8 @@ function addBitonicStagePass<Parameters>(
   paddedLength: number,
   stage: BitonicStage,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const descending = sort.direction === 'descending';
   const source = /* wgsl */ `
 const INVALID_INDEX: u32 = ${INVALID_INDEX}u;
@@ -538,17 +572,21 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
   indicesOut[INDICES_OUT_OFFSET + index] = select(leftIndex, rightIndex, shouldSwap);
   indicesOut[INDICES_OUT_OFFSET + partnerIndex] = select(rightIndex, leftIndex, shouldSwap);
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-bitonic-${stage.blockWidth}-${stage.compareStride}`,
-    source,
-    resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: indicesIn, usage: 'storage-read'},
-      {buffer: indicesOut, usage: 'storage-write'}
-    ],
-    bindings: {keys: sort.keys, indicesIn, indicesOut},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-bitonic-${stage.blockWidth}-${stage.compareStride}`,
+      source,
+      resources: [
+        {buffer: sort.keys, usage: 'storage-read'},
+        {buffer: indicesIn, usage: 'storage-read'},
+        {buffer: indicesOut, usage: 'storage-write'}
+      ],
+      bindings: {keys: sort.keys, indicesIn, indicesOut},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Gathers keys and payloads through the final sorted logical-index permutation. */
@@ -557,7 +595,8 @@ function addBitonicGatherPass<Parameters>(
   sort: GPUSort,
   indices: GraphDataView<'uint32'>,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const LOGICAL_LENGTH: u32 = ${sort.keys.length}u;
 const KEYS_OFFSET: u32 = ${getViewElementOffset(sort.keys)}u;
@@ -581,25 +620,29 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
   outputKeys[OUTPUT_KEYS_OFFSET + index] = keys[KEYS_OFFSET + sourceIndex];
   outputValues[OUTPUT_VALUES_OFFSET + index] = values[VALUES_OFFSET + sourceIndex];
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-bitonic-gather`,
-    source,
-    resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: sort.values, usage: 'storage-read'},
-      {buffer: indices, usage: 'storage-read'},
-      {buffer: sort.outputKeys, usage: 'storage-write'},
-      {buffer: sort.outputValues, usage: 'storage-write'}
-    ],
-    bindings: {
-      keys: sort.keys,
-      values: sort.values,
-      indices,
-      outputKeys: sort.outputKeys,
-      outputValues: sort.outputValues
-    },
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-bitonic-gather`,
+      source,
+      resources: [
+        {buffer: sort.keys, usage: 'storage-read'},
+        {buffer: sort.values, usage: 'storage-read'},
+        {buffer: indices, usage: 'storage-read'},
+        {buffer: sort.outputKeys, usage: 'storage-write'},
+        {buffer: sort.outputValues, usage: 'storage-write'}
+      ],
+      bindings: {
+        keys: sort.keys,
+        values: sort.values,
+        indices,
+        outputKeys: sort.outputKeys,
+        outputValues: sort.outputValues
+      },
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds stable four-bit least-significant-digit histogram, scan, and scatter partitions. */
@@ -608,7 +651,8 @@ function addRadixSort<Parameters>(
   sort: GPUSort,
   dispatchLayout: GPUBoundedDispatchLayout,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const digitCount = Math.ceil(sort.keyBits / RADIX_DIGIT_BITS);
   const workgroupCount = Math.ceil(sort.keys.length / RADIX_WORKGROUP_SIZE);
   const scratchKeys =
@@ -644,38 +688,46 @@ function addRadixSort<Parameters>(
     if (!nextKeys || !nextValues) {
       throw new Error(`${sort.id} radix scratch is missing`);
     }
-    addRadixHistogramPass(
-      graph,
-      sort,
-      currentKeys,
-      histogram,
-      bitOffset,
-      digitBits,
-      workgroupCount,
-      dispatchLayout
+    nodes.push(
+      ...addRadixHistogramPass(
+        graph,
+        sort,
+        currentKeys,
+        histogram,
+        bitOffset,
+        digitBits,
+        workgroupCount,
+        dispatchLayout
+      )
     );
     const scan = new GPUScan({
       id: `${sort.id}-radix-digit-${bitOffset}-scan`,
       input: histogram,
       output: offsets
     });
-    addGPUScanToGraphWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension);
-    addRadixScatterPass(
-      graph,
-      sort,
-      currentKeys,
-      currentValues,
-      offsets,
-      nextKeys,
-      nextValues,
-      bitOffset,
-      digitBits,
-      workgroupCount,
-      dispatchLayout
+    nodes.push(
+      ...getGPUScanCommandNodesWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension)
+    );
+    nodes.push(
+      ...addRadixScatterPass(
+        graph,
+        sort,
+        currentKeys,
+        currentValues,
+        offsets,
+        nextKeys,
+        nextValues,
+        bitOffset,
+        digitBits,
+        workgroupCount,
+        dispatchLayout
+      )
     );
     currentKeys = nextKeys;
     currentValues = nextValues;
   }
+
+  return nodes;
 }
 
 /** Counts one radix digit per workgroup into a digit-major histogram suitable for global scan. */
@@ -688,7 +740,8 @@ function addRadixHistogramPass<Parameters>(
   digitBits: number,
   workgroupCount: number,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const bucketCount = 2 ** digitBits;
   const descending = sort.direction === 'descending';
   const source = /* wgsl */ `
@@ -729,16 +782,20 @@ var<workgroup> digitCounts: array<atomic<u32>, ${bucketCount}>;
       atomicLoad(&digitCounts[localInvocationIndex]);
   }
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-radix-digit-${bitOffset}-histogram`,
-    source,
-    resources: [
-      {buffer: keys, usage: 'storage-read'},
-      {buffer: histogram, usage: 'storage-write'}
-    ],
-    bindings: {keys, histogram},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-radix-digit-${bitOffset}-histogram`,
+      source,
+      resources: [
+        {buffer: keys, usage: 'storage-read'},
+        {buffer: histogram, usage: 'storage-write'}
+      ],
+      bindings: {keys, histogram},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Stably scatters one digit using workgroup ballot masks and digit-major global offsets. */
@@ -754,7 +811,8 @@ function addRadixScatterPass<Parameters>(
   digitBits: number,
   workgroupCount: number,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const bucketCount = 2 ** digitBits;
   const descending = sort.direction === 'descending';
   const source = /* wgsl */ `
@@ -816,19 +874,23 @@ var<workgroup> digitMasks: array<atomic<u32>, ${bucketCount * RADIX_MASK_WORD_CO
   outputKeys[OUTPUT_KEYS_OFFSET + outputIndex] = key;
   outputValues[OUTPUT_VALUES_OFFSET + outputIndex] = values[VALUES_OFFSET + index];
 }`;
-  addComputationPass(graph, {
-    id: `${sort.id}-radix-digit-${bitOffset}-scatter`,
-    source,
-    resources: [
-      {buffer: keys, usage: 'storage-read'},
-      {buffer: values, usage: 'storage-read'},
-      {buffer: offsets, usage: 'storage-read'},
-      {buffer: outputKeys, usage: 'storage-write'},
-      {buffer: outputValues, usage: 'storage-write'}
-    ],
-    bindings: {keys, values, offsets, outputKeys, outputValues},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${sort.id}-radix-digit-${bitOffset}-scatter`,
+      source,
+      resources: [
+        {buffer: keys, usage: 'storage-read'},
+        {buffer: values, usage: 'storage-read'},
+        {buffer: offsets, usage: 'storage-read'},
+        {buffer: outputKeys, usage: 'storage-write'},
+        {buffer: outputValues, usage: 'storage-write'}
+      ],
+      bindings: {keys, values, offsets, outputKeys, outputValues},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns the smallest power of two greater than or equal to `length`. */
@@ -861,39 +923,44 @@ function addComputationPass<GraphParameters>(
     bindings: Record<string, GraphDataView>;
     dispatchLayout: GPUBoundedDispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<GraphParameters>[] {
+  const nodes: GPUCommandNode<GraphParameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<GraphParameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

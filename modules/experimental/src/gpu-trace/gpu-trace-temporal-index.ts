@@ -155,12 +155,14 @@ export class GPUTraceTemporalIndex {
       if (this.stats.batchCount > 0) {
         addTemporalQueryPass(graph, this, candidateFlags);
       }
-      new GPUVisibilityWorkflow({
-        id: `${this.id}-candidates`,
-        predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
-        output: this.output.candidates,
-        count: this.output.candidateCount
-      }).addToGraph(graph);
+      graph.add(
+        new GPUVisibilityWorkflow({
+          id: `${this.id}-candidates`,
+          predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
+          output: this.output.candidates,
+          count: this.output.candidateCount
+        })
+      );
     }
   }
 }
@@ -312,16 +314,18 @@ function addHierarchicalCandidateQuery<Parameters>(
 
   addDispatchInitializationPass(graph, `${index.id}-active-node-dispatch`, activeNodeDispatch);
   addHierarchyNodeQueryPass(graph, index, hierarchy, level, nodeFlags);
-  new GPUVisibilityWorkflow({
-    id: `${index.id}-active-nodes`,
-    predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
-    output: activeNodeIds,
-    count: graph.createDataView(activeNodeDispatch.buffer, {
-      format: 'uint32',
-      length: 1,
-      byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
+  graph.add(
+    new GPUVisibilityWorkflow({
+      id: `${index.id}-active-nodes`,
+      predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
+      output: activeNodeIds,
+      count: graph.createDataView(activeNodeDispatch.buffer, {
+        format: 'uint32',
+        length: 1,
+        byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
+      })
     })
-  }).addToGraph(graph);
+  );
   addClearViewPass(graph, `${index.id}-active-node-counts`, activeNodeCounts);
   addActiveNodeCountPass(
     graph,
@@ -332,11 +336,13 @@ function addHierarchicalCandidateQuery<Parameters>(
     activeNodeDispatch,
     activeNodeCounts
   );
-  new GPUScan({
-    id: `${index.id}-active-node-offsets`,
-    input: activeNodeCounts,
-    output: activeNodeOffsets
-  }).addToGraph(graph);
+  graph.add(
+    new GPUScan({
+      id: `${index.id}-active-node-offsets`,
+      input: activeNodeCounts,
+      output: activeNodeOffsets
+    })
+  );
   addActiveNodeScatterPass(
     graph,
     index,

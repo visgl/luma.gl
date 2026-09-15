@@ -37,7 +37,7 @@ it('GPUScatter scatters fixed-width float rows and ignores invalid destinations'
     new GPUData({buffer: outputBuffer, format: 'float32x3', length: 4, ownsBuffer: false})
   );
 
-  new GPUScatter({source, indices, output}).addToGraph(graph);
+  graph.add(new GPUScatter({source, indices, output}));
   const compiled = graph.compile();
   try {
     const encoder = device.createCommandEncoder({id: 'scatter'});

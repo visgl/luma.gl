@@ -64,9 +64,9 @@ semantic operation types can register an equally explicit backend lowering.
 
 ## Hard boundary
 
-A semantic `GPUOperation` does not expose `addToGraph()`. Operations do not own a `Device`, command encoder, bindings, dispatch dimensions, or command-graph nodes.
+A semantic `GPUOperation` does not expose `getCommandNodes()`. Operations do not own a `Device`, command encoder, bindings, dispatch dimensions, or command-graph nodes.
 
-During migration, `GPUProgram` also accepts existing `GPUCommandGraphContributor` implementations. `GPUProgramCompiler` recognizes those legacy contributors and invokes `addToGraph()` as a temporary backend adapter. New semantic operations without a registered WebGPU lowering are rejected rather than silently acquiring execution responsibilities.
+`GPUProgram` also accepts `GPUProgramPrimitive` objects that construct explicit command nodes against the compiler-supplied graph. There is no graph-mutation compatibility fallback. Semantic operations require a registered backend lowerer.
 
 The intended end state is:
 

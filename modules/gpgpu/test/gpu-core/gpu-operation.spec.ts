@@ -6,7 +6,7 @@ import {describe, expect, it} from 'vitest';
 import {GPUCompositeOperation, type GPUOperation} from '../../src/gpu-core/gpu-operation';
 
 function operation(id: string): GPUOperation {
-  return {id, type: 'test', addToGraph: () => {}};
+  return {id, type: 'test'};
 }
 
 describe('GPU operation IR', () => {

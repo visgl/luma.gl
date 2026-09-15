@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -115,7 +116,10 @@ export class GPUBVHQuery {
   }
 
   /** Adds initialization and level-ordered traversal without submission or readback. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.bvh.nodeMinima,
       this.bvh.nodeMaxima,
@@ -138,11 +142,13 @@ export class GPUBVHQuery {
       'uint32',
       this.nodeCount
     );
-    addInitializePass(graph, this, activeNodes);
+    nodes.push(...addInitializePass(graph, this, activeNodes));
     for (let depth = 0; depth < this.levelCount; depth++) {
-      addTraversalLevelPass(graph, this, activeNodes, depth);
+      nodes.push(...addTraversalLevelPass(graph, this, activeNodes, depth));
     }
-    if (this.outputMask && this.output.length > 0) addOutputMaskPass(graph, this);
+    if (this.outputMask && this.output.length > 0) nodes.push(...addOutputMaskPass(graph, this));
+
+    return nodes;
   }
 }
 
@@ -170,7 +176,8 @@ function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUBVHQuery,
   activeNodes: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const maskBinding = query.outputMask
     ? '@group(0) @binding(4) var<storage, read_write> outputMask: array<u32>;'
     : '';
@@ -225,22 +232,26 @@ ${visitedBinding}
       ? ([{buffer: query.visitedCount, usage: 'storage-write'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: `${query.id}-initialize`,
-    source,
-    resources,
-    bindings: {
-      activeNodes,
-      bvhOverflow: query.bvh.overflow,
-      outputCount: query.count,
-      outputOverflow: query.overflow,
-      ...(query.outputMask ? {outputMask: query.outputMask} : {}),
-      ...(query.visitedCount ? {visitedCount: query.visitedCount} : {})
-    },
-    dispatchCount: Math.ceil(
-      Math.max(query.nodeCount, query.outputMask?.length ?? 0, 1) / BVH_QUERY_WORKGROUP_SIZE
-    )
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-initialize`,
+      source,
+      resources,
+      bindings: {
+        activeNodes,
+        bvhOverflow: query.bvh.overflow,
+        outputCount: query.count,
+        outputOverflow: query.overflow,
+        ...(query.outputMask ? {outputMask: query.outputMask} : {}),
+        ...(query.visitedCount ? {visitedCount: query.visitedCount} : {})
+      },
+      dispatchCount: Math.ceil(
+        Math.max(query.nodeCount, query.outputMask?.length ?? 0, 1) / BVH_QUERY_WORKGROUP_SIZE
+      )
+    })
+  );
+
+  return nodes;
 }
 
 function addTraversalLevelPass<Parameters>(
@@ -248,7 +259,8 @@ function addTraversalLevelPass<Parameters>(
   query: GPUBVHQuery,
   activeNodes: GraphDataView<'uint32'>,
   depth: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const firstNode = 2 ** depth - 1;
   const levelNodeCount = 2 ** depth;
   const leafLevel = depth === query.levelCount - 1;
@@ -299,32 +311,34 @@ fn finite(value: f32) -> bool {
     }
   }
 }`;
-    addComputationPass(graph, {
-      id: `${query.id}-depth-${depth}`,
-      source,
-      resources: [
-        {buffer: activeNodes, usage: 'storage-read-write'},
-        {buffer: query.bvh.nodeMinima, usage: 'storage-read'},
-        {buffer: query.bvh.nodeMaxima, usage: 'storage-read'},
-        {buffer: query.bvh.leafIds, usage: 'storage-read'},
-        {buffer: query.query, usage: 'storage-read'},
-        {buffer: query.output, usage: 'storage-write'},
-        {buffer: query.count, usage: 'storage-read-write'},
-        {buffer: query.overflow, usage: 'storage-read-write'}
-      ],
-      bindings: {
-        activeNodes,
-        nodeMinima: query.bvh.nodeMinima,
-        nodeMaxima: query.bvh.nodeMaxima,
-        leafIds: query.bvh.leafIds,
-        queryValues: query.query,
-        outputIds: query.output,
-        outputCount: query.count,
-        outputOverflow: query.overflow
-      },
-      dispatchCount: Math.ceil(levelNodeCount / BVH_QUERY_WORKGROUP_SIZE)
-    });
-    return;
+    nodes.push(
+      ...addComputationPass(graph, {
+        id: `${query.id}-depth-${depth}`,
+        source,
+        resources: [
+          {buffer: activeNodes, usage: 'storage-read-write'},
+          {buffer: query.bvh.nodeMinima, usage: 'storage-read'},
+          {buffer: query.bvh.nodeMaxima, usage: 'storage-read'},
+          {buffer: query.bvh.leafIds, usage: 'storage-read'},
+          {buffer: query.query, usage: 'storage-read'},
+          {buffer: query.output, usage: 'storage-write'},
+          {buffer: query.count, usage: 'storage-read-write'},
+          {buffer: query.overflow, usage: 'storage-read-write'}
+        ],
+        bindings: {
+          activeNodes,
+          nodeMinima: query.bvh.nodeMinima,
+          nodeMaxima: query.bvh.nodeMaxima,
+          leafIds: query.bvh.leafIds,
+          queryValues: query.query,
+          outputIds: query.output,
+          outputCount: query.count,
+          outputOverflow: query.overflow
+        },
+        dispatchCount: Math.ceil(levelNodeCount / BVH_QUERY_WORKGROUP_SIZE)
+      })
+    );
+    return nodes;
   }
 
   const visitedBinding = query.visitedCount
@@ -371,29 +385,33 @@ fn finite(value: f32) -> bool {
     ${query.visitedCount ? 'atomicAdd(&visitedCount[VISITED_OFFSET], 2u);' : ''}
   }
 }`;
-  addComputationPass(graph, {
-    id: `${query.id}-depth-${depth}`,
-    source,
-    resources: [
-      {buffer: activeNodes, usage: 'storage-read-write'},
-      {buffer: query.bvh.nodeMinima, usage: 'storage-read'},
-      {buffer: query.bvh.nodeMaxima, usage: 'storage-read'},
-      {buffer: query.bvh.nodeChildren, usage: 'storage-read'},
-      {buffer: query.query, usage: 'storage-read'},
-      ...(query.visitedCount
-        ? ([{buffer: query.visitedCount, usage: 'storage-read-write'}] as GraphBufferUse[])
-        : [])
-    ],
-    bindings: {
-      activeNodes,
-      nodeMinima: query.bvh.nodeMinima,
-      nodeMaxima: query.bvh.nodeMaxima,
-      nodeChildren: query.bvh.nodeChildren,
-      queryValues: query.query,
-      ...(query.visitedCount ? {visitedCount: query.visitedCount} : {})
-    },
-    dispatchCount: Math.ceil(levelNodeCount / BVH_QUERY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-depth-${depth}`,
+      source,
+      resources: [
+        {buffer: activeNodes, usage: 'storage-read-write'},
+        {buffer: query.bvh.nodeMinima, usage: 'storage-read'},
+        {buffer: query.bvh.nodeMaxima, usage: 'storage-read'},
+        {buffer: query.bvh.nodeChildren, usage: 'storage-read'},
+        {buffer: query.query, usage: 'storage-read'},
+        ...(query.visitedCount
+          ? ([{buffer: query.visitedCount, usage: 'storage-read-write'}] as GraphBufferUse[])
+          : [])
+      ],
+      bindings: {
+        activeNodes,
+        nodeMinima: query.bvh.nodeMinima,
+        nodeMaxima: query.bvh.nodeMaxima,
+        nodeChildren: query.bvh.nodeChildren,
+        queryValues: query.query,
+        ...(query.visitedCount ? {visitedCount: query.visitedCount} : {})
+      },
+      dispatchCount: Math.ceil(levelNodeCount / BVH_QUERY_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function validateDisjointViews(query: GPUBVHQuery): void {
@@ -426,7 +444,8 @@ function validateDisjointViews(query: GPUBVHQuery): void {
 function addOutputMaskPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUBVHQuery
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const OUTPUT_CAPACITY: u32 = ${query.output.length}u;
 const MASK_LENGTH: u32 = ${query.outputMask!.length}u;
@@ -446,17 +465,21 @@ const MASK_OFFSET: u32 = ${getViewElementOffset(query.outputMask!)}u;
   let objectId = outputIds[OUTPUT_OFFSET + index];
   if (objectId < MASK_LENGTH) { atomicStore(&outputMask[MASK_OFFSET + objectId], 1u); }
 }`;
-  addComputationPass(graph, {
-    id: `${query.id}-output-mask`,
-    source,
-    resources: [
-      {buffer: query.output, usage: 'storage-read'},
-      {buffer: query.count, usage: 'storage-read'},
-      {buffer: query.outputMask!, usage: 'storage-read-write'}
-    ],
-    bindings: {outputIds: query.output, outputCount: query.count, outputMask: query.outputMask!},
-    dispatchCount: Math.ceil(query.output.length / BVH_QUERY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-output-mask`,
+      source,
+      resources: [
+        {buffer: query.output, usage: 'storage-read'},
+        {buffer: query.count, usage: 'storage-read'},
+        {buffer: query.outputMask!, usage: 'storage-read-write'}
+      ],
+      bindings: {outputIds: query.output, outputCount: query.count, outputMask: query.outputMask!},
+      dispatchCount: Math.ceil(query.output.length / BVH_QUERY_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function makeNodePredicate(query: GPUBVHQuery): string {
@@ -515,36 +538,41 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function isPowerOfTwo(value: number): boolean {

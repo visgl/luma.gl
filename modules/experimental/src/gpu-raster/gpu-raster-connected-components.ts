@@ -6,7 +6,6 @@ import {Buffer, type Binding, type BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -66,7 +65,7 @@ const MAXIMUM_ROOT_POINTER_STEPS = 32;
  * Outputs remain caller-owned. An insufficient round budget globally clears all labels and
  * validity so downstream passes cannot consume plausible-looking partial segmentation.
  */
-export class GPURasterConnectedComponents implements GPUCommandGraphContributor {
+export class GPURasterConnectedComponents {
   readonly id: string;
   readonly width: number;
   readonly height: number;

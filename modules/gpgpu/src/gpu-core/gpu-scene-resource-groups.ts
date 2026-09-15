@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from './draw-command-buffer';
@@ -112,7 +113,10 @@ export class GPUSceneResourceGroups {
   }
 
   /** Adds deterministic diagnostic initialization and generated-command classification. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.scene.groupIds,
       this.scene.geometryIds,
@@ -128,15 +132,18 @@ export class GPUSceneResourceGroups {
       format: 'uint32',
       length: this.scene.groupIds.buffer.byteLength / UINT32_BYTE_LENGTH
     });
-    addInitializePass(graph, this);
-    addClassifyPass(graph, this, records);
+    nodes.push(...addInitializePass(graph, this));
+    nodes.push(...addClassifyPass(graph, this, records));
+
+    return nodes;
   }
 }
 
 function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   groups: GPUSceneResourceGroups
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatch = getGPUSceneResourceGroupDispatchLayout(
     groups.groups.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -160,24 +167,29 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(groups.overflow)}u;
   }
   if (groupIndex == 0u) { overflow[OVERFLOW_OFFSET] = 0u; }
 }`;
-  addComputationPass(graph, {
-    id: `${groups.id}-initialize`,
-    source,
-    resources: [
-      {buffer: groups.counts, usage: 'storage-write'},
-      {buffer: groups.overflows, usage: 'storage-write'},
-      {buffer: groups.overflow, usage: 'storage-write'}
-    ],
-    bindings: {counts: groups.counts, overflows: groups.overflows, overflow: groups.overflow},
-    dispatch
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${groups.id}-initialize`,
+      source,
+      resources: [
+        {buffer: groups.counts, usage: 'storage-write'},
+        {buffer: groups.overflows, usage: 'storage-write'},
+        {buffer: groups.overflow, usage: 'storage-write'}
+      ],
+      bindings: {counts: groups.counts, overflows: groups.overflows, overflow: groups.overflow},
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addClassifyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   groups: GPUSceneResourceGroups,
   records: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatch = getGPUSceneResourceGroupDispatchLayout(
     groups.commands.capacity,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -246,25 +258,29 @@ const COMMAND_COUNTS = array<u32, ${groups.groups.length}>(${values(group => gro
   }
   atomicStore(&overflow[OVERFLOW_OFFSET], 1u);
 }`;
-  addComputationPass(graph, {
-    id: `${groups.id}-classify`,
-    source,
-    resources: [
-      {buffer: records, usage: 'storage-read'},
-      {buffer: groups.commands.words, usage: 'storage-read'},
-      {buffer: groups.counts, usage: 'storage-read-write'},
-      {buffer: groups.overflows, usage: 'storage-read-write'},
-      {buffer: groups.overflow, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      records,
-      commands: groups.commands.words,
-      counts: groups.counts,
-      overflows: groups.overflows,
-      overflow: groups.overflow
-    },
-    dispatch
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${groups.id}-classify`,
+      source,
+      resources: [
+        {buffer: records, usage: 'storage-read'},
+        {buffer: groups.commands.words, usage: 'storage-read'},
+        {buffer: groups.counts, usage: 'storage-read-write'},
+        {buffer: groups.overflows, usage: 'storage-read-write'},
+        {buffer: groups.overflow, usage: 'storage-read-write'}
+      ],
+      bindings: {
+        records,
+        commands: groups.commands.words,
+        counts: groups.counts,
+        overflows: groups.overflows,
+        overflow: groups.overflow
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addComputationPass<Parameters>(
@@ -276,36 +292,41 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatch: DispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Plans a bounded 3D dispatch for scene resource-group initialization or classification. @internal */

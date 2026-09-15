@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {GraphVectorView, type GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   doGraphDataViewsOverlap,
@@ -9,7 +10,7 @@ import {
   validatePackedUint32View
 } from './graph-data-view-utils';
 import {
-  addGPUHashIndexBuildBatchesToGraph,
+  getGPUHashIndexBuildBatchesCommandNodes,
   GPU_HASH_INDEX_STATISTICS_LENGTH,
   type GPUHashIndexBuildBatch,
   type GPUHashIndexStats,
@@ -160,7 +161,10 @@ export class GPUBatchHashIndex implements GPUHashIndexView {
   }
 
   /** Adds one shared clear and sequential chunk-local build/finalize passes to a graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       ...this.keys.data,
       ...(this.values?.data ?? []),
@@ -179,7 +183,9 @@ export class GPUBatchHashIndex implements GPUHashIndexView {
       ...(this.validity ? {validity: this.validity.data[chunkIndex]} : {}),
       firstValue: this.firstValues[chunkIndex]
     }));
-    addGPUHashIndexBuildBatchesToGraph(graph, this, batches);
+    nodes.push(...getGPUHashIndexBuildBatchesCommandNodes(graph, this, batches));
+
+    return nodes;
   }
 }
 

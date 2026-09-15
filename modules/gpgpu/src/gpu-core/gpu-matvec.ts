@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -57,55 +58,62 @@ export class GPUMatVec {
       throw new Error(`${this.id} output must use a separate buffer`);
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.matrix, this.vector, this.output]) {
       if (view.buffer.graph !== graph)
         throw new Error(`${this.id} views must belong to the target graph`);
     }
-    if (this.rows === 0) return;
+    if (this.rows === 0) return nodes;
 
     const source = makeShaderSource(this);
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUMatVec',
-        commandCount: 1,
-        maximumWorkgroupCount: this.rows,
-        maximumInvocationCount: this.rows * WORKGROUP_SIZE,
-        readByteLength: (this.matrix.length + this.vector.length) * 4,
-        writeByteLength: this.output.length * 4
-      },
-      resources: [
-        {buffer: this.matrix, usage: 'storage-read'},
-        {buffer: this.vector, usage: 'storage-read'},
-        {buffer: this.output, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 0},
-              {name: 'vectorValues', type: 'read-only-storage', group: 0, location: 1},
-              {name: 'outputValues', type: 'storage', group: 0, location: 2}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {
-              matrixValues: getViewBinding(this.matrix, getBuffer),
-              vectorValues: getViewBinding(this.vector, getBuffer),
-              outputValues: getViewBinding(this.output, getBuffer)
-            };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, this.rows, 1, 1);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: 'GPUMatVec',
+          commandCount: 1,
+          maximumWorkgroupCount: this.rows,
+          maximumInvocationCount: this.rows * WORKGROUP_SIZE,
+          readByteLength: (this.matrix.length + this.vector.length) * 4,
+          writeByteLength: this.output.length * 4
+        },
+        resources: [
+          {buffer: this.matrix, usage: 'storage-read'},
+          {buffer: this.vector, usage: 'storage-read'},
+          {buffer: this.output, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 0},
+                {name: 'vectorValues', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'outputValues', type: 'storage', group: 0, location: 2}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {
+                matrixValues: getViewBinding(this.matrix, getBuffer),
+                vectorValues: getViewBinding(this.vector, getBuffer),
+                outputValues: getViewBinding(this.output, getBuffer)
+              };
+              computation.setBindings(bindings);
+              computation.dispatch(computePass, this.rows, 1, 1);
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

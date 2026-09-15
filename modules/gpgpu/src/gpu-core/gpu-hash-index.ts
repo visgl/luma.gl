@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -161,7 +162,10 @@ export class GPUHashIndex implements GPUHashIndexView {
   }
 
   /** Adds initialization, insertion, and deterministic value finalization to a command graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.keys,
       ...(this.values ? [this.values] : []),
@@ -186,25 +190,28 @@ export class GPUHashIndex implements GPUHashIndexView {
       firstValue: this.firstValue,
       firstSourceRow: 0
     };
-    addBuildInitializePass(graph, this, sourceRows);
-    if (this.keys.length > 0) addBuildPass(graph, this, sourceRows, batch);
-    addBuildFinalizePass(graph, this, sourceRows, batch);
+    nodes.push(...addBuildInitializePass(graph, this, sourceRows));
+    if (this.keys.length > 0) nodes.push(...addBuildPass(graph, this, sourceRows, batch));
+    nodes.push(...addBuildFinalizePass(graph, this, sourceRows, batch));
+
+    return nodes;
   }
 }
 
 /** Rebuilds one shared index from ordered source chunks without concatenating their buffers. @internal */
-export function addGPUHashIndexBuildBatchesToGraph<Parameters>(
+export function getGPUHashIndexBuildBatchesCommandNodes<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   index: GPUHashIndexBuildTarget,
   batches: readonly GPUHashIndexBuildBatch[]
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const sourceRows = createTransientView(
     graph,
     `${index.id}-source-rows`,
     'uint32',
     index.tableKeys.length
   );
-  addBuildInitializePass(graph, index, sourceRows);
+  nodes.push(...addBuildInitializePass(graph, index, sourceRows));
 
   let firstSourceRow = 0;
   for (const [batchIndex, batch] of batches.entries()) {
@@ -214,11 +221,13 @@ export function addGPUHashIndexBuildBatchesToGraph<Parameters>(
         id: `${index.id}-batch-${batchIndex}`,
         firstSourceRow
       };
-      addBuildPass(graph, index, sourceRows, pass);
-      addBuildFinalizePass(graph, index, sourceRows, pass);
+      nodes.push(...addBuildPass(graph, index, sourceRows, pass));
+      nodes.push(...addBuildFinalizePass(graph, index, sourceRows, pass));
     }
     firstSourceRow += batch.keys.length;
   }
+
+  return nodes;
 }
 
 /** Properties for one packed hash-index lookup batch. */
@@ -295,7 +304,10 @@ export class GPUHashIndexQuery {
   }
 
   /** Adds statistics initialization and one bounded lookup pass without submission or readback. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.index.tableKeys,
       this.index.tableValues,
@@ -308,8 +320,10 @@ export class GPUHashIndexQuery {
     if (views.some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
-    addQueryInitializePass(graph, this);
-    if (this.keys.length > 0) addQueryPass(graph, this);
+    nodes.push(...addQueryInitializePass(graph, this));
+    if (this.keys.length > 0) nodes.push(...addQueryPass(graph, this));
+
+    return nodes;
   }
 }
 
@@ -317,7 +331,8 @@ function addBuildInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   index: GPUHashIndexBuildTarget,
   sourceRows: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const layout = getDispatchLayout(
     Math.max(index.tableKeys.length, GPU_HASH_INDEX_STATISTICS_LENGTH),
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -349,23 +364,27 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(index.statistics)}u;
     statistics[STATISTICS_OFFSET + elementIndex] = 0u;
   }
 }`;
-  addComputationPass(graph, {
-    id: `${index.id}-initialize`,
-    source,
-    resources: [
-      {buffer: index.tableKeys, usage: 'storage-write'},
-      {buffer: index.tableValues, usage: 'storage-write'},
-      {buffer: sourceRows, usage: 'storage-write'},
-      {buffer: index.statistics, usage: 'storage-write'}
-    ],
-    bindings: {
-      tableKeys: index.tableKeys,
-      tableValues: index.tableValues,
-      sourceRows,
-      statistics: index.statistics
-    },
-    dispatchSize: layout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${index.id}-initialize`,
+      source,
+      resources: [
+        {buffer: index.tableKeys, usage: 'storage-write'},
+        {buffer: index.tableValues, usage: 'storage-write'},
+        {buffer: sourceRows, usage: 'storage-write'},
+        {buffer: index.statistics, usage: 'storage-write'}
+      ],
+      bindings: {
+        tableKeys: index.tableKeys,
+        tableValues: index.tableValues,
+        sourceRows,
+        statistics: index.statistics
+      },
+      dispatchSize: layout
+    })
+  );
+
+  return nodes;
 }
 
 function addBuildPass<Parameters>(
@@ -373,7 +392,8 @@ function addBuildPass<Parameters>(
   index: GPUHashIndexBuildTarget,
   sourceRows: GraphDataView<'uint32'>,
   batch: GPUHashIndexBuildPass
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const layout = getDispatchLayout(
     batch.keys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -465,27 +485,31 @@ fn hashKey(key: u32) -> u32 {
     atomicAdd(&statistics[STATISTICS_OFFSET + 2u], 1u);
   }
 }`;
-  addComputationPass(graph, {
-    id: `${batch.id}-build`,
-    source,
-    resources: [
-      {buffer: batch.keys, usage: 'storage-read'},
-      ...(batch.validity
-        ? ([{buffer: batch.validity, usage: 'storage-read'}] as GraphBufferUse[])
-        : []),
-      {buffer: index.tableKeys, usage: 'storage-read-write'},
-      {buffer: sourceRows, usage: 'storage-read-write'},
-      {buffer: index.statistics, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      inputKeys: batch.keys,
-      ...(batch.validity ? {inputValidity: batch.validity} : {}),
-      tableKeys: index.tableKeys,
-      sourceRows,
-      statistics: index.statistics
-    },
-    dispatchSize: layout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${batch.id}-build`,
+      source,
+      resources: [
+        {buffer: batch.keys, usage: 'storage-read'},
+        ...(batch.validity
+          ? ([{buffer: batch.validity, usage: 'storage-read'}] as GraphBufferUse[])
+          : []),
+        {buffer: index.tableKeys, usage: 'storage-read-write'},
+        {buffer: sourceRows, usage: 'storage-read-write'},
+        {buffer: index.statistics, usage: 'storage-read-write'}
+      ],
+      bindings: {
+        inputKeys: batch.keys,
+        ...(batch.validity ? {inputValidity: batch.validity} : {}),
+        tableKeys: index.tableKeys,
+        sourceRows,
+        statistics: index.statistics
+      },
+      dispatchSize: layout
+    })
+  );
+
+  return nodes;
 }
 
 function addBuildFinalizePass<Parameters>(
@@ -493,7 +517,8 @@ function addBuildFinalizePass<Parameters>(
   index: GPUHashIndexBuildTarget,
   sourceRows: GraphDataView<'uint32'>,
   batch: GPUHashIndexBuildPass
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const layout = getDispatchLayout(
     index.tableKeys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -530,31 +555,36 @@ ${valueBinding}
   let localSourceRow = sourceRow - FIRST_SOURCE_ROW;
   tableValues[TABLE_VALUES_OFFSET + slot] = ${valueExpression};
 }`;
-  addComputationPass(graph, {
-    id: `${batch.id}-finalize`,
-    source,
-    resources: [
-      {buffer: index.tableKeys, usage: 'storage-read'},
-      {buffer: sourceRows, usage: 'storage-read'},
-      {buffer: index.tableValues, usage: 'storage-write'},
-      ...(hasExplicitValues
-        ? ([{buffer: batch.values!, usage: 'storage-read'}] as GraphBufferUse[])
-        : [])
-    ],
-    bindings: {
-      tableKeys: index.tableKeys,
-      sourceRows,
-      tableValues: index.tableValues,
-      ...(hasExplicitValues ? {inputValues: batch.values!} : {})
-    },
-    dispatchSize: layout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${batch.id}-finalize`,
+      source,
+      resources: [
+        {buffer: index.tableKeys, usage: 'storage-read'},
+        {buffer: sourceRows, usage: 'storage-read'},
+        {buffer: index.tableValues, usage: 'storage-write'},
+        ...(hasExplicitValues
+          ? ([{buffer: batch.values!, usage: 'storage-read'}] as GraphBufferUse[])
+          : [])
+      ],
+      bindings: {
+        tableKeys: index.tableKeys,
+        sourceRows,
+        tableValues: index.tableValues,
+        ...(hasExplicitValues ? {inputValues: batch.values!} : {})
+      },
+      dispatchSize: layout
+    })
+  );
+
+  return nodes;
 }
 
 function addQueryInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUHashIndexQuery
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const STATISTICS_OFFSET: u32 = ${getViewElementOffset(query.statistics)}u;
 @group(0) @binding(0) var<storage, read_write> statistics: array<u32>;
@@ -565,19 +595,24 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(query.statistics)}u;
     statistics[STATISTICS_OFFSET + globalId.x] = 0u;
   }
 }`;
-  addComputationPass(graph, {
-    id: `${query.id}-initialize`,
-    source,
-    resources: [{buffer: query.statistics, usage: 'storage-write'}],
-    bindings: {statistics: query.statistics},
-    dispatchSize: {x: 1, y: 1, z: 1}
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-initialize`,
+      source,
+      resources: [{buffer: query.statistics, usage: 'storage-write'}],
+      bindings: {statistics: query.statistics},
+      dispatchSize: {x: 1, y: 1, z: 1}
+    })
+  );
+
+  return nodes;
 }
 
 function addQueryPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUHashIndexQuery
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const layout = getDispatchLayout(
     query.keys.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -642,29 +677,33 @@ fn hashKey(key: u32) -> u32 {
   atomicAdd(&statistics[STATISTICS_OFFSET + 2u], probes);
   atomicMax(&statistics[STATISTICS_OFFSET + 3u], probes);
 }`;
-  addComputationPass(graph, {
-    id: `${query.id}-lookup`,
-    source,
-    resources: [
-      {buffer: query.keys, usage: 'storage-read'},
-      {buffer: query.index.tableKeys, usage: 'storage-read'},
-      {buffer: query.index.tableValues, usage: 'storage-read'},
-      {buffer: query.values, usage: 'storage-write'},
-      {buffer: query.found, usage: 'storage-write'},
-      {buffer: query.probes, usage: 'storage-write'},
-      {buffer: query.statistics, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      queryKeys: query.keys,
-      tableKeys: query.index.tableKeys,
-      tableValues: query.index.tableValues,
-      outputValues: query.values,
-      outputFound: query.found,
-      outputProbes: query.probes,
-      statistics: query.statistics
-    },
-    dispatchSize: layout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-lookup`,
+      source,
+      resources: [
+        {buffer: query.keys, usage: 'storage-read'},
+        {buffer: query.index.tableKeys, usage: 'storage-read'},
+        {buffer: query.index.tableValues, usage: 'storage-read'},
+        {buffer: query.values, usage: 'storage-write'},
+        {buffer: query.found, usage: 'storage-write'},
+        {buffer: query.probes, usage: 'storage-write'},
+        {buffer: query.statistics, usage: 'storage-read-write'}
+      ],
+      bindings: {
+        queryKeys: query.keys,
+        tableKeys: query.index.tableKeys,
+        tableValues: query.index.tableValues,
+        outputValues: query.values,
+        outputFound: query.found,
+        outputProbes: query.probes,
+        statistics: query.statistics
+      },
+      dispatchSize: layout
+    })
+  );
+
+  return nodes;
 }
 
 function validateProbeCount(id: string, probes: number, capacity: number, rows: number): void {
@@ -722,39 +761,44 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchSize: DispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchSize.x,
-            props.dispatchSize.y,
-            props.dispatchSize.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchSize.x,
+              props.dispatchSize.y,
+              props.dispatchSize.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

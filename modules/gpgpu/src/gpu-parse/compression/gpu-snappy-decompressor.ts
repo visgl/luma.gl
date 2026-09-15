@@ -33,14 +33,16 @@ export class GPUSnappyDecompressor {
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const props = this.props;
-    new GPULZByteDecompressor({
-      id: props.id,
-      input: props.input,
-      descriptors: props.descriptors,
-      output: props.output,
-      inputByteLength: props.compressedByteLength,
-      outputByteLength: props.outputByteLength,
-      descriptorCount: props.descriptorCount
-    }).addToGraph(graph);
+    graph.add(
+      new GPULZByteDecompressor({
+        id: props.id,
+        input: props.input,
+        descriptors: props.descriptors,
+        output: props.output,
+        inputByteLength: props.compressedByteLength,
+        outputByteLength: props.outputByteLength,
+        descriptorCount: props.descriptorCount
+      })
+    );
   }
 }

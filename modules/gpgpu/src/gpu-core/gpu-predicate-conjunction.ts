@@ -5,11 +5,7 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph} from './gpu-command-graph';
-import {
-  addGPUCommandNodes,
-  createGPUComputeCommandNode,
-  type GPUCommandNode
-} from './gpu-command-node';
+import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {
   GPUScalar,
   getGPUScalarWGSLLoad,
@@ -71,9 +67,5 @@ export class GPUPredicateConjunction {
         }
       })
     ];
-  }
-  /** @deprecated Prefer getCommandNodes(). */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUCommandNodes(graph, this.getCommandNodes(graph));
   }
 }

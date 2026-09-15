@@ -165,7 +165,7 @@ const output = graph.importBuffer(
 const values = graph.createDataView(input, {format: 'uint32', length});
 const prefixes = graph.createDataView(output, {format: 'uint32', length});
 
-new GPUScan({id: 'scan', input: values, output: prefixes}).addToGraph(graph);
+graph.add(new GPUScan({id: 'scan', input: values, output: prefixes}));
 
 const compiledGraph = graph.compile();
 const commandEncoder = device.createCommandEncoder();

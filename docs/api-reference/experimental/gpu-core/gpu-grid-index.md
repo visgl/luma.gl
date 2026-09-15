@@ -90,14 +90,14 @@ const index = new GPUGridIndex({
   overflow
 });
 
-index.addToGraph(graph);
+graph.add(index);
 ```
 
 Three-dimensional positions use `float32x3`, a three-component `gridSize`, and minima followed by
 maxima in `bounds`:
 
 ```ts
-new GPUGridIndex({
+graph.add(new GPUGridIndex({
   positions: particlePositions,
   gridSize: [32, 16, 32],
   bounds: [-100, -50, -100, 100, 50, 100],
@@ -105,7 +105,7 @@ new GPUGridIndex({
   objectIds,
   count,
   overflow
-}).addToGraph(graph);
+}));
 ```
 
 `cellOffsets.length` must equal `width * height + 1` or `width * height * depth + 1`.

@@ -86,11 +86,11 @@ import.
 
 ## Extension libraries
 
-Small algorithm libraries can implement the structural `GPUCommandGraphContributor` interface:
+Small algorithm libraries can implement the structural `GPUProgramPrimitive` interface:
 
 ```ts
-class GPUAlgorithm implements GPUCommandGraphContributor {
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+class GPUAlgorithm implements GPUProgramPrimitive {
+  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
     const output = createTransientView(
       graph,
       'algorithm-output',
@@ -98,16 +98,24 @@ class GPUAlgorithm implements GPUCommandGraphContributor {
       outputCapacity,
       Buffer.STORAGE | Buffer.INDIRECT
     );
-    // Declare compute, render, or copy nodes that use output.
+    // Return compute, render, or copy nodes that use output.
+    return [createGPUComputeCommandNode({id: 'algorithm', resources: [{buffer: output, usage: 'storage-write'}], compile: compileAlgorithm})];
   }
 }
 
-new GPUAlgorithm().addToGraph(graph);
+graph.add(new GPUAlgorithm());
 ```
 
-A contributor only declares resources and nodes. It does not compile the graph, encode commands,
+`graph.add(node)` accepts command nodes, leaf primitives, groups exposing `getNodes()`, and arrays.
+Groups return child primitives or nested groups without receiving a graph. The graph recursively
+expands them in depth-first order and calls `getCommandNodes(graph)` on leaves before scheduling
+their compute, render, and copy nodes. `GPUNode<Parameters>` describes this structural input. It rejects additions after compilation, before invoking the primitive.
+Use `getCommandNodes(graph)` directly when you need to inspect or transform nodes before scheduling
+them with `addGPUCommandNodes(graph, nodes)`.
+
+A primitive only declares resources and constructs nodes. It does not compile the graph, encode commands,
 submit work, or read results back. This keeps ownership and scheduling with the application and
-allows independently authored contributors to compose without a runtime registry.
+allows independently authored primitives to compose without a runtime registry.
 
 The exported `createTransientView()` helper creates packed, graph-owned typed storage for
 fixed-width `VertexFormat` values. Variable-length `vertex-list<...>` and `value-list<...>` formats
@@ -197,7 +205,7 @@ graph.addComputePass({
 ```
 
 Do not work around this check by importing the same writable physical allocation under separate
-IDs. If two independently authored contributors need it, pass them the same handle or typed view.
+IDs. If two independently authored primitives need it, pass them the same handle or typed view.
 When one shader needs distinct input and output bindings in a shared allocation, their aligned
 binding ranges must not overlap; otherwise expose the shared range through one read-write binding.
 Validation never destroys caller-owned imports; after a rejected override, the caller can retry
@@ -638,7 +646,7 @@ graph.addComputePass({
 ```
 
 Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph
-contract: `primitive.addToGraph(graph)` contributes compute nodes but does not compile, submit, or
+contract: `primitive.getCommandNodes(graph)` contributes compute nodes but does not compile, submit, or
 read back the graph on the application's behalf.
 
 ### `addRenderPass(node)`

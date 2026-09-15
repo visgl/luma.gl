@@ -84,7 +84,7 @@ async function runOperator(
     spacing: [DX, DY],
     operator
   });
-  difference.addToGraph(graph);
+  graph.add(difference);
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: `${operator}-test`});

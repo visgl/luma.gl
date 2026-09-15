@@ -44,6 +44,7 @@ import {
   GraphTextureView,
   GraphVectorView
 } from './gpu-command-graph-types';
+import {addGPUCommandNode, addGPUCommandNodes, type GPUNode} from './gpu-command-node';
 import type {GPUCommandGraphAutotuner} from './gpu-command-graph-autotuner';
 
 import type {
@@ -133,11 +134,6 @@ export type {
   GraphTextureUse,
   GraphTextureViewProps
 } from './gpu-command-graph-types';
-
-/** A reusable algorithm or workflow that contributes nodes to a command graph. */
-export interface GPUCommandGraphContributor {
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void;
-}
 
 /** Per-submission limits for a resumable command-graph execution. */
 export type GPUCommandGraphExecutionBudget = {
@@ -857,6 +853,20 @@ export class GPUCommandGraph<Parameters = void> {
     this.assertTexture(texture);
     const normalizedProps = normalizeGraphTextureView(texture, props);
     return new GraphTextureView(texture, normalizedProps);
+  }
+
+  /** Expands groups and primitives, scheduling concrete command nodes in depth-first order. */
+  add(node: GPUNode<Parameters>): void {
+    this.assertMutable();
+    if ('getNodes' in node) {
+      for (const child of node.getNodes()) this.add(child);
+    } else if ('getCommandNodes' in node) {
+      addGPUCommandNodes(this, node.getCommandNodes(this));
+    } else if ('type' in node) {
+      addGPUCommandNode(this, node);
+    } else {
+      for (const child of node) this.add(child);
+    }
   }
 
   /**

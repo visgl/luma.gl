@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -100,7 +101,10 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const resources = [
       {name: 'inputValues', view: this.input, usage: 'storage-read' as const},
       ...(this.inputB
@@ -115,7 +119,7 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     if (resources.some(resource => resource.view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
-    if (this.output.length === 0) return;
+    if (this.output.length === 0) return nodes;
 
     const dispatchLayout = getBoundedDispatchLayout(
       'GPUElementwise',
@@ -125,45 +129,56 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     );
     const source = makeShaderSource(this, dispatchLayout);
 
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUElementwise',
-        commandCount: 1,
-        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-        maximumInvocationCount:
-          dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * WORKGROUP_SIZE,
-        readByteLength:
-          this.input.length * 4 * (1 + Number(Boolean(this.inputB)) + Number(Boolean(this.inputC))),
-        writeByteLength: this.output.length * 4
-      },
-      resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: resources.map((resource, location) => ({
-              name: resource.name,
-              type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const resource of resources) {
-              bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: 'GPUElementwise',
+          commandCount: 1,
+          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+          maximumInvocationCount:
+            dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * WORKGROUP_SIZE,
+          readByteLength:
+            this.input.length *
+            4 *
+            (1 + Number(Boolean(this.inputB)) + Number(Boolean(this.inputC))),
+          writeByteLength: this.output.length * 4
+        },
+        resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: resources.map((resource, location) => ({
+                name: resource.name,
+                type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+                group: 0,
+                location
+              }))
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {};
+              for (const resource of resources) {
+                bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+              }
+              computation.setBindings(bindings);
+              computation.dispatch(
+                computePass,
+                dispatchLayout.x,
+                dispatchLayout.y,
+                dispatchLayout.z
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

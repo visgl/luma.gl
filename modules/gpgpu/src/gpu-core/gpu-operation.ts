@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraphContributor} from './gpu-command-graph';
+import type {GPUCommandNode, GPUNode} from './gpu-command-node';
+import type {GPUCommandGraph} from './gpu-command-graph';
+
+export interface GPUProgramPrimitive {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[];
+}
 
 export type GPUOperationResource = {
   name: string;
@@ -23,8 +30,7 @@ export type GPUOperationMetadata = {
  * Semantic unit in a GPUProgram.
  *
  * Operations describe intent and contain no execution-graph mutation API. Backends lower them
- * through GPUProgramCompiler. Legacy GPUCommandGraphContributor objects remain accepted by the
- * compiler only as a migration bridge while existing algorithms acquire semantic operation forms.
+ * through GPUProgramCompiler. Concrete primitives construct execution nodes explicitly.
  */
 export interface GPUOperation {
   readonly id: string;
@@ -32,8 +38,11 @@ export interface GPUOperation {
   readonly metadata?: GPUOperationMetadata;
 }
 
-/** Transitional input accepted by GPUProgram while existing algorithms migrate to GPUOperation. */
-export type GPUProgramOperation = GPUOperation | GPUCommandGraphContributor;
+/** Semantic operations and concrete execution primitives accepted by GPUProgram. */
+export type GPUProgramOperation =
+  | GPUOperation
+  | GPUProgramPrimitive
+  | {getNodes<Parameters>(): readonly GPUNode<Parameters>[]};
 export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
@@ -98,14 +107,14 @@ export function getGPUOperationTree(operation: GPUProgramOperation): GPUOperatio
     });
   }
   return Object.freeze({
-    id: operation.constructor?.name ?? 'gpu-command-graph-contributor',
-    type: 'legacy-contributor'
+    id: operation.constructor?.name ?? 'gpu-command-node-producer',
+    type: 'command-node-producer'
   });
 }
 
-/** @internal Migration guard for existing addToGraph-based algorithms. */
-export function isGPUCommandGraphContributor(
+/** Identifies concrete execution primitives. */
+export function isGPUCommandNodeProducer(
   operation: GPUProgramOperation
-): operation is GPUCommandGraphContributor {
-  return typeof (operation as GPUCommandGraphContributor).addToGraph === 'function';
+): operation is GPUProgramPrimitive {
+  return typeof (operation as GPUProgramPrimitive).getCommandNodes === 'function';
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -13,7 +14,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUVisibilityWorkflowToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
+import {getGPUVisibilityWorkflowCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';
 
 it('GPUVisibilityWorkflow composes predicates and publishes indirect-ready results', async () => {
   const device = await getWebGPUTestDevice();
@@ -97,7 +98,7 @@ it('GPUVisibilityWorkflow composes predicates and publishes indirect-ready resul
     count,
     firstSourceIndex: 40
   });
-  workflow.addToGraph(graph);
+  graph.add(workflow);
   const compiled = graph.compile();
 
   await encodeAndSubmit(device, compiled, 'visibility-first');
@@ -200,7 +201,10 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
     count: importView('count', countBuffer, 1),
     firstSourceIndex
   });
-  addGPUVisibilityWorkflowToGraphWithDispatchLimit(workflow, graph, 2);
+  addGPUCommandNodes(
+    graph,
+    getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(workflow, graph, 2)
+  );
   const compiled = graph.compile();
   const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
 
@@ -275,11 +279,13 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  new GPUVisibilityWorkflow({
-    predicates: [{kind: 'bounds', mask}],
-    output,
-    count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-  }).addToGraph(graph);
+  graph.add(
+    new GPUVisibilityWorkflow({
+      predicates: [{kind: 'bounds', mask}],
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled, 'chunked-visibility');
 

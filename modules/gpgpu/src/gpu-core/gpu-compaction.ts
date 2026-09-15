@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {
@@ -9,7 +10,7 @@ import {
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
 } from './gpu-dispatch-utils';
-import {addGPUScanToGraphWithDispatchLimit, GPUScan} from './gpu-scan';
+import {getGPUScanCommandNodesWithDispatchLimit, GPUScan} from './gpu-scan';
 import {
   createTransientVectorView,
   createTransientView,
@@ -102,21 +103,29 @@ export class GPUCompaction {
    * Empty input adds only a pass that writes a zero count. This method does not submit or read back
    * commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUCompactionToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUCompactionCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds stable scan and scatter passes with an explicit dispatch limit. @internal */
-export function addGPUCompactionToGraphWithDispatchLimit<Parameters>(
+export function getGPUCompactionCommandNodesWithDispatchLimit<Parameters>(
   compaction: GPUCompaction,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const view of [
     ...getCompactionChunks(compaction.input),
     ...getCompactionChunks(compaction.flags),
@@ -129,8 +138,8 @@ export function addGPUCompactionToGraphWithDispatchLimit<Parameters>(
   }
 
   if (compaction.input.length === 0) {
-    addClearCountPass(graph, compaction.id, compaction.count);
-    return;
+    nodes.push(...addClearCountPass(graph, compaction.id, compaction.count));
+    return nodes;
   }
 
   const offsets =
@@ -142,17 +151,23 @@ export function addGPUCompactionToGraphWithDispatchLimit<Parameters>(
     input: compaction.flags,
     output: offsets
   });
-  addGPUScanToGraphWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension);
-  addScatterPasses(
-    graph,
-    compaction.id,
-    compaction.input,
-    compaction.flags,
-    offsets,
-    compaction.output,
-    compaction.count,
-    maxComputeWorkgroupsPerDimension
+  nodes.push(
+    ...getGPUScanCommandNodesWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension)
   );
+  nodes.push(
+    ...addScatterPasses(
+      graph,
+      compaction.id,
+      compaction.input,
+      compaction.flags,
+      offsets,
+      compaction.output,
+      compaction.count,
+      maxComputeWorkgroupsPerDimension
+    )
+  );
+
+  return nodes;
 }
 
 /** Writes the required zero count for an empty input. */
@@ -160,30 +175,35 @@ function addClearCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   count: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear-count`;
-  graph.addComputePass({
-    id: passId,
-    resources: [{buffer: count, usage: 'storage-write'}],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: passId,
-        source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: passId,
+      resources: [{buffer: count, usage: 'storage-write'}],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: passId,
+          source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
 @group(0) @binding(0) var<storage, read_write> outputCount: array<u32>;
 @compute @workgroup_size(1) fn main() { outputCount[COUNT_OFFSET] = 0u; }`,
-        shaderLayout: {
-          bindings: [{name: 'outputCount', type: 'storage', group: 0, location: 0}]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings({outputCount: getViewBinding(count, getBuffer)});
-          computation.dispatch(computePass, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+          shaderLayout: {
+            bindings: [{name: 'outputCount', type: 'storage', group: 0, location: 0}]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({outputCount: getViewBinding(count, getBuffer)});
+            computation.dispatch(computePass, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Routes every non-empty input chunk through each non-empty logical output range. */
@@ -196,7 +216,8 @@ function addScatterPasses<Parameters>(
   output: GPUCompactionInput,
   count: GraphDataView<'uint32'>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const inputChunks = getCompactionChunks(input);
   const flagChunks = getCompactionChunks(flags);
   const offsetChunks = getCompactionChunks(offsets);
@@ -219,28 +240,32 @@ function addScatterPasses<Parameters>(
       for (const inputChunkIndex of inputChunkIndices) {
         const writesCount =
           inputChunkIndex === countInputChunkIndex && outputChunkIndex === countOutputChunkIndex;
-        addScatterPass(graph, {
-          id: isVector
-            ? `${id}-scatter-input-${inputChunkIndex}-output-${outputChunkIndex}`
-            : `${id}-scatter`,
-          input: inputChunks[inputChunkIndex],
-          flags: flagChunks[inputChunkIndex],
-          offsets: offsetChunks[inputChunkIndex],
-          output: outputChunk,
-          outputStart,
-          outputEnd,
-          count: writesCount ? count : undefined,
-          dispatchLayout: getBoundedDispatchLayout(
-            'GPUCompaction',
-            inputChunks[inputChunkIndex].length,
-            COMPACTION_WORKGROUP_SIZE,
-            maxComputeWorkgroupsPerDimension
-          )
-        });
+        nodes.push(
+          ...addScatterPass(graph, {
+            id: isVector
+              ? `${id}-scatter-input-${inputChunkIndex}-output-${outputChunkIndex}`
+              : `${id}-scatter`,
+            input: inputChunks[inputChunkIndex],
+            flags: flagChunks[inputChunkIndex],
+            offsets: offsetChunks[inputChunkIndex],
+            output: outputChunk,
+            outputStart,
+            outputEnd,
+            count: writesCount ? count : undefined,
+            dispatchLayout: getBoundedDispatchLayout(
+              'GPUCompaction',
+              inputChunks[inputChunkIndex].length,
+              COMPACTION_WORKGROUP_SIZE,
+              maxComputeWorkgroupsPerDimension
+            )
+          })
+        );
       }
     }
     outputStart = outputEnd;
   }
+
+  return nodes;
 }
 
 /** Scatters one input chunk into one logical output range and optionally writes the total count. */
@@ -257,7 +282,8 @@ function addScatterPass<Parameters>(
     count?: GraphDataView<'uint32'>;
     dispatchLayout: GPUBoundedDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const countBinding = props.count
     ? '@group(0) @binding(4) var<storage, read_write> outputCount: array<u32>;'
     : '';
@@ -294,25 +320,29 @@ ${countBinding}
   }
   ${countWrite}
 }`;
-  addCompactionPass(graph, {
-    id: props.id,
-    source,
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: props.offsets, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'},
-      ...(props.count ? [{buffer: props.count, usage: 'storage-write'} as const] : [])
-    ],
-    bindings: {
-      inputValues: props.input,
-      flags: props.flags,
-      offsets: props.offsets,
-      outputValues: props.output,
-      ...(props.count ? {outputCount: props.count} : {})
-    },
-    dispatchLayout: props.dispatchLayout
-  });
+  nodes.push(
+    ...addCompactionPass(graph, {
+      id: props.id,
+      source,
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        {buffer: props.flags, usage: 'storage-read'},
+        {buffer: props.offsets, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'},
+        ...(props.count ? [{buffer: props.count, usage: 'storage-write'} as const] : [])
+      ],
+      bindings: {
+        inputValues: props.input,
+        flags: props.flags,
+        offsets: props.offsets,
+        outputValues: props.output,
+        ...(props.count ? {outputCount: props.count} : {})
+      },
+      dispatchLayout: props.dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds a storage-only computation pass used by compaction kernels. */
@@ -328,68 +358,73 @@ function addCompactionPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchLayout: GPUBoundedDispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    workload: {
-      operation: 'GPUCompaction',
-      commandCount: 1,
-      maximumWorkgroupCount:
-        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
-      maximumInvocationCount:
-        props.dispatchLayout.x *
-        props.dispatchLayout.y *
-        props.dispatchLayout.z *
-        COMPACTION_WORKGROUP_SIZE,
-      readByteLength: props.resources.reduce(
-        (total, resource) =>
-          total +
-          (resource.usage === 'storage-read' || resource.usage === 'storage-read-write'
-            ? resource.buffer.length * resource.buffer.rowByteLength
-            : 0),
-        0
-      ),
-      writeByteLength: props.resources.reduce(
-        (total, resource) =>
-          total +
-          (resource.usage === 'storage-write' || resource.usage === 'storage-read-write'
-            ? resource.buffer.length * resource.buffer.rowByteLength
-            : 0),
-        0
-      )
-    },
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, ReturnType<typeof getViewBinding>> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      workload: {
+        operation: 'GPUCompaction',
+        commandCount: 1,
+        maximumWorkgroupCount:
+          props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+        maximumInvocationCount:
+          props.dispatchLayout.x *
+          props.dispatchLayout.y *
+          props.dispatchLayout.z *
+          COMPACTION_WORKGROUP_SIZE,
+        readByteLength: props.resources.reduce(
+          (total, resource) =>
+            total +
+            (resource.usage === 'storage-read' || resource.usage === 'storage-read-write'
+              ? resource.buffer.length * resource.buffer.rowByteLength
+              : 0),
+          0
+        ),
+        writeByteLength: props.resources.reduce(
+          (total, resource) =>
+            total +
+            (resource.usage === 'storage-write' || resource.usage === 'storage-read-write'
+              ? resource.buffer.length * resource.buffer.rowByteLength
+              : 0),
+          0
+        )
+      },
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, ReturnType<typeof getViewBinding>> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Normalizes one compaction input or vector into its ordered atomic chunks. */

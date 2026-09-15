@@ -6,7 +6,6 @@ import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -60,7 +59,7 @@ const LINEAR_WORKGROUP_SIZE = 256;
  * Labels may be dense or sparse. Capacity overflow is explicit, empty output slots are zeroed,
  * and connected-component results can be consumed directly without readback.
  */
-export class GPUVolumeRegionMeasurements implements GPUCommandGraphContributor {
+export class GPUVolumeRegionMeasurements {
   readonly id: string;
   readonly width: number;
   readonly height: number;

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -123,7 +124,10 @@ export class GPUGridBinning {
    *
    * This method declares work only and does not submit or read back commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     if (
       getPositionChunks(this.positions).some(chunk => chunk.buffer.graph !== graph) ||
       this.output.buffer.graph !== graph
@@ -133,21 +137,27 @@ export class GPUGridBinning {
     if (isGPUGridBoundsView(this.bounds) && this.bounds.buffer.graph !== graph) {
       throw new Error(`${this.id} bounds must belong to the target graph`);
     }
-    addClearGridPass(graph, this.id, this.output);
+    nodes.push(...addClearGridPass(graph, this.id, this.output));
     const chunks = getPositionChunks(this.positions);
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
       const positions = chunks[chunkIndex];
       if (positions.length > 0) {
-        addGridPass(graph, {
-          id:
-            this.positions instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
-          positions,
-          output: this.output,
-          gridSize: this.gridSize,
-          bounds: this.bounds
-        });
+        nodes.push(
+          ...addGridPass(graph, {
+            id:
+              this.positions instanceof GraphVectorView
+                ? `${this.id}-chunk-${chunkIndex}`
+                : this.id,
+            positions,
+            output: this.output,
+            gridSize: this.gridSize,
+            bounds: this.bounds
+          })
+        );
       }
     }
+
+    return nodes;
   }
 }
 
@@ -156,7 +166,8 @@ function addClearGridPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear`;
   const source = /* wgsl */ `
 const CELL_COUNT: u32 = ${output.length}u;
@@ -167,13 +178,17 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 ) {
   if (globalId.x < CELL_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + globalId.x], 0u); }
 }`;
-  addComputationPass(graph, {
-    id: passId,
-    source,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputCounts: output},
-    dispatchCount: Math.ceil(output.length / GRID_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: passId,
+      source,
+      resources: [{buffer: output, usage: 'storage-write'}],
+      bindings: {outputCounts: output},
+      dispatchCount: Math.ceil(output.length / GRID_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds the local- or global-atomic row-major grid accumulation pass. */
@@ -186,7 +201,8 @@ function addGridPass<Parameters>(
     gridSize: readonly [number, number];
     bounds: GPUGridBinningBounds;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const [width, height] = binning.gridSize;
   const local = binning.output.length <= MAXIMUM_LOCAL_CELL_COUNT;
   const useSubgroups =
@@ -276,17 +292,21 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
       : []),
     {buffer: binning.output, usage: 'storage-read-write'}
   ];
-  addComputationPass(graph, {
-    id: `${binning.id}-${local ? 'local' : 'global'}`,
-    source,
-    resources,
-    bindings: {
-      positions: binning.positions,
-      ...(gpuBounds ? {boundsValues: binning.bounds as GraphDataView} : {}),
-      outputCounts: binning.output
-    },
-    dispatchCount: Math.ceil(binning.positions.length / GRID_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${binning.id}-${local ? 'local' : 'global'}`,
+      source,
+      resources,
+      bindings: {
+        positions: binning.positions,
+        ...(gpuBounds ? {boundsValues: binning.bounds as GraphDataView} : {}),
+        outputCounts: binning.output
+      },
+      dispatchCount: Math.ceil(binning.positions.length / GRID_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
@@ -299,36 +319,41 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Formats a finite JavaScript number as a WGSL `f32` literal. */

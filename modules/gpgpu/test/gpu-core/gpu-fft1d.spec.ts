@@ -113,24 +113,28 @@ async function runGPUFFT1D(
   const input = importComplexView(graph, 'input', inputBuffer, inputValues.length / 2);
   const forward = importComplexView(graph, 'forward', forwardBuffer, inputValues.length / 2);
   const inverse = importComplexView(graph, 'inverse', inverseBuffer, inputValues.length / 2);
-  new GPUFFT1D({
-    id: 'forward',
-    input,
-    output: forward,
-    length,
-    batchCount,
-    direction: 'forward',
-    strategy
-  }).addToGraph(graph);
-  new GPUFFT1D({
-    id: 'inverse',
-    input: forward,
-    output: inverse,
-    length,
-    batchCount,
-    direction: 'inverse',
-    strategy
-  }).addToGraph(graph);
+  graph.add(
+    new GPUFFT1D({
+      id: 'forward',
+      input,
+      output: forward,
+      length,
+      batchCount,
+      direction: 'forward',
+      strategy
+    })
+  );
+  graph.add(
+    new GPUFFT1D({
+      id: 'inverse',
+      input: forward,
+      output: inverse,
+      length,
+      batchCount,
+      direction: 'inverse',
+      strategy
+    })
+  );
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-fft1d-roundtrip'});

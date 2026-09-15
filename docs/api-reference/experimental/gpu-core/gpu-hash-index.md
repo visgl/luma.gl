@@ -132,28 +132,28 @@ const index = new GPUHashIndex({
   statistics: buildStatistics,
   maxProbeCount: 32
 });
-index.addToGraph(graph);
+graph.add(index);
 
-new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
   index,
   keys: selectedObjectIds,
   values: selectedRows,
   found: selectedRowsFound,
   probes: selectedRowsProbeCounts,
   statistics: queryStatistics
-}).addToGraph(graph);
+}));
 ```
 
 To generate row IDs instead of reading an aligned values buffer:
 
 ```ts
-new GPUHashIndex({
+graph.add(new GPUHashIndex({
   keys: featureIds,
   firstValue: batchBaseRow,
   tableKeys,
   tableValues,
   statistics: buildStatistics
-}).addToGraph(graph);
+}));
 ```
 
 ## Constructors

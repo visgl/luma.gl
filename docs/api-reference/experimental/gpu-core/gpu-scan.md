@@ -42,24 +42,24 @@ chunks.
 ## Usage
 
 ```ts
-new GPUScan({
+graph.add(new GPUScan({
   id: 'selection-offsets',
   input: flags,
   output: offsets
-}).addToGraph(graph);
+}));
 ```
 
 Set `mode: 'inclusive'` when each output should include its corresponding input value. Supply
 `segmentFlags` to reset the prefix at every nonzero flag:
 
 ```ts
-new GPUScan({
+graph.add(new GPUScan({
   id: 'cumulative-counts-by-group',
   input: counts,
   output: cumulativeCounts,
   mode: 'inclusive',
   segmentFlags: groupStarts
-}).addToGraph(graph);
+}));
 ```
 
 `input` and `output` may both be packed, four-byte-aligned `GraphDataView<'uint32'>` values or both

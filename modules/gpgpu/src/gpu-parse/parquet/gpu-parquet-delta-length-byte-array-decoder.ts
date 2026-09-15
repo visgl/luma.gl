@@ -38,11 +38,13 @@ export class GPUParquetDeltaLengthByteArrayDecoder {
       descriptorCount: this.props.descriptorCount,
       firstValue: this.props.firstValue
     }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-offsets`,
-      input: this.props.lengths,
-      output: this.props.offsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
+    graph.add(
+      new GPUScan({
+        id: `${this.id}-offsets`,
+        input: this.props.lengths,
+        output: this.props.offsets,
+        mode: 'exclusive'
+      })
+    );
   }
 }

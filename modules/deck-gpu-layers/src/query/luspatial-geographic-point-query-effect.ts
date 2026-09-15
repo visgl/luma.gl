@@ -618,16 +618,18 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       })
     );
     projection.addToGraph(graph);
-    new GPUGridIndex({
-      id: `${this.id}-grid`,
-      positions: projected,
-      gridSize: this.gridSize,
-      bounds: this.projectedBounds,
-      cellOffsets,
-      objectIds: rowIndices,
-      count,
-      overflow
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGridIndex({
+        id: `${this.id}-grid`,
+        positions: projected,
+        gridSize: this.gridSize,
+        bounds: this.projectedBounds,
+        cellOffsets,
+        objectIds: rowIndices,
+        count,
+        overflow
+      })
+    );
     return graph.compile();
   }
 

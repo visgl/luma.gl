@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
@@ -51,7 +52,10 @@ export class GPUSegmentOffsets {
   }
 
   /** Adds a segment-index scan followed by segment-offset and count publication passes. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [
       ...getChunks(this.props.elementFlags),
       ...getChunks(this.props.elementOffsets),
@@ -65,32 +69,38 @@ export class GPUSegmentOffsets {
       }
     }
     if (this.props.elementFlags.length === 0) {
-      addEmptyPass(graph, this.props);
-      return;
+      nodes.push(...addEmptyPass(graph, this.props));
+      return nodes;
     }
-    new GPUScan({
-      id: `${this.id}-segment-indices`,
-      input: this.props.segmentStartFlags,
-      output: this.props.segmentIndices,
-      mode: 'exclusive'
-    }).addToGraph(graph);
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-segment-indices`,
+        input: this.props.segmentStartFlags,
+        output: this.props.segmentIndices,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
     const elementFlagChunks = getChunks(this.props.elementFlags);
     const elementOffsetChunks = getChunks(this.props.elementOffsets);
     const segmentStartFlagChunks = getChunks(this.props.segmentStartFlags);
     const segmentIndexChunks = getChunks(this.props.segmentIndices);
     for (let chunkIndex = 0; chunkIndex < elementFlagChunks.length; chunkIndex++) {
       if (elementFlagChunks[chunkIndex].length > 0) {
-        addSegmentOffsetsPass(graph, {
-          ...this.props,
-          id: `${this.id}-chunk-${chunkIndex}`,
-          elementFlags: elementFlagChunks[chunkIndex],
-          elementOffsets: elementOffsetChunks[chunkIndex],
-          segmentStartFlags: segmentStartFlagChunks[chunkIndex],
-          segmentIndices: segmentIndexChunks[chunkIndex]
-        });
+        nodes.push(
+          ...addSegmentOffsetsPass(graph, {
+            ...this.props,
+            id: `${this.id}-chunk-${chunkIndex}`,
+            elementFlags: elementFlagChunks[chunkIndex],
+            elementOffsets: elementOffsetChunks[chunkIndex],
+            segmentStartFlags: segmentStartFlagChunks[chunkIndex],
+            segmentIndices: segmentIndexChunks[chunkIndex]
+          })
+        );
       }
     }
-    addSegmentCountPass(graph, this.props);
+    nodes.push(...addSegmentCountPass(graph, this.props));
+
+    return nodes;
   }
 }
 
@@ -103,7 +113,8 @@ type PassResource = {
 function addEmptyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentOffsetsProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = `const SEGMENT_OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.segmentOffsets)}u;
 const SEGMENT_COUNT_OFFSET: u32 = ${getViewElementOffset(props.segmentCount)}u;
 @group(0) @binding(0) var<storage, read_write> segmentOffsets: array<u32>;
@@ -114,10 +125,14 @@ fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
   segmentOffsets[SEGMENT_OFFSETS_OFFSET] = 0u;
   segmentCount[SEGMENT_COUNT_OFFSET] = 0u;
 }`;
-  addPass(graph, `${props.id}-empty`, 'GPUSegmentOffsetsEmpty', source, 1, [
-    {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
-    {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${props.id}-empty`, 'GPUSegmentOffsetsEmpty', source, 1, [
+      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
+      {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 function addSegmentOffsetsPass<Parameters>(
@@ -128,7 +143,8 @@ function addSegmentOffsetsPass<Parameters>(
     segmentStartFlags: GraphDataView<'uint32'>;
     segmentIndices: GraphDataView<'uint32'>;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.elementFlags.length;
   const source = `const LENGTH: u32 = ${length}u;
 const ELEMENT_OFFSET: u32 = ${getViewElementOffset(props.elementOffsets)}u;
@@ -159,18 +175,23 @@ fn main(
       elementOffsets[ELEMENT_OFFSET + index];
   }
 }`;
-  addPass(graph, `${props.id}-publish`, 'GPUSegmentOffsetsPublish', source, length, [
-    {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
-    {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
-    {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-    {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${props.id}-publish`, 'GPUSegmentOffsetsPublish', source, length, [
+      {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
+      {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
+      {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
+      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 function addSegmentCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentOffsetsProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const elementFlagChunk = getLastNonEmptyChunk(props.elementFlags);
   const elementOffsetChunk = getLastNonEmptyChunk(props.elementOffsets);
   const segmentStartFlagChunk = getLastNonEmptyChunk(props.segmentStartFlags);
@@ -198,14 +219,18 @@ fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
   segmentOffsets[SEGMENT_OFFSETS_OFFSET + count] = elementCount;
   segmentCount[SEGMENT_COUNT_OFFSET] = count;
 }`;
-  addPass(graph, `${props.id}-count`, 'GPUSegmentOffsetsCount', source, 1, [
-    {name: 'elementFlags', view: elementFlagChunk, usage: 'storage-read'},
-    {name: 'elementOffsets', view: elementOffsetChunk, usage: 'storage-read'},
-    {name: 'segmentStartFlags', view: segmentStartFlagChunk, usage: 'storage-read'},
-    {name: 'segmentIndices', view: segmentIndexChunk, usage: 'storage-read'},
-    {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
-    {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${props.id}-count`, 'GPUSegmentOffsetsCount', source, 1, [
+      {name: 'elementFlags', view: elementFlagChunk, usage: 'storage-read'},
+      {name: 'elementOffsets', view: elementOffsetChunk, usage: 'storage-read'},
+      {name: 'segmentStartFlags', view: segmentStartFlagChunk, usage: 'storage-read'},
+      {name: 'segmentIndices', view: segmentIndexChunk, usage: 'storage-read'},
+      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
+      {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 function addPass<Parameters>(
@@ -215,7 +240,8 @@ function addPass<Parameters>(
   source: string,
   length: number,
   resources: PassResource[]
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     operation,
     length,
@@ -223,45 +249,49 @@ function addPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const workgroupCount = Math.ceil(length / WORKGROUP_SIZE);
-  graph.addComputePass({
-    id,
-    workload: {
-      operation,
-      commandCount: 1,
-      maximumWorkgroupCount: workgroupCount,
-      maximumInvocationCount: workgroupCount * WORKGROUP_SIZE,
-      readByteLength:
-        resources.filter(resource => resource.usage === 'storage-read').length * length * 4,
-      writeByteLength:
-        resources.filter(resource => resource.usage === 'storage-write').length * length * 4
-    },
-    resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: resources.map((resource, location) => ({
-            name: resource.name,
-            type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const resource of resources) {
-            bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id,
+      workload: {
+        operation,
+        commandCount: 1,
+        maximumWorkgroupCount: workgroupCount,
+        maximumInvocationCount: workgroupCount * WORKGROUP_SIZE,
+        readByteLength:
+          resources.filter(resource => resource.usage === 'storage-read').length * length * 4,
+        writeByteLength:
+          resources.filter(resource => resource.usage === 'storage-write').length * length * 4
+      },
+      resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: resources.map((resource, location) => ({
+              name: resource.name,
+              type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const resource of resources) {
+              bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPUSegmentOffsetsProps>): void {

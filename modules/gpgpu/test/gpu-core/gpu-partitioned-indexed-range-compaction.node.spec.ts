@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -18,7 +19,8 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      const result = fixture.compaction.addToGraph(fixture.graph);
+      const result = fixture.compaction.getCommands(fixture.graph);
+      addGPUCommandNodes(fixture.graph, result.nodes);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'visible-clear-range-counts',
         'visible-partition-0-range-count',
@@ -47,7 +49,8 @@ describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {
   test('accepts one packed visibility bit per source row', () => {
     const fixture = createCompactionFixture('bitset');
     try {
-      const result = fixture.compaction.addToGraph(fixture.graph);
+      const result = fixture.compaction.getCommands(fixture.graph);
+      addGPUCommandNodes(fixture.graph, result.nodes);
       expect(fixture.compaction.flags.data.map(chunk => chunk.length)).toEqual([1, 1]);
       expect(result.partitionCounts.length).toBe(2);
     } finally {

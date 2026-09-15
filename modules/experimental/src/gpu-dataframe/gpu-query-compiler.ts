@@ -317,14 +317,16 @@ export function compileGPUDataFrameQuery<
         });
       }
 
-      new GPUVisibilityWorkflow({
-        id: `${queryId}-visibility-batch-${batchIndex}`,
-        predicates: [{kind: 'selection', mask}],
-        outputMask: mask,
-        output: rowIndexView.data[batchIndex],
-        count: countView.data[batchIndex],
-        firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
-      }).addToGraph(graph);
+      graph.add(
+        new GPUVisibilityWorkflow({
+          id: `${queryId}-visibility-batch-${batchIndex}`,
+          predicates: [{kind: 'selection', mask}],
+          outputMask: mask,
+          output: rowIndexView.data[batchIndex],
+          count: countView.data[batchIndex],
+          firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
+        })
+      );
       sourceRowOffset += batch.numRows;
     }
 

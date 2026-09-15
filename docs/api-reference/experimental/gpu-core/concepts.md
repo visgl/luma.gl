@@ -13,7 +13,7 @@ plan. Encoding records the compiled plan into a caller-owned command encoder.
 
 The lifecycle has two distinct preparation steps:
 
-1. Calling a contributor's `addToGraph()` expands the operation into logical resources and
+1. Calling a contributor's `getCommandNodes()` expands the operation into logical resources and
    low-level nodes.
 2. Calling `compile()` validates those declarations, infers resource dependencies, chooses a stable
    topological order, plans compatible transient reuse, creates physical resources, and compiles

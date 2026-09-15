@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type GPUCommandGraph, type GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
+import {type GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {
   GPUFloat32Positions,
   GPUFloat64Positions,
@@ -58,7 +58,7 @@ export type GPUPairwisePointSegmentDistanceProps = GPUPairwisePointSegmentDistan
   );
 
 /** Computes the distance from each point row to its paired closed line segment. */
-export class GPUPairwisePointSegmentDistance implements GPUCommandGraphContributor {
+export class GPUPairwisePointSegmentDistance {
   readonly id: string;
   readonly points: GPUFloat32Positions | GPUFloat64Positions;
   readonly segmentStarts: GPUFloat32Positions | GPUFloat64Positions;

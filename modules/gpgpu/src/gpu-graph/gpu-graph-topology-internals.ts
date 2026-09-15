@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
@@ -16,7 +17,7 @@ import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
 } from '../gpu-core/gpu-dispatch-utils';
-import {addGPUScanToGraphWithDispatchLimit, GPUScan} from '../gpu-core/gpu-scan';
+import {getGPUScanCommandNodesWithDispatchLimit, GPUScan} from '../gpu-core/gpu-scan';
 import {
   createTransientView,
   getViewBinding,
@@ -199,7 +200,14 @@ function addAdjacencyBuild<Parameters>(
   }
 
   const scan = new GPUScan({id: `${props.id}-scan`, input: degrees, output: scannedOffsets});
-  addGPUScanToGraphWithDispatchLimit(scan, commandGraph, props.maxComputeWorkgroupsPerDimension);
+  addGPUCommandNodes(
+    commandGraph,
+    getGPUScanCommandNodesWithDispatchLimit(
+      scan,
+      commandGraph,
+      props.maxComputeWorkgroupsPerDimension
+    )
+  );
 
   addFinalizePass(commandGraph, {
     id: `${props.id}-finalize`,

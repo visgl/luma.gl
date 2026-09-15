@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -89,9 +85,9 @@ export type GPUGallopingSearchStats = {
  * Segment/tile pairs run independently, retaining parallel GPU work while exploiting ordered-query
  * locality. Output positions are absolute indices relative to the supplied value view.
  */
-export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGallopingSearchFormat>
-  implements GPUCommandGraphContributor
-{
+export class GPUGallopingSearch<
+  Format extends GPUGallopingSearchFormat = GPUGallopingSearchFormat
+> {
   readonly id: string;
   readonly values: GraphDataView<Format>;
   readonly valueOrder?: GraphDataView<'uint32'>;
@@ -172,7 +168,10 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
   }
 
   /** Adds optional validation reset and one tiled search pass to a caller-owned graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [
       this.values,
       ...(this.valueOrder ? [this.valueOrder] : []),
@@ -186,11 +185,13 @@ export class GPUGallopingSearch<Format extends GPUGallopingSearchFormat = GPUGal
       }
     }
     if (!this.preserveValidationErrors) {
-      addValidationClearPass(graph, this.id, this.validationErrors);
+      nodes.push(...addValidationClearPass(graph, this.id, this.validationErrors));
     }
     if (this.stats.maximumSearchCount > 0) {
-      addSearchPass(graph, this);
+      nodes.push(...addSearchPass(graph, this));
     }
+
+    return nodes;
   }
 }
 
@@ -198,43 +199,49 @@ function addValidationClearPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   validationErrors: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const ERROR_OFFSET: u32 = ${getViewElementOffset(validationErrors)}u;
 @group(0) @binding(0) var<storage, read_write> errors: array<u32>;
 @compute @workgroup_size(1) fn main() { errors[ERROR_OFFSET] = 0u; }`;
-  graph.addComputePass({
-    id: `${id}-clear-validation`,
-    resources: [{buffer: validationErrors, usage: 'storage-write'}],
-    workload: {
-      operation: 'GPUGallopingSearch',
-      commandCount: 1,
-      maximumWorkgroupCount: 1,
-      maximumInvocationCount: 1
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${id}-clear-validation`,
-        source,
-        shaderLayout: {
-          bindings: [{name: 'errors', type: 'storage', group: 0, location: 0}]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings({errors: getViewBinding(validationErrors, getBuffer)});
-          computation.dispatch(computePass, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${id}-clear-validation`,
+      resources: [{buffer: validationErrors, usage: 'storage-write'}],
+      workload: {
+        operation: 'GPUGallopingSearch',
+        commandCount: 1,
+        maximumWorkgroupCount: 1,
+        maximumInvocationCount: 1
+      },
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${id}-clear-validation`,
+          source,
+          shaderLayout: {
+            bindings: [{name: 'errors', type: 'storage', group: 0, location: 0}]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({errors: getViewBinding(validationErrors, getBuffer)});
+            computation.dispatch(computePass, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addSearchPass<Parameters, Format extends GPUGallopingSearchFormat>(
   graph: GPUCommandGraph<Parameters>,
   search: GPUGallopingSearch<Format>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const tilesPerSegment = Math.ceil(search.stats.maximumQueryCount / search.stats.queriesPerTile);
   const dispatchLayout = getBoundedDispatchLayout(
     search.id,
@@ -371,7 +378,9 @@ fn gallopForward(segmentEnd: u32, position: u32, searchValue: ${scalarType}) -> 
     searchValue = nextSearchValue;
   }
 }`;
-  addSearchComputationPass(graph, search, source, dispatchLayout);
+  nodes.push(...addSearchComputationPass(graph, search, source, dispatchLayout));
+
+  return nodes;
 }
 
 function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchFormat>(
@@ -379,7 +388,8 @@ function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchF
   search: GPUGallopingSearch<Format>,
   source: string,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const bindings = {
     values: search.values,
     ...(search.valueOrder ? {valueOrder: search.valueOrder} : {}),
@@ -396,42 +406,46 @@ function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchF
     {buffer: search.output, usage: 'storage-write'},
     {buffer: search.validationErrors, usage: 'storage-read-write'}
   ];
-  graph.addComputePass({
-    id: `${search.id}-query`,
-    resources,
-    workload: {
-      operation: 'GPUGallopingSearch',
-      commandCount: 1,
-      maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-      maximumInvocationCount:
-        dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GALLOPING_SEARCH_WORKGROUP_SIZE
-    },
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${search.id}-query`,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolvedBindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(bindings)) {
-            resolvedBindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${search.id}-query`,
+      resources,
+      workload: {
+        operation: 'GPUGallopingSearch',
+        commandCount: 1,
+        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+        maximumInvocationCount:
+          dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GALLOPING_SEARCH_WORKGROUP_SIZE
+      },
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${search.id}-query`,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const resolvedBindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(bindings)) {
+              resolvedBindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(resolvedBindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateScalarValueView(

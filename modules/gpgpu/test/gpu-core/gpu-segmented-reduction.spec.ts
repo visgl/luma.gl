@@ -73,12 +73,14 @@ describe('GPUSegmentedReduction', () => {
       ),
       {format: 'uint32', length: 3}
     );
-    new GPUSegmentedReduction({
-      input,
-      segmentOffsets: offsets,
-      output,
-      operation: 'sum'
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSegmentedReduction({
+        input,
+        segmentOffsets: offsets,
+        output,
+        operation: 'sum'
+      })
+    );
     const compiled = graph.compile();
     try {
       const commandEncoder = device.createCommandEncoder({id: 'segmented-reduction-test'});

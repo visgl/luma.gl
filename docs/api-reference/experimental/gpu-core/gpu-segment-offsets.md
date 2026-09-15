@@ -43,22 +43,23 @@ without inventing an empty child. Empty input writes zero to both `segmentOffset
 ```ts
 import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/gpgpu/gpu-core';
 
-new GPUFlagOffsets({
-  id: 'list-elements',
-  flags: elementFlags,
-  offsets: elementOffsets,
-  count: elementCount
-}).addToGraph(graph);
-
-new GPUSegmentOffsets({
-  id: 'list-rows',
-  elementFlags,
-  elementOffsets,
-  segmentStartFlags: rowStartFlags,
-  segmentIndices: rowIndices,
-  segmentOffsets: listOffsets,
-  segmentCount: rowCount
-}).addToGraph(graph);
+graph.add([
+  new GPUFlagOffsets({
+    id: 'list-elements',
+    flags: elementFlags,
+    offsets: elementOffsets,
+    count: elementCount
+  }),
+  new GPUSegmentOffsets({
+    id: 'list-rows',
+    elementFlags,
+    elementOffsets,
+    segmentStartFlags: rowStartFlags,
+    segmentIndices: rowIndices,
+    segmentOffsets: listOffsets,
+    segmentCount: rowCount
+  })
+]);
 ```
 
 The operation contributes one inclusive scan and two small publication passes. Every shader stays

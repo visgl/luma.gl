@@ -4,12 +4,7 @@
 
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -84,7 +79,7 @@ export type GPUTracePixelMipmapStats = {
  * The index must have no overlaps within a lane/depth segment. Use
  * {@link GPUTraceLaneIndexBuilder}; it reports overlap violations during construction.
  */
-export class GPUTracePixelMipmap implements GPUCommandGraphContributor {
+export class GPUTracePixelMipmap {
   readonly id: string;
   readonly index: GPUTracePixelMipmapIndex;
   readonly query: GPUTraceMipmapBoundaryQuery;

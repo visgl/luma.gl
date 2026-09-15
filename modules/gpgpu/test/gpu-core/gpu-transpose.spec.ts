@@ -85,7 +85,7 @@ async function runTranspose(
   );
   const input = graph.createDataView(inputHandle, {format, length: values.length});
   const output = graph.createDataView(outputHandle, {format, length: values.length});
-  new GPUTranspose({input, output, rows, columns}).addToGraph(graph);
+  graph.add(new GPUTranspose({input, output, rows, columns}));
   const compiled = graph.compile();
 
   try {

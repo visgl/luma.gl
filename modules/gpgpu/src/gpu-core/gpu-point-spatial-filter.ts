@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -103,7 +104,10 @@ export class GPUPointSpatialFilter {
   }
 
   /** Adds mask initialization and exact point filtering without submission or readback. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.positions,
       this.query,
@@ -120,16 +124,19 @@ export class GPUPointSpatialFilter {
     if (views.some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
-    addInitializePass(graph, this);
+    nodes.push(...addInitializePass(graph, this));
     const dispatchLength = this.candidates?.ids.length ?? this.positions.length;
-    if (dispatchLength > 0) addFilterPass(graph, this, dispatchLength);
+    if (dispatchLength > 0) nodes.push(...addFilterPass(graph, this, dispatchLength));
+
+    return nodes;
   }
 }
 
 function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   filter: GPUPointSpatialFilter
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const candidateBindings = filter.candidates
     ? `@group(0) @binding(2) var<storage, read> candidateCount: array<u32>;
 ${
@@ -178,25 +185,30 @@ ${candidateBindings}
       ? ([{buffer: filter.candidates.overflow, usage: 'storage-read'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: `${filter.id}-initialize`,
-    source,
-    resources,
-    bindings: {
-      outputMask: filter.outputMask,
-      outputOverflow: filter.overflow,
-      ...(filter.candidates ? {candidateCount: filter.candidates.count} : {}),
-      ...(filter.candidates?.overflow ? {sourceOverflow: filter.candidates.overflow} : {})
-    },
-    dispatchCount: Math.ceil(Math.max(filter.outputMask.length, 1) / POINT_FILTER_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${filter.id}-initialize`,
+      source,
+      resources,
+      bindings: {
+        outputMask: filter.outputMask,
+        outputOverflow: filter.overflow,
+        ...(filter.candidates ? {candidateCount: filter.candidates.count} : {}),
+        ...(filter.candidates?.overflow ? {sourceOverflow: filter.candidates.overflow} : {})
+      },
+      dispatchCount: Math.ceil(Math.max(filter.outputMask.length, 1) / POINT_FILTER_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addFilterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   filter: GPUPointSpatialFilter,
   dispatchLength: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const candidateBindings = filter.candidates
     ? `@group(0) @binding(3) var<storage, read> candidateIds: array<u32>;
 @group(0) @binding(4) var<storage, read> candidateCount: array<u32>;`
@@ -248,20 +260,24 @@ fn finite(value: f32) -> bool {
         ] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: filter.id,
-    source,
-    resources,
-    bindings: {
-      positions: filter.positions,
-      queryValues: filter.query,
-      outputMask: filter.outputMask,
-      ...(filter.candidates
-        ? {candidateIds: filter.candidates.ids, candidateCount: filter.candidates.count}
-        : {})
-    },
-    dispatchCount: Math.ceil(dispatchLength / POINT_FILTER_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: filter.id,
+      source,
+      resources,
+      bindings: {
+        positions: filter.positions,
+        queryValues: filter.query,
+        outputMask: filter.outputMask,
+        ...(filter.candidates
+          ? {candidateIds: filter.candidates.ids, candidateCount: filter.candidates.count}
+          : {})
+      },
+      dispatchCount: Math.ceil(dispatchLength / POINT_FILTER_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function makePredicate(filter: GPUPointSpatialFilter): string {
@@ -329,34 +345,39 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

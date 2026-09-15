@@ -31,11 +31,11 @@ An out-of-range source index writes an all-zero row. Source and output must have
 fixed-width GPU format.
 
 ```ts
-new GPUGather({
+graph.add(new GPUGather({
   source,
   indices,
   output
-}).addToGraph(graph);
+}));
 ```
 
 Rows are copied as 32-bit words. This preserves the bit representation of fixed-width float and

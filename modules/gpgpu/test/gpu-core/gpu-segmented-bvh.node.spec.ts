@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {
-  addGPUSegmentedBVHToGraphWithDispatchLimit,
+  getGPUSegmentedBVHCommandNodesWithDispatchLimit,
   GPUSegmentedBVH,
   type GPUBVHSegment,
   type GPUSegmentedBVHProps
@@ -22,7 +23,7 @@ describe('GPUSegmentedBVH', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      fixture.hierarchy.addToGraph(fixture.graph);
+      fixture.graph.add(fixture.hierarchy);
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         [1, 2, 4, 8, 16, 32, 64, 128].map(
@@ -46,7 +47,7 @@ describe('GPUSegmentedBVH', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      fixture.hierarchy.addToGraph(fixture.graph);
+      fixture.graph.add(fixture.hierarchy);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-bvh-fused-refit-4'
       ]);
@@ -63,7 +64,10 @@ describe('GPUSegmentedBVH', () => {
 
     try {
       expect(() =>
-        addGPUSegmentedBVHToGraphWithDispatchLimit(fixture.hierarchy, fixture.graph, 2)
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSegmentedBVHCommandNodesWithDispatchLimit(fixture.hierarchy, fixture.graph, 2)
+        )
       ).toThrow(/exceeding the 3D dispatch limit/i);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
@@ -77,7 +81,10 @@ describe('GPUSegmentedBVH', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      addGPUSegmentedBVHToGraphWithDispatchLimit(fixture.hierarchy, fixture.graph, 0);
+      addGPUCommandNodes(
+        fixture.graph,
+        getGPUSegmentedBVHCommandNodesWithDispatchLimit(fixture.hierarchy, fixture.graph, 0)
+      );
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();
@@ -209,7 +216,7 @@ describe('GPUSegmentedBVH', () => {
     const addComputePass = vi.spyOn(otherGraph, 'addComputePass');
 
     try {
-      expect(() => fixture.hierarchy.addToGraph(otherGraph)).toThrow(/belong to the target graph/);
+      expect(() => otherGraph.add(fixture.hierarchy)).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();

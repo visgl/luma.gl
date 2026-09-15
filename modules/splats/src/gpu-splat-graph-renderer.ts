@@ -609,16 +609,18 @@ export class GPUSplatGraphRenderer {
       });
     }
 
-    new GPUSort({
-      id: 'gaussian-splat-global-depth-sort',
-      keys: depthKeys,
-      values: sourceIndices,
-      outputKeys: sortedKeys,
-      outputValues: sortedIndices,
-      algorithm: 'radix',
-      direction: 'ascending',
-      keyBits: 16
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: 'gaussian-splat-global-depth-sort',
+        keys: depthKeys,
+        values: sourceIndices,
+        outputKeys: sortedKeys,
+        outputValues: sortedIndices,
+        algorithm: 'radix',
+        direction: 'ascending',
+        keyBits: 16
+      })
+    );
 
     const firstUniformBuffer = this.batchUniforms[0];
     if (!firstUniform) {
