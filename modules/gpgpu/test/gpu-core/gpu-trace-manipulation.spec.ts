@@ -195,7 +195,7 @@ it('GPUGraphTraversal executes packed initialization, seeds, and expansion in th
     output: importUint32View(graph, 'output', buffers.output, nodeCount),
     maxDepth: 1
   });
-  getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2);
+  addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
   const compiled = graph.compile();
   const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
 
@@ -324,7 +324,7 @@ it('GPUGraphTraversal routes large seed and output partitions through three-dime
     output: graph.importGPUVector('output', output.vector),
     maxDepth: 2
   });
-  getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2);
+  addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
   const compiled = graph.compile();
   const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
 
