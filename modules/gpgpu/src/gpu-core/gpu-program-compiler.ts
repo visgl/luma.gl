@@ -3,8 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
-import type {GPUData} from '../gpu-data/gpu-data';
-import {GPUVector} from '../gpu-data/gpu-vector';
+import type {GPUVectorInput} from '../gpu-data/gpu-vector-like';
 import {getSingleGraphVectorChunk} from './graph-vector-view-utils';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
@@ -50,8 +49,7 @@ import {
 import {validateGPUProgram, type GPUProgramValidationReport} from './gpu-program-validation';
 import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
 import type {GPUProgram} from './gpu-program';
-export type GPUProgramVectorBinding = GPUVector | GPUData | readonly GPUData[];
-export type GPUProgramBindings = {vectors?: Readonly<Record<string, GPUProgramVectorBinding>>};
+export type GPUProgramBindings = {vectors?: Readonly<Record<string, GPUVectorInput>>};
 export type GPUProgramLoweredNode = {
   nodeId: string;
   nodeType: 'compute' | 'render' | 'copy';
@@ -118,14 +116,13 @@ export class GPUProgramCompiler<Parameters = void> {
       if (vector.external) {
         const binding = bindings.vectors![vector.id];
         const source =
-          binding instanceof GPUVector
+          'data' in binding
             ? binding
-            : new GPUVector({
-                type: 'data',
-                name: vector.id,
+            : {
                 format: vector.format,
-                data: isProgramChunkArray(binding) ? binding : [binding]
-              });
+                length: vector.length,
+                data: 'buffer' in binding ? [binding] : binding
+              };
         resolved = graph.importGPUVector(vector.id, source);
         if (resolved.format !== vector.format || resolved.length !== vector.length) {
           throw new Error(`${vector.id} binding format and length must match its logical vector`);
@@ -505,10 +502,6 @@ export class GPUProgramCompiler<Parameters = void> {
       throw new Error(`GPUProgram vector "${v.id}" is not part of compilation`);
     return r as GraphVectorView<T>;
   }
-}
-
-function isProgramChunkArray(binding: GPUData | readonly GPUData[]): binding is readonly GPUData[] {
-  return Array.isArray(binding);
 }
 
 function getTransientChunkLengths(length: number, device: Device): readonly number[] {

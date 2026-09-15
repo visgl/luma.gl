@@ -11,6 +11,7 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import {GPUData} from './gpu-data';
+import type {GPUVectorLike} from './gpu-vector-like';
 import {getGPUVectorChunks} from './gpu-vector-chunks';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
@@ -140,7 +141,7 @@ export type GPUVectorCreateProps<T extends GPUVectorFormat = GPUVectorFormat> =
  * Format-specific modules upload bytes and use these vectors to expose shared
  * lifecycle, chunking, batching, and ownership semantics.
  */
-export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GPUVector<T extends GPUVectorFormat = GPUVectorFormat> implements GPUVectorLike<T> {
   /** Stable vector name. */
   readonly name: string;
   /** Optional adapter-owned metadata; core tables do not inspect this value. */

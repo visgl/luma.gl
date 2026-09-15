@@ -5,7 +5,7 @@
 import {expect, test, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUProgram,
   GPUProgramCompiler,
@@ -45,13 +45,17 @@ test('program binding preserves zero-copy chunks, empty batches, shared buffers 
   const data = [first, empty, last] as const;
   const source = new GPUVector({type: 'data', name: 'source', data});
   const allocate = vi.spyOn(device, 'createBuffer');
-  for (const binding of [data, source]) {
+  const structural: GPUVectorLike<'float32'> = {format: 'float32', length: 5, data};
+  for (const binding of [data, source, structural]) {
     const program = new GPUProgram();
     program.vector('input', 'float32', 5, {external: true, chunkLengths: [2, 0, 3]});
     const compilation = new GPUProgramCompiler(device).compile(program, {
       vectors: {input: binding}
     });
     const vector = compilation.vectors.get('input')!;
+    expect(vector.valueLength).toBe(5);
+    expect(vector.stride).toBe(first.stride);
+    expect(vector.name).toBe(binding === source ? 'source' : 'input');
     expect(vector.chunks.map(chunk => [chunk.offset, chunk.length])).toEqual([
       [0, 2],
       [2, 0],

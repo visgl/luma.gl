@@ -592,7 +592,6 @@ export type {GPUProgramScalarFormat, GPUProgramVectorFormat} from './gpu-program
 export {GPUProgramCompiler} from './gpu-program-compiler';
 export type {
   GPUProgramBindings,
-  GPUProgramVectorBinding,
   GPUProgramCompilation,
   GPUProgramLoweredNode,
   GPUProgramLoweringReport
