@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device} from '@luma.gl/core';
-import {type GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {type Device} from '@luma.gl/core';
+import type {GPUData} from '../gpu-data/gpu-data';
+import {GPUVector} from '../gpu-data/gpu-vector';
+import {getSingleGraphVectorChunk} from './graph-vector-view-utils';
+import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,
   type GPUCommandNode,
@@ -47,7 +50,8 @@ import {
 import {validateGPUProgram, type GPUProgramValidationReport} from './gpu-program-validation';
 import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
 import type {GPUProgram} from './gpu-program';
-export type GPUProgramBindings = {vectors?: Readonly<Record<string, Buffer>>};
+export type GPUProgramVectorBinding = GPUVector | GPUData | readonly GPUData[];
+export type GPUProgramBindings = {vectors?: Readonly<Record<string, GPUProgramVectorBinding>>};
 export type GPUProgramLoweredNode = {
   nodeId: string;
   nodeType: 'compute' | 'render' | 'copy';
@@ -62,7 +66,7 @@ export type GPUProgramCompilation<Parameters = void> = {
   program: GPUProgram;
   graph: GPUCommandGraph<Parameters>;
   scalars: ReadonlyMap<string, GPUScalar>;
-  vectors: ReadonlyMap<string, GraphDataView>;
+  vectors: ReadonlyMap<string, GraphVectorView>;
   validation: GPUProgramValidationReport;
   lowering: GPUProgramLoweringReport;
 };
@@ -72,7 +76,7 @@ type LoweringState = {
   decisions: GPUOperationLoweringDecision[];
   predicates: GPUOperationPredicate[];
   scalars: Map<string, GPUScalar>;
-  vectors: Map<string, GraphDataView>;
+  vectors: Map<string, GraphVectorView>;
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
 };
@@ -108,22 +112,55 @@ export class GPUProgramCompiler<Parameters = void> {
     const scalars = new Map<string, GPUScalar>();
     for (const scalar of program.scalars)
       scalars.set(scalar.id, createGPUScalar(graph, scalar.id, scalar.format));
-    const vectors = new Map<string, GraphDataView>();
+    const vectors = new Map<string, GraphVectorView>();
     for (const vector of program.vectors) {
+      let resolved: GraphVectorView;
       if (vector.external) {
-        const buffer = bindings.vectors![vector.id];
-        if (buffer.byteLength < Math.max(1, vector.length) * 4)
-          throw new Error(`GPUProgram external vector "${vector.id}" buffer is too small`);
-        const handle = graph.importBuffer(
-          {id: vector.id, byteLength: buffer.byteLength, usage: buffer.usage},
-          buffer
+        const binding = bindings.vectors![vector.id];
+        const source =
+          binding instanceof GPUVector
+            ? binding
+            : new GPUVector({
+                type: 'data',
+                name: vector.id,
+                format: vector.format,
+                data: isProgramChunkArray(binding) ? binding : [binding]
+              });
+        resolved = graph.importGPUVector(vector.id, source);
+        if (resolved.format !== vector.format || resolved.length !== vector.length) {
+          throw new Error(`${vector.id} binding format and length must match its logical vector`);
+        }
+        if (
+          vector.chunkLengths &&
+          (vector.chunkLengths.length !== resolved.data.length ||
+            vector.chunkLengths.some((length, index) => length !== resolved.data[index].length))
+        ) {
+          throw new Error(`${vector.id} binding must preserve its declared chunk topology`);
+        }
+      } else {
+        const chunkLengths =
+          vector.chunkLengths ?? getTransientChunkLengths(vector.length, this.device);
+        const data = chunkLengths.map((length, index) =>
+          createTransientView(
+            graph,
+            chunkLengths.length === 1 ? vector.id : `${vector.id}-chunk-${index}`,
+            vector.format,
+            length
+          )
         );
-        vectors.set(
-          vector.id,
-          graph.createDataView(handle, {format: vector.format, length: vector.length})
-        );
-      } else
-        vectors.set(vector.id, createTransientView(graph, vector.id, vector.format, vector.length));
+        resolved = new GraphVectorView({
+          id: vector.id,
+          name: vector.id,
+          format: vector.format,
+          length: vector.length,
+          valueLength: vector.length,
+          stride: 1,
+          byteStride: 4,
+          rowByteLength: 4,
+          data
+        });
+      }
+      vectors.set(vector.id, resolved);
     }
     const state: LoweringState = {
       path: [],
@@ -193,10 +230,7 @@ export class GPUProgramCompiler<Parameters = void> {
           addend: c.resolveVector(p.addend),
           output: c.resolveVector(p.output)
         });
-      const dispatches: [number, number, number][] = p.output.length
-        ? [[Math.ceil(p.output.length / 256), 1, 1]]
-        : [];
-      this.emitProducer(c.graph, e, dispatches);
+      this.emitProducer(c.graph, e);
       c.recordDecision({
         operationId: o.id,
         operationType: o.type,
@@ -212,7 +246,7 @@ export class GPUProgramCompiler<Parameters = void> {
           right: c.resolveVector(p.right),
           output: c.resolveScalar(p.output)
         });
-      this.emitProducer(c.graph, e, [[1, 1, 1]]);
+      this.emitProducer(c.graph, e);
       c.recordDecision({
         operationId: o.id,
         operationType: o.type,
@@ -225,11 +259,11 @@ export class GPUProgramCompiler<Parameters = void> {
         m = p.matrix,
         e = new GPUAdaptiveSpMV({
           id: o.id,
-          rowOffsets: c.resolveVector(m.rowOffsets),
-          columnIndices: c.resolveVector(m.columnIndices),
-          values: c.resolveVector(m.values),
-          vector: c.resolveVector(p.vector),
-          output: c.resolveVector(p.output),
+          rowOffsets: getSingleGraphVectorChunk(c.resolveVector(m.rowOffsets)),
+          columnIndices: getSingleGraphVectorChunk(c.resolveVector(m.columnIndices)),
+          values: getSingleGraphVectorChunk(c.resolveVector(m.values)),
+          vector: getSingleGraphVectorChunk(c.resolveVector(p.vector)),
+          output: getSingleGraphVectorChunk(c.resolveVector(p.output)),
           columns: m.columns,
           statistics: m.statistics,
           strategy: p.strategy
@@ -352,9 +386,13 @@ export class GPUProgramCompiler<Parameters = void> {
   private emitProducer(
     graph: GPUCommandGraph<Parameters>,
     producer: GPUCommandNodeProducer<Parameters>,
-    dispatches: [number, number, number][]
+    dispatches?: [number, number, number][]
   ): void {
     const nodes = producer.getCommandNodes(graph);
+    if (!dispatches) {
+      addGPUCommandNodes(graph, nodes);
+      return;
+    }
     if (nodes.length !== dispatches.length)
       throw new Error(
         `lowering produced ${nodes.length} command nodes but declared ${dispatches.length} dispatches`
@@ -461,10 +499,24 @@ export class GPUProgramCompiler<Parameters = void> {
   private resolveVector<T extends 'float32' | 'uint32' | 'sint32'>(
     v: GPUProgramVector<T>,
     state: LoweringState
-  ): GraphDataView<T> {
+  ): GraphVectorView<T> {
     const r = state.vectors.get(v.id);
     if (!r || r.format !== v.format || r.length !== v.length)
       throw new Error(`GPUProgram vector "${v.id}" is not part of compilation`);
-    return r as GraphDataView<T>;
+    return r as GraphVectorView<T>;
   }
+}
+
+function isProgramChunkArray(binding: GPUData | readonly GPUData[]): binding is readonly GPUData[] {
+  return Array.isArray(binding);
+}
+
+function getTransientChunkLengths(length: number, device: Device): readonly number[] {
+  const maximumLength = Math.floor(device.limits.maxStorageBufferBindingSize / 4);
+  if (maximumLength < 1 || length <= maximumLength) return [length];
+  const lengths: number[] = [];
+  for (let offset = 0; offset < length; offset += maximumLength) {
+    lengths.push(Math.min(maximumLength, length - offset));
+  }
+  return lengths;
 }

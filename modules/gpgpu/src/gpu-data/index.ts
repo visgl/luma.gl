@@ -71,3 +71,5 @@ export {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType
 } from '@luma.gl/core';
+
+export {getGPUVectorChunks, type GPUVectorChunk} from './gpu-vector-chunks';
