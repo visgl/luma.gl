@@ -7,6 +7,9 @@ import {expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   GPUCommandGraph,
+  GPUProgram,
+  GPUProgramCompiler,
+  type GPUNode,
   GPUScan,
   type GPUCommandNodeProducer,
   addGPUCommandNodes,
@@ -80,5 +83,86 @@ test('graph.add rejects compiled graphs before invoking a producer, including em
   expect(() => graph.add({getCommandNodes})).toThrow();
   expect(getCommandNodes).not.toHaveBeenCalled();
   compiled.destroy();
+  device.destroy();
+});
+
+test('graph.add recursively expands groups, arrays and primitives in depth-first order', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const graph = new GPUCommandGraph<{count: number}>(device);
+  const scheduled: string[] = [];
+  const expanded: string[] = [];
+  vi.spyOn(graph, 'addCopyPass').mockImplementation(node => {
+    scheduled.push(node.id);
+  });
+  const copy = (id: string): GPUNode<{count: number}> => ({
+    type: 'copy',
+    id,
+    compile: () => ({encode() {}})
+  });
+  const group = {
+    getNodes(): readonly GPUNode<{count: number}>[] {
+      expanded.push('outer');
+      return [
+        copy('first'),
+        [
+          {
+            getNodes() {
+              expanded.push('inner');
+              return [
+                {
+                  getCommandNodes(received: GPUCommandGraph<{count: number}>) {
+                    expect(received).toBe(graph);
+                    return [{type: 'copy' as const, id: 'second', compile: () => ({encode() {}})}];
+                  }
+                }
+              ];
+            }
+          }
+        ],
+        copy('third')
+      ];
+    }
+  };
+  graph.add(group);
+  expect(expanded).toEqual(['outer', 'inner']);
+  expect(scheduled).toEqual(['first', 'second', 'third']);
+  const compiled = graph.compile();
+  expect(() => graph.add(group)).toThrow();
+  expect(expanded).toEqual(['outer', 'inner']);
+  compiled.destroy();
+  device.destroy();
+});
+
+test('GPUProgram lowers structural execution groups through graph.add', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  // A graph-independent leaf lets this test inspect scheduling without allocating GPU resources.
+  const group = {
+    getNodes<Parameters>(): readonly GPUNode<Parameters>[] {
+      return [
+        {
+          getNodes() {
+            return [
+              {
+                getCommandNodes() {
+                  return [
+                    {type: 'compute' as const, id: 'nested-compute', compile: () => ({encode() {}})}
+                  ];
+                }
+              }
+            ];
+          }
+        }
+      ];
+    }
+  };
+  const program = new GPUProgram();
+  program.add(group);
+  const result = new GPUProgramCompiler(device).compile(program);
+  expect(result.lowering.nodes.map(node => node.nodeType)).toEqual(['compute']);
+  expect(
+    result.lowering.decisions.some(decision => decision.lowering === 'explicit-command-nodes')
+  ).toBe(true);
   device.destroy();
 });

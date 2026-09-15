@@ -36,3 +36,7 @@ migrated before they can be added to a `GPUProgram`.
 `GPUConditionalOperation` and `GPULoopOperation` preserve structured control flow. WebGPU lowers GPU
 predicates using indirect dispatch and bounded loops using repeated commands; compiler support nodes
 remain unconditional.
+
+Execution composites can expose `getNodes()` returning child primitives or nested groups. Both
+`graph.add(composite)` and `program.add(composite)` accept this structural contract. The graph
+expands execution groups in order; semantic operations still use GPUProgramCompiler lowering.

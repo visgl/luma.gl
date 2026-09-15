@@ -334,7 +334,7 @@ export class GPUProgramCompiler<Parameters = void> {
           return;
         }
       }
-      if (isGPUCommandNodeProducer(operation)) {
+      if ('getNodes' in operation || isGPUCommandNodeProducer(operation)) {
         state.decisions.push({
           operationId: id,
           operationType: 'command-node-producer',

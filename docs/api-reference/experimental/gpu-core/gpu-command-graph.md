@@ -106,8 +106,10 @@ class GPUAlgorithm implements GPUProgramPrimitive {
 graph.add(new GPUAlgorithm());
 ```
 
-`graph.add(primitive)` calls `primitive.getCommandNodes(graph)` and schedules the returned compute,
-render, and copy nodes in order. It rejects additions after compilation, before invoking the primitive.
+`graph.add(node)` accepts command nodes, leaf primitives, groups exposing `getNodes()`, and arrays.
+Groups return child primitives or nested groups without receiving a graph. The graph recursively
+expands them in depth-first order and calls `getCommandNodes(graph)` on leaves before scheduling
+their compute, render, and copy nodes. `GPUNode<Parameters>` describes this structural input. It rejects additions after compilation, before invoking the primitive.
 Use `getCommandNodes(graph)` directly when you need to inspect or transform nodes before scheduling
 them with `addGPUCommandNodes(graph, nodes)`.
 

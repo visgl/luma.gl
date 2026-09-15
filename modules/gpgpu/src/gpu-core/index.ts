@@ -552,6 +552,7 @@ export {
   createGPURenderCommandNode
 } from './gpu-command-node';
 export type {
+  GPUNode,
   GPUCommandNode,
   GPUCommandNodeProducer,
   GPUCommandNodeType,

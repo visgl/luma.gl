@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandNode} from './gpu-command-node';
+import type {GPUCommandNode, GPUNode} from './gpu-command-node';
 import type {GPUCommandGraph} from './gpu-command-graph';
 
 export interface GPUProgramPrimitive {
@@ -39,7 +39,10 @@ export interface GPUOperation {
 }
 
 /** Semantic operations and concrete execution primitives accepted by GPUProgram. */
-export type GPUProgramOperation = GPUOperation | GPUProgramPrimitive;
+export type GPUProgramOperation =
+  | GPUOperation
+  | GPUProgramPrimitive
+  | {getNodes<Parameters>(): readonly GPUNode<Parameters>[]};
 export type GPUOperationLike = GPUProgramOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */

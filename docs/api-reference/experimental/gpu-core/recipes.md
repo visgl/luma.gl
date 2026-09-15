@@ -177,35 +177,37 @@ See [Resumable execution and work budgets](./concepts#resumable-execution-and-wo
 
 ## Package a reusable operation
 
-**Pipeline neighborhood:** typed props → contributor `getCommandNodes()` → logical resources and nodes →
+**Pipeline neighborhood:** typed props → composite `getNodes()` → leaf `getCommandNodes(graph)` → command nodes →
 caller compilation and encoding
 
 A contributor validates its fixed contract, declares every resource use, creates any bounded
-transients, and adds nodes with stable identifiers. It does not submit commands, own the frame loop,
+transients, and constructs nodes with stable identifiers. Composites can return their child primitives
+from `getNodes()` without receiving a graph; `graph.add()` recursively expands them in order. It does not submit commands, own the frame loop,
 or map application data. Expose ordinary graph views, masks, counts, and indirect commands so the
 next operation can compose without CPU translation.
 
 ```ts
-class VisibleItems implements GPUProgramPrimitive {
+class VisibleItems {
   constructor(readonly props: VisibleItemsProps) {}
 
-  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
+  getNodes() {
     return [
-    ...new GPUMask({
-      inputs: this.props.predicateMasks,
-      output: this.props.visibleMask,
-      operation: 'and'
-    }).getCommandNodes(graph),
-
-    ...new GPUCompaction({
-      input: this.props.sourceIds,
-      flags: this.props.visibleMask,
-      output: this.props.visibleIds,
-      count: this.props.visibleCount
-    }).getCommandNodes(graph)
+      new GPUMask({
+        inputs: this.props.predicateMasks,
+        output: this.props.visibleMask,
+        operation: 'and'
+      }),
+      new GPUCompaction({
+        input: this.props.sourceIds,
+        flags: this.props.visibleMask,
+        output: this.props.visibleIds,
+        count: this.props.visibleCount
+      })
     ];
   }
 }
+
+graph.add(new VisibleItems(props));
 ```
 
 - **Cost to watch:** attach estimates for invocations, bytes, dispatches, draws, and whether each
