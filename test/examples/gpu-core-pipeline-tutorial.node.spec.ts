@@ -84,7 +84,7 @@ describe('GPU Core pipeline tutorial', () => {
     expect(componentSource).toMatch(/Manual WebGPU and GPU Core/);
     expect(componentSource).toMatch(/mask, exclusive scan,[\s\S]*stable scatter/);
     expect(componentSource).toContain("['Composed'");
-    expect(componentSource).toMatch(/\['Declared',[\s\S]*addToGraph\(\) expands compaction/);
+    expect(componentSource).toMatch(/\['Declared',[\s\S]*getCommandNodes\(\) expands compaction/);
     expect(componentSource).toContain('drawIndirect');
   });
 
