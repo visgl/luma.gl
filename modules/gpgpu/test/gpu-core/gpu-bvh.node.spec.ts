@@ -3,6 +3,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes, type GPUCommandNodeProducer} from '../../src/gpu-core/gpu-command-node';
 import type {GPUCommandGraph, GraphDataView} from '../../src/gpu-core/gpu-command-graph';
 import {GPUBVH, type GPUBVHStrategy} from '../../src/gpu-core/gpu-bvh';
 
@@ -164,6 +165,9 @@ function makeGraph(limitOverrides: Record<string, number> = {}): MockGraph {
       }
     },
     recordedNodes,
+    add(this: GPUCommandGraph, primitive: GPUCommandNodeProducer): void {
+      addGPUCommandNodes(this, primitive.getCommandNodes(this));
+    },
     addComputePass: (node: RecordedGraphNode) => recordedNodes.push(node)
   } as unknown as MockGraph;
 }
