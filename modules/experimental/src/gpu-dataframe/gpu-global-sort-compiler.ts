@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {
@@ -164,12 +165,15 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
     const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
       .data[0];
 
-    new GPUReduction({
-      id: `${prefix}-count-selected`,
-      input: context.selectedCounts,
-      output: selectedCount,
-      operation: 'sum'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUReduction({
+        id: `${prefix}-count-selected`,
+        input: context.selectedCounts,
+        output: selectedCount,
+        operation: 'sum'
+      }).getCommandNodes(graph)
+    );
 
     if (input.length > 0) {
       const scratch = createGPUGlobalSortScratch(graph, prefix, input.length);
@@ -191,26 +195,32 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
         fallbackOffset += batch.numRows;
       }
 
-      new GPUSort({
-        id: `${prefix}-numeric`,
-        keys: scratch.encodedKeys,
-        values: scratch.sourceOrdinals,
-        outputKeys: scratch.sortedKeys,
-        outputValues: scratch.sortedOrdinals,
-        direction: options.direction,
-        algorithm: options.algorithm
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUSort({
+          id: `${prefix}-numeric`,
+          keys: scratch.encodedKeys,
+          values: scratch.sourceOrdinals,
+          outputKeys: scratch.sortedKeys,
+          outputValues: scratch.sortedOrdinals,
+          direction: options.direction,
+          algorithm: options.algorithm
+        }).getCommandNodes(graph)
+      );
 
       addGPUGlobalSortGatherClassesPass(graph, `${prefix}-gather-classes`, scratch);
-      new GPUSort({
-        id: `${prefix}-classes`,
-        keys: scratch.sortedKeys,
-        values: scratch.sortedOrdinals,
-        outputKeys: scratch.encodedKeys,
-        outputValues: scratch.sourceOrdinals,
-        direction: 'ascending',
-        algorithm: options.algorithm
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUSort({
+          id: `${prefix}-classes`,
+          keys: scratch.sortedKeys,
+          values: scratch.sortedOrdinals,
+          outputKeys: scratch.encodedKeys,
+          outputValues: scratch.sourceOrdinals,
+          direction: 'ascending',
+          algorithm: options.algorithm
+        }).getCommandNodes(graph)
+      );
 
       addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
         scratch,
@@ -231,14 +241,17 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
               globalOffset,
               limit: options.limit
             });
-            new GPUVisibilityWorkflow({
-              id: `${prefix}-visibility-batch-${batchIndex}`,
-              predicates: [{kind: 'selection', mask: selection}],
-              outputMask: selection,
-              output: context.rowIndices.data[batchIndex],
-              count: context.selectedCounts.data[batchIndex],
-              firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
-            }).addToGraph(graph);
+            addGPUCommandNodes(
+              graph,
+              new GPUVisibilityWorkflow({
+                id: `${prefix}-visibility-batch-${batchIndex}`,
+                predicates: [{kind: 'selection', mask: selection}],
+                outputMask: selection,
+                output: context.rowIndices.data[batchIndex],
+                count: context.selectedCounts.data[batchIndex],
+                firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
+              }).getCommandNodes(graph)
+            );
           }
           globalOffset += batch.numRows;
           fallbackOffset += batch.numRows;

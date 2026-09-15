@@ -55,11 +55,12 @@ GPULoopOperation
 
 Loops without runtime predicates can already lower by bounded unrolling. Runtime predicates remain explicit compiler errors until the WebGPU compiler has a concrete predicate binding plus per-node indirect-dispatch geometry. This is preferable to silently inserting CPU readback or pretending a single dispatch gate can condition an arbitrary composite.
 
-## Migration
+## Execution primitives
 
-Existing algorithms that expose `addToGraph()` are temporarily accepted as legacy WebGPU contributors. Their lowering decision is recorded as `legacy-addToGraph`.
-
-New semantic operations should instead receive registered backend lowerers. The migration bridge can disappear once the numerical library has been converted.
+Semantic operations use registered backend lowerers. Concrete `GPUProgramPrimitive` objects return
+nodes through `getCommandNodes(graph)`; their decision is recorded as `explicit-command-nodes`.
+Construction may allocate graph-owned scratch but cannot schedule work. There is no legacy mutation
+fallback.
 
 ## Why record decisions?
 

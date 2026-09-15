@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {GPUScan} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
@@ -89,7 +85,7 @@ type RasterContourDescription = Pick<
  * exact determinant tie deterministically connects the high-valued diagonal. A missing corner, exact
  * raw nodata sentinel, nonfinite calibrated sample, or nonfinite GPU level clears the whole cell.
  */
-export class GPURasterContourClassifier implements GPUCommandGraphContributor {
+export class GPURasterContourClassifier {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -179,7 +175,7 @@ export class GPURasterContourClassifier implements GPUCommandGraphContributor {
  * by their callers. Vertex positions remain local pixel-center coordinates: area pixels start at
  * (0.5, 0.5), point pixels at (0, 0). Apply the retained affine/CRS separately when rendering.
  */
-export class GPURasterContours implements GPUCommandGraphContributor {
+export class GPURasterContours {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -304,12 +300,15 @@ export class GPURasterContours implements GPUCommandGraphContributor {
       cases,
       segmentCounts
     }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-scan`,
-      input: segmentCounts,
-      output: segmentOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUScan({
+        id: `${this.id}-scan`,
+        input: segmentCounts,
+        output: segmentOffsets,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
     if (this.cellCount > 0 && this.capacity > 0) {
       this.addScatterPass(graph, cases, segmentOffsets, gpuLevel);
     }

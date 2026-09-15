@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -11,7 +12,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test, vi} from 'vitest';
-import {addGPUSegmentedSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
+import {getGPUSegmentedSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 
 describe('GPUSegmentedSort', () => {
   test('groups arbitrary independent domains into at most eight CORE-compatible graph nodes', () => {
@@ -21,7 +22,7 @@ describe('GPUSegmentedSort', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      fixture.sort.addToGraph(fixture.graph);
+      addGPUCommandNodes(fixture.graph, fixture.sort.getCommandNodes(fixture.graph));
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-sort-bitonic-local-2',
@@ -48,7 +49,7 @@ describe('GPUSegmentedSort', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      fixture.sort.addToGraph(fixture.graph);
+      addGPUCommandNodes(fixture.graph, fixture.sort.getCommandNodes(fixture.graph));
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-sort-bitonic-local-4'
@@ -66,7 +67,10 @@ describe('GPUSegmentedSort', () => {
 
     try {
       expect(() =>
-        addGPUSegmentedSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 2)
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSegmentedSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 2)
+        )
       ).toThrow(/exceeding the 3D dispatch limit/i);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
@@ -80,7 +84,10 @@ describe('GPUSegmentedSort', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      addGPUSegmentedSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 0);
+      addGPUCommandNodes(
+        fixture.graph,
+        getGPUSegmentedSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 0)
+      );
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();
@@ -191,7 +198,9 @@ describe('GPUSegmentedSort', () => {
     const addComputePass = vi.spyOn(otherGraph, 'addComputePass');
 
     try {
-      expect(() => fixture.sort.addToGraph(otherGraph)).toThrow(/belong to the target graph/);
+      expect(() =>
+        addGPUCommandNodes(otherGraph, fixture.sort.getCommandNodes(otherGraph))
+      ).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();

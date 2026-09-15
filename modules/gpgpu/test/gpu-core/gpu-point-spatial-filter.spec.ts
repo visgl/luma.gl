@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -178,7 +179,7 @@ function createFixture(
     count: importView(graph, 'index-count', indexCount, 'uint32', 1),
     overflow: importView(graph, 'index-overflow', indexOverflow, 'uint32', 1)
   });
-  index.addToGraph(graph);
+  addGPUCommandNodes(graph, index.getCommandNodes(graph));
 
   const candidateIdsView = importView(graph, 'candidate-ids', candidateIds, 'uint32', length);
   const candidateCountView = importView(graph, 'candidate-count', candidateCount, 'uint32', 1);
@@ -189,14 +190,17 @@ function createFixture(
     'uint32',
     1
   );
-  new GPUGridIndexQuery({
-    index,
-    kind: props.kind,
-    query: queryView,
-    output: candidateIdsView,
-    count: candidateCountView,
-    overflow: candidateOverflowView
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGridIndexQuery({
+      index,
+      kind: props.kind,
+      query: queryView,
+      output: candidateIdsView,
+      count: candidateCountView,
+      overflow: candidateOverflowView
+    }).getCommandNodes(graph)
+  );
 
   addFilterAndVisibility(graph, {
     id: 'indexed',
@@ -270,15 +274,18 @@ function addFilterAndVisibility(
     props.length
   );
   const overflow = importView(graph, `${props.id}-overflow`, props.result.overflow, 'uint32', 1);
-  new GPUPointSpatialFilter({
-    id: `${props.id}-point-filter`,
-    positions: props.positions,
-    kind: props.kind,
-    query: props.query,
-    outputMask: exactMask,
-    overflow,
-    candidates: props.candidates
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUPointSpatialFilter({
+      id: `${props.id}-point-filter`,
+      positions: props.positions,
+      kind: props.kind,
+      query: props.query,
+      outputMask: exactMask,
+      overflow,
+      candidates: props.candidates
+    }).getCommandNodes(graph)
+  );
 
   const predicates = [{kind: 'bounds' as const, mask: exactMask}];
   if (props.selection) {
@@ -287,13 +294,22 @@ function addFilterAndVisibility(
       mask: importView(graph, `${props.id}-selection`, props.selection, 'uint32', props.length)
     });
   }
-  new GPUVisibilityWorkflow({
-    id: `${props.id}-visibility`,
-    predicates,
-    output: importView(graph, `${props.id}-visible-ids`, props.result.ids, 'uint32', props.length),
-    count: importView(graph, `${props.id}-visible-count`, props.result.count, 'uint32', 1),
-    outputMask
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUVisibilityWorkflow({
+      id: `${props.id}-visibility`,
+      predicates,
+      output: importView(
+        graph,
+        `${props.id}-visible-ids`,
+        props.result.ids,
+        'uint32',
+        props.length
+      ),
+      count: importView(graph, `${props.id}-visible-count`, props.result.count, 'uint32', 1),
+      outputMask
+    }).getCommandNodes(graph)
+  );
 }
 
 function createResultBuffers(device: Device, length: number): ResultBuffers {

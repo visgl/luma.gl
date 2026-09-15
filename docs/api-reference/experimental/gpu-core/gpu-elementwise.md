@@ -69,13 +69,13 @@ AXPY is therefore a special case of MADD where one multiplicand is a scalar broa
 ## Contract
 
 ```ts
-new GPUElementwise({
+addGPUCommandNodes(graph, new GPUElementwise({
   input: a,
   inputB: b,
   inputC: c,
   output,
   operation: 'multiply-add'
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 Inputs/output currently use matching packed scalar formats and logical lengths.

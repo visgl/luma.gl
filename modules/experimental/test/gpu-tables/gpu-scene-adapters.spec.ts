@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
@@ -202,30 +203,39 @@ it('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer
   const groupOverflows = makeOutput('group-overflows', [0, 0]);
   const groupOverflow = makeOutput('group-overflow', [0]);
 
-  new GPUVisibilityWorkflow({
-    predicates: [{kind: 'bounds', mask: visibility.view}],
-    output: visibleRows.view,
-    count: visibleCount.view
-  }).addToGraph(graph);
-  new GPUSceneDrawGeneration({
-    scene: source,
-    visibility: visibility.view,
-    commands: commandViews,
-    requiredCount: required.view,
-    publishedCount: published.view,
-    overflow: drawOverflow.view
-  }).addToGraph(graph);
-  new GPUSceneResourceGroups({
-    scene: source,
-    commands: commandViews,
-    groups: [
-      {id: 0, firstCommand: 0, commandCount: 2, geometryId: 7},
-      {id: 1, firstCommand: 2, commandCount: 2, geometryId: 7}
-    ],
-    counts: groupCounts.view,
-    overflows: groupOverflows.view,
-    overflow: groupOverflow.view
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUVisibilityWorkflow({
+      predicates: [{kind: 'bounds', mask: visibility.view}],
+      output: visibleRows.view,
+      count: visibleCount.view
+    }).getCommandNodes(graph)
+  );
+  addGPUCommandNodes(
+    graph,
+    new GPUSceneDrawGeneration({
+      scene: source,
+      visibility: visibility.view,
+      commands: commandViews,
+      requiredCount: required.view,
+      publishedCount: published.view,
+      overflow: drawOverflow.view
+    }).getCommandNodes(graph)
+  );
+  addGPUCommandNodes(
+    graph,
+    new GPUSceneResourceGroups({
+      scene: source,
+      commands: commandViews,
+      groups: [
+        {id: 0, firstCommand: 0, commandCount: 2, geometryId: 7},
+        {id: 1, firstCommand: 2, commandCount: 2, geometryId: 7}
+      ],
+      counts: groupCounts.view,
+      overflows: groupOverflows.view,
+      overflow: groupOverflow.view
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -120,7 +120,7 @@ const LINEAR_WORKGROUP_SIZE = 256;
  * explicit upstream status, caller-owned dense outputs, saturating unsigned populations, and merged
  * calibrated intensity/moment partials remain entirely inside the caller's command graph.
  */
-export class GPURasterCrossTileComponents implements GPUCommandGraphContributor {
+export class GPURasterCrossTileComponents {
   readonly id: string;
   readonly metadata: GPURasterMetadata;
   readonly tiles: readonly GPURasterCrossTile[];
@@ -348,14 +348,17 @@ export class GPURasterCrossTileComponents implements GPUCommandGraphContributor 
     for (const tile of this.plannedTiles) this.addTileInitialization(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativePass(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativeValidation(graph, scratch, tile);
-    new GPUSort({
-      id: `${this.id}-sort-global-roots`,
-      keys: scratch.rootPositions,
-      values: scratch.candidateIndices,
-      outputKeys: scratch.sortedPositions,
-      outputValues: scratch.sortedCandidates,
-      direction: 'ascending'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUSort({
+        id: `${this.id}-sort-global-roots`,
+        keys: scratch.rootPositions,
+        values: scratch.candidateIndices,
+        outputKeys: scratch.sortedPositions,
+        outputValues: scratch.sortedCandidates,
+        direction: 'ascending'
+      }).getCommandNodes(graph)
+    );
     this.addRankInitialization(graph, scratch);
     for (let iteration = 0; iteration < this.maximumIterations; iteration++) {
       for (const seam of this.seams) this.addSeamPass(graph, scratch, seam, iteration);
@@ -363,12 +366,15 @@ export class GPURasterCrossTileComponents implements GPUCommandGraphContributor 
       this.addConvergencePass(graph, scratch, iteration);
     }
     this.addRootFlagPass(graph, scratch);
-    new GPUScan({
-      id: `${this.id}-scan-global-roots`,
-      input: scratch.rootFlags,
-      output: scratch.rootOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUScan({
+        id: `${this.id}-scan-global-roots`,
+        input: scratch.rootFlags,
+        output: scratch.rootOffsets,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
     this.addCountPublication(graph, scratch);
     for (const tile of this.plannedTiles) this.addTilePublication(graph, scratch, tile);
     if (this.output.pixelCounts.length > 0) {

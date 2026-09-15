@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {getGPUVectorFormatInfo} from '@luma.gl/gpgpu/gpu-data';
@@ -184,7 +185,10 @@ export class GPUBVH {
   }
 
   /** Adds leaf loading, topology publication, and bottom-up refit passes to the graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.minima,
       this.maxima,
@@ -201,29 +205,37 @@ export class GPUBVH {
     }
 
     if (this.resolvedStrategy === 'fused') {
-      addFusedRefitPass(graph, this);
+      nodes.push(...addFusedRefitPass(graph, this));
     } else {
-      addLoadLeavesPass(
-        graph,
-        this,
-        getGPUBVHDispatchLayout(
-          this.nodeCount,
-          graph.device.limits.maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addLoadLeavesPass(
+          graph,
+          this,
+          getGPUBVHDispatchLayout(
+            this.nodeCount,
+            graph.device.limits.maxComputeWorkgroupsPerDimension
+          )
         )
       );
       for (let depth = this.levelCount - 2; depth >= 0; depth--) {
-        addRefitLevelPass(graph, this, depth);
+        nodes.push(...addRefitLevelPass(graph, this, depth));
       }
     }
 
     if (this.sourceIds) {
-      addRemapSourceIdsPass(graph, this, this.sourceIds);
+      nodes.push(...addRemapSourceIdsPass(graph, this, this.sourceIds));
     }
+
+    return nodes;
   }
 }
 
 /** Builds the complete hierarchy inside one synchronized workgroup without global barriers. */
-function addFusedRefitPass<Parameters>(graph: GPUCommandGraph<Parameters>, bvh: GPUBVH): void {
+function addFusedRefitPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  bvh: GPUBVH
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const SOURCE_COUNT: u32 = ${bvh.minima.length}u;
 const STORED_COUNT: u32 = ${Math.min(bvh.minima.length, bvh.leafCapacity)}u;
@@ -337,29 +349,34 @@ fn finite(value: f32) -> bool {
     {buffer: bvh.count, usage: 'storage-write'},
     {buffer: bvh.overflow, usage: 'storage-write'}
   ];
-  addComputationPass(graph, {
-    id: `${bvh.id}-fused-refit`,
-    source,
-    resources,
-    bindings: {
-      sourceMinima: bvh.minima,
-      sourceMaxima: bvh.maxima,
-      nodeMinima: bvh.nodeMinima,
-      nodeMaxima: bvh.nodeMaxima,
-      nodeChildren: bvh.nodeChildren,
-      leafIds: bvh.leafIds,
-      outputCount: bvh.count,
-      outputOverflow: bvh.overflow
-    },
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${bvh.id}-fused-refit`,
+      source,
+      resources,
+      bindings: {
+        sourceMinima: bvh.minima,
+        sourceMaxima: bvh.maxima,
+        nodeMinima: bvh.nodeMinima,
+        nodeMaxima: bvh.nodeMaxima,
+        nodeChildren: bvh.nodeChildren,
+        leafIds: bvh.leafIds,
+        outputCount: bvh.count,
+        outputOverflow: bvh.overflow
+      },
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 function addLoadLeavesPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   bvh: GPUBVH,
   dispatchLayout: GPUBVHDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const SOURCE_COUNT: u32 = ${bvh.minima.length}u;
 const STORED_COUNT: u32 = ${Math.min(bvh.minima.length, bvh.leafCapacity)}u;
@@ -443,22 +460,26 @@ fn finite(value: f32) -> bool {
     {buffer: bvh.count, usage: 'storage-write'},
     {buffer: bvh.overflow, usage: 'storage-write'}
   ];
-  addComputationPass(graph, {
-    id: `${bvh.id}-load-leaves`,
-    source,
-    resources,
-    bindings: {
-      sourceMinima: bvh.minima,
-      sourceMaxima: bvh.maxima,
-      nodeMinima: bvh.nodeMinima,
-      nodeMaxima: bvh.nodeMaxima,
-      nodeChildren: bvh.nodeChildren,
-      leafIds: bvh.leafIds,
-      outputCount: bvh.count,
-      outputOverflow: bvh.overflow
-    },
-    dispatchSize: dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${bvh.id}-load-leaves`,
+      source,
+      resources,
+      bindings: {
+        sourceMinima: bvh.minima,
+        sourceMaxima: bvh.maxima,
+        nodeMinima: bvh.nodeMinima,
+        nodeMaxima: bvh.nodeMaxima,
+        nodeChildren: bvh.nodeChildren,
+        leafIds: bvh.leafIds,
+        outputCount: bvh.count,
+        outputOverflow: bvh.overflow
+      },
+      dispatchSize: dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Remaps published leaf indices without exceeding the eight-buffer CORE storage limit. */
@@ -466,7 +487,8 @@ function addRemapSourceIdsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   bvh: GPUBVH,
   sourceIds: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const storedCount = Math.min(sourceIds.length, bvh.leafCapacity);
   const dispatchLayout = getGPUBVHDispatchLayout(
     storedCount,
@@ -490,23 +512,28 @@ const LEAF_IDS_OFFSET: u32 = ${getViewElementOffset(bvh.leafIds)}u;
   if (sourceIndex == ${INVALID_NODE}u) { return; }
   leafIds[LEAF_IDS_OFFSET + leafIndex] = sourceIds[SOURCE_IDS_OFFSET + sourceIndex];
 }`;
-  addComputationPass(graph, {
-    id: `${bvh.id}-remap-source-ids`,
-    source,
-    resources: [
-      {buffer: sourceIds, usage: 'storage-read'},
-      {buffer: bvh.leafIds, usage: 'storage-read-write'}
-    ],
-    bindings: {sourceIds, leafIds: bvh.leafIds},
-    dispatchSize: dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${bvh.id}-remap-source-ids`,
+      source,
+      resources: [
+        {buffer: sourceIds, usage: 'storage-read'},
+        {buffer: bvh.leafIds, usage: 'storage-read-write'}
+      ],
+      bindings: {sourceIds, leafIds: bvh.leafIds},
+      dispatchSize: dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 function addRefitLevelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   bvh: GPUBVH,
   depth: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const firstNode = 2 ** depth - 1;
   const levelNodeCount = 2 ** depth;
   const source = /* wgsl */ `
@@ -539,21 +566,25 @@ const CHILDREN_OFFSET: u32 = ${getViewElementOffset(bvh.nodeChildren)}u;
     );
   }
 }`;
-  addComputationPass(graph, {
-    id: `${bvh.id}-refit-depth-${depth}`,
-    source,
-    resources: [
-      {buffer: bvh.nodeMinima, usage: 'storage-read-write'},
-      {buffer: bvh.nodeMaxima, usage: 'storage-read-write'},
-      {buffer: bvh.nodeChildren, usage: 'storage-read'}
-    ],
-    bindings: {
-      nodeMinima: bvh.nodeMinima,
-      nodeMaxima: bvh.nodeMaxima,
-      nodeChildren: bvh.nodeChildren
-    },
-    dispatchCount: Math.ceil(levelNodeCount / BVH_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${bvh.id}-refit-depth-${depth}`,
+      source,
+      resources: [
+        {buffer: bvh.nodeMinima, usage: 'storage-read-write'},
+        {buffer: bvh.nodeMaxima, usage: 'storage-read-write'},
+        {buffer: bvh.nodeChildren, usage: 'storage-read'}
+      ],
+      bindings: {
+        nodeMinima: bvh.nodeMinima,
+        nodeMaxima: bvh.nodeMaxima,
+        nodeChildren: bvh.nodeChildren
+      },
+      dispatchCount: Math.ceil(levelNodeCount / BVH_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addComputationPass<Parameters>(
@@ -566,45 +597,50 @@ function addComputationPass<Parameters>(
     dispatchCount?: number;
     dispatchSize?: GPUBVHDispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          if (props.dispatchSize) {
-            computation.dispatch(
-              computePass,
-              props.dispatchSize.x,
-              props.dispatchSize.y,
-              props.dispatchSize.z
-            );
-          } else {
-            computation.dispatch(computePass, props.dispatchCount!);
-          }
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            if (props.dispatchSize) {
+              computation.dispatch(
+                computePass,
+                props.dispatchSize.x,
+                props.dispatchSize.y,
+                props.dispatchSize.z
+              );
+            } else {
+              computation.dispatch(computePass, props.dispatchCount!);
+            }
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Plans a bounded 3D dispatch for BVH node initialization. @internal */

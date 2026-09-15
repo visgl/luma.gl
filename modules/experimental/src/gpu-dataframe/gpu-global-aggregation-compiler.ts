@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUField, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {
@@ -106,12 +107,15 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
           nullable: false,
           metadata: new Map()
         });
-        new GPUReduction({
-          id,
-          input: context.selectionMask,
-          output: context.graph.importGPUVector(`${id}-output`, output).data[0],
-          operation: 'sum'
-        }).addToGraph(context.graph);
+        addGPUCommandNodes(
+          context.graph,
+          new GPUReduction({
+            id,
+            input: context.selectionMask,
+            output: context.graph.importGPUVector(`${id}-output`, output).data[0],
+            operation: 'sum'
+          }).getCommandNodes(context.graph)
+        );
         continue;
       }
 
@@ -139,12 +143,15 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
 
       const sanitized = getGPUSanitizedMetricValues(context, state, definition.operation, id);
       const outputView = context.graph.importGPUVector(`${id}-output`, output).data[0];
-      new GPUReduction({
-        id: `${id}-reduce`,
-        input: sanitized,
-        output: outputView,
-        operation: definition.operation === 'mean' ? 'sum' : definition.operation
-      }).addToGraph(context.graph);
+      addGPUCommandNodes(
+        context.graph,
+        new GPUReduction({
+          id: `${id}-reduce`,
+          input: sanitized,
+          output: outputView,
+          operation: definition.operation === 'mean' ? 'sum' : definition.operation
+        }).getCommandNodes(context.graph)
+      );
       if (definition.operation !== 'sum') {
         addGPUFinalizeGlobalMetricPass(
           context.graph,
@@ -194,12 +201,15 @@ function createGPUGlobalMetricState<Selection extends GPUTypeMap>(
         )
       : selectedRows;
   const acceptedCount = createTransientView(context.graph, `${id}-accepted-count`, 'uint32', 1);
-  new GPUReduction({
-    id: `${id}-count-valid`,
-    input: acceptedRows,
-    output: acceptedCount,
-    operation: 'sum'
-  }).addToGraph(context.graph);
+  addGPUCommandNodes(
+    context.graph,
+    new GPUReduction({
+      id: `${id}-count-valid`,
+      input: acceptedRows,
+      output: acceptedCount,
+      operation: 'sum'
+    }).getCommandNodes(context.graph)
+  );
 
   const validity = createGPUAnalyticsOutputVector(
     context.graph.device,

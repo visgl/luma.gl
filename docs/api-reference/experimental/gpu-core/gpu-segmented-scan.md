@@ -47,12 +47,12 @@ Many GPU structures contain thousands of logical lists packed into one allocatio
 The initial operation consumes packed `uint32` values and `segmentOffsets`. The output has the same length as the input and supports `exclusive` and `inclusive` modes.
 
 ```ts
-new GPUSegmentedScan({
+addGPUCommandNodes(graph, new GPUSegmentedScan({
   input: weights,
   segmentOffsets,
   output: prefixWeights,
   mode: 'exclusive'
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 Empty segments are valid and write no rows.

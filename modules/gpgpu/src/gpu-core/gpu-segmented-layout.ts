@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -69,7 +70,10 @@ export class GPUSegmentedLayout {
   }
 
   /** Adds prefix scans and offset publication passes to a command graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const props = this.props;
     for (const view of Object.values(props).filter(
       (value): value is GraphDataView<'uint32'> =>
@@ -80,36 +84,45 @@ export class GPUSegmentedLayout {
       }
     }
     if (props.valueFlags.length === 0) {
-      addEmptyPass(graph, props);
-      return;
+      nodes.push(...addEmptyPass(graph, props));
+      return nodes;
     }
-    new GPUScan({
-      id: `${this.id}-value-offsets`,
-      input: props.valueFlags,
-      output: props.valueOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-element-offsets`,
-      input: props.elementFlags,
-      output: props.elementOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-segment-indices`,
-      input: props.segmentStartFlags,
-      output: props.segmentIndices,
-      mode: 'inclusive'
-    }).addToGraph(graph);
-    addSegmentOffsetsPass(graph, props);
-    addCountsPass(graph, props);
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-value-offsets`,
+        input: props.valueFlags,
+        output: props.valueOffsets,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-element-offsets`,
+        input: props.elementFlags,
+        output: props.elementOffsets,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-segment-indices`,
+        input: props.segmentStartFlags,
+        output: props.segmentIndices,
+        mode: 'inclusive'
+      }).getCommandNodes(graph)
+    );
+    nodes.push(...addSegmentOffsetsPass(graph, props));
+    nodes.push(...addCountsPass(graph, props));
+
+    return nodes;
   }
 }
 
 function addEmptyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentedLayoutProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUSegmentedLayoutEmpty',
     1,
@@ -136,26 +149,31 @@ fn main(
   elementCount[ELEMENT_COUNT_OFFSET] = 0u;
   segmentCount[SEGMENT_COUNT_OFFSET] = 0u;
 }`;
-  addPass(
-    graph,
-    `${props.id}-empty`,
-    'GPUSegmentedLayoutEmpty',
-    source,
-    1,
-    [
-      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
-      {name: 'valueCount', view: props.valueCount, usage: 'storage-write'},
-      {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
-      {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
-    ],
-    dispatchLayout
+  nodes.push(
+    ...addPass(
+      graph,
+      `${props.id}-empty`,
+      'GPUSegmentedLayoutEmpty',
+      source,
+      1,
+      [
+        {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
+        {name: 'valueCount', view: props.valueCount, usage: 'storage-write'},
+        {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
+        {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
+      ],
+      dispatchLayout
+    )
   );
+
+  return nodes;
 }
 
 function addSegmentOffsetsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentedLayoutProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.valueFlags.length;
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUSegmentedLayoutSegmentOffsets',
@@ -192,27 +210,32 @@ fn main(
     segmentOffsets[SEGMENT_OFFSET + segments] = logicalElementCount;
   }
 }`;
-  addPass(
-    graph,
-    `${props.id}-segment-offsets`,
-    'GPUSegmentedLayoutSegmentOffsets',
-    source,
-    length,
-    [
-      {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
-      {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
-      {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
-      {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-      {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
-    ],
-    dispatchLayout
+  nodes.push(
+    ...addPass(
+      graph,
+      `${props.id}-segment-offsets`,
+      'GPUSegmentedLayoutSegmentOffsets',
+      source,
+      length,
+      [
+        {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
+        {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
+        {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
+        {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
+        {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
+      ],
+      dispatchLayout
+    )
   );
+
+  return nodes;
 }
 
 function addCountsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUSegmentedLayoutProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.valueFlags.length;
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUSegmentedLayoutCounts',
@@ -251,24 +274,28 @@ fn main(
     elementOffsets[ELEMENT_OFFSET + LAST_INDEX] + elementFlags[ELEMENT_FLAG_OFFSET + LAST_INDEX];
   segmentCount[SEGMENT_COUNT_OFFSET] = segmentIndices[SEGMENT_INDEX_OFFSET + LAST_INDEX] + 1u;
 }`;
-  addPass(
-    graph,
-    `${props.id}-counts`,
-    'GPUSegmentedLayoutCounts',
-    source,
-    1,
-    [
-      {name: 'valueFlags', view: props.valueFlags, usage: 'storage-read'},
-      {name: 'valueOffsets', view: props.valueOffsets, usage: 'storage-read'},
-      {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
-      {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-      {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
-      {name: 'valueCount', view: props.valueCount, usage: 'storage-write'},
-      {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
-      {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
-    ],
-    dispatchLayout
+  nodes.push(
+    ...addPass(
+      graph,
+      `${props.id}-counts`,
+      'GPUSegmentedLayoutCounts',
+      source,
+      1,
+      [
+        {name: 'valueFlags', view: props.valueFlags, usage: 'storage-read'},
+        {name: 'valueOffsets', view: props.valueOffsets, usage: 'storage-read'},
+        {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
+        {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
+        {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
+        {name: 'valueCount', view: props.valueCount, usage: 'storage-write'},
+        {name: 'elementCount', view: props.elementCount, usage: 'storage-write'},
+        {name: 'segmentCount', view: props.segmentCount, usage: 'storage-write'}
+      ],
+      dispatchLayout
+    )
   );
+
+  return nodes;
 }
 
 type PassResource = {
@@ -285,47 +312,52 @@ function addPass<Parameters>(
   length: number,
   resources: PassResource[],
   dispatchLayout: ReturnType<typeof getBoundedDispatchLayout>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const workgroupCount = Math.ceil(length / SEGMENTED_LAYOUT_WORKGROUP_SIZE);
-  graph.addComputePass({
-    id,
-    workload: {
-      operation,
-      commandCount: 1,
-      maximumWorkgroupCount: workgroupCount,
-      maximumInvocationCount: workgroupCount * SEGMENTED_LAYOUT_WORKGROUP_SIZE,
-      readByteLength:
-        resources.filter(resource => resource.usage === 'storage-read').length * length * 4,
-      writeByteLength:
-        resources.filter(resource => resource.usage === 'storage-write').length * length * 4
-    },
-    resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: resources.map((resource, location) => ({
-            name: resource.name,
-            type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const resource of resources) {
-            bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id,
+      workload: {
+        operation,
+        commandCount: 1,
+        maximumWorkgroupCount: workgroupCount,
+        maximumInvocationCount: workgroupCount * SEGMENTED_LAYOUT_WORKGROUP_SIZE,
+        readByteLength:
+          resources.filter(resource => resource.usage === 'storage-read').length * length * 4,
+        writeByteLength:
+          resources.filter(resource => resource.usage === 'storage-write').length * length * 4
+      },
+      resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: resources.map((resource, location) => ({
+              name: resource.name,
+              type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const resource of resources) {
+              bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPUSegmentedLayoutProps>): void {

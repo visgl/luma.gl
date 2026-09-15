@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {
@@ -157,7 +158,7 @@ class GPUSortExample {
               algorithm,
               direction
             });
-      sort.addToGraph(graph);
+      addGPUCommandNodes(graph, sort.getCommandNodes(graph));
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

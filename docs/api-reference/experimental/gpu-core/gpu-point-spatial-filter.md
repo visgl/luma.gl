@@ -82,7 +82,7 @@ const candidateMask = graph.createDataView(candidateMaskBuffer, {
   length: positions.length
 });
 
-new GPUPointSpatialFilter({
+addGPUCommandNodes(graph, new GPUPointSpatialFilter({
   positions,
   kind: 'radius',
   query: centerAndRadius,
@@ -93,16 +93,16 @@ new GPUPointSpatialFilter({
   },
   outputMask: candidateMask,
   overflow: exactResultOverflow
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 
-new GPUVisibilityWorkflow({
+addGPUCommandNodes(graph, new GPUVisibilityWorkflow({
   predicates: [
     {kind: 'bounds', mask: candidateMask},
     {kind: 'selection', mask: selectedRows}
   ],
   output: visibleIds,
   count: visibleCount
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 Omit `candidates` to dispatch the identical exact predicate over every source point. Query-buffer

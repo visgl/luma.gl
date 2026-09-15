@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -56,7 +57,10 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   const input = graph.createDataView(inputHandle, {format: 'float32', length: 12});
   const output = graph.createDataView(outputHandle, {format: 'float32', length: 12});
   const transpose = new GPUTranspose({input, output, rows: 3, columns: 4});
-  expect(() => transpose.addToGraph(graph), 'valid transpose adds one graph node').not.toThrow();
+  expect(
+    () => addGPUCommandNodes(graph, transpose.getCommandNodes(graph)),
+    'valid transpose adds one graph node'
+  ).not.toThrow();
 
   const shortOutput = graph.createDataView(outputHandle, {format: 'float32', length: 11});
   expect(() => new GPUTranspose({input, output: shortOutput, rows: 3, columns: 4})).toThrow(
@@ -91,7 +95,9 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32', length: 12});
   const crossGraphTranspose = new GPUTranspose({input, output: otherOutput, rows: 3, columns: 4});
-  expect(() => crossGraphTranspose.addToGraph(graph)).toThrow(/different GPUCommandGraph/);
+  expect(() => addGPUCommandNodes(graph, crossGraphTranspose.getCommandNodes(graph))).toThrow(
+    /different GPUCommandGraph/
+  );
 
   const emptyGraph = new GPUCommandGraph(makeSupportDevice());
   const emptyInputHandle = emptyGraph.importBuffer({
@@ -106,8 +112,11 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const emptyInput = emptyGraph.createDataView(emptyInputHandle, {format: 'uint32', length: 0});
   const emptyOutput = emptyGraph.createDataView(emptyOutputHandle, {format: 'uint32', length: 0});
-  new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}).addToGraph(
-    emptyGraph
+  addGPUCommandNodes(
+    emptyGraph,
+    new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}).getCommandNodes(
+      emptyGraph
+    )
   );
   const compiledEmptyGraph = emptyGraph.compile();
   expect(compiledEmptyGraph.stats.nodeOrder.length, 'empty transpose adds no graph node').toBe(0);

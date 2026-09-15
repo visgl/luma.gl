@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from './gpu-command-node';
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -194,7 +195,12 @@ function makeGPUTransposeBenchmarkPath(
   const input = importGPUTransposeBenchmarkView(graph, 'input', inputBuffer, elementCount);
   const output = importGPUTransposeBenchmarkView(graph, 'output', outputBuffer, elementCount);
   if (strategy === 'tiled') {
-    new GPUTranspose({id: `${benchmarkId}-tiled`, input, output, rows, columns}).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUTranspose({id: `${benchmarkId}-tiled`, input, output, rows, columns}).getCommandNodes(
+        graph
+      )
+    );
   } else {
     addGPUTransposeReferencePass(graph, benchmarkId, input, output, rows, columns);
   }

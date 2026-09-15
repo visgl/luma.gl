@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type GPUCommandGraph, type GPUCommandGraphContributor} from '@luma.gl/gpgpu/gpu-core';
+import {type GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import type {
   GPUFloat32Positions,
   GPUFloat64Positions,
@@ -54,7 +54,7 @@ export type GPUPairwisePointDistanceProps = GPUPairwisePointDistanceBaseProps &
   );
 
 /** Computes pairwise Euclidean point distance without first subtracting on the CPU. */
-export class GPUPairwisePointDistance implements GPUCommandGraphContributor {
+export class GPUPairwisePointDistance {
   readonly id: string;
   readonly left: GPUFloat32Positions | GPUFloat64Positions;
   readonly right: GPUFloat32Positions | GPUFloat64Positions;

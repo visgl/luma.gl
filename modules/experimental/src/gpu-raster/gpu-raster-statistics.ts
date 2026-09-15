@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {GPUReduction} from '@luma.gl/gpgpu/gpu-core';
 import {getRasterDeviceLimits} from './raster-device-limits';
@@ -48,7 +44,7 @@ export type GPURasterStatisticsProps = {
  * values. Existing hierarchical reductions compute count, sum, and extent; the final one-thread
  * pass computes the mean from the caller-owned GPU outputs.
  */
-export class GPURasterStatistics implements GPUCommandGraphContributor {
+export class GPURasterStatistics {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -154,26 +150,35 @@ export class GPURasterStatistics implements GPUCommandGraphContributor {
       horizontalCount,
       verticalCount
     ]);
-    new GPUReduction({
-      id: `${this.id}-count`,
-      input: resolvedValidity,
-      output: this.count,
-      operation: 'sum'
-    }).addToGraph(graph);
-    new GPUReduction({
-      id: `${this.id}-sum`,
-      input: calibratedValues,
-      mask: resolvedValidity,
-      output: this.sum,
-      operation: 'sum'
-    }).addToGraph(graph);
-    new GPUReduction({
-      id: `${this.id}-extent`,
-      input: calibratedValues,
-      mask: resolvedValidity,
-      output: this.extent,
-      operation: 'extent'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUReduction({
+        id: `${this.id}-count`,
+        input: resolvedValidity,
+        output: this.count,
+        operation: 'sum'
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUReduction({
+        id: `${this.id}-sum`,
+        input: calibratedValues,
+        mask: resolvedValidity,
+        output: this.sum,
+        operation: 'sum'
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUReduction({
+        id: `${this.id}-extent`,
+        input: calibratedValues,
+        mask: resolvedValidity,
+        output: this.extent,
+        operation: 'extent'
+      }).getCommandNodes(graph)
+    );
     this.addMeanPass(graph);
   }
 

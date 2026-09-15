@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -45,7 +46,10 @@ export class GPUCOOToCSR {
     if (props.outputColumnIndices.length !== nnz || props.outputValues.length !== nnz)
       throw new Error(`${this.id} CSR entry outputs must have length nnz`);
   }
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const p = this.props;
     if (
       [
@@ -58,32 +62,50 @@ export class GPUCOOToCSR {
       ].some(view => view.buffer.graph !== graph)
     )
       throw new Error(`${this.id} views must belong to target graph`);
-    addCopyEntriesPass(graph, this);
-    addOffsetsPass(graph, this);
+    nodes.push(...addCopyEntriesPass(graph, this));
+    nodes.push(...addOffsetsPass(graph, this));
+
+    return nodes;
   }
 }
-function addCopyEntriesPass<Parameters>(graph: GPUCommandGraph<Parameters>, c: GPUCOOToCSR): void {
+function addCopyEntriesPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  c: GPUCOOToCSR
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const p = c.props,
     nnz = p.rowIndices.length;
-  if (nnz === 0) return;
+  if (nnz === 0) return nodes;
   const groups = Math.ceil(nnz / WORKGROUP_SIZE);
   const source = `const NNZ:u32=${nnz}u;const CI:u32=${getViewElementOffset(p.columnIndices)}u;const VI:u32=${getViewElementOffset(p.values)}u;const CO:u32=${getViewElementOffset(p.outputColumnIndices)}u;const VO:u32=${getViewElementOffset(p.outputValues)}u;@group(0)@binding(0)var<storage,read>columns:array<u32>;@group(0)@binding(1)var<storage,read>values:array<f32>;@group(0)@binding(2)var<storage,read_write>outColumns:array<u32>;@group(0)@binding(3)var<storage,read_write>outValues:array<f32>;@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(global_invocation_id)id:vec3u){let i=id.x;if(i<NNZ){outColumns[CO+i]=columns[CI+i];outValues[VO+i]=values[VI+i];}}`;
-  addPass(graph, `${c.id}-copy`, source, groups, [
-    {name: 'columns', view: p.columnIndices, usage: 'storage-read'},
-    {name: 'values', view: p.values, usage: 'storage-read'},
-    {name: 'outColumns', view: p.outputColumnIndices, usage: 'storage-write'},
-    {name: 'outValues', view: p.outputValues, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${c.id}-copy`, source, groups, [
+      {name: 'columns', view: p.columnIndices, usage: 'storage-read'},
+      {name: 'values', view: p.values, usage: 'storage-read'},
+      {name: 'outColumns', view: p.outputColumnIndices, usage: 'storage-write'},
+      {name: 'outValues', view: p.outputValues, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
-function addOffsetsPass<Parameters>(graph: GPUCommandGraph<Parameters>, c: GPUCOOToCSR): void {
+function addOffsetsPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  c: GPUCOOToCSR
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const p = c.props,
     nnz = p.rowIndices.length,
     groups = Math.ceil((p.rows + 1) / WORKGROUP_SIZE);
   const source = `const ROWS:u32=${p.rows}u;const NNZ:u32=${nnz}u;const RI:u32=${getViewElementOffset(p.rowIndices)}u;const OO:u32=${getViewElementOffset(p.rowOffsets)}u;@group(0)@binding(0)var<storage,read>rowsIn:array<u32>;@group(0)@binding(1)var<storage,read_write>offsets:array<u32>;fn lowerBound(target:u32)->u32{var lo=0u;var hi=NNZ;loop{if(lo>=hi){break;}let mid=lo+(hi-lo)/2u;if(rowsIn[RI+mid]<target){lo=mid+1u;}else{hi=mid;}}return lo;}@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(global_invocation_id)id:vec3u){let row=id.x;if(row<=ROWS){offsets[OO+row]=lowerBound(row);}}`;
-  addPass(graph, `${c.id}-offsets`, source, groups, [
-    {name: 'rowsIn', view: p.rowIndices, usage: 'storage-read'},
-    {name: 'offsets', view: p.rowOffsets, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${c.id}-offsets`, source, groups, [
+      {name: 'rowsIn', view: p.rowIndices, usage: 'storage-read'},
+      {name: 'offsets', view: p.rowOffsets, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 type Resource = {name: string; view: GraphDataView; usage: 'storage-read' | 'storage-write'};
 function addPass<Parameters>(
@@ -92,40 +114,45 @@ function addPass<Parameters>(
   source: string,
   groups: number,
   resources: Resource[]
-): void {
-  graph.addComputePass({
-    id,
-    workload: {
-      operation: 'GPUCOOToCSR',
-      commandCount: 1,
-      maximumWorkgroupCount: groups,
-      maximumInvocationCount: groups * WORKGROUP_SIZE,
-      readByteLength: 0,
-      writeByteLength: 0
-    },
-    resources: resources.map(r => ({buffer: r.view, usage: r.usage})),
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: resources.map((r, location) => ({
-            name: r.name,
-            type: r.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const r of resources) bindings[r.name] = getViewBinding(r.view, getBuffer);
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, groups, 1, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id,
+      workload: {
+        operation: 'GPUCOOToCSR',
+        commandCount: 1,
+        maximumWorkgroupCount: groups,
+        maximumInvocationCount: groups * WORKGROUP_SIZE,
+        readByteLength: 0,
+        writeByteLength: 0
+      },
+      resources: resources.map(r => ({buffer: r.view, usage: r.usage})),
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: resources.map((r, location) => ({
+              name: r.name,
+              type: r.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const r of resources) bindings[r.name] = getViewBinding(r.view, getBuffer);
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, groups, 1, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

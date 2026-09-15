@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Geometry, Model, type AnimationProps} from '@luma.gl/engine';
 import {
@@ -416,7 +417,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       }),
       overflow: graph.createDataView(overflowBuffer, {format: 'uint32', length: 1})
     });
-    selection.addToGraph(graph);
+    addGPUCommandNodes(graph, selection.getCommandNodes(graph));
 
     const frameColor = graph.importFrameTexture({
       id: 'frame-color',

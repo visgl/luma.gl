@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {
   GPUCommandGraph,
   GPUScan,
@@ -43,11 +44,14 @@ export class GPUParquetDeltaBinaryPackedDecoder {
       descriptorCount: this.props.descriptorCount,
       firstValue: this.props.firstValue
     }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-scan`,
-      input: deltas,
-      output: this.props.output,
-      mode: 'inclusive'
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUScan({
+        id: `${this.id}-scan`,
+        input: deltas,
+        output: this.props.output,
+        mode: 'inclusive'
+      }).getCommandNodes(graph)
+    );
   }
 }

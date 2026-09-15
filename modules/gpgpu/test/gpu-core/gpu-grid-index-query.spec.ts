@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -292,18 +293,21 @@ function createQueryFixture(
     count: importView(graph, 'index-count', indexCount, 'uint32', 1),
     overflow: importView(graph, 'index-overflow', indexOverflow, 'uint32', 1)
   });
-  index.addToGraph(graph);
-  new GPUGridIndexQuery({
-    index,
-    kind: props.kind,
-    query: importView(graph, 'query', query, 'float32', props.query.length),
-    output: importView(graph, 'output', output, 'uint32', props.outputCapacity),
-    count: importView(graph, 'output-count', outputCount, 'uint32', 1),
-    overflow: importView(graph, 'output-overflow', outputOverflow, 'uint32', 1),
-    outputMask: outputMask
-      ? importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength!)
-      : undefined
-  }).addToGraph(graph);
+  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  addGPUCommandNodes(
+    graph,
+    new GPUGridIndexQuery({
+      index,
+      kind: props.kind,
+      query: importView(graph, 'query', query, 'float32', props.query.length),
+      output: importView(graph, 'output', output, 'uint32', props.outputCapacity),
+      count: importView(graph, 'output-count', outputCount, 'uint32', 1),
+      overflow: importView(graph, 'output-overflow', outputOverflow, 'uint32', 1),
+      outputMask: outputMask
+        ? importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength!)
+        : undefined
+    }).getCommandNodes(graph)
+  );
   return {
     compiled: graph.compile(),
     query,

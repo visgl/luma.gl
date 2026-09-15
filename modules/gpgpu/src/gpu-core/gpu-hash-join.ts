@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -188,7 +189,10 @@ export class GPUHashJoin {
   }
 
   /** Adds lookup, exclusive scan, and stable bounded pair publication to a graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.index.tableKeys,
       this.index.tableValues,
@@ -217,31 +221,43 @@ export class GPUHashJoin {
       this.found ?? createTransientView(graph, `${this.id}-found`, 'uint32', this.keys.length);
     const probes =
       this.probes ?? createTransientView(graph, `${this.id}-probes`, 'uint32', this.keys.length);
-    new GPUHashIndexQuery({
-      id: `${this.id}-lookup`,
-      index: this.index,
-      keys: this.keys,
-      values: matchedRightRows,
-      found,
-      probes,
-      statistics: this.statistics,
-      maxProbeCount: this.maxProbeCount
-    }).addToGraph(graph);
+    nodes.push(
+      ...new GPUHashIndexQuery({
+        id: `${this.id}-lookup`,
+        index: this.index,
+        keys: this.keys,
+        values: matchedRightRows,
+        found,
+        probes,
+        statistics: this.statistics,
+        maxProbeCount: this.maxProbeCount
+      }).getCommandNodes(graph)
+    );
 
     if (this.keys.length === 0) {
-      addEmptyJoinPass(graph, this);
+      nodes.push(...addEmptyJoinPass(graph, this));
     } else {
       const offsets = createTransientView(graph, `${this.id}-offsets`, 'uint32', this.keys.length);
-      new GPUScan({id: `${this.id}-scan`, input: found, output: offsets}).addToGraph(graph);
-      addJoinScatterPass(graph, this, matchedRightRows, found, offsets);
+      nodes.push(
+        ...new GPUScan({id: `${this.id}-scan`, input: found, output: offsets}).getCommandNodes(
+          graph
+        )
+      );
+      nodes.push(...addJoinScatterPass(graph, this, matchedRightRows, found, offsets));
     }
     if (this.index.statistics) {
-      addSourceOverflowPass(graph, this.id, this.index.statistics, this.overflow);
+      nodes.push(...addSourceOverflowPass(graph, this.id, this.index.statistics, this.overflow));
     }
+
+    return nodes;
   }
 }
 
-function addEmptyJoinPass<Parameters>(graph: GPUCommandGraph<Parameters>, join: GPUHashJoin): void {
+function addEmptyJoinPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  join: GPUHashJoin
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const COUNT_OFFSET: u32 = ${getViewElementOffset(join.count)}u;
 const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
@@ -251,16 +267,20 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
   count[COUNT_OFFSET] = 0u;
   overflow[OVERFLOW_OFFSET] = 0u;
 }`;
-  addComputationPass(graph, {
-    id: `${join.id}-empty`,
-    source,
-    resources: [
-      {buffer: join.count, usage: 'storage-write'},
-      {buffer: join.overflow, usage: 'storage-write'}
-    ],
-    bindings: {count: join.count, overflow: join.overflow},
-    dispatchSize: {x: 1, y: 1, z: 1}
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${join.id}-empty`,
+      source,
+      resources: [
+        {buffer: join.count, usage: 'storage-write'},
+        {buffer: join.overflow, usage: 'storage-write'}
+      ],
+      bindings: {count: join.count, overflow: join.overflow},
+      dispatchSize: {x: 1, y: 1, z: 1}
+    })
+  );
+
+  return nodes;
 }
 
 function addJoinScatterPass<Parameters>(
@@ -269,10 +289,11 @@ function addJoinScatterPass<Parameters>(
   matchedRightRows: GraphDataView<'uint32'>,
   found: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   if (join.outputLeftRows.length === 0) {
-    addJoinCountOnlyPass(graph, join, found, offsets);
-    return;
+    nodes.push(...addJoinCountOnlyPass(graph, join, found, offsets));
+    return nodes;
   }
   const layout = getDispatchLayout(
     join.keys.length,
@@ -326,33 +347,37 @@ ${leftRowsBinding}
     overflow[OVERFLOW_OFFSET] = select(0u, 1u, requiredCount > OUTPUT_CAPACITY);
   }
 }`;
-  addComputationPass(graph, {
-    id: `${join.id}-scatter`,
-    source,
-    resources: [
-      {buffer: matchedRightRows, usage: 'storage-read'},
-      {buffer: found, usage: 'storage-read'},
-      {buffer: offsets, usage: 'storage-read'},
-      ...(join.leftRows
-        ? ([{buffer: join.leftRows, usage: 'storage-read'}] as GraphBufferUse[])
-        : []),
-      {buffer: join.outputLeftRows, usage: 'storage-write'},
-      {buffer: join.outputRightRows, usage: 'storage-write'},
-      {buffer: join.count, usage: 'storage-write'},
-      {buffer: join.overflow, usage: 'storage-write'}
-    ],
-    bindings: {
-      matchedRightRows,
-      found,
-      offsets,
-      ...(join.leftRows ? {leftRows: join.leftRows} : {}),
-      outputLeftRows: join.outputLeftRows,
-      outputRightRows: join.outputRightRows,
-      count: join.count,
-      overflow: join.overflow
-    },
-    dispatchSize: layout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${join.id}-scatter`,
+      source,
+      resources: [
+        {buffer: matchedRightRows, usage: 'storage-read'},
+        {buffer: found, usage: 'storage-read'},
+        {buffer: offsets, usage: 'storage-read'},
+        ...(join.leftRows
+          ? ([{buffer: join.leftRows, usage: 'storage-read'}] as GraphBufferUse[])
+          : []),
+        {buffer: join.outputLeftRows, usage: 'storage-write'},
+        {buffer: join.outputRightRows, usage: 'storage-write'},
+        {buffer: join.count, usage: 'storage-write'},
+        {buffer: join.overflow, usage: 'storage-write'}
+      ],
+      bindings: {
+        matchedRightRows,
+        found,
+        offsets,
+        ...(join.leftRows ? {leftRows: join.leftRows} : {}),
+        outputLeftRows: join.outputLeftRows,
+        outputRightRows: join.outputRightRows,
+        count: join.count,
+        overflow: join.overflow
+      },
+      dispatchSize: layout
+    })
+  );
+
+  return nodes;
 }
 
 function addJoinCountOnlyPass<Parameters>(
@@ -360,7 +385,8 @@ function addJoinCountOnlyPass<Parameters>(
   join: GPUHashJoin,
   found: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const LAST_INDEX: u32 = ${join.keys.length - 1}u;
 const FOUND_OFFSET: u32 = ${getViewElementOffset(found)}u;
@@ -378,18 +404,22 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
   count[COUNT_OFFSET] = requiredCount;
   overflow[OVERFLOW_OFFSET] = min(requiredCount, 1u);
 }`;
-  addComputationPass(graph, {
-    id: `${join.id}-count-only`,
-    source,
-    resources: [
-      {buffer: found, usage: 'storage-read'},
-      {buffer: offsets, usage: 'storage-read'},
-      {buffer: join.count, usage: 'storage-write'},
-      {buffer: join.overflow, usage: 'storage-write'}
-    ],
-    bindings: {found, offsets, count: join.count, overflow: join.overflow},
-    dispatchSize: {x: 1, y: 1, z: 1}
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${join.id}-count-only`,
+      source,
+      resources: [
+        {buffer: found, usage: 'storage-read'},
+        {buffer: offsets, usage: 'storage-read'},
+        {buffer: join.count, usage: 'storage-write'},
+        {buffer: join.overflow, usage: 'storage-write'}
+      ],
+      bindings: {found, offsets, count: join.count, overflow: join.overflow},
+      dispatchSize: {x: 1, y: 1, z: 1}
+    })
+  );
+
+  return nodes;
 }
 
 function addSourceOverflowPass<Parameters>(
@@ -397,7 +427,8 @@ function addSourceOverflowPass<Parameters>(
   id: string,
   indexStatistics: GraphDataView<'uint32'>,
   overflow: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const INDEX_STATISTICS_OFFSET: u32 = ${getViewElementOffset(indexStatistics)}u;
 const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(overflow)}u;
@@ -408,16 +439,20 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(overflow)}u;
     overflow[OVERFLOW_OFFSET] = 1u;
   }
 }`;
-  addComputationPass(graph, {
-    id: `${id}-source-overflow`,
-    source,
-    resources: [
-      {buffer: indexStatistics, usage: 'storage-read'},
-      {buffer: overflow, usage: 'storage-read-write'}
-    ],
-    bindings: {indexStatistics, overflow},
-    dispatchSize: {x: 1, y: 1, z: 1}
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${id}-source-overflow`,
+      source,
+      resources: [
+        {buffer: indexStatistics, usage: 'storage-read'},
+        {buffer: overflow, usage: 'storage-read-write'}
+      ],
+      bindings: {indexStatistics, overflow},
+      dispatchSize: {x: 1, y: 1, z: 1}
+    })
+  );
+
+  return nodes;
 }
 
 function validateDisjointViews(
@@ -462,39 +497,44 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchSize: DispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchSize.x,
-            props.dispatchSize.y,
-            props.dispatchSize.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchSize.x,
+              props.dispatchSize.y,
+              props.dispatchSize.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

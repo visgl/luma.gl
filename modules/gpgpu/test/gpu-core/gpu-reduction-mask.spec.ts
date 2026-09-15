@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -159,7 +160,10 @@ async function runMaskedReduction(
   const input = importView(graph, 'input', inputBuffer, format, values.length);
   const mask = importView(graph, 'selection', selectionBuffer, 'uint32', selection.length);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  new GPUReduction({input, output, mask, operation}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUReduction({input, output, mask, operation}).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'masked-reduction-test'});
@@ -219,7 +223,10 @@ async function runMaskedVectorReduction(
   const input = graph.importGPUVector('values', values);
   const mask = graph.importGPUVector('selection', selection);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  new GPUReduction({input, output, mask, operation}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUReduction({input, output, mask, operation}).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'masked-vector-reduction-test'});

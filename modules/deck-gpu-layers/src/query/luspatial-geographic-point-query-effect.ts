@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
@@ -618,16 +619,19 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       })
     );
     projection.addToGraph(graph);
-    new GPUGridIndex({
-      id: `${this.id}-grid`,
-      positions: projected,
-      gridSize: this.gridSize,
-      bounds: this.projectedBounds,
-      cellOffsets,
-      objectIds: rowIndices,
-      count,
-      overflow
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUGridIndex({
+        id: `${this.id}-grid`,
+        positions: projected,
+        gridSize: this.gridSize,
+        bounds: this.projectedBounds,
+        cellOffsets,
+        objectIds: rowIndices,
+        count,
+        overflow
+      }).getCommandNodes(graph)
+    );
     return graph.compile();
   }
 

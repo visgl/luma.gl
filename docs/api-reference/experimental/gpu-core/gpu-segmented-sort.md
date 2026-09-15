@@ -64,7 +64,7 @@ const sort = new GPUSegmentedSort({
   ]
 });
 
-sort.addToGraph(graph);
+addGPUCommandNodes(graph, sort.getCommandNodes(graph));
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'sort-packed-meshes'});
@@ -116,7 +116,7 @@ The constructor snapshots segment descriptors. Editing the original descriptor o
 not change a recorded operation. Changing the segment layout requires a new operation and graph;
 changing only caller-owned key and payload contents does not.
 
-## `addToGraph(graph)`
+## `getCommandNodes(graph)`
 
 Adds one compute node for each occupied padded workgroup width. Possible widths are 2, 4, 8, 16,
 32, 64, 128, and 256, so any number of supported segments requires at most eight nodes. Empty

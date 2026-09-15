@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -191,15 +192,18 @@ function addLZByteStreamSplitBatchToGraph<Parameters>(
     plan.outputByteLength,
     Buffer.STORAGE | Buffer.COPY_SRC
   );
-  new GPULZByteBatchDecompressor({
-    id: `${graph.id}-parquet-lz-byte-batch`,
-    upload,
-    jobs,
-    output: byteStreamSplit,
-    jobCount: plan.pageIndices.length,
-    outputByteLength: plan.outputByteLength,
-    maximumOutputWordCount: plan.maximumOutputWordCount
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPULZByteBatchDecompressor({
+      id: `${graph.id}-parquet-lz-byte-batch`,
+      upload,
+      jobs,
+      output: byteStreamSplit,
+      jobCount: plan.pageIndices.length,
+      outputByteLength: plan.outputByteLength,
+      maximumOutputWordCount: plan.maximumOutputWordCount
+    }).getCommandNodes(graph)
+  );
   new GPUParquetByteStreamSplitBatchDecoder({
     id: `${graph.id}-parquet-byte-stream-split-batch`,
     input: byteStreamSplit,

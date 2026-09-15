@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
@@ -156,29 +157,35 @@ it('GPUTraceScene feeds shared visibility, indirect draws, and renderer resource
   const required = makeOutput(device, graph, 'trace-required', 1);
   const published = makeOutput(device, graph, 'trace-published', 1);
   const drawOverflow = makeOutput(device, graph, 'trace-draw-overflow', 1);
-  new GPUSceneDrawGeneration({
-    scene: view.scene,
-    visibility: visibility.view,
-    commands: commandView,
-    requiredCount: required.view,
-    publishedCount: published.view,
-    overflow: drawOverflow.view
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUSceneDrawGeneration({
+      scene: view.scene,
+      visibility: visibility.view,
+      commands: commandView,
+      requiredCount: required.view,
+      publishedCount: published.view,
+      overflow: drawOverflow.view
+    }).getCommandNodes(graph)
+  );
 
   const counts = makeOutput(device, graph, 'trace-group-counts', 2);
   const overflows = makeOutput(device, graph, 'trace-group-overflows', 2);
   const overflow = makeOutput(device, graph, 'trace-global-overflow', 1);
-  new GPUSceneResourceGroups({
-    scene: view.scene,
-    commands: commandView,
-    groups: [
-      {id: 4, firstCommand: 0, commandCount: 1, geometryId: 12},
-      {id: 5, firstCommand: 1, commandCount: 2, geometryId: 12}
-    ],
-    counts: counts.view,
-    overflows: overflows.view,
-    overflow: overflow.view
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUSceneResourceGroups({
+      scene: view.scene,
+      commands: commandView,
+      groups: [
+        {id: 4, firstCommand: 0, commandCount: 1, geometryId: 12},
+        {id: 5, firstCommand: 1, commandCount: 2, geometryId: 12}
+      ],
+      counts: counts.view,
+      overflows: overflows.view,
+      overflow: overflow.view
+    }).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();

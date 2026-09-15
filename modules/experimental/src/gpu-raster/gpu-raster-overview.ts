@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -115,7 +110,7 @@ export function makeRasterOverviewMetadata(
  * already-rounded means. A caller-declared input-count bound proves that every output remains
  * representable as uint32 before graph work is registered.
  */
-export class GPURasterOverview implements GPUCommandGraphContributor {
+export class GPURasterOverview {
   readonly id: string;
   readonly sourceMetadata: GPURasterMetadata;
   readonly metadata: GPURasterMetadata;
@@ -335,8 +330,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
  */
 export class GPURasterCategoricalOverview<
   Format extends GPURasterCategoricalOverviewFormat = GPURasterCategoricalOverviewFormat
-> implements GPUCommandGraphContributor
-{
+> {
   readonly id: string;
   readonly sourceMetadata: GPURasterMetadata;
   readonly metadata: GPURasterMetadata;

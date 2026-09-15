@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
@@ -170,13 +171,16 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         const output = createGPUGroupedOutputVector(graph.device, metricId, groupCount, 'uint32');
         ownedVectors.push(output);
         outputVectors.set(definition.name, output);
-        new GPUGroupAggregation({
-          id: metricId,
-          keys,
-          mask: baseMask,
-          output: graph.importGPUVector(`${metricId}-output`, output).data[0],
-          operation: 'count'
-        }).addToGraph(graph);
+        addGPUCommandNodes(
+          graph,
+          new GPUGroupAggregation({
+            id: metricId,
+            keys,
+            mask: baseMask,
+            output: graph.importGPUVector(`${metricId}-output`, output).data[0],
+            operation: 'count'
+          }).getCommandNodes(graph)
+        );
         continue;
       }
 
@@ -202,14 +206,17 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ownedVectors.push(output);
       outputVectors.set(definition.name, output);
       validity[definition.name] = state.validity;
-      new GPUGroupAggregation({
-        id: metricId,
-        keys,
-        values: state.values,
-        mask: state.mask,
-        output: graph.importGPUVector(`${metricId}-output`, output).data[0],
-        operation: definition.operation
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUGroupAggregation({
+          id: metricId,
+          keys,
+          values: state.values,
+          mask: state.mask,
+          output: graph.importGPUVector(`${metricId}-output`, output).data[0],
+          operation: definition.operation
+        }).getCommandNodes(graph)
+      );
     }
 
     resultTable = createGPUGroupedResultTable<Selection, Result>(
@@ -295,7 +302,10 @@ function combineGPUGroupingMasks(
   second: GraphVectorView<'uint32'>
 ): GraphVectorView<'uint32'> {
   const output = createTransientVectorView(graph, id, first);
-  new GPUMask({id: `${id}-compose`, inputs: [first, second], output}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUMask({id: `${id}-compose`, inputs: [first, second], output}).getCommandNodes(graph)
+  );
   return output;
 }
 
@@ -328,13 +338,16 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
   );
   ownedVectors.push(validity);
   const output = context.graph.importGPUVector(`${id}-group-validity-vector`, validity).data[0];
-  new GPUGroupAggregation({
-    id: `${id}-accepted-count`,
-    keys,
-    mask: finiteRows,
-    output,
-    operation: 'count'
-  }).addToGraph(context.graph);
+  addGPUCommandNodes(
+    context.graph,
+    new GPUGroupAggregation({
+      id: `${id}-accepted-count`,
+      keys,
+      mask: finiteRows,
+      output,
+      operation: 'count'
+    }).getCommandNodes(context.graph)
+  );
   addGPUNormalizeGroupValidityPass(context.graph, `${id}-normalize-validity`, output);
   return {values, mask: finiteRows, validity};
 }

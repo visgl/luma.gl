@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_WORKGROUP_SIZE,
@@ -35,7 +36,10 @@ export class GPULZ4RawDecompressor {
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    new GPULZByteDecompressor(makeGPULZ4RawDecompressorProps(this.props)).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPULZByteDecompressor(makeGPULZ4RawDecompressorProps(this.props)).getCommandNodes(graph)
+    );
   }
 }
 

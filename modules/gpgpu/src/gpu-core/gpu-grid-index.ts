@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
-import {addGPUGridIndexToGraphWithDispatchLimit} from './gpu-grid-index-internals';
+import {getGPUGridIndexCommandNodesWithDispatchLimit} from './gpu-grid-index-internals';
 import {
   doGraphDataViewsOverlap,
   validateMatchingVectorTopology,
@@ -142,12 +143,19 @@ export class GPUGridIndex {
   }
 
   /** Adds a complete index rebuild to the target graph without submitting or reading back work. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUGridIndexToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUGridIndexCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 

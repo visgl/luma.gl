@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -84,7 +85,7 @@ async function runOperator(
     spacing: [DX, DY],
     operator
   });
-  difference.addToGraph(graph);
+  addGPUCommandNodes(graph, difference.getCommandNodes(graph));
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: `${operator}-test`});

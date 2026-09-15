@@ -3,12 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphBufferUse,
-  GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
@@ -81,7 +76,7 @@ export type GPUPairwisePointLinestringNearestProps =
  * If no segment remains, outputs are NaN and optional indices are `0xffffffff`. Equal-distance
  * ties retain the first part and segment.
  */
-export class GPUPairwisePointLinestringNearest implements GPUCommandGraphContributor {
+export class GPUPairwisePointLinestringNearest {
   readonly id: string;
   readonly points: GraphDataView<'float32x2'> | GraphDataView<'uint32x4'>;
   readonly linestringPositions: GraphDataView<'float32x2'> | GraphDataView<'uint32x4'>;

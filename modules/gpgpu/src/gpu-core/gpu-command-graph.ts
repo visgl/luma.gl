@@ -135,9 +135,6 @@ export type {
 } from './gpu-command-graph-types';
 
 /** A reusable algorithm or workflow that contributes nodes to a command graph. */
-export interface GPUCommandGraphContributor {
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void;
-}
 
 /** Per-submission limits for a resumable command-graph execution. */
 export type GPUCommandGraphExecutionBudget = {

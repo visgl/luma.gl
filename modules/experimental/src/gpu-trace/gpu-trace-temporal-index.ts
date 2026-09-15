@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -155,12 +156,15 @@ export class GPUTraceTemporalIndex {
       if (this.stats.batchCount > 0) {
         addTemporalQueryPass(graph, this, candidateFlags);
       }
-      new GPUVisibilityWorkflow({
-        id: `${this.id}-candidates`,
-        predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
-        output: this.output.candidates,
-        count: this.output.candidateCount
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUVisibilityWorkflow({
+          id: `${this.id}-candidates`,
+          predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
+          output: this.output.candidates,
+          count: this.output.candidateCount
+        }).getCommandNodes(graph)
+      );
     }
   }
 }
@@ -312,16 +316,19 @@ function addHierarchicalCandidateQuery<Parameters>(
 
   addDispatchInitializationPass(graph, `${index.id}-active-node-dispatch`, activeNodeDispatch);
   addHierarchyNodeQueryPass(graph, index, hierarchy, level, nodeFlags);
-  new GPUVisibilityWorkflow({
-    id: `${index.id}-active-nodes`,
-    predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
-    output: activeNodeIds,
-    count: graph.createDataView(activeNodeDispatch.buffer, {
-      format: 'uint32',
-      length: 1,
-      byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
-    })
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUVisibilityWorkflow({
+      id: `${index.id}-active-nodes`,
+      predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
+      output: activeNodeIds,
+      count: graph.createDataView(activeNodeDispatch.buffer, {
+        format: 'uint32',
+        length: 1,
+        byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
+      })
+    }).getCommandNodes(graph)
+  );
   addClearViewPass(graph, `${index.id}-active-node-counts`, activeNodeCounts);
   addActiveNodeCountPass(
     graph,
@@ -332,11 +339,14 @@ function addHierarchicalCandidateQuery<Parameters>(
     activeNodeDispatch,
     activeNodeCounts
   );
-  new GPUScan({
-    id: `${index.id}-active-node-offsets`,
-    input: activeNodeCounts,
-    output: activeNodeOffsets
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUScan({
+      id: `${index.id}-active-node-offsets`,
+      input: activeNodeCounts,
+      output: activeNodeOffsets
+    }).getCommandNodes(graph)
+  );
   addActiveNodeScatterPass(
     graph,
     index,

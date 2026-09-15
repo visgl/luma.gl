@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   type CompiledGPUCommandGraph,
@@ -119,34 +120,46 @@ export class VectorFieldEngine {
       boundary: 'one-sided' as const
     };
     new GPUVectorFieldSampler3D({scalar, vector, resolution: this.resolution}).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-gradient',
-      ...common,
-      operator: 'gradient',
-      input: scalar,
-      output: gradient
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-laplacian',
-      ...common,
-      operator: 'laplacian',
-      input: scalar,
-      output: laplacian
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-divergence',
-      ...common,
-      operator: 'divergence',
-      input: vector,
-      output: divergence
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-curl',
-      ...common,
-      operator: 'curl',
-      input: vector,
-      output: curl
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUFiniteDifference3D({
+        id: 'field-gradient',
+        ...common,
+        operator: 'gradient',
+        input: scalar,
+        output: gradient
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUFiniteDifference3D({
+        id: 'field-laplacian',
+        ...common,
+        operator: 'laplacian',
+        input: scalar,
+        output: laplacian
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUFiniteDifference3D({
+        id: 'field-divergence',
+        ...common,
+        operator: 'divergence',
+        input: vector,
+        output: divergence
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUFiniteDifference3D({
+        id: 'field-curl',
+        ...common,
+        operator: 'curl',
+        input: vector,
+        output: curl
+      }).getCommandNodes(graph)
+    );
     return graph.compile();
   }
 }

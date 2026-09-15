@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  GPUCommandGraph,
-  GraphDataView,
-  GraphVectorView,
-  type GPUCommandGraphContributor
-} from '@luma.gl/gpgpu/gpu-core';
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GraphDataView, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
 import {GPUGroupAggregation, type GPUGroupAggregationOperation} from '@luma.gl/gpgpu/gpu-core';
 
 /** One packed canonical column or ordered chunks preserving canonical row order. */
@@ -76,7 +72,7 @@ export type GPUTraceAggregationProps = GPUTraceAggregationBaseProps &
  * makes filters, hierarchy changes, and dependency focus update the same aggregation graph without
  * rebuilding CPU span lists.
  */
-export class GPUTraceAggregation implements GPUCommandGraphContributor {
+export class GPUTraceAggregation {
   /** Prefix for generated command-graph node IDs. */
   readonly id: string;
   /** Canonical source trace. */
@@ -108,24 +104,30 @@ export class GPUTraceAggregation implements GPUCommandGraphContributor {
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const keys = getDimensionView(this.trace, this.dimension);
     if (this.metric === 'count') {
-      new GPUGroupAggregation({
-        id: this.id,
-        keys,
-        mask: this.selection,
-        output: this.output as GraphDataView<'uint32'>,
-        operation: 'count'
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUGroupAggregation({
+          id: this.id,
+          keys,
+          mask: this.selection,
+          output: this.output as GraphDataView<'uint32'>,
+          operation: 'count'
+        }).getCommandNodes(graph)
+      );
       return;
     }
 
-    new GPUGroupAggregation({
-      id: this.id,
-      keys,
-      values: this.trace.durations,
-      mask: this.selection,
-      output: this.output as GraphDataView<'float32'>,
-      operation: getDurationOperation(this.metric)
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUGroupAggregation({
+        id: this.id,
+        keys,
+        values: this.trace.durations,
+        mask: this.selection,
+        output: this.output as GraphDataView<'float32'>,
+        operation: getDurationOperation(this.metric)
+      }).getCommandNodes(graph)
+    );
   }
 }
 

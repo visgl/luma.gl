@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {GPUBatchSort} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -167,15 +168,18 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     });
   }
 
-  new GPUBatchSort({
-    id: `${id}-numeric`,
-    keys: encodedKeys,
-    values: localIndices,
-    outputKeys: sortedKeys,
-    outputValues: sortedIndices,
-    direction: options.direction,
-    algorithm: options.algorithm
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUBatchSort({
+      id: `${id}-numeric`,
+      keys: encodedKeys,
+      values: localIndices,
+      outputKeys: sortedKeys,
+      outputValues: sortedIndices,
+      direction: options.direction,
+      algorithm: options.algorithm
+    }).getCommandNodes(graph)
+  );
 
   for (const [batchIndex, values] of input.data.entries()) {
     if (values.length === 0) {
@@ -197,15 +201,18 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     );
   }
 
-  new GPUBatchSort({
-    id: `${id}-classes`,
-    keys: sortedKeys,
-    values: sortedIndices,
-    outputKeys: encodedKeys,
-    outputValues: localIndices,
-    direction: 'ascending',
-    algorithm: options.algorithm
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUBatchSort({
+      id: `${id}-classes`,
+      keys: sortedKeys,
+      values: sortedIndices,
+      outputKeys: encodedKeys,
+      outputValues: localIndices,
+      direction: 'ascending',
+      algorithm: options.algorithm
+    }).getCommandNodes(graph)
+  );
 
   let sourceOffset = 0;
   for (const [batchIndex, batch] of context.table.batches.entries()) {

@@ -43,14 +43,14 @@ without inventing an empty child. Empty input writes zero to both `segmentOffset
 ```ts
 import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/gpgpu/gpu-core';
 
-new GPUFlagOffsets({
+addGPUCommandNodes(graph, new GPUFlagOffsets({
   id: 'list-elements',
   flags: elementFlags,
   offsets: elementOffsets,
   count: elementCount
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 
-new GPUSegmentOffsets({
+addGPUCommandNodes(graph, new GPUSegmentOffsets({
   id: 'list-rows',
   elementFlags,
   elementOffsets,
@@ -58,7 +58,7 @@ new GPUSegmentOffsets({
   segmentIndices: rowIndices,
   segmentOffsets: listOffsets,
   segmentCount: rowCount
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 The operation contributes one inclusive scan and two small publication passes. Every shader stays

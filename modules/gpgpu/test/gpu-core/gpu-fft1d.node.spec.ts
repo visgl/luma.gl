@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -109,9 +110,12 @@ it('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership',
     usage: Buffer.STORAGE
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32x2', length: 8});
-  expect(() => new GPUFFT1D({input, output: otherOutput, length: 8}).addToGraph(graph)).toThrow(
-    /different GPUCommandGraph/
-  );
+  expect(() =>
+    addGPUCommandNodes(
+      graph,
+      new GPUFFT1D({input, output: otherOutput, length: 8}).getCommandNodes(graph)
+    )
+  ).toThrow(/different GPUCommandGraph/);
 });
 
 it('GPUFFT1D shaders share FFT helpers and expose portable and subgroup butterflies', () => {

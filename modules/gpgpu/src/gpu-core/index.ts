@@ -66,7 +66,6 @@ export type {
   GraphTextureUse,
   GraphTextureViewProps
 } from './gpu-command-graph';
-export type {GPUCommandGraphContributor} from './gpu-command-graph';
 export {GPUCommandGraphExecutionBudgetController} from './gpu-command-graph-budget-controller';
 export type {
   GPUCommandGraphExecutionBudgetControllerProps,
@@ -563,7 +562,7 @@ export type {
 export {
   getGPUOperationTree,
   GPUCompositeOperation,
-  isGPUCommandGraphContributor,
+  isGPUCommandNodeProducer,
   isGPUOperation
 } from './gpu-operation';
 export type {
@@ -574,7 +573,8 @@ export type {
   GPUOperationResource,
   GPUOperationTree,
   GPUOperationWorkload,
-  GPUProgramOperation
+  GPUProgramOperation,
+  GPUProgramPrimitive
 } from './gpu-operation';
 export {
   GPUConditionalOperation,

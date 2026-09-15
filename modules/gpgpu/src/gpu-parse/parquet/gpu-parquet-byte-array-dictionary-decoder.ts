@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {
   GPUByteRangeGather,
   GPUCommandGraph,
@@ -47,33 +48,45 @@ export class GPUParquetByteArrayDictionaryDecoder {
       'uint32',
       this.props.indices.length
     );
-    new GPUUint32Gather({
-      id: `${this.id}-lengths`,
-      source: this.props.dictionaryLengths,
-      indices: this.props.indices,
-      output: this.props.outputLengths
-    }).addToGraph(graph);
-    new GPUUint32Gather({
-      id: `${this.id}-source-offsets`,
-      source: this.props.dictionaryOffsets,
-      indices: this.props.indices,
-      output: sourceOffsets
-    }).addToGraph(graph);
-    new GPUScan({
-      id: `${this.id}-output-offsets`,
-      input: this.props.outputLengths,
-      output: this.props.outputOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    new GPUByteRangeGather({
-      id: `${this.id}-bytes`,
-      source: this.props.dictionary,
-      sourceOffsets,
-      lengths: this.props.outputLengths,
-      outputOffsets: this.props.outputOffsets,
-      output: this.props.output,
-      sourceByteLength: this.props.dictionaryByteLength,
-      outputByteCapacity: this.props.outputByteCapacity
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUUint32Gather({
+        id: `${this.id}-lengths`,
+        source: this.props.dictionaryLengths,
+        indices: this.props.indices,
+        output: this.props.outputLengths
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUUint32Gather({
+        id: `${this.id}-source-offsets`,
+        source: this.props.dictionaryOffsets,
+        indices: this.props.indices,
+        output: sourceOffsets
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUScan({
+        id: `${this.id}-output-offsets`,
+        input: this.props.outputLengths,
+        output: this.props.outputOffsets,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUByteRangeGather({
+        id: `${this.id}-bytes`,
+        source: this.props.dictionary,
+        sourceOffsets,
+        lengths: this.props.outputLengths,
+        outputOffsets: this.props.outputOffsets,
+        output: this.props.output,
+        sourceByteLength: this.props.dictionaryByteLength,
+        outputByteCapacity: this.props.outputByteCapacity
+      }).getCommandNodes(graph)
+    );
   }
 }

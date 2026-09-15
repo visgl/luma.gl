@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUTable, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
@@ -335,16 +336,19 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     for (const [batchIndex, batch] of context.table.batches.entries()) {
       const batchId = `${id}-batch-${batchIndex}`;
       const capacity = Math.min(options.capacity ?? batch.numRows, batch.numRows);
-      new GPUHashIndexQuery({
-        id: batchId,
-        index: indexState.index,
-        keys: indexState.maskedLeftKeys.data[batchIndex],
-        values: matchedRightRows.data[batchIndex],
-        found: matches.data[batchIndex],
-        probes: probeCounts.data[batchIndex],
-        statistics: statistics.data[batchIndex],
-        maxProbeCount: options.maxProbeCount
-      }).addToGraph(context.graph);
+      addGPUCommandNodes(
+        context.graph,
+        new GPUHashIndexQuery({
+          id: batchId,
+          index: indexState.index,
+          keys: indexState.maskedLeftKeys.data[batchIndex],
+          values: matchedRightRows.data[batchIndex],
+          found: matches.data[batchIndex],
+          probes: probeCounts.data[batchIndex],
+          statistics: statistics.data[batchIndex],
+          maxProbeCount: options.maxProbeCount
+        }).getCommandNodes(context.graph)
+      );
 
       addGPUJoinClassifyPass(context.graph, `${batchId}-classify`, {
         matches: matches.data[batchIndex],
@@ -359,11 +363,14 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
         'uint32',
         batch.numRows
       );
-      new GPUScan({
-        id: `${batchId}-published-offsets`,
-        input: included.data[batchIndex],
-        output: offsets
-      }).addToGraph(context.graph);
+      addGPUCommandNodes(
+        context.graph,
+        new GPUScan({
+          id: `${batchId}-published-offsets`,
+          input: included.data[batchIndex],
+          output: offsets
+        }).getCommandNodes(context.graph)
+      );
       addGPUJoinCountPass(context.graph, `${batchId}-count`, {
         included: included.data[batchIndex],
         offsets,
@@ -444,16 +451,19 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     const statistics = context.graph.importGPUVector(`${id}-query-statistics`, lookupStatistics);
 
     for (const [batchIndex, keys] of indexState.maskedLeftKeys.data.entries()) {
-      new GPUHashIndexQuery({
-        id: `${id}-batch-${batchIndex}`,
-        index: indexState.index,
-        keys,
-        values: rightRows.data[batchIndex],
-        found: matches.data[batchIndex],
-        probes: probes.data[batchIndex],
-        statistics: statistics.data[batchIndex],
-        maxProbeCount: options.maxProbeCount
-      }).addToGraph(context.graph);
+      addGPUCommandNodes(
+        context.graph,
+        new GPUHashIndexQuery({
+          id: `${id}-batch-${batchIndex}`,
+          index: indexState.index,
+          keys,
+          values: rightRows.data[batchIndex],
+          found: matches.data[batchIndex],
+          probes: probes.data[batchIndex],
+          statistics: statistics.data[batchIndex],
+          maxProbeCount: options.maxProbeCount
+        }).getCommandNodes(context.graph)
+      );
     }
 
     const resources: GPULookupResources<Right> = {
@@ -556,7 +566,7 @@ function buildGPUJoinIndex<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     statistics,
     maxProbeCount: options.maxProbeCount
   });
-  index.addToGraph(graph);
+  addGPUCommandNodes(graph, index.getCommandNodes(graph));
   addGPUJoinContractPass(graph, `${id}-validate-contract`, statistics, violation);
 
   const leftField = context.table.schema.fields.find(field => field.name === options.leftOn);

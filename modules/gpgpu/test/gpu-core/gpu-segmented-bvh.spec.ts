@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -13,7 +14,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSegmentedBVHToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
+import {getGPUSegmentedBVHCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
 
 const SOURCE_GAP = -123_456;
 const NODE_GAP = 654_321;
@@ -103,7 +104,10 @@ it('GPUSegmentedBVH bounds singleton hierarchy workgroups across all three dispa
 
   const fixture = createSegmentedBVHFixture(device, 2, [1, 1, 1, 1, 1], [0, 1, 1, 0, 1]);
   const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
-  addGPUSegmentedBVHToGraphWithDispatchLimit(fixture.hierarchy, fixture.graph, 2);
+  addGPUCommandNodes(
+    fixture.graph,
+    getGPUSegmentedBVHCommandNodesWithDispatchLimit(fixture.hierarchy, fixture.graph, 2)
+  );
   const compiled = fixture.graph.compile();
 
   try {
@@ -485,7 +489,7 @@ function importView<T extends 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>
 }
 
 function compileFixture(fixture: SegmentedBVHFixture): CompiledGPUCommandGraph {
-  fixture.hierarchy.addToGraph(fixture.graph);
+  addGPUCommandNodes(fixture.graph, fixture.hierarchy.getCommandNodes(fixture.graph));
   return fixture.graph.compile();
 }
 

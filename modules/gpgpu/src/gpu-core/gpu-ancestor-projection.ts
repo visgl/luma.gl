@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -105,7 +106,10 @@ export class GPUAncestorProjection {
   }
 
   /** Adds one bounded, source-aligned projection pass without submitting GPU work. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     if (
       this.parents.buffer.graph !== graph ||
       this.visibility.buffer.graph !== graph ||
@@ -115,7 +119,7 @@ export class GPUAncestorProjection {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (this.output.length === 0) {
-      return;
+      return nodes;
     }
 
     const source = /* wgsl */ `
@@ -166,44 +170,48 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
       projectedAncestors: this.output,
       ...(this.visibilityValue ? {visibilityValue: this.visibilityValue} : {})
     };
-    graph.addComputePass({
-      id: this.id,
-      resources: [
-        {buffer: this.parents, usage: 'storage-read'},
-        {buffer: this.visibility, usage: 'storage-read'},
-        {buffer: this.output, usage: 'storage-write'},
-        ...(this.visibilityValue
-          ? [{buffer: this.visibilityValue, usage: 'storage-read'} as const]
-          : [])
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: Object.keys(views).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const resolvedBindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(views)) {
-              resolvedBindings[name] = getViewBinding(view, getBuffer);
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        resources: [
+          {buffer: this.parents, usage: 'storage-read'},
+          {buffer: this.visibility, usage: 'storage-read'},
+          {buffer: this.output, usage: 'storage-write'},
+          ...(this.visibilityValue
+            ? [{buffer: this.visibilityValue, usage: 'storage-read'} as const]
+            : [])
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: Object.keys(views).map((name, location) => ({
+                name,
+                type: 'storage' as const,
+                group: 0,
+                location
+              }))
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(
-              computePass,
-              Math.ceil(this.output.length / ANCESTOR_PROJECTION_WORKGROUP_SIZE)
-            );
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const resolvedBindings: Record<string, Binding> = {};
+              for (const [name, view] of Object.entries(views)) {
+                resolvedBindings[name] = getViewBinding(view, getBuffer);
+              }
+              computation.setBindings(resolvedBindings);
+              computation.dispatch(
+                computePass,
+                Math.ceil(this.output.length / ANCESTOR_PROJECTION_WORKGROUP_SIZE)
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }

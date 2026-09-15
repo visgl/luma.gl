@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVolumeBufferChannel} from './types';
 import {
@@ -54,7 +49,7 @@ export type GPUVolumeThresholdProps = {
  * Source validity, exact native-format nodata, finite floating-point samples, calibrated values,
  * and GPU-provided thresholds are intersected before publishing the canonical output mask.
  */
-export class GPUVolumeThreshold implements GPUCommandGraphContributor {
+export class GPUVolumeThreshold {
   readonly id: string;
   readonly width: number;
   readonly height: number;

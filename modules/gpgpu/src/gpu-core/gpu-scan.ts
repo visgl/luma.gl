@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
@@ -116,37 +117,49 @@ export class GPUScan {
    * Empty inputs add no nodes. This method declares work only; it does not compile, encode, submit,
    * or read data back.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUScanToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUScanCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds a scan using an explicit per-dimension dispatch limit. @internal */
-export function addGPUScanToGraphWithDispatchLimit<Parameters>(
+export function getGPUScanCommandNodesWithDispatchLimit<Parameters>(
   scan: GPUScan,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   validateScanOwnership(graph, scan.input, scan.id);
   validateScanOwnership(graph, scan.output, scan.id);
   if (scan.segmentFlags) {
     validateScanOwnership(graph, scan.segmentFlags, scan.id);
   }
-  addChunkedScan(
-    graph,
-    {
-      id: scan.id,
-      input: scan.input,
-      output: scan.output,
-      mode: scan.mode,
-      segmentFlags: scan.segmentFlags
-    },
-    maxComputeWorkgroupsPerDimension
+  nodes.push(
+    ...addChunkedScan(
+      graph,
+      {
+        id: scan.id,
+        input: scan.input,
+        output: scan.output,
+        mode: scan.mode,
+        segmentFlags: scan.segmentFlags
+      },
+      maxComputeWorkgroupsPerDimension
+    )
   );
+
+  return nodes;
 }
 
 /** Normalizes atomic and vector inputs and adds the required local scans and vector carries. */
@@ -160,7 +173,8 @@ function addChunkedScan<Parameters>(
     segmentFlags?: GPUScanInput;
   },
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const inputChunks = getScanChunks(props.input);
   const outputChunks = getScanChunks(props.output);
   const segmentFlagChunks = props.segmentFlags ? getScanChunks(props.segmentFlags) : undefined;
@@ -173,20 +187,22 @@ function addChunkedScan<Parameters>(
     }))
     .filter(chunk => chunk.input.length > 0);
   if (nonEmptyChunks.length === 0) {
-    return;
+    return nodes;
   }
   const isVector = props.input instanceof GraphVectorView;
   if (nonEmptyChunks.length === 1) {
     const chunk = nonEmptyChunks[0];
-    addScanLevels(graph, {
-      id: isVector ? `${props.id}-chunk-${chunk.chunkIndex}` : props.id,
-      input: chunk.input,
-      output: chunk.output,
-      mode: props.mode,
-      segmentFlags: chunk.segmentFlags,
-      maxComputeWorkgroupsPerDimension
-    });
-    return;
+    nodes.push(
+      ...addScanLevels(graph, {
+        id: isVector ? `${props.id}-chunk-${chunk.chunkIndex}` : props.id,
+        input: chunk.input,
+        output: chunk.output,
+        mode: props.mode,
+        segmentFlags: chunk.segmentFlags,
+        maxComputeWorkgroupsPerDimension
+      })
+    );
+    return nodes;
   }
 
   const chunkTotals = createTransientView(
@@ -215,43 +231,51 @@ function addChunkedScan<Parameters>(
       )
     : undefined;
   for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
-    addScanLevels(graph, {
-      id: `${props.id}-chunk-${chunk.chunkIndex}`,
-      input: chunk.input,
-      output: chunk.output,
-      mode: props.mode,
-      segmentFlags: chunk.segmentFlags,
-      outputSegmentPrefixes: chunkSegmentPrefixes?.[partialIndex],
-      finalSum: createPackedSubview(graph, chunkTotals, partialIndex),
-      finalSegmentFlag: chunkSegmentFlags
-        ? createPackedSubview(graph, chunkSegmentFlags, partialIndex)
-        : undefined,
-      maxComputeWorkgroupsPerDimension
-    });
-  }
-  addScanLevels(graph, {
-    id: `${props.id}-chunk-carries`,
-    input: chunkTotals,
-    output: chunkOffsets,
-    mode: 'exclusive',
-    segmentFlags: chunkSegmentFlags,
-    segmentSummaryInput: Boolean(chunkSegmentFlags),
-    maxComputeWorkgroupsPerDimension
-  });
-  for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
-    addOffsetPass(graph, {
-      id: `${props.id}-chunk-${chunk.chunkIndex}-add-carry`,
-      output: chunk.output,
-      offsets: chunkOffsets,
-      length: chunk.output.length,
-      offsetIndex: partialIndex,
-      segmentPrefixes: chunkSegmentPrefixes?.[partialIndex],
-      dispatchLayout: getGPUScanDispatchLayout(
-        chunk.output.length,
+    nodes.push(
+      ...addScanLevels(graph, {
+        id: `${props.id}-chunk-${chunk.chunkIndex}`,
+        input: chunk.input,
+        output: chunk.output,
+        mode: props.mode,
+        segmentFlags: chunk.segmentFlags,
+        outputSegmentPrefixes: chunkSegmentPrefixes?.[partialIndex],
+        finalSum: createPackedSubview(graph, chunkTotals, partialIndex),
+        finalSegmentFlag: chunkSegmentFlags
+          ? createPackedSubview(graph, chunkSegmentFlags, partialIndex)
+          : undefined,
         maxComputeWorkgroupsPerDimension
-      )
-    });
+      })
+    );
   }
+  nodes.push(
+    ...addScanLevels(graph, {
+      id: `${props.id}-chunk-carries`,
+      input: chunkTotals,
+      output: chunkOffsets,
+      mode: 'exclusive',
+      segmentFlags: chunkSegmentFlags,
+      segmentSummaryInput: Boolean(chunkSegmentFlags),
+      maxComputeWorkgroupsPerDimension
+    })
+  );
+  for (const [partialIndex, chunk] of nonEmptyChunks.entries()) {
+    nodes.push(
+      ...addOffsetPass(graph, {
+        id: `${props.id}-chunk-${chunk.chunkIndex}-add-carry`,
+        output: chunk.output,
+        offsets: chunkOffsets,
+        length: chunk.output.length,
+        offsetIndex: partialIndex,
+        segmentPrefixes: chunkSegmentPrefixes?.[partialIndex],
+        dispatchLayout: getGPUScanDispatchLayout(
+          chunk.output.length,
+          maxComputeWorkgroupsPerDimension
+        )
+      })
+    );
+  }
+
+  return nodes;
 }
 
 /** Adds every hierarchical level required to scan one non-empty packed data view. */
@@ -270,9 +294,10 @@ function addScanLevels<Parameters>(
     segmentSummaryInput?: boolean;
     maxComputeWorkgroupsPerDimension: number;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   if (props.input.length === 0) {
-    return;
+    return nodes;
   }
 
   const levels: Array<{
@@ -320,23 +345,28 @@ function addScanLevels<Parameters>(
           : undefined
       : undefined;
 
-    addBlockScanPass(graph, {
-      id: `${props.id}-level-${levelIndex}-scan`,
-      input: levelInput,
-      output: levelOutput,
-      mode: levelIndex === 0 ? props.mode : 'exclusive',
-      segmentFlags: levelSegmentFlags,
-      segmentSummaryInput:
-        Boolean(levelSegmentFlags) && (levelIndex > 0 || props.segmentSummaryInput),
-      segmentPrefixes,
-      blockSums,
-      blockSegmentFlags,
-      finalSum: blockSums ? undefined : props.finalSum,
-      finalSegmentFlag: blockSums ? undefined : props.finalSegmentFlag,
-      length: levelLength,
-      blockCount,
-      dispatchLayout: getGPUScanDispatchLayout(levelLength, props.maxComputeWorkgroupsPerDimension)
-    });
+    nodes.push(
+      ...addBlockScanPass(graph, {
+        id: `${props.id}-level-${levelIndex}-scan`,
+        input: levelInput,
+        output: levelOutput,
+        mode: levelIndex === 0 ? props.mode : 'exclusive',
+        segmentFlags: levelSegmentFlags,
+        segmentSummaryInput:
+          Boolean(levelSegmentFlags) && (levelIndex > 0 || props.segmentSummaryInput),
+        segmentPrefixes,
+        blockSums,
+        blockSegmentFlags,
+        finalSum: blockSums ? undefined : props.finalSum,
+        finalSegmentFlag: blockSums ? undefined : props.finalSegmentFlag,
+        length: levelLength,
+        blockCount,
+        dispatchLayout: getGPUScanDispatchLayout(
+          levelLength,
+          props.maxComputeWorkgroupsPerDimension
+        )
+      })
+    );
     levels.push({output: levelOutput, length: levelLength, segmentPrefixes});
 
     if (!blockSums) {
@@ -359,16 +389,23 @@ function addScanLevels<Parameters>(
   for (let index = levels.length - 2; index >= 0; index--) {
     const level = levels[index];
     const parentLevel = levels[index + 1];
-    addOffsetPass(graph, {
-      id: `${props.id}-level-${index}-add-offsets`,
-      output: level.output,
-      offsets: level.blockOffsets!,
-      length: level.length,
-      segmentPrefixes: level.segmentPrefixes,
-      offsetSegmentPrefixes: parentLevel.segmentPrefixes,
-      dispatchLayout: getGPUScanDispatchLayout(level.length, props.maxComputeWorkgroupsPerDimension)
-    });
+    nodes.push(
+      ...addOffsetPass(graph, {
+        id: `${props.id}-level-${index}-add-offsets`,
+        output: level.output,
+        offsets: level.blockOffsets!,
+        length: level.length,
+        segmentPrefixes: level.segmentPrefixes,
+        offsetSegmentPrefixes: parentLevel.segmentPrefixes,
+        dispatchLayout: getGPUScanDispatchLayout(
+          level.length,
+          props.maxComputeWorkgroupsPerDimension
+        )
+      })
+    );
   }
+
+  return nodes;
 }
 
 /** Returns one packed row within a transient view without allocating another buffer. */
@@ -429,7 +466,8 @@ function addBlockScanPass<Parameters>(
     blockCount: number;
     dispatchLayout: GPUScanDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const sumOutput = props.blockSums ?? props.finalSum;
   const segmentFlagOutput = props.blockSegmentFlags ?? props.finalSegmentFlag;
   const sumBinding = sumOutput
@@ -544,94 +582,100 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
       ? getSubgroupBlockScanSource(props, sumOutput, sumBinding)
       : portableSource;
 
-  graph.addComputePass({
-    id: props.id,
-    workload: {
-      operation: 'GPUScan',
-      variant: strategy,
-      commandCount: 1,
-      maximumWorkgroupCount:
-        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
-      maximumInvocationCount:
-        props.dispatchLayout.x *
-        props.dispatchLayout.y *
-        props.dispatchLayout.z *
-        SCAN_WORKGROUP_SIZE,
-      readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength:
-        props.length * Uint32Array.BYTES_PER_ELEMENT +
-        props.blockCount * Uint32Array.BYTES_PER_ELEMENT
-    },
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'},
-      ...(sumOutput ? [{buffer: sumOutput, usage: 'storage-write'} as const] : []),
-      ...(props.segmentFlags ? [{buffer: props.segmentFlags, usage: 'storage-read'} as const] : []),
-      ...(props.segmentPrefixes
-        ? [{buffer: props.segmentPrefixes, usage: 'storage-write'} as const]
-        : []),
-      ...(segmentFlagOutput ? [{buffer: segmentFlagOutput, usage: 'storage-write'} as const] : [])
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputValues', type: 'storage', group: 0, location: 0},
-            {name: 'outputValues', type: 'storage', group: 0, location: 1},
-            ...(sumOutput
-              ? [{name: 'sumValues', type: 'storage' as const, group: 0, location: 2}]
-              : []),
-            ...(props.segmentFlags
-              ? [{name: 'segmentFlags', type: 'storage' as const, group: 0, location: 3}]
-              : []),
-            ...(props.segmentPrefixes
-              ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 4}]
-              : []),
-            ...(segmentFlagOutput
-              ? [
-                  {
-                    name: 'summarySegmentFlags',
-                    type: 'storage' as const,
-                    group: 0,
-                    location: 5
-                  }
-                ]
-              : [])
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputValues: getViewBinding(props.input, getBuffer),
-            outputValues: getViewBinding(props.output, getBuffer)
-          };
-          if (sumOutput) {
-            bindings['sumValues'] = getViewBinding(sumOutput, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      workload: {
+        operation: 'GPUScan',
+        variant: strategy,
+        commandCount: 1,
+        maximumWorkgroupCount:
+          props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+        maximumInvocationCount:
+          props.dispatchLayout.x *
+          props.dispatchLayout.y *
+          props.dispatchLayout.z *
+          SCAN_WORKGROUP_SIZE,
+        readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength:
+          props.length * Uint32Array.BYTES_PER_ELEMENT +
+          props.blockCount * Uint32Array.BYTES_PER_ELEMENT
+      },
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'},
+        ...(sumOutput ? [{buffer: sumOutput, usage: 'storage-write'} as const] : []),
+        ...(props.segmentFlags
+          ? [{buffer: props.segmentFlags, usage: 'storage-read'} as const]
+          : []),
+        ...(props.segmentPrefixes
+          ? [{buffer: props.segmentPrefixes, usage: 'storage-write'} as const]
+          : []),
+        ...(segmentFlagOutput ? [{buffer: segmentFlagOutput, usage: 'storage-write'} as const] : [])
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'storage', group: 0, location: 0},
+              {name: 'outputValues', type: 'storage', group: 0, location: 1},
+              ...(sumOutput
+                ? [{name: 'sumValues', type: 'storage' as const, group: 0, location: 2}]
+                : []),
+              ...(props.segmentFlags
+                ? [{name: 'segmentFlags', type: 'storage' as const, group: 0, location: 3}]
+                : []),
+              ...(props.segmentPrefixes
+                ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 4}]
+                : []),
+              ...(segmentFlagOutput
+                ? [
+                    {
+                      name: 'summarySegmentFlags',
+                      type: 'storage' as const,
+                      group: 0,
+                      location: 5
+                    }
+                  ]
+                : [])
+            ]
           }
-          if (props.segmentFlags) {
-            bindings['segmentFlags'] = getViewBinding(props.segmentFlags, getBuffer);
-          }
-          if (props.segmentPrefixes) {
-            bindings['segmentPrefixes'] = getViewBinding(props.segmentPrefixes, getBuffer);
-          }
-          if (segmentFlagOutput) {
-            bindings['summarySegmentFlags'] = getViewBinding(segmentFlagOutput, getBuffer);
-          }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputValues: getViewBinding(props.input, getBuffer),
+              outputValues: getViewBinding(props.output, getBuffer)
+            };
+            if (sumOutput) {
+              bindings['sumValues'] = getViewBinding(sumOutput, getBuffer);
+            }
+            if (props.segmentFlags) {
+              bindings['segmentFlags'] = getViewBinding(props.segmentFlags, getBuffer);
+            }
+            if (props.segmentPrefixes) {
+              bindings['segmentPrefixes'] = getViewBinding(props.segmentPrefixes, getBuffer);
+            }
+            if (segmentFlagOutput) {
+              bindings['summarySegmentFlags'] = getViewBinding(segmentFlagOutput, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Uses empirical adapter calibration when supplied, otherwise preserves capability selection. */
@@ -751,7 +795,8 @@ function addOffsetPass<Parameters>(
     offsetSegmentPrefixes?: GraphDataView<'uint32'>;
     dispatchLayout: GPUScanDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const offsetIndex =
     props.offsetIndex === undefined ? `index / ${SCAN_WORKGROUP_SIZE}u` : `${props.offsetIndex}u`;
   const source = /* wgsl */ `
@@ -783,87 +828,91 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
     ${props.segmentPrefixes && props.offsetSegmentPrefixes ? 'segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] = segmentPrefix | offsetSegmentPrefix;' : ''}
   }
 }`;
-  graph.addComputePass({
-    id: props.id,
-    workload: {
-      operation: 'GPUScan',
-      commandCount: 1,
-      maximumWorkgroupCount:
-        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
-      maximumInvocationCount:
-        props.dispatchLayout.x *
-        props.dispatchLayout.y *
-        props.dispatchLayout.z *
-        SCAN_WORKGROUP_SIZE,
-      readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT * 2,
-      writeByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT
-    },
-    resources: [
-      {buffer: props.output, usage: 'storage-read-write'},
-      {buffer: props.offsets, usage: 'storage-read'},
-      ...(props.segmentPrefixes
-        ? [
-            {
-              buffer: props.segmentPrefixes,
-              usage: props.offsetSegmentPrefixes ? 'storage-read-write' : 'storage-read'
-            } as const
-          ]
-        : []),
-      ...(props.offsetSegmentPrefixes
-        ? [{buffer: props.offsetSegmentPrefixes, usage: 'storage-read'} as const]
-        : [])
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'outputValues', type: 'storage', group: 0, location: 0},
-            {name: 'offsets', type: 'storage', group: 0, location: 1},
-            ...(props.segmentPrefixes
-              ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 2}]
-              : []),
-            ...(props.offsetSegmentPrefixes
-              ? [
-                  {
-                    name: 'offsetSegmentPrefixes',
-                    type: 'storage' as const,
-                    group: 0,
-                    location: 3
-                  }
-                ]
-              : [])
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            outputValues: getViewBinding(props.output, getBuffer),
-            offsets: getViewBinding(props.offsets, getBuffer)
-          };
-          if (props.segmentPrefixes) {
-            bindings['segmentPrefixes'] = getViewBinding(props.segmentPrefixes, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      workload: {
+        operation: 'GPUScan',
+        commandCount: 1,
+        maximumWorkgroupCount:
+          props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+        maximumInvocationCount:
+          props.dispatchLayout.x *
+          props.dispatchLayout.y *
+          props.dispatchLayout.z *
+          SCAN_WORKGROUP_SIZE,
+        readByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT * 2,
+        writeByteLength: props.length * Uint32Array.BYTES_PER_ELEMENT
+      },
+      resources: [
+        {buffer: props.output, usage: 'storage-read-write'},
+        {buffer: props.offsets, usage: 'storage-read'},
+        ...(props.segmentPrefixes
+          ? [
+              {
+                buffer: props.segmentPrefixes,
+                usage: props.offsetSegmentPrefixes ? 'storage-read-write' : 'storage-read'
+              } as const
+            ]
+          : []),
+        ...(props.offsetSegmentPrefixes
+          ? [{buffer: props.offsetSegmentPrefixes, usage: 'storage-read'} as const]
+          : [])
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'outputValues', type: 'storage', group: 0, location: 0},
+              {name: 'offsets', type: 'storage', group: 0, location: 1},
+              ...(props.segmentPrefixes
+                ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 2}]
+                : []),
+              ...(props.offsetSegmentPrefixes
+                ? [
+                    {
+                      name: 'offsetSegmentPrefixes',
+                      type: 'storage' as const,
+                      group: 0,
+                      location: 3
+                    }
+                  ]
+                : [])
+            ]
           }
-          if (props.offsetSegmentPrefixes) {
-            bindings['offsetSegmentPrefixes'] = getViewBinding(
-              props.offsetSegmentPrefixes,
-              getBuffer
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              outputValues: getViewBinding(props.output, getBuffer),
+              offsets: getViewBinding(props.offsets, getBuffer)
+            };
+            if (props.segmentPrefixes) {
+              bindings['segmentPrefixes'] = getViewBinding(props.segmentPrefixes, getBuffer);
+            }
+            if (props.offsetSegmentPrefixes) {
+              bindings['offsetSegmentPrefixes'] = getViewBinding(
+                props.offsetSegmentPrefixes,
+                getBuffer
+              );
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
             );
-          }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 type GPUScanDispatchLayout = GPUBoundedDispatchLayout;

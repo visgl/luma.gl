@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUField, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {type GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -125,12 +126,18 @@ function addGPUHistogramToGraph<Selection extends GPUTypeMap>(
     addGPUHistogramBinIdentityPass(context.graph, `${prefix}-initialize-bins`, binView);
 
     if ('edges' in options) {
-      new GPUHistogram({id: prefix, input, output, mask, edges: options.edges}).addToGraph(
-        context.graph
+      addGPUCommandNodes(
+        context.graph,
+        new GPUHistogram({id: prefix, input, output, mask, edges: options.edges}).getCommandNodes(
+          context.graph
+        )
       );
     } else {
-      new GPUHistogram({id: prefix, input, output, mask, domain: options.domain}).addToGraph(
-        context.graph
+      addGPUCommandNodes(
+        context.graph,
+        new GPUHistogram({id: prefix, input, output, mask, domain: options.domain}).getCommandNodes(
+          context.graph
+        )
       );
     }
 

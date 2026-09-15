@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {
   Buffer,
   type Binding,
@@ -317,14 +318,17 @@ export function compileGPUDataFrameQuery<
         });
       }
 
-      new GPUVisibilityWorkflow({
-        id: `${queryId}-visibility-batch-${batchIndex}`,
-        predicates: [{kind: 'selection', mask}],
-        outputMask: mask,
-        output: rowIndexView.data[batchIndex],
-        count: countView.data[batchIndex],
-        firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUVisibilityWorkflow({
+          id: `${queryId}-visibility-batch-${batchIndex}`,
+          predicates: [{kind: 'selection', mask}],
+          outputMask: mask,
+          output: rowIndexView.data[batchIndex],
+          count: countView.data[batchIndex],
+          firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
+        }).getCommandNodes(graph)
+      );
       sourceRowOffset += batch.numRows;
     }
 

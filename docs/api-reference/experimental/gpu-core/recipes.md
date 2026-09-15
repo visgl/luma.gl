@@ -177,7 +177,7 @@ See [Resumable execution and work budgets](./concepts#resumable-execution-and-wo
 
 ## Package a reusable operation
 
-**Pipeline neighborhood:** typed props → contributor `addToGraph()` → logical resources and nodes →
+**Pipeline neighborhood:** typed props → contributor `getCommandNodes()` → logical resources and nodes →
 caller compilation and encoding
 
 A contributor validates its fixed contract, declares every resource use, creates any bounded
@@ -186,22 +186,24 @@ or map application data. Expose ordinary graph views, masks, counts, and indirec
 next operation can compose without CPU translation.
 
 ```ts
-class VisibleItems implements GPUCommandGraphContributor {
+class VisibleItems implements GPUProgramPrimitive {
   constructor(readonly props: VisibleItemsProps) {}
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    new GPUMask({
+  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
+    return [
+    ...new GPUMask({
       inputs: this.props.predicateMasks,
       output: this.props.visibleMask,
       operation: 'and'
-    }).addToGraph(graph);
+    }).getCommandNodes(graph),
 
-    new GPUCompaction({
+    ...new GPUCompaction({
       input: this.props.sourceIds,
       flags: this.props.visibleMask,
       output: this.props.visibleIds,
       count: this.props.visibleCount
-    }).addToGraph(graph);
+    }).getCommandNodes(graph)
+    ];
   }
 }
 ```

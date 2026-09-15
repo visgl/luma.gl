@@ -81,7 +81,7 @@ export const GPU_CORE_FEATURE_CARDS: readonly TraceFeatureCard[] = [
     capability: 'Contributor composition',
     outcome:
       'Lets reusable subsystems add graph work without taking over compilation or submission.',
-    surface: 'GPUCommandGraphContributor'
+    surface: ''
   },
   {
     capability: 'Static preflight',

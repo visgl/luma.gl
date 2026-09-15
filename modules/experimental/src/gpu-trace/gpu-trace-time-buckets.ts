@@ -8,7 +8,6 @@ import {
   GPUCommandGraph,
   GraphDataView,
   GraphVectorView,
-  type GPUCommandGraphContributor,
   type GraphBufferUse
 } from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -78,7 +77,7 @@ export type GPUTraceTimeBucketsProps = {
  * between the span and each bucket. The contributor preserves source chunks, declares graph work
  * only, and leaves output submission and readback policy to the caller.
  */
-export class GPUTraceTimeBuckets implements GPUCommandGraphContributor {
+export class GPUTraceTimeBuckets {
   /** Prefix for generated graph nodes. */
   readonly id: string;
   /** Canonical source interval columns. */

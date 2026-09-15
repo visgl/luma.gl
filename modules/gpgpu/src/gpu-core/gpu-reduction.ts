@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -154,7 +155,10 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
    *
    * @param graph Mutable graph that owns all input/output handles and generated scratch.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const inputs = getReductionInputs(this.input);
     const masks = this.mask ? getReductionMasks(this.mask) : undefined;
     if (
@@ -168,14 +172,14 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
       .map((input, chunkIndex) => ({input, mask: masks?.[chunkIndex]}))
       .filter(({input}) => input.length > 0);
     if (nonEmptyInputs.length === 0) {
-      addClearReductionPass(graph, this.id, this.output);
-      return;
+      nodes.push(...addClearReductionPass(graph, this.id, this.output));
+      return nodes;
     }
 
     const valuesPerRow = this.operation === 'extent' ? 2 : 1;
     const needsValidity =
       this.operation !== 'sum' && (this.input.format === 'float32' || Boolean(this.mask));
-    let reductionResult: ReductionResult<T>;
+    let reductionResult: ReductionResult<T> & {nodes: readonly GPUCommandNode<Parameters>[]};
 
     if (nonEmptyInputs.length === 1) {
       reductionResult = addReductionLevels(graph, {
@@ -189,6 +193,7 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         firstLevel: true,
         needsValidity
       });
+      nodes.push(...reductionResult.nodes);
     } else {
       const partialValues = createTransientView(
         graph,
@@ -201,26 +206,28 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         : undefined;
 
       nonEmptyInputs.forEach(({input, mask}, partialIndex) => {
-        addReductionLevels(graph, {
-          id: `${this.id}-chunk-${partialIndex}`,
-          format: this.input.format,
-          operation: this.operation,
-          inputValues: input,
-          inputValidity: mask,
-          inputLength: input.length,
-          valuesPerRow,
-          firstLevel: true,
-          needsValidity,
-          finalValues: createPackedSubview(
-            graph,
-            partialValues,
-            partialIndex * valuesPerRow,
-            valuesPerRow
-          ),
-          finalValidity: partialValidity
-            ? createPackedSubview(graph, partialValidity, partialIndex, 1)
-            : undefined
-        });
+        nodes.push(
+          ...addReductionLevels(graph, {
+            id: `${this.id}-chunk-${partialIndex}`,
+            format: this.input.format,
+            operation: this.operation,
+            inputValues: input,
+            inputValidity: mask,
+            inputLength: input.length,
+            valuesPerRow,
+            firstLevel: true,
+            needsValidity,
+            finalValues: createPackedSubview(
+              graph,
+              partialValues,
+              partialIndex * valuesPerRow,
+              valuesPerRow
+            ),
+            finalValidity: partialValidity
+              ? createPackedSubview(graph, partialValidity, partialIndex, 1)
+              : undefined
+          }).nodes
+        );
       });
 
       reductionResult = addReductionLevels(graph, {
@@ -234,16 +241,21 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
         firstLevel: false,
         needsValidity
       });
+      nodes.push(...reductionResult.nodes);
     }
 
-    addFinalizeReductionPass(graph, {
-      id: `${this.id}-finalize`,
-      format: this.input.format,
-      inputValues: reductionResult.values,
-      inputValidity: reductionResult.validity,
-      output: this.output,
-      valuesPerRow
-    });
+    nodes.push(
+      ...addFinalizeReductionPass(graph, {
+        id: `${this.id}-finalize`,
+        format: this.input.format,
+        inputValues: reductionResult.values,
+        inputValidity: reductionResult.validity,
+        output: this.output,
+        valuesPerRow
+      })
+    );
+
+    return nodes;
   }
 }
 
@@ -291,7 +303,8 @@ type ReductionLevelsProps<T extends GPUScalarFormat> = {
 function addReductionLevels<Parameters, T extends GPUScalarFormat>(
   graph: GPUCommandGraph<Parameters>,
   props: ReductionLevelsProps<T>
-): ReductionResult<T> {
+): ReductionResult<T> & {nodes: readonly GPUCommandNode<Parameters>[]} {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   let currentValues = props.inputValues;
   let currentValidity = props.inputValidity;
   let currentLength = props.inputLength;
@@ -321,25 +334,27 @@ function addReductionLevels<Parameters, T extends GPUScalarFormat>(
             nextLength
           )
       : undefined;
-    addReductionLevelPass(graph, {
-      id: `${props.id}-level-${levelIndex}`,
-      format: props.format,
-      operation: props.operation,
-      inputValues: currentValues,
-      inputValidity: currentValidity,
-      outputValues: nextValues,
-      outputValidity: nextValidity,
-      inputLength: currentLength,
-      valuesPerRow: props.valuesPerRow,
-      firstLevel: props.firstLevel && levelIndex === 0
-    });
+    nodes.push(
+      ...addReductionLevelPass(graph, {
+        id: `${props.id}-level-${levelIndex}`,
+        format: props.format,
+        operation: props.operation,
+        inputValues: currentValues,
+        inputValidity: currentValidity,
+        outputValues: nextValues,
+        outputValidity: nextValidity,
+        inputLength: currentLength,
+        valuesPerRow: props.valuesPerRow,
+        firstLevel: props.firstLevel && levelIndex === 0
+      })
+    );
     currentValues = nextValues;
     currentValidity = nextValidity;
     currentLength = nextLength;
     levelIndex++;
   }
 
-  return {values: currentValues, validity: currentValidity};
+  return {values: currentValues, validity: currentValidity, nodes};
 }
 
 /** Creates a packed logical slice without allocating or changing hazard granularity. */
@@ -383,7 +398,8 @@ function addReductionLevelPass<Parameters, T extends GPUScalarFormat>(
     valuesPerRow: number;
     firstLevel: boolean;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUReduction',
     props.inputLength,
@@ -493,13 +509,17 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
   if (props.inputValidity) bindings['inputValidity'] = props.inputValidity;
   bindings['outputValues'] = props.outputValues;
   if (props.outputValidity) bindings['outputValidity'] = props.outputValidity;
-  addComputationPass(graph, {
-    id: props.id,
-    source,
-    resources,
-    bindings,
-    dispatchLayout
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: props.id,
+      source,
+      resources,
+      bindings,
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Emits the portable 256-lane shared-memory reduction. */
@@ -600,7 +620,8 @@ function addFinalizeReductionPass<Parameters, T extends GPUScalarFormat>(
     output: GraphDataView<T>;
     valuesPerRow: number;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const shaderType = getShaderType(props.format);
   const zero = getZeroLiteral(props.format);
   const outputLines = Array.from({length: props.valuesPerRow}, (_, index) => {
@@ -618,23 +639,27 @@ ${props.inputValidity ? '@group(0) @binding(1) var<storage, read> inputValidity:
   ${props.inputValidity ? 'let valid = inputValidity[VALIDITY_OFFSET] != 0u;' : ''}
   ${outputLines}
 }`;
-  addComputationPass(graph, {
-    id: props.id,
-    source,
-    resources: [
-      {buffer: props.inputValues, usage: 'storage-read'},
-      ...(props.inputValidity
-        ? ([{buffer: props.inputValidity, usage: 'storage-read'}] as GraphBufferUse[])
-        : []),
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    bindings: {
-      inputValues: props.inputValues,
-      ...(props.inputValidity ? {inputValidity: props.inputValidity} : {}),
-      outputValues: props.output
-    },
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: props.id,
+      source,
+      resources: [
+        {buffer: props.inputValues, usage: 'storage-read'},
+        ...(props.inputValidity
+          ? ([{buffer: props.inputValidity, usage: 'storage-read'}] as GraphBufferUse[])
+          : []),
+        {buffer: props.output, usage: 'storage-write'}
+      ],
+      bindings: {
+        inputValues: props.inputValues,
+        ...(props.inputValidity ? {inputValidity: props.inputValidity} : {}),
+        outputValues: props.output
+      },
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 /** Writes the documented zero result for an input with no rows. */
@@ -642,21 +667,26 @@ function addClearReductionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<GPUScalarFormat>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear`;
   const shaderType = getShaderType(output.format);
   const zero = getZeroLiteral(output.format);
-  addComputationPass(graph, {
-    id: passId,
-    source: `const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: passId,
+      source: `const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<${shaderType}>;
 @compute @workgroup_size(1) fn main() {
   for (var index = 0u; index < ${output.length}u; index++) { outputValues[OUTPUT_OFFSET + index] = ${zero}; }
 }`,
-    resources: [{buffer: output, usage: 'storage-write'}],
-    bindings: {outputValues: output},
-    dispatchCount: 1
-  });
+      resources: [{buffer: output, usage: 'storage-write'}],
+      bindings: {outputValues: output},
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
@@ -670,46 +700,51 @@ function addComputationPass<Parameters>(
     dispatchCount?: number;
     dispatchLayout?: GPUBoundedDispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const bindingNames = Object.keys(props.bindings);
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: bindingNames.map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const bindingNames = Object.keys(props.bindings);
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: bindingNames.map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          if (props.dispatchLayout) {
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
-          } else {
-            computation.dispatch(computePass, props.dispatchCount ?? 1);
-          }
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            if (props.dispatchLayout) {
+              computation.dispatch(
+                computePass,
+                props.dispatchLayout.x,
+                props.dispatchLayout.y,
+                props.dispatchLayout.z
+              );
+            } else {
+              computation.dispatch(computePass, props.dispatchCount ?? 1);
+            }
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns the WGSL scalar type corresponding to a supported GPU storage format. */

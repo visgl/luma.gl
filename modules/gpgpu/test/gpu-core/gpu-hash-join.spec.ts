@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -169,31 +170,34 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
     tableValues: importView(graph, 'table-values', buffers.tableValues, props.tableCapacity ?? 8),
     statistics: importView(graph, 'build-statistics', buffers.buildStatistics, 6)
   });
-  index.addToGraph(graph);
-  new GPUHashJoin({
-    index,
-    keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
-    ...(buffers.leftRows
-      ? {leftRows: importView(graph, 'left-rows', buffers.leftRows, props.leftRows!.length)}
-      : {firstLeftRow: props.firstLeftRow}),
-    outputLeftRows: importView(
-      graph,
-      'output-left-rows',
-      buffers.outputLeftRows,
-      props.outputCapacity
-    ),
-    outputRightRows: importView(
-      graph,
-      'output-right-rows',
-      buffers.outputRightRows,
-      props.outputCapacity
-    ),
-    count: importView(graph, 'count', buffers.count, 1),
-    overflow: importView(graph, 'overflow', buffers.overflow, 1),
-    statistics: importView(graph, 'statistics', buffers.statistics, 4),
-    found: importView(graph, 'found', buffers.found, props.leftKeys.length),
-    probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
-  }).addToGraph(graph);
+  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  addGPUCommandNodes(
+    graph,
+    new GPUHashJoin({
+      index,
+      keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
+      ...(buffers.leftRows
+        ? {leftRows: importView(graph, 'left-rows', buffers.leftRows, props.leftRows!.length)}
+        : {firstLeftRow: props.firstLeftRow}),
+      outputLeftRows: importView(
+        graph,
+        'output-left-rows',
+        buffers.outputLeftRows,
+        props.outputCapacity
+      ),
+      outputRightRows: importView(
+        graph,
+        'output-right-rows',
+        buffers.outputRightRows,
+        props.outputCapacity
+      ),
+      count: importView(graph, 'count', buffers.count, 1),
+      overflow: importView(graph, 'overflow', buffers.overflow, 1),
+      statistics: importView(graph, 'statistics', buffers.statistics, 4),
+      found: importView(graph, 'found', buffers.found, props.leftKeys.length),
+      probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
+    }).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'hash-join-test'});

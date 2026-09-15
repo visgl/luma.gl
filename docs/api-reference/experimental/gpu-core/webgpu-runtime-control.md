@@ -72,7 +72,7 @@ This differs from a future CUDA backend, where the same semantic loop may lower 
 
 ## Migration constraint
 
-Dynamic runtime control requires exact dispatch geometry. Existing legacy `addToGraph()` contributors can participate only after their compute-node descriptors opt into `setGPUComputeDispatchWorkgroups()`. Native semantic operation lowerers should provide this metadata as part of their WebGPU realization.
+Dynamic runtime control requires exact dispatch geometry. Existing legacy `getCommandNodes()` contributors can participate only after their compute-node descriptors opt into `setGPUComputeDispatchWorkgroups()`. Native semantic operation lowerers should provide this metadata as part of their WebGPU realization.
 
 The compiler rejects missing geometry rather than assuming a one-dimensional dispatch.
 

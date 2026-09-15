@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {
   createTransientView,
   getViewBinding,
@@ -69,7 +65,7 @@ export type GPURasterContrastProps = {
  * CDF scratch before one bounded two-dimensional transform. Literal and GPU-resident domains,
  * exact integer nodata sentinels, nonzero masks, and nonzero byte offsets are all explicit.
  */
-export class GPURasterContrast implements GPUCommandGraphContributor {
+export class GPURasterContrast {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -233,12 +229,15 @@ export class GPURasterContrast implements GPUCommandGraphContributor {
         'uint32',
         this.histogram.length
       );
-      new GPUScan({
-        id: `${this.id}-histogram-cdf`,
-        input: this.histogram,
-        output: cumulativeHistogram,
-        mode: 'inclusive'
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUScan({
+          id: `${this.id}-histogram-cdf`,
+          input: this.histogram,
+          output: cumulativeHistogram,
+          mode: 'inclusive'
+        }).getCommandNodes(graph)
+      );
       histogramSummary = createTransientView(graph, `${this.id}-histogram-summary`, 'uint32', 2);
       this.addHistogramSummaryPass(graph, cumulativeHistogram, histogramSummary);
     }

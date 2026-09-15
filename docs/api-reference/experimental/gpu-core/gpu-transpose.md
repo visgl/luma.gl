@@ -31,13 +31,13 @@ GPU transpose pass may cost more than it saves.
 ```ts
 import {GPUTranspose} from '@luma.gl/experimental';
 
-new GPUTranspose({
+addGPUCommandNodes(graph, new GPUTranspose({
   id: 'transpose-points',
   input,
   output,
   rows: 480,
   columns: 640
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 `input` and `output` must be packed, four-byte-aligned `GraphDataView` values with the same scalar
@@ -55,7 +55,7 @@ of 16; bounds checks handle every partial tile.
 
 ## Graph and ownership contract
 
-Both views must belong to the graph passed to `addToGraph()`. The primitive contributes one compute
+Both views must belong to the graph passed to `getCommandNodes()`. The primitive contributes one compute
 node that declares the input as storage-read and the output as storage-write. It uses no transient
 buffers and performs no hidden copies. Compilation, physical resource resolution, command
 encoding, submission, and optional readback stay with the graph and caller.

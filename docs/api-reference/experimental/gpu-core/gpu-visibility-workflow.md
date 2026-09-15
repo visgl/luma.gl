@@ -40,7 +40,7 @@ const count = graph.importGPUData(
   drawCommands.getInstanceCountData(0)
 );
 
-new GPUVisibilityWorkflow({
+addGPUCommandNodes(graph, new GPUVisibilityWorkflow({
   id: 'visible-objects',
   predicates: [
     {kind: 'time-range', mask: timeRangeMask},
@@ -51,7 +51,7 @@ new GPUVisibilityWorkflow({
   outputMask: visibleMask,
   output: visibleIds,
   count
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 The workflow owns mask intersection, identity generation, scan, stable scatter, and count
@@ -83,12 +83,12 @@ By default, the workflow generates consecutive source IDs beginning at zero. Set
 `firstSourceIndex` when the input represents a slice of a larger stable identity space:
 
 ```ts
-new GPUVisibilityWorkflow({
+addGPUCommandNodes(graph, new GPUVisibilityWorkflow({
   predicates: [{kind: 'selection', mask: groupMask}],
   output: groupVisibleIds,
   count: groupInstanceCount,
   firstSourceIndex: group.firstRow
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 Alternatively, supply `sourceIds` to compact an explicit ID vector. `sourceIds` and

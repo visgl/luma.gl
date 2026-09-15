@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device, type TextureFormat} from '@luma.gl/core';
 import {
@@ -202,20 +203,26 @@ it('GPURaster composes gathered validity with a GPU-resident masked extent and h
     output: values,
     outputValidity: validity
   }).addToGraph(graph);
-  new GPUReduction({
-    id: 'valid-extent',
-    input: values,
-    mask: validity,
-    output: extent,
-    operation: 'extent'
-  }).addToGraph(graph);
-  new GPUHistogram({
-    id: 'valid-histogram',
-    input: values,
-    mask: validity,
-    domain: extent,
-    output: histogram
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUReduction({
+      id: 'valid-extent',
+      input: values,
+      mask: validity,
+      output: extent,
+      operation: 'extent'
+    }).getCommandNodes(graph)
+  );
+  addGPUCommandNodes(
+    graph,
+    new GPUHistogram({
+      id: 'valid-histogram',
+      input: values,
+      mask: validity,
+      domain: extent,
+      output: histogram
+    }).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const gatherIndex = compiled.stats.nodeOrder.indexOf('raster-gather');

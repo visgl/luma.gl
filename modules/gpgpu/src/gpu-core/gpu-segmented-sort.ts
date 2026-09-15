@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView} from './gpu-command-graph';
@@ -118,21 +119,29 @@ export class GPUSegmentedSort {
    * Empty segments produce no work. This method does not concatenate, compile, encode, submit,
    * upload, read back, or allocate physical GPU resources.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUSegmentedSortToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUSegmentedSortCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds independent stable local domains while propagating a bounded dispatch limit. @internal */
-export function addGPUSegmentedSortToGraphWithDispatchLimit<Parameters>(
+export function getGPUSegmentedSortCommandNodesWithDispatchLimit<Parameters>(
   sort: GPUSegmentedSort,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const view of [sort.keys, sort.values, sort.outputKeys, sort.outputValues]) {
     if (view.buffer.graph !== graph) {
       throw new Error(`${sort.id} views must belong to the target graph`);
@@ -152,8 +161,12 @@ export function addGPUSegmentedSortToGraphWithDispatchLimit<Parameters>(
   }));
 
   for (const plan of plans) {
-    addSegmentBucketPass(graph, sort, plan.width, plan.segments, plan.dispatchLayout);
+    nodes.push(
+      ...addSegmentBucketPass(graph, sort, plan.width, plan.segments, plan.dispatchLayout)
+    );
   }
+
+  return nodes;
 }
 
 /** Validates and snapshots one source/output range against its corresponding parent view. */
@@ -244,7 +257,8 @@ function addSegmentBucketPass<Parameters>(
   width: number,
   segments: readonly GPUSortSegment[],
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const descriptorSource = segments
     .map(
       segment =>
@@ -310,40 +324,44 @@ ${useSubgroups ? getSubgroupSegmentedBitonicShader(width) : getPortableSegmented
     outputKeys: sort.outputKeys,
     outputValues: sort.outputValues
   };
-  graph.addComputePass({
-    id: identifier,
-    resources: [
-      {buffer: sort.keys, usage: 'storage-read'},
-      {buffer: sort.values, usage: 'storage-read'},
-      {buffer: sort.outputKeys, usage: 'storage-write'},
-      {buffer: sort.outputValues, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: identifier,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(bindingViews).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(bindingViews)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: identifier,
+      resources: [
+        {buffer: sort.keys, usage: 'storage-read'},
+        {buffer: sort.values, usage: 'storage-read'},
+        {buffer: sort.outputKeys, usage: 'storage-write'},
+        {buffer: sort.outputValues, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: identifier,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(bindingViews).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(bindingViews)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Emits the portable shared-memory network retained for CORE devices. */

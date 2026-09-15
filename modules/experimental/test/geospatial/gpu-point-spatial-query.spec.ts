@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   type CompiledGPUCommandGraph,
@@ -582,16 +583,19 @@ function createQueryFixture(device: Device, props: QueryFixtureProps): QueryFixt
       'uint32',
       1
     );
-    new GPUGridIndex({
-      id: `${props.id}-index`,
-      positions,
-      gridSize: props.gridSize,
-      bounds: props.indexBounds,
-      cellOffsets,
-      objectIds: rowIndices,
-      count: indexCount,
-      overflow: indexOverflow
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUGridIndex({
+        id: `${props.id}-index`,
+        positions,
+        gridSize: props.gridSize,
+        bounds: props.indexBounds,
+        cellOffsets,
+        objectIds: rowIndices,
+        count: indexCount,
+        overflow: indexOverflow
+      }).getCommandNodes(graph)
+    );
     index = {
       gridSize: props.gridSize,
       bounds: props.indexBounds,

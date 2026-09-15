@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import React, {type ReactNode, useEffect, useId, useState} from 'react';
 import {Buffer, type Device} from '@luma.gl/core';
 import {type CompiledGPUCommandGraph, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -374,7 +375,7 @@ function compileIndexBuild(
   const count = importSpatialView(graph, 'index-count', index.count, 'uint32', 1);
   const overflow = importSpatialView(graph, 'index-overflow', index.overflow, 'uint32', 1);
 
-  new GPUGridIndex({
+  addGPUCommandNodes(graph, new GPUGridIndex({
     id: 'docs-spatial-grid',
     positions: positionView,
     gridSize: [GRID_DIMENSION, GRID_DIMENSION],
@@ -383,7 +384,7 @@ function compileIndexBuild(
     objectIds: rowIndices,
     count,
     overflow
-  }).addToGraph(graph);
+  }).getCommandNodes(graph));
 
   return graph.compile();
 }

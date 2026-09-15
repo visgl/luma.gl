@@ -33,20 +33,20 @@ Each complex value is one packed `GraphDataView<'float32x2'>` row: real followed
 ```ts
 import {GPUFFT1D} from '@luma.gl/experimental';
 
-new GPUFFT1D({
+addGPUCommandNodes(graph, new GPUFFT1D({
   id: 'spectrum',
   input,
   output,
   length: 1024,
   batchCount: 16,
   direction: 'forward'
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 `length` is the number of complex values in each transform and must be a power of two from 2
 through 2048. `batchCount` defaults to one. Input and output must each contain at least
 `length * batchCount` packed rows, use separate graph buffers, and belong to the graph passed to
-`addToGraph()`.
+`getCommandNodes()`.
 
 The initial layout is deliberately narrow: batches are tightly packed, and values inside each
 batch have no padding. Strided and interleaved batches remain future extensions.

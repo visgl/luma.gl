@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {createTransientView} from './graph-data-view-utils';
 import {createGPUScalar} from './gpu-scalar';
@@ -26,12 +27,12 @@ export class GPUConjugateGradientExecutable<Parameters = unknown> {
       solution: GraphDataView<'float32'>;
       maxIterations: number;
       toleranceSquared: number;
-      addSpMV: (
+      getSpMVCommandNodes: (
         graph: GPUCommandGraph<Parameters>,
         input: GraphDataView<'float32'>,
         output: GraphDataView<'float32'>,
         gate?: GPUScalarDispatchGate
-      ) => void;
+      ) => readonly GPUCommandNode<Parameters>[];
     }
   ) {
     this.id = props.id ?? 'gpu-conjugate-gradient';
@@ -42,8 +43,9 @@ export class GPUConjugateGradientExecutable<Parameters = unknown> {
     if (!(props.toleranceSquared > 0))
       throw new Error(`${this.id} toleranceSquared must be positive`);
   }
-  addToGraph(graph: GPUCommandGraph<Parameters>): void {
-    const {rhs, solution, maxIterations, toleranceSquared, addSpMV} = this.props;
+  getCommandNodes(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    const {rhs, solution, maxIterations, toleranceSquared, getSpMVCommandNodes} = this.props;
     const n = rhs.length;
     const r = createTransientView(graph, `${this.id}-r`, 'float32', n);
     const p = createTransientView(graph, `${this.id}-p`, 'float32', n);
@@ -62,7 +64,7 @@ export class GPUConjugateGradientExecutable<Parameters = unknown> {
     const active = createGPUScalar(graph, `${this.id}-active`, 'uint32');
     // Initial matrix application and residual setup are represented explicitly. Literal scalar
     // initialization is intentionally isolated here pending a general GPUScalar constant/parameter API.
-    addSpMV(graph, solution, ax);
+    nodes.push(...getSpMVCommandNodes(graph, solution, ax));
     addVectorInitPass(
       graph,
       `${this.id}-initialize`,
@@ -75,8 +77,13 @@ export class GPUConjugateGradientExecutable<Parameters = unknown> {
       active,
       toleranceSquared
     );
-    new GPUDotProductScalar({id: `${this.id}-rr0`, left: r, right: r, output: rr}).addToGraph(
-      graph
+    nodes.push(
+      ...new GPUDotProductScalar({
+        id: `${this.id}-rr0`,
+        left: r,
+        right: r,
+        output: rr
+      }).getCommandNodes(graph)
     );
     const vectorWG = Math.max(1, Math.ceil(n / 256));
     const vectorGate = new GPUScalarDispatchGate(graph, {
@@ -90,83 +97,105 @@ export class GPUConjugateGradientExecutable<Parameters = unknown> {
       workgroups: [1, 1, 1]
     });
     for (let iteration = 0; iteration < maxIterations; iteration++) {
-      vectorGate.addUpdateToGraph(graph, `${this.id}-vector-gate-${iteration}`);
-      scalarGate.addUpdateToGraph(graph, `${this.id}-scalar-gate-${iteration}`);
-      addSpMV(graph, p, q, vectorGate);
-      new GPUDotProductScalar({
-        id: `${this.id}-pq-${iteration}`,
-        left: p,
-        right: q,
-        output: pq,
-        gate: scalarGate
-      }).addToGraph(graph);
-      new GPUScalarCompute({
-        id: `${this.id}-alpha-${iteration}`,
-        operation: 'divide',
-        left: rr,
-        right: pq,
-        output: alpha
-      }).addToGraph(graph);
-      new GPUVectorScalarMADD({
-        id: `${this.id}-x-${iteration}`,
-        input: p,
-        scale: alpha,
-        addend: solution,
-        output: solution,
-        gate: vectorGate
-      }).addToGraph(graph);
-      new GPUScalarCompute({
-        id: `${this.id}-neg-alpha-${iteration}`,
-        operation: 'multiply',
-        left: alpha,
-        right: minusOne,
-        output: negAlpha
-      }).addToGraph(graph);
-      new GPUVectorScalarMADD({
-        id: `${this.id}-r-${iteration}`,
-        input: q,
-        scale: negAlpha,
-        addend: r,
-        output: r,
-        gate: vectorGate
-      }).addToGraph(graph);
-      new GPUDotProductScalar({
-        id: `${this.id}-newrr-${iteration}`,
-        left: r,
-        right: r,
-        output: newRR,
-        gate: scalarGate
-      }).addToGraph(graph);
-      new GPUScalarCompute({
-        id: `${this.id}-converged-${iteration}`,
-        operation: 'less-than-or-equal',
-        left: newRR,
-        right: tolerance,
-        output: converged
-      }).addToGraph(graph);
+      nodes.push(...vectorGate.getUpdateCommandNodes(graph, `${this.id}-vector-gate-${iteration}`));
+      nodes.push(...scalarGate.getUpdateCommandNodes(graph, `${this.id}-scalar-gate-${iteration}`));
+      nodes.push(...getSpMVCommandNodes(graph, p, q, vectorGate));
+      nodes.push(
+        ...new GPUDotProductScalar({
+          id: `${this.id}-pq-${iteration}`,
+          left: p,
+          right: q,
+          output: pq,
+          gate: scalarGate
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUScalarCompute({
+          id: `${this.id}-alpha-${iteration}`,
+          operation: 'divide',
+          left: rr,
+          right: pq,
+          output: alpha
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUVectorScalarMADD({
+          id: `${this.id}-x-${iteration}`,
+          input: p,
+          scale: alpha,
+          addend: solution,
+          output: solution,
+          gate: vectorGate
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUScalarCompute({
+          id: `${this.id}-neg-alpha-${iteration}`,
+          operation: 'multiply',
+          left: alpha,
+          right: minusOne,
+          output: negAlpha
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUVectorScalarMADD({
+          id: `${this.id}-r-${iteration}`,
+          input: q,
+          scale: negAlpha,
+          addend: r,
+          output: r,
+          gate: vectorGate
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUDotProductScalar({
+          id: `${this.id}-newrr-${iteration}`,
+          left: r,
+          right: r,
+          output: newRR,
+          gate: scalarGate
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUScalarCompute({
+          id: `${this.id}-converged-${iteration}`,
+          operation: 'less-than-or-equal',
+          left: newRR,
+          right: tolerance,
+          output: converged
+        }).getCommandNodes(graph)
+      );
       addActiveInvertPass(graph, `${this.id}-active-${iteration}`, converged, active);
-      new GPUScalarCompute({
-        id: `${this.id}-beta-${iteration}`,
-        operation: 'divide',
-        left: newRR,
-        right: rr,
-        output: beta
-      }).addToGraph(graph);
-      new GPUVectorScalarMADD({
-        id: `${this.id}-p-${iteration}`,
-        input: p,
-        scale: beta,
-        addend: r,
-        output: p,
-        gate: vectorGate
-      }).addToGraph(graph);
-      new GPUScalarCompute({
-        id: `${this.id}-rr-copy-${iteration}`,
-        operation: 'copy',
-        left: newRR,
-        output: rr
-      }).addToGraph(graph);
+      nodes.push(
+        ...new GPUScalarCompute({
+          id: `${this.id}-beta-${iteration}`,
+          operation: 'divide',
+          left: newRR,
+          right: rr,
+          output: beta
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUVectorScalarMADD({
+          id: `${this.id}-p-${iteration}`,
+          input: p,
+          scale: beta,
+          addend: r,
+          output: p,
+          gate: vectorGate
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...new GPUScalarCompute({
+          id: `${this.id}-rr-copy-${iteration}`,
+          operation: 'copy',
+          left: newRR,
+          output: rr
+        }).getCommandNodes(graph)
+      );
     }
+
+    return nodes;
   }
 }
 

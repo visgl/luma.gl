@@ -70,14 +70,14 @@ This is the first major difference between GEMM and simpler elementwise GPU oper
 ## Contract
 
 ```ts
-new GPUMatMul({
+addGPUCommandNodes(graph, new GPUMatMul({
   left: a,
   right: b,
   output: c,
   m: 1024,
   k: 512,
   n: 1024
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 All matrices are initially packed row-major `float32`. Edge tiles are bounds-checked, so dimensions need not be multiples of 16.

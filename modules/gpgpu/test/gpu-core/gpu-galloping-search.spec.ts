@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -50,7 +51,7 @@ it('GPUGallopingSearch matches segmented lower bounds and recovers from unsorted
     queriesPerTile: 4,
     maximumSearchCount: 4
   });
-  search.addToGraph(graph);
+  addGPUCommandNodes(graph, search.getCommandNodes(graph));
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
@@ -108,7 +109,7 @@ it('GPUGallopingSearch follows a sorted index over strided canonical values', as
     queriesPerTile: 32,
     maximumSearchCount: 1
   });
-  search.addToGraph(graph);
+  addGPUCommandNodes(graph, search.getCommandNodes(graph));
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});
@@ -136,14 +137,17 @@ it('GPUGallopingSearch supports uint32 values, empty segments, and offset views'
   const segments = makeView(device, graph, 'segments', 'uint32', [0, 5, 0, 4, 5, 0, 4, 0]);
   const output = makeView(device, graph, 'output', 'uint32', [99, 99, 99, 99, 99, 99], 1, 4);
   const validationErrors = makeView(device, graph, 'errors', 'uint32', [0]);
-  new GPUGallopingSearch({
-    values: values.view,
-    queries: queries.view,
-    segments: segments.view,
-    maximumQueryCount: 4,
-    output: output.view,
-    validationErrors: validationErrors.view
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGallopingSearch({
+      values: values.view,
+      queries: queries.view,
+      segments: segments.view,
+      maximumQueryCount: 4,
+      output: output.view,
+      validationErrors: validationErrors.view
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});

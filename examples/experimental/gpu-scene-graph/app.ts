@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import {AnimationLoopTemplate, Computation, Model, type AnimationProps} from '@luma.gl/engine';
 import {
@@ -256,35 +257,44 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         };
       }
     });
-    new GPUVisibilityWorkflow({
-      id: 'scene-graph-visible-rows',
-      predicates: [{kind: 'bounds', mask: visibility.view}],
-      output: visibleRows.view,
-      count: visibleCount.view
-    }).addToGraph(graph);
-    new GPUSceneDrawGeneration({
-      id: 'scene-graph-draw-generation',
-      scene: source,
-      visibility: visibility.view,
-      commands: commandViews,
-      requiredCount: requiredCount.view,
-      publishedCount: publishedCount.view,
-      overflow: drawOverflow.view
-    }).addToGraph(graph);
-    new GPUSceneResourceGroups({
-      id: 'scene-graph-resource-groups',
-      scene: source,
-      commands: commandViews,
-      groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
-        id: groupIndex,
-        firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
-        commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
-        geometryId: 0
-      })),
-      counts: groupCounts.view,
-      overflows: groupOverflows.view,
-      overflow: groupOverflow.view
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUVisibilityWorkflow({
+        id: 'scene-graph-visible-rows',
+        predicates: [{kind: 'bounds', mask: visibility.view}],
+        output: visibleRows.view,
+        count: visibleCount.view
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUSceneDrawGeneration({
+        id: 'scene-graph-draw-generation',
+        scene: source,
+        visibility: visibility.view,
+        commands: commandViews,
+        requiredCount: requiredCount.view,
+        publishedCount: publishedCount.view,
+        overflow: drawOverflow.view
+      }).getCommandNodes(graph)
+    );
+    addGPUCommandNodes(
+      graph,
+      new GPUSceneResourceGroups({
+        id: 'scene-graph-resource-groups',
+        scene: source,
+        commands: commandViews,
+        groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
+          id: groupIndex,
+          firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
+          commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
+          geometryId: 0
+        })),
+        counts: groupCounts.view,
+        overflows: groupOverflows.view,
+        overflow: groupOverflow.view
+      }).getCommandNodes(graph)
+    );
     graph.addComputePass({
       id: 'scene-graph-picking',
       resources: [

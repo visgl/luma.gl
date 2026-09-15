@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterNeighborhood,
@@ -159,7 +154,7 @@ export class GPURasterLaplacian extends GPURasterNeighborhood {
  * Four graph-owned transient float32/uint32 buffers hold both directional responses and masks.
  * Inputs, outputs, validity, and graph lifetimes remain GPU-resident and caller-controlled.
  */
-export class GPURasterGradientMagnitude implements GPUCommandGraphContributor {
+export class GPURasterGradientMagnitude {
   readonly id: string;
   readonly width: number;
   readonly height: number;

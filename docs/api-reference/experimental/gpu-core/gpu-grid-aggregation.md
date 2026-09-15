@@ -51,14 +51,14 @@ input. This keeps table batches aligned while producing one grid-wide result.
 ## Usage
 
 ```ts
-new GPUGridAggregation({
+addGPUCommandNodes(graph, new GPUGridAggregation({
   positions,
   weights: temperatures,
   output: cellTemperatureMeans,
   operation: 'mean',
   gridSize: [32, 16],
   bounds: [-180, -90, 180, 90]
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 ## Constructor

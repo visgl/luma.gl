@@ -86,11 +86,11 @@ import.
 
 ## Extension libraries
 
-Small algorithm libraries can implement the structural `GPUCommandGraphContributor` interface:
+Small algorithm libraries can implement the structural `GPUProgramPrimitive` interface:
 
 ```ts
-class GPUAlgorithm implements GPUCommandGraphContributor {
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+class GPUAlgorithm implements GPUProgramPrimitive {
+  getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
     const output = createTransientView(
       graph,
       'algorithm-output',
@@ -98,11 +98,12 @@ class GPUAlgorithm implements GPUCommandGraphContributor {
       outputCapacity,
       Buffer.STORAGE | Buffer.INDIRECT
     );
-    // Declare compute, render, or copy nodes that use output.
+    // Return compute, render, or copy nodes that use output.
+    return [createGPUComputeCommandNode({id: 'algorithm', resources: [{buffer: output, usage: 'storage-write'}], compile: compileAlgorithm})];
   }
 }
 
-new GPUAlgorithm().addToGraph(graph);
+addGPUCommandNodes(graph, new GPUAlgorithm().getCommandNodes(graph));
 ```
 
 A contributor only declares resources and nodes. It does not compile the graph, encode commands,
@@ -638,7 +639,7 @@ graph.addComputePass({
 ```
 
 Primitives such as `GPUBatchHashIndex`, `GPUScan`, and `GPUHashJoin` use this same public graph
-contract: `primitive.addToGraph(graph)` contributes compute nodes but does not compile, submit, or
+contract: `primitive.getCommandNodes(graph)` contributes compute nodes but does not compile, submit, or
 read back the graph on the application's behalf.
 
 ### `addRenderPass(node)`

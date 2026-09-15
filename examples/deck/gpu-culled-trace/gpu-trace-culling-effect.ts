@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -251,13 +252,16 @@ export class GPUTraceCullingEffect implements Effect {
       rowFlags: rowFlagView,
       cullingCounts
     });
-    new GPUCompaction({
-      id: 'visible-block-compaction',
-      input: sourceIds,
-      flags: rowFlagView,
-      output: visibleIdView,
-      count: blockCount
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUCompaction({
+        id: 'visible-block-compaction',
+        input: sourceIds,
+        flags: rowFlagView,
+        output: visibleIdView,
+        count: blockCount
+      }).getCommandNodes(graph)
+    );
 
     if (this.textSelection) {
       const {source, selectedGlyphIds, selectedGlyphRecords, drawCommands} = this.textSelection;
@@ -271,29 +275,32 @@ export class GPUTraceCullingEffect implements Effect {
         byteOffset: UINT32_BYTE_LENGTH * 2,
         byteStride: source.recordWordLength * UINT32_BYTE_LENGTH
       });
-      new GPUTextSelection({
-        id: 'visible-text-selection',
-        glyphRows,
-        rowFlags: rowFlagView,
-        output: graph.createDataView(selectedIds, {
-          format: 'uint32',
-          length: source.glyphCount
-        }),
-        count: graph.createDataView(textCommands, {
-          format: 'uint32',
-          length: 1,
-          byteOffset: drawCommands.getInstanceCountByteOffset(0)
-        }),
-        sourceRecords: graph.createDataView(glyphRecords, {
-          format: 'uint32',
-          length: source.glyphCount * source.recordWordLength
-        }),
-        outputRecords: graph.createDataView(selectedRecords, {
-          format: 'uint32',
-          length: source.glyphCount * source.recordWordLength
-        }),
-        recordWordLength: source.recordWordLength
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUTextSelection({
+          id: 'visible-text-selection',
+          glyphRows,
+          rowFlags: rowFlagView,
+          output: graph.createDataView(selectedIds, {
+            format: 'uint32',
+            length: source.glyphCount
+          }),
+          count: graph.createDataView(textCommands, {
+            format: 'uint32',
+            length: 1,
+            byteOffset: drawCommands.getInstanceCountByteOffset(0)
+          }),
+          sourceRecords: graph.createDataView(glyphRecords, {
+            format: 'uint32',
+            length: source.glyphCount * source.recordWordLength
+          }),
+          outputRecords: graph.createDataView(selectedRecords, {
+            format: 'uint32',
+            length: source.glyphCount * source.recordWordLength
+          }),
+          recordWordLength: source.recordWordLength
+        }).getCommandNodes(graph)
+      );
     }
     this.compiled = graph.compile();
     this.publishStats();

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {GraphVectorView, type GPUCommandGraph} from './gpu-command-graph';
 import {validateMatchingVectorTopology} from './graph-data-view-utils';
 import {GPUSort, type GPUSortAlgorithm, type GPUSortDirection} from './gpu-sort';
@@ -111,10 +112,15 @@ export class GPUBatchSort {
    * Empty chunks add no nodes. Scratch remains batch-local and graph-owned. This method does not
    * compile, encode, submit, or read back commands.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const sort of this.chunkSorts) {
-      sort.addToGraph(graph);
+      nodes.push(...sort.getCommandNodes(graph));
     }
+
+    return nodes;
   }
 }
 

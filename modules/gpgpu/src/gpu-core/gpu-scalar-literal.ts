@@ -5,11 +5,7 @@
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph} from './gpu-command-graph';
-import {
-  addGPUCommandNodes,
-  createGPUComputeCommandNode,
-  type GPUComputeCommandNode
-} from './gpu-command-node';
+import {createGPUComputeCommandNode, type GPUComputeCommandNode} from './gpu-command-node';
 import {GPUScalar, getGPUScalarWGSLStore, getGPUValueArenaWGSLBinding} from './gpu-scalar';
 
 /** WebGPU execution primitive writing one host-known literal to an arena scalar. */
@@ -63,10 +59,5 @@ export class GPUScalarLiteral {
         }
       })
     ];
-  }
-
-  /** @deprecated Compatibility construction helper. Prefer getCommandNodes(). */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUCommandNodes(graph, this.getCommandNodes(graph));
   }
 }

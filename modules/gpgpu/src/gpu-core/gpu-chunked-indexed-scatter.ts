@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferHandle, type GraphDataView} from './gpu-command-graph';
@@ -117,7 +118,10 @@ export class GPUChunkedIndexedScatter {
   }
 
   /** Adds route initialization, counting, prefix publication, and indirect scatter passes. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): GPUChunkedIndexedScatterResult {
+  getCommands<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): GPUChunkedIndexedScatterResult & {nodes: readonly GPUCommandNode<Parameters>[]} {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.sourceIds, this.sourceCount, this.routes, this.output]) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
@@ -155,11 +159,16 @@ export class GPUChunkedIndexedScatter {
       Buffer.STORAGE | Buffer.INDIRECT
     );
 
-    addInitializePass(graph, this, chunkState, sourceDispatchCommand);
-    addCountPass(graph, this, chunkState, sourceDispatchCommand.buffer);
-    addPublishPass(graph, this, chunkState, dispatchCommands);
-    addScatterPass(graph, this, chunkState, sourceDispatchCommand.buffer);
-    return {chunkCounts, chunkOffsets, dispatchCommands};
+    nodes.push(...addInitializePass(graph, this, chunkState, sourceDispatchCommand));
+    nodes.push(...addCountPass(graph, this, chunkState, sourceDispatchCommand.buffer));
+    nodes.push(...addPublishPass(graph, this, chunkState, dispatchCommands));
+    nodes.push(...addScatterPass(graph, this, chunkState, sourceDispatchCommand.buffer));
+    return {...{chunkCounts, chunkOffsets, dispatchCommands}, nodes};
+  }
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    return this.getCommands(graph).nodes;
   }
 }
 
@@ -221,7 +230,8 @@ function addInitializePass<Parameters>(
   scatter: GPUChunkedIndexedScatter,
   chunkState: GraphDataView<'uint32'>,
   sourceDispatchCommand: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const SOURCE_CAPACITY: u32 = ${scatter.sourceIds.length}u;
 const CHUNK_STATE_LENGTH: u32 = ${chunkState.length}u;
@@ -252,17 +262,21 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     sourceDispatchCommand[DISPATCH_OFFSET + 2u] = 1u;
   }
 }`;
-  addDirectPass(graph, {
-    id: `${scatter.id}-initialize`,
-    source,
-    views: {sourceCount: scatter.sourceCount, chunkState, sourceDispatchCommand},
-    resources: [
-      {buffer: scatter.sourceCount, usage: 'storage-read'},
-      {buffer: chunkState, usage: 'storage-write'},
-      {buffer: sourceDispatchCommand, usage: 'storage-write'}
-    ],
-    dispatchCount: Math.ceil(chunkState.length / CHUNKED_SCATTER_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addDirectPass(graph, {
+      id: `${scatter.id}-initialize`,
+      source,
+      views: {sourceCount: scatter.sourceCount, chunkState, sourceDispatchCommand},
+      resources: [
+        {buffer: scatter.sourceCount, usage: 'storage-read'},
+        {buffer: chunkState, usage: 'storage-write'},
+        {buffer: sourceDispatchCommand, usage: 'storage-write'}
+      ],
+      dispatchCount: Math.ceil(chunkState.length / CHUNKED_SCATTER_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addCountPass<Parameters>(
@@ -270,7 +284,8 @@ function addCountPass<Parameters>(
   scatter: GPUChunkedIndexedScatter,
   chunkState: GraphDataView<'uint32'>,
   sourceDispatchCommand: GraphBufferHandle
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const useSubgroups =
     scatter.chunkEnds.length <= MAXIMUM_ROUTE_COUNT &&
     getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
@@ -352,23 +367,27 @@ ${getSubgroupCoalescedAtomicAddWGSL(
     );
   }
 }`;
-  addIndirectPass(graph, {
-    id: `${scatter.id}-count`,
-    source,
-    views: {
-      sourceIds: scatter.sourceIds,
-      sourceCount: scatter.sourceCount,
-      routes: scatter.routes,
-      chunkState
-    },
-    resources: [
-      {buffer: scatter.sourceIds, usage: 'storage-read'},
-      {buffer: scatter.sourceCount, usage: 'storage-read'},
-      {buffer: scatter.routes, usage: 'storage-read'},
-      {buffer: chunkState, usage: 'storage-read-write'}
-    ],
-    dispatchBuffer: sourceDispatchCommand
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: `${scatter.id}-count`,
+      source,
+      views: {
+        sourceIds: scatter.sourceIds,
+        sourceCount: scatter.sourceCount,
+        routes: scatter.routes,
+        chunkState
+      },
+      resources: [
+        {buffer: scatter.sourceIds, usage: 'storage-read'},
+        {buffer: scatter.sourceCount, usage: 'storage-read'},
+        {buffer: scatter.routes, usage: 'storage-read'},
+        {buffer: chunkState, usage: 'storage-read-write'}
+      ],
+      dispatchBuffer: sourceDispatchCommand
+    })
+  );
+
+  return nodes;
 }
 
 function addPublishPass<Parameters>(
@@ -376,7 +395,8 @@ function addPublishPass<Parameters>(
   scatter: GPUChunkedIndexedScatter,
   chunkState: GraphDataView<'uint32'>,
   dispatchCommands: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const chunkCount = scatter.chunkEnds.length;
   const source = /* wgsl */ `
 const CHUNK_COUNT: u32 = ${chunkCount}u;
@@ -402,16 +422,20 @@ fn main() {
     offset += count;
   }
 }`;
-  addDirectPass(graph, {
-    id: `${scatter.id}-publish`,
-    source,
-    views: {chunkState, dispatchCommands},
-    resources: [
-      {buffer: chunkState, usage: 'storage-read-write'},
-      {buffer: dispatchCommands, usage: 'storage-write'}
-    ],
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addDirectPass(graph, {
+      id: `${scatter.id}-publish`,
+      source,
+      views: {chunkState, dispatchCommands},
+      resources: [
+        {buffer: chunkState, usage: 'storage-read-write'},
+        {buffer: dispatchCommands, usage: 'storage-write'}
+      ],
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 function addScatterPass<Parameters>(
@@ -419,7 +443,8 @@ function addScatterPass<Parameters>(
   scatter: GPUChunkedIndexedScatter,
   chunkState: GraphDataView<'uint32'>,
   sourceDispatchCommand: GraphBufferHandle
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const chunkCount = scatter.chunkEnds.length;
   const useSubgroups =
     chunkCount <= MAXIMUM_ROUTE_COUNT && getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
@@ -532,25 +557,29 @@ ${
     }
   }
 }`;
-  addIndirectPass(graph, {
-    id: `${scatter.id}-scatter`,
-    source,
-    views: {
-      sourceIds: scatter.sourceIds,
-      sourceCount: scatter.sourceCount,
-      routes: scatter.routes,
-      chunkState,
-      outputJobs: scatter.output
-    },
-    resources: [
-      {buffer: scatter.sourceIds, usage: 'storage-read'},
-      {buffer: scatter.sourceCount, usage: 'storage-read'},
-      {buffer: scatter.routes, usage: 'storage-read'},
-      {buffer: chunkState, usage: 'storage-read-write'},
-      {buffer: scatter.output, usage: 'storage-write'}
-    ],
-    dispatchBuffer: sourceDispatchCommand
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: `${scatter.id}-scatter`,
+      source,
+      views: {
+        sourceIds: scatter.sourceIds,
+        sourceCount: scatter.sourceCount,
+        routes: scatter.routes,
+        chunkState,
+        outputJobs: scatter.output
+      },
+      resources: [
+        {buffer: scatter.sourceIds, usage: 'storage-read'},
+        {buffer: scatter.sourceCount, usage: 'storage-read'},
+        {buffer: scatter.routes, usage: 'storage-read'},
+        {buffer: chunkState, usage: 'storage-read-write'},
+        {buffer: scatter.output, usage: 'storage-write'}
+      ],
+      dispatchBuffer: sourceDispatchCommand
+    })
+  );
+
+  return nodes;
 }
 
 type ChunkedScatterPassResource = {
@@ -567,21 +596,26 @@ function addDirectPass<Parameters>(
     resources: ChunkedScatterPassResource[];
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = makeComputation(device, props.id, props.source, props.views);
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings(resolveBindings(props.views, getBuffer));
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = makeComputation(device, props.id, props.source, props.views);
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings(resolveBindings(props.views, getBuffer));
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addIndirectPass<Parameters>(
@@ -593,21 +627,26 @@ function addIndirectPass<Parameters>(
     resources: ChunkedScatterPassResource[];
     dispatchBuffer: GraphBufferHandle;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: [...props.resources, {buffer: props.dispatchBuffer, usage: 'indirect' as const}],
-    compile: ({device}) => {
-      const computation = makeComputation(device, props.id, props.source, props.views);
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings(resolveBindings(props.views, getBuffer));
-          computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: [...props.resources, {buffer: props.dispatchBuffer, usage: 'indirect' as const}],
+      compile: ({device}) => {
+        const computation = makeComputation(device, props.id, props.source, props.views);
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings(resolveBindings(props.views, getBuffer));
+            computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function makeComputation(

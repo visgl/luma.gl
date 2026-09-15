@@ -101,7 +101,7 @@ export const GPU_CORE_COMPILER_NODES: readonly GPUCoreCompilerNode[] = [
     invocations: 1_000_000,
     dispatches: 1,
     output: 'Local prefixes and block totals',
-    code: "new GPUScan({input: flags, output: offsets}).addToGraph(graph);"
+    code: "addGPUCommandNodes(graph, new GPUScan({input: flags, output: offsets}).getCommandNodes(graph));"
   },
   {
     id: 'scan-carry',
@@ -123,7 +123,7 @@ export const GPU_CORE_COMPILER_NODES: readonly GPUCoreCompilerNode[] = [
     invocations: 1_000_000,
     dispatches: 1,
     output: 'Packed IDs and a GPU-written indirect count',
-    code: "new GPUCompaction({input: source, flags, output: visibleIds, count}).addToGraph(graph);"
+    code: "addGPUCommandNodes(graph, new GPUCompaction({input: source, flags, output: visibleIds, count}).getCommandNodes(graph));"
   },
   {
     id: 'style',

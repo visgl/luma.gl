@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -68,7 +63,7 @@ export type GPURasterOtsuThresholdProps = {
  * Source validity, exact native-format nodata, finite floating-point samples, calibrated values,
  * and GPU-provided thresholds are all intersected before publishing the canonical output mask.
  */
-export class GPURasterThreshold implements GPUCommandGraphContributor {
+export class GPURasterThreshold {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -312,7 +307,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
  * lowest sample boundary when multiple splits have the same score. Empty histograms and invalid
  * GPU domains publish zero. Neither histogram bins nor the selected threshold are read back.
  */
-export class GPURasterOtsuThreshold implements GPUCommandGraphContributor {
+export class GPURasterOtsuThreshold {
   readonly id: string;
   readonly histogram: GraphDataView<'uint32'>;
   readonly domain: GPURasterOtsuDomain;

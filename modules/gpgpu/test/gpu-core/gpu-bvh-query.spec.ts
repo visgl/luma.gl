@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -201,7 +202,7 @@ function createFixture(
     count: importView(graph, 'bvh-count', bvhCount, 'uint32', 1),
     overflow: importView(graph, 'bvh-overflow', bvhOverflow, 'uint32', 1)
   });
-  bvh.addToGraph(graph);
+  addGPUCommandNodes(graph, bvh.getCommandNodes(graph));
   const bvhQuery = new GPUBVHQuery({
     id: 'test-bvh-query',
     bvh,
@@ -213,7 +214,7 @@ function createFixture(
     outputMask: importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength),
     visitedCount: importView(graph, 'visited-count', visitedCount, 'uint32', 1)
   });
-  bvhQuery.addToGraph(graph);
+  addGPUCommandNodes(graph, bvhQuery.getCommandNodes(graph));
   return {
     compiled: graph.compile(),
     workflow: bvhQuery,

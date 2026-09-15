@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {
   Buffer,
   type Device,
@@ -1749,13 +1750,16 @@ export class RayTracingSceneRenderer {
             length: geometryLayout.triangleCount
           });
         } else {
-          new GPUSort({
-            id: `${props.frameIdentifier}-blas-${geometryIndex}-sort-triangle-morton-keys`,
-            keys: geometryMortonKeys,
-            values: geometryLocalTriangleIds,
-            outputKeys: geometrySortedMortonKeys,
-            outputValues: geometrySortedTriangleIds
-          }).addToGraph(graph);
+          addGPUCommandNodes(
+            graph,
+            new GPUSort({
+              id: `${props.frameIdentifier}-blas-${geometryIndex}-sort-triangle-morton-keys`,
+              keys: geometryMortonKeys,
+              values: geometryLocalTriangleIds,
+              outputKeys: geometrySortedMortonKeys,
+              outputValues: geometrySortedTriangleIds
+            }).getCommandNodes(graph)
+          );
         }
 
         const addGatherPass = (): void => {
@@ -1819,7 +1823,7 @@ export class RayTracingSceneRenderer {
             count,
             overflow
           });
-          blas.addToGraph(graph);
+          addGPUCommandNodes(graph, blas.getCommandNodes(graph));
         };
 
         const addPackPass = (): void => {
@@ -1889,32 +1893,38 @@ export class RayTracingSceneRenderer {
     }
 
     if (localSortSegments.length > 0) {
-      new GPUSegmentedSort({
-        id: `${props.frameIdentifier}-blas-sort-triangle-morton-keys`,
-        keys: mortonKeys,
-        values: localTriangleIds,
-        outputKeys: sortedMortonKeys,
-        outputValues: sortedTriangleIds,
-        segments: localSortSegments
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUSegmentedSort({
+          id: `${props.frameIdentifier}-blas-sort-triangle-morton-keys`,
+          keys: mortonKeys,
+          values: localTriangleIds,
+          outputKeys: sortedMortonKeys,
+          outputValues: sortedTriangleIds,
+          segments: localSortSegments
+        }).getCommandNodes(graph)
+      );
 
       for (const hierarchyPasses of deferredHierarchyPasses) {
         hierarchyPasses.addGatherPass();
       }
 
       if (localHierarchySegments.length > 0) {
-        new GPUSegmentedBVH({
-          id: `${props.frameIdentifier}-blas-bvh`,
-          minima: sortedMinima,
-          maxima: sortedMaxima,
-          nodeMinima,
-          nodeMaxima,
-          nodeChildren,
-          leafIds,
-          counts: blasCounts,
-          overflows: blasOverflows,
-          segments: localHierarchySegments
-        }).addToGraph(graph);
+        addGPUCommandNodes(
+          graph,
+          new GPUSegmentedBVH({
+            id: `${props.frameIdentifier}-blas-bvh`,
+            minima: sortedMinima,
+            maxima: sortedMaxima,
+            nodeMinima,
+            nodeMaxima,
+            nodeChildren,
+            leafIds,
+            counts: blasCounts,
+            overflows: blasOverflows,
+            segments: localHierarchySegments
+          }).getCommandNodes(graph)
+        );
       }
 
       for (const hierarchyPasses of deferredHierarchyPasses) {
@@ -2207,13 +2217,16 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    new GPUSort({
-      id: `${props.frameIdentifier}-sort-primitive-morton-keys`,
-      keys: mortonKeys,
-      values: primitiveIds,
-      outputKeys: sortedMortonKeys,
-      outputValues: sortedPrimitiveIds
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUSort({
+        id: `${props.frameIdentifier}-sort-primitive-morton-keys`,
+        keys: mortonKeys,
+        values: primitiveIds,
+        outputKeys: sortedMortonKeys,
+        outputValues: sortedPrimitiveIds
+      }).getCommandNodes(graph)
+    );
 
     graph.addComputePass({
       id: `${props.frameIdentifier}-gather-sorted-bounds`,
@@ -2257,7 +2270,7 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    acceleration.addToGraph(graph);
+    addGPUCommandNodes(graph, acceleration.getCommandNodes(graph));
 
     return graph.compile();
   }
@@ -2458,7 +2471,7 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    refit.addToGraph(graph);
+    addGPUCommandNodes(graph, refit.getCommandNodes(graph));
 
     return graph.compile();
   }

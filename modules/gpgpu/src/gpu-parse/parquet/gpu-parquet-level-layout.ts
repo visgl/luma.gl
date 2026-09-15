@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -80,19 +81,22 @@ export class GPUParquetLevelLayout {
     if (props.definitionLevels.length > 0) {
       addClassifyPass(graph, props);
     }
-    new GPUSegmentedLayout({
-      id: `${this.id}-materialize`,
-      valueFlags: props.validity,
-      elementFlags: props.elementFlags,
-      segmentStartFlags: props.rowStartFlags,
-      valueOffsets: props.valueOffsets,
-      elementOffsets: props.elementOffsets,
-      segmentIndices: props.rowIndices,
-      segmentOffsets: props.listOffsets,
-      valueCount: props.nonNullValueCount,
-      elementCount: props.elementCount,
-      segmentCount: props.rowCount
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUSegmentedLayout({
+        id: `${this.id}-materialize`,
+        valueFlags: props.validity,
+        elementFlags: props.elementFlags,
+        segmentStartFlags: props.rowStartFlags,
+        valueOffsets: props.valueOffsets,
+        elementOffsets: props.elementOffsets,
+        segmentIndices: props.rowIndices,
+        segmentOffsets: props.listOffsets,
+        valueCount: props.nonNullValueCount,
+        elementCount: props.elementCount,
+        segmentCount: props.rowCount
+      }).getCommandNodes(graph)
+    );
   }
 }
 

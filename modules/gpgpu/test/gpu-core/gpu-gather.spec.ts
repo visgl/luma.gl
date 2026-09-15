@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -50,7 +51,12 @@ it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', a
     })
   );
 
-  new GPUGather({source: sourceView, indices: indexView, output: outputView}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGather({source: sourceView, indices: indexView, output: outputView}).getCommandNodes(
+      graph
+    )
+  );
   const compiled = graph.compile();
 
   try {

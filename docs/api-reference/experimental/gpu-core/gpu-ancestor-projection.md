@@ -42,13 +42,13 @@ representative; it does not select a neighborhood or rewrite the graph.
 ```ts
 import {GPUAncestorProjection} from '@luma.gl/gpgpu/gpu-core';
 
-new GPUAncestorProjection({
+addGPUCommandNodes(graph, new GPUAncestorProjection({
   id: 'visible-parent-projection',
   parents: canonicalParentIds,
   visibility: visibleSpanMask,
   output: visibleAncestorIds,
   maxDepth: 32
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 All three views are packed `GraphDataView<'uint32'>` values with identical logical row counts.

@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -85,7 +86,10 @@ async function runTranspose(
   );
   const input = graph.createDataView(inputHandle, {format, length: values.length});
   const output = graph.createDataView(outputHandle, {format, length: values.length});
-  new GPUTranspose({input, output, rows, columns}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUTranspose({input, output, rows, columns}).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
 
   try {

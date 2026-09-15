@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -182,7 +183,7 @@ function createFixture(device: Device, outputCapacity: number): Fixture {
     totalCount: importView(graph, 'total-count', totalCount, 'uint32', 1),
     overflow: importView(graph, 'overflow', overflow, 'uint32', 1)
   });
-  selection.addToGraph(graph);
+  addGPUCommandNodes(graph, selection.getCommandNodes(graph));
   return {
     compiled: graph.compile(),
     selection,

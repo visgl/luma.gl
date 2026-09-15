@@ -1,3 +1,4 @@
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -188,7 +189,7 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
     tableValues: importView(graph, 'table-values', tableValuesBuffer, tableCapacity),
     statistics: importView(graph, 'build-statistics', buildStatisticsBuffer, 6)
   });
-  index.addToGraph(graph);
+  addGPUCommandNodes(graph, index.getCommandNodes(graph));
 
   const keys = makeVector(graph, device, 'keys', props.keyChunks);
   const leftRows = props.leftRowChunks
@@ -222,18 +223,21 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
   const countsBuffer = createOutputBuffer(device, batchCount);
   const overflowsBuffer = createOutputBuffer(device, batchCount);
   const statisticsBuffer = createOutputBuffer(device, batchCount * 4);
-  new GPUBatchHashJoin({
-    index,
-    keys: keys.vector,
-    ...(leftRows ? {leftRows: leftRows.vector} : {firstLeftRow: props.firstLeftRow}),
-    outputLeftRows: outputLeftRows.vector,
-    outputRightRows: outputRightRows.vector,
-    counts: importView(graph, 'counts', countsBuffer, batchCount),
-    overflows: importView(graph, 'overflows', overflowsBuffer, batchCount),
-    statistics: importView(graph, 'statistics', statisticsBuffer, batchCount * 4),
-    found: found.vector,
-    probes: probes.vector
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUBatchHashJoin({
+      index,
+      keys: keys.vector,
+      ...(leftRows ? {leftRows: leftRows.vector} : {firstLeftRow: props.firstLeftRow}),
+      outputLeftRows: outputLeftRows.vector,
+      outputRightRows: outputRightRows.vector,
+      counts: importView(graph, 'counts', countsBuffer, batchCount),
+      overflows: importView(graph, 'overflows', overflowsBuffer, batchCount),
+      statistics: importView(graph, 'statistics', statisticsBuffer, batchCount * 4),
+      found: found.vector,
+      probes: probes.vector
+    }).getCommandNodes(graph)
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-hash-join-test'});

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
@@ -37,7 +38,7 @@ it('GPUScatter scatters fixed-width float rows and ignores invalid destinations'
     new GPUData({buffer: outputBuffer, format: 'float32x3', length: 4, ownsBuffer: false})
   );
 
-  new GPUScatter({source, indices, output}).addToGraph(graph);
+  addGPUCommandNodes(graph, new GPUScatter({source, indices, output}).getCommandNodes(graph));
   const compiled = graph.compile();
   try {
     const encoder = device.createCommandEncoder({id: 'scatter'});

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -36,7 +37,10 @@ export class GPUScanUint64 {
   }
 
   /** Adds low-word scan, carry classification, and high-word scan nodes. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const props = this.props;
     for (const view of [props.inputLow, props.inputHigh, props.outputLow, props.outputHigh]) {
       if (view.buffer.graph !== graph) {
@@ -44,27 +48,33 @@ export class GPUScanUint64 {
       }
     }
     if (props.inputLow.length === 0) {
-      return;
+      return nodes;
     }
-    new GPUScan({
-      id: `${this.id}-low`,
-      input: props.inputLow,
-      output: props.outputLow,
-      mode: 'inclusive'
-    }).addToGraph(graph);
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-low`,
+        input: props.inputLow,
+        output: props.outputLow,
+        mode: 'inclusive'
+      }).getCommandNodes(graph)
+    );
     const adjustedHigh = createTransientView(
       graph,
       `${this.id}-adjusted-high`,
       'uint32',
       props.inputLow.length
     );
-    addCarryPass(graph, props, adjustedHigh);
-    new GPUScan({
-      id: `${this.id}-high`,
-      input: adjustedHigh,
-      output: props.outputHigh,
-      mode: 'inclusive'
-    }).addToGraph(graph);
+    nodes.push(...addCarryPass(graph, props, adjustedHigh));
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-high`,
+        input: adjustedHigh,
+        output: props.outputHigh,
+        mode: 'inclusive'
+      }).getCommandNodes(graph)
+    );
+
+    return nodes;
   }
 }
 
@@ -72,7 +82,8 @@ function addCarryPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUScanUint64Props>,
   adjustedHigh: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.inputLow.length;
   const dispatchLayout = getBoundedDispatchLayout(
     'GPUScanUint64',
@@ -100,48 +111,52 @@ fn main(
   }
   adjustedHigh[OUTPUT_OFFSET + index] = inputHigh[INPUT_HIGH_OFFSET + index] + carry;
 }`;
-  graph.addComputePass({
-    id: `${props.id}-carry`,
-    workload: {
-      operation: 'GPUScanUint64',
-      commandCount: 1,
-      maximumWorkgroupCount: Math.ceil(length / UINT64_SCAN_WORKGROUP_SIZE),
-      maximumInvocationCount:
-        Math.ceil(length / UINT64_SCAN_WORKGROUP_SIZE) * UINT64_SCAN_WORKGROUP_SIZE,
-      readByteLength: length * 2 * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength: length * Uint32Array.BYTES_PER_ELEMENT
-    },
-    resources: [
-      {buffer: props.inputHigh, usage: 'storage-read'},
-      {buffer: props.outputLow, usage: 'storage-read'},
-      {buffer: adjustedHigh, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${props.id}-carry`,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputHigh', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'prefixLow', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'adjustedHigh', type: 'storage', group: 0, location: 2}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputHigh: getViewBinding(props.inputHigh, getBuffer),
-            prefixLow: getViewBinding(props.outputLow, getBuffer),
-            adjustedHigh: getViewBinding(adjustedHigh, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${props.id}-carry`,
+      workload: {
+        operation: 'GPUScanUint64',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(length / UINT64_SCAN_WORKGROUP_SIZE),
+        maximumInvocationCount:
+          Math.ceil(length / UINT64_SCAN_WORKGROUP_SIZE) * UINT64_SCAN_WORKGROUP_SIZE,
+        readByteLength: length * 2 * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: length * Uint32Array.BYTES_PER_ELEMENT
+      },
+      resources: [
+        {buffer: props.inputHigh, usage: 'storage-read'},
+        {buffer: props.outputLow, usage: 'storage-read'},
+        {buffer: adjustedHigh, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${props.id}-carry`,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputHigh', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'prefixLow', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'adjustedHigh', type: 'storage', group: 0, location: 2}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputHigh: getViewBinding(props.inputHigh, getBuffer),
+              prefixLow: getViewBinding(props.outputLow, getBuffer),
+              adjustedHigh: getViewBinding(adjustedHigh, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPUScanUint64Props>): void {

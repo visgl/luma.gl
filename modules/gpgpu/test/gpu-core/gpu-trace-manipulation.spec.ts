@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -16,7 +17,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUGraphTraversalToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-graph-traversal';
+import {getGPUGraphTraversalCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-graph-traversal';
 
 it('GPUMask composes canonical GPU selection masks', async () => {
   const device = await getWebGPUTestDevice();
@@ -64,7 +65,10 @@ it('GPUMask preserves imported GPUVector chunk boundaries', async () => {
   const firstView = graph.importGPUVector('first', first.vector);
   const secondView = graph.importGPUVector('second', second.vector);
   const outputView = graph.importGPUVector('output', output.vector);
-  new GPUMask({inputs: [firstView, secondView], output: outputView}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUMask({inputs: [firstView, secondView], output: outputView}).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'chunked-mask');
   expect(
@@ -191,7 +195,7 @@ it('GPUGraphTraversal executes packed initialization, seeds, and expansion in th
     output: importUint32View(graph, 'output', buffers.output, nodeCount),
     maxDepth: 1
   });
-  addGPUGraphTraversalToGraphWithDispatchLimit(traversal, graph, 2);
+  getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2);
   const compiled = graph.compile();
   const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
 
@@ -320,7 +324,7 @@ it('GPUGraphTraversal routes large seed and output partitions through three-dime
     output: graph.importGPUVector('output', output.vector),
     maxDepth: 2
   });
-  addGPUGraphTraversalToGraphWithDispatchLimit(traversal, graph, 2);
+  getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2);
   const compiled = graph.compile();
   const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
 
@@ -550,14 +554,17 @@ async function runHierarchyLayout(
   const heightsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
   const offsetsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
   const graph = new GPUCommandGraph(device, {id: 'hierarchy-layout-test'});
-  new GPUHierarchyLayout({
-    parentStates: importUint32View(graph, 'parents', parentBuffer, parentStates.length),
-    childStates: importUint32View(graph, 'children', childBuffer, childStates.length),
-    heights: importUint32View(graph, 'heights', heightsBuffer, childStates.length),
-    offsets: importUint32View(graph, 'offsets', offsetsBuffer, childStates.length),
-    childrenPerParent,
-    expandedChildHeight: 4
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUHierarchyLayout({
+      parentStates: importUint32View(graph, 'parents', parentBuffer, parentStates.length),
+      childStates: importUint32View(graph, 'children', childBuffer, childStates.length),
+      heights: importUint32View(graph, 'heights', heightsBuffer, childStates.length),
+      offsets: importUint32View(graph, 'offsets', offsetsBuffer, childStates.length),
+      childrenPerParent,
+      expandedChildHeight: 4
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'hierarchy-layout-test');
   const [heights, offsets] = await Promise.all([
@@ -589,15 +596,18 @@ async function runPartitionedHierarchyLayout(device: Device): Promise<{
   const heights = createVectorFixture(device, 'heights', childChunks, true);
   const offsets = createVectorFixture(device, 'offsets', childChunks, true);
   const graph = new GPUCommandGraph(device, {id: 'partitioned-hierarchy-test'});
-  new GPUHierarchyLayout({
-    id: 'partitioned-hierarchy',
-    parentStates: graph.importGPUVector('parents', parents.vector),
-    childStates: graph.importGPUVector('children', children.vector),
-    heights: graph.importGPUVector('heights', heights.vector),
-    offsets: graph.importGPUVector('offsets', offsets.vector),
-    childrenPerParent: 2,
-    expandedChildHeight: 4
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUHierarchyLayout({
+      id: 'partitioned-hierarchy',
+      parentStates: graph.importGPUVector('parents', parents.vector),
+      childStates: graph.importGPUVector('children', children.vector),
+      heights: graph.importGPUVector('heights', heights.vector),
+      offsets: graph.importGPUVector('offsets', offsets.vector),
+      childrenPerParent: 2,
+      expandedChildHeight: 4
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'partitioned-hierarchy-test');
   const firstHeights = await readVectorFixture(heights);
@@ -627,12 +637,15 @@ async function runAncestorProjection(
   const visibilityBuffer = createUint32Buffer(device, visibility, false);
   const outputBuffer = createUint32Buffer(device, new Uint32Array(parents.length), true);
   const graph = new GPUCommandGraph(device, {id: 'ancestor-projection-test'});
-  new GPUAncestorProjection({
-    parents: importUint32View(graph, 'parents', parentBuffer, parents.length),
-    visibility: importUint32View(graph, 'visibility', visibilityBuffer, visibility.length),
-    output: importUint32View(graph, 'output', outputBuffer, parents.length),
-    maxDepth
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUAncestorProjection({
+      parents: importUint32View(graph, 'parents', parentBuffer, parents.length),
+      visibility: importUint32View(graph, 'visibility', visibilityBuffer, visibility.length),
+      output: importUint32View(graph, 'output', outputBuffer, parents.length),
+      maxDepth
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'ancestor-projection-test');
   const result = await readUint32(outputBuffer, parents.length);
@@ -656,7 +669,10 @@ async function runMask(
     importUint32View(graph, 'input-' + index, buffer, length)
   );
   const output = importUint32View(graph, 'output', outputBuffer, length);
-  new GPUMask({inputs: inputViews, output, operation}).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUMask({inputs: inputViews, output, operation}).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'mask-' + operation);
   const result = await readUint32(outputBuffer, length);
@@ -700,32 +716,35 @@ async function runTraversal(
       ? {}
       : {activeDepth: createUint32Buffer(device, Uint32Array.from([props.activeDepth]), false)})
   };
-  new GPUGraphTraversal({
-    offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
-    neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
-    reverseOffsets: importUint32View(
-      graph,
-      'reverse-offsets',
-      buffers.reverseOffsets,
-      reverseOffsets.length
-    ),
-    reverseNeighbors: importUint32View(
-      graph,
-      'reverse-neighbors',
-      buffers.reverseNeighbors,
-      reverseNeighbors.length
-    ),
-    seeds: importUint32View(graph, 'seeds', buffers.seeds, props.seeds.length),
-    ...(buffers.seedCount
-      ? {seedCount: importUint32View(graph, 'seed-count', buffers.seedCount, 1)}
-      : {}),
-    ...(buffers.activeDepth
-      ? {activeDepth: importUint32View(graph, 'active-depth', buffers.activeDepth, 1)}
-      : {}),
-    output: importUint32View(graph, 'output', buffers.output, nodeCount),
-    direction: props.direction,
-    maxDepth: props.maxDepth
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGraphTraversal({
+      offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
+      neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
+      reverseOffsets: importUint32View(
+        graph,
+        'reverse-offsets',
+        buffers.reverseOffsets,
+        reverseOffsets.length
+      ),
+      reverseNeighbors: importUint32View(
+        graph,
+        'reverse-neighbors',
+        buffers.reverseNeighbors,
+        reverseNeighbors.length
+      ),
+      seeds: importUint32View(graph, 'seeds', buffers.seeds, props.seeds.length),
+      ...(buffers.seedCount
+        ? {seedCount: importUint32View(graph, 'seed-count', buffers.seedCount, 1)}
+        : {}),
+      ...(buffers.activeDepth
+        ? {activeDepth: importUint32View(graph, 'active-depth', buffers.activeDepth, 1)}
+        : {}),
+      output: importUint32View(graph, 'output', buffers.output, nodeCount),
+      direction: props.direction,
+      maxDepth: props.maxDepth
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'graph-traversal-test');
   const result = await readUint32(buffers.output, nodeCount);
@@ -775,14 +794,17 @@ async function runPartitionedTraversal(device: Device): Promise<{
   const seeds = createVectorFixture(device, 'seeds', seedChunks, false);
   const output = createVectorFixture(device, 'output', outputChunks, true);
   const graph = new GPUCommandGraph(device, {id: 'partitioned-traversal-test'});
-  new GPUGraphTraversal({
-    id: 'partitioned-traversal',
-    offsets: graph.importGPUVector('offsets', offsets.vector),
-    neighbors: graph.importGPUVector('neighbors', neighbors.vector),
-    seeds: graph.importGPUVector('seeds', seeds.vector),
-    output: graph.importGPUVector('output', output.vector),
-    maxDepth: 3
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGraphTraversal({
+      id: 'partitioned-traversal',
+      offsets: graph.importGPUVector('offsets', offsets.vector),
+      neighbors: graph.importGPUVector('neighbors', neighbors.vector),
+      seeds: graph.importGPUVector('seeds', seeds.vector),
+      output: graph.importGPUVector('output', output.vector),
+      maxDepth: 3
+    }).getCommandNodes(graph)
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'partitioned-traversal-test');
   const result = {output: await readVectorFixture(output), nodeOrder: compiled.stats.nodeOrder};

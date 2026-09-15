@@ -58,13 +58,13 @@ For `rows × columns`, matrix element `(row,column)` is at `row * columns + colu
 ## Contract
 
 ```ts
-new GPUMatVec({
+addGPUCommandNodes(graph, new GPUMatVec({
   matrix,
   vector: x,
   output: y,
   rows: 1024,
   columns: 1024
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 The matrix contains `rows * columns` packed `float32` values, `x` contains `columns`, and `y` contains `rows`.

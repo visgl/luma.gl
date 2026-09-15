@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
@@ -28,7 +29,10 @@ describe('GPURunLengthEncode', () => {
     const values = createView(graph, 'values', 6);
     const lengths = createView(graph, 'lengths', 6);
     const count = createView(graph, 'count', 1);
-    new GPURunLengthEncode({input, values, lengths, count}).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPURunLengthEncode({input, values, lengths, count}).getCommandNodes(graph)
+    );
     expect(graph).toBeDefined();
   });
 });

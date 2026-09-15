@@ -3,11 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {
-  type GPUCommandGraph,
-  type GraphDataView,
-  type GPUCommandGraphContributor
-} from '@luma.gl/gpgpu/gpu-core';
+import {type GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   GEOSPATIAL_WORKGROUP_SIZE,
@@ -106,7 +102,7 @@ export type GPUPairwisePointInPolygonProps = GPUPairwisePointInPolygonBaseProps 
  * coordinates, malformed offsets, invalid rings, and predicates that exceed the double-single
  * arithmetic envelope return `uncertain` rather than a silent inside/outside classification.
  */
-export class GPUPairwisePointInPolygon implements GPUCommandGraphContributor {
+export class GPUPairwisePointInPolygon {
   readonly id: string;
   readonly points: GraphDataView<'float32x2'> | GraphDataView<'uint32x4'>;
   readonly polygonPositions: GraphDataView<'float32x2'> | GraphDataView<'uint32x4'>;

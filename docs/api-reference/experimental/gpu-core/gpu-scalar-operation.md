@@ -118,12 +118,12 @@ This gives all supported scalar types one stable physical arena representation.
 ## Contract
 
 ```ts
-new GPUScalarCompute({
+addGPUCommandNodes(graph, new GPUScalarCompute({
   operation: 'divide',
   left: rr,
   right: pDotQ,
   output: alpha
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 Binary arithmetic requires matching input/output formats. `sqrt` currently supports `float32`. Comparisons accept matching input formats and require a `uint32` output.

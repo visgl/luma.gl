@@ -176,3 +176,11 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 
 This page only covers luma.gl v9 and later releases. 
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
+
+## GPU Core composition
+
+GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
+the returned nodes with `addGPUCommandNodes(graph, nodes)`, or add a graph-independent primitive
+to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
+removed. The three range/scatter primitives that also publish scratch views expose
+`getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
@@ -256,61 +257,76 @@ export class GPUTraceInteraction {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    new GPUHierarchyLayout({
-      id: `${this.id}-hierarchy`,
-      parentStates: this.processStates,
-      childStates: this.threadStates,
-      heights: this.threadHeights,
-      offsets: this.threadOffsets,
-      childrenPerParent: this.threadsPerProcess,
-      expandedChildHeight: this.lanesPerThread,
-      collapsedChildHeight: 1,
-      collapsedParentHeight: 1
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUHierarchyLayout({
+        id: `${this.id}-hierarchy`,
+        parentStates: this.processStates,
+        childStates: this.threadStates,
+        heights: this.threadHeights,
+        offsets: this.threadOffsets,
+        childrenPerParent: this.threadsPerProcess,
+        expandedChildHeight: this.lanesPerThread,
+        collapsedChildHeight: 1,
+        collapsedParentHeight: 1
+      }).getCommandNodes(graph)
+    );
 
-    new GPUGraphTraversal({
-      id: `${this.id}-focus`,
-      offsets: this.trace.outgoingOffsets,
-      neighbors: this.trace.outgoingNeighbors,
-      reverseOffsets: this.trace.incomingOffsets,
-      reverseNeighbors: this.trace.incomingNeighbors,
-      seeds: this.selectedSpans,
-      seedCount: this.selectedCount,
-      output: this.reachedSpans,
-      maxDepth: this.maxFocusDepth,
-      activeDepth: this.focusDepth,
-      direction: this.focusDirection
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUGraphTraversal({
+        id: `${this.id}-focus`,
+        offsets: this.trace.outgoingOffsets,
+        neighbors: this.trace.outgoingNeighbors,
+        reverseOffsets: this.trace.incomingOffsets,
+        reverseNeighbors: this.trace.incomingNeighbors,
+        seeds: this.selectedSpans,
+        seedCount: this.selectedCount,
+        output: this.reachedSpans,
+        maxDepth: this.maxFocusDepth,
+        activeDepth: this.focusDepth,
+        direction: this.focusDirection
+      }).getCommandNodes(graph)
+    );
 
     addPolicyPass(graph, this);
 
-    new GPUVisibilityWorkflow({
-      id: `${this.id}-visibility`,
-      predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
-      output: this.visibleSpans,
-      outputMask: this.visibleMask,
-      count: this.visibleCount
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUVisibilityWorkflow({
+        id: `${this.id}-visibility`,
+        predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
+        output: this.visibleSpans,
+        outputMask: this.visibleMask,
+        count: this.visibleCount
+      }).getCommandNodes(graph)
+    );
 
     if (this.stats.spanCount > 0) {
-      new GPUAncestorProjection({
-        id: `${this.id}-ancestors`,
-        parents: this.trace.parents,
-        visibility: this.visibleMask,
-        output: this.projectedAncestors,
-        maxDepth: this.maxAncestorDepth
-      }).addToGraph(graph);
+      addGPUCommandNodes(
+        graph,
+        new GPUAncestorProjection({
+          id: `${this.id}-ancestors`,
+          parents: this.trace.parents,
+          visibility: this.visibleMask,
+          output: this.projectedAncestors,
+          maxDepth: this.maxAncestorDepth
+        }).getCommandNodes(graph)
+      );
     }
 
-    new GPUSceneDrawGeneration({
-      id: `${this.id}-draws`,
-      scene: this.trace.scene,
-      visibility: this.visibleMask,
-      commands: this.draw.commands,
-      requiredCount: this.draw.requiredCount,
-      publishedCount: this.draw.publishedCount,
-      overflow: this.draw.overflow
-    }).addToGraph(graph);
+    addGPUCommandNodes(
+      graph,
+      new GPUSceneDrawGeneration({
+        id: `${this.id}-draws`,
+        scene: this.trace.scene,
+        visibility: this.visibleMask,
+        commands: this.draw.commands,
+        requiredCount: this.draw.requiredCount,
+        publishedCount: this.draw.publishedCount,
+        overflow: this.draw.overflow
+      }).getCommandNodes(graph)
+    );
   }
 }
 

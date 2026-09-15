@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type ComputePassProps, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {
@@ -390,16 +391,19 @@ it('GPUPointSpatialQuery propagates index overflow independently of result capac
   const rowIndices = importView(graph, 'row-indices', rowIndicesBuffer, 'uint32', 2);
   const indexCount = importView(graph, 'index-count', indexCountBuffer, 'uint32', 1);
   const indexOverflow = importView(graph, 'index-overflow', indexOverflowBuffer, 'uint32', 1);
-  new GPUGridIndex({
-    id: 'capacity-index',
-    positions,
-    gridSize: [1, 1],
-    bounds: [0, 0, 1, 1],
-    cellOffsets,
-    objectIds: rowIndices,
-    count: indexCount,
-    overflow: indexOverflow
-  }).addToGraph(graph);
+  addGPUCommandNodes(
+    graph,
+    new GPUGridIndex({
+      id: 'capacity-index',
+      positions,
+      gridSize: [1, 1],
+      bounds: [0, 0, 1, 1],
+      cellOffsets,
+      objectIds: rowIndices,
+      count: indexCount,
+      overflow: indexOverflow
+    }).getCommandNodes(graph)
+  );
   new GPUPointSpatialQuery({
     id: 'indexed-capacity-query',
     positions,

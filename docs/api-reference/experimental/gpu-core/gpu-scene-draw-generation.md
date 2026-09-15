@@ -64,7 +64,7 @@ every encoding first clears all command instance counts and first-instance field
 The winner's scene-record index becomes `firstInstance`. Shaders can use that index to fetch the
 record's transform, bounds, stable object ID, or renderer-owned references from the scene buffer.
 Because scene rows beyond zero produce nonzero `firstInstance` values, the device must expose the
-optional WebGPU `indirect-first-instance` feature. `addToGraph()` rejects unsupported devices
+optional WebGPU `indirect-first-instance` feature. `getCommandNodes()` rejects unsupported devices
 before adding passes; applications should request the feature when creating their device.
 
 ### Visibility is optional and parameter-only
@@ -83,7 +83,7 @@ new workflow so allocation, dispatch, and overflow behavior remain inspectable.
 
 ### Submission and draw recording stay with the application
 
-`addToGraph()` adds initialization, eligibility, ownership, and publication passes but does not
+`getCommandNodes()` adds initialization, eligibility, ownership, and publication passes but does not
 compile, encode, submit, or read back. After the graph runs, the application still records one
 indirect draw for each renderer-owned command slot. Slots with `instanceCount === 0` do no visible
 work.
@@ -110,7 +110,7 @@ const generation = new GPUSceneDrawGeneration({
   overflow
 });
 
-generation.addToGraph(graph);
+addGPUCommandNodes(graph, generation.getCommandNodes(graph));
 
 // The application compiles, encodes, and submits the graph, then records its stable slots.
 for (let slot = 0; slot < commands.capacity; slot++) {
@@ -124,7 +124,7 @@ and may not overlap the scene, visibility, command, or one another.
 
 ## Methods
 
-### `addToGraph(graph)`
+### `getCommandNodes(graph)`
 
 Adds the fixed-capacity draw-generation passes to the target graph. Every supplied view must belong
 to that graph.

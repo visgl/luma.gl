@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -80,7 +81,10 @@ export class GPUFiniteDifference3D {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     if (this.input.buffer.graph !== graph || this.output.buffer.graph !== graph) {
       throw new Error(`${this.id} views belong to a different GPUCommandGraph`);
     }
@@ -95,48 +99,57 @@ export class GPUFiniteDifference3D {
     const source = getGPUFiniteDifference3DShaderSource(this, dispatchLayout);
     const inputByteLength = this.stats.elementCount * this.stats.inputComponentCount * 4;
     const outputByteLength = this.stats.elementCount * this.stats.outputComponentCount * 4;
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: `GPUFiniteDifference3D.${this.stats.operator}`,
-        commandCount: 1,
-        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-        maximumInvocationCount:
-          dispatchLayout.x *
-          dispatchLayout.y *
-          dispatchLayout.z *
-          GPU_FINITE_DIFFERENCE_3D_WORKGROUP_SIZE,
-        readByteLength: inputByteLength * (this.stats.operator === 'laplacian' ? 13 : 9),
-        writeByteLength: outputByteLength
-      },
-      resources: [
-        {buffer: this.input, usage: 'storage-read'},
-        {buffer: this.output, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-              {name: 'outputValues', type: 'storage', group: 0, location: 1}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {
-              inputValues: getViewBinding(this.input, getBuffer),
-              outputValues: getViewBinding(this.output, getBuffer)
-            };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: `GPUFiniteDifference3D.${this.stats.operator}`,
+          commandCount: 1,
+          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+          maximumInvocationCount:
+            dispatchLayout.x *
+            dispatchLayout.y *
+            dispatchLayout.z *
+            GPU_FINITE_DIFFERENCE_3D_WORKGROUP_SIZE,
+          readByteLength: inputByteLength * (this.stats.operator === 'laplacian' ? 13 : 9),
+          writeByteLength: outputByteLength
+        },
+        resources: [
+          {buffer: this.input, usage: 'storage-read'},
+          {buffer: this.output, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+                {name: 'outputValues', type: 'storage', group: 0, location: 1}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {
+                inputValues: getViewBinding(this.input, getBuffer),
+                outputValues: getViewBinding(this.output, getBuffer)
+              };
+              computation.setBindings(bindings);
+              computation.dispatch(
+                computePass,
+                dispatchLayout.x,
+                dispatchLayout.y,
+                dispatchLayout.z
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

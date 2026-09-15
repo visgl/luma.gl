@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
@@ -105,7 +106,10 @@ export class GPUGridIndexQuery {
   }
 
   /** Adds output initialization and candidate collection without submitting or reading back work. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const views = [
       this.index.cellOffsets,
       this.index.objectIds,
@@ -121,15 +125,18 @@ export class GPUGridIndexQuery {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    addInitializePass(graph, this);
-    if (this.index.objectIds.length > 0) addQueryPass(graph, this);
+    nodes.push(...addInitializePass(graph, this));
+    if (this.index.objectIds.length > 0) nodes.push(...addQueryPass(graph, this));
+
+    return nodes;
   }
 }
 
 function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUGridIndexQuery
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const maskBinding = query.outputMask
     ? '@group(0) @binding(3) var<storage, read_write> outputMask: array<u32>;'
     : '';
@@ -168,24 +175,31 @@ ${maskBinding}
       ? ([{buffer: query.outputMask, usage: 'storage-write'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: `${query.id}-initialize`,
-    source,
-    resources,
-    bindings: {
-      indexOverflow: query.index.overflow,
-      outputCount: query.count,
-      outputOverflow: query.overflow,
-      ...(query.outputMask ? {outputMask: query.outputMask} : {})
-    },
-    dispatchCount: Math.ceil(Math.max(query.outputMask?.length ?? 0, 1) / GRID_QUERY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${query.id}-initialize`,
+      source,
+      resources,
+      bindings: {
+        indexOverflow: query.index.overflow,
+        outputCount: query.count,
+        outputOverflow: query.overflow,
+        ...(query.outputMask ? {outputMask: query.outputMask} : {})
+      },
+      dispatchCount: Math.ceil(
+        Math.max(query.outputMask?.length ?? 0, 1) / GRID_QUERY_WORKGROUP_SIZE
+      )
+    })
+  );
+
+  return nodes;
 }
 
 function addQueryPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   query: GPUGridIndexQuery
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dimension = query.dimension;
   const width = query.index.gridSize[0];
   const height = query.index.gridSize[1];
@@ -309,22 +323,26 @@ fn cellMaximum(coordinate: u32, size: u32, minimum: f32, maximum: f32) -> f32 {
       ? ([{buffer: query.outputMask, usage: 'storage-read-write'}] as GraphBufferUse[])
       : [])
   ];
-  addComputationPass(graph, {
-    id: query.id,
-    source,
-    resources,
-    bindings: {
-      cellOffsets: query.index.cellOffsets,
-      objectIds: query.index.objectIds,
-      indexCount: query.index.count,
-      queryValues: query.query,
-      outputIds: query.output,
-      outputCount: query.count,
-      outputOverflow: query.overflow,
-      ...(query.outputMask ? {outputMask: query.outputMask} : {})
-    },
-    dispatchCount: Math.ceil(query.index.objectIds.length / GRID_QUERY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: query.id,
+      source,
+      resources,
+      bindings: {
+        cellOffsets: query.index.cellOffsets,
+        objectIds: query.index.objectIds,
+        indexCount: query.index.count,
+        queryValues: query.query,
+        outputIds: query.output,
+        outputCount: query.count,
+        outputOverflow: query.overflow,
+        ...(query.outputMask ? {outputMask: query.outputMask} : {})
+      },
+      dispatchCount: Math.ceil(query.index.objectIds.length / GRID_QUERY_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function makeCellSelection(query: GPUGridIndexQuery): string {
@@ -528,36 +546,41 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function getFloatLiteral(value: number): string {

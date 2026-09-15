@@ -6,7 +6,6 @@ import {Buffer, type Binding, type BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -65,7 +64,7 @@ const MAXIMUM_ROOT_POINTER_STEPS = 32;
  * path compression. An insufficient round budget globally clears labels and validity so downstream
  * passes cannot consume plausible-looking partial segmentation.
  */
-export class GPUVolumeConnectedComponents implements GPUCommandGraphContributor {
+export class GPUVolumeConnectedComponents {
   readonly id: string;
   readonly width: number;
   readonly height: number;

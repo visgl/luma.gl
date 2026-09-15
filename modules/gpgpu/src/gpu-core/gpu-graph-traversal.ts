@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -159,21 +160,29 @@ export class GPUGraphTraversal {
    * Invalid seed and neighbor indices are ignored. Atomic exchange prevents cycles and duplicate
    * edges from rediscovering a previously reached node.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUGraphTraversalToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUGraphTraversalCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds traversal using an explicit per-dimension dispatch limit. @internal */
-export function addGPUGraphTraversalToGraphWithDispatchLimit<Parameters>(
+export function getGPUGraphTraversalCommandNodesWithDispatchLimit<Parameters>(
   traversal: GPUGraphTraversal,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const [, data] of getNamedTraversalData(traversal)) {
     for (const view of getTraversalChunks(data)) {
       if (view.buffer.graph !== graph) {
@@ -182,14 +191,18 @@ export function addGPUGraphTraversalToGraphWithDispatchLimit<Parameters>(
     }
   }
   if (traversal.output.length === 0) {
-    return;
+    return nodes;
   }
 
   if (traversal.output instanceof GraphVectorView) {
-    addPartitionedTraversalToGraph(traversal, graph, maxComputeWorkgroupsPerDimension);
-    return;
+    nodes.push(
+      ...addPartitionedTraversalToGraph(traversal, graph, maxComputeWorkgroupsPerDimension)
+    );
+    return nodes;
   }
-  addPackedTraversalToGraph(traversal, graph, maxComputeWorkgroupsPerDimension);
+  nodes.push(...addPackedTraversalToGraph(traversal, graph, maxComputeWorkgroupsPerDimension));
+
+  return nodes;
 }
 
 /** Adds the original one-allocation traversal path. */
@@ -197,7 +210,8 @@ function addPackedTraversalToGraph<Parameters>(
   traversal: GPUGraphTraversal,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const output = traversal.output as GraphDataView<'uint32'>;
   const offsets = traversal.offsets as GraphDataView<'uint32'>;
   const neighbors = traversal.neighbors as GraphDataView<'uint32'>;
@@ -215,79 +229,91 @@ function addPackedTraversalToGraph<Parameters>(
     'uint32',
     output.length
   );
-  addInitializationPass(
-    graph,
-    traversal.id,
-    output,
-    currentFrontier,
-    maxComputeWorkgroupsPerDimension
+  nodes.push(
+    ...addInitializationPass(
+      graph,
+      traversal.id,
+      output,
+      currentFrontier,
+      maxComputeWorkgroupsPerDimension
+    )
   );
   if (traversal.seeds.length > 0) {
     for (const seedChunk of getTraversalChunkRanges(traversal.seeds)) {
       if (seedChunk.view.length > 0) {
-        addSeedPass(
-          graph,
-          {
-            id:
-              traversal.seeds instanceof GraphVectorView
-                ? `${traversal.id}-seed-${seedChunk.index}`
-                : `${traversal.id}-seed`,
-            seeds: seedChunk.view,
-            seedBase: seedChunk.base,
-            seedCount: traversal.seedCount,
-            targetBase: 0,
-            frontier: currentFrontier,
-            output
-          },
-          maxComputeWorkgroupsPerDimension
+        nodes.push(
+          ...addSeedPass(
+            graph,
+            {
+              id:
+                traversal.seeds instanceof GraphVectorView
+                  ? `${traversal.id}-seed-${seedChunk.index}`
+                  : `${traversal.id}-seed`,
+              seeds: seedChunk.view,
+              seedBase: seedChunk.base,
+              seedCount: traversal.seedCount,
+              targetBase: 0,
+              frontier: currentFrontier,
+              output
+            },
+            maxComputeWorkgroupsPerDimension
+          )
         );
       }
     }
   }
 
   for (let depth = 0; depth < traversal.maxDepth; depth++) {
-    addClearFrontierPass(
-      graph,
-      `${traversal.id}-depth-${depth}-clear`,
-      nextFrontier,
-      maxComputeWorkgroupsPerDimension
+    nodes.push(
+      ...addClearFrontierPass(
+        graph,
+        `${traversal.id}-depth-${depth}-clear`,
+        nextFrontier,
+        maxComputeWorkgroupsPerDimension
+      )
     );
     if (traversal.direction !== 'incoming') {
-      addExpansionPass(
-        graph,
-        {
-          id: `${traversal.id}-depth-${depth}-outgoing`,
-          offsets,
-          neighbors,
-          frontier: currentFrontier,
-          nextFrontier,
-          output,
-          targetBase: 0,
-          activeDepth: traversal.activeDepth,
-          depth
-        },
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addExpansionPass(
+          graph,
+          {
+            id: `${traversal.id}-depth-${depth}-outgoing`,
+            offsets,
+            neighbors,
+            frontier: currentFrontier,
+            nextFrontier,
+            output,
+            targetBase: 0,
+            activeDepth: traversal.activeDepth,
+            depth
+          },
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
     if (traversal.direction !== 'outgoing') {
-      addExpansionPass(
-        graph,
-        {
-          id: `${traversal.id}-depth-${depth}-incoming`,
-          offsets: reverseOffsets!,
-          neighbors: reverseNeighbors!,
-          frontier: currentFrontier,
-          nextFrontier,
-          output,
-          targetBase: 0,
-          activeDepth: traversal.activeDepth,
-          depth
-        },
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addExpansionPass(
+          graph,
+          {
+            id: `${traversal.id}-depth-${depth}-incoming`,
+            offsets: reverseOffsets!,
+            neighbors: reverseNeighbors!,
+            frontier: currentFrontier,
+            nextFrontier,
+            output,
+            targetBase: 0,
+            activeDepth: traversal.activeDepth,
+            depth
+          },
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
     [currentFrontier, nextFrontier] = [nextFrontier, currentFrontier];
   }
+
+  return nodes;
 }
 
 /** Adds partition-preserving traversal over local CSR rows and global stable neighbor IDs. */
@@ -295,7 +321,8 @@ function addPartitionedTraversalToGraph<Parameters>(
   traversal: GPUGraphTraversal,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const output = traversal.output as GraphVectorView<'uint32'>;
   const offsets = traversal.offsets as GraphVectorView<'uint32'>;
   const neighbors = traversal.neighbors as GraphVectorView<'uint32'>;
@@ -312,12 +339,14 @@ function addPartitionedTraversalToGraph<Parameters>(
 
   for (const outputRange of outputRanges) {
     if (outputRange.view.length > 0) {
-      addInitializationPass(
-        graph,
-        `${traversal.id}-partition-${outputRange.index}`,
-        outputRange.view,
-        currentFrontier.data[outputRange.index],
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addInitializationPass(
+          graph,
+          `${traversal.id}-partition-${outputRange.index}`,
+          outputRange.view,
+          currentFrontier.data[outputRange.index],
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
   }
@@ -327,18 +356,20 @@ function addPartitionedTraversalToGraph<Parameters>(
     }
     for (const targetRange of outputRanges) {
       if (targetRange.view.length > 0) {
-        addSeedPass(
-          graph,
-          {
-            id: `${traversal.id}-seed-${seedRange.index}-target-${targetRange.index}`,
-            seeds: seedRange.view,
-            seedBase: seedRange.base,
-            seedCount: traversal.seedCount,
-            targetBase: targetRange.base,
-            frontier: currentFrontier.data[targetRange.index],
-            output: targetRange.view
-          },
-          maxComputeWorkgroupsPerDimension
+        nodes.push(
+          ...addSeedPass(
+            graph,
+            {
+              id: `${traversal.id}-seed-${seedRange.index}-target-${targetRange.index}`,
+              seeds: seedRange.view,
+              seedBase: seedRange.base,
+              seedCount: traversal.seedCount,
+              targetBase: targetRange.base,
+              frontier: currentFrontier.data[targetRange.index],
+              output: targetRange.view
+            },
+            maxComputeWorkgroupsPerDimension
+          )
         );
       }
     }
@@ -347,48 +378,56 @@ function addPartitionedTraversalToGraph<Parameters>(
   for (let depth = 0; depth < traversal.maxDepth; depth++) {
     for (const targetRange of outputRanges) {
       if (targetRange.view.length > 0) {
-        addClearFrontierPass(
-          graph,
-          `${traversal.id}-depth-${depth}-clear-${targetRange.index}`,
-          nextFrontier.data[targetRange.index],
-          maxComputeWorkgroupsPerDimension
+        nodes.push(
+          ...addClearFrontierPass(
+            graph,
+            `${traversal.id}-depth-${depth}-clear-${targetRange.index}`,
+            nextFrontier.data[targetRange.index],
+            maxComputeWorkgroupsPerDimension
+          )
         );
       }
     }
     if (traversal.direction !== 'incoming') {
-      addPartitionedExpansionPasses(
-        graph,
-        {
-          id: `${traversal.id}-depth-${depth}-outgoing`,
-          offsets,
-          neighbors,
-          currentFrontier,
-          nextFrontier,
-          output,
-          activeDepth: traversal.activeDepth,
-          depth
-        },
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addPartitionedExpansionPasses(
+          graph,
+          {
+            id: `${traversal.id}-depth-${depth}-outgoing`,
+            offsets,
+            neighbors,
+            currentFrontier,
+            nextFrontier,
+            output,
+            activeDepth: traversal.activeDepth,
+            depth
+          },
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
     if (traversal.direction !== 'outgoing') {
-      addPartitionedExpansionPasses(
-        graph,
-        {
-          id: `${traversal.id}-depth-${depth}-incoming`,
-          offsets: reverseOffsets!,
-          neighbors: reverseNeighbors!,
-          currentFrontier,
-          nextFrontier,
-          output,
-          activeDepth: traversal.activeDepth,
-          depth
-        },
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addPartitionedExpansionPasses(
+          graph,
+          {
+            id: `${traversal.id}-depth-${depth}-incoming`,
+            offsets: reverseOffsets!,
+            neighbors: reverseNeighbors!,
+            currentFrontier,
+            nextFrontier,
+            output,
+            activeDepth: traversal.activeDepth,
+            depth
+          },
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
     [currentFrontier, nextFrontier] = [nextFrontier, currentFrontier];
   }
+
+  return nodes;
 }
 
 /** Returns caller-owned graph views in stable validation order. */
@@ -423,7 +462,8 @@ function addInitializationPass<Parameters>(
   output: GraphDataView<'uint32'>,
   frontier: GraphDataView<'uint32'>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGraphTraversalDispatchLayout(
     output.length,
     maxComputeWorkgroupsPerDimension
@@ -447,16 +487,20 @@ fn main(
     atomicStore(&frontier[FRONTIER_OFFSET + index], 0u);
   }
 }`;
-  addTraversalPass(graph, {
-    id: `${id}-initialize`,
-    source,
-    resources: [
-      {buffer: output, usage: 'storage-write'},
-      {buffer: frontier, usage: 'storage-write'}
-    ],
-    bindings: {reached: output, frontier},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addTraversalPass(graph, {
+      id: `${id}-initialize`,
+      source,
+      resources: [
+        {buffer: output, usage: 'storage-write'},
+        {buffer: frontier, usage: 'storage-write'}
+      ],
+      bindings: {reached: output, frontier},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Marks valid seed nodes in both the first frontier and the reached mask. */
@@ -472,7 +516,8 @@ function addSeedPass<Parameters>(
     output: GraphDataView<'uint32'>;
   },
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGraphTraversalDispatchLayout(
     props.seeds.length,
     maxComputeWorkgroupsPerDimension
@@ -529,13 +574,17 @@ fn main(
     bindings['activeSeedCount'] = props.seedCount;
     resources.push({buffer: props.seedCount, usage: 'storage-read'});
   }
-  addTraversalPass(graph, {
-    id: props.id,
-    source,
-    resources,
-    bindings,
-    dispatchLayout
-  });
+  nodes.push(
+    ...addTraversalPass(graph, {
+      id: props.id,
+      source,
+      resources,
+      bindings,
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Clears a frontier before its next parallel breadth-first expansion. */
@@ -544,7 +593,8 @@ function addClearFrontierPass<Parameters>(
   id: string,
   frontier: GraphDataView<'uint32'>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGraphTraversalDispatchLayout(
     frontier.length,
     maxComputeWorkgroupsPerDimension
@@ -565,13 +615,17 @@ fn main(
     atomicStore(&frontier[FRONTIER_OFFSET + index], 0u);
   }
 }`;
-  addTraversalPass(graph, {
-    id,
-    source,
-    resources: [{buffer: frontier, usage: 'storage-write'}],
-    bindings: {frontier},
-    dispatchLayout
-  });
+  nodes.push(
+    ...addTraversalPass(graph, {
+      id,
+      source,
+      resources: [{buffer: frontier, usage: 'storage-write'}],
+      bindings: {frontier},
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Expands one directed CSR frontier and atomically suppresses repeated node discovery. */
@@ -589,7 +643,8 @@ function addExpansionPass<Parameters>(
     depth: number;
   },
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGraphTraversalDispatchLayout(
     props.frontier.length,
     maxComputeWorkgroupsPerDimension
@@ -662,13 +717,17 @@ fn main(
     bindings['activeDepth'] = props.activeDepth;
     resources.push({buffer: props.activeDepth, usage: 'storage-read'});
   }
-  addTraversalPass(graph, {
-    id: props.id,
-    source,
-    resources,
-    bindings,
-    dispatchLayout
-  });
+  nodes.push(
+    ...addTraversalPass(graph, {
+      id: props.id,
+      source,
+      resources,
+      bindings,
+      dispatchLayout
+    })
+  );
+
+  return nodes;
 }
 
 /** Adds every source-to-target partition pair required for arbitrary cross-partition edges. */
@@ -685,7 +744,8 @@ function addPartitionedExpansionPasses<Parameters>(
     depth: number;
   },
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const sourceRanges = getTraversalChunkRanges(props.output);
   for (const sourceRange of sourceRanges) {
     if (sourceRange.view.length === 0) {
@@ -695,23 +755,27 @@ function addPartitionedExpansionPasses<Parameters>(
       if (targetRange.view.length === 0) {
         continue;
       }
-      addExpansionPass(
-        graph,
-        {
-          id: `${props.id}-source-${sourceRange.index}-target-${targetRange.index}`,
-          offsets: props.offsets.data[sourceRange.index],
-          neighbors: props.neighbors.data[sourceRange.index],
-          frontier: props.currentFrontier.data[sourceRange.index],
-          nextFrontier: props.nextFrontier.data[targetRange.index],
-          output: targetRange.view,
-          targetBase: targetRange.base,
-          activeDepth: props.activeDepth,
-          depth: props.depth
-        },
-        maxComputeWorkgroupsPerDimension
+      nodes.push(
+        ...addExpansionPass(
+          graph,
+          {
+            id: `${props.id}-source-${sourceRange.index}-target-${targetRange.index}`,
+            offsets: props.offsets.data[sourceRange.index],
+            neighbors: props.neighbors.data[sourceRange.index],
+            frontier: props.currentFrontier.data[sourceRange.index],
+            nextFrontier: props.nextFrontier.data[targetRange.index],
+            output: targetRange.view,
+            targetBase: targetRange.base,
+            activeDepth: props.activeDepth,
+            depth: props.depth
+          },
+          maxComputeWorkgroupsPerDimension
+        )
       );
     }
   }
+
+  return nodes;
 }
 
 /** Validates atomic adjacency or one local CSR allocation per output partition. */
@@ -805,39 +869,44 @@ export function getGPUGraphTraversalInvocationIndexSource(
 function addTraversalPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: TraversalPassProps
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolvedBindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            resolvedBindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const resolvedBindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              resolvedBindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(resolvedBindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

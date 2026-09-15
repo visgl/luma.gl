@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -174,7 +175,10 @@ export class GPUIndexedRangeCompaction {
   }
 
   /** Adds range clearing, local scans, canonical range scan, scatter, and count publication. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): GPUIndexedRangeCompactionResult {
+  getCommands<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): GPUIndexedRangeCompactionResult & {nodes: readonly GPUCommandNode<Parameters>[]} {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.flags, this.ranges, this.activeRangeIds, this.output, this.count]) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
@@ -203,16 +207,23 @@ export class GPUIndexedRangeCompaction {
       this.rangeCount
     );
 
-    addClearRangeCountsPass(graph, this.id, rangeCounts);
-    addLocalScanPass(graph, this, localOffsets, rangeCounts);
-    new GPUScan({
-      id: `${this.id}-range-scan`,
-      input: rangeCounts,
-      output: rangeOffsets
-    }).addToGraph(graph);
-    addScatterPass(graph, this, localOffsets, rangeOffsets);
-    addCountPass(graph, this.id, rangeCounts, rangeOffsets, this.count);
-    return {localOffsets, rangeCounts, rangeOffsets};
+    nodes.push(...addClearRangeCountsPass(graph, this.id, rangeCounts));
+    nodes.push(...addLocalScanPass(graph, this, localOffsets, rangeCounts));
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-range-scan`,
+        input: rangeCounts,
+        output: rangeOffsets
+      }).getCommandNodes(graph)
+    );
+    nodes.push(...addScatterPass(graph, this, localOffsets, rangeOffsets));
+    nodes.push(...addCountPass(graph, this.id, rangeCounts, rangeOffsets, this.count));
+    return {...{localOffsets, rangeCounts, rangeOffsets}, nodes};
+  }
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    return this.getCommands(graph).nodes;
   }
 }
 
@@ -277,9 +288,10 @@ export class GPUPartitionedIndexedRangeCompaction {
   }
 
   /** Adds partitioned range counts, bounded range scans, scratchless scatter, and count publication. */
-  addToGraph<Parameters>(
+  getCommands<Parameters>(
     graph: GPUCommandGraph<Parameters>
-  ): GPUPartitionedIndexedRangeCompactionResult {
+  ): GPUPartitionedIndexedRangeCompactionResult & {nodes: readonly GPUCommandNode<Parameters>[]} {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [
       ...this.flags.data,
       this.ranges,
@@ -314,7 +326,7 @@ export class GPUPartitionedIndexedRangeCompaction {
       this.partitionRangeEnds.length
     );
 
-    addClearRangeCountsPass(graph, this.id, rangeCounts);
+    nodes.push(...addClearRangeCountsPass(graph, this.id, rangeCounts));
     let sourceStart = 0;
     let rangeStart = 0;
     for (let partitionIndex = 0; partitionIndex < this.flags.data.length; partitionIndex++) {
@@ -322,15 +334,17 @@ export class GPUPartitionedIndexedRangeCompaction {
       const output = this.output.data[partitionIndex];
       const sourceEnd = sourceStart + output.length;
       const rangeEnd = this.partitionRangeEnds[partitionIndex];
-      addPartitionRangeCountPass(graph, this, {
-        partitionIndex,
-        sourceStart,
-        sourceEnd,
-        rangeStart,
-        rangeEnd,
-        flags,
-        rangeCounts
-      });
+      nodes.push(
+        ...addPartitionRangeCountPass(graph, this, {
+          partitionIndex,
+          sourceStart,
+          sourceEnd,
+          rangeStart,
+          rangeEnd,
+          flags,
+          rangeCounts
+        })
+      );
       const partitionRangeCount = rangeEnd - rangeStart;
       const partitionRangeCounts = graph.createDataView<'uint32'>(rangeCounts.buffer, {
         format: 'uint32',
@@ -342,26 +356,35 @@ export class GPUPartitionedIndexedRangeCompaction {
         length: partitionRangeCount,
         byteOffset: rangeStart * Uint32Array.BYTES_PER_ELEMENT
       });
-      new GPUScan({
-        id: `${this.id}-partition-${partitionIndex}-range-scan`,
-        input: partitionRangeCounts,
-        output: partitionRangeOffsets
-      }).addToGraph(graph);
-      addPartitionScatterPass(graph, this, {
-        partitionIndex,
-        sourceStart,
-        sourceEnd,
-        rangeStart,
-        rangeEnd,
-        flags,
-        rangeOffsets,
-        output
-      });
+      nodes.push(
+        ...new GPUScan({
+          id: `${this.id}-partition-${partitionIndex}-range-scan`,
+          input: partitionRangeCounts,
+          output: partitionRangeOffsets
+        }).getCommandNodes(graph)
+      );
+      nodes.push(
+        ...addPartitionScatterPass(graph, this, {
+          partitionIndex,
+          sourceStart,
+          sourceEnd,
+          rangeStart,
+          rangeEnd,
+          flags,
+          rangeOffsets,
+          output
+        })
+      );
       sourceStart = sourceEnd;
       rangeStart = rangeEnd;
     }
-    addPartitionCountPass(graph, this, rangeCounts, rangeOffsets, partitionCounts);
-    return {rangeCounts, rangeOffsets, partitionCounts};
+    nodes.push(...addPartitionCountPass(graph, this, rangeCounts, rangeOffsets, partitionCounts));
+    return {...{rangeCounts, rangeOffsets, partitionCounts}, nodes};
+  }
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    return this.getCommands(graph).nodes;
   }
 }
 
@@ -472,7 +495,8 @@ function addPartitionRangeCountPass<Parameters>(
     flags: GraphDataView<'uint32'>;
     rangeCounts: GraphDataView<'uint32'>;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const {rangeLayout} = compaction;
   const useSubgroups =
     getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
@@ -518,23 +542,27 @@ ${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
     rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
   }
 }`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-range-count`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      rangeCounts: props.rangeCounts
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: `${compaction.id}-partition-${props.partitionIndex}-range-count`,
+      source,
+      views: {
+        flags: props.flags,
+        ranges: compaction.ranges,
+        activeRangeIds: compaction.activeRangeIds,
+        rangeCounts: props.rangeCounts
+      },
+      resources: [
+        {buffer: props.flags, usage: 'storage-read'},
+        {buffer: compaction.ranges, usage: 'storage-read'},
+        {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+        {buffer: props.rangeCounts, usage: 'storage-write'}
+      ],
+      dispatchBuffer: compaction.activeRangeDispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addPartitionScatterPass<Parameters>(
@@ -550,7 +578,8 @@ function addPartitionScatterPass<Parameters>(
     rangeOffsets: GraphDataView<'uint32'>;
     output: GraphDataView<'uint32'>;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const {rangeLayout} = compaction;
   const useSubgroups =
     getGPUShaderSubgroupStrategy(graph.device, {requiresSubgroupId: true}) === 'subgroups';
@@ -598,25 +627,29 @@ ${getPartitionSelectionScanShader(compaction.flagEncoding, useSubgroups)}
     outputIds[OUTPUT_OFFSET + outputIndex] = firstIndex + localIndex;
   }
 }`;
-  addIndirectPass(graph, {
-    id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
-    source,
-    views: {
-      flags: props.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      rangeOffsets: props.rangeOffsets,
-      outputIds: props.output
-    },
-    resources: [
-      {buffer: props.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: props.rangeOffsets, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: `${compaction.id}-partition-${props.partitionIndex}-scatter`,
+      source,
+      views: {
+        flags: props.flags,
+        ranges: compaction.ranges,
+        activeRangeIds: compaction.activeRangeIds,
+        rangeOffsets: props.rangeOffsets,
+        outputIds: props.output
+      },
+      resources: [
+        {buffer: props.flags, usage: 'storage-read'},
+        {buffer: compaction.ranges, usage: 'storage-read'},
+        {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+        {buffer: props.rangeOffsets, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'}
+      ],
+      dispatchBuffer: compaction.activeRangeDispatch
+    })
+  );
+
+  return nodes;
 }
 
 function getPartitionSelectionScanShader(
@@ -692,7 +725,8 @@ function addPartitionCountPass<Parameters>(
   rangeCounts: GraphDataView<'uint32'>,
   rangeOffsets: GraphDataView<'uint32'>,
   partitionCounts: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const rangeEnds = compaction.partitionRangeEnds.map(rangeEnd => `${rangeEnd}u`).join(', ');
   const source = /* wgsl */ `
 const PARTITION_COUNT: u32 = ${compaction.partitionRangeEnds.length}u;
@@ -718,18 +752,22 @@ fn main() {
   }
   outputCount[COUNT_OFFSET] = totalCount;
 }`;
-  addDirectPass(graph, {
-    id: `${compaction.id}-publish-counts`,
-    source,
-    views: {rangeCounts, rangeOffsets, partitionCounts, outputCount: compaction.count},
-    resources: [
-      {buffer: rangeCounts, usage: 'storage-read'},
-      {buffer: rangeOffsets, usage: 'storage-read'},
-      {buffer: partitionCounts, usage: 'storage-write'},
-      {buffer: compaction.count, usage: 'storage-write'}
-    ],
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addDirectPass(graph, {
+      id: `${compaction.id}-publish-counts`,
+      source,
+      views: {rangeCounts, rangeOffsets, partitionCounts, outputCount: compaction.count},
+      resources: [
+        {buffer: rangeCounts, usage: 'storage-read'},
+        {buffer: rangeOffsets, usage: 'storage-read'},
+        {buffer: partitionCounts, usage: 'storage-write'},
+        {buffer: compaction.count, usage: 'storage-write'}
+      ],
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 function validateRangeLayout(id: string, layout: GPUIndexedRangeLayout): void {
@@ -750,7 +788,8 @@ function addClearRangeCountsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   rangeCounts: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear-range-counts`;
   const source = /* wgsl */ `
 const RANGE_COUNT: u32 = ${rangeCounts.length}u;
@@ -762,13 +801,17 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     rangeCounts[RANGE_COUNTS_OFFSET + globalId.x] = 0u;
   }
 }`;
-  addDirectPass(graph, {
-    id: passId,
-    source,
-    views: {rangeCounts},
-    resources: [{buffer: rangeCounts, usage: 'storage-write'}],
-    dispatchCount: Math.ceil(rangeCounts.length / RANGE_COMPACTION_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addDirectPass(graph, {
+      id: passId,
+      source,
+      views: {rangeCounts},
+      resources: [{buffer: rangeCounts, usage: 'storage-write'}],
+      dispatchCount: Math.ceil(rangeCounts.length / RANGE_COMPACTION_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addLocalScanPass<Parameters>(
@@ -776,7 +819,8 @@ function addLocalScanPass<Parameters>(
   compaction: GPUIndexedRangeCompaction,
   localOffsets: GraphDataView<'uint32'>,
   rangeCounts: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const {rangeLayout} = compaction;
   const passId = `${compaction.id}-local-scan`;
   const useSubgroups =
@@ -823,25 +867,29 @@ ${getRangeSelectionScanShader(useSubgroups)}
     rangeCounts[RANGE_COUNTS_OFFSET + rangeId] = inclusivePrefix;
   }
 }`;
-  addIndirectPass(graph, {
-    id: passId,
-    source,
-    views: {
-      flags: compaction.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets,
-      rangeCounts
-    },
-    resources: [
-      {buffer: compaction.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: localOffsets, usage: 'storage-write'},
-      {buffer: rangeCounts, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: passId,
+      source,
+      views: {
+        flags: compaction.flags,
+        ranges: compaction.ranges,
+        activeRangeIds: compaction.activeRangeIds,
+        localOffsets,
+        rangeCounts
+      },
+      resources: [
+        {buffer: compaction.flags, usage: 'storage-read'},
+        {buffer: compaction.ranges, usage: 'storage-read'},
+        {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+        {buffer: localOffsets, usage: 'storage-write'},
+        {buffer: rangeCounts, usage: 'storage-write'}
+      ],
+      dispatchBuffer: compaction.activeRangeDispatch
+    })
+  );
+
+  return nodes;
 }
 
 function getRangeSelectionScanShader(useSubgroups: boolean): string {
@@ -901,7 +949,8 @@ function addScatterPass<Parameters>(
   compaction: GPUIndexedRangeCompaction,
   localOffsets: GraphDataView<'uint32'>,
   rangeOffsets: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const {rangeLayout} = compaction;
   const passId = `${compaction.id}-scatter`;
   const source = /* wgsl */ `
@@ -945,27 +994,31 @@ fn main(
     outputIds[OUTPUT_OFFSET + outputIndex] = sourceIndex;
   }
 }`;
-  addIndirectPass(graph, {
-    id: passId,
-    source,
-    views: {
-      flags: compaction.flags,
-      ranges: compaction.ranges,
-      activeRangeIds: compaction.activeRangeIds,
-      localOffsets,
-      rangeOffsets,
-      outputIds: compaction.output
-    },
-    resources: [
-      {buffer: compaction.flags, usage: 'storage-read'},
-      {buffer: compaction.ranges, usage: 'storage-read'},
-      {buffer: compaction.activeRangeIds, usage: 'storage-read'},
-      {buffer: localOffsets, usage: 'storage-read'},
-      {buffer: rangeOffsets, usage: 'storage-read'},
-      {buffer: compaction.output, usage: 'storage-write'}
-    ],
-    dispatchBuffer: compaction.activeRangeDispatch
-  });
+  nodes.push(
+    ...addIndirectPass(graph, {
+      id: passId,
+      source,
+      views: {
+        flags: compaction.flags,
+        ranges: compaction.ranges,
+        activeRangeIds: compaction.activeRangeIds,
+        localOffsets,
+        rangeOffsets,
+        outputIds: compaction.output
+      },
+      resources: [
+        {buffer: compaction.flags, usage: 'storage-read'},
+        {buffer: compaction.ranges, usage: 'storage-read'},
+        {buffer: compaction.activeRangeIds, usage: 'storage-read'},
+        {buffer: localOffsets, usage: 'storage-read'},
+        {buffer: rangeOffsets, usage: 'storage-read'},
+        {buffer: compaction.output, usage: 'storage-write'}
+      ],
+      dispatchBuffer: compaction.activeRangeDispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addCountPass<Parameters>(
@@ -974,7 +1027,8 @@ function addCountPass<Parameters>(
   rangeCounts: GraphDataView<'uint32'>,
   rangeOffsets: GraphDataView<'uint32'>,
   count: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-publish-count`;
   const source = /* wgsl */ `
 const LAST_RANGE_INDEX: u32 = ${rangeCounts.length - 1}u;
@@ -989,17 +1043,21 @@ fn main() {
   outputCount[COUNT_OFFSET] = rangeOffsets[RANGE_OFFSETS_OFFSET + LAST_RANGE_INDEX] +
     rangeCounts[RANGE_COUNTS_OFFSET + LAST_RANGE_INDEX];
 }`;
-  addDirectPass(graph, {
-    id: passId,
-    source,
-    views: {rangeCounts, rangeOffsets, outputCount: count},
-    resources: [
-      {buffer: rangeCounts, usage: 'storage-read'},
-      {buffer: rangeOffsets, usage: 'storage-read'},
-      {buffer: count, usage: 'storage-write'}
-    ],
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addDirectPass(graph, {
+      id: passId,
+      source,
+      views: {rangeCounts, rangeOffsets, outputCount: count},
+      resources: [
+        {buffer: rangeCounts, usage: 'storage-read'},
+        {buffer: rangeOffsets, usage: 'storage-read'},
+        {buffer: count, usage: 'storage-write'}
+      ],
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 type RangePassResource = {
@@ -1016,21 +1074,26 @@ function addDirectPass<Parameters>(
     resources: RangePassResource[];
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = makeComputation(device, props.id, props.source, props.views);
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings(resolveBindings(props.views, getBuffer));
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = makeComputation(device, props.id, props.source, props.views);
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings(resolveBindings(props.views, getBuffer));
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addIndirectPass<Parameters>(
@@ -1042,21 +1105,26 @@ function addIndirectPass<Parameters>(
     resources: RangePassResource[];
     dispatchBuffer: GraphBufferHandle;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: [...props.resources, {buffer: props.dispatchBuffer, usage: 'indirect' as const}],
-    compile: ({device}) => {
-      const computation = makeComputation(device, props.id, props.source, props.views);
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings(resolveBindings(props.views, getBuffer));
-          computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: [...props.resources, {buffer: props.dispatchBuffer, usage: 'indirect' as const}],
+      compile: ({device}) => {
+        const computation = makeComputation(device, props.id, props.source, props.views);
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings(resolveBindings(props.views, getBuffer));
+            computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function makeComputation(

@@ -90,9 +90,9 @@ const index = new GPUGridIndex({
   count: indexCount,
   overflow: indexOverflow
 });
-index.addToGraph(graph);
+addGPUCommandNodes(graph, index.getCommandNodes(graph));
 
-new GPUGridIndexQuery({
+addGPUCommandNodes(graph, new GPUGridIndexQuery({
   index,
   kind: 'radius',
   query: centerAndRadius, // packed float32 [x, y, radius]
@@ -100,7 +100,7 @@ new GPUGridIndexQuery({
   count: candidateCount,
   overflow: candidateOverflow,
   outputMask: candidateMask
-}).addToGraph(graph);
+}).getCommandNodes(graph));
 ```
 
 For three dimensions, a radius query contains `[x, y, z, radius]`; bounds contain

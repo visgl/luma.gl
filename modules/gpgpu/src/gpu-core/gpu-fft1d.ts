@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -121,7 +122,10 @@ export class GPUFFT1D {
   }
 
   /** Adds every FFT stage and one graph-owned scratch view. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     validateGPUFFT1DOwnership(graph, this.input, `${this.id} input`);
     validateGPUFFT1DOwnership(graph, this.output, `${this.id} output`);
     const support = getGPUFFT1DSupport(graph.device, {
@@ -148,19 +152,23 @@ export class GPUFFT1D {
         support.strategy === 'subgroups' &&
         pass.kind === 'butterfly' &&
         pass.stage <= (support.subgroupStageCount ?? 0);
-      addGPUFFT1DPass(graph, {
-        id: `${this.id}-${pass.kind}-${pass.stage}`,
-        input: passInput,
-        output: passOutput,
-        length: this.length,
-        batchCount: this.batchCount,
-        direction: this.direction,
-        pass,
-        finalPass: passIndex === passPlan.length - 1,
-        useSubgroups
-      });
+      nodes.push(
+        ...addGPUFFT1DPass(graph, {
+          id: `${this.id}-${pass.kind}-${pass.stage}`,
+          input: passInput,
+          output: passOutput,
+          length: this.length,
+          batchCount: this.batchCount,
+          direction: this.direction,
+          pass,
+          finalPass: passIndex === passPlan.length - 1,
+          useSubgroups
+        })
+      );
       passInput = passOutput;
     }
+
+    return nodes;
   }
 }
 
@@ -285,7 +293,8 @@ export type GPUFFT1DPassProps = {
 function addGPUFFT1DPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: GPUFFT1DPassProps
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const elementCount = props.length * props.batchCount;
   const dispatchLayout = getBoundedDispatchLayout(
     props.id,
@@ -294,45 +303,49 @@ function addGPUFFT1DPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = getGPUFFT1DShaderSource(props, dispatchLayout);
-  graph.addComputePass({
-    id: props.id,
-    workload: {
-      operation: props.useSubgroups ? 'GPUFFT1D.subgroups' : 'GPUFFT1D',
-      commandCount: 1,
-      maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-      maximumInvocationCount:
-        dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GPU_FFT1D_WORKGROUP_SIZE,
-      readByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
-      writeByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT
-    },
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'outputValues', type: 'storage', group: 0, location: 1}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputValues: getViewBinding(props.input, getBuffer),
-            outputValues: getViewBinding(props.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      workload: {
+        operation: props.useSubgroups ? 'GPUFFT1D.subgroups' : 'GPUFFT1D',
+        commandCount: 1,
+        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+        maximumInvocationCount:
+          dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GPU_FFT1D_WORKGROUP_SIZE,
+        readByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+        writeByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT
+      },
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'outputValues', type: 'storage', group: 0, location: 1}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputValues: getViewBinding(props.input, getBuffer),
+              outputValues: getViewBinding(props.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns one generated FFT pass shader. @internal */

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
@@ -127,7 +128,10 @@ export class GPUHierarchyLayout {
   }
 
   /** Adds one hierarchy-height kernel and the graph-native exclusive prefix scan. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const data of [this.parentStates, this.childStates, this.heights, this.offsets]) {
       for (const view of getHierarchyChunks(data)) {
         if (view.buffer.graph !== graph) {
@@ -136,7 +140,7 @@ export class GPUHierarchyLayout {
       }
     }
     if (this.childStates.length === 0) {
-      return;
+      return nodes;
     }
     const parentChunks = getHierarchyChunkRanges(this.parentStates);
     const childChunks = getHierarchyChunkRanges(this.childStates);
@@ -149,24 +153,30 @@ export class GPUHierarchyLayout {
           (parentChunk.base + parentChunk.view.length) * this.childrenPerParent
         );
         if (firstChild < lastChild) {
-          this.addHeightPass(graph, {
-            id: `${this.id}-heights-child-${childChunk.index}-parent-${parentChunk.index}`,
-            parentStates: parentChunk.view,
-            parentBase: parentChunk.base,
-            childStates: childChunk.view,
-            childHeights: heightChunks[childChunk.index],
-            childBase: childChunk.base,
-            firstChild,
-            childCount: lastChild - firstChild
-          });
+          nodes.push(
+            ...this.addHeightPass(graph, {
+              id: `${this.id}-heights-child-${childChunk.index}-parent-${parentChunk.index}`,
+              parentStates: parentChunk.view,
+              parentBase: parentChunk.base,
+              childStates: childChunk.view,
+              childHeights: heightChunks[childChunk.index],
+              childBase: childChunk.base,
+              firstChild,
+              childCount: lastChild - firstChild
+            })
+          );
         }
       }
     }
-    new GPUScan({
-      id: `${this.id}-offsets`,
-      input: this.heights,
-      output: this.offsets
-    }).addToGraph(graph);
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-offsets`,
+        input: this.heights,
+        output: this.offsets
+      }).getCommandNodes(graph)
+    );
+
+    return nodes;
   }
 
   /** Publishes one effective child height for the current parent and child expansion state. */
@@ -182,7 +192,8 @@ export class GPUHierarchyLayout {
       firstChild: number;
       childCount: number;
     }
-  ): void {
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const source = /* wgsl */ `
 const CHILD_COUNT: u32 = ${props.childCount}u;
 const CHILDREN_PER_PARENT: u32 = ${this.childrenPerParent}u;
@@ -226,42 +237,46 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
       childStates: props.childStates,
       childHeights: props.childHeights
     };
-    graph.addComputePass({
-      id: props.id,
-      resources: [
-        {buffer: props.parentStates, usage: 'storage-read'},
-        {buffer: props.childStates, usage: 'storage-read'},
-        {buffer: props.childHeights, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: props.id,
-          source,
-          shaderLayout: {
-            bindings: Object.keys(views).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const resolvedBindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(views)) {
-              resolvedBindings[name] = getViewBinding(view, getBuffer);
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: props.id,
+        resources: [
+          {buffer: props.parentStates, usage: 'storage-read'},
+          {buffer: props.childStates, usage: 'storage-read'},
+          {buffer: props.childHeights, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: props.id,
+            source,
+            shaderLayout: {
+              bindings: Object.keys(views).map((name, location) => ({
+                name,
+                type: 'storage' as const,
+                group: 0,
+                location
+              }))
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(
-              computePass,
-              Math.ceil(props.childCount / HIERARCHY_LAYOUT_WORKGROUP_SIZE)
-            );
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const resolvedBindings: Record<string, Binding> = {};
+              for (const [name, view] of Object.entries(views)) {
+                resolvedBindings[name] = getViewBinding(view, getBuffer);
+              }
+              computation.setBindings(resolvedBindings);
+              computation.dispatch(
+                computePass,
+                Math.ceil(props.childCount / HIERARCHY_LAYOUT_WORKGROUP_SIZE)
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 
