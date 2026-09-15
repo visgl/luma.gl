@@ -28,7 +28,14 @@ export class GPUScalarLiteral {
         : output.format === 'uint32'
           ? `${value}u`
           : `${value}i`;
-    const source = `${getGPUValueArenaWGSLBinding(0, 0)}\n@compute @workgroup_size(1) fn main(){${getGPUScalarWGSLStore(output, expression)}}`;
+    const source = `
+${getGPUValueArenaWGSLBinding(0, 0)}
+
+@compute @workgroup_size(1)
+fn main() {
+  ${getGPUScalarWGSLStore(output, expression)}
+}
+`;
     const buffer = output.arena.buffer;
     return [
       createGPUComputeCommandNode({

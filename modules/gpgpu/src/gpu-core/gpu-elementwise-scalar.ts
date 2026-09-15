@@ -72,7 +72,32 @@ export class GPUVectorScalarMADD {
       WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    const source = `const LENGTH:u32=${output.length}u;const I:u32=${getViewElementOffset(input)}u;const A:u32=${getViewElementOffset(addend)}u;const O:u32=${getViewElementOffset(output)}u;@group(0)@binding(0)var<storage,read>inputValues:array<f32>;@group(0)@binding(1)var<storage,read>addendValues:array<f32>;@group(0)@binding(2)var<storage,read_write>outputValues:array<f32>;${getGPUValueArenaWGSLBinding(0, 3)}@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(workgroup_id)workgroupId:vec3u,@builtin(local_invocation_index)localInvocationIndex:u32){${getBoundedInvocationIndexSource(layout, WORKGROUP_SIZE)}if(index>=LENGTH){return;}let x=inputValues[I+index];let y=addendValues[A+index];outputValues[O+index]=${getGPUScalarWGSLLoad(scale)}*x+y;}`;
+    const source = `
+const LENGTH: u32 = ${output.length}u;
+const I: u32 = ${getViewElementOffset(input)}u;
+const A: u32 = ${getViewElementOffset(addend)}u;
+const O: u32 = ${getViewElementOffset(output)}u;
+
+@group(0) @binding(0) var<storage, read> inputValues: array<f32>;
+@group(0) @binding(1) var<storage, read> addendValues: array<f32>;
+@group(0) @binding(2) var<storage, read_write> outputValues: array<f32>;
+${getGPUValueArenaWGSLBinding(0, 3)}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3u,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(layout, WORKGROUP_SIZE)}
+  if (index >= LENGTH) {
+    return;
+  }
+
+  let x = inputValues[I + index];
+  let y = addendValues[A + index];
+  outputValues[O + index] = ${getGPUScalarWGSLLoad(scale)} * x + y;
+}
+`;
     return [
       setGPUComputeDispatchWorkgroups(
         createGPUComputeCommandNode<Parameters>({

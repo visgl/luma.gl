@@ -82,7 +82,49 @@ export class GPUDotProductScalar {
     )
       throw new Error(`${this.id} resources must belong to target graph`);
     const arenaBuffer = output.arena.buffer;
-    const source = `const LENGTH:u32=${left.length}u;const L:u32=${getViewElementOffset(left)}u;const R:u32=${getViewElementOffset(right)}u;@group(0)@binding(0)var<storage,read>leftValues:array<f32>;@group(0)@binding(1)var<storage,read>rightValues:array<f32>;${getGPUValueArenaWGSLBinding(0, 2)}var<workgroup>s:array<f32,${WORKGROUP_SIZE}>;@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(local_invocation_index)lane:u32){var v=0.0;var i=lane;loop{if(i>=LENGTH){break;}v+=leftValues[L+i]*rightValues[R+i];i+=${WORKGROUP_SIZE}u;}s[lane]=v;workgroupBarrier();var stride=${WORKGROUP_SIZE / 2}u;loop{if(stride==0u){break;}if(lane<stride){s[lane]+=s[lane+stride];}workgroupBarrier();stride/=2u;}if(lane==0u){${getGPUScalarWGSLStore(output, accumulate ? `${getGPUScalarWGSLLoad(output)} + s[0]` : 's[0]')}}}`;
+    const source = `
+const LENGTH: u32 = ${left.length}u;
+const L: u32 = ${getViewElementOffset(left)}u;
+const R: u32 = ${getViewElementOffset(right)}u;
+
+@group(0) @binding(0) var<storage, read> leftValues: array<f32>;
+@group(0) @binding(1) var<storage, read> rightValues: array<f32>;
+${getGPUValueArenaWGSLBinding(0, 2)}
+
+var<workgroup> s: array<f32, ${WORKGROUP_SIZE}>;
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(@builtin(local_invocation_index) lane: u32) {
+  var v = 0.0;
+  var i = lane;
+  loop {
+    if (i >= LENGTH) {
+      break;
+    }
+    v += leftValues[L + i] * rightValues[R + i];
+    i += ${WORKGROUP_SIZE}u;
+  }
+
+  s[lane] = v;
+  workgroupBarrier();
+
+  var stride = ${WORKGROUP_SIZE / 2}u;
+  loop {
+    if (stride == 0u) {
+      break;
+    }
+    if (lane < stride) {
+      s[lane] += s[lane + stride];
+    }
+    workgroupBarrier();
+    stride /= 2u;
+  }
+
+  if (lane == 0u) {
+    ${getGPUScalarWGSLStore(output, accumulate ? `${getGPUScalarWGSLLoad(output)} + s[0]` : 's[0]')}
+  }
+}
+`;
     return [
       setGPUComputeDispatchWorkgroups(
         createGPUComputeCommandNode<Parameters>({
