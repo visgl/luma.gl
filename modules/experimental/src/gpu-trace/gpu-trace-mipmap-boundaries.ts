@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUGallopingSearch} from '@luma.gl/gpgpu/gpu-core';
@@ -192,7 +191,8 @@ export class GPUTraceMipmapBoundaries {
 
     addValidationClearPass(graph, this);
     addPixelQueryPreparationPass(graph, this, queryTimes, searchSegments);
-    graph.add(new GPUGallopingSearch({
+    graph.add(
+      new GPUGallopingSearch({
         id: `${this.id}-galloping-search`,
         values: this.startTimes,
         valueOrder: this.startTimeOrder,
@@ -203,7 +203,8 @@ export class GPUTraceMipmapBoundaries {
         output: this.output,
         validationErrors: this.validationErrors,
         preserveValidationErrors: true
-      }));
+      })
+    );
   }
 }
 

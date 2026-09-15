@@ -551,14 +551,16 @@ async function runHierarchyLayout(
   const heightsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
   const offsetsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
   const graph = new GPUCommandGraph(device, {id: 'hierarchy-layout-test'});
-  graph.add(new GPUHierarchyLayout({
+  graph.add(
+    new GPUHierarchyLayout({
       parentStates: importUint32View(graph, 'parents', parentBuffer, parentStates.length),
       childStates: importUint32View(graph, 'children', childBuffer, childStates.length),
       heights: importUint32View(graph, 'heights', heightsBuffer, childStates.length),
       offsets: importUint32View(graph, 'offsets', offsetsBuffer, childStates.length),
       childrenPerParent,
       expandedChildHeight: 4
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'hierarchy-layout-test');
   const [heights, offsets] = await Promise.all([
@@ -590,7 +592,8 @@ async function runPartitionedHierarchyLayout(device: Device): Promise<{
   const heights = createVectorFixture(device, 'heights', childChunks, true);
   const offsets = createVectorFixture(device, 'offsets', childChunks, true);
   const graph = new GPUCommandGraph(device, {id: 'partitioned-hierarchy-test'});
-  graph.add(new GPUHierarchyLayout({
+  graph.add(
+    new GPUHierarchyLayout({
       id: 'partitioned-hierarchy',
       parentStates: graph.importGPUVector('parents', parents.vector),
       childStates: graph.importGPUVector('children', children.vector),
@@ -598,7 +601,8 @@ async function runPartitionedHierarchyLayout(device: Device): Promise<{
       offsets: graph.importGPUVector('offsets', offsets.vector),
       childrenPerParent: 2,
       expandedChildHeight: 4
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'partitioned-hierarchy-test');
   const firstHeights = await readVectorFixture(heights);
@@ -628,12 +632,14 @@ async function runAncestorProjection(
   const visibilityBuffer = createUint32Buffer(device, visibility, false);
   const outputBuffer = createUint32Buffer(device, new Uint32Array(parents.length), true);
   const graph = new GPUCommandGraph(device, {id: 'ancestor-projection-test'});
-  graph.add(new GPUAncestorProjection({
+  graph.add(
+    new GPUAncestorProjection({
       parents: importUint32View(graph, 'parents', parentBuffer, parents.length),
       visibility: importUint32View(graph, 'visibility', visibilityBuffer, visibility.length),
       output: importUint32View(graph, 'output', outputBuffer, parents.length),
       maxDepth
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'ancestor-projection-test');
   const result = await readUint32(outputBuffer, parents.length);
@@ -701,7 +707,8 @@ async function runTraversal(
       ? {}
       : {activeDepth: createUint32Buffer(device, Uint32Array.from([props.activeDepth]), false)})
   };
-  graph.add(new GPUGraphTraversal({
+  graph.add(
+    new GPUGraphTraversal({
       offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
       neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
       reverseOffsets: importUint32View(
@@ -726,7 +733,8 @@ async function runTraversal(
       output: importUint32View(graph, 'output', buffers.output, nodeCount),
       direction: props.direction,
       maxDepth: props.maxDepth
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'graph-traversal-test');
   const result = await readUint32(buffers.output, nodeCount);
@@ -776,14 +784,16 @@ async function runPartitionedTraversal(device: Device): Promise<{
   const seeds = createVectorFixture(device, 'seeds', seedChunks, false);
   const output = createVectorFixture(device, 'output', outputChunks, true);
   const graph = new GPUCommandGraph(device, {id: 'partitioned-traversal-test'});
-  graph.add(new GPUGraphTraversal({
+  graph.add(
+    new GPUGraphTraversal({
       id: 'partitioned-traversal',
       offsets: graph.importGPUVector('offsets', offsets.vector),
       neighbors: graph.importGPUVector('neighbors', neighbors.vector),
       seeds: graph.importGPUVector('seeds', seeds.vector),
       output: graph.importGPUVector('output', output.vector),
       maxDepth: 3
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'partitioned-traversal-test');
   const result = {output: await readVectorFixture(output), nodeOrder: compiled.stats.nodeOrder};

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -74,12 +73,14 @@ describe('GPUSegmentedReduction', () => {
       ),
       {format: 'uint32', length: 3}
     );
-    graph.add(new GPUSegmentedReduction({
+    graph.add(
+      new GPUSegmentedReduction({
         input,
         segmentOffsets: offsets,
         output,
         operation: 'sum'
-      }));
+      })
+    );
     const compiled = graph.compile();
     try {
       const commandEncoder = device.createCommandEncoder({id: 'segmented-reduction-test'});

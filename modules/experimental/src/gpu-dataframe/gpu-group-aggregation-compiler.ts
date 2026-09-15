@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
@@ -171,13 +170,15 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         const output = createGPUGroupedOutputVector(graph.device, metricId, groupCount, 'uint32');
         ownedVectors.push(output);
         outputVectors.set(definition.name, output);
-        graph.add(new GPUGroupAggregation({
+        graph.add(
+          new GPUGroupAggregation({
             id: metricId,
             keys,
             mask: baseMask,
             output: graph.importGPUVector(`${metricId}-output`, output).data[0],
             operation: 'count'
-          }));
+          })
+        );
         continue;
       }
 
@@ -203,14 +204,16 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ownedVectors.push(output);
       outputVectors.set(definition.name, output);
       validity[definition.name] = state.validity;
-      graph.add(new GPUGroupAggregation({
+      graph.add(
+        new GPUGroupAggregation({
           id: metricId,
           keys,
           values: state.values,
           mask: state.mask,
           output: graph.importGPUVector(`${metricId}-output`, output).data[0],
           operation: definition.operation
-        }));
+        })
+      );
     }
 
     resultTable = createGPUGroupedResultTable<Selection, Result>(
@@ -329,13 +332,15 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
   );
   ownedVectors.push(validity);
   const output = context.graph.importGPUVector(`${id}-group-validity-vector`, validity).data[0];
-  context.graph.add(new GPUGroupAggregation({
+  context.graph.add(
+    new GPUGroupAggregation({
       id: `${id}-accepted-count`,
       keys,
       mask: finiteRows,
       output,
       operation: 'count'
-    }));
+    })
+  );
   addGPUNormalizeGroupValidityPass(context.graph, `${id}-normalize-validity`, output);
   return {values, mask: finiteRows, validity};
 }

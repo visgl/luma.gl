@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
@@ -300,12 +299,14 @@ export class GPURasterContours {
       cases,
       segmentCounts
     }).addToGraph(graph);
-    graph.add(new GPUScan({
+    graph.add(
+      new GPUScan({
         id: `${this.id}-scan`,
         input: segmentCounts,
         output: segmentOffsets,
         mode: 'exclusive'
-      }));
+      })
+    );
     if (this.cellCount > 0 && this.capacity > 0) {
       this.addScatterPass(graph, cases, segmentOffsets, gpuLevel);
     }

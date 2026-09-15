@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
-import {addGPUCommandNodes} from '../gpu-core/gpu-command-node';
 import {
   createTransientView,
   doGraphDataViewsOverlap,
@@ -198,12 +197,14 @@ export class GPUIVFFlatIndex {
       0,
       this.listCount
     );
-    graph.add(new GPUScan({
+    graph.add(
+      new GPUScan({
         id: `${this.id}-list-offsets`,
         input: this.listCounts,
         output: offsetsWithoutTotal,
         mode: 'exclusive'
-      }));
+      })
+    );
     addFinalizeListOffsetsPass(graph, this);
 
     const listCursors = createTransientView<'uint32', Parameters>(

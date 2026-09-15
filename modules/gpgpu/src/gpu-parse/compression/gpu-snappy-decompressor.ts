@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_WORKGROUP_SIZE,
@@ -34,7 +33,8 @@ export class GPUSnappyDecompressor {
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const props = this.props;
-    graph.add(new GPULZByteDecompressor({
+    graph.add(
+      new GPULZByteDecompressor({
         id: props.id,
         input: props.input,
         descriptors: props.descriptors,
@@ -42,6 +42,7 @@ export class GPUSnappyDecompressor {
         inputByteLength: props.compressedByteLength,
         outputByteLength: props.outputByteLength,
         descriptorCount: props.descriptorCount
-      }));
+      })
+    );
   }
 }

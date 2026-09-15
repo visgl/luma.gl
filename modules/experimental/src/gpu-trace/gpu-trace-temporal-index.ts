@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -156,12 +155,14 @@ export class GPUTraceTemporalIndex {
       if (this.stats.batchCount > 0) {
         addTemporalQueryPass(graph, this, candidateFlags);
       }
-      graph.add(new GPUVisibilityWorkflow({
+      graph.add(
+        new GPUVisibilityWorkflow({
           id: `${this.id}-candidates`,
           predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
           output: this.output.candidates,
           count: this.output.candidateCount
-        }));
+        })
+      );
     }
   }
 }
@@ -313,7 +314,8 @@ function addHierarchicalCandidateQuery<Parameters>(
 
   addDispatchInitializationPass(graph, `${index.id}-active-node-dispatch`, activeNodeDispatch);
   addHierarchyNodeQueryPass(graph, index, hierarchy, level, nodeFlags);
-  graph.add(new GPUVisibilityWorkflow({
+  graph.add(
+    new GPUVisibilityWorkflow({
       id: `${index.id}-active-nodes`,
       predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
       output: activeNodeIds,
@@ -322,7 +324,8 @@ function addHierarchicalCandidateQuery<Parameters>(
         length: 1,
         byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
       })
-    }));
+    })
+  );
   addClearViewPass(graph, `${index.id}-active-node-counts`, activeNodeCounts);
   addActiveNodeCountPass(
     graph,
@@ -333,11 +336,13 @@ function addHierarchicalCandidateQuery<Parameters>(
     activeNodeDispatch,
     activeNodeCounts
   );
-  graph.add(new GPUScan({
+  graph.add(
+    new GPUScan({
       id: `${index.id}-active-node-offsets`,
       input: activeNodeCounts,
       output: activeNodeOffsets
-    }));
+    })
+  );
   addActiveNodeScatterPass(
     graph,
     index,

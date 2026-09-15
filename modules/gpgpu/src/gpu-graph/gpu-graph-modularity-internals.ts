@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
-import {addGPUCommandNodes} from '../gpu-core/gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
@@ -150,21 +149,25 @@ export function addGPUGraphModularityToGraphWithDispatchLimit<Parameters>(
     });
   }
 
-  commandGraph.add(new GPUReduction({
+  commandGraph.add(
+    new GPUReduction({
       id: `${state.id}-total-volume-reduction`,
       input: state.outgoingVolumes,
       output: state.totalVolume,
       operation: 'sum'
-    }));
+    })
+  );
 
   if (vertexCount > 0) addContributionPass(commandGraph, state);
 
-  commandGraph.add(new GPUReduction({
+  commandGraph.add(
+    new GPUReduction({
       id: `${state.id}-score-reduction`,
       input: state.contributions,
       output: state.output,
       operation: 'sum'
-    }));
+    })
+  );
 
   addValidityFinalizationPass(commandGraph, state);
 }

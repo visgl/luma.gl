@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   type CompiledGPUCommandGraph,
@@ -120,34 +119,42 @@ export class VectorFieldEngine {
       boundary: 'one-sided' as const
     };
     new GPUVectorFieldSampler3D({scalar, vector, resolution: this.resolution}).addToGraph(graph);
-    graph.add(new GPUFiniteDifference3D({
+    graph.add(
+      new GPUFiniteDifference3D({
         id: 'field-gradient',
         ...common,
         operator: 'gradient',
         input: scalar,
         output: gradient
-      }));
-    graph.add(new GPUFiniteDifference3D({
+      })
+    );
+    graph.add(
+      new GPUFiniteDifference3D({
         id: 'field-laplacian',
         ...common,
         operator: 'laplacian',
         input: scalar,
         output: laplacian
-      }));
-    graph.add(new GPUFiniteDifference3D({
+      })
+    );
+    graph.add(
+      new GPUFiniteDifference3D({
         id: 'field-divergence',
         ...common,
         operator: 'divergence',
         input: vector,
         output: divergence
-      }));
-    graph.add(new GPUFiniteDifference3D({
+      })
+    );
+    graph.add(
+      new GPUFiniteDifference3D({
         id: 'field-curl',
         ...common,
         operator: 'curl',
         input: vector,
         output: curl
-      }));
+      })
+    );
     return graph.compile();
   }
 }

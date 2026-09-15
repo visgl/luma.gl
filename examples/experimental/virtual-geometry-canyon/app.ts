@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Geometry, Model, type AnimationProps} from '@luma.gl/engine';
 import {

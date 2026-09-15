@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
@@ -150,26 +149,32 @@ export class GPURasterStatistics {
       horizontalCount,
       verticalCount
     ]);
-    graph.add(new GPUReduction({
+    graph.add(
+      new GPUReduction({
         id: `${this.id}-count`,
         input: resolvedValidity,
         output: this.count,
         operation: 'sum'
-      }));
-    graph.add(new GPUReduction({
+      })
+    );
+    graph.add(
+      new GPUReduction({
         id: `${this.id}-sum`,
         input: calibratedValues,
         mask: resolvedValidity,
         output: this.sum,
         operation: 'sum'
-      }));
-    graph.add(new GPUReduction({
+      })
+    );
+    graph.add(
+      new GPUReduction({
         id: `${this.id}-extent`,
         input: calibratedValues,
         mask: resolvedValidity,
         output: this.extent,
         operation: 'extent'
-      }));
+      })
+    );
     this.addMeanPass(graph);
   }
 

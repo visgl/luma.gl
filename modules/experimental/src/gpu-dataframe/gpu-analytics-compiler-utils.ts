@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
@@ -151,11 +150,13 @@ export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
     `${id}-combined-mask`,
     context.selectionMask
   );
-  context.graph.add(new GPUMask({
+  context.graph.add(
+    new GPUMask({
       id: `${id}-combine-validity`,
       inputs: [context.selectionMask, validityView],
       output
-    }));
+    })
+  );
   return output;
 }
 

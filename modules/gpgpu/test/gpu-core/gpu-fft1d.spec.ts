@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -114,7 +113,8 @@ async function runGPUFFT1D(
   const input = importComplexView(graph, 'input', inputBuffer, inputValues.length / 2);
   const forward = importComplexView(graph, 'forward', forwardBuffer, inputValues.length / 2);
   const inverse = importComplexView(graph, 'inverse', inverseBuffer, inputValues.length / 2);
-  graph.add(new GPUFFT1D({
+  graph.add(
+    new GPUFFT1D({
       id: 'forward',
       input,
       output: forward,
@@ -122,8 +122,10 @@ async function runGPUFFT1D(
       batchCount,
       direction: 'forward',
       strategy
-    }));
-  graph.add(new GPUFFT1D({
+    })
+  );
+  graph.add(
+    new GPUFFT1D({
       id: 'inverse',
       input: forward,
       output: inverse,
@@ -131,7 +133,8 @@ async function runGPUFFT1D(
       batchCount,
       direction: 'inverse',
       strategy
-    }));
+    })
+  );
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-fft1d-roundtrip'});

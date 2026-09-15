@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_WORKGROUP_SIZE,

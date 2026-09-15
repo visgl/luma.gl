@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -169,12 +168,14 @@ it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
   const irregularInput = irregularGraph.importGPUVector('values', values.vector);
   const irregularMask = irregularGraph.importGPUVector('masks', masks.vector);
   const irregularOutput = importView(irregularGraph, 'counts', outputBuffer, 'uint32', 3);
-  irregularGraph.add(new GPUHistogram({
+  irregularGraph.add(
+    new GPUHistogram({
       input: irregularInput,
       mask: irregularMask,
       output: irregularOutput,
       edges: [0, 1, 3, 4]
-    }));
+    })
+  );
   const irregularCompiled = irregularGraph.compile();
   submitGraph(device, irregularCompiled, 'masked-irregular-vector-histogram');
   expect(
@@ -220,20 +221,24 @@ it('GPUHistogram shares offset selection views across independently binned outpu
   const regularOutput = importView(graph, 'regular-counts', regularOutputBuffer, 'uint32', 4);
   const irregularOutput = importView(graph, 'irregular-counts', irregularOutputBuffer, 'uint32', 3);
 
-  graph.add(new GPUHistogram({
+  graph.add(
+    new GPUHistogram({
       id: 'offset-regular-histogram',
       input,
       mask,
       output: regularOutput,
       domain: [0, 3]
-    }));
-  graph.add(new GPUHistogram({
+    })
+  );
+  graph.add(
+    new GPUHistogram({
       id: 'offset-irregular-histogram',
       input,
       mask,
       output: irregularOutput,
       edges: [0, 1, 3, 4]
-    }));
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'offset-masked-histograms');
 
@@ -317,8 +322,7 @@ it('GPUHistogram validates mask layout, topology, ownership, and aliases', async
   const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-histogram-mask'});
   const foreignMask = importView(foreignGraph, 'foreign-mask', maskBuffer, 'uint32', 4);
   expect(
-    () =>
-      graph.add(new GPUHistogram({input, mask: foreignMask, output, domain: [0, 3]})),
+    () => graph.add(new GPUHistogram({input, mask: foreignMask, output, domain: [0, 3]})),
     'mask storage must belong to the encoded command graph'
   ).toThrow(/views must belong to the target graph/);
 

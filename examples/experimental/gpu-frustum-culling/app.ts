@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, Texture, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -466,12 +465,14 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       }
     });
 
-    graph.add(new GPUVisibilityWorkflow({
+    graph.add(
+      new GPUVisibilityWorkflow({
         id: 'visible-instances',
         predicates: [{kind: 'bounds', mask: flags}],
         output: visibleIdView,
         count: instanceCount
-      }));
+      })
+    );
 
     graph.addRenderPass({
       id: 'render-visible-instances',

@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -190,14 +189,16 @@ function createFixture(
     'uint32',
     1
   );
-  graph.add(new GPUGridIndexQuery({
+  graph.add(
+    new GPUGridIndexQuery({
       index,
       kind: props.kind,
       query: queryView,
       output: candidateIdsView,
       count: candidateCountView,
       overflow: candidateOverflowView
-    }));
+    })
+  );
 
   addFilterAndVisibility(graph, {
     id: 'indexed',
@@ -271,7 +272,8 @@ function addFilterAndVisibility(
     props.length
   );
   const overflow = importView(graph, `${props.id}-overflow`, props.result.overflow, 'uint32', 1);
-  graph.add(new GPUPointSpatialFilter({
+  graph.add(
+    new GPUPointSpatialFilter({
       id: `${props.id}-point-filter`,
       positions: props.positions,
       kind: props.kind,
@@ -279,7 +281,8 @@ function addFilterAndVisibility(
       outputMask: exactMask,
       overflow,
       candidates: props.candidates
-    }));
+    })
+  );
 
   const predicates = [{kind: 'bounds' as const, mask: exactMask}];
   if (props.selection) {
@@ -288,7 +291,8 @@ function addFilterAndVisibility(
       mask: importView(graph, `${props.id}-selection`, props.selection, 'uint32', props.length)
     });
   }
-  graph.add(new GPUVisibilityWorkflow({
+  graph.add(
+    new GPUVisibilityWorkflow({
       id: `${props.id}-visibility`,
       predicates,
       output: importView(
@@ -300,7 +304,8 @@ function addFilterAndVisibility(
       ),
       count: importView(graph, `${props.id}-visible-count`, props.result.count, 'uint32', 1),
       outputMask
-    }));
+    })
+  );
 }
 
 function createResultBuffers(device: Device, length: number): ResultBuffers {

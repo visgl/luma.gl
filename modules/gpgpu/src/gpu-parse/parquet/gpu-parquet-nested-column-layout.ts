@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -192,23 +191,28 @@ export class GPUParquetNestedColumnLayout {
     }
 
     for (let chunkIndex = 0; chunkIndex < validity.data.length; chunkIndex++) {
-      graph.add(new GPUFlagOffsets({
+      graph.add(
+        new GPUFlagOffsets({
           id: `${this.id}-leaf-values-chunk-${chunkIndex}`,
           flags: validity.data[chunkIndex],
           offsets: valueOffsets.data[chunkIndex],
           count: nonNullValueCounts.data[chunkIndex]
-        }));
+        })
+      );
     }
     for (let depthIndex = 0; depthIndex < this.props.depths.length; depthIndex++) {
       const depth = this.props.depths[depthIndex];
       const output = depthOutputs[depthIndex];
-      graph.add(new GPUFlagOffsets({
+      graph.add(
+        new GPUFlagOffsets({
           id: `${this.id}-${depth.name}-elements`,
           flags: output.elementFlags,
           offsets: output.elementOffsets,
           count: output.elementCount
-        }));
-      graph.add(new GPUSegmentOffsets({
+        })
+      );
+      graph.add(
+        new GPUSegmentOffsets({
           id: `${this.id}-${depth.name}-rows`,
           elementFlags: output.elementFlags,
           elementOffsets: output.elementOffsets,
@@ -216,7 +220,8 @@ export class GPUParquetNestedColumnLayout {
           segmentIndices: output.rowIndices,
           segmentOffsets: output.listOffsets,
           segmentCount: output.rowCount
-        }));
+        })
+      );
     }
 
     return Object.freeze({

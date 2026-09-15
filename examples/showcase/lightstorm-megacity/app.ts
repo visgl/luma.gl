@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, type Device, type RenderBundle, type TextureFormatColor} from '@luma.gl/core';
 import {
   createBloomCompositeShaderPass,
@@ -849,12 +848,14 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       }
     });
 
-    graph.add(new GPUVisibilityWorkflow({
+    graph.add(
+      new GPUVisibilityWorkflow({
         id: 'visible-city-records',
         predicates: [{kind: 'bounds', mask: flags}],
         output: visibleIdentifierView,
         count: instanceCount
-      }));
+      })
+    );
 
     graph.addRenderPass({
       id: 'render-visible-city',

@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -155,13 +154,15 @@ it('GPUHashIndex accepts empty explicit-value views at the end of their buffers'
     {id: 'empty-values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
     valuesBuffer
   );
-  graph.add(new GPUHashIndex({
+  graph.add(
+    new GPUHashIndex({
       keys: graph.createDataView(keyHandle, {format: 'uint32', length: 0, byteOffset: 4}),
       values: graph.createDataView(valueHandle, {format: 'uint32', length: 0, byteOffset: 4}),
       tableKeys: importView(graph, 'empty-table-keys', tableKeysBuffer, 4),
       tableValues: importView(graph, 'empty-table-values', tableValuesBuffer, 4),
       statistics: importView(graph, 'empty-statistics', statisticsBuffer, 6)
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder();
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -218,14 +219,16 @@ async function runHashIndex(
     statistics: importView(graph, 'build-statistics', buffers.buildStatistics, 6)
   });
   graph.add(index);
-  graph.add(new GPUHashIndexQuery({
+  graph.add(
+    new GPUHashIndexQuery({
       index,
       keys: importView(graph, 'query-keys', buffers.queryKeys, queryKeys.length),
       values: importView(graph, 'values', buffers.values, queryKeys.length),
       found: importView(graph, 'found', buffers.found, queryKeys.length),
       probes: importView(graph, 'probes', buffers.probes, queryKeys.length),
       statistics: importView(graph, 'query-statistics', buffers.queryStatistics, 4)
-    }));
+    })
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'hash-index-test'});

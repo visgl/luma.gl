@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
 import {
@@ -165,12 +164,14 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
     const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
       .data[0];
 
-    graph.add(new GPUReduction({
+    graph.add(
+      new GPUReduction({
         id: `${prefix}-count-selected`,
         input: context.selectedCounts,
         output: selectedCount,
         operation: 'sum'
-      }));
+      })
+    );
 
     if (input.length > 0) {
       const scratch = createGPUGlobalSortScratch(graph, prefix, input.length);
@@ -192,7 +193,8 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
         fallbackOffset += batch.numRows;
       }
 
-      graph.add(new GPUSort({
+      graph.add(
+        new GPUSort({
           id: `${prefix}-numeric`,
           keys: scratch.encodedKeys,
           values: scratch.sourceOrdinals,
@@ -200,10 +202,12 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
           outputValues: scratch.sortedOrdinals,
           direction: options.direction,
           algorithm: options.algorithm
-        }));
+        })
+      );
 
       addGPUGlobalSortGatherClassesPass(graph, `${prefix}-gather-classes`, scratch);
-      graph.add(new GPUSort({
+      graph.add(
+        new GPUSort({
           id: `${prefix}-classes`,
           keys: scratch.sortedKeys,
           values: scratch.sortedOrdinals,
@@ -211,7 +215,8 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
           outputValues: scratch.sourceOrdinals,
           direction: 'ascending',
           algorithm: options.algorithm
-        }));
+        })
+      );
 
       addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
         scratch,
@@ -232,14 +237,16 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
               globalOffset,
               limit: options.limit
             });
-            graph.add(new GPUVisibilityWorkflow({
+            graph.add(
+              new GPUVisibilityWorkflow({
                 id: `${prefix}-visibility-batch-${batchIndex}`,
                 predicates: [{kind: 'selection', mask: selection}],
                 outputMask: selection,
                 output: context.rowIndices.data[batchIndex],
                 count: context.selectedCounts.data[batchIndex],
                 firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
-              }));
+              })
+            );
           }
           globalOffset += batch.numRows;
           fallbackOffset += batch.numRows;

@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -223,7 +222,8 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
   const countsBuffer = createOutputBuffer(device, batchCount);
   const overflowsBuffer = createOutputBuffer(device, batchCount);
   const statisticsBuffer = createOutputBuffer(device, batchCount * 4);
-  graph.add(new GPUBatchHashJoin({
+  graph.add(
+    new GPUBatchHashJoin({
       index,
       keys: keys.vector,
       ...(leftRows ? {leftRows: leftRows.vector} : {firstLeftRow: props.firstLeftRow}),
@@ -234,7 +234,8 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
       statistics: importView(graph, 'statistics', statisticsBuffer, batchCount * 4),
       found: found.vector,
       probes: probes.vector
-    }));
+    })
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-hash-join-test'});

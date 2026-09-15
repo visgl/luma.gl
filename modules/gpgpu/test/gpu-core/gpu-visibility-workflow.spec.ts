@@ -279,11 +279,13 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  graph.add(new GPUVisibilityWorkflow({
+  graph.add(
+    new GPUVisibilityWorkflow({
       predicates: [{kind: 'bounds', mask}],
       output,
       count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-    }));
+    })
+  );
   const compiled = graph.compile();
   await encodeAndSubmit(device, compiled, 'chunked-visibility');
 

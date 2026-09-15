@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
 import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
@@ -1081,7 +1080,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
     });
     const count = graph.createDataView(countBuffer, {format: 'uint32', length: 1});
     const overflow = graph.createDataView(overflowBuffer, {format: 'uint32', length: 1});
-    graph.add(new GPUGridIndex({
+    graph.add(
+      new GPUGridIndex({
         id: 'spatial-atlas-grid',
         positions,
         gridSize: resources.gridSize,
@@ -1090,7 +1090,8 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         objectIds: rowIndices,
         count,
         overflow
-      }));
+      })
+    );
     return graph.compile();
   }
 

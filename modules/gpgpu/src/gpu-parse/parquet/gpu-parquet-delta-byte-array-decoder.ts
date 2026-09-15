@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -89,18 +88,22 @@ export class GPUParquetDeltaByteArrayDecoder {
       this.props.valueCount
     );
     addLengthPass(graph, this, valueLengths);
-    graph.add(new GPUScan({
+    graph.add(
+      new GPUScan({
         id: `${this.id}-value-offsets`,
         input: valueLengths,
         output: this.props.valueOffsets,
         mode: 'exclusive'
-      }));
-    graph.add(new GPUScan({
+      })
+    );
+    graph.add(
+      new GPUScan({
         id: `${this.id}-suffix-offsets`,
         input: this.props.suffixLengths,
         output: suffixOffsets,
         mode: 'exclusive'
-      }));
+      })
+    );
     if (this.props.outputByteCapacity > 0) {
       addReconstructionPass(graph, this, valueLengths, suffixOffsets);
     }

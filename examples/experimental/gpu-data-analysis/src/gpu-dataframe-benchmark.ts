@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
@@ -804,7 +803,8 @@ function compileStandaloneBenchmarkIndex(
     GPU_HASH_INDEX_STATISTICS_LENGTH
   );
   const firstValues = right.batches.map(batch => batch.sourceInfo?.sourceRowIndexOffset ?? 0);
-  graph.add(new GPUBatchHashIndex({
+  graph.add(
+    new GPUBatchHashIndex({
       id: 'gpu-dataframe-equivalent-right-index',
       keys,
       firstValues,
@@ -812,7 +812,8 @@ function compileStandaloneBenchmarkIndex(
       tableValues,
       statistics,
       maxProbeCount: INDEX_CAPACITY
-    }));
+    })
+  );
   return graph.compile();
 }
 

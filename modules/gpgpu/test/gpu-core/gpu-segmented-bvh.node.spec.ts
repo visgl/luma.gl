@@ -216,9 +216,7 @@ describe('GPUSegmentedBVH', () => {
     const addComputePass = vi.spyOn(otherGraph, 'addComputePass');
 
     try {
-      expect(() =>
-        otherGraph.add(fixture.hierarchy)
-      ).toThrow(/belong to the target graph/);
+      expect(() => otherGraph.add(fixture.hierarchy)).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();

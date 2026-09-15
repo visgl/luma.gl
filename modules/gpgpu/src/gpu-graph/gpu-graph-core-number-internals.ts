@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
-import {addGPUCommandNodes} from '../gpu-core/gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
@@ -134,12 +133,14 @@ export function addGPUGraphCoreNumberToGraphWithDispatchLimit<Parameters>(
   }
 
   if (state.degeneracy) {
-    commandGraph.add(new GPUReduction({
+    commandGraph.add(
+      new GPUReduction({
         id: `${state.id}-degeneracy`,
         input: state.output,
         output: state.degeneracy,
         operation: 'max'
-      }));
+      })
+    );
   }
 }
 

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../gpu-core/gpu-command-node';
 import {GPUByteRangeGather, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 
 export type GPUParquetPlainByteArrayDecoderProps = {
@@ -27,7 +26,8 @@ export class GPUParquetPlainByteArrayDecoder {
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    graph.add(new GPUByteRangeGather({
+    graph.add(
+      new GPUByteRangeGather({
         id: this.id,
         source: this.props.input,
         sourceOffsets: this.props.sourceOffsets,
@@ -36,6 +36,7 @@ export class GPUParquetPlainByteArrayDecoder {
         output: this.props.output,
         sourceByteLength: this.props.encodedByteLength,
         outputByteCapacity: this.props.outputByteLength
-      }));
+      })
+    );
   }
 }

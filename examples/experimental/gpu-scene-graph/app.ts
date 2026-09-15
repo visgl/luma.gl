@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import {Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import {AnimationLoopTemplate, Computation, Model, type AnimationProps} from '@luma.gl/engine';
 import {
@@ -257,13 +256,16 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         };
       }
     });
-    graph.add(new GPUVisibilityWorkflow({
+    graph.add(
+      new GPUVisibilityWorkflow({
         id: 'scene-graph-visible-rows',
         predicates: [{kind: 'bounds', mask: visibility.view}],
         output: visibleRows.view,
         count: visibleCount.view
-      }));
-    graph.add(new GPUSceneDrawGeneration({
+      })
+    );
+    graph.add(
+      new GPUSceneDrawGeneration({
         id: 'scene-graph-draw-generation',
         scene: source,
         visibility: visibility.view,
@@ -271,8 +273,10 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         requiredCount: requiredCount.view,
         publishedCount: publishedCount.view,
         overflow: drawOverflow.view
-      }));
-    graph.add(new GPUSceneResourceGroups({
+      })
+    );
+    graph.add(
+      new GPUSceneResourceGroups({
         id: 'scene-graph-resource-groups',
         scene: source,
         commands: commandViews,
@@ -285,7 +289,8 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         counts: groupCounts.view,
         overflows: groupOverflows.view,
         overflow: groupOverflow.view
-      }));
+      })
+    );
     graph.addComputePass({
       id: 'scene-graph-picking',
       resources: [

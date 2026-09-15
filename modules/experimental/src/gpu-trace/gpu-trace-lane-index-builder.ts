@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
@@ -152,23 +151,27 @@ export class GPUTraceLaneIndexBuilder {
     addClearPass(graph, this, laneCounts);
     if (this.stats.spanCount > 0) {
       addTimeKeyPass(graph, this, sourceTimeKeys, sourceSpanIds);
-      graph.add(new GPUSort({
+      graph.add(
+        new GPUSort({
           id: `${this.id}-start-time-sort`,
           keys: sourceTimeKeys,
           values: sourceSpanIds,
           outputKeys: timeSortedKeys,
           outputValues: timeSortedSpanIds,
           algorithm: 'radix'
-        }));
+        })
+      );
       addLaneKeyPass(graph, this, timeSortedSpanIds, timeOrderedLaneKeys);
-      graph.add(new GPUSort({
+      graph.add(
+        new GPUSort({
           id: `${this.id}-lane-sort`,
           keys: timeOrderedLaneKeys,
           values: timeSortedSpanIds,
           outputKeys: sortedLaneKeys,
           outputValues: this.output.spanIds,
           algorithm: 'radix'
-        }));
+        })
+      );
       if (this.output.startTimes && this.output.durations) {
         addGatherPass(graph, this, sortedLaneKeys, laneCounts);
       } else {
@@ -176,12 +179,14 @@ export class GPUTraceLaneIndexBuilder {
       }
     }
     if (this.stats.laneCount > 0) {
-      graph.add(new GPUScan({
+      graph.add(
+        new GPUScan({
           id: `${this.id}-lane-offsets`,
           input: laneCounts,
           output: this.output.laneOffsets,
           mode: 'exclusive'
-        }));
+        })
+      );
     }
     addOffsetSentinelPass(graph, this, laneCounts);
   }

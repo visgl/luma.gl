@@ -341,9 +341,7 @@ export class GPUProgramCompiler<Parameters = void> {
           lowering: 'explicit-command-nodes',
           reason: 'execution primitive constructs explicit command nodes'
         });
-        this.withNodeDecoration(graph, state, () =>
-          graph.add(operation)
-        );
+        this.withNodeDecoration(graph, state, () => graph.add(operation));
         return;
       }
       throw new Error(`GPUProgram operation "${id}" has no WebGPU lowering`);

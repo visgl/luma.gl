@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
@@ -145,13 +144,15 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
         this.domainOutput ??
         createTransientView(graph, `${this.id}-valid-domain`, this.input.format, 2);
       assertRasterStorageBindingFits(graph.device, resolvedDomain, `${this.id} domain`);
-      graph.add(new GPUReduction<GPURasterScalarFormat>({
+      graph.add(
+        new GPUReduction<GPURasterScalarFormat>({
           id: `${this.id}-valid-extent`,
           input: values,
           mask,
           output: resolvedDomain,
           operation: 'extent'
-        }));
+        })
+      );
       domain = resolvedDomain;
     } else {
       domain = this.domain;
@@ -160,13 +161,15 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
       }
     }
 
-    graph.add(new GPUHistogram<GPURasterScalarFormat>({
+    graph.add(
+      new GPUHistogram<GPURasterScalarFormat>({
         id: `${this.id}-bins`,
         input: values,
         mask,
         output: this.output,
         domain
-      }));
+      })
+    );
   }
 
   private resolveValidity<Parameters>(

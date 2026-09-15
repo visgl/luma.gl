@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from './gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {type CompiledGPUCommandGraph, GPUCommandGraph} from './gpu-command-graph';
 import {getGPUFFT1DSupport, GPUFFT1D, makeGPUFFT1DStats, type GPUFFT1DStrategy} from './gpu-fft1d';
@@ -205,14 +204,16 @@ function makeGPUFFT1DBenchmarkPath(
   );
   const input = graph.createDataView(inputHandle, {format: 'float32x2', length: elementCount});
   const output = graph.createDataView(outputHandle, {format: 'float32x2', length: elementCount});
-  graph.add(new GPUFFT1D({
+  graph.add(
+    new GPUFFT1D({
       id: `${benchmarkId}-${strategy}`,
       input,
       output,
       length,
       batchCount,
       strategy
-    }));
+    })
+  );
   return {strategy, outputBuffer, compiled: graph.compile()};
 }
 

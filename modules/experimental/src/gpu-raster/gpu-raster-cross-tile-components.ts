@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
@@ -348,14 +347,16 @@ export class GPURasterCrossTileComponents {
     for (const tile of this.plannedTiles) this.addTileInitialization(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativePass(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativeValidation(graph, scratch, tile);
-    graph.add(new GPUSort({
+    graph.add(
+      new GPUSort({
         id: `${this.id}-sort-global-roots`,
         keys: scratch.rootPositions,
         values: scratch.candidateIndices,
         outputKeys: scratch.sortedPositions,
         outputValues: scratch.sortedCandidates,
         direction: 'ascending'
-      }));
+      })
+    );
     this.addRankInitialization(graph, scratch);
     for (let iteration = 0; iteration < this.maximumIterations; iteration++) {
       for (const seam of this.seams) this.addSeamPass(graph, scratch, seam, iteration);
@@ -363,12 +364,14 @@ export class GPURasterCrossTileComponents {
       this.addConvergencePass(graph, scratch, iteration);
     }
     this.addRootFlagPass(graph, scratch);
-    graph.add(new GPUScan({
+    graph.add(
+      new GPUScan({
         id: `${this.id}-scan-global-roots`,
         input: scratch.rootFlags,
         output: scratch.rootOffsets,
         mode: 'exclusive'
-      }));
+      })
+    );
     this.addCountPublication(graph, scratch);
     for (const tile of this.plannedTiles) this.addTilePublication(graph, scratch, tile);
     if (this.output.pixelCounts.length > 0) {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {GPUCommandGraph, GraphDataView, GraphVectorView} from '@luma.gl/gpgpu/gpu-core';
 import {GPUGroupAggregation, type GPUGroupAggregationOperation} from '@luma.gl/gpgpu/gpu-core';
 
@@ -104,24 +103,28 @@ export class GPUTraceAggregation {
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const keys = getDimensionView(this.trace, this.dimension);
     if (this.metric === 'count') {
-      graph.add(new GPUGroupAggregation({
+      graph.add(
+        new GPUGroupAggregation({
           id: this.id,
           keys,
           mask: this.selection,
           output: this.output as GraphDataView<'uint32'>,
           operation: 'count'
-        }));
+        })
+      );
       return;
     }
 
-    graph.add(new GPUGroupAggregation({
+    graph.add(
+      new GPUGroupAggregation({
         id: this.id,
         keys,
         values: this.trace.durations,
         mask: this.selection,
         output: this.output as GraphDataView<'float32'>,
         operation: getDurationOperation(this.metric)
-      }));
+      })
+    );
   }
 }
 

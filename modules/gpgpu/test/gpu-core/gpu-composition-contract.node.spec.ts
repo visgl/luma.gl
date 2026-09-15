@@ -38,22 +38,30 @@ test('constructing a multi-level scan leaves scheduling to its caller', () => {
   device.destroy();
 });
 
-
 test('graph.add passes the graph to a typed producer and schedules mixed nodes in order', () => {
   const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
   const graph = new GPUCommandGraph<{count: number}>(device);
   const scheduled: string[] = [];
-  vi.spyOn(graph, 'addComputePass').mockImplementation(node => { scheduled.push(node.id); });
-  vi.spyOn(graph, 'addRenderPass').mockImplementation(node => { scheduled.push(node.id); });
-  vi.spyOn(graph, 'addCopyPass').mockImplementation(node => { scheduled.push(node.id); });
-  const getCommandNodes: GPUCommandNodeProducer<{count: number}>['getCommandNodes'] = vi.fn(receivedGraph => {
-    expect(receivedGraph).toBe(graph);
-    return [
-      {type: 'copy', id: 'upload', compile: () => ({encode() {}})},
-      {type: 'compute', id: 'compute', compile: () => ({encode() {}})},
-      {type: 'render', id: 'render', compile: () => ({encode() {}})}
-    ];
+  vi.spyOn(graph, 'addComputePass').mockImplementation(node => {
+    scheduled.push(node.id);
   });
+  vi.spyOn(graph, 'addRenderPass').mockImplementation(node => {
+    scheduled.push(node.id);
+  });
+  vi.spyOn(graph, 'addCopyPass').mockImplementation(node => {
+    scheduled.push(node.id);
+  });
+  const getCommandNodes = vi.fn<GPUCommandNodeProducer<{count: number}>['getCommandNodes']>(
+    receivedGraph => {
+      expect(receivedGraph).toBe(graph);
+      return [
+        {type: 'copy', id: 'upload', compile: () => ({encode() {}})},
+        {type: 'compute', id: 'compute', compile: () => ({encode() {}})},
+        {type: 'render', id: 'render', compile: () => ({encode() {}})}
+      ];
+    }
+  );
   graph.add({getCommandNodes});
   expect(getCommandNodes).toHaveBeenCalledTimes(1);
   expect(scheduled).toEqual(['upload', 'compute', 'render']);
@@ -62,6 +70,7 @@ test('graph.add passes the graph to a typed producer and schedules mixed nodes i
 
 test('graph.add rejects compiled graphs before invoking a producer, including empty producers', () => {
   const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
   const graph = new GPUCommandGraph(device);
   const getCommandNodes = vi.fn(() => []);
   graph.add({getCommandNodes});

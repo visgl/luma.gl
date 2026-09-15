@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -57,10 +56,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   const input = graph.createDataView(inputHandle, {format: 'float32', length: 12});
   const output = graph.createDataView(outputHandle, {format: 'float32', length: 12});
   const transpose = new GPUTranspose({input, output, rows: 3, columns: 4});
-  expect(
-    () => graph.add(transpose),
-    'valid transpose adds one graph node'
-  ).not.toThrow();
+  expect(() => graph.add(transpose), 'valid transpose adds one graph node').not.toThrow();
 
   const shortOutput = graph.createDataView(outputHandle, {format: 'float32', length: 11});
   expect(() => new GPUTranspose({input, output: shortOutput, rows: 3, columns: 4})).toThrow(
@@ -95,9 +91,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32', length: 12});
   const crossGraphTranspose = new GPUTranspose({input, output: otherOutput, rows: 3, columns: 4});
-  expect(() => graph.add(crossGraphTranspose)).toThrow(
-    /different GPUCommandGraph/
-  );
+  expect(() => graph.add(crossGraphTranspose)).toThrow(/different GPUCommandGraph/);
 
   const emptyGraph = new GPUCommandGraph(makeSupportDevice());
   const emptyInputHandle = emptyGraph.importBuffer({

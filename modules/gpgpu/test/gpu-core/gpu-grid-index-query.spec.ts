@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -294,7 +293,8 @@ function createQueryFixture(
     overflow: importView(graph, 'index-overflow', indexOverflow, 'uint32', 1)
   });
   graph.add(index);
-  graph.add(new GPUGridIndexQuery({
+  graph.add(
+    new GPUGridIndexQuery({
       index,
       kind: props.kind,
       query: importView(graph, 'query', query, 'float32', props.query.length),
@@ -304,7 +304,8 @@ function createQueryFixture(
       outputMask: outputMask
         ? importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength!)
         : undefined
-    }));
+    })
+  );
   return {
     compiled: graph.compile(),
     query,

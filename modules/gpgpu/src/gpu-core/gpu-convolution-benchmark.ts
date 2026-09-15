@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from './gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {type CompiledGPUCommandGraph, GPUCommandGraph} from './gpu-command-graph';
 import {
@@ -340,7 +339,8 @@ function makeGPUConvolutionBenchmarkPath(
     length: kernelWidth * kernelHeight
   });
   const output = graph.createDataView(outputHandle, {format: 'float32', length: elementCount});
-  graph.add(new GPUConvolution({
+  graph.add(
+    new GPUConvolution({
       id: `${id}-${strategy}`,
       input,
       kernel,
@@ -350,7 +350,8 @@ function makeGPUConvolutionBenchmarkPath(
       kernelWidth,
       kernelHeight,
       strategy
-    }));
+    })
+  );
   return {strategy, nodeCount, outputBuffer, compiled: graph.compile()};
 }
 

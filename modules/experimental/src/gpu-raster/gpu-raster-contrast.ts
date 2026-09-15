@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
@@ -229,12 +228,14 @@ export class GPURasterContrast {
         'uint32',
         this.histogram.length
       );
-      graph.add(new GPUScan({
+      graph.add(
+        new GPUScan({
           id: `${this.id}-histogram-cdf`,
           input: this.histogram,
           output: cumulativeHistogram,
           mode: 'inclusive'
-        }));
+        })
+      );
       histogramSummary = createTransientView(graph, `${this.id}-histogram-summary`, 'uint32', 2);
       this.addHistogramSummaryPass(graph, cumulativeHistogram, histogramSummary);
     }

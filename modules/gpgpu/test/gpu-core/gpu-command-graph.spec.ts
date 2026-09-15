@@ -1163,12 +1163,14 @@ it('GPUCompaction preserves selected order and writes indirect instance count', 
     length: values.length
   });
   const countView = graph.importGPUData('draw-count', drawCommands.getInstanceCountData(0));
-  graph.add(new GPUCompaction({
+  graph.add(
+    new GPUCompaction({
       input: valuesView,
       flags: flagsView,
       output: outputView,
       count: countView
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'compaction-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1243,7 +1245,8 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
     },
     selectedRecordBuffer
   );
-  graph.add(new GPUTextSelection({
+  graph.add(
+    new GPUTextSelection({
       glyphRows: graph.createDataView(recordsHandle, {
         format: 'uint32',
         length: 5,
@@ -1262,7 +1265,8 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
         length: records.length
       }),
       recordWordLength: 3
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'text-selection-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1750,12 +1754,14 @@ async function runCompaction(
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  graph.add(new GPUCompaction({
+  graph.add(
+    new GPUCompaction({
       input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
       flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
       output: graph.createDataView(outputHandle, {format: 'uint32', length: values.length}),
       count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: `compaction-${id}-encoder`});
   compiled.encode(commandEncoder, {parameters: undefined});

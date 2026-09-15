@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -171,7 +170,8 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
     statistics: importView(graph, 'build-statistics', buffers.buildStatistics, 6)
   });
   graph.add(index);
-  graph.add(new GPUHashJoin({
+  graph.add(
+    new GPUHashJoin({
       index,
       keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
       ...(buffers.leftRows
@@ -194,7 +194,8 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
       statistics: importView(graph, 'statistics', buffers.statistics, 4),
       found: importView(graph, 'found', buffers.found, props.leftKeys.length),
       probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
-    }));
+    })
+  );
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'hash-join-test'});

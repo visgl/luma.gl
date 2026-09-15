@@ -346,7 +346,8 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
     const inputValues = createPaddedView('values', values, 2);
     const outputKeys = createPaddedView('output-keys', new Uint32Array(length), 3);
     const outputValues = createPaddedView('output-values', new Uint32Array(length), 4);
-    graph.add(new GPUSort({
+    graph.add(
+      new GPUSort({
         id: `offset-${algorithm}`,
         keys: inputKeys.view,
         values: inputValues.view,
@@ -354,7 +355,8 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
         outputValues: outputValues.view,
         algorithm,
         direction: 'descending'
-      }));
+      })
+    );
 
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `offset-${algorithm}-encoder`});
@@ -625,10 +627,7 @@ it('GPUSort validates layouts, lengths, graph ownership, and output buffers', as
 
   const otherGraph = new GPUCommandGraph(device, {id: 'other-sort-graph'});
   const sort = new GPUSort({keys, values, outputKeys, outputValues});
-  expect(
-    () => otherGraph.add(sort),
-    'foreign graph is rejected'
-  ).toThrow(/target graph/);
+  expect(() => otherGraph.add(sort), 'foreign graph is rejected').toThrow(/target graph/);
 });
 
 it('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async () => {

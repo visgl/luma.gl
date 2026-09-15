@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {
   assert,
   Buffer,
@@ -673,7 +672,8 @@ export class GPUPagedSplatRenderer {
       this.addFeaturePass(graph, segment, depthKeys, drawCommandViews.buffer, semanticSelections);
     }
 
-    graph.add(new GPUSort({
+    graph.add(
+      new GPUSort({
         id: 'paged-gaussian-global-depth-sort',
         keys: depthKeys,
         values: sourceIndices,
@@ -682,7 +682,8 @@ export class GPUPagedSplatRenderer {
         algorithm: 'radix',
         direction: 'ascending',
         keyBits: 16
-      }));
+      })
+    );
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
     for (let segmentIndex = 0; segmentIndex < outputSegmentCount; segmentIndex++) {

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {
   GPUBatchHashIndex,
@@ -205,9 +204,7 @@ describe('GPUBatchHashIndex planning', () => {
         ...props,
         validity: createVector(other.graph, 'external-validity', [2, 0, 3])
       });
-      expect(() => fixture.graph.add(index)).toThrow(
-        /views must belong to the target graph/
-      );
+      expect(() => fixture.graph.add(index)).toThrow(/views must belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();

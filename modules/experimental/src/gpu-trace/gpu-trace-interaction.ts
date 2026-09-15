@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from '@luma.gl/gpgpu/gpu-core';
@@ -257,7 +256,8 @@ export class GPUTraceInteraction {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    graph.add(new GPUHierarchyLayout({
+    graph.add(
+      new GPUHierarchyLayout({
         id: `${this.id}-hierarchy`,
         parentStates: this.processStates,
         childStates: this.threadStates,
@@ -267,9 +267,11 @@ export class GPUTraceInteraction {
         expandedChildHeight: this.lanesPerThread,
         collapsedChildHeight: 1,
         collapsedParentHeight: 1
-      }));
+      })
+    );
 
-    graph.add(new GPUGraphTraversal({
+    graph.add(
+      new GPUGraphTraversal({
         id: `${this.id}-focus`,
         offsets: this.trace.outgoingOffsets,
         neighbors: this.trace.outgoingNeighbors,
@@ -281,29 +283,35 @@ export class GPUTraceInteraction {
         maxDepth: this.maxFocusDepth,
         activeDepth: this.focusDepth,
         direction: this.focusDirection
-      }));
+      })
+    );
 
     addPolicyPass(graph, this);
 
-    graph.add(new GPUVisibilityWorkflow({
+    graph.add(
+      new GPUVisibilityWorkflow({
         id: `${this.id}-visibility`,
         predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
         output: this.visibleSpans,
         outputMask: this.visibleMask,
         count: this.visibleCount
-      }));
+      })
+    );
 
     if (this.stats.spanCount > 0) {
-      graph.add(new GPUAncestorProjection({
+      graph.add(
+        new GPUAncestorProjection({
           id: `${this.id}-ancestors`,
           parents: this.trace.parents,
           visibility: this.visibleMask,
           output: this.projectedAncestors,
           maxDepth: this.maxAncestorDepth
-        }));
+        })
+      );
     }
 
-    graph.add(new GPUSceneDrawGeneration({
+    graph.add(
+      new GPUSceneDrawGeneration({
         id: `${this.id}-draws`,
         scene: this.trace.scene,
         visibility: this.visibleMask,
@@ -311,7 +319,8 @@ export class GPUTraceInteraction {
         requiredCount: this.draw.requiredCount,
         publishedCount: this.draw.publishedCount,
         overflow: this.draw.overflow
-      }));
+      })
+    );
   }
 }
 

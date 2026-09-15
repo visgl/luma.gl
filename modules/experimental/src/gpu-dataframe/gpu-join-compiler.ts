@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUTable, type GPUTypeMap} from '@luma.gl/experimental/gpu-tables';
@@ -336,7 +335,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     for (const [batchIndex, batch] of context.table.batches.entries()) {
       const batchId = `${id}-batch-${batchIndex}`;
       const capacity = Math.min(options.capacity ?? batch.numRows, batch.numRows);
-      context.graph.add(new GPUHashIndexQuery({
+      context.graph.add(
+        new GPUHashIndexQuery({
           id: batchId,
           index: indexState.index,
           keys: indexState.maskedLeftKeys.data[batchIndex],
@@ -345,7 +345,8 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
           probes: probeCounts.data[batchIndex],
           statistics: statistics.data[batchIndex],
           maxProbeCount: options.maxProbeCount
-        }));
+        })
+      );
 
       addGPUJoinClassifyPass(context.graph, `${batchId}-classify`, {
         matches: matches.data[batchIndex],
@@ -360,11 +361,13 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
         'uint32',
         batch.numRows
       );
-      context.graph.add(new GPUScan({
+      context.graph.add(
+        new GPUScan({
           id: `${batchId}-published-offsets`,
           input: included.data[batchIndex],
           output: offsets
-        }));
+        })
+      );
       addGPUJoinCountPass(context.graph, `${batchId}-count`, {
         included: included.data[batchIndex],
         offsets,
@@ -445,7 +448,8 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     const statistics = context.graph.importGPUVector(`${id}-query-statistics`, lookupStatistics);
 
     for (const [batchIndex, keys] of indexState.maskedLeftKeys.data.entries()) {
-      context.graph.add(new GPUHashIndexQuery({
+      context.graph.add(
+        new GPUHashIndexQuery({
           id: `${id}-batch-${batchIndex}`,
           index: indexState.index,
           keys,
@@ -454,7 +458,8 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
           probes: probes.data[batchIndex],
           statistics: statistics.data[batchIndex],
           maxProbeCount: options.maxProbeCount
-        }));
+        })
+      );
     }
 
     const resources: GPULookupResources<Right> = {

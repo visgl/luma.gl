@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -84,7 +83,8 @@ async function runOperator(
     format: outputComponents === 1 ? 'float32' : 'float32x4',
     length: RESOLUTION ** 3
   });
-  graph.add(new GPUFiniteDifference3D({
+  graph.add(
+    new GPUFiniteDifference3D({
       input,
       output,
       width: RESOLUTION,
@@ -92,7 +92,8 @@ async function runOperator(
       depth: RESOLUTION,
       spacing: [SPACING, SPACING, SPACING],
       operator
-    }));
+    })
+  );
   const compiled = graph.compile();
   try {
     const encoder = device.createCommandEncoder({id: `${operator}-3d-test`});

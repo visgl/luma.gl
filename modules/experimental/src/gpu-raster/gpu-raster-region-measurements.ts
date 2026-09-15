@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
@@ -259,58 +258,72 @@ export class GPURasterRegionMeasurements {
       rowValues,
       rasterDispatch
     );
-    graph.add(new GPUGroupAggregation({
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-pixel-count`,
         keys: groupKeys,
         mask: topologyMask,
         output: this.output.pixelCounts
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-intensity-count`,
         keys: groupKeys,
         mask: intensityMask,
         output: this.output.intensityCounts
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-intensity-sum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensitySums,
         operation: 'sum'
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-intensity-minimum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensityMinimums,
         operation: 'min'
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-intensity-maximum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensityMaximums,
         operation: 'max'
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-column-sum`,
         keys: groupKeys,
         values: columnValues,
         mask: topologyMask,
         output: this.output.columnSums,
         operation: 'sum'
-      }));
-    graph.add(new GPUGroupAggregation({
+      })
+    );
+    graph.add(
+      new GPUGroupAggregation({
         id: `${this.id}-row-sum`,
         keys: groupKeys,
         values: rowValues,
         mask: topologyMask,
         output: this.output.rowSums,
         operation: 'sum'
-      }));
+      })
+    );
     this.addIntensityMeanPass(graph, groupDispatch);
     this.addGeometryPass(graph, groupDispatch);
   }

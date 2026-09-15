@@ -198,9 +198,7 @@ describe('GPUSegmentedSort', () => {
     const addComputePass = vi.spyOn(otherGraph, 'addComputePass');
 
     try {
-      expect(() =>
-        otherGraph.add(fixture.sort)
-      ).toThrow(/belong to the target graph/);
+      expect(() => otherGraph.add(fixture.sort)).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();

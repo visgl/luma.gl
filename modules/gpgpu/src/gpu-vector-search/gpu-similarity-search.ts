@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
-import {addGPUCommandNodes} from '../gpu-core/gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -677,13 +676,15 @@ function createCandidateMembershipIndex<Parameters>(
     'uint32',
     6
   );
-  graph.add(new GPUHashIndex({
+  graph.add(
+    new GPUHashIndex({
       id: `${search.id}-candidate-index`,
       keys: search.candidateIds,
       tableKeys,
       tableValues,
       statistics
-    }));
+    })
+  );
   return {keys: tableKeys, statistics, capacity};
 }
 

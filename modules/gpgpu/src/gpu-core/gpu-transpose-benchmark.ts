@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from './gpu-command-node';
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {

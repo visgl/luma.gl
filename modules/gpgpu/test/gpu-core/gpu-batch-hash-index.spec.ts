@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -189,7 +188,8 @@ async function runBatchHashIndex(device: Device, fixture: BatchHashIndexFixture)
     statistics: buildStatistics.view
   });
   graph.add(index);
-  graph.add(new GPUHashIndexQuery({
+  graph.add(
+    new GPUHashIndexQuery({
       id: 'browser-batch-query',
       index,
       keys: queryKeys,
@@ -197,7 +197,8 @@ async function runBatchHashIndex(device: Device, fixture: BatchHashIndexFixture)
       found: found.view,
       probes: probes.view,
       statistics: queryStatistics.view
-    }));
+    })
+  );
 
   const compiled = graph.compile();
   try {

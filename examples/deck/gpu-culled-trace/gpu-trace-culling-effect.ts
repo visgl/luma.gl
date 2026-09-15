@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -252,13 +251,15 @@ export class GPUTraceCullingEffect implements Effect {
       rowFlags: rowFlagView,
       cullingCounts
     });
-    graph.add(new GPUCompaction({
+    graph.add(
+      new GPUCompaction({
         id: 'visible-block-compaction',
         input: sourceIds,
         flags: rowFlagView,
         output: visibleIdView,
         count: blockCount
-      }));
+      })
+    );
 
     if (this.textSelection) {
       const {source, selectedGlyphIds, selectedGlyphRecords, drawCommands} = this.textSelection;
@@ -272,7 +273,8 @@ export class GPUTraceCullingEffect implements Effect {
         byteOffset: UINT32_BYTE_LENGTH * 2,
         byteStride: source.recordWordLength * UINT32_BYTE_LENGTH
       });
-      graph.add(new GPUTextSelection({
+      graph.add(
+        new GPUTextSelection({
           id: 'visible-text-selection',
           glyphRows,
           rowFlags: rowFlagView,
@@ -294,7 +296,8 @@ export class GPUTraceCullingEffect implements Effect {
             length: source.glyphCount * source.recordWordLength
           }),
           recordWordLength: source.recordWordLength
-        }));
+        })
+      );
     }
     this.compiled = graph.compile();
     this.publishStats();

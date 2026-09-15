@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -137,14 +136,16 @@ it('GPUGallopingSearch supports uint32 values, empty segments, and offset views'
   const segments = makeView(device, graph, 'segments', 'uint32', [0, 5, 0, 4, 5, 0, 4, 0]);
   const output = makeView(device, graph, 'output', 'uint32', [99, 99, 99, 99, 99, 99], 1, 4);
   const validationErrors = makeView(device, graph, 'errors', 'uint32', [0]);
-  graph.add(new GPUGallopingSearch({
+  graph.add(
+    new GPUGallopingSearch({
       values: values.view,
       queries: queries.view,
       segments: segments.view,
       maximumQueryCount: 4,
       output: output.view,
       validationErrors: validationErrors.view
-    }));
+    })
+  );
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});

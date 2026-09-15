@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import React, {type ReactNode, useEffect, useId, useState} from 'react';
 import {Buffer, type Device} from '@luma.gl/core';
 import {type CompiledGPUCommandGraph, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';

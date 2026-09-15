@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -1205,13 +1204,15 @@ async function runGroupStatistic(
     ? importView(graph, 'group-mask', maskBuffer, 'uint32', mask!.length)
     : undefined;
   const output = importView(graph, 'group-statistic', outputBuffer, 'float32', groupCount);
-  graph.add(new GPUGroupAggregation({
+  graph.add(
+    new GPUGroupAggregation({
       keys: keysView,
       values: valuesView,
       mask: maskView,
       output,
       operation
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'group-statistic-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1385,12 +1386,14 @@ async function runGrid(
     boundsBuffer = createInputBuffer(device, Float32Array.from(bounds));
     gridBounds = importView(graph, 'bounds', boundsBuffer, 'float32x4', 1);
   }
-  graph.add(new GPUGridBinning({
+  graph.add(
+    new GPUGridBinning({
       positions: positionsView as never,
       output,
       gridSize,
       bounds: gridBounds as never
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'grid-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1472,14 +1475,16 @@ async function runGridAggregation(
     boundsBuffer = createInputBuffer(device, Float32Array.from(bounds));
     aggregationBounds = importView(graph, 'bounds', boundsBuffer, 'float32x4', 1);
   }
-  graph.add(new GPUGridAggregation({
+  graph.add(
+    new GPUGridAggregation({
       positions,
       weights,
       output,
       operation,
       gridSize,
       bounds: aggregationBounds as never
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'grid-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1539,14 +1544,16 @@ async function runVectorGridAggregation(
   const positions = graph.importGPUVector('positions', positionsVector);
   const weights = graph.importGPUVector('weights', weightsVector);
   const output = importView(graph, 'output', outputBuffer, 'float32', gridSize[0] * gridSize[1]);
-  graph.add(new GPUGridAggregation({
+  graph.add(
+    new GPUGridAggregation({
       positions,
       weights,
       output,
       operation,
       gridSize,
       bounds
-    }));
+    })
+  );
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-grid-aggregation-test'});
   compiled.encode(commandEncoder, {parameters: undefined});

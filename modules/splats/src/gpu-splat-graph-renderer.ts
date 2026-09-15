@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {assert, Buffer, type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {
@@ -610,7 +609,8 @@ export class GPUSplatGraphRenderer {
       });
     }
 
-    graph.add(new GPUSort({
+    graph.add(
+      new GPUSort({
         id: 'gaussian-splat-global-depth-sort',
         keys: depthKeys,
         values: sourceIndices,
@@ -619,7 +619,8 @@ export class GPUSplatGraphRenderer {
         algorithm: 'radix',
         direction: 'ascending',
         keyBits: 16
-      }));
+      })
+    );
 
     const firstUniformBuffer = this.batchUniforms[0];
     if (!firstUniform) {

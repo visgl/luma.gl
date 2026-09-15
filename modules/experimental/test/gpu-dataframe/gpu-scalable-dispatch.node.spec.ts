@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer} from '@luma.gl/core';
 import {
   GPUCommandGraph,
@@ -48,12 +47,14 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        graph.add(new GPUReduction({
+        graph.add(
+          new GPUReduction({
             id: 'bounded-reduction',
             input,
             output,
             operation: 'sum'
-          }))
+          })
+        )
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         expect.arrayContaining(['bounded-reduction-level-0', 'bounded-reduction-level-1'])
@@ -72,12 +73,14 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        graph.add(new GPUHistogram({
+        graph.add(
+          new GPUHistogram({
             id: 'bounded-histogram',
             input,
             output,
             domain: [0, 1_025]
-          }))
+          })
+        )
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'bounded-histogram-clear',
@@ -98,13 +101,15 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        graph.add(new GPUGroupAggregation({
+        graph.add(
+          new GPUGroupAggregation({
             id: 'bounded-groups',
             keys,
             values,
             output,
             operation: 'mean'
-          }))
+          })
+        )
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         expect.arrayContaining(['bounded-groups-initialize', 'bounded-groups-finalize'])

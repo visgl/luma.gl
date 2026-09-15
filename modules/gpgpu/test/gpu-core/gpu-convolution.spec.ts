@@ -1,4 +1,3 @@
-import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -165,7 +164,8 @@ async function runGPUConvolution(
   const input = importFloatView(graph, 'input', inputBuffer, inputValues.length);
   const kernel = importFloatView(graph, 'kernel', kernelBuffer, kernelValues.length);
   const output = importFloatView(graph, 'output', outputBuffer, inputValues.length);
-  graph.add(new GPUConvolution({
+  graph.add(
+    new GPUConvolution({
       input,
       kernel,
       output,
@@ -175,7 +175,8 @@ async function runGPUConvolution(
       kernelHeight,
       strategy,
       boundary
-    }));
+    })
+  );
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: `gpu-convolution-${strategy}`});
