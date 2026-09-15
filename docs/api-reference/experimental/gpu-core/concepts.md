@@ -150,3 +150,8 @@ indirect draws, readback cadence, and GPU duration. Row count alone is not a suf
 - [`GPUTextureHistory`](./gpu-texture-history) manages rotating retained texture state.
 - [`GPUReadbackRing`](./gpu-readback-ring) supports bounded asynchronous readback.
 - The [GPU Core overview](/docs/api-reference/experimental/gpu-core) indexes reusable operations and domain modules.
+
+## Batch semantics
+
+See [batch semantics and coverage](../../../api-guide/gpu/batch-semantics.md) for logical row alignment, physical
+chunk preservation, empty results, aliasing, and the audited operation families.

@@ -145,10 +145,11 @@ it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
     await readUint32(outputBuffer, 4),
     'each nonempty source chunk uses its matching mask chunk'
   ).toEqual([1, 0, 0, 2]);
-  expect(
-    compiled.stats.nodeOrder,
-    'empty aligned chunks retain their index without a dispatch'
-  ).toEqual(['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local']);
+  expect(compiled.stats.nodeOrder, 'only non-empty aligned spans dispatch').toEqual([
+    'gpu-histogram-clear',
+    'gpu-histogram-chunk-0-local',
+    'gpu-histogram-chunk-1-local'
+  ]);
   expect(
     compiled.stats.logicalTransientBufferCount,
     'masked vector accumulation does not concatenate chunks or allocate scratch buffers'
@@ -188,7 +189,7 @@ it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
   ).toEqual([
     'gpu-histogram-clear',
     'gpu-histogram-chunk-0-edges-local',
-    'gpu-histogram-chunk-2-edges-local'
+    'gpu-histogram-chunk-1-edges-local'
   ]);
   irregularCompiled.destroy();
 
@@ -312,12 +313,12 @@ it('GPUHistogram validates mask layout, topology, ownership, and aliases', async
   const vectorMask = graph.importGPUVector('vector-masks', vectorMasks.vector);
   expect(
     () => new GPUHistogram({input: vectorInput, mask: shortMask, output, domain: [0, 3]}),
-    'vector input cannot use a single atomic mask view'
-  ).toThrow(/same view kind/);
+    'vector input still requires equal logical lengths'
+  ).toThrow(/lengths must match/);
   expect(
     () => new GPUHistogram({input: vectorInput, mask: vectorMask, output, domain: [0, 3]}),
-    'vector masks must preserve every source chunk boundary'
-  ).toThrow(/same chunk topology/);
+    'vector masks may use different chunk boundaries'
+  ).not.toThrow();
 
   const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-histogram-mask'});
   const foreignMask = importView(foreignGraph, 'foreign-mask', maskBuffer, 'uint32', 4);

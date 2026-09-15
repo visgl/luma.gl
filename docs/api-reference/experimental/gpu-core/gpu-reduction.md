@@ -110,3 +110,13 @@ bandwidth-bound graphs may improve less.
 
 Declares reduction levels and a final normalization pass. It does not compile, encode, submit,
 map, or destroy imported buffers.
+
+## Batch selection
+
+An optional `uint32` mask selects rows by logical index: zero excludes a row and any nonzero
+value includes it. Input and mask must have equal logical lengths, but may use different chunk
+boundaries or mix a data view with a vector. Lowering creates borrowed slices at shared boundaries;
+it never concatenates or uploads input data. Empty chunks contribute no rows. The output is
+reinitialized on every encoding.
+
+See the [batch semantics contract](../../../api-guide/gpu/batch-semantics.md) for layout, alias, and empty-result rules.

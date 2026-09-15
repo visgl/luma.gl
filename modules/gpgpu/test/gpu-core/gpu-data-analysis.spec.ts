@@ -332,7 +332,7 @@ it('GPUHistogram accumulates fixed-width GPUVector chunks after one clear', asyn
   expect(literal.counts, 'every non-empty chunk contributes counts').toEqual([1, 1, 1, 2]);
   expect(
     literal.nodeOrder,
-    'one clear precedes ordered per-chunk accumulation and empty chunks keep their source index'
+    'one clear precedes ordered aligned-span accumulation and empty chunks keep their source index'
   ).toEqual(['gpu-histogram-clear', 'gpu-histogram-chunk-0-local', 'gpu-histogram-chunk-2-local']);
   expect(
     literal.logicalTransientBufferCount,
@@ -554,10 +554,10 @@ it('GPUGroupAggregation preserves aligned vector chunks', async () => {
     4
   );
   expect(result.counts, 'aligned non-empty chunks share dense counts').toEqual([1, 1, 0, 1]);
-  expect(result.nodeOrder, 'one clear precedes ordered per-chunk accumulation').toEqual([
+  expect(result.nodeOrder, 'one clear precedes ordered aligned-span accumulation').toEqual([
     'gpu-group-aggregation-clear',
     'gpu-group-aggregation-chunk-0-local',
-    'gpu-group-aggregation-chunk-2-local'
+    'gpu-group-aggregation-chunk-1-local'
   ]);
   expect(
     result.logicalTransientBufferCount,
@@ -579,7 +579,7 @@ it('GPUGroupAggregation preserves aligned vector chunks', async () => {
   ).toEqual([
     'gpu-group-aggregation-initialize',
     'gpu-group-aggregation-chunk-0-mean',
-    'gpu-group-aggregation-chunk-2-mean',
+    'gpu-group-aggregation-chunk-1-mean',
     'gpu-group-aggregation-finalize'
   ]);
   expect(mean.logicalTransientBufferCount, 'mean owns one transient group-count buffer').toBe(1);

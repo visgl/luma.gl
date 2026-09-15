@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {alignGraphVectorViews} from './graph-vector-view-utils';
+
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -20,7 +22,6 @@ import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedView,
   validatePackedUint32View
 } from './graph-data-view-utils';
@@ -40,10 +41,10 @@ type GPUGroupAggregationDispatchLayout = GPUBoundedDispatchLayout;
 /** One scalar group-key chunk or an ordered vector of scalar group-key chunks. */
 export type GPUGroupAggregationKeys = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Optional nonzero/zero row selection with the same topology as the group keys. */
+/** Optional nonzero/zero row selection with the same logical length as the group keys. */
 export type GPUGroupAggregationMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
-/** Optional floating-point contributions with the same topology as the group keys. */
+/** Optional floating-point contributions with the same logical length as the group keys. */
 export type GPUGroupAggregationValues = GraphDataView<'float32'> | GraphVectorView<'float32'>;
 
 /** Statistic computed by {@link GPUGroupAggregation}. */
@@ -54,7 +55,7 @@ type GPUGroupAggregationBaseProps = {
   id?: string;
   /** Dense unsigned group keys. Keys outside the output range are ignored. */
   keys: GPUGroupAggregationKeys;
-  /** Optional nonzero/zero selection with the same view kind and chunk topology as `keys`. */
+  /** Optional nonzero/zero selection with the same logical length as `keys`; chunk boundaries may differ. */
   mask?: GPUGroupAggregationMask;
 };
 
@@ -69,7 +70,7 @@ export type GPUGroupAggregationProps = GPUGroupAggregationBaseProps &
         values?: never;
       }
     | {
-        /** One finite floating-point contribution per key with identical chunk topology. */
+        /** One finite floating-point contribution per key with equal logical length. */
         values: GPUGroupAggregationValues;
         /** Caller-owned floating-point group statistics. */
         output: GraphDataView<'float32'>;
@@ -92,7 +93,7 @@ export class GPUGroupAggregation {
   readonly id: string;
   /** Packed group keys or ordered group-key vector. */
   readonly keys: GPUGroupAggregationKeys;
-  /** Optional packed values with the same view kind and chunk topology as keys. */
+  /** Optional packed values with the same logical length as keys. */
   readonly values?: GPUGroupAggregationValues;
   /** Caller-owned dense group result. */
   readonly output: GraphDataView<'uint32'> | GraphDataView<'float32'>;
@@ -167,9 +168,9 @@ export class GPUGroupAggregation {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const keyChunks = getGroupChunks(this.keys);
-    const maskChunks = this.mask ? getGroupChunks(this.mask) : undefined;
-    const valueChunks = this.values ? getValueChunks(this.values) : undefined;
+    let keyChunks = getGroupChunks(this.keys);
+    let maskChunks = this.mask ? getGroupChunks(this.mask) : undefined;
+    let valueChunks = this.values ? getValueChunks(this.values) : undefined;
     if (
       keyChunks.some(chunk => chunk.buffer.graph !== graph) ||
       maskChunks?.some(chunk => chunk.buffer.graph !== graph) ||
@@ -177,6 +178,16 @@ export class GPUGroupAggregation {
       this.output.buffer.graph !== graph
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
+    }
+    if (this.values) {
+      const spans = alignGraphVectorViews(graph, [this.keys, this.values, this.mask ?? this.keys]);
+      keyChunks = spans.map(([keys]) => keys);
+      valueChunks = spans.map(([, values]) => values);
+      maskChunks = this.mask ? spans.map(([, , mask]) => mask) : undefined;
+    } else if (this.mask) {
+      const spans = alignGraphVectorViews(graph, [this.keys, this.mask]);
+      keyChunks = spans.map(([keys]) => keys);
+      maskChunks = spans.map(([, mask]) => mask);
     }
 
     if (this.operation === 'count') {
@@ -189,7 +200,7 @@ export class GPUGroupAggregation {
         nodes.push(
           ...addGroupCountPass(graph, {
             id:
-              this.keys instanceof GraphVectorView
+              this.keys instanceof GraphVectorView || keyChunks.length > 1
                 ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
                 : `${this.id}-${accumulationPath}`,
             keys,
@@ -217,7 +228,10 @@ export class GPUGroupAggregation {
       if (keys.length === 0) continue;
       nodes.push(
         ...addGroupStatisticPass(graph, {
-          id: this.keys instanceof GraphVectorView ? `${this.id}-chunk-${chunkIndex}` : this.id,
+          id:
+            this.keys instanceof GraphVectorView || keyChunks.length > 1
+              ? `${this.id}-chunk-${chunkIndex}`
+              : this.id,
           keys,
           values: valueChunks![chunkIndex],
           mask: maskChunks?.[chunkIndex],
@@ -271,18 +285,13 @@ function getValueChunks(input: GPUGroupAggregationValues): readonly GraphDataVie
   return input instanceof GraphVectorView ? input.data : [input];
 }
 
-/** Validates atomic/vector kind, row count, and ordered vector chunk lengths. */
+/** Validates row correspondence independently of physical chunk boundaries. */
 function validateMatchingInputs(
   keys: GPUGroupAggregationKeys,
   paired: GPUGroupAggregationMask | GPUGroupAggregationValues,
   label: string
 ): void {
-  if (keys instanceof GraphVectorView !== paired instanceof GraphVectorView) {
-    throw new Error(`${label} must use the same view kind`);
-  }
-  if (keys instanceof GraphVectorView && paired instanceof GraphVectorView) {
-    validateMatchingVectorTopology(keys, paired, label);
-  } else if (keys.length !== paired.length) {
+  if (keys.length !== paired.length) {
     throw new Error(`${label} lengths must match`);
   }
 }
