@@ -34,11 +34,11 @@ when the destination is in range. Out-of-range destinations are ignored. Source 
 the same packed fixed-width GPU format.
 
 ```ts
-addGPUCommandNodes(graph, new GPUScatter({
+graph.add(new GPUScatter({
   source,
   indices,
   output
-}).getCommandNodes(graph));
+}));
 ```
 
 Rows are copied as 32-bit words so floating-point and integer fixed-width formats share one kernel.

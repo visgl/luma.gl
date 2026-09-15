@@ -202,7 +202,7 @@ function createFixture(
     count: importView(graph, 'bvh-count', bvhCount, 'uint32', 1),
     overflow: importView(graph, 'bvh-overflow', bvhOverflow, 'uint32', 1)
   });
-  addGPUCommandNodes(graph, bvh.getCommandNodes(graph));
+  graph.add(bvh);
   const bvhQuery = new GPUBVHQuery({
     id: 'test-bvh-query',
     bvh,
@@ -214,7 +214,7 @@ function createFixture(
     outputMask: importView(graph, 'output-mask', outputMask, 'uint32', props.maskLength),
     visitedCount: importView(graph, 'visited-count', visitedCount, 'uint32', 1)
   });
-  addGPUCommandNodes(graph, bvhQuery.getCommandNodes(graph));
+  graph.add(bvhQuery);
   return {
     compiled: graph.compile(),
     workflow: bvhQuery,

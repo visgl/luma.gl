@@ -229,15 +229,12 @@ export class GPURasterContrast {
         'uint32',
         this.histogram.length
       );
-      addGPUCommandNodes(
-        graph,
-        new GPUScan({
+      graph.add(new GPUScan({
           id: `${this.id}-histogram-cdf`,
           input: this.histogram,
           output: cumulativeHistogram,
           mode: 'inclusive'
-        }).getCommandNodes(graph)
-      );
+        }));
       histogramSummary = createTransientView(graph, `${this.id}-histogram-summary`, 'uint32', 2);
       this.addHistogramSummaryPass(graph, cumulativeHistogram, histogramSummary);
     }

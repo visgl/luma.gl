@@ -64,7 +64,7 @@ const sort = new GPUSegmentedSort({
   ]
 });
 
-addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+graph.add(sort);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'sort-packed-meshes'});

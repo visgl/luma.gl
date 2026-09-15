@@ -334,7 +334,7 @@ it('GPUGridIndex preserves vector chunks and rebuilds after input updates', asyn
     bounds: [0, 0, 2, 2],
     ...importIndexOutputs(graph, outputs, 4, 4)
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  graph.add(index);
   const compiled = graph.compile();
 
   encode(device, compiled);
@@ -409,7 +409,7 @@ async function runGridIndex(
     ...importIndexOutputs(graph, outputs, cellCount, capacity)
   });
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    addGPUCommandNodes(graph, index.getCommandNodes(graph));
+    graph.add(index);
   } else {
     addGPUCommandNodes(
       graph,

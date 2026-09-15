@@ -118,9 +118,9 @@ const propertyIndex = new GPUHashIndex({
   tableValues,
   statistics: indexStatistics
 });
-addGPUCommandNodes(graph, propertyIndex.getCommandNodes(graph));
+graph.add(propertyIndex);
 
-addGPUCommandNodes(graph, new GPUHashJoin({
+graph.add(new GPUHashJoin({
   index: propertyIndex,
   keys: visibleObjectIds,
   firstLeftRow: visibleBaseRow,
@@ -130,20 +130,20 @@ addGPUCommandNodes(graph, new GPUHashJoin({
   overflow: matchOverflow,
   statistics: lookupStatistics,
   found: visibleObjectsWithProperties
-}).getCommandNodes(graph));
+}));
 ```
 
 For an aligned left join without compaction, use the underlying query directly:
 
 ```ts
-addGPUCommandNodes(graph, new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
   index: propertyIndex,
   keys: visibleObjectIds,
   values: propertyRowsOrEmpty,
   found: visibleObjectsWithProperties,
   probes: lookupProbeCounts,
   statistics: lookupStatistics
-}).getCommandNodes(graph));
+}));
 ```
 
 ## Constructor

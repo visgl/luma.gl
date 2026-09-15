@@ -34,12 +34,12 @@ not evaluate geometric, temporal, or application-specific predicates itself.
 ```ts
 import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
 
-addGPUCommandNodes(graph, new GPUMask({
+graph.add(new GPUMask({
   id: 'visible-focused-records',
   inputs: [viewportMask, hierarchyMask, focusedSelectionMask],
   output: visibleRecordMask,
   operation: 'and'
-}).getCommandNodes(graph));
+}));
 ```
 
 Every nonzero input is true. Outputs are canonical `0` or `1` and can feed `GPUScan`,

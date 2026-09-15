@@ -40,7 +40,7 @@ describe('GPUBatchHashIndex planning', () => {
       expect(index.updatePolicy).toBe('rebuild');
       expect(createBuffer).not.toHaveBeenCalled();
 
-      addGPUCommandNodes(fixture.graph, index.getCommandNodes(fixture.graph));
+      fixture.graph.add(index);
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'node-batch-index-initialize',
@@ -181,12 +181,7 @@ describe('GPUBatchHashIndex planning', () => {
       const createBuffer = vi.spyOn(fixture.device, 'createBuffer');
 
       try {
-        addGPUCommandNodes(
-          fixture.graph,
-          new GPUBatchHashIndex(createIndexProps(fixture.graph, lengths)).getCommandNodes(
-            fixture.graph
-          )
-        );
+        fixture.graph.add(new GPUBatchHashIndex(createIndexProps(fixture.graph, lengths)));
         expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
           'node-batch-index-initialize'
         ]);
@@ -210,7 +205,7 @@ describe('GPUBatchHashIndex planning', () => {
         ...props,
         validity: createVector(other.graph, 'external-validity', [2, 0, 3])
       });
-      expect(() => addGPUCommandNodes(fixture.graph, index.getCommandNodes(fixture.graph))).toThrow(
+      expect(() => fixture.graph.add(index)).toThrow(
         /views must belong to the target graph/
       );
       expect(addComputePass).not.toHaveBeenCalled();

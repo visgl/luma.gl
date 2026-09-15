@@ -583,9 +583,7 @@ function createQueryFixture(device: Device, props: QueryFixtureProps): QueryFixt
       'uint32',
       1
     );
-    addGPUCommandNodes(
-      graph,
-      new GPUGridIndex({
+    graph.add(new GPUGridIndex({
         id: `${props.id}-index`,
         positions,
         gridSize: props.gridSize,
@@ -594,8 +592,7 @@ function createQueryFixture(device: Device, props: QueryFixtureProps): QueryFixt
         objectIds: rowIndices,
         count: indexCount,
         overflow: indexOverflow
-      }).getCommandNodes(graph)
-    );
+      }));
     index = {
       gridSize: props.gridSize,
       bounds: props.indexBounds,

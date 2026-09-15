@@ -257,9 +257,7 @@ export class GPUTraceInteraction {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUHierarchyLayout({
+    graph.add(new GPUHierarchyLayout({
         id: `${this.id}-hierarchy`,
         parentStates: this.processStates,
         childStates: this.threadStates,
@@ -269,12 +267,9 @@ export class GPUTraceInteraction {
         expandedChildHeight: this.lanesPerThread,
         collapsedChildHeight: 1,
         collapsedParentHeight: 1
-      }).getCommandNodes(graph)
-    );
+      }));
 
-    addGPUCommandNodes(
-      graph,
-      new GPUGraphTraversal({
+    graph.add(new GPUGraphTraversal({
         id: `${this.id}-focus`,
         offsets: this.trace.outgoingOffsets,
         neighbors: this.trace.outgoingNeighbors,
@@ -286,38 +281,29 @@ export class GPUTraceInteraction {
         maxDepth: this.maxFocusDepth,
         activeDepth: this.focusDepth,
         direction: this.focusDirection
-      }).getCommandNodes(graph)
-    );
+      }));
 
     addPolicyPass(graph, this);
 
-    addGPUCommandNodes(
-      graph,
-      new GPUVisibilityWorkflow({
+    graph.add(new GPUVisibilityWorkflow({
         id: `${this.id}-visibility`,
         predicates: [{kind: ['time-range', 'bounds', 'selection'], mask: this.visibleMask}],
         output: this.visibleSpans,
         outputMask: this.visibleMask,
         count: this.visibleCount
-      }).getCommandNodes(graph)
-    );
+      }));
 
     if (this.stats.spanCount > 0) {
-      addGPUCommandNodes(
-        graph,
-        new GPUAncestorProjection({
+      graph.add(new GPUAncestorProjection({
           id: `${this.id}-ancestors`,
           parents: this.trace.parents,
           visibility: this.visibleMask,
           output: this.projectedAncestors,
           maxDepth: this.maxAncestorDepth
-        }).getCommandNodes(graph)
-      );
+        }));
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUSceneDrawGeneration({
+    graph.add(new GPUSceneDrawGeneration({
         id: `${this.id}-draws`,
         scene: this.trace.scene,
         visibility: this.visibleMask,
@@ -325,8 +311,7 @@ export class GPUTraceInteraction {
         requiredCount: this.draw.requiredCount,
         publishedCount: this.draw.publishedCount,
         overflow: this.draw.overflow
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }
 

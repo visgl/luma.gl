@@ -489,7 +489,7 @@ function importView<T extends 'float32x2' | 'float32x3' | 'uint32x2' | 'uint32'>
 }
 
 function compileFixture(fixture: SegmentedBVHFixture): CompiledGPUCommandGraph {
-  addGPUCommandNodes(fixture.graph, fixture.hierarchy.getCommandNodes(fixture.graph));
+  fixture.graph.add(fixture.hierarchy);
   return fixture.graph.compile();
 }
 

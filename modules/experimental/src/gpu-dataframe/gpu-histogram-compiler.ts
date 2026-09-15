@@ -126,19 +126,9 @@ function addGPUHistogramToGraph<Selection extends GPUTypeMap>(
     addGPUHistogramBinIdentityPass(context.graph, `${prefix}-initialize-bins`, binView);
 
     if ('edges' in options) {
-      addGPUCommandNodes(
-        context.graph,
-        new GPUHistogram({id: prefix, input, output, mask, edges: options.edges}).getCommandNodes(
-          context.graph
-        )
-      );
+      context.graph.add(new GPUHistogram({id: prefix, input, output, mask, edges: options.edges}));
     } else {
-      addGPUCommandNodes(
-        context.graph,
-        new GPUHistogram({id: prefix, input, output, mask, domain: options.domain}).getCommandNodes(
-          context.graph
-        )
-      );
+      context.graph.add(new GPUHistogram({id: prefix, input, output, mask, domain: options.domain}));
     }
 
     const fields: GPUField[] = [

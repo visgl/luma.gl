@@ -95,9 +95,9 @@ const featureIndex = new GPUBatchHashIndex({
   statistics: featureIndexStatistics,
   maxProbeCount: 32
 });
-addGPUCommandNodes(graph, featureIndex.getCommandNodes(graph));
+graph.add(featureIndex);
 
-addGPUCommandNodes(graph, new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
   id: 'lookup-visible-features',
   index: featureIndex,
   keys: selectedFeatureIds,
@@ -105,7 +105,7 @@ addGPUCommandNodes(graph, new GPUHashIndexQuery({
   found: matchedFeatureMask,
   probes: lookupProbeCounts,
   statistics: lookupStatistics
-}).getCommandNodes(graph));
+}));
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder();
@@ -131,9 +131,9 @@ const propertyIndex = new GPUBatchHashIndex({
   tableValues,
   statistics: indexStatistics
 });
-addGPUCommandNodes(graph, propertyIndex.getCommandNodes(graph));
+graph.add(propertyIndex);
 
-addGPUCommandNodes(graph, new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
   id: 'join-instance-batches',
   index: propertyIndex,
   keys: instanceIdentifierBatches,
@@ -142,7 +142,7 @@ addGPUCommandNodes(graph, new GPUBatchHashJoin({
   counts: requiredMatchCounts,
   overflows: batchOverflows,
   statistics: batchLookupStatistics
-}).getCommandNodes(graph));
+}));
 ```
 
 Left and right chunk topologies do not need to match. Right-side chunks contribute to one shared

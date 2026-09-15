@@ -804,9 +804,7 @@ function compileStandaloneBenchmarkIndex(
     GPU_HASH_INDEX_STATISTICS_LENGTH
   );
   const firstValues = right.batches.map(batch => batch.sourceInfo?.sourceRowIndexOffset ?? 0);
-  addGPUCommandNodes(
-    graph,
-    new GPUBatchHashIndex({
+  graph.add(new GPUBatchHashIndex({
       id: 'gpu-dataframe-equivalent-right-index',
       keys,
       firstValues,
@@ -814,8 +812,7 @@ function compileStandaloneBenchmarkIndex(
       tableValues,
       statistics,
       maxProbeCount: INDEX_CAPACITY
-    }).getCommandNodes(graph)
-  );
+    }));
   return graph.compile();
 }
 

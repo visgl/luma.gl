@@ -152,29 +152,23 @@ export class GPUTraceLaneIndexBuilder {
     addClearPass(graph, this, laneCounts);
     if (this.stats.spanCount > 0) {
       addTimeKeyPass(graph, this, sourceTimeKeys, sourceSpanIds);
-      addGPUCommandNodes(
-        graph,
-        new GPUSort({
+      graph.add(new GPUSort({
           id: `${this.id}-start-time-sort`,
           keys: sourceTimeKeys,
           values: sourceSpanIds,
           outputKeys: timeSortedKeys,
           outputValues: timeSortedSpanIds,
           algorithm: 'radix'
-        }).getCommandNodes(graph)
-      );
+        }));
       addLaneKeyPass(graph, this, timeSortedSpanIds, timeOrderedLaneKeys);
-      addGPUCommandNodes(
-        graph,
-        new GPUSort({
+      graph.add(new GPUSort({
           id: `${this.id}-lane-sort`,
           keys: timeOrderedLaneKeys,
           values: timeSortedSpanIds,
           outputKeys: sortedLaneKeys,
           outputValues: this.output.spanIds,
           algorithm: 'radix'
-        }).getCommandNodes(graph)
-      );
+        }));
       if (this.output.startTimes && this.output.durations) {
         addGatherPass(graph, this, sortedLaneKeys, laneCounts);
       } else {
@@ -182,15 +176,12 @@ export class GPUTraceLaneIndexBuilder {
       }
     }
     if (this.stats.laneCount > 0) {
-      addGPUCommandNodes(
-        graph,
-        new GPUScan({
+      graph.add(new GPUScan({
           id: `${this.id}-lane-offsets`,
           input: laneCounts,
           output: this.output.laneOffsets,
           mode: 'exclusive'
-        }).getCommandNodes(graph)
-      );
+        }));
     }
     addOffsetSentinelPass(graph, this, laneCounts);
   }

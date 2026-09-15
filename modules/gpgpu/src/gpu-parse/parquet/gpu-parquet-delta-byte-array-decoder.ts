@@ -89,24 +89,18 @@ export class GPUParquetDeltaByteArrayDecoder {
       this.props.valueCount
     );
     addLengthPass(graph, this, valueLengths);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-value-offsets`,
         input: valueLengths,
         output: this.props.valueOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+      }));
+    graph.add(new GPUScan({
         id: `${this.id}-suffix-offsets`,
         input: this.props.suffixLengths,
         output: suffixOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
     if (this.props.outputByteCapacity > 0) {
       addReconstructionPass(graph, this, valueLengths, suffixOffsets);
     }

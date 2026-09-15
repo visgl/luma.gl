@@ -333,7 +333,7 @@ function createFixture(
     count: importView(graph, 'count', count, 'uint32', 1),
     overflow: importView(graph, 'overflow', overflow, 'uint32', 1)
   });
-  addGPUCommandNodes(graph, bvh.getCommandNodes(graph));
+  graph.add(bvh);
   return {
     bvh,
     compiled: graph.compile(),

@@ -485,7 +485,7 @@ it('GPUCommandGraph exposes safe extension-library helpers', async () => {
       return [];
     }
   };
-  addGPUCommandNodes(graph, contributor.getCommandNodes(graph));
+  graph.add(contributor);
   expect(contributorOutputUsage, 'contributors can request additional transient usage flags').toBe(
     Buffer.STORAGE | Buffer.INDIRECT
   );
@@ -975,7 +975,7 @@ it('GPUScan computes exclusive uint32 prefixes', async () => {
     );
     const input = graph.createDataView(inputHandle, {format: 'uint32', length});
     const output = graph.createDataView(outputHandle, {format: 'uint32', length});
-    addGPUCommandNodes(graph, new GPUScan({input, output}).getCommandNodes(graph));
+    graph.add(new GPUScan({input, output}));
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `scan-${length}-encoder`});
     compiled.encode(commandEncoder, {parameters: undefined});
@@ -1163,15 +1163,12 @@ it('GPUCompaction preserves selected order and writes indirect instance count', 
     length: values.length
   });
   const countView = graph.importGPUData('draw-count', drawCommands.getInstanceCountData(0));
-  addGPUCommandNodes(
-    graph,
-    new GPUCompaction({
+  graph.add(new GPUCompaction({
       input: valuesView,
       flags: flagsView,
       output: outputView,
       count: countView
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'compaction-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1246,9 +1243,7 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
     },
     selectedRecordBuffer
   );
-  addGPUCommandNodes(
-    graph,
-    new GPUTextSelection({
+  graph.add(new GPUTextSelection({
       glyphRows: graph.createDataView(recordsHandle, {
         format: 'uint32',
         length: 5,
@@ -1267,8 +1262,7 @@ it('GPUTextSelection gathers selected row-indexed glyph records and indirect cou
         length: records.length
       }),
       recordWordLength: 3
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'text-selection-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1503,7 +1497,7 @@ async function runVectorScan(
     : undefined;
   const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    addGPUCommandNodes(graph, scan.getCommandNodes(graph));
+    graph.add(scan);
   } else {
     addGPUCommandNodes(
       graph,
@@ -1574,7 +1568,7 @@ async function runScan(
     : undefined;
   const scan = new GPUScan({input, output, mode: options.mode, segmentFlags});
   if (options.maxComputeWorkgroupsPerDimension === undefined) {
-    addGPUCommandNodes(graph, scan.getCommandNodes(graph));
+    graph.add(scan);
   } else {
     addGPUCommandNodes(
       graph,
@@ -1636,10 +1630,7 @@ async function runVectorCompaction(
     countBuffer
   );
   const count = graph.createDataView(countHandle, {format: 'uint32', length: 1});
-  addGPUCommandNodes(
-    graph,
-    new GPUCompaction({input: values, flags, output, count}).getCommandNodes(graph)
-  );
+  graph.add(new GPUCompaction({input: values, flags, output, count}));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'vector-compaction-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});
@@ -1759,15 +1750,12 @@ async function runCompaction(
     {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
     countBuffer
   );
-  addGPUCommandNodes(
-    graph,
-    new GPUCompaction({
+  graph.add(new GPUCompaction({
       input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
       flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
       output: graph.createDataView(outputHandle, {format: 'uint32', length: values.length}),
       count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: `compaction-${id}-encoder`});
   compiled.encode(commandEncoder, {parameters: undefined});

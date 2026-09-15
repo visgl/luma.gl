@@ -48,15 +48,12 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        addGPUCommandNodes(
-          graph,
-          new GPUReduction({
+        graph.add(new GPUReduction({
             id: 'bounded-reduction',
             input,
             output,
             operation: 'sum'
-          }).getCommandNodes(graph)
-        )
+          }))
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         expect.arrayContaining(['bounded-reduction-level-0', 'bounded-reduction-level-1'])
@@ -75,15 +72,12 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        addGPUCommandNodes(
-          graph,
-          new GPUHistogram({
+        graph.add(new GPUHistogram({
             id: 'bounded-histogram',
             input,
             output,
             domain: [0, 1_025]
-          }).getCommandNodes(graph)
-        )
+          }))
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'bounded-histogram-clear',
@@ -104,16 +98,13 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
 
     try {
       expect(() =>
-        addGPUCommandNodes(
-          graph,
-          new GPUGroupAggregation({
+        graph.add(new GPUGroupAggregation({
             id: 'bounded-groups',
             keys,
             values,
             output,
             operation: 'mean'
-          }).getCommandNodes(graph)
-        )
+          }))
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         expect.arrayContaining(['bounded-groups-initialize', 'bounded-groups-finalize'])

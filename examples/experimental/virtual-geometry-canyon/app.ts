@@ -417,7 +417,7 @@ export default class VirtualGeometryCanyonAnimationLoopTemplate extends Animatio
       }),
       overflow: graph.createDataView(overflowBuffer, {format: 'uint32', length: 1})
     });
-    addGPUCommandNodes(graph, selection.getCommandNodes(graph));
+    graph.add(selection);
 
     const frameColor = graph.importFrameTexture({
       id: 'frame-color',

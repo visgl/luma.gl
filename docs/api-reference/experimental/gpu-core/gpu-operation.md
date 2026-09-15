@@ -26,7 +26,7 @@ logical resources and emits nodes. `GPUProgramPrimitive` instead exposes
 but must not schedule nodes, encode, submit, or read back data while constructing them.
 
 Existing graph-bound primitives can be scheduled directly with
-`addGPUCommandNodes(graph, primitive.getCommandNodes(graph))`. Program primitives must construct
+`graph.add(primitive)`. Program primitives must construct
 resources against the graph supplied by the compiler.
 
 `GPUCommandGraphContributor` and its graph-mutation hook have been removed. There is no compatibility

@@ -189,7 +189,7 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
     tableValues: importView(graph, 'table-values', tableValuesBuffer, tableCapacity),
     statistics: importView(graph, 'build-statistics', buildStatisticsBuffer, 6)
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  graph.add(index);
 
   const keys = makeVector(graph, device, 'keys', props.keyChunks);
   const leftRows = props.leftRowChunks
@@ -223,9 +223,7 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
   const countsBuffer = createOutputBuffer(device, batchCount);
   const overflowsBuffer = createOutputBuffer(device, batchCount);
   const statisticsBuffer = createOutputBuffer(device, batchCount * 4);
-  addGPUCommandNodes(
-    graph,
-    new GPUBatchHashJoin({
+  graph.add(new GPUBatchHashJoin({
       index,
       keys: keys.vector,
       ...(leftRows ? {leftRows: leftRows.vector} : {firstLeftRow: props.firstLeftRow}),
@@ -236,8 +234,7 @@ async function runBatchJoin(device: Device, props: BatchJoinProps) {
       statistics: importView(graph, 'statistics', statisticsBuffer, batchCount * 4),
       found: found.vector,
       probes: probes.vector
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-hash-join-test'});

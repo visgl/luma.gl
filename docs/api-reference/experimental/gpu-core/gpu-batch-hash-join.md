@@ -113,7 +113,7 @@ their memory and identity contracts.
 ## Usage
 
 ```ts
-addGPUCommandNodes(graph, new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
   index: sharedPropertyIndex,
   keys: eventIdBatches,
   firstLeftRow: streamBaseRow,
@@ -123,7 +123,7 @@ addGPUCommandNodes(graph, new GPUBatchHashJoin({
   overflows: overflowByBatch,
   statistics: lookupStatisticsByBatch,
   found: propertyFoundByEventBatch
-}).getCommandNodes(graph));
+}));
 ```
 
 ## Constructor

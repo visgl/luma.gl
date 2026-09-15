@@ -162,15 +162,12 @@ export class GPURasterDenseComponents {
     assertRasterStorageBindingFits(graph.device, rootOffsets, `${this.id} representative offsets`);
 
     this.addMarkPass(graph, rootFlags, dispatch);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-scan`,
         input: rootFlags,
         output: rootOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addScatterPass(graph, rootFlags, rootOffsets, dispatch);
     this.addPublicationPass(graph, rootFlags, rootOffsets);
   }

@@ -198,15 +198,12 @@ export class GPUIVFFlatIndex {
       0,
       this.listCount
     );
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-list-offsets`,
         input: this.listCounts,
         output: offsetsWithoutTotal,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
     addFinalizeListOffsetsPass(graph, this);
 
     const listCursors = createTransientView<'uint32', Parameters>(

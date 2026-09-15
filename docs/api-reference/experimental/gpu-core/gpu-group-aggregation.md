@@ -87,20 +87,20 @@ uses one graph-owned transient `uint32` count per group and divides after all ch
 ## Usage
 
 ```ts
-addGPUCommandNodes(graph, new GPUGroupAggregation({
+graph.add(new GPUGroupAggregation({
   keys: serviceCodes,
   mask: visibleRequests,
   output: requestCountsByService,
   operation: 'count'
-}).getCommandNodes(graph));
+}));
 
-addGPUCommandNodes(graph, new GPUGroupAggregation({
+graph.add(new GPUGroupAggregation({
   keys: serviceCodes,
   values: requestLatencies,
   mask: visibleRequests,
   output: meanLatencyByService,
   operation: 'mean'
-}).getCommandNodes(graph));
+}));
 ```
 
 ## Constructor

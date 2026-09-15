@@ -165,15 +165,12 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
     const selectedCount = graph.importGPUVector(`${prefix}-count-vector`, globalSelectedCount)
       .data[0];
 
-    addGPUCommandNodes(
-      graph,
-      new GPUReduction({
+    graph.add(new GPUReduction({
         id: `${prefix}-count-selected`,
         input: context.selectedCounts,
         output: selectedCount,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
+      }));
 
     if (input.length > 0) {
       const scratch = createGPUGlobalSortScratch(graph, prefix, input.length);
@@ -195,9 +192,7 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
         fallbackOffset += batch.numRows;
       }
 
-      addGPUCommandNodes(
-        graph,
-        new GPUSort({
+      graph.add(new GPUSort({
           id: `${prefix}-numeric`,
           keys: scratch.encodedKeys,
           values: scratch.sourceOrdinals,
@@ -205,13 +200,10 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
           outputValues: scratch.sortedOrdinals,
           direction: options.direction,
           algorithm: options.algorithm
-        }).getCommandNodes(graph)
-      );
+        }));
 
       addGPUGlobalSortGatherClassesPass(graph, `${prefix}-gather-classes`, scratch);
-      addGPUCommandNodes(
-        graph,
-        new GPUSort({
+      graph.add(new GPUSort({
           id: `${prefix}-classes`,
           keys: scratch.sortedKeys,
           values: scratch.sortedOrdinals,
@@ -219,8 +211,7 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
           outputValues: scratch.sourceOrdinals,
           direction: 'ascending',
           algorithm: options.algorithm
-        }).getCommandNodes(graph)
-      );
+        }));
 
       addGPUGlobalSortPublishPass(graph, `${prefix}-publish`, {
         scratch,
@@ -241,17 +232,14 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
               globalOffset,
               limit: options.limit
             });
-            addGPUCommandNodes(
-              graph,
-              new GPUVisibilityWorkflow({
+            graph.add(new GPUVisibilityWorkflow({
                 id: `${prefix}-visibility-batch-${batchIndex}`,
                 predicates: [{kind: 'selection', mask: selection}],
                 outputMask: selection,
                 output: context.rowIndices.data[batchIndex],
                 count: context.selectedCounts.data[batchIndex],
                 firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? fallbackOffset
-              }).getCommandNodes(graph)
-            );
+              }));
           }
           globalOffset += batch.numRows;
           fallbackOffset += batch.numRows;

@@ -168,9 +168,7 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     });
   }
 
-  addGPUCommandNodes(
-    graph,
-    new GPUBatchSort({
+  graph.add(new GPUBatchSort({
       id: `${id}-numeric`,
       keys: encodedKeys,
       values: localIndices,
@@ -178,8 +176,7 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
       outputValues: sortedIndices,
       direction: options.direction,
       algorithm: options.algorithm
-    }).getCommandNodes(graph)
-  );
+    }));
 
   for (const [batchIndex, values] of input.data.entries()) {
     if (values.length === 0) {
@@ -201,9 +198,7 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
     );
   }
 
-  addGPUCommandNodes(
-    graph,
-    new GPUBatchSort({
+  graph.add(new GPUBatchSort({
       id: `${id}-classes`,
       keys: sortedKeys,
       values: sortedIndices,
@@ -211,8 +206,7 @@ function addGPUBatchSortToGraph<Selection extends GPUTypeMap>(
       outputValues: localIndices,
       direction: 'ascending',
       algorithm: options.algorithm
-    }).getCommandNodes(graph)
-  );
+    }));
 
   let sourceOffset = 0;
   for (const [batchIndex, batch] of context.table.batches.entries()) {

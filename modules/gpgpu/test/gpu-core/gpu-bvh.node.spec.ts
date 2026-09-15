@@ -19,7 +19,7 @@ type MockGraph = GPUCommandGraph & {
 it('GPUBVH automatically fuses portable small hierarchies into one graph node', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 3, leafCapacity: 128, sourceCount: 87});
-  addGPUCommandNodes(graph, hierarchy.getCommandNodes(graph));
+  graph.add(hierarchy);
 
   expect(hierarchy.strategy).toBe('auto');
   expect(hierarchy.resolvedStrategy).toBe('fused');
@@ -41,7 +41,7 @@ it('GPUBVH preserves explicit source IDs in the fused graph contributor', () => 
     sourceCount: 5,
     sourceIds: true
   });
-  addGPUCommandNodes(graph, hierarchy.getCommandNodes(graph));
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('fused');
   expect(
@@ -71,7 +71,7 @@ it('GPUBVH remaps explicit source IDs after per-level hierarchy publication', ()
     sourceIds: true,
     strategy: 'level'
   });
-  addGPUCommandNodes(graph, hierarchy.getCommandNodes(graph));
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('level');
   expect(graph.recordedNodes.map(node => node.id)).toEqual([
@@ -89,7 +89,7 @@ it('GPUBVH remaps explicit source IDs after per-level hierarchy publication', ()
 it('GPUBVH fuses empty and singleton hierarchies without requiring a parent level', () => {
   const graph = makeGraph();
   const hierarchy = makeHierarchy(graph, {dimension: 2, leafCapacity: 1, sourceCount: 0});
-  addGPUCommandNodes(graph, hierarchy.getCommandNodes(graph));
+  graph.add(hierarchy);
 
   expect(hierarchy.resolvedStrategy).toBe('fused');
   expect(hierarchy.internalNodeCount).toBe(0);
@@ -105,7 +105,7 @@ it('GPUBVH retains forced and automatic multi-pass hierarchy construction', () =
     sourceCount: 3,
     strategy: 'level'
   });
-  addGPUCommandNodes(forcedGraph, forcedHierarchy.getCommandNodes(forcedGraph));
+  forcedGraph.add(forcedHierarchy);
 
   expect(forcedHierarchy.resolvedStrategy).toBe('level');
   expect(forcedGraph.recordedNodes.map(node => node.id)).toEqual([
@@ -120,7 +120,7 @@ it('GPUBVH retains forced and automatic multi-pass hierarchy construction', () =
     leafCapacity: 256,
     sourceCount: 131
   });
-  addGPUCommandNodes(largeGraph, largeHierarchy.getCommandNodes(largeGraph));
+  largeGraph.add(largeHierarchy);
 
   expect(largeHierarchy.resolvedStrategy).toBe('level');
   expect(largeGraph.recordedNodes.length, 'one leaf load precedes eight tree levels').toBe(9);

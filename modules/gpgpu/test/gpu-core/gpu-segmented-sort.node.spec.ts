@@ -22,7 +22,7 @@ describe('GPUSegmentedSort', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      addGPUCommandNodes(fixture.graph, fixture.sort.getCommandNodes(fixture.graph));
+      fixture.graph.add(fixture.sort);
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-sort-bitonic-local-2',
@@ -49,7 +49,7 @@ describe('GPUSegmentedSort', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      addGPUCommandNodes(fixture.graph, fixture.sort.getCommandNodes(fixture.graph));
+      fixture.graph.add(fixture.sort);
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-sort-bitonic-local-4'
@@ -199,7 +199,7 @@ describe('GPUSegmentedSort', () => {
 
     try {
       expect(() =>
-        addGPUCommandNodes(otherGraph, fixture.sort.getCommandNodes(otherGraph))
+        otherGraph.add(fixture.sort)
       ).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {

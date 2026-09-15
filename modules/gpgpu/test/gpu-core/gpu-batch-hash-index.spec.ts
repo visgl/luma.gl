@@ -188,10 +188,8 @@ async function runBatchHashIndex(device: Device, fixture: BatchHashIndexFixture)
     tableValues: tableValues.view,
     statistics: buildStatistics.view
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
-  addGPUCommandNodes(
-    graph,
-    new GPUHashIndexQuery({
+  graph.add(index);
+  graph.add(new GPUHashIndexQuery({
       id: 'browser-batch-query',
       index,
       keys: queryKeys,
@@ -199,8 +197,7 @@ async function runBatchHashIndex(device: Device, fixture: BatchHashIndexFixture)
       found: found.view,
       probes: probes.view,
       statistics: queryStatistics.view
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const compiled = graph.compile();
   try {

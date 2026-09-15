@@ -34,12 +34,12 @@ spatial index. Grid resolution is also an application tradeoff: finer grids pres
 increase clearing, contention, and result storage.
 
 ```ts
-addGPUCommandNodes(graph, new GPUGridBinning({
+graph.add(new GPUGridBinning({
   positions,
   output: cellCounts,
   gridSize: [32, 16],
   bounds: [-180, -90, 180, 90]
-}).getCommandNodes(graph));
+}));
 ```
 
 ## Constructor

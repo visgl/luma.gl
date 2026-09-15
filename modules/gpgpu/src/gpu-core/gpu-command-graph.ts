@@ -44,6 +44,7 @@ import {
   GraphTextureView,
   GraphVectorView
 } from './gpu-command-graph-types';
+import {addGPUCommandNodes, type GPUCommandNodeProducer} from './gpu-command-node';
 import type {GPUCommandGraphAutotuner} from './gpu-command-graph-autotuner';
 
 import type {
@@ -852,6 +853,12 @@ export class GPUCommandGraph<Parameters = void> {
     this.assertTexture(texture);
     const normalizedProps = normalizeGraphTextureView(texture, props);
     return new GraphTextureView(texture, normalizedProps);
+  }
+
+  /** Constructs and schedules a primitive's command nodes in their returned order. */
+  add(primitive: GPUCommandNodeProducer<Parameters>): void {
+    this.assertMutable();
+    addGPUCommandNodes(this, primitive.getCommandNodes(this));
   }
 
   /**

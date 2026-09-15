@@ -95,7 +95,7 @@ const query = new GPUBVHQuery({
   visitedCount
 });
 
-addGPUCommandNodes(graph, query.getCommandNodes(graph));
+graph.add(query);
 ```
 
 The point query contains two or three packed `float32` values, matching the BVH dimension. The

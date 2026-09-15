@@ -345,7 +345,7 @@ class GPUGraphBenchmarkResources {
       count: importVector('spatial-count', this.spatialLayout.count),
       overflow: importVector('spatial-overflow', this.spatialLayout.overflow)
     });
-    addGPUCommandNodes(graph, index.getCommandNodes(graph));
+    graph.add(index);
     return graph.compile();
   }
 

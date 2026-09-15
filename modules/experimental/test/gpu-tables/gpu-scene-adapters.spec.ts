@@ -203,28 +203,20 @@ it('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer
   const groupOverflows = makeOutput('group-overflows', [0, 0]);
   const groupOverflow = makeOutput('group-overflow', [0]);
 
-  addGPUCommandNodes(
-    graph,
-    new GPUVisibilityWorkflow({
+  graph.add(new GPUVisibilityWorkflow({
       predicates: [{kind: 'bounds', mask: visibility.view}],
       output: visibleRows.view,
       count: visibleCount.view
-    }).getCommandNodes(graph)
-  );
-  addGPUCommandNodes(
-    graph,
-    new GPUSceneDrawGeneration({
+    }));
+  graph.add(new GPUSceneDrawGeneration({
       scene: source,
       visibility: visibility.view,
       commands: commandViews,
       requiredCount: required.view,
       publishedCount: published.view,
       overflow: drawOverflow.view
-    }).getCommandNodes(graph)
-  );
-  addGPUCommandNodes(
-    graph,
-    new GPUSceneResourceGroups({
+    }));
+  graph.add(new GPUSceneResourceGroups({
       scene: source,
       commands: commandViews,
       groups: [
@@ -234,8 +226,7 @@ it('CPU scene hierarchies reuse generic visibility, indirect draws, and renderer
       counts: groupCounts.view,
       overflows: groupOverflows.view,
       overflow: groupOverflow.view
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   let encoder = device.createCommandEncoder();
   compiled.encode(encoder, {parameters: undefined});

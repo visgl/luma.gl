@@ -328,57 +328,40 @@ class GPUDataAnalysisExample {
         'float32',
         GROUP_COUNT
       );
-      addGPUCommandNodes(
-        graph,
-        new GPUReduction({
+      graph.add(new GPUReduction({
           id: 'extent',
           input: valuesImport,
           output: extent,
           operation: 'extent'
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUHistogram({
+        }));
+      graph.add(new GPUHistogram({
           id: 'histogram',
           input: valuesImport,
           output: histogram,
           ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUScan({
+        }));
+      graph.add(new GPUScan({
           id: 'cumulative-histogram',
           input: histogram,
           output: cumulativeHistogram,
           mode: 'inclusive'
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGridBinning({
+        }));
+      graph.add(new GPUGridBinning({
           id: 'grid',
           positions: positionsImport,
           output: grid,
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGridAggregation({
+        }));
+      graph.add(new GPUGridAggregation({
           id: 'grid-weight-sums',
           positions: positionsImport,
           weights: valuesImport,
           output: gridWeightSums,
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGridAggregation({
+        }));
+      graph.add(new GPUGridAggregation({
           id: 'grid-weight-minimums',
           positions: positionsImport,
           weights: valuesImport,
@@ -386,11 +369,8 @@ class GPUDataAnalysisExample {
           operation: 'min',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGridAggregation({
+        }));
+      graph.add(new GPUGridAggregation({
           id: 'grid-weight-maximums',
           positions: positionsImport,
           weights: valuesImport,
@@ -398,11 +378,8 @@ class GPUDataAnalysisExample {
           operation: 'max',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGridAggregation({
+        }));
+      graph.add(new GPUGridAggregation({
           id: 'grid-weight-means',
           positions: positionsImport,
           weights: valuesImport,
@@ -410,38 +387,28 @@ class GPUDataAnalysisExample {
           operation: 'mean',
           gridSize: [gridWidth, gridWidth],
           bounds: [-1, -1, 1, 1]
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUScan({
+        }));
+      graph.add(new GPUScan({
           id: 'cumulative-grid-rows',
           input: grid,
           output: cumulativeGrid,
           mode: 'inclusive',
           segmentFlags: gridSegmentFlags
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGroupAggregation({
+        }));
+      graph.add(new GPUGroupAggregation({
           id: 'group-counts',
           keys: groupKeysImport,
           mask: selectionImport,
           output: groupCounts
-        }).getCommandNodes(graph)
-      );
-      addGPUCommandNodes(
-        graph,
-        new GPUGroupAggregation({
+        }));
+      graph.add(new GPUGroupAggregation({
           id: 'group-means',
           keys: groupKeysImport,
           values: valuesImport,
           mask: selectionImport,
           output: groupMeans,
           operation: 'mean'
-        }).getCommandNodes(graph)
-      );
+        }));
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

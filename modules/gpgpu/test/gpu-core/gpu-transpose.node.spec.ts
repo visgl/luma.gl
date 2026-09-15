@@ -58,7 +58,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   const output = graph.createDataView(outputHandle, {format: 'float32', length: 12});
   const transpose = new GPUTranspose({input, output, rows: 3, columns: 4});
   expect(
-    () => addGPUCommandNodes(graph, transpose.getCommandNodes(graph)),
+    () => graph.add(transpose),
     'valid transpose adds one graph node'
   ).not.toThrow();
 
@@ -95,7 +95,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32', length: 12});
   const crossGraphTranspose = new GPUTranspose({input, output: otherOutput, rows: 3, columns: 4});
-  expect(() => addGPUCommandNodes(graph, crossGraphTranspose.getCommandNodes(graph))).toThrow(
+  expect(() => graph.add(crossGraphTranspose)).toThrow(
     /different GPUCommandGraph/
   );
 
@@ -112,12 +112,7 @@ it('GPUTranspose validates packed capacity, format, aliasing, and graph ownershi
   });
   const emptyInput = emptyGraph.createDataView(emptyInputHandle, {format: 'uint32', length: 0});
   const emptyOutput = emptyGraph.createDataView(emptyOutputHandle, {format: 'uint32', length: 0});
-  addGPUCommandNodes(
-    emptyGraph,
-    new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}).getCommandNodes(
-      emptyGraph
-    )
-  );
+  emptyGraph.add(new GPUTranspose({input: emptyInput, output: emptyOutput, rows: 0, columns: 7}));
   const compiledEmptyGraph = emptyGraph.compile();
   expect(compiledEmptyGraph.stats.nodeOrder.length, 'empty transpose adds no graph node').toBe(0);
   compiledEmptyGraph.destroy();

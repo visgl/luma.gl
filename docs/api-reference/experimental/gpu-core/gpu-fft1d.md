@@ -33,14 +33,14 @@ Each complex value is one packed `GraphDataView<'float32x2'>` row: real followed
 ```ts
 import {GPUFFT1D} from '@luma.gl/experimental';
 
-addGPUCommandNodes(graph, new GPUFFT1D({
+graph.add(new GPUFFT1D({
   id: 'spectrum',
   input,
   output,
   length: 1024,
   batchCount: 16,
   direction: 'forward'
-}).getCommandNodes(graph));
+}));
 ```
 
 `length` is the number of complex values in each transform and must be a power of two from 2

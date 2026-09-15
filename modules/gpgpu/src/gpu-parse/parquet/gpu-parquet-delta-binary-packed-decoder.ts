@@ -44,14 +44,11 @@ export class GPUParquetDeltaBinaryPackedDecoder {
       descriptorCount: this.props.descriptorCount,
       firstValue: this.props.firstValue
     }).addToGraph(graph);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-scan`,
         input: deltas,
         output: this.props.output,
         mode: 'inclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }

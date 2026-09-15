@@ -160,10 +160,7 @@ async function runMaskedReduction(
   const input = importView(graph, 'input', inputBuffer, format, values.length);
   const mask = importView(graph, 'selection', selectionBuffer, 'uint32', selection.length);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  addGPUCommandNodes(
-    graph,
-    new GPUReduction({input, output, mask, operation}).getCommandNodes(graph)
-  );
+  graph.add(new GPUReduction({input, output, mask, operation}));
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'masked-reduction-test'});
@@ -223,10 +220,7 @@ async function runMaskedVectorReduction(
   const input = graph.importGPUVector('values', values);
   const mask = graph.importGPUVector('selection', selection);
   const output = importView(graph, 'output', outputBuffer, format, outputLength);
-  addGPUCommandNodes(
-    graph,
-    new GPUReduction({input, output, mask, operation}).getCommandNodes(graph)
-  );
+  graph.add(new GPUReduction({input, output, mask, operation}));
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'masked-vector-reduction-test'});

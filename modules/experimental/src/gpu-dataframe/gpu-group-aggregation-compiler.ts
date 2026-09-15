@@ -171,16 +171,13 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
         const output = createGPUGroupedOutputVector(graph.device, metricId, groupCount, 'uint32');
         ownedVectors.push(output);
         outputVectors.set(definition.name, output);
-        addGPUCommandNodes(
-          graph,
-          new GPUGroupAggregation({
+        graph.add(new GPUGroupAggregation({
             id: metricId,
             keys,
             mask: baseMask,
             output: graph.importGPUVector(`${metricId}-output`, output).data[0],
             operation: 'count'
-          }).getCommandNodes(graph)
-        );
+          }));
         continue;
       }
 
@@ -206,17 +203,14 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
       ownedVectors.push(output);
       outputVectors.set(definition.name, output);
       validity[definition.name] = state.validity;
-      addGPUCommandNodes(
-        graph,
-        new GPUGroupAggregation({
+      graph.add(new GPUGroupAggregation({
           id: metricId,
           keys,
           values: state.values,
           mask: state.mask,
           output: graph.importGPUVector(`${metricId}-output`, output).data[0],
           operation: definition.operation
-        }).getCommandNodes(graph)
-      );
+        }));
     }
 
     resultTable = createGPUGroupedResultTable<Selection, Result>(
@@ -302,10 +296,7 @@ function combineGPUGroupingMasks(
   second: GraphVectorView<'uint32'>
 ): GraphVectorView<'uint32'> {
   const output = createTransientVectorView(graph, id, first);
-  addGPUCommandNodes(
-    graph,
-    new GPUMask({id: `${id}-compose`, inputs: [first, second], output}).getCommandNodes(graph)
-  );
+  graph.add(new GPUMask({id: `${id}-compose`, inputs: [first, second], output}));
   return output;
 }
 
@@ -338,16 +329,13 @@ function createGPUGroupedMetricState<Selection extends GPUTypeMap>(
   );
   ownedVectors.push(validity);
   const output = context.graph.importGPUVector(`${id}-group-validity-vector`, validity).data[0];
-  addGPUCommandNodes(
-    context.graph,
-    new GPUGroupAggregation({
+  context.graph.add(new GPUGroupAggregation({
       id: `${id}-accepted-count`,
       keys,
       mask: finiteRows,
       output,
       operation: 'count'
-    }).getCommandNodes(context.graph)
-  );
+    }));
   addGPUNormalizeGroupValidityPass(context.graph, `${id}-normalize-validity`, output);
   return {values, mask: finiteRows, validity};
 }

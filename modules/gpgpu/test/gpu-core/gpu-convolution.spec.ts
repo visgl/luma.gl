@@ -165,9 +165,7 @@ async function runGPUConvolution(
   const input = importFloatView(graph, 'input', inputBuffer, inputValues.length);
   const kernel = importFloatView(graph, 'kernel', kernelBuffer, kernelValues.length);
   const output = importFloatView(graph, 'output', outputBuffer, inputValues.length);
-  addGPUCommandNodes(
-    graph,
-    new GPUConvolution({
+  graph.add(new GPUConvolution({
       input,
       kernel,
       output,
@@ -177,8 +175,7 @@ async function runGPUConvolution(
       kernelHeight,
       strategy,
       boundary
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: `gpu-convolution-${strategy}`});

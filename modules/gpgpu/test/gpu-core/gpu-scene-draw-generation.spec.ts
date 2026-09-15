@@ -63,7 +63,7 @@ it('GPUSceneDrawGeneration publishes deterministic bounded commands and re-encod
     publishedCount: published.view,
     overflow: overflow.view
   });
-  addGPUCommandNodes(graph, generation.getCommandNodes(graph));
+  graph.add(generation);
   expect(generation.stats).toEqual({
     recordCount: 6,
     recordCapacity: 6,
@@ -129,7 +129,7 @@ it('GPUSceneDrawGeneration supports indexed commands, inactive rows, and validat
     publishedCount: published.view,
     overflow: overflow.view
   });
-  addGPUCommandNodes(graph, generation.getCommandNodes(graph));
+  graph.add(generation);
   const compiled = graph.compile();
 
   await encodeAndSubmit(device, compiled);
@@ -198,7 +198,7 @@ it('GPUSceneDrawGeneration discovers inserted records across the full scene capa
     publishedCount: published.view,
     overflow: overflow.view
   });
-  addGPUCommandNodes(graph, generation.getCommandNodes(graph));
+  graph.add(generation);
   expect(generation.stats.recordCount, 'the imported active prefix starts empty').toBe(0);
   expect(generation.stats.recordCapacity, 'dispatch spans the reserved record capacity').toBe(2);
 
@@ -252,7 +252,7 @@ it('GPUSceneDrawGeneration rejects devices without indirect-first-instance', asy
   });
 
   expect(
-    () => addGPUCommandNodes(graph, generation.getCommandNodes(graph)),
+    () => graph.add(generation),
     'nonzero first-instance publication requires the optional WebGPU feature'
   ).toThrow(/indirect-first-instance/);
 

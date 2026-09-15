@@ -2315,16 +2315,13 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       publicationId: 'summary',
       completeness: 'partial'
     });
-    addGPUCommandNodes(
-      graph,
-      new GPUHistogram({
+    graph.add(new GPUHistogram({
         id: 'trace-duration-histogram',
         input: source.durations,
         mask: selection,
         edges: TRACE_DURATION_HISTOGRAM_EDGES,
         output: TRACE_ANALYTICS_OUTPUT.createUint32View(graph, resultHandle, 'duration-histogram')
-      }).getCommandNodes(graph)
-    );
+      }));
     addTraceAnalyticsPublicationBoundary(graph, {
       id: 'trace-histogram-ready',
       result: resultHandle,
@@ -3306,9 +3303,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       workgroupSize: 1
     });
 
-    addGPUCommandNodes(
-      graph,
-      new GPUHierarchyLayout({
+    graph.add(new GPUHierarchyLayout({
         id: 'trace-process-thread-layout',
         parentStates: makeUint32GraphVector(
           graph,
@@ -3342,8 +3337,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         expandedChildHeight: TRACE_LANES_PER_THREAD + TRACE_THREAD_GAP_LANE_COUNT,
         collapsedChildHeight: 1 + TRACE_THREAD_GAP_LANE_COUNT,
         collapsedParentHeight: 1 + TRACE_THREAD_GAP_LANE_COUNT
-      }).getCommandNodes(graph)
-    );
+      }));
 
     const focusFrontiers = [0, 1].map(index =>
       graph.createTransientBuffer({
@@ -3823,9 +3817,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
         ],
         length: dependencyChunk.batchCount
       });
-      addGPUCommandNodes(
-        graph,
-        new GPUVisibilityWorkflow({
+      graph.add(new GPUVisibilityWorkflow({
           id: `trace-candidate-dependency-batches-${dependencyChunk.chunkIndex}`,
           predicates: [
             {
@@ -3844,8 +3836,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             format: 'uint32',
             length: 1
           })
-        }).getCommandNodes(graph)
-      );
+        }));
       addTraceComputePass(graph, {
         id: `trace-budget-candidate-dependency-batches-${dependencyChunk.chunkIndex}`,
         source: getDependencyDispatchBudgetShader(

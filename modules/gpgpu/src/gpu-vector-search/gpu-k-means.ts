@@ -202,14 +202,11 @@ export class GPUKMeans {
           `${iterationId}-assign-tile-${tileIndex}`
         );
       }
-      addGPUCommandNodes(
-        graph,
-        new GPUGroupAggregation({
+      graph.add(new GPUGroupAggregation({
           id: `${iterationId}-counts`,
           keys: this.labels,
           output: this.counts
-        }).getCommandNodes(graph)
-      );
+        }));
       addClearSumsPass(graph, `${iterationId}-clear-sums`, sums, status);
       for (const [tileIndex, tile] of tiles.entries()) {
         addAccumulateCentroidsPass(

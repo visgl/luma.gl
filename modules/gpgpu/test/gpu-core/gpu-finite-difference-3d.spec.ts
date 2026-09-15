@@ -84,9 +84,7 @@ async function runOperator(
     format: outputComponents === 1 ? 'float32' : 'float32x4',
     length: RESOLUTION ** 3
   });
-  addGPUCommandNodes(
-    graph,
-    new GPUFiniteDifference3D({
+  graph.add(new GPUFiniteDifference3D({
       input,
       output,
       width: RESOLUTION,
@@ -94,8 +92,7 @@ async function runOperator(
       depth: RESOLUTION,
       spacing: [SPACING, SPACING, SPACING],
       operator
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   try {
     const encoder = device.createCommandEncoder({id: `${operator}-3d-test`});

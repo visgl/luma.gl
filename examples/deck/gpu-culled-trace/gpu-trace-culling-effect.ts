@@ -252,16 +252,13 @@ export class GPUTraceCullingEffect implements Effect {
       rowFlags: rowFlagView,
       cullingCounts
     });
-    addGPUCommandNodes(
-      graph,
-      new GPUCompaction({
+    graph.add(new GPUCompaction({
         id: 'visible-block-compaction',
         input: sourceIds,
         flags: rowFlagView,
         output: visibleIdView,
         count: blockCount
-      }).getCommandNodes(graph)
-    );
+      }));
 
     if (this.textSelection) {
       const {source, selectedGlyphIds, selectedGlyphRecords, drawCommands} = this.textSelection;
@@ -275,9 +272,7 @@ export class GPUTraceCullingEffect implements Effect {
         byteOffset: UINT32_BYTE_LENGTH * 2,
         byteStride: source.recordWordLength * UINT32_BYTE_LENGTH
       });
-      addGPUCommandNodes(
-        graph,
-        new GPUTextSelection({
+      graph.add(new GPUTextSelection({
           id: 'visible-text-selection',
           glyphRows,
           rowFlags: rowFlagView,
@@ -299,8 +294,7 @@ export class GPUTraceCullingEffect implements Effect {
             length: source.glyphCount * source.recordWordLength
           }),
           recordWordLength: source.recordWordLength
-        }).getCommandNodes(graph)
-      );
+        }));
     }
     this.compiled = graph.compile();
     this.publishStats();

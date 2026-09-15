@@ -44,7 +44,7 @@ mask for later filtering.
 ```ts
 import {GPUGraphTraversal} from '@luma.gl/gpgpu/gpu-core';
 
-addGPUCommandNodes(graph, new GPUGraphTraversal({
+graph.add(new GPUGraphTraversal({
   id: 'focused-dependencies',
   offsets: outgoingOffsets,
   neighbors: outgoingNeighbors,
@@ -56,7 +56,7 @@ addGPUCommandNodes(graph, new GPUGraphTraversal({
   maxDepth: 4,
   activeDepth: selectedTraversalDepth,
   direction: 'both'
-}).getCommandNodes(graph));
+}));
 ```
 
 Inputs may use one packed `GraphDataView<'uint32'>` adjacency or partitioned

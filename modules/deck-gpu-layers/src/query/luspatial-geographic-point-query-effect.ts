@@ -619,9 +619,7 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       })
     );
     projection.addToGraph(graph);
-    addGPUCommandNodes(
-      graph,
-      new GPUGridIndex({
+    graph.add(new GPUGridIndex({
         id: `${this.id}-grid`,
         positions: projected,
         gridSize: this.gridSize,
@@ -630,8 +628,7 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
         objectIds: rowIndices,
         count,
         overflow
-      }).getCommandNodes(graph)
-    );
+      }));
     return graph.compile();
   }
 

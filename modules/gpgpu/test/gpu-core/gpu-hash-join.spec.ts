@@ -170,10 +170,8 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
     tableValues: importView(graph, 'table-values', buffers.tableValues, props.tableCapacity ?? 8),
     statistics: importView(graph, 'build-statistics', buffers.buildStatistics, 6)
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
-  addGPUCommandNodes(
-    graph,
-    new GPUHashJoin({
+  graph.add(index);
+  graph.add(new GPUHashJoin({
       index,
       keys: importView(graph, 'left-keys', buffers.leftKeys, props.leftKeys.length),
       ...(buffers.leftRows
@@ -196,8 +194,7 @@ async function runHashJoin(device: Device, props: JoinFixtureProps) {
       statistics: importView(graph, 'statistics', buffers.statistics, 4),
       found: importView(graph, 'found', buffers.found, props.leftKeys.length),
       probes: importView(graph, 'probes', buffers.probes, props.leftKeys.length)
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'hash-join-test'});

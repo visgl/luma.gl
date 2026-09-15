@@ -318,17 +318,14 @@ export function compileGPUDataFrameQuery<
         });
       }
 
-      addGPUCommandNodes(
-        graph,
-        new GPUVisibilityWorkflow({
+      graph.add(new GPUVisibilityWorkflow({
           id: `${queryId}-visibility-batch-${batchIndex}`,
           predicates: [{kind: 'selection', mask}],
           outputMask: mask,
           output: rowIndexView.data[batchIndex],
           count: countView.data[batchIndex],
           firstSourceIndex: batch.sourceInfo?.sourceRowIndexOffset ?? sourceRowOffset
-        }).getCommandNodes(graph)
-      );
+        }));
       sourceRowOffset += batch.numRows;
     }
 

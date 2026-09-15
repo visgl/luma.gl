@@ -610,9 +610,7 @@ export class GPUSplatGraphRenderer {
       });
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUSort({
+    graph.add(new GPUSort({
         id: 'gaussian-splat-global-depth-sort',
         keys: depthKeys,
         values: sourceIndices,
@@ -621,8 +619,7 @@ export class GPUSplatGraphRenderer {
         algorithm: 'radix',
         direction: 'ascending',
         keyBits: 16
-      }).getCommandNodes(graph)
-    );
+      }));
 
     const firstUniformBuffer = this.batchUniforms[0];
     if (!firstUniform) {

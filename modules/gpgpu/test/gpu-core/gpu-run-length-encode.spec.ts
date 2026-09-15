@@ -29,10 +29,7 @@ describe('GPURunLengthEncode', () => {
     const values = createView(graph, 'values', 6);
     const lengths = createView(graph, 'lengths', 6);
     const count = createView(graph, 'count', 1);
-    addGPUCommandNodes(
-      graph,
-      new GPURunLengthEncode({input, values, lengths, count}).getCommandNodes(graph)
-    );
+    graph.add(new GPURunLengthEncode({input, values, lengths, count}));
     expect(graph).toBeDefined();
   });
 });

@@ -81,9 +81,7 @@ export class GPUParquetLevelLayout {
     if (props.definitionLevels.length > 0) {
       addClassifyPass(graph, props);
     }
-    addGPUCommandNodes(
-      graph,
-      new GPUSegmentedLayout({
+    graph.add(new GPUSegmentedLayout({
         id: `${this.id}-materialize`,
         valueFlags: props.validity,
         elementFlags: props.elementFlags,
@@ -95,8 +93,7 @@ export class GPUParquetLevelLayout {
         valueCount: props.nonNullValueCount,
         elementCount: props.elementCount,
         segmentCount: props.rowCount
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }
 

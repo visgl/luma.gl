@@ -30,13 +30,13 @@ source-aligned membership tests. Compaction adds scan and scatter work, and only
 by `count` is meaningful; it does not shrink the caller-owned output allocation.
 
 ```ts
-addGPUCommandNodes(graph, new GPUCompaction({
+graph.add(new GPUCompaction({
   id: 'visible-ids',
   input: sourceIds,
   flags: visibilityFlags,
   output: visibleIds,
   count: visibleCount
-}).getCommandNodes(graph));
+}));
 ```
 
 Flags should contain `0` or `1`. Nonzero values are clamped to one by the scatter pass. Selected

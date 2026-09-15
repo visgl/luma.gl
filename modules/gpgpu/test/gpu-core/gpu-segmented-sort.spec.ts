@@ -375,7 +375,7 @@ function importView(
 }
 
 function compileFixture(fixture: SegmentedSortFixture): CompiledGPUCommandGraph {
-  addGPUCommandNodes(fixture.graph, fixture.sort.getCommandNodes(fixture.graph));
+  fixture.graph.add(fixture.sort);
   return fixture.graph.compile();
 }
 

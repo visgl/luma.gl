@@ -48,36 +48,25 @@ export class GPUParquetByteArrayDictionaryDecoder {
       'uint32',
       this.props.indices.length
     );
-    addGPUCommandNodes(
-      graph,
-      new GPUUint32Gather({
+    graph.add(new GPUUint32Gather({
         id: `${this.id}-lengths`,
         source: this.props.dictionaryLengths,
         indices: this.props.indices,
         output: this.props.outputLengths
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUUint32Gather({
+      }));
+    graph.add(new GPUUint32Gather({
         id: `${this.id}-source-offsets`,
         source: this.props.dictionaryOffsets,
         indices: this.props.indices,
         output: sourceOffsets
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+      }));
+    graph.add(new GPUScan({
         id: `${this.id}-output-offsets`,
         input: this.props.outputLengths,
         output: this.props.outputOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUByteRangeGather({
+      }));
+    graph.add(new GPUByteRangeGather({
         id: `${this.id}-bytes`,
         source: this.props.dictionary,
         sourceOffsets,
@@ -86,7 +75,6 @@ export class GPUParquetByteArrayDictionaryDecoder {
         output: this.props.output,
         sourceByteLength: this.props.dictionaryByteLength,
         outputByteCapacity: this.props.outputByteCapacity
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }

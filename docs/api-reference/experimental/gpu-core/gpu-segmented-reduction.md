@@ -44,12 +44,12 @@ This is useful for totals per group, edge-weight totals per graph vertex, statis
 Given offsets `[o0, o1, ... oN]`, output row `i` reduces `input[oi..o(i+1))`.
 
 ```ts
-addGPUCommandNodes(graph, new GPUSegmentedReduction({
+graph.add(new GPUSegmentedReduction({
   input: values,
   segmentOffsets,
   output: segmentTotals,
   operation: 'sum'
-}).getCommandNodes(graph));
+}));
 ```
 
 The initial implementation accepts packed `uint32`, `sint32`, and `float32` values and supports `sum`, `min`, and `max`. `segmentOffsets.length` must equal `output.length + 1`. Empty segments produce zero.

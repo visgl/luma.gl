@@ -375,7 +375,7 @@ function compileIndexBuild(
   const count = importSpatialView(graph, 'index-count', index.count, 'uint32', 1);
   const overflow = importSpatialView(graph, 'index-overflow', index.overflow, 'uint32', 1);
 
-  addGPUCommandNodes(graph, new GPUGridIndex({
+  graph.add(new GPUGridIndex({
     id: 'docs-spatial-grid',
     positions: positionView,
     gridSize: [GRID_DIMENSION, GRID_DIMENSION],
@@ -384,7 +384,7 @@ function compileIndexBuild(
     objectIds: rowIndices,
     count,
     overflow
-  }).getCommandNodes(graph));
+  }));
 
   return graph.compile();
 }

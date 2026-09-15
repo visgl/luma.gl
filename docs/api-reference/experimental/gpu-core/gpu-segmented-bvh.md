@@ -67,7 +67,7 @@ const hierarchy = new GPUSegmentedBVH({
   ]
 });
 
-addGPUCommandNodes(graph, hierarchy.getCommandNodes(graph));
+graph.add(hierarchy);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'packed-mesh-hierarchies'});

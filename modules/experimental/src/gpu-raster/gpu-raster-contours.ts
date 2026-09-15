@@ -300,15 +300,12 @@ export class GPURasterContours {
       cases,
       segmentCounts
     }).addToGraph(graph);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-scan`,
         input: segmentCounts,
         output: segmentOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
     if (this.cellCount > 0 && this.capacity > 0) {
       this.addScatterPass(graph, cases, segmentOffsets, gpuLevel);
     }

@@ -109,14 +109,14 @@ dispatch envelope are rejected before encoding.
 const sceneView = scene.importToGraph(graph);
 const commandView = commands.importToGraph(graph);
 
-addGPUCommandNodes(graph, new GPUSceneDrawGeneration({
+graph.add(new GPUSceneDrawGeneration({
   scene: sceneView,
   visibility,
   commands: commandView,
   requiredCount,
   publishedCount,
   overflow: drawOverflow
-}).getCommandNodes(graph));
+}));
 
 const groups = new GPUSceneResourceGroups({
   scene: sceneView,
@@ -131,7 +131,7 @@ const groups = new GPUSceneResourceGroups({
   overflow: anyResourceMismatch
 });
 
-addGPUCommandNodes(graph, groups.getCommandNodes(graph));
+graph.add(groups);
 
 for (const group of groups.groups) {
   bindRendererResources(renderPass, group.id);

@@ -180,7 +180,8 @@ For information on upgrading to from v8 and earlier releases, see the [Legacy Up
 ## GPU Core composition
 
 GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
-the returned nodes with `addGPUCommandNodes(graph, nodes)`, or add a graph-independent primitive
-to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
+a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect
+or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent
+primitives can also be added to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
 removed. The three range/scatter primitives that also publish scratch views expose
 `getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.

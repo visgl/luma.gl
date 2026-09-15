@@ -336,9 +336,7 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     for (const [batchIndex, batch] of context.table.batches.entries()) {
       const batchId = `${id}-batch-${batchIndex}`;
       const capacity = Math.min(options.capacity ?? batch.numRows, batch.numRows);
-      addGPUCommandNodes(
-        context.graph,
-        new GPUHashIndexQuery({
+      context.graph.add(new GPUHashIndexQuery({
           id: batchId,
           index: indexState.index,
           keys: indexState.maskedLeftKeys.data[batchIndex],
@@ -347,8 +345,7 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
           probes: probeCounts.data[batchIndex],
           statistics: statistics.data[batchIndex],
           maxProbeCount: options.maxProbeCount
-        }).getCommandNodes(context.graph)
-      );
+        }));
 
       addGPUJoinClassifyPass(context.graph, `${batchId}-classify`, {
         matches: matches.data[batchIndex],
@@ -363,14 +360,11 @@ function addGPUJoinToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
         'uint32',
         batch.numRows
       );
-      addGPUCommandNodes(
-        context.graph,
-        new GPUScan({
+      context.graph.add(new GPUScan({
           id: `${batchId}-published-offsets`,
           input: included.data[batchIndex],
           output: offsets
-        }).getCommandNodes(context.graph)
-      );
+        }));
       addGPUJoinCountPass(context.graph, `${batchId}-count`, {
         included: included.data[batchIndex],
         offsets,
@@ -451,9 +445,7 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     const statistics = context.graph.importGPUVector(`${id}-query-statistics`, lookupStatistics);
 
     for (const [batchIndex, keys] of indexState.maskedLeftKeys.data.entries()) {
-      addGPUCommandNodes(
-        context.graph,
-        new GPUHashIndexQuery({
+      context.graph.add(new GPUHashIndexQuery({
           id: `${id}-batch-${batchIndex}`,
           index: indexState.index,
           keys,
@@ -462,8 +454,7 @@ function addGPULookupToGraph<Left extends GPUTypeMap, Right extends GPUTypeMap>(
           probes: probes.data[batchIndex],
           statistics: statistics.data[batchIndex],
           maxProbeCount: options.maxProbeCount
-        }).getCommandNodes(context.graph)
-      );
+        }));
     }
 
     const resources: GPULookupResources<Right> = {
@@ -566,7 +557,7 @@ function buildGPUJoinIndex<Left extends GPUTypeMap, Right extends GPUTypeMap>(
     statistics,
     maxProbeCount: options.maxProbeCount
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  graph.add(index);
   addGPUJoinContractPass(graph, `${id}-validate-contract`, statistics, violation);
 
   const leftField = context.table.schema.fields.find(field => field.name === options.leftOn);

@@ -247,7 +247,7 @@ describe('bounded GPU sort dispatch', () => {
     const addComputePass = vi.spyOn(graph, 'addComputePass');
 
     try {
-      addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+      graph.add(sort);
 
       const identifiers = addComputePass.mock.calls.map(([pass]) => pass.id);
       expect(identifiers).toContain('bounded-batch-sort-chunk-0-radix-digit-0-histogram');

@@ -54,13 +54,13 @@ The output is a distribution, not a prefix sum. Compose it with inclusive `GPUSc
 cumulative distribution, or reduce the bins to validate the accepted-row total.
 
 ```ts
-addGPUCommandNodes(graph, new GPUHistogram({input: values, output: counts, domain: 'auto'}).getCommandNodes(graph));
+graph.add(new GPUHistogram({input: values, output: counts, domain: 'auto'}));
 
-addGPUCommandNodes(graph, new GPUHistogram({
+graph.add(new GPUHistogram({
   input: durations,
   output: latencyCounts,
   edges: [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10]
-}).getCommandNodes(graph));
+}));
 ```
 
 ## Constructor

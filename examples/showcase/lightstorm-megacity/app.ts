@@ -849,15 +849,12 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       }
     });
 
-    addGPUCommandNodes(
-      graph,
-      new GPUVisibilityWorkflow({
+    graph.add(new GPUVisibilityWorkflow({
         id: 'visible-city-records',
         predicates: [{kind: 'bounds', mask: flags}],
         output: visibleIdentifierView,
         count: instanceCount
-      }).getCommandNodes(graph)
-    );
+      }));
 
     graph.addRenderPass({
       id: 'render-visible-city',

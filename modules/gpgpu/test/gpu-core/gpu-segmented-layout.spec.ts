@@ -43,9 +43,7 @@ it('GPUSegmentedLayout materializes generic value and segment offsets', async ()
   const valueCount = importOutput('value-count', 1);
   const elementCount = importOutput('element-count', 1);
   const segmentCount = importOutput('segment-count', 1);
-  addGPUCommandNodes(
-    graph,
-    new GPUSegmentedLayout({
+  graph.add(new GPUSegmentedLayout({
       valueFlags: importValues('value-flags', Uint32Array.from([1, 0, 1, 1, 0, 1])),
       elementFlags: importValues('element-flags', Uint32Array.from([1, 1, 1, 0, 1, 1])),
       segmentStartFlags: importValues('segment-start-flags', Uint32Array.from([0, 0, 1, 0, 1, 0])),
@@ -56,8 +54,7 @@ it('GPUSegmentedLayout materializes generic value and segment offsets', async ()
       valueCount: valueCount.view,
       elementCount: elementCount.view,
       segmentCount: segmentCount.view
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-segmented-layout-test'});
@@ -108,9 +105,7 @@ it('GPUSegmentedLayout clears counts and the first offset for an empty sequence'
     );
     return graph.createDataView(handle, {format: 'uint32', length: 1});
   });
-  addGPUCommandNodes(
-    graph,
-    new GPUSegmentedLayout({
+  graph.add(new GPUSegmentedLayout({
       valueFlags: emptyView,
       elementFlags: emptyView,
       segmentStartFlags: emptyView,
@@ -121,8 +116,7 @@ it('GPUSegmentedLayout clears counts and the first offset for an empty sequence'
       valueCount: outputViews[1],
       elementCount: outputViews[2],
       segmentCount: outputViews[3]
-    }).getCommandNodes(graph)
-  );
+    }));
   const compiled = graph.compile();
   try {
     const commandEncoder = device.createCommandEncoder({id: 'gpu-segmented-layout-empty-test'});

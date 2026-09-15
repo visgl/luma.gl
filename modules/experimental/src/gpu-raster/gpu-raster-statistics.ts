@@ -150,35 +150,26 @@ export class GPURasterStatistics {
       horizontalCount,
       verticalCount
     ]);
-    addGPUCommandNodes(
-      graph,
-      new GPUReduction({
+    graph.add(new GPUReduction({
         id: `${this.id}-count`,
         input: resolvedValidity,
         output: this.count,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUReduction({
+      }));
+    graph.add(new GPUReduction({
         id: `${this.id}-sum`,
         input: calibratedValues,
         mask: resolvedValidity,
         output: this.sum,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUReduction({
+      }));
+    graph.add(new GPUReduction({
         id: `${this.id}-extent`,
         input: calibratedValues,
         mask: resolvedValidity,
         output: this.extent,
         operation: 'extent'
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addMeanPass(graph);
   }
 

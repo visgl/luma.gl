@@ -27,9 +27,7 @@ export class GPUParquetPlainByteArrayDecoder {
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUCommandNodes(
-      graph,
-      new GPUByteRangeGather({
+    graph.add(new GPUByteRangeGather({
         id: this.id,
         source: this.props.input,
         sourceOffsets: this.props.sourceOffsets,
@@ -38,7 +36,6 @@ export class GPUParquetPlainByteArrayDecoder {
         output: this.props.output,
         sourceByteLength: this.props.encodedByteLength,
         outputByteCapacity: this.props.outputByteLength
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }

@@ -103,12 +103,17 @@ class GPUAlgorithm implements GPUProgramPrimitive {
   }
 }
 
-addGPUCommandNodes(graph, new GPUAlgorithm().getCommandNodes(graph));
+graph.add(new GPUAlgorithm());
 ```
 
-A contributor only declares resources and nodes. It does not compile the graph, encode commands,
+`graph.add(primitive)` calls `primitive.getCommandNodes(graph)` and schedules the returned compute,
+render, and copy nodes in order. It rejects additions after compilation, before invoking the primitive.
+Use `getCommandNodes(graph)` directly when you need to inspect or transform nodes before scheduling
+them with `addGPUCommandNodes(graph, nodes)`.
+
+A primitive only declares resources and constructs nodes. It does not compile the graph, encode commands,
 submit work, or read results back. This keeps ownership and scheduling with the application and
-allows independently authored contributors to compose without a runtime registry.
+allows independently authored primitives to compose without a runtime registry.
 
 The exported `createTransientView()` helper creates packed, graph-owned typed storage for
 fixed-width `VertexFormat` values. Variable-length `vertex-list<...>` and `value-list<...>` formats
@@ -198,7 +203,7 @@ graph.addComputePass({
 ```
 
 Do not work around this check by importing the same writable physical allocation under separate
-IDs. If two independently authored contributors need it, pass them the same handle or typed view.
+IDs. If two independently authored primitives need it, pass them the same handle or typed view.
 When one shader needs distinct input and output bindings in a shared allocation, their aligned
 binding ranges must not overlap; otherwise expose the shared range through one read-write binding.
 Validation never destroys caller-owned imports; after a rejected override, the caller can retry

@@ -677,16 +677,13 @@ function createCandidateMembershipIndex<Parameters>(
     'uint32',
     6
   );
-  addGPUCommandNodes(
-    graph,
-    new GPUHashIndex({
+  graph.add(new GPUHashIndex({
       id: `${search.id}-candidate-index`,
       keys: search.candidateIds,
       tableKeys,
       tableValues,
       statistics
-    }).getCommandNodes(graph)
-  );
+    }));
   return {keys: tableKeys, statistics, capacity};
 }
 

@@ -31,13 +31,13 @@ GPU transpose pass may cost more than it saves.
 ```ts
 import {GPUTranspose} from '@luma.gl/experimental';
 
-addGPUCommandNodes(graph, new GPUTranspose({
+graph.add(new GPUTranspose({
   id: 'transpose-points',
   input,
   output,
   rows: 480,
   columns: 640
-}).getCommandNodes(graph));
+}));
 ```
 
 `input` and `output` must be packed, four-byte-aligned `GraphDataView` values with the same scalar

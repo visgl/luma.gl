@@ -104,30 +104,24 @@ export class GPUTraceAggregation {
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const keys = getDimensionView(this.trace, this.dimension);
     if (this.metric === 'count') {
-      addGPUCommandNodes(
-        graph,
-        new GPUGroupAggregation({
+      graph.add(new GPUGroupAggregation({
           id: this.id,
           keys,
           mask: this.selection,
           output: this.output as GraphDataView<'uint32'>,
           operation: 'count'
-        }).getCommandNodes(graph)
-      );
+        }));
       return;
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+    graph.add(new GPUGroupAggregation({
         id: this.id,
         keys,
         values: this.trace.durations,
         mask: this.selection,
         output: this.output as GraphDataView<'float32'>,
         operation: getDurationOperation(this.metric)
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }
 

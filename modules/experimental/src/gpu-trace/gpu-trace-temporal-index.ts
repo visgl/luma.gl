@@ -156,15 +156,12 @@ export class GPUTraceTemporalIndex {
       if (this.stats.batchCount > 0) {
         addTemporalQueryPass(graph, this, candidateFlags);
       }
-      addGPUCommandNodes(
-        graph,
-        new GPUVisibilityWorkflow({
+      graph.add(new GPUVisibilityWorkflow({
           id: `${this.id}-candidates`,
           predicates: [{kind: ['time-range', 'bounds'], mask: candidateFlags}],
           output: this.output.candidates,
           count: this.output.candidateCount
-        }).getCommandNodes(graph)
-      );
+        }));
     }
   }
 }
@@ -316,9 +313,7 @@ function addHierarchicalCandidateQuery<Parameters>(
 
   addDispatchInitializationPass(graph, `${index.id}-active-node-dispatch`, activeNodeDispatch);
   addHierarchyNodeQueryPass(graph, index, hierarchy, level, nodeFlags);
-  addGPUCommandNodes(
-    graph,
-    new GPUVisibilityWorkflow({
+  graph.add(new GPUVisibilityWorkflow({
       id: `${index.id}-active-nodes`,
       predicates: [{kind: ['time-range', 'bounds'], mask: nodeFlags}],
       output: activeNodeIds,
@@ -327,8 +322,7 @@ function addHierarchicalCandidateQuery<Parameters>(
         length: 1,
         byteOffset: activeNodeDispatch.byteOffset + UINT32_BYTE_LENGTH
       })
-    }).getCommandNodes(graph)
-  );
+    }));
   addClearViewPass(graph, `${index.id}-active-node-counts`, activeNodeCounts);
   addActiveNodeCountPass(
     graph,
@@ -339,14 +333,11 @@ function addHierarchicalCandidateQuery<Parameters>(
     activeNodeDispatch,
     activeNodeCounts
   );
-  addGPUCommandNodes(
-    graph,
-    new GPUScan({
+  graph.add(new GPUScan({
       id: `${index.id}-active-node-offsets`,
       input: activeNodeCounts,
       output: activeNodeOffsets
-    }).getCommandNodes(graph)
-  );
+    }));
   addActiveNodeScatterPass(
     graph,
     index,

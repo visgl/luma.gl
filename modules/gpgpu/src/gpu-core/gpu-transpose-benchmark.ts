@@ -195,12 +195,7 @@ function makeGPUTransposeBenchmarkPath(
   const input = importGPUTransposeBenchmarkView(graph, 'input', inputBuffer, elementCount);
   const output = importGPUTransposeBenchmarkView(graph, 'output', outputBuffer, elementCount);
   if (strategy === 'tiled') {
-    addGPUCommandNodes(
-      graph,
-      new GPUTranspose({id: `${benchmarkId}-tiled`, input, output, rows, columns}).getCommandNodes(
-        graph
-      )
-    );
+    graph.add(new GPUTranspose({id: `${benchmarkId}-tiled`, input, output, rows, columns}));
   } else {
     addGPUTransposeReferencePass(graph, benchmarkId, input, output, rows, columns);
   }

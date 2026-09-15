@@ -192,9 +192,7 @@ export class GPUTraceMipmapBoundaries {
 
     addValidationClearPass(graph, this);
     addPixelQueryPreparationPass(graph, this, queryTimes, searchSegments);
-    addGPUCommandNodes(
-      graph,
-      new GPUGallopingSearch({
+    graph.add(new GPUGallopingSearch({
         id: `${this.id}-galloping-search`,
         values: this.startTimes,
         valueOrder: this.startTimeOrder,
@@ -205,8 +203,7 @@ export class GPUTraceMipmapBoundaries {
         output: this.output,
         validationErrors: this.validationErrors,
         preserveValidationErrors: true
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }
 

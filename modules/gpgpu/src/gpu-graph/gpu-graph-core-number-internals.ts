@@ -134,15 +134,12 @@ export function addGPUGraphCoreNumberToGraphWithDispatchLimit<Parameters>(
   }
 
   if (state.degeneracy) {
-    addGPUCommandNodes(
-      commandGraph,
-      new GPUReduction({
+    commandGraph.add(new GPUReduction({
         id: `${state.id}-degeneracy`,
         input: state.output,
         output: state.degeneracy,
         operation: 'max'
-      }).getCommandNodes(commandGraph)
-    );
+      }));
   }
 }
 

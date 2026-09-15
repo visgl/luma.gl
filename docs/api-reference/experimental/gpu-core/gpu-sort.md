@@ -90,7 +90,7 @@ const sort = new GPUSort({
   algorithm: 'auto',
   direction: 'ascending'
 });
-addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+graph.add(sort);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'sort-records'});
@@ -112,7 +112,7 @@ const sort = new GPUBatchSort({
   algorithm: 'auto',
   direction: 'ascending'
 });
-addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+graph.add(sort);
 ```
 
 ## Constructor

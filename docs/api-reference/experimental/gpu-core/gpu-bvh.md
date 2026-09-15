@@ -126,7 +126,7 @@ const bvh = new GPUBVH({
   overflow: capacityOverflow
 });
 
-addGPUCommandNodes(graph, bvh.getCommandNodes(graph));
+graph.add(bvh);
 ```
 
 All views must be packed and belong to the target command graph. `nodeMinima`, `nodeMaxima`, and

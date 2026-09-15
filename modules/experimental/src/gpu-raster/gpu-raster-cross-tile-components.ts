@@ -348,17 +348,14 @@ export class GPURasterCrossTileComponents {
     for (const tile of this.plannedTiles) this.addTileInitialization(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativePass(graph, scratch, tile);
     for (const tile of this.plannedTiles) this.addRepresentativeValidation(graph, scratch, tile);
-    addGPUCommandNodes(
-      graph,
-      new GPUSort({
+    graph.add(new GPUSort({
         id: `${this.id}-sort-global-roots`,
         keys: scratch.rootPositions,
         values: scratch.candidateIndices,
         outputKeys: scratch.sortedPositions,
         outputValues: scratch.sortedCandidates,
         direction: 'ascending'
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addRankInitialization(graph, scratch);
     for (let iteration = 0; iteration < this.maximumIterations; iteration++) {
       for (const seam of this.seams) this.addSeamPass(graph, scratch, seam, iteration);
@@ -366,15 +363,12 @@ export class GPURasterCrossTileComponents {
       this.addConvergencePass(graph, scratch, iteration);
     }
     this.addRootFlagPass(graph, scratch);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-scan-global-roots`,
         input: scratch.rootFlags,
         output: scratch.rootOffsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addCountPublication(graph, scratch);
     for (const tile of this.plannedTiles) this.addTilePublication(graph, scratch, tile);
     if (this.output.pixelCounts.length > 0) {

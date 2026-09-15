@@ -23,7 +23,7 @@ describe('GPUSegmentedBVH', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      addGPUCommandNodes(fixture.graph, fixture.hierarchy.getCommandNodes(fixture.graph));
+      fixture.graph.add(fixture.hierarchy);
 
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
         [1, 2, 4, 8, 16, 32, 64, 128].map(
@@ -47,7 +47,7 @@ describe('GPUSegmentedBVH', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      addGPUCommandNodes(fixture.graph, fixture.hierarchy.getCommandNodes(fixture.graph));
+      fixture.graph.add(fixture.hierarchy);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'segmented-bvh-fused-refit-4'
       ]);
@@ -217,7 +217,7 @@ describe('GPUSegmentedBVH', () => {
 
     try {
       expect(() =>
-        addGPUCommandNodes(otherGraph, fixture.hierarchy.getCommandNodes(otherGraph))
+        otherGraph.add(fixture.hierarchy)
       ).toThrow(/belong to the target graph/);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {

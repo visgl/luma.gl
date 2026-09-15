@@ -33,7 +33,7 @@ or a distribution. A reduction deliberately discards row identity and intermedia
 does not report which row produced a minimum or maximum.
 
 ```ts
-addGPUCommandNodes(graph, new GPUReduction({input: values, output: extent, operation: 'extent'}).getCommandNodes(graph));
+graph.add(new GPUReduction({input: values, output: extent, operation: 'extent'}));
 ```
 
 ## Constructor

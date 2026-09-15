@@ -39,14 +39,11 @@ export class GPUParquetDeltaLengthByteArrayDecoder {
       descriptorCount: this.props.descriptorCount,
       firstValue: this.props.firstValue
     }).addToGraph(graph);
-    addGPUCommandNodes(
-      graph,
-      new GPUScan({
+    graph.add(new GPUScan({
         id: `${this.id}-offsets`,
         input: this.props.lengths,
         output: this.props.offsets,
         mode: 'exclusive'
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 }

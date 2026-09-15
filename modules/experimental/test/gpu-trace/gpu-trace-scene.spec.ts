@@ -157,24 +157,19 @@ it('GPUTraceScene feeds shared visibility, indirect draws, and renderer resource
   const required = makeOutput(device, graph, 'trace-required', 1);
   const published = makeOutput(device, graph, 'trace-published', 1);
   const drawOverflow = makeOutput(device, graph, 'trace-draw-overflow', 1);
-  addGPUCommandNodes(
-    graph,
-    new GPUSceneDrawGeneration({
+  graph.add(new GPUSceneDrawGeneration({
       scene: view.scene,
       visibility: visibility.view,
       commands: commandView,
       requiredCount: required.view,
       publishedCount: published.view,
       overflow: drawOverflow.view
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const counts = makeOutput(device, graph, 'trace-group-counts', 2);
   const overflows = makeOutput(device, graph, 'trace-group-overflows', 2);
   const overflow = makeOutput(device, graph, 'trace-global-overflow', 1);
-  addGPUCommandNodes(
-    graph,
-    new GPUSceneResourceGroups({
+  graph.add(new GPUSceneResourceGroups({
       scene: view.scene,
       commands: commandView,
       groups: [
@@ -184,8 +179,7 @@ it('GPUTraceScene feeds shared visibility, indirect draws, and renderer resource
       counts: counts.view,
       overflows: overflows.view,
       overflow: overflow.view
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const compiled = graph.compile();
   const encoder = device.createCommandEncoder();

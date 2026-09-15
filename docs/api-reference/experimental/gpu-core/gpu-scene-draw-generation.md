@@ -110,7 +110,7 @@ const generation = new GPUSceneDrawGeneration({
   overflow
 });
 
-addGPUCommandNodes(graph, generation.getCommandNodes(graph));
+graph.add(generation);
 
 // The application compiles, encodes, and submits the graph, then records its stable slots.
 for (let slot = 0; slot < commands.capacity; slot++) {

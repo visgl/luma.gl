@@ -342,7 +342,7 @@ export class GPUProgramCompiler<Parameters = void> {
           reason: 'execution primitive constructs explicit command nodes'
         });
         this.withNodeDecoration(graph, state, () =>
-          addGPUCommandNodes(graph, operation.getCommandNodes(graph))
+          graph.add(operation)
         );
         return;
       }

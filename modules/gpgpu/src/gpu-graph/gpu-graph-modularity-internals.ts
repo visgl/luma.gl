@@ -150,27 +150,21 @@ export function addGPUGraphModularityToGraphWithDispatchLimit<Parameters>(
     });
   }
 
-  addGPUCommandNodes(
-    commandGraph,
-    new GPUReduction({
+  commandGraph.add(new GPUReduction({
       id: `${state.id}-total-volume-reduction`,
       input: state.outgoingVolumes,
       output: state.totalVolume,
       operation: 'sum'
-    }).getCommandNodes(commandGraph)
-  );
+    }));
 
   if (vertexCount > 0) addContributionPass(commandGraph, state);
 
-  addGPUCommandNodes(
-    commandGraph,
-    new GPUReduction({
+  commandGraph.add(new GPUReduction({
       id: `${state.id}-score-reduction`,
       input: state.contributions,
       output: state.output,
       operation: 'sum'
-    }).getCommandNodes(commandGraph)
-  );
+    }));
 
   addValidityFinalizationPass(commandGraph, state);
 }

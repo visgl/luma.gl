@@ -259,79 +259,58 @@ export class GPURasterRegionMeasurements {
       rowValues,
       rasterDispatch
     );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-pixel-count`,
         keys: groupKeys,
         mask: topologyMask,
         output: this.output.pixelCounts
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-intensity-count`,
         keys: groupKeys,
         mask: intensityMask,
         output: this.output.intensityCounts
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-intensity-sum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensitySums,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-intensity-minimum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensityMinimums,
         operation: 'min'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-intensity-maximum`,
         keys: groupKeys,
         values: intensityValues,
         mask: intensityMask,
         output: this.output.intensityMaximums,
         operation: 'max'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-column-sum`,
         keys: groupKeys,
         values: columnValues,
         mask: topologyMask,
         output: this.output.columnSums,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
-    addGPUCommandNodes(
-      graph,
-      new GPUGroupAggregation({
+      }));
+    graph.add(new GPUGroupAggregation({
         id: `${this.id}-row-sum`,
         keys: groupKeys,
         values: rowValues,
         mask: topologyMask,
         output: this.output.rowSums,
         operation: 'sum'
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addIntensityMeanPass(graph, groupDispatch);
     this.addGeometryPass(graph, groupDispatch);
   }

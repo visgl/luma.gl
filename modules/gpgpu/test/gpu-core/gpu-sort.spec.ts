@@ -346,9 +346,7 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
     const inputValues = createPaddedView('values', values, 2);
     const outputKeys = createPaddedView('output-keys', new Uint32Array(length), 3);
     const outputValues = createPaddedView('output-values', new Uint32Array(length), 4);
-    addGPUCommandNodes(
-      graph,
-      new GPUSort({
+    graph.add(new GPUSort({
         id: `offset-${algorithm}`,
         keys: inputKeys.view,
         values: inputValues.view,
@@ -356,8 +354,7 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
         outputValues: outputValues.view,
         algorithm,
         direction: 'descending'
-      }).getCommandNodes(graph)
-    );
+      }));
 
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `offset-${algorithm}-encoder`});
@@ -629,7 +626,7 @@ it('GPUSort validates layouts, lengths, graph ownership, and output buffers', as
   const otherGraph = new GPUCommandGraph(device, {id: 'other-sort-graph'});
   const sort = new GPUSort({keys, values, outputKeys, outputValues});
   expect(
-    () => addGPUCommandNodes(otherGraph, sort.getCommandNodes(otherGraph)),
+    () => otherGraph.add(sort),
     'foreign graph is rejected'
   ).toThrow(/target graph/);
 });
@@ -661,7 +658,7 @@ it('GPUSort rejects borrowed physical-buffer aliases before encoding either algo
       outputValues: importView(graph, 'output-values', outputValuesBuffer, 4),
       algorithm
     });
-    addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+    graph.add(sort);
     const compiled = graph.compile();
     const rejectedEncoder = device.createCommandEncoder({id: `${algorithm}-rejected-alias`});
 
@@ -728,7 +725,7 @@ it('GPUBatchSort rejects physically aliased output overrides before encoding', a
     outputKeys: makeImportedGraphVector(graph, 'batch-output-keys', outputKeysBuffer, 3),
     outputValues: makeImportedGraphVector(graph, 'batch-output-values', outputValuesBuffer, 3)
   });
-  addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+  graph.add(sort);
   const compiled = graph.compile();
   const rejectedEncoder = device.createCommandEncoder({id: 'batch-sort-rejected-alias'});
 
@@ -817,7 +814,7 @@ async function runSort(
     keyBits
   });
   if (maxComputeWorkgroupsPerDimension === undefined) {
-    addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+    graph.add(sort);
   } else {
     addGPUCommandNodes(
       graph,
@@ -877,7 +874,7 @@ async function runBatchSort(
     algorithm,
     direction
   });
-  addGPUCommandNodes(graph, sort.getCommandNodes(graph));
+  graph.add(sort);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-sort-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});

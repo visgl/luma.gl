@@ -36,10 +36,7 @@ export class GPULZ4RawDecompressor {
   }
 
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUCommandNodes(
-      graph,
-      new GPULZByteDecompressor(makeGPULZ4RawDecompressorProps(this.props)).getCommandNodes(graph)
-    );
+    graph.add(new GPULZByteDecompressor(makeGPULZ4RawDecompressorProps(this.props)));
   }
 }
 

@@ -145,16 +145,13 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
         this.domainOutput ??
         createTransientView(graph, `${this.id}-valid-domain`, this.input.format, 2);
       assertRasterStorageBindingFits(graph.device, resolvedDomain, `${this.id} domain`);
-      addGPUCommandNodes(
-        graph,
-        new GPUReduction<GPURasterScalarFormat>({
+      graph.add(new GPUReduction<GPURasterScalarFormat>({
           id: `${this.id}-valid-extent`,
           input: values,
           mask,
           output: resolvedDomain,
           operation: 'extent'
-        }).getCommandNodes(graph)
-      );
+        }));
       domain = resolvedDomain;
     } else {
       domain = this.domain;
@@ -163,16 +160,13 @@ export class GPURasterHistogram<Format extends GPURasterScalarFormat = GPURaster
       }
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUHistogram<GPURasterScalarFormat>({
+    graph.add(new GPUHistogram<GPURasterScalarFormat>({
         id: `${this.id}-bins`,
         input: values,
         mask,
         output: this.output,
         domain
-      }).getCommandNodes(graph)
-    );
+      }));
   }
 
   private resolveValidity<Parameters>(

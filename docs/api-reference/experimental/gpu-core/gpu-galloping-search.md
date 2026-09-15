@@ -31,7 +31,7 @@ it does not assume that the CPU microbenchmark's reported speedup transfers unch
 ## Usage
 
 ```ts
-addGPUCommandNodes(graph, new GPUGallopingSearch({
+graph.add(new GPUGallopingSearch({
   values: sortedValues,
   valueOrder: optionalSortedRowIds,
   queries: orderedQueries,
@@ -40,7 +40,7 @@ addGPUCommandNodes(graph, new GPUGallopingSearch({
   queriesPerTile: 32,
   output: lowerBoundPositions,
   validationErrors
-}).getCommandNodes(graph));
+}));
 ```
 
 `segments` contains packed four-word records:

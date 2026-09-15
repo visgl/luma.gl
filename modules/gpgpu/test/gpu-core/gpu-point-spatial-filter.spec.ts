@@ -179,7 +179,7 @@ function createFixture(
     count: importView(graph, 'index-count', indexCount, 'uint32', 1),
     overflow: importView(graph, 'index-overflow', indexOverflow, 'uint32', 1)
   });
-  addGPUCommandNodes(graph, index.getCommandNodes(graph));
+  graph.add(index);
 
   const candidateIdsView = importView(graph, 'candidate-ids', candidateIds, 'uint32', length);
   const candidateCountView = importView(graph, 'candidate-count', candidateCount, 'uint32', 1);
@@ -190,17 +190,14 @@ function createFixture(
     'uint32',
     1
   );
-  addGPUCommandNodes(
-    graph,
-    new GPUGridIndexQuery({
+  graph.add(new GPUGridIndexQuery({
       index,
       kind: props.kind,
       query: queryView,
       output: candidateIdsView,
       count: candidateCountView,
       overflow: candidateOverflowView
-    }).getCommandNodes(graph)
-  );
+    }));
 
   addFilterAndVisibility(graph, {
     id: 'indexed',
@@ -274,9 +271,7 @@ function addFilterAndVisibility(
     props.length
   );
   const overflow = importView(graph, `${props.id}-overflow`, props.result.overflow, 'uint32', 1);
-  addGPUCommandNodes(
-    graph,
-    new GPUPointSpatialFilter({
+  graph.add(new GPUPointSpatialFilter({
       id: `${props.id}-point-filter`,
       positions: props.positions,
       kind: props.kind,
@@ -284,8 +279,7 @@ function addFilterAndVisibility(
       outputMask: exactMask,
       overflow,
       candidates: props.candidates
-    }).getCommandNodes(graph)
-  );
+    }));
 
   const predicates = [{kind: 'bounds' as const, mask: exactMask}];
   if (props.selection) {
@@ -294,9 +288,7 @@ function addFilterAndVisibility(
       mask: importView(graph, `${props.id}-selection`, props.selection, 'uint32', props.length)
     });
   }
-  addGPUCommandNodes(
-    graph,
-    new GPUVisibilityWorkflow({
+  graph.add(new GPUVisibilityWorkflow({
       id: `${props.id}-visibility`,
       predicates,
       output: importView(
@@ -308,8 +300,7 @@ function addFilterAndVisibility(
       ),
       count: importView(graph, `${props.id}-visible-count`, props.result.count, 'uint32', 1),
       outputMask
-    }).getCommandNodes(graph)
-  );
+    }));
 }
 
 function createResultBuffers(device: Device, length: number): ResultBuffers {

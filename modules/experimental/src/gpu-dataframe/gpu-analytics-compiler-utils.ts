@@ -151,14 +151,11 @@ export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
     `${id}-combined-mask`,
     context.selectionMask
   );
-  addGPUCommandNodes(
-    context.graph,
-    new GPUMask({
+  context.graph.add(new GPUMask({
       id: `${id}-combine-validity`,
       inputs: [context.selectionMask, validityView],
       output
-    }).getCommandNodes(context.graph)
-  );
+    }));
   return output;
 }
 

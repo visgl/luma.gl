@@ -673,9 +673,7 @@ export class GPUPagedSplatRenderer {
       this.addFeaturePass(graph, segment, depthKeys, drawCommandViews.buffer, semanticSelections);
     }
 
-    addGPUCommandNodes(
-      graph,
-      new GPUSort({
+    graph.add(new GPUSort({
         id: 'paged-gaussian-global-depth-sort',
         keys: depthKeys,
         values: sourceIndices,
@@ -684,8 +682,7 @@ export class GPUPagedSplatRenderer {
         algorithm: 'radix',
         direction: 'ascending',
         keyBits: 16
-      }).getCommandNodes(graph)
-    );
+      }));
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
     for (let segmentIndex = 0; segmentIndex < outputSegmentCount; segmentIndex++) {

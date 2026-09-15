@@ -72,7 +72,7 @@ import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/gpgpu/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'column-layout'});
 
-addGPUCommandNodes(graph, new GPUSegmentedLayout({
+graph.add(new GPUSegmentedLayout({
   id: 'nullable-lists',
   valueFlags,
   elementFlags,
@@ -84,7 +84,7 @@ addGPUCommandNodes(graph, new GPUSegmentedLayout({
   valueCount,
   elementCount,
   segmentCount
-}).getCommandNodes(graph));
+}));
 ```
 
 The operation contributes three `GPUScan` pipelines, one segment-offset pass, and one count pass.
