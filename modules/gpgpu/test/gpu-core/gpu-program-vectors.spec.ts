@@ -98,3 +98,55 @@ test('program MADD and dot execute across different physical chunk boundaries', 
     for (const buffer of buffers) buffer.destroy();
   }
 });
+
+for (const outputAlias of ['input', 'addend', 'both'] as const) {
+  for (const chunked of [false, true]) {
+    test(`program MADD executes in place for ${outputAlias} (${chunked ? 'split' : 'single'} chunks)`, async () => {
+      const device = await getWebGPUTestDevice();
+      if (!device) return;
+      const buffers: Buffer[] = [];
+      const chunks = (batches: number[][]) =>
+        batches.map(values => {
+          const buffer = device.createBuffer({
+            data: new Float32Array(values.length ? values : [0]),
+            usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+          });
+          buffers.push(buffer);
+          return new GPUData({buffer, format: 'float32', length: values.length});
+        });
+      const inputData = chunks(chunked ? [[1, 2], [], [3, 4, 5]] : [[1, 2, 3, 4, 5]]);
+      const addendData = chunks(chunked ? [[10], [20, 30, 40, 50]] : [[10, 20, 30, 40, 50]]);
+      const program = new GPUProgram();
+      const input = program.vector('input', 'float32', 5, {external: true});
+      const addend =
+        outputAlias === 'both' ? input : program.vector('addend', 'float32', 5, {external: true});
+      const output = outputAlias === 'addend' ? addend : input;
+      const scale = program.scalar('scale', 'float32');
+      program.add([
+        new GPUProgramScalarLiteral({output: scale, value: 2}),
+        new GPUProgramVectorMADD({input, addend, output, scale})
+      ]);
+      const compilation = new GPUProgramCompiler(device).compile(program, {
+        vectors: {input: inputData, addend: addendData}
+      });
+      const executable = compilation.graph.compile();
+      try {
+        const encoder = device.createCommandEncoder();
+        executable.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+        const outputData = outputAlias === 'addend' ? addendData : inputData;
+        const result: number[] = [];
+        for (const data of outputData) {
+          if (data.length) {
+            const bytes = await data.buffer.readAsync();
+            result.push(...new Float32Array(bytes.buffer, bytes.byteOffset, data.length));
+          }
+        }
+        expect(result).toEqual(outputAlias === 'both' ? [3, 6, 9, 12, 15] : [12, 24, 36, 48, 60]);
+      } finally {
+        executable.destroy();
+        for (const buffer of buffers) buffer.destroy();
+      }
+    });
+  }
+}

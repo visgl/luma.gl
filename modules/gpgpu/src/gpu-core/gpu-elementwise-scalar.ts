@@ -72,14 +72,17 @@ export class GPUVectorScalarMADD {
       WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
+    // An in-place operand must read through the writable output binding, not bind it twice.
+    const inputBindingName = input === output ? 'outputValues' : 'inputValues';
+    const addendBindingName = addend === output ? 'outputValues' : 'addendValues';
     const source = `
 const LENGTH: u32 = ${output.length}u;
 const I: u32 = ${getViewElementOffset(input)}u;
 const A: u32 = ${getViewElementOffset(addend)}u;
 const O: u32 = ${getViewElementOffset(output)}u;
 
-@group(0) @binding(0) var<storage, read> inputValues: array<f32>;
-@group(0) @binding(1) var<storage, read> addendValues: array<f32>;
+${input === output ? '' : '@group(0) @binding(0) var<storage, read> inputValues: array<f32>;'}
+${addend === output ? '' : '@group(0) @binding(1) var<storage, read> addendValues: array<f32>;'}
 @group(0) @binding(2) var<storage, read_write> outputValues: array<f32>;
 ${getGPUValueArenaWGSLBinding(0, 3)}
 
@@ -93,8 +96,8 @@ fn main(
     return;
   }
 
-  let x = inputValues[I + index];
-  let y = addendValues[A + index];
+  let x = ${inputBindingName}[I + index];
+  let y = ${addendBindingName}[A + index];
   outputValues[O + index] = ${getGPUScalarWGSLLoad(scale)} * x + y;
 }
 `;
@@ -112,9 +115,12 @@ fn main(
             writeByteLength: output.length * 4
           },
           resources: [
-            {buffer: input, usage: 'storage-read'},
-            {buffer: addend, usage: 'storage-read'},
-            {buffer: output, usage: 'storage-write'},
+            ...(input === output ? [] : [{buffer: input, usage: 'storage-read' as const}]),
+            ...(addend === output ? [] : [{buffer: addend, usage: 'storage-read' as const}]),
+            {
+              buffer: output,
+              usage: input === output || addend === output ? 'storage-read-write' : 'storage-write'
+            },
             {buffer: arenaBuffer, usage: 'storage-read'},
             ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
           ],
@@ -124,8 +130,26 @@ fn main(
               source,
               shaderLayout: {
                 bindings: [
-                  {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-                  {name: 'addendValues', type: 'read-only-storage', group: 0, location: 1},
+                  ...(input === output
+                    ? []
+                    : [
+                        {
+                          name: 'inputValues',
+                          type: 'read-only-storage' as const,
+                          group: 0,
+                          location: 0
+                        }
+                      ]),
+                  ...(addend === output
+                    ? []
+                    : [
+                        {
+                          name: 'addendValues',
+                          type: 'read-only-storage' as const,
+                          group: 0,
+                          location: 1
+                        }
+                      ]),
                   {name: 'outputValues', type: 'storage', group: 0, location: 2},
                   {name: 'gpuValues', type: 'read-only-storage', group: 0, location: 3}
                 ]
@@ -134,8 +158,8 @@ fn main(
             return {
               encode: ({computePass, getBuffer}) => {
                 const bindings: Record<string, Binding> = {
-                  inputValues: getViewBinding(input, getBuffer),
-                  addendValues: getViewBinding(addend, getBuffer),
+                  ...(input === output ? {} : {inputValues: getViewBinding(input, getBuffer)}),
+                  ...(addend === output ? {} : {addendValues: getViewBinding(addend, getBuffer)}),
                   outputValues: getViewBinding(output, getBuffer),
                   gpuValues: getBuffer(arenaBuffer)
                 };

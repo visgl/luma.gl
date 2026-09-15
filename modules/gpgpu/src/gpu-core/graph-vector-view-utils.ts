@@ -34,17 +34,29 @@ export function alignGraphVectorViews<Parameters, T extends GPUVectorFormat>(
     }
     const current = chunks.map((data, index) => data[indices[index]]);
     const span = Math.min(...current.map((data, index) => data.length - offsets[index]));
-    result.push(
-      current.map((data, index) =>
-        graph.createDataView(data.buffer, {
-          format: data.format,
-          length: span,
-          byteOffset: data.byteOffset + offsets[index] * data.byteStride,
-          byteStride: data.byteStride,
-          rowByteLength: data.rowByteLength
-        })
-      )
-    );
+    const aligned: GraphDataView<T>[] = [];
+    for (let index = 0; index < current.length; index++) {
+      const data = current[index];
+      // Preserve identity for in-place operands, but never merge distinct source views.
+      const matchingIndex = current.findIndex(
+        (candidate, candidateIndex) =>
+          candidateIndex < index && candidate === data && offsets[candidateIndex] === offsets[index]
+      );
+      aligned.push(
+        matchingIndex >= 0
+          ? aligned[matchingIndex]
+          : offsets[index] === 0 && span === data.length
+            ? data
+            : graph.createDataView(data.buffer, {
+                format: data.format,
+                length: span,
+                byteOffset: data.byteOffset + offsets[index] * data.byteStride,
+                byteStride: data.byteStride,
+                rowByteLength: data.rowByteLength
+              })
+      );
+    }
+    result.push(aligned);
     for (let index = 0; index < offsets.length; index++) offsets[index] += span;
     position += span;
   }

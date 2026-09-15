@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GPUVectorScalarMADD} from '../../src/gpu-core/gpu-elementwise-scalar';
+import {createGPUScalar} from '../../src/gpu-core/gpu-scalar';
+import {alignGraphVectorViews} from '../../src/gpu-core/graph-vector-view-utils';
 import {expect, test, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUProgram,
+  GPUCommandGraph,
+  createGPUConjugateGradientProgram,
   GPUProgramCompiler,
   GPUProgramVectorMADD,
   GPUProgramDotProduct,
@@ -169,5 +174,86 @@ test('implicit transient topology respects storage binding capacity', () => {
     [4, 4],
     [8, 3]
   ]);
+  device.destroy();
+});
+
+test('alignment preserves identical views and distinguishes different subranges', () => {
+  const device = makeDevice();
+  const graph = new GPUCommandGraph(device);
+  const data = graph.importGPUVector(
+    'data',
+    new GPUVector({
+      type: 'data',
+      name: 'data',
+      data: [makeChunk(device, 5)]
+    })
+  );
+  const split = graph.importGPUVector(
+    'split',
+    new GPUVector({
+      type: 'data',
+      name: 'split',
+      data: [makeChunk(device, 2), makeChunk(device, 3)]
+    })
+  );
+  const original = data.data[0];
+  const whole = alignGraphVectorViews(graph, [data, data]);
+  expect(whole[0][0]).toBe(original);
+  expect(whole[0][1]).toBe(original);
+  const spans = alignGraphVectorViews(graph, [data, split, data]);
+  expect(spans.map(span => span[0].length)).toEqual([2, 3]);
+  for (const span of spans) expect(span[0]).toBe(span[2]);
+  expect(spans[0][0]).not.toBe(spans[1][0]);
+  expect(spans[0][0].byteOffset).toBe(0);
+  expect(spans[1][0].byteOffset).toBe(8);
+  // Distinct source views retain distinct identities; partial writable overlap remains invalid.
+  const other = graph.createDataView(original.buffer, {
+    format: 'float32',
+    length: 5,
+    byteOffset: 4
+  });
+  const separate = alignGraphVectorViews(graph, [original, other]);
+  expect(separate[0][0]).not.toBe(separate[0][1]);
+  const scale = createGPUScalar(graph, 'scale', 'float32');
+  expect(() =>
+    graph.add(
+      new GPUVectorScalarMADD({
+        input: original,
+        addend: other,
+        output: original,
+        scale
+      })
+    )
+  ).toThrow(/overlapping writable storage bindings/);
+  device.destroy();
+});
+
+test('conjugate-gradient program lowers its in-place vector updates', () => {
+  const device = makeDevice();
+  const {program, rowOffsets, columnIndices, values, rhs, solution} =
+    createGPUConjugateGradientProgram({
+      size: 2,
+      nonZeros: 2,
+      maxIterations: 2,
+      toleranceSquared: 1e-8
+    });
+  const makeData = (format: 'float32' | 'uint32', length: number) =>
+    new GPUData({
+      buffer: device.createBuffer({byteLength: 16, usage: Buffer.STORAGE}),
+      format,
+      length
+    });
+  const result = new GPUProgramCompiler(device).compile(program, {
+    vectors: {
+      [rowOffsets.id]: makeData('uint32', 3),
+      [columnIndices.id]: makeData('uint32', 2),
+      [values.id]: makeData('float32', 2),
+      [rhs.id]: makeData('float32', 2),
+      [solution.id]: makeData('float32', 2)
+    }
+  });
+  for (const operation of ['x-update', 'r-update', 'p-update']) {
+    expect(result.lowering.nodes.some(node => node.nodeId.includes(operation))).toBe(true);
+  }
   device.destroy();
 });
