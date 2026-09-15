@@ -5,11 +5,7 @@
 import {OrthographicView, type ViewStateChangeParameters} from '@deck.gl/core';
 import {buildSdfFontAtlas} from '@luma.gl/text';
 import {ArrowDeck} from '../arrow-deck';
-import {
-  getDeckExampleProps,
-  installLegacyDeckShaderAssemblerCompatibility,
-  type DeckExampleDeviceOptions
-} from '../deck-example-device';
+import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {GPUCulledArrowTextLayer} from './gpu-culled-arrow-text-layer';
 import {GPUCulledTraceLayer} from './gpu-culled-trace-layer';
 import {GPUTraceCullingEffect, type GPUTraceCullingStats} from './gpu-trace-culling-effect';
@@ -35,7 +31,6 @@ export function createGPUCulledTraceDeck(
   let animationFrame = 0;
   let lastAnimationTime = 0;
   let autoScroll = true;
-  let restoreShaderAssembler: (() => void) | null = null;
   let viewState: TraceViewState = {target: [150, TRACE_LANE_WINDOW / 2, 0], zoom: 0};
   let cullingStats: GPUTraceCullingStats = {
     totalBlocks: traceData.count,
@@ -68,15 +63,6 @@ export function createGPUCulledTraceDeck(
     },
     layers: [],
     effects: [],
-    onDeviceInitialized: initializedDevice => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-    },
-    onError: error => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
-      throw error;
-    },
     getTooltip: info => userInterface.getTooltip(info),
     onViewStateChange: ({viewState: nextViewState}: ViewStateChangeParameters) => {
       viewState = nextViewState as TraceViewState;
@@ -134,8 +120,6 @@ export function createGPUCulledTraceDeck(
       });
     },
     onFinalize: () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
       cancelAnimationFrame(animationFrame);
       userInterface.finalize();
     }
