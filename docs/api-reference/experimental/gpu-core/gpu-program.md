@@ -128,7 +128,8 @@ const chunks = compilation.vectors.get(input.id).chunks;
 // Each descriptor has offset (logical rows), length, and data (a physical GraphDataView).
 ```
 
-Bindings accept a `GPUVector`, a single `GPUData`, or a readonly `GPUData[]`. Raw `Buffer` bindings
+Bindings accept a `GPUVectorLike` (including `GPUVector`), a single `GPUData`, or a readonly
+`GPUData[]`. Raw `Buffer` bindings
 must be wrapped in `GPUData` with explicit format and layout. Import preserves physical buffers,
 byte offsets, row strides, empty chunks, and source order. Shared physical buffers share graph
 hazard tracking. Imports borrow storage; destroying a compiled program does not destroy the source.
@@ -151,3 +152,27 @@ and inspected but is rejected by kernels that do not support it.
 The current CSR SpMV backend requires one physical chunk per operand and rejects multi-chunk
 bindings explicitly. General sparse indexing, global reordering, and the library-wide operation
 batching audit remain follow-up work; this foundation does not claim universal algorithm coverage.
+
+
+### Shared vector shape
+
+`GPUVectorLike<Format, Data>` is the structural, read-only contract for an ordered vector. Its
+required fields are `length` and `data`; `format` can be inferred from nonempty chunks. Optional
+aggregate metadata is inferred during graph import. `GPUVector` and `GraphVectorView` implement
+this contract using their respective physical and graph-managed chunk types. It carries no
+allocation or destruction methods, so other implementations do not need to subclass `GPUVector`.
+
+WebGPU program bindings accept structural vectors whose chunks are `GPUData`, without creating
+an intermediate `GPUVector` wrapper:
+
+```ts
+compiler.compile(program, {
+  vectors: {input: {format: 'float32', length: 5, data: inputChunks}}
+});
+```
+
+`GPUVectorInput` names the shared storage input union in `gpu-data`; there is no program-specific
+vector-binding type. `GPUProgramBindings` is only a TypeScript object type for the named bindings,
+not a runtime wrapper. `GPUProgramVector` remains a symbolic declaration: it can describe transient
+storage before a device or buffer exists. Keeping this declaration separate avoids adding program
+identity, external-binding flags, or compiler allocation state to ordinary `GPUVector` instances.

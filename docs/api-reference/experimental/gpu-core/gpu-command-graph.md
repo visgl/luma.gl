@@ -79,7 +79,8 @@ asynchronous resource can provide `compileAsync(context)` alongside its required
 `compile(context)` callback. `compileAsync()` prefers that callback for the node; `compile()` always
 uses the synchronous callback.
 
-Imported buffers, textures, external textures, `GPUData`, and `GPUVector` chunks are borrowed. The
+Imported buffers, textures, external textures, `GPUData`, and `GPUVectorLike` chunks are borrowed.
+`importGPUVector()` accepts structural vectors as well as `GPUVector` instances. The
 compiled graph owns only node-created resources, physical transients, and cached texture
 views/framebuffers. Calling `destroy()` releases those owned resources and never destroys an
 import.

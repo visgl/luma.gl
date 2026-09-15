@@ -17,7 +17,7 @@ import type {
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
 import {
   type GPUData,
-  type GPUVector,
+  type GPUVectorLike,
   type GPUVectorFormat,
   getGPUVectorFormatInfo,
   isValueListGPUVectorFormat,
@@ -750,7 +750,10 @@ export class GPUCommandGraph<Parameters = void> {
    * Shared physical buffers map to one graph handle while each chunk retains its own offset and
    * layout. Interleaved and variable-length vectors are rejected.
    */
-  importGPUVector<T extends GPUVectorFormat>(id: string, vector: GPUVector<T>): GraphVectorView<T> {
+  importGPUVector<T extends GPUVectorFormat>(
+    id: string,
+    vector: GPUVectorLike<T>
+  ): GraphVectorView<T> {
     if (vector.bufferLayout) {
       throw new Error(`GPUCommandGraph import "${id}" does not accept interleaved GPUVector data`);
     }
@@ -761,6 +764,7 @@ export class GPUCommandGraph<Parameters = void> {
     if (isVertexListGPUVectorFormat(format) || isValueListGPUVectorFormat(format)) {
       throw new Error(`GPUCommandGraph import "${id}" requires a fixed-width GPUVector format`);
     }
+    const formatInfo = getGPUVectorFormatInfo(format);
     const data = vector.data.map((chunk, chunkIndex) => {
       if (chunk.format !== format) {
         throw new Error(`GPUCommandGraph import "${id}" requires matching GPUVector chunk formats`);
@@ -770,13 +774,17 @@ export class GPUCommandGraph<Parameters = void> {
     });
     return new GraphVectorView({
       id,
-      name: vector.name,
+      name: vector.name ?? id,
       format,
       length: vector.length,
-      valueLength: vector.valueLength,
-      stride: vector.stride,
-      byteStride: vector.byteStride,
-      rowByteLength: vector.rowByteLength,
+      valueLength:
+        vector.valueLength ?? vector.data.reduce((sum, chunk) => sum + chunk.valueLength, 0),
+      stride:
+        vector.stride ??
+        vector.data[0]?.stride ??
+        formatInfo.components * (formatInfo.listSize ?? 1),
+      byteStride: vector.byteStride ?? data[0]?.byteStride ?? formatInfo.byteLength,
+      rowByteLength: vector.rowByteLength ?? data[0]?.rowByteLength ?? formatInfo.byteLength,
       data
     });
   }

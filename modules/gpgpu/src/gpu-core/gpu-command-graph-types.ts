@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUVectorLike} from '../gpu-data/gpu-vector-like';
 import {getGPUVectorChunks} from '../gpu-data/gpu-vector-chunks';
 
 import type {
@@ -221,7 +222,9 @@ export class GraphDataView<T extends GPUVectorFormat = GPUVectorFormat> {
  * A vector view is metadata and an ordered list only. Nodes declare uses of individual
  * {@link GraphDataView} chunks so that the compiler continues to track physical buffer hazards.
  */
-export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat> {
+export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat>
+  implements GPUVectorLike<T, GraphDataView<T>>
+{
   /** Canonical logical positions and physical views for every chunk. */
   get chunks() {
     return getGPUVectorChunks(this.data);
