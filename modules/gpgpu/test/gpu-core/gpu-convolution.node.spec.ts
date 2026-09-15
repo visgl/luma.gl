@@ -143,15 +143,17 @@ it('GPUConvolution validates views, capacity, aliasing, and graph ownership', ()
   const otherGraph = new GPUCommandGraph(makeSupportDevice());
   const otherOutput = makeView(otherGraph, 'other-output', 64);
   expect(() =>
-    new GPUConvolution({
-      input,
-      kernel,
-      output: otherOutput,
-      width: 8,
-      height: 8,
-      kernelWidth: 3,
-      kernelHeight: 3
-    }).addToGraph(graph)
+    graph.add(
+      new GPUConvolution({
+        input,
+        kernel,
+        output: otherOutput,
+        width: 8,
+        height: 8,
+        kernelWidth: 3,
+        kernelHeight: 3
+      })
+    )
   ).toThrow(/different GPUCommandGraph/);
 });
 

@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import {
   assertRasterStorageBindingFits,
@@ -49,8 +44,7 @@ export type GPURasterTextureToBufferProps<
 export class GPURasterTextureToBuffer<
   InputFormat extends GPURasterScalarFormat = GPURasterScalarFormat,
   OutputFormat extends GPURasterScalarFormat = GPURasterScalarFormat
-> implements GPUCommandGraphContributor
-{
+> {
   readonly id: string;
   readonly input: GPURasterTextureBand<InputFormat>;
   readonly output: GraphDataView<OutputFormat>;

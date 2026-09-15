@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
@@ -46,7 +47,10 @@ export class GPUFlagOffsets {
   }
 
   /** Adds one exclusive scan and one scalar publication pass to a command graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const {flags, offsets, count} = this.props;
     for (const view of [...getChunks(flags), ...getChunks(offsets), count]) {
       if (view.buffer.graph !== graph) {
@@ -54,21 +58,26 @@ export class GPUFlagOffsets {
       }
     }
     if (flags.length > 0) {
-      new GPUScan({
-        id: `${this.id}-scan`,
-        input: flags,
-        output: offsets,
-        mode: 'exclusive'
-      }).addToGraph(graph);
+      nodes.push(
+        ...new GPUScan({
+          id: `${this.id}-scan`,
+          input: flags,
+          output: offsets,
+          mode: 'exclusive'
+        }).getCommandNodes(graph)
+      );
     }
-    addCountPass(graph, this.props);
+    nodes.push(...addCountPass(graph, this.props));
+
+    return nodes;
   }
 }
 
 function addCountPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPUFlagOffsetsProps>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const hasValues = props.flags.length > 0;
   const flagChunk = hasValues ? getLastNonEmptyChunk(props.flags) : undefined;
   const offsetChunk = hasValues ? getLastNonEmptyChunk(props.offsets) : undefined;
@@ -105,43 +114,47 @@ fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
         {name: 'count', view: props.count, usage: 'storage-write' as const}
       ]
     : [{name: 'count', view: props.count, usage: 'storage-write' as const}];
-  graph.addComputePass({
-    id: `${props.id}-count`,
-    workload: {
-      operation: 'GPUFlagOffsetsCount',
-      commandCount: 1,
-      maximumWorkgroupCount: 1,
-      maximumInvocationCount: WORKGROUP_SIZE,
-      readByteLength: hasValues ? 8 : 0,
-      writeByteLength: 4
-    },
-    resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${props.id}-count`,
-        source,
-        shaderLayout: {
-          bindings: resources.map((resource, location) => ({
-            name: resource.name,
-            type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const resource of resources) {
-            bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${props.id}-count`,
+      workload: {
+        operation: 'GPUFlagOffsetsCount',
+        commandCount: 1,
+        maximumWorkgroupCount: 1,
+        maximumInvocationCount: WORKGROUP_SIZE,
+        readByteLength: hasValues ? 8 : 0,
+        writeByteLength: 4
+      },
+      resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${props.id}-count`,
+          source,
+          shaderLayout: {
+            bindings: resources.map((resource, location) => ({
+              name: resource.name,
+              type: resource.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const resource of resources) {
+              bindings[resource.name] = getViewBinding(resource.view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPUFlagOffsetsProps>): void {

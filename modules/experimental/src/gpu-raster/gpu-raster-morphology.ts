@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPURasterBorderMode} from './gpu-raster-neighborhood';
 import {
@@ -103,7 +98,7 @@ export type GPURasterClosingProps =
  * canonicalized from uint32 flags and remain uint32; grayscale outputs are float32 extrema.
  * Missing centers always remain invalid, independently of the neighborhood nodata policy.
  */
-export class GPURasterMorphology implements GPUCommandGraphContributor {
+export class GPURasterMorphology {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -403,7 +398,7 @@ export class GPURasterErosion extends GPURasterMorphology {
 }
 
 /** Ordered morphology pair with typed graph-owned sample and validity scratch. */
-abstract class GPURasterComposedMorphology implements GPUCommandGraphContributor {
+abstract class GPURasterComposedMorphology {
   readonly id: string;
   readonly width: number;
   readonly height: number;

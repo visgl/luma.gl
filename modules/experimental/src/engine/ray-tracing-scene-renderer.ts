@@ -1749,13 +1749,15 @@ export class RayTracingSceneRenderer {
             length: geometryLayout.triangleCount
           });
         } else {
-          new GPUSort({
-            id: `${props.frameIdentifier}-blas-${geometryIndex}-sort-triangle-morton-keys`,
-            keys: geometryMortonKeys,
-            values: geometryLocalTriangleIds,
-            outputKeys: geometrySortedMortonKeys,
-            outputValues: geometrySortedTriangleIds
-          }).addToGraph(graph);
+          graph.add(
+            new GPUSort({
+              id: `${props.frameIdentifier}-blas-${geometryIndex}-sort-triangle-morton-keys`,
+              keys: geometryMortonKeys,
+              values: geometryLocalTriangleIds,
+              outputKeys: geometrySortedMortonKeys,
+              outputValues: geometrySortedTriangleIds
+            })
+          );
         }
 
         const addGatherPass = (): void => {
@@ -1819,7 +1821,7 @@ export class RayTracingSceneRenderer {
             count,
             overflow
           });
-          blas.addToGraph(graph);
+          graph.add(blas);
         };
 
         const addPackPass = (): void => {
@@ -1889,32 +1891,36 @@ export class RayTracingSceneRenderer {
     }
 
     if (localSortSegments.length > 0) {
-      new GPUSegmentedSort({
-        id: `${props.frameIdentifier}-blas-sort-triangle-morton-keys`,
-        keys: mortonKeys,
-        values: localTriangleIds,
-        outputKeys: sortedMortonKeys,
-        outputValues: sortedTriangleIds,
-        segments: localSortSegments
-      }).addToGraph(graph);
+      graph.add(
+        new GPUSegmentedSort({
+          id: `${props.frameIdentifier}-blas-sort-triangle-morton-keys`,
+          keys: mortonKeys,
+          values: localTriangleIds,
+          outputKeys: sortedMortonKeys,
+          outputValues: sortedTriangleIds,
+          segments: localSortSegments
+        })
+      );
 
       for (const hierarchyPasses of deferredHierarchyPasses) {
         hierarchyPasses.addGatherPass();
       }
 
       if (localHierarchySegments.length > 0) {
-        new GPUSegmentedBVH({
-          id: `${props.frameIdentifier}-blas-bvh`,
-          minima: sortedMinima,
-          maxima: sortedMaxima,
-          nodeMinima,
-          nodeMaxima,
-          nodeChildren,
-          leafIds,
-          counts: blasCounts,
-          overflows: blasOverflows,
-          segments: localHierarchySegments
-        }).addToGraph(graph);
+        graph.add(
+          new GPUSegmentedBVH({
+            id: `${props.frameIdentifier}-blas-bvh`,
+            minima: sortedMinima,
+            maxima: sortedMaxima,
+            nodeMinima,
+            nodeMaxima,
+            nodeChildren,
+            leafIds,
+            counts: blasCounts,
+            overflows: blasOverflows,
+            segments: localHierarchySegments
+          })
+        );
       }
 
       for (const hierarchyPasses of deferredHierarchyPasses) {
@@ -2207,13 +2213,15 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    new GPUSort({
-      id: `${props.frameIdentifier}-sort-primitive-morton-keys`,
-      keys: mortonKeys,
-      values: primitiveIds,
-      outputKeys: sortedMortonKeys,
-      outputValues: sortedPrimitiveIds
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: `${props.frameIdentifier}-sort-primitive-morton-keys`,
+        keys: mortonKeys,
+        values: primitiveIds,
+        outputKeys: sortedMortonKeys,
+        outputValues: sortedPrimitiveIds
+      })
+    );
 
     graph.addComputePass({
       id: `${props.frameIdentifier}-gather-sorted-bounds`,
@@ -2257,7 +2265,7 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    acceleration.addToGraph(graph);
+    graph.add(acceleration);
 
     return graph.compile();
   }
@@ -2458,7 +2466,7 @@ export class RayTracingSceneRenderer {
       }
     });
 
-    refit.addToGraph(graph);
+    graph.add(refit);
 
     return graph.compile();
   }

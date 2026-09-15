@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {GPUFloat32HierarchicalReduction} from './gpu-reduction-substrate';
 import {GPUScalar} from './gpu-scalar';
@@ -21,15 +22,22 @@ export class GPUDotProductHierarchical {
   ) {
     this.id = props.id ?? 'gpu-dot-product-hierarchical';
   }
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    new GPUFloat32HierarchicalReduction({
-      id: this.id,
-      input: this.props.left,
-      inputB: this.props.right,
-      map: 'multiply',
-      output: this.props.output,
-      gate: this.props.gate
-    }).addToGraph(graph);
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...new GPUFloat32HierarchicalReduction({
+        id: this.id,
+        input: this.props.left,
+        inputB: this.props.right,
+        map: 'multiply',
+        output: this.props.output,
+        gate: this.props.gate
+      }).getCommandNodes(graph)
+    );
+
+    return nodes;
   }
 }
 
@@ -46,13 +54,20 @@ export class GPUVectorNormSquaredHierarchical {
   ) {
     this.id = props.id ?? 'gpu-vector-norm-squared-hierarchical';
   }
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    new GPUFloat32HierarchicalReduction({
-      id: this.id,
-      input: this.props.input,
-      map: 'square',
-      output: this.props.output,
-      gate: this.props.gate
-    }).addToGraph(graph);
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...new GPUFloat32HierarchicalReduction({
+        id: this.id,
+        input: this.props.input,
+        map: 'square',
+        output: this.props.output,
+        gate: this.props.gate
+      }).getCommandNodes(graph)
+    );
+
+    return nodes;
   }
 }

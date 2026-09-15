@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -146,7 +147,10 @@ export class GPUConvolution {
   }
 
   /** Adds the selected direct or FFT pipeline without compiling, submitting, or reading back. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     validateGPUConvolutionOwnership(graph, this.input, `${this.id} input`);
     validateGPUConvolutionOwnership(graph, this.kernel, `${this.id} kernel`);
     validateGPUConvolutionOwnership(graph, this.output, `${this.id} output`);
@@ -162,10 +166,12 @@ export class GPUConvolution {
       throw new Error(support.reason);
     }
     if (support.strategy === 'direct') {
-      addGPUConvolutionDirectPass(graph, this);
+      nodes.push(...addGPUConvolutionDirectPass(graph, this));
     } else {
-      addGPUConvolutionFFTPipeline(graph, this);
+      nodes.push(...addGPUConvolutionFFTPipeline(graph, this));
     }
+
+    return nodes;
   }
 }
 
@@ -279,7 +285,8 @@ export function getGPUConvolutionSupport(
 function addGPUConvolutionDirectPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   convolution: GPUConvolution
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     convolution.id,
     convolution.stats.elementCount,
@@ -287,22 +294,27 @@ function addGPUConvolutionDirectPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = getGPUConvolutionDirectShaderSource(convolution, dispatchLayout);
-  addGPUConvolutionComputePass(graph, {
-    id: `${convolution.id}-direct`,
-    source,
-    bindings: {inputValues: convolution.input, kernelValues: convolution.kernel},
-    outputs: {outputValues: convolution.output},
-    dispatchLayout,
-    operation: 'GPUConvolution.direct',
-    readByteLength: convolution.stats.directMultiplyAddCount * 2 * Float32Array.BYTES_PER_ELEMENT,
-    writeByteLength: convolution.stats.elementCount * Float32Array.BYTES_PER_ELEMENT
-  });
+  nodes.push(
+    ...addGPUConvolutionComputePass(graph, {
+      id: `${convolution.id}-direct`,
+      source,
+      bindings: {inputValues: convolution.input, kernelValues: convolution.kernel},
+      outputs: {outputValues: convolution.output},
+      dispatchLayout,
+      operation: 'GPUConvolution.direct',
+      readByteLength: convolution.stats.directMultiplyAddCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+      writeByteLength: convolution.stats.elementCount * Float32Array.BYTES_PER_ELEMENT
+    })
+  );
+
+  return nodes;
 }
 
 function addGPUConvolutionFFTPipeline<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   convolution: GPUConvolution
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const {fftElementCount} = convolution.stats;
   const packedInput = createTransientView(
     graph,
@@ -359,39 +371,55 @@ function addGPUConvolutionFFTPipeline<Parameters>(
     fftElementCount
   );
 
-  addGPUConvolutionPackPass(graph, convolution, packedInput, packedKernel);
-  addGPUConvolutionFFT2D(
-    graph,
-    `${convolution.id}-fft-input`,
-    packedInput,
-    inputSpectrum,
-    inputScratch,
-    convolution.stats.fftWidth,
-    convolution.stats.fftHeight,
-    'forward'
+  nodes.push(...addGPUConvolutionPackPass(graph, convolution, packedInput, packedKernel));
+  nodes.push(
+    ...addGPUConvolutionFFT2D(
+      graph,
+      `${convolution.id}-fft-input`,
+      packedInput,
+      inputSpectrum,
+      inputScratch,
+      convolution.stats.fftWidth,
+      convolution.stats.fftHeight,
+      'forward'
+    )
   );
-  addGPUConvolutionFFT2D(
-    graph,
-    `${convolution.id}-fft-kernel`,
-    packedKernel,
-    kernelSpectrum,
-    kernelScratch,
-    convolution.stats.fftWidth,
-    convolution.stats.fftHeight,
-    'forward'
+  nodes.push(
+    ...addGPUConvolutionFFT2D(
+      graph,
+      `${convolution.id}-fft-kernel`,
+      packedKernel,
+      kernelSpectrum,
+      kernelScratch,
+      convolution.stats.fftWidth,
+      convolution.stats.fftHeight,
+      'forward'
+    )
   );
-  addGPUConvolutionMultiplyPass(graph, convolution, inputSpectrum, kernelSpectrum, productSpectrum);
-  addGPUConvolutionFFT2D(
-    graph,
-    `${convolution.id}-fft-inverse`,
-    productSpectrum,
-    inverseSpatial,
-    inverseScratch,
-    convolution.stats.fftWidth,
-    convolution.stats.fftHeight,
-    'inverse'
+  nodes.push(
+    ...addGPUConvolutionMultiplyPass(
+      graph,
+      convolution,
+      inputSpectrum,
+      kernelSpectrum,
+      productSpectrum
+    )
   );
-  addGPUConvolutionCropPass(graph, convolution, inverseSpatial);
+  nodes.push(
+    ...addGPUConvolutionFFT2D(
+      graph,
+      `${convolution.id}-fft-inverse`,
+      productSpectrum,
+      inverseSpatial,
+      inverseScratch,
+      convolution.stats.fftWidth,
+      convolution.stats.fftHeight,
+      'inverse'
+    )
+  );
+  nodes.push(...addGPUConvolutionCropPass(graph, convolution, inverseSpatial));
+
+  return nodes;
 }
 
 function addGPUConvolutionPackPass<Parameters>(
@@ -399,7 +427,8 @@ function addGPUConvolutionPackPass<Parameters>(
   convolution: GPUConvolution,
   packedInput: GraphDataView<'float32x2'>,
   packedKernel: GraphDataView<'float32x2'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     `${convolution.id} FFT pack`,
     convolution.stats.fftElementCount,
@@ -407,18 +436,22 @@ function addGPUConvolutionPackPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = getGPUConvolutionPackShaderSource(convolution, dispatchLayout);
-  addGPUConvolutionComputePass(graph, {
-    id: `${convolution.id}-fft-pack`,
-    source,
-    bindings: {inputValues: convolution.input, kernelValues: convolution.kernel},
-    outputs: {packedInput, packedKernel},
-    dispatchLayout,
-    operation: 'GPUConvolution.fft.pack',
-    readByteLength:
-      (convolution.stats.elementCount + convolution.stats.kernelElementCount) *
-      Float32Array.BYTES_PER_ELEMENT,
-    writeByteLength: 2 * convolution.stats.fftComplexBufferByteLength
-  });
+  nodes.push(
+    ...addGPUConvolutionComputePass(graph, {
+      id: `${convolution.id}-fft-pack`,
+      source,
+      bindings: {inputValues: convolution.input, kernelValues: convolution.kernel},
+      outputs: {packedInput, packedKernel},
+      dispatchLayout,
+      operation: 'GPUConvolution.fft.pack',
+      readByteLength:
+        (convolution.stats.elementCount + convolution.stats.kernelElementCount) *
+        Float32Array.BYTES_PER_ELEMENT,
+      writeByteLength: 2 * convolution.stats.fftComplexBufferByteLength
+    })
+  );
+
+  return nodes;
 }
 
 function addGPUConvolutionMultiplyPass<Parameters>(
@@ -427,7 +460,8 @@ function addGPUConvolutionMultiplyPass<Parameters>(
   inputSpectrum: GraphDataView<'float32x2'>,
   kernelSpectrum: GraphDataView<'float32x2'>,
   productSpectrum: GraphDataView<'float32x2'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     `${convolution.id} FFT multiply`,
     convolution.stats.fftElementCount,
@@ -447,23 +481,28 @@ const ELEMENT_COUNT: u32 = ${convolution.stats.fftElementCount}u;
   if (index >= ELEMENT_COUNT) { return; }
   productSpectrum[index] = multiplyComplex(inputSpectrum[index], kernelSpectrum[index]);
 }`;
-  addGPUConvolutionComputePass(graph, {
-    id: `${convolution.id}-fft-multiply`,
-    source,
-    bindings: {inputSpectrum, kernelSpectrum},
-    outputs: {productSpectrum},
-    dispatchLayout,
-    operation: 'GPUConvolution.fft.multiply',
-    readByteLength: 2 * convolution.stats.fftComplexBufferByteLength,
-    writeByteLength: convolution.stats.fftComplexBufferByteLength
-  });
+  nodes.push(
+    ...addGPUConvolutionComputePass(graph, {
+      id: `${convolution.id}-fft-multiply`,
+      source,
+      bindings: {inputSpectrum, kernelSpectrum},
+      outputs: {productSpectrum},
+      dispatchLayout,
+      operation: 'GPUConvolution.fft.multiply',
+      readByteLength: 2 * convolution.stats.fftComplexBufferByteLength,
+      writeByteLength: convolution.stats.fftComplexBufferByteLength
+    })
+  );
+
+  return nodes;
 }
 
 function addGPUConvolutionCropPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   convolution: GPUConvolution,
   inverseSpatial: GraphDataView<'float32x2'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getBoundedDispatchLayout(
     `${convolution.id} FFT crop`,
     convolution.stats.elementCount,
@@ -486,16 +525,20 @@ const FFT_WIDTH: u32 = ${convolution.stats.fftWidth}u;
   outputValues[${getViewElementOffset(convolution.output)}u + index] =
     inverseSpatial[outputY * FFT_WIDTH + outputX].x;
 }`;
-  addGPUConvolutionComputePass(graph, {
-    id: `${convolution.id}-fft-crop`,
-    source,
-    bindings: {inverseSpatial},
-    outputs: {outputValues: convolution.output},
-    dispatchLayout,
-    operation: 'GPUConvolution.fft.crop',
-    readByteLength: convolution.stats.elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
-    writeByteLength: convolution.stats.elementCount * Float32Array.BYTES_PER_ELEMENT
-  });
+  nodes.push(
+    ...addGPUConvolutionComputePass(graph, {
+      id: `${convolution.id}-fft-crop`,
+      source,
+      bindings: {inverseSpatial},
+      outputs: {outputValues: convolution.output},
+      dispatchLayout,
+      operation: 'GPUConvolution.fft.crop',
+      readByteLength: convolution.stats.elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+      writeByteLength: convolution.stats.elementCount * Float32Array.BYTES_PER_ELEMENT
+    })
+  );
+
+  return nodes;
 }
 
 function addGPUConvolutionFFT2D<Parameters>(
@@ -507,7 +550,8 @@ function addGPUConvolutionFFT2D<Parameters>(
   width: number,
   height: number,
   direction: GPUFFTDirection
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passes: FFT2DPass[] = [
     ...makeGPUFFTPassPlan(width).map(pass => ({axis: 'horizontal' as const, ...pass})),
     ...makeGPUFFTPassPlan(height).map(pass => ({axis: 'vertical' as const, ...pass}))
@@ -516,24 +560,29 @@ function addGPUConvolutionFFT2D<Parameters>(
   for (const [passIndex, pass] of passes.entries()) {
     const remainingPassCount = passes.length - passIndex;
     const passOutput = remainingPassCount % 2 === 0 ? scratch : output;
-    addGPUConvolutionFFTPass(graph, {
-      id: `${id}-${pass.axis}-${pass.kind}-${pass.stage}`,
-      input: passInput,
-      output: passOutput,
-      width,
-      height,
-      direction,
-      pass,
-      finalPass: passIndex === passes.length - 1
-    });
+    nodes.push(
+      ...addGPUConvolutionFFTPass(graph, {
+        id: `${id}-${pass.axis}-${pass.kind}-${pass.stage}`,
+        input: passInput,
+        output: passOutput,
+        width,
+        height,
+        direction,
+        pass,
+        finalPass: passIndex === passes.length - 1
+      })
+    );
     passInput = passOutput;
   }
+
+  return nodes;
 }
 
 function addGPUConvolutionFFTPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: FFTPassProps
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const elementCount = props.width * props.height;
   const dispatchLayout = getBoundedDispatchLayout(
     props.id,
@@ -542,16 +591,20 @@ function addGPUConvolutionFFTPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = getGPUConvolutionFFTShaderSource(props, dispatchLayout);
-  addGPUConvolutionComputePass(graph, {
-    id: props.id,
-    source,
-    bindings: {inputValues: props.input},
-    outputs: {outputValues: props.output},
-    dispatchLayout,
-    operation: 'GPUConvolution.fft.transform',
-    readByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
-    writeByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT
-  });
+  nodes.push(
+    ...addGPUConvolutionComputePass(graph, {
+      id: props.id,
+      source,
+      bindings: {inputValues: props.input},
+      outputs: {outputValues: props.output},
+      dispatchLayout,
+      operation: 'GPUConvolution.fft.transform',
+      readByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+      writeByteLength: elementCount * 2 * Float32Array.BYTES_PER_ELEMENT
+    })
+  );
+
+  return nodes;
 }
 
 type ComputePassProps = {
@@ -568,58 +621,63 @@ type ComputePassProps = {
 function addGPUConvolutionComputePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: ComputePassProps
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const entries = [...Object.entries(props.bindings), ...Object.entries(props.outputs)];
-  graph.addComputePass({
-    id: props.id,
-    workload: {
-      operation: props.operation,
-      commandCount: 1,
-      maximumWorkgroupCount:
-        props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
-      maximumInvocationCount:
-        props.dispatchLayout.x *
-        props.dispatchLayout.y *
-        props.dispatchLayout.z *
-        GPU_CONVOLUTION_WORKGROUP_SIZE,
-      readByteLength: props.readByteLength,
-      writeByteLength: props.writeByteLength
-    },
-    resources: [
-      ...Object.values(props.bindings).map(buffer => ({buffer, usage: 'storage-read' as const})),
-      ...Object.values(props.outputs).map(buffer => ({buffer, usage: 'storage-write' as const}))
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: entries.map(([name], location) => ({
-            name,
-            type: location < Object.keys(props.bindings).length ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of entries) {
-            bindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      workload: {
+        operation: props.operation,
+        commandCount: 1,
+        maximumWorkgroupCount:
+          props.dispatchLayout.x * props.dispatchLayout.y * props.dispatchLayout.z,
+        maximumInvocationCount:
+          props.dispatchLayout.x *
+          props.dispatchLayout.y *
+          props.dispatchLayout.z *
+          GPU_CONVOLUTION_WORKGROUP_SIZE,
+        readByteLength: props.readByteLength,
+        writeByteLength: props.writeByteLength
+      },
+      resources: [
+        ...Object.values(props.bindings).map(buffer => ({buffer, usage: 'storage-read' as const})),
+        ...Object.values(props.outputs).map(buffer => ({buffer, usage: 'storage-write' as const}))
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: entries.map(([name], location) => ({
+              name,
+              type: location < Object.keys(props.bindings).length ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of entries) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns the direct spatial convolution shader. @internal */

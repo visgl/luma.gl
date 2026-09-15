@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode} from './gpu-command-node';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {GPUHashJoin} from './gpu-hash-join';
 import type {GPUHashIndexView} from './gpu-hash-index';
@@ -202,28 +203,35 @@ export class GPUBatchHashJoin {
   }
 
   /** Adds one independently bounded join workflow per source chunk. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     let globalLeftRow = this.firstLeftRow;
     for (let batchIndex = 0; batchIndex < this.keys.data.length; batchIndex++) {
       const keys = this.keys.data[batchIndex];
-      new GPUHashJoin({
-        id: `${this.id}-batch-${batchIndex}`,
-        index: this.index,
-        keys,
-        ...(this.leftRows
-          ? {leftRows: this.leftRows.data[batchIndex]}
-          : {firstLeftRow: globalLeftRow}),
-        outputLeftRows: this.outputLeftRows.data[batchIndex],
-        outputRightRows: this.outputRightRows.data[batchIndex],
-        count: slicePackedView(graph, this.counts, batchIndex, 1),
-        overflow: slicePackedView(graph, this.overflows, batchIndex, 1),
-        statistics: slicePackedView(graph, this.statistics, batchIndex * 4, 4),
-        ...(this.found ? {found: this.found.data[batchIndex]} : {}),
-        ...(this.probes ? {probes: this.probes.data[batchIndex]} : {}),
-        maxProbeCount: this.maxProbeCount
-      }).addToGraph(graph);
+      nodes.push(
+        ...new GPUHashJoin({
+          id: `${this.id}-batch-${batchIndex}`,
+          index: this.index,
+          keys,
+          ...(this.leftRows
+            ? {leftRows: this.leftRows.data[batchIndex]}
+            : {firstLeftRow: globalLeftRow}),
+          outputLeftRows: this.outputLeftRows.data[batchIndex],
+          outputRightRows: this.outputRightRows.data[batchIndex],
+          count: slicePackedView(graph, this.counts, batchIndex, 1),
+          overflow: slicePackedView(graph, this.overflows, batchIndex, 1),
+          statistics: slicePackedView(graph, this.statistics, batchIndex * 4, 4),
+          ...(this.found ? {found: this.found.data[batchIndex]} : {}),
+          ...(this.probes ? {probes: this.probes.data[batchIndex]} : {}),
+          maxProbeCount: this.maxProbeCount
+        }).getCommandNodes(graph)
+      );
       globalLeftRow += keys.length;
     }
+
+    return nodes;
   }
 }
 

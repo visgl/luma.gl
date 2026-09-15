@@ -109,7 +109,7 @@ it('GPUFFT1D validates packed complex views, capacity, aliasing, and ownership',
     usage: Buffer.STORAGE
   });
   const otherOutput = otherGraph.createDataView(otherHandle, {format: 'float32x2', length: 8});
-  expect(() => new GPUFFT1D({input, output: otherOutput, length: 8}).addToGraph(graph)).toThrow(
+  expect(() => graph.add(new GPUFFT1D({input, output: otherOutput, length: 8}))).toThrow(
     /different GPUCommandGraph/
   );
 });

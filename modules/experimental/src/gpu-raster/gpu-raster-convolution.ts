@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView} from '@luma.gl/gpgpu/gpu-core';
 import {
   GPURasterNeighborhood,
@@ -63,7 +59,7 @@ export class GPURasterConvolution extends GPURasterNeighborhood {
 }
 
 /** Shared graph-native ping-pong contract for explicitly separable spatial kernels. */
-abstract class GPURasterSeparableSmoothing implements GPUCommandGraphContributor {
+abstract class GPURasterSeparableSmoothing {
   readonly id: string;
   readonly width: number;
   readonly height: number;

@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {
-  addGPUCompactionToGraphWithDispatchLimit,
+  getGPUCompactionCommandNodesWithDispatchLimit,
   GPUCompaction,
   type GPUCompactionInput
 } from './gpu-compaction';
@@ -15,7 +16,7 @@ import {
   getBoundedInvocationIndexSource,
   type GPUBoundedDispatchLayout
 } from './gpu-dispatch-utils';
-import {addGPUMaskToGraphWithDispatchLimit, GPUMask} from './gpu-mask';
+import {getGPUMaskCommandNodesWithDispatchLimit, GPUMask} from './gpu-mask';
 import {
   createTransientVectorView,
   createTransientView,
@@ -133,21 +134,29 @@ export class GPUVisibilityWorkflow {
   /**
    * Adds mask composition, identity generation, scan, scatter, and count publication to a graph.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUVisibilityWorkflowToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds the complete visibility workflow using one explicit dispatch limit. @internal */
-export function addGPUVisibilityWorkflowToGraphWithDispatchLimit<Parameters>(
+export function getGPUVisibilityWorkflowCommandNodesWithDispatchLimit<Parameters>(
   workflow: GPUVisibilityWorkflow,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const template = workflow.predicates[0].mask;
   for (const view of [
     ...workflow.predicates.flatMap(predicate => getVisibilityChunks(predicate.mask)),
@@ -169,19 +178,23 @@ export function addGPUVisibilityWorkflowToGraphWithDispatchLimit<Parameters>(
       inputs: workflow.predicates.map(predicate => predicate.mask),
       output: finalMask
     });
-    addGPUMaskToGraphWithDispatchLimit(mask, graph, maxComputeWorkgroupsPerDimension);
+    nodes.push(
+      ...getGPUMaskCommandNodesWithDispatchLimit(mask, graph, maxComputeWorkgroupsPerDimension)
+    );
   }
 
   const sourceIds =
     workflow.sourceIds ??
     createTransientVisibilityInput(graph, `${workflow.id}-source-ids`, template);
   if (!workflow.sourceIds) {
-    addIdentityPasses(
-      graph,
-      `${workflow.id}-identity`,
-      sourceIds,
-      workflow.firstSourceIndex,
-      maxComputeWorkgroupsPerDimension
+    nodes.push(
+      ...addIdentityPasses(
+        graph,
+        `${workflow.id}-identity`,
+        sourceIds,
+        workflow.firstSourceIndex,
+        maxComputeWorkgroupsPerDimension
+      )
     );
   }
 
@@ -192,7 +205,15 @@ export function addGPUVisibilityWorkflowToGraphWithDispatchLimit<Parameters>(
     output: workflow.output,
     count: workflow.count
   });
-  addGPUCompactionToGraphWithDispatchLimit(compaction, graph, maxComputeWorkgroupsPerDimension);
+  nodes.push(
+    ...getGPUCompactionCommandNodesWithDispatchLimit(
+      compaction,
+      graph,
+      maxComputeWorkgroupsPerDimension
+    )
+  );
+
+  return nodes;
 }
 
 /** Creates graph-owned storage with the same atomic or vector topology as a visibility input. */
@@ -213,24 +234,29 @@ function addIdentityPasses<Parameters>(
   output: GPUCompactionInput,
   firstSourceIndex: number,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   let chunkSourceOffset = firstSourceIndex;
   for (const [chunkIndex, chunk] of getVisibilityChunks(output).entries()) {
     if (chunk.length > 0) {
-      addIdentityPass(graph, {
-        id: output instanceof GraphVectorView ? `${id}-chunk-${chunkIndex}` : id,
-        output: chunk,
-        firstSourceIndex: chunkSourceOffset,
-        dispatchLayout: getBoundedDispatchLayout(
-          'GPUVisibilityWorkflow',
-          chunk.length,
-          VISIBILITY_WORKGROUP_SIZE,
-          maxComputeWorkgroupsPerDimension
-        )
-      });
+      nodes.push(
+        ...addIdentityPass(graph, {
+          id: output instanceof GraphVectorView ? `${id}-chunk-${chunkIndex}` : id,
+          output: chunk,
+          firstSourceIndex: chunkSourceOffset,
+          dispatchLayout: getBoundedDispatchLayout(
+            'GPUVisibilityWorkflow',
+            chunk.length,
+            VISIBILITY_WORKGROUP_SIZE,
+            maxComputeWorkgroupsPerDimension
+          )
+        })
+      );
     }
     chunkSourceOffset += chunk.length;
   }
+
+  return nodes;
 }
 
 /** Writes consecutive uint32 source IDs into one packed view. */
@@ -242,7 +268,8 @@ function addIdentityPass<Parameters>(
     firstSourceIndex: number;
     dispatchLayout: GPUBoundedDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
@@ -259,34 +286,38 @@ fn main(
     outputIds[OUTPUT_OFFSET + index] = FIRST_SOURCE_INDEX + index;
   }
 }`;
-  graph.addComputePass({
-    id: props.id,
-    resources: [{buffer: props.output, usage: 'storage-write'}],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [{name: 'outputIds', type: 'storage', group: 0, location: 0}]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            outputIds: getViewBinding(props.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: [{buffer: props.output, usage: 'storage-write'}],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [{name: 'outputIds', type: 'storage', group: 0, location: 0}]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              outputIds: getViewBinding(props.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Returns ordered atomic chunks without repacking vector-backed masks. */

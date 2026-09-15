@@ -67,7 +67,7 @@ const hierarchy = new GPUSegmentedBVH({
   ]
 });
 
-hierarchy.addToGraph(graph);
+graph.add(hierarchy);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'packed-mesh-hierarchies'});
@@ -135,7 +135,7 @@ The constructor snapshots segment descriptors. Updating only the contents of cal
 buffers does not require recompilation. Changing capacities, segment domains, or offsets requires
 recording a new operation.
 
-## `addToGraph(graph)`
+## `getCommandNodes(graph)`
 
 Adds one compute graph node for each occupied capacity bucket. Possible capacities are 1, 2, 4, 8,
 16, 32, 64, and 128, so any number of supported hierarchies requires at most eight graph nodes.

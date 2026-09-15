@@ -80,19 +80,21 @@ export class GPUParquetLevelLayout {
     if (props.definitionLevels.length > 0) {
       addClassifyPass(graph, props);
     }
-    new GPUSegmentedLayout({
-      id: `${this.id}-materialize`,
-      valueFlags: props.validity,
-      elementFlags: props.elementFlags,
-      segmentStartFlags: props.rowStartFlags,
-      valueOffsets: props.valueOffsets,
-      elementOffsets: props.elementOffsets,
-      segmentIndices: props.rowIndices,
-      segmentOffsets: props.listOffsets,
-      valueCount: props.nonNullValueCount,
-      elementCount: props.elementCount,
-      segmentCount: props.rowCount
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSegmentedLayout({
+        id: `${this.id}-materialize`,
+        valueFlags: props.validity,
+        elementFlags: props.elementFlags,
+        segmentStartFlags: props.rowStartFlags,
+        valueOffsets: props.valueOffsets,
+        elementOffsets: props.elementOffsets,
+        segmentIndices: props.rowIndices,
+        segmentOffsets: props.listOffsets,
+        valueCount: props.nonNullValueCount,
+        elementCount: props.elementCount,
+        segmentCount: props.rowCount
+      })
+    );
   }
 }
 

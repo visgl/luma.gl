@@ -672,16 +672,18 @@ export class GPUPagedSplatRenderer {
       this.addFeaturePass(graph, segment, depthKeys, drawCommandViews.buffer, semanticSelections);
     }
 
-    new GPUSort({
-      id: 'paged-gaussian-global-depth-sort',
-      keys: depthKeys,
-      values: sourceIndices,
-      outputKeys: sortedKeys,
-      outputValues: sortedIndices,
-      algorithm: 'radix',
-      direction: 'ascending',
-      keyBits: 16
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: 'paged-gaussian-global-depth-sort',
+        keys: depthKeys,
+        values: sourceIndices,
+        outputKeys: sortedKeys,
+        outputValues: sortedIndices,
+        algorithm: 'radix',
+        direction: 'ascending',
+        keyBits: 16
+      })
+    );
     this.addInversePermutationPass(graph, sortedIndices, inverseIndices);
 
     for (let segmentIndex = 0; segmentIndex < outputSegmentCount; segmentIndex++) {

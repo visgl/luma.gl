@@ -95,9 +95,9 @@ const featureIndex = new GPUBatchHashIndex({
   statistics: featureIndexStatistics,
   maxProbeCount: 32
 });
-featureIndex.addToGraph(graph);
+graph.add(featureIndex);
 
-new GPUHashIndexQuery({
+graph.add(new GPUHashIndexQuery({
   id: 'lookup-visible-features',
   index: featureIndex,
   keys: selectedFeatureIds,
@@ -105,7 +105,7 @@ new GPUHashIndexQuery({
   found: matchedFeatureMask,
   probes: lookupProbeCounts,
   statistics: lookupStatistics
-}).addToGraph(graph);
+}));
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder();
@@ -131,9 +131,9 @@ const propertyIndex = new GPUBatchHashIndex({
   tableValues,
   statistics: indexStatistics
 });
-propertyIndex.addToGraph(graph);
+graph.add(propertyIndex);
 
-new GPUBatchHashJoin({
+graph.add(new GPUBatchHashJoin({
   id: 'join-instance-batches',
   index: propertyIndex,
   keys: instanceIdentifierBatches,
@@ -142,7 +142,7 @@ new GPUBatchHashJoin({
   counts: requiredMatchCounts,
   overflows: batchOverflows,
   statistics: batchLookupStatistics
-}).addToGraph(graph);
+}));
 ```
 
 Left and right chunk topologies do not need to match. Right-side chunks contribute to one shared
@@ -187,7 +187,7 @@ and counters without requiring a bound source row.
 
 The application owns all imported input vectors, table buffers, and statistics. The graph owns
 its transient source-row bookkeeping and reclaims it when the compiled graph is destroyed.
-`GPUBatchHashIndex.addToGraph(graph)` only contributes command-graph nodes; it never compiles the
+`GPUBatchHashIndex.getCommandNodes(graph)` only contributes command-graph nodes; it never compiles the
 graph, submits GPU work, copies rows, maps buffers, or destroys caller-owned data.
 
 Each repeated `CompiledGPUCommandGraph.encode()` rebuilds the index by clearing once and replaying

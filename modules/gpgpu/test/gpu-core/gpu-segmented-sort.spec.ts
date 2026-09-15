@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -14,7 +15,7 @@ import {
 } from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSegmentedSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
+import {getGPUSegmentedSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 
 const UNSORTED_GAP = 0xcafef00d;
 const OUTPUT_GAP = 0xdeadbeef;
@@ -128,7 +129,10 @@ it('GPUSegmentedSort bounds segment workgroups across all three dispatch dimensi
 
   const fixture = createSegmentedSortFixture(device, [3, 3, 3, 3, 3], 'descending');
   const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
-  addGPUSegmentedSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 2);
+  addGPUCommandNodes(
+    fixture.graph,
+    getGPUSegmentedSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 2)
+  );
   const compiled = fixture.graph.compile();
 
   try {
@@ -371,7 +375,7 @@ function importView(
 }
 
 function compileFixture(fixture: SegmentedSortFixture): CompiledGPUCommandGraph {
-  fixture.sort.addToGraph(fixture.graph);
+  fixture.graph.add(fixture.sort);
   return fixture.graph.compile();
 }
 

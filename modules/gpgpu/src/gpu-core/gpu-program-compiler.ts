@@ -29,7 +29,7 @@ import {
 } from './gpu-command-dispatch-metadata';
 import {
   GPUCompositeOperation,
-  isGPUCommandGraphContributor,
+  isGPUCommandNodeProducer,
   isGPUOperation,
   type GPUProgramOperation,
   type GPUOperationTree
@@ -295,7 +295,7 @@ export class GPUProgramCompiler<Parameters = void> {
     const id =
       'id' in operation && typeof operation.id === 'string'
         ? operation.id
-        : (operation.constructor?.name ?? 'legacy-contributor');
+        : (operation.constructor?.name ?? 'command-node-producer');
     state.path.push(id);
     try {
       if (operation instanceof GPUCompositeOperation && operation.type === 'composite') {
@@ -334,14 +334,14 @@ export class GPUProgramCompiler<Parameters = void> {
           return;
         }
       }
-      if (isGPUCommandGraphContributor(operation)) {
+      if ('getNodes' in operation || isGPUCommandNodeProducer(operation)) {
         state.decisions.push({
           operationId: id,
-          operationType: 'legacy-contributor',
-          lowering: 'legacy-addToGraph',
-          reason: 'compatibility bridge; migrate contributor to GPUCommandNodeProducer'
+          operationType: 'command-node-producer',
+          lowering: 'explicit-command-nodes',
+          reason: 'execution primitive constructs explicit command nodes'
         });
-        this.withNodeDecoration(graph, state, () => operation.addToGraph(graph));
+        this.withNodeDecoration(graph, state, () => graph.add(operation));
         return;
       }
       throw new Error(`GPUProgram operation "${id}" has no WebGPU lowering`);

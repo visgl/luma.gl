@@ -119,34 +119,36 @@ export class VectorFieldEngine {
       boundary: 'one-sided' as const
     };
     new GPUVectorFieldSampler3D({scalar, vector, resolution: this.resolution}).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-gradient',
-      ...common,
-      operator: 'gradient',
-      input: scalar,
-      output: gradient
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-laplacian',
-      ...common,
-      operator: 'laplacian',
-      input: scalar,
-      output: laplacian
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-divergence',
-      ...common,
-      operator: 'divergence',
-      input: vector,
-      output: divergence
-    }).addToGraph(graph);
-    new GPUFiniteDifference3D({
-      id: 'field-curl',
-      ...common,
-      operator: 'curl',
-      input: vector,
-      output: curl
-    }).addToGraph(graph);
+    graph.add([
+      new GPUFiniteDifference3D({
+        id: 'field-gradient',
+        ...common,
+        operator: 'gradient',
+        input: scalar,
+        output: gradient
+      }),
+      new GPUFiniteDifference3D({
+        id: 'field-laplacian',
+        ...common,
+        operator: 'laplacian',
+        input: scalar,
+        output: laplacian
+      }),
+      new GPUFiniteDifference3D({
+        id: 'field-divergence',
+        ...common,
+        operator: 'divergence',
+        input: vector,
+        output: divergence
+      }),
+      new GPUFiniteDifference3D({
+        id: 'field-curl',
+        ...common,
+        operator: 'curl',
+        input: vector,
+        output: curl
+      })
+    ]);
     return graph.compile();
   }
 }

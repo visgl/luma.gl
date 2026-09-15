@@ -5,12 +5,7 @@
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUGallopingSearch} from '@luma.gl/gpgpu/gpu-core';
-import {
-  GPUCommandGraph,
-  type GPUCommandGraphContributor,
-  type GraphBufferUse,
-  type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -77,7 +72,7 @@ export type GPUTraceMipmapBoundariesStats = {
  * segmented batched lower bounds: each tile starts with binary search and then gallops forward
  * through its remaining nondecreasing queries.
  */
-export class GPUTraceMipmapBoundaries implements GPUCommandGraphContributor {
+export class GPUTraceMipmapBoundaries {
   readonly id: string;
   readonly startTimes: GraphDataView<'float32'>;
   readonly startTimeOrder?: GraphDataView<'uint32'>;
@@ -196,18 +191,20 @@ export class GPUTraceMipmapBoundaries implements GPUCommandGraphContributor {
 
     addValidationClearPass(graph, this);
     addPixelQueryPreparationPass(graph, this, queryTimes, searchSegments);
-    new GPUGallopingSearch({
-      id: `${this.id}-galloping-search`,
-      values: this.startTimes,
-      valueOrder: this.startTimeOrder,
-      queries: queryTimes,
-      segments: searchSegments,
-      maximumQueryCount: this.stats.maximumPixelCount + 1,
-      queriesPerTile: this.stats.boundariesPerTile,
-      output: this.output,
-      validationErrors: this.validationErrors,
-      preserveValidationErrors: true
-    }).addToGraph(graph);
+    graph.add(
+      new GPUGallopingSearch({
+        id: `${this.id}-galloping-search`,
+        values: this.startTimes,
+        valueOrder: this.startTimeOrder,
+        queries: queryTimes,
+        segments: searchSegments,
+        maximumQueryCount: this.stats.maximumPixelCount + 1,
+        queriesPerTile: this.stats.boundariesPerTile,
+        output: this.output,
+        validationErrors: this.validationErrors,
+        preserveValidationErrors: true
+      })
+    );
   }
 }
 

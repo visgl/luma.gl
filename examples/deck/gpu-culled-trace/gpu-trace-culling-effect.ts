@@ -251,13 +251,15 @@ export class GPUTraceCullingEffect implements Effect {
       rowFlags: rowFlagView,
       cullingCounts
     });
-    new GPUCompaction({
-      id: 'visible-block-compaction',
-      input: sourceIds,
-      flags: rowFlagView,
-      output: visibleIdView,
-      count: blockCount
-    }).addToGraph(graph);
+    graph.add(
+      new GPUCompaction({
+        id: 'visible-block-compaction',
+        input: sourceIds,
+        flags: rowFlagView,
+        output: visibleIdView,
+        count: blockCount
+      })
+    );
 
     if (this.textSelection) {
       const {source, selectedGlyphIds, selectedGlyphRecords, drawCommands} = this.textSelection;
@@ -271,29 +273,31 @@ export class GPUTraceCullingEffect implements Effect {
         byteOffset: UINT32_BYTE_LENGTH * 2,
         byteStride: source.recordWordLength * UINT32_BYTE_LENGTH
       });
-      new GPUTextSelection({
-        id: 'visible-text-selection',
-        glyphRows,
-        rowFlags: rowFlagView,
-        output: graph.createDataView(selectedIds, {
-          format: 'uint32',
-          length: source.glyphCount
-        }),
-        count: graph.createDataView(textCommands, {
-          format: 'uint32',
-          length: 1,
-          byteOffset: drawCommands.getInstanceCountByteOffset(0)
-        }),
-        sourceRecords: graph.createDataView(glyphRecords, {
-          format: 'uint32',
-          length: source.glyphCount * source.recordWordLength
-        }),
-        outputRecords: graph.createDataView(selectedRecords, {
-          format: 'uint32',
-          length: source.glyphCount * source.recordWordLength
-        }),
-        recordWordLength: source.recordWordLength
-      }).addToGraph(graph);
+      graph.add(
+        new GPUTextSelection({
+          id: 'visible-text-selection',
+          glyphRows,
+          rowFlags: rowFlagView,
+          output: graph.createDataView(selectedIds, {
+            format: 'uint32',
+            length: source.glyphCount
+          }),
+          count: graph.createDataView(textCommands, {
+            format: 'uint32',
+            length: 1,
+            byteOffset: drawCommands.getInstanceCountByteOffset(0)
+          }),
+          sourceRecords: graph.createDataView(glyphRecords, {
+            format: 'uint32',
+            length: source.glyphCount * source.recordWordLength
+          }),
+          outputRecords: graph.createDataView(selectedRecords, {
+            format: 'uint32',
+            length: source.glyphCount * source.recordWordLength
+          }),
+          recordWordLength: source.recordWordLength
+        })
+      );
     }
     this.compiled = graph.compile();
     this.publishStats();

@@ -43,12 +43,12 @@ import {GPUCommandGraph, GPUFlagOffsets} from '@luma.gl/gpgpu/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'nullable-column'});
 
-new GPUFlagOffsets({
+graph.add(new GPUFlagOffsets({
   id: 'present-values',
   flags: validity,
   offsets: valueOffsets,
   count: nonNullValueCount
-}).addToGraph(graph);
+}));
 ```
 
 The class contributes graph nodes only. It does not allocate public outputs, compile the graph,

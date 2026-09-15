@@ -15,7 +15,6 @@ import {
   getViewElementOffset,
   GPUHashIndex,
   type GPUCommandGraph,
-  type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView,
@@ -80,7 +79,7 @@ type QueryTile = {
  * Original allocations are sharded at the device storage-binding limit. Each query invocation keeps
  * only its caller-owned top-K output, so no query-by-dataset distance matrix is materialized.
  */
-export class GPUSimilaritySearch implements GPUCommandGraphContributor {
+export class GPUSimilaritySearch {
   /** Prefix shared by bounded graph passes and transient eligibility metadata. */
   readonly id: string;
   /** Caller-owned, chunk-preserving dataset embeddings. */
@@ -677,13 +676,15 @@ function createCandidateMembershipIndex<Parameters>(
     'uint32',
     6
   );
-  new GPUHashIndex({
-    id: `${search.id}-candidate-index`,
-    keys: search.candidateIds,
-    tableKeys,
-    tableValues,
-    statistics
-  }).addToGraph(graph);
+  graph.add(
+    new GPUHashIndex({
+      id: `${search.id}-candidate-index`,
+      keys: search.candidateIds,
+      tableKeys,
+      tableValues,
+      statistics
+    })
+  );
   return {keys: tableKeys, statistics, capacity};
 }
 

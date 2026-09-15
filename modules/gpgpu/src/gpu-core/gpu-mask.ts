@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -101,21 +102,29 @@ export class GPUMask {
    *
    * The caller remains responsible for graph compilation, command submission, and readback.
    */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
-    addGPUMaskToGraphWithDispatchLimit(
-      this,
-      graph,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    nodes.push(
+      ...getGPUMaskCommandNodesWithDispatchLimit(
+        this,
+        graph,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      )
     );
+
+    return nodes;
   }
 }
 
 /** Adds source-aligned mask composition with an explicit dispatch limit. @internal */
-export function addGPUMaskToGraphWithDispatchLimit<Parameters>(
+export function getGPUMaskCommandNodesWithDispatchLimit<Parameters>(
   mask: GPUMask,
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const outputChunks = getMaskChunks(mask.output);
   const inputChunks = mask.inputs.map(getMaskChunks);
   for (const chunk of [...outputChunks, ...inputChunks.flat()]) {
@@ -129,19 +138,23 @@ export function addGPUMaskToGraphWithDispatchLimit<Parameters>(
       continue;
     }
     const inputs = inputChunks.map(chunks => chunks[chunkIndex]);
-    addMaskPass(graph, {
-      id: mask.output instanceof GraphVectorView ? `${mask.id}-chunk-${chunkIndex}` : mask.id,
-      inputs,
-      output,
-      operation: mask.operation,
-      dispatchLayout: getBoundedDispatchLayout(
-        'GPUMask',
-        output.length,
-        MASK_WORKGROUP_SIZE,
-        maxComputeWorkgroupsPerDimension
-      )
-    });
+    nodes.push(
+      ...addMaskPass(graph, {
+        id: mask.output instanceof GraphVectorView ? `${mask.id}-chunk-${chunkIndex}` : mask.id,
+        inputs,
+        output,
+        operation: mask.operation,
+        dispatchLayout: getBoundedDispatchLayout(
+          'GPUMask',
+          output.length,
+          MASK_WORKGROUP_SIZE,
+          maxComputeWorkgroupsPerDimension
+        )
+      })
+    );
   }
+
+  return nodes;
 }
 
 /** Returns the original, ordered source chunks without materializing a packed vector. */
@@ -159,7 +172,8 @@ function addMaskPass<Parameters>(
     operation: GPUMaskOperation;
     dispatchLayout: GPUBoundedDispatchLayout;
   }
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const inputDeclarations = props.inputs
     .map(
       (input, inputIndex) =>
@@ -198,40 +212,44 @@ fn main(
   bindings['outputMask'] = props.output;
   resources.push({buffer: props.output, usage: 'storage-write'});
 
-  graph.addComputePass({
-    id: props.id,
-    resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolvedBindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(bindings)) {
-            resolvedBindings[name] = getViewBinding(view, getBuffer);
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const resolvedBindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(bindings)) {
+              resolvedBindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(resolvedBindings);
+            computation.dispatch(
+              computePass,
+              props.dispatchLayout.x,
+              props.dispatchLayout.y,
+              props.dispatchLayout.z
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 /** Constructs a boolean WGSL expression with explicit zero/nonzero mask semantics. */

@@ -96,8 +96,10 @@ describe('GPU module documentation contract', () => {
     expect(recipes).toContain('## Package a reusable operation');
     expect(recipes).toContain("source: 'cpu'");
     expect(recipes).toContain('compiled.getExecutionPlan(budget');
-    expect(recipes).toContain('class VisibleItems implements GPUCommandGraphContributor');
-    expect(concepts).toMatch(/addToGraph\(\)[\s\S]*compile\(\)[\s\S]*Encoding/);
+    expect(recipes).toMatch(
+      /class VisibleItems[\s\S]*getNodes\(\)[\s\S]*graph\.add\(new VisibleItems/
+    );
+    expect(concepts).toMatch(/getCommandNodes\(\)[\s\S]*compile\(\)[\s\S]*Encoding/);
   });
 
   test('answers practical contract questions on every operation page', () => {

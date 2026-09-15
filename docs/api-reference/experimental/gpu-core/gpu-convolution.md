@@ -33,7 +33,7 @@ passes can also be substantially cheaper than either general strategy.
 ```ts
 import {GPUConvolution} from '@luma.gl/experimental';
 
-new GPUConvolution({
+graph.add(new GPUConvolution({
   id: 'blur',
   input,
   kernel,
@@ -44,7 +44,7 @@ new GPUConvolution({
   kernelHeight: 15,
   boundary: 'zero',
   strategy: 'auto'
-}).addToGraph(graph);
+}));
 ```
 
 All three values are packed `GraphDataView<'float32'>` views belonging to the target graph. The

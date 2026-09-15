@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -72,7 +73,10 @@ export class GPULZByteBatchDecompressor {
   }
 
   /** Adds one batch node without compiling, submitting, or reading data back. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const [name, view] of Object.entries({
       upload: this.props.upload,
       jobs: this.props.jobs,
@@ -82,9 +86,11 @@ export class GPULZByteBatchDecompressor {
         throw new Error(`${this.id} ${name} belongs to a different GPUCommandGraph`);
       }
     }
-    if (this.props.jobCount === 0) return;
+    if (this.props.jobCount === 0) return nodes;
     const dispatch = getDispatch(this.props, graph.device);
-    addDecompressionPass(graph, this, dispatch);
+    nodes.push(...addDecompressionPass(graph, this, dispatch));
+
+    return nodes;
   }
 }
 
@@ -192,47 +198,52 @@ function addDecompressionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   decompressor: GPULZByteBatchDecompressor,
   dispatch: BatchDispatch
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = getGPULZByteBatchDecompressorShaderSource(decompressor, dispatch);
-  graph.addComputePass({
-    id: decompressor.id,
-    workload: {
-      operation: 'GPULZByteBatchDecompressor',
-      commandCount: 1,
-      maximumWorkgroupCount: decompressor.stats.dispatchedWorkgroupCount,
-      maximumInvocationCount:
-        decompressor.stats.dispatchedWorkgroupCount * GPU_LZ_BYTE_BATCH_WORKGROUP_SIZE,
-      readByteLength: decompressor.props.upload.length * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength: decompressor.props.outputByteLength
-    },
-    resources: [
-      {buffer: decompressor.props.upload, usage: 'storage-read'},
-      {buffer: decompressor.props.output, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: decompressor.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'uploadWords', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'outputWords', type: 'storage', group: 0, location: 1}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            uploadWords: getViewBinding(decompressor.props.upload, getBuffer),
-            outputWords: getViewBinding(decompressor.props.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: decompressor.id,
+      workload: {
+        operation: 'GPULZByteBatchDecompressor',
+        commandCount: 1,
+        maximumWorkgroupCount: decompressor.stats.dispatchedWorkgroupCount,
+        maximumInvocationCount:
+          decompressor.stats.dispatchedWorkgroupCount * GPU_LZ_BYTE_BATCH_WORKGROUP_SIZE,
+        readByteLength: decompressor.props.upload.length * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: decompressor.props.outputByteLength
+      },
+      resources: [
+        {buffer: decompressor.props.upload, usage: 'storage-read'},
+        {buffer: decompressor.props.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: decompressor.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'uploadWords', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'outputWords', type: 'storage', group: 0, location: 1}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              uploadWords: getViewBinding(decompressor.props.upload, getBuffer),
+              outputWords: getViewBinding(decompressor.props.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function getDispatch(

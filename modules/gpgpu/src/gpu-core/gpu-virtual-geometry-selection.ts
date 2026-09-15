@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
@@ -217,7 +218,10 @@ export class GPUVirtualGeometrySelection {
   }
 
   /** Adds initialization, breadth-level traversal, stable compaction, and bounded publication. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     if (this.destroyed) {
       throw new Error(`${this.id} has been destroyed`);
     }
@@ -256,10 +260,12 @@ export class GPUVirtualGeometrySelection {
       this.plan.nodeCount
     );
     const packedView = this.createOwnedView(graph, `${this.id}-packed-view`, 'float32x4', 2);
-    addInitializePass(graph, this, activeNodes, selectedMask);
-    addPackViewPass(graph, this, packedView);
+    nodes.push(...addInitializePass(graph, this, activeNodes, selectedMask));
+    nodes.push(...addPackViewPass(graph, this, packedView));
     for (let levelIndex = 0; levelIndex < this.plan.levelCount; levelIndex++) {
-      addTraversalPass(graph, this, activeNodes, selectedMask, packedView, levelIndex);
+      nodes.push(
+        ...addTraversalPass(graph, this, activeNodes, selectedMask, packedView, levelIndex)
+      );
     }
 
     const compactedClusterIds = this.createOwnedView(
@@ -274,15 +280,19 @@ export class GPUVirtualGeometrySelection {
       'uint32',
       1
     );
-    new GPUVisibilityWorkflow({
-      id: `${this.id}-visibility`,
-      predicates: [{kind: ['bounds', 'lod'], mask: selectedMask}],
-      output: compactedClusterIds,
-      outputMask: selectedMask,
-      sourceIds: this.hierarchy.clusterIds,
-      count: selectedTotalCount
-    }).addToGraph(graph);
-    addFinalizePass(graph, this, compactedClusterIds, selectedTotalCount);
+    nodes.push(
+      ...new GPUVisibilityWorkflow({
+        id: `${this.id}-visibility`,
+        predicates: [{kind: ['bounds', 'lod'], mask: selectedMask}],
+        output: compactedClusterIds,
+        outputMask: selectedMask,
+        sourceIds: this.hierarchy.clusterIds,
+        count: selectedTotalCount
+      }).getCommandNodes(graph)
+    );
+    nodes.push(...addFinalizePass(graph, this, compactedClusterIds, selectedTotalCount));
+
+    return nodes;
   }
 
   /** Destroys selector-owned masks, compacted IDs, counts, and packed view storage. */
@@ -316,7 +326,8 @@ function addInitializePass<Parameters>(
   selection: GPUVirtualGeometrySelection,
   activeNodes: GraphDataView<'uint32'>,
   selectedMask: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const NODE_COUNT: u32 = ${selection.plan.nodeCount}u;
 const ROOT_COUNT: u32 = ${selection.plan.rootCount}u;
@@ -333,23 +344,28 @@ const SELECTED_OFFSET: u32 = ${getViewElementOffset(selectedMask)}u;
   atomicStore(&activeNodes[ACTIVE_OFFSET + nodeIndex], select(0u, 1u, nodeIndex < ROOT_COUNT));
   selectedMask[SELECTED_OFFSET + nodeIndex] = 0u;
 }`;
-  addComputationPass(graph, {
-    id: `${selection.id}-initialize`,
-    source,
-    resources: [
-      {buffer: activeNodes, usage: 'storage-write'},
-      {buffer: selectedMask, usage: 'storage-write'}
-    ],
-    bindings: {activeNodes, selectedMask},
-    dispatchCount: Math.ceil(selection.plan.nodeCount / VIRTUAL_GEOMETRY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${selection.id}-initialize`,
+      source,
+      resources: [
+        {buffer: activeNodes, usage: 'storage-write'},
+        {buffer: selectedMask, usage: 'storage-write'}
+      ],
+      bindings: {activeNodes, selectedMask},
+      dispatchCount: Math.ceil(selection.plan.nodeCount / VIRTUAL_GEOMETRY_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addPackViewPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   selection: GPUVirtualGeometrySelection,
   packedView: GraphDataView<'float32x4'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
 const CAMERA_OFFSET: u32 = ${getViewElementOffset(selection.view.cameraPosition)}u;
 const SCALE_OFFSET: u32 = ${getViewElementOffset(selection.view.pixelProjectionScale)}u;
@@ -367,23 +383,27 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(packedView)}u;
   packedView[OUTPUT_OFFSET + 3u] = pixelProjectionScale[SCALE_OFFSET];
   packedView[OUTPUT_OFFSET + 4u] = maximumScreenSpaceError[ERROR_OFFSET];
 }`;
-  addComputationPass(graph, {
-    id: `${selection.id}-pack-view`,
-    source,
-    resources: [
-      {buffer: selection.view.cameraPosition, usage: 'storage-read'},
-      {buffer: selection.view.pixelProjectionScale, usage: 'storage-read'},
-      {buffer: selection.view.maximumScreenSpaceError, usage: 'storage-read'},
-      {buffer: packedView, usage: 'storage-write'}
-    ],
-    bindings: {
-      cameraPosition: selection.view.cameraPosition,
-      pixelProjectionScale: selection.view.pixelProjectionScale,
-      maximumScreenSpaceError: selection.view.maximumScreenSpaceError,
-      packedView
-    },
-    dispatchCount: 1
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${selection.id}-pack-view`,
+      source,
+      resources: [
+        {buffer: selection.view.cameraPosition, usage: 'storage-read'},
+        {buffer: selection.view.pixelProjectionScale, usage: 'storage-read'},
+        {buffer: selection.view.maximumScreenSpaceError, usage: 'storage-read'},
+        {buffer: packedView, usage: 'storage-write'}
+      ],
+      bindings: {
+        cameraPosition: selection.view.cameraPosition,
+        pixelProjectionScale: selection.view.pixelProjectionScale,
+        maximumScreenSpaceError: selection.view.maximumScreenSpaceError,
+        packedView
+      },
+      dispatchCount: 1
+    })
+  );
+
+  return nodes;
 }
 
 function addTraversalPass<Parameters>(
@@ -393,7 +413,8 @@ function addTraversalPass<Parameters>(
   selectedMask: GraphDataView<'uint32'>,
   packedView: GraphDataView<'float32x4'>,
   levelIndex: number
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const firstNode = selection.plan.levelOffsets[levelIndex];
   const levelEnd = selection.plan.levelOffsets[levelIndex + 1];
   const nodeCount = levelEnd - firstNode;
@@ -502,29 +523,33 @@ fn sphereVisible(center: vec3f, radius: f32) -> bool {
   }
   selectedMask[SELECTED_OFFSET + nodeIndex] = 1u;
 }`;
-  addComputationPass(graph, {
-    id: `${selection.id}-level-${levelIndex}`,
-    source,
-    resources: [
-      {buffer: selection.hierarchy.sphereBounds, usage: 'storage-read'},
-      {buffer: selection.hierarchy.geometricErrors, usage: 'storage-read'},
-      {buffer: selection.hierarchy.children, usage: 'storage-read'},
-      {buffer: selection.view.frustumPlanes, usage: 'storage-read'},
-      {buffer: packedView, usage: 'storage-read'},
-      {buffer: activeNodes, usage: 'storage-read-write'},
-      {buffer: selectedMask, usage: 'storage-write'}
-    ],
-    bindings: {
-      sphereBounds: selection.hierarchy.sphereBounds,
-      geometricErrors: selection.hierarchy.geometricErrors,
-      children: selection.hierarchy.children,
-      frustumPlanes: selection.view.frustumPlanes,
-      packedView,
-      activeNodes,
-      selectedMask
-    },
-    dispatchCount: Math.ceil(nodeCount / VIRTUAL_GEOMETRY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${selection.id}-level-${levelIndex}`,
+      source,
+      resources: [
+        {buffer: selection.hierarchy.sphereBounds, usage: 'storage-read'},
+        {buffer: selection.hierarchy.geometricErrors, usage: 'storage-read'},
+        {buffer: selection.hierarchy.children, usage: 'storage-read'},
+        {buffer: selection.view.frustumPlanes, usage: 'storage-read'},
+        {buffer: packedView, usage: 'storage-read'},
+        {buffer: activeNodes, usage: 'storage-read-write'},
+        {buffer: selectedMask, usage: 'storage-write'}
+      ],
+      bindings: {
+        sphereBounds: selection.hierarchy.sphereBounds,
+        geometricErrors: selection.hierarchy.geometricErrors,
+        children: selection.hierarchy.children,
+        frustumPlanes: selection.view.frustumPlanes,
+        packedView,
+        activeNodes,
+        selectedMask
+      },
+      dispatchCount: Math.ceil(nodeCount / VIRTUAL_GEOMETRY_WORKGROUP_SIZE)
+    })
+  );
+
+  return nodes;
 }
 
 function addFinalizePass<Parameters>(
@@ -532,7 +557,8 @@ function addFinalizePass<Parameters>(
   selection: GPUVirtualGeometrySelection,
   compactedClusterIds: GraphDataView<'uint32'>,
   selectedTotalCount: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const totalCountBinding = selection.totalCount
     ? '@group(0) @binding(5) var<storage, read_write> publishedTotalCount: array<u32>;'
     : '';
@@ -573,29 +599,35 @@ ${totalCountBinding}
     ${totalCountWrite}
   }
 }`;
-  addComputationPass(graph, {
-    id: `${selection.id}-finalize`,
-    source,
-    resources: [
-      {buffer: compactedClusterIds, usage: 'storage-read'},
-      {buffer: selectedTotalCount, usage: 'storage-read'},
-      {buffer: selection.output, usage: 'storage-write'},
-      {buffer: selection.count, usage: 'storage-write'},
-      {buffer: selection.overflow, usage: 'storage-write'},
-      ...(selection.totalCount
-        ? ([{buffer: selection.totalCount, usage: 'storage-write'}] as GraphBufferUse[])
-        : [])
-    ],
-    bindings: {
-      sourceIds: compactedClusterIds,
-      sourceTotalCount: selectedTotalCount,
-      outputIds: selection.output,
-      outputCount: selection.count,
-      outputOverflow: selection.overflow,
-      ...(selection.totalCount ? {publishedTotalCount: selection.totalCount} : {})
-    },
-    dispatchCount: Math.ceil(Math.max(selection.output.length, 1) / VIRTUAL_GEOMETRY_WORKGROUP_SIZE)
-  });
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${selection.id}-finalize`,
+      source,
+      resources: [
+        {buffer: compactedClusterIds, usage: 'storage-read'},
+        {buffer: selectedTotalCount, usage: 'storage-read'},
+        {buffer: selection.output, usage: 'storage-write'},
+        {buffer: selection.count, usage: 'storage-write'},
+        {buffer: selection.overflow, usage: 'storage-write'},
+        ...(selection.totalCount
+          ? ([{buffer: selection.totalCount, usage: 'storage-write'}] as GraphBufferUse[])
+          : [])
+      ],
+      bindings: {
+        sourceIds: compactedClusterIds,
+        sourceTotalCount: selectedTotalCount,
+        outputIds: selection.output,
+        outputCount: selection.count,
+        outputOverflow: selection.overflow,
+        ...(selection.totalCount ? {publishedTotalCount: selection.totalCount} : {})
+      },
+      dispatchCount: Math.ceil(
+        Math.max(selection.output.length, 1) / VIRTUAL_GEOMETRY_WORKGROUP_SIZE
+      )
+    })
+  );
+
+  return nodes;
 }
 
 function addComputationPass<Parameters>(
@@ -607,34 +639,39 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatchCount: number;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatchCount);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatchCount);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

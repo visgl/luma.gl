@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from './draw-command-buffer';
@@ -101,7 +102,10 @@ export class GPUSceneDrawGeneration {
   }
 
   /** Adds deterministic initialize, eligibility, claim, and publish passes to the target graph. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     if (!graph.device.features.has('indirect-first-instance')) {
       throw new Error(`${this.id} requires the indirect-first-instance device feature`);
     }
@@ -136,10 +140,12 @@ export class GPUSceneDrawGeneration {
       format: 'uint32',
       length: this.scene.flags.buffer.byteLength / UINT32_BYTE_LENGTH
     });
-    addInitializePass(graph, this, owners);
-    addEligibilityPass(graph, this, sceneRecords, eligibility);
-    addClaimPass(graph, this, eligibility, owners);
-    addPublishPass(graph, this, eligibility, owners);
+    nodes.push(...addInitializePass(graph, this, owners));
+    nodes.push(...addEligibilityPass(graph, this, sceneRecords, eligibility));
+    nodes.push(...addClaimPass(graph, this, eligibility, owners));
+    nodes.push(...addPublishPass(graph, this, eligibility, owners));
+
+    return nodes;
   }
 }
 
@@ -148,7 +154,8 @@ function addEligibilityPass<Parameters>(
   generation: GPUSceneDrawGeneration,
   sceneRecords: GraphDataView<'uint32'>,
   eligibility: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatch = getDispatchLayout(
     generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -162,9 +169,10 @@ function addEligibilityPass<Parameters>(
   }`
     : '';
   const eligibilityBinding = generation.visibility ? 2 : 1;
-  addComputationPass(graph, {
-    id: `${generation.id}-eligibility`,
-    source: `${makeDispatchConstants(dispatch)}
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${generation.id}-eligibility`,
+      source: `${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const FLAGS_VECTOR_OFFSET: u32 = ${Math.floor(generation.scene.flags.byteOffset / 16)}u;
 const FLAGS_VECTOR_STRIDE: u32 = ${generation.scene.flags.byteStride / 16}u;
@@ -183,36 +191,41 @@ ${visibilityDeclaration}
   ${visibilityFilter}
   eligibility[ELIGIBILITY_OFFSET + index] = eligible;
 }`,
-    resources: [
-      {buffer: sceneRecords, usage: 'storage-read'},
-      ...(generation.visibility
-        ? [{buffer: generation.visibility, usage: 'storage-read'} as const]
-        : []),
-      {buffer: eligibility, usage: 'storage-write'}
-    ],
-    bindings: {
-      sceneRecords,
-      ...(generation.visibility ? {visibility: generation.visibility} : {}),
-      eligibility
-    },
-    dispatch
-  });
+      resources: [
+        {buffer: sceneRecords, usage: 'storage-read'},
+        ...(generation.visibility
+          ? [{buffer: generation.visibility, usage: 'storage-read'} as const]
+          : []),
+        {buffer: eligibility, usage: 'storage-write'}
+      ],
+      bindings: {
+        sceneRecords,
+        ...(generation.visibility ? {visibility: generation.visibility} : {}),
+        eligibility
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   generation: GPUSceneDrawGeneration,
   owners: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const recordWords = generation.commands.recordByteLength / UINT32_BYTE_LENGTH;
   const firstInstanceWord = recordWords - 1;
   const dispatch = getDispatchLayout(
     Math.max(generation.commands.capacity, 1),
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  addComputationPass(graph, {
-    id: `${generation.id}-initialize`,
-    source: `${makeDispatchConstants(dispatch)}
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${generation.id}-initialize`,
+      source: `${makeDispatchConstants(dispatch)}
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
 const RECORD_WORDS: u32 = ${recordWords}u;
 const FIRST_INSTANCE_WORD: u32 = ${firstInstanceWord}u;
@@ -242,22 +255,25 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(generation.overflow)}u;
     atomicStore(&overflow[OVERFLOW_OFFSET], 0u);
   }
 }`,
-    resources: [
-      {buffer: owners, usage: 'storage-write'},
-      {buffer: generation.commands.buffer, usage: 'storage-write'},
-      {buffer: generation.requiredCount, usage: 'storage-write'},
-      {buffer: generation.publishedCount, usage: 'storage-write'},
-      {buffer: generation.overflow, usage: 'storage-write'}
-    ],
-    bindings: {
-      owners,
-      commands: generation.commands.words,
-      requiredCount: generation.requiredCount,
-      publishedCount: generation.publishedCount,
-      overflow: generation.overflow
-    },
-    dispatch
-  });
+      resources: [
+        {buffer: owners, usage: 'storage-write'},
+        {buffer: generation.commands.buffer, usage: 'storage-write'},
+        {buffer: generation.requiredCount, usage: 'storage-write'},
+        {buffer: generation.publishedCount, usage: 'storage-write'},
+        {buffer: generation.overflow, usage: 'storage-write'}
+      ],
+      bindings: {
+        owners,
+        commands: generation.commands.words,
+        requiredCount: generation.requiredCount,
+        publishedCount: generation.publishedCount,
+        overflow: generation.overflow
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addClaimPass<Parameters>(
@@ -265,15 +281,17 @@ function addClaimPass<Parameters>(
   generation: GPUSceneDrawGeneration,
   eligibility: GraphDataView<'uint32'>,
   owners: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const dispatch = getDispatchLayout(
     generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  addComputationPass(graph, {
-    id: `${generation.id}-claim`,
-    source: `${useSubgroups ? 'enable subgroups;' : ''}
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${generation.id}-claim`,
+      source: `${useSubgroups ? 'enable subgroups;' : ''}
 ${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
@@ -329,22 +347,25 @@ ${
   `
 }
 }`,
-    resources: [
-      {buffer: generation.scene.commandSlots, usage: 'storage-read'},
-      {buffer: eligibility, usage: 'storage-read'},
-      {buffer: owners, usage: 'storage-read-write'},
-      {buffer: generation.requiredCount, usage: 'storage-read-write'},
-      {buffer: generation.overflow, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      commandSlots: generation.scene.commandSlots,
-      eligibility,
-      owners,
-      requiredCount: generation.requiredCount,
-      overflow: generation.overflow
-    },
-    dispatch
-  });
+      resources: [
+        {buffer: generation.scene.commandSlots, usage: 'storage-read'},
+        {buffer: eligibility, usage: 'storage-read'},
+        {buffer: owners, usage: 'storage-read-write'},
+        {buffer: generation.requiredCount, usage: 'storage-read-write'},
+        {buffer: generation.overflow, usage: 'storage-read-write'}
+      ],
+      bindings: {
+        commandSlots: generation.scene.commandSlots,
+        eligibility,
+        owners,
+        requiredCount: generation.requiredCount,
+        overflow: generation.overflow
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addPublishPass<Parameters>(
@@ -352,7 +373,8 @@ function addPublishPass<Parameters>(
   generation: GPUSceneDrawGeneration,
   eligibility: GraphDataView<'uint32'>,
   owners: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const useSubgroups = getGPUShaderSubgroupStrategy(graph.device) === 'subgroups';
   const recordWords = generation.commands.recordByteLength / UINT32_BYTE_LENGTH;
   const firstInstanceWord = recordWords - 1;
@@ -360,9 +382,10 @@ function addPublishPass<Parameters>(
     generation.scene.flags.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  addComputationPass(graph, {
-    id: `${generation.id}-publish`,
-    source: `${useSubgroups ? 'enable subgroups;' : ''}
+  nodes.push(
+    ...addComputationPass(graph, {
+      id: `${generation.id}-publish`,
+      source: `${useSubgroups ? 'enable subgroups;' : ''}
 ${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
@@ -436,24 +459,27 @@ ${
   `
 }
 }`,
-    resources: [
-      {buffer: generation.scene.commandSlots, usage: 'storage-read'},
-      {buffer: eligibility, usage: 'storage-read'},
-      {buffer: owners, usage: 'storage-read-write'},
-      {buffer: generation.commands.buffer, usage: 'storage-write'},
-      {buffer: generation.publishedCount, usage: 'storage-read-write'},
-      {buffer: generation.overflow, usage: 'storage-read-write'}
-    ],
-    bindings: {
-      commandSlots: generation.scene.commandSlots,
-      eligibility,
-      owners,
-      commands: generation.commands.words,
-      publishedCount: generation.publishedCount,
-      overflow: generation.overflow
-    },
-    dispatch
-  });
+      resources: [
+        {buffer: generation.scene.commandSlots, usage: 'storage-read'},
+        {buffer: eligibility, usage: 'storage-read'},
+        {buffer: owners, usage: 'storage-read-write'},
+        {buffer: generation.commands.buffer, usage: 'storage-write'},
+        {buffer: generation.publishedCount, usage: 'storage-read-write'},
+        {buffer: generation.overflow, usage: 'storage-read-write'}
+      ],
+      bindings: {
+        commandSlots: generation.scene.commandSlots,
+        eligibility,
+        owners,
+        commands: generation.commands.words,
+        publishedCount: generation.publishedCount,
+        overflow: generation.overflow
+      },
+      dispatch
+    })
+  );
+
+  return nodes;
 }
 
 function addComputationPass<Parameters>(
@@ -465,36 +491,41 @@ function addComputationPass<Parameters>(
     bindings: Record<string, GraphDataView>;
     dispatch: DispatchLayout;
   }
-): void {
-  graph.addComputePass({
-    id: props.id,
-    resources: props.resources,
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source: props.source,
-        shaderLayout: {
-          bindings: Object.keys(props.bindings).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const [name, view] of Object.entries(props.bindings)) {
-            bindings[name] = getViewBinding(view, getBuffer);
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      resources: props.resources,
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source: props.source,
+          shaderLayout: {
+            bindings: Object.keys(props.bindings).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const [name, view] of Object.entries(props.bindings)) {
+              bindings[name] = getViewBinding(view, getBuffer);
+            }
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateSceneSource(

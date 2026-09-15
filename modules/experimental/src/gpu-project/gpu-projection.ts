@@ -7,7 +7,6 @@ import {Buffer} from '@luma.gl/core';
 
 import {
   type GPUCommandGraph,
-  type GPUCommandGraphContributor,
   type GraphBufferUse,
   type GraphDataView,
   type GraphVectorView
@@ -90,7 +89,7 @@ export type GPUProjectionProps = GPUProjectionLocalFloat32Props | GPUProjectionD
  * Plans live in storage buffers instead of generated shader constants. {@link updatePlan} can
  * replace an equally sized plan without recompiling the surrounding command graph.
  */
-export class GPUProjection implements GPUCommandGraphContributor {
+export class GPUProjection {
   /** Prefix used for generated graph nodes and privately owned plan storage. */
   readonly id: string;
   /** Source rows, potentially containing raw binary64 coordinates. */

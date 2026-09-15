@@ -61,12 +61,12 @@ For the example, run lengths `[3,2,4]` correspond to offsets `[0,3,5,9]`. Those 
 Input is an ordered packed `uint32` vector. `values` and `lengths` are caller-owned capacity buffers; only the prefix described by `count` is valid.
 
 ```ts
-new GPURunLengthEncode({
+graph.add(new GPURunLengthEncode({
   input: sortedKeys,
   values: uniqueKeys,
   lengths: runLengths,
   count: runCount
-}).addToGraph(graph);
+}));
 ```
 
 The operation preserves first-occurrence order and does not sort input. Empty input writes `count = 0`.

@@ -83,15 +83,17 @@ async function runOperator(
     format: outputComponents === 1 ? 'float32' : 'float32x4',
     length: RESOLUTION ** 3
   });
-  new GPUFiniteDifference3D({
-    input,
-    output,
-    width: RESOLUTION,
-    height: RESOLUTION,
-    depth: RESOLUTION,
-    spacing: [SPACING, SPACING, SPACING],
-    operator
-  }).addToGraph(graph);
+  graph.add(
+    new GPUFiniteDifference3D({
+      input,
+      output,
+      width: RESOLUTION,
+      height: RESOLUTION,
+      depth: RESOLUTION,
+      spacing: [SPACING, SPACING, SPACING],
+      operator
+    })
+  );
   const compiled = graph.compile();
   try {
     const encoder = device.createCommandEncoder({id: `${operator}-3d-test`});

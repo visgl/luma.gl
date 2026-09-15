@@ -6,7 +6,6 @@ import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -62,7 +61,7 @@ type DenseComponentBinding = {
  * explicit capacity become invalid. Upstream nonconvergence clears all labels, masks, counts,
  * and overflow on every graph encoding. Scratch is graph-owned; external views stay borrowed.
  */
-export class GPURasterDenseComponents implements GPUCommandGraphContributor {
+export class GPURasterDenseComponents {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -162,12 +161,14 @@ export class GPURasterDenseComponents implements GPUCommandGraphContributor {
     assertRasterStorageBindingFits(graph.device, rootOffsets, `${this.id} representative offsets`);
 
     this.addMarkPass(graph, rootFlags, dispatch);
-    new GPUScan({
-      id: `${this.id}-scan`,
-      input: rootFlags,
-      output: rootOffsets,
-      mode: 'exclusive'
-    }).addToGraph(graph);
+    graph.add(
+      new GPUScan({
+        id: `${this.id}-scan`,
+        input: rootFlags,
+        output: rootOffsets,
+        mode: 'exclusive'
+      })
+    );
     this.addScatterPass(graph, rootFlags, rootOffsets, dispatch);
     this.addPublicationPass(graph, rootFlags, rootOffsets);
   }

@@ -70,7 +70,7 @@ describe('GPU Core pipeline tutorial', () => {
     expect(overviewSource).toContain('Compute shaders and storage buffers');
     expect(overviewSource).toContain('GPU-writable indirect draw and dispatch arguments');
     expect(overviewSource).toContain('new GPUCommandGraph(device');
-    expect(overviewSource).toContain('.addToGraph(graph)');
+    expect(overviewSource).toContain('graph.add(');
     expect(tutorialSource).toContain('<GPUCorePipelineTutorial />');
     expect(tutorialSource).toContain('Terminology in one minute');
     expect(tutorialSource).toMatch(
@@ -84,7 +84,7 @@ describe('GPU Core pipeline tutorial', () => {
     expect(componentSource).toMatch(/Manual WebGPU and GPU Core/);
     expect(componentSource).toMatch(/mask, exclusive scan,[\s\S]*stable scatter/);
     expect(componentSource).toContain("['Composed'");
-    expect(componentSource).toMatch(/\['Declared',[\s\S]*addToGraph\(\) expands compaction/);
+    expect(componentSource).toMatch(/\['Declared',[\s\S]*getCommandNodes\(\) expands compaction/);
     expect(componentSource).toContain('drawIndirect');
   });
 

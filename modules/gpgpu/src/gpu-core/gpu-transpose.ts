@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -79,18 +80,23 @@ export class GPUTranspose<T extends GPUTransposeFormat = GPUTransposeFormat> {
   }
 
   /** Adds one tiled compute node without compiling, submitting, or reading data back. */
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     validateGPUTransposeOwnership(graph, this.input, `${this.id} input`);
     validateGPUTransposeOwnership(graph, this.output, `${this.id} output`);
     if (this.stats.elementCount === 0) {
-      return;
+      return nodes;
     }
     validateGPUTransposeDevice(graph.device, this.id);
     const dispatchLayout = getGPUTransposeDispatchLayout(
       this.stats.tileCount,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    addGPUTransposePass(graph, this, dispatchLayout);
+    nodes.push(...addGPUTransposePass(graph, this, dispatchLayout));
+
+    return nodes;
   }
 }
 
@@ -165,47 +171,52 @@ function addGPUTransposePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   transpose: GPUTranspose,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = getGPUTransposeShaderSource(transpose, dispatchLayout);
-  graph.addComputePass({
-    id: transpose.id,
-    workload: {
-      operation: 'GPUTranspose',
-      commandCount: 1,
-      maximumWorkgroupCount: transpose.stats.tileCount,
-      maximumInvocationCount:
-        transpose.stats.tileCount * GPU_TRANSPOSE_TILE_SIZE * GPU_TRANSPOSE_TILE_SIZE,
-      readByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT
-    },
-    resources: [
-      {buffer: transpose.input, usage: 'storage-read'},
-      {buffer: transpose.output, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: transpose.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'outputValues', type: 'storage', group: 0, location: 1}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputValues: getViewBinding(transpose.input, getBuffer),
-            outputValues: getViewBinding(transpose.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: transpose.id,
+      workload: {
+        operation: 'GPUTranspose',
+        commandCount: 1,
+        maximumWorkgroupCount: transpose.stats.tileCount,
+        maximumInvocationCount:
+          transpose.stats.tileCount * GPU_TRANSPOSE_TILE_SIZE * GPU_TRANSPOSE_TILE_SIZE,
+        readByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT
+      },
+      resources: [
+        {buffer: transpose.input, usage: 'storage-read'},
+        {buffer: transpose.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: transpose.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'outputValues', type: 'storage', group: 0, location: 1}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputValues: getViewBinding(transpose.input, getBuffer),
+              outputValues: getViewBinding(transpose.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function getGPUTransposeDispatchLayout(

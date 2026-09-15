@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -67,7 +68,10 @@ export class GPUByteRangeGather {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const props = this.props;
     for (const view of [
       props.source,
@@ -81,7 +85,7 @@ export class GPUByteRangeGather {
       }
     }
     if (props.outputByteCapacity === 0 || props.lengths.length === 0) {
-      return;
+      return nodes;
     }
     const wordCount = Math.ceil(props.outputByteCapacity / 4);
     const dispatchLayout = getBoundedDispatchLayout(
@@ -91,55 +95,64 @@ export class GPUByteRangeGather {
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
     const source = makeShaderSource(props, dispatchLayout);
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUByteRangeGather',
-        commandCount: 1,
-        maximumWorkgroupCount: Math.ceil(wordCount / BYTE_RANGE_GATHER_WORKGROUP_SIZE),
-        maximumInvocationCount:
-          Math.ceil(wordCount / BYTE_RANGE_GATHER_WORKGROUP_SIZE) *
-          BYTE_RANGE_GATHER_WORKGROUP_SIZE,
-        readByteLength: props.sourceByteLength + props.lengths.length * 12,
-        writeByteLength: props.outputByteCapacity
-      },
-      resources: [
-        {buffer: props.source, usage: 'storage-read'},
-        {buffer: props.sourceOffsets, usage: 'storage-read'},
-        {buffer: props.lengths, usage: 'storage-read'},
-        {buffer: props.outputOffsets, usage: 'storage-read'},
-        {buffer: props.output, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
-              {name: 'sourceOffsets', type: 'read-only-storage', group: 0, location: 1},
-              {name: 'lengths', type: 'read-only-storage', group: 0, location: 2},
-              {name: 'outputOffsets', type: 'read-only-storage', group: 0, location: 3},
-              {name: 'outputWords', type: 'storage', group: 0, location: 4}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {
-              sourceWords: getViewBinding(props.source, getBuffer),
-              sourceOffsets: getViewBinding(props.sourceOffsets, getBuffer),
-              lengths: getViewBinding(props.lengths, getBuffer),
-              outputOffsets: getViewBinding(props.outputOffsets, getBuffer),
-              outputWords: getViewBinding(props.output, getBuffer)
-            };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: 'GPUByteRangeGather',
+          commandCount: 1,
+          maximumWorkgroupCount: Math.ceil(wordCount / BYTE_RANGE_GATHER_WORKGROUP_SIZE),
+          maximumInvocationCount:
+            Math.ceil(wordCount / BYTE_RANGE_GATHER_WORKGROUP_SIZE) *
+            BYTE_RANGE_GATHER_WORKGROUP_SIZE,
+          readByteLength: props.sourceByteLength + props.lengths.length * 12,
+          writeByteLength: props.outputByteCapacity
+        },
+        resources: [
+          {buffer: props.source, usage: 'storage-read'},
+          {buffer: props.sourceOffsets, usage: 'storage-read'},
+          {buffer: props.lengths, usage: 'storage-read'},
+          {buffer: props.outputOffsets, usage: 'storage-read'},
+          {buffer: props.output, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
+                {name: 'sourceOffsets', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'lengths', type: 'read-only-storage', group: 0, location: 2},
+                {name: 'outputOffsets', type: 'read-only-storage', group: 0, location: 3},
+                {name: 'outputWords', type: 'storage', group: 0, location: 4}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {
+                sourceWords: getViewBinding(props.source, getBuffer),
+                sourceOffsets: getViewBinding(props.sourceOffsets, getBuffer),
+                lengths: getViewBinding(props.lengths, getBuffer),
+                outputOffsets: getViewBinding(props.outputOffsets, getBuffer),
+                outputWords: getViewBinding(props.output, getBuffer)
+              };
+              computation.setBindings(bindings);
+              computation.dispatch(
+                computePass,
+                dispatchLayout.x,
+                dispatchLayout.y,
+                dispatchLayout.z
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

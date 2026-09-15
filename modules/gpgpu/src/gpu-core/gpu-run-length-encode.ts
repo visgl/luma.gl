@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -58,14 +59,17 @@ export class GPURunLengthEncode {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.input, this.values, this.lengths, this.count]) {
       if (view.buffer.graph !== graph)
         throw new Error(`${this.id} views must belong to target graph`);
     }
     if (this.input.length === 0) {
-      addEmptyPass(graph, this);
-      return;
+      nodes.push(...addEmptyPass(graph, this));
+      return nodes;
     }
     const flags = createTransientView(
       graph,
@@ -79,14 +83,18 @@ export class GPURunLengthEncode {
       'uint32',
       this.input.length
     );
-    addFlagsPass(graph, this, flags);
-    new GPUScan({
-      id: `${this.id}-run-index-scan`,
-      input: flags,
-      output: runIndices,
-      mode: 'exclusive'
-    }).addToGraph(graph);
-    addMaterializePass(graph, this, flags, runIndices);
+    nodes.push(...addFlagsPass(graph, this, flags));
+    nodes.push(
+      ...new GPUScan({
+        id: `${this.id}-run-index-scan`,
+        input: flags,
+        output: runIndices,
+        mode: 'exclusive'
+      }).getCommandNodes(graph)
+    );
+    nodes.push(...addMaterializePass(graph, this, flags, runIndices));
+
+    return nodes;
   }
 }
 
@@ -97,15 +105,20 @@ function addFlagsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   rle: GPURunLengthEncode,
   flags: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = `const LENGTH: u32 = ${rle.input.length}u; const INPUT_OFFSET: u32 = ${getViewElementOffset(rle.input)}u; const FLAG_OFFSET: u32 = ${getViewElementOffset(flags)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<u32>;
 @group(0) @binding(1) var<storage, read_write> flags: array<u32>;
 @compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) id: vec3u) { let i=id.x; if(i>=LENGTH){return;} flags[FLAG_OFFSET+i]=select(0u,1u,i==0u || inputValues[INPUT_OFFSET+i]!=inputValues[INPUT_OFFSET+i-1u]); }`;
-  addPass(graph, `${rle.id}-flags`, source, rle.input.length, [
-    {name: 'inputValues', view: rle.input, usage: 'storage-read'},
-    {name: 'flags', view: flags, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${rle.id}-flags`, source, rle.input.length, [
+      {name: 'inputValues', view: rle.input, usage: 'storage-read'},
+      {name: 'flags', view: flags, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 function addMaterializePass<Parameters>(
@@ -113,28 +126,38 @@ function addMaterializePass<Parameters>(
   rle: GPURunLengthEncode,
   flags: GraphDataView<'uint32'>,
   runIndices: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = `const LENGTH:u32=${rle.input.length}u; const INPUT_OFFSET:u32=${getViewElementOffset(rle.input)}u; const FLAG_OFFSET:u32=${getViewElementOffset(flags)}u; const INDEX_OFFSET:u32=${getViewElementOffset(runIndices)}u; const VALUE_OFFSET:u32=${getViewElementOffset(rle.values)}u; const LENGTH_OFFSET:u32=${getViewElementOffset(rle.lengths)}u; const COUNT_OFFSET:u32=${getViewElementOffset(rle.count)}u;
 @group(0) @binding(0) var<storage,read> inputValues:array<u32>; @group(0) @binding(1) var<storage,read> flags:array<u32>; @group(0) @binding(2) var<storage,read> runIndices:array<u32>; @group(0) @binding(3) var<storage,read_write> values:array<u32>; @group(0) @binding(4) var<storage,read_write> lengths:array<u32>; @group(0) @binding(5) var<storage,read_write> count:array<u32>;
 @compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(global_invocation_id) id:vec3u){let i=id.x;if(i>=LENGTH){return;} let run=runIndices[INDEX_OFFSET+i]; if(flags[FLAG_OFFSET+i]!=0u){values[VALUE_OFFSET+run]=inputValues[INPUT_OFFSET+i];} let isEnd=i+1u==LENGTH || flags[FLAG_OFFSET+i+1u]!=0u; if(isEnd){let start=select(0u, runIndices[INDEX_OFFSET+i], run==0u); var j=i; loop { if(j==0u || flags[FLAG_OFFSET+j]!=0u){break;} j-=1u;} lengths[LENGTH_OFFSET+run]=i-j+1u; if(i+1u==LENGTH){count[COUNT_OFFSET]=run+1u;}}}`;
-  addPass(graph, `${rle.id}-materialize`, source, rle.input.length, [
-    {name: 'inputValues', view: rle.input, usage: 'storage-read'},
-    {name: 'flags', view: flags, usage: 'storage-read'},
-    {name: 'runIndices', view: runIndices, usage: 'storage-read'},
-    {name: 'values', view: rle.values, usage: 'storage-write'},
-    {name: 'lengths', view: rle.lengths, usage: 'storage-write'},
-    {name: 'count', view: rle.count, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${rle.id}-materialize`, source, rle.input.length, [
+      {name: 'inputValues', view: rle.input, usage: 'storage-read'},
+      {name: 'flags', view: flags, usage: 'storage-read'},
+      {name: 'runIndices', view: runIndices, usage: 'storage-read'},
+      {name: 'values', view: rle.values, usage: 'storage-write'},
+      {name: 'lengths', view: rle.lengths, usage: 'storage-write'},
+      {name: 'count', view: rle.count, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 function addEmptyPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   rle: GPURunLengthEncode
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = `const COUNT_OFFSET:u32=${getViewElementOffset(rle.count)}u; @group(0) @binding(0) var<storage,read_write> count:array<u32>; @compute @workgroup_size(1) fn main(){count[COUNT_OFFSET]=0u;}`;
-  addPass(graph, `${rle.id}-empty`, source, 1, [
-    {name: 'count', view: rle.count, usage: 'storage-write'}
-  ]);
+  nodes.push(
+    ...addPass(graph, `${rle.id}-empty`, source, 1, [
+      {name: 'count', view: rle.count, usage: 'storage-write'}
+    ])
+  );
+
+  return nodes;
 }
 
 type Resource = {
@@ -148,40 +171,45 @@ function addPass<Parameters>(
   source: string,
   length: number,
   resources: Resource[]
-): void {
-  graph.addComputePass({
-    id,
-    workload: {
-      operation: 'GPURunLengthEncode',
-      commandCount: 1,
-      maximumWorkgroupCount: Math.ceil(length / WORKGROUP_SIZE),
-      maximumInvocationCount: Math.ceil(length / WORKGROUP_SIZE) * WORKGROUP_SIZE,
-      readByteLength: resources.filter(r => r.usage === 'storage-read').length * length * 4,
-      writeByteLength: resources.filter(r => r.usage === 'storage-write').length * length * 4
-    },
-    resources: resources.map(r => ({buffer: r.view, usage: r.usage})),
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: resources.map((r, location) => ({
-            name: r.name,
-            type: r.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-            group: 0,
-            location
-          }))
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {};
-          for (const r of resources) bindings[r.name] = getViewBinding(r.view, getBuffer);
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, Math.ceil(length / WORKGROUP_SIZE), 1, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id,
+      workload: {
+        operation: 'GPURunLengthEncode',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(length / WORKGROUP_SIZE),
+        maximumInvocationCount: Math.ceil(length / WORKGROUP_SIZE) * WORKGROUP_SIZE,
+        readByteLength: resources.filter(r => r.usage === 'storage-read').length * length * 4,
+        writeByteLength: resources.filter(r => r.usage === 'storage-write').length * length * 4
+      },
+      resources: resources.map(r => ({buffer: r.view, usage: r.usage})),
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: resources.map((r, location) => ({
+              name: r.name,
+              type: r.usage === 'storage-read' ? 'read-only-storage' : 'storage',
+              group: 0,
+              location
+            }))
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {};
+            for (const r of resources) bindings[r.name] = getViewBinding(r.view, getBuffer);
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, Math.ceil(length / WORKGROUP_SIZE), 1, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }

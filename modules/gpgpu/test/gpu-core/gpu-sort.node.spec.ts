@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {
   GPUBatchSort,
@@ -16,7 +17,7 @@ import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource
 } from '../../src/gpu-core/gpu-dispatch-utils';
-import {addGPUSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
+import {getGPUSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
 
 const WORKGROUP_SIZE = 256;
 
@@ -60,7 +61,10 @@ describe('bounded GPU sort dispatch', () => {
       const createBuffer = vi.spyOn(fixture.device, 'createBuffer');
 
       try {
-        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 2);
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 2)
+        );
 
         const identifiers = addComputePass.mock.calls.map(([pass]) => pass.id);
         if (algorithm === 'bitonic') {
@@ -91,7 +95,10 @@ describe('bounded GPU sort dispatch', () => {
       const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
       try {
-        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 65_535)
+        );
 
         expect(fixture.sort.resolvedAlgorithm).toBe('bitonic');
         expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
@@ -117,7 +124,10 @@ describe('bounded GPU sort dispatch', () => {
       const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
       try {
-        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 65_535)
+        );
 
         expect(fixture.sort.resolvedAlgorithm).toBe('radix');
         expect(addComputePass).toHaveBeenCalledTimes(expectedPassCount);
@@ -142,7 +152,10 @@ describe('bounded GPU sort dispatch', () => {
       const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
       try {
-        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 65_535);
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 65_535)
+        );
 
         const passes = addComputePass.mock.calls.map(([pass]) => pass);
         const identifiers = passes.map(pass => pass.id);
@@ -165,9 +178,12 @@ describe('bounded GPU sort dispatch', () => {
     const createTransientBuffer = vi.spyOn(fixture.graph, 'createTransientBuffer');
 
     try {
-      expect(() => addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 3)).toThrow(
-        /GPUSort bitonic.*exceeding the 3D dispatch limit/i
-      );
+      expect(() =>
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 3)
+        )
+      ).toThrow(/GPUSort bitonic.*exceeding the 3D dispatch limit/i);
       expect(addComputePass).not.toHaveBeenCalled();
       expect(createTransientBuffer).not.toHaveBeenCalled();
     } finally {
@@ -182,9 +198,12 @@ describe('bounded GPU sort dispatch', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      expect(() => addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 2)).toThrow(
-        /GPUSort.*exceeding the 3D dispatch limit/i
-      );
+      expect(() =>
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 2)
+        )
+      ).toThrow(/GPUSort.*exceeding the 3D dispatch limit/i);
       expect(addComputePass).not.toHaveBeenCalled();
     } finally {
       addComputePass.mockRestore();
@@ -198,7 +217,10 @@ describe('bounded GPU sort dispatch', () => {
       const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
       try {
-        addGPUSortToGraphWithDispatchLimit(fixture.sort, fixture.graph, 0);
+        addGPUCommandNodes(
+          fixture.graph,
+          getGPUSortCommandNodesWithDispatchLimit(fixture.sort, fixture.graph, 0)
+        );
         expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
           length === 0 ? [] : ['node-sort-copy-pair']
         );
@@ -225,7 +247,7 @@ describe('bounded GPU sort dispatch', () => {
     const addComputePass = vi.spyOn(graph, 'addComputePass');
 
     try {
-      sort.addToGraph(graph);
+      graph.add(sort);
 
       const identifiers = addComputePass.mock.calls.map(([pass]) => pass.id);
       expect(identifiers).toContain('bounded-batch-sort-chunk-0-radix-digit-0-histogram');

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -61,7 +62,10 @@ export class GPUFloat32HierarchicalReduction {
         throw new Error(`${this.id} input lengths must match`);
     } else if (props.inputB) throw new Error(`${this.id} inputB is only valid for multiply map`);
   }
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const {input, inputB, output, gate} = this.props;
     if (
       input.buffer.graph !== graph ||
@@ -80,27 +84,33 @@ export class GPUFloat32HierarchicalReduction {
         'float32',
         getGPUReductionNextLength(current.length)
       );
-      addReductionLevel(graph, {
-        id: `${this.id}-level-${level}`,
-        input: current,
-        inputB: currentB,
-        map,
-        output: partials,
-        gate
-      });
+      nodes.push(
+        ...addReductionLevel(graph, {
+          id: `${this.id}-level-${level}`,
+          input: current,
+          inputB: currentB,
+          map,
+          output: partials,
+          gate
+        })
+      );
       current = partials;
       currentB = undefined;
       map = 'identity';
       level++;
     }
-    addReductionLevel(graph, {
-      id: `${this.id}-level-${level}`,
-      input: current,
-      inputB: currentB,
-      map,
-      finalScalar: output,
-      gate
-    });
+    nodes.push(
+      ...addReductionLevel(graph, {
+        id: `${this.id}-level-${level}`,
+        input: current,
+        inputB: currentB,
+        map,
+        finalScalar: output,
+        gate
+      })
+    );
+
+    return nodes;
   }
 }
 type ReductionLevelProps = {
@@ -115,62 +125,76 @@ type ReductionLevelProps = {
 function addReductionLevel<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: ReductionLevelProps
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const outputCount = props.output?.length ?? 1;
   const arenaBuffer = props.finalScalar?.arena.buffer;
-  graph.addComputePass({
-    id: props.id,
-    condition: props.gate?.condition,
-    workload: {
-      operation: 'GPUHierarchicalReductionLevel',
-      commandCount: 1,
-      maximumWorkgroupCount: outputCount,
-      maximumInvocationCount: outputCount * GPU_REDUCTION_WORKGROUP_SIZE,
-      readByteLength: props.input.length * 4 * (props.inputB ? 2 : 1),
-      writeByteLength: outputCount * 4
-    },
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      ...(props.inputB ? [{buffer: props.inputB, usage: 'storage-read' as const}] : []),
-      ...(props.output ? [{buffer: props.output, usage: 'storage-write' as const}] : []),
-      ...(arenaBuffer ? [{buffer: arenaBuffer, usage: 'storage-write' as const}] : []),
-      ...(props.gate ? [{buffer: props.gate.dispatchBuffer, usage: 'indirect' as const}] : [])
-    ],
-    compile: ({device}) => {
-      const strategy = getGPUHierarchicalReductionStrategy(device);
-      const source = makeReductionLevelSource(props, strategy);
-      const bindings = [
-        {name: 'inputValues', type: 'read-only-storage' as const, group: 0, location: 0},
-        ...(props.inputB
-          ? [{name: 'inputBValues', type: 'read-only-storage' as const, group: 0, location: 1}]
-          : []),
-        props.output
-          ? {
-              name: 'outputValues',
-              type: 'storage' as const,
-              group: 0,
-              location: props.inputB ? 2 : 1
-            }
-          : {name: 'gpuValues', type: 'storage' as const, group: 0, location: props.inputB ? 2 : 1}
-      ];
-      const computation = new Computation(device, {id: props.id, source, shaderLayout: {bindings}});
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const resolved: Record<string, Binding> = {
-            inputValues: getViewBinding(props.input, getBuffer)
-          };
-          if (props.inputB) resolved['inputBValues'] = getViewBinding(props.inputB, getBuffer);
-          if (props.output) resolved['outputValues'] = getViewBinding(props.output, getBuffer);
-          if (arenaBuffer) resolved['gpuValues'] = getBuffer(arenaBuffer);
-          computation.setBindings(resolved);
-          if (props.gate)
-            computation.dispatchIndirect(computePass, getBuffer(props.gate.dispatchBuffer));
-          else computation.dispatch(computePass, outputCount, 1, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id,
+      condition: props.gate?.condition,
+      workload: {
+        operation: 'GPUHierarchicalReductionLevel',
+        commandCount: 1,
+        maximumWorkgroupCount: outputCount,
+        maximumInvocationCount: outputCount * GPU_REDUCTION_WORKGROUP_SIZE,
+        readByteLength: props.input.length * 4 * (props.inputB ? 2 : 1),
+        writeByteLength: outputCount * 4
+      },
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        ...(props.inputB ? [{buffer: props.inputB, usage: 'storage-read' as const}] : []),
+        ...(props.output ? [{buffer: props.output, usage: 'storage-write' as const}] : []),
+        ...(arenaBuffer ? [{buffer: arenaBuffer, usage: 'storage-write' as const}] : []),
+        ...(props.gate ? [{buffer: props.gate.dispatchBuffer, usage: 'indirect' as const}] : [])
+      ],
+      compile: ({device}) => {
+        const strategy = getGPUHierarchicalReductionStrategy(device);
+        const source = makeReductionLevelSource(props, strategy);
+        const bindings = [
+          {name: 'inputValues', type: 'read-only-storage' as const, group: 0, location: 0},
+          ...(props.inputB
+            ? [{name: 'inputBValues', type: 'read-only-storage' as const, group: 0, location: 1}]
+            : []),
+          props.output
+            ? {
+                name: 'outputValues',
+                type: 'storage' as const,
+                group: 0,
+                location: props.inputB ? 2 : 1
+              }
+            : {
+                name: 'gpuValues',
+                type: 'storage' as const,
+                group: 0,
+                location: props.inputB ? 2 : 1
+              }
+        ];
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {bindings}
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const resolved: Record<string, Binding> = {
+              inputValues: getViewBinding(props.input, getBuffer)
+            };
+            if (props.inputB) resolved['inputBValues'] = getViewBinding(props.inputB, getBuffer);
+            if (props.output) resolved['outputValues'] = getViewBinding(props.output, getBuffer);
+            if (arenaBuffer) resolved['gpuValues'] = getBuffer(arenaBuffer);
+            computation.setBindings(resolved);
+            if (props.gate)
+              computation.dispatchIndirect(computePass, getBuffer(props.gate.dispatchBuffer));
+            else computation.dispatch(computePass, outputCount, 1, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 function makeReductionLevelSource(
   props: ReductionLevelProps,

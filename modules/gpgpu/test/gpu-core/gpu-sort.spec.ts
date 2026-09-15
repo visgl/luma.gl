@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -15,7 +16,7 @@ import {
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {expect, it, vi} from 'vitest';
-import {addGPUSortToGraphWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
+import {getGPUSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
 
 it('GPUSort bitonic stably sorts paired uint32 values in both directions', async () => {
   const device = await getWebGPUTestDevice();
@@ -345,15 +346,17 @@ it('GPUSort honors offset storage views for local bitonic and multi-workgroup ra
     const inputValues = createPaddedView('values', values, 2);
     const outputKeys = createPaddedView('output-keys', new Uint32Array(length), 3);
     const outputValues = createPaddedView('output-values', new Uint32Array(length), 4);
-    new GPUSort({
-      id: `offset-${algorithm}`,
-      keys: inputKeys.view,
-      values: inputValues.view,
-      outputKeys: outputKeys.view,
-      outputValues: outputValues.view,
-      algorithm,
-      direction: 'descending'
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSort({
+        id: `offset-${algorithm}`,
+        keys: inputKeys.view,
+        values: inputValues.view,
+        outputKeys: outputKeys.view,
+        outputValues: outputValues.view,
+        algorithm,
+        direction: 'descending'
+      })
+    );
 
     const compiled = graph.compile();
     const commandEncoder = device.createCommandEncoder({id: `offset-${algorithm}-encoder`});
@@ -624,7 +627,7 @@ it('GPUSort validates layouts, lengths, graph ownership, and output buffers', as
 
   const otherGraph = new GPUCommandGraph(device, {id: 'other-sort-graph'});
   const sort = new GPUSort({keys, values, outputKeys, outputValues});
-  expect(() => sort.addToGraph(otherGraph), 'foreign graph is rejected').toThrow(/target graph/);
+  expect(() => otherGraph.add(sort), 'foreign graph is rejected').toThrow(/target graph/);
 });
 
 it('GPUSort rejects borrowed physical-buffer aliases before encoding either algorithm', async () => {
@@ -654,7 +657,7 @@ it('GPUSort rejects borrowed physical-buffer aliases before encoding either algo
       outputValues: importView(graph, 'output-values', outputValuesBuffer, 4),
       algorithm
     });
-    sort.addToGraph(graph);
+    graph.add(sort);
     const compiled = graph.compile();
     const rejectedEncoder = device.createCommandEncoder({id: `${algorithm}-rejected-alias`});
 
@@ -721,7 +724,7 @@ it('GPUBatchSort rejects physically aliased output overrides before encoding', a
     outputKeys: makeImportedGraphVector(graph, 'batch-output-keys', outputKeysBuffer, 3),
     outputValues: makeImportedGraphVector(graph, 'batch-output-values', outputValuesBuffer, 3)
   });
-  sort.addToGraph(graph);
+  graph.add(sort);
   const compiled = graph.compile();
   const rejectedEncoder = device.createCommandEncoder({id: 'batch-sort-rejected-alias'});
 
@@ -810,9 +813,12 @@ async function runSort(
     keyBits
   });
   if (maxComputeWorkgroupsPerDimension === undefined) {
-    sort.addToGraph(graph);
+    graph.add(sort);
   } else {
-    addGPUSortToGraphWithDispatchLimit(sort, graph, maxComputeWorkgroupsPerDimension);
+    addGPUCommandNodes(
+      graph,
+      getGPUSortCommandNodesWithDispatchLimit(sort, graph, maxComputeWorkgroupsPerDimension)
+    );
   }
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'sort-test-encoder'});
@@ -867,7 +873,7 @@ async function runBatchSort(
     algorithm,
     direction
   });
-  sort.addToGraph(graph);
+  graph.add(sort);
   const compiled = graph.compile();
   const commandEncoder = device.createCommandEncoder({id: 'batch-sort-test-encoder'});
   compiled.encode(commandEncoder, {parameters: undefined});

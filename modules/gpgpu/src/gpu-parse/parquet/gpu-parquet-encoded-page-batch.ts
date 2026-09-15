@@ -191,15 +191,17 @@ function addLZByteStreamSplitBatchToGraph<Parameters>(
     plan.outputByteLength,
     Buffer.STORAGE | Buffer.COPY_SRC
   );
-  new GPULZByteBatchDecompressor({
-    id: `${graph.id}-parquet-lz-byte-batch`,
-    upload,
-    jobs,
-    output: byteStreamSplit,
-    jobCount: plan.pageIndices.length,
-    outputByteLength: plan.outputByteLength,
-    maximumOutputWordCount: plan.maximumOutputWordCount
-  }).addToGraph(graph);
+  graph.add(
+    new GPULZByteBatchDecompressor({
+      id: `${graph.id}-parquet-lz-byte-batch`,
+      upload,
+      jobs,
+      output: byteStreamSplit,
+      jobCount: plan.pageIndices.length,
+      outputByteLength: plan.outputByteLength,
+      maximumOutputWordCount: plan.maximumOutputWordCount
+    })
+  );
   new GPUParquetByteStreamSplitBatchDecoder({
     id: `${graph.id}-parquet-byte-stream-split-batch`,
     input: byteStreamSplit,

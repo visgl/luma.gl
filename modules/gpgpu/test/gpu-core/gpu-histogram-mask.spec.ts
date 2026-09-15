@@ -137,7 +137,7 @@ it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
   const input = graph.importGPUVector('values', values.vector);
   const mask = graph.importGPUVector('masks', masks.vector);
   const output = importView(graph, 'counts', outputBuffer, 'uint32', 4);
-  new GPUHistogram({input, mask, output, domain: [0, 3]}).addToGraph(graph);
+  graph.add(new GPUHistogram({input, mask, output, domain: [0, 3]}));
   const compiled = graph.compile();
 
   submitGraph(device, compiled, 'masked-vector-histogram-initial');
@@ -168,12 +168,14 @@ it('GPUHistogram preserves source-aligned masked vector chunks', async () => {
   const irregularInput = irregularGraph.importGPUVector('values', values.vector);
   const irregularMask = irregularGraph.importGPUVector('masks', masks.vector);
   const irregularOutput = importView(irregularGraph, 'counts', outputBuffer, 'uint32', 3);
-  new GPUHistogram({
-    input: irregularInput,
-    mask: irregularMask,
-    output: irregularOutput,
-    edges: [0, 1, 3, 4]
-  }).addToGraph(irregularGraph);
+  irregularGraph.add(
+    new GPUHistogram({
+      input: irregularInput,
+      mask: irregularMask,
+      output: irregularOutput,
+      edges: [0, 1, 3, 4]
+    })
+  );
   const irregularCompiled = irregularGraph.compile();
   submitGraph(device, irregularCompiled, 'masked-irregular-vector-histogram');
   expect(
@@ -219,20 +221,24 @@ it('GPUHistogram shares offset selection views across independently binned outpu
   const regularOutput = importView(graph, 'regular-counts', regularOutputBuffer, 'uint32', 4);
   const irregularOutput = importView(graph, 'irregular-counts', irregularOutputBuffer, 'uint32', 3);
 
-  new GPUHistogram({
-    id: 'offset-regular-histogram',
-    input,
-    mask,
-    output: regularOutput,
-    domain: [0, 3]
-  }).addToGraph(graph);
-  new GPUHistogram({
-    id: 'offset-irregular-histogram',
-    input,
-    mask,
-    output: irregularOutput,
-    edges: [0, 1, 3, 4]
-  }).addToGraph(graph);
+  graph.add(
+    new GPUHistogram({
+      id: 'offset-regular-histogram',
+      input,
+      mask,
+      output: regularOutput,
+      domain: [0, 3]
+    })
+  );
+  graph.add(
+    new GPUHistogram({
+      id: 'offset-irregular-histogram',
+      input,
+      mask,
+      output: irregularOutput,
+      edges: [0, 1, 3, 4]
+    })
+  );
   const compiled = graph.compile();
   submitGraph(device, compiled, 'offset-masked-histograms');
 
@@ -316,7 +322,7 @@ it('GPUHistogram validates mask layout, topology, ownership, and aliases', async
   const foreignGraph = new GPUCommandGraph(device, {id: 'foreign-histogram-mask'});
   const foreignMask = importView(foreignGraph, 'foreign-mask', maskBuffer, 'uint32', 4);
   expect(
-    () => new GPUHistogram({input, mask: foreignMask, output, domain: [0, 3]}).addToGraph(graph),
+    () => graph.add(new GPUHistogram({input, mask: foreignMask, output, domain: [0, 3]})),
     'mask storage must belong to the encoded command graph'
   ).toThrow(/views must belong to the target graph/);
 
@@ -357,9 +363,9 @@ async function runMaskedHistogram(props: {
       edgesBuffer = createInputBuffer(props.device, EdgeArray.from(props.options.edges));
       edges = importView(graph, 'edges', edgesBuffer, props.format, props.options.edges.length);
     }
-    new GPUHistogram({input, mask, output, edges}).addToGraph(graph);
+    graph.add(new GPUHistogram({input, mask, output, edges}));
   } else {
-    new GPUHistogram({input, mask, output, domain: props.options.domain}).addToGraph(graph);
+    graph.add(new GPUHistogram({input, mask, output, domain: props.options.domain}));
   }
 
   const compiled = graph.compile();

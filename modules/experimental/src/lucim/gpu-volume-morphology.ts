@@ -4,12 +4,7 @@
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView,
-  GraphResourceUse
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/gpgpu/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVolumeBufferChannel} from './types';
 import {
@@ -92,7 +87,7 @@ export type GPUVolumeClosingProps = GPUVolumeDilationProps;
  * Workgroups cooperatively cache calibrated source values and validity. Binary sources are
  * canonicalized from uint32 flags and remain uint32; grayscale outputs are float32 extrema.
  */
-export class GPUVolumeMorphology implements GPUCommandGraphContributor {
+export class GPUVolumeMorphology {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -388,7 +383,7 @@ export class GPUVolumeErosion extends GPUVolumeMorphology {
 }
 
 /** Ordered morphology pair with typed graph-owned sample and validity scratch. */
-abstract class GPUVolumeComposedMorphology implements GPUCommandGraphContributor {
+abstract class GPUVolumeComposedMorphology {
   readonly id: string;
   readonly width: number;
   readonly height: number;

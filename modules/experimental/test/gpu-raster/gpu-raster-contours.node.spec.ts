@@ -4,6 +4,8 @@
 
 import {describe, expect, test} from 'vitest';
 import {
+  addGPUCommandNodes,
+  type GPUCommandNodeProducer,
   GraphBufferHandle,
   GraphDataView,
   type DrawCommandBufferView,
@@ -343,6 +345,9 @@ function makeRecordingGraph(
     },
     passes,
     transientBuffers,
+    add(this: GPUCommandGraph, primitive: GPUCommandNodeProducer): void {
+      addGPUCommandNodes(this, primitive.getCommandNodes(this));
+    },
     addComputePass(pass: GPUCommandGraphComputeNode): void {
       passes.push(pass);
     },

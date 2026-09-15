@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -63,57 +64,64 @@ export class GPUMatMul {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.left, this.right, this.output]) {
       if (view.buffer.graph !== graph)
         throw new Error(`${this.id} views must belong to the target graph`);
     }
-    if (this.m === 0 || this.n === 0) return;
+    if (this.m === 0 || this.n === 0) return nodes;
 
     const source = makeShaderSource(this);
     const workgroupsX = Math.ceil(this.n / TILE);
     const workgroupsY = Math.ceil(this.m / TILE);
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUMatMul',
-        commandCount: 1,
-        maximumWorkgroupCount: workgroupsX * workgroupsY,
-        maximumInvocationCount: workgroupsX * workgroupsY * TILE * TILE,
-        readByteLength: (this.left.length + this.right.length) * 4,
-        writeByteLength: this.output.length * 4
-      },
-      resources: [
-        {buffer: this.left, usage: 'storage-read'},
-        {buffer: this.right, usage: 'storage-read'},
-        {buffer: this.output, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
-              {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
-              {name: 'outputValues', type: 'storage', group: 0, location: 2}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {
-              leftValues: getViewBinding(this.left, getBuffer),
-              rightValues: getViewBinding(this.right, getBuffer),
-              outputValues: getViewBinding(this.output, getBuffer)
-            };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, workgroupsX, workgroupsY, 1);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: 'GPUMatMul',
+          commandCount: 1,
+          maximumWorkgroupCount: workgroupsX * workgroupsY,
+          maximumInvocationCount: workgroupsX * workgroupsY * TILE * TILE,
+          readByteLength: (this.left.length + this.right.length) * 4,
+          writeByteLength: this.output.length * 4
+        },
+        resources: [
+          {buffer: this.left, usage: 'storage-read'},
+          {buffer: this.right, usage: 'storage-read'},
+          {buffer: this.output, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
+                {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'outputValues', type: 'storage', group: 0, location: 2}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {
+                leftValues: getViewBinding(this.left, getBuffer),
+                rightValues: getViewBinding(this.right, getBuffer),
+                outputValues: getViewBinding(this.output, getBuffer)
+              };
+              computation.setBindings(bindings);
+              computation.dispatch(computePass, workgroupsX, workgroupsY, 1);
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

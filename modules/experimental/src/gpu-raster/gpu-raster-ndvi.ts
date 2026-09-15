@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {
-  GPUCommandGraph,
-  GPUCommandGraphContributor,
-  GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+import type {GPUCommandGraph, GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import {GPURasterBandMath} from './gpu-raster-band-math';
 import type {GPURasterBufferBand} from './types';
 
@@ -33,7 +29,7 @@ export type GPURasterNDVIProps = {
  * This specialized contributor borrows its inputs and outputs and delegates all graph ownership,
  * exact raw nodata rejection, validity propagation, and finite checks to raster band math.
  */
-export class GPURasterNDVI implements GPUCommandGraphContributor {
+export class GPURasterNDVI {
   readonly id: string;
   readonly width: number;
   readonly height: number;

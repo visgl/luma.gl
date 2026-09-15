@@ -6,7 +6,6 @@ import type {Binding, BindingDeclaration} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import type {
   GPUCommandGraph,
-  GPUCommandGraphContributor,
   GraphBufferUsage,
   GraphDataView,
   GraphResourceUse
@@ -82,7 +81,7 @@ type GlobalBinding = {
 };
 
 /** Initializes one caller-owned persistent dataset accumulator through an explicit graph pass. */
-export class GPURasterGlobalInitialize implements GPUCommandGraphContributor {
+export class GPURasterGlobalInitialize {
   readonly id: string;
   readonly accumulator: GPURasterGlobalAccumulator;
 
@@ -137,7 +136,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Merges one reusable tile's calibrated scalar partials into persistent global GPU outputs. */
-export class GPURasterGlobalStatisticsMerge implements GPUCommandGraphContributor {
+export class GPURasterGlobalStatisticsMerge {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -245,7 +244,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Replays one calibrated tile against stable global extrema and merges only its cleared partial. */
-export class GPURasterGlobalHistogramMerge implements GPUCommandGraphContributor {
+export class GPURasterGlobalHistogramMerge {
   readonly id: string;
   readonly width: number;
   readonly height: number;
@@ -395,7 +394,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
 }
 
 /** Publishes one explicit histogram-bin percentile without CPU readback or silent overflow use. */
-export class GPURasterGlobalPercentile implements GPUCommandGraphContributor {
+export class GPURasterGlobalPercentile {
   readonly id: string;
   readonly accumulator: GPURasterGlobalAccumulator;
   readonly percentile: number;

@@ -33,7 +33,7 @@ or a distribution. A reduction deliberately discards row identity and intermedia
 does not report which row produced a minimum or maximum.
 
 ```ts
-new GPUReduction({input: values, output: extent, operation: 'extent'}).addToGraph(graph);
+graph.add(new GPUReduction({input: values, output: extent, operation: 'extent'}));
 ```
 
 ## Constructor
@@ -106,7 +106,7 @@ The fast path also benefits automatic histogram domains, raster statistics, grap
 PageRank, and global data-frame aggregations. Gains are largest when synchronization matters;
 bandwidth-bound graphs may improve less.
 
-## `addToGraph(graph)`
+## `getCommandNodes(graph)`
 
 Declares reduction levels and a final normalization pass. It does not compile, encode, submit,
 map, or destroy imported buffers.

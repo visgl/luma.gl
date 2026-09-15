@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
@@ -75,14 +76,17 @@ export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
     this.wordsPerRow = this.source.rowByteLength / UINT32_BYTE_LENGTH;
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [this.source, this.indices, this.output]) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
     }
     if (this.indices.length === 0) {
-      return;
+      return nodes;
     }
 
     const dispatchLayout = getBoundedDispatchLayout(
@@ -93,48 +97,57 @@ export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
     );
     const source = makeShaderSource(this, dispatchLayout);
 
-    graph.addComputePass({
-      id: this.id,
-      workload: {
-        operation: 'GPUGather',
-        commandCount: 1,
-        maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-        maximumInvocationCount:
-          dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
-        readByteLength: this.indices.length * (UINT32_BYTE_LENGTH + this.source.rowByteLength),
-        writeByteLength: this.indices.length * this.output.rowByteLength
-      },
-      resources: [
-        {buffer: this.source, usage: 'storage-read'},
-        {buffer: this.indices, usage: 'storage-read'},
-        {buffer: this.output, usage: 'storage-write'}
-      ],
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: this.id,
-          source,
-          shaderLayout: {
-            bindings: [
-              {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
-              {name: 'indices', type: 'read-only-storage', group: 0, location: 1},
-              {name: 'outputWords', type: 'storage', group: 0, location: 2}
-            ]
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {
-              sourceWords: getViewBinding(this.source, getBuffer),
-              indices: getViewBinding(this.indices, getBuffer),
-              outputWords: getViewBinding(this.output, getBuffer)
-            };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    });
+    nodes.push(
+      createGPUComputeCommandNode<Parameters>({
+        id: this.id,
+        workload: {
+          operation: 'GPUGather',
+          commandCount: 1,
+          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+          maximumInvocationCount:
+            dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
+          readByteLength: this.indices.length * (UINT32_BYTE_LENGTH + this.source.rowByteLength),
+          writeByteLength: this.indices.length * this.output.rowByteLength
+        },
+        resources: [
+          {buffer: this.source, usage: 'storage-read'},
+          {buffer: this.indices, usage: 'storage-read'},
+          {buffer: this.output, usage: 'storage-write'}
+        ],
+        compile: ({device}) => {
+          const computation = new Computation(device, {
+            id: this.id,
+            source,
+            shaderLayout: {
+              bindings: [
+                {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
+                {name: 'indices', type: 'read-only-storage', group: 0, location: 1},
+                {name: 'outputWords', type: 'storage', group: 0, location: 2}
+              ]
+            }
+          });
+          return {
+            encode: ({computePass, getBuffer}) => {
+              const bindings: Record<string, Binding> = {
+                sourceWords: getViewBinding(this.source, getBuffer),
+                indices: getViewBinding(this.indices, getBuffer),
+                outputWords: getViewBinding(this.output, getBuffer)
+              };
+              computation.setBindings(bindings);
+              computation.dispatch(
+                computePass,
+                dispatchLayout.x,
+                dispatchLayout.y,
+                dispatchLayout.z
+              );
+            },
+            destroy: () => computation.destroy()
+          };
+        }
+      })
+    );
+
+    return nodes;
   }
 }
 

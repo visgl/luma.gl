@@ -90,7 +90,7 @@ const sort = new GPUSort({
   algorithm: 'auto',
   direction: 'ascending'
 });
-sort.addToGraph(graph);
+graph.add(sort);
 
 const compiled = graph.compile();
 const commandEncoder = device.createCommandEncoder({id: 'sort-records'});
@@ -112,7 +112,7 @@ const sort = new GPUBatchSort({
   algorithm: 'auto',
   direction: 'ascending'
 });
-sort.addToGraph(graph);
+graph.add(sort);
 ```
 
 ## Constructor
@@ -175,7 +175,7 @@ type GPUBatchSortProps = {
 - `resolvedAlgorithms` contains one concrete choice per chunk in source order.
 - Inputs and outputs remain caller-owned; no vector is concatenated or repacked.
 
-## `addToGraph(graph)`
+## `getCommandNodes(graph)`
 
 Adds all compute passes and transient scratch declarations to the supplied graph. The graph must
 own every input and output view. Scratch buffers are graph-owned, participate in transient lifetime

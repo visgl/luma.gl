@@ -50,7 +50,7 @@ it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', a
     })
   );
 
-  new GPUGather({source: sourceView, indices: indexView, output: outputView}).addToGraph(graph);
+  graph.add(new GPUGather({source: sourceView, indices: indexView, output: outputView}));
   const compiled = graph.compile();
 
   try {

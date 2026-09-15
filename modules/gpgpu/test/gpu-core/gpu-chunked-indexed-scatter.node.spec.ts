@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {addGPUCommandNodes} from '@luma.gl/gpgpu/gpu-core';
 import {Buffer} from '@luma.gl/core';
 import {GPUChunkedIndexedScatter, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -13,7 +14,8 @@ describe('GPUChunkedIndexedScatter graph construction', () => {
     const addComputePass = vi.spyOn(fixture.graph, 'addComputePass');
 
     try {
-      const result = fixture.scatter.addToGraph(fixture.graph);
+      const result = fixture.scatter.getCommands(fixture.graph);
+      addGPUCommandNodes(fixture.graph, result.nodes);
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual([
         'routes-initialize',
         'routes-count',

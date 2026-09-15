@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -172,7 +173,10 @@ export class GPULZByteDecompressor {
     validateConfiguration(this.props);
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     const props = this.props;
     for (const view of [props.input, props.descriptors, props.output]) {
       if (view.buffer.graph !== graph) {
@@ -180,7 +184,7 @@ export class GPULZByteDecompressor {
       }
     }
     if (props.outputByteLength === 0) {
-      return;
+      return nodes;
     }
     validateDevice(graph.device, this.id);
     const outputWordCount = Math.ceil(props.outputByteLength / 4);
@@ -190,7 +194,9 @@ export class GPULZByteDecompressor {
       GPU_LZ_BYTE_WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    addDecompressionPass(graph, props, dispatchLayout);
+    nodes.push(...addDecompressionPass(graph, props, dispatchLayout));
+
+    return nodes;
   }
 }
 
@@ -277,53 +283,58 @@ function addDecompressionPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: Readonly<GPULZByteDecompressorProps>,
   dispatchLayout: GPUBoundedDispatchLayout
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const source = getGPULZByteDecompressorShaderSource(props, dispatchLayout);
   const outputWordCount = Math.ceil(props.outputByteLength / 4);
   const workgroupCount = Math.ceil(outputWordCount / GPU_LZ_BYTE_WORKGROUP_SIZE);
-  graph.addComputePass({
-    id: props.id ?? 'gpu-lz-byte-decompressor',
-    workload: {
-      operation: 'GPULZByteDecompressor',
-      commandCount: 1,
-      maximumWorkgroupCount: workgroupCount,
-      maximumInvocationCount: workgroupCount * GPU_LZ_BYTE_WORKGROUP_SIZE,
-      readByteLength:
-        props.inputByteLength +
-        props.descriptorCount * GPU_LZ_BYTE_DESCRIPTOR_WORDS * Uint32Array.BYTES_PER_ELEMENT,
-      writeByteLength: props.outputByteLength
-    },
-    resources: [
-      {buffer: props.input, usage: 'storage-read'},
-      {buffer: props.descriptors, usage: 'storage-read'},
-      {buffer: props.output, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'inputWords', type: 'read-only-storage', group: 0, location: 0},
-            {name: 'descriptors', type: 'read-only-storage', group: 0, location: 1},
-            {name: 'outputWords', type: 'storage', group: 0, location: 2}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {
-            inputWords: getViewBinding(props.input, getBuffer),
-            descriptors: getViewBinding(props.descriptors, getBuffer),
-            outputWords: getViewBinding(props.output, getBuffer)
-          };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: props.id ?? 'gpu-lz-byte-decompressor',
+      workload: {
+        operation: 'GPULZByteDecompressor',
+        commandCount: 1,
+        maximumWorkgroupCount: workgroupCount,
+        maximumInvocationCount: workgroupCount * GPU_LZ_BYTE_WORKGROUP_SIZE,
+        readByteLength:
+          props.inputByteLength +
+          props.descriptorCount * GPU_LZ_BYTE_DESCRIPTOR_WORDS * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: props.outputByteLength
+      },
+      resources: [
+        {buffer: props.input, usage: 'storage-read'},
+        {buffer: props.descriptors, usage: 'storage-read'},
+        {buffer: props.output, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: props.id,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'inputWords', type: 'read-only-storage', group: 0, location: 0},
+              {name: 'descriptors', type: 'read-only-storage', group: 0, location: 1},
+              {name: 'outputWords', type: 'storage', group: 0, location: 2}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {
+              inputWords: getViewBinding(props.input, getBuffer),
+              descriptors: getViewBinding(props.descriptors, getBuffer),
+              outputWords: getViewBinding(props.output, getBuffer)
+            };
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function validateConfiguration(props: Readonly<GPULZByteDecompressorProps>): void {

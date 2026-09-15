@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
@@ -88,7 +89,10 @@ export class GPUTextSelection {
     }
   }
 
-  addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
+  getCommandNodes<Parameters>(
+    graph: GPUCommandGraph<Parameters>
+  ): readonly GPUCommandNode<Parameters>[] {
+    const nodes: GPUCommandNode<Parameters>[] = [];
     for (const view of [
       this.glyphRows,
       this.rowFlags,
@@ -107,8 +111,8 @@ export class GPUTextSelection {
     }
 
     if (this.glyphRows.length === 0) {
-      addClearTextSelectionCount(graph, this.id, this.count);
-      return;
+      nodes.push(...addClearTextSelectionCount(graph, this.id, this.count));
+      return nodes;
     }
 
     const glyphIds = createTransientView(
@@ -123,24 +127,29 @@ export class GPUTextSelection {
       'uint32',
       this.glyphRows.length
     );
-    addGlyphVisibilityPass(graph, this, glyphIds, glyphFlags);
-    new GPUCompaction({
-      id: `${this.id}-compaction`,
-      input: glyphIds,
-      flags: glyphFlags,
-      output: this.output,
-      count: this.count
-    }).addToGraph(graph);
+    nodes.push(...addGlyphVisibilityPass(graph, this, glyphIds, glyphFlags));
+    nodes.push(
+      ...new GPUCompaction({
+        id: `${this.id}-compaction`,
+        input: glyphIds,
+        flags: glyphFlags,
+        output: this.output,
+        count: this.count
+      }).getCommandNodes(graph)
+    );
     if (this.sourceRecords && this.outputRecords) {
-      addGatherGlyphRecordsPass(graph, this);
+      nodes.push(...addGatherGlyphRecordsPass(graph, this));
     }
+
+    return nodes;
   }
 }
 
 function addGatherGlyphRecordsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   selection: GPUTextSelection
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const sourceRecords = selection.sourceRecords!;
   const outputRecords = selection.outputRecords!;
   const passId = `${selection.id}-gather-records`;
@@ -173,41 +182,48 @@ const COUNT_OFFSET: u32 = ${countOffset}u;
       sourceRecords[SOURCE_OFFSET + sourceIndex * RECORD_WORD_LENGTH + wordIndex];
   }
 }`;
-  graph.addComputePass({
-    id: passId,
-    resources: [
-      {buffer: sourceRecords, usage: 'storage-read'},
-      {buffer: selection.output, usage: 'storage-read'},
-      {buffer: selection.count, usage: 'storage-read'},
-      {buffer: outputRecords, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: passId,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'sourceRecords', type: 'storage', group: 0, location: 0},
-            {name: 'selectedGlyphIds', type: 'storage', group: 0, location: 1},
-            {name: 'selectedCount', type: 'storage', group: 0, location: 2},
-            {name: 'outputRecords', type: 'storage', group: 0, location: 3}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings({
-            sourceRecords: getBuffer(sourceRecords),
-            selectedGlyphIds: getBuffer(selection.output),
-            selectedCount: getBuffer(selection.count),
-            outputRecords: getBuffer(outputRecords)
-          });
-          computation.dispatch(computePass, Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE));
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: passId,
+      resources: [
+        {buffer: sourceRecords, usage: 'storage-read'},
+        {buffer: selection.output, usage: 'storage-read'},
+        {buffer: selection.count, usage: 'storage-read'},
+        {buffer: outputRecords, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: passId,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'sourceRecords', type: 'storage', group: 0, location: 0},
+              {name: 'selectedGlyphIds', type: 'storage', group: 0, location: 1},
+              {name: 'selectedCount', type: 'storage', group: 0, location: 2},
+              {name: 'outputRecords', type: 'storage', group: 0, location: 3}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({
+              sourceRecords: getBuffer(sourceRecords),
+              selectedGlyphIds: getBuffer(selection.output),
+              selectedCount: getBuffer(selection.count),
+              outputRecords: getBuffer(outputRecords)
+            });
+            computation.dispatch(
+              computePass,
+              Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addGlyphVisibilityPass<Parameters>(
@@ -215,7 +231,8 @@ function addGlyphVisibilityPass<Parameters>(
   selection: GPUTextSelection,
   glyphIds: GraphDataView<'uint32'>,
   glyphFlags: GraphDataView<'uint32'>
-): void {
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${selection.id}-visibility`;
   const source = /* wgsl */ `
 const GLYPH_COUNT: u32 = ${selection.glyphRows.length}u;
@@ -241,69 +258,81 @@ const ROW_FLAG_STRIDE: u32 = ${selection.rowFlags.byteStride / Uint32Array.BYTES
     glyphFlags[glyphIndex] = rowFlags[ROW_FLAG_OFFSET + rowIndex * ROW_FLAG_STRIDE];
   }
 }`;
-  graph.addComputePass({
-    id: passId,
-    resources: [
-      {buffer: selection.glyphRows, usage: 'storage-read'},
-      {buffer: selection.rowFlags, usage: 'storage-read'},
-      {buffer: glyphIds, usage: 'storage-write'},
-      {buffer: glyphFlags, usage: 'storage-write'}
-    ],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: passId,
-        source,
-        shaderLayout: {
-          bindings: [
-            {name: 'glyphRows', type: 'storage', group: 0, location: 0},
-            {name: 'rowFlags', type: 'storage', group: 0, location: 1},
-            {name: 'glyphIds', type: 'storage', group: 0, location: 2},
-            {name: 'glyphFlags', type: 'storage', group: 0, location: 3}
-          ]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          computation.setBindings({
-            glyphRows: getViewBinding(selection.glyphRows, getBuffer),
-            rowFlags: getViewBinding(selection.rowFlags, getBuffer),
-            glyphIds: getViewBinding(glyphIds, getBuffer),
-            glyphFlags: getViewBinding(glyphFlags, getBuffer)
-          });
-          computation.dispatch(computePass, Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE));
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: passId,
+      resources: [
+        {buffer: selection.glyphRows, usage: 'storage-read'},
+        {buffer: selection.rowFlags, usage: 'storage-read'},
+        {buffer: glyphIds, usage: 'storage-write'},
+        {buffer: glyphFlags, usage: 'storage-write'}
+      ],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: passId,
+          source,
+          shaderLayout: {
+            bindings: [
+              {name: 'glyphRows', type: 'storage', group: 0, location: 0},
+              {name: 'rowFlags', type: 'storage', group: 0, location: 1},
+              {name: 'glyphIds', type: 'storage', group: 0, location: 2},
+              {name: 'glyphFlags', type: 'storage', group: 0, location: 3}
+            ]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            computation.setBindings({
+              glyphRows: getViewBinding(selection.glyphRows, getBuffer),
+              rowFlags: getViewBinding(selection.rowFlags, getBuffer),
+              glyphIds: getViewBinding(glyphIds, getBuffer),
+              glyphFlags: getViewBinding(glyphFlags, getBuffer)
+            });
+            computation.dispatch(
+              computePass,
+              Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
+            );
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
 
 function addClearTextSelectionCount<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   count: GraphDataView<'uint32'>
-): void {
-  graph.addComputePass({
-    id: `${id}-clear-count`,
-    resources: [{buffer: count, usage: 'storage-write'}],
-    compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${id}-clear-count`,
-        source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  nodes.push(
+    createGPUComputeCommandNode<Parameters>({
+      id: `${id}-clear-count`,
+      resources: [{buffer: count, usage: 'storage-write'}],
+      compile: ({device}) => {
+        const computation = new Computation(device, {
+          id: `${id}-clear-count`,
+          source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
 @group(0) @binding(0) var<storage, read_write> count: array<u32>;
 @compute @workgroup_size(1) fn main() { count[COUNT_OFFSET] = 0u; }`,
-        shaderLayout: {
-          bindings: [{name: 'count', type: 'storage', group: 0, location: 0}]
-        }
-      });
-      return {
-        encode: ({computePass, getBuffer}) => {
-          const bindings: Record<string, Binding> = {count: getViewBinding(count, getBuffer)};
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, 1);
-        },
-        destroy: () => computation.destroy()
-      };
-    }
-  });
+          shaderLayout: {
+            bindings: [{name: 'count', type: 'storage', group: 0, location: 0}]
+          }
+        });
+        return {
+          encode: ({computePass, getBuffer}) => {
+            const bindings: Record<string, Binding> = {count: getViewBinding(count, getBuffer)};
+            computation.setBindings(bindings);
+            computation.dispatch(computePass, 1);
+          },
+          destroy: () => computation.destroy()
+        };
+      }
+    })
+  );
+
+  return nodes;
 }
