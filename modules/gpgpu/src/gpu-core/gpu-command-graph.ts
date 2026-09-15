@@ -134,8 +134,6 @@ export type {
   GraphTextureViewProps
 } from './gpu-command-graph-types';
 
-/** A reusable algorithm or workflow that contributes nodes to a command graph. */
-
 /** Per-submission limits for a resumable command-graph execution. */
 export type GPUCommandGraphExecutionBudget = {
   /** Maximum statically estimated shader invocations encoded in one step. */

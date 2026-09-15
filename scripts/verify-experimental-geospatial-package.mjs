@@ -108,7 +108,7 @@ try {
   type GPUPointSpatialQueryProps,
   type GPUSpatialQueryOutput
 } from '@luma.gl/experimental/geospatial';
-import type {GPUCommandGraphContributor} from '@luma.gl/experimental';
+import type {GPUProgramPrimitive} from '@luma.gl/gpgpu/gpu-core';
 
 const constructors = [
   GPUHaversineDistance,
@@ -120,7 +120,6 @@ const constructors = [
   GPUPointSpatialQuery,
   GPUSinusoidalProjection
 ];
-declare const contributor: GPUCommandGraphContributor;
 declare const positions: GPUFloat64Positions;
 declare const gridProps: GPUGridIndexProps;
 declare const polygonProps: GPUPairwisePointInPolygonProps;
@@ -129,7 +128,8 @@ declare const classification: GPUPointInPolygonClassification;
 declare const queryProps: GPUPointSpatialQueryProps;
 declare const queryOutput: GPUSpatialQueryOutput;
 void constructors;
-void contributor;
+const gridPrimitive: GPUProgramPrimitive = new GPUGridIndex(gridProps);
+void gridPrimitive;
 void positions;
 void gridProps;
 void polygonProps;
