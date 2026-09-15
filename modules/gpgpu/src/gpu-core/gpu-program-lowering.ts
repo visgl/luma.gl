@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUCommandGraph, GraphDataView} from './gpu-command-graph';
+import type {GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import type {GPUScalar} from './gpu-scalar';
 import type {GPUProgramScalar, GPUProgramVector} from './gpu-program-value';
 import type {GPUOperationPredicate} from './gpu-control-flow-operation';
@@ -29,7 +29,7 @@ export type GPUOperationLoweringContext<Parameters = void> = {
   ) => GPUScalar<T>;
   resolveVector: <T extends 'float32' | 'uint32' | 'sint32'>(
     vector: GPUProgramVector<T>
-  ) => GraphDataView<T>;
+  ) => GraphVectorView<T>;
   recordDecision: (decision: GPUOperationLoweringDecision) => void;
 };
 export type GPUOperationLowerer<
