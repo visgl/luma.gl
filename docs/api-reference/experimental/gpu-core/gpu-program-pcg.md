@@ -37,7 +37,7 @@ GPUCommandGraph
 
 ## External resource binding
 
-`GPUProgram` declares logical external vectors. Concrete WebGPU buffers are supplied only when the program is compiled:
+`GPUProgram` declares logical external vectors. Typed GPUData chunks are supplied only when the program is compiled:
 
 ```ts
 const solver = createGPUConjugateGradientProgram({
@@ -49,14 +49,16 @@ const solver = createGPUConjugateGradientProgram({
 
 const compilation = new GPUProgramCompiler(device).compile(solver.program, {
   vectors: {
-    [solver.rowOffsets.id]: rowOffsetsBuffer,
-    [solver.columnIndices.id]: columnIndicesBuffer,
-    [solver.values.id]: valuesBuffer,
-    [solver.rhs.id]: rhsBuffer,
-    [solver.solution.id]: solutionBuffer
+    [solver.rowOffsets.id]: rowOffsetsData,
+    [solver.columnIndices.id]: columnIndicesData,
+    [solver.values.id]: valuesData,
+    [solver.rhs.id]: rhsData,
+    [solver.solution.id]: solutionData
   }
 });
 ```
+
+The current CSR backend requires one physical chunk for each operand. Wrap existing buffers in `GPUData` with their format and length; binding never concatenates batches.
 
 A future CUDA compiler can bind the same logical vectors to CUDA allocations without changing the program.
 

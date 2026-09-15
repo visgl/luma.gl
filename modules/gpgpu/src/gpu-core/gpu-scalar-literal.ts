@@ -24,11 +24,18 @@ export class GPUScalarLiteral {
       throw new Error(`${this.id} output must belong to target graph`);
     const expression =
       output.format === 'float32'
-        ? `${value}`
+        ? `f32(${value})`
         : output.format === 'uint32'
           ? `${value}u`
           : `${value}i`;
-    const source = `${getGPUValueArenaWGSLBinding(0, 0)}\n@compute @workgroup_size(1) fn main(){${getGPUScalarWGSLStore(output, expression)}}`;
+    const source = `
+${getGPUValueArenaWGSLBinding(0, 0)}
+
+@compute @workgroup_size(1)
+fn main() {
+  ${getGPUScalarWGSLStore(output, expression)}
+}
+`;
     const buffer = output.arena.buffer;
     return [
       createGPUComputeCommandNode({

@@ -4,19 +4,21 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
 import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 const WORKGROUP_SIZE = 256;
 export type GPUVectorScalarMADDProps = {
   id?: string;
-  input: GraphDataView<'float32'>;
+  input: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   scale: GPUScalar<'float32'>;
-  addend: GraphDataView<'float32'>;
-  output: GraphDataView<'float32'>;
+  addend: GraphDataView<'float32'> | GraphVectorView<'float32'>;
+  output: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   gate?: GPUScalarDispatchGate;
 };
 /** Broadcast MADD: `output[i] = scale * input[i] + addend[i]`. */
@@ -31,7 +33,8 @@ export class GPUVectorScalarMADD {
       addend: props.addend,
       output: props.output
     }))
-      validatePackedView(view, ['float32'], `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view))
+        validatePackedView(chunk, ['float32'], `${this.id} ${name}`);
     if (props.input.length !== props.addend.length || props.input.length !== props.output.length)
       throw new Error(`${this.id} vector lengths must match`);
   }
@@ -39,6 +42,23 @@ export class GPUVectorScalarMADD {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const {input, scale, addend, output, gate} = this.props;
+    if (
+      input instanceof GraphVectorView ||
+      addend instanceof GraphVectorView ||
+      output instanceof GraphVectorView
+    ) {
+      return alignGraphVectorViews(graph, [input, addend, output]).flatMap(
+        ([inputChunk, addendChunk, outputChunk], index) =>
+          new GPUVectorScalarMADD({
+            id: `${this.id}-chunk-${index}`,
+            input: inputChunk,
+            addend: addendChunk,
+            output: outputChunk,
+            scale,
+            gate
+          }).getCommandNodes(graph)
+      );
+    }
     if (
       [input, addend, output].some(view => view.buffer.graph !== graph) ||
       scale.arena.graph !== (graph as unknown as GPUCommandGraph<unknown>)
@@ -52,55 +72,107 @@ export class GPUVectorScalarMADD {
       WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    const source = `const LENGTH:u32=${output.length}u;const I:u32=${getViewElementOffset(input)}u;const A:u32=${getViewElementOffset(addend)}u;const O:u32=${getViewElementOffset(output)}u;@group(0)@binding(0)var<storage,read>inputValues:array<f32>;@group(0)@binding(1)var<storage,read>addendValues:array<f32>;@group(0)@binding(2)var<storage,read_write>outputValues:array<f32>;${getGPUValueArenaWGSLBinding(0, 3)}@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(workgroup_id)workgroupId:vec3u,@builtin(local_invocation_index)localInvocationIndex:u32){${getBoundedInvocationIndexSource(layout, WORKGROUP_SIZE)}if(index>=LENGTH){return;}let x=inputValues[I+index];let y=addendValues[A+index];outputValues[O+index]=${getGPUScalarWGSLLoad(scale)}*x+y;}`;
+    // An in-place operand must read through the writable output binding, not bind it twice.
+    const inputBindingName = input === output ? 'outputValues' : 'inputValues';
+    const addendBindingName = addend === output ? 'outputValues' : 'addendValues';
+    const source = `
+const LENGTH: u32 = ${output.length}u;
+const I: u32 = ${getViewElementOffset(input)}u;
+const A: u32 = ${getViewElementOffset(addend)}u;
+const O: u32 = ${getViewElementOffset(output)}u;
+
+${input === output ? '' : '@group(0) @binding(0) var<storage, read> inputValues: array<f32>;'}
+${addend === output ? '' : '@group(0) @binding(1) var<storage, read> addendValues: array<f32>;'}
+@group(0) @binding(2) var<storage, read_write> outputValues: array<f32>;
+${getGPUValueArenaWGSLBinding(0, 3)}
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroupId: vec3u,
+  @builtin(local_invocation_index) localInvocationIndex: u32
+) {
+  ${getBoundedInvocationIndexSource(layout, WORKGROUP_SIZE)}
+  if (index >= LENGTH) {
+    return;
+  }
+
+  let x = ${inputBindingName}[I + index];
+  let y = ${addendBindingName}[A + index];
+  outputValues[O + index] = ${getGPUScalarWGSLLoad(scale)} * x + y;
+}
+`;
     return [
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        condition: gate?.condition,
-        workload: {
-          operation: 'GPUVectorScalarMADD',
-          commandCount: 1,
-          maximumWorkgroupCount: layout.x * layout.y * layout.z,
-          maximumInvocationCount: layout.x * layout.y * layout.z * WORKGROUP_SIZE,
-          readByteLength: input.length * 8 + 4,
-          writeByteLength: output.length * 4
-        },
-        resources: [
-          {buffer: input, usage: 'storage-read'},
-          {buffer: addend, usage: 'storage-read'},
-          {buffer: output, usage: 'storage-write'},
-          {buffer: arenaBuffer, usage: 'storage-read'},
-          ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'addendValues', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputValues', type: 'storage', group: 0, location: 2},
-                {name: 'gpuValues', type: 'read-only-storage', group: 0, location: 3}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                inputValues: getViewBinding(input, getBuffer),
-                addendValues: getViewBinding(addend, getBuffer),
-                outputValues: getViewBinding(output, getBuffer),
-                gpuValues: getBuffer(arenaBuffer)
-              };
-              computation.setBindings(bindings);
-              if (gate) computation.dispatchIndirect(computePass, getBuffer(gate.dispatchBuffer));
-              else computation.dispatch(computePass, layout.x, layout.y, layout.z);
+      setGPUComputeDispatchWorkgroups(
+        createGPUComputeCommandNode<Parameters>({
+          id: this.id,
+          condition: gate?.condition,
+          workload: {
+            operation: 'GPUVectorScalarMADD',
+            commandCount: 1,
+            maximumWorkgroupCount: layout.x * layout.y * layout.z,
+            maximumInvocationCount: layout.x * layout.y * layout.z * WORKGROUP_SIZE,
+            readByteLength: input.length * 8 + 4,
+            writeByteLength: output.length * 4
+          },
+          resources: [
+            ...(input === output ? [] : [{buffer: input, usage: 'storage-read' as const}]),
+            ...(addend === output ? [] : [{buffer: addend, usage: 'storage-read' as const}]),
+            {
+              buffer: output,
+              usage: input === output || addend === output ? 'storage-read-write' : 'storage-write'
             },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
+            {buffer: arenaBuffer, usage: 'storage-read'},
+            ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
+          ],
+          compile: ({device}) => {
+            const computation = new Computation(device, {
+              id: this.id,
+              source,
+              shaderLayout: {
+                bindings: [
+                  ...(input === output
+                    ? []
+                    : [
+                        {
+                          name: 'inputValues',
+                          type: 'read-only-storage' as const,
+                          group: 0,
+                          location: 0
+                        }
+                      ]),
+                  ...(addend === output
+                    ? []
+                    : [
+                        {
+                          name: 'addendValues',
+                          type: 'read-only-storage' as const,
+                          group: 0,
+                          location: 1
+                        }
+                      ]),
+                  {name: 'outputValues', type: 'storage', group: 0, location: 2},
+                  {name: 'gpuValues', type: 'read-only-storage', group: 0, location: 3}
+                ]
+              }
+            });
+            return {
+              encode: ({computePass, getBuffer}) => {
+                const bindings: Record<string, Binding> = {
+                  ...(input === output ? {} : {inputValues: getViewBinding(input, getBuffer)}),
+                  ...(addend === output ? {} : {addendValues: getViewBinding(addend, getBuffer)}),
+                  outputValues: getViewBinding(output, getBuffer),
+                  gpuValues: getBuffer(arenaBuffer)
+                };
+                computation.setBindings(bindings);
+                if (gate) computation.dispatchIndirect(computePass, getBuffer(gate.dispatchBuffer));
+                else computation.dispatch(computePass, layout.x, layout.y, layout.z);
+              },
+              destroy: () => computation.destroy()
+            };
+          }
+        }),
+        [layout.x, layout.y, layout.z]
+      )
     ];
   }
 }

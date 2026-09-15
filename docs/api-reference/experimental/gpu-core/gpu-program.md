@@ -109,3 +109,70 @@ The lowering report links command nodes back to root-to-leaf operation paths, en
 ```
 
 Backend portability is a design constraint, not a promise of an immediate CUDA implementation.
+
+## Vector bindings and chunk topology
+
+A `GPUData` describes one physical chunk. A `GPUVector` is an ordered logical sequence of chunks.
+`GPUProgramVector` declares its logical format and length, plus optional `chunkLengths` when the
+application needs a particular partition. A single chunk follows the same compilation path.
+
+```ts
+const input = program.vector('input', 'float32', batch0.length + batch1.length, {external: true});
+const output = program.vector('output', 'float32', input.length, {
+  chunkLengths: [batch0.length, batch1.length]
+});
+const compilation = new GPUProgramCompiler(device).compile(program, {
+  vectors: {input: [batch0, batch1]} // Existing GPUData chunks; no upload or concatenation.
+});
+const chunks = compilation.vectors.get(input.id).chunks;
+// Each descriptor has offset (logical rows), length, and data (a physical GraphDataView).
+```
+
+Bindings accept a `GPUVectorLike` (including `GPUVector`), a single `GPUData`, or a readonly
+`GPUData[]`. Raw `Buffer` bindings
+must be wrapped in `GPUData` with explicit format and layout. Import preserves physical buffers,
+byte offsets, row strides, empty chunks, and source order. Shared physical buffers share graph
+hazard tracking. Imports borrow storage; destroying a compiled program does not destroy the source.
+
+Both `GPUVector.chunks` and `GraphVectorView.chunks` use the same metadata definition. A descriptor's
+`data` holds canonical physical format, byte offset, byte stride and row payload size. Compiler
+bindings snapshot the current source chunks; later appends require recompilation to participate.
+
+`resolveVector()` and `compilation.vectors` always return `GraphVectorView`. Explicit transient
+`chunkLengths` are retained; otherwise the compiler partitions transients to fit the device's
+storage-buffer binding capacity. External bindings must match logical format and length, and must
+match explicit chunk lengths when supplied. They are never repacked to satisfy a declaration.
+
+MADD intersects source and destination chunk boundaries through borrowed views. Dot product sums
+chunk partials into one scalar, resetting the result on every invocation. These lowerings retain
+per-node dispatch geometry for GPU predicates. Neither requires matching source batches or a
+contiguous copy. Current numeric kernels require packed float32 rows; strided layout can be bound
+and inspected but is rejected by kernels that do not support it.
+
+The current CSR SpMV backend requires one physical chunk per operand and rejects multi-chunk
+bindings explicitly. General sparse indexing, global reordering, and the library-wide operation
+batching audit remain follow-up work; this foundation does not claim universal algorithm coverage.
+
+
+### Shared vector shape
+
+`GPUVectorLike<Format, Data>` is the structural, read-only contract for an ordered vector. Its
+required fields are `length` and `data`; `format` can be inferred from nonempty chunks. Optional
+aggregate metadata is inferred during graph import. `GPUVector` and `GraphVectorView` implement
+this contract using their respective physical and graph-managed chunk types. It carries no
+allocation or destruction methods, so other implementations do not need to subclass `GPUVector`.
+
+WebGPU program bindings accept structural vectors whose chunks are `GPUData`, without creating
+an intermediate `GPUVector` wrapper:
+
+```ts
+compiler.compile(program, {
+  vectors: {input: {format: 'float32', length: 5, data: inputChunks}}
+});
+```
+
+`GPUVectorInput` names the shared storage input union in `gpu-data`; there is no program-specific
+vector-binding type. `GPUProgramBindings` is only a TypeScript object type for the named bindings,
+not a runtime wrapper. `GPUProgramVector` remains a symbolic declaration: it can describe transient
+storage before a device or buffer exists. Keeping this declaration separate avoids adding program
+identity, external-binding flags, or compiler allocation state to ordinary `GPUVector` instances.

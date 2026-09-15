@@ -185,3 +185,7 @@ or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph
 primitives can also be added to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
 removed. The three range/scatter primitives that also publish scratch views expose
 `getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
+
+`GPUProgramBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
+instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
+chunks through `.data` or canonical logical descriptors through `.chunks`.

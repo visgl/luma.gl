@@ -40,10 +40,10 @@ export class GPUProgram {
     id: string,
     format: T,
     length: number,
-    props: {external?: boolean} = {}
+    props: {external?: boolean; chunkLengths?: readonly number[]} = {}
   ): GPUProgramVector<T> {
     this.assertValueId(id);
-    const vector = new GPUProgramVector({id, format, length, external: props.external});
+    const vector = new GPUProgramVector({id, format, length, ...props});
     this.programVectors.set(id, vector);
     return vector;
   }

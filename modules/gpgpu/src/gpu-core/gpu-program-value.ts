@@ -29,7 +29,15 @@ export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVecto
   readonly format: T;
   readonly length: number;
   readonly external: boolean;
-  constructor(props: {id: string; format: T; length: number; external?: boolean}) {
+  /** Optional physical partition lengths; omitted external topology is supplied by its binding. */
+  readonly chunkLengths?: readonly number[];
+  constructor(props: {
+    id: string;
+    format: T;
+    length: number;
+    external?: boolean;
+    chunkLengths?: readonly number[];
+  }) {
     if (!props.id) throw new Error('GPUProgramVector id is required');
     if (!Number.isSafeInteger(props.length) || props.length < 0) {
       throw new Error(`${props.id} vector length must be a non-negative safe integer`);
@@ -38,5 +46,14 @@ export class GPUProgramVector<T extends GPUProgramVectorFormat = GPUProgramVecto
     this.format = props.format;
     this.length = props.length;
     this.external = props.external ?? false;
+    if (props.chunkLengths) {
+      if (
+        props.chunkLengths.some(length => !Number.isSafeInteger(length) || length < 0) ||
+        props.chunkLengths.reduce((sum, length) => sum + length, 0) !== props.length
+      ) {
+        throw new Error(`${props.id} chunk lengths must partition its logical length`);
+      }
+      this.chunkLengths = Object.freeze([...props.chunkLengths]);
+    }
   }
 }
