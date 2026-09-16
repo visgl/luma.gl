@@ -12,11 +12,7 @@ import {
   type ProjectionProgram
 } from '@luma.gl/experimental/gpu-project';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
-import {
-  geographicCRS,
-  makeWebMercatorCRS,
-  makeTransverseMercatorCRS
-} from './projection-crs-fixtures';
+import {geographicCRS, makeWebMercatorCRS} from './projection-crs-fixtures';
 
 const radius = 6378137;
 const program: ProjectionProgram = {
@@ -167,8 +163,8 @@ describe('Web Mercator planning', () => {
     ).toBe(false);
     for (const reverse of [false, true]) {
       const declined = planCRSProjection({
-        from: reverse ? makeTransverseMercatorCRS() : makeWebMercatorCRS(),
-        to: reverse ? makeWebMercatorCRS() : makeTransverseMercatorCRS(),
+        from: reverse ? 'EPSG:32610' : makeWebMercatorCRS(),
+        to: reverse ? makeWebMercatorCRS() : 'EPSG:32610',
         bounds: [-1, -1, 1, 1],
         projectionArithmetic: 'float32'
       });
@@ -345,10 +341,9 @@ describe('Web Mercator planning', () => {
     );
   });
 
-  it('does not broaden the native datum, ellipsoidal Mercator or UTM contract', () => {
+  it('does not broaden the native datum or ellipsoidal Mercator contract', () => {
     const projected = makeWebMercatorCRS();
     for (const target of [
-      makeTransverseMercatorCRS(),
       {
         ...projected,
         base_crs: {...geographicCRS, datum: {...geographicCRS.datum, name: 'different datum'}}

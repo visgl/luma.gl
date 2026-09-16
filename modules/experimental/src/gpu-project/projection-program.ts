@@ -15,6 +15,15 @@ import {
   getWebMercatorStage,
   type WebMercatorOperation
 } from './projection-web-mercator';
+import {
+  evaluateTransverseMercator,
+  getTransverseMercatorBounds,
+  getTransverseMercatorParameters,
+  getTransverseMercatorStage,
+  TRANSVERSE_MERCATOR_GEOGRAPHIC_BOUNDS,
+  TRANSVERSE_MERCATOR_SHADER_FUNCTIONS,
+  type TransverseMercatorOperation
+} from './projection-transverse-mercator';
 
 /** Explicit operations; adaptive inversion requires a separately validated inverse plan. */
 export type ProjectionOperation =
@@ -22,6 +31,7 @@ export type ProjectionOperation =
   | {type: 'unit'; factor: number; inverse?: boolean}
   | {type: 'affine'; scale: ProjectionCoordinates; offset: ProjectionCoordinates; inverse?: boolean}
   | WebMercatorOperation
+  | TransverseMercatorOperation
   | {type: 'adaptive'; plan: ProjectionPlan; inversePlan?: ProjectionPlan};
 
 /** A two-dimensional operation sequence. Analytic float32 stages must be explicitly opted into. */
@@ -134,6 +144,7 @@ export function invertProjectionProgram(
           return {...operation, inverse: !operation.inverse};
         case 'affine':
         case 'web-mercator':
+        case 'transverse-mercator':
           return {...operation, inverse: !operation.inverse};
         case 'adaptive':
           if (!operation.inversePlan) {
@@ -175,12 +186,21 @@ export function evaluateProjectionProgram(
               position[1] * operation.scale[1] + operation.offset[1]
             ];
         break;
-      case 'web-mercator': {
-        const bounds = getWebMercatorBounds(operation);
+      case 'web-mercator':
+      case 'transverse-mercator': {
+        const bounds =
+          operation.type === 'web-mercator'
+            ? getWebMercatorBounds(operation)
+            : getTransverseMercatorBounds(operation);
         if (position.some((value, axis) => value < bounds[axis] || value > bounds[axis + 2])) {
           return {position: [0, 0], valid: false};
         }
-        position = evaluateWebMercator(operation, position);
+        const projected =
+          operation.type === 'web-mercator'
+            ? evaluateWebMercator(operation, position)
+            : evaluateTransverseMercator(operation, position);
+        if (!projected) return {position: [0, 0], valid: false};
+        position = projected;
         break;
       }
       case 'adaptive':
@@ -270,6 +290,14 @@ function compileProgram(
         stages.push(getWebMercatorStage(operation, offset));
         appendNumber(operation.radius);
         appendBounds(getWebMercatorBounds(operation));
+        break;
+      case 'transverse-mercator':
+        for (const value of getTransverseMercatorParameters(operation)) appendNumber(value);
+        appendBounds(getTransverseMercatorBounds(operation));
+        appendBounds(TRANSVERSE_MERCATOR_GEOGRAPHIC_BOUNDS);
+        if (!functions.includes(TRANSVERSE_MERCATOR_SHADER_FUNCTIONS))
+          functions.push(TRANSVERSE_MERCATOR_SHADER_FUNCTIONS);
+        stages.push(getTransverseMercatorStage(operation, offset));
         break;
       case 'adaptive': {
         if (operation.plan.precision !== 'double-single' || operation.plan.patches.length === 0) {

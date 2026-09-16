@@ -292,7 +292,14 @@ metadata exposes `mixed`; double-single output storage does not restore formula 
 Default higher-precision CRS planning fits the normalized binary64 Web Mercator reference into
 double-single patches. It does not use the current provider's incorrect ellipsoidal interpretation
 of explicit Pseudo Mercator PROJJSON. Provider-only transformations involving such objects decline.
-Native UTM/TM formulas and analytic/adaptive comparative benchmarks remain the next P.4 work.
+Native sixth-order Transverse Mercator/UTM uses the same Float32 opt-in, including EPSG 9807
+PROJJSON conversions and explicit `utm`/`tmerc` pipeline steps. The local branch accepts relative
+longitude ±12 degrees and latitude ±85 degrees, with an additional recovered-footprint check for
+inverse inputs. Default higher-precision execution fits the normalized binary64 series reference
+into double-single patches. Native series truncation is additional to sampled fitting error.
+All 60 UTM zones and both hemispheres have independent forward/inverse oracle coverage; no global
+Float32 accuracy or speedup guarantee is claimed. Explicit angular normalization and
+analytic/adaptive comparative benchmarks remain the next P.4 work.
 GPU execution does not import math.gl or proj4js.
 
 See the [API guide](../../../../docs/api-reference/experimental/gpu-project.md) for examples,

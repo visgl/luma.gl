@@ -98,7 +98,11 @@ export function lowerProjectionPipeline(
             ? ['proj', 'inv', 's11', 's22', 'xoff', 'yoff']
             : method === 'webmerc'
               ? ['proj', 'inv', 'ellps', 'a', 'lon_0', 'x_0', 'y_0']
-              : null;
+              : method === 'utm'
+                ? ['proj', 'inv', 'ellps', 'zone', 'south']
+                : method === 'tmerc'
+                  ? ['proj', 'inv', 'ellps', 'a', 'rf', 'lon_0', 'lat_0', 'k_0', 'x_0', 'y_0']
+                  : null;
     if (!supported) {
       return decline(
         'unsupported-operation',
@@ -115,8 +119,13 @@ export function lowerProjectionPipeline(
           name
         );
       }
-      if ((name === 'inv') !== (value === undefined)) {
-        return decline('invalid-definition', 'expected a value, or a bare inv flag', step, name);
+      if ((name === 'inv' || name === 'south') !== (value === undefined)) {
+        return decline(
+          'invalid-definition',
+          'expected a value, or a bare inv/south flag',
+          step,
+          name
+        );
       }
     }
 
@@ -224,6 +233,86 @@ export function lowerProjectionPipeline(
       stage.push(
         {type: 'affine', scale: [1, 1], offset: [-longitude, 0]},
         {type: 'web-mercator', arithmetic: 'float32', radius},
+        {type: 'affine', scale: [1, 1], offset: [easting, northing]}
+      );
+    } else if (method === 'utm' || method === 'tmerc') {
+      const zone = getNumber(values.get('zone'), NaN);
+      if (method === 'utm' && (!Number.isInteger(zone) || zone < 1 || zone > 60)) {
+        return decline(
+          'invalid-definition',
+          'utm requires an integer zone from 1 through 60',
+          step,
+          'zone'
+        );
+      }
+      // UTM deliberately supports only the explicit WGS84 ellipsoid, with fixed standard offsets.
+      // General tmerc additionally accepts an explicit semi-major axis and inverse flattening.
+      const namedEllipsoid =
+        values.get('ellps') === 'WGS84' && !values.has('a') && !values.has('rf');
+      const numericEllipsoid =
+        method === 'tmerc' && !values.has('ellps') && values.has('a') && values.has('rf');
+      if (!namedEllipsoid && !numericEllipsoid) {
+        return decline(
+          'unsupported-parameter',
+          'expected ellps=WGS84 or explicit tmerc a/rf parameters',
+          step
+        );
+      }
+      const semiMajorAxis = namedEllipsoid ? 6378137 : getNumber(values.get('a'), NaN);
+      const inverseFlattening = namedEllipsoid ? 298.257223563 : getNumber(values.get('rf'), NaN);
+      const longitude =
+        ((method === 'utm' ? zone * 6 - 183 : getNumber(values.get('lon_0'), 0)) * Math.PI) / 180;
+      const latitudeOrigin = (getNumber(values.get('lat_0'), 0) * Math.PI) / 180;
+      const scaleFactor = method === 'utm' ? 0.9996 : getNumber(values.get('k_0'), 1);
+      const easting = method === 'utm' ? 500000 : getNumber(values.get('x_0'), 0);
+      const northing =
+        method === 'utm' ? (values.has('south') ? 10000000 : 0) : getNumber(values.get('y_0'), 0);
+      if (
+        ![
+          semiMajorAxis,
+          inverseFlattening,
+          longitude,
+          latitudeOrigin,
+          scaleFactor,
+          easting,
+          northing
+        ].every(Number.isFinite) ||
+        semiMajorAxis <= 0 ||
+        scaleFactor <= 0 ||
+        !(inverseFlattening === 0 || inverseFlattening >= 100) ||
+        Math.abs(latitudeOrigin) > (85 * Math.PI) / 180
+      ) {
+        return decline(
+          'invalid-definition',
+          'tmerc parameters exceed the supported ellipsoid/origin range',
+          step
+        );
+      }
+      const sourceDimension = inverse ? 'linear' : 'angular';
+      if (
+        previousUnit &&
+        (previousUnit.dimension !== sourceDimension || previousUnit.factor !== 1)
+      ) {
+        return decline('incompatible-units', 'tmerc/utm consumes radians or inverse metres', step);
+      }
+      if (projectionArithmetic !== 'float32') {
+        return decline(
+          'unsupported-arithmetic',
+          'native tmerc/utm requires explicit float32 projection arithmetic',
+          step
+        );
+      }
+      previousUnit = {dimension: inverse ? 'angular' : 'linear', factor: 1};
+      stage.push(
+        {type: 'affine', scale: [1, 1], offset: [-longitude, 0]},
+        {
+          type: 'transverse-mercator',
+          arithmetic: 'float32',
+          semiMajorAxis,
+          semiMinorAxis: semiMajorAxis * (inverseFlattening === 0 ? 1 : 1 - 1 / inverseFlattening),
+          scaleFactor,
+          latitudeOrigin
+        },
         {type: 'affine', scale: [1, 1], offset: [easting, northing]}
       );
     } else {

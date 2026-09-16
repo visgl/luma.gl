@@ -6,8 +6,9 @@
 import type {ProjectionInputFormat, ProjectionProgram} from './projection-program';
 import type {ProjectionBounds, ProjectionPrecision} from './types';
 import {getWebMercatorBounds} from './projection-web-mercator';
+import {getTransverseMercatorBounds} from './projection-transverse-mercator';
 
-/** Approximation estimates exclude input quantization and native/output arithmetic rounding. */
+/** Estimates exclude input quantization, native series truncation and native/output rounding. */
 export type ProjectionErrorMetadata = {
   readonly kind: 'none' | 'sampled-estimate' | 'unknown';
   /** Euclidean error in this stage's output units; null means composition is not bounded. */
@@ -22,7 +23,7 @@ export type ProjectionStageMetadata = {
   readonly arithmetic: 'float32' | 'double-single';
   readonly inputDimensions: 2;
   readonly outputDimensions: 2;
-  /** Coordinates at this stage, before evaluation. Null means finite coordinates only. */
+  /** Stage-input envelope (null: finite only); nonlinear inverses also check their footprint. */
   readonly inputBounds: ProjectionBounds | null;
   readonly invertible: boolean;
   /** Maximum Euclidean amplification for a native linear stage; null for nonlinear stages. */
@@ -73,8 +74,13 @@ export function getProjectionProgramMetadata(
         );
         break;
       case 'web-mercator':
+      case 'transverse-mercator':
         amplification = null;
-        inputBounds = Object.freeze(getWebMercatorBounds(operation));
+        inputBounds = Object.freeze(
+          operation.type === 'web-mercator'
+            ? getWebMercatorBounds(operation)
+            : getTransverseMercatorBounds(operation)
+        );
         // No global derivative/rounding bound is promised for the analytic fast path.
         if (maximum !== 0) maximum = null;
         break;
@@ -95,7 +101,10 @@ export function getProjectionProgramMetadata(
     return Object.freeze({
       index,
       operation: operation.type,
-      arithmetic: operation.type === 'web-mercator' ? 'float32' : 'double-single',
+      arithmetic:
+        operation.type === 'web-mercator' || operation.type === 'transverse-mercator'
+          ? 'float32'
+          : 'double-single',
       inputDimensions: 2,
       outputDimensions: 2,
       inputBounds,
