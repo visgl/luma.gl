@@ -40,6 +40,8 @@ explicit graph-owned scratch.
 | `GPUGather`, `GPUUint32Gather` | Global indexed row selection; one output row per index, in index order | Independent atomic/vector partitions; packed fixed-width word-aligned rows and uint32 indices; output capacity covers indices | Empty indices leave output untouched; empty source fills invalid rows; each encoding rewrites the active prefix and preserves spare capacity |
 | `GPUByteRangeGather` | Byte ranges addressed in global source/output byte order | Five packed `uint32` operands may have independent atomic/vector partitions; metadata lengths match; output ranges are sorted and nonoverlapping | Empty metadata or zero capacity writes nothing; empty source fills zero; each encoding clears gaps, invalid bytes, and final-word padding; spare words are untouched |
 | `GPUTranspose` | One global row-major matrix becomes its transposed row-major matrix | Packed `uint32`, `sint32`, or `float32`; independent input/output partitions may split rows and tiles; both capacities cover the matrix | Zero rows or columns write nothing; spare capacity is untouched; every encoding overwrites the transposed matrix and preserves raw value bits |
+| `GPUElementwise` | Copy, add, subtract, multiply, multiply-add, min, or max at each logical row | Equal lengths and packed `uint32`, `sint32`, or `float32`; all input/output boundaries may differ | Empty input writes nothing; each encoding overwrites all output rows |
+| `GPUFiniteDifference2D`, `GPUFiniteDifference3D` | Gradient, divergence, curl, or Laplacian of one global field | Independent input/output boundaries may split rows or planes; scalar or vector `float32` formats depend on the operator | Dimensions remain at least four; spare capacity is untouched; every encoding refreshes stencil samples and output |
 | `GPUSegmentedLayout` | Physical-value and logical-element offsets, inclusive segment indices, list offsets, and three counts | Six packed `uint32` slot views may use independent atomic/vector partitions; all cover the value-flag domain; list offsets and counts remain atomic | Empty input clears counts and the first list offset; nonempty input has one implicit first segment; extra slot-output capacity is untouched |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
@@ -116,50 +118,52 @@ and restriction to shared tiles. Each source/destination pair uses a bounded reg
 padded tile kernel; pairs with no shared elements emit no commands. Planning still considers the
 product of input and output chunks, and fragmented boundaries may repeat tile workgroups.
 
-## Coverage inventory
+`gpu-elementwise-batching.spec.ts` checks all seven operators and all three scalar formats,
+independent input/B/C/output boundaries, empty chunks, offsets, integer wrapping, and updated
+inputs across repeated encodings. Lowering intersects boundaries without allocating buffers.
+
+`gpu-finite-difference-batching.spec.ts` checks all four operators in 2D and 3D, both boundary
+policies, independent partitions, offsets, spare capacity, scratch reuse, and updated inputs.
+Results are compared with the atomic kernel using floating-point tolerance; analytic tests also
+cover polynomial fields. A single source chunk needs no scratch. Multiple source chunks gather
+the existing stencil's samples into one reusable buffer for at most 4096 output rows, reduced
+further to fit device limits. The stencil expressions retain their arithmetic order; this is
+algorithm scratch, not concatenation of caller inputs. Gather dispatch count scales with source
+chunks times output blocks; halo routing and unnecessary sample removal remain performance work.
+`gpu-numeric-batching.node.spec.ts` verifies allocation bounds, alias/layout/ownership validation,
+and fields whose total byte size exceeds a single binding while individual chunks fit.
+
+Elementwise and finite-difference destinations must use separate buffers from their inputs, and
+output chunks must not overlap. Finite-difference vector offsets must align with the stored WGSL
+array element (8 bytes for `float32x2`, 16 for `float32x4`).
+
+## Remaining work, grouped for review
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
 single-view API; unifying global order with batch sort is follow-up work. Program CSR SpMV lowering
 still requires one physical chunk per operand because its column indices address a global vector.
-Neither limitation permits implicit packing. The exported operation classes below are **unaudited
-for this contract**; being listed does not imply missing batching or claim conformance. Helpers,
-resource descriptors, inspectors, benchmark runners, and execution containers are outside this
-operation inventory. The exhaustive API/function audit remains tranche 4.
+Neither limitation permits implicit packing. The former inventory listed 38 classes after the
+transpose work, mixing missing support with partial support and operations that do not themselves
+process arrays. It was an audit queue, not 38 required implementation PRs. It also omitted some
+newer numeric implementations. Group related operations into substantial PRs based on current
+master, with shared lowering, conformance tests, and documented exceptions in each group.
 
-- `GPULZByteDecompressor`
-- `GPULZByteBatchDecompressor`
-- `GPUSegmentedSort`
-- `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`
-- `GPUChunkedIndexedScatter`
-- `GPUTextSelection`
-- `GPUVirtualGeometrySelection`
-- `GPUHierarchyLayout`
-- `GPUGraphTraversal`
-- `GPUAncestorProjection`
-- `GPUBatchSort`
-- `GPUGallopingSearch`
-- `GPUFFT1D`
-- `GPUConvolution`
-- `GPUFiniteDifference2D`
-- `GPUFiniteDifference3D`
-- `GPUGridBinning`
-- `GPUGridIndex`
-- `GPUGridIndexQuery`
-- `GPUPointSpatialFilter`
-- `GPUBVH`
-- `GPUSegmentedBVH`
-- `GPUBVHQuery`
-- `GPUSceneDrawGeneration`
-- `GPUSceneResourceGroups`
-- `GPUGridAggregation`
-- `GPUHashIndex`, `GPUHashIndexQuery`
-- `GPUBatchHashIndex`
-- `GPUHashJoin`
-- `GPUBatchHashJoin`
-- `GPUCompositeOperation`, `GPUConditionalOperation`, `GPULoopOperation`
-- `GPUProgramScalarLiteral`
-- `GPUProgramScalarOperation`
-- `GPUProgramSpMV`
+| Review group | Operations to cover together | Current gap or audit question |
+| --- | --- | --- |
+| Transforms and convolution | `GPUFFT1D`, `GPUFFT2D`, `GPUConvolution` | Transform `batchCount` describes independent transforms within packed storage; support for arbitrary physical chunks is a separate requirement. Convolution still takes atomic graph views. |
+| Dense and sparse algebra | `GPUMatVec`, `GPUMatMul`, `GPUProgramSpMV` | Dense implementations use atomic views; CSR lowering requires one chunk. Design global matrix/vector addressing and audit the public export surface together. |
+| Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
+| Hash indexing and joins | `GPUHashIndex`, `GPUHashIndexQuery`, `GPUBatchHashIndex`, `GPUHashJoin`, `GPUBatchHashJoin` | Reuse batch variants; audit global lookup, duplicate/cardinality rules, independently partitioned columns, and destination capacity. |
+| Indexed movement and hierarchy | `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection` | Some APIs already represent partitions/chunks. Audit global indices, cross-chunk ranges, output topology, and shared hierarchy callers as one family. |
+| Spatial operations | `GPUGridBinning`, `GPUGridAggregation`, `GPUGridIndex`, `GPUGridIndexQuery`, `GPUPointSpatialFilter`, `GPUBVH`, `GPUSegmentedBVH`, `GPUBVHQuery`, `GPUSceneDrawGeneration`, `GPUSceneResourceGroups` | Packed spatial domains and segmented hierarchies are not yet a universal vector contract. Group grid operations and hierarchy/query operations into coherent blocks if this family is too large for one review. |
+| Decoding | `GPULZByteDecompressor`, `GPULZByteBatchDecompressor` | Existing batch decoding needs a cross-chunk history, addressing, output-capacity, and ownership audit. |
 
-Next work: audit the remaining operations, then separately design global CSR addressing,
-sort/Top-K/join repartitioning, and strided numeric kernels. No new PR stack is required.
+`GPUCompositeOperation`, `GPUConditionalOperation`, and `GPULoopOperation` are composition/control
+flow containers; scalar literals and scalar operations intentionally represent single values.
+Audit their propagation of batched child resources and parameters alongside each family, rather
+than creating separate “batchified scalar” APIs or PRs. Helpers, descriptors, inspectors, and
+benchmark/execution containers likewise do not each need a batch implementation.
+
+These are review groups, not a fixed PR count. Split a group only for a substantial independent
+algorithm or review-size concern; avoid one PR per operation. The exhaustive API/function audit,
+strided numeric kernels, and chunk-routing performance remain explicit follow-up work.

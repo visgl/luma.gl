@@ -5,10 +5,12 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {
   getViewBinding,
+  doGraphDataViewsOverlap,
   getViewElementOffset,
   validatePackedView,
   type GPUScalarFormat
@@ -29,13 +31,13 @@ export type GPUElementwiseOperation =
 export type GPUElementwiseProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
   /** First packed scalar input. */
-  input: GraphDataView<T>;
+  input: GraphDataView<T> | GraphVectorView<T>;
   /** Second packed scalar input required by binary and ternary operations. */
-  inputB?: GraphDataView<T>;
+  inputB?: GraphDataView<T> | GraphVectorView<T>;
   /** Third packed scalar input required by `multiply-add`. */
-  inputC?: GraphDataView<T>;
+  inputC?: GraphDataView<T> | GraphVectorView<T>;
   /** Caller-owned packed scalar output. */
-  output: GraphDataView<T>;
+  output: GraphDataView<T> | GraphVectorView<T>;
   /** Operation applied independently to every row. */
   operation: GPUElementwiseOperation;
 };
@@ -49,10 +51,10 @@ export type GPUElementwiseProps<T extends GPUScalarFormat = GPUScalarFormat> = {
  */
 export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
   readonly id: string;
-  readonly input: GraphDataView<T>;
-  readonly inputB?: GraphDataView<T>;
-  readonly inputC?: GraphDataView<T>;
-  readonly output: GraphDataView<T>;
+  readonly input: GPUElementwiseProps<T>['input'];
+  readonly inputB: GPUElementwiseProps<T>['inputB'];
+  readonly inputC: GPUElementwiseProps<T>['inputC'];
+  readonly output: GPUElementwiseProps<T>['output'];
   readonly operation: GPUElementwiseOperation;
 
   constructor(props: GPUElementwiseProps<T>) {
@@ -63,8 +65,12 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     this.output = props.output;
     this.operation = props.operation;
 
-    validatePackedView(this.input, SCALAR_FORMATS, `${this.id} input`);
-    validatePackedView(this.output, SCALAR_FORMATS, `${this.id} output`);
+    for (const view of [this.input, this.inputB, this.inputC, this.output]) {
+      if (view)
+        for (const chunk of getGraphVectorData(view)) {
+          validatePackedView(chunk, SCALAR_FORMATS, this.id);
+        }
+    }
     if (this.input.format !== this.output.format || this.input.length !== this.output.length) {
       throw new Error(`${this.id} input and output must have matching format and length`);
     }
@@ -86,9 +92,23 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
       ['inputC', this.inputC]
     ] as const) {
       if (!input) continue;
-      validatePackedView(input, SCALAR_FORMATS, `${this.id} ${name}`);
       if (input.format !== this.input.format || input.length !== this.input.length) {
         throw new Error(`${this.id} ${name} must match input format and length`);
+      }
+    }
+
+    const inputBuffers = new Set(
+      [this.input, this.inputB, this.inputC].flatMap(view =>
+        view ? getGraphVectorData(view).map(chunk => chunk.buffer) : []
+      )
+    );
+    const outputChunks = getGraphVectorData(this.output);
+    if (outputChunks.some(chunk => inputBuffers.has(chunk.buffer))) {
+      throw new Error(`${this.id} output must use separate buffers from inputs`);
+    }
+    for (const [index, chunk] of outputChunks.entries()) {
+      if (outputChunks.slice(0, index).some(previous => doGraphDataViewsOverlap(previous, chunk))) {
+        throw new Error(`${this.id} output chunks must not overlap`);
       }
     }
 
@@ -105,20 +125,48 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
+    const views = [this.input, this.inputB, this.inputC, this.output];
+    for (const view of views) {
+      if (view && getGraphVectorData(view).some(chunk => chunk.buffer.graph !== graph)) {
+        throw new Error(`${this.id} views must belong to the target graph`);
+      }
+    }
+    if (
+      this.input instanceof GraphVectorView ||
+      this.inputB instanceof GraphVectorView ||
+      this.inputC instanceof GraphVectorView ||
+      this.output instanceof GraphVectorView
+    ) {
+      const operands = [
+        this.input,
+        this.inputB ?? this.input,
+        this.inputC ?? this.input,
+        this.output
+      ] as const;
+      return alignGraphVectorViews(graph, operands).flatMap(
+        ([input, inputB, inputC, output], index) =>
+          new GPUElementwise({
+            id: `${this.id}-${index}`,
+            input,
+            inputB: this.inputB ? inputB : undefined,
+            inputC: this.inputC ? inputC : undefined,
+            output,
+            operation: this.operation
+          }).getCommandNodes(graph)
+      );
+    }
+    // All vector operands have been lowered to borrowed atomic spans above.
+    const input = this.input;
+    const inputB = this.inputB;
+    const inputC = this.inputC;
+    const output = this.output;
     const resources = [
-      {name: 'inputValues', view: this.input, usage: 'storage-read' as const},
-      ...(this.inputB
-        ? [{name: 'inputBValues', view: this.inputB, usage: 'storage-read' as const}]
-        : []),
-      ...(this.inputC
-        ? [{name: 'inputCValues', view: this.inputC, usage: 'storage-read' as const}]
-        : []),
-      {name: 'outputValues', view: this.output, usage: 'storage-write' as const}
+      {name: 'inputValues', view: input, usage: 'storage-read' as const},
+      ...(inputB ? [{name: 'inputBValues', view: inputB, usage: 'storage-read' as const}] : []),
+      ...(inputC ? [{name: 'inputCValues', view: inputC, usage: 'storage-read' as const}] : []),
+      {name: 'outputValues', view: output, usage: 'storage-write' as const}
     ];
 
-    if (resources.some(resource => resource.view.buffer.graph !== graph)) {
-      throw new Error(`${this.id} views must belong to the target graph`);
-    }
     if (this.output.length === 0) return nodes;
 
     const dispatchLayout = getBoundedDispatchLayout(
@@ -127,7 +175,7 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
       WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    const source = makeShaderSource(this, dispatchLayout);
+    const source = makeShaderSource({...this, input, inputB, inputC, output}, dispatchLayout);
 
     nodes.push(
       createGPUComputeCommandNode<Parameters>({
@@ -183,7 +231,13 @@ export class GPUElementwise<T extends GPUScalarFormat = GPUScalarFormat> {
 }
 
 function makeShaderSource(
-  elementwise: GPUElementwise,
+  elementwise: {
+    input: GraphDataView;
+    inputB?: GraphDataView;
+    inputC?: GraphDataView;
+    output: GraphDataView;
+    operation: GPUElementwiseOperation;
+  },
   dispatchLayout: ReturnType<typeof getBoundedDispatchLayout>
 ): string {
   const shaderType =

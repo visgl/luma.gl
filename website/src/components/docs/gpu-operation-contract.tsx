@@ -573,13 +573,25 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     cost: 'Source extent and memory bandwidth dominate.',
     mistake: 'Do not swap dimensions without also allocating the transposed destination shape.'
   },
+  'gpu-finite-differences': {
+    problem: 'Evaluate gradient, divergence, curl, or Laplacian on a regular 2D or 3D sampled field.',
+    readsWrites: 'Reads scalar or vector field samples; writes the operator result in global row-major order.',
+    ownership: 'Caller-owned input/output; bounded graph-owned stencil scratch for multiple source chunks.',
+    output: 'One result per field row; spare output capacity remains untouched.',
+    work: 'Gathers neighbors across source chunks and evaluates second-order stencils in bounded output blocks.',
+    chunks: 'Independent input/output partitions may split rows or planes without changing field boundaries.',
+    execution: COMMON.noSubmission,
+    neighborhood: 'sampled field → finite differences → elementwise update, residual, or visualization.',
+    cost: 'Direct kernels need no scratch; chunked source gathering scales with source chunks times output blocks.',
+    mistake: 'Use physical spacing and the intended field-edge policy; chunk boundaries are storage only.'
+  },
   'gpu-elementwise': {
     problem: 'Apply one canonical arithmetic operation independently to every packed scalar row.',
     readsWrites: 'Reads one to three matching scalar inputs; writes one source-aligned output.',
     ownership: COMMON.callerOwned,
     output: 'One value per input row in the shared uint32, sint32, or float32 format.',
     work: 'One bounded invocation per row with no cross-row communication.',
-    chunks: 'Consumes matching packed views; callers invoke per durable chunk when needed.',
+    chunks: 'Equal logical lengths with independent input/B/C/output chunk boundaries; alignment borrows views without packing.',
     execution: COMMON.noSubmission,
     neighborhood: 'vectors and coefficients → GPUElementwise → residuals, updates, or dense operators.',
     cost: 'Usually memory-bandwidth bound; graph fusion can avoid intermediate traffic.',

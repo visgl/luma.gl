@@ -345,6 +345,9 @@ export type {
   GPUConvolutionBenchmarkStrategy
 } from './gpu-convolution-benchmark';
 
+export {GPUElementwise} from './gpu-elementwise';
+export type {GPUElementwiseProps, GPUElementwiseOperation} from './gpu-elementwise';
+
 export {
   getGPUFiniteDifference2DSupport,
   GPUFiniteDifference2D,
