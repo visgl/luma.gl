@@ -15,6 +15,7 @@ import {
   type ProjectionProgram
 } from './projection-program';
 import {lowerProjectionPipeline, type ProjectionPlanningReason} from './projection-pipeline';
+import {normalizeCRSProviderDefinition} from './projection-crs-provider';
 import {
   canUseCRSProvider,
   getCRSProviderReason,
@@ -42,6 +43,8 @@ export type ProjectionPlanningResult =
   | {status: 'unsupported'; reasons: readonly ProjectionPlanningReason[]};
 
 type ProjectionOutputOptions = {
+  /** Return structured unsupported results by default, or throw with the same reasons. */
+  onUnsupported?: 'return' | 'throw';
   precision?: ProjectionPrecision;
   /** Native nonlinear arithmetic. Default double-single retains bounded adaptive fitting. */
   projectionArithmetic?: 'double-single' | 'float32';
@@ -78,6 +81,12 @@ export type PlanCRSProjectionOptions = ProjectionOutputOptions &
 
 /** Compile the supported explicit PROJ pipeline subset, or use an explicitly supplied oracle. */
 export function planProjectionPipeline(
+  options: PlanProjectionPipelineOptions
+): ProjectionPlanningResult {
+  return applyFailurePolicy(planProjectionPipelineResult(options), options);
+}
+
+function planProjectionPipelineResult(
   options: PlanProjectionPipelineOptions
 ): ProjectionPlanningResult {
   let lowered: ReturnType<typeof lowerProjectionPipeline>;
@@ -121,6 +130,10 @@ export function planProjectionPipeline(
  * Lower explicit 2D CRS frames and opted-in formulas, or fit a bounded provider transformation.
  */
 export function planCRSProjection(options: PlanCRSProjectionOptions): ProjectionPlanningResult {
+  return applyFailurePolicy(planCRSProjectionResult(options), options);
+}
+
+function planCRSProjectionResult(options: PlanCRSProjectionOptions): ProjectionPlanningResult {
   // PROJJSON dimensionality is explicit. Never silently extract a horizontal component.
   for (const definition of [options.from, options.to]) {
     if (typeof definition !== 'string' && !isTwoDimensionalCRS(definition)) {
@@ -195,9 +208,18 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
       ]
     };
   }
-  for (const definition of [options.from, options.to]) {
-    const reason = getCRSProviderReason(definition);
-    if (reason) return {status: 'unsupported', reasons: [...reasons, reason]};
+  const providerDefinitions: ReadonlyCRSDefinition[] = [];
+  try {
+    for (const definition of [options.from, options.to]) {
+      const normalized = normalizeCRSProviderDefinition(definition);
+      if ('reason' in normalized)
+        return {status: 'unsupported', reasons: [...reasons, normalized.reason]};
+      const reason = getCRSProviderReason(normalized.definition);
+      if (reason) return {status: 'unsupported', reasons: [...reasons, reason]};
+      providerDefinitions.push(normalized.definition);
+    }
+  } catch (error) {
+    return unsupported('invalid-definition', error);
   }
   if (!options.bounds) {
     return {
@@ -211,8 +233,8 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
   let projection: Proj4Projection;
   try {
     projection = new Proj4Projection({
-      from: toProj4CRSDefinition(options.from),
-      to: toProj4CRSDefinition(options.to),
+      from: toProj4CRSDefinition(providerDefinitions[0]),
+      to: toProj4CRSDefinition(providerDefinitions[1]),
       enforceAxis: options.enforceAxis ?? false
     });
   } catch (error) {
@@ -311,6 +333,26 @@ function unsupported(
     status: 'unsupported',
     reasons: [{code, message: error instanceof Error ? error.message : String(error)}]
   };
+}
+
+/** Optional throwing interface; the same structured reasons are available to callers. */
+export class ProjectionPlanningError extends Error {
+  readonly reasons: readonly ProjectionPlanningReason[];
+
+  constructor(reasons: readonly ProjectionPlanningReason[]) {
+    super(reasons.map(reason => reason.message).join('; '));
+    this.name = 'ProjectionPlanningError';
+    this.reasons = Object.freeze(reasons.map(reason => Object.freeze({...reason})));
+  }
+}
+
+function applyFailurePolicy(
+  result: ProjectionPlanningResult,
+  options: ProjectionOutputOptions
+): ProjectionPlanningResult {
+  if (result.status === 'unsupported' && options.onUnsupported === 'throw')
+    throw new ProjectionPlanningError(result.reasons);
+  return result;
 }
 
 function isTwoDimensionalCRS(definition: Exclude<ReadonlyCRSDefinition, string>): boolean {

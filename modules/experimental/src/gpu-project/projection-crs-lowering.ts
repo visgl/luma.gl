@@ -460,7 +460,7 @@ function getEPSGCode(object: {
   return identifier?.authority === 'EPSG' ? Number(identifier.code) : undefined;
 }
 
-function getUnitFactor(
+export function getUnitFactor(
   unit: Unit | undefined,
   dimension: 'LinearUnit' | 'AngularUnit' | 'ScaleUnit'
 ): number | null {

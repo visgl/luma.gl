@@ -81,3 +81,74 @@ export function makeWebMercatorCRS() {
     }
   } as const satisfies CRSDefinition;
 }
+
+export function makeConicCRS(method: 'lambert-1sp' | 'lambert-2sp' | 'albers', southern = false) {
+  const sign = southern ? -1 : 1;
+  const singleParallel = method === 'lambert-1sp';
+  const codes = singleParallel
+    ? [8801, 8802, 8805, 8806, 8807]
+    : [8821, 8822, 8823, 8824, 8826, 8827];
+  const names = singleParallel
+    ? [
+        'Latitude of natural origin',
+        'Longitude of natural origin',
+        'Scale factor at natural origin',
+        'False easting',
+        'False northing'
+      ]
+    : [
+        'Latitude of false origin',
+        'Longitude of false origin',
+        'Latitude of 1st standard parallel',
+        'Latitude of 2nd standard parallel',
+        'Easting at false origin',
+        'Northing at false origin'
+      ];
+  const values = singleParallel
+    ? [41 * sign, -71.5, 0.9999, 200000, 750000]
+    : [41 * sign, -71.5, 42.6833333333 * sign, 41.7166666667 * sign, 200000, 750000];
+  const projected = makeTransverseMercatorCRS();
+  return {
+    ...projected,
+    name: '',
+    conversion: {
+      name: '',
+      method: {
+        name:
+          method === 'albers'
+            ? 'Albers Equal Area'
+            : singleParallel
+              ? 'Lambert Conic Conformal (1SP)'
+              : 'Lambert Conic Conformal (2SP)',
+        id: {authority: 'EPSG', code: method === 'albers' ? 9822 : singleParallel ? 9801 : 9802}
+      },
+      parameters: codes.map(
+        (code, index) =>
+          ({
+            name: names[index],
+            value: values[index],
+            unit:
+              code === 8805
+                ? 'unity'
+                : [8801, 8802, 8821, 8822, 8823, 8824].includes(code)
+                  ? 'degree'
+                  : 'metre',
+            id: {authority: 'EPSG', code}
+          }) as const
+      )
+    }
+  } satisfies CRSDefinition;
+}
+
+/** Independent serialized definition: never derive the oracle through PROJJSON normalization. */
+export function getConicOracleDefinition(
+  method: 'lambert-1sp' | 'lambert-2sp' | 'albers',
+  southern = false
+): string {
+  const sign = southern ? -1 : 1;
+  const parallels =
+    method === 'lambert-1sp'
+      ? `+lat_1=${41 * sign} +lat_2=${41 * sign} +k_0=0.9999`
+      : `+lat_1=${42.6833333333 * sign} +lat_2=${41.7166666667 * sign}`;
+  return `+proj=${method === 'albers' ? 'aea' : 'lcc'} +lat_0=${41 * sign} +lon_0=-71.5 ${parallels} +x_0=200000 +y_0=750000 +ellps=WGS84 +units=m`;
+}
