@@ -35,7 +35,7 @@ it('refuses accuracy/validity failures before warmup and does not return mislead
   }
 });
 
-it.each([
+it.for([
   'local-f32',
   'double-single'
 ] as const)('decodes %s identity output and refuses mismatched output precision', async (precision, context) => {
