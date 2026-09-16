@@ -38,6 +38,7 @@ explicit graph-owned scratch.
 | `GPUFlagOffsets` | Exclusive binary-flag offsets and one global count | Packed `uint32`; independent atomic/vector partitions; destination capacity must cover flags | Empty input clears count; extra destination capacity is untouched; every encoding replaces the active prefix |
 | `GPUSegmentOffsets` | Exclusive start-flag prefixes, global list offsets, and segment count | Packed `uint32`; slot views cover element flags with independent partitions; list offsets remain one atomic destination | Empty input clears count and terminal offset; every encoding rebuilds the valid offset prefix |
 | `GPUGather`, `GPUUint32Gather` | Global indexed row selection; one output row per index, in index order | Independent atomic/vector partitions; packed fixed-width word-aligned rows and uint32 indices; output capacity covers indices | Empty indices leave output untouched; empty source fills invalid rows; each encoding rewrites the active prefix and preserves spare capacity |
+| `GPUByteRangeGather` | Byte ranges addressed in global source/output byte order | Five packed `uint32` operands may have independent atomic/vector partitions; metadata lengths match; output ranges are sorted and nonoverlapping | Empty metadata or zero capacity writes nothing; empty source fills zero; each encoding clears gaps, invalid bytes, and final-word padding; spare words are untouched |
 | `GPUSegmentedLayout` | Physical-value and logical-element offsets, inclusive segment indices, list offsets, and three counts | Six packed `uint32` slot views may use independent atomic/vector partitions; all cover the value-flag domain; list offsets and counts remain atomic | Empty input clears counts and the first list offset; nonempty input has one implicit first segment; extra slot-output capacity is untouched |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
@@ -100,6 +101,13 @@ Adjusted high-word scratch follows the high input's chunks. Low output buffers m
 from both inputs and the high output. The high output may reuse high input storage because carry
 classification finishes before the high scan. Output chunks must not overlap.
 
+`gpu-byte-range-gather-batching.*.spec.ts` checks independently partitioned source words, three
+range metadata columns, and output words on WebGPU CORE. It covers ranges crossing source chunks,
+metadata spans sharing output words, empty ranges/chunks, partial words, gaps, invalid source
+addresses, capacity truncation, repeated encodings, and zero-copy lowering. The implementation
+uses no scratch storage; dispatch count grows with the product of source chunks, aligned metadata
+spans, and output chunks. More efficient routing for fragmented data remains follow-up work.
+
 ## Coverage inventory
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -110,7 +118,6 @@ for this contract**; being listed does not imply missing batching or claim confo
 resource descriptors, inspectors, benchmark runners, and execution containers are outside this
 operation inventory. The exhaustive API/function audit remains tranche 4.
 
-- `GPUByteRangeGather`
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
 - `GPUSegmentedSort`
