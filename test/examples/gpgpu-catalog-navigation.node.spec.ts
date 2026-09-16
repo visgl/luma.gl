@@ -28,6 +28,7 @@ const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'experimental/gpu-trace-scene',
   'experimental/gpu-scene-graph',
   'showcase/vector-field-lab',
+  'showcase/spectral-wave-lab',
   'experimental/gpu-sort',
   'experimental/gpu-data-analysis'
 ] as const;
@@ -95,7 +96,7 @@ describe('GPGPU example catalog navigation', () => {
       id: 'showcase/million-row-crossfilter',
       label: 'GPUCrossfilter: Million-Row Crossfilter Explorer'
     });
-    expect(crossfilterExampleSource).toContain("title: 'Million-Row Crossfilter Explorer'");
+    expect(crossfilterExampleSource).toContain("title: 'Million-Row DataFrame Crossfilter'");
     expect(crossfilterExampleSource).toContain('<MillionRowCrossfilterExample />');
     expect(
       existsSync(
@@ -215,6 +216,7 @@ describe('GPGPU example catalog navigation', () => {
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'showcase/vector-field-lab',
+      'showcase/spectral-wave-lab',
       'showcase/quantum-state-studio',
       'experimental/gpu-sort',
       'experimental/gpu-data-analysis'
