@@ -25,9 +25,8 @@ Run the opt-in comparison with:
 yarn test-browser-benchmarks modules/gpgpu/test/gpu-core/gpu-kernel-benchmark.spec.ts
 ```
 
-For the software-backed CI configuration, prefix the command with `CI=true`. The benchmark attaches
-`GPU_KERNEL_BASELINE` JSON containing device information and nearest-rank timing distributions
-to the test report.
+For the software-backed CI configuration, prefix the command with `CI=true`. The benchmark emits a `GPU_KERNEL_BASELINE` JSON annotation containing device information and
+nearest-rank timing distributions. Add `--reporter=verbose` to display annotations in the terminal.
 It uses identical complete WGSL, layouts, output sizes, and 64 dispatches per graph for both paths.
 Three warmup iterations precede nine measured iterations, alternating path order. Each path retains
 an executable to keep its shader/pipeline cache references alive while graph compilation is measured.
@@ -40,6 +39,22 @@ GPU output is checked after every encoding. Timings report:
 These are execution-overhead baselines, not numerical-kernel throughput or cold compilation results.
 Timing assertions are deliberately absent. Software GPU timings must not be treated as hardware
 performance claims, and heterogeneous or fragmented workloads need separate measurements.
+
+### Initial software-GPU observation
+
+A local Chromium/SwiftShader run on 2026-09-16, using the maximum test-device feature profile,
+reported these medians (microseconds):
+
+| Measurement | Computation | Kernel |
+| --- | ---: | ---: |
+| Warm compilation per node | 43.75 | 3.13 |
+| CPU encoding per dispatch | 7.81 | 9.37 |
+| GPU timestamp per dispatch | 1.01 | 0.56 |
+
+The main observed gain is reduced warm compilation overhead. CPU encoding was slightly slower in
+this run. The tiny software-GPU intervals and coarse browser CPU timer make these directional
+observations, not throughput guarantees. Both paths execute identical WGSL; hardware and larger
+workload measurements are needed before claiming GPU execution gains.
 
 ## Next execution tranche
 

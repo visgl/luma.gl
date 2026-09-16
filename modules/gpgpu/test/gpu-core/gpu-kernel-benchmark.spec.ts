@@ -27,7 +27,7 @@ test('Kernel baseline compares warm compilation and dispatch against Computation
   annotate,
   skip
 }) => {
-  const device = await getWebGPUTestDevice('core');
+  const device = await getWebGPUTestDevice();
   if (!device) skip('WebGPU is unavailable');
   const timestampQueries = device.features.has('timestamp-query');
   const paths = (['computation', 'kernel'] as const).map(kind => {
@@ -77,9 +77,9 @@ test('Kernel baseline compares warm compilation and dispatch against Computation
         }
       }
     }
-    await annotate('GPU_KERNEL_BASELINE', 'benchmark', {
-      contentType: 'application/json',
-      body: JSON.stringify({
+    await annotate(
+      JSON.stringify({
+        benchmark: 'GPU_KERNEL_BASELINE',
         device: device.info,
         dispatchCount: DISPATCH_COUNT,
         warmupIterations: WARMUP_ITERATIONS,
@@ -95,8 +95,9 @@ test('Kernel baseline compares warm compilation and dispatch against Computation
               }
             : {})
         }))
-      })
-    });
+      }),
+      'benchmark'
+    );
   } finally {
     for (const path of paths) {
       path.compiled.destroy();
