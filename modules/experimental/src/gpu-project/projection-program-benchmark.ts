@@ -21,9 +21,13 @@ import {
   type CompiledProjection
 } from './projection-program';
 import {GPUProjectionProgram} from './gpu-projection-program';
-import type {ProjectionCoordinates} from './types';
+import type {ProjectionBounds, ProjectionCoordinates, ProjectionDegree} from './types';
 import type {ProjectionProgramMetadata} from './projection-metadata';
 import {executeGPUProjectionBenchmark} from './gpu-projection-benchmark';
+import {
+  measureProjectionProgramCPU,
+  type ProjectionProgramCPUPathReport
+} from './projection-program-cpu-benchmark';
 import {
   getProjectionBenchmarkTime,
   getProjectionBenchmarkThroughput,
@@ -44,7 +48,13 @@ export type ProjectionProgramBenchmarkOptions = {
   coordinates: readonly ProjectionCoordinates[];
   /** Independent absolute-coordinate oracle, including expected validity. Never inferred from a variant. */
   oracle: (position: ProjectionCoordinates) => {position: ProjectionCoordinates; valid: boolean};
+  /** Descriptive label for the CPU oracle implementation; does not load or select a provider. */
+  oracleLabel?: string;
   variants: readonly ProjectionProgramBenchmarkVariant[];
+  /** Independent consumers in one submission. Materialized mode projects once and shares the result. */
+  consumerCount?: number;
+  /** Enable optional GPU timestamps (default true). Instrumentation prevents compute-pass coalescing. */
+  gpuTiming?: boolean;
   warmupIterations?: number;
   measuredIterations?: number;
 };
@@ -56,6 +66,17 @@ export type ProjectionProgramBenchmarkPathReport = {
   maximumAllowedError: number;
   maximumObservedError: number;
   validRows: number;
+  /** Forward adaptive stages actually executed, excluding unused inverse plans. */
+  adaptiveStages: {
+    index: number;
+    patchCount: number;
+    degree: ProjectionDegree;
+    tolerance: number;
+    bounds: ProjectionBounds;
+  }[];
+  /** Logical projection evaluations per source row in this graph (not measured shader invocations). */
+  projectionsPerRow: number;
+  dispatchCount: number;
   parameterByteLength: number;
   intermediateByteLength: number;
   bufferByteLength: number;
@@ -68,6 +89,10 @@ export type ProjectionProgramBenchmarkPathReport = {
   cpuEncodeTimeMilliseconds: ProjectionBenchmarkDistribution;
   synchronizedTimeMilliseconds: ProjectionBenchmarkDistribution;
   synchronizedCoordinatesPerSecond: number;
+  /** Per-sample CPU encoding plus submission-to-fence time; excludes uploads and readback. */
+  encodeAndSynchronizedTimeMilliseconds: ProjectionBenchmarkDistribution;
+  /** Matching CPU mode median / resident GPU encode+fence median. Null below timer resolution. */
+  residentSpeedupOverCPU: number | null;
   gpuTimeMilliseconds?: ProjectionBenchmarkDistribution;
 };
 
@@ -75,17 +100,23 @@ export type ProjectionProgramBenchmarkReport = {
   device: DeviceInfo;
   inputFormat: 'uint32x4';
   consumer: 'axis-swap';
+  consumerCount: number;
+  timestampQueries: boolean;
+  /** Budgets are equal only when every variant declares the same absolute error threshold. */
+  comparison: 'equal-error-budget' | 'different-error-budgets';
   coordinateCount: number;
   warmupIterations: number;
   measuredIterations: number;
   oracleTimeMilliseconds: ProjectionBenchmarkDistribution;
   oracleChecksum: number;
+  cpuProvider: string;
+  cpuPaths: ProjectionProgramCPUPathReport[];
   paths: ProjectionProgramBenchmarkPathReport[];
 };
 
 /**
- * Compare caller-selected programs against one independent oracle and an identical axis-swap
- * consumer. Inline execution avoids the materialized path's intermediate buffers and second pass.
+ * Compare caller-selected programs against one independent oracle and identical axis-swap
+ * consumers. Inline execution avoids intermediate buffers; materialization projects once for reuse.
  * Every path validates every row before warmup and again after timing; failure returns no report.
  * Both modes use raw binary64 input and require the same output precision and destination frame.
  */
@@ -95,9 +126,13 @@ export async function runProjectionProgramBenchmark(
 ): Promise<ProjectionProgramBenchmarkReport> {
   const warmupIterations = options.warmupIterations ?? 2;
   const measuredIterations = options.measuredIterations ?? 5;
+  const consumerCount = options.consumerCount ?? 1;
+  const timestampQueries = options.gpuTiming !== false && device.features.has('timestamp-query');
   if (
     !options.coordinates.length ||
     options.variants.length < 2 ||
+    !Number.isSafeInteger(consumerCount) ||
+    consumerCount < 1 ||
     new Set(options.variants.map(variant => variant.id)).size !== options.variants.length ||
     !Number.isSafeInteger(warmupIterations) ||
     warmupIterations < 0 ||
@@ -129,11 +164,20 @@ export async function runProjectionProgramBenchmark(
     oracleChecksum = checksum;
   }
   const paths: ProjectionProgramBenchmarkPathReport[] = [];
+  const cpuPaths = measureProjectionProgramCPU({
+    coordinates,
+    oracle: options.oracle,
+    expected,
+    consumerCount,
+    warmupIterations,
+    measuredIterations
+  });
   let firstProjection: CompiledProjection | undefined;
   for (const variant of options.variants) {
     const planningSamples: number[] = [];
     const compilationSamples: number[] = [];
     let projection: CompiledProjection | undefined;
+    let adaptiveStages: ProjectionProgramBenchmarkPathReport['adaptiveStages'] = [];
     for (let iteration = -warmupIterations; iteration < measuredIterations; iteration++) {
       const start = getProjectionBenchmarkTime();
       const program = variant.createProgram();
@@ -143,6 +187,19 @@ export async function runProjectionProgramBenchmark(
         planningSamples.push(planned - start);
         compilationSamples.push(getProjectionBenchmarkTime() - planned);
       }
+      adaptiveStages = program.operations.flatMap((operation, index) =>
+        operation.type === 'adaptive'
+          ? [
+              {
+                index,
+                patchCount: operation.plan.patches.length,
+                degree: operation.plan.degree,
+                tolerance: operation.plan.tolerance,
+                bounds: [...operation.plan.bounds] as ProjectionBounds
+              }
+            ]
+          : []
+      );
     }
     const compiledProjection = projection!;
     firstProjection ??= compiledProjection;
@@ -165,6 +222,10 @@ export async function runProjectionProgramBenchmark(
           expected,
           variant,
           mode,
+          consumerCount,
+          timestampQueries,
+          adaptiveStages,
+          cpuPaths.find(path => path.mode === mode)!,
           warmupIterations,
           measuredIterations,
           summarizeProjectionBenchmarkSamples(planningSamples),
@@ -177,11 +238,20 @@ export async function runProjectionProgramBenchmark(
     device: {...device.info},
     inputFormat: 'uint32x4',
     consumer: 'axis-swap',
+    consumerCount,
+    timestampQueries,
+    comparison: options.variants.every(
+      variant => variant.maximumError === options.variants[0].maximumError
+    )
+      ? 'equal-error-budget'
+      : 'different-error-budgets',
     coordinateCount: coordinates.length,
     warmupIterations,
     measuredIterations,
     oracleTimeMilliseconds: summarizeProjectionBenchmarkSamples(oracleSamples),
     oracleChecksum,
+    cpuProvider: options.oracleLabel ?? 'caller-supplied oracle',
+    cpuPaths,
     paths
   };
 }
@@ -193,6 +263,10 @@ async function measurePath(
   expected: readonly {position: ProjectionCoordinates; valid: boolean}[],
   variant: ProjectionProgramBenchmarkVariant,
   mode: 'inline' | 'materialized',
+  consumerCount: number,
+  timestampQueries: boolean,
+  adaptiveStages: ProjectionProgramBenchmarkPathReport['adaptiveStages'],
+  cpuPath: ProjectionProgramCPUPathReport,
   warmupIterations: number,
   measuredIterations: number,
   planningTimeMilliseconds: ProjectionBenchmarkDistribution,
@@ -229,10 +303,13 @@ async function measurePath(
     );
     const format = projection.precision === 'double-single' ? 'float32x4' : 'float32x2';
     const outputByteLength = coordinates.length * (format === 'float32x4' ? 16 : 8);
-    const output = makeView('output', format, outputByteLength);
-    const outputBuffer = buffers[buffers.length - 1];
-    const validity = makeView('validity', 'uint32', coordinates.length * 4);
-    const validityBuffer = buffers[buffers.length - 1];
+    const outputs = Array.from({length: consumerCount}, (_value, index) => {
+      const output = makeView(`output-${index}`, format, outputByteLength);
+      const outputBuffer = buffers[buffers.length - 1];
+      const validity = makeView(`validity-${index}`, 'uint32', coordinates.length * 4);
+      const validityBuffer = buffers[buffers.length - 1];
+      return {output, outputBuffer, validity, validityBuffer};
+    });
     const shader = projection.getShader();
     const dispatchLayout = getGeospatialDispatchLayout(
       coordinates.length,
@@ -257,17 +334,23 @@ async function measurePath(
         validity: intermediateValidity
       });
       contributor.addToGraph(graph);
-      addGeospatialPass(graph, {
-        id: 'consumer',
-        dispatchLayout,
-        bindings: {positions: intermediate, sourceValidity: intermediateValidity, output, validity},
-        resources: [
-          {buffer: intermediate, usage: 'storage-read'},
-          {buffer: intermediateValidity, usage: 'storage-read'},
-          {buffer: output, usage: 'storage-write'},
-          {buffer: validity, usage: 'storage-write'}
-        ],
-        source: `
+      for (const [index, {output, validity}] of outputs.entries()) {
+        addGeospatialPass(graph, {
+          id: `consumer-${index}`,
+          dispatchLayout,
+          bindings: {
+            positions: intermediate,
+            sourceValidity: intermediateValidity,
+            output,
+            validity
+          },
+          resources: [
+            {buffer: intermediate, usage: 'storage-read'},
+            {buffer: intermediateValidity, usage: 'storage-read'},
+            {buffer: output, usage: 'storage-write'},
+            {buffer: validity, usage: 'storage-write'}
+          ],
+          source: `
 @group(0) @binding(auto) var<storage, read> positions: array<${shader.outputType}>;
 @group(0) @binding(auto) var<storage, read> sourceValidity: array<u32>;
 @group(0) @binding(auto) var<storage, read_write> output: array<${shader.outputType}>;
@@ -277,22 +360,24 @@ async function measurePath(
   output[index] = positions[index].${swap};
   validity[index] = sourceValidity[index];
 }`
-      });
+        });
+      }
     } else {
       const words = projection.packParameters();
       const parameters = makeView('parameters', 'uint32', words.byteLength, words);
-      addGeospatialPass(graph, {
-        id: 'inline-consumer',
-        dispatchLayout,
-        precise: true,
-        bindings: {[shader.bindingName]: parameters, positions, output, validity},
-        resources: [
-          {buffer: parameters, usage: 'storage-read'},
-          {buffer: positions, usage: 'storage-read'},
-          {buffer: output, usage: 'storage-write'},
-          {buffer: validity, usage: 'storage-write'}
-        ],
-        source: `${shader.source}
+      for (const [index, {output, validity}] of outputs.entries()) {
+        addGeospatialPass(graph, {
+          id: `inline-consumer-${index}`,
+          dispatchLayout,
+          precise: true,
+          bindings: {[shader.bindingName]: parameters, positions, output, validity},
+          resources: [
+            {buffer: parameters, usage: 'storage-read'},
+            {buffer: positions, usage: 'storage-read'},
+            {buffer: output, usage: 'storage-write'},
+            {buffer: validity, usage: 'storage-write'}
+          ],
+          source: `${shader.source}
 @group(0) @binding(auto) var<storage, read> positions: array<vec4u>;
 @group(0) @binding(auto) var<storage, read_write> output: array<${shader.outputType}>;
 @group(0) @binding(auto) var<storage, read_write> validity: array<u32>;
@@ -302,7 +387,8 @@ async function measurePath(
   output[index] = projected.position.${swap};
   validity[index] = projected.valid;
 }`
-      });
+        });
+      }
     }
     const compilationStart = getProjectionBenchmarkTime();
     compiled = await graph.compileAsync();
@@ -320,45 +406,47 @@ async function measurePath(
       'program-benchmark-validation'
     );
     const validate = async (): Promise<number> => {
-      const outputBytes = await outputBuffer.readAsync();
-      const validityBytes = await validityBuffer.readAsync();
-      const values = new Float32Array(
-        outputBytes.buffer,
-        outputBytes.byteOffset,
-        outputBytes.byteLength / 4
-      );
-      const validities = new Uint32Array(
-        validityBytes.buffer,
-        validityBytes.byteOffset,
-        coordinates.length
-      );
       let maximumError = 0;
-      for (let row = 0; row < coordinates.length; row++) {
-        if (validities[row] !== Number(expected[row].valid))
-          throw new Error(`${variant.id}/${mode}: validity differs from oracle at row ${row}`);
-        const width = format === 'float32x4' ? 4 : 2;
-        const offset = row * width;
-        if (!expected[row].valid) {
-          if (values.subarray(offset, offset + width).some(value => value !== 0))
-            throw new Error(`${variant.id}/${mode}: invalid row must be zero`);
-          continue;
-        }
-        const actual =
-          format === 'float32x4'
-            ? [values[offset + 2] + values[offset + 3], values[offset] + values[offset + 1]]
-            : [
-                values[offset + 1] + projection.destinationOrigin[0],
-                values[offset] + projection.destinationOrigin[1]
-              ];
-        const error = Math.hypot(
-          actual[0] - expected[row].position[0],
-          actual[1] - expected[row].position[1]
+      for (const {outputBuffer, validityBuffer} of outputs) {
+        const outputBytes = await outputBuffer.readAsync();
+        const validityBytes = await validityBuffer.readAsync();
+        const values = new Float32Array(
+          outputBytes.buffer,
+          outputBytes.byteOffset,
+          outputBytes.byteLength / 4
         );
-        if (!Number.isFinite(error) || error > variant.maximumError)
-          throw new Error(
-            `${variant.id}/${mode}: row ${row} exceeds error budget (${error} > ${variant.maximumError})`
+        const validities = new Uint32Array(
+          validityBytes.buffer,
+          validityBytes.byteOffset,
+          coordinates.length
+        );
+        for (let row = 0; row < coordinates.length; row++) {
+          if (validities[row] !== Number(expected[row].valid))
+            throw new Error(`${variant.id}/${mode}: validity differs from oracle at row ${row}`);
+          const width = format === 'float32x4' ? 4 : 2;
+          const offset = row * width;
+          if (!expected[row].valid) {
+            if (values.subarray(offset, offset + width).some(value => value !== 0))
+              throw new Error(`${variant.id}/${mode}: invalid row must be zero`);
+            continue;
+          }
+          const actual =
+            format === 'float32x4'
+              ? [values[offset + 2] + values[offset + 3], values[offset] + values[offset + 1]]
+              : [
+                  values[offset + 1] + projection.destinationOrigin[0],
+                  values[offset] + projection.destinationOrigin[1]
+                ];
+          const error = Math.hypot(
+            actual[0] - expected[row].position[0],
+            actual[1] - expected[row].position[1]
           );
-        maximumError = Math.max(maximumError, error);
+          if (!Number.isFinite(error) || error > variant.maximumError)
+            throw new Error(
+              `${variant.id}/${mode}: row ${row} exceeds error budget (${error} > ${variant.maximumError})`
+            );
+          maximumError = Math.max(maximumError, error);
+        }
       }
       return maximumError;
     };
@@ -367,9 +455,12 @@ async function measurePath(
       await executeGPUProjectionBenchmark(device, compiled, 'program-benchmark-warmup');
     const executions: Awaited<ReturnType<typeof executeGPUProjectionBenchmark>>[] = [];
     for (let iteration = 0; iteration < measuredIterations; iteration++) {
-      // One projection and one consumer can produce two separate compute passes.
-      const querySet = device.features.has('timestamp-query')
-        ? device.createQuerySet({type: 'timestamp', count: mode === 'materialized' ? 4 : 2})
+      // Reserve two timestamps per dispatch, even if graph compilation groups compatible passes.
+      const querySet = timestampQueries
+        ? device.createQuerySet({
+            type: 'timestamp',
+            count: 2 * (consumerCount + (mode === 'materialized' ? 1 : 0))
+          })
         : undefined;
       try {
         executions.push(
@@ -393,6 +484,12 @@ async function measurePath(
         ? []
         : [execution.timing.gpuTimeMilliseconds]
     );
+    const encodeAndSynchronizedTimeMilliseconds = summarizeProjectionBenchmarkSamples(
+      executions.map(
+        execution =>
+          execution.timing.cpuEncodeTimeMilliseconds + execution.synchronizedTimeMilliseconds
+      )
+    );
     const parameterByteLength = projection.packParameters().byteLength;
     return {
       id: variant.id,
@@ -401,6 +498,9 @@ async function measurePath(
       maximumAllowedError: variant.maximumError,
       maximumObservedError,
       validRows: expected.filter(row => row.valid).length,
+      adaptiveStages,
+      projectionsPerRow: mode === 'materialized' ? 1 : consumerCount,
+      dispatchCount: consumerCount + (mode === 'materialized' ? 1 : 0),
       parameterByteLength,
       intermediateByteLength,
       bufferByteLength:
@@ -414,6 +514,11 @@ async function measurePath(
         executions.map(execution => execution.timing.cpuEncodeTimeMilliseconds)
       ),
       synchronizedTimeMilliseconds,
+      encodeAndSynchronizedTimeMilliseconds,
+      residentSpeedupOverCPU:
+        encodeAndSynchronizedTimeMilliseconds.median > 0 && cpuPath.durationMilliseconds.median > 0
+          ? cpuPath.durationMilliseconds.median / encodeAndSynchronizedTimeMilliseconds.median
+          : null,
       synchronizedCoordinatesPerSecond: getProjectionBenchmarkThroughput(
         coordinates.length,
         synchronizedTimeMilliseconds.median

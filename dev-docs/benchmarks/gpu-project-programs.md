@@ -65,6 +65,10 @@ compilation column measures an additional standalone rebuild, not a decompositio
 
 ## Interpretation and follow-ups
 
+The [multi-patch and consumer-reuse follow-up](gpu-project-performance-sweeps.md) adds equal-budget
+quadratic/cubic comparisons and uninstrumented reuse measurements. It is still one Apple device,
+not cross-vendor or production-consumer evidence.
+
 The adaptive path retains substantially more precision in these fixtures; its Float32 storage
 limbs are not evidence of Float32 arithmetic. Native timing does not justify silently relaxing the
 application's error budget. The minimal consumer exposes intermediate-memory cost, but observed

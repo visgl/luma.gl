@@ -45,6 +45,8 @@ it.for([
     context.skip();
   const report = await runProjectionProgramBenchmark(device, {
     coordinates: [[10000000.25, 20000000.5]],
+    consumerCount: 3,
+    gpuTiming: false,
     oracle: position => ({position, valid: true}),
     variants: ['first', 'second'].map(id => ({
       id,
@@ -59,6 +61,23 @@ it.for([
     measuredIterations: 1
   });
   expect(report.paths.every(path => path.maximumObservedError === 0)).toBe(true);
+  expect(report.consumerCount).toBe(3);
+  expect(report.cpuProvider).toBe('caller-supplied oracle');
+  expect(report.cpuPaths.map(path => path.checksum)).toEqual([90000002.25, 90000002.25]);
+  expect(report.cpuPaths.every(path => path.outputEncoding === 'binary64')).toBe(true);
+  expect(report.comparison).toBe('equal-error-budget');
+  expect(report.timestampQueries).toBe(false);
+  for (const path of report.paths) {
+    expect(path.gpuTimeMilliseconds).toBeUndefined();
+    expect(path.adaptiveStages).toEqual([]);
+    expect(path.projectionsPerRow).toBe(path.mode === 'inline' ? 3 : 1);
+    expect(path.dispatchCount).toBe(path.mode === 'inline' ? 3 : 4);
+    const rowBytes = precision === 'double-single' ? 20 : 12;
+    expect(path.intermediateByteLength).toBe(path.mode === 'inline' ? 0 : rowBytes);
+    expect(path.bufferByteLength).toBe(
+      16 + 3 * rowBytes + path.parameterByteLength + path.intermediateByteLength
+    );
+  }
   await expect(
     runProjectionProgramBenchmark(device, {
       coordinates: [[1, 2]],

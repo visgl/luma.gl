@@ -28,6 +28,10 @@ it.each([
   {warmupIterations: -1},
   {measuredIterations: 0},
   {measuredIterations: 1.5},
+  {consumerCount: 0},
+  {consumerCount: -1},
+  {consumerCount: 1.5},
+  {consumerCount: Infinity},
   {variants: options.variants.map(variant => ({...variant, maximumError: NaN}))}
 ])('rejects invalid benchmark controls without GPU allocation: %j', async invalid => {
   const device = new NullDevice({});
@@ -66,7 +70,7 @@ it('destroys allocated buffers when graph compilation fails before execution', a
   try {
     // NullDevice cannot compile a compute pipeline; partially allocated resources must be released.
     await expect(
-      runProjectionProgramBenchmark(device, {...options, warmupIterations: 2})
+      runProjectionProgramBenchmark(device, {...options, warmupIterations: 2, consumerCount: 3})
     ).rejects.toThrow(/ComputePipeline/);
     expect(submit).not.toHaveBeenCalled();
     expect(allocation.mock.results.length).toBeGreaterThan(0);
