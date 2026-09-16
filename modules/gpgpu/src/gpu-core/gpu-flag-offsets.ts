@@ -11,7 +11,7 @@ import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
+  getUint32GraphPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
 
@@ -51,12 +51,13 @@ export class GPUFlagOffsets {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const {flags, offsets, count} = this.props;
-    for (const view of [...getChunks(flags), ...getChunks(offsets), count]) {
+    const {flags, count} = this.props;
+    for (const view of [...getChunks(flags), ...getChunks(this.props.offsets), count]) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
     }
+    const offsets = getUint32GraphPrefix(graph, this.props.offsets, flags.length);
     if (flags.length > 0) {
       nodes.push(
         ...new GPUScan({
@@ -67,7 +68,7 @@ export class GPUFlagOffsets {
         }).getCommandNodes(graph)
       );
     }
-    nodes.push(...addCountPass(graph, this.props));
+    nodes.push(...addCountPass(graph, {...this.props, offsets}));
 
     return nodes;
   }
@@ -88,7 +89,8 @@ function addCountPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const source = hasValues
-    ? `const LAST_INDEX: u32 = ${flagChunk!.length - 1}u;
+    ? `const LAST_FLAG_INDEX: u32 = ${flagChunk!.length - 1}u;
+const LAST_OFFSET_INDEX: u32 = ${offsetChunk!.length - 1}u;
 const FLAG_OFFSET: u32 = ${getViewElementOffset(flagChunk!)}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsetChunk!)}u;
 const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
@@ -98,7 +100,7 @@ const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(@builtin(local_invocation_index) localInvocationIndex: u32) {
   if (localInvocationIndex > 0u) { return; }
-  count[COUNT_OFFSET] = offsets[OFFSETS_OFFSET + LAST_INDEX] + flags[FLAG_OFFSET + LAST_INDEX];
+  count[COUNT_OFFSET] = offsets[OFFSETS_OFFSET + LAST_OFFSET_INDEX] + flags[FLAG_OFFSET + LAST_FLAG_INDEX];
 }`
     : `const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
 @group(0) @binding(0) var<storage, read_write> count: array<u32>;
@@ -165,13 +167,7 @@ function validateConfiguration(props: Readonly<GPUFlagOffsetsProps>): void {
     validatePackedUint32View(view, `${props.id} offsets`);
   }
   validatePackedUint32View(props.count, `${props.id} count`);
-  const flagsAreVector = props.flags instanceof GraphVectorView;
-  if (flagsAreVector !== props.offsets instanceof GraphVectorView) {
-    throw new Error(`${props.id} flags and offsets must both be data views or vector views`);
-  }
-  if (props.flags instanceof GraphVectorView && props.offsets instanceof GraphVectorView) {
-    validateMatchingVectorTopology(props.flags, props.offsets, `${props.id} offsets`);
-  } else if (props.offsets.length < props.flags.length) {
+  if (props.offsets.length < props.flags.length) {
     throw new Error(`${props.id} offsets must contain at least flags.length rows`);
   }
   if (props.count.length < 1) {

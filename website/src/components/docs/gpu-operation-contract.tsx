@@ -399,7 +399,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     ownership: 'Flags, offsets, and count are caller-owned; hierarchical scan scratch is graph-owned.',
     output: 'One source-aligned exclusive offset per flag and an exact count modulo uint32.',
     work: 'One hierarchical exclusive scan plus one scalar publication pass.',
-    chunks: 'Consumes one GraphDataView; invoke once per durable source chunk to retain boundaries.',
+    chunks: 'Atomic and vector views may have independent boundaries; only the flag-length destination prefix is written.',
     execution: 'Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.',
     neighborhood: 'format classifier → GPUFlagOffsets → compaction destinations, counts, or GPUSegmentOffsets.',
     cost: 'The complete flag stream is scanned even when few flags are set.',
@@ -410,12 +410,12 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads element flags/offsets and segment-start flags; writes segment indices, offsets, and count.',
     ownership: 'All public views are caller-owned; hierarchical segment-scan scratch is graph-owned.',
     output: 'Source-aligned segment indices plus a segmentCount + 1 valid offset prefix.',
-    work: 'One hierarchical inclusive scan, one offset publication pass, and one scalar count pass.',
-    chunks: 'Consumes one GraphDataView chunk and preserves its local segment coordinate space.',
+    work: 'One hierarchical exclusive scan, offset publication per aligned span, and one scalar count pass.',
+    chunks: 'Slot views align by logical row across independent atomic/vector boundaries; the global list-offset destination remains atomic.',
     execution: 'Contributes ordinary graph nodes and never compiles, submits, maps, or reads back.',
     neighborhood: 'GPUFlagOffsets plus segment flags → GPUSegmentOffsets → lists, groups, or nested consumers.',
     cost: 'Separating shared value and per-depth element scans saves work only when layouts reuse them.',
-    mistake: 'Keep segmentStartFlags[0] zero and consume only the prefix named by segmentCount.'
+    mistake: 'Mark every segment start, including the first; consume only segmentCount + 1 list offsets.'
   },
   'gpu-segmented-layout': {
     problem: 'Turn slot-aligned value, element, and segment-start flags into dense columnar layout metadata.',

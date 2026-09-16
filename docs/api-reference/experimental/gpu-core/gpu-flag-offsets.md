@@ -31,8 +31,9 @@ element `GPUFlagOffsets` and `GPUSegmentOffsets` per depth.
 | `offsets` | at least slot count | Exclusive prefix sum; the dense destination for each slot |
 | `count` | at least 1 | Total set flags in element zero |
 
-`flags` and `offsets` may be matching `GraphVectorView`s. In that form, the scan carries across
-chunks without repacking their buffers and `count` covers the complete vector. An empty input writes
+`flags` and `offsets` may independently be atomic views or `GraphVectorView`s with different
+partitions. The scan carries across chunks without repacking their buffers, and `count` covers
+the complete flag sequence. Extra offset capacity is left untouched. An empty input writes
 `count[0] = 0`. No offset element exists for an empty input. Counts and offsets use `uint32`
 arithmetic, so callers must retain page or batch boundaries before overflow.
 

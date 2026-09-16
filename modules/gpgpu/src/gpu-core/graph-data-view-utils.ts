@@ -160,6 +160,40 @@ export function createTransientVectorView<T extends VertexFormat, Parameters>(
   });
 }
 
+/** Borrows a packed uint32 prefix without allocating or combining chunks. @internal */
+export function getUint32GraphPrefix<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  input: GraphDataView<'uint32'> | GraphVectorView<'uint32'>,
+  length: number
+): GraphDataView<'uint32'> | GraphVectorView<'uint32'> {
+  if (!Number.isSafeInteger(length) || length < 0 || length > input.length) {
+    throw new Error('Graph prefix must fit within the input');
+  }
+  if (length === input.length) return input;
+  const chunks = input instanceof GraphVectorView ? input.data : [input];
+  let remaining = length;
+  const data: GraphDataView<'uint32'>[] = [];
+  for (const chunk of chunks) {
+    const chunkLength = Math.min(remaining, chunk.length);
+    data.push(
+      chunkLength === chunk.length
+        ? chunk
+        : graph.createDataView(chunk.buffer, {
+            format: chunk.format,
+            length: chunkLength,
+            byteOffset: chunk.byteOffset,
+            byteStride: chunk.byteStride,
+            rowByteLength: chunk.rowByteLength
+          })
+    );
+    remaining -= chunkLength;
+    if (remaining === 0) break;
+  }
+  return input instanceof GraphVectorView
+    ? new GraphVectorView({...input, length, valueLength: length, data})
+    : data[0];
+}
+
 /** Validates that two vectors have identical ordered chunk lengths. @internal */
 export function validateMatchingVectorTopology(
   first: GraphVectorView,
