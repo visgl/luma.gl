@@ -50,7 +50,7 @@ the aligned diagnostics available even when the primary result is compacted.
 
 The right index stores one value per distinct key. If right-side input contains duplicate keys,
 either hash-index implementation deterministically retains the value from the lowest source row.
-For `GPUBatchHashIndex`, that winner is the earliest row across all preserved right-side chunks.
+For both index builders, that winner is the earliest row across all right-side chunks.
 The resulting join is therefore many-left-to-one-right: repeated left keys may all map to one
 right row.
 
@@ -82,6 +82,23 @@ The join never resizes its outputs. A workload can choose fixed worst-case stora
 counts to size a later frame, or reject overflow in correctness-sensitive processing. The contract
 keeps allocation and latency policy with the application.
 
+### One global result across independent chunks
+
+`GPUHashJoin` treats all input chunks as one ordered sequence. A global scan carries match offsets
+across boundaries, and pairs fill the caller's existing output chunks up to their total capacity.
+The left and right output vectors may be partitioned differently. Empty chunks and zero output
+capacity are valid; count and overflow are still published. Unused output rows are untouched.
+Generated left IDs use global source positions, not positions within a chunk.
+
+Inputs and outputs stay borrowed. Matched rows and scan scratch follow the key topology, and
+caller-provided found/probe vectors keep their own boundaries. Lowering aligns views without
+concatenation. Scatter dispatch count grows with the product of aligned source and destination
+spans; optimizing routing for heavily fragmented vectors remains future work.
+
+Use [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) when each
+source chunk must instead have its own output capacity, required count, overflow, and diagnostics.
+Its publication domains intentionally do not spill into neighboring batches.
+
 ### Probe statistics separate lookup cost from join density
 
 The four-row statistics block comes directly from `GPUHashIndexQuery`:
@@ -98,13 +115,15 @@ or index capacity and probe bounds for the latter.
 
 ### Composition and ownership
 
-The workflow reuses `GPUHashIndexQuery` and `GPUScan`, then adds one pair-scatter pass. Callers own
+The workflow reuses `GPUHashIndexQuery` and `GPUScan`, then adds pair-scatter passes over aligned source and destination spans. Callers own
 the persistent right index, left keys, published pairs, count, overflow, and statistics. The graph
 owns transient matched rows, flags, probe counts, and scan offsets unless their diagnostic outputs
 are supplied explicitly.
 
-All current inputs are packed `uint32` views. Preserved chunk topology, multiple right matches,
-payload materialization, outer joins, and join chaining remain future contracts. Keeping this slice
+Keys, explicit left rows, diagnostic outputs, and pair outputs accept packed `uint32` atomic views
+or vectors. Their boundaries may differ. Tables, count, overflow, and statistics remain atomic
+views. Multiple right matches, payload materialization, outer joins, and join chaining remain
+future contracts. Keeping this slice
 row-ID-oriented lets downstream consumers gather their own typed columns without making the join
 primitive depend on Arrow or a particular table representation.
 

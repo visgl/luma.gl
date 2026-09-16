@@ -5,16 +5,23 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {GPUHashIndexQuery, type GPUHashIndexView} from './gpu-hash-index';
 import {GPUScan} from './gpu-scan';
 import {
   createTransientView,
+  createTransientVectorView,
   doGraphDataViewsOverlap,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 
 const HASH_JOIN_WORKGROUP_SIZE = 256;
 const MAXIMUM_UINT32 = 0xffffffff;
@@ -27,15 +34,15 @@ export type GPUHashJoinProps = {
   /** Previously built right-side key-to-row index. */
   index: GPUHashIndexView;
   /** Packed left-side keys in source order. */
-  keys: GraphDataView<'uint32'>;
+  keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Optional left-side row IDs aligned with `keys`. */
-  leftRows?: GraphDataView<'uint32'>;
+  leftRows?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** First generated left row ID. Mutually exclusive with `leftRows`. */
   firstLeftRow?: number;
   /** Stable compacted left row IDs. Its length defines output capacity. */
-  outputLeftRows: GraphDataView<'uint32'>;
+  outputLeftRows: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Matched right row IDs aligned with `outputLeftRows`. */
-  outputRightRows: GraphDataView<'uint32'>;
+  outputRightRows: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Required match count before capacity truncation. */
   count: GraphDataView<'uint32'>;
   /** Nonzero when `count` exceeds output capacity. */
@@ -43,9 +50,9 @@ export type GPUHashJoinProps = {
   /** Four-row hash-query statistics block. */
   statistics: GraphDataView<'uint32'>;
   /** Optional source-aligned match mask. */
-  found?: GraphDataView<'uint32'>;
+  found?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Optional source-aligned probe counts. */
-  probes?: GraphDataView<'uint32'>;
+  probes?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Defaults to the index probe bound. */
   maxProbeCount?: number;
 };
@@ -67,16 +74,16 @@ export type GPUHashJoinStats = {
 export class GPUHashJoin {
   readonly id: string;
   readonly index: GPUHashIndexView;
-  readonly keys: GraphDataView<'uint32'>;
-  readonly leftRows?: GraphDataView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly leftRows?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly firstLeftRow: number;
-  readonly outputLeftRows: GraphDataView<'uint32'>;
-  readonly outputRightRows: GraphDataView<'uint32'>;
+  readonly outputLeftRows: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly outputRightRows: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly count: GraphDataView<'uint32'>;
   readonly overflow: GraphDataView<'uint32'>;
   readonly statistics: GraphDataView<'uint32'>;
-  readonly found?: GraphDataView<'uint32'>;
-  readonly probes?: GraphDataView<'uint32'>;
+  readonly found?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly probes?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly maxProbeCount: number;
   readonly stats: GPUHashJoinStats;
 
@@ -109,7 +116,9 @@ export class GPUHashJoin {
       ...(this.found ? ([[this.found, 'found']] as const) : []),
       ...(this.probes ? ([[this.probes, 'probes']] as const) : [])
     ] as const) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view)) {
+        validatePackedUint32View(chunk, `${this.id} ${name}`);
+      }
     }
     if (this.leftRows && this.leftRows.length !== this.keys.length) {
       throw new Error(`${this.id} leftRows length must match keys`);
@@ -119,6 +128,9 @@ export class GPUHashJoin {
     }
     if (this.outputLeftRows.length !== this.outputRightRows.length) {
       throw new Error(`${this.id} output capacities must match`);
+    }
+    if (this.outputLeftRows.length > MAXIMUM_UINT32) {
+      throw new Error(`${this.id} output capacity must fit in uint32`);
     }
     if (
       this.index.tableKeys.length !== this.index.tableValues.length ||
@@ -207,20 +219,17 @@ export class GPUHashJoin {
       ...(this.found ? [this.found] : []),
       ...(this.probes ? [this.probes] : [])
     ];
-    if (views.some(view => view.buffer.graph !== graph)) {
+    if (views.flatMap(getGraphVectorData).some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    const matchedRightRows = createTransientView(
-      graph,
-      `${this.id}-matched-right-rows`,
-      'uint32',
-      this.keys.length
-    );
-    const found =
-      this.found ?? createTransientView(graph, `${this.id}-found`, 'uint32', this.keys.length);
-    const probes =
-      this.probes ?? createTransientView(graph, `${this.id}-probes`, 'uint32', this.keys.length);
+    const createScratch = (id: string) =>
+      this.keys instanceof GraphVectorView
+        ? createTransientVectorView(graph, id, this.keys)
+        : createTransientView(graph, id, 'uint32', this.keys.length);
+    const matchedRightRows = createScratch(`${this.id}-matched-right-rows`);
+    const found = this.found ?? createScratch(`${this.id}-found`);
+    const probes = this.probes ?? createScratch(`${this.id}-probes`);
     nodes.push(
       ...new GPUHashIndexQuery({
         id: `${this.id}-lookup`,
@@ -237,13 +246,50 @@ export class GPUHashJoin {
     if (this.keys.length === 0) {
       nodes.push(...addEmptyJoinPass(graph, this));
     } else {
-      const offsets = createTransientView(graph, `${this.id}-offsets`, 'uint32', this.keys.length);
+      const offsets = createScratch(`${this.id}-offsets`);
       nodes.push(
         ...new GPUScan({id: `${this.id}-scan`, input: found, output: offsets}).getCommandNodes(
           graph
         )
       );
-      nodes.push(...addJoinScatterPass(graph, this, matchedRightRows, found, offsets));
+      // Global scan offsets route stable pairs into independently partitioned destinations.
+      const sources = alignGraphVectorViews(graph, [
+        matchedRightRows,
+        found,
+        offsets,
+        this.leftRows ?? matchedRightRows
+      ]);
+      const destinations = alignGraphVectorViews(graph, [
+        this.outputLeftRows,
+        this.outputRightRows
+      ]);
+      let outputStart = 0;
+      for (const [destinationIndex, [outputLeftRows, outputRightRows]] of destinations.entries()) {
+        let inputStart = 0;
+        for (const [sourceIndex, [matchedRows, flags, positions, leftRows]] of sources.entries()) {
+          nodes.push(
+            ...addJoinScatterPass(
+              graph,
+              {
+                id: `${this.id}-source-${sourceIndex}-destination-${destinationIndex}`,
+                firstLeftRow: this.firstLeftRow + inputStart,
+                leftRows: this.leftRows ? leftRows : undefined,
+                outputLeftRows,
+                outputRightRows,
+                outputStart
+              },
+              matchedRows,
+              flags,
+              positions
+            )
+          );
+          inputStart += matchedRows.length;
+        }
+        outputStart += outputLeftRows.length;
+      }
+      // Publish the global count once, even when output capacity is zero.
+      const [, lastFound, lastOffsets] = sources[sources.length - 1];
+      nodes.push(...addJoinCountOnlyPass(graph, this, lastFound, lastOffsets));
     }
     if (this.index.statistics) {
       nodes.push(...addSourceOverflowPass(graph, this.id, this.index.statistics, this.overflow));
@@ -285,18 +331,21 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
 
 function addJoinScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  join: GPUHashJoin,
+  join: {
+    id: string;
+    firstLeftRow: number;
+    leftRows?: GraphDataView<'uint32'>;
+    outputLeftRows: GraphDataView<'uint32'>;
+    outputRightRows: GraphDataView<'uint32'>;
+    outputStart: number;
+  },
   matchedRightRows: GraphDataView<'uint32'>,
   found: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  if (join.outputLeftRows.length === 0) {
-    nodes.push(...addJoinCountOnlyPass(graph, join, found, offsets));
-    return nodes;
-  }
   const layout = getDispatchLayout(
-    join.keys.length,
+    matchedRightRows.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const leftRowsBinding = join.leftRows
@@ -307,8 +356,9 @@ function addJoinScatterPass<Parameters>(
     : `${join.firstLeftRow}u + inputIndex`;
   const firstOutputBinding = join.leftRows ? 4 : 3;
   const source = /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${join.keys.length}u;
-const OUTPUT_CAPACITY: u32 = ${join.outputLeftRows.length}u;
+const ELEMENT_COUNT: u32 = ${matchedRightRows.length}u;
+const OUTPUT_START: u32 = ${join.outputStart}u;
+const OUTPUT_END: u32 = ${join.outputStart + join.outputLeftRows.length}u;
 const DISPATCH_X: u32 = ${layout.x}u;
 const DISPATCH_Y: u32 = ${layout.y}u;
 const MATCHED_ROWS_OFFSET: u32 = ${getViewElementOffset(matchedRightRows)}u;
@@ -316,16 +366,12 @@ const FOUND_OFFSET: u32 = ${getViewElementOffset(found)}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsets)}u;
 const OUTPUT_LEFT_OFFSET: u32 = ${getViewElementOffset(join.outputLeftRows)}u;
 const OUTPUT_RIGHT_OFFSET: u32 = ${getViewElementOffset(join.outputRightRows)}u;
-const COUNT_OFFSET: u32 = ${getViewElementOffset(join.count)}u;
-const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
 @group(0) @binding(0) var<storage, read> matchedRightRows: array<u32>;
 @group(0) @binding(1) var<storage, read> found: array<u32>;
 @group(0) @binding(2) var<storage, read> offsets: array<u32>;
 ${leftRowsBinding}
 @group(0) @binding(${firstOutputBinding}) var<storage, read_write> outputLeftRows: array<u32>;
 @group(0) @binding(${firstOutputBinding + 1}) var<storage, read_write> outputRightRows: array<u32>;
-@group(0) @binding(${firstOutputBinding + 2}) var<storage, read_write> count: array<u32>;
-@group(0) @binding(${firstOutputBinding + 3}) var<storage, read_write> overflow: array<u32>;
 
 @compute @workgroup_size(${HASH_JOIN_WORKGROUP_SIZE}) fn main(
   @builtin(workgroup_id) workgroupId: vec3u,
@@ -336,15 +382,10 @@ ${leftRowsBinding}
   if (inputIndex >= ELEMENT_COUNT) { return; }
   let accepted = min(found[FOUND_OFFSET + inputIndex], 1u);
   let outputIndex = offsets[OFFSETS_OFFSET + inputIndex];
-  if (accepted != 0u && outputIndex < OUTPUT_CAPACITY) {
-    outputLeftRows[OUTPUT_LEFT_OFFSET + outputIndex] = ${leftRowExpression};
-    outputRightRows[OUTPUT_RIGHT_OFFSET + outputIndex] =
+  if (accepted != 0u && outputIndex >= OUTPUT_START && outputIndex < OUTPUT_END) {
+    outputLeftRows[OUTPUT_LEFT_OFFSET + outputIndex - OUTPUT_START] = ${leftRowExpression};
+    outputRightRows[OUTPUT_RIGHT_OFFSET + outputIndex - OUTPUT_START] =
       matchedRightRows[MATCHED_ROWS_OFFSET + inputIndex];
-  }
-  if (inputIndex == ELEMENT_COUNT - 1u) {
-    let requiredCount = outputIndex + accepted;
-    count[COUNT_OFFSET] = requiredCount;
-    overflow[OVERFLOW_OFFSET] = select(0u, 1u, requiredCount > OUTPUT_CAPACITY);
   }
 }`;
   nodes.push(
@@ -359,9 +400,7 @@ ${leftRowsBinding}
           ? ([{buffer: join.leftRows, usage: 'storage-read'}] as GraphBufferUse[])
           : []),
         {buffer: join.outputLeftRows, usage: 'storage-write'},
-        {buffer: join.outputRightRows, usage: 'storage-write'},
-        {buffer: join.count, usage: 'storage-write'},
-        {buffer: join.overflow, usage: 'storage-write'}
+        {buffer: join.outputRightRows, usage: 'storage-write'}
       ],
       bindings: {
         matchedRightRows,
@@ -369,9 +408,7 @@ ${leftRowsBinding}
         offsets,
         ...(join.leftRows ? {leftRows: join.leftRows} : {}),
         outputLeftRows: join.outputLeftRows,
-        outputRightRows: join.outputRightRows,
-        count: join.count,
-        overflow: join.overflow
+        outputRightRows: join.outputRightRows
       },
       dispatchSize: layout
     })
@@ -388,7 +425,7 @@ function addJoinCountOnlyPass<Parameters>(
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const source = /* wgsl */ `
-const LAST_INDEX: u32 = ${join.keys.length - 1}u;
+const LAST_INDEX: u32 = ${found.length - 1}u;
 const FOUND_OFFSET: u32 = ${getViewElementOffset(found)}u;
 const OFFSETS_OFFSET: u32 = ${getViewElementOffset(offsets)}u;
 const COUNT_OFFSET: u32 = ${getViewElementOffset(join.count)}u;
@@ -402,7 +439,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(join.overflow)}u;
   let requiredCount = offsets[OFFSETS_OFFSET + LAST_INDEX] +
     min(found[FOUND_OFFSET + LAST_INDEX], 1u);
   count[COUNT_OFFSET] = requiredCount;
-  overflow[OVERFLOW_OFFSET] = min(requiredCount, 1u);
+  overflow[OVERFLOW_OFFSET] = select(0u, 1u, requiredCount > ${join.outputLeftRows.length}u);
 }`;
   nodes.push(
     ...addComputationPass(graph, {
@@ -457,9 +494,11 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(overflow)}u;
 
 function validateDisjointViews(
   id: string,
-  inputs: readonly GraphDataView<'uint32'>[],
-  outputs: readonly GraphDataView<'uint32'>[]
+  inputVectors: readonly (GraphDataView<'uint32'> | GraphVectorView<'uint32'>)[],
+  outputVectors: readonly (GraphDataView<'uint32'> | GraphVectorView<'uint32'>)[]
 ): void {
+  const inputs = inputVectors.flatMap(getGraphVectorData);
+  const outputs = outputVectors.flatMap(getGraphVectorData);
   for (const input of inputs) {
     for (const output of outputs) {
       if (doGraphDataViewsOverlap(input, output)) {

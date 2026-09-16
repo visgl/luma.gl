@@ -1203,7 +1203,11 @@ it('GPUSimilaritySearch indexes substantial stable candidate-ID allowlists on th
 
   assertMatchesIndependentCPU(fixture, result, 'hashed stable candidate-ID membership');
   expect(
-    Boolean(result.nodeOrder.some(nodeId => nodeId.includes('-candidate-index-build'))),
+    Boolean(
+      result.nodeOrder.some(
+        nodeId => nodeId.includes('-candidate-index-batch-') && nodeId.endsWith('-build')
+      )
+    ),
     'substantial allowlists build bounded GPU membership instead of repeated linear scans'
   ).toBe(true);
   expect(
