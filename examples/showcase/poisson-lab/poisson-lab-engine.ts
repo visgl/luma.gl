@@ -139,7 +139,7 @@ export class PoissonLabEngine {
       ),
       rhs = importView(graph, this.buffers.rhs, 'rhs', 'float32', n),
       solution = importView(graph, this.buffers.solution, 'solution', 'float32', n);
-    const result = new GPUJacobiPCG({
+    const solver = new GPUJacobiPCG({
       id: 'poisson-pcg',
       rowOffsets,
       columnIndices: columns,
@@ -149,7 +149,9 @@ export class PoissonLabEngine {
       columns: n,
       iterations,
       spmvStatistics: {maxNonZerosPerRow: 5, shortRowFraction: 1}
-    }).addToGraph(graph);
+    });
+    graph.add(solver);
+    const result = solver.getResult();
     return {
       graph: graph.compile(),
       spmvStrategy: result.spmvStrategy,

@@ -19,9 +19,9 @@ import {
 import {
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 const MASK_WORKGROUP_SIZE = 256;
 
@@ -35,9 +35,9 @@ export type GPUMaskInput = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 export type GPUMaskProps = {
   /** Prefix for generated command-graph node identifiers. */
   id?: string;
-  /** Input masks with matching lengths and, for vectors, matching chunk topology. */
+  /** Input masks with matching logical lengths; chunk boundaries may differ. */
   inputs: readonly GPUMaskInput[];
-  /** Caller-owned output mask with the same kind and topology as every input. */
+  /** Caller-owned output mask with the same logical length as every input. */
   output: GPUMaskInput;
   /** Boolean operation. Defaults to intersection. */
   operation?: GPUMaskOperation;
@@ -73,20 +73,14 @@ export class GPUMask {
     }
 
     const outputChunks = getMaskChunks(this.output);
-    const outputIsVector = this.output instanceof GraphVectorView;
     for (const chunk of outputChunks) {
       validatePackedUint32View(chunk, `${this.id} output`);
     }
     for (const [inputIndex, input] of this.inputs.entries()) {
-      if (input instanceof GraphVectorView !== outputIsVector) {
-        throw new Error(`${this.id} inputs and output must use the same view kind`);
-      }
       for (const chunk of getMaskChunks(input)) {
         validatePackedUint32View(chunk, `${this.id} input ${inputIndex}`);
       }
-      if (input instanceof GraphVectorView && this.output instanceof GraphVectorView) {
-        validateMatchingVectorTopology(input, this.output, `${this.id} input ${inputIndex}`);
-      } else if (input.length !== this.output.length) {
+      if (input.length !== this.output.length) {
         throw new Error(`${this.id} input ${inputIndex} length must equal output length`);
       }
       for (const inputChunk of getMaskChunks(input)) {
@@ -125,22 +119,22 @@ export function getGPUMaskCommandNodesWithDispatchLimit<Parameters>(
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const outputChunks = getMaskChunks(mask.output);
-  const inputChunks = mask.inputs.map(getMaskChunks);
-  for (const chunk of [...outputChunks, ...inputChunks.flat()]) {
+  const allViews = [mask.output, ...mask.inputs] as const;
+  for (const chunk of allViews.flatMap(getMaskChunks)) {
     if (chunk.buffer.graph !== graph) {
       throw new Error(`${mask.id} masks must belong to the target graph`);
     }
   }
 
-  for (const [chunkIndex, output] of outputChunks.entries()) {
+  const spans = alignGraphVectorViews(graph, [mask.output, ...mask.inputs]);
+  for (const [chunkIndex, span] of spans.entries()) {
+    const [output, ...inputs] = span;
     if (output.length === 0) {
       continue;
     }
-    const inputs = inputChunks.map(chunks => chunks[chunkIndex]);
     nodes.push(
       ...addMaskPass(graph, {
-        id: mask.output instanceof GraphVectorView ? `${mask.id}-chunk-${chunkIndex}` : mask.id,
+        id: spans.length > 1 ? `${mask.id}-chunk-${chunkIndex}` : mask.id,
         inputs,
         output,
         operation: mask.operation,

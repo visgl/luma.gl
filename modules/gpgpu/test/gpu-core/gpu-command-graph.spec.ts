@@ -1024,6 +1024,29 @@ it('GPUScan propagates carries across GPUVector chunks without changing topology
   ).toBe(false);
 });
 
+it('GPUScan aligns independent input, output, and segment partitions', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const result = await runVectorScan(
+    device,
+    [Uint32Array.from([1, 2]), new Uint32Array(0), Uint32Array.from([3, 4, 5])],
+    {
+      outputChunks: [
+        Uint32Array.from({length: 1}, () => 0),
+        Uint32Array.from({length: 2}, () => 0),
+        Uint32Array.from({length: 2}, () => 0)
+      ],
+      segmentFlagChunks: [Uint32Array.from([0]), Uint32Array.from([1, 0]), Uint32Array.from([0, 1])]
+    }
+  );
+  expect(result.chunks, 'scan preserves logical order while borrowing output slices').toEqual([
+    [0],
+    [0, 2],
+    [5, 0]
+  ]);
+});
+
 it('GPUScan computes inclusive and segmented uint32 prefixes across block boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -1484,12 +1507,18 @@ async function runVectorScan(
   chunks: Uint32Array[],
   options: {
     mode?: 'exclusive' | 'inclusive';
+    outputChunks?: Uint32Array[];
     segmentFlagChunks?: Uint32Array[];
     maxComputeWorkgroupsPerDimension?: number;
   } = {}
 ): Promise<{chunks: number[][]; nodeOrder: string[]}> {
   const inputFixture = createUint32VectorFixture(device, 'input', chunks);
-  const outputFixture = createUint32VectorFixture(device, 'output', chunks, 0);
+  const outputFixture = createUint32VectorFixture(
+    device,
+    'output',
+    options.outputChunks ?? chunks,
+    0
+  );
   const segmentFlagsFixture = options.segmentFlagChunks
     ? createUint32VectorFixture(device, 'segment-flags', options.segmentFlagChunks)
     : null;

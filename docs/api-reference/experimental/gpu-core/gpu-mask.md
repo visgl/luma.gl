@@ -53,9 +53,10 @@ Supported operations:
 - `'difference'`: retain rows accepted by the first input and none of the remaining inputs.
 - `'not'`: invert exactly one input.
 
-Inputs and output must all be packed `GraphDataView<'uint32'>` values or all be
-`GraphVectorView<'uint32'>` values. Vector masks must have identical ordered chunk topology.
-Composition emits one pass per nonempty chunk and never concatenates or repacks source data.
+Inputs and output must have equal logical lengths and may be packed `GraphDataView<'uint32'>`
+values or `GraphVectorView<'uint32'>` values with independent chunk boundaries. Composition
+intersects boundaries with borrowed views, emits one pass per nonempty span, and never concatenates
+or repacks source data.
 
 The output must use a different physical buffer from all inputs. Graph ownership, command
 submission, and optional readback remain with the caller. An empty mask adds no compute nodes.

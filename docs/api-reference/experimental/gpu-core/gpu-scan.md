@@ -62,13 +62,13 @@ graph.add(new GPUScan({
 }));
 ```
 
-`input` and `output` may both be packed, four-byte-aligned `GraphDataView<'uint32'>` values or both
-be `GraphVectorView<'uint32'>` values. A data-view output must contain at least as many rows as its
-input. Vector input and output must have identical ordered chunk lengths.
+`input` and `output` may be packed, four-byte-aligned `GraphDataView<'uint32'>` values or
+`GraphVectorView<'uint32'>` values. The output must cover the input's logical length; scalar views
+may provide extra capacity, while vector views must have equal logical lengths. Physical chunk
+boundaries may differ.
 
-`segmentFlags`, when supplied, must use the same view kind as `input` and must not share an
-underlying graph buffer with `output`. An atomic flags view must contain at least as many rows as
-the input; vector flags must have identical ordered chunk lengths. The first logical row begins a
+`segmentFlags`, when supplied, must cover the logical length of `input` and must not share an
+underlying graph buffer with `output`. Its physical chunk boundaries may differ. The first logical row begins a
 segment even if its flag is zero. Every later nonzero flag begins a new segment. Segments continue
 across vector chunk boundaries unless the first row in a later chunk is flagged.
 
