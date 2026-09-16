@@ -13,13 +13,18 @@ import {expect, it, vi, type TestContext} from 'vitest';
 import {
   compileProjectionPlan,
   compileProjectionProgram,
+  evaluateProjectionProgram,
   GPUProjectionProgram,
   invertProjectionProgram,
   type ProjectionProgram,
   type ProjectionInputFormat
 } from '@luma.gl/experimental/gpu-project';
 import {addGeospatialPass} from '../../src/geospatial/geospatial-utils';
-import {makeTransverseMercatorCRS} from './projection-crs-fixtures';
+import {
+  geographicCRS,
+  makeTransverseMercatorCRS,
+  makeWebMercatorCRS
+} from './projection-crs-fixtures';
 
 const formats: ProjectionInputFormat[] = ['float32x2', 'float32x4', 'uint32x4'];
 for (const inputFormat of formats) {
@@ -564,13 +569,21 @@ it('keeps double-single input bounds inside the exact binary64 domain', async co
   validity.destroy();
 });
 
-for (const target of ['native', 'EPSG:3857', '+proj=utm +zone=10 +datum=WGS84 +units=m'] as const) {
-  it(`executes a planned ${target} transformation with sub-Float32 accuracy`, async context => {
+for (const target of [
+  'native',
+  'EPSG:3857',
+  'PROJJSON:3857',
+  'analytic:3857',
+  '+proj=utm +zone=10 +datum=WGS84 +units=m'
+] as const) {
+  it(`executes a planned ${target} transformation with the declared arithmetic precision`, async context => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
     }
     skipSoftwareDevice(device, context);
+    const analytic = target === 'analytic:3857';
+    const explicitWebMercator = target === 'PROJJSON:3857' || analytic;
     const planned =
       target === 'native'
         ? planProjectionPipeline({
@@ -578,18 +591,24 @@ for (const target of ['native', 'EPSG:3857', '+proj=utm +zone=10 +datum=WGS84 +u
               '+proj=pipeline +step +proj=axisswap +order=-2,1 +step +proj=affine +s11=2 +s22=-3 +xoff=10000000 +yoff=20000000'
           })
         : planCRSProjection({
-            from: 'EPSG:4326',
-            to: target,
+            from: explicitWebMercator ? geographicCRS : 'EPSG:4326',
+            to: explicitWebMercator ? makeWebMercatorCRS() : target,
+            projectionArithmetic: analytic ? 'float32' : 'double-single',
             bounds: [-122.5, 37.7, -122.3, 37.9],
             tolerance: 1e-5
           });
     if (planned.status !== 'ready') {
       throw new Error(JSON.stringify(planned.reasons));
     }
+    expect(planned.compiled.metadata.arithmetic).toBe(analytic ? 'mixed' : 'double-single');
+    if (analytic) expect(planned.strategy).toBe('native');
     const project =
       target === 'native'
         ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
-        : new Proj4Projection({from: 'EPSG:4326', to: target}).project;
+        : new Proj4Projection({
+            from: 'EPSG:4326',
+            to: explicitWebMercator ? 'EPSG:3857' : target
+          }).project;
     const points = [
       [-122.4194001, 37.7749001],
       [-122.4194002, 37.7749002],
@@ -618,12 +637,15 @@ for (const target of ['native', 'EPSG:3857', '+proj=utm +zone=10 +datum=WGS84 +u
         const expected = project(points[row]);
         for (let axis = 0; axis < 2; axis++) {
           const offset = row * 4 + axis * 2;
-          expect(Math.abs(actual[offset] + actual[offset + 1] - expected[axis])).toBeLessThan(1e-5);
+          expect(Math.abs(actual[offset] + actual[offset + 1] - expected[axis])).toBeLessThan(
+            analytic ? 20 : 1e-5
+          );
         }
       }
-      // The nearby points collapse in Float32, yet remain distinct through the planned GPU path.
+      // Float32 formulas collapse nearby points; the default adaptive path retains their detail.
       expect(actual[0]).toBe(actual[4]);
-      expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
+      if (analytic) expect(actual[0] + actual[1]).toBe(actual[4] + actual[5]);
+      else expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
     } finally {
       compiled.destroy();
       contributor.destroy();
@@ -632,6 +654,146 @@ for (const target of ['native', 'EPSG:3857', '+proj=utm +zone=10 +datum=WGS84 +u
       validity.destroy();
     }
   });
+}
+
+for (const inputFormat of formats) {
+  for (const inverse of [false, true]) {
+    it(`executes native Web Mercator ${inverse ? 'inverse' : 'forward'} with ${inputFormat} identically inline and in a graph`, async context => {
+      const device = await getWebGPUTestDevice();
+      if (!device) return;
+      skipSoftwareDevice(device, context);
+      const radius = 6378137;
+      const definition: ProjectionProgram = {
+        precision: 'double-single',
+        operations: [{type: 'web-mercator', arithmetic: 'float32', radius, inverse}]
+      };
+      const projection = compileProjectionProgram(definition, {inputFormat});
+      const domain = projection.metadata.stages[0].inputBounds!;
+      const fractions = [
+        -0.99999, -0.75, -0.01, -0.005, -1e-8, 0, 1e-8, 0.005, 0.01, 0.75, 0.99999
+      ];
+      const points = [
+        ...fractions.map(fraction => [domain[2] * fraction, domain[3] * fraction]),
+        [domain[2] + (inputFormat === 'float32x2' ? 1 : inverse ? 0.01 : 1e-8), 0],
+        [0, domain[3] + (inputFormat === 'float32x2' ? 1 : inverse ? 0.01 : 1e-8)],
+        [Infinity, 0],
+        [0, NaN],
+        [0, 0]
+      ];
+      const graph = new GPUCommandGraph(device);
+      const buffers: Buffer[] = [];
+      const makeView = <Format extends GPUVectorFormat>(
+        id: string,
+        format: Format,
+        data: Float32Array | Uint32Array
+      ) => {
+        const buffer = device.createBuffer({data, usage: Buffer.STORAGE | Buffer.COPY_SRC});
+        buffers.push(buffer);
+        return importView(graph, id, buffer, format, points.length);
+      };
+      const input = makeView('analytic-input', inputFormat, encodePositions(inputFormat, points));
+      const output = makeView('analytic-output', 'float32x4', new Float32Array(points.length * 4));
+      const validity = makeView('analytic-validity', 'uint32', new Uint32Array(points.length));
+      const mask = makeView(
+        'analytic-mask',
+        'uint32',
+        Uint32Array.from(points, (_point, index) => (index === points.length - 1 ? 0 : 1))
+      );
+      const inlineOutput = makeView(
+        'inline-output',
+        'float32x4',
+        new Float32Array(points.length * 4)
+      );
+      const inlineValidity = makeView('inline-validity', 'uint32', new Uint32Array(points.length));
+      const parameterData = projection.packParameters();
+      const parameterBuffer = device.createBuffer({data: parameterData, usage: Buffer.STORAGE});
+      buffers.push(parameterBuffer);
+      const parameters = importView(
+        graph,
+        'analytic-parameters',
+        parameterBuffer,
+        'uint32',
+        parameterData.length
+      );
+      const contributor = new GPUProjectionProgram({
+        projection,
+        positions: input,
+        output,
+        validity,
+        inputValidity: mask
+      });
+      contributor.addToGraph(graph);
+      const shader = projection.getShader({namespace: 'analytic'});
+      addGeospatialPass(graph, {
+        id: 'inline-analytic',
+        precise: true,
+        dispatchLayout: {x: points.length, y: 1, z: 1},
+        bindings: {
+          [shader.bindingName]: parameters,
+          inputs: input,
+          mask,
+          outputs: inlineOutput,
+          validity: inlineValidity
+        },
+        resources: [
+          {buffer: parameters, usage: 'storage-read'},
+          {buffer: input, usage: 'storage-read'},
+          {buffer: mask, usage: 'storage-read'},
+          {buffer: inlineOutput, usage: 'storage-write'},
+          {buffer: inlineValidity, usage: 'storage-write'}
+        ],
+        source: `${shader.source}
+@group(0) @binding(auto) var<storage, read> inputs: array<${shader.inputType}>;
+@group(0) @binding(auto) var<storage, read> mask: array<u32>;
+@group(0) @binding(auto) var<storage, read_write> outputs: array<vec4f>;
+@group(0) @binding(auto) var<storage, read_write> validity: array<u32>;
+@compute @workgroup_size(1) fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let result = ${shader.entryPoint}(inputs[invocation.x], mask[invocation.x]);
+  outputs[invocation.x] = result.position;
+  validity[invocation.x] = result.valid;
+}`
+      });
+      const compiled = graph.compile();
+      try {
+        execute(device, compiled);
+        const actual = new Float32Array((await buffers[1].readAsync()).buffer);
+        const inline = new Float32Array((await buffers[4].readAsync()).buffer);
+        expect(new Uint32Array(actual.buffer)).toEqual(new Uint32Array(inline.buffer));
+        const expectedValidity = Uint32Array.from(points, (_point, index) =>
+          index < fractions.length ? 1 : 0
+        );
+        expect(new Uint32Array((await buffers[2].readAsync()).buffer)).toEqual(expectedValidity);
+        expect(new Uint32Array((await buffers[5].readAsync()).buffer)).toEqual(expectedValidity);
+        for (let row = 0; row < fractions.length; row++) {
+          const point = points[row].map(value =>
+            inputFormat === 'float32x2' ? Math.fround(value) : value
+          );
+          const expected = evaluateProjectionProgram(definition, [point[0], point[1]]);
+          expect(expected.valid).toBe(true);
+          for (let axis = 0; axis < 2; axis++) {
+            const offset = row * 4 + axis * 2;
+            // Device-dependent transcendental rounding, not a portable global accuracy promise.
+            expect(Math.abs(actual[offset] - expected.position[axis])).toBeLessThan(
+              inverse ? 2e-6 : 20
+            );
+            expect(actual[offset + 1]).toBe(0);
+            if (Math.abs(fractions[row]) <= 1e-8) {
+              expect(Math.abs(actual[offset] - expected.position[axis])).toBeLessThan(
+                inverse ? 1e-13 : 1e-7
+              );
+            }
+          }
+        }
+        expect([...actual.slice(fractions.length * 4)]).toEqual(
+          new Array((points.length - fractions.length) * 4).fill(0)
+        );
+      } finally {
+        compiled.destroy();
+        contributor.destroy();
+        for (const buffer of buffers) buffer.destroy();
+      }
+    });
+  }
 }
 
 function skipSoftwareDevice(device: Device, context: TestContext): void {

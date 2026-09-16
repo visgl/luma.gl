@@ -11,6 +11,7 @@ export type ProjectionPlanningReason = {
     | 'invalid-definition'
     | 'unsupported-parameter'
     | 'unsupported-operation'
+    | 'unsupported-arithmetic'
     | 'unsupported-dimensions'
     | 'unsupported-coordinate-system'
     | 'unsupported-datum'
@@ -44,7 +45,8 @@ const UNITS: Record<string, Unit> = {
 
 /** Deliberately bounded PROJ subset. Every token is consumed or produces an explicit decline. */
 export function lowerProjectionPipeline(
-  definition: PROJStringAst
+  definition: PROJStringAst,
+  projectionArithmetic: 'float32' | 'double-single' = 'double-single'
 ): {operations: ProjectionOperation[]} | {reason: ProjectionPlanningReason} {
   const steps: PROJParameter[][] = [];
   let parameters: PROJParameter[] = [];
@@ -94,7 +96,9 @@ export function lowerProjectionPipeline(
           ? ['proj', 'inv', 'xy_in', 'xy_out']
           : method === 'affine'
             ? ['proj', 'inv', 's11', 's22', 'xoff', 'yoff']
-            : null;
+            : method === 'webmerc'
+              ? ['proj', 'inv', 'ellps', 'a', 'lon_0', 'x_0', 'y_0']
+              : null;
     if (!supported) {
       return decline(
         'unsupported-operation',
@@ -177,6 +181,51 @@ export function lowerProjectionPipeline(
       }
       previousUnit = inverse ? inputUnit : outputUnit;
       stage.push({type: 'unit', factor: inputUnit.factor / outputUnit.factor});
+    } else if (method === 'webmerc') {
+      // Deliberately require an explicit radius or the verified WGS84 ellipsoid. Do not guess
+      // ellipsoid defaults, consume datum/grid options, or silently ignore an eccentricity.
+      if (
+        (values.has('a') && values.has('ellps')) ||
+        (values.has('ellps') && values.get('ellps') !== 'WGS84') ||
+        (!values.has('a') && !values.has('ellps'))
+      ) {
+        return decline(
+          'unsupported-parameter',
+          'webmerc requires +a or +ellps=WGS84, not both',
+          step
+        );
+      }
+      const radius = values.has('ellps') ? 6378137 : getNumber(values.get('a'), NaN);
+      const longitude = (getNumber(values.get('lon_0'), 0) * Math.PI) / 180;
+      const easting = getNumber(values.get('x_0'), 0);
+      const northing = getNumber(values.get('y_0'), 0);
+      if (![radius, longitude, easting, northing].every(Number.isFinite) || radius <= 0) {
+        return decline(
+          'invalid-definition',
+          'webmerc parameters must be finite and radius positive',
+          step
+        );
+      }
+      const sourceUnit: Unit = {dimension: inverse ? 'linear' : 'angular', factor: 1};
+      if (
+        previousUnit &&
+        (previousUnit.dimension !== sourceUnit.dimension || previousUnit.factor !== 1)
+      ) {
+        return decline('incompatible-units', 'webmerc consumes radians or inverse metres', step);
+      }
+      if (projectionArithmetic !== 'float32') {
+        return decline(
+          'unsupported-arithmetic',
+          'native webmerc requires explicit float32 projection arithmetic',
+          step
+        );
+      }
+      previousUnit = {dimension: inverse ? 'angular' : 'linear', factor: 1};
+      stage.push(
+        {type: 'affine', scale: [1, 1], offset: [-longitude, 0]},
+        {type: 'web-mercator', arithmetic: 'float32', radius},
+        {type: 'affine', scale: [1, 1], offset: [easting, northing]}
+      );
     } else {
       const scaleX = getNumber(values.get('s11'), 1);
       const scaleY = getNumber(values.get('s22'), 1);

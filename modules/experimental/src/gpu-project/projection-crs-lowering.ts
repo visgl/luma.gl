@@ -40,11 +40,12 @@ const PARAMETER_NAMES = new Map([
   ['False northing', 8807]
 ]);
 
-/** Native changes of coordinate frame, not a projection or datum transformation engine. */
+/** Native coordinate frames and explicitly opted-in projection formulas; no datum transformations. */
 export function lowerCRSProjection(
   from: ReadonlyCRSDefinition,
   to: ReadonlyCRSDefinition,
-  enforceAxis: boolean
+  enforceAxis: boolean,
+  projectionArithmetic: 'float32' | 'double-single' = 'double-single'
 ): {operations: ProjectionOperation[]} | Decline {
   const source = normalizeFrame(from, enforceAxis);
   const target = normalizeFrame(to, enforceAxis);
@@ -66,6 +67,7 @@ export function lowerCRSProjection(
     );
   }
   let translation: readonly [number, number];
+  let conversions: ProjectionOperation[] | undefined;
   if (!source.conversion && !target.conversion) {
     translation = [source.reference.meridian - target.reference.meridian, 0];
   } else if (
@@ -81,6 +83,32 @@ export function lowerCRSProjection(
       target.conversion.easting - source.conversion.easting,
       target.conversion.northing - source.conversion.northing
     ];
+  } else if (
+    (!source.conversion || source.conversion.method === 1024) &&
+    (!target.conversion || target.conversion.method === 1024)
+  ) {
+    if (projectionArithmetic !== 'float32') {
+      return decline(
+        'unsupported-arithmetic',
+        'native Web Mercator requires explicit float32 projection arithmetic; use adaptive fitting for double-single'
+      );
+    }
+    translation = [0, 0];
+    conversions = [
+      ...lowerWebMercatorConversion(source, true),
+      {
+        type: 'affine',
+        scale: [1, 1],
+        offset: [
+          (source.conversion?.longitude ?? 0) +
+            source.reference.meridian -
+            (target.conversion?.longitude ?? 0) -
+            target.reference.meridian,
+          0
+        ]
+      },
+      ...lowerWebMercatorConversion(target, false)
+    ];
   } else {
     return decline(
       'crs-requires-provider',
@@ -90,17 +118,29 @@ export function lowerCRSProjection(
   return {
     operations: [
       ...source.operations,
-      {type: 'affine', scale: [1, 1], offset: translation},
+      ...(conversions ?? [{type: 'affine' as const, scale: [1, 1] as const, offset: translation}]),
       ...invertProjectionProgram({precision: 'double-single', operations: target.operations})
         .operations
     ]
   };
 }
 
+function lowerWebMercatorConversion(frame: Frame, inverse: boolean): ProjectionOperation[] {
+  if (!frame.conversion) return [];
+  const operations: ProjectionOperation[] = [
+    {type: 'web-mercator', arithmetic: 'float32', radius: frame.reference.major},
+    {type: 'affine', scale: [1, 1], offset: [frame.conversion.easting, frame.conversion.northing]}
+  ];
+  return inverse
+    ? [...invertProjectionProgram({precision: 'double-single', operations}).operations]
+    : operations;
+}
+
 /** Do not send semantics known to be invalid or lossy through a permissive provider. */
 export function canUseCRSProvider(reason: ProjectionPlanningReason): boolean {
   return [
     'crs-requires-provider',
+    'unsupported-arithmetic',
     'datum-transformation-required',
     'unsupported-conversion'
   ].includes(reason.code);
@@ -114,6 +154,13 @@ export function getCRSProviderReason(
   if (definition.type === 'ProjectedCRS') {
     const conversion = definition.conversion;
     const method = getEPSGCode(conversion.method);
+    if (method === 1024 || conversion.method.name === 'Popular Visualisation Pseudo Mercator') {
+      return {
+        code: 'unsupported-conversion',
+        message:
+          'adaptive provider does not preserve Pseudo Mercator PROJJSON spherical formulas; use a supported native pair or an independently verified serialized definition'
+      };
+    }
     if (
       (method !== undefined &&
         ((method !== 9807 && method !== 1024) ||

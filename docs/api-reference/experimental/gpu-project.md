@@ -207,7 +207,9 @@ const inverse = compileProjectionProgram(invertProjectionProgram(program), {
 ```
 
 Program inputs support `float32x2`, raw binary64 `uint32x4`, and absolute double-single `float32x4`.
-All intermediate arithmetic uses double-single. The selected precision controls the output:
+Axis, unit, affine, and adaptive intermediates use double-single. An explicitly requested
+`web-mercator` operation uses Float32 formula arithmetic (see below). The selected precision
+controls the output representation, not the precision of opted-in analytic formulas:
 `double-single` emits absolute high/low pairs; `local-f32` subtracts `program.destinationOrigin`
 (default `[0, 0]`) before rounding the final result to `float32x2`. Raw input is narrowed at entry
 except when the first stage is adaptive, which retains exact binary64 source-origin subtraction.
@@ -244,7 +246,7 @@ recompilation. Inline consumers can perform the same check and update their own 
 `CompiledProjection.metadata` is an immutable snapshot of a two-dimensional program's input
 encoding, intermediate arithmetic, output precision/frame, validity rules, and inversion support.
 `getProjectionProgramMetadata(program, inputFormat?)` also exposes this contract before compilation.
-Each stage records its input domain (`inputBounds`, or `null` for finite-coordinate native stages),
+Each stage records its arithmetic and input domain (`inputBounds`, or `null` for finite-coordinate native stages),
 inversion support, and accumulated approximation error in that stage's output units. Adaptive
 bounds describe stage coordinates, not necessarily the original input coordinates.
 
@@ -310,8 +312,8 @@ bounds. Supported transformations are:
   changes. The method, latitude of natural origin, Greenwich-relative central meridian, scale,
   datum identity, and normalized ellipsoid must match exactly.
 
-This eliminates a redundant inverse/forward projection pair; it does **not** implement native
-Mercator or UTM projection formulas. Different zones, projection families, or reference frames do
+This eliminates a redundant inverse/forward projection pair without evaluating a projection
+formula. Different zones, projection families, or reference frames do
 not cancel. Matching ellipsoid dimensions or CRS names alone never establish datum equivalence.
 Datum names, identifiers, anchors, and ensemble members/accuracy are compared conservatively;
 inconclusive equivalence goes to the provider or is declined. Ellipsoid quantities normalize to
@@ -344,6 +346,52 @@ extents. Explicit axis ranges and axis meridians are declined. Bounds, fitting b
 Native approximation metadata is `none`, which excludes arithmetic/input/output rounding.
 For local-f32 native output, the destination origin defaults to zero unless supplied.
 
+### Native Web Mercator formulas
+
+`projectionArithmetic: 'float32'` explicitly enables native forward/inverse Web Mercator for
+PROJJSON geographic/Pseudo Mercator pairs and different Pseudo Mercator conversions. The datum
+and ellipsoid must match. Units, signed axes, prime meridians, central meridians, and false origins
+are normalized by the same frame planner. Equivalent conversions still cancel in double-single.
+Serialized CRS strings are not resolved into native operations.
+
+```ts
+const result = planCRSProjection({
+  from: geographicPROJJSON,
+  to: pseudoMercatorPROJJSON,
+  projectionArithmetic: 'float32', // Explicit lower-precision formula opt-in.
+  allowAdaptive: false
+});
+```
+
+The dependency-free program operation is
+`{type: 'web-mercator', arithmetic: 'float32', radius, inverse?}`. It maps central-meridian-relative
+longitude/latitude in radians to metres using the ellipsoid's semi-major axis as `radius`.
+Affine stages handle central meridians and false origins. It implements spherical Pseudo Mercator,
+not ellipsoidal Mercator. The [published PROJ formulas](https://proj.org/en/stable/operations/projections/webmerc.html)
+are evaluated in equivalent `asinh(tan(latitude))` / `atan(sinh(northing / radius))` form to avoid
+equatorial cancellation.
+
+The stage's square-world domain is longitude ±π and latitude ±atan(sinh(π)) (approximately
+85.05113 degrees); inverse easting/northing must be within ±π times `radius`. Values outside the
+domain, non-finite values, and upstream-invalid rows produce zero output with zero validity.
+There is no longitude wrapping or latitude clamping. Domain tests use the incoming double-single
+coordinates before Float32 narrowing, with inward-rounded bounds. Boundary rounding can invalidate
+an otherwise exact edge or a round trip; use an inset domain when validity must survive round trips.
+
+Metadata reports program arithmetic as `mixed` and formula-stage arithmetic as `float32`, even
+with binary64 inputs or double-single outputs. The formula writes zero low limbs; surrounding
+double-single frame transforms can create nonzero low limbs without restoring lost formula
+precision. A local output origin likewise does not recover that precision. Transcendental accuracy
+is device-dependent; no global Float32 error or speedup guarantee is claimed. Sampled approximation
+error excludes this rounding, and a preceding nonzero adaptive estimate becomes `unknown` through
+the nonlinear stage.
+
+The default `projectionArithmetic: 'double-single'` never silently selects this formula on the GPU.
+For these supported CRS pairs, provide `bounds` and `tolerance` to fit the binary64 native CPU
+reference into double-single adaptive patches, with independently bounded inverse fitting available.
+This avoids the current provider's incorrect ellipsoidal interpretation of Pseudo Mercator PROJJSON.
+`precision: 'local-f32'` alone does **not** opt into Float32 formula arithmetic.
+
 ### Adaptive provider planning
 
 `bounds` is optional for native plans and required for adaptive plans (`bounds-required` if absent).
@@ -357,6 +405,10 @@ are likewise declined on that route; the current provider interprets names rathe
 identifiers. This includes provider-only PROJJSON methods such as EPSG-labelled Lambert Conformal
 Conic. Serialized definitions remain available for provider-supported projections. Extra parameters
 on known methods are rejected instead of reaching a provider that might ignore them.
+Provider-only routes containing explicit Pseudo Mercator PROJJSON are also declined: the current
+provider does not preserve its spherical formula. Supported native Web Mercator pairs instead
+use the binary64 reference described above; verified serialized definitions such as `EPSG:3857`
+remain available through the provider.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
@@ -389,9 +441,25 @@ native operations: signed 2D `axisswap`; `unitconvert` with `m`, `km`, `cm`, `mm
 including signed axis permutations. Incompatible unit categories and consecutive unit conversions
 with mismatched units are declined.
 
+With `projectionArithmetic: 'float32'`, `webmerc` accepts exactly one of `+a=<radius>` or
+`+ellps=WGS84`, optional decimal-degree `+lon_0`, metre `+x_0`/`+y_0`, and `+inv`.
+Forward input is radians and output metres; inverse reverses those units. Adjacent unit
+conversions must agree. For example:
+
+```ts
+const result = planProjectionPipeline({
+  projectionArithmetic: 'float32',
+  pipeline: `+proj=pipeline
+    +step +proj=unitconvert +xy_in=deg +xy_out=rad
+    +step +proj=webmerc +ellps=WGS84`
+});
+```
+
 Every token is consumed or declined. Global parameters, duplicate parameters, shear/rotation,
-extra dimensions, nested pipelines, omission flags, grids, and native map-projection methods are
-outside this initial lowering subset. Optional `fallback: {projection, bounds, tolerance, ...}`
+extra dimensions, nested pipelines, omission flags, grids, longitude wrapping, and map-projection
+methods other than this Web Mercator subset are outside native lowering. Unknown ellipsoids,
+datum parameters, radian-suffixed origins, scale factors, and `+over` are not silently discarded.
+Optional `fallback: {projection, bounds, tolerance, ...}`
 supplies a CPU oracle for the **whole** pipeline when lowering is unsupported. Native programs do
 not sample that oracle or use its bounds. Syntax and malformed-parameter errors do not fall back.
 The planner never assumes proj4js implements arbitrary PROJ pipelines.

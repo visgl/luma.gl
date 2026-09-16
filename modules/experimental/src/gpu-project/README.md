@@ -219,11 +219,12 @@ const inverse = compileProjectionProgram(invertProjectionProgram(program), {
 });
 ```
 
-All program intermediates use the existing integer-controlled double-single arithmetic. Inputs
+Axis/unit/affine/adaptive intermediates use integer-controlled double-single arithmetic. Inputs
 can be `float32x2`, raw binary64 `uint32x4`, or absolute double-single `float32x4`. `double-single`
 output is `[xHigh, xLow, yHigh, yLow]`. For `local-f32`, the final result is translated by the
 program's binary64 `destinationOrigin` (default `[0, 0]`) before rounding to `float32x2`.
-This initial program backend uses double-single arithmetic in both output modes; the existing
+The explicit `web-mercator` operation opts into Float32 formula arithmetic, independently of output
+format. All other stages retain double-single in both output modes; the existing
 `GPUProjection` retains its faster local Float32 evaluator.
 
 Use a hardware WebGPU adapter for program execution. Integer-fp64 program shaders can exceed
@@ -251,7 +252,7 @@ error. Validate a complete program against its CPU provider over the intended do
 
 ### Numerical metadata and CRS planning
 
-`CompiledProjection.metadata` snapshots dimensions, input encoding, double-single arithmetic,
+`CompiledProjection.metadata` snapshots dimensions, input encoding, per-stage arithmetic,
 output frame/precision, validity, stage domains, and inversion support. The same inspection is
 available through `getProjectionProgramMetadata`. Approximation error is `none`, `sampled-estimate`,
 or `unknown`. Native scales propagate a preceding adaptive estimate in destination units; a second
@@ -279,8 +280,20 @@ Both return a discriminated `ready`/`unsupported` result. A ready result include
 `GPUProjectionProgram`. Defaults preserve raw binary64 input and double-single output. Fitting
 tolerance remains sampled and excludes final local Float32 rounding. Native plans preserve declared
 per-axis units; adaptive fallback declines geographic non-degree units, mixed projected units, and
-non-numeric prime-meridian quantities unsupported by the current provider. Native named projection
-formulas remain P.3b.2/P.4. GPU execution does not import math.gl or proj4js.
+non-numeric prime-meridian quantities unsupported by the current provider.
+
+`projectionArithmetic: 'float32'` opts into native Web Mercator forward/inverse formulas for explicit
+same-datum PROJJSON geographic/Pseudo Mercator pairs, and `webmerc` PROJ pipeline steps. The program
+operation is `{type: 'web-mercator', arithmetic: 'float32', radius, inverse?}`. It consumes relative
+radians and produces metres (inverse reverses this), rejects coordinates outside the square-world
+domain, and never wraps/clamps coordinates. Formula stages expose `float32` arithmetic and program
+metadata exposes `mixed`; double-single output storage does not restore formula precision.
+
+Default higher-precision CRS planning fits the normalized binary64 Web Mercator reference into
+double-single patches. It does not use the current provider's incorrect ellipsoidal interpretation
+of explicit Pseudo Mercator PROJJSON. Provider-only transformations involving such objects decline.
+Native UTM/TM formulas and analytic/adaptive comparative benchmarks remain the next P.4 work.
+GPU execution does not import math.gl or proj4js.
 
 See the [API guide](../../../../docs/api-reference/experimental/gpu-project.md) for examples,
 supported units/parameters, error semantics, and planning limitations.
