@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import type {GPUCommandNode} from './gpu-command-node';
+import type {Device} from '@luma.gl/core';
+import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
-import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
+import {
+  getFiniteDifferenceArrayOffset,
+  getFiniteDifferenceStorageError,
+  getFiniteDifferenceNodes,
+  getFiniteDifferenceSampleSource,
+  validateFiniteDifferenceViews,
+  type GPUFiniteDifferencePass
+} from './gpu-finite-difference-utils';
 
 /** Number of invocations in one finite-difference workgroup. */
 export const GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE = 256;
@@ -31,9 +37,9 @@ export type GPUFiniteDifference2DPlanProps = {
 export type GPUFiniteDifference2DProps = GPUFiniteDifference2DPlanProps & {
   id?: string;
   /** Scalar (`float32`) for gradient/Laplacian; vector (`float32x2`) for divergence/curl. */
-  input: GraphDataView<'float32'> | GraphDataView<'float32x2'>;
+  input: GraphDataView<'float32' | 'float32x2'> | GraphVectorView<'float32' | 'float32x2'>;
   /** Vector (`float32x2`) for gradient; scalar (`float32`) for all other operators. */
-  output: GraphDataView<'float32'> | GraphDataView<'float32x2'>;
+  output: GraphDataView<'float32' | 'float32x2'> | GraphVectorView<'float32' | 'float32x2'>;
 };
 
 /** Immutable workload and discretization description. */
@@ -75,98 +81,22 @@ export class GPUFiniteDifference2D {
     this.output = props.output;
     this.stats = makeGPUFiniteDifference2DStats(props);
 
-    const scalarInput = props.operator === 'gradient' || props.operator === 'laplacian';
-    validatePackedView(this.input, [scalarInput ? 'float32' : 'float32x2'], `${this.id} input`);
-    validatePackedView(
-      this.output,
-      [props.operator === 'gradient' ? 'float32x2' : 'float32'],
-      `${this.id} output`
-    );
-    getArrayElementOffset(this.input, this.stats.inputComponentCount, `${this.id} input`);
-    getArrayElementOffset(this.output, this.stats.outputComponentCount, `${this.id} output`);
-    if (
-      this.input.length < this.stats.elementCount ||
-      this.output.length < this.stats.elementCount
-    ) {
-      throw new Error(`${this.id} input and output must contain at least width * height rows`);
-    }
-    if (this.input.buffer === this.output.buffer) {
-      throw new Error(`${this.id} output must use a separate buffer from input`);
-    }
+    validateFiniteDifferenceViews(this.input, this.output, this.stats);
   }
 
-  /** Adds one compute node without compiling, submitting, or reading back. */
+  /** Returns compute nodes without compiling, submitting, or reading back. */
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    if (this.input.buffer.graph !== graph || this.output.buffer.graph !== graph) {
-      throw new Error(`${this.id} views belong to a different GPUCommandGraph`);
-    }
-    const support = getGPUFiniteDifference2DSupport(graph.device, this.stats);
-    if (!support.supported) {
-      throw new Error(support.reason);
-    }
-    const dispatchLayout = getBoundedDispatchLayout(
-      this.id,
-      this.stats.elementCount,
-      GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+    const support = getGPUFiniteDifference2DSupport(graph.device, {
+      ...this.stats,
+      input: this.input,
+      output: this.output
+    });
+    if (!support.supported) throw new Error(support.reason);
+    return getFiniteDifferenceNodes(graph, this, (pass, layout) =>
+      getGPUFiniteDifference2DShaderSource({...pass, stats: this.stats}, layout)
     );
-    const source = getGPUFiniteDifference2DShaderSource(this, dispatchLayout);
-    const inputByteLength = this.stats.elementCount * this.stats.inputComponentCount * 4;
-    const outputByteLength = this.stats.elementCount * this.stats.outputComponentCount * 4;
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: `GPUFiniteDifference2D.${this.stats.operator}`,
-          commandCount: 1,
-          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-          maximumInvocationCount:
-            dispatchLayout.x *
-            dispatchLayout.y *
-            dispatchLayout.z *
-            GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE,
-          readByteLength: inputByteLength * (this.stats.operator === 'laplacian' ? 9 : 7),
-          writeByteLength: outputByteLength
-        },
-        resources: [
-          {buffer: this.input, usage: 'storage-read'},
-          {buffer: this.output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'outputValues', type: 'storage', group: 0, location: 1}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                inputValues: getViewBinding(this.input, getBuffer),
-                outputValues: getViewBinding(this.output, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(
-                computePass,
-                dispatchLayout.x,
-                dispatchLayout.y,
-                dispatchLayout.z
-              );
-            },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
-    );
-
-    return nodes;
   }
 }
 
@@ -213,7 +143,8 @@ export function makeGPUFiniteDifference2DStats(
 /** Reports whether a device can execute the requested field size. */
 export function getGPUFiniteDifference2DSupport(
   device: Device,
-  props: GPUFiniteDifference2DPlanProps
+  props: GPUFiniteDifference2DPlanProps &
+    Partial<Pick<GPUFiniteDifference2DProps, 'input' | 'output'>>
 ): GPUFiniteDifference2DSupport {
   let stats: GPUFiniteDifference2DStats;
   try {
@@ -234,14 +165,10 @@ export function getGPUFiniteDifference2DSupport(
       stats
     };
   }
-  const largestByteLength =
-    stats.elementCount * Math.max(stats.inputComponentCount, stats.outputComponentCount) * 4;
-  if (
-    largestByteLength > device.limits.maxStorageBufferBindingSize ||
-    largestByteLength > device.limits.maxBufferSize
-  ) {
-    return {supported: false, reason: 'GPUFiniteDifference2D field exceeds device limits.', stats};
-  }
+  const storageError = getFiniteDifferenceStorageError(device, stats, props.input, props.output);
+  if (storageError) return {supported: false, reason: storageError, stats};
+  // Concrete chunk dispatches are checked during lowering.
+  if (props.input && props.output) return {supported: true, stats};
   try {
     getBoundedDispatchLayout(
       'GPUFiniteDifference2D',
@@ -257,10 +184,14 @@ export function getGPUFiniteDifference2DSupport(
 
 /** Returns the generated second-order WGSL kernel. @internal */
 export function getGPUFiniteDifference2DShaderSource(
-  difference: Pick<GPUFiniteDifference2D, 'input' | 'output' | 'stats'>,
+  difference: Pick<GPUFiniteDifferencePass, 'input' | 'output'> &
+    Partial<Pick<GPUFiniteDifferencePass, 'outputOffset' | 'length' | 'sampleCount'>> & {
+      stats: GPUFiniteDifference2DStats;
+    },
   dispatchLayout: {x: number; y: number; z: number}
 ): string {
   const {stats} = difference;
+  const sampleCount = difference.sampleCount ?? 0;
   const inputType = stats.inputComponentCount === 1 ? 'f32' : 'vec2f';
   const outputType = stats.outputComponentCount === 1 ? 'f32' : 'vec2f';
   const periodic = stats.boundary === 'periodic';
@@ -309,17 +240,24 @@ export function getGPUFiniteDifference2DShaderSource(
 
   return `const WIDTH: u32 = ${stats.width}u;
 const HEIGHT: u32 = ${stats.height}u;
-const ELEMENT_COUNT: u32 = ${stats.elementCount}u;
+const ELEMENT_COUNT: u32 = ${difference.length ?? stats.elementCount}u;
+const OUTPUT_ROW_OFFSET: u32 = ${difference.outputOffset ?? 0}u;
 const DX: f32 = ${stats.spacing[0]};
 const DY: f32 = ${stats.spacing[1]};
-const INPUT_OFFSET: u32 = ${getArrayElementOffset(difference.input, stats.inputComponentCount, 'input')}u;
-const OUTPUT_OFFSET: u32 = ${getArrayElementOffset(difference.output, stats.outputComponentCount, 'output')}u;
+const INPUT_OFFSET: u32 = ${getFiniteDifferenceArrayOffset(difference.input, stats.inputComponentCount)}u;
+const OUTPUT_OFFSET: u32 = ${getFiniteDifferenceArrayOffset(difference.output, stats.outputComponentCount)}u;
 @group(0) @binding(0) var<storage, read> inputValues: array<${inputType}>;
 @group(0) @binding(1) var<storage, read_write> outputValues: array<${outputType}>;
 
+${sampleCount ? 'var<private> sampleOrigin: vec2i;\nvar<private> sampleRow: u32;' : ''}
+
 fn sampleField(coordinate: vec2i) -> ${inputType} {
-  ${wrapCoordinate}
-  return inputValues[INPUT_OFFSET + u32(wrapped.y) * WIDTH + u32(wrapped.x)];
+  ${
+    sampleCount
+      ? getFiniteDifferenceSampleSource(2, sampleCount)
+      : `${wrapCoordinate}
+  return inputValues[INPUT_OFFSET + u32(wrapped.y) * WIDTH + u32(wrapped.x)];`
+  }
 }
 
 fn firstDerivative(coordinate: vec2i, axis: vec2i, spacing: f32) -> ${inputType} {
@@ -336,15 +274,9 @@ fn secondDerivative(coordinate: vec2i, axis: vec2i, spacing: f32) -> ${inputType
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, GPU_FINITE_DIFFERENCE_2D_WORKGROUP_SIZE)}
   if (index >= ELEMENT_COUNT) { return; }
-  let coordinate = vec2i(i32(index % WIDTH), i32(index / WIDTH));
+  let row = OUTPUT_ROW_OFFSET + index;
+  let coordinate = vec2i(i32(row % WIDTH), i32(row / WIDTH));
+  ${sampleCount ? 'sampleOrigin = coordinate;\n  sampleRow = index;' : ''}
   outputValues[OUTPUT_OFFSET + index] = ${expression};
 }`;
-}
-
-function getArrayElementOffset(view: GraphDataView, componentCount: 1 | 2, name: string): number {
-  const componentOffset = getViewElementOffset(view);
-  if (componentOffset % componentCount !== 0) {
-    throw new Error(`${name} byteOffset must align with its WGSL array element type`);
-  }
-  return componentOffset / componentCount;
 }

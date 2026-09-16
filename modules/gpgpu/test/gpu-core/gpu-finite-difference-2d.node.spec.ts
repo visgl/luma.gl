@@ -9,6 +9,7 @@ import {
   GPUFiniteDifference2D,
   makeGPUFiniteDifference2DStats
 } from '@luma.gl/gpgpu/gpu-core';
+import {getGraphVectorData} from '../../src/gpu-core/graph-vector-view-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {getGPUFiniteDifference2DShaderSource} from '../../src/gpu-core/gpu-finite-difference-2d';
 
@@ -77,15 +78,36 @@ it('GPUFiniteDifference2D validates topology and generated WGSL', () => {
     boundary: 'periodic'
   });
   for (const operation of [gradient, curl]) {
-    const source = getGPUFiniteDifference2DShaderSource(operation, {x: 1, y: 1, z: 1});
+    const source = getGPUFiniteDifference2DShaderSource(
+      {
+        ...operation,
+        input: getGraphVectorData(operation.input)[0],
+        output: getGraphVectorData(operation.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    );
     expect(new WgslReflect(source).entry.compute.map(entry => entry.name)).toEqual(['main']);
   }
   expect(
-    getGPUFiniteDifference2DShaderSource(gradient, {x: 1, y: 1, z: 1}),
+    getGPUFiniteDifference2DShaderSource(
+      {
+        ...gradient,
+        input: getGraphVectorData(gradient.input)[0],
+        output: getGraphVectorData(gradient.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    ),
     'one-sided first derivative is explicit'
   ).toMatch(/-3\.0 \* sampleField/);
   expect(
-    getGPUFiniteDifference2DShaderSource(curl, {x: 1, y: 1, z: 1}),
+    getGPUFiniteDifference2DShaderSource(
+      {
+        ...curl,
+        input: getGraphVectorData(curl.input)[0],
+        output: getGraphVectorData(curl.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    ),
     'periodic wrapping is explicit'
   ).toMatch(/% i32\(WIDTH\)/);
   const offsetGradient = new GPUFiniteDifference2D({
@@ -105,7 +127,14 @@ it('GPUFiniteDifference2D validates topology and generated WGSL', () => {
     operator: 'curl'
   });
   for (const operation of [offsetGradient, offsetCurl]) {
-    const source = getGPUFiniteDifference2DShaderSource(operation, {x: 1, y: 1, z: 1});
+    const source = getGPUFiniteDifference2DShaderSource(
+      {
+        ...operation,
+        input: getGraphVectorData(operation.input)[0],
+        output: getGraphVectorData(operation.output)[0]
+      },
+      {x: 1, y: 1, z: 1}
+    );
     expect(source, 'input offset uses WGSL array elements').toMatch(/INPUT_OFFSET: u32 = 1u/);
     expect(source, 'output offset uses WGSL array elements').toMatch(/OUTPUT_OFFSET: u32 = 1u/);
   }

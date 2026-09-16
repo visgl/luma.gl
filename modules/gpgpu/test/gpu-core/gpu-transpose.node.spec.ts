@@ -127,14 +127,14 @@ it('GPUTranspose shader uses padded workgroup tiles and bounded tile indexing', 
   const input = graph.createDataView(inputHandle, {format: 'sint32', length: 17 * 35});
   const output = graph.createDataView(outputHandle, {format: 'sint32', length: 17 * 35});
   const transpose = new GPUTranspose({input, output, rows: 17, columns: 35});
-  const source = getGPUTransposeShaderSource(transpose, {x: 6, y: 1, z: 1});
+  const source = getGPUTransposeShaderSource({...transpose, input, output}, {x: 6, y: 1, z: 1});
   const reflection = new WgslReflect(source);
 
   expect(
     reflection.entry.compute.map(entry => entry.name),
     'shader exposes one compute entry point'
   ).toEqual(['main']);
-  expect(source, 'tile is padded by one column').toMatch(/array<array<i32, 17>, 16>/);
+  expect(source, 'raw-word tile is padded by one column').toMatch(/array<array<u32, 17>, 16>/);
   expect(source, 'tile load is synchronized before writing').toMatch(/workgroupBarrier/);
   expect(source, 'partial bounded dispatch workgroups are guarded').toMatch(/tileIndex >= 6u/);
   expect(source, 'rectangular output stride uses rows').toMatch(

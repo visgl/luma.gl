@@ -78,7 +78,12 @@ graph.add(new GPUElementwise({
 }));
 ```
 
-Inputs/output currently use matching packed scalar formats and logical lengths.
+Inputs/output use matching packed scalar formats and logical lengths. Each operand accepts either
+`GraphDataView` or `GraphVectorView`, with independent chunk boundaries. Lowering borrows aligned
+subviews without concatenating or allocating storage. Empty vectors emit no commands, and each
+encoding overwrites the output using the current input contents.
+
+The output must use separate buffers from every input, and its chunks must not overlap.
 
 ## Why graph-visible arithmetic?
 
