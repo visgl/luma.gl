@@ -5,9 +5,17 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
+import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
-import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
+import {
+  doGraphDataViewsOverlap,
+  getGraphDataPrefix,
+  getViewBinding,
+  getViewElementOffset,
+  validatePackedView
+} from './graph-data-view-utils';
+import {getGraphVectorData} from './graph-vector-view-utils';
 
 /** Width and height of one workgroup-memory transpose tile. */
 export const GPU_TRANSPOSE_TILE_SIZE = 16;
@@ -20,9 +28,9 @@ export type GPUTransposeProps<T extends GPUTransposeFormat = GPUTransposeFormat>
   /** Prefix for generated graph node IDs. */
   id?: string;
   /** Packed row-major source matrix. */
-  input: GraphDataView<T>;
+  input: GraphDataView<T> | GraphVectorView<T>;
   /** Packed row-major destination matrix. */
-  output: GraphDataView<T>;
+  output: GraphDataView<T> | GraphVectorView<T>;
   /** Source matrix row count. */
   rows: number;
   /** Source matrix column count. */
@@ -41,16 +49,16 @@ export type GPUTransposeStats = {
 };
 
 /**
- * Tiled out-of-place transpose over a packed scalar {@link GraphDataView}.
+ * Tiled out-of-place transpose over packed scalar views with independent chunk boundaries.
  *
- * The primitive contributes one compute node to an existing command graph. Each workgroup reads a
+ * The primitive contributes compute nodes to an existing command graph. Each workgroup reads a
  * 16 by 16 source tile through padded workgroup memory and writes it with coalesced transposed
  * addressing. Rectangular matrices and partial edge tiles are supported.
  */
 export class GPUTranspose<T extends GPUTransposeFormat = GPUTransposeFormat> {
   readonly id: string;
-  readonly input: GraphDataView<T>;
-  readonly output: GraphDataView<T>;
+  readonly input: GraphDataView<T> | GraphVectorView<T>;
+  readonly output: GraphDataView<T> | GraphVectorView<T>;
   readonly rows: number;
   readonly columns: number;
   readonly stats: GPUTransposeStats;
@@ -63,8 +71,14 @@ export class GPUTranspose<T extends GPUTransposeFormat = GPUTransposeFormat> {
     this.columns = props.columns;
     this.stats = makeGPUTransposeStats(props.rows, props.columns);
 
-    validatePackedView(this.input, ['uint32', 'sint32', 'float32'], `${this.id} input`);
-    validatePackedView(this.output, ['uint32', 'sint32', 'float32'], `${this.id} output`);
+    for (const [name, view] of [
+      ['input', this.input],
+      ['output', this.output]
+    ] as const) {
+      for (const chunk of getGraphVectorData(view)) {
+        validatePackedView(chunk, ['uint32', 'sint32', 'float32'], `${this.id} ${name}`);
+      }
+    }
     if (this.output.format !== this.input.format) {
       throw new Error(`${this.id} input and output formats must match`);
     }
@@ -74,12 +88,19 @@ export class GPUTranspose<T extends GPUTransposeFormat = GPUTransposeFormat> {
     if (this.output.length < this.stats.elementCount) {
       throw new Error(`${this.id} output must contain at least rows * columns rows`);
     }
-    if (this.input.buffer === this.output.buffer) {
+    const inputBuffers = new Set(getGraphVectorData(this.input).map(chunk => chunk.buffer));
+    const outputChunks = getGraphVectorData(this.output);
+    if (outputChunks.some(chunk => inputBuffers.has(chunk.buffer))) {
       throw new Error(`${this.id} input and output must use separate buffers`);
+    }
+    for (const [index, chunk] of outputChunks.entries()) {
+      if (outputChunks.slice(0, index).some(previous => doGraphDataViewsOverlap(previous, chunk))) {
+        throw new Error(`${this.id} output chunks must not overlap`);
+      }
     }
   }
 
-  /** Adds one tiled compute node without compiling, submitting, or reading data back. */
+  /** Adds tiled compute nodes without compiling, submitting, or reading data back. */
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
@@ -90,11 +111,45 @@ export class GPUTranspose<T extends GPUTransposeFormat = GPUTransposeFormat> {
       return nodes;
     }
     validateGPUTransposeDevice(graph.device, this.id);
-    const dispatchLayout = getGPUTransposeDispatchLayout(
-      this.stats.tileCount,
-      graph.device.limits.maxComputeWorkgroupsPerDimension
+    const input = getGraphDataPrefix(graph, this.input, this.stats.elementCount);
+    const output = getGraphDataPrefix(graph, this.output, this.stats.elementCount);
+    const sources = getGPUVectorChunks(getGraphVectorData(input)).filter(chunk => chunk.length);
+    const destinations = getGPUVectorChunks(getGraphVectorData(output)).filter(
+      chunk => chunk.length
     );
-    nodes.push(...addGPUTransposePass(graph, this, dispatchLayout));
+    for (const [inputIndex, source] of sources.entries()) {
+      for (const [outputIndex, destination] of destinations.entries()) {
+        const region = makeTransposeRegion(
+          source.offset,
+          source.length,
+          destination.offset,
+          destination.length,
+          this.rows,
+          this.columns
+        );
+        if (!region) continue;
+        const dispatchLayout = getGPUTransposeDispatchLayout(
+          region.tileCount,
+          graph.device.limits.maxComputeWorkgroupsPerDimension
+        );
+        nodes.push(
+          ...addGPUTransposePass(
+            graph,
+            {
+              ...this,
+              id:
+                sources.length === 1 && destinations.length === 1
+                  ? this.id
+                  : `${this.id}-input-${inputIndex}-output-${outputIndex}`,
+              input: source.data,
+              output: destination.data
+            },
+            dispatchLayout,
+            region
+          )
+        );
+      }
+    }
 
     return nodes;
   }
@@ -127,19 +182,36 @@ export function makeGPUTransposeStats(rows: number, columns: number): GPUTranspo
 
 /** Returns the padded workgroup-memory WGSL used by one transpose node. @internal */
 export function getGPUTransposeShaderSource(
-  transpose: Pick<GPUTranspose, 'input' | 'output' | 'rows' | 'columns' | 'stats'>,
-  dispatchLayout: GPUBoundedDispatchLayout
+  transpose: AtomicTranspose,
+  dispatchLayout: GPUBoundedDispatchLayout,
+  region: TransposeRegion = {
+    inputOffset: 0,
+    outputOffset: 0,
+    tileRowOffset: 0,
+    tileColumnOffset: 0,
+    tileColumnCount: transpose.stats.tileColumnCount,
+    tileCount: transpose.stats.tileCount,
+    elementCount: transpose.stats.elementCount
+  }
 ): string {
-  const shaderType = getGPUTransposeShaderType(transpose.input.format as GPUTransposeFormat);
+  const wholeInput =
+    region.inputOffset === 0 && transpose.input.length >= transpose.stats.elementCount;
+  const wholeOutput =
+    region.outputOffset === 0 && transpose.output.length >= transpose.stats.elementCount;
   return `const ROWS: u32 = ${transpose.rows}u;
 const COLUMNS: u32 = ${transpose.columns}u;
-const TILE_COLUMN_COUNT: u32 = ${transpose.stats.tileColumnCount}u;
+const TILE_COLUMN_COUNT: u32 = ${region.tileColumnCount}u;
+const INPUT_START: u32 = ${region.inputOffset}u;
+const INPUT_LENGTH: u32 = ${transpose.input.length}u;
+const OUTPUT_START: u32 = ${region.outputOffset}u;
+const OUTPUT_LENGTH: u32 = ${transpose.output.length}u;
 const INPUT_OFFSET: u32 = ${getViewElementOffset(transpose.input)}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(transpose.output)}u;
 
-@group(0) @binding(0) var<storage, read> inputValues: array<${shaderType}>;
-@group(0) @binding(1) var<storage, read_write> outputValues: array<${shaderType}>;
-var<workgroup> tile: array<array<${shaderType}, ${GPU_TRANSPOSE_TILE_SIZE + 1}>, ${GPU_TRANSPOSE_TILE_SIZE}>;
+// Move raw words so signed zeros, NaN payloads, and integer bits survive unchanged.
+@group(0) @binding(0) var<storage, read> inputValues: array<u32>;
+@group(0) @binding(1) var<storage, read_write> outputValues: array<u32>;
+var<workgroup> tile: array<array<u32, ${GPU_TRANSPOSE_TILE_SIZE + 1}>, ${GPU_TRANSPOSE_TILE_SIZE}>;
 
 @compute @workgroup_size(${GPU_TRANSPOSE_TILE_SIZE}, ${GPU_TRANSPOSE_TILE_SIZE}, 1)
 fn main(
@@ -148,20 +220,29 @@ fn main(
 ) {
   let tileIndex = (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) *
     ${dispatchLayout.x}u + workgroupId.x;
-  if (tileIndex >= ${transpose.stats.tileCount}u) { return; }
-  let tileRow = tileIndex / TILE_COLUMN_COUNT;
-  let tileColumn = tileIndex - tileRow * TILE_COLUMN_COUNT;
+  if (tileIndex >= ${region.tileCount}u) { return; }
+  let localTileRow = tileIndex / TILE_COLUMN_COUNT;
+  let tileRow = localTileRow + ${region.tileRowOffset}u;
+  let tileColumn = tileIndex - localTileRow * TILE_COLUMN_COUNT + ${region.tileColumnOffset}u;
   let inputRow = tileRow * ${GPU_TRANSPOSE_TILE_SIZE}u + localIdentifier.y;
   let inputColumn = tileColumn * ${GPU_TRANSPOSE_TILE_SIZE}u + localIdentifier.x;
-  if (inputRow < ROWS && inputColumn < COLUMNS) {
+  let inputIndex = inputRow * COLUMNS + inputColumn;
+  let destinationIndex = inputColumn * ROWS + inputRow;
+  if (inputRow < ROWS && inputColumn < COLUMNS
+      ${wholeInput ? '' : '&& inputIndex >= INPUT_START && inputIndex - INPUT_START < INPUT_LENGTH'}
+      ${wholeOutput ? '' : '&& destinationIndex >= OUTPUT_START && destinationIndex - OUTPUT_START < OUTPUT_LENGTH'}) {
     tile[localIdentifier.y][localIdentifier.x] =
-      inputValues[INPUT_OFFSET + inputRow * COLUMNS + inputColumn];
+      inputValues[INPUT_OFFSET + inputIndex - INPUT_START];
   }
   workgroupBarrier();
   let outputRow = tileColumn * ${GPU_TRANSPOSE_TILE_SIZE}u + localIdentifier.y;
   let outputColumn = tileRow * ${GPU_TRANSPOSE_TILE_SIZE}u + localIdentifier.x;
-  if (outputRow < COLUMNS && outputColumn < ROWS) {
-    outputValues[OUTPUT_OFFSET + outputRow * ROWS + outputColumn] =
+  let outputIndex = outputRow * ROWS + outputColumn;
+  let sourceIndex = outputColumn * COLUMNS + outputRow;
+  if (outputRow < COLUMNS && outputColumn < ROWS
+      ${wholeOutput ? '' : '&& outputIndex >= OUTPUT_START && outputIndex - OUTPUT_START < OUTPUT_LENGTH'}
+      ${wholeInput ? '' : '&& sourceIndex >= INPUT_START && sourceIndex - INPUT_START < INPUT_LENGTH'}) {
+    outputValues[OUTPUT_OFFSET + outputIndex - OUTPUT_START] =
       tile[localIdentifier.x][localIdentifier.y];
   }
 }`;
@@ -169,22 +250,23 @@ fn main(
 
 function addGPUTransposePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  transpose: GPUTranspose,
-  dispatchLayout: GPUBoundedDispatchLayout
+  transpose: AtomicTranspose,
+  dispatchLayout: GPUBoundedDispatchLayout,
+  region: TransposeRegion
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const source = getGPUTransposeShaderSource(transpose, dispatchLayout);
+  const source = getGPUTransposeShaderSource(transpose, dispatchLayout, region);
   nodes.push(
     createGPUComputeCommandNode<Parameters>({
       id: transpose.id,
       workload: {
         operation: 'GPUTranspose',
         commandCount: 1,
-        maximumWorkgroupCount: transpose.stats.tileCount,
+        maximumWorkgroupCount: region.tileCount,
         maximumInvocationCount:
-          transpose.stats.tileCount * GPU_TRANSPOSE_TILE_SIZE * GPU_TRANSPOSE_TILE_SIZE,
-        readByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT,
-        writeByteLength: transpose.stats.elementCount * Uint32Array.BYTES_PER_ELEMENT
+          region.tileCount * GPU_TRANSPOSE_TILE_SIZE * GPU_TRANSPOSE_TILE_SIZE,
+        readByteLength: region.elementCount * Uint32Array.BYTES_PER_ELEMENT,
+        writeByteLength: region.elementCount * Uint32Array.BYTES_PER_ELEMENT
       },
       resources: [
         {buffer: transpose.input, usage: 'storage-read'},
@@ -239,10 +321,10 @@ function validateGPUTransposeDimension(name: string, dimension: number): void {
 
 function validateGPUTransposeOwnership<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  view: GraphDataView,
+  view: GraphDataView | GraphVectorView,
   name: string
 ): void {
-  if (view.buffer.graph !== graph) {
+  if (getGraphVectorData(view).some(chunk => chunk.buffer.graph !== graph)) {
     throw new Error(`${name} belongs to a different GPUCommandGraph`);
   }
 }
@@ -258,6 +340,82 @@ function validateGPUTransposeDevice(device: Device, id: string): void {
   }
 }
 
-function getGPUTransposeShaderType(format: GPUTransposeFormat): 'u32' | 'i32' | 'f32' {
-  return format === 'uint32' ? 'u32' : format === 'sint32' ? 'i32' : 'f32';
+type AtomicTranspose = Pick<GPUTranspose, 'id' | 'rows' | 'columns' | 'stats'> & {
+  input: GraphDataView;
+  output: GraphDataView;
+};
+
+type TransposeRegion = {
+  inputOffset: number;
+  outputOffset: number;
+  tileRowOffset: number;
+  tileColumnOffset: number;
+  tileColumnCount: number;
+  tileCount: number;
+  elementCount: number;
+};
+
+type MatrixRectangle = {rowStart: number; rowEnd: number; columnStart: number; columnEnd: number};
+
+/** A contiguous row-major chunk is at most two partial rows and one full-row rectangle. */
+function getChunkRectangles(offset: number, length: number, columns: number): MatrixRectangle[] {
+  const firstRow = Math.floor(offset / columns);
+  const lastRow = Math.floor((offset + length - 1) / columns);
+  const firstColumn = offset % columns;
+  const lastColumn = ((offset + length - 1) % columns) + 1;
+  if (firstRow === lastRow) {
+    return [
+      {rowStart: firstRow, rowEnd: firstRow + 1, columnStart: firstColumn, columnEnd: lastColumn}
+    ];
+  }
+  const rectangles = [
+    {rowStart: firstRow, rowEnd: firstRow + 1, columnStart: firstColumn, columnEnd: columns},
+    {rowStart: lastRow, rowEnd: lastRow + 1, columnStart: 0, columnEnd: lastColumn}
+  ];
+  if (firstRow + 1 < lastRow)
+    rectangles.push({rowStart: firstRow + 1, rowEnd: lastRow, columnStart: 0, columnEnd: columns});
+  return rectangles;
+}
+
+/** Finds the shared tiles and exact element count without walking matrix rows or allocating GPU storage. */
+function makeTransposeRegion(
+  inputOffset: number,
+  inputLength: number,
+  outputOffset: number,
+  outputLength: number,
+  rows: number,
+  columns: number
+): TransposeRegion | undefined {
+  let rowStart = rows;
+  let rowEnd = 0;
+  let columnStart = columns;
+  let columnEnd = 0;
+  let elementCount = 0;
+  for (const input of getChunkRectangles(inputOffset, inputLength, columns)) {
+    for (const output of getChunkRectangles(outputOffset, outputLength, rows)) {
+      const firstRow = Math.max(input.rowStart, output.columnStart);
+      const lastRow = Math.min(input.rowEnd, output.columnEnd);
+      const firstColumn = Math.max(input.columnStart, output.rowStart);
+      const lastColumn = Math.min(input.columnEnd, output.rowEnd);
+      if (firstRow >= lastRow || firstColumn >= lastColumn) continue;
+      elementCount += (lastRow - firstRow) * (lastColumn - firstColumn);
+      rowStart = Math.min(rowStart, firstRow);
+      rowEnd = Math.max(rowEnd, lastRow);
+      columnStart = Math.min(columnStart, firstColumn);
+      columnEnd = Math.max(columnEnd, lastColumn);
+    }
+  }
+  if (!elementCount) return undefined;
+  const tileRowOffset = Math.floor(rowStart / GPU_TRANSPOSE_TILE_SIZE);
+  const tileColumnOffset = Math.floor(columnStart / GPU_TRANSPOSE_TILE_SIZE);
+  const tileColumnCount = Math.ceil(columnEnd / GPU_TRANSPOSE_TILE_SIZE) - tileColumnOffset;
+  return {
+    inputOffset,
+    outputOffset,
+    tileRowOffset,
+    tileColumnOffset,
+    tileColumnCount,
+    tileCount: (Math.ceil(rowEnd / GPU_TRANSPOSE_TILE_SIZE) - tileRowOffset) * tileColumnCount,
+    elementCount
+  };
 }

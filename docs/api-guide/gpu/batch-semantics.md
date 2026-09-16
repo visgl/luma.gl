@@ -39,6 +39,7 @@ explicit graph-owned scratch.
 | `GPUSegmentOffsets` | Exclusive start-flag prefixes, global list offsets, and segment count | Packed `uint32`; slot views cover element flags with independent partitions; list offsets remain one atomic destination | Empty input clears count and terminal offset; every encoding rebuilds the valid offset prefix |
 | `GPUGather`, `GPUUint32Gather` | Global indexed row selection; one output row per index, in index order | Independent atomic/vector partitions; packed fixed-width word-aligned rows and uint32 indices; output capacity covers indices | Empty indices leave output untouched; empty source fills invalid rows; each encoding rewrites the active prefix and preserves spare capacity |
 | `GPUByteRangeGather` | Byte ranges addressed in global source/output byte order | Five packed `uint32` operands may have independent atomic/vector partitions; metadata lengths match; output ranges are sorted and nonoverlapping | Empty metadata or zero capacity writes nothing; empty source fills zero; each encoding clears gaps, invalid bytes, and final-word padding; spare words are untouched |
+| `GPUTranspose` | One global row-major matrix becomes its transposed row-major matrix | Packed `uint32`, `sint32`, or `float32`; independent input/output partitions may split rows and tiles; both capacities cover the matrix | Zero rows or columns write nothing; spare capacity is untouched; every encoding overwrites the transposed matrix and preserves raw value bits |
 | `GPUSegmentedLayout` | Physical-value and logical-element offsets, inclusive segment indices, list offsets, and three counts | Six packed `uint32` slot views may use independent atomic/vector partitions; all cover the value-flag domain; list offsets and counts remain atomic | Empty input clears counts and the first list offset; nonempty input has one implicit first segment; extra slot-output capacity is untouched |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
@@ -108,6 +109,13 @@ addresses, capacity truncation, repeated encodings, and zero-copy lowering. The 
 uses no scratch storage; dispatch count grows with the product of source chunks, aligned metadata
 spans, and output chunks. More efficient routing for fragmented data remains follow-up work.
 
+`gpu-transpose-batching.*.spec.ts` checks independent partitions, row/tile boundary splits, empty
+chunks, rectangular matrices, spare capacity, changed inputs, and exact 32-bit preservation for all
+three formats on WebGPU CORE. Node tests verify allocation-free lowering, alias/ownership checks,
+and restriction to shared tiles. Each source/destination pair uses a bounded region of the existing
+padded tile kernel; pairs with no shared elements emit no commands. Planning still considers the
+product of input and output chunks, and fragmented boundaries may repeat tile workgroups.
+
 ## Coverage inventory
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -130,7 +138,6 @@ operation inventory. The exhaustive API/function audit remains tranche 4.
 - `GPUAncestorProjection`
 - `GPUBatchSort`
 - `GPUGallopingSearch`
-- `GPUTranspose`
 - `GPUFFT1D`
 - `GPUConvolution`
 - `GPUFiniteDifference2D`

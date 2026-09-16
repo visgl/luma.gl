@@ -10,7 +10,7 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 ## Overview
 
 `GPUTranspose` adds an out-of-place two-dimensional matrix transpose to a `GPUCommandGraph`.
-It operates directly on packed graph data views, supports rectangular matrices and partial edge
+It operates directly on packed graph data views or chunked vectors, supports rectangular matrices and partial edge
 tiles, and does not compile, submit, or read data back by itself.
 
 The implementation moves 16-by-16 tiles through workgroup memory. The tile has one padded column
@@ -40,12 +40,18 @@ graph.add(new GPUTranspose({
 }));
 ```
 
-`input` and `output` must be packed, four-byte-aligned `GraphDataView` values with the same scalar
-format. Supported formats are `float32`, `sint32`, and `uint32`. Each view must contain at least
-`rows * columns` rows, and the source and destination must use separate graph buffers.
+`input` and `output` accept packed, four-byte-aligned `GraphDataView` or `GraphVectorView` values
+with the same scalar format. Supported formats are `float32`, `sint32`, and `uint32`. Each operand
+must contain at least `rows * columns` elements. Source and destination chunks must use separate
+graph buffers, and output chunks must not overlap one another.
 
 The input uses row-major indexing `input[row * columns + column]`. The output has shape
 `columns` by `rows` and uses `output[column * rows + row]`.
+
+Chunk boundaries may differ and may split either matrix rows or tiles. They describe storage for
+one logical matrix. Extra input/output capacity is untouched. Every encoding overwrites the matrix
+prefix using the current inputs; raw 32-bit transfers preserve signed zeros, NaN payloads, and
+integer values exactly.
 
 ## Empty matrices
 
@@ -55,9 +61,10 @@ of 16; bounds checks handle every partial tile.
 
 ## Graph and ownership contract
 
-Both views must belong to the graph passed to `getCommandNodes()`. The primitive contributes one compute
-node that declares the input as storage-read and the output as storage-write. It uses no transient
-buffers and performs no hidden copies. Compilation, physical resource resolution, command
+Every chunk must belong to the graph passed to `getCommandNodes()`, including unused capacity.
+The primitive contributes one compute node per source/destination pair with shared elements,
+declaring the source as storage-read and the destination as storage-write. Atomic operands retain
+one node. It uses no transient buffers, packing, or hidden copies. Compilation, physical resource resolution, command
 encoding, submission, and optional readback stay with the graph and caller.
 
 ## Statistics and limits
@@ -66,6 +73,10 @@ encoding, submission, and optional readback stay with the graph and caller.
 tile grid, tile count, and fixed `[16, 16, 1]` workgroup size. The graph maps the tile count across
 WebGPU's bounded three-dimensional dispatch space. The device must support 256 invocations per
 workgroup and workgroup dimensions of at least 16 by 16.
+
+These statistics describe the logical matrix. Individual node workloads report their shared
+element counts and actual tile regions. Chunk boundaries may cause the same logical tile to appear
+in multiple nodes, so the sum of dispatched tile counts may exceed `transpose.stats.tileCount`.
 
 The matrix element count must fit a `uint32` index range. Logical view capacity and the graph's
 buffer descriptors apply their own byte-size and device-limit checks.
@@ -77,6 +88,13 @@ once, with little arithmetic to hide memory latency. The 16-by-16 tile turns the
 destination traffic into coalesced writes, while its padded workgroup-memory row reduces bank
 conflicts. Matrices whose dimensions are multiples of 16 use every invocation; narrow matrices and
 partial edge tiles spend some lanes only on synchronization and bounds checks.
+
+For each source/destination chunk pair, lowering intersects their matrix regions and dispatches only
+the shared tile bounds. The kernel masks both source and destination membership, reading and writing
+each logical element once across the complete operation. Empty intersections produce no dispatch.
+Planning considers every input/output chunk pair, and heavily fragmented boundaries add partially
+occupied workgroups and dispatch overhead. Optimizing that planning and scheduling remains follow-up
+work; chunk storage is never combined implicitly.
 
 Subgroups do not remove the need for a cross-row data reorder before coalesced writes, and subgroup
 matrix shapes vary between devices. The portable workgroup tile is therefore the primary path. A
