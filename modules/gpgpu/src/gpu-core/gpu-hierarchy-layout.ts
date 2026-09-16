@@ -10,9 +10,12 @@ import {GPUScan} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
+
+import {alignGraphVectorViews} from './graph-vector-view-utils';
+import {validateChunkViews} from './gpu-chunk-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 
 const HIERARCHY_LAYOUT_WORKGROUP_SIZE = 256;
 
@@ -99,8 +102,6 @@ export class GPUHierarchyLayout {
     ) {
       throw new Error(`${this.id} heights and offsets must match the child count`);
     }
-    validateChildOutputTopology(this.childStates, this.heights, `${this.id} heights`);
-    validateChildOutputTopology(this.childStates, this.offsets, `${this.id} offsets`);
     for (const [name, value] of [
       ['expandedChildHeight', this.expandedChildHeight],
       ['collapsedChildHeight', this.collapsedChildHeight],
@@ -143,8 +144,15 @@ export class GPUHierarchyLayout {
       return nodes;
     }
     const parentChunks = getHierarchyChunkRanges(this.parentStates);
-    const childChunks = getHierarchyChunkRanges(this.childStates);
-    const heightChunks = getHierarchyChunks(this.heights);
+    validateChunkViews(graph, [this.parentStates, this.childStates], [this.heights, this.offsets]);
+    let base = 0;
+    const childChunks = alignGraphVectorViews(graph, [this.childStates, this.heights]).map(
+      ([view, height], index) => {
+        const range = {view, height, index, base};
+        base += view.length;
+        return range;
+      }
+    );
     for (const childChunk of childChunks) {
       for (const parentChunk of parentChunks) {
         const firstChild = Math.max(childChunk.base, parentChunk.base * this.childrenPerParent);
@@ -159,7 +167,7 @@ export class GPUHierarchyLayout {
               parentStates: parentChunk.view,
               parentBase: parentChunk.base,
               childStates: childChunk.view,
-              childHeights: heightChunks[childChunk.index],
+              childHeights: childChunk.height,
               childBase: childChunk.base,
               firstChild,
               childCount: lastChild - firstChild
@@ -194,6 +202,12 @@ export class GPUHierarchyLayout {
     }
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
+    const dispatch = getBoundedDispatchLayout(
+      this.id,
+      props.childCount,
+      HIERARCHY_LAYOUT_WORKGROUP_SIZE,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
     const source = /* wgsl */ `
 const CHILD_COUNT: u32 = ${props.childCount}u;
 const CHILDREN_PER_PARENT: u32 = ${this.childrenPerParent}u;
@@ -211,11 +225,12 @@ const HEIGHT_OFFSET: u32 = ${getViewElementOffset(props.childHeights)}u;
 @group(0) @binding(2) var<storage, read_write> childHeights: array<u32>;
 
 @compute @workgroup_size(${HIERARCHY_LAYOUT_WORKGROUP_SIZE})
-fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
-  if (globalId.x >= CHILD_COUNT) {
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getBoundedInvocationIndexSource(dispatch, HIERARCHY_LAYOUT_WORKGROUP_SIZE)}
+  if (index >= CHILD_COUNT) {
     return;
   }
-  let globalChildIndex = FIRST_CHILD + globalId.x;
+  let globalChildIndex = FIRST_CHILD + index;
   let childIndex = globalChildIndex - CHILD_BASE;
   let parentIndex = globalChildIndex / CHILDREN_PER_PARENT - PARENT_BASE;
   if (parentStates[PARENT_OFFSET + parentIndex] == 0u) {
@@ -265,10 +280,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
                 resolvedBindings[name] = getViewBinding(view, getBuffer);
               }
               computation.setBindings(resolvedBindings);
-              computation.dispatch(
-                computePass,
-                Math.ceil(props.childCount / HIERARCHY_LAYOUT_WORKGROUP_SIZE)
-              );
+              computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
             },
             destroy: () => computation.destroy()
           };
@@ -304,20 +316,6 @@ function validateHierarchyData(data: GPUHierarchyLayoutData, name: string): void
   for (const [chunkIndex, view] of getHierarchyChunks(data).entries()) {
     const chunkName = data instanceof GraphVectorView ? `${name} chunk ${chunkIndex}` : name;
     validatePackedUint32View(view, chunkName);
-  }
-}
-
-/** Requires child-aligned outputs to preserve the source partition topology. */
-function validateChildOutputTopology(
-  childStates: GPUHierarchyLayoutData,
-  output: GPUHierarchyLayoutData,
-  name: string
-): void {
-  if (childStates instanceof GraphVectorView !== output instanceof GraphVectorView) {
-    throw new Error(`${name} must use the same data-view or vector-view kind as childStates`);
-  }
-  if (childStates instanceof GraphVectorView && output instanceof GraphVectorView) {
-    validateMatchingVectorTopology(childStates, output, name);
   }
 }
 

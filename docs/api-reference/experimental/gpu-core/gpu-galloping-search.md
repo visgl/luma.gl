@@ -82,3 +82,10 @@ trade some repeated binary-search seeds for parallelism. With `T` queries per ti
 uses approximately `M / T` independent seeds, while the remaining queries gallop from a preceding
 position. The default `T = 32` is a policy starting point and should be benchmarked against the
 target adapter and data distribution.
+
+
+## Chunked storage
+
+Values, optional value order, queries, segment records, and output may be independently partitioned vectors. Segment ranges and results use global logical indices. The atomic path retains exponential probing. The vector path gathers bounded query tiles and sums per-chunk lower bounds over each segment; it preserves malformed-range bits, decreasing-query diagnostics, and stop-on-non-finite behavior within each query tile. Four-word descriptor records may cross chunk boundaries.
+
+Indirect searches explicitly gather the requested permutation into scratch with the order vector's chunk boundaries. Direct searches borrow values without copies. No whole-column concatenation is performed. Vector-path command count grows with segment count, reserved query tiles, and value/output chunks; optimizing fragmented workloads remains performance work.

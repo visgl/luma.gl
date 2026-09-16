@@ -2,26 +2,27 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import type {GPUCommandNode} from './gpu-command-node';
+import type {GPUCommandGraph, GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {
-  getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
-const WORKGROUP_SIZE = 256;
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {createChunkNode, validateChunkViews} from './gpu-chunk-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
+import {GPUElementwise} from './gpu-elementwise';
+
 export type GPUCOOToCSRProps = {
   id?: string;
-  rowIndices: GraphDataView<'uint32'>;
-  columnIndices: GraphDataView<'uint32'>;
-  values: GraphDataView<'float32'>;
+  rowIndices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  columnIndices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  values: GraphDataView<'float32'> | GraphVectorView<'float32'>;
   rows: number;
-  rowOffsets: GraphDataView<'uint32'>;
-  outputColumnIndices: GraphDataView<'uint32'>;
-  outputValues: GraphDataView<'float32'>;
+  rowOffsets: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  outputColumnIndices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  outputValues: GraphDataView<'float32'> | GraphVectorView<'float32'>;
 };
 /** Converts row-sorted COO entries into CSR without CPU readback. */
 export class GPUCOOToCSR {
@@ -30,129 +31,106 @@ export class GPUCOOToCSR {
   constructor(props: GPUCOOToCSRProps) {
     this.id = props.id ?? 'gpu-coo-to-csr';
     this.props = props;
-    validatePackedUint32View(props.rowIndices, `${this.id} rowIndices`);
-    validatePackedUint32View(props.columnIndices, `${this.id} columnIndices`);
-    validatePackedView(props.values, ['float32'], `${this.id} values`);
-    validatePackedUint32View(props.rowOffsets, `${this.id} rowOffsets`);
-    validatePackedUint32View(props.outputColumnIndices, `${this.id} outputColumnIndices`);
-    validatePackedView(props.outputValues, ['float32'], `${this.id} outputValues`);
-    const nnz = props.rowIndices.length;
-    if (props.columnIndices.length !== nnz || props.values.length !== nnz)
+    for (const chunk of getGraphVectorData(props.rowIndices))
+      validatePackedUint32View(chunk, `${this.id} rowIndices`);
+    for (const chunk of getGraphVectorData(props.columnIndices))
+      validatePackedUint32View(chunk, `${this.id} columnIndices`);
+    for (const chunk of getGraphVectorData(props.values))
+      validatePackedView(chunk, ['float32'], `${this.id} values`);
+    for (const chunk of getGraphVectorData(props.rowOffsets))
+      validatePackedUint32View(chunk, `${this.id} rowOffsets`);
+    for (const chunk of getGraphVectorData(props.outputColumnIndices))
+      validatePackedUint32View(chunk, `${this.id} outputColumnIndices`);
+    for (const chunk of getGraphVectorData(props.outputValues))
+      validatePackedView(chunk, ['float32'], `${this.id} outputValues`);
+    const nonzeroCount = props.rowIndices.length;
+    if (props.columnIndices.length !== nonzeroCount || props.values.length !== nonzeroCount)
       throw new Error(`${this.id} COO arrays must have equal length`);
-    if (!Number.isInteger(props.rows) || props.rows < 0)
+    if (
+      !Number.isSafeInteger(props.rows) ||
+      props.rows < 0 ||
+      props.rows >= 0xffffffff ||
+      nonzeroCount > 0xffffffff
+    )
       throw new Error(`${this.id} rows must be a non-negative integer`);
     if (props.rowOffsets.length !== props.rows + 1)
       throw new Error(`${this.id} rowOffsets length must equal rows + 1`);
-    if (props.outputColumnIndices.length !== nnz || props.outputValues.length !== nnz)
+    if (
+      props.outputColumnIndices.length !== nonzeroCount ||
+      props.outputValues.length !== nonzeroCount
+    )
       throw new Error(`${this.id} CSR entry outputs must have length nnz`);
   }
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    const p = this.props;
-    if (
-      [
-        p.rowIndices,
-        p.columnIndices,
-        p.values,
-        p.rowOffsets,
-        p.outputColumnIndices,
-        p.outputValues
-      ].some(view => view.buffer.graph !== graph)
-    )
-      throw new Error(`${this.id} views must belong to target graph`);
-    nodes.push(...addCopyEntriesPass(graph, this));
-    nodes.push(...addOffsetsPass(graph, this));
-
+    const {rowIndices, columnIndices, values, rowOffsets, outputColumnIndices, outputValues} =
+      this.props;
+    validateChunkViews(
+      graph,
+      [rowIndices, columnIndices, values],
+      [rowOffsets, outputColumnIndices, outputValues]
+    );
+    const nodes: GPUCommandNode<Parameters>[] = [
+      ...new GPUElementwise({
+        id: `${this.id}-copy-columns`,
+        input: columnIndices,
+        output: outputColumnIndices,
+        operation: 'copy'
+      }).getCommandNodes(graph),
+      ...new GPUElementwise({
+        id: `${this.id}-copy-values`,
+        input: values,
+        output: outputValues,
+        operation: 'copy'
+      }).getCommandNodes(graph)
+    ];
+    const inputChunks = getGraphVectorData(rowIndices).filter(chunk => chunk.length);
+    let firstRow = 0;
+    for (const [outputIndex, output] of getGraphVectorData(rowOffsets).entries()) {
+      if (!output.length) continue;
+      const dispatch = getBoundedDispatchLayout(
+        this.id,
+        output.length,
+        256,
+        graph.device.limits.maxComputeWorkgroupsPerDimension
+      );
+      // Add each chunk's lower bound. Sorted COO preserves global order without packing entries.
+      for (let inputIndex = 0; inputIndex < Math.max(1, inputChunks.length); inputIndex++) {
+        const input = inputChunks[inputIndex];
+        nodes.push(
+          createChunkNode(graph, {
+            id: `${this.id}-offsets-${outputIndex}-${inputIndex}`,
+            inputs: input ? {rows: input} : {},
+            outputs: {offsets: output},
+            dispatch,
+            source: `
+${input ? '@group(0) @binding(0) var<storage, read> rows: array<u32>;' : ''}
+@group(0) @binding(${input ? 1 : 0}) var<storage, read_write> offsets: array<u32>;
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getBoundedInvocationIndexSource(dispatch, 256)}
+  if (index >= ${output.length}u) { return; }
+  let targetRow = ${firstRow}u + index;
+  var low = 0u;
+  ${
+    input
+      ? `var high = ${input.length}u;
+  loop {
+    if (low >= high) { break; }
+    let middle = low + (high - low) / 2u;
+    if (rows[${getViewElementOffset(input)}u + middle] < targetRow) { low = middle + 1u; }
+    else { high = middle; }
+  }`
+      : ''
+  }
+  offsets[${getViewElementOffset(output)}u + index] ${inputIndex ? '+=' : '='} low;
+}`
+          })
+        );
+      }
+      firstRow += output.length;
+    }
     return nodes;
   }
-}
-function addCopyEntriesPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  c: GPUCOOToCSR
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const p = c.props,
-    nnz = p.rowIndices.length;
-  if (nnz === 0) return nodes;
-  const groups = Math.ceil(nnz / WORKGROUP_SIZE);
-  const source = `const NNZ:u32=${nnz}u;const CI:u32=${getViewElementOffset(p.columnIndices)}u;const VI:u32=${getViewElementOffset(p.values)}u;const CO:u32=${getViewElementOffset(p.outputColumnIndices)}u;const VO:u32=${getViewElementOffset(p.outputValues)}u;@group(0)@binding(0)var<storage,read>columns:array<u32>;@group(0)@binding(1)var<storage,read>values:array<f32>;@group(0)@binding(2)var<storage,read_write>outColumns:array<u32>;@group(0)@binding(3)var<storage,read_write>outValues:array<f32>;@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(global_invocation_id)id:vec3u){let i=id.x;if(i<NNZ){outColumns[CO+i]=columns[CI+i];outValues[VO+i]=values[VI+i];}}`;
-  nodes.push(
-    ...addPass(graph, `${c.id}-copy`, source, groups, [
-      {name: 'columns', view: p.columnIndices, usage: 'storage-read'},
-      {name: 'values', view: p.values, usage: 'storage-read'},
-      {name: 'outColumns', view: p.outputColumnIndices, usage: 'storage-write'},
-      {name: 'outValues', view: p.outputValues, usage: 'storage-write'}
-    ])
-  );
-
-  return nodes;
-}
-function addOffsetsPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  c: GPUCOOToCSR
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const p = c.props,
-    nnz = p.rowIndices.length,
-    groups = Math.ceil((p.rows + 1) / WORKGROUP_SIZE);
-  const source = `const ROWS:u32=${p.rows}u;const NNZ:u32=${nnz}u;const RI:u32=${getViewElementOffset(p.rowIndices)}u;const OO:u32=${getViewElementOffset(p.rowOffsets)}u;@group(0)@binding(0)var<storage,read>rowsIn:array<u32>;@group(0)@binding(1)var<storage,read_write>offsets:array<u32>;fn lowerBound(target:u32)->u32{var lo=0u;var hi=NNZ;loop{if(lo>=hi){break;}let mid=lo+(hi-lo)/2u;if(rowsIn[RI+mid]<target){lo=mid+1u;}else{hi=mid;}}return lo;}@compute @workgroup_size(${WORKGROUP_SIZE})fn main(@builtin(global_invocation_id)id:vec3u){let row=id.x;if(row<=ROWS){offsets[OO+row]=lowerBound(row);}}`;
-  nodes.push(
-    ...addPass(graph, `${c.id}-offsets`, source, groups, [
-      {name: 'rowsIn', view: p.rowIndices, usage: 'storage-read'},
-      {name: 'offsets', view: p.rowOffsets, usage: 'storage-write'}
-    ])
-  );
-
-  return nodes;
-}
-type Resource = {name: string; view: GraphDataView; usage: 'storage-read' | 'storage-write'};
-function addPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  id: string,
-  source: string,
-  groups: number,
-  resources: Resource[]
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id,
-      workload: {
-        operation: 'GPUCOOToCSR',
-        commandCount: 1,
-        maximumWorkgroupCount: groups,
-        maximumInvocationCount: groups * WORKGROUP_SIZE,
-        readByteLength: 0,
-        writeByteLength: 0
-      },
-      resources: resources.map(r => ({buffer: r.view, usage: r.usage})),
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id,
-          source,
-          shaderLayout: {
-            bindings: resources.map((r, location) => ({
-              name: r.name,
-              type: r.usage === 'storage-read' ? 'read-only-storage' : 'storage',
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const r of resources) bindings[r.name] = getViewBinding(r.view, getBuffer);
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, groups, 1, 1);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    })
-  );
-
-  return nodes;
 }

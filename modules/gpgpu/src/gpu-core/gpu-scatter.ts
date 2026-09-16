@@ -2,22 +2,20 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {type GPUCommandNode} from './gpu-command-node';
 import {
   getGPUVectorFormatInfo,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
-import {
-  getViewBinding,
-  getViewElementOffset,
-  validatePackedUint32View
-} from './graph-data-view-utils';
+import {getViewElementOffset, validatePackedUint32View} from './graph-data-view-utils';
+
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
+import {getGraphDataPrefix} from './graph-data-view-utils';
+import {createChunkNode, validateChunkViews} from './gpu-chunk-utils';
 
 const SCATTER_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -33,11 +31,11 @@ export type GPUScatterProps<T extends GPUScatterFormat = GPUScatterFormat> = {
   /** Prefix for the generated graph node. */
   id?: string;
   /** Packed fixed-width source rows. */
-  source: GraphDataView<T>;
+  source: GraphDataView<T> | GraphVectorView<T>;
   /** Packed uint32 destination-row indices. */
-  indices: GraphDataView<'uint32'>;
+  indices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned packed destination with the same format as source. */
-  output: GraphDataView<T>;
+  output: GraphDataView<T> | GraphVectorView<T>;
 };
 
 /**
@@ -53,9 +51,9 @@ export type GPUScatterProps<T extends GPUScatterFormat = GPUScatterFormat> = {
  */
 export class GPUScatter<T extends GPUScatterFormat = GPUScatterFormat> {
   readonly id: string;
-  readonly source: GraphDataView<T>;
-  readonly indices: GraphDataView<'uint32'>;
-  readonly output: GraphDataView<T>;
+  readonly source: GraphDataView<T> | GraphVectorView<T>;
+  readonly indices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly output: GraphDataView<T> | GraphVectorView<T>;
   readonly wordsPerRow: number;
 
   constructor(props: GPUScatterProps<T>) {
@@ -64,9 +62,12 @@ export class GPUScatter<T extends GPUScatterFormat = GPUScatterFormat> {
     this.indices = props.indices;
     this.output = props.output;
 
-    validateScatterView(this.source, `${this.id} source`);
-    validatePackedUint32View(this.indices, `${this.id} indices`);
-    validateScatterView(this.output, `${this.id} output`);
+    for (const chunk of getGraphVectorData(this.source))
+      validateScatterView(chunk, `${this.id} source`);
+    for (const chunk of getGraphVectorData(this.indices))
+      validatePackedUint32View(chunk, `${this.id} indices`);
+    for (const chunk of getGraphVectorData(this.output))
+      validateScatterView(chunk, `${this.id} output`);
 
     if (this.source.format !== this.output.format) {
       throw new Error(`${this.id} source and output must use the same format`);
@@ -74,7 +75,13 @@ export class GPUScatter<T extends GPUScatterFormat = GPUScatterFormat> {
     if (this.source.length < this.indices.length) {
       throw new Error(`${this.id} source must contain at least indices.length rows`);
     }
-    if (this.output.buffer === this.source.buffer || this.output.buffer === this.indices.buffer) {
+    if (
+      getGraphVectorData(this.output).some(output =>
+        [...getGraphVectorData(this.source), ...getGraphVectorData(this.indices)].some(
+          input => output.buffer === input.buffer
+        )
+      )
+    ) {
       throw new Error(`${this.id} output must use a separate buffer`);
     }
 
@@ -84,76 +91,55 @@ export class GPUScatter<T extends GPUScatterFormat = GPUScatterFormat> {
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    for (const view of [this.source, this.indices, this.output]) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
-      }
-    }
-    if (this.indices.length === 0) {
-      return nodes;
-    }
-
-    const dispatchLayout = getBoundedDispatchLayout(
-      'GPUScatter',
-      this.indices.length,
-      SCATTER_WORKGROUP_SIZE,
+    return getGPUScatterCommandNodesWithDispatchLimit(
+      this,
+      graph,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    const source = makeShaderSource(this, dispatchLayout);
-
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUScatter',
-          commandCount: 1,
-          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-          maximumInvocationCount:
-            dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * SCATTER_WORKGROUP_SIZE,
-          readByteLength: this.indices.length * (UINT32_BYTE_LENGTH + this.source.rowByteLength),
-          writeByteLength: this.indices.length * this.output.rowByteLength
-        },
-        resources: [
-          {buffer: this.source, usage: 'storage-read'},
-          {buffer: this.indices, usage: 'storage-read'},
-          {buffer: this.output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'indices', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputWords', type: 'storage', group: 0, location: 2}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                sourceWords: getViewBinding(this.source, getBuffer),
-                indices: getViewBinding(this.indices, getBuffer),
-                outputWords: getViewBinding(this.output, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(
-                computePass,
-                dispatchLayout.x,
-                dispatchLayout.y,
-                dispatchLayout.z
-              );
-            },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
-    );
-
-    return nodes;
   }
+}
+
+/** Shares global scatter lowering with bounded composite operations. @internal */
+export function getGPUScatterCommandNodesWithDispatchLimit<Parameters>(
+  scatter: GPUScatter,
+  graph: GPUCommandGraph<Parameters>,
+  maximum: number
+): readonly GPUCommandNode<Parameters>[] {
+  validateChunkViews(graph, [scatter.source, scatter.indices], [scatter.output]);
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  const spans = alignGraphVectorViews(graph, [
+    getGraphDataPrefix(graph, scatter.source, scatter.indices.length),
+    scatter.indices
+  ]);
+  for (const [spanIndex, [source, indices]] of spans.entries()) {
+    const dispatchLayout = getBoundedDispatchLayout(
+      scatter.id,
+      indices.length,
+      SCATTER_WORKGROUP_SIZE,
+      maximum
+    );
+    let outputStart = 0;
+    for (const [outputIndex, output] of getGraphVectorData(scatter.output).entries()) {
+      if (output.length)
+        nodes.push(
+          createChunkNode(graph, {
+            id:
+              spans.length === 1 && getGraphVectorData(scatter.output).length === 1
+                ? scatter.id
+                : `${scatter.id}-${spanIndex}-${outputIndex}`,
+            inputs: {sourceWords: source, indices},
+            outputs: {outputWords: output},
+            dispatch: dispatchLayout,
+            source: makeShaderSource(
+              {source, indices, output, wordsPerRow: scatter.wordsPerRow, outputStart},
+              dispatchLayout
+            )
+          })
+        );
+      outputStart += output.length;
+    }
+  }
+  return nodes;
 }
 
 function validateScatterView(view: GraphDataView, name: string): void {
@@ -172,7 +158,13 @@ function validateScatterView(view: GraphDataView, name: string): void {
 }
 
 function makeShaderSource(
-  scatter: GPUScatter,
+  scatter: {
+    source: GraphDataView;
+    indices: GraphDataView<'uint32'>;
+    output: GraphDataView;
+    wordsPerRow: number;
+    outputStart: number;
+  },
   dispatchLayout: ReturnType<typeof getBoundedDispatchLayout>
 ): string {
   return `const INDEX_COUNT: u32 = ${scatter.indices.length}u;
@@ -192,10 +184,10 @@ fn main(
   ${getBoundedInvocationIndexSource(dispatchLayout, SCATTER_WORKGROUP_SIZE)}
   if (index >= INDEX_COUNT) { return; }
   let destinationIndex = indices[INDEX_OFFSET + index];
-  if (destinationIndex >= OUTPUT_LENGTH) { return; }
+  if (destinationIndex < ${scatter.outputStart}u || destinationIndex - ${scatter.outputStart}u >= OUTPUT_LENGTH) { return; }
 
   let sourceBase = SOURCE_OFFSET + index * WORDS_PER_ROW;
-  let outputBase = OUTPUT_OFFSET + destinationIndex * WORDS_PER_ROW;
+  let outputBase = OUTPUT_OFFSET + (destinationIndex - ${scatter.outputStart}u) * WORDS_PER_ROW;
   for (var word = 0u; word < WORDS_PER_ROW; word++) {
     outputWords[outputBase + word] = sourceWords[sourceBase + word];
   }

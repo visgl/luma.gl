@@ -67,15 +67,3 @@ export function alignGraphVectorViews<Parameters, const Formats extends readonly
   // Each span preserves the format at the corresponding operand position.
   return result as {readonly [Index in keyof Formats]: GraphDataView<Formats[Index]>}[];
 }
-
-/** Explicit backend limitation for operations whose global indexing needs one physical chunk. */
-export function getSingleGraphVectorChunk<T extends GPUVectorFormat>(
-  vector: GraphVectorView<T>
-): GraphDataView<T> {
-  if (vector.data.length !== 1) {
-    throw new Error(
-      `${vector.id}: this lowering requires one physical chunk; packing is never implicit`
-    );
-  }
-  return vector.data[0];
-}

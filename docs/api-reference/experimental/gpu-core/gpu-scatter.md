@@ -85,3 +85,8 @@ allocate scratch resources or perform readback.
 
 Arbitrary duplicate-destination reduction is intentionally outside this primitive; adding atomic or
 reduction semantics would change both the type constraints and performance model substantially.
+
+
+## Chunked storage
+
+`source`, `indices`, and `output` accept atomic views or independently partitioned vectors. Destination indices address global logical output rows. Lowering intersects source/index boundaries and routes each span to the relevant destination chunks without concatenation. Out-of-range indices are ignored and duplicate destinations remain unordered. Source rows beyond `indices.length` are untouched.

@@ -143,3 +143,8 @@ readback remain application-owned.
 Segments larger than 256 rows are rejected. Use `GPUSort` for an individual larger domain or
 `GPUBatchSort` for separately allocated chunks. A segmented multi-workgroup radix implementation
 could extend this contract later without changing independent-domain semantics.
+
+
+## Chunked storage
+
+Each parent column may be an atomic view or an independently partitioned vector. A CPU-known sort segment may cross physical chunk seams, and output gaps remain untouched. Atomic parents retain the width-bucket workgroup kernels. Vector parents borrow each logical segment and use stable chunk-aware `GPUSort` within that domain. The existing limit of 256 rows per segment remains a domain constraint; use `GPUSort` for larger or global domains.

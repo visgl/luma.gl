@@ -5,8 +5,6 @@
 import type {GPUCommandNode} from './gpu-command-node';
 import type {GPUCommandGraph} from './gpu-command-graph';
 import {GPUGather, getGatherCommandNodes, type GPUGatherProps} from './gpu-gather';
-import {validatePackedUint32View} from './graph-data-view-utils';
-import {getGraphVectorData} from './graph-vector-view-utils';
 
 export type GPUUint32GatherProps = GPUGatherProps<'uint32'> & {
   invalidValue?: number;
@@ -19,9 +17,7 @@ export class GPUUint32Gather extends GPUGather<'uint32'> {
   constructor(props: GPUUint32GatherProps) {
     super({...props, id: props.id ?? 'gpu-uint32-gather'});
     this.invalidValue = props.invalidValue ?? 0;
-    for (const view of [this.source, this.output]) {
-      for (const chunk of getGraphVectorData(view)) validatePackedUint32View(chunk, this.id);
-    }
+    if (this.source.format !== 'uint32') throw new Error(`${this.id} source must use uint32`);
     if (
       !Number.isSafeInteger(this.invalidValue) ||
       this.invalidValue < 0 ||

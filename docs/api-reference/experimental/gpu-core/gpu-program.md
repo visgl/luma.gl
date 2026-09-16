@@ -149,9 +149,11 @@ per-node dispatch geometry for GPU predicates. Neither requires matching source 
 contiguous copy. Current numeric kernels require packed float32 rows; strided layout can be bound
 and inspected but is rejected by kernels that do not support it.
 
-The current CSR SpMV backend requires one physical chunk per operand and rejects multi-chunk
-bindings explicitly. General sparse indexing, global reordering, and the library-wide operation
-batching audit remain follow-up work; this foundation does not claim universal algorithm coverage.
+CSR SpMV resolves all operands as graph vectors. Row offsets, nonzero columns/values, the dense
+input, and output may have independent chunk boundaries. Cross-chunk rows use global indices;
+source buffers remain borrowed, long-row scratch is bounded, and GPU predicates retain each
+node's exact dispatch geometry. See the individual operation contracts for specialized domain
+constraints and performance costs.
 
 
 ### Shared vector shape

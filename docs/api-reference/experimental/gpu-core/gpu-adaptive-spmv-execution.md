@@ -64,3 +64,8 @@ A future GPU classifier can bucket rows and generate indirect queues entirely on
 ## Why this matters beyond SpMV
 
 Adaptive SpMV is the first irregular workload to exercise the common GPU strategy layer. Reduction chooses hierarchy shapes; SpMV chooses fundamentally different mappings of work to GPU lanes. If both fit the same strategy contract, that contract is a credible foundation for later FFT, MatMul, sort and graph-operation planning.
+
+
+## Chunked storage
+
+CSR row offsets, column indices, values, input vector, and output accept independently partitioned graph vectors. Row boundaries, nonzero indices, and column IDs are global. Adjacent offsets can straddle chunks, and one row may consume nonzeros and vector entries from many chunks. All four strategies remain available; subgroup execution uses one subgroup per row without assuming a fixed subgroup width. Long-row partial scratch is bounded by a row block and the storage binding limit. Each encoding overwrites the previous result before accumulating contributions. `GPUProgramSpMV` uses the same lowering and preserves external `GPUData[]` bindings.

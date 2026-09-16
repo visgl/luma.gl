@@ -342,7 +342,7 @@ it('GPUGridIndex preserves vector chunks and rebuilds after input updates', asyn
   expect(
     compiled.stats.nodeOrder.filter(id => id.includes('-count-')),
     'empty chunks retain identity without adding count work'
-  ).toEqual(['gpu-grid-index-count-0', 'gpu-grid-index-count-2']);
+  ).toEqual(['gpu-grid-index-count-0-0', 'gpu-grid-index-count-0-2']);
 
   buffers[2].write(Float32Array.from([0, 0, 0, 0]));
   encode(device, compiled);

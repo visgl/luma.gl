@@ -24,7 +24,11 @@ function makeDevice() {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   Object.defineProperty(device, 'limits', {
-    value: {...device.limits, maxComputeWorkgroupsPerDimension: 65535}
+    value: {
+      ...device.limits,
+      maxComputeWorkgroupsPerDimension: 65535,
+      maxStorageBufferBindingSize: 128 * 1024 * 1024
+    }
   });
   return device;
 }

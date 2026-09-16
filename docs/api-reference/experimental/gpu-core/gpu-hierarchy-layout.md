@@ -68,8 +68,7 @@ Inputs and outputs may be packed `GraphDataView<'uint32'>` values or ordered
 - `GPUScan` converts the effective child heights into stable exclusive row offsets.
 
 `childStates.length` must equal `parentStates.length * childrenPerParent`. Both output lengths
-must equal the child count. Vector heights and offsets preserve the exact child-state chunk
-topology; parent partitions may use different boundaries.
+must equal the child count. Parent states, child states, heights, and offsets may use independent chunk boundaries.
 
 ### Partitioned hierarchy identity
 
@@ -87,3 +86,8 @@ Heights and offsets are caller-owned and cannot alias each other or their input 
 
 Expansion states can be updated between graph encodings. The operation allocates only graph-owned
 scan scratch and does not submit, repack, or read back data.
+
+
+## Chunked storage
+
+Parent states, child states, heights, and offsets may have independent chunk boundaries or mix atomic and vector views. Cumulative logical row IDs define parent/child relationships. Height passes intersect child/output spans with parent ranges, and the scan carries offsets across every output chunk. Empty chunks do not introduce hierarchy or scan boundaries.

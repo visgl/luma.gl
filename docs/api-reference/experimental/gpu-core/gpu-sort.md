@@ -28,7 +28,7 @@ and table permutation because a later consumer can still recover the canonical s
 
 ### Global order and batch order answer different questions
 
-`GPUSort` treats one packed view as one global comparison domain. Use it when every row must be
+`GPUSort` treats an atomic view or a vector as one global comparison domain. Use it when every row must be
 ranked against every other row—for example, one back-to-front draw list or one global event
 timeline.
 
@@ -41,14 +41,15 @@ under a global sort.
 
 The distinction is deliberate. Silently concatenating chunks would allocate packed storage,
 discard useful partition metadata, and turn an incremental operation into whole-dataset work.
-Callers that need a global order across chunks must explicitly choose and provision a packed
+Callers that need a global order across chunks can supply vectors directly to `GPUSort`, with
+independently partitioned caller-owned destinations. They may also explicitly provision a packed
 representation.
 
 When independent domains are already packed into four shared parent buffers,
 [`GPUSegmentedSort`](/docs/api-reference/experimental/gpu-core/gpu-segmented-sort) keeps the
 boundaries and inter-segment padding intact while sorting equal-width domains together. It does
-not combine separately allocated streaming chunks; it only exploits storage that the application
-explicitly packed in advance.
+not combine separately allocated streaming chunks. With vector parents it borrows each logical
+segment and sorts across its storage seams; the eight-dispatch bound applies to atomic parents.
 
 ### Algorithm selection follows the work unit
 
@@ -197,3 +198,10 @@ The method does not compile the graph, create an encoder, submit work, or map ou
 See the runnable [GPU sort example](/examples/experimental/gpu-sort) for packed and preserved-batch
 Arrow upload, per-batch algorithm selection, graph compilation statistics, explicit submission,
 and CPU-oracle validation.
+
+
+## Chunked storage
+
+`GPUSort` accepts an atomic view or independently partitioned `GraphVectorView` for each of its four columns. Keys and payloads share a logical length, not a required physical partition. It produces one stable global order across all source chunks, including equal keys that cross chunk boundaries. Source buffers are borrowed unchanged; sorted-span scratch and rank scratch follow the intersections of key and payload chunks. The merge searches other sorted spans and scatters global ranks into destination chunks. Its dispatch count grows with the number of spans; fragmented inputs warrant benchmarking.
+
+`GPUBatchSort` continues to sort each batch independently. Chunk boundaries are comparison-domain boundaries only in that API.
