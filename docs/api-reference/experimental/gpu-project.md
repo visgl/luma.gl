@@ -693,13 +693,29 @@ invalid rows explicitly; passing finite samples is not a global accuracy guarant
 Each variant runs an identical axis-swap consumer in two modes: `inline` embeds the callable
 projection in that consumer, while `materialized` writes an intermediate coordinate/validity buffer
 through `GPUProjectionProgram`, then runs the consumer. This minimal consumer measures that extra
-storage/dispatch boundary, not an application's rendering cost. Reports include observed error,
+storage/dispatch boundary, not an application's rendering cost. `consumerCount` (default `1`)
+creates independent consumers with separate outputs in one submission: inline mode repeats
+projection for each consumer, while materialized mode shares one projection result. Every
+consumer's output and validity are checked, and all output buffers are included in memory totals.
+This is within-submission reuse, not a cross-frame cache or an automatic execution policy.
+Reports include actual adaptive-stage patch counts, polynomial degrees, bounds and fitting
+tolerances, logical dispatch/projection counts, observed error,
 valid-row count, parameter/intermediate/total buffer bytes, CPU planning/program-compilation
 distributions, graph/pipeline setup time, first synchronized use, CPU encoding, fence-synchronized
 execution, and optional GPU timestamp durations. Buffer totals exclude driver/pipeline memory and
 temporary readback/query allocations. Uploads and readbacks are outside execution timings.
 First-use/setup measurements are cache-sensitive, not cold-compiler guarantees. Run with other
 GPU work idle, repeat on target devices, and compare accuracy budgets before interpreting speed.
+The report labels comparisons as `equal-error-budget` or `different-error-budgets`; this refers
+to the declared thresholds, not identical observed errors or a global guarantee. Throughput is
+source rows per second for the **whole consumer workload**, not multiplied by consumer count.
+
+`gpuTiming: false` disables optional GPU timestamps while retaining synchronized timing. Timestamp
+instrumentation prevents the command graph from coalescing compute passes, so instrumented and
+uninstrumented results must not be mixed when choosing an execution strategy. `timestampQueries`
+records whether timestamps were actually used. First use and warmup are uninstrumented.
+The GPU metric sums per-pass timestamp intervals; with independent consumers it must not be
+interpreted as elapsed GPU latency or substituted for synchronized workload time.
 
 The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
 
@@ -712,6 +728,32 @@ LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
 The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failure-gate and
 output-frame regressions. Software adapters skip these integer-fp64 GPU checks.
 The benchmark does not automatically select arithmetic or relax application tolerances.
+
+### Multi-patch and consumer-reuse sweeps
+
+An additional opt-in suite compares degree-2 and degree-3 adaptive programs at the **same 1 mm
+output error budget**, using double-single arithmetic/output and binary64 input throughout.
+Local/regional UTM and regional Albers vary actual patch count; row and consumer sweeps expose
+scaling without conflating a Float32 precision reduction with a performance improvement.
+
+```sh
+LUMA_TEST_BROWSER_BENCHMARKS=true \
+  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-performance.spec.ts
+```
+
+Rows are deterministic; each requested count adds nine valid boundary/seam probes and two invalid
+rows. Each path is validated before two warmups and after five measured submissions. Without
+`VITE_LUPROJ_SWEEP_ROWS`, this opt-in suite uses 32 rows, no warmups, and one measured iteration
+for a quick correctness check. Set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a **separate** instrumented
+run. Reports prefixed `PROJECTION_PERFORMANCE_SWEEP` contain the complete JSON distributions,
+device description, patch counts, accuracy and memory results.
+
+Patch lookup currently scans linearly. Changing polynomial degree changes both patch count and
+evaluation cost: these measurements do not isolate routing time or prove an indexed lookup wins.
+The axis-swap consumers remain synthetic; production consumers and other GPU vendors are still
+required before selecting optimizations.
 
 See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
 [GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),

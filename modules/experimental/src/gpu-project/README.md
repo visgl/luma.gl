@@ -416,12 +416,32 @@ All output rows are validated before GPU warmups and after measurement; failed a
 returns no report. Results include device identity, observed error, parameter/intermediate/buffer
 bytes, planning and compilation costs, first use, CPU encoding, synchronized dispatch, and optional
 GPU timestamps. Cache-sensitive setup and a minimal consumer are not production speedup guarantees.
+`consumerCount` defaults to one; higher values compare repeated inline projection against one
+materialized result shared by independent consumers in a single submission. Reports include actual
+adaptive patch counts/degrees and distinguish equal from different declared error budgets.
+`gpuTiming: false` retains synchronized timing without timestamp instrumentation, allowing normal
+compute-pass coalescing. Do not mix instrumented and uninstrumented timings.
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
 ```
+
+The equal-budget performance sweep uses binary64 input, double-single arithmetic/output, and a
+1 mm error budget for both quadratic and cubic plans over local/regional UTM and regional Albers.
+It reports 1/4-consumer reuse and actual multi-patch costs without changing precision:
+
+```sh
+LUMA_TEST_BROWSER_BENCHMARKS=true \
+  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-performance.spec.ts
+```
+
+This sweep defaults to uninstrumented timing; set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a separate
+GPU-timestamp run. JSON reports begin with `PROJECTION_PERFORMANCE_SWEEP`. These synthetic workloads
+do not replace production-consumer or cross-vendor evidence.
 
 ## Accuracy boundaries
 
