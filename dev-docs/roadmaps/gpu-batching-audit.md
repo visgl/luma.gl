@@ -55,10 +55,10 @@ Keep these grouped by architecture rather than opening one mechanical PR per ope
 
 The portable global sort computes ranks against other sorted spans. Sparse multiplication visits
 nonzero/vector chunk pairs. Grid index passes visit position/cell pairs. Chunked ancestor projection
-visits source/output pairs per depth. Chunked search visits bounded query tiles and value chunks;
+composes parent jumps in at most 32 levels of source/output chunk pairs. Chunked search visits bounded query tiles and value chunks;
 indirect search allocates a permutation with the order vector's topology. These preserve storage
 and exact logical semantics, but heavily fragmented workloads can create many passes. Benchmark
-before selecting hierarchical merging, routing indexes, pointer jumping, or cached query plans.
+before selecting hierarchical merging, routing indexes or cached query plans.
 
 No automatic concatenation is an acceptable performance fallback. Every physical chunk must still
 fit a WebGPU storage binding, including its alignment prefix. Logical addresses are uint32.

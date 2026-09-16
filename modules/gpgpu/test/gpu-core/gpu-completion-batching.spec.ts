@@ -508,3 +508,42 @@ test('global radix merge preserves low-bit ties across multi-workgroup chunks', 
     fixture.destroy();
   }
 });
+
+for (const maxDepth of [0, 1, 2, 3, 0xffffffff]) {
+  test(`ancestor jump composition honors depth ${maxDepth} and preserves nearest visible identity`, async () => {
+    const device = await getWebGPUTestDevice('core');
+    if (!device) return;
+    const fixture = new BatchConformanceFixture(device);
+    const parents = fixture.column('parents', 'uint32', [0xffffffff, 0, 1, 2, 5, 4], [2, 0, 4]);
+    const visibility = fixture.column('visibility', 'uint32', [1, 0, 1, 0, 0, 0], [1, 3, 2]);
+    const output = fixture.column('output', 'uint32', Array(6).fill(77), [3, 3]);
+    const nodes = new GPUAncestorProjection({
+      parents,
+      visibility,
+      output,
+      maxDepth,
+      invalidValue: 99
+    }).getCommandNodes(fixture.graph);
+    expect(nodes.length).toBeLessThan(300);
+    fixture.graph.add(nodes);
+    const executable = fixture.graph.compile();
+    try {
+      for (let iteration = 0; iteration < 2; iteration++) {
+        const encoder = device.createCommandEncoder();
+        executable.encode(encoder, {parameters: undefined});
+        device.submit(encoder.finish());
+        expect(await fixture.read(output)).toEqual([
+          0,
+          maxDepth ? 0 : 99,
+          2,
+          maxDepth ? 2 : 99,
+          99,
+          99
+        ]);
+      }
+    } finally {
+      executable.destroy();
+      fixture.destroy();
+    }
+  });
+}
