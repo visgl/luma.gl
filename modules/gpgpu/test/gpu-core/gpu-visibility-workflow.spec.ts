@@ -297,7 +297,7 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
   expect(
     compiled.stats.nodeOrder.filter(id => id.includes('compose')),
     'one noncanonical predicate is normalized before compaction'
-  ).toEqual(['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-2']);
+  ).toEqual(['gpu-visibility-compose-chunk-0', 'gpu-visibility-compose-chunk-1']);
   expect(
     compiled.stats.nodeOrder.filter(id => id.includes('identity')),
     'empty chunks retain topology without an unnecessary dispatch'

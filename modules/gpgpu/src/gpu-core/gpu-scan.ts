@@ -15,9 +15,9 @@ import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews} from './graph-vector-view-utils';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const SCAN_WORKGROUP_SIZE = 256;
@@ -40,7 +40,7 @@ export type GPUScanProps = {
   id?: string;
   /** One packed unsigned data view or an ordered vector of packed chunks. */
   input: GPUScanInput;
-  /** Caller-owned destination with matching view kind and sufficient capacity or topology. */
+  /** Caller-owned destination with at least the input length; chunk boundaries may differ. */
   output: GPUScanInput;
   /** Prefix convention. Defaults to `exclusive`. */
   mode?: 'exclusive' | 'inclusive';
@@ -81,28 +81,22 @@ export class GPUScan {
     this.segmentFlags = props.segmentFlags;
     validateScanInput(this.input, `${this.id} input`);
     validateScanInput(this.output, `${this.id} output`);
-    const inputIsVector = this.input instanceof GraphVectorView;
-    const outputIsVector = this.output instanceof GraphVectorView;
-    if (inputIsVector !== outputIsVector) {
-      throw new Error(`${this.id} input and output must both be data views or vector views`);
-    }
-    if (this.input instanceof GraphVectorView && this.output instanceof GraphVectorView) {
-      validateMatchingVectorTopology(this.input, this.output, `${this.id} output`);
-    } else if (this.output.length < this.input.length) {
+    if (this.output.length < this.input.length) {
       throw new Error(`${this.id} output must contain at least input.length rows`);
+    }
+    if (this.output instanceof GraphVectorView && this.output.length !== this.input.length) {
+      throw new Error(`${this.id} vector output length must equal input length`);
     }
     if (this.segmentFlags) {
       validateScanInput(this.segmentFlags, `${this.id} segmentFlags`);
-      const flagsAreVector = this.segmentFlags instanceof GraphVectorView;
-      if (inputIsVector !== flagsAreVector) {
-        throw new Error(
-          `${this.id} input and segmentFlags must both be data views or vector views`
-        );
-      }
-      if (this.input instanceof GraphVectorView && this.segmentFlags instanceof GraphVectorView) {
-        validateMatchingVectorTopology(this.input, this.segmentFlags, `${this.id} segmentFlags`);
-      } else if (this.segmentFlags.length < this.input.length) {
+      if (this.segmentFlags.length < this.input.length) {
         throw new Error(`${this.id} segmentFlags must contain at least input.length rows`);
+      }
+      if (
+        this.segmentFlags instanceof GraphVectorView &&
+        this.segmentFlags.length !== this.input.length
+      ) {
+        throw new Error(`${this.id} vector segmentFlags length must equal input length`);
       }
       const outputBuffers = new Set(getScanChunks(this.output).map(chunk => chunk.buffer));
       if (getScanChunks(this.segmentFlags).some(chunk => outputBuffers.has(chunk.buffer))) {
@@ -145,15 +139,23 @@ export function getGPUScanCommandNodesWithDispatchLimit<Parameters>(
   if (scan.segmentFlags) {
     validateScanOwnership(graph, scan.segmentFlags, scan.id);
   }
+  const output = getScanPrefixView(graph, scan.output, scan.input.length);
+  const segmentFlags = scan.segmentFlags
+    ? getScanPrefixView(graph, scan.segmentFlags, scan.input.length)
+    : undefined;
+  const views = segmentFlags
+    ? alignGraphVectorViews(graph, [scan.input, output, segmentFlags])
+    : alignGraphVectorViews(graph, [scan.input, output]);
   nodes.push(
     ...addChunkedScan(
       graph,
       {
         id: scan.id,
-        input: scan.input,
-        output: scan.output,
-        mode: scan.mode,
-        segmentFlags: scan.segmentFlags
+        inputChunks: views.map(span => span[0]),
+        outputChunks: views.map(span => span[1]),
+        segmentFlagChunks: segmentFlags ? views.map(span => span[2]!) : undefined,
+        isVector: views.length > 1,
+        mode: scan.mode
       },
       maxComputeWorkgroupsPerDimension
     )
@@ -162,22 +164,40 @@ export function getGPUScanCommandNodesWithDispatchLimit<Parameters>(
   return nodes;
 }
 
+function getScanPrefixView<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  view: GPUScanInput,
+  length: number
+): GPUScanInput {
+  if (view.length === length || view instanceof GraphVectorView) {
+    return view;
+  }
+  return graph.createDataView(view.buffer, {
+    format: view.format,
+    length,
+    byteOffset: view.byteOffset,
+    byteStride: view.byteStride,
+    rowByteLength: view.rowByteLength
+  });
+}
+
 /** Normalizes atomic and vector inputs and adds the required local scans and vector carries. */
 function addChunkedScan<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
-    input: GPUScanInput;
-    output: GPUScanInput;
+    inputChunks: readonly GraphDataView<'uint32'>[];
+    outputChunks: readonly GraphDataView<'uint32'>[];
+    segmentFlagChunks?: readonly GraphDataView<'uint32'>[];
+    isVector: boolean;
     mode: 'exclusive' | 'inclusive';
-    segmentFlags?: GPUScanInput;
   },
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const inputChunks = getScanChunks(props.input);
-  const outputChunks = getScanChunks(props.output);
-  const segmentFlagChunks = props.segmentFlags ? getScanChunks(props.segmentFlags) : undefined;
+  const inputChunks = props.inputChunks;
+  const outputChunks = props.outputChunks;
+  const segmentFlagChunks = props.segmentFlagChunks;
   const nonEmptyChunks = inputChunks
     .map((inputChunk, chunkIndex) => ({
       chunkIndex,
@@ -189,12 +209,11 @@ function addChunkedScan<Parameters>(
   if (nonEmptyChunks.length === 0) {
     return nodes;
   }
-  const isVector = props.input instanceof GraphVectorView;
   if (nonEmptyChunks.length === 1) {
     const chunk = nonEmptyChunks[0];
     nodes.push(
       ...addScanLevels(graph, {
-        id: isVector ? `${props.id}-chunk-${chunk.chunkIndex}` : props.id,
+        id: props.isVector ? `${props.id}-chunk-${chunk.chunkIndex}` : props.id,
         input: chunk.input,
         output: chunk.output,
         mode: props.mode,
@@ -217,10 +236,10 @@ function addChunkedScan<Parameters>(
     'uint32',
     nonEmptyChunks.length
   );
-  const chunkSegmentFlags = props.segmentFlags
+  const chunkSegmentFlags = segmentFlagChunks
     ? createTransientView(graph, `${props.id}-chunk-segment-flags`, 'uint32', nonEmptyChunks.length)
     : undefined;
-  const chunkSegmentPrefixes = props.segmentFlags
+  const chunkSegmentPrefixes = segmentFlagChunks
     ? nonEmptyChunks.map(chunk =>
         createTransientView(
           graph,

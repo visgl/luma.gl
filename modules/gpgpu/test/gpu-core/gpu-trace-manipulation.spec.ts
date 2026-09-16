@@ -50,17 +50,22 @@ it('GPUMask composes canonical GPU selection masks', async () => {
   expect(await runMask(device, [new Uint32Array(0)], 'and'), 'empty masks add no work').toEqual([]);
 });
 
-it('GPUMask preserves imported GPUVector chunk boundaries', async () => {
+it('GPUMask aligns independent GPUVector chunk boundaries', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     return;
   }
 
   const firstChunks = [Uint32Array.from([1, 0, 9]), new Uint32Array(0), Uint32Array.from([0, 2])];
-  const secondChunks = [Uint32Array.from([1, 1, 0]), new Uint32Array(0), Uint32Array.from([8, 1])];
+  const secondChunks = [Uint32Array.from([1]), Uint32Array.from([1, 0, 8, 1])];
   const first = createVectorFixture(device, 'first', firstChunks, false);
   const second = createVectorFixture(device, 'second', secondChunks, false);
-  const output = createVectorFixture(device, 'output', firstChunks, true);
+  const output = createVectorFixture(
+    device,
+    'output',
+    [Uint32Array.from([0, 0]), Uint32Array.from([0, 0, 0])],
+    true
+  );
   const graph = new GPUCommandGraph(device, {id: 'chunked-mask'});
   const firstView = graph.importGPUVector('first', first.vector);
   const secondView = graph.importGPUVector('second', second.vector);
@@ -69,15 +74,16 @@ it('GPUMask preserves imported GPUVector chunk boundaries', async () => {
   const compiled = graph.compile();
   submitGraph(device, compiled, 'chunked-mask');
   expect(
-    await Promise.all(
-      output.buffers.map((buffer, index) => readUint32(buffer, firstChunks[index].length))
-    ),
-    'each existing chunk receives only its source-aligned selected rows'
-  ).toEqual([[1, 0, 0], [], [0, 1]]);
+    await Promise.all(output.buffers.map((buffer, index) => readUint32(buffer, [2, 3][index]))),
+    'output chunks receive the logical mask result at their own boundaries'
+  ).toEqual([
+    [1, 0],
+    [0, 0, 1]
+  ]);
   expect(
     compiled.stats.nodeOrder,
     'empty chunks preserve their identity without generating a dispatch'
-  ).toEqual(['gpu-mask-chunk-0', 'gpu-mask-chunk-2']);
+  ).toEqual(['gpu-mask-chunk-0', 'gpu-mask-chunk-2', 'gpu-mask-chunk-1', 'gpu-mask-chunk-3']);
   compiled.destroy();
   destroyVectorFixture(first);
   destroyVectorFixture(second);

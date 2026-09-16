@@ -39,7 +39,7 @@ test('heterogeneous alignment borrows source storage and preserves row layout', 
   }
 });
 
-test('reference families reject unsupported lengths, layouts and writable aliases', () => {
+test('reference families reject invalid layouts and writable aliases', () => {
   const fixture = makeFixture();
   try {
     const keys = fixture.column('keys', 'uint32', [0, 1, 0], [1, 2]);
@@ -64,12 +64,10 @@ test('reference families reject unsupported lengths, layouts and writable aliase
     const strided = fixture.column('strided', 'float32', [1, 2, 3], [3], {stride: 2});
     expect(() => new GPUReduction({input: strided, output, operation: 'extent'})).toThrow(/packed/);
     const mismatched = fixture.column('mismatched', 'uint32', [0, 0, 0], [2, 1]);
-    expect(() => new GPUScan({input: keys, output: mismatched})).toThrow(/topology/);
-    expect(() => new GPUScan({input: keys, output: keys, segmentFlags: mismatched})).toThrow(
-      /topology/
-    );
+    expect(() => new GPUScan({input: keys, output: mismatched})).not.toThrow();
+    expect(() => new GPUScan({input: keys, output: keys, segmentFlags: mismatched})).not.toThrow();
     const atomic = fixture.output('atomic', 'uint32', 3);
-    expect(() => new GPUScan({input: keys, output: atomic})).toThrow(/both be/);
+    expect(() => new GPUScan({input: keys, output: atomic})).not.toThrow();
     expect(() => new GPUGroupAggregation({keys: atomic, output: atomic})).toThrow(
       /separate buffers/
     );
