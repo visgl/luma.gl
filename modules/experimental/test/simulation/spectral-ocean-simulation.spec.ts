@@ -240,7 +240,7 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
 
   device.createBuffer = ((props: Parameters<Device['createBuffer']>[0]) => {
     const bufferId = (props as {id?: string}).id;
-    if (bufferId === `${id}-fft-inverse-1-parameters`) {
+    if (bufferId === `${id}-fft-1-parameters`) {
       throw new Error('injected SpectralOceanSimulation allocation failure');
     }
     const buffer = originalCreateBuffer.call(device, props);

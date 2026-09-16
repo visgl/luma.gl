@@ -277,7 +277,6 @@ export {
 } from './gpu-fft2d';
 export type {
   GPUFFT2DDirection,
-  GPUFFT2DEncodeOptions,
   GPUFFT2DProps,
   GPUFFT2DStats,
   GPUFFT2DSupport

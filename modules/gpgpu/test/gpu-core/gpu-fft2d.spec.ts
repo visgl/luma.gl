@@ -1,230 +1,233 @@
-import {expect, it} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
-import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+import {
+  GPUFFT2D,
+  GPUCommandGraph,
+  GraphVectorView,
+  type GraphDataView
+} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-it('GPUFFT2D matches a CPU DFT and composes forward/inverse passes in one encoder', async () => {
+it.each([
+  {width: 4, height: 8, batchCount: 1, chunked: false},
+  {width: 4, height: 4, batchCount: 3, chunked: false},
+  {width: 4, height: 8, batchCount: 2, chunked: true},
+  {width: 4, height: 4, batchCount: 3, chunked: true}
+])('GPUFFT2D graph roundtrip $width x $height, batches $batchCount, chunked $chunked', async ({
+  width,
+  height,
+  batchCount,
+  chunked
+}) => {
   const device = await getWebGPUTestDevice();
-  if (!device) {
-    return;
+  if (!device) return;
+  const graph = new GPUCommandGraph(device);
+  const inputValues = new Float32Array(width * height * batchCount * 2);
+  const expected: number[] = [];
+  for (let batch = 0; batch < batchCount; batch++) {
+    const values = makeComplexInput(width, height).map(value => value * (batch + 1));
+    inputValues.set(values, batch * width * height * 2);
+    expected.push(...makeCPUDFT2D(values, width, height, 'forward'));
   }
-
-  const width = 4;
-  const height = 8;
-  const inputValues = makeComplexInput(width, height);
-  const expectedForward = makeCPUDFT2D(inputValues, width, height, 'forward');
-  const transform = new GPUFFT2D(device, {id: 'gpu-fft2d-numerical-test', width, height});
-  const inputBuffer = device.createBuffer({
-    id: 'gpu-fft2d-input',
-    data: inputValues,
-    usage: Buffer.STORAGE | Buffer.COPY_DST
-  });
-  const forwardBuffer = makeOutputBuffer(device, 'gpu-fft2d-forward', inputValues.byteLength);
-  const inverseBuffer = makeOutputBuffer(device, 'gpu-fft2d-inverse', inputValues.byteLength);
-
-  try {
-    const commandEncoder = device.createCommandEncoder({id: 'gpu-fft2d-roundtrip'});
-    expect(
-      transform.encode(commandEncoder, {
-        inputBuffer,
-        outputBuffer: forwardBuffer,
-        direction: 'forward'
-      }),
-      'forward encode returns the caller-owned output'
-    ).toBe(forwardBuffer);
-    transform.encode(commandEncoder, {
-      inputBuffer: forwardBuffer,
-      outputBuffer: inverseBuffer,
+  const buffers: Buffer[] = [];
+  const viewBuffers = new Map<GraphDataView<'float32x2'>, Buffer>();
+  const createView = (id: string, values: Float32Array, split: number) => {
+    const length = values.length / 2;
+    const boundaries = chunked ? [0, split, length] : [0, length];
+    const chunks: GraphDataView<'float32x2'>[] = [];
+    for (let index = 1; index < boundaries.length; index++) {
+      const first = boundaries[index - 1];
+      const last = boundaries[index];
+      // Protect sentinels around each borrowed span and exercise nonzero binding offsets.
+      const data = new Float32Array((last - first) * 2 + 68).fill(987);
+      data.set(values.subarray(first * 2, last * 2), 66);
+      const buffer = device.createBuffer({
+        data,
+        usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      });
+      buffers.push(buffer);
+      const chunk = graph.createDataView(
+        graph.importBuffer(
+          {id: `${id}-${index}`, byteLength: buffer.byteLength, usage: buffer.usage},
+          buffer
+        ),
+        {format: 'float32x2', byteOffset: 264, length: last - first}
+      );
+      chunks.push(chunk);
+      viewBuffers.set(chunk, buffer);
+    }
+    return chunked
+      ? new GraphVectorView({
+          id,
+          name: id,
+          format: 'float32x2',
+          length,
+          valueLength: length,
+          stride: 2,
+          byteStride: 8,
+          rowByteLength: 8,
+          data: chunks
+        })
+      : chunks[0];
+  };
+  const input = createView('input', inputValues, 5);
+  const forward = createView('forward', new Float32Array(inputValues.length), 19);
+  const inverse = createView('inverse', new Float32Array(inputValues.length), 11);
+  graph.add([
+    new GPUFFT2D({id: 'forward', input, output: forward, width, height, batchCount}),
+    new GPUFFT2D({
+      id: 'inverse',
+      input: forward,
+      output: inverse,
+      width,
+      height,
+      batchCount,
       direction: 'inverse'
-    });
-    device.submit(commandEncoder.finish());
-
-    const forwardValues = await readFloat32(forwardBuffer, inputValues.length);
-    const inverseValues = await readFloat32(inverseBuffer, inputValues.length);
-    assertClose(forwardValues, expectedForward, 0.0005, 'forward transform');
-    assertClose(inverseValues, Array.from(inputValues), 0.0005, 'inverse round trip');
-    expect(transform.stats.passCount, 'rectangular transform reports every dispatch').toBe(7);
-    expect(transform.stats.scratchBufferByteLength, 'one complex field of scratch is owned').toBe(
-      inputValues.byteLength
-    );
+    })
+  ]);
+  const compiled = graph.compile();
+  const readView = async (view: typeof input) => {
+    const values: number[] = [];
+    for (const chunk of view instanceof GraphVectorView ? view.data : [view]) {
+      const buffer = viewBuffers.get(chunk)!;
+      const bytes = await buffer.readAsync(chunk.byteOffset, chunk.length * 8);
+      values.push(...new Float32Array(bytes.buffer, bytes.byteOffset, chunk.length * 2));
+    }
+    return values;
+  };
+  try {
+    const encoder = device.createCommandEncoder();
+    compiled.encode(encoder, {parameters: undefined});
+    compiled.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    assertClose(await readView(forward), expected, 0.002, 'forward DFT');
+    assertClose(await readView(inverse), Array.from(inputValues), 0.002, 'inverse roundtrip');
+    assertClose(await readView(input), Array.from(inputValues), 0, 'borrowed input');
+    for (const buffer of buffers) {
+      const values = await readFloat32(buffer, buffer.byteLength / 4);
+      expect(values.slice(0, 66).every(value => value === 987)).toBe(true);
+      expect(values.slice(-2)).toEqual([987, 987]);
+    }
   } finally {
-    transform.destroy();
-    transform.destroy();
-    inputBuffer.destroy();
-    forwardBuffer.destroy();
-    inverseBuffer.destroy();
+    compiled.destroy();
+    expect(buffers.every(buffer => !buffer.destroyed)).toBe(true);
+    for (const buffer of buffers) buffer.destroy();
   }
 });
 
-it('GPUFFT2D transforms packed RGB fields in one batched dispatch sequence', async () => {
+it('GPUFFT2D graph compilation unwinds partially allocated parameters and scratch', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) {
-    return;
-  }
-
-  const width = 4;
-  const height = 4;
-  const batchCount = 3;
-  const channelLength = width * height * 2;
-  const inputValues = new Float32Array(channelLength * batchCount);
-  const expectedValues: number[] = [];
-  for (let channelIndex = 0; channelIndex < batchCount; channelIndex++) {
-    const channelValues = makeComplexInput(width, height).map(value => value * (channelIndex + 1));
-    inputValues.set(channelValues, channelIndex * channelLength);
-    expectedValues.push(...makeCPUDFT2D(channelValues, width, height, 'forward'));
-  }
-
-  const transform = new GPUFFT2D(device, {width, height, batchCount});
-  const inputBuffer = device.createBuffer({
-    data: inputValues,
-    usage: Buffer.STORAGE | Buffer.COPY_DST
-  });
-  const outputBuffer = makeOutputBuffer(device, 'gpu-fft2d-batched-output', inputValues.byteLength);
-
+  if (!device) return;
+  const inputBuffer = makeOutputBuffer(device, 'input', 128);
+  const outputBuffer = makeOutputBuffer(device, 'output', 128);
+  const graph = new GPUCommandGraph(device);
+  const input = importView(graph, 'input', inputBuffer, 16);
+  const output = importView(graph, 'output', outputBuffer, 16);
+  graph.add(new GPUFFT2D({id: 'fft-failure', input, output, width: 4, height: 4}));
+  const baseline = getResourceCount(device, 'Buffers');
+  const original = device.createBuffer;
+  const allocations: Buffer[] = [];
+  device.createBuffer = function (props) {
+    if (props.id === 'fft-failure-2-parameters') throw new Error('injected allocation failure');
+    const buffer = original.call(this, props);
+    allocations.push(buffer);
+    return buffer;
+  };
   try {
-    const commandEncoder = device.createCommandEncoder();
-    transform.encode(commandEncoder, {inputBuffer, outputBuffer});
-    device.submit(commandEncoder.finish());
-    const actualValues = await readFloat32(outputBuffer, inputValues.length);
-    assertClose(actualValues, expectedValues, 0.002, 'independent batched RGB transforms');
-    expect(transform.stats.dispatchCountPerEncode, 'batching preserves one FFT schedule').toBe(6);
+    expect(() => graph.compile()).toThrow(/injected allocation failure/);
+    expect(allocations.length).toBeGreaterThanOrEqual(2);
+    expect(allocations.every(buffer => buffer.destroyed)).toBe(true);
+    expect(getResourceCount(device, 'Buffers')).toBe(baseline);
   } finally {
-    transform.destroy();
+    device.createBuffer = original;
     inputBuffer.destroy();
     outputBuffer.destroy();
   }
 });
 
-it('GPUFFT2D rejects aliased and incompatible caller buffers', async () => {
+it('GPUFFT2D rejects aliased, short, misaligned and foreign graph views', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) {
-    return;
-  }
-
-  const transform = new GPUFFT2D(device, {width: 2, height: 2});
-  const validBuffer = device.createBuffer({
-    byteLength: transform.stats.complexBufferByteLength,
-    usage: Buffer.STORAGE
-  });
-  const shortBuffer = device.createBuffer({byteLength: 8, usage: Buffer.STORAGE});
-  const aliasBuffer = device.createBuffer({
-    handle: validBuffer.handle,
-    byteLength: validBuffer.byteLength,
-    usage: Buffer.STORAGE
-  });
-  const copyOnlyBuffer = device.createBuffer({
-    byteLength: transform.stats.complexBufferByteLength,
-    usage: Buffer.COPY_DST
-  });
-
+  if (!device) return;
+  const buffer = makeOutputBuffer(device, 'input', 128);
+  const outputBuffer = makeOutputBuffer(device, 'output', 128);
   try {
-    expect(
-      () =>
-        transform.encode(device.commandEncoder, {
-          inputBuffer: validBuffer,
-          outputBuffer: validBuffer
-        }),
-      'in-place aliasing is rejected'
-    ).toThrow(/must be separate/);
-    expect(
-      () =>
-        transform.encode(device.commandEncoder, {
-          inputBuffer: validBuffer,
-          outputBuffer: aliasBuffer
-        }),
-      'distinct Buffer wrappers cannot alias the same GPU allocation'
-    ).toThrow(/must be separate/);
-    expect(
-      () =>
-        transform.encode(device.commandEncoder, {
-          inputBuffer: shortBuffer,
-          outputBuffer: validBuffer
-        }),
-      'short complex fields are rejected'
-    ).toThrow(/at least 32 bytes/);
-    expect(
-      () =>
-        transform.encode(device.commandEncoder, {
-          inputBuffer: copyOnlyBuffer,
-          outputBuffer: validBuffer
-        }),
-      'buffers without storage usage are rejected'
-    ).toThrow(/Buffer.STORAGE/);
-    transform.destroy();
-    expect(
-      () =>
-        transform.encode(device.commandEncoder, {
-          inputBuffer: validBuffer,
-          outputBuffer: shortBuffer
-        }),
-      'destroyed transforms reject new work'
-    ).toThrow(/destroyed/);
+    const graph = new GPUCommandGraph(device);
+    const input = importView(graph, 'input', buffer, 16);
+    const output = importView(graph, 'output', outputBuffer, 16);
+    expect(() => graph.add(new GPUFFT2D({input, output: input, width: 4, height: 4}))).toThrow(
+      /separate/
+    );
+    expect(() => new GPUFFT2D({input, output, width: 8, height: 4})).toThrow(/contain/);
+    const misaligned = graph.createDataView(input.buffer, {
+      format: 'float32x2',
+      byteOffset: 4,
+      length: 4
+    });
+    expect(() => new GPUFFT2D({input: misaligned, output, width: 2, height: 2})).toThrow(/aligned/);
+    expect(() =>
+      new GPUCommandGraph(device).add(new GPUFFT2D({input, output, width: 4, height: 4}))
+    ).toThrow(/target graph/);
   } finally {
-    transform.destroy();
-    aliasBuffer.destroy();
-    validBuffer.destroy();
-    shortBuffer.destroy();
-    copyOnlyBuffer.destroy();
+    buffer.destroy();
+    outputBuffer.destroy();
   }
 });
 
-it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
+it('GPUFFT2D compiled graph preserves separate bindings in one command buffer', async () => {
   const device = await getWebGPUTestDevice();
-  if (!device) {
-    return;
-  }
-
-  const id = 'gpu-fft2d-allocation-failure';
-  const activeBufferCount = getResourceCount(device, 'Buffers');
-  const allocatedBuffers: Buffer[] = [];
-  const originalCreateBuffer = device.createBuffer;
-  const originalKernelDestroy = Kernel.prototype.destroy;
-  let kernelDestroyCount = 0;
-
-  device.createBuffer = ((props: Parameters<Device['createBuffer']>[0]) => {
-    const bufferId = (props as {id?: string}).id;
-    if (bufferId === `${id}-inverse-1-parameters`) {
-      throw new Error('injected GPUFFT2D allocation failure');
-    }
-    const buffer = originalCreateBuffer.call(device, props);
-    if (bufferId?.startsWith(id)) {
-      allocatedBuffers.push(buffer);
-    }
-    return buffer;
-  }) as Device['createBuffer'];
-  Kernel.prototype.destroy = function (): void {
-    kernelDestroyCount++;
-    originalKernelDestroy.call(this);
-  };
-
-  try {
-    expect(
-      () => new GPUFFT2D(device, {id, width: 4, height: 4}),
-      'the original allocation error is preserved'
-    ).toThrow(/injected GPUFFT2D allocation failure/);
-  } finally {
-    device.createBuffer = originalCreateBuffer;
-    Kernel.prototype.destroy = originalKernelDestroy;
-  }
-
-  expect(allocatedBuffers.length, 'scratch and completed parameter allocations were observed').toBe(
-    4
+  if (!device) return;
+  const firstValues = makeComplexInput(4, 4);
+  const secondValues = firstValues.map(value => value * 3);
+  const firstInput = device.createBuffer({data: firstValues, usage: Buffer.STORAGE});
+  const secondInput = device.createBuffer({data: secondValues, usage: Buffer.STORAGE});
+  const firstOutput = makeOutputBuffer(device, 'first-output', firstValues.byteLength);
+  const secondOutput = makeOutputBuffer(device, 'second-output', firstValues.byteLength);
+  const graph = new GPUCommandGraph(device);
+  graph.add(
+    new GPUFFT2D({
+      width: 4,
+      height: 4,
+      input: importView(graph, 'input', firstInput, 16),
+      output: importView(graph, 'output', firstOutput, 16)
+    })
   );
-  expect(
-    Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
-    'every buffer allocated before the failure is destroyed'
-  ).toBe(true);
-  expect(kernelDestroyCount, 'the partially initialized kernel is destroyed').toBe(1);
-  expect(
-    getResourceCount(device, 'Buffers'),
-    'active buffer accounting returns to its baseline'
-  ).toBe(activeBufferCount);
+  const compiled = await graph.compileAsync();
+  try {
+    const encoder = device.createCommandEncoder();
+    compiled.encode(encoder, {parameters: undefined});
+    compiled.encode(encoder, {
+      parameters: undefined,
+      buffers: {input: secondInput, output: secondOutput}
+    });
+    device.submit(encoder.finish());
+    assertClose(
+      await readFloat32(firstOutput, 32),
+      makeCPUDFT2D(firstValues, 4, 4, 'forward'),
+      0.002,
+      'first binding'
+    );
+    assertClose(
+      await readFloat32(secondOutput, 32),
+      makeCPUDFT2D(secondValues, 4, 4, 'forward'),
+      0.002,
+      'second binding'
+    );
+  } finally {
+    compiled.destroy();
+    for (const buffer of [firstInput, secondInput, firstOutput, secondOutput]) buffer.destroy();
+  }
 });
+
+function importView(graph: GPUCommandGraph, id: string, buffer: Buffer, length: number) {
+  return graph.createDataView(
+    graph.importBuffer({id, byteLength: buffer.byteLength, usage: buffer.usage}, buffer),
+    {format: 'float32x2', length}
+  );
+}
 
 function makeOutputBuffer(device: Device, id: string, byteLength: number): Buffer {
   return device.createBuffer({

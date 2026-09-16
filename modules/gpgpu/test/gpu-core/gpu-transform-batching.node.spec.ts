@@ -6,6 +6,8 @@ import {expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   GPUFFT1D,
+  GPUFFT2D,
+  getGPUFFT2DSupport,
   GPUConvolution,
   GraphVectorView,
   getGPUFFT1DSupport,
@@ -43,6 +45,52 @@ test('FFT batching bounds scratch and splits bindings without packing caller buf
       expect(executable.preflight.fitsDeviceLimits).toBe(true);
     } finally {
       executable.destroy();
+    }
+    allocate.mockRestore();
+  } finally {
+    fixture.destroy();
+    device.destroy();
+  }
+});
+
+test.each([false, true])('FFT2D bounds oversized packed and chunked plans (atomic: %s)', atomic => {
+  const device = makeDevice(1024, 2);
+  const fixture = new BatchConformanceFixture(device);
+  try {
+    const input = fixture.column(
+      'input',
+      'float32x2',
+      Array(512).fill(1),
+      atomic ? [256] : [0, 129, 127],
+      {atomic}
+    );
+    const output = fixture.column(
+      'output',
+      'float32x2',
+      Array(512).fill(77),
+      atomic ? [256] : [65, 0, 191],
+      {atomic}
+    );
+    const props = {input, output, width: 4, height: 4, batchCount: 16};
+    expect(getGPUFFT2DSupport(device, {width: 4, height: 4, batchCount: 16}).supported).toBe(false);
+    expect(getGPUFFT2DSupport(device, props).supported).toBe(true);
+    expect(() => new GPUFFT2D({...props, direction: '' as 'forward'})).toThrow(/direction/);
+    const allocate = vi.spyOn(fixture.graph, 'createTransientBuffer');
+    const nodes = new GPUFFT2D(props).getCommandNodes(fixture.graph);
+    expect(allocate.mock.calls.map(([allocation]) => allocation.byteLength)).toEqual([128, 128]);
+    for (const node of nodes) {
+      for (const resource of node.resources ?? []) {
+        if ('buffer' in resource && 'format' in resource.buffer)
+          expect(getViewBindingRange(resource.buffer).size).toBeLessThanOrEqual(1024);
+      }
+    }
+    fixture.graph.add(nodes.map(node => ({...node, compile: () => ({encode() {}})})));
+    const compiled = fixture.graph.compile();
+    try {
+      expect(compiled.preflight.fitsDeviceLimits).toBe(true);
+      expect(compiled.stats.logicalTransientBufferCount).toBe(2);
+    } finally {
+      compiled.destroy();
     }
     allocate.mockRestore();
   } finally {
@@ -247,6 +295,8 @@ function makeDevice(bindingLimit = 1 << 28, dispatchLimit = 65535) {
     maxComputeWorkgroupsPerDimension: dispatchLimit,
     maxComputeInvocationsPerWorkgroup: 256,
     maxComputeWorkgroupSizeX: 256,
+    maxComputeWorkgroupSizeY: 256,
+    maxUniformBuffersPerShaderStage: 12,
     maxStorageBuffersPerShaderStage: 8,
     maxStorageBufferBindingSize: bindingLimit,
     maxBufferSize: 1 << 30

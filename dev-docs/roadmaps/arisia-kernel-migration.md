@@ -58,7 +58,8 @@ workload measurements are needed before claiming GPU execution gains.
 
 ## Next execution tranche
 
-FFT2D and device-owned CG/PCG/reduction helpers still retain their existing public buffer lifecycles.
-Move them onto graph/program resource planning together. Kernel migration alone neither completes
-that work nor removes the dependency on luma core: `Kernel` still uses luma's device, shader, pipeline,
-and compute-pass resources. Native WebGPU independence remains a later explicit boundary change.
+FFT2D now composes through graph-owned resources; see the
+[execution lifecycle audit](./arisia-execution-lifecycle.md). PCG and hierarchical reductions
+already build graph nodes. Their remaining work is numerical correctness and consolidation,
+rather than a second resource-lifecycle migration. Kernel still depends on luma's device,
+shader, pipeline, and compute-pass resources; native WebGPU independence remains a later boundary change.
