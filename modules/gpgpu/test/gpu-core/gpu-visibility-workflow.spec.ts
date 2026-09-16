@@ -309,6 +309,66 @@ it('GPUVisibilityWorkflow preserves chunk topology while generating global IDs',
   countBuffer.destroy();
 });
 
+it('GPUVisibilityWorkflow aligns predicate vectors and preserves an independent output topology', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const firstPredicateFixture = createVectorFixture(device, 'first-predicate', [
+    Uint32Array.from([2, 3, 0]),
+    Uint32Array.from([4, 5])
+  ]);
+  const secondPredicateFixture = createVectorFixture(device, 'second-predicate', [
+    Uint32Array.from([1]),
+    Uint32Array.from([1, 1, 0, 1])
+  ]);
+  const outputFixture = createVectorFixture(
+    device,
+    'independent-output',
+    [new Uint32Array(2), new Uint32Array(3)],
+    0xffffffff
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'independent-visibility'});
+  const firstPredicate = graph.importGPUVector('first-predicate', firstPredicateFixture.vector);
+  const secondPredicate = graph.importGPUVector('second-predicate', secondPredicateFixture.vector);
+  const output = graph.importGPUVector('independent-output', outputFixture.vector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  graph.add(
+    new GPUVisibilityWorkflow({
+      id: 'independent-visibility',
+      predicates: [
+        {kind: 'bounds', mask: firstPredicate},
+        {kind: 'selection', mask: secondPredicate}
+      ],
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1}),
+      firstSourceIndex: 10
+    })
+  );
+  const compiled = graph.compile();
+  await encodeAndSubmit(device, compiled, 'independent-visibility');
+
+  expect(await readVectorFixture(outputFixture)).toEqual([
+    [10, 11],
+    [14, 0xffffffff, 0xffffffff]
+  ]);
+  expect(await readUint32(countBuffer, 1)).toEqual([3]);
+
+  compiled.destroy();
+  destroyVectorFixture(firstPredicateFixture);
+  destroyVectorFixture(secondPredicateFixture);
+  destroyVectorFixture(outputFixture);
+  countBuffer.destroy();
+});
+
 it('GPUVisibilityWorkflow rejects incompatible contracts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {

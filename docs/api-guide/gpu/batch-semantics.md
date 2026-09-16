@@ -32,6 +32,8 @@ explicit graph-owned scratch.
 | `GPUReduction` | Global aggregate; one row, two for extent | Packed `uint32`, `sint32`, or `float32`; optional packed `uint32` mask has equal logical length and independent boundaries | Zero for empty or fully excluded input; every encoding replaces output |
 | `GPUHistogram` | Global aggregate into caller-sized bins | Scalar input may be strided; optional packed `uint32` mask has equal length and independent boundaries; automatic domain requires packed input | Clears bins every encoding, including empty input |
 | `GPUGroupAggregation` | Global aggregate into caller-sized dense groups | `uint32` keys/masks and `float32` values can be strided and independently partitioned; participating columns have equal logical length | Counts/sums zero; min/max/mean NaN for groups with no accepted finite values; initializes every encoding |
+| `GPUCompaction` | Stable selection into a caller-sized destination and one accepted-row count | Packed `uint32` input and flags have equal logical length and may use independent atomic/vector boundaries; output may use any atomic/vector capacity topology | Count is cleared for zero rows; selected values preserve logical order and overwrite the accepted prefix |
+| `GPUVisibilityWorkflow` | Predicate intersection, stable source IDs, compacted output, and count | Predicate masks, optional output mask, and source IDs require equal logical length and may use independent atomic/vector boundaries; output may use any capacity topology | Empty source publishes zero count; generated IDs preserve logical row order |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
 zero is different from an output of length zero: histogram and dense group output still require
@@ -90,14 +92,12 @@ operation inventory. The exhaustive API/function audit remains tranche 4.
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
 - `GPUSegmentedSort`
-- `GPUCompaction`
 - `GPUFlagOffsets`
 - `GPUSegmentOffsets`
 - `GPUSegmentedLayout`
 - `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`
 - `GPUChunkedIndexedScatter`
 - `GPUTextSelection`
-- `GPUVisibilityWorkflow`
 - `GPUVirtualGeometrySelection`
 - `GPUMask`
 - `GPUHierarchyLayout`

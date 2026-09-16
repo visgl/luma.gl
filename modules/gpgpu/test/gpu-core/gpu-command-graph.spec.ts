@@ -1391,6 +1391,88 @@ it('GPUCompaction preserves GPUVector topology while selecting across chunks', a
   ).toBe(5);
 });
 
+it('GPUCompaction aligns independently partitioned inputs and output capacity', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const result = await runVectorCompaction(
+    device,
+    [Uint32Array.from([10, 11]), Uint32Array.from([12, 13, 14])],
+    [Uint32Array.from([1]), Uint32Array.from([0, 1, 0, 1])],
+    [new Uint32Array(2), new Uint32Array(3)]
+  );
+  expect(result.count, 'count spans independently partitioned source and flag vectors').toBe(3);
+  expect(result.chunks, 'selected rows preserve order in the caller output topology').toEqual([
+    [10, 12],
+    [14, 0xffffffff, 0xffffffff]
+  ]);
+});
+
+it('GPUCompaction gives atomic input and chunked output passes unique node IDs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const values = Uint32Array.from([20, 21, 22, 23]);
+  const flags = Uint32Array.from([1, 0, 1, 1]);
+  const valuesBuffer = device.createBuffer({data: values, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const flagsBuffer = device.createBuffer({data: flags, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const outputFixture = createUint32VectorFixture(
+    device,
+    'atomic-input-output',
+    [new Uint32Array(2), new Uint32Array(2)],
+    0xffffffff
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'atomic-input-output'});
+  const valuesHandle = graph.importBuffer(
+    {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
+    valuesBuffer
+  );
+  const flagsHandle = graph.importBuffer(
+    {id: 'flags', byteLength: flagsBuffer.byteLength, usage: flagsBuffer.usage},
+    flagsBuffer
+  );
+  const output = graph.importGPUVector('output', outputFixture.vector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  graph.add(
+    new GPUCompaction({
+      input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
+      flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'atomic-input-output-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const [outputChunks, countBytes] = await Promise.all([
+    readUint32VectorFixture(outputFixture),
+    countBuffer.readAsync()
+  ]);
+  expect(outputChunks).toEqual([
+    [20, 22],
+    [23, 0xffffffff]
+  ]);
+  expect(new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0]).toBe(3);
+
+  compiled.destroy();
+  valuesBuffer.destroy();
+  flagsBuffer.destroy();
+  destroyUint32VectorFixture(outputFixture);
+  countBuffer.destroy();
+});
+
 it('DrawCommandBuffer replays an indirect draw through a render bundle', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -1640,7 +1722,8 @@ function getExpectedScan(
 async function runVectorCompaction(
   device: Device,
   valueChunks: Uint32Array[],
-  flagChunks: Uint32Array[]
+  flagChunks: Uint32Array[],
+  outputChunks: Uint32Array[] = valueChunks
 ): Promise<{
   chunks: number[][];
   count: number;
@@ -1649,7 +1732,7 @@ async function runVectorCompaction(
 }> {
   const valuesFixture = createUint32VectorFixture(device, 'values', valueChunks);
   const flagsFixture = createUint32VectorFixture(device, 'flags', flagChunks);
-  const outputFixture = createUint32VectorFixture(device, 'output', valueChunks, 0xffffffff);
+  const outputFixture = createUint32VectorFixture(device, 'output', outputChunks, 0xffffffff);
   const countBuffer = device.createBuffer({
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC

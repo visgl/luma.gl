@@ -16,9 +16,9 @@ import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 const COMPACTION_WORKGROUP_SIZE = 256;
 
@@ -31,9 +31,9 @@ export type GPUCompactionProps = {
   id?: string;
   /** Packed source values as one data view or an ordered vector. */
   input: GPUCompactionInput;
-  /** Matching packed selection flags; zero rejects and any non-zero value accepts. */
+  /** Packed selection flags; zero rejects and any non-zero value accepts. */
   flags: GPUCompactionInput;
-  /** Caller-owned destination with matching view kind and sufficient capacity or topology. */
+  /** Caller-owned destination with sufficient logical capacity. */
   output: GPUCompactionInput;
   /** Caller-owned view whose first row receives the accepted value count. */
   count: GraphDataView<'uint32'>;
@@ -51,9 +51,9 @@ export class GPUCompaction {
   readonly id: string;
   /** Packed source values or ordered source vector. */
   readonly input: GPUCompactionInput;
-  /** Packed selection flags with the same view kind and topology as the input. */
+  /** Packed selection flags aligned to the same logical rows as the input. */
   readonly flags: GPUCompactionInput;
-  /** Caller-owned compacted destination with matching view kind. */
+  /** Caller-owned compacted destination with enough logical capacity. */
   readonly output: GPUCompactionInput;
   /** Caller-owned accepted-count destination. */
   readonly count: GraphDataView<'uint32'>;
@@ -74,22 +74,10 @@ export class GPUCompaction {
     validateCompactionInput(this.flags, `${this.id} flags`);
     validateCompactionInput(this.output, `${this.id} output`);
     validatePackedUint32View(this.count, `${this.id} count`);
-    const inputIsVector = this.input instanceof GraphVectorView;
-    const flagsAreVector = this.flags instanceof GraphVectorView;
-    const outputIsVector = this.output instanceof GraphVectorView;
-    if (inputIsVector !== flagsAreVector || inputIsVector !== outputIsVector) {
-      throw new Error(`${this.id} input, flags, and output must use the same view kind`);
-    }
-    if (
-      this.input instanceof GraphVectorView &&
-      this.flags instanceof GraphVectorView &&
-      this.output instanceof GraphVectorView
-    ) {
-      validateMatchingVectorTopology(this.input, this.flags, `${this.id} flags`);
-      validateMatchingVectorTopology(this.input, this.output, `${this.id} output`);
-    } else if (this.flags.length !== this.input.length) {
+    if (this.flags.length !== this.input.length) {
       throw new Error(`${this.id} flags.length must equal input.length`);
-    } else if (this.output.length < this.input.length) {
+    }
+    if (this.output.length < this.input.length) {
       throw new Error(`${this.id} output must contain at least input.length rows`);
     }
     if (this.count.length < 1) {
@@ -218,9 +206,10 @@ function addScatterPasses<Parameters>(
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const inputChunks = getCompactionChunks(input);
-  const flagChunks = getCompactionChunks(flags);
-  const offsetChunks = getCompactionChunks(offsets);
+  const sourceSpans = alignGraphVectorViews(graph, [input, flags, offsets]);
+  const inputChunks = sourceSpans.map(span => span[0]);
+  const flagChunks = sourceSpans.map(span => span[1]);
+  const offsetChunks = sourceSpans.map(span => span[2]);
   const outputChunks = getCompactionChunks(output);
   const inputChunkIndices = inputChunks
     .map((chunk, chunkIndex) => (chunk.length > 0 ? chunkIndex : -1))
@@ -230,7 +219,7 @@ function addScatterPasses<Parameters>(
     .filter(chunkIndex => chunkIndex >= 0);
   const countInputChunkIndex = inputChunkIndices[inputChunkIndices.length - 1];
   const countOutputChunkIndex = outputChunkIndices[outputChunkIndices.length - 1];
-  const isVector = input instanceof GraphVectorView;
+  const isVector = sourceSpans.length > 1 || output instanceof GraphVectorView;
 
   let outputStart = 0;
   for (let outputChunkIndex = 0; outputChunkIndex < outputChunks.length; outputChunkIndex++) {

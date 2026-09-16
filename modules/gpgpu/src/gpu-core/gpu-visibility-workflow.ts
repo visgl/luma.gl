@@ -22,7 +22,6 @@ import {
   createTransientView,
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
   validatePackedUint32View
 } from './graph-data-view-utils';
 
@@ -99,7 +98,7 @@ export class GPUVisibilityWorkflow {
     validateVisibilityInput(template, `${this.id} predicate 0`);
     for (const [predicateIndex, predicate] of this.predicates.entries()) {
       validateVisibilityInput(predicate.mask, `${this.id} predicate ${predicateIndex}`);
-      validateMatchingVisibilityTopology(
+      validateMatchingVisibilityLength(
         template,
         predicate.mask,
         `${this.id} predicate ${predicateIndex}`
@@ -113,11 +112,11 @@ export class GPUVisibilityWorkflow {
     }
     if (this.outputMask) {
       validateVisibilityInput(this.outputMask, `${this.id} output mask`);
-      validateMatchingVisibilityTopology(template, this.outputMask, `${this.id} output mask`);
+      validateMatchingVisibilityLength(template, this.outputMask, `${this.id} output mask`);
     }
     if (this.sourceIds) {
       validateVisibilityInput(this.sourceIds, `${this.id} source IDs`);
-      validateMatchingVisibilityTopology(template, this.sourceIds, `${this.id} source IDs`);
+      validateMatchingVisibilityLength(template, this.sourceIds, `${this.id} source IDs`);
       if (props.firstSourceIndex !== undefined) {
         throw new Error(`${this.id} firstSourceIndex cannot be used with explicit source IDs`);
       }
@@ -332,32 +331,24 @@ function validateVisibilityInput(input: GPUCompactionInput, name: string): void 
   }
 }
 
-/** Validates source-aligned mask or source-ID topology. */
-function validateMatchingVisibilityTopology(
+/** Validates source-aligned masks and IDs by logical row count. */
+function validateMatchingVisibilityLength(
   template: GPUCompactionInput,
   input: GPUCompactionInput,
   name: string
 ): void {
-  if (template instanceof GraphVectorView && input instanceof GraphVectorView) {
-    validateMatchingVectorTopology(template, input, name);
-  } else if (template instanceof GraphVectorView !== input instanceof GraphVectorView) {
-    throw new Error(`${name} must use the same view kind`);
-  } else if (template.length !== input.length) {
+  if (template.length !== input.length) {
     throw new Error(`${name} length must match visibility predicates`);
   }
 }
 
-/** Validates compacted output capacity and required vector topology. */
+/** Validates compacted output capacity without imposing a destination topology. */
 function validateVisibilityOutput(
   template: GPUCompactionInput,
   output: GPUCompactionInput,
   name: string
 ): void {
-  if (template instanceof GraphVectorView && output instanceof GraphVectorView) {
-    validateMatchingVectorTopology(template, output, name);
-  } else if (template instanceof GraphVectorView !== output instanceof GraphVectorView) {
-    throw new Error(`${name} must use the same view kind`);
-  } else if (output.length < template.length) {
+  if (output.length < template.length) {
     throw new Error(`${name} must contain at least one row per source`);
   }
 }
