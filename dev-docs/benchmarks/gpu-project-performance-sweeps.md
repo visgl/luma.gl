@@ -135,6 +135,77 @@ Each JSON record is printed after `PROJECTION_PERFORMANCE_SWEEP `.
 The archived file contains 18 uninstrumented reports (72 paths) followed by three instrumented
 reports (12 paths), all passing the same independent accuracy/validity gate.
 
+## Matched math.gl/proj4 CPU comparison
+
+A subsequent isolated capture adds CPU baselines to the same 18-case uninstrumented sweep:
+[CPU/GPU JSONL reports](data/gpu-project-cpu-comparison-2026-09-16.jsonl).
+These schema-version-2 records ran from 2026-09-16T22:20:19.224Z to 2026-09-16T22:20:50.842Z
+on the same adapter/browser described above. CPU reference versions were
+`@math.gl/proj4 5.0.0-alpha.5` and `proj4 2.21.0`. This is the JavaScript
+`Proj4Projection.project()` implementation, **not native C++ PROJ**.
+
+The oracle wrapper applies the same finite/domain validity checks and calls an already-constructed
+CPU projection. `oracleTimeMilliseconds` measures one callback per source row plus a checksum,
+without consumer output buffers. Its 65,547-row medians were:
+
+| Fixture | CPU oracle/checksum ms |
+| --- | ---: |
+| utm-local | 30.80 |
+| utm-regional | 30.00 |
+| albers-regional | 20.40 |
+
+For the matched workloads, CPU inline mode actually projects once per consumer; CPU materialized
+mode projects once into a shared intermediate then executes each consumer. Both write preallocated
+binary64 coordinate arrays and uint32 validity arrays; every output is checked before warmup and
+after timing. This gives CPU the same reuse opportunity instead of multiplying its projection-only
+time by consumer count. CPU output is more precise than double-single and is not the same encoding.
+
+CPU timings include callback/provider allocations, domain checks and consumer writes; constructor,
+output allocation and validation are excluded. GPU timings below add CPU encoding to synchronized
+submission-to-fence time **per sample before summarizing**. Upload/readback, planning, allocation
+and compilation are excluded. Thus these are **GPU-resident, steady-state** ratios, not full
+CPU-memory round-trip speedups. Provider and workload warmups are two iterations, followed by five
+samples; ordering and single-session limitations still apply.
+
+### 65,547 rows, cubic adaptive GPU versus matching CPU mode
+
+GPU uses the same 1 mm error budget and double-single arithmetic as the original sweep.
+Ratios greater than one favor GPU; ratios below one favor CPU.
+
+| Fixture | Consumers | Mode | CPU workload ms | GPU encoding + fence ms | CPU / GPU |
+| --- | ---: | --- | ---: | ---: | ---: |
+| utm-local | 1 | inline | 30.30 | 8.20 | 3.70× |
+| utm-local | 1 | materialized | 30.30 | 10.10 | 3.00× |
+| utm-local | 4 | inline | 120.50 | 33.30 | 3.62× |
+| utm-local | 4 | materialized | 30.70 | 8.20 | 3.74× |
+| utm-regional | 1 | inline | 30.20 | 6.20 | 4.87× |
+| utm-regional | 1 | materialized | 30.10 | 7.20 | 4.18× |
+| utm-regional | 4 | inline | 121.20 | 26.30 | 4.61× |
+| utm-regional | 4 | materialized | 31.10 | 6.70 | 4.64× |
+| albers-regional | 1 | inline | 20.40 | 5.30 | 3.85× |
+| albers-regional | 1 | materialized | 20.80 | 5.70 | 3.65× |
+| albers-regional | 4 | inline | 82.10 | 22.60 | 3.63× |
+| albers-regional | 4 | materialized | 21.10 | 6.60 | 3.20× |
+
+The raw reports also include both quadratic GPU paths; the table does not silently compare
+materialized GPU reuse against repeated CPU projection.
+
+### Small batches can favor CPU
+
+Cubic regional UTM, one consumer, shared-result mode:
+
+| Total rows | CPU workload ms | GPU encoding + fence ms | CPU / GPU |
+| ---: | ---: | ---: | ---: |
+| 1,035 | 0.50 | 1.90 | 0.26× |
+| 16,395 | 7.90 | 2.10 | 3.76× |
+| 65,547 | 30.10 | 7.20 | 4.18× |
+
+These samples demonstrate a workload-size effect, not a portable crossover threshold.
+Both medians must be positive to publish a ratio; otherwise the report uses `null`.
+The existing reproduction command now emits the CPU baselines and ratios as well.
+The original schema-version-1 capture above remains unchanged for provenance.
+
+
 ## Decisions and remaining evidence
 
 - Retain cubic fitting as the default; it already avoids much of the regional patch-count and

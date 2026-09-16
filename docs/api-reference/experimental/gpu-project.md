@@ -717,6 +717,31 @@ records whether timestamps were actually used. First use and warmup are uninstru
 The GPU metric sums per-pass timestamp intervals; with independent consumers it must not be
 interpreted as elapsed GPU latency or substituted for synchronized workload time.
 
+### CPU provider comparison
+
+`oracleLabel` identifies the CPU implementation used by the oracle callback; it does not resolve
+or import a provider. `cpuProvider` records that label, and `cpuPaths` times two equivalent
+axis-swap workloads using that callback: `inline` projects separately for every consumer;
+`materialized` projects once, then copies the shared result to each consumer's output.
+CPU outputs are preallocated binary64 coordinate arrays plus uint32 validity. They have the same
+mathematical consumer contract as GPU results, but are **not the same memory encoding** as
+double-single limbs or origin-relative Float32 GPU output. All CPU outputs are checked against
+the captured reference before warmup and after timing. Reported CPU output/intermediate bytes
+exclude JavaScript source objects, reference snapshots and provider-internal allocations.
+
+`oracleTimeMilliseconds` remains a one-projection-per-row callback/checksum baseline, not a
+matched multi-consumer workload. The sweeps use `@math.gl/proj4`'s `Proj4Projection.project`, backed
+by **proj4js JavaScript**, with the same finite/domain checks as the GPU workload. They do not
+benchmark the native C++ PROJ library. Provider construction and output allocation are outside
+CPU timing; callback/provider allocations and consumer writes are inside it.
+
+Each GPU path reports `encodeAndSynchronizedTimeMilliseconds`, the distribution of per-sample
+CPU encoding plus submission-to-fence time. `residentSpeedupOverCPU` divides the **matching CPU
+mode's median** by this GPU median (greater than one favors GPU; below one favors CPU). It is
+`null` if either median is below timer resolution. This excludes GPU upload/readback and all
+planning/compilation; it is not an end-to-end CPU-memory-to-CPU-memory speedup. CPU and GPU
+arithmetic differ, so the explicit accuracy budget still governs the comparison.
+
 The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
 
 ```sh

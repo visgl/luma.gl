@@ -92,6 +92,7 @@ export function makePerformanceOptions(
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,
+    oracleLabel: '@math.gl/proj4 Proj4Projection.project (proj4js)',
     oracle: position => {
       const valid =
         position.every(Number.isFinite) &&

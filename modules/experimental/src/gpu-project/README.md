@@ -421,6 +421,11 @@ materialized result shared by independent consumers in a single submission. Repo
 adaptive patch counts/degrees and distinguish equal from different declared error budgets.
 `gpuTiming: false` retains synchronized timing without timestamp instrumentation, allowing normal
 compute-pass coalescing. Do not mix instrumented and uninstrumented timings.
+`oracleLabel` names the CPU reference. `cpuPaths` measures the same independent/reused consumer
+work using preallocated binary64 outputs. `residentSpeedupOverCPU` compares the matching CPU
+mode with GPU encoding plus fence completion, excluding transfers and setup. The sweep's CPU
+provider is math.gl's JavaScript proj4 adapter, not native C++ PROJ; its old oracle/checksum
+timing is retained separately from the matched consumer work.
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \

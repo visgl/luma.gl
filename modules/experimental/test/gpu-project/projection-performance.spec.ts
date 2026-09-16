@@ -32,11 +32,26 @@ for (const fixture of performanceFixtures) {
         });
         expect(report.comparison).toBe('equal-error-budget');
         expect(report.consumerCount).toBe(consumerCount);
+        expect(report.cpuProvider).toBe('@math.gl/proj4 Proj4Projection.project (proj4js)');
+        expect(report.cpuPaths).toHaveLength(2);
+        for (const path of report.cpuPaths) {
+          expect(path.validRows).toBe(rowCount + 9);
+          expect(path.projectionsPerRow).toBe(path.mode === 'inline' ? consumerCount : 1);
+          expect(path.outputEncoding).toBe('binary64');
+        }
         expect(report.coordinateCount).toBe(rowCount + 11);
         expect(report.paths).toHaveLength(4);
         for (const path of report.paths) {
           expect(path.validRows).toBe(rowCount + 9);
           expect(path.maximumObservedError).toBeLessThanOrEqual(0.001);
+          const cpuPath = report.cpuPaths.find(candidate => candidate.mode === path.mode)!;
+          expect(path.residentSpeedupOverCPU).toBe(
+            path.encodeAndSynchronizedTimeMilliseconds.median > 0 &&
+              cpuPath.durationMilliseconds.median > 0
+              ? cpuPath.durationMilliseconds.median /
+                  path.encodeAndSynchronizedTimeMilliseconds.median
+              : null
+          );
           expect(path.metadata.arithmetic).toBe('double-single');
           expect(path.adaptiveStages).toHaveLength(1);
           expect(path.dispatchCount).toBe(consumerCount + (path.mode === 'materialized' ? 1 : 0));
@@ -55,7 +70,7 @@ for (const fixture of performanceFixtures) {
         );
         if (measured)
           console.info(
-            `PROJECTION_PERFORMANCE_SWEEP ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, bounds: fixture.bounds, rowCount, report})}`
+            `PROJECTION_PERFORMANCE_SWEEP ${JSON.stringify({schemaVersion: 2, capturedAt: new Date().toISOString(), browser: navigator.userAgent, fixture: fixture.id, bounds: fixture.bounds, rowCount, report})}`
           );
       }, 180000);
     }

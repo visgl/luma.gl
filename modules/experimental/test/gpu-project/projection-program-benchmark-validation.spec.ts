@@ -62,6 +62,9 @@ it.for([
   });
   expect(report.paths.every(path => path.maximumObservedError === 0)).toBe(true);
   expect(report.consumerCount).toBe(3);
+  expect(report.cpuProvider).toBe('caller-supplied oracle');
+  expect(report.cpuPaths.map(path => path.checksum)).toEqual([90000002.25, 90000002.25]);
+  expect(report.cpuPaths.every(path => path.outputEncoding === 'binary64')).toBe(true);
   expect(report.comparison).toBe('equal-error-budget');
   expect(report.timestampQueries).toBe(false);
   for (const path of report.paths) {
