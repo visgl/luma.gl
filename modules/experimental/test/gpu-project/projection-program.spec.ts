@@ -573,14 +573,17 @@ for (const target of [
   'native',
   'EPSG:3857',
   'PROJJSON:3857',
+  'analytic:3857',
   '+proj=utm +zone=10 +datum=WGS84 +units=m'
 ] as const) {
-  it(`executes a planned ${target} transformation with sub-Float32 accuracy`, async context => {
+  it(`executes a planned ${target} transformation with the declared arithmetic precision`, async context => {
     const device = await getWebGPUTestDevice();
     if (!device) {
       return;
     }
     skipSoftwareDevice(device, context);
+    const analytic = target === 'analytic:3857';
+    const explicitWebMercator = target === 'PROJJSON:3857' || analytic;
     const planned =
       target === 'native'
         ? planProjectionPipeline({
@@ -588,20 +591,23 @@ for (const target of [
               '+proj=pipeline +step +proj=axisswap +order=-2,1 +step +proj=affine +s11=2 +s22=-3 +xoff=10000000 +yoff=20000000'
           })
         : planCRSProjection({
-            from: target === 'PROJJSON:3857' ? geographicCRS : 'EPSG:4326',
-            to: target === 'PROJJSON:3857' ? makeWebMercatorCRS() : target,
+            from: explicitWebMercator ? geographicCRS : 'EPSG:4326',
+            to: explicitWebMercator ? makeWebMercatorCRS() : target,
+            projectionArithmetic: analytic ? 'float32' : 'double-single',
             bounds: [-122.5, 37.7, -122.3, 37.9],
             tolerance: 1e-5
           });
     if (planned.status !== 'ready') {
       throw new Error(JSON.stringify(planned.reasons));
     }
+    expect(planned.compiled.metadata.arithmetic).toBe(analytic ? 'mixed' : 'double-single');
+    if (analytic) expect(planned.strategy).toBe('native');
     const project =
       target === 'native'
         ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
         : new Proj4Projection({
             from: 'EPSG:4326',
-            to: target === 'PROJJSON:3857' ? 'EPSG:3857' : target
+            to: explicitWebMercator ? 'EPSG:3857' : target
           }).project;
     const points = [
       [-122.4194001, 37.7749001],
@@ -631,12 +637,15 @@ for (const target of [
         const expected = project(points[row]);
         for (let axis = 0; axis < 2; axis++) {
           const offset = row * 4 + axis * 2;
-          expect(Math.abs(actual[offset] + actual[offset + 1] - expected[axis])).toBeLessThan(1e-5);
+          expect(Math.abs(actual[offset] + actual[offset + 1] - expected[axis])).toBeLessThan(
+            analytic ? 20 : 1e-5
+          );
         }
       }
-      // The nearby points collapse in Float32, yet remain distinct through the planned GPU path.
+      // Float32 formulas collapse nearby points; the default adaptive path retains their detail.
       expect(actual[0]).toBe(actual[4]);
-      expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
+      if (analytic) expect(actual[0] + actual[1]).toBe(actual[4] + actual[5]);
+      else expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
     } finally {
       compiled.destroy();
       contributor.destroy();
