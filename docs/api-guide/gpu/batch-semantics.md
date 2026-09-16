@@ -28,6 +28,7 @@ explicit graph-owned scratch.
 | MADD (`GPUProgramVectorMADD`) | Row-wise, same logical length and order | Equal lengths; independent input/addend/output boundaries; packed `float32` | No writes for zero rows; each encoding overwrites its destination |
 | Dot (`GPUProgramDotProduct`) | Global aggregate, one scalar | Equal lengths; independent boundaries; packed `float32` | Zero; first partial overwrites, subsequent partials accumulate on every encoding |
 | `GPUScan` | Stateful prefix, same logical row order | Packed `uint32`; input and segment flags cover the scanned rows, scalar destinations may provide extra capacity, and all may use independent chunk boundaries | No writes for zero rows; carry is rebuilt per encoding |
+| `GPUScanUint64` | Inclusive modulo-2^64 prefix over split low/high words | Four packed `uint32` operands may use independent atomic/vector boundaries; inputs have equal lengths and outputs cover them | No writes for zero rows; spare capacity is untouched; carry is rebuilt per encoding |
 | `GPUMask` | Row-wise boolean composition, canonical zero/one output | Packed `uint32`; inputs and output require equal logical lengths and may use independent atomic/vector boundaries | No writes for zero rows; output is overwritten for every encoded row |
 | `GPUReduction` | Global aggregate; one row, two for extent | Packed `uint32`, `sint32`, or `float32`; optional packed `uint32` mask has equal logical length and independent boundaries | Zero for empty or fully excluded input; every encoding replaces output |
 | `GPUHistogram` | Global aggregate into caller-sized bins | Scalar input may be strided; optional packed `uint32` mask has equal length and independent boundaries; automatic domain requires packed input | Clears bins every encoding, including empty input |
@@ -92,6 +93,13 @@ lists, custom uint32 invalid values, empty sources/indices, nonzero offsets, spa
 changed inputs across repeated encodings. Lowering allocates no scratch or packed storage. Its
 index traversal cost scales with source chunk count; routing optimization remains follow-up work.
 
+`gpu-uint64-scan-batching.*.spec.ts` compares split-word prefixes with a BigInt reference on
+WebGPU CORE, including low-word overflow at chunk boundaries, full 64-bit wrap, empty chunks,
+multiple workgroups, nonzero offsets, spare capacity, and changed inputs across repeated encodings.
+Adjusted high-word scratch follows the high input's chunks. Low output buffers must be separate
+from both inputs and the high output. The high output may reuse high input storage because carry
+classification finishes before the high scan. Output chunks must not overlap.
+
 ## Coverage inventory
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -102,7 +110,6 @@ for this contract**; being listed does not imply missing batching or claim confo
 resource descriptors, inspectors, benchmark runners, and execution containers are outside this
 operation inventory. The exhaustive API/function audit remains tranche 4.
 
-- `GPUScanUint64`
 - `GPUByteRangeGather`
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
