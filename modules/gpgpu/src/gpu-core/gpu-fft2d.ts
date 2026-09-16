@@ -106,7 +106,8 @@ export class GPUFFT2D {
     this.props = props;
     this.id = props.id ?? 'gpu-fft2d';
     this.stats = makeGPUFFT2DStats(props.width, props.height, props.batchCount ?? 1);
-    if (props.direction && props.direction !== 'forward' && props.direction !== 'inverse') {
+    const direction = props.direction ?? 'forward';
+    if (direction !== 'forward' && direction !== 'inverse') {
       throw new Error('GPUFFT2D direction must be forward or inverse');
     }
     for (const view of [props.input, props.output]) {
