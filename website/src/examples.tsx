@@ -78,6 +78,7 @@ const loadInstancingApp = () => import('../../examples/showcase/instancing/app')
 const loadLightstormMegacityApp = () => import('../../examples/showcase/lightstorm-megacity/app');
 const loadLLMNetworkApp = () => import('../../examples/showcase/llm-network/app');
 const loadVectorFieldLabApp = () => import('../../examples/showcase/vector-field-lab/app');
+const loadSpectralWaveLabApp = () => import('../../examples/showcase/spectral-wave-lab/app');
 const loadQuantumStateStudioApp = () => import('../../examples/showcase/quantum-state-studio/app');
 const loadTempestOceanApp = () => import('../../examples/showcase/tempest-ocean/app');
 const loadRenderBundlesApp = () => import('../../examples/api/render-bundles/app');
@@ -971,6 +972,19 @@ export const VectorFieldLabExample: React.FC<WebsiteExampleProps> = props => (
     directory="showcase"
     devices={['webgpu']}
     loadTemplate={loadVectorFieldLabApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const SpectralWaveLabExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="spectral-wave-lab"
+    title="Spectral Dynamics Lab"
+    subtitle="One GPU wave state in synchronized physical and Fourier views"
+    directory="showcase"
+    devices={['webgpu']}
+    loadTemplate={loadSpectralWaveLabApp}
     config={exampleConfig}
     {...props}
   />
