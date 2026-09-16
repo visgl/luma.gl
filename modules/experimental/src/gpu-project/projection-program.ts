@@ -7,6 +7,7 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 import {GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE} from '../geospatial/geospatial-utils';
 import {evaluateProjectionPlan, findProjectionPatch, packProjectionPlan} from './projection-plan';
 import {getProjectionShaderFunctions} from './projection-shader';
+import {getProjectionProgramMetadata, type ProjectionProgramMetadata} from './projection-metadata';
 import type {ProjectionCoordinates, ProjectionPlan, ProjectionPrecision} from './types';
 
 /** Explicit operations; adaptive inversion requires a separately validated inverse plan. */
@@ -42,6 +43,7 @@ export class CompiledProjection {
   readonly precision: ProjectionPrecision;
   readonly inputFormat: ProjectionInputFormat;
   readonly destinationOrigin: ProjectionCoordinates;
+  readonly metadata: ProjectionProgramMetadata;
   private readonly parameterWords: Uint32Array;
   private readonly shaderSource: string;
 
@@ -52,6 +54,7 @@ export class CompiledProjection {
     const compiled = compileProgram(program, inputFormat);
     this.parameterWords = compiled.parameters;
     this.shaderSource = compiled.source;
+    this.metadata = getProjectionProgramMetadata(program, inputFormat);
   }
 
   /** Returns a copy so callers cannot mutate this compiled program's parameter snapshot. */

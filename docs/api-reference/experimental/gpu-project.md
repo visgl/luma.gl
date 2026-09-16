@@ -239,6 +239,108 @@ rebuilding or submitting the graph. Numeric parameters and same-sized adaptive p
 changes to operation topology, direction, axis permutation, precision, or input encoding can require
 recompilation. Inline consumers can perform the same check and update their own parameter buffer.
 
+## Numerical metadata
+
+`CompiledProjection.metadata` is an immutable snapshot of a two-dimensional program's input
+encoding, intermediate arithmetic, output precision/frame, validity rules, and inversion support.
+`getProjectionProgramMetadata(program, inputFormat?)` also exposes this contract before compilation.
+Each stage records its input domain (`inputBounds`, or `null` for finite-coordinate native stages),
+inversion support, and accumulated approximation error in that stage's output units. Adaptive
+bounds describe stage coordinates, not necessarily the original input coordinates.
+
+`approximationError` distinguishes three cases:
+
+- `none`: no adaptive approximation is present. This does not mean floating-point arithmetic is exact.
+- `sampled-estimate`: the first adaptive plan's sampled double-single error, amplified by subsequent
+  unit/affine scales using their maximum absolute scale. Axis permutations preserve this estimate.
+- `unknown`: a later adaptive stage needs a provider sensitivity/continuity bound that is not
+  available, or the estimate overflows. `maximum` is `null` in this case.
+
+`guaranteed` is always `false`. These values exclude input quantization and subsequent native/output
+arithmetic rounding; they must not be used as certified global error bounds. `local-f32` output
+still rounds at the final origin-relative output boundary.
+
+## Optional math.gl CRS planner
+
+Install `@math.gl/crs` and `@math.gl/proj4` 5.x separately and import the CPU planner from
+`@luma.gl/experimental/gpu-project/crs`. These optional peers are not loaded by the GPU execution
+entry point. Planning allocates no GPU resources and returns either
+`{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
+The default is raw binary64 `uint32x4` input and double-single output.
+
+```ts
+import {planCRSProjection} from '@luma.gl/experimental/gpu-project/crs';
+import {GPUProjectionProgram} from '@luma.gl/experimental/gpu-project';
+
+const result = planCRSProjection({
+  from: 'EPSG:4326',
+  to: '+proj=utm +zone=10 +datum=WGS84 +units=m',
+  bounds: [-122.5, 37.7, -122.3, 37.9],
+  tolerance: 0.001
+});
+if (result.status === 'ready') {
+  const contributor = new GPUProjectionProgram({
+    projection: result.compiled,
+    positions: rawBinary64Positions,
+    output: doubleSinglePositions,
+    validity
+  });
+  contributor.addToGraph(graph);
+  // result.compiled.getShader() exposes the same transformation for inline use.
+}
+```
+
+`planCRSProjection` currently fits the entire CRS transformation through the public math.gl
+`Proj4Projection` provider. It accepts named/serialized definitions that the provider resolves and
+explicit two-dimensional geographic/projected PROJJSON objects. Explicit 3D, compound, bound,
+vertical, and geocentric objects are declined. Serialized definitions retain the provider's XY
+semantics; providers returning extra coordinate components are rejected. CRS resolution does not
+download definitions or grids. Unknown identifiers, unavailable resources, invalid provider output,
+and exhausted patch budgets return structured reasons. `allowAdaptive: false` declines CRS pairs
+until native CRS conversion lowering is implemented.
+
+`enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
+`true` to use declared CRS axes. `inverse: {bounds, tolerance}` requests a separately fitted inverse
+over an explicit destination-coordinate domain; inverse tolerance uses the inverse's output units.
+Forward bounds are never reused as inverse bounds. `degree`, `sampleCount`, `maxDepth`, and
+`maxPatches` control fitting. The tolerance applies to the adaptive double-single stage and remains
+a sampled estimate. If `precision: 'local-f32'` is selected, the default destination origin is the
+provider's output at the source-domain center; final Float32 rounding is additional error.
+
+### Explicit PROJ pipelines
+
+```ts
+import {parsePROJString} from '@math.gl/crs';
+import {planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
+
+const result = planProjectionPipeline({
+  pipeline: parsePROJString(`+proj=pipeline
+    +step +proj=axisswap +order=2,1
+    +step +proj=unitconvert +xy_in=deg +xy_out=rad
+    +step +proj=affine +s11=2 +s22=3 +xoff=100 +yoff=200`)
+});
+```
+
+The planner accepts a string or the public math.gl `PROJStringAst`. Supported stages lower to static
+native operations: signed 2D `axisswap`; `unitconvert` with `m`, `km`, `cm`, `mm`, `ft`, `us-ft`,
+`rad`, `deg`, `grad`, or positive numeric linear factors; and diagonal `affine` with `s11`, `s22`,
+`xoff`, `yoff`. Missing horizontal units default to metres. `+inv` reverses the entire stage,
+including signed axis permutations. Incompatible unit categories and consecutive unit conversions
+with mismatched units are declined.
+
+Every token is consumed or declined. Global parameters, duplicate parameters, shear/rotation,
+extra dimensions, nested pipelines, omission flags, grids, and native map-projection methods are
+outside this initial lowering subset. Optional `fallback: {projection, bounds, tolerance, ...}`
+supplies a CPU oracle for the **whole** pipeline when lowering is unsupported. Native programs do
+not sample that oracle or use its bounds. Syntax and malformed-parameter errors do not fall back.
+The planner never assumes proj4js implements arbitrary PROJ pipelines.
+
+Operation semantics follow the published PROJ documentation for
+[pipelines](https://proj.org/en/stable/operations/pipeline.html),
+[axis swaps](https://proj.org/en/stable/operations/conversions/axisswap.html),
+[unit conversion](https://proj.org/en/stable/operations/conversions/unitconvert.html), and
+[affine transforms](https://proj.org/en/stable/operations/transformations/affine.html).
+
 ## Adaptive patches and explicit assignment
 
 `compileProjectionPlan()` samples the provider and subdivides regions until their local polynomial

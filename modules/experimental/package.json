@@ -62,6 +62,11 @@
       "import": "./dist/gpu-project/benchmarks.js",
       "require": "./dist/gpu-project/benchmarks.cjs"
     },
+    "./gpu-project/crs": {
+      "types": "./dist/gpu-project/crs.d.ts",
+      "import": "./dist/gpu-project/crs.js",
+      "require": "./dist/gpu-project/crs.cjs"
+    },
     "./gpu-dataframe": {
       "types": "./dist/gpu-dataframe/index.d.ts",
       "import": "./dist/gpu-dataframe/index.js",
@@ -98,7 +103,17 @@
   "peerDependencies": {
     "@luma.gl/core": "~9.4.0-alpha.1",
     "@luma.gl/engine": "~9.4.0-alpha.1",
-    "@luma.gl/shadertools": "~9.4.0-alpha.1"
+    "@luma.gl/shadertools": "~9.4.0-alpha.1",
+    "@math.gl/crs": "~5.0.0-alpha.5",
+    "@math.gl/proj4": "~5.0.0-alpha.5"
+  },
+  "peerDependenciesMeta": {
+    "@math.gl/crs": {
+      "optional": true
+    },
+    "@math.gl/proj4": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@loaders.gl/core": "~5.0.0-alpha.5",

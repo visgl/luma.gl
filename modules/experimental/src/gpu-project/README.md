@@ -249,6 +249,37 @@ It does not simulate GPU rounding. Adaptive plan tolerances remain sampled, per-
 program composition does not establish a global error bound, and later scaling can magnify earlier
 error. Validate a complete program against its CPU provider over the intended domain.
 
+### Numerical metadata and CRS planning
+
+`CompiledProjection.metadata` snapshots dimensions, input encoding, double-single arithmetic,
+output frame/precision, validity, stage domains, and inversion support. The same inspection is
+available through `getProjectionProgramMetadata`. Approximation error is `none`, `sampled-estimate`,
+or `unknown`. Native scales propagate a preceding adaptive estimate in destination units; a second
+adaptive stage reports unknown composed error because provider sensitivity and patch continuity
+are not established. Estimates exclude input/native/output rounding and are never certified bounds.
+
+The optional `@luma.gl/experimental/gpu-project/crs` subpath uses public math.gl 5 APIs. Install its
+optional `@math.gl/crs` and `@math.gl/proj4` peers to use:
+
+- `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
+  signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.
+  Unsupported tokens produce structured reasons. An optional `fallback` supplies an oracle and
+  bounds for the entire pipeline.
+- `planCRSProjection({from, to, bounds, tolerance})`: compile a bounded double-single adaptive CRS
+  transformation through `Proj4Projection`, including PROJJSON and provider-resolved serialized
+  definitions. Set `enforceAxis` explicitly when declared axes should be honored. Request an inverse
+  with its own `{bounds, tolerance}` in destination coordinates. Explicit non-2D PROJJSON objects
+  and providers returning extra components are declined.
+
+Both return a discriminated `ready`/`unsupported` result. A ready result includes `program`,
+`compiled`, execution `strategy`, and fallback `reasons`; it can be consumed inline or by
+`GPUProjectionProgram`. Defaults preserve raw binary64 input and double-single output. Fitting
+tolerance remains sampled and excludes final local Float32 rounding. Native named projections and
+PROJJSON conversion lowering remain P.3b/P.4. GPU execution does not import math.gl or proj4js.
+
+See the [API guide](../../../../docs/api-reference/experimental/gpu-project.md) for examples,
+supported units/parameters, error semantics, and planning limitations.
+
 ### Inline shader consumption
 
 ```ts
