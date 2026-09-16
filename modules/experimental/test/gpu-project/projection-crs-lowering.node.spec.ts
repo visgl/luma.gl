@@ -562,4 +562,87 @@ describe('native PROJJSON frame lowering', () => {
     expect(adaptive.status).toBe('unsupported');
     expect(adaptive.reasons.at(-1)?.code).toBe('unsupported-conversion');
   });
+
+  it('declines unverified EPSG identifiers on provider-only methods, including localized Lambert parameters', () => {
+    const projected = makeTransverseMercatorCRS();
+    const parameters = [
+      {
+        name: 'Latitude of false origin',
+        value: 41,
+        unit: 'degree',
+        id: {authority: 'EPSG', code: 8821}
+      },
+      {
+        name: 'Longitude of false origin',
+        value: -71.5,
+        unit: 'degree',
+        id: {authority: 'EPSG', code: 8822}
+      },
+      {
+        name: 'Latitude of 1st standard parallel',
+        value: 42.6833333333,
+        unit: 'degree',
+        id: {authority: 'EPSG', code: 8823}
+      },
+      {
+        name: 'Latitude of 2nd standard parallel',
+        value: 41.7166666667,
+        unit: 'degree',
+        id: {authority: 'EPSG', code: 8824}
+      },
+      {
+        name: 'Easting at false origin',
+        value: 200000,
+        unit: 'metre',
+        id: {authority: 'EPSG', code: 8826}
+      },
+      {
+        name: 'Northing at false origin',
+        value: 750000,
+        unit: 'metre',
+        id: {authority: 'EPSG', code: 8827}
+      }
+    ] as const;
+    for (const parameterName of ['Latitude of 1st standard parallel', 'Localized first parallel']) {
+      for (const method of [
+        {name: 'Lambert Conic Conformal (2SP)'},
+        {name: 'Lambert Conic Conformal (2SP)', id: {authority: 'EPSG', code: 9802}}
+      ]) {
+        const target = {
+          ...projected,
+          conversion: {
+            name: 'Lambert',
+            method,
+            parameters: parameters.map(parameter => ({
+              ...parameter,
+              name: parameter.id.code === 8823 ? parameterName : parameter.name
+            }))
+          }
+        };
+        const result = planCRSProjection({
+          from: geographicCRS,
+          to: target,
+          bounds: [-72, 41, -71, 42]
+        });
+        expect(result.status).toBe('unsupported');
+        expect(result.reasons.at(-1)?.code).toBe('unsupported-conversion');
+        expect(result.reasons.at(-1)?.message).toContain('verified EPSG');
+      }
+    }
+    // Unknown EPSG method identifiers must not be interpreted solely by a familiar name either.
+    const wrongMethod = {
+      ...projected,
+      conversion: {
+        ...projected.conversion,
+        method: {name: 'Transverse Mercator', id: {authority: 'EPSG', code: 9802}}
+      }
+    };
+    const result = planCRSProjection({
+      from: geographicCRS,
+      to: wrongMethod,
+      bounds: [-123, 37, -122, 38]
+    });
+    expect(result.status).toBe('unsupported');
+    expect(result.reasons.at(-1)?.message).toContain('verified EPSG');
+  });
 });

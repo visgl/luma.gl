@@ -115,22 +115,19 @@ export function getCRSProviderReason(
     const conversion = definition.conversion;
     const method = getEPSGCode(conversion.method);
     if (
-      ((method === 9807 || method === 1024) &&
-        conversion.method.name !==
-          (method === 9807 ? 'Transverse Mercator' : 'Popular Visualisation Pseudo Mercator')) ||
+      (method !== undefined &&
+        ((method !== 9807 && method !== 1024) ||
+          conversion.method.name !==
+            (method === 9807 ? 'Transverse Mercator' : 'Popular Visualisation Pseudo Mercator'))) ||
       conversion.parameters?.some(parameter => {
         const code = getEPSGCode(parameter);
-        return (
-          code !== undefined &&
-          [...PARAMETER_NAMES.values()].includes(code) &&
-          PARAMETER_NAMES.get(parameter.name) !== code
-        );
+        return code !== undefined && PARAMETER_NAMES.get(parameter.name) !== code;
       })
     ) {
       return {
         code: 'unsupported-conversion',
         message:
-          'adaptive provider requires canonical names for supported EPSG methods and parameters; native lowering can use their identifiers'
+          'adaptive provider requires a verified EPSG method/parameter mapping and canonical names; native lowering can use supported identifiers'
       };
     }
   }
