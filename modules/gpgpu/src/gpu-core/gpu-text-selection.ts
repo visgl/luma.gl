@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {GPUCompaction} from './gpu-compaction';
 import {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
@@ -192,7 +192,7 @@ const COUNT_OFFSET: u32 = ${countOffset}u;
         {buffer: outputRecords, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: passId,
           source,
           shaderLayout: {
@@ -206,18 +206,17 @@ const COUNT_OFFSET: u32 = ${countOffset}u;
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({
-              sourceRecords: getBuffer(sourceRecords),
-              selectedGlyphIds: getBuffer(selection.output),
-              selectedCount: getBuffer(selection.count),
-              outputRecords: getBuffer(outputRecords)
+            kernel.dispatch(computePass, {
+              bindings: {
+                sourceRecords: getBuffer(sourceRecords),
+                selectedGlyphIds: getBuffer(selection.output),
+                selectedCount: getBuffer(selection.count),
+                outputRecords: getBuffer(outputRecords)
+              },
+              x: Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
             });
-            computation.dispatch(
-              computePass,
-              Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
-            );
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -268,7 +267,7 @@ const ROW_FLAG_STRIDE: u32 = ${selection.rowFlags.byteStride / Uint32Array.BYTES
         {buffer: glyphFlags, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: passId,
           source,
           shaderLayout: {
@@ -282,18 +281,17 @@ const ROW_FLAG_STRIDE: u32 = ${selection.rowFlags.byteStride / Uint32Array.BYTES
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({
-              glyphRows: getViewBinding(selection.glyphRows, getBuffer),
-              rowFlags: getViewBinding(selection.rowFlags, getBuffer),
-              glyphIds: getViewBinding(glyphIds, getBuffer),
-              glyphFlags: getViewBinding(glyphFlags, getBuffer)
+            kernel.dispatch(computePass, {
+              bindings: {
+                glyphRows: getViewBinding(selection.glyphRows, getBuffer),
+                rowFlags: getViewBinding(selection.rowFlags, getBuffer),
+                glyphIds: getViewBinding(glyphIds, getBuffer),
+                glyphFlags: getViewBinding(glyphFlags, getBuffer)
+              },
+              x: Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
             });
-            computation.dispatch(
-              computePass,
-              Math.ceil(selection.glyphRows.length / WORKGROUP_SIZE)
-            );
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -313,7 +311,7 @@ function addClearTextSelectionCount<Parameters>(
       id: `${id}-clear-count`,
       resources: [{buffer: count, usage: 'storage-write'}],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${id}-clear-count`,
           source: `const COUNT_OFFSET: u32 = ${getViewElementOffset(count)}u;
 @group(0) @binding(0) var<storage, read_write> count: array<u32>;
@@ -325,10 +323,10 @@ function addClearTextSelectionCount<Parameters>(
         return {
           encode: ({computePass, getBuffer}) => {
             const bindings: Record<string, Binding> = {count: getViewBinding(count, getBuffer)};
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, 1);
+
+            kernel.dispatch(computePass, {bindings, x: 1});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

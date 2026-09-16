@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUComputeCommandNode} from './gpu-command-node';
 import {GPUScalar, getGPUScalarWGSLStore, getGPUValueArenaWGSLBinding} from './gpu-scalar';
@@ -50,7 +50,7 @@ fn main() {
         },
         resources: [{buffer, usage: 'storage-write'}],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id: this.id,
             source,
             shaderLayout: {bindings: [{name: 'gpuValues', type: 'storage', group: 0, location: 0}]}
@@ -58,10 +58,10 @@ fn main() {
           return {
             encode: ({computePass, getBuffer}) => {
               const bindings: Record<string, Binding> = {gpuValues: getBuffer(buffer)};
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, 1, 1, 1);
+
+              kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })

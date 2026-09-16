@@ -4,7 +4,7 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUBatchSort,
   GPUCommandGraph,
@@ -44,7 +44,7 @@ it('GPUSort fuses irregular workgroup-local networks on CORE WebGPU devices', as
     return;
   }
 
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
   try {
     for (const length of [2, 3, 4, 5, 9, 17, 33, 65, 255, 256]) {
       const keys = Uint32Array.from({length}, (_, index) =>
@@ -243,7 +243,7 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
     ['bitonic', 'ascending'],
     ['radix', 'descending']
   ] as const) {
-    const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+    const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
     try {
       const result = await runSort(device, keys, values, algorithm, direction, undefined, 2);
@@ -254,30 +254,30 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
         `${algorithm} preserves duplicate-key payload order across workgroups`
       ).toEqual(expected.values);
 
-      const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
-        id: (computation as Computation).id,
-        dimensions: dispatchSpy.mock.calls[index].slice(1)
+      const dispatches = dispatchSpy.mock.instances.map((kernel, index) => ({
+        id: (kernel as Kernel).id,
+        dimensions: dispatchSpy.mock.calls[index][1]
       }));
       const expectedPasses =
         algorithm === 'bitonic'
           ? [
-              ['sort-bitonic-initialize', [2, 2, 2]],
-              ['sort-bitonic-2048-1', [2, 2, 2]],
-              ['sort-bitonic-gather', [2, 2, 2]]
+              ['sort-bitonic-initialize', {x: 2, y: 2, z: 2}],
+              ['sort-bitonic-2048-1', {x: 2, y: 2, z: 2}],
+              ['sort-bitonic-gather', {x: 2, y: 2, z: 2}]
             ]
           : [
-              ['sort-radix-digit-0-histogram', [2, 2, 2]],
-              ['sort-radix-digit-0-scan-level-0-scan', [1, 1, 1]],
-              ['sort-radix-digit-0-scatter', [2, 2, 2]],
-              ['sort-radix-digit-28-histogram', [2, 2, 2]],
-              ['sort-radix-digit-28-scatter', [2, 2, 2]]
+              ['sort-radix-digit-0-histogram', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-0-scan-level-0-scan', {x: 1, y: 1, z: 1}],
+              ['sort-radix-digit-0-scatter', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-28-histogram', {x: 2, y: 2, z: 2}],
+              ['sort-radix-digit-28-scatter', {x: 2, y: 2, z: 2}]
             ];
 
       for (const [identifier, expectedDimensions] of expectedPasses) {
         expect(
           dispatches.find(dispatch => dispatch.id === identifier)?.dimensions,
           `${identifier} respects the synthetic per-dimension dispatch limit`
-        ).toEqual(expectedDimensions);
+        ).toMatchObject(expectedDimensions);
       }
     } finally {
       dispatchSpy.mockRestore();
@@ -285,7 +285,7 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
   }
 
   const limitedKeys = Uint32Array.from(keys, key => key & 0x7fff);
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
   try {
     const result = await runSort(device, limitedKeys, values, 'radix', 'ascending', 15, 2);
     const expected = getStableSortedPairs(limitedKeys, values, 'ascending');
@@ -295,12 +295,12 @@ it('GPUSort bounds bitonic and radix stages across all three dispatch dimensions
     );
 
     const finalScatterDispatchIndex = dispatchSpy.mock.instances.findIndex(
-      computation => (computation as Computation).id === 'sort-radix-digit-12-scatter'
+      kernel => (kernel as Kernel).id === 'sort-radix-digit-12-scatter'
     );
     expect(
-      dispatchSpy.mock.calls[finalScatterDispatchIndex]?.slice(1),
+      dispatchSpy.mock.calls[finalScatterDispatchIndex]?.[1],
       'partial final radix digits respect the synthetic per-dimension dispatch limit'
-    ).toEqual([2, 2, 2]);
+    ).toMatchObject({x: 2, y: 2, z: 2});
   } finally {
     dispatchSpy.mockRestore();
   }

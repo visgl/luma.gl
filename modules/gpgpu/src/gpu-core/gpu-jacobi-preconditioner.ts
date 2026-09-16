@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   getViewBinding,
@@ -93,7 +93,7 @@ const OUTPUT_OFFSET:u32=${getViewElementOffset(inverseDiagonal)}u;
           {buffer: inverseDiagonal, usage: 'storage-write'}
         ],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id: this.id,
             source,
             shaderLayout: {
@@ -113,10 +113,15 @@ const OUTPUT_OFFSET:u32=${getViewElementOffset(inverseDiagonal)}u;
                 matrixValues: getViewBinding(values, getBuffer),
                 inverseDiagonal: getViewBinding(inverseDiagonal, getBuffer)
               };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, Math.ceil(rows / WORKGROUP_SIZE), 1, 1);
+
+              kernel.dispatch(computePass, {
+                bindings,
+                x: Math.ceil(rows / WORKGROUP_SIZE),
+                y: 1,
+                z: 1
+              });
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })
@@ -180,7 +185,7 @@ export class GPUApplyJacobiPreconditioner {
           {buffer: output, usage: 'storage-write'}
         ],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id: this.id,
             source,
             shaderLayout: {
@@ -193,14 +198,18 @@ export class GPUApplyJacobiPreconditioner {
           });
           return {
             encode: ({computePass, getBuffer}) => {
-              computation.setBindings({
-                d: getViewBinding(inverseDiagonal, getBuffer),
-                r: getViewBinding(residual, getBuffer),
-                o: getViewBinding(output, getBuffer)
+              kernel.dispatch(computePass, {
+                bindings: {
+                  d: getViewBinding(inverseDiagonal, getBuffer),
+                  r: getViewBinding(residual, getBuffer),
+                  o: getViewBinding(output, getBuffer)
+                },
+                x: Math.ceil(length / WORKGROUP_SIZE),
+                y: 1,
+                z: 1
               });
-              computation.dispatch(computePass, Math.ceil(length / WORKGROUP_SIZE), 1, 1);
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })

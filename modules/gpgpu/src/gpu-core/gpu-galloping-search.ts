@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   type GraphBufferUse,
@@ -241,7 +241,7 @@ const ERROR_OFFSET: u32 = ${getViewElementOffset(validationErrors)}u;
         maximumInvocationCount: 1
       },
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${id}-clear-validation`,
           source,
           shaderLayout: {
@@ -250,10 +250,12 @@ const ERROR_OFFSET: u32 = ${getViewElementOffset(validationErrors)}u;
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({errors: getViewBinding(validationErrors, getBuffer)});
-            computation.dispatch(computePass, 1);
+            kernel.dispatch(computePass, {
+              bindings: {errors: getViewBinding(validationErrors, getBuffer)},
+              x: 1
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -403,12 +405,12 @@ fn gallopForward(segmentEnd: u32, position: u32, searchValue: ${scalarType}) -> 
     searchValue = nextSearchValue;
   }
 }`;
-  nodes.push(...addSearchComputationPass(graph, search, source, dispatchLayout));
+  nodes.push(...addSearchKernelPass(graph, search, source, dispatchLayout));
 
   return nodes;
 }
 
-function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchFormat>(
+function addSearchKernelPass<Parameters, Format extends GPUGallopingSearchFormat>(
   graph: GPUCommandGraph<Parameters>,
   search: AtomicGallopingSearch<Format>,
   source: string,
@@ -443,7 +445,7 @@ function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchF
           dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GALLOPING_SEARCH_WORKGROUP_SIZE
       },
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${search.id}-query`,
           source,
           shaderLayout: {
@@ -461,10 +463,15 @@ function addSearchComputationPass<Parameters, Format extends GPUGallopingSearchF
             for (const [name, view] of Object.entries(bindings)) {
               resolvedBindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+            kernel.dispatch(computePass, {
+              bindings: resolvedBindings,
+              x: dispatchLayout.x,
+              y: dispatchLayout.y,
+              z: dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

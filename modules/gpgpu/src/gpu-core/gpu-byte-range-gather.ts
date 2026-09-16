@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
@@ -195,7 +195,7 @@ function makeGatherNode<Parameters>(
       {buffer: props.output, usage: props.initialize ? 'storage-write' : 'storage-read-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: makeShaderSource(props, dispatchLayout),
         shaderLayout: {
@@ -216,10 +216,15 @@ function makeGatherNode<Parameters>(
             outputWords: getViewBinding(props.output, getBuffer)
           };
           for (const input of inputs) bindings[input.name] = getViewBinding(input.view, getBuffer);
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+          kernel.dispatch(computePass, {
+            bindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

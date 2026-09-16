@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
   createTransientView,
@@ -170,7 +170,7 @@ function addReductionLevel<Parameters>(
                 location: props.inputB ? 2 : 1
               }
         ];
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source,
           shaderLayout: {bindings}
@@ -183,12 +183,15 @@ function addReductionLevel<Parameters>(
             if (props.inputB) resolved['inputBValues'] = getViewBinding(props.inputB, getBuffer);
             if (props.output) resolved['outputValues'] = getViewBinding(props.output, getBuffer);
             if (arenaBuffer) resolved['gpuValues'] = getBuffer(arenaBuffer);
-            computation.setBindings(resolved);
+
             if (props.gate)
-              computation.dispatchIndirect(computePass, getBuffer(props.gate.dispatchBuffer));
-            else computation.dispatch(computePass, outputCount, 1, 1);
+              kernel.dispatchIndirect(computePass, {
+                bindings: resolved,
+                indirectBuffer: getBuffer(props.gate.dispatchBuffer)
+              });
+            else kernel.dispatch(computePass, {bindings: resolved, x: outputCount, y: 1, z: 1});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

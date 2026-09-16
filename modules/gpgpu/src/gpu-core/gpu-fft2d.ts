@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type CommandEncoder, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPU_FFT2D_PARAMETER_BYTE_LENGTH,
   GPU_FFT2D_SHADER,
@@ -90,7 +90,7 @@ type GPUFFT2DPassResources = {
 
 type GPUFFT2DResources = {
   scratchBuffer: Buffer;
-  computation: Computation;
+  kernel: Kernel;
   passResources: GPUFFT2DPassResources[];
 };
 
@@ -111,7 +111,7 @@ export class GPUFFT2D {
   readonly stats: GPUFFT2DStats;
 
   private readonly scratchBuffer: Buffer;
-  private readonly computation: Computation;
+  private readonly kernel: Kernel;
   private readonly passResources: GPUFFT2DPassResources[];
   private destroyed = false;
 
@@ -134,7 +134,7 @@ export class GPUFFT2D {
       stats: this.stats
     });
     this.scratchBuffer = resources.scratchBuffer;
-    this.computation = resources.computation;
+    this.kernel = resources.kernel;
     this.passResources = resources.passResources;
   }
 
@@ -164,23 +164,22 @@ export class GPUFFT2D {
       throw new Error('GPUFFT2D input and output buffers must be separate.');
     }
 
-    this.computation.predraw(commandEncoder);
     const computePass = commandEncoder.beginComputePass({id: `${this.id}-${direction}`});
     let inputBuffer = options.inputBuffer;
     for (const [passIndex, passResources] of this.passResources.entries()) {
       const remainingPassCount = this.passResources.length - passIndex;
       const outputBuffer = remainingPassCount % 2 === 0 ? this.scratchBuffer : options.outputBuffer;
-      this.computation.setBindings({
-        inputValues: inputBuffer,
-        outputValues: outputBuffer,
-        parameters: passResources.parameterBuffers[direction]
+
+      this.kernel.dispatch(computePass, {
+        bindings: {
+          inputValues: inputBuffer,
+          outputValues: outputBuffer,
+          parameters: passResources.parameterBuffers[direction]
+        },
+        x: this.stats.workgroupCount[0],
+        y: this.stats.workgroupCount[1],
+        z: this.stats.workgroupCount[2]
       });
-      this.computation.dispatch(
-        computePass,
-        this.stats.workgroupCount[0],
-        this.stats.workgroupCount[1],
-        this.stats.workgroupCount[2]
-      );
       inputBuffer = outputBuffer;
     }
     computePass.end();
@@ -193,7 +192,7 @@ export class GPUFFT2D {
       return;
     }
     this.destroyed = true;
-    this.computation.destroy();
+    this.kernel.destroy();
     this.scratchBuffer.destroy();
     for (const passResources of this.passResources) {
       passResources.parameterBuffers.forward.destroy();
@@ -304,7 +303,7 @@ function createGPUFFT2DResources(
   props: {id: string; width: number; height: number; stats: GPUFFT2DStats}
 ): GPUFFT2DResources {
   let scratchBuffer: Buffer | undefined;
-  let computation: Computation | undefined;
+  let kernel: Kernel | undefined;
   const allocatedParameterBuffers: Buffer[] = [];
   try {
     scratchBuffer = device.createBuffer({
@@ -312,7 +311,7 @@ function createGPUFFT2DResources(
       byteLength: props.stats.scratchBufferByteLength,
       usage: Buffer.STORAGE
     });
-    computation = new Computation(device, {
+    kernel = new Kernel(device, {
       id: `${props.id}-pass`,
       source: GPU_FFT2D_SHADER,
       shaderLayout: {
@@ -330,12 +329,12 @@ function createGPUFFT2DResources(
       allocatedParameterBuffers.push(inverse);
       return {parameterBuffers: {forward, inverse}};
     });
-    return {scratchBuffer, computation, passResources};
+    return {scratchBuffer, kernel, passResources};
   } catch (error) {
     for (const parameterBuffer of allocatedParameterBuffers) {
       parameterBuffer.destroy();
     }
-    computation?.destroy();
+    kernel?.destroy();
     scratchBuffer?.destroy();
     throw error;
   }

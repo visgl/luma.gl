@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
@@ -145,7 +145,7 @@ fn main(@builtin(local_invocation_index) lane: u32) {
             ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
           ],
           compile: ({device}) => {
-            const computation = new Computation(device, {
+            const kernel = new Kernel(device, {
               id: this.id,
               source,
               shaderLayout: {
@@ -163,11 +163,15 @@ fn main(@builtin(local_invocation_index) lane: u32) {
                   rightValues: getViewBinding(right, getBuffer),
                   gpuValues: getBuffer(arenaBuffer)
                 };
-                computation.setBindings(bindings);
-                if (gate) computation.dispatchIndirect(computePass, getBuffer(gate.dispatchBuffer));
-                else computation.dispatch(computePass, 1, 1, 1);
+
+                if (gate)
+                  kernel.dispatchIndirect(computePass, {
+                    bindings,
+                    indirectBuffer: getBuffer(gate.dispatchBuffer)
+                  });
+                else kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
               },
-              destroy: () => computation.destroy()
+              destroy: () => kernel.destroy()
             };
           }
         }),

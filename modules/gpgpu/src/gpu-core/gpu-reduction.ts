@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -510,7 +510,7 @@ var<workgroup> validityScratch: array<u32, ${REDUCTION_WORKGROUP_SIZE}>;
   bindings['outputValues'] = props.outputValues;
   if (props.outputValidity) bindings['outputValidity'] = props.outputValidity;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: props.id,
       source,
       resources,
@@ -640,7 +640,7 @@ ${props.inputValidity ? '@group(0) @binding(1) var<storage, read> inputValidity:
   ${outputLines}
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: props.id,
       source,
       resources: [
@@ -673,7 +673,7 @@ function addClearReductionPass<Parameters>(
   const shaderType = getShaderType(output.format);
   const zero = getZeroLiteral(output.format);
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: passId,
       source: `const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<${shaderType}>;
@@ -690,7 +690,7 @@ function addClearReductionPass<Parameters>(
 }
 
 /** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -708,7 +708,7 @@ function addComputationPass<Parameters>(
       resources: props.resources,
       compile: ({device}) => {
         const bindingNames = Object.keys(props.bindings);
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -726,19 +726,19 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
+
             if (props.dispatchLayout) {
-              computation.dispatch(
-                computePass,
-                props.dispatchLayout.x,
-                props.dispatchLayout.y,
-                props.dispatchLayout.z
-              );
+              kernel.dispatch(computePass, {
+                bindings,
+                x: props.dispatchLayout.x,
+                y: props.dispatchLayout.y,
+                z: props.dispatchLayout.z
+              });
             } else {
-              computation.dispatch(computePass, props.dispatchCount ?? 1);
+              kernel.dispatch(computePass, {bindings, x: props.dispatchCount ?? 1});
             }
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

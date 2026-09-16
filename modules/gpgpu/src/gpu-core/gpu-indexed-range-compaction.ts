@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   type GraphBufferHandle,
@@ -1081,13 +1081,15 @@ function addDirectPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = makeComputation(device, props.id, props.source, props.views);
+        const kernel = makeKernel(device, props.id, props.source, props.views);
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings(resolveBindings(props.views, getBuffer));
-            computation.dispatch(computePass, props.dispatchCount);
+            kernel.dispatch(computePass, {
+              bindings: resolveBindings(props.views, getBuffer),
+              x: props.dispatchCount
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -1112,13 +1114,15 @@ function addIndirectPass<Parameters>(
       id: props.id,
       resources: [...props.resources, {buffer: props.dispatchBuffer, usage: 'indirect' as const}],
       compile: ({device}) => {
-        const computation = makeComputation(device, props.id, props.source, props.views);
+        const kernel = makeKernel(device, props.id, props.source, props.views);
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings(resolveBindings(props.views, getBuffer));
-            computation.dispatchIndirect(computePass, getBuffer(props.dispatchBuffer));
+            kernel.dispatchIndirect(computePass, {
+              bindings: resolveBindings(props.views, getBuffer),
+              indirectBuffer: getBuffer(props.dispatchBuffer)
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -1127,13 +1131,13 @@ function addIndirectPass<Parameters>(
   return nodes;
 }
 
-function makeComputation(
+function makeKernel(
   device: Device,
   id: string,
   source: string,
   views: Record<string, GraphDataView>
-): Computation {
-  return new Computation(device, {
+): Kernel {
+  return new Kernel(device, {
     id,
     source,
     shaderLayout: {

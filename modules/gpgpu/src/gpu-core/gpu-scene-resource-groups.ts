@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from './draw-command-buffer';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
@@ -168,7 +168,7 @@ const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(groups.overflow)}u;
   if (groupIndex == 0u) { overflow[OVERFLOW_OFFSET] = 0u; }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${groups.id}-initialize`,
       source,
       resources: [
@@ -259,7 +259,7 @@ const COMMAND_COUNTS = array<u32, ${groups.groups.length}>(${values(group => gro
   atomicStore(&overflow[OVERFLOW_OFFSET], 1u);
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${groups.id}-classify`,
       source,
       resources: [
@@ -283,7 +283,7 @@ const COMMAND_COUNTS = array<u32, ${groups.groups.length}>(${values(group => gro
   return nodes;
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -299,7 +299,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -317,10 +317,15 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatch.x,
+              y: props.dispatch.y,
+              z: props.dispatch.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

@@ -4,7 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -183,8 +183,8 @@ it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
   const activeBufferCount = getResourceCount(device, 'Buffers');
   const allocatedBuffers: Buffer[] = [];
   const originalCreateBuffer = device.createBuffer;
-  const originalComputationDestroy = Computation.prototype.destroy;
-  let computationDestroyCount = 0;
+  const originalKernelDestroy = Kernel.prototype.destroy;
+  let kernelDestroyCount = 0;
 
   device.createBuffer = ((props: Parameters<Device['createBuffer']>[0]) => {
     const bufferId = (props as {id?: string}).id;
@@ -197,9 +197,9 @@ it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
     }
     return buffer;
   }) as Device['createBuffer'];
-  Computation.prototype.destroy = function (): void {
-    computationDestroyCount++;
-    originalComputationDestroy.call(this);
+  Kernel.prototype.destroy = function (): void {
+    kernelDestroyCount++;
+    originalKernelDestroy.call(this);
   };
 
   try {
@@ -209,7 +209,7 @@ it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
     ).toThrow(/injected GPUFFT2D allocation failure/);
   } finally {
     device.createBuffer = originalCreateBuffer;
-    Computation.prototype.destroy = originalComputationDestroy;
+    Kernel.prototype.destroy = originalKernelDestroy;
   }
 
   expect(allocatedBuffers.length, 'scratch and completed parameter allocations were observed').toBe(
@@ -219,7 +219,7 @@ it('GPUFFT2D construction unwinds partial GPU allocations', async () => {
     Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'every buffer allocated before the failure is destroyed'
   ).toBe(true);
-  expect(computationDestroyCount, 'the partially initialized computation is destroyed').toBe(1);
+  expect(kernelDestroyCount, 'the partially initialized kernel is destroyed').toBe(1);
   expect(
     getResourceCount(device, 'Buffers'),
     'active buffer accounting returns to its baseline'

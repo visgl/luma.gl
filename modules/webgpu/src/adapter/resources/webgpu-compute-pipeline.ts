@@ -14,8 +14,6 @@ import {
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';
 
-const EMPTY_BIND_GROUPS: BindingsByGroup = {};
-
 // COMPUTE PIPELINE
 
 /** Creates a new compute pipeline when parameters change */
@@ -76,7 +74,8 @@ export class WebGPUComputePipeline extends ComputePipeline {
         layout: 'auto'
       });
 
-    this._bindingsByGroup = EMPTY_BIND_GROUPS;
+    // Each pipeline owns its mutable bindings; other pipelines may use per-dispatch bindings.
+    this._bindingsByGroup = {};
     this._bindGroupCacheKeysByGroup = {};
   }
 

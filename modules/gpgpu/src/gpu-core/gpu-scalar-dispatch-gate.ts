@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferHandle} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
@@ -54,7 +54,7 @@ export class GPUScalarDispatchGate {
           {buffer: this.dispatchBuffer, usage: 'storage-write'}
         ],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id,
             source,
             shaderLayout: {
@@ -70,10 +70,10 @@ export class GPUScalarDispatchGate {
                 gpuValues: getBuffer(arenaBuffer),
                 dispatch: getBuffer(this.dispatchBuffer)
               };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, 1, 1, 1);
+
+              kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })

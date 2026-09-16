@@ -4,7 +4,7 @@
 
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from '../gpu-data/gpu-vector-format';
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
@@ -145,7 +145,7 @@ export function createChunkNode<Parameters>(
         }))
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -162,10 +162,15 @@ export function createChunkNode<Parameters>(
           encode: ({computePass, getBuffer}) => {
             const bindings: Record<string, Binding> = {};
             for (const [name, view] of entries) bindings[name] = getViewBinding(view, getBuffer);
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatch.x,
+              y: props.dispatch.y,
+              z: props.dispatch.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     }),
