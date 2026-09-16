@@ -43,6 +43,12 @@ export type {
   ProjectionShader
 } from './projection-program';
 export {GPUProjectionProgram} from './gpu-projection-program';
+export {getProjectionProgramMetadata} from './projection-metadata';
+export type {
+  ProjectionErrorMetadata,
+  ProjectionStageMetadata,
+  ProjectionProgramMetadata
+} from './projection-metadata';
 export type {GPUProjectionProgramProps} from './gpu-projection-program';
 export type {
   GPUProjectionDoubleSingleProps,

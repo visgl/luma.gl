@@ -7,6 +7,8 @@ import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {Proj4Projection} from '@math.gl/proj4';
+import {planCRSProjection, planProjectionPipeline} from '@luma.gl/experimental/gpu-project/crs';
 import {expect, it, vi, type TestContext} from 'vitest';
 import {
   compileProjectionPlan,
@@ -509,6 +511,76 @@ it('keeps double-single input bounds inside the exact binary64 domain', async co
   output.destroy();
   validity.destroy();
 });
+
+for (const target of ['native', 'EPSG:3857', '+proj=utm +zone=10 +datum=WGS84 +units=m'] as const) {
+  it(`executes a planned ${target} transformation with sub-Float32 accuracy`, async context => {
+    const device = await getWebGPUTestDevice();
+    if (!device) {
+      return;
+    }
+    skipSoftwareDevice(device, context);
+    const planned =
+      target === 'native'
+        ? planProjectionPipeline({
+            pipeline:
+              '+proj=pipeline +step +proj=axisswap +order=-2,1 +step +proj=affine +s11=2 +s22=-3 +xoff=10000000 +yoff=20000000'
+          })
+        : planCRSProjection({
+            from: 'EPSG:4326',
+            to: target,
+            bounds: [-122.5, 37.7, -122.3, 37.9],
+            tolerance: 1e-5
+          });
+    if (planned.status !== 'ready') {
+      throw new Error(JSON.stringify(planned.reasons));
+    }
+    const project =
+      target === 'native'
+        ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
+        : new Proj4Projection({from: 'EPSG:4326', to: target}).project;
+    const points = [
+      [-122.4194001, 37.7749001],
+      [-122.4194002, 37.7749002],
+      [Infinity, 0]
+    ];
+    const graph = new GPUCommandGraph(device);
+    const source = device.createBuffer({
+      data: encodePositions('uint32x4', points),
+      usage: Buffer.STORAGE
+    });
+    const output = device.createBuffer({byteLength: 48, usage: Buffer.STORAGE | Buffer.COPY_SRC});
+    const validity = device.createBuffer({byteLength: 12, usage: Buffer.STORAGE | Buffer.COPY_SRC});
+    const contributor = new GPUProjectionProgram({
+      projection: planned.compiled,
+      positions: importView(graph, 'planned-source', source, 'uint32x4', 3),
+      output: importView(graph, 'planned-output', output, 'float32x4', 3),
+      validity: importView(graph, 'planned-validity', validity, 'uint32', 3)
+    });
+    contributor.addToGraph(graph);
+    const compiled = graph.compile();
+    try {
+      execute(device, compiled);
+      const actual = new Float32Array((await output.readAsync()).buffer);
+      expect(new Uint32Array((await validity.readAsync()).buffer)).toEqual(Uint32Array.of(1, 1, 0));
+      for (let row = 0; row < 2; row++) {
+        const expected = project(points[row]);
+        for (let axis = 0; axis < 2; axis++) {
+          const offset = row * 4 + axis * 2;
+          expect(Math.abs(actual[offset] + actual[offset + 1] - expected[axis])).toBeLessThan(1e-5);
+        }
+      }
+      // The nearby points collapse in Float32, yet remain distinct through the planned GPU path.
+      expect(actual[0]).toBe(actual[4]);
+      expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
+    } finally {
+      compiled.destroy();
+      contributor.destroy();
+      source.destroy();
+      output.destroy();
+      validity.destroy();
+    }
+  });
+}
 
 function skipSoftwareDevice(device: Device, context: TestContext): void {
   // Like the P.1 projection tests, composed integer-fp64 shaders exceed SwiftShader's practical

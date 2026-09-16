@@ -1,0 +1,124 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
+
+import type {ProjectionInputFormat, ProjectionProgram} from './projection-program';
+import type {ProjectionBounds, ProjectionPrecision} from './types';
+
+/** Approximation estimates exclude input quantization and native/output arithmetic rounding. */
+export type ProjectionErrorMetadata = {
+  readonly kind: 'none' | 'sampled-estimate' | 'unknown';
+  /** Euclidean error in this stage's output units; null means composition is not bounded. */
+  readonly maximum: number | null;
+  /** Sampling alone cannot establish a global numerical guarantee. */
+  readonly guaranteed: false;
+};
+
+export type ProjectionStageMetadata = {
+  readonly index: number;
+  readonly operation: ProjectionProgram['operations'][number]['type'];
+  readonly inputDimensions: 2;
+  readonly outputDimensions: 2;
+  /** Coordinates at this stage, before evaluation. Null means finite coordinates only. */
+  readonly inputBounds: ProjectionBounds | null;
+  readonly invertible: boolean;
+  /** Maximum Euclidean amplification for a native linear stage; null for adaptive stages. */
+  readonly errorAmplification: number | null;
+  readonly approximationError: ProjectionErrorMetadata;
+};
+
+export type ProjectionProgramMetadata = {
+  readonly inputDimensions: 2;
+  readonly outputDimensions: 2;
+  readonly inputFormat: ProjectionInputFormat;
+  readonly inputEncoding: 'float32' | 'double-single' | 'binary64';
+  readonly arithmetic: 'double-single';
+  readonly outputPrecision: ProjectionPrecision;
+  readonly outputFrame: 'absolute' | 'origin-relative';
+  readonly validity: 'upstream-and-finite-and-stage-domain';
+  readonly invertible: boolean;
+  readonly approximationError: ProjectionErrorMetadata;
+  readonly stages: readonly ProjectionStageMetadata[];
+};
+
+/**
+ * Snapshot the numerical contract without allocating GPU resources.
+ *
+ * Native scales propagate preceding sampled error estimates. An adaptive stage after another
+ * adaptive stage has unknown composed error: neither a derivative bound for the provider nor
+ * continuity across patch boundaries is established by the sampled plans.
+ */
+export function getProjectionProgramMetadata(
+  program: ProjectionProgram,
+  inputFormat: ProjectionInputFormat = 'float32x2'
+): ProjectionProgramMetadata {
+  let maximum: number | null = 0;
+  let sampled = false;
+  const stages = program.operations.map((operation, index): ProjectionStageMetadata => {
+    let amplification: number | null = 1;
+    let inputBounds: ProjectionBounds | null = null;
+    let invertible = true;
+    switch (operation.type) {
+      case 'axis':
+        break;
+      case 'unit':
+        amplification = Math.abs(operation.inverse ? 1 / operation.factor : operation.factor);
+        break;
+      case 'affine':
+        amplification = Math.max(
+          ...operation.scale.map(value => Math.abs(operation.inverse ? 1 / value : value))
+        );
+        break;
+      case 'adaptive':
+        amplification = null;
+        inputBounds = Object.freeze([...operation.plan.bounds]) as ProjectionBounds;
+        invertible = Boolean(operation.inversePlan);
+        maximum = sampled ? null : operation.plan.doubleSingleMaxError;
+        sampled = true;
+        break;
+    }
+    if (amplification !== null && maximum !== null) {
+      maximum *= amplification;
+    }
+    if (maximum !== null && !Number.isFinite(maximum)) {
+      maximum = null;
+    }
+    return Object.freeze({
+      index,
+      operation: operation.type,
+      inputDimensions: 2,
+      outputDimensions: 2,
+      inputBounds,
+      invertible,
+      errorAmplification: amplification,
+      approximationError: makeErrorMetadata(maximum, sampled)
+    });
+  });
+  return Object.freeze({
+    inputDimensions: 2,
+    outputDimensions: 2,
+    inputFormat,
+    inputEncoding:
+      inputFormat === 'uint32x4'
+        ? 'binary64'
+        : inputFormat === 'float32x4'
+          ? 'double-single'
+          : 'float32',
+    arithmetic: 'double-single',
+    outputPrecision: program.precision,
+    outputFrame: program.precision === 'local-f32' ? 'origin-relative' : 'absolute',
+    validity: 'upstream-and-finite-and-stage-domain',
+    invertible: stages.every(stage => stage.invertible),
+    approximationError: makeErrorMetadata(maximum, sampled),
+    stages: Object.freeze(stages)
+  });
+}
+
+function makeErrorMetadata(maximum: number | null, sampled: boolean): ProjectionErrorMetadata {
+  return Object.freeze({
+    kind: maximum === null ? 'unknown' : sampled ? 'sampled-estimate' : 'none',
+    maximum,
+    guaranteed: false
+  });
+}
