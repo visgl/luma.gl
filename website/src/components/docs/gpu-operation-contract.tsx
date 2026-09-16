@@ -374,11 +374,11 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads source rows and indices; writes caller-provided destination rows.',
     ownership: COMMON.callerOwned,
     output: 'One destination row per index, with out-of-range indices producing zero-filled rows.',
-    work: 'One invocation per output row and one 32-bit-word copy loop per row.',
-    chunks: 'Consumes explicit packed views; callers preserve chunk boundaries by invoking per chunk.',
+    work: 'One index traversal per nonempty source chunk; each matched row is copied as 32-bit words.',
+    chunks: 'Independent source, index, and output partitions; indices address global rows without packing.',
     execution: COMMON.noSubmission,
     neighborhood: 'source rows + source indices → GPUGather → selected or reordered packed rows.',
-    cost: 'Memory bandwidth, index locality, and row width dominate.',
+    cost: 'Index traversal grows with source chunk count; each pass uses at most three storage bindings.',
     mistake: 'Do not use typed gather for variable-length rows or formats whose byte length is not word-aligned.'
   },
   'gpu-run-length-encode': {

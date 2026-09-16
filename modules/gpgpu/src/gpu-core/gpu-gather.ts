@@ -7,17 +7,20 @@ import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {
   getGPUVectorFormatInfo,
+  getGPUVectorChunks,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {
+  getGraphDataPrefix,
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 
 const GATHER_WORKGROUP_SIZE = 256;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
@@ -32,12 +35,12 @@ export type GPUGatherFormat = Exclude<
 export type GPUGatherProps<T extends GPUGatherFormat = GPUGatherFormat> = {
   /** Prefix for the generated graph node. */
   id?: string;
-  /** Packed fixed-width source rows. */
-  source: GraphDataView<T>;
-  /** Packed uint32 source-row indices. */
-  indices: GraphDataView<'uint32'>;
-  /** Caller-owned packed destination with the same format as source. */
-  output: GraphDataView<T>;
+  /** Packed fixed-width source rows; indices address their global logical order. */
+  source: GraphDataView<T> | GraphVectorView<T>;
+  /** Packed uint32 source-row indices, independently partitioned from source and output. */
+  indices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  /** Caller-owned packed destination with the source format and capacity for every index. */
+  output: GraphDataView<T> | GraphVectorView<T>;
 };
 
 /**
@@ -48,9 +51,9 @@ export type GPUGatherProps<T extends GPUGatherFormat = GPUGatherFormat> = {
  */
 export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
   readonly id: string;
-  readonly source: GraphDataView<T>;
-  readonly indices: GraphDataView<'uint32'>;
-  readonly output: GraphDataView<T>;
+  readonly source: GraphDataView<T> | GraphVectorView<T>;
+  readonly indices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly output: GraphDataView<T> | GraphVectorView<T>;
   readonly wordsPerRow: number;
 
   constructor(props: GPUGatherProps<T>) {
@@ -59,9 +62,12 @@ export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
     this.indices = props.indices;
     this.output = props.output;
 
-    validatePackedUint32View(this.indices, `${this.id} indices`);
-    validateGatherView(this.source, `${this.id} source`);
-    validateGatherView(this.output, `${this.id} output`);
+    for (const chunk of getGraphVectorData(this.indices)) {
+      validatePackedUint32View(chunk, `${this.id} indices`);
+    }
+    for (const view of [this.source, this.output]) {
+      for (const chunk of getGraphVectorData(view)) validateGatherView(chunk, this.id);
+    }
 
     if (this.source.format !== this.output.format) {
       throw new Error(`${this.id} source and output must use the same format`);
@@ -69,86 +75,140 @@ export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
     if (this.output.length < this.indices.length) {
       throw new Error(`${this.id} output must contain at least indices.length rows`);
     }
-    if (this.output.buffer === this.source.buffer || this.output.buffer === this.indices.buffer) {
+    const inputBuffers = new Set([
+      ...getGraphVectorData(this.source).map(chunk => chunk.buffer),
+      ...getGraphVectorData(this.indices).map(chunk => chunk.buffer)
+    ]);
+    if (getGraphVectorData(this.output).some(chunk => inputBuffers.has(chunk.buffer))) {
       throw new Error(`${this.id} output must use a separate buffer`);
     }
 
-    this.wordsPerRow = this.source.rowByteLength / UINT32_BYTE_LENGTH;
+    this.wordsPerRow = getGPUVectorFormatInfo(this.source.format).byteLength / UINT32_BYTE_LENGTH;
   }
 
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
-    const nodes: GPUCommandNode<Parameters>[] = [];
-    for (const view of [this.source, this.indices, this.output]) {
-      if (view.buffer.graph !== graph) {
-        throw new Error(`${this.id} views must belong to the target graph`);
+    return getGatherCommandNodes(graph, this);
+  }
+}
+
+/** Shares fixed-width gather lowering with the uint32 invalid-value specialization. @internal */
+export function getGatherCommandNodes<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  gather: GPUGather,
+  invalidValue = 0,
+  operation = 'GPUGather'
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  for (const view of [gather.source, gather.indices, gather.output]) {
+    for (const chunk of getGraphVectorData(view)) {
+      if (chunk.buffer.graph !== graph) {
+        throw new Error(`${gather.id} views must belong to the target graph`);
       }
     }
-    if (this.indices.length === 0) {
-      return nodes;
-    }
+  }
+  if (gather.indices.length === 0) return nodes;
 
+  const output = getGraphDataPrefix(graph, gather.output, gather.indices.length);
+  const spans = alignGraphVectorViews(graph, [gather.indices, output]);
+  const sources = getGPUVectorChunks(getGraphVectorData(gather.source)).filter(
+    chunk => chunk.length
+  );
+  // With no source rows, use an output-only fill pass; empty buffers need not be bound.
+  const sourcePasses = sources.length ? sources : [undefined];
+  for (const [spanIndex, [indices, destination]] of spans.entries()) {
     const dispatchLayout = getBoundedDispatchLayout(
-      'GPUGather',
-      this.indices.length,
+      operation,
+      indices.length,
       GATHER_WORKGROUP_SIZE,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
-    const source = makeShaderSource(this, dispatchLayout);
-
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUGather',
-          commandCount: 1,
-          maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
-          maximumInvocationCount:
-            dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
-          readByteLength: this.indices.length * (UINT32_BYTE_LENGTH + this.source.rowByteLength),
-          writeByteLength: this.indices.length * this.output.rowByteLength
-        },
-        resources: [
-          {buffer: this.source, usage: 'storage-read'},
-          {buffer: this.indices, usage: 'storage-read'},
-          {buffer: this.output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'sourceWords', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'indices', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputWords', type: 'storage', group: 0, location: 2}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                sourceWords: getViewBinding(this.source, getBuffer),
-                indices: getViewBinding(this.indices, getBuffer),
-                outputWords: getViewBinding(this.output, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(
-                computePass,
-                dispatchLayout.x,
-                dispatchLayout.y,
-                dispatchLayout.z
-              );
-            },
-            destroy: () => computation.destroy()
-          };
-        }
-      })
-    );
-
-    return nodes;
+    for (const [sourceIndex, chunk] of sourcePasses.entries()) {
+      const sourceView = chunk?.data;
+      const id =
+        spans.length === 1 && sourcePasses.length === 1
+          ? gather.id
+          : `${gather.id}-span-${spanIndex}-source-${sourceIndex}`;
+      const source = makeShaderSource({
+        source: sourceView,
+        sourceOffset: chunk?.offset ?? 0,
+        indices,
+        output: destination,
+        wordsPerRow: gather.wordsPerRow,
+        initialize: sourceIndex === 0,
+        invalidValue,
+        dispatchLayout
+      });
+      nodes.push(
+        createGPUComputeCommandNode<Parameters>({
+          id,
+          workload: {
+            operation,
+            commandCount: 1,
+            maximumWorkgroupCount: dispatchLayout.x * dispatchLayout.y * dispatchLayout.z,
+            maximumInvocationCount:
+              dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * GATHER_WORKGROUP_SIZE,
+            readByteLength: sourceView
+              ? indices.length * (UINT32_BYTE_LENGTH + sourceView.rowByteLength)
+              : 0,
+            writeByteLength: indices.length * destination.rowByteLength
+          },
+          resources: [
+            ...(sourceView
+              ? [
+                  {buffer: sourceView, usage: 'storage-read' as const},
+                  {buffer: indices, usage: 'storage-read' as const}
+                ]
+              : []),
+            {buffer: destination, usage: 'storage-write'}
+          ],
+          compile: ({device}) => {
+            const computation = new Computation(device, {
+              id,
+              source,
+              shaderLayout: {
+                bindings: [
+                  {name: 'outputWords', type: 'storage', group: 0, location: 0},
+                  ...(sourceView
+                    ? [
+                        {
+                          name: 'sourceWords',
+                          type: 'read-only-storage' as const,
+                          group: 0,
+                          location: 1
+                        },
+                        {name: 'indices', type: 'read-only-storage' as const, group: 0, location: 2}
+                      ]
+                    : [])
+                ]
+              }
+            });
+            return {
+              encode: ({computePass, getBuffer}) => {
+                const bindings: Record<string, Binding> = {
+                  outputWords: getViewBinding(destination, getBuffer)
+                };
+                if (sourceView) {
+                  bindings['sourceWords'] = getViewBinding(sourceView, getBuffer);
+                  bindings['indices'] = getViewBinding(indices, getBuffer);
+                }
+                computation.setBindings(bindings);
+                computation.dispatch(
+                  computePass,
+                  dispatchLayout.x,
+                  dispatchLayout.y,
+                  dispatchLayout.z
+                );
+              },
+              destroy: () => computation.destroy()
+            };
+          }
+        })
+      );
+    }
   }
+  return nodes;
 }
 
 function validateGatherView(view: GraphDataView, name: string): void {
@@ -166,19 +226,33 @@ function validateGatherView(view: GraphDataView, name: string): void {
   }
 }
 
-function makeShaderSource(
-  gather: GPUGather,
-  dispatchLayout: ReturnType<typeof getBoundedDispatchLayout>
-): string {
-  return `const SOURCE_LENGTH: u32 = ${gather.source.length}u;
-const INDEX_COUNT: u32 = ${gather.indices.length}u;
-const WORDS_PER_ROW: u32 = ${gather.wordsPerRow}u;
-const SOURCE_OFFSET: u32 = ${getViewElementOffset(gather.source)}u;
-const INDEX_OFFSET: u32 = ${getViewElementOffset(gather.indices)}u;
-const OUTPUT_OFFSET: u32 = ${getViewElementOffset(gather.output)}u;
-@group(0) @binding(0) var<storage, read> sourceWords: array<u32>;
-@group(0) @binding(1) var<storage, read> indices: array<u32>;
-@group(0) @binding(2) var<storage, read_write> outputWords: array<u32>;
+function makeShaderSource(props: {
+  source?: GraphDataView;
+  sourceOffset: number;
+  indices: GraphDataView<'uint32'>;
+  output: GraphDataView;
+  wordsPerRow: number;
+  initialize: boolean;
+  invalidValue: number;
+  dispatchLayout: ReturnType<typeof getBoundedDispatchLayout>;
+}): string {
+  const {source, indices, output, wordsPerRow, initialize, invalidValue, dispatchLayout} = props;
+  return `const INDEX_COUNT: u32 = ${indices.length}u;
+const WORDS_PER_ROW: u32 = ${wordsPerRow}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
+@group(0) @binding(0) var<storage, read_write> outputWords: array<u32>;
+${
+  source
+    ? `
+const SOURCE_LENGTH: u32 = ${source.length}u;
+const SOURCE_ROW_OFFSET: u32 = ${props.sourceOffset}u;
+const SOURCE_OFFSET: u32 = ${getViewElementOffset(source)}u;
+const INDEX_OFFSET: u32 = ${getViewElementOffset(indices)}u;
+@group(0) @binding(1) var<storage, read> sourceWords: array<u32>;
+@group(0) @binding(2) var<storage, read> indices: array<u32>;
+`
+    : ''
+}
 @compute @workgroup_size(${GATHER_WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3u,
@@ -186,17 +260,29 @@ fn main(
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, GATHER_WORKGROUP_SIZE)}
   if (index >= INDEX_COUNT) { return; }
-  let sourceIndex = indices[INDEX_OFFSET + index];
   let outputBase = OUTPUT_OFFSET + index * WORDS_PER_ROW;
-  if (sourceIndex >= SOURCE_LENGTH) {
+${
+  source
+    ? `
+  let sourceIndex = indices[INDEX_OFFSET + index];
+  if (sourceIndex >= SOURCE_ROW_OFFSET && sourceIndex - SOURCE_ROW_OFFSET < SOURCE_LENGTH) {
+    let sourceBase = SOURCE_OFFSET + (sourceIndex - SOURCE_ROW_OFFSET) * WORDS_PER_ROW;
     for (var word = 0u; word < WORDS_PER_ROW; word++) {
-      outputWords[outputBase + word] = 0u;
+      outputWords[outputBase + word] = sourceWords[sourceBase + word];
     }
     return;
   }
-  let sourceBase = SOURCE_OFFSET + sourceIndex * WORDS_PER_ROW;
+`
+    : ''
+}
+${
+  initialize
+    ? `
   for (var word = 0u; word < WORDS_PER_ROW; word++) {
-    outputWords[outputBase + word] = sourceWords[sourceBase + word];
+    outputWords[outputBase + word] = ${invalidValue}u;
   }
+`
+    : ''
+}
 }`;
 }
