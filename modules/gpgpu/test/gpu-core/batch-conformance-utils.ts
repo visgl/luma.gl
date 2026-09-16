@@ -21,7 +21,7 @@ export const BATCH_PARTITIONS = [
   {name: 'atomic input with vector peer', input: [6], paired: [1, 0, 5], atomic: true}
 ] as const;
 
-type Format = 'uint32' | 'sint32' | 'float32' | 'float32x2' | 'float32x4';
+type Format = 'uint32' | 'sint32' | 'float32' | 'float32x2' | 'float32x3' | 'float32x4';
 
 /** Owns only test buffers, leaving production vector ownership and layout untouched. */
 export class BatchConformanceFixture {

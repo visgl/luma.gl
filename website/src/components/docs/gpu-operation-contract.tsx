@@ -674,11 +674,11 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads float32x2 positions and weights; writes per-cell accumulators, counts, and final values.',
     ownership: COMMON.callerOwned,
     output: 'Dense row-major grid statistics with explicit empty-cell behavior.',
-    work: 'One input visit plus a bounded finalization pass over grid cells.',
-    chunks: COMMON.preserveChunks,
+    work: 'Input visits per output chunk plus initialization and finalization over cells.',
+    chunks: 'Independent position, weight, and cell-output chunks; mean-count scratch follows output chunks.',
     execution: COMMON.noSubmission,
     neighborhood: 'positions + weights → GPUGridAggregation → texture upload, contours, or chart readback.',
-    cost: 'Source rows, grid cell count, and atomic contention in dense cells.',
+    cost: 'Aligned input spans times output chunks, cell count, and atomic contention.',
     mistake: 'Do not infer a mean from sums without preserving counts and empty-cell policy.'
   },
   'gpu-grid-binning': {
@@ -686,11 +686,11 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads float32x2 positions; atomically writes uint32 cell counts.',
     ownership: COMMON.callerOwned,
     output: 'Exact modulo-2^32 counts for the configured bounds and grid extent.',
-    work: 'One source-row visit plus grid initialization.',
-    chunks: COMMON.preserveChunks,
+    work: 'Input visits per output chunk plus grid initialization.',
+    chunks: 'Independent position and cell-output chunks; global row-major cell addresses.',
     execution: COMMON.noSubmission,
     neighborhood: 'positions → GPUGridBinning → density texture, histogram, or threshold mask.',
-    cost: 'Initialization scales with cells; updates scale with points and contention.',
+    cost: 'Position chunks times output chunks, cell count, and atomic contention.',
     mistake: 'Do not confuse cell counts with an exact object-level spatial query.'
   },
   'gpu-grid-index': {
@@ -770,11 +770,11 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     readsWrites: 'Reads positions and optional candidate IDs; writes one source-row-aligned exact mask.',
     ownership: COMMON.callerOwned,
     output: 'Exact membership mask in canonical source-row space.',
-    work: 'Linear in all source rows or only the supplied candidate list.',
-    chunks: COMMON.preserveChunks,
+    work: 'Aligned source spans, or candidate chunks visited for each aligned source span.',
+    chunks: 'Independent positions, masks, and candidate-ID chunks; IDs address global source rows.',
     execution: COMMON.noSubmission,
     neighborhood: 'grid candidates or source rows → GPUPointSpatialFilter → scan, compaction, or aggregation.',
-    cost: 'Candidate count determines whether index refinement beats a full scan.',
+    cost: 'Candidate count and chunk-routing overhead determine whether refinement beats a full scan.',
     mistake: 'Do not emit candidate-relative identities when downstream consumers expect source-row masks.'
   },
   'gpu-reduction': {

@@ -49,7 +49,7 @@ an application-specific exact predicate over that geometry.
 
 ### Candidate rows and stable identity
 
-Candidate IDs are interpreted as source-row addresses because the filter uses them to load packed
+Candidate IDs are interpreted as global source-row addresses because the filter uses them to load packed
 positions and set the corresponding mask row. This is intentionally narrower than
 `GPUGridIndexQuery`, whose stable IDs may be arbitrary. Use this refinement path when the index was
 built with generated row IDs. Applications with global or sparse IDs can keep a separate row-to-ID
@@ -109,3 +109,21 @@ graph.add([
 Omit `candidates` to dispatch the identical exact predicate over every source point. Query-buffer
 updates require no graph recompilation. The primitive clears its output mask and overflow word on
 every encoding; it does not submit, read back, compact, or allocate caller-visible results.
+
+## Chunked storage
+
+`positions`, `outputMask`, and `candidates.ids` accept atomic `GraphDataView` or chunked
+`GraphVectorView` resources. Positions and masks have equal logical lengths; their boundaries and
+candidate-ID boundaries may differ. IDs address the complete source vector, not a candidate chunk
+or position chunk. Duplicate candidates set the same mask row; out-of-range IDs are ignored.
+Candidate count is clamped to the total ID capacity across all chunks, and producer overflow is
+propagated even for empty source or candidate vectors.
+
+Unindexed execution borrows aligned position/mask spans. Indexed execution visits each candidate
+chunk for each aligned source span and filters IDs to that span's global row range. Neither path
+allocates packed buffers or scratch. Query, count, and overflow metadata remain atomic views.
+Empty chunks emit no data work, but overflow is still initialized on every encoding. Writable
+views must not overlap inputs or other outputs; each active binding must fit the device limit.
+
+Indexed dispatch overhead scales with candidate chunks times aligned source spans. Fragmented
+routing remains a performance consideration when comparing an index with a full scan.

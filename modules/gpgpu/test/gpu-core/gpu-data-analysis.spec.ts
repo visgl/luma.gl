@@ -634,9 +634,9 @@ it('GPUGridBinning clears once and accumulates GPUVector chunks in order', async
     result.nodeOrder,
     'one clear precedes ordered accumulation and empty chunks keep their source index'
   ).toEqual([
-    'gpu-grid-binning-clear',
-    'gpu-grid-binning-chunk-0-local',
-    'gpu-grid-binning-chunk-2-local'
+    'gpu-grid-binning-output-0-clear',
+    'gpu-grid-binning-output-0-input-0-local',
+    'gpu-grid-binning-output-0-input-2-local'
   ]);
   expect(result.logicalTransientBufferCount, 'position chunks are not packed or concatenated').toBe(
     0
@@ -761,9 +761,9 @@ it('GPUGridAggregation preserves paired GPUVector chunk topology', async () => {
   );
   expect(result.values, 'aligned chunks accumulate in source order').toEqual([1.25, 2.5, -3, 4.75]);
   expect(result.nodeOrder, 'one clear precedes each non-empty aligned chunk').toEqual([
-    'gpu-grid-aggregation-clear',
-    'gpu-grid-aggregation-chunk-0-sum',
-    'gpu-grid-aggregation-chunk-2-sum'
+    'gpu-grid-aggregation-output-0-clear',
+    'gpu-grid-aggregation-output-0-input-0-sum',
+    'gpu-grid-aggregation-output-0-input-1-sum'
   ]);
   expect(result.logicalTransientBufferCount, 'paired chunks are not packed or concatenated').toBe(
     0
@@ -782,10 +782,10 @@ it('GPUGridAggregation preserves paired GPUVector chunk topology', async () => {
     mean.nodeOrder,
     'mean initializes once, accumulates every non-empty chunk, and finalizes once'
   ).toEqual([
-    'gpu-grid-aggregation-initialize',
-    'gpu-grid-aggregation-chunk-0-mean',
-    'gpu-grid-aggregation-chunk-2-mean',
-    'gpu-grid-aggregation-finalize'
+    'gpu-grid-aggregation-output-0-initialize',
+    'gpu-grid-aggregation-output-0-input-0-mean',
+    'gpu-grid-aggregation-output-0-input-1-mean',
+    'gpu-grid-aggregation-output-0-finalize'
   ]);
   expect(mean.logicalTransientBufferCount, 'mean owns one transient cell-count buffer').toBe(1);
 });
