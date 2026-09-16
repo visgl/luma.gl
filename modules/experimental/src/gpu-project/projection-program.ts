@@ -9,15 +9,22 @@ import {evaluateProjectionPlan, findProjectionPatch, packProjectionPlan} from '.
 import {getProjectionShaderFunctions} from './projection-shader';
 import {getProjectionProgramMetadata, type ProjectionProgramMetadata} from './projection-metadata';
 import type {ProjectionCoordinates, ProjectionPlan, ProjectionPrecision} from './types';
+import {
+  evaluateWebMercator,
+  getWebMercatorBounds,
+  getWebMercatorStage,
+  type WebMercatorOperation
+} from './projection-web-mercator';
 
 /** Explicit operations; adaptive inversion requires a separately validated inverse plan. */
 export type ProjectionOperation =
   | {type: 'axis'; order: readonly [0, 1] | readonly [1, 0]}
   | {type: 'unit'; factor: number; inverse?: boolean}
   | {type: 'affine'; scale: ProjectionCoordinates; offset: ProjectionCoordinates; inverse?: boolean}
+  | WebMercatorOperation
   | {type: 'adaptive'; plan: ProjectionPlan; inversePlan?: ProjectionPlan};
 
-/** A two-dimensional operation sequence. Precision applies through intermediate coordinates. */
+/** A two-dimensional operation sequence. Analytic float32 stages must be explicitly opted into. */
 export type ProjectionProgram = {
   operations: readonly ProjectionOperation[];
   precision: ProjectionPrecision;
@@ -126,6 +133,7 @@ export function invertProjectionProgram(
         case 'unit':
           return {...operation, inverse: !operation.inverse};
         case 'affine':
+        case 'web-mercator':
           return {...operation, inverse: !operation.inverse};
         case 'adaptive':
           if (!operation.inversePlan) {
@@ -167,6 +175,14 @@ export function evaluateProjectionProgram(
               position[1] * operation.scale[1] + operation.offset[1]
             ];
         break;
+      case 'web-mercator': {
+        const bounds = getWebMercatorBounds(operation);
+        if (position.some((value, axis) => value < bounds[axis] || value > bounds[axis + 2])) {
+          return {position: [0, 0], valid: false};
+        }
+        position = evaluateWebMercator(operation, position);
+        break;
+      }
       case 'adaptive':
         if (findProjectionPatch(operation.plan, position) < 0) {
           return {position: [0, 0], valid: false};
@@ -198,6 +214,18 @@ function compileProgram(
       throw new Error('projection parameters must fit the double-single exponent range');
     }
     words.push(...new Uint32Array(Float32Array.of(high, low).buffer));
+  };
+  const appendBounds = (bounds: readonly number[]): void => {
+    for (const [boundIndex, value] of bounds.entries()) {
+      const high = Math.fround(value);
+      let low = Math.fround(value - high);
+      // Round bounds inward: a rounded split must never expand the exact binary64 domain.
+      const rounded = high + low;
+      if ((boundIndex < 2 && rounded < value) || (boundIndex >= 2 && rounded > value)) {
+        low = nextFloat32(low, boundIndex < 2);
+      }
+      words.push(...new Uint32Array(Float32Array.of(high, low).buffer));
+    }
   };
   for (const value of program.destinationOrigin ?? [0, 0]) {
     appendNumber(value);
@@ -238,6 +266,11 @@ function compileProgram(
         stages.push(`value = vec4f(${transform('value.xy', 0)}, ${transform('value.zw', 1)});`);
         break;
       }
+      case 'web-mercator':
+        stages.push(getWebMercatorStage(operation, offset));
+        appendNumber(operation.radius);
+        appendBounds(getWebMercatorBounds(operation));
+        break;
       case 'adaptive': {
         if (operation.plan.precision !== 'double-single' || operation.plan.patches.length === 0) {
           throw new Error('program adaptive stages require double-single projection plans');
@@ -246,16 +279,7 @@ function compileProgram(
           words.push(word);
         }
         const boundsOffset = words.length;
-        for (const [boundIndex, value] of operation.plan.bounds.entries()) {
-          const high = Math.fround(value);
-          let low = Math.fround(value - high);
-          // Round bounds inward: a rounded split must never expand the exact binary64 domain.
-          const rounded = high + low;
-          if ((boundIndex < 2 && rounded < value) || (boundIndex >= 2 && rounded > value)) {
-            low = nextFloat32(low, boundIndex < 2);
-          }
-          words.push(...new Uint32Array(Float32Array.of(high, low).buffer));
-        }
+        appendBounds(operation.plan.bounds);
         const rawInput = index === 0 && inputFormat === 'uint32x4';
         let source = getProjectionShaderFunctions({
           precise: rawInput,

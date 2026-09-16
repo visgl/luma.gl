@@ -5,6 +5,7 @@
 
 import type {ProjectionInputFormat, ProjectionProgram} from './projection-program';
 import type {ProjectionBounds, ProjectionPrecision} from './types';
+import {getWebMercatorBounds} from './projection-web-mercator';
 
 /** Approximation estimates exclude input quantization and native/output arithmetic rounding. */
 export type ProjectionErrorMetadata = {
@@ -18,12 +19,13 @@ export type ProjectionErrorMetadata = {
 export type ProjectionStageMetadata = {
   readonly index: number;
   readonly operation: ProjectionProgram['operations'][number]['type'];
+  readonly arithmetic: 'float32' | 'double-single';
   readonly inputDimensions: 2;
   readonly outputDimensions: 2;
   /** Coordinates at this stage, before evaluation. Null means finite coordinates only. */
   readonly inputBounds: ProjectionBounds | null;
   readonly invertible: boolean;
-  /** Maximum Euclidean amplification for a native linear stage; null for adaptive stages. */
+  /** Maximum Euclidean amplification for a native linear stage; null for nonlinear stages. */
   readonly errorAmplification: number | null;
   readonly approximationError: ProjectionErrorMetadata;
 };
@@ -33,7 +35,7 @@ export type ProjectionProgramMetadata = {
   readonly outputDimensions: 2;
   readonly inputFormat: ProjectionInputFormat;
   readonly inputEncoding: 'float32' | 'double-single' | 'binary64';
-  readonly arithmetic: 'double-single';
+  readonly arithmetic: 'double-single' | 'mixed';
   readonly outputPrecision: ProjectionPrecision;
   readonly outputFrame: 'absolute' | 'origin-relative';
   readonly validity: 'upstream-and-finite-and-stage-domain';
@@ -70,6 +72,12 @@ export function getProjectionProgramMetadata(
           ...operation.scale.map(value => Math.abs(operation.inverse ? 1 / value : value))
         );
         break;
+      case 'web-mercator':
+        amplification = null;
+        inputBounds = Object.freeze(getWebMercatorBounds(operation));
+        // No global derivative/rounding bound is promised for the analytic fast path.
+        if (maximum !== 0) maximum = null;
+        break;
       case 'adaptive':
         amplification = null;
         inputBounds = Object.freeze([...operation.plan.bounds]) as ProjectionBounds;
@@ -87,6 +95,7 @@ export function getProjectionProgramMetadata(
     return Object.freeze({
       index,
       operation: operation.type,
+      arithmetic: operation.type === 'web-mercator' ? 'float32' : 'double-single',
       inputDimensions: 2,
       outputDimensions: 2,
       inputBounds,
@@ -105,7 +114,7 @@ export function getProjectionProgramMetadata(
         : inputFormat === 'float32x4'
           ? 'double-single'
           : 'float32',
-    arithmetic: 'double-single',
+    arithmetic: stages.some(stage => stage.arithmetic === 'float32') ? 'mixed' : 'double-single',
     outputPrecision: program.precision,
     outputFrame: program.precision === 'local-f32' ? 'origin-relative' : 'absolute',
     validity: 'upstream-and-finite-and-stage-domain',

@@ -8,6 +8,8 @@ import {Proj4Projection, toProj4CRSDefinition} from '@math.gl/proj4';
 import {compileProjectionPlan} from './projection-plan';
 import {
   compileProjectionProgram,
+  evaluateProjectionProgram,
+  invertProjectionProgram,
   type CompiledProjection,
   type ProjectionInputFormat,
   type ProjectionProgram
@@ -41,6 +43,8 @@ export type ProjectionPlanningResult =
 
 type ProjectionOutputOptions = {
   precision?: ProjectionPrecision;
+  /** Native nonlinear arithmetic. Default double-single retains bounded adaptive fitting. */
+  projectionArithmetic?: 'double-single' | 'float32';
   inputFormat?: ProjectionInputFormat;
   destinationOrigin?: ProjectionCoordinates;
 };
@@ -68,7 +72,7 @@ export type PlanCRSProjectionOptions = ProjectionOutputOptions &
     enforceAxis?: boolean;
     /** Required only when the transformation needs adaptive fitting. */
     bounds?: ProjectionBounds;
-    /** Set to false to require native coordinate-frame lowering. */
+    /** Set to false to require native lowering without provider fitting. */
     allowAdaptive?: boolean;
   };
 
@@ -79,7 +83,8 @@ export function planProjectionPipeline(
   let lowered: ReturnType<typeof lowerProjectionPipeline>;
   try {
     lowered = lowerProjectionPipeline(
-      typeof options.pipeline === 'string' ? parsePROJString(options.pipeline) : options.pipeline
+      typeof options.pipeline === 'string' ? parsePROJString(options.pipeline) : options.pipeline,
+      options.projectionArithmetic
     );
   } catch (error) {
     return unsupported('invalid-definition', error);
@@ -113,8 +118,7 @@ export function planProjectionPipeline(
 }
 
 /**
- * Lower equivalent explicit 2D CRS frames natively, or fit a bounded provider transformation.
- * Native named projection formulas follow in P.4.
+ * Lower explicit 2D CRS frames and opted-in formulas, or fit a bounded provider transformation.
  */
 export function planCRSProjection(options: PlanCRSProjectionOptions): ProjectionPlanningResult {
   // PROJJSON dimensionality is explicit. Never silently extract a horizontal component.
@@ -128,7 +132,12 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
   }
   let lowered: ReturnType<typeof lowerCRSProjection>;
   try {
-    lowered = lowerCRSProjection(options.from, options.to, options.enforceAxis ?? false);
+    lowered = lowerCRSProjection(
+      options.from,
+      options.to,
+      options.enforceAxis ?? false,
+      options.projectionArithmetic
+    );
     if ('operations' in lowered) {
       return ready(
         {
@@ -147,6 +156,44 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
   const reasons = [lowered.reason];
   if (options.allowAdaptive === false || !canUseCRSProvider(lowered.reason)) {
     return {status: 'unsupported', reasons};
+  }
+  if (lowered.reason.code === 'unsupported-arithmetic') {
+    // The normalized formula is also a binary64 CPU oracle. Keep the default high-precision
+    // path without sending Pseudo Mercator PROJJSON through a provider that treats it as
+    // ellipsoidal Mercator. No float32 operation executes in the fitted GPU program.
+    const analytic = lowerCRSProjection(
+      options.from,
+      options.to,
+      options.enforceAxis ?? false,
+      'float32'
+    );
+    if ('operations' in analytic && options.bounds) {
+      const program: ProjectionProgram = {
+        precision: 'double-single',
+        operations: analytic.operations
+      };
+      const inverse = invertProjectionProgram(program);
+      const project = (definition: ProjectionProgram, coordinates: number[]): number[] => {
+        const result = evaluateProjectionProgram(definition, [coordinates[0], coordinates[1]]);
+        return result.valid ? [...result.position] : [NaN, NaN];
+      };
+      return planAdaptiveProjection(
+        {
+          project: coordinates => project(program, coordinates),
+          unproject: coordinates => project(inverse, coordinates)
+        },
+        {...options, bounds: options.bounds},
+        options,
+        reasons
+      );
+    }
+    return {
+      status: 'unsupported',
+      reasons: [
+        ...reasons,
+        {code: 'bounds-required', message: 'adaptive CRS planning requires explicit source bounds'}
+      ]
+    };
   }
   for (const definition of [options.from, options.to]) {
     const reason = getCRSProviderReason(definition);
