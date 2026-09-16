@@ -8,7 +8,7 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 ## Overview
 
 `GPUHashIndex` builds a fixed-capacity `uint32` key/value lookup table, and `GPUHashIndexQuery`
-looks up a packed batch of keys without submission or CPU readback. Together they provide the
+looks up one logical sequence of packed keys without submission or CPU readback. Together they provide the
 sparse identity lookup that dense group arrays cannot: map stable object IDs to rows, join sparse
 feature IDs to attributes, deduplicate identifiers, or resolve categorical dictionaries whose key
 space is much larger than their population.
@@ -27,10 +27,10 @@ their inputs:
 
 | Feature | Input it owns logically | Use it when |
 | --- | --- | --- |
-| `GPUHashIndex` | One packed right-side key batch. | The complete lookup dictionary or property table already lives in one contiguous chunk. |
-| [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index) | Several ordered right-side key chunks. | Streamed record batches must populate one shared index without repacking or losing source-row offsets. |
-| `GPUHashIndexQuery` | One left-side key batch against either index type. | Every source row must retain its position, a found mask, and an optional matched value. |
-| [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join) | One left-side key batch against either index type. | Only matching left/right row pairs should be published, with an explicit output capacity. |
+| `GPUHashIndex` | One logical right-side sequence, stored in one or many chunks. | Build a shared dictionary with independently partitioned keys and values, or contiguous generated row IDs. |
+| [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index) | Several ordered right-side key chunks with batch metadata. | Supply per-chunk generated row-ID bases or validity masks with matching topology. |
+| `GPUHashIndexQuery` | One logical left-side sequence against either index type. | Every source row must retain its position, a found mask, and an optional matched value. |
+| [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join) | One logical left-side sequence against either index type. | Only matching left/right row pairs should be published, with an explicit output capacity. |
 | [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) | Several preserved left-side chunks against either index type. | Independent source batches need separate stable pairs, counts, capacities, and diagnostics. |
 
 The right-index choice and left-query choice are independent. For example, a
@@ -89,6 +89,20 @@ An empty explicit values view is also valid, including a zero-length view positi
 its backing buffer. Empty rebuilds clear the table and statistics without binding unavailable input
 rows.
 
+### Chunks form one logical sequence
+
+Keys, explicit values, and query outputs may have different physical boundaries. Lowering
+intersects those boundaries using borrowed views; it does not concatenate or copy caller data.
+Generated IDs and duplicate winners use global source positions, including when duplicates cross
+chunks. Empty chunks do not add rows, and empty builds and queries still clear their statistics.
+
+Each nonempty build span contributes insertion and finalization passes to the shared table.
+Queries initialize statistics once and accumulate results across all spans. The table keys, table
+values, and build source-row scratch each remain one capacity-sized binding; individual active
+source and destination spans must fit device limits. Fragmentation increases dispatch count and
+repeats table finalization work. Partitioning may change physical table layout, probe counts, and
+the retained subset when overflow occurs; without overflow, key-to-value results remain stable.
+
 ### Statistics expose the cost model
 
 Build statistics contain:
@@ -115,9 +129,9 @@ parallel insertion, and deterministic value-finalization passes; the graph owns 
 source-row buffer. Query contributes statistics initialization and lookup. Neither object compiles,
 encodes, submits, resizes, or reads back on its own.
 
-This single-batch primitive supports packed `uint32` keys and values and full rebuilds.
-`GPUBatchHashIndex` adds preserved right-side vector chunks, while `GPUHashJoin` and
-`GPUBatchHashJoin` provide bounded row-pair publication. Deletion and tombstones, 64-bit keys,
+Build and query accept packed `uint32` atomic views or vectors with independent chunk boundaries.
+`GPUBatchHashIndex` adds per-chunk generated row-ID bases and validity masks, while `GPUHashJoin`
+and `GPUBatchHashJoin` provide global or per-batch bounded row-pair publication. Deletion and tombstones, 64-bit keys,
 custom hash callbacks, independently partitioned right tables, and one-to-many matches remain
 outside the current contracts.
 
@@ -182,7 +196,8 @@ new GPUHashIndexQuery({
 });
 ```
 
-All views are packed `GraphDataView<'uint32'>` values in the target graph. Table key and value
+Keys, explicit values, and query outputs accept packed `GraphDataView<'uint32'>` or
+`GraphVectorView<'uint32'>` values in the target graph. Tables and statistics remain atomic views. Table key and value
 capacities must match, build statistics require six rows, query statistics require four rows, and
 aligned query outputs must match the query-key length. Writable views cannot overlap each other or
 their read inputs.

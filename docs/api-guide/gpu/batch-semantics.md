@@ -162,6 +162,13 @@ summation order. Node tests cover bounded dispatch, binding limits, ownership, a
 overlapping outputs. Both classes and their props are exported from `@luma.gl/gpgpu/gpu-core`.
 Chunk-pair selection and fragmented tile work remain performance debt.
 
+`gpu-hash-batching.*.spec.ts` covers index construction, lookup, and stable joins with independent
+keys/value/diagnostic/output boundaries, empty chunks, offsets, generated global IDs, earliest-row
+duplicate selection, empty and truncated publication, global scan carry, and repeated rebuilds.
+Caller storage stays borrowed; join scratch follows key chunks. Hash tables remain single bounded
+bindings. `GPUBatchHashIndex` retains its specialized matching-topology validity and per-chunk ID
+bases; `GPUBatchHashJoin` retains separate publication domains and diagnostics for each batch.
+
 ## Remaining work, grouped for review
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -178,7 +185,7 @@ master, with shared lowering, conformance tests, and documented exceptions in ea
 | Two-dimensional transforms | `GPUFFT2D` | FFT1D and convolution now accept independent graph chunks. FFT2D still has a device-owned raw-buffer encode API; migrate its composition and resource contract together. Spectral convolution also retains bounded contiguous algorithm scratch. |
 | Sparse algebra | `GPUProgramSpMV`, `GPUAdaptiveSpMV` | Dense MatVec/MatMul now accept independent chunks and have public exports. CSR lowering still requires one chunk; route row-offset pairs, nonzeros, and global vector indices together while preserving adaptive strategies. |
 | Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
-| Hash indexing and joins | `GPUHashIndex`, `GPUHashIndexQuery`, `GPUBatchHashIndex`, `GPUHashJoin`, `GPUBatchHashJoin` | Reuse batch variants; audit global lookup, duplicate/cardinality rules, independently partitioned columns, and destination capacity. |
+| Hash follow-ups | `GPUBatchHashIndex`, `GPUBatchHashJoin` and hash routing | Core build/query/global joins support independent chunks. Specialized batch variants still require matching per-batch topology. Tables remain single bindings; fragmented finalization/scatter routing and one-to-many joins remain separate work. |
 | Indexed movement and hierarchy | `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection` | Some APIs already represent partitions/chunks. Audit global indices, cross-chunk ranges, output topology, and shared hierarchy callers as one family. |
 | Spatial operations | `GPUGridBinning`, `GPUGridAggregation`, `GPUGridIndex`, `GPUGridIndexQuery`, `GPUPointSpatialFilter`, `GPUBVH`, `GPUSegmentedBVH`, `GPUBVHQuery`, `GPUSceneDrawGeneration`, `GPUSceneResourceGroups` | Packed spatial domains and segmented hierarchies are not yet a universal vector contract. Group grid operations and hierarchy/query operations into coherent blocks if this family is too large for one review. |
 | Decoding | `GPULZByteDecompressor`, `GPULZByteBatchDecompressor` | Existing batch decoding needs a cross-chunk history, addressing, output-capacity, and ownership audit. |

@@ -5,7 +5,12 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  type GraphVectorView,
+  type GraphBufferUse,
+  type GraphDataView
+} from './gpu-command-graph';
 import {
   createTransientView,
   doGraphDataViewsOverlap,
@@ -13,6 +18,7 @@ import {
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 
 const HASH_INDEX_WORKGROUP_SIZE = 256;
 const HASH_INDEX_COMPARE_EXCHANGE_RETRY_COUNT = 4;
@@ -54,13 +60,13 @@ type GPUHashIndexBuildPass = GPUHashIndexBuildBatch & {
   firstSourceRow: number;
 };
 
-/** Properties for one packed fixed-capacity hash-index rebuild. */
+/** Properties for one fixed-capacity hash-index rebuild from a logical key sequence. */
 export type GPUHashIndexProps = {
   id?: string;
   /** Packed keys. `0xffffffff` is reserved and ignored. */
-  keys: GraphDataView<'uint32'>;
+  keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Optional packed values aligned with keys. Generated row IDs are used by default. */
-  values?: GraphDataView<'uint32'>;
+  values?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** First generated row ID. Mutually exclusive with `values`. */
   firstValue?: number;
   /** Caller-owned power-of-two key table. Its length defines capacity. */
@@ -90,8 +96,8 @@ export type GPUHashIndexStats = {
  */
 export class GPUHashIndex implements GPUHashIndexView {
   readonly id: string;
-  readonly keys: GraphDataView<'uint32'>;
-  readonly values?: GraphDataView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly values?: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly firstValue: number;
   readonly tableKeys: GraphDataView<'uint32'>;
   readonly tableValues: GraphDataView<'uint32'>;
@@ -117,7 +123,9 @@ export class GPUHashIndex implements GPUHashIndexView {
       [this.tableValues, 'tableValues'],
       [this.statistics, 'statistics']
     ] as const) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view)) {
+        validatePackedUint32View(chunk, `${this.id} ${name}`);
+      }
     }
     if (!isPowerOfTwo(this.tableKeys.length)) {
       throw new Error(`${this.id} table capacity must be a positive power of two`);
@@ -173,26 +181,21 @@ export class GPUHashIndex implements GPUHashIndexView {
       this.tableValues,
       this.statistics
     ];
-    if (views.some(view => view.buffer.graph !== graph)) {
+    if (views.flatMap(getGraphVectorData).some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
 
-    const sourceRows = createTransientView(
-      graph,
-      `${this.id}-source-rows`,
-      'uint32',
-      this.tableKeys.length
-    );
-    const batch: GPUHashIndexBuildPass = {
-      id: this.id,
-      keys: this.keys,
-      ...(this.values ? {values: this.values} : {}),
-      firstValue: this.firstValue,
-      firstSourceRow: 0
-    };
-    nodes.push(...addBuildInitializePass(graph, this, sourceRows));
-    if (this.keys.length > 0) nodes.push(...addBuildPass(graph, this, sourceRows, batch));
-    nodes.push(...addBuildFinalizePass(graph, this, sourceRows, batch));
+    // Borrow intersections so explicit values need not share key chunk boundaries.
+    const spans = this.values
+      ? alignGraphVectorViews(graph, [this.keys, this.values])
+      : alignGraphVectorViews(graph, [this.keys]);
+    let firstValue = this.firstValue;
+    const batches = spans.map(([keys, values]) => {
+      const batch = {keys, values, firstValue};
+      firstValue += keys.length;
+      return batch;
+    });
+    nodes.push(...getGPUHashIndexBuildBatchesCommandNodes(graph, this, batches));
 
     return nodes;
   }
@@ -230,31 +233,31 @@ export function getGPUHashIndexBuildBatchesCommandNodes<Parameters>(
   return nodes;
 }
 
-/** Properties for one packed hash-index lookup batch. */
+/** Properties for bounded lookup across independently partitioned query columns. */
 export type GPUHashIndexQueryProps = {
   id?: string;
   index: GPUHashIndexView;
-  keys: GraphDataView<'uint32'>;
+  keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned values aligned with query keys. Missing values become `0xffffffff`. */
-  values: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned nonzero/zero lookup results aligned with query keys. */
-  found: GraphDataView<'uint32'>;
+  found: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned number of examined slots per query. */
-  probes: GraphDataView<'uint32'>;
+  probes: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned four-row query-statistics block. */
   statistics: GraphDataView<'uint32'>;
   /** Defaults to the index build probe bound. */
   maxProbeCount?: number;
 };
 
-/** Performs a packed batch of bounded hash-index lookups. */
+/** Performs bounded hash-index lookups across one logical query sequence. */
 export class GPUHashIndexQuery {
   readonly id: string;
   readonly index: GPUHashIndexView;
-  readonly keys: GraphDataView<'uint32'>;
-  readonly values: GraphDataView<'uint32'>;
-  readonly found: GraphDataView<'uint32'>;
-  readonly probes: GraphDataView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly found: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly probes: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly statistics: GraphDataView<'uint32'>;
   readonly maxProbeCount: number;
 
@@ -277,7 +280,9 @@ export class GPUHashIndexQuery {
       [this.probes, 'probes'],
       [this.statistics, 'statistics']
     ] as const) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view)) {
+        validatePackedUint32View(chunk, `${this.id} ${name}`);
+      }
     }
     if (this.index.tableKeys.length !== this.index.tableValues.length) {
       throw new Error(`${this.id} index table key and value capacities must match`);
@@ -303,7 +308,7 @@ export class GPUHashIndexQuery {
     );
   }
 
-  /** Adds statistics initialization and one bounded lookup pass without submission or readback. */
+  /** Adds statistics initialization and bounded lookup spans without submission or readback. */
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
@@ -317,11 +322,23 @@ export class GPUHashIndexQuery {
       this.probes,
       this.statistics
     ];
-    if (views.some(view => view.buffer.graph !== graph)) {
+    if (views.flatMap(getGraphVectorData).some(view => view.buffer.graph !== graph)) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     nodes.push(...addQueryInitializePass(graph, this));
-    if (this.keys.length > 0) nodes.push(...addQueryPass(graph, this));
+    const spans = alignGraphVectorViews(graph, [this.keys, this.values, this.found, this.probes]);
+    for (const [spanIndex, [keys, values, found, probes]] of spans.entries()) {
+      nodes.push(
+        ...addQueryPass(graph, {
+          ...this,
+          id: `${this.id}-span-${spanIndex}`,
+          keys,
+          values,
+          found,
+          probes
+        })
+      );
+    }
 
     return nodes;
   }
@@ -610,7 +627,12 @@ const STATISTICS_OFFSET: u32 = ${getViewElementOffset(query.statistics)}u;
 
 function addQueryPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  query: GPUHashIndexQuery
+  query: Pick<GPUHashIndexQuery, 'id' | 'index' | 'statistics' | 'maxProbeCount'> & {
+    keys: GraphDataView<'uint32'>;
+    values: GraphDataView<'uint32'>;
+    found: GraphDataView<'uint32'>;
+    probes: GraphDataView<'uint32'>;
+  }
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const layout = getDispatchLayout(
@@ -717,9 +739,11 @@ function validateProbeCount(id: string, probes: number, capacity: number, rows: 
 
 function validateDisjointViews(
   id: string,
-  inputs: readonly GraphDataView<'uint32'>[],
-  outputs: readonly GraphDataView<'uint32'>[]
+  inputVectors: readonly (GraphDataView<'uint32'> | GraphVectorView<'uint32'>)[],
+  outputVectors: readonly (GraphDataView<'uint32'> | GraphVectorView<'uint32'>)[]
 ): void {
+  const inputs = inputVectors.flatMap(getGraphVectorData);
+  const outputs = outputVectors.flatMap(getGraphVectorData);
   for (const input of inputs) {
     for (const output of outputs) {
       if (doGraphDataViewsOverlap(input, output)) {

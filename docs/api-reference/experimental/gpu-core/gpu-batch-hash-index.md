@@ -20,12 +20,13 @@ right-side source occupied one buffer or many preserved record batches.
 
 ## Why this feature exists
 
-`GPUHashIndex` accepts one packed `GraphDataView` and clears its table every time its build runs.
-Calling it separately for three streamed right-side batches would therefore overwrite the first
-two batches. Concatenating those batches beforehand would allocate new storage, copy their rows,
-erase their original offsets, and violate streaming ownership.
+`GPUHashIndex` already accepts atomic views or vectors and builds one shared table with global
+source positions. Use `GPUBatchHashIndex` when the source batches carry additional metadata:
+per-chunk generated row-ID bases or validity masks. Its keys, values, and validity vectors must
+have matching chunk topology. Independently partitioned columns without that metadata can use
+`GPUHashIndex` directly.
 
-`GPUBatchHashIndex` instead declares one table initialization followed by one ordered insertion
+`GPUBatchHashIndex` declares one table initialization followed by one ordered insertion
 and value-finalization sequence per nonempty chunk. It keeps source buffers borrowed, preserves
 empty batches, and retains the globally earliest source row when duplicate keys span chunks.
 
