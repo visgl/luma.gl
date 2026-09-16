@@ -53,28 +53,16 @@ it('GPUReduction rejects invalid selection mask formats, layouts, lengths, and a
   ).toThrow(/mask and output must use separate buffers/);
 });
 
-it('GPUReduction requires selection masks to preserve ordered vector topology', () => {
-  const input = createVector('input', 'sint32', [2, 0, 3]);
-  const matchingMask = createVector('matching-mask', 'uint32', [2, 0, 3]);
-  const mismatchedMask = createVector('mismatched-mask', 'uint32', [1, 0, 4]);
-  const differentChunkCountMask = createVector('different-chunk-count-mask', 'uint32', [2, 3]);
-  const atomicMask = createView('atomic-mask', 'uint32', 5);
-  const output = createView('output', 'sint32', 1);
-
-  const reduction = new GPUReduction({input, output, mask: matchingMask, operation: 'min'});
-  expect(reduction.mask, 'preserves empty chunks at their source positions').toBe(matchingMask);
-  expect(
-    () => new GPUReduction({input, output, mask: atomicMask, operation: 'min'}),
-    'vector inputs cannot silently concatenate an atomic selection'
-  ).toThrow(/same view kind/);
-  expect(
-    () => new GPUReduction({input, output, mask: mismatchedMask, operation: 'min'}),
-    'equal total row counts cannot replace matching ordered chunk sizes'
-  ).toThrow(/same chunk topology/);
-  expect(
-    () => new GPUReduction({input, output, mask: differentChunkCountMask, operation: 'min'}),
-    'vector selections must preserve the complete source chunk count'
-  ).toThrow(/same chunk topology/);
+it('GPUReduction accepts equal logical lengths across different mask partitions', () => {
+  const input = createVector('input', 'float32', [2, 0, 3]);
+  const output = createView('output', 'float32', 1);
+  for (const mask of [
+    createVector('mask', 'uint32', [1, 0, 4]),
+    createVector('mask', 'uint32', [2, 3]),
+    createView('mask', 'uint32', 5)
+  ]) {
+    expect(new GPUReduction({input, output, mask, operation: 'min'}).mask).toBe(mask);
+  }
 });
 
 function createView<T extends ScalarFormat>(

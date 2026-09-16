@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {alignGraphVectorViews} from './graph-vector-view-utils';
+
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
@@ -21,7 +23,6 @@ import {
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
-  validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
@@ -53,7 +54,7 @@ export type GPUHistogramInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
-/** Optional nonzero/zero row selection with the same topology as histogram input. */
+/** Optional nonzero/zero row selection with the same logical length as histogram input. */
 export type GPUHistogramMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
 /** Ordered bin boundaries accepted by {@link GPUHistogram}. */
@@ -69,7 +70,7 @@ type GPUHistogramBaseProps<T extends GPUScalarFormat> = {
   input: GPUHistogramInput<T>;
   /** Caller-owned `uint32` counts; its length defines the bin count. */
   output: GraphDataView<'uint32'>;
-  /** Optional nonzero/zero selection with the same view kind and chunk topology as `input`. */
+  /** Optional nonzero/zero selection with the same logical length as `input`; chunk boundaries may differ. */
   mask?: GPUHistogramMask;
 };
 
@@ -141,18 +142,13 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
       throw new Error(`${this.id} input and output must use separate buffers`);
     }
     if (this.mask) {
-      if (this.input instanceof GraphVectorView !== this.mask instanceof GraphVectorView) {
-        throw new Error(`${this.id} input and mask must use the same view kind`);
-      }
       for (const [chunkIndex, mask] of getHistogramMasks(this.mask).entries()) {
         validatePackedUint32View(mask, `${this.id} mask chunk ${chunkIndex}`);
         if (mask.buffer === this.output.buffer) {
           throw new Error(`${this.id} mask and output must use separate buffers`);
         }
       }
-      if (this.input instanceof GraphVectorView && this.mask instanceof GraphVectorView) {
-        validateMatchingVectorTopology(this.input, this.mask, `${this.id} input and mask`);
-      } else if (this.input.length !== this.mask.length) {
+      if (this.input.length !== this.mask.length) {
         throw new Error(`${this.id} input and mask lengths must match`);
       }
     }
@@ -189,14 +185,19 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const inputs = getHistogramInputs(this.input);
-    const masks = this.mask ? getHistogramMasks(this.mask) : undefined;
+    let inputs = getHistogramInputs(this.input);
+    let masks = this.mask ? getHistogramMasks(this.mask) : undefined;
     if (
       inputs.some(input => input.buffer.graph !== graph) ||
       masks?.some(mask => mask.buffer.graph !== graph) ||
       this.output.buffer.graph !== graph
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
+    }
+    if (this.mask) {
+      const spans = alignGraphVectorViews(graph, [this.input, this.mask]);
+      inputs = spans.map(([input]) => input);
+      masks = spans.map(([, mask]) => mask);
     }
     let domain = this.domain;
     const edges = this.edges;
@@ -217,7 +218,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
         nodes.push(
           ...addIrregularHistogramPass(graph, {
             id:
-              this.input instanceof GraphVectorView
+              this.input instanceof GraphVectorView || inputs.length > 1
                 ? `${this.id}-chunk-${chunkIndex}-edges-${accumulationPath}`
                 : `${this.id}-edges-${accumulationPath}`,
             input,
@@ -262,7 +263,7 @@ export class GPUHistogram<T extends GPUScalarFormat = GPUScalarFormat> {
       nodes.push(
         ...addHistogramPass(graph, {
           id:
-            this.input instanceof GraphVectorView
+            this.input instanceof GraphVectorView || inputs.length > 1
               ? `${this.id}-chunk-${chunkIndex}-${accumulationPath}`
               : `${this.id}-${accumulationPath}`,
           input,

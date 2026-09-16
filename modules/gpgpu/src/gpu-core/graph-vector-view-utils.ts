@@ -12,10 +12,14 @@ export function getGraphVectorData<T extends GPUVectorFormat>(
 }
 
 /** Intersects logical chunk boundaries using borrowed views, never packed buffers. */
-export function alignGraphVectorViews<Parameters, T extends GPUVectorFormat>(
+export function alignGraphVectorViews<Parameters, const Formats extends readonly GPUVectorFormat[]>(
   graph: GPUCommandGraph<Parameters>,
-  vectors: readonly (GraphDataView<T> | GraphVectorView<T>)[]
-): readonly (readonly GraphDataView<T>[])[] {
+  vectors: {
+    readonly [Index in keyof Formats]:
+      | GraphDataView<Formats[Index]>
+      | GraphVectorView<Formats[Index]>;
+  }
+): readonly {readonly [Index in keyof Formats]: GraphDataView<Formats[Index]>}[] {
   const length = vectors[0]?.length ?? 0;
   if (vectors.some(vector => vector.length !== length)) {
     throw new Error('Aligned vectors must have equal logical lengths');
@@ -23,7 +27,7 @@ export function alignGraphVectorViews<Parameters, T extends GPUVectorFormat>(
   const chunks = vectors.map(getGraphVectorData);
   const indices = vectors.map(() => 0);
   const offsets = vectors.map(() => 0);
-  const result: GraphDataView<T>[][] = [];
+  const result: GraphDataView[][] = [];
   let position = 0;
   while (position < length) {
     for (let index = 0; index < chunks.length; index++) {
@@ -34,7 +38,7 @@ export function alignGraphVectorViews<Parameters, T extends GPUVectorFormat>(
     }
     const current = chunks.map((data, index) => data[indices[index]]);
     const span = Math.min(...current.map((data, index) => data.length - offsets[index]));
-    const aligned: GraphDataView<T>[] = [];
+    const aligned: GraphDataView[] = [];
     for (let index = 0; index < current.length; index++) {
       const data = current[index];
       // Preserve identity for in-place operands, but never merge distinct source views.
@@ -60,7 +64,8 @@ export function alignGraphVectorViews<Parameters, T extends GPUVectorFormat>(
     for (let index = 0; index < offsets.length; index++) offsets[index] += span;
     position += span;
   }
-  return result;
+  // Each span preserves the format at the corresponding operand position.
+  return result as {readonly [Index in keyof Formats]: GraphDataView<Formats[Index]>}[];
 }
 
 /** Explicit backend limitation for operations whose global indexing needs one physical chunk. */

@@ -67,7 +67,9 @@ drives rendering.
 
 ### Chunk preservation and contention
 
-For `GraphVectorView` inputs, keys, masks, and values must have identical ordered chunk lengths.
+Keys, masks, and values must have equal logical lengths. Each can be a data view or vector with
+independent chunk boundaries. Lowering intersects boundaries using borrowed views and preserves
+each column's format, byte offset, and stride.
 Every encoding initializes the output once, then each non-empty chunk accumulates into the shared
 group rows without concatenation or repacking. Empty chunks retain their place in the source
 topology but add no accumulation pass.
@@ -122,7 +124,7 @@ type GPUGroupAggregationProps = {
 ```
 
 `output` must contain at least one group and must not alias the key, mask, or value buffers. Paired
-inputs must use the same atomic/vector view kind and, for vectors, identical chunk topology. All
+inputs must have equal logical lengths; their view kinds and chunk boundaries may differ. All
 inputs and output must belong to the target graph.
 
 The graph owns no persistent result buffer, performs no submission, and introduces no readback.

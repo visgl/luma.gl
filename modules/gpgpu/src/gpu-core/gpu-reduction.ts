@@ -21,10 +21,10 @@ import {
   getViewBinding,
   getViewElementOffset,
   type GPUScalarFormat,
-  validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
+import {alignGraphVectorViews} from './graph-vector-view-utils';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const REDUCTION_WORKGROUP_SIZE = 256;
@@ -54,7 +54,7 @@ export type GPUReductionInput<T extends GPUScalarFormat = GPUScalarFormat> =
   | GraphDataView<T>
   | GraphVectorView<T>;
 
-/** Optional nonzero/zero row selection with the same topology as reduction input. */
+/** Optional nonzero/zero row selection with the same logical length as reduction input. */
 export type GPUReductionMask = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
 
 /** Properties for a graph-native scalar reduction. */
@@ -63,7 +63,7 @@ export type GPUReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
   /** Packed scalar data view or ordered vector of packed scalar chunks. */
   input: GPUReductionInput<T>;
-  /** Optional nonzero/zero selection with the same view kind and chunk topology as `input`. */
+  /** Optional nonzero/zero selection with the same logical length as `input`; chunk boundaries may differ. */
   mask?: GPUReductionMask;
   /** Caller-owned result view: one row, or two rows for `extent`. */
   output: GraphDataView<T>;
@@ -128,18 +128,13 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
       throw new Error(`${this.id} inputs and output must use separate buffers`);
     }
     if (this.mask) {
-      if (this.input instanceof GraphVectorView !== this.mask instanceof GraphVectorView) {
-        throw new Error(`${this.id} input and mask must use the same view kind`);
-      }
       for (const [chunkIndex, mask] of getReductionMasks(this.mask).entries()) {
         validatePackedUint32View(mask, `${this.id} mask chunk ${chunkIndex}`);
         if (mask.buffer === this.output.buffer) {
           throw new Error(`${this.id} mask and output must use separate buffers`);
         }
       }
-      if (this.input instanceof GraphVectorView && this.mask instanceof GraphVectorView) {
-        validateMatchingVectorTopology(this.input, this.mask, `${this.id} input and mask`);
-      } else if (this.input.length !== this.mask.length) {
+      if (this.input.length !== this.mask.length) {
         throw new Error(`${this.id} input and mask lengths must match`);
       }
     }
@@ -159,14 +154,19 @@ export class GPUReduction<T extends GPUScalarFormat = GPUScalarFormat> {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const inputs = getReductionInputs(this.input);
-    const masks = this.mask ? getReductionMasks(this.mask) : undefined;
+    let inputs = getReductionInputs(this.input);
+    let masks = this.mask ? getReductionMasks(this.mask) : undefined;
     if (
       inputs.some(input => input.buffer.graph !== graph) ||
       masks?.some(mask => mask.buffer.graph !== graph) ||
       this.output.buffer.graph !== graph
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
+    }
+    if (this.mask) {
+      const spans = alignGraphVectorViews(graph, [this.input, this.mask]);
+      inputs = spans.map(([input]) => input);
+      masks = spans.map(([, mask]) => mask);
     }
     const nonEmptyInputs = inputs
       .map((input, chunkIndex) => ({input, mask: masks?.[chunkIndex]}))

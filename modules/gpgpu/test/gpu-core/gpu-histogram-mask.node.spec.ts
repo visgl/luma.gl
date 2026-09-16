@@ -55,28 +55,16 @@ it('GPUHistogram rejects invalid atomic mask formats, layouts, lengths, and alia
   ).toThrow(/mask and output must use separate buffers/);
 });
 
-it('GPUHistogram requires identical mask view kind and ordered vector topology', () => {
+it('GPUHistogram accepts equal logical lengths across different mask partitions', () => {
   const input = createVector('input', 'float32', [2, 0, 3]);
-  const matchingMask = createVector('matching-mask', 'uint32', [2, 0, 3]);
-  const mismatchedMask = createVector('mismatched-mask', 'uint32', [1, 0, 4]);
-  const differentChunkCountMask = createVector('different-chunk-count-mask', 'uint32', [2, 3]);
-  const atomicMask = createView('atomic-mask', 'uint32', 5);
   const output = createView('output', 'uint32', 4);
-
-  const histogram = new GPUHistogram({input, output, mask: matchingMask, domain: [0, 4]});
-  expect(histogram.mask, 'accepts empty chunks at matching source indices').toBe(matchingMask);
-  expect(
-    () => new GPUHistogram({input, output, mask: atomicMask, domain: [0, 4]}),
-    'vector inputs cannot silently concatenate an atomic selection'
-  ).toThrow(/same view kind/);
-  expect(
-    () => new GPUHistogram({input, output, mask: mismatchedMask, domain: [0, 4]}),
-    'equal total row counts do not permit different ordered chunk sizes'
-  ).toThrow(/same chunk topology/);
-  expect(
-    () => new GPUHistogram({input, output, mask: differentChunkCountMask, domain: [0, 4]}),
-    'vector masks must preserve the complete source chunk count'
-  ).toThrow(/same chunk topology/);
+  for (const mask of [
+    createVector('mask', 'uint32', [1, 0, 4]),
+    createVector('mask', 'uint32', [2, 3]),
+    createView('mask', 'uint32', 5)
+  ]) {
+    expect(new GPUHistogram({input, output, mask, domain: [0, 4]}).mask).toBe(mask);
+  }
 });
 
 function createView<T extends ScalarFormat>(
