@@ -680,11 +680,13 @@ GPU work idle, repeat on target devices, and compare accuracy budgets before int
 The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
 
 ```sh
-VITE_LUPROJ_BENCHMARK_ROWS=65536 yarn test-headless --no-coverage --silent=false --reporter=verbose \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
-Ordinary hardware tests use small fixtures; software adapters skip these integer-fp64 GPU checks.
+The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failure-gate and
+output-frame regressions. Software adapters skip these integer-fp64 GPU checks.
 The benchmark does not automatically select arithmetic or relax application tolerances.
 
 See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),

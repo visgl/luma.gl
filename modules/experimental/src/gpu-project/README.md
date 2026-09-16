@@ -405,7 +405,8 @@ bytes, planning and compilation costs, first use, CPU encoding, synchronized dis
 GPU timestamps. Cache-sensitive setup and a minimal consumer are not production speedup guarantees.
 
 ```sh
-VITE_LUPROJ_BENCHMARK_ROWS=65536 yarn test-headless --no-coverage --silent=false --reporter=verbose \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 

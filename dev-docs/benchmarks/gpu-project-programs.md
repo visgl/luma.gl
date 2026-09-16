@@ -29,14 +29,14 @@ validation or readback. Inline and materialized modes had identical observed err
 
 | Fixture | Arithmetic | Maximum observed error | Parameter bytes | Inline sync | Materialized sync | Inline GPU | Materialized GPU |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| web-mercator | native | 2.6191e+0 | 184 | 3.70 | 3.80 | 2.425 | 3.177 |
-| web-mercator | adaptive | 2.6217e-6 | 352 | 8.00 | 8.40 | 7.529 | 7.825 |
-| utm-north | native | 2.0397e+0 | 320 | 2.00 | 3.40 | 1.610 | 1.645 |
-| utm-north | adaptive | 7.5591e-6 | 352 | 8.40 | 8.00 | 7.934 | 7.609 |
-| utm-south | native | 2.4434e+0 | 320 | 2.10 | 2.80 | 1.730 | 1.746 |
-| utm-south | adaptive | 7.2274e-6 | 352 | 7.50 | 7.70 | 7.080 | 7.238 |
-| utm-inverse | native | 1.8814e-5 | 320 | 3.20 | 3.50 | 2.728 | 2.791 |
-| utm-inverse | adaptive | 1.9179e-10 | 352 | 6.60 | 6.80 | 6.032 | 5.806 |
+| web-mercator | native | 2.6191e+0 | 184 | 2.60 | 2.70 | 2.275 | 2.228 |
+| web-mercator | adaptive | 2.6217e-6 | 352 | 6.30 | 6.30 | 5.817 | 5.857 |
+| utm-north | native | 2.0397e+0 | 320 | 2.10 | 2.00 | 1.626 | 1.642 |
+| utm-north | adaptive | 7.5591e-6 | 352 | 9.00 | 8.30 | 8.468 | 7.897 |
+| utm-south | native | 2.4434e+0 | 320 | 3.00 | 3.30 | 2.682 | 2.978 |
+| utm-south | adaptive | 7.2274e-6 | 352 | 10.80 | 8.70 | 10.255 | 8.447 |
+| utm-inverse | native | 1.8814e-5 | 320 | 3.40 | 3.30 | 3.082 | 2.743 |
+| utm-inverse | adaptive | 1.9179e-10 | 352 | 5.40 | 5.40 | 5.012 | 5.041 |
 
 Materialization adds exactly **1,310,740 bytes** (20 bytes per row: double-single coordinates and
 validity). Total owned/imported benchmark buffers ranged from 2,359,516 to 2,359,684 bytes inline,
@@ -54,14 +54,14 @@ compilation column measures an additional standalone rebuild, not a decompositio
 
 | Fixture | Arithmetic | Planning | Program compile | Graph setup inline / materialized | First use inline / materialized |
 | --- | --- | ---: | ---: | ---: | ---: |
-| web-mercator | native | 0.10 | 0.00 | 29.80 / 21.70 | 16.40 / 17.00 |
-| web-mercator | adaptive | 1.20 | 0.10 | 19.50 / 21.10 | 14.50 / 18.80 |
-| utm-north | native | 0.10 | 0.00 | 19.00 / 20.60 | 19.90 / 2.20 |
-| utm-north | adaptive | 1.30 | 0.20 | 10.10 / 9.20 | 7.60 / 11.50 |
-| utm-south | native | 0.00 | 0.00 | 7.70 / 7.80 | 17.20 / 2.70 |
-| utm-south | adaptive | 1.00 | 0.20 | 9.60 / 9.30 | 9.40 / 7.00 |
-| utm-inverse | native | 0.10 | 0.00 | 15.80 / 19.10 | 18.70 / 3.60 |
-| utm-inverse | adaptive | 1.10 | 0.10 | 8.80 / 10.10 | 5.80 / 7.00 |
+| web-mercator | native | 0.00 | 0.00 | 24.70 / 14.70 | 6.90 / 3.20 |
+| web-mercator | adaptive | 0.90 | 0.20 | 18.20 / 18.60 | 12.60 / 8.00 |
+| utm-north | native | 0.10 | 0.00 | 16.00 / 15.90 | 5.80 / 2.20 |
+| utm-north | adaptive | 1.10 | 0.10 | 8.40 / 10.00 | 8.40 / 10.00 |
+| utm-south | native | 0.00 | 0.00 | 7.40 / 7.60 | 6.20 / 3.20 |
+| utm-south | adaptive | 0.90 | 0.20 | 9.70 / 10.20 | 18.70 / 10.50 |
+| utm-inverse | native | 0.00 | 0.10 | 15.10 / 15.10 | 9.20 / 3.20 |
+| utm-inverse | adaptive | 1.00 | 0.10 | 8.20 / 8.30 | 7.20 / 5.80 |
 
 ## Interpretation and follow-ups
 
@@ -77,10 +77,12 @@ add larger/multi-patch domains and actual consumer workloads. Repeat on addition
 ## Reproduce
 
 ```sh
-VITE_LUPROJ_BENCHMARK_ROWS=65536 yarn test-headless --no-coverage --silent=false --reporter=verbose \\
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
 The test prints full JSON reports prefixed with `PROJECTION_PROGRAM_BENCHMARK`, including all
-minimum/median/95th-percentile/maximum distributions and numerical metadata. Ordinary hardware
-checks use 32-row fixtures; software adapters retain the existing integer-fp64 skip policy.
+minimum/median/95th-percentile/maximum distributions and numerical metadata. Opt-in fixtures
+default to 32 rows; ordinary hardware checks retain the correctness-gate and output-frame tests.
+Software adapters retain the existing integer-fp64 skip policy.
