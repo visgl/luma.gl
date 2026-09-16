@@ -34,6 +34,8 @@ explicit graph-owned scratch.
 | `GPUGroupAggregation` | Global aggregate into caller-sized dense groups | `uint32` keys/masks and `float32` values can be strided and independently partitioned; participating columns have equal logical length | Counts/sums zero; min/max/mean NaN for groups with no accepted finite values; initializes every encoding |
 | `GPUCompaction` | Stable selection into a caller-sized destination and one accepted-row count | Packed `uint32` input and flags have equal logical length and may use independent atomic/vector boundaries; output may use any atomic/vector capacity topology | Count is cleared for zero rows; selected values preserve logical order and overwrite the accepted prefix |
 | `GPUVisibilityWorkflow` | Predicate intersection, stable source IDs, compacted output, and count | Predicate masks, optional output mask, and source IDs require equal logical length and may use independent atomic/vector boundaries; output may use any capacity topology | Empty source publishes zero count; generated IDs preserve logical row order |
+| `GPUFlagOffsets` | Exclusive binary-flag offsets and one global count | Packed `uint32`; independent atomic/vector partitions; destination capacity must cover flags | Empty input clears count; extra destination capacity is untouched; every encoding replaces the active prefix |
+| `GPUSegmentOffsets` | Exclusive start-flag prefixes, global list offsets, and segment count | Packed `uint32`; slot views cover element flags with independent partitions; list offsets remain one atomic destination | Empty input clears count and terminal offset; every encoding rebuilds the valid offset prefix |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
 zero is different from an output of length zero: histogram and dense group output still require
@@ -69,15 +71,20 @@ are separate properties to specify when global sort, joins, and gather/scatter a
 
 `gpu-batch-conformance.spec.ts` shares partition fixtures for atomic input, one chunk, uneven
 chunks, leading/interior/trailing empty chunks, and differing operand boundaries. It checks the
-six reference families, repeated encoding, empty aggregation, heterogeneous formats, nonzero byte
+reference families, repeated encoding, empty aggregation, heterogeneous formats, nonzero byte
 offsets, and strided histogram/group inputs. Scan cases exercise carry across boundaries and
 segment heads inside and at chunk boundaries. Node tests verify zero-copy alignment and reject
 unsupported lengths/layouts/topologies. `gpu-program-vectors.*.spec.ts` covers GPU conditional
 execution, exact MADD aliases, and rejection of overlapping writable views.
 
+`gpu-offset-batching.*.spec.ts` checks independent offset partitions, mixed atomic/vector views,
+nonzero byte offsets, empty chunks, extra capacity, and repeated encodings with changed flags.
+The prefix helper borrows storage and retains complete chunk identities. `GPUSegmentedLayout`
+and chunked list-offset destinations remain follow-up work.
+
 ## Coverage inventory
 
-The six reference families above are audited for the stated contract. `GPUSort` remains a
+The reference families above are audited for the stated contract. `GPUSort` remains a
 single-view API; unifying global order with batch sort is follow-up work. Program CSR SpMV lowering
 still requires one physical chunk per operand because its column indices address a global vector.
 Neither limitation permits implicit packing. The exported operation classes below are **unaudited
@@ -92,14 +99,11 @@ operation inventory. The exhaustive API/function audit remains tranche 4.
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
 - `GPUSegmentedSort`
-- `GPUFlagOffsets`
-- `GPUSegmentOffsets`
 - `GPUSegmentedLayout`
 - `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`
 - `GPUChunkedIndexedScatter`
 - `GPUTextSelection`
 - `GPUVirtualGeometrySelection`
-- `GPUMask`
 - `GPUHierarchyLayout`
 - `GPUGraphTraversal`
 - `GPUAncestorProjection`

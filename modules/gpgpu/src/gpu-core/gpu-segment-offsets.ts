@@ -11,9 +11,10 @@ import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  validateMatchingVectorTopology,
+  getUint32GraphPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 const WORKGROUP_SIZE = 256;
 
@@ -26,7 +27,7 @@ export type GPUSegmentOffsetsProps = {
   elementOffsets: GPUScanInput;
   /** One when a slot starts a segment, including the first segment. */
   segmentStartFlags: GPUScanInput;
-  /** Dense zero-based segment index for every slot. */
+  /** Exclusive start-flag prefix; the destination index at each segment start. */
   segmentIndices: GPUScanInput;
   /** Logical-element offset for every segment plus one terminal offset. */
   segmentOffsets: GraphDataView<'uint32'>;
@@ -72,33 +73,46 @@ export class GPUSegmentOffsets {
       nodes.push(...addEmptyPass(graph, this.props));
       return nodes;
     }
+    const length = this.props.elementFlags.length;
+    const elementOffsets = getUint32GraphPrefix(graph, this.props.elementOffsets, length);
+    const segmentStartFlags = getUint32GraphPrefix(graph, this.props.segmentStartFlags, length);
+    const segmentIndices = getUint32GraphPrefix(graph, this.props.segmentIndices, length);
     nodes.push(
       ...new GPUScan({
         id: `${this.id}-segment-indices`,
-        input: this.props.segmentStartFlags,
-        output: this.props.segmentIndices,
+        input: segmentStartFlags,
+        output: segmentIndices,
         mode: 'exclusive'
       }).getCommandNodes(graph)
     );
-    const elementFlagChunks = getChunks(this.props.elementFlags);
-    const elementOffsetChunks = getChunks(this.props.elementOffsets);
-    const segmentStartFlagChunks = getChunks(this.props.segmentStartFlags);
-    const segmentIndexChunks = getChunks(this.props.segmentIndices);
-    for (let chunkIndex = 0; chunkIndex < elementFlagChunks.length; chunkIndex++) {
-      if (elementFlagChunks[chunkIndex].length > 0) {
-        nodes.push(
-          ...addSegmentOffsetsPass(graph, {
-            ...this.props,
-            id: `${this.id}-chunk-${chunkIndex}`,
-            elementFlags: elementFlagChunks[chunkIndex],
-            elementOffsets: elementOffsetChunks[chunkIndex],
-            segmentStartFlags: segmentStartFlagChunks[chunkIndex],
-            segmentIndices: segmentIndexChunks[chunkIndex]
-          })
-        );
-      }
+    const spans = alignGraphVectorViews(graph, [
+      this.props.elementFlags,
+      elementOffsets,
+      segmentStartFlags,
+      segmentIndices
+    ]);
+    for (const [chunkIndex, span] of spans.entries()) {
+      nodes.push(
+        ...addSegmentOffsetsPass(graph, {
+          ...this.props,
+          id: `${this.id}-chunk-${chunkIndex}`,
+          elementFlags: span[0],
+          elementOffsets: span[1],
+          segmentStartFlags: span[2],
+          segmentIndices: span[3]
+        })
+      );
     }
-    nodes.push(...addSegmentCountPass(graph, this.props));
+    const lastSpan = spans[spans.length - 1];
+    nodes.push(
+      ...addSegmentCountPass(graph, {
+        ...this.props,
+        elementFlags: lastSpan[0],
+        elementOffsets: lastSpan[1],
+        segmentStartFlags: lastSpan[2],
+        segmentIndices: lastSpan[3]
+      })
+    );
 
     return nodes;
   }
@@ -308,14 +322,8 @@ function validateConfiguration(props: Readonly<GPUSegmentOffsetsProps>): void {
   }
   validatePackedUint32View(props.segmentOffsets, `${props.id} segmentOffsets`);
   validatePackedUint32View(props.segmentCount, `${props.id} segmentCount`);
-  const elementFlagsAreVector = props.elementFlags instanceof GraphVectorView;
   for (const input of [props.elementOffsets, props.segmentStartFlags, props.segmentIndices]) {
-    if (elementFlagsAreVector !== input instanceof GraphVectorView) {
-      throw new Error(`${props.id} slot-aligned inputs must use the same view kind`);
-    }
-    if (props.elementFlags instanceof GraphVectorView && input instanceof GraphVectorView) {
-      validateMatchingVectorTopology(props.elementFlags, input, `${props.id} slot-aligned inputs`);
-    } else if (input.length < slotCount) {
+    if (input.length < slotCount) {
       throw new Error(`${props.id} slot-aligned views must cover every element flag`);
     }
   }
