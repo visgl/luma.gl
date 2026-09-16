@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import type {GPUCommandNode} from './gpu-command-node';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -12,7 +10,6 @@ import {
   type GraphDataView
 } from './gpu-command-graph';
 import {
-  getViewBinding,
   getViewElementOffset,
   validatePackedUint32View,
   validatePackedView
@@ -22,6 +19,10 @@ import {
   getSubgroupBallotHelpersWGSL,
   getSubgroupCoalescedAtomicAddWGSL
 } from './gpu-subgroup-utils';
+
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
+import {getSpatialCommandNodes, validateSpatialWrites} from './gpu-spatial-utils';
 
 const GRID_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_CELL_COUNT = 256;
@@ -42,7 +43,7 @@ export type GPUGridBinningProps = {
   /** One packed position view or an ordered vector of packed position chunks. */
   positions: GPUGridBinningPositions;
   /** Caller-owned row-major cell counts. */
-  output: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Positive integer `[width, height]` cell dimensions. */
   gridSize: readonly [number, number];
   /** Inclusive literal or GPU-resident spatial bounds. */
@@ -52,8 +53,8 @@ export type GPUGridBinningProps = {
 /**
  * Graph-native row-major count accumulation for packed `float32x2` positions.
  *
- * Output is cleared on every encoding. Grids with up to 256 cells use workgroup-local atomics;
- * larger grids use global atomics. Non-finite and out-of-bounds positions are ignored, while exact
+ * Output is cleared on every encoding. Output chunks with up to 256 cells use workgroup-local atomics;
+ * larger chunks use global atomics. Non-finite and out-of-bounds positions are ignored, while exact
  * maximum boundaries enter the final row or column.
  */
 export class GPUGridBinning {
@@ -62,7 +63,7 @@ export class GPUGridBinning {
   /** Packed two-dimensional positions or ordered position vector. */
   readonly positions: GPUGridBinningPositions;
   /** Caller-owned row-major cell counts. */
-  readonly output: GraphDataView<'uint32'>;
+  readonly output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Positive integer grid dimensions. */
   readonly gridSize: readonly [number, number];
   /** Literal or GPU-resident spatial bounds. */
@@ -82,7 +83,13 @@ export class GPUGridBinning {
     for (const chunk of getPositionChunks(this.positions)) {
       validatePackedView(chunk, ['float32x2'], `${this.id} positions`);
     }
-    validatePackedUint32View(this.output, `${this.id} output`);
+    for (const chunk of getGraphVectorData(this.output))
+      validatePackedUint32View(chunk, `${this.id} output`);
+    validateSpatialWrites(
+      this.id,
+      getPositionChunks(this.positions),
+      getGraphVectorData(this.output)
+    );
     const [width, height] = this.gridSize;
     if (
       !Number.isSafeInteger(width) ||
@@ -92,10 +99,18 @@ export class GPUGridBinning {
     ) {
       throw new Error(`${this.id} gridSize must contain two positive integers`);
     }
-    if (this.output.length !== width * height) {
+    if (
+      !Number.isSafeInteger(width * height) ||
+      width * height > 0xffffffff ||
+      this.output.length !== width * height
+    ) {
       throw new Error(`${this.id} output.length must equal gridSize width * height`);
     }
-    if (getPositionChunks(this.positions).some(chunk => chunk.buffer === this.output.buffer)) {
+    if (
+      getPositionChunks(this.positions).some(chunk =>
+        getGraphVectorData(this.output).some(output => chunk.buffer === output.buffer)
+      )
+    ) {
       throw new Error(`${this.id} positions and output must use separate buffers`);
     }
     if (Array.isArray(this.bounds)) {
@@ -113,14 +128,18 @@ export class GPUGridBinning {
       if (this.bounds.length !== 1) {
         throw new Error(`${this.id} GPU bounds must contain one float32x4 row`);
       }
-      if (this.bounds.buffer === this.output.buffer) {
+      if (
+        getGraphVectorData(this.output).some(
+          output => output.buffer === (this.bounds as GraphDataView).buffer
+        )
+      ) {
         throw new Error(`${this.id} bounds and output must use separate buffers`);
       }
     }
   }
 
   /**
-   * Adds one output-clear pass and, for non-empty input, one accumulation pass to a graph.
+   * Adds a clear and non-empty input accumulation passes for each output chunk.
    *
    * This method declares work only and does not submit or read back commands.
    */
@@ -130,31 +149,33 @@ export class GPUGridBinning {
     const nodes: GPUCommandNode<Parameters>[] = [];
     if (
       getPositionChunks(this.positions).some(chunk => chunk.buffer.graph !== graph) ||
-      this.output.buffer.graph !== graph
+      getGraphVectorData(this.output).some(chunk => chunk.buffer.graph !== graph)
     ) {
       throw new Error(`${this.id} views must belong to the target graph`);
     }
     if (isGPUGridBoundsView(this.bounds) && this.bounds.buffer.graph !== graph) {
       throw new Error(`${this.id} bounds must belong to the target graph`);
     }
-    nodes.push(...addClearGridPass(graph, this.id, this.output));
-    const chunks = getPositionChunks(this.positions);
-    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-      const positions = chunks[chunkIndex];
-      if (positions.length > 0) {
-        nodes.push(
-          ...addGridPass(graph, {
-            id:
-              this.positions instanceof GraphVectorView
-                ? `${this.id}-chunk-${chunkIndex}`
-                : this.id,
-            positions,
-            output: this.output,
-            gridSize: this.gridSize,
-            bounds: this.bounds
-          })
-        );
+    let outputStart = 0;
+    for (const [outputIndex, output] of getGraphVectorData(this.output).entries()) {
+      if (output.length) {
+        const id = `${this.id}-output-${outputIndex}`;
+        nodes.push(...addClearGridPass(graph, id, output));
+        for (const [chunkIndex, positions] of getPositionChunks(this.positions).entries()) {
+          if (positions.length)
+            nodes.push(
+              ...addGridPass(graph, {
+                id: `${id}-input-${chunkIndex}`,
+                positions,
+                output,
+                outputStart,
+                gridSize: this.gridSize,
+                bounds: this.bounds
+              })
+            );
+        }
       }
+      outputStart += output.length;
     }
 
     return nodes;
@@ -169,22 +190,30 @@ function addClearGridPass<Parameters>(
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const passId = `${id}-clear`;
+  const dispatch = getBoundedDispatchLayout(
+    id,
+    output.length,
+    GRID_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const source = /* wgsl */ `
 const CELL_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputCounts: array<atomic<u32>>;
 @compute @workgroup_size(${GRID_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32
 ) {
-  if (globalId.x < CELL_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + globalId.x], 0u); }
+  ${getBoundedInvocationIndexSource(dispatch, GRID_WORKGROUP_SIZE)}
+  if (index < CELL_COUNT) { atomicStore(&outputCounts[OUTPUT_OFFSET + index], 0u); }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...getSpatialCommandNodes(graph, {
       id: passId,
       source,
       resources: [{buffer: output, usage: 'storage-write'}],
       bindings: {outputCounts: output},
-      dispatchCount: Math.ceil(output.length / GRID_WORKGROUP_SIZE)
+      dispatch
     })
   );
 
@@ -198,12 +227,19 @@ function addGridPass<Parameters>(
     id: string;
     positions: GraphDataView<'float32x2'>;
     output: GraphDataView<'uint32'>;
+    outputStart: number;
     gridSize: readonly [number, number];
     bounds: GPUGridBinningBounds;
   }
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const [width, height] = binning.gridSize;
+  const dispatch = getBoundedDispatchLayout(
+    binning.id,
+    binning.positions.length,
+    GRID_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
   const local = binning.output.length <= MAXIMUM_LOCAL_CELL_COUNT;
   const useSubgroups =
     local &&
@@ -245,6 +281,7 @@ const ELEMENT_COUNT: u32 = ${binning.positions.length}u;
 const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
 const CELL_COUNT: u32 = ${binning.output.length}u;
+const OUTPUT_START: u32 = ${binning.outputStart}u;
 const POSITIONS_OFFSET: u32 = ${getViewElementOffset(binning.positions)}u;
 ${gpuBounds ? `const BOUNDS_OFFSET: u32 = ${getViewElementOffset(binning.bounds as GraphDataView)}u;` : ''}
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(binning.output)}u;
@@ -261,10 +298,11 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
 }
 
 @compute @workgroup_size(${GRID_WORKGROUP_SIZE}) fn main(
-  @builtin(global_invocation_id) globalId: vec3<u32>,
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(local_invocation_id) localId: vec3<u32>${useSubgroups ? ',\n  @builtin(subgroup_invocation_id) subgroupInvocationId: u32' : ''}
 ) {
-  let index = globalId.x;
+  ${getBoundedInvocationIndexSource(dispatch, GRID_WORKGROUP_SIZE)}
   let lane = localId.x;
   ${boundsInitialization}
   ${local ? 'if (lane < CELL_COUNT) { atomicStore(&localCounts[lane], 0u); }\n  workgroupBarrier();' : ''}
@@ -277,10 +315,11 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
     let inX = x >= minimumX && x <= maximumX && (maximumX != minimumX || x == minimumX);
     let inY = y >= minimumY && y <= maximumY && (maximumY != minimumY || y == minimumY);
     if (finite && inX && inY) {
-      accepted = true;
       let column = getCoordinate(x, minimumX, maximumX, WIDTH);
       let row = getCoordinate(y, minimumY, maximumY, HEIGHT);
-      cellIndex = row * WIDTH + column;
+      let globalCell = row * WIDTH + column;
+      accepted = globalCell >= OUTPUT_START && globalCell - OUTPUT_START < CELL_COUNT;
+      if (accepted) { cellIndex = globalCell - OUTPUT_START; }
     }
   }
   ${accumulation}
@@ -293,7 +332,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
     {buffer: binning.output, usage: 'storage-read-write'}
   ];
   nodes.push(
-    ...addComputationPass(graph, {
+    ...getSpatialCommandNodes(graph, {
       id: `${binning.id}-${local ? 'local' : 'global'}`,
       source,
       resources,
@@ -302,54 +341,7 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
         ...(gpuBounds ? {boundsValues: binning.bounds as GraphDataView} : {}),
         outputCounts: binning.output
       },
-      dispatchCount: Math.ceil(binning.positions.length / GRID_WORKGROUP_SIZE)
-    })
-  );
-
-  return nodes;
-}
-
-/** Wraps generated WGSL in a graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    source: string;
-    resources: GraphBufferUse[];
-    bindings: Record<string, GraphDataView>;
-    dispatchCount: number;
-  }
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id: props.id,
-      resources: props.resources,
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: props.id,
-          source: props.source,
-          shaderLayout: {
-            bindings: Object.keys(props.bindings).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(props.bindings)) {
-              bindings[name] = getViewBinding(view, getBuffer);
-            }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatchCount);
-          },
-          destroy: () => computation.destroy()
-        };
-      }
+      dispatch
     })
   );
 

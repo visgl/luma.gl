@@ -169,6 +169,14 @@ Caller storage stays borrowed; join scratch follows key chunks. Hash tables rema
 bindings. `GPUBatchHashIndex` retains its specialized matching-topology validity and per-chunk ID
 bases; `GPUBatchHashJoin` retains separate publication domains and diagnostics for each batch.
 
+`gpu-spatial-batching.*.spec.ts` covers grid binning, all four weighted grid statistics, and 2D/3D
+bounds/radius point filtering. Inputs, cell outputs, masks, and global candidate IDs use independent
+partitions, including empty chunks and nonzero offsets. Tests compare CPU results across repeated
+encodings, mutable bounds/queries, candidate truncation, and bounded 3D dispatch. Grid accumulation
+revisits input spans per output chunk; indexed filtering revisits candidate chunks per aligned
+source span. Binning and filtering allocate no scratch; mean counts follow cell-output chunks.
+The source vectors are never concatenated. Fragmented routing remains performance debt.
+
 ## Remaining work, grouped for review
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -187,7 +195,7 @@ master, with shared lowering, conformance tests, and documented exceptions in ea
 | Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
 | Hash follow-ups | `GPUBatchHashIndex`, `GPUBatchHashJoin` and hash routing | Core build/query/global joins support independent chunks. Specialized batch variants still require matching per-batch topology. Tables remain single bindings; fragmented finalization/scatter routing and one-to-many joins remain separate work. |
 | Indexed movement and hierarchy | `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection` | Some APIs already represent partitions/chunks. Audit global indices, cross-chunk ranges, output topology, and shared hierarchy callers as one family. |
-| Spatial operations | `GPUGridBinning`, `GPUGridAggregation`, `GPUGridIndex`, `GPUGridIndexQuery`, `GPUPointSpatialFilter`, `GPUBVH`, `GPUSegmentedBVH`, `GPUBVHQuery`, `GPUSceneDrawGeneration`, `GPUSceneResourceGroups` | Packed spatial domains and segmented hierarchies are not yet a universal vector contract. Group grid operations and hierarchy/query operations into coherent blocks if this family is too large for one review. |
+| Spatial operations | `GPUGridIndex`, `GPUGridIndexQuery`, `GPUBVH`, `GPUSegmentedBVH`, `GPUBVHQuery`, `GPUSceneDrawGeneration`, `GPUSceneResourceGroups` | Binning, weighted grid statistics, and exact point filtering now accept independent chunks. Grid indexing/query and segmented hierarchies still need a universal vector contract. Group grid operations and hierarchy/query operations into coherent blocks if this family is too large for one review. |
 | Decoding | `GPULZByteDecompressor`, `GPULZByteBatchDecompressor` | Existing batch decoding needs a cross-chunk history, addressing, output-capacity, and ownership audit. |
 
 `GPUCompositeOperation`, `GPUConditionalOperation`, and `GPULoopOperation` are composition/control

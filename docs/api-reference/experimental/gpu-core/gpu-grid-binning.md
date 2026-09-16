@@ -48,7 +48,7 @@ graph.add(new GPUGridBinning({
 type GPUGridBinningProps = {
   id?: string;
   positions: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
-  output: GraphDataView<'uint32'>;
+  output: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   gridSize: readonly [number, number];
   bounds: readonly [number, number, number, number] | GraphDataView<'float32x4'>;
 };
@@ -56,11 +56,13 @@ type GPUGridBinningProps = {
 
 `output.length` must equal `width * height`. Non-finite and out-of-bounds positions are ignored;
 exact maximum coordinates enter the final column or row. Each encoding clears the output. Up to
-256 cells use workgroup-local atomics, and larger grids use direct global atomics.
+256 cells per output chunk use workgroup-local atomics; larger chunks use direct global atomics.
 
-For a `GraphVectorView`, each encoding clears the grid once and then accumulates every non-empty
-position chunk in source order. Chunk boundaries and backing buffers are preserved; the primitive
-does not concatenate or pack positions.
+Positions and output may independently use atomic views or vectors. Output chunks cover consecutive
+ranges of the global row-major grid, including splits inside rows. Each encoding clears each output
+chunk once, then visits every non-empty position chunk in source order. Empty chunks are skipped;
+source buffers and destination partitions are preserved without concatenation or scratch storage.
+Each active chunk, including its binding-alignment prefix, must fit a storage binding.
 
 This API accumulates counts only. Weighted floating-point sums are provided separately by
 `GPUGridAggregation`, keeping integer count overflow and floating-point rounding contracts
@@ -68,6 +70,10 @@ explicit.
 
 ## Performance notes
 
-On subgroup-capable devices, grids with at most 16 cells combine lanes targeting the same cell
+On subgroup-capable devices, output chunks with at most 16 cells combine lanes targeting the same cell
 before updating workgroup memory. This is intended for coarse, highly contended occupancy grids;
 larger grids and devices without both subgroup capabilities retain the existing paths.
+
+Dispatch count grows with position chunks times output chunks. Each destination chunk revisits
+the source points and accepts only its global cell range. This preserves bounded bindings; routing
+points to destination chunks more efficiently remains performance work.
