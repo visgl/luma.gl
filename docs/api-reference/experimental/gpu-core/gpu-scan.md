@@ -90,6 +90,24 @@ are supported. A zero-length scan adds no nodes.
 All arithmetic wraps modulo 2^32. Signed, floating-point, minimum/maximum, and custom associative
 scans remain future work.
 
+### Split-word 64-bit scan
+
+`GPUScanUint64` computes inclusive prefixes modulo 2^64 using packed `uint32` low and high words:
+
+```ts
+graph.add(new GPUScanUint64({inputLow, inputHigh, outputLow, outputHigh}));
+```
+
+All four operands accept atomic views or chunked vectors with independent boundaries. Inputs
+must have equal logical lengths. Outputs may have extra capacity; only the input-length prefix
+is written. Empty input writes nothing. Carries cross chunk boundaries, and adjusted high-word
+scratch follows the high input's topology without packing caller data.
+
+Low output buffers must be separate from both inputs and the high output. The high output may
+reuse the high input's storage: the operation reads all high words into scratch before writing
+their prefixes. Chunks within each output must not overlap. Each encoding rebuilds the carry;
+an aliased high input reads the previous output unless the caller updates it.
+
 ## Performance notes
 
 ### Subgroup acceleration
