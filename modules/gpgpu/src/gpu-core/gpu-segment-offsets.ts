@@ -11,7 +11,7 @@ import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  getUint32GraphPrefix,
+  getGraphDataPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
 import {alignGraphVectorViews} from './graph-vector-view-utils';
@@ -74,9 +74,9 @@ export class GPUSegmentOffsets {
       return nodes;
     }
     const length = this.props.elementFlags.length;
-    const elementOffsets = getUint32GraphPrefix(graph, this.props.elementOffsets, length);
-    const segmentStartFlags = getUint32GraphPrefix(graph, this.props.segmentStartFlags, length);
-    const segmentIndices = getUint32GraphPrefix(graph, this.props.segmentIndices, length);
+    const elementOffsets = getGraphDataPrefix(graph, this.props.elementOffsets, length);
+    const segmentStartFlags = getGraphDataPrefix(graph, this.props.segmentStartFlags, length);
+    const segmentIndices = getGraphDataPrefix(graph, this.props.segmentIndices, length);
     nodes.push(
       ...new GPUScan({
         id: `${this.id}-segment-indices`,

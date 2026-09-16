@@ -11,7 +11,7 @@ import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  getUint32GraphPrefix,
+  getGraphDataPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
@@ -106,11 +106,11 @@ export class GPUSegmentedLayout {
     const length = this.props.valueFlags.length;
     const props = {
       ...this.props,
-      elementFlags: getUint32GraphPrefix(graph, this.props.elementFlags, length),
-      segmentStartFlags: getUint32GraphPrefix(graph, this.props.segmentStartFlags, length),
-      valueOffsets: getUint32GraphPrefix(graph, this.props.valueOffsets, length),
-      elementOffsets: getUint32GraphPrefix(graph, this.props.elementOffsets, length),
-      segmentIndices: getUint32GraphPrefix(graph, this.props.segmentIndices, length)
+      elementFlags: getGraphDataPrefix(graph, this.props.elementFlags, length),
+      segmentStartFlags: getGraphDataPrefix(graph, this.props.segmentStartFlags, length),
+      valueOffsets: getGraphDataPrefix(graph, this.props.valueOffsets, length),
+      elementOffsets: getGraphDataPrefix(graph, this.props.elementOffsets, length),
+      segmentIndices: getGraphDataPrefix(graph, this.props.segmentIndices, length)
     };
     nodes.push(
       ...new GPUScan({

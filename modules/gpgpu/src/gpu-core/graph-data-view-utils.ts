@@ -160,19 +160,22 @@ export function createTransientVectorView<T extends VertexFormat, Parameters>(
   });
 }
 
-/** Borrows a packed uint32 prefix without allocating or combining chunks. @internal */
-export function getUint32GraphPrefix<Parameters>(
+/** Borrows a fixed-width row prefix without allocating or combining chunks. @internal */
+export function getGraphDataPrefix<
+  Parameters,
+  T extends Exclude<GPUVectorFormat, `vertex-list<${string}>` | `value-list<${string}>`>
+>(
   graph: GPUCommandGraph<Parameters>,
-  input: GraphDataView<'uint32'> | GraphVectorView<'uint32'>,
+  input: GraphDataView<T> | GraphVectorView<T>,
   length: number
-): GraphDataView<'uint32'> | GraphVectorView<'uint32'> {
+): GraphDataView<T> | GraphVectorView<T> {
   if (!Number.isSafeInteger(length) || length < 0 || length > input.length) {
     throw new Error('Graph prefix must fit within the input');
   }
   if (length === input.length) return input;
   const chunks = input instanceof GraphVectorView ? input.data : [input];
   let remaining = length;
-  const data: GraphDataView<'uint32'>[] = [];
+  const data: GraphDataView<T>[] = [];
   for (const chunk of chunks) {
     const chunkLength = Math.min(remaining, chunk.length);
     data.push(
@@ -190,7 +193,12 @@ export function getUint32GraphPrefix<Parameters>(
     if (remaining === 0) break;
   }
   return input instanceof GraphVectorView
-    ? new GraphVectorView({...input, length, valueLength: length, data})
+    ? new GraphVectorView({
+        ...input,
+        length,
+        valueLength: length * (getGPUVectorFormatInfo(input.format).listSize ?? 1),
+        data
+      })
     : data[0];
 }
 

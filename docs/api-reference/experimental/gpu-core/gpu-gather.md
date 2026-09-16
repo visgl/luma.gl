@@ -28,7 +28,8 @@ output[i] = source[indices[i]]
 ```
 
 An out-of-range source index writes an all-zero row. Source and output must have the same packed
-fixed-width GPU format.
+fixed-width GPU format. `GPUUint32Gather` follows the same batching contract, with a configurable
+`invalidValue` (default `0`) instead of a zero-filled row.
 
 ```ts
 graph.add(new GPUGather({
@@ -40,6 +41,22 @@ graph.add(new GPUGather({
 
 Rows are copied as 32-bit words. This preserves the bit representation of fixed-width float and
 integer rows without making the movement primitive responsible for numeric conversion.
+
+## Batching contract
+
+`source`, `indices`, and `output` accept either `GraphDataView` or `GraphVectorView`, independently.
+Source indices address the global logical source row, including across chunk boundaries. The
+source length may differ from the index count. Index order and duplicate indices are preserved.
+
+Output capacity must cover the index count. Only that prefix is written; spare rows and padding
+remain untouched. Empty indices perform no writes. An empty source fills the active destination
+with invalid rows. Empty chunks do not contribute logical rows. Every encoding rebuilds results,
+so source values and indices may change without recompiling when their layout stays fixed.
+
+Chunks must contain packed rows with four-byte-aligned offsets and row widths divisible by four.
+This includes fixed-size-list rows. Output storage must use buffers separate from every source
+and index chunk, and output chunks must not overlap one another. Variable-length and strided rows
+remain outside this operation's contract.
 
 ## When to use it
 
@@ -71,6 +88,12 @@ in the ordering kernel itself.
 
 ## Performance notes
 
-Gather performs one indexed source lookup and one fixed-width row copy per output row. The initial
-implementation accepts packed rows whose byte length is a multiple of four and does not allocate
-scratch resources or read data back to the CPU.
+Lowering aligns index and output boundaries using borrowed views, then dispatches one pass per
+nonempty source chunk for each aligned span. Each pass scans that span's indices, copying rows
+whose global index belongs to its source chunk. The first source pass initializes invalid rows;
+later passes preserve rows outside their source range. An empty source uses an output-only fill.
+
+This keeps each pass at no more than three storage bindings, within WebGPU CORE limits, without
+concatenation, scratch buffers, or CPU readback. Index traversal and dispatch count grow with the
+number of source chunks; optimizing this routing for very fragmented sources remains follow-up
+work. Atomic input retains a single gather pass when indices and output form one span.

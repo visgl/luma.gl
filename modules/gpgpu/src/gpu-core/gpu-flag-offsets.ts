@@ -11,7 +11,7 @@ import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
-  getUint32GraphPrefix,
+  getGraphDataPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
 
@@ -57,7 +57,7 @@ export class GPUFlagOffsets {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
     }
-    const offsets = getUint32GraphPrefix(graph, this.props.offsets, flags.length);
+    const offsets = getGraphDataPrefix(graph, this.props.offsets, flags.length);
     if (flags.length > 0) {
       nodes.push(
         ...new GPUScan({

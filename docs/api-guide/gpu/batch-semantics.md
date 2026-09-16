@@ -36,6 +36,7 @@ explicit graph-owned scratch.
 | `GPUVisibilityWorkflow` | Predicate intersection, stable source IDs, compacted output, and count | Predicate masks, optional output mask, and source IDs require equal logical length and may use independent atomic/vector boundaries; output may use any capacity topology | Empty source publishes zero count; generated IDs preserve logical row order |
 | `GPUFlagOffsets` | Exclusive binary-flag offsets and one global count | Packed `uint32`; independent atomic/vector partitions; destination capacity must cover flags | Empty input clears count; extra destination capacity is untouched; every encoding replaces the active prefix |
 | `GPUSegmentOffsets` | Exclusive start-flag prefixes, global list offsets, and segment count | Packed `uint32`; slot views cover element flags with independent partitions; list offsets remain one atomic destination | Empty input clears count and terminal offset; every encoding rebuilds the valid offset prefix |
+| `GPUGather`, `GPUUint32Gather` | Global indexed row selection; one output row per index, in index order | Independent atomic/vector partitions; packed fixed-width word-aligned rows and uint32 indices; output capacity covers indices | Empty indices leave output untouched; empty source fills invalid rows; each encoding rewrites the active prefix and preserves spare capacity |
 | `GPUSegmentedLayout` | Physical-value and logical-element offsets, inclusive segment indices, list offsets, and three counts | Six packed `uint32` slot views may use independent atomic/vector partitions; all cover the value-flag domain; list offsets and counts remain atomic | Empty input clears counts and the first list offset; nonempty input has one implicit first segment; extra slot-output capacity is untouched |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
@@ -66,7 +67,7 @@ an in-place MADD intentionally reads the previous result as its new input.
 Operation trees and lowering decisions remain the existing inspection interfaces. This tranche
 adds no parallel batch wrapper classes or unconsumed scheduling flags. Shape/layout checks and
 alignment in the concrete lowerers enforce these contracts. Repartitioning and cardinality expansion
-are separate properties to specify when global sort, joins, and gather/scatter are audited.
+are separate properties to specify when global sort, joins, and scatter are audited.
 
 ## Conformance evidence
 
@@ -85,6 +86,12 @@ The prefix helper borrows storage and retains complete chunk identities.
 empty chunks, multi-workgroup scans, unused capacity, and changed flags across repeated encodings
 on WebGPU CORE. Chunked list-offset destinations remain follow-up work.
 
+`gpu-gather-batching.*.spec.ts` checks global indexing across independently partitioned sources,
+indices, and destinations on WebGPU CORE. Coverage includes raw float bit preservation, fixed-size
+lists, custom uint32 invalid values, empty sources/indices, nonzero offsets, spare capacity, and
+changed inputs across repeated encodings. Lowering allocates no scratch or packed storage. Its
+index traversal cost scales with source chunk count; routing optimization remains follow-up work.
+
 ## Coverage inventory
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -96,9 +103,7 @@ resource descriptors, inspectors, benchmark runners, and execution containers ar
 operation inventory. The exhaustive API/function audit remains tranche 4.
 
 - `GPUScanUint64`
-- `GPUUint32Gather`
 - `GPUByteRangeGather`
-- `GPUGather`
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
 - `GPUSegmentedSort`
