@@ -100,11 +100,12 @@ updates the output IDs and count without recompiling the graph.
 
 ## Chunked vectors
 
-Predicates, source IDs, output masks, and outputs may all be atomic
-`GraphDataView<'uint32'>` values or all be `GraphVectorView<'uint32'>` values. Vector inputs must
-have identical ordered chunk topology. The workflow preserves chunk boundaries, generates IDs in
-the global logical order, and reports one vector-wide count; it never concatenates or repacks the
-caller-owned buffers.
+Predicates, source IDs, output masks, and outputs may each be atomic `GraphDataView<'uint32'>`
+values or `GraphVectorView<'uint32'>` values. Source-aligned masks and IDs must have equal logical
+length, while their atomic/vector boundaries may differ. Output only needs enough logical capacity
+and may use an independent topology. The workflow aligns rows by logical position, preserves
+caller-owned chunk boundaries, generates IDs in global order, and reports one vector-wide count; it
+never concatenates or repacks buffers.
 
 Output capacity must cover every source row. All views must belong to the target graph, and
 generated IDs must fit in `uint32`.

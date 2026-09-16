@@ -1387,8 +1387,27 @@ it('GPUCompaction preserves GPUVector topology while selecting across chunks', a
   ).toBe(false);
   expect(
     result.logicalTransientBufferCount,
-    'zero-length offset chunks share one transient backing view'
-  ).toBe(5);
+    'offset storage remains one logical scratch vector despite source partitions'
+  ).toBe(3);
+});
+
+it('GPUCompaction aligns independently partitioned inputs and output capacity', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const result = await runVectorCompaction(
+    device,
+    [Uint32Array.from([10, 11]), Uint32Array.from([12, 13, 14])],
+    [Uint32Array.from([1]), Uint32Array.from([0, 1, 0, 1])],
+    [new Uint32Array(2), new Uint32Array(3)]
+  );
+  expect(result.count, 'count spans independently partitioned source and flag vectors').toBe(3);
+  expect(result.chunks, 'selected rows preserve order in the caller output topology').toEqual([
+    [10, 12],
+    [14, 0xffffffff, 0xffffffff]
+  ]);
 });
 
 it('DrawCommandBuffer replays an indirect draw through a render bundle', async () => {
@@ -1640,7 +1659,8 @@ function getExpectedScan(
 async function runVectorCompaction(
   device: Device,
   valueChunks: Uint32Array[],
-  flagChunks: Uint32Array[]
+  flagChunks: Uint32Array[],
+  outputChunks: Uint32Array[] = valueChunks
 ): Promise<{
   chunks: number[][];
   count: number;
@@ -1649,7 +1669,7 @@ async function runVectorCompaction(
 }> {
   const valuesFixture = createUint32VectorFixture(device, 'values', valueChunks);
   const flagsFixture = createUint32VectorFixture(device, 'flags', flagChunks);
-  const outputFixture = createUint32VectorFixture(device, 'output', valueChunks, 0xffffffff);
+  const outputFixture = createUint32VectorFixture(device, 'output', outputChunks, 0xffffffff);
   const countBuffer = device.createBuffer({
     byteLength: Uint32Array.BYTES_PER_ELEMENT,
     usage: Buffer.STORAGE | Buffer.COPY_SRC
