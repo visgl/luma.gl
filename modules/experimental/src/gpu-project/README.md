@@ -282,6 +282,19 @@ tolerance remains sampled and excludes final local Float32 rounding. Native plan
 per-axis units; adaptive fallback declines geographic non-degree units, mixed projected units, and
 non-numeric prime-meridian quantities unsupported by the current provider.
 
+The adaptive frontend verifies PROJJSON Lambert Conic Conformal 1SP/2SP and Albers Equal Area
+methods and parameters by EPSG identifiers or canonical names. No registered CRS name/code is
+required; empty or localized labels work when identifiers establish the method and parameter
+semantics. Normalization uses a copy, validates units and completeness, and rejects unknown or
+conflicting semantics. These families use the existing double-single adaptive backend, not new
+Float32 formulas. Serialized provider definitions and explicit CPU projection callbacks remain
+available through the existing provider APIs for broader/custom coverage.
+Lambert 2SP PROJJSON with a zero standard parallel is declined to avoid provider defaults;
+Albers zero parallels use an equivalent symmetric ordering that preserves the zero value.
+
+Both planners accept `onUnsupported: 'throw'` to throw `ProjectionPlanningError` with the same
+immutable `reasons` as an unsupported result. The default remains `onUnsupported: 'return'`.
+
 `projectionArithmetic: 'float32'` opts into native Web Mercator forward/inverse formulas for explicit
 same-datum PROJJSON geographic/Pseudo Mercator pairs, and `webmerc` PROJ pipeline steps. The program
 operation is `{type: 'web-mercator', arithmetic: 'float32', radius, inverse?}`. It consumes relative

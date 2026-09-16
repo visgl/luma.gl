@@ -470,16 +470,40 @@ parameters, unsupported axes, and dynamic frames are declined rather than silent
 The current provider assumes geographic degrees and one shared projected-axis unit; explicit
 non-degree geographic axes, mixed projected-axis units, and non-numeric prime-meridian quantities
 are therefore declined **on the adaptive route**, even when native frame changes support them.
-EPSG-labelled methods/parameters outside the verified native mapping, or with non-canonical names,
-are likewise declined on that route; the current provider interprets names rather than those
-identifiers. This includes provider-only PROJJSON methods such as EPSG-labelled Lambert Conformal
-Conic. Serialized definitions remain available for provider-supported projections. Extra parameters
-on known methods are rejected instead of reaching a provider that might ignore them.
+The adaptive frontend additionally verifies Lambert Conic Conformal 1SP (EPSG 9801), Lambert Conic
+Conformal 2SP (9802), and Albers Equal Area (9822). It resolves methods and parameters by their
+EPSG `id`/`ids`, or by canonical EPSG names when identifiers are absent, then creates a provider-only
+copy with normalized names and units. Custom CRS/conversion labels, empty display names, and the
+absence of a registered CRS code are supported. Localized or empty method/parameter names work
+when their EPSG identifiers resolve; conflicting identifiers or recognized names are rejected.
+The caller's definition is not mutated and no registry lookup or network access is performed.
+
+These are **adaptive coverage additions**, not native GPU formulas: all three families retain
+double-single fitting/evaluation, explicit bounds, sampled error estimates, and separately fitted
+inverse domains. Conic parameters must be complete, finite, unique, dimensionally consistent, and
+nondegenerate. Unsupported variants (such as modified/Belgian/Michigan Lambert methods) are not
+silently treated as ordinary 1SP/2SP. A method with neither a resolvable identifier nor an executable
+name cannot be inferred from the parameter values alone.
+Zero standard parallels in Lambert 2SP PROJJSON are declined because the current provider replaces
+them with defaults. Albers preserves a zero parallel by placing it second in the equivalent,
+symmetric pair before calling the provider.
+
+Outside these verified mappings, the provider's existing compatibility restrictions remain.
+Serialized definitions remain available for provider-supported projections without a registered
+CRS name. Entirely custom projection functions can use `compileProjectionPlan()` directly, or
+the explicit whole-pipeline `fallback` of `planProjectionPipeline()`. Extra parameters on verified
+methods are rejected instead of reaching a provider that might ignore them.
 Provider-only routes containing explicit Pseudo Mercator PROJJSON are also declined: the current
 provider does not preserve its spherical formula. Supported native Web Mercator pairs instead
 use the binary64 reference described above; verified serialized definitions such as `EPSG:3857`
 remain available through the provider.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
+
+Both `planCRSProjection()` and `planProjectionPipeline()` return structured `unsupported` results
+by default. Set `onUnsupported: 'throw'` to throw `ProjectionPlanningError` instead; its immutable
+`reasons` contain the same planning diagnostics, including missing bounds, unavailable providers,
+and failed approximation budgets. This changes failure handling, not which semantics are accepted.
+The error class is exported from the optional `gpu-project/crs` entry, not the execution core.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
 `true` to use declared CRS axes and directions. Native plans retain declared coordinate units

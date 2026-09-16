@@ -567,7 +567,7 @@ describe('native PROJJSON frame lowering', () => {
     expect(adaptive.reasons.at(-1)?.code).toBe('unsupported-conversion');
   });
 
-  it('declines unverified EPSG identifiers on provider-only methods, including localized Lambert parameters', () => {
+  it('normalizes verified Lambert identifiers, including localized parameter labels', () => {
     const projected = makeTransverseMercatorCRS();
     const parameters = [
       {
@@ -628,9 +628,7 @@ describe('native PROJJSON frame lowering', () => {
           to: target,
           bounds: [-72, 41, -71, 42]
         });
-        expect(result.status).toBe('unsupported');
-        expect(result.reasons.at(-1)?.code).toBe('unsupported-conversion');
-        expect(result.reasons.at(-1)?.message).toContain('verified EPSG');
+        expect(result).toMatchObject({status: 'ready', strategy: 'adaptive'});
       }
     }
     // Unknown EPSG method identifiers must not be interpreted solely by a familiar name either.
@@ -647,6 +645,5 @@ describe('native PROJJSON frame lowering', () => {
       bounds: [-123, 37, -122, 38]
     });
     expect(result.status).toBe('unsupported');
-    expect(result.reasons.at(-1)?.message).toContain('verified EPSG');
   });
 });
