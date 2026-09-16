@@ -259,7 +259,7 @@ bounds describe stage coordinates, not necessarily the original input coordinate
   available, or the estimate overflows. `maximum` is `null` in this case.
 
 `guaranteed` is always `false`. These values exclude input quantization and subsequent native/output
-arithmetic rounding; they must not be used as certified global error bounds. `local-f32` output
+arithmetic rounding and native series truncation; they must not be used as certified global error bounds. `local-f32` output
 still rounds at the final origin-relative output boundary.
 
 ## Optional math.gl CRS planner
@@ -343,7 +343,7 @@ if (result.status === 'ready') {
 Native plans do not wrap longitude, clamp latitude, or derive validity limits from CRS usage
 extents. Explicit axis ranges and axis meridians are declined. Bounds, fitting budgets, and
 `inverse` fitting options apply only to adaptive plans; native inverses are always available.
-Native approximation metadata is `none`, which excludes arithmetic/input/output rounding.
+Native approximation metadata is `none`, which excludes native series truncation and arithmetic/input/output rounding.
 For local-f32 native output, the destination origin defaults to zero unless supplied.
 
 ### Native Web Mercator formulas
@@ -391,6 +391,35 @@ For these supported CRS pairs, provide `bounds` and `tolerance` to fit the binar
 reference into double-single adaptive patches, with independently bounded inverse fitting available.
 This avoids the current provider's incorrect ellipsoidal interpretation of Pseudo Mercator PROJJSON.
 `precision: 'local-f32'` alone does **not** opt into Float32 formula arithmetic.
+
+### Native Transverse Mercator and UTM formulas
+
+The same explicit `projectionArithmetic: 'float32'` option enables EPSG method 9807
+Transverse Mercator for geographic/projected and different projected PROJJSON pairs, including
+TM/Web Mercator composition. Datum/ellipsoid matching and frame normalization remain mandatory.
+Equivalent conversions still cancel without evaluating a formula.
+
+The operation is `{type: 'transverse-mercator', arithmetic: 'float32', semiMajorAxis,
+semiMinorAxis, scaleFactor, latitudeOrigin, inverse?}`. Axes are in metres, `latitudeOrigin`
+is radians, and scale must be positive. It accepts spheres and oblate ellipsoids with
+`0.99 * semiMajorAxis <= semiMinorAxis <= semiMajorAxis`. Longitude is relative to the central
+meridian; surrounding affine stages handle that meridian and false origins.
+
+Forward input is restricted to relative longitude ±12 degrees and latitude ±85 degrees.
+Inverse `inputBounds` is only a rectangular envelope: recovered geographic coordinates must
+also satisfy that footprint. Poles, other branches, non-finite inputs and upstream-invalid rows
+produce zero output and zero validity. There is no automatic zone selection, longitude wrapping,
+latitude clamping, polar UPS, or datum transformation. UTM's `south` flag selects its false
+northing, not a hemisphere validity restriction. Boundary-rounding caveats apply as for Web Mercator.
+
+The independently implemented sixth-order series follows the
+[published Transverse Mercator mathematics](https://proj.org/en/stable/operations/projections/tmerc.html).
+The series is not exact TM, and Float32 GPU transcendental accuracy remains device-dependent.
+Metadata reports `mixed` program arithmetic; double-single storage cannot recover formula precision.
+The default higher-precision route instead fits the normalized binary64 series reference into
+double-single adaptive patches, including independently fitted inverse plans. Sampled tolerance
+is relative to that reference; native series truncation and input/output rounding are additional.
+No global error bound, cuProj precision parity, or performance advantage is claimed.
 
 ### Adaptive provider planning
 
@@ -457,12 +486,22 @@ const result = planProjectionPipeline({
 
 Every token is consumed or declined. Global parameters, duplicate parameters, shear/rotation,
 extra dimensions, nested pipelines, omission flags, grids, longitude wrapping, and map-projection
-methods other than this Web Mercator subset are outside native lowering. Unknown ellipsoids,
-datum parameters, radian-suffixed origins, scale factors, and `+over` are not silently discarded.
+methods outside the documented subset are outside native lowering. Unknown ellipsoids,
+datum parameters, radian-suffixed origins, unsupported scale parameters, and `+over` are not silently discarded.
 Optional `fallback: {projection, bounds, tolerance, ...}`
 supplies a CPU oracle for the **whole** pipeline when lowering is unsupported. Native programs do
 not sample that oracle or use its bounds. Syntax and malformed-parameter errors do not fall back.
 The planner never assumes proj4js implements arbitrary PROJ pipelines.
+
+With the same Float32 arithmetic opt-in, `utm` accepts `+ellps=WGS84`, an integer `+zone=1..60`,
+optional bare `+south`, and `+inv`. `tmerc` accepts either `+ellps=WGS84` or explicit
+`+a=<metres> +rf=<inverse flattening>` (`rf=0` means a sphere; otherwise `rf>=100`). Optional
+`lon_0`/`lat_0` are decimal degrees, `x_0`/`y_0` are metres, and `k_0` is a positive scale.
+Defaults are zero origins and unit scale. `+inv` reverses the full stage including its frame
+transforms. Both consume radians and produce metres, with reversed units for inverse steps.
+For example, replace the `webmerc` step above with `+proj=utm +ellps=WGS84 +zone=10`.
+The local-branch domain and precision restrictions above apply; `+datum`, `+units`, `+approx`,
+and `+algo` are not silently interpreted. Use explicit adjacent unit conversions.
 
 Operation semantics follow the published PROJ documentation for
 [pipelines](https://proj.org/en/stable/operations/pipeline.html),

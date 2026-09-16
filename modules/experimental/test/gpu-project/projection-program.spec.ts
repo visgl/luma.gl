@@ -574,6 +574,8 @@ for (const target of [
   'EPSG:3857',
   'PROJJSON:3857',
   'analytic:3857',
+  'PROJJSON:32610',
+  'analytic:32610',
   '+proj=utm +zone=10 +datum=WGS84 +units=m'
 ] as const) {
   it(`executes a planned ${target} transformation with the declared arithmetic precision`, async context => {
@@ -582,8 +584,9 @@ for (const target of [
       return;
     }
     skipSoftwareDevice(device, context);
-    const analytic = target === 'analytic:3857';
-    const explicitWebMercator = target === 'PROJJSON:3857' || analytic;
+    const analytic = target === 'analytic:3857' || target === 'analytic:32610';
+    const explicitWebMercator = target === 'PROJJSON:3857' || target === 'analytic:3857';
+    const explicitTransverseMercator = target === 'PROJJSON:32610' || target === 'analytic:32610';
     const planned =
       target === 'native'
         ? planProjectionPipeline({
@@ -591,8 +594,12 @@ for (const target of [
               '+proj=pipeline +step +proj=axisswap +order=-2,1 +step +proj=affine +s11=2 +s22=-3 +xoff=10000000 +yoff=20000000'
           })
         : planCRSProjection({
-            from: explicitWebMercator ? geographicCRS : 'EPSG:4326',
-            to: explicitWebMercator ? makeWebMercatorCRS() : target,
+            from: explicitWebMercator || explicitTransverseMercator ? geographicCRS : 'EPSG:4326',
+            to: explicitWebMercator
+              ? makeWebMercatorCRS()
+              : explicitTransverseMercator
+                ? makeTransverseMercatorCRS()
+                : target,
             projectionArithmetic: analytic ? 'float32' : 'double-single',
             bounds: [-122.5, 37.7, -122.3, 37.9],
             tolerance: 1e-5
@@ -607,7 +614,11 @@ for (const target of [
         ? (coordinate: number[]) => [1e7 - 2 * coordinate[1], 2e7 - 3 * coordinate[0]]
         : new Proj4Projection({
             from: 'EPSG:4326',
-            to: explicitWebMercator ? 'EPSG:3857' : target
+            to: explicitWebMercator
+              ? 'EPSG:3857'
+              : explicitTransverseMercator
+                ? 'EPSG:32610'
+                : target
           }).project;
     const points = [
       [-122.4194001, 37.7749001],
@@ -642,10 +653,13 @@ for (const target of [
           );
         }
       }
-      // Float32 formulas collapse nearby points; the default adaptive path retains their detail.
-      expect(actual[0]).toBe(actual[4]);
-      if (analytic) expect(actual[0] + actual[1]).toBe(actual[4] + actual[5]);
-      else expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
+      // The default retains detail below the high limb. Native formulas make no such guarantee.
+      if (!analytic) {
+        expect(actual[0]).toBe(actual[4]);
+        expect(actual[0] + actual[1]).not.toBe(actual[4] + actual[5]);
+      } else if (explicitWebMercator) {
+        expect(actual[0] + actual[1]).toBe(actual[4] + actual[5]);
+      }
     } finally {
       compiled.destroy();
       contributor.destroy();
@@ -656,16 +670,30 @@ for (const target of [
   });
 }
 
-for (const inputFormat of formats) {
+for (const {inputFormat, transverse} of formats.flatMap(inputFormat =>
+  [false, true].map(transverse => ({inputFormat, transverse}))
+)) {
   for (const inverse of [false, true]) {
-    it(`executes native Web Mercator ${inverse ? 'inverse' : 'forward'} with ${inputFormat} identically inline and in a graph`, async context => {
+    it(`executes native ${transverse ? 'Transverse' : 'Web'} Mercator ${inverse ? 'inverse' : 'forward'} with ${inputFormat} identically inline and in a graph`, async context => {
       const device = await getWebGPUTestDevice();
       if (!device) return;
       skipSoftwareDevice(device, context);
       const radius = 6378137;
       const definition: ProjectionProgram = {
         precision: 'double-single',
-        operations: [{type: 'web-mercator', arithmetic: 'float32', radius, inverse}]
+        operations: [
+          transverse
+            ? {
+                type: 'transverse-mercator',
+                arithmetic: 'float32',
+                semiMajorAxis: radius,
+                semiMinorAxis: radius * (1 - 1 / 298.257223563),
+                scaleFactor: 0.9996,
+                latitudeOrigin: 0,
+                inverse
+              }
+            : {type: 'web-mercator', arithmetic: 'float32', radius, inverse}
+        ]
       };
       const projection = compileProjectionProgram(definition, {inputFormat});
       const domain = projection.metadata.stages[0].inputBounds!;
@@ -673,9 +701,22 @@ for (const inputFormat of formats) {
         -0.99999, -0.75, -0.01, -0.005, -1e-8, 0, 1e-8, 0.005, 0.01, 0.75, 0.99999
       ];
       const points = [
-        ...fractions.map(fraction => [domain[2] * fraction, domain[3] * fraction]),
+        ...fractions.map(fraction => {
+          const point: readonly [number, number] = transverse
+            ? [((11.8 * Math.PI) / 180) * fraction, ((84 * Math.PI) / 180) * fraction]
+            : [domain[2] * fraction, domain[3] * fraction];
+          return transverse && inverse
+            ? [...evaluateProjectionProgram(invertProjectionProgram(definition), point).position]
+            : [...point];
+        }),
         [domain[2] + (inputFormat === 'float32x2' ? 1 : inverse ? 0.01 : 1e-8), 0],
         [0, domain[3] + (inputFormat === 'float32x2' ? 1 : inverse ? 0.01 : 1e-8)],
+        ...(transverse && inverse
+          ? [
+              [1500000, 0],
+              [0, 10000000]
+            ]
+          : []),
         [Infinity, 0],
         [0, NaN],
         [0, 0]
@@ -795,6 +836,101 @@ for (const inputFormat of formats) {
     });
   }
 }
+
+it('reuses native forward/inverse GPU programs across all UTM zones and hemispheres', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  skipSoftwareDevice(device, context);
+  const planZone = (zone: number, south: boolean) => {
+    const result = planCRSProjection({
+      from: geographicCRS,
+      to: makeTransverseMercatorCRS(zone, south),
+      projectionArithmetic: 'float32',
+      allowAdaptive: false
+    });
+    if (result.status !== 'ready') throw new Error(JSON.stringify(result.reasons));
+    return result;
+  };
+  const initial = planZone(1, false);
+  const graph = new GPUCommandGraph(device);
+  const rowCount = 7;
+  const inputs = [0, 1].map(() =>
+    device.createBuffer({byteLength: rowCount * 16, usage: Buffer.STORAGE | Buffer.COPY_DST})
+  );
+  const outputs = [0, 1].map(() =>
+    device.createBuffer({byteLength: rowCount * 16, usage: Buffer.STORAGE | Buffer.COPY_SRC})
+  );
+  const validities = [0, 1].map(() =>
+    device.createBuffer({byteLength: rowCount * 4, usage: Buffer.STORAGE | Buffer.COPY_SRC})
+  );
+  const contributors = [
+    initial.compiled,
+    compileProjectionProgram(invertProjectionProgram(initial.program), {inputFormat: 'uint32x4'})
+  ].map((projection, index) => {
+    const contributor = new GPUProjectionProgram({
+      id: `utm-${index}`,
+      projection,
+      positions: importView(graph, `utm-input-${index}`, inputs[index], 'uint32x4', rowCount),
+      output: importView(graph, `utm-output-${index}`, outputs[index], 'float32x4', rowCount),
+      validity: importView(graph, `utm-validity-${index}`, validities[index], 'uint32', rowCount)
+    });
+    contributor.addToGraph(graph);
+    return contributor;
+  });
+  const compiled = graph.compile();
+  try {
+    for (let zone = 1; zone <= 60; zone++) {
+      for (const south of [false, true]) {
+        const planned = planZone(zone, south);
+        contributors[0].updateProjection(planned.compiled);
+        contributors[1].updateProjection(
+          compileProjectionProgram(invertProjectionProgram(planned.program), {
+            inputFormat: 'uint32x4'
+          })
+        );
+        const centralMeridian = zone * 6 - 183;
+        const latitude = south ? -80 : 84;
+        const positions = [
+          [centralMeridian - 3, latitude],
+          [centralMeridian, latitude],
+          [centralMeridian + 3, latitude],
+          [centralMeridian - 3, 0],
+          [centralMeridian, 0],
+          [centralMeridian + 3, 0],
+          [centralMeridian + 0.001, south ? -45 : 45]
+        ];
+        const oracle = new Proj4Projection({
+          from: 'EPSG:4326',
+          to: `+proj=utm +zone=${zone} ${south ? '+south' : ''} +datum=WGS84 +units=m`
+        });
+        const projected = positions.map(position => oracle.project(position));
+        inputs[0].write(encodePositions('uint32x4', positions));
+        // Independent oracle coordinates, not our forward result, exercise the inverse.
+        inputs[1].write(encodePositions('uint32x4', projected));
+        execute(device, compiled);
+        for (let direction = 0; direction < 2; direction++) {
+          expect(new Uint32Array((await validities[direction].readAsync()).buffer)).toEqual(
+            new Uint32Array(rowCount).fill(1)
+          );
+          const actual = new Float32Array((await outputs[direction].readAsync()).buffer);
+          const expected = direction === 0 ? projected : positions;
+          for (let row = 0; row < rowCount; row++) {
+            for (let axis = 0; axis < 2; axis++) {
+              const offset = row * 4 + axis * 2;
+              expect(
+                Math.abs(actual[offset] + actual[offset + 1] - expected[row][axis])
+              ).toBeLessThan(direction === 0 ? 20 : 0.0001);
+            }
+          }
+        }
+      }
+    }
+  } finally {
+    compiled.destroy();
+    for (const contributor of contributors) contributor.destroy();
+    for (const buffer of [...inputs, ...outputs, ...validities]) buffer.destroy();
+  }
+}, 60000);
 
 function skipSoftwareDevice(device: Device, context: TestContext): void {
   // Like the P.1 projection tests, composed integer-fp64 shaders exceed SwiftShader's practical

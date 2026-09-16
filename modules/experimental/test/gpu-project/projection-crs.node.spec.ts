@@ -117,7 +117,7 @@ describe('optional CRS planner', () => {
     ['+proj=pipeline', 'invalid-definition'],
     ['+proj=pipeline +step', 'invalid-definition'],
     ['+proj=pipeline +ellps=WGS84 +step +proj=affine', 'unsupported-parameter'],
-    ['+proj=pipeline +step +proj=utm +zone=10', 'unsupported-operation'],
+    ['+proj=pipeline +step +proj=utm +zone=10', 'unsupported-parameter'],
     ['+proj=pipeline +step +proj=affine +s12=1', 'unsupported-parameter'],
     ['+proj=pipeline +step +proj=affine +omit_inv', 'unsupported-parameter'],
     ['+proj=pipeline +step +proj=affine +inv=true', 'invalid-definition'],

@@ -554,8 +554,12 @@ describe('native PROJJSON frame lowering', () => {
       }
     };
     requireNative(planCRSProjection({from: projected, to: renamed}));
+    // Native TM normalization now supplies the binary64 fitting reference, including EPSG IDs.
+    expect(
+      planCRSProjection({from: geographicCRS, to: renamed, bounds: [-123, 37, -122, 38]})
+    ).toMatchObject({status: 'ready', strategy: 'adaptive'});
     const adaptive = planCRSProjection({
-      from: geographicCRS,
+      from: 'EPSG:4326',
       to: renamed,
       bounds: [-123, 37, -122, 38]
     });

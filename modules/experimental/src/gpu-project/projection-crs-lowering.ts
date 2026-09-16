@@ -83,19 +83,16 @@ export function lowerCRSProjection(
       target.conversion.easting - source.conversion.easting,
       target.conversion.northing - source.conversion.northing
     ];
-  } else if (
-    (!source.conversion || source.conversion.method === 1024) &&
-    (!target.conversion || target.conversion.method === 1024)
-  ) {
+  } else if (supportsNativeConversion(source) && supportsNativeConversion(target)) {
     if (projectionArithmetic !== 'float32') {
       return decline(
         'unsupported-arithmetic',
-        'native Web Mercator requires explicit float32 projection arithmetic; use adaptive fitting for double-single'
+        'native projection formulas require explicit float32 arithmetic; use adaptive fitting for double-single'
       );
     }
     translation = [0, 0];
     conversions = [
-      ...lowerWebMercatorConversion(source, true),
+      ...lowerProjectionConversion(source, true),
       {
         type: 'affine',
         scale: [1, 1],
@@ -107,7 +104,7 @@ export function lowerCRSProjection(
           0
         ]
       },
-      ...lowerWebMercatorConversion(target, false)
+      ...lowerProjectionConversion(target, false)
     ];
   } else {
     return decline(
@@ -125,10 +122,29 @@ export function lowerCRSProjection(
   };
 }
 
-function lowerWebMercatorConversion(frame: Frame, inverse: boolean): ProjectionOperation[] {
+function supportsNativeConversion(frame: Frame): boolean {
+  return (
+    !frame.conversion ||
+    frame.conversion.method === 1024 ||
+    (frame.conversion.method === 9807 &&
+      frame.reference.minor >= 0.99 * frame.reference.major &&
+      Math.abs(frame.conversion.latitude) <= (85 * Math.PI) / 180)
+  );
+}
+
+function lowerProjectionConversion(frame: Frame, inverse: boolean): ProjectionOperation[] {
   if (!frame.conversion) return [];
   const operations: ProjectionOperation[] = [
-    {type: 'web-mercator', arithmetic: 'float32', radius: frame.reference.major},
+    frame.conversion.method === 1024
+      ? {type: 'web-mercator', arithmetic: 'float32', radius: frame.reference.major}
+      : {
+          type: 'transverse-mercator',
+          arithmetic: 'float32',
+          semiMajorAxis: frame.reference.major,
+          semiMinorAxis: frame.reference.minor,
+          scaleFactor: frame.conversion.scale,
+          latitudeOrigin: frame.conversion.latitude
+        },
     {type: 'affine', scale: [1, 1], offset: [frame.conversion.easting, frame.conversion.northing]}
   ];
   return inverse
