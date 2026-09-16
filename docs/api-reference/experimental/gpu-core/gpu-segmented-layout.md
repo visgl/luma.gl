@@ -39,11 +39,11 @@ counts and writes `segmentOffsets[0] = 0`.
 | View | Length | Meaning |
 | --- | ---: | --- |
 | `valueFlags` | slot count | One when the slot owns a physical value |
-| `elementFlags` | slot count | One when the slot represents a logical element |
-| `segmentStartFlags` | slot count | One when the slot starts a segment after the first |
-| `valueOffsets` | slot count | Exclusive dense physical-value index for each slot |
-| `elementOffsets` | slot count | Exclusive dense logical-element index for each slot |
-| `segmentIndices` | slot count | Inclusive scan of segment starts; the dense segment index |
+| `elementFlags` | at least slot count | One when the slot represents a logical element |
+| `segmentStartFlags` | at least slot count | One when the slot starts a segment after the first |
+| `valueOffsets` | at least slot count | Exclusive dense physical-value index for each slot |
+| `elementOffsets` | at least slot count | Exclusive dense logical-element index for each slot |
+| `segmentIndices` | at least slot count | Inclusive scan of segment starts; the dense segment index |
 | `segmentOffsets` | at least slot count + 1 | Logical-element offset for every segment plus a terminal offset |
 | `valueCount` | at least 1 | Total physical values in element zero |
 | `elementCount` | at least 1 | Total logical elements in element zero |
@@ -87,7 +87,8 @@ graph.add(new GPUSegmentedLayout({
 }));
 ```
 
-The operation contributes three `GPUScan` pipelines, one segment-offset pass, and one count pass.
+The operation contributes three `GPUScan` pipelines, segment-offset passes over aligned spans,
+and one count pass for the full sequence.
 The publication work is split so every shader stays within the eight-storage-buffer limit of the
 default WebGPU CORE profile. It does not compile the graph, submit commands, map counts, or move
 physical payload values.
@@ -118,9 +119,19 @@ The operation performs three complete prefix scans plus one complete publication
 appropriate when several downstream stages reuse the resulting layout or when avoiding a CPU
 decode/readback/re-upload boundary matters more than a single lightweight CPU pass.
 
-The initial API accepts packed `GraphDataView<'uint32'>` inputs and outputs. Invoke it once per
-durable source chunk rather than concatenating streaming batches implicitly. Slot counts and offsets
-must fit in `uint32`; split larger datasets at existing page or batch boundaries.
+The six slot-aligned views may independently be packed `GraphDataView<'uint32'>` or
+`GraphVectorView<'uint32'>` values. Their chunk boundaries may differ. Scans carry across chunks,
+including segments spanning multiple chunks; empty chunks do not introduce segments. Alignment
+borrows views without concatenating or copying source storage.
+
+`valueFlags.length` defines the active source range. Extra input capacity is ignored and extra
+slot-output capacity is left untouched. Re-encoding recomputes the layout and counts from current
+flags. Only the first logical row initializes the implicit segment, and only the final logical row
+publishes its terminal offset.
+
+`segmentOffsets` and the three counts remain atomic destinations. Chunked final list-offset storage
+is follow-up work. Slot counts and offsets must fit in `uint32`; split larger datasets at existing
+page or batch boundaries.
 
 `GPUSegmentedLayout` validates view formats, lengths, and graph ownership. It cannot cheaply inspect
 GPU-resident flag contents during graph construction, so the classifier is responsible for binary
