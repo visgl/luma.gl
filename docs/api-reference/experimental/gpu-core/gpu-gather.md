@@ -71,6 +71,37 @@ Use gather when an index vector defines output order, including:
 Use `GPUByteRangeGather` for variable-length byte spans and `GPUUint32Gather` when the payload is
 specifically a packed uint32 vector and its specialized invalid-value behavior is useful.
 
+### Byte ranges
+
+```ts
+graph.add(new GPUByteRangeGather({
+  source, sourceOffsets, lengths, outputOffsets, output,
+  sourceByteLength, outputByteCapacity
+}));
+```
+
+All five operands accept packed `uint32` atomic views or independently chunked vectors. Source
+and output lengths count words; offsets, range lengths, and capacities count bytes in the logical
+concatenation of those words. Physical chunk boundaries are word-aligned; any padding inside a
+source chunk is part of that logical byte sequence. `sourceByteLength` excludes final source padding.
+
+The three metadata columns have equal logical lengths. Each output range must start at or after
+the preceding range's end, including empty ranges; a zero-length range may share its offset with
+the following range. Source ranges may overlap, repeat,
+or cross chunks. These GPU-resident range ordering requirements are caller-owned. Invalid source
+addresses and output gaps produce zero bytes, and ranges are clipped to `outputByteCapacity`.
+
+Each encoding rewrites `ceil(outputByteCapacity / 4)` output words, clearing unused bytes in the
+final word. Additional words remain untouched. Empty metadata or zero capacity adds no commands;
+an empty source with nonempty metadata fills the active output words with zero. Output storage
+must be separate from source and metadata, and output chunks must not overlap.
+
+Lowering borrows aligned metadata spans and dispatches each source/span pair over each output
+chunk. A single invocation owns an entire output word, accumulating bytes across passes without
+write races or scratch allocation. Atomic operands retain one pass. The number of dispatches grows
+with the product of source chunks, metadata spans, and output chunks; optimizing routing for heavily
+fragmented data remains follow-up work.
+
 ## Composition
 
 Gather naturally separates **ordering** from **payload movement**. A sort can produce a permutation
