@@ -190,11 +190,11 @@ export class GPUHashIndex implements GPUHashIndexView {
       ? alignGraphVectorViews(graph, [this.keys, this.values])
       : alignGraphVectorViews(graph, [this.keys]);
     let firstValue = this.firstValue;
-    const batches = spans.map(([keys, values]) => {
-      const batch = {keys, values, firstValue};
+    const batches: GPUHashIndexBuildBatch[] = [];
+    for (const [keys, values] of spans) {
+      batches.push({keys, values, firstValue});
       firstValue += keys.length;
-      return batch;
-    });
+    }
     nodes.push(...getGPUHashIndexBuildBatchesCommandNodes(graph, this, batches));
 
     return nodes;
