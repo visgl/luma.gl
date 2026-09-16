@@ -5,7 +5,9 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
+import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
+import {getGraphVectorData} from './graph-vector-view-utils';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {
   getGPUFFTLengthReason,
@@ -17,7 +19,13 @@ import {
   type GPUFFTPassPlan
 } from './gpu-fft-utils';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
-import {createTransientView, getViewBinding} from './graph-data-view-utils';
+import {
+  createTransientView,
+  getViewBinding,
+  getGraphDataPrefix,
+  doGraphDataViewsOverlap,
+  getViewBindingRange
+} from './graph-data-view-utils';
 
 /** Smallest supported transform length. */
 export const GPU_FFT1D_MIN_LENGTH = GPU_FFT_MIN_LENGTH;
@@ -37,9 +45,9 @@ export type GPUFFT1DProps = {
   /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
   /** Packed complex input, one `float32x2` row per complex value. */
-  input: GraphDataView<'float32x2'>;
-  /** Packed complex destination with the same batch layout. */
-  output: GraphDataView<'float32x2'>;
+  input: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
+  /** Packed complex destination with the same logical transforms and independent chunks. */
+  output: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>;
   /** Complex values per transform. Must be a power of two from 2 through 2048. */
   length: number;
   /** Number of tightly packed independent transforms. Defaults to one. */
@@ -50,7 +58,7 @@ export type GPUFFT1DProps = {
   strategy?: GPUFFT1DStrategy;
 };
 
-/** Device-independent allocation and dispatch statistics. */
+/** Device-independent contiguous-plan statistics; inspect the graph for chunk-lowered counts. */
 export type GPUFFT1DStats = {
   length: number;
   batchCount: number;
@@ -78,14 +86,14 @@ export type GPUFFT1DSupport = {
 /**
  * Graph-native out-of-place batched complex FFT.
  *
- * The primitive contributes a bit-reversal node followed by one radix-2 butterfly node per stage.
- * Nodes ping-pong through one graph-owned transient view, keep batches tightly packed, and never
- * submit commands or synchronize with the CPU.
+ * Bit reversal and radix-2 butterflies use graph-owned scratch. Independently chunked operands
+ * run complete transforms in reusable scratch blocks while preserving caller storage.
+ * The primitive never submits commands or synchronizes with the CPU.
  */
 export class GPUFFT1D {
   readonly id: string;
-  readonly input: GraphDataView<'float32x2'>;
-  readonly output: GraphDataView<'float32x2'>;
+  readonly input: GPUFFT1DProps['input'];
+  readonly output: GPUFFT1DProps['output'];
   readonly length: number;
   readonly batchCount: number;
   readonly direction: GPUFFT1DDirection;
@@ -102,16 +110,24 @@ export class GPUFFT1D {
     this.strategy = props.strategy ?? 'auto';
     this.stats = makeGPUFFT1DStats(this.length, this.batchCount);
 
-    validateGPUFFT1DView(this.input, `${this.id} input`);
-    validateGPUFFT1DView(this.output, `${this.id} output`);
+    for (const view of [this.input, this.output]) {
+      for (const chunk of getGraphVectorData(view)) validateGPUFFT1DView(chunk, this.id);
+    }
     if (this.input.length < this.stats.elementCount) {
       throw new Error(`${this.id} input must contain at least length * batchCount rows`);
     }
     if (this.output.length < this.stats.elementCount) {
       throw new Error(`${this.id} output must contain at least length * batchCount rows`);
     }
-    if (this.input.buffer === this.output.buffer) {
+    const inputs = new Set(getGraphVectorData(this.input).map(chunk => chunk.buffer));
+    const outputs = getGraphVectorData(this.output);
+    if (outputs.some(chunk => inputs.has(chunk.buffer))) {
       throw new Error(`${this.id} input and output must use separate buffers`);
+    }
+    for (const [index, chunk] of outputs.entries()) {
+      if (outputs.slice(0, index).some(previous => doGraphDataViewsOverlap(previous, chunk))) {
+        throw new Error(`${this.id} output chunks must not overlap`);
+      }
     }
     if (this.direction !== 'forward' && this.direction !== 'inverse') {
       throw new Error(`${this.id} direction must be forward or inverse`);
@@ -121,7 +137,7 @@ export class GPUFFT1D {
     }
   }
 
-  /** Adds every FFT stage and one graph-owned scratch view. */
+  /** Adds FFT stages with graph-owned scratch and borrowed input/output spans. */
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
@@ -131,10 +147,22 @@ export class GPUFFT1D {
     const support = getGPUFFT1DSupport(graph.device, {
       length: this.length,
       batchCount: this.batchCount,
-      strategy: this.strategy
+      strategy: this.strategy,
+      input: this.input,
+      output: this.output
     });
     if (!support.supported || !support.stats || !support.strategy) {
       throw new Error(support.reason);
+    }
+
+    const input = getGraphDataPrefix(graph, this.input, this.stats.elementCount);
+    const output = getGraphDataPrefix(graph, this.output, this.stats.elementCount);
+    if (
+      input instanceof GraphVectorView ||
+      output instanceof GraphVectorView ||
+      usesGPUFFT1DBlocks(graph.device, input, output, this.stats.elementCount)
+    ) {
+      return addGPUFFT1DBatchedPasses(graph, this, support);
     }
 
     const scratch = createTransientView(
@@ -144,10 +172,10 @@ export class GPUFFT1D {
       this.stats.elementCount
     );
     const passPlan = makeGPUFFTPassPlan(this.length);
-    let passInput = this.input;
+    let passInput = input;
     for (const [passIndex, pass] of passPlan.entries()) {
       const remainingPassCount = passPlan.length - passIndex;
-      const passOutput = remainingPassCount % 2 === 0 ? scratch : this.output;
+      const passOutput = remainingPassCount % 2 === 0 ? scratch : output;
       const useSubgroups =
         support.strategy === 'subgroups' &&
         pass.kind === 'butterfly' &&
@@ -170,6 +198,124 @@ export class GPUFFT1D {
 
     return nodes;
   }
+}
+
+/** Runs complete transforms in bounded scratch while borrowing every caller-owned span. */
+function addGPUFFT1DBatchedPasses<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  transform: GPUFFT1D,
+  support: GPUFFT1DSupport
+): readonly GPUCommandNode<Parameters>[] {
+  const inputs = getGPUVectorChunks(getGraphVectorData(transform.input));
+  const outputs = getGPUVectorChunks(getGraphVectorData(transform.output));
+  const blockCapacity = getGPUFFT1DBlockCapacity(graph.device, transform.stats);
+  const firstScratch = createTransientView(
+    graph,
+    `${transform.id}-scratch-a`,
+    'float32x2',
+    blockCapacity
+  );
+  const secondScratch =
+    transform.stats.stageCount > 1
+      ? createTransientView(graph, `${transform.id}-scratch-b`, 'float32x2', blockCapacity)
+      : undefined;
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  const plan = makeGPUFFTPassPlan(transform.length);
+  for (
+    let blockOffset = 0;
+    blockOffset < transform.stats.elementCount;
+    blockOffset += blockCapacity
+  ) {
+    const elementCount = Math.min(blockCapacity, transform.stats.elementCount - blockOffset);
+    const common = {
+      length: transform.length,
+      batchCount: elementCount / transform.length,
+      direction: transform.direction
+    };
+    const sourceSpans = getFFT1DSpans(graph, inputs, blockOffset, elementCount);
+    for (const [index, span] of sourceSpans.entries()) {
+      nodes.push(
+        ...addGPUFFT1DPass(graph, {
+          ...common,
+          id: `${transform.id}-${blockOffset}-reorder-${index}`,
+          input: span.data,
+          output: firstScratch,
+          inputLogicalOffset: span.offset - blockOffset,
+          pass: plan[0],
+          finalPass: false,
+          useSubgroups: false
+        })
+      );
+    }
+    let passInput = firstScratch;
+    for (let passIndex = 1; passIndex < plan.length; passIndex++) {
+      const pass = plan[passIndex];
+      const finalPass = passIndex === plan.length - 1;
+      const destinations = finalPass
+        ? getFFT1DSpans(graph, outputs, blockOffset, elementCount)
+        : [
+            {
+              data: passInput === firstScratch ? secondScratch! : firstScratch,
+              offset: blockOffset,
+              length: elementCount
+            }
+          ];
+      for (const [index, span] of destinations.entries()) {
+        nodes.push(
+          ...addGPUFFT1DPass(graph, {
+            ...common,
+            id: `${transform.id}-${blockOffset}-stage-${pass.stage}-${index}`,
+            input: passInput,
+            output: span.data,
+            pass,
+            finalPass,
+            outputLogicalOffset: span.offset - blockOffset,
+            invocationCount: span.length,
+            // A cropped output span may omit a shuffle partner. Use portable loads for that pass.
+            useSubgroups:
+              support.strategy === 'subgroups' &&
+              pass.stage <= (support.subgroupStageCount ?? 0) &&
+              span.offset === blockOffset &&
+              span.length === elementCount
+          })
+        );
+      }
+      if (!finalPass) passInput = destinations[0].data;
+    }
+  }
+  return nodes;
+}
+
+/** Intersects global rows with chunk and aligned-binding boundaries without copying storage. */
+function getFFT1DSpans<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  chunks: readonly {data: GraphDataView<'float32x2'>; offset: number; length: number}[],
+  offset: number,
+  length: number
+): {data: GraphDataView<'float32x2'>; offset: number; length: number}[] {
+  const spans: {data: GraphDataView<'float32x2'>; offset: number; length: number}[] = [];
+  for (const chunk of chunks) {
+    const end = Math.min(offset + length, chunk.offset + chunk.length);
+    for (let start = Math.max(offset, chunk.offset); start < end; ) {
+      const byteOffset = chunk.data.byteOffset + (start - chunk.offset) * 8;
+      const spanLength = Math.min(
+        end - start,
+        Math.floor((graph.device.limits.maxStorageBufferBindingSize - (byteOffset % 256)) / 8)
+      );
+      if (spanLength < 1) throw new Error('GPUFFT1D view offset exceeds the storage binding limit');
+      spans.push({
+        offset: start,
+        length: spanLength,
+        data: graph.createDataView(chunk.data.buffer, {
+          format: 'float32x2',
+          byteOffset,
+          length: spanLength
+        })
+      });
+      start += spanLength;
+    }
+  }
+  return spans;
 }
 
 /** Builds the immutable radix-2 plan without allocating graph or GPU resources. */
@@ -204,7 +350,8 @@ export function makeGPUFFT1DStats(length: number, batchCount = 1): GPUFFT1DStats
 /** Reports device limits and the portable/subgroup strategy for a bounded plan. */
 export function getGPUFFT1DSupport(
   device: Device,
-  props: Pick<GPUFFT1DProps, 'length' | 'batchCount' | 'strategy'>
+  props: Pick<GPUFFT1DProps, 'length' | 'batchCount' | 'strategy'> &
+    Partial<Pick<GPUFFT1DProps, 'input' | 'output'>>
 ): GPUFFT1DSupport {
   let stats: GPUFFT1DStats;
   try {
@@ -224,20 +371,37 @@ export function getGPUFFT1DSupport(
   if (device.limits.maxComputeWorkgroupSizeX < GPU_FFT1D_WORKGROUP_SIZE) {
     return {supported: false, reason: 'GPUFFT1D requires a workgroup width of 256.', stats};
   }
-  if (stats.complexBufferByteLength > device.limits.maxStorageBufferBindingSize) {
+  const requiredByteLength =
+    props.input && props.output ? props.length * 8 : stats.complexBufferByteLength;
+  if (requiredByteLength > device.limits.maxStorageBufferBindingSize) {
     return {
       supported: false,
       reason: 'GPUFFT1D complex buffer exceeds maxStorageBufferBindingSize.',
       stats
     };
   }
-  if (stats.complexBufferByteLength > device.limits.maxBufferSize) {
+  if (requiredByteLength > device.limits.maxBufferSize) {
     return {supported: false, reason: 'GPUFFT1D complex buffer exceeds maxBufferSize.', stats};
+  }
+  if (
+    [props.input, props.output].some(
+      view =>
+        view &&
+        getGraphVectorData(view).some(
+          chunk => chunk.buffer.byteLength > device.limits.maxBufferSize
+        )
+    )
+  ) {
+    return {supported: false, reason: 'GPUFFT1D chunk exceeds maxBufferSize.', stats};
   }
   try {
     getBoundedDispatchLayout(
       'GPUFFT1D',
-      stats.elementCount,
+      props.input &&
+        props.output &&
+        usesGPUFFT1DBlocks(device, props.input, props.output, stats.elementCount)
+        ? getGPUFFT1DBlockCapacity(device, stats)
+        : stats.elementCount,
       GPU_FFT1D_WORKGROUP_SIZE,
       device.limits.maxComputeWorkgroupsPerDimension
     );
@@ -257,6 +421,30 @@ export function getGPUFFT1DSupport(
     subgroupStageCount:
       strategy === 'subgroups' ? getGPUFFT1DSubgroupStageCount(device, props.length) : 0
   };
+}
+
+function usesGPUFFT1DBlocks(
+  device: Device,
+  input: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>,
+  output: GraphDataView<'float32x2'> | GraphVectorView<'float32x2'>,
+  elementCount: number
+): boolean {
+  return [input, output].some(
+    view =>
+      view instanceof GraphVectorView ||
+      getViewBindingRange(view).size - (view.length - elementCount) * 8 >
+        device.limits.maxStorageBufferBindingSize
+  );
+}
+
+function getGPUFFT1DBlockCapacity(device: Device, stats: GPUFFT1DStats): number {
+  return Math.min(
+    stats.elementCount,
+    Math.floor(
+      Math.min(4096 * 8, device.limits.maxStorageBufferBindingSize, device.limits.maxBufferSize) /
+        (stats.length * 8)
+    ) * stats.length
+  );
 }
 
 /** Resolves an explicit or automatic subgroup preference. */
@@ -288,6 +476,11 @@ export type GPUFFT1DPassProps = {
   pass: GPUFFTPassPlan;
   finalPass: boolean;
   useSubgroups: boolean;
+  /** Logical source span in the current block, for split bit-reversal reads. */
+  inputLogicalOffset?: number;
+  /** Logical invocation span in the current block, for split final writes. */
+  outputLogicalOffset?: number;
+  invocationCount?: number;
 };
 
 function addGPUFFT1DPass<Parameters>(
@@ -295,7 +488,7 @@ function addGPUFFT1DPass<Parameters>(
   props: GPUFFT1DPassProps
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const elementCount = props.length * props.batchCount;
+  const elementCount = props.invocationCount ?? props.length * props.batchCount;
   const dispatchLayout = getBoundedDispatchLayout(
     props.id,
     elementCount,
@@ -356,7 +549,7 @@ export function getGPUFFT1DShaderSource(
   const directionSign = props.direction === 'forward' ? '-1.0' : '1.0';
   const normalizationScale =
     props.direction === 'inverse' && props.finalPass ? `${1 / props.length}` : '1.0';
-  const commonSource = `const ELEMENT_COUNT: u32 = ${props.length * props.batchCount}u;
+  const commonSource = `const ELEMENT_COUNT: u32 = ${props.invocationCount ?? props.length * props.batchCount}u;
 const TRANSFORM_LENGTH: u32 = ${props.length}u;
 const INPUT_OFFSET: u32 = ${getGPUFFT1DViewOffset(props.input)}u;
 const OUTPUT_OFFSET: u32 = ${getGPUFFT1DViewOffset(props.output)}u;
@@ -375,8 +568,10 @@ ${GPU_FFT_COMMON_SHADER_SOURCE}`;
   let batchIndex = index / TRANSFORM_LENGTH;
   let coordinate = index - batchIndex * TRANSFORM_LENGTH;
   let sourceCoordinate = reverseLowBits(coordinate, ${props.pass.stage}u);
+  let sourceIndex = batchIndex * TRANSFORM_LENGTH + sourceCoordinate;
+  ${props.inputLogicalOffset === undefined ? '' : `if (sourceIndex < ${props.inputLogicalOffset}u || sourceIndex - ${props.inputLogicalOffset}u >= ${props.input.length}u) {\n    return;\n  }`}
   outputValues[OUTPUT_OFFSET + index] =
-    inputValues[INPUT_OFFSET + batchIndex * TRANSFORM_LENGTH + sourceCoordinate];
+    inputValues[INPUT_OFFSET + sourceIndex - ${props.inputLogicalOffset ?? 0}u];
 }`;
   }
 
@@ -414,7 +609,7 @@ ${GPU_FFT_COMMON_SHADER_SOURCE}`;
     props.useSubgroups
       ? `let elementIsActive = index < ELEMENT_COUNT;
   let safeIndex = min(index, ELEMENT_COUNT - 1u);`
-      : 'if (index >= ELEMENT_COUNT) { return; }\n  let safeIndex = index;'
+      : `if (index >= ELEMENT_COUNT) {\n    return;\n  }\n  let safeIndex = index + ${props.outputLogicalOffset ?? 0}u;`
   }
   let batchIndex = safeIndex / TRANSFORM_LENGTH;
   let coordinate = safeIndex - batchIndex * TRANSFORM_LENGTH;
@@ -464,10 +659,10 @@ function getGPUFFT1DViewOffset(view: GraphDataView<'float32x2'>): number {
 
 function validateGPUFFT1DOwnership<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  view: GraphDataView,
+  view: GPUFFT1DProps['input'],
   name: string
 ): void {
-  if (view.buffer.graph !== graph) {
+  if (getGraphVectorData(view).some(chunk => chunk.buffer.graph !== graph)) {
     throw new Error(`${name} belongs to a different GPUCommandGraph`);
   }
 }

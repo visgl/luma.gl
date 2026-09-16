@@ -172,8 +172,14 @@ it('GPUConvolution generated direct, packing, and FFT shaders reflect', () => {
     kernelHeight: 3,
     boundary: 'wrap'
   });
-  const direct = getGPUConvolutionDirectShaderSource(convolution, {x: 1, y: 1, z: 1});
-  const pack = getGPUConvolutionPackShaderSource(convolution, {x: 1, y: 1, z: 1});
+  const direct = getGPUConvolutionDirectShaderSource(
+    {...convolution, input, kernel, output},
+    {x: 1, y: 1, z: 1}
+  );
+  const pack = getGPUConvolutionPackShaderSource(
+    {...convolution, input, kernel},
+    {x: 1, y: 1, z: 1}
+  );
   const complexInput = makeComplexView(graph, 'complex-input', 64);
   const complexOutput = makeComplexView(graph, 'complex-output', 64);
   const fft = getGPUConvolutionFFTShaderSource(
@@ -231,5 +237,5 @@ function makeSupportDevice(): Device {
       maxComputeWorkgroupSizeY: 256,
       maxComputeWorkgroupsPerDimension: 65_535
     }
-  } as Device;
+  } as unknown as Device;
 }
