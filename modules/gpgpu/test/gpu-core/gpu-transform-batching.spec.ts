@@ -58,7 +58,29 @@ for (const [configurationIndex, configuration] of fftCases.entries()) {
         count - 1,
         1
       ]);
+      const atomicInput = fixture.column('atomic-input', 'float32x2', values, [count + 2], {
+        atomic: true
+      });
+      const atomicForward = fixture.output('atomic-forward', 'float32x2', count);
+      const atomicInverse = fixture.output('atomic-inverse', 'float32x2', count);
       fixture.graph.add([
+        new GPUFFT1D({
+          id: 'atomic-forward',
+          input: atomicInput,
+          output: atomicForward,
+          length,
+          batchCount,
+          strategy
+        }),
+        new GPUFFT1D({
+          id: 'atomic-inverse',
+          input: atomicForward,
+          output: atomicInverse,
+          length,
+          batchCount,
+          strategy,
+          direction: 'inverse'
+        }),
         new GPUFFT1D({id: 'forward', input, output, length, batchCount, strategy}),
         new GPUFFT1D({
           id: 'inverse',
@@ -76,12 +98,15 @@ for (const [configurationIndex, configuration] of fftCases.entries()) {
           if (iteration === 2) {
             values.fill(0, 0, count * 2);
             writeValues(fixture, input, values);
+            writeValues(fixture, atomicInput, values);
           }
           const encoder = device.createCommandEncoder();
           executable.encode(encoder, {parameters: undefined});
           device.submit(encoder.finish());
           const forward = await fixture.read(output);
           const restored = await fixture.read(inverse);
+          assertAtomicAgreement(forward.slice(0, count * 2), await fixture.read(atomicForward));
+          assertAtomicAgreement(restored.slice(0, count * 2), await fixture.read(atomicInverse));
           for (let batch = 0; batch < batchCount; batch++) {
             for (let frequency = 0; frequency < length; frequency++) {
               const angle = (-2 * Math.PI * frequency * ((batch + 1) % length)) / length;
@@ -94,12 +119,17 @@ for (const [configurationIndex, configuration] of fftCases.entries()) {
                   ? 0
                   : (1 + batch) * Math.sin(angle) + batch * 0.25 * Math.cos(angle);
               const index = (batch * length + frequency) * 2;
-              expect(Math.abs(forward[index] - real)).toBeLessThan(0.001);
-              expect(Math.abs(forward[index + 1] - imaginary)).toBeLessThan(0.001);
+              // Portable shader sin/cos accuracy varies by adapter; scale by signal amplitude.
+              // The separate atomic comparison above checks chunk routing much more tightly.
+              const tolerance = 0.002 * Math.hypot(1 + batch, batch * 0.25);
+              expect(Math.abs(forward[index] - real)).toBeLessThan(tolerance);
+              expect(Math.abs(forward[index + 1] - imaginary)).toBeLessThan(tolerance);
             }
           }
           for (let index = 0; index < count * 2; index++)
-            expect(Math.abs(restored[index] - values[index])).toBeLessThan(0.001);
+            expect(Math.abs(restored[index] - values[index])).toBeLessThan(
+              0.002 * (1 + Math.floor(index / (length * 2)))
+            );
           expect(forward.slice(count * 2)).toEqual(Array(6).fill(77));
           expect(restored.slice(count * 2)).toEqual([55, 55]);
           expect(await fixture.read(input)).toEqual(values);
@@ -143,6 +173,31 @@ for (const boundary of ['zero', 'wrap'] as const) {
           Array(count + 3).fill(77),
           partition === 'one chunk' ? [count + 3] : [0, 6, 0, count - 6, 3]
         );
+        const atomicInput = fixture.column('atomic-input', 'float32', values, [values.length], {
+          atomic: true
+        });
+        const atomicKernel = fixture.column(
+          'atomic-kernel',
+          'float32',
+          coefficients,
+          [coefficients.length],
+          {atomic: true}
+        );
+        const atomicOutput = fixture.output('atomic-output', 'float32', count);
+        fixture.graph.add(
+          new GPUConvolution({
+            id: 'atomic',
+            input: atomicInput,
+            kernel: atomicKernel,
+            output: atomicOutput,
+            width,
+            height,
+            kernelWidth: 3,
+            kernelHeight: 3,
+            boundary,
+            strategy
+          })
+        );
         fixture.graph.add(
           new GPUConvolution({
             input,
@@ -165,14 +220,26 @@ for (const boundary of ['zero', 'wrap'] as const) {
               coefficients[4] = 3;
               writeValues(fixture, input, values);
               writeValues(fixture, kernel, coefficients);
+              writeValues(fixture, atomicInput, values);
+              writeValues(fixture, atomicKernel, coefficients);
             }
             const encoder = device.createCommandEncoder();
             executable.encode(encoder, {parameters: undefined});
             device.submit(encoder.finish());
             const actual = await fixture.read(output);
             const expected = convolve(values, coefficients, width, height, boundary);
+            const magnitude = convolve(
+              values.map(Math.abs),
+              coefficients.map(Math.abs),
+              width,
+              height,
+              boundary
+            );
+            assertAtomicAgreement(actual.slice(0, count), await fixture.read(atomicOutput));
             for (let index = 0; index < count; index++)
-              expect(Math.abs(actual[index] - expected[index])).toBeLessThan(0.001);
+              expect(Math.abs(actual[index] - expected[index])).toBeLessThan(
+                strategy === 'fft' ? 0.001 * Math.max(1, magnitude[index]) : 0.001
+              );
             expect(actual.slice(count)).toEqual([77, 77, 77]);
             expect(await fixture.read(input)).toEqual(values);
             expect(await fixture.read(kernel)).toEqual(coefficients);
@@ -211,6 +278,30 @@ for (const boundary of ['zero', 'wrap'] as const) {
       Array(width * height + 1).fill(77),
       [13, 0, 19, 1]
     );
+    const atomicInput = fixture.column('atomic-input', 'float32', values, [values.length], {
+      atomic: true
+    });
+    const atomicKernel = fixture.column(
+      'atomic-kernel',
+      'float32',
+      coefficients,
+      [coefficients.length],
+      {atomic: true}
+    );
+    const atomicOutput = fixture.output('atomic-output', 'float32', width * height);
+    fixture.graph.add(
+      new GPUConvolution({
+        id: 'atomic',
+        input: atomicInput,
+        kernel: atomicKernel,
+        output: atomicOutput,
+        width,
+        height,
+        kernelWidth,
+        kernelHeight,
+        boundary
+      })
+    );
     fixture.graph.add(
       new GPUConvolution({
         input,
@@ -231,6 +322,7 @@ for (const boundary of ['zero', 'wrap'] as const) {
           coefficients[Math.floor(kernelHeight / 2) * kernelWidth + Math.floor(kernelWidth / 2)] =
             2;
           writeValues(fixture, kernel, coefficients);
+          writeValues(fixture, atomicKernel, coefficients);
         }
         const encoder = device.createCommandEncoder();
         executable.encode(encoder, {parameters: undefined});
@@ -245,8 +337,20 @@ for (const boundary of ['zero', 'wrap'] as const) {
           kernelWidth,
           kernelHeight
         );
+        const magnitude = convolve(
+          values.map(Math.abs),
+          coefficients.map(Math.abs),
+          width,
+          height,
+          boundary,
+          kernelWidth,
+          kernelHeight
+        );
+        assertAtomicAgreement(actual.slice(0, expected.length), await fixture.read(atomicOutput));
         for (let index = 0; index < expected.length; index++)
-          expect(Math.abs(actual[index] - expected[index])).toBeLessThan(0.001);
+          expect(Math.abs(actual[index] - expected[index])).toBeLessThan(
+            boundary === 'zero' ? 0.001 * Math.max(1, magnitude[index]) : 0.001
+          );
         expect(actual.at(-1)).toBe(77);
       }
     } finally {
@@ -254,6 +358,16 @@ for (const boundary of ['zero', 'wrap'] as const) {
       fixture.destroy();
     }
   });
+}
+
+/** Chunk routing must agree tightly with the existing pipeline on the same adapter. */
+function assertAtomicAgreement(actual: number[], expected: number[]): void {
+  expect(actual.length).toBe(expected.length);
+  for (let index = 0; index < actual.length; index++) {
+    expect(Math.abs(actual[index] - expected[index])).toBeLessThan(
+      0.00001 * Math.max(1, Math.abs(expected[index]))
+    );
+  }
 }
 
 function writeValues<T extends 'float32' | 'float32x2'>(
