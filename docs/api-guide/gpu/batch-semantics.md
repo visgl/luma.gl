@@ -36,6 +36,7 @@ explicit graph-owned scratch.
 | `GPUVisibilityWorkflow` | Predicate intersection, stable source IDs, compacted output, and count | Predicate masks, optional output mask, and source IDs require equal logical length and may use independent atomic/vector boundaries; output may use any capacity topology | Empty source publishes zero count; generated IDs preserve logical row order |
 | `GPUFlagOffsets` | Exclusive binary-flag offsets and one global count | Packed `uint32`; independent atomic/vector partitions; destination capacity must cover flags | Empty input clears count; extra destination capacity is untouched; every encoding replaces the active prefix |
 | `GPUSegmentOffsets` | Exclusive start-flag prefixes, global list offsets, and segment count | Packed `uint32`; slot views cover element flags with independent partitions; list offsets remain one atomic destination | Empty input clears count and terminal offset; every encoding rebuilds the valid offset prefix |
+| `GPUSegmentedLayout` | Physical-value and logical-element offsets, inclusive segment indices, list offsets, and three counts | Six packed `uint32` slot views may use independent atomic/vector partitions; all cover the value-flag domain; list offsets and counts remain atomic | Empty input clears counts and the first list offset; nonempty input has one implicit first segment; extra slot-output capacity is untouched |
 
 For the three aggregation families, an atomic view and vector may be mixed. An input of length
 zero is different from an output of length zero: histogram and dense group output still require
@@ -79,8 +80,10 @@ execution, exact MADD aliases, and rejection of overlapping writable views.
 
 `gpu-offset-batching.*.spec.ts` checks independent offset partitions, mixed atomic/vector views,
 nonzero byte offsets, empty chunks, extra capacity, and repeated encodings with changed flags.
-The prefix helper borrows storage and retains complete chunk identities. `GPUSegmentedLayout`
-and chunked list-offset destinations remain follow-up work.
+The prefix helper borrows storage and retains complete chunk identities.
+`gpu-segmented-layout-batching.*.spec.ts` covers independent partitions, segments spanning chunks,
+empty chunks, multi-workgroup scans, unused capacity, and changed flags across repeated encodings
+on WebGPU CORE. Chunked list-offset destinations remain follow-up work.
 
 ## Coverage inventory
 
@@ -99,7 +102,6 @@ operation inventory. The exhaustive API/function audit remains tranche 4.
 - `GPULZByteDecompressor`
 - `GPULZByteBatchDecompressor`
 - `GPUSegmentedSort`
-- `GPUSegmentedLayout`
 - `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`
 - `GPUChunkedIndexedScatter`
 - `GPUTextSelection`

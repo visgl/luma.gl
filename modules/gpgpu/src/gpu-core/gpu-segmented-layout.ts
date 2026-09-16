@@ -7,12 +7,14 @@ import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
-import {GPUScan} from './gpu-scan';
+import {GPUScan, type GPUScanInput} from './gpu-scan';
 import {
   getViewBinding,
   getViewElementOffset,
+  getUint32GraphPrefix,
   validatePackedUint32View
 } from './graph-data-view-utils';
+import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 
 const SEGMENTED_LAYOUT_WORKGROUP_SIZE = 256;
 
@@ -21,17 +23,17 @@ export type GPUSegmentedLayoutProps = {
   /** Prefix for generated graph node IDs. */
   id?: string;
   /** One for every slot that owns a physical value; zero otherwise. */
-  valueFlags: GraphDataView<'uint32'>;
+  valueFlags: GPUScanInput;
   /** One for every slot that represents a logical element; zero otherwise. */
-  elementFlags: GraphDataView<'uint32'>;
+  elementFlags: GPUScanInput;
   /** One when a slot starts a new segment after the implicit first segment; zero otherwise. */
-  segmentStartFlags: GraphDataView<'uint32'>;
+  segmentStartFlags: GPUScanInput;
   /** Exclusive dense physical-value index for every slot. */
-  valueOffsets: GraphDataView<'uint32'>;
+  valueOffsets: GPUScanInput;
   /** Exclusive dense logical-element index for every slot. */
-  elementOffsets: GraphDataView<'uint32'>;
+  elementOffsets: GPUScanInput;
   /** Dense zero-based segment index for every slot. */
-  segmentIndices: GraphDataView<'uint32'>;
+  segmentIndices: GPUScanInput;
   /** Dense logical-element offsets for every segment plus one terminal offset. */
   segmentOffsets: GraphDataView<'uint32'>;
   /** Single uint32 receiving the number of physical values. */
@@ -40,6 +42,13 @@ export type GPUSegmentedLayoutProps = {
   elementCount: GraphDataView<'uint32'>;
   /** Single uint32 receiving the number of segments. */
   segmentCount: GraphDataView<'uint32'>;
+};
+
+/** Shader passes consume physical views after logical chunk alignment. */
+type GPUSegmentedLayoutPassProps = {
+  [Key in keyof GPUSegmentedLayoutProps]: GPUSegmentedLayoutProps[Key] extends GPUScanInput
+    ? GraphDataView<'uint32'>
+    : GPUSegmentedLayoutProps[Key];
 };
 
 /**
@@ -74,19 +83,35 @@ export class GPUSegmentedLayout {
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
     const nodes: GPUCommandNode<Parameters>[] = [];
-    const props = this.props;
-    for (const view of Object.values(props).filter(
-      (value): value is GraphDataView<'uint32'> =>
-        typeof value === 'object' && value !== null && 'buffer' in value
-    )) {
+    for (const view of [
+      this.props.valueFlags,
+      this.props.elementFlags,
+      this.props.segmentStartFlags,
+      this.props.valueOffsets,
+      this.props.elementOffsets,
+      this.props.segmentIndices,
+      this.props.segmentOffsets,
+      this.props.valueCount,
+      this.props.elementCount,
+      this.props.segmentCount
+    ].flatMap(getGraphVectorData)) {
       if (view.buffer.graph !== graph) {
         throw new Error(`${this.id} views must belong to the target graph`);
       }
     }
-    if (props.valueFlags.length === 0) {
-      nodes.push(...addEmptyPass(graph, props));
+    if (this.props.valueFlags.length === 0) {
+      nodes.push(...addEmptyPass(graph, this.props));
       return nodes;
     }
+    const length = this.props.valueFlags.length;
+    const props = {
+      ...this.props,
+      elementFlags: getUint32GraphPrefix(graph, this.props.elementFlags, length),
+      segmentStartFlags: getUint32GraphPrefix(graph, this.props.segmentStartFlags, length),
+      valueOffsets: getUint32GraphPrefix(graph, this.props.valueOffsets, length),
+      elementOffsets: getUint32GraphPrefix(graph, this.props.elementOffsets, length),
+      segmentIndices: getUint32GraphPrefix(graph, this.props.segmentIndices, length)
+    };
     nodes.push(
       ...new GPUScan({
         id: `${this.id}-value-offsets`,
@@ -111,8 +136,38 @@ export class GPUSegmentedLayout {
         mode: 'inclusive'
       }).getCommandNodes(graph)
     );
-    nodes.push(...addSegmentOffsetsPass(graph, props));
-    nodes.push(...addCountsPass(graph, props));
+    const spans = alignGraphVectorViews(graph, [
+      props.valueFlags,
+      props.elementFlags,
+      props.segmentStartFlags,
+      props.valueOffsets,
+      props.elementOffsets,
+      props.segmentIndices
+    ]);
+    for (const [spanIndex, span] of spans.entries()) {
+      const chunkProps = {
+        ...props,
+        valueFlags: span[0],
+        elementFlags: span[1],
+        segmentStartFlags: span[2],
+        valueOffsets: span[3],
+        elementOffsets: span[4],
+        segmentIndices: span[5]
+      };
+      const lastSpan = spanIndex === spans.length - 1;
+      nodes.push(
+        ...addSegmentOffsetsPass(
+          graph,
+          {
+            ...chunkProps,
+            id: spans.length > 1 ? `${this.id}-chunk-${spanIndex}` : this.id
+          },
+          spanIndex === 0,
+          lastSpan
+        )
+      );
+      if (lastSpan) nodes.push(...addCountsPass(graph, chunkProps));
+    }
 
     return nodes;
   }
@@ -171,7 +226,9 @@ fn main(
 
 function addSegmentOffsetsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  props: Readonly<GPUSegmentedLayoutProps>
+  props: Readonly<GPUSegmentedLayoutPassProps>,
+  firstSpan: boolean,
+  lastSpan: boolean
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.valueFlags.length;
@@ -189,9 +246,9 @@ const SEGMENT_INDEX_OFFSET: u32 = ${getViewElementOffset(props.segmentIndices)}u
 const SEGMENT_OFFSET: u32 = ${getViewElementOffset(props.segmentOffsets)}u;
 @group(0) @binding(0) var<storage, read> segmentStartFlags: array<u32>;
 @group(0) @binding(1) var<storage, read> segmentIndices: array<u32>;
-@group(0) @binding(2) var<storage, read> elementFlags: array<u32>;
-@group(0) @binding(3) var<storage, read> elementOffsets: array<u32>;
-@group(0) @binding(4) var<storage, read_write> segmentOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read> elementOffsets: array<u32>;
+@group(0) @binding(3) var<storage, read_write> segmentOffsets: array<u32>;
+${lastSpan ? '@group(0) @binding(4) var<storage, read> elementFlags: array<u32>;' : ''}
 @compute @workgroup_size(${SEGMENTED_LAYOUT_WORKGROUP_SIZE})
 fn main(
   @builtin(workgroup_id) workgroupId: vec3u,
@@ -199,15 +256,19 @@ fn main(
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, SEGMENTED_LAYOUT_WORKGROUP_SIZE)}
   if (index >= LENGTH) { return; }
-  if (index == 0u) { segmentOffsets[SEGMENT_OFFSET] = 0u; }
+  ${firstSpan ? 'if (index == 0u) { segmentOffsets[SEGMENT_OFFSET] = 0u; }' : ''}
   if (segmentStartFlags[SEGMENT_START_OFFSET + index] != 0u) {
     segmentOffsets[SEGMENT_OFFSET + segmentIndices[SEGMENT_INDEX_OFFSET + index]] =
       elementOffsets[ELEMENT_OFFSET + index];
   }
-  if (index + 1u == LENGTH) {
+  ${
+    lastSpan
+      ? `if (index + 1u == LENGTH) {
     let logicalElementCount = elementOffsets[ELEMENT_OFFSET + index] + elementFlags[ELEMENT_FLAG_OFFSET + index];
     let segments = segmentIndices[SEGMENT_INDEX_OFFSET + index] + 1u;
     segmentOffsets[SEGMENT_OFFSET + segments] = logicalElementCount;
+  }`
+      : ''
   }
 }`;
   nodes.push(
@@ -220,9 +281,11 @@ fn main(
       [
         {name: 'segmentStartFlags', view: props.segmentStartFlags, usage: 'storage-read'},
         {name: 'segmentIndices', view: props.segmentIndices, usage: 'storage-read'},
-        {name: 'elementFlags', view: props.elementFlags, usage: 'storage-read'},
         {name: 'elementOffsets', view: props.elementOffsets, usage: 'storage-read'},
-        {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'}
+        {name: 'segmentOffsets', view: props.segmentOffsets, usage: 'storage-write'},
+        ...(lastSpan
+          ? [{name: 'elementFlags', view: props.elementFlags, usage: 'storage-read' as const}]
+          : [])
       ],
       dispatchLayout
     )
@@ -233,7 +296,7 @@ fn main(
 
 function addCountsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  props: Readonly<GPUSegmentedLayoutProps>
+  props: Readonly<GPUSegmentedLayoutPassProps>
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
   const length = props.valueFlags.length;
@@ -374,7 +437,9 @@ function validateConfiguration(props: Readonly<GPUSegmentedLayoutProps>): void {
     elementCount: props.elementCount,
     segmentCount: props.segmentCount
   })) {
-    validatePackedUint32View(view, `${props.id} ${name}`);
+    for (const chunk of getGraphVectorData(view)) {
+      validatePackedUint32View(chunk, `${props.id} ${name}`);
+    }
   }
   for (const view of [
     props.elementFlags,
