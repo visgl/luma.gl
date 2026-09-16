@@ -30,6 +30,10 @@ feature or precision parity, NVIDIA affiliation, or NVIDIA endorsement.
 
 ## Compile and execute a projection
 
+For manually composed transformations and inline shader use, see
+[Compose a projection program](#compose-a-projection-program). The provider-driven API below
+remains available for a single adaptive transformation.
+
 ```ts
 import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
 import {
@@ -153,9 +157,9 @@ verification or picking, `evaluateProjectionPlan(plan, coordinate, patchId?)`
 returns an absolute destination coordinate rather than a GPU-local offset.
 
 Non-finite input coordinates, rows outside the compiled source bounds, invalid
-patch IDs, and patch IDs that do not cover their assigned row produce a
-deterministic GPU output of `[0, 0]`. A valid row can also project to the local
-origin, so validate inputs separately when that distinction matters. Patch
+patch IDs, and patch IDs that do not cover their assigned row produce zero output.
+Supply a caller-owned `uint32` `validity` column to distinguish invalid rows (`0`)
+from legitimate zero coordinates (`1`). Patch
 lookup tolerates float32 normalization at shared seams and inclusive endpoints,
 but that tolerance never expands the plan's exterior source bounds.
 
@@ -174,6 +178,107 @@ current `packProjectionPlan()` result. Call
 `GPUProjection.destroy()` when the contributor is no longer needed; only its
 privately allocated plan storage is destroyed, never
 caller-owned source, destination, or explicitly supplied `planBuffer` storage.
+
+## Compose a projection program
+
+`ProjectionProgram` describes an ordered two-dimensional transformation. The initial operations
+are axis permutation, scalar unit conversion, per-axis affine scale/offset, and adaptive projection
+plans. `compileProjectionProgram` specializes that sequence into straight-line WGSL calls and a
+packed parameter buffer. Adaptive stages retain their patch lookup; there is no per-row operation
+interpreter. Compiling a program allocates no GPU resources.
+
+```ts
+import {
+  compileProjectionProgram,
+  GPUProjectionProgram,
+  invertProjectionProgram,
+  type ProjectionProgram
+} from '@luma.gl/experimental/gpu-project';
+
+const program: ProjectionProgram = {
+  precision: 'double-single',
+  operations: [
+    {type: 'axis', order: [1, 0]},
+    {type: 'unit', factor: Math.PI / 180},
+    {type: 'affine', scale: [2, -3], offset: [1_000_000, 2_000_000]}
+  ]
+};
+const projection = compileProjectionProgram(program, {inputFormat: 'uint32x4'});
+
+const contributor = new GPUProjectionProgram({
+  projection,
+  positions: sourcePositions,
+  output: doubleSinglePositions,
+  validity: outputValidity
+});
+contributor.addToGraph(graph);
+
+// Absolute double-single output can feed another program without CPU readback or repacking.
+const inverse = compileProjectionProgram(invertProjectionProgram(program), {
+  inputFormat: 'float32x4'
+});
+```
+
+All program intermediates use the existing integer-controlled double-single arithmetic. Inputs
+can be `float32x2`, raw binary64 `uint32x4`, or absolute double-single `float32x4`. `double-single`
+output is `[xHigh, xLow, yHigh, yLow]`. For `local-f32`, the final result is translated by the
+program's binary64 `destinationOrigin` (default `[0, 0]`) before rounding to `float32x2`.
+This initial program backend uses double-single arithmetic in both output modes; the existing
+`GPUProjection` retains its faster local Float32 evaluator.
+
+Use a hardware WebGPU adapter for program execution. Integer-fp64 program shaders can exceed
+practical compilation budgets on software adapters such as SwiftShader. CPU compiler tests run
+on all CI hosts; the numerical program suite explicitly requires hardware WebGPU, as do the P.1
+double-single projection tests.
+
+Raw binary64 input is converted to double-single at entry. When the first operation is adaptive,
+it instead preserves P.1's raw binary64 origin subtraction before narrowing. Double-single has
+approximately 48 significant bits within the Float32 exponent range, not IEEE binary64 semantics.
+Native operations require nonzero scale factors and finite representable parameters; non-finite
+intermediates and final overflows invalidate the row.
+
+An adaptive operation is `{type: 'adaptive', plan, inversePlan?}`. Compile both supplied plans with
+`precision: 'double-single'`. Each plan's bounds apply in that stage's input coordinate system.
+Double-single input bounds are rounded inward to avoid expanding the exact binary64 domain.
+`invertProjectionProgram` reverses stage order and direction, and requires an explicit inverse plan
+for every adaptive stage. Its optional `destinationOrigin` specifies the inverse's local output
+origin; local Float32 output must be reconstructed before feeding an inverse program.
+
+`evaluateProjectionProgram` is an absolute-coordinate CPU reference returning `{position, valid}`.
+It does not simulate GPU rounding. Adaptive plan tolerances remain sampled, per-stage estimates:
+program composition does not establish a global error bound, and later scaling can magnify earlier
+error. Validate a complete program against its CPU provider over the intended domain.
+
+### Inline shader consumption
+
+```ts
+const shader = projection.getShader({namespace: 'map'});
+const parameterWords = projection.packParameters();
+// Upload parameterWords to a storage buffer bound under shader.bindingName.
+// Include shader.source in a Model/Computation shader, with shader.modules and shader.defines.
+// The generated callable for this example is:
+// projection_map_project(position: vec4u, inputValidity: u32)
+// It returns a struct with .position: vec4f and .valid: u32.
+```
+
+The returned shader has no entry point, dispatch, or output buffer. It can be called directly from
+a render or analysis shader. Each use can select a namespace and a parameter word offset for
+embedding in a larger buffer. Preserve declaration order when assigning `@binding(auto)` locations:
+the generated parameter binding appears where `shader.source` is inserted. Pass the returned
+modules and defines to enable the integer-controlled fp64 implementation.
+
+Pass upstream row validity to the callable, or use the contributor's `inputValidity` column.
+Zero validity short-circuits evaluation and produces zero output with zero validity. Valid zero
+coordinates remain valid. Materialized input, output, and validity views must have matching chunks,
+including empty chunks. The contributor owns only its parameter buffer.
+
+`contributor.updateProjection(nextCompiledProjection)` updates parameters without changing the
+shader or graph. `projection.isCompatible(nextCompiledProjection)` reports whether the shader and
+parameter layout match. Numeric scales, offsets, origins, coefficients, and same-sized adaptive
+plans may change; operation order, direction, axis permutation, patch counts, input format, and
+output precision may require recompilation. Updates perform a buffer write, with no hidden command
+submission or readback. Inline consumers can write `nextCompiledProjection.packParameters()` into
+their own buffer after the same compatibility check.
 
 ## Benchmark CPU and GPU projection paths
 

@@ -168,6 +168,77 @@ providing binary64's exponent range or exact rounding semantics. `plan.maxError`
 validation error for the selected mode; `float32MaxError` and `doubleSingleMaxError` expose both
 simulated paths for inspection.
 
+## Projection programs and inline shaders
+
+`compileProjectionProgram(program, {inputFormat})` compiles an explicit sequence of two-dimensional
+operations. The initial operation set includes axis permutation, unit conversion, per-axis affine
+scale/offset, and adaptive plans. The same `CompiledProjection` supports materialized GPU Graph
+output and inline calls from rendering or analysis shaders.
+
+```ts
+import {
+  compileProjectionProgram,
+  GPUProjectionProgram,
+  invertProjectionProgram,
+  type ProjectionProgram
+} from '@luma.gl/experimental/gpu-project';
+
+const program: ProjectionProgram = {
+  precision: 'double-single',
+  operations: [
+    {type: 'axis', order: [1, 0]},
+    {type: 'unit', factor: Math.PI / 180},
+    {type: 'affine', scale: [2, -3], offset: [1_000_000, 2_000_000]}
+  ]
+};
+const projection = compileProjectionProgram(program, {inputFormat: 'uint32x4'});
+const contributor = new GPUProjectionProgram({
+  projection,
+  positions: sourcePositions,
+  output: doubleSinglePositions,
+  inputValidity: sourceValidity,
+  validity: projectedValidity
+});
+contributor.addToGraph(graph);
+
+const inverse = compileProjectionProgram(invertProjectionProgram(program), {
+  inputFormat: 'float32x4'
+});
+```
+
+Program inputs support `float32x2`, raw binary64 `uint32x4`, and absolute double-single `float32x4`.
+All intermediate arithmetic uses double-single. The selected precision controls the output:
+`double-single` emits absolute high/low pairs; `local-f32` subtracts `program.destinationOrigin`
+(default `[0, 0]`) before rounding the final result to `float32x2`. Raw input is narrowed at entry
+except when the first stage is adaptive, which retains exact binary64 source-origin subtraction.
+Use a hardware WebGPU adapter: integer-fp64 program shaders can exceed practical compilation
+budgets on software adapters such as SwiftShader.
+
+Add `{type: 'adaptive', plan, inversePlan?}` to include an adaptive transformation. Both plans must
+use `precision: 'double-single'`, and each plan's bounds apply to its own stage input. Inversion
+reverses the sequence and requires an explicit inverse plan for adaptive stages. Program composition
+does not establish a global error bound: per-stage sampled tolerances can be amplified by later
+operations. `evaluateProjectionProgram(program, coordinates)` provides an absolute-coordinate CPU
+reference returning `{position, valid}`, not a simulation of GPU rounding.
+
+For inline use, call `projection.getShader({namespace: 'map', parameterOffset: 0})`. Include its
+`source`, `modules`, and `defines` in the consumer shader and bind uploaded `packParameters()` under
+the returned `bindingName`. The returned `entryPoint` names a callable taking a coordinate and a
+`u32` validity flag, returning a struct with `position` and `valid`. There is no generated compute
+entry point or intermediate output buffer. `parameterOffset` is in Uint32 words relative to the
+bound buffer range; namespaces allow multiple programs in one shader. Match `@binding(auto)`
+declaration order in the consumer's shader layout.
+
+Zero input validity, non-finite intermediates, and rejected domains produce zero output and validity.
+The graph contributor preserves source chunks, including empty chunks, and owns only its parameter
+buffer. Input, output, and validity columns remain caller-owned.
+
+`projection.isCompatible(nextProjection)` checks whether the generated shader and parameter layout
+are unchanged. `contributor.updateProjection(nextProjection)` then writes the new parameters without
+rebuilding or submitting the graph. Numeric parameters and same-sized adaptive plans can change;
+changes to operation topology, direction, axis permutation, precision, or input encoding can require
+recompilation. Inline consumers can perform the same check and update their own parameter buffer.
+
 ## Adaptive patches and explicit assignment
 
 `compileProjectionPlan()` samples the provider and subdivides regions until their local polynomial
