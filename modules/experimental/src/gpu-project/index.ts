@@ -30,6 +30,20 @@ export {
 } from './web-mercator';
 
 export {GPUProjection} from './gpu-projection';
+export {
+  CompiledProjection,
+  compileProjectionProgram,
+  invertProjectionProgram,
+  evaluateProjectionProgram
+} from './projection-program';
+export type {
+  ProjectionProgram,
+  ProjectionOperation,
+  ProjectionInputFormat,
+  ProjectionShader
+} from './projection-program';
+export {GPUProjectionProgram} from './gpu-projection-program';
+export type {GPUProjectionProgramProps} from './gpu-projection-program';
 export type {
   GPUProjectionDoubleSingleProps,
   GPUProjectionLocalFloat32Props,
