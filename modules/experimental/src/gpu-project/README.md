@@ -265,17 +265,22 @@ optional `@math.gl/crs` and `@math.gl/proj4` peers to use:
   signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.
   Unsupported tokens produce structured reasons. An optional `fallback` supplies an oracle and
   bounds for the entire pipeline.
-- `planCRSProjection({from, to, bounds, tolerance})`: compile a bounded double-single adaptive CRS
-  transformation through `Proj4Projection`, including PROJJSON and provider-resolved serialized
-  definitions. Set `enforceAxis` explicitly when declared axes should be honored. Request an inverse
-  with its own `{bounds, tolerance}` in destination coordinates. Explicit non-2D PROJJSON objects
-  and providers returning extra components are declined.
+- `planCRSProjection({from, to, bounds?, tolerance})`: lower equivalent explicit PROJJSON frames
+  into native double-single axis/unit/affine operations, or fit a bounded transformation through
+  `Proj4Projection`. Native geographic frames support prime-meridian changes; equivalent Transverse
+  Mercator and Pseudo Mercator conversions support false-origin changes without evaluating a
+  projection. Datum identity and normalized ellipsoids must match. Set `enforceAxis` to honor
+  declared axes, or `allowAdaptive: false` to require native lowering. Only adaptive routes need
+  bounds and separately fitted inverse domains. Explicit non-2D/dynamic objects, unsupported axis
+  semantics, and providers returning extra components are declined.
 
 Both return a discriminated `ready`/`unsupported` result. A ready result includes `program`,
 `compiled`, execution `strategy`, and fallback `reasons`; it can be consumed inline or by
 `GPUProjectionProgram`. Defaults preserve raw binary64 input and double-single output. Fitting
-tolerance remains sampled and excludes final local Float32 rounding. Native named projections and
-PROJJSON conversion lowering remain P.3b/P.4. GPU execution does not import math.gl or proj4js.
+tolerance remains sampled and excludes final local Float32 rounding. Native plans preserve declared
+per-axis units; adaptive fallback declines geographic non-degree units, mixed projected units, and
+non-numeric prime-meridian quantities unsupported by the current provider. Native named projection
+formulas remain P.3b.2/P.4. GPU execution does not import math.gl or proj4js.
 
 See the [API guide](../../../../docs/api-reference/experimental/gpu-project.md) for examples,
 supported units/parameters, error semantics, and planning limitations.

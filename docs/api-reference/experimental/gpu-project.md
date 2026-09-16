@@ -290,17 +290,78 @@ if (result.status === 'ready') {
 }
 ```
 
-`planCRSProjection` currently fits the entire CRS transformation through the public math.gl
-`Proj4Projection` provider. It accepts named/serialized definitions that the provider resolves and
-explicit two-dimensional geographic/projected PROJJSON objects. Explicit 3D, compound, bound,
-vertical, and geocentric objects are declined. Serialized definitions retain the provider's XY
-semantics; providers returning extra coordinate components are rejected. CRS resolution does not
-download definitions or grids. Unknown identifiers, unavailable resources, invalid provider output,
-and exhausted patch budgets return structured reasons. `allowAdaptive: false` declines CRS pairs
-until native CRS conversion lowering is implemented.
+`planCRSProjection` first tries native coordinate-frame lowering for explicit two-dimensional
+geographic/projected PROJJSON objects. Otherwise it fits the entire transformation through the
+public math.gl `Proj4Projection` provider. Named/serialized definitions use the provider path;
+identifiers are not resolved into PROJJSON or downloaded. Explicit 3D, compound, bound, vertical,
+geocentric, and dynamic-frame objects are declined. Providers returning extra coordinate components
+are rejected. Unknown identifiers, unavailable resources, invalid provider output, and exhausted
+patch budgets return structured reasons. `allowAdaptive: false` requires a native plan.
+
+### Native PROJJSON coordinate frames
+
+Native plans use only double-single axis/affine operations and need no provider sampling or fitting
+bounds. Supported transformations are:
+
+- Geographic frames with the same explicit static datum/ensemble and ellipsoid: cardinal axis
+  order/direction, separate angular units per axis, and prime-meridian longitude changes.
+- Equivalent Transverse Mercator (EPSG method 9807) or Popular Visualisation Pseudo Mercator
+  (EPSG method 1024) conversions: cardinal axes, separate linear units, and false-easting/northing
+  changes. The method, latitude of natural origin, Greenwich-relative central meridian, scale,
+  datum identity, and normalized ellipsoid must match exactly.
+
+This eliminates a redundant inverse/forward projection pair; it does **not** implement native
+Mercator or UTM projection formulas. Different zones, projection families, or reference frames do
+not cancel. Matching ellipsoid dimensions or CRS names alone never establish datum equivalence.
+Datum names, identifiers, anchors, and ensemble members/accuracy are compared conservatively;
+inconclusive equivalence goes to the provider or is declined. Ellipsoid quantities normalize to
+metres, angular quantities to radians, and conversion parameters use their explicit units.
+
+The conversion subset requires all natural-origin parameters: EPSG 8801, 8802, 8806, and 8807,
+plus 8805 for Transverse Mercator. Standard parameter/method names are accepted when EPSG IDs are
+absent. Unknown parameters are never dropped. Units use PROJJSON's `degree`, `metre`, `unity`, or
+an explicitly typed positive `conversion_factor`; prime-meridian numeric values mean degrees.
+See the [PROJJSON specification](https://proj.org/en/stable/specifications/projjson.html).
+
+```ts
+// Both definitions are explicit PROJJSON objects describing the same projection frame,
+// e.g. UTM zone 10N in east/north metres and north/east kilometres.
+const result = planCRSProjection({
+  from: sourcePROJJSON,
+  to: targetPROJJSON,
+  enforceAxis: true,
+  allowAdaptive: false
+});
+if (result.status === 'ready') {
+  // No fitted patches or inverse-domain estimate are needed.
+  const inverse = invertProjectionProgram(result.program);
+}
+```
+
+Native plans do not wrap longitude, clamp latitude, or derive validity limits from CRS usage
+extents. Explicit axis ranges and axis meridians are declined. Bounds, fitting budgets, and
+`inverse` fitting options apply only to adaptive plans; native inverses are always available.
+Native approximation metadata is `none`, which excludes arithmetic/input/output rounding.
+For local-f32 native output, the destination origin defaults to zero unless supplied.
+
+### Adaptive provider planning
+
+`bounds` is optional for native plans and required for adaptive plans (`bounds-required` if absent).
+Unsupported native conversions retain a bounded provider fallback. Invalid quantities, ambiguous
+parameters, unsupported axes, and dynamic frames are declined rather than silently approximated.
+The current provider assumes geographic degrees and one shared projected-axis unit; explicit
+non-degree geographic axes, mixed projected-axis units, and non-numeric prime-meridian quantities
+are therefore declined **on the adaptive route**, even when native frame changes support them.
+EPSG-labelled methods/parameters outside the verified native mapping, or with non-canonical names,
+are likewise declined on that route; the current provider interprets names rather than those
+identifiers. This includes provider-only PROJJSON methods such as EPSG-labelled Lambert Conformal
+Conic. Serialized definitions remain available for provider-supported projections. Extra parameters
+on known methods are rejected instead of reaching a provider that might ignore them.
+Serialized definitions retain the provider's coordinate conventions and resolution limitations.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to
-`true` to use declared CRS axes. `inverse: {bounds, tolerance}` requests a separately fitted inverse
+`true` to use declared CRS axes and directions. Native plans retain declared coordinate units
+under either axis policy. `inverse: {bounds, tolerance}` requests a separately fitted inverse
 over an explicit destination-coordinate domain; inverse tolerance uses the inverse's output units.
 Forward bounds are never reused as inverse bounds. `degree`, `sampleCount`, `maxDepth`, and
 `maxPatches` control fitting. The tolerance applies to the adaptive double-single stage and remains

@@ -13,6 +13,11 @@ import {
   type ProjectionProgram
 } from './projection-program';
 import {lowerProjectionPipeline, type ProjectionPlanningReason} from './projection-pipeline';
+import {
+  canUseCRSProvider,
+  getCRSProviderReason,
+  lowerCRSProjection
+} from './projection-crs-lowering';
 import type {
   CompileProjectionPlanOptions,
   ProjectionBounds,
@@ -56,12 +61,14 @@ export type PlanProjectionPipelineOptions = ProjectionOutputOptions & {
 };
 
 export type PlanCRSProjectionOptions = ProjectionOutputOptions &
-  AdaptiveProjectionOptions & {
+  Omit<AdaptiveProjectionOptions, 'bounds'> & {
     from: ReadonlyCRSDefinition;
     to: ReadonlyCRSDefinition;
     /** math.gl axis semantics, default false: longitude/easting first. */
     enforceAxis?: boolean;
-    /** Set to false to inspect why native CRS lowering is currently unavailable. */
+    /** Required only when the transformation needs adaptive fitting. */
+    bounds?: ProjectionBounds;
+    /** Set to false to require native coordinate-frame lowering. */
     allowAdaptive?: boolean;
   };
 
@@ -106,19 +113,10 @@ export function planProjectionPipeline(
 }
 
 /**
- * Fit a bounded 2D CRS transformation through math.gl's public CPU provider.
- * Native named projection families and explicit PROJJSON conversion lowering follow in P.3b/P.4.
+ * Lower equivalent explicit 2D CRS frames natively, or fit a bounded provider transformation.
+ * Native named projection formulas follow in P.4.
  */
 export function planCRSProjection(options: PlanCRSProjectionOptions): ProjectionPlanningResult {
-  const reasons: ProjectionPlanningReason[] = [
-    {
-      code: 'crs-requires-provider',
-      message: 'CRS pairs currently require a bounded adaptive provider plan'
-    }
-  ];
-  if (options.allowAdaptive === false) {
-    return {status: 'unsupported', reasons};
-  }
   // PROJJSON dimensionality is explicit. Never silently extract a horizontal component.
   for (const definition of [options.from, options.to]) {
     if (typeof definition !== 'string' && !isTwoDimensionalCRS(definition)) {
@@ -127,6 +125,41 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
         'only explicit 2D geographic and projected CRS objects are supported'
       );
     }
+  }
+  let lowered: ReturnType<typeof lowerCRSProjection>;
+  try {
+    lowered = lowerCRSProjection(options.from, options.to, options.enforceAxis ?? false);
+    if ('operations' in lowered) {
+      return ready(
+        {
+          precision: options.precision ?? 'double-single',
+          destinationOrigin: options.destinationOrigin,
+          operations: lowered.operations
+        },
+        options,
+        'native',
+        []
+      );
+    }
+  } catch (error) {
+    return unsupported('invalid-definition', error);
+  }
+  const reasons = [lowered.reason];
+  if (options.allowAdaptive === false || !canUseCRSProvider(lowered.reason)) {
+    return {status: 'unsupported', reasons};
+  }
+  for (const definition of [options.from, options.to]) {
+    const reason = getCRSProviderReason(definition);
+    if (reason) return {status: 'unsupported', reasons: [...reasons, reason]};
+  }
+  if (!options.bounds) {
+    return {
+      status: 'unsupported',
+      reasons: [
+        ...reasons,
+        {code: 'bounds-required', message: 'adaptive CRS planning requires explicit source bounds'}
+      ]
+    };
   }
   let projection: Proj4Projection;
   try {
@@ -138,7 +171,7 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
   } catch (error) {
     return unsupported('provider-unavailable', error);
   }
-  return planAdaptiveProjection(projection, options, options, reasons);
+  return planAdaptiveProjection(projection, {...options, bounds: options.bounds}, options, reasons);
 }
 
 function planAdaptiveProjection(
