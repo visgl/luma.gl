@@ -7,6 +7,7 @@ import type {ProjectionInputFormat, ProjectionProgram} from './projection-progra
 import type {ProjectionBounds, ProjectionPrecision} from './types';
 import {getWebMercatorBounds} from './projection-web-mercator';
 import {getTransverseMercatorBounds} from './projection-transverse-mercator';
+import {getLongitudeWrapParameters} from './projection-longitude-wrap';
 
 /** Estimates exclude input quantization, native series truncation and native/output rounding. */
 export type ProjectionErrorMetadata = {
@@ -26,6 +27,12 @@ export type ProjectionStageMetadata = {
   /** Stage-input envelope (null: finite only); nonlinear inverses also check their footprint. */
   readonly inputBounds: ProjectionBounds | null;
   readonly invertible: boolean;
+  /** Explicit angular seam policy; normalization always discards the original turn count. */
+  readonly longitudeWrap?: {
+    readonly interval: readonly [number, number];
+    readonly seamTolerance: number;
+    readonly seamValidity: 'invalid';
+  };
   /** Maximum Euclidean amplification for a native linear stage; null for nonlinear stages. */
   readonly errorAmplification: number | null;
   readonly approximationError: ProjectionErrorMetadata;
@@ -63,6 +70,13 @@ export function getProjectionProgramMetadata(
     let inputBounds: ProjectionBounds | null = null;
     let invertible = true;
     switch (operation.type) {
+      case 'longitude-wrap':
+        inputBounds = Object.freeze(getLongitudeWrapParameters(operation).inputBounds);
+        amplification = null;
+        invertible = false;
+        // A preceding approximation may cross the discontinuity or its invalid guard band.
+        if (maximum !== 0) maximum = null;
+        break;
       case 'axis':
         break;
       case 'unit':
@@ -109,6 +123,15 @@ export function getProjectionProgramMetadata(
       outputDimensions: 2,
       inputBounds,
       invertible,
+      ...(operation.type === 'longitude-wrap'
+        ? {
+            longitudeWrap: Object.freeze({
+              interval: Object.freeze([operation.interval[0], operation.interval[1]] as const),
+              seamTolerance: getLongitudeWrapParameters(operation).seamTolerance,
+              seamValidity: 'invalid' as const
+            })
+          }
+        : {}),
       errorAmplification: amplification,
       approximationError: makeErrorMetadata(maximum, sampled)
     });

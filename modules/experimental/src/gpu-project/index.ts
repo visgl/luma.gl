@@ -50,6 +50,7 @@ export type {
   ProjectionProgramMetadata
 } from './projection-metadata';
 export type {GPUProjectionProgramProps} from './gpu-projection-program';
+export type {LongitudeWrapOperation} from './projection-longitude-wrap';
 export type {
   GPUProjectionDoubleSingleProps,
   GPUProjectionLocalFloat32Props,

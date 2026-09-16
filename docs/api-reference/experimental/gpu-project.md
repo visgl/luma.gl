@@ -262,6 +262,47 @@ bounds describe stage coordinates, not necessarily the original input coordinate
 arithmetic rounding and native series truncation; they must not be used as certified global error bounds. `local-f32` output
 still rounds at the final origin-relative output boundary.
 
+## Explicit longitude normalization
+
+`{type: 'longitude-wrap', interval: [minimum, maximum], seamTolerance?}` reduces the first
+coordinate into one declared turn using double-single arithmetic; the second coordinate is unchanged.
+Use the current coordinate units: `[-180, 180]` or `[0, 360]` for degrees, `[-Math.PI, Math.PI]`
+for radians. No CRS or pipeline implicitly inserts this operation, and PROJ `+over`/`+lon_wrap`
+remain unsupported by the pipeline parser.
+
+Both sides of the seam are invalid within `seamTolerance`, including the seam itself. The default
+and minimum allowed tolerance is `period * 2^-32`; callers can enlarge it, but not to half a turn.
+Invalid rows produce zero output and zero validity, never clamped coordinates. Inputs are bounded
+to 1,024 turns below/above the interval. Periods must be between `2^-80` and `2^100`, and interval
+endpoints must be within 1,024 periods of zero. These bounds leave guard bits for range reduction;
+they do not extend double-single to IEEE binary64 exponent range. As with other domains, use inset
+coordinates rather than depending on exact floating-point guard-band boundaries.
+
+Metadata exposes the immutable `longitudeWrap` interval/seam policy and the input envelope.
+Normalization is many-to-one: `invertible` is false and `invertProjectionProgram()` throws.
+For inverse use, construct a separate conversion with an explicit unwrapped branch; it cannot
+recover a discarded turn count. A preceding nonzero sampled error becomes `unknown` at this stage
+because it could cross the seam.
+
+To cross the antimeridian, move the seam away from the working region and wrap **before** a
+smooth bounded plan. For example, a longitude-first, degree-based WGS84-to-zone-60 UTM plan over
+`[179, -1, 181, 1]` can consume both `179.5` and `-179.5`:
+
+```ts
+const projection = compileProjectionProgram({
+  ...planned.program,
+  operations: [
+    {type: 'longitude-wrap', interval: [0, 360]},
+    ...planned.program.operations
+  ]
+}, {inputFormat: 'uint32x4'});
+```
+
+Here `planned` is a ready `planCRSProjection()` result for that unwrapped domain. This works with
+either explicit native Float32 formulas or the default double-single adaptive plan. Do not fit an
+adaptive polynomial across a discontinuity, and do not insert wrapping before projected metre
+coordinates or a latitude-first axis without explicitly rearranging/converting those coordinates.
+
 ## Optional math.gl CRS planner
 
 Install `@math.gl/crs` and `@math.gl/proj4` 5.x separately and import the CPU planner from
@@ -590,6 +631,63 @@ const options = {
 const cpuReport = runProjectionBenchmark(options);
 const gpuReport = await runGPUProjectionBenchmark(device, options);
 ```
+
+### Native versus adaptive programs and inline versus materialized execution
+
+`runProjectionProgramBenchmark(device, options)` accepts caller-supplied coordinates, an independent
+absolute-coordinate `oracle(position) => {position, valid}`, and at least two named variants:
+`{id, createProgram, maximumError}`. `createProgram()` returns a deterministic `ProjectionProgram`
+and includes planning/fitting work in its measured interval. Use separate native-Float32 and
+adaptive-double-single factories; do not use a variant's own evaluator as its oracle.
+Factories using `planCRSProjection()` already compile internally; the separate program-compilation
+column measures an additional standalone rebuild, not a decomposition of that factory's latency.
+
+```ts
+const report = await runProjectionProgramBenchmark(device, {
+  coordinates: [[-122.4194, 37.7749], [-122.4194001, 37.7749001]],
+  oracle: position => {
+    const projected = independentProvider.project([...position]);
+    return {position: [projected[0], projected[1]], valid: true};
+  },
+  variants: [
+    {id: 'native', createProgram: createNativeProgram, maximumError: 20},
+    {id: 'adaptive', createProgram: createAdaptiveProgram, maximumError: 1e-5}
+  ],
+  warmupIterations: 2,
+  measuredIterations: 5
+});
+```
+
+Import this helper from `@luma.gl/experimental/gpu-project/benchmarks`. All variants receive the
+same raw binary64 input rows and must share output precision; origin-relative output must also
+share its destination origin. Arithmetic metadata remains separate from output storage. Budgets
+are Euclidean destination-unit errors including native formula, fitting, and output rounding.
+Every row's validity and coordinates are checked before GPU warmups and again after timing;
+any mismatch throws instead of returning a throughput report. Include representative edge and
+invalid rows explicitly; passing finite samples is not a global accuracy guarantee.
+
+Each variant runs an identical axis-swap consumer in two modes: `inline` embeds the callable
+projection in that consumer, while `materialized` writes an intermediate coordinate/validity buffer
+through `GPUProjectionProgram`, then runs the consumer. This minimal consumer measures that extra
+storage/dispatch boundary, not an application's rendering cost. Reports include observed error,
+valid-row count, parameter/intermediate/total buffer bytes, CPU planning/program-compilation
+distributions, graph/pipeline setup time, first synchronized use, CPU encoding, fence-synchronized
+execution, and optional GPU timestamp durations. Buffer totals exclude driver/pipeline memory and
+temporary readback/query allocations. Uploads and readbacks are outside execution timings.
+First-use/setup measurements are cache-sensitive, not cold-compiler guarantees. Run with other
+GPU work idle, repeat on target devices, and compare accuracy budgets before interpreting speed.
+
+The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
+
+```sh
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+  yarn test-headless --no-coverage --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
+```
+
+The opt-in fixtures default to 32 rows; ordinary hardware tests retain the failure-gate and
+output-frame regressions. Software adapters skip these integer-fp64 GPU checks.
+The benchmark does not automatically select arithmetic or relax application tolerances.
 
 See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
 [GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),

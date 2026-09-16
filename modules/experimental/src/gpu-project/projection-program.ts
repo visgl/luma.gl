@@ -10,6 +10,12 @@ import {getProjectionShaderFunctions} from './projection-shader';
 import {getProjectionProgramMetadata, type ProjectionProgramMetadata} from './projection-metadata';
 import type {ProjectionCoordinates, ProjectionPlan, ProjectionPrecision} from './types';
 import {
+  evaluateLongitudeWrap,
+  getLongitudeWrapParameters,
+  getLongitudeWrapStage,
+  type LongitudeWrapOperation
+} from './projection-longitude-wrap';
+import {
   evaluateWebMercator,
   getWebMercatorBounds,
   getWebMercatorStage,
@@ -32,6 +38,7 @@ export type ProjectionOperation =
   | {type: 'affine'; scale: ProjectionCoordinates; offset: ProjectionCoordinates; inverse?: boolean}
   | WebMercatorOperation
   | TransverseMercatorOperation
+  | LongitudeWrapOperation
   | {type: 'adaptive'; plan: ProjectionPlan; inversePlan?: ProjectionPlan};
 
 /** A two-dimensional operation sequence. Analytic float32 stages must be explicitly opted into. */
@@ -138,6 +145,8 @@ export function invertProjectionProgram(
     destinationOrigin: options.destinationOrigin ?? [0, 0],
     operations: [...program.operations].reverse().map(operation => {
       switch (operation.type) {
+        case 'longitude-wrap':
+          throw new Error('longitude normalization discards turns and has no automatic inverse');
         case 'axis':
           return {...operation, order: [...operation.order]};
         case 'unit':
@@ -167,6 +176,12 @@ export function evaluateProjectionProgram(
       return {position: [0, 0], valid: false};
     }
     switch (operation.type) {
+      case 'longitude-wrap': {
+        const longitude = evaluateLongitudeWrap(operation, position[0]);
+        if (longitude === null) return {position: [0, 0], valid: false};
+        position = [longitude, position[1]];
+        break;
+      }
       case 'axis':
         position = [position[operation.order[0]], position[operation.order[1]]];
         break;
@@ -256,6 +271,13 @@ function compileProgram(
     const offset = words.length;
     const scalar = (wordOffset: number): string => `PROGRAM_scalar(${wordOffset}u)`;
     switch (operation.type) {
+      case 'longitude-wrap': {
+        const {minimum, period, seamTolerance, inputBounds} = getLongitudeWrapParameters(operation);
+        for (const value of [minimum, period, seamTolerance]) appendNumber(value);
+        appendBounds([inputBounds[0], 0, inputBounds[2], 0]);
+        stages.push(getLongitudeWrapStage(offset));
+        break;
+      }
       case 'axis':
         if (
           !(
@@ -357,6 +379,11 @@ function compileProgram(
         ? 'vec4f(normalize_fp64(position.xy), normalize_fp64(position.zw))'
         : 'vec4f(position.x, 0.0, position.y, 0.0)';
   const rawAdaptive = inputFormat === 'uint32x4' && program.operations[0]?.type === 'adaptive';
+  // Retain the parameter binding in inferred GPU layouts even when no scalar is read.
+  const parameterGuard =
+    words.length === 4 && program.precision === 'double-single'
+      ? 'if (arrayLength(&PROGRAM_parameters) <= PARAMETER_OFFSET + 3u) { return invalid; }'
+      : '';
   const source = `
 @group(0) @binding(auto) var<storage, read> PROGRAM_parameters: array<u32>;
 struct PROGRAM_Result { position: ${outputType}, valid: u32 }
@@ -368,6 +395,7 @@ ${functions.join('\n')}
 fn PROGRAM_project(position: ${inputType}, inputValidity: u32) -> PROGRAM_Result {
   let invalid = PROGRAM_Result(${outputType}(0.0), 0u);
   if (inputValidity == 0u) { return invalid; }
+  ${parameterGuard}
   var value = ${rawAdaptive ? 'vec4f(0.0)' : initial};
   if (!PROGRAM_finite(value)) { return invalid; }
   ${stages.join('\n  ')}
