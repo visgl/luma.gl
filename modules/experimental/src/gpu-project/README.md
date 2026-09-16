@@ -298,8 +298,14 @@ longitude ±12 degrees and latitude ±85 degrees, with an additional recovered-f
 inverse inputs. Default higher-precision execution fits the normalized binary64 series reference
 into double-single patches. Native series truncation is additional to sampled fitting error.
 All 60 UTM zones and both hemispheres have independent forward/inverse oracle coverage; no global
-Float32 accuracy or speedup guarantee is claimed. Explicit angular normalization and
-analytic/adaptive comparative benchmarks remain the next P.4 work.
+Float32 accuracy or speedup guarantee is claimed.
+
+Explicit `{type: 'longitude-wrap', interval: [0, 360]}` operations normalize the first coordinate
+using double-single arithmetic. The interval uses the current angular units. A bounded seam guard
+produces invalid rows; normalization discards turns, so automatic inversion throws and metadata
+reports `invertible: false`. Put wrapping before a smooth, separately bounded projection to handle
+antimeridian input. The CRS/pipeline planners never insert it implicitly. See the API guide for
+seam tolerances, supported input ranges, and branch-selection examples.
 GPU execution does not import math.gl or proj4js.
 
 See the [API guide](../../../../docs/api-reference/experimental/gpu-project.md) for examples,
@@ -385,6 +391,22 @@ uses a small smoke-test dataset:
 ```sh
 VITE_LUPROJ_BENCHMARK_ROWS=16384 yarn test-headless \
   modules/experimental/test/gpu-project/projection-benchmark.spec.ts --reporter=verbose
+```
+
+### Program comparison
+
+`runProjectionProgramBenchmark` from the same optional `/benchmarks` entry accepts shared binary64
+coordinates, an independent validity-aware oracle, and named `{id, createProgram, maximumError}`
+variants. It compares native Float32 and adaptive double-single arithmetic without changing output
+precision. Each variant executes the same axis-swap consumer inline and after materialization.
+All output rows are validated before GPU warmups and after measurement; failed accuracy/validity
+returns no report. Results include device identity, observed error, parameter/intermediate/buffer
+bytes, planning and compilation costs, first use, CPU encoding, synchronized dispatch, and optional
+GPU timestamps. Cache-sensitive setup and a minimal consumer are not production speedup guarantees.
+
+```sh
+VITE_LUPROJ_BENCHMARK_ROWS=65536 yarn test-headless --no-coverage --silent=false --reporter=verbose \
+  modules/experimental/test/gpu-project/projection-program-benchmark.spec.ts
 ```
 
 ## Accuracy boundaries

@@ -278,7 +278,8 @@ async function measureGPUProjectionBenchmarkPath(
   }
 }
 
-async function executeGPUProjectionBenchmark(
+/** @internal Shared fence-synchronized execution; uploads and readback are outside the interval. */
+export async function executeGPUProjectionBenchmark(
   device: Device,
   compiled: CompiledGPUCommandGraph<void>,
   identifier: string,

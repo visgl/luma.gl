@@ -134,8 +134,8 @@ accepted.
 | P.3b.2 — Native projection conversion lowering | Lower geographic/projected and different projected conversions into native named projection operations; extend explicit PROJ pipelines and retain adaptive fallback | P.3b.1 normalization and P.4 native projection families | Web Mercator and TM/UTM pairs and pipelines lower with explicit arithmetic selection; the default uses double-single fitting of the normalized binary64 reference | Implemented | Complete |
 | P.4a — Native Web Mercator | Add independently implemented forward/inverse WGSL formulas with explicit Float32 arithmetic, square-world domain/validity, stable parameters, and native CRS/pipeline selection | P.2 and P.3b.1 | CPU oracle and hardware tests cover hemispheres, edges, invalid inputs, inline/graph agreement, all input encodings, and preservation of default sub-Float32 adaptive accuracy | Implemented | Complete |
 | P.4b.1 — Bounded native Transverse Mercator/UTM | Add sixth-order Transverse Mercator/UTM forward and inverse with CRS/pipeline lowering, bounded local-branch validity, and inverse footprint checks | P.4a arithmetic/validity conventions | All 60 WGS84 UTM zones and both hemispheres/directions have CPU-oracle and hardware coverage; all input encodings share inline/graph behavior; no implicit downgrade of double-single requests | Implemented | Complete |
-| P.4b.2 — Explicit angular normalization | Add a named range-reduction operation with declared interval, seam validity and inversion policy; enable explicit antimeridian-crossing plans | P.4b.1 local-branch contract | Seam/branch tests cover both sides and many-to-one normalization never advertises an unqualified inverse; no implicit wrapping changes existing plans | Planned | Medium |
-| P.4c — Analytic/adaptive comparison | Extend correctness-gated benchmarks to compare native Float32 and adaptive double-single programs | P.4a/P.4b | Report independent accuracy, parameter memory, compilation, dispatch, and inline/materialized costs on representative hardware; no comparison conflates output format with arithmetic precision | Planned | Medium |
+| P.4b.2 — Explicit angular normalization | Add a named double-single range-reduction operation with declared interval, invalid seam guards and no automatic many-to-one inverse; enable explicit antimeridian-crossing plans | P.4b.1 local-branch contract | CPU and all-input-format hardware seam/branch tests pass; explicit wrapping composes before smooth native/adaptive UTM plans; no implicit wrapping changes existing plans | Implemented | Complete |
+| P.4c — Analytic/adaptive comparison | Compare named native Float32/adaptive double-single programs and an identical inline/materialized consumer against an independent oracle | P.4a/P.4b | Report independent accuracy, parameter/intermediate buffer memory, planning/compilation, first use and synchronized execution on representative hardware; keep output precision fixed and fail invalid results before timing | Implemented | Complete |
 | P.5a — High-value projection families | Add Albers Equal Area, Lambert Conformal Conic, and geocentric/ECEF operations, informed by the stack.gl module inventory but independently implemented | P.3 planner and P.4 native-operation conventions | Forward/inverse/property tests and PROJ-oracle fixtures cover parameter variants and domain failures; CRS planner selects each operation without custom consumer code | Planned | Large |
 | P.5b — Visualization projection families | Add gnomonic and orthographic operations where demonstrated consumers require them | P.5a conventions and two requesting consumers | At least two consumers replace local projection shaders; clipping and inverse-domain behavior have explicit tests | Conditional | Medium |
 | P.6 — Analytic high-precision math | Add range-reduced double-single transcendental functions and high-precision analytic projection variants where they beat adaptive plans | P.4/P.5 benchmarks showing adaptive memory or dispatch cost is material | Accuracy improves beyond Float32 across global domains and throughput/memory beats the adaptive double-single path on representative devices; otherwise the tranche is deferred | Conditional | Very large |
@@ -146,14 +146,22 @@ accepted.
 
 ## Recommended execution order
 
+P.4c's [recorded hardware baseline](../benchmarks/gpu-project-programs.md) includes forward/inverse
+accuracy, parameter and intermediate memory, planning/compilation, and synchronized execution.
+It is a one-device, one-patch baseline; it does not establish a cross-device speedup or justify
+changing the default precision. More vendors, multi-patch domains, and real consumers remain
+evidence requirements for P.6/P.8 decisions.
+
 1. Land P.1 before adding projection families. Raw binary64 input followed by Float32 coefficients,
    arithmetic, and output is not a greater-than-Float32 projection contract.
 2. Establish P.2 so new projection formulas target one typed operation program and both inline and
    materialized use, rather than accumulating standalone shaders.
 3. P.3a establishes the optional frontend and bounded fallback; P.3b.1 normalizes explicit coordinate
    frames and eliminates redundant conversions. P.4a and P.4b.1 now supply Web Mercator and bounded
-   sixth-order TM/UTM, completing P.3b.2 formula lowering. Next implement P.4b.2's explicit angular
-   normalization and P.4c's correctness-gated comparison. Float32 formula selection remains explicit; default high-precision
+   sixth-order TM/UTM, completing P.3b.2 formula lowering. P.4b.2 adds explicit angular normalization
+   and P.4c supplies correctness-gated comparison. Next prioritize P.5a projection families, using
+   representative benchmark evidence to decide whether P.6 or P.8 optimization is justified.
+   Float32 formula selection remains explicit; default high-precision
    programs continue to use double-single adaptive fitting.
 4. Add P.5a projection families based on observed CRS demand. Enter P.5b only with consumers.
 5. Run the P.6 decision gate after native and adaptive double-single paths can be compared. Do not
