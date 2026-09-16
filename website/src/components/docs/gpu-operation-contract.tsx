@@ -639,7 +639,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     ownership: COMMON.callerOwned,
     output: 'Exact complex transform for the configured power-of-two extent.',
     work: 'Bit reversal plus radix-2 butterfly passes across both dimensions.',
-    chunks: 'Requires one packed 2D domain.',
+    chunks: 'Independent packed float32x2 chunks; bounded single-transform scratch preserves caller storage.',
     execution: COMMON.noSubmission,
     neighborhood: 'complex field → GPUFFT2D → spectral filter, simulation step, or inverse transform.',
     cost: 'O(width × height × (log width + log height)) passes and bandwidth.',
