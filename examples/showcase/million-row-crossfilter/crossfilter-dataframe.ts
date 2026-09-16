@@ -78,11 +78,13 @@ export function addCrossfilterDataFrameCategoryCount<Parameters>(
     throw new Error('Crossfilter category output must match dataframe category dictionary');
   }
   const keys = graph.importGPUVector('crossfilter-dataframe-category', category).data[0];
-  new GPUGroupAggregation({
-    id: 'crossfilter-dataframe-category-count',
-    keys,
-    mask: selectionMask,
-    output,
-    operation: 'count'
-  }).addToGraph(graph);
+  graph.add(
+    new GPUGroupAggregation({
+      id: 'crossfilter-dataframe-category-count',
+      keys,
+      mask: selectionMask,
+      output,
+      operation: 'count'
+    })
+  );
 }
