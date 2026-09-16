@@ -19,6 +19,7 @@ import {
   type ProjectionInputFormat
 } from '@luma.gl/experimental/gpu-project';
 import {addGeospatialPass} from '../../src/geospatial/geospatial-utils';
+import {makeTransverseMercatorCRS} from './projection-crs-fixtures';
 
 const formats: ProjectionInputFormat[] = ['float32x2', 'float32x4', 'uint32x4'];
 for (const inputFormat of formats) {
@@ -190,81 +191,132 @@ for (const inputFormat of formats) {
   }
 }
 
-it('chains double-single output through inverse operations and preserves zero validity', async context => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    return;
-  }
-  skipSoftwareDevice(device, context);
-  const definition: ProjectionProgram = {
-    precision: 'double-single',
-    operations: [
-      {type: 'axis', order: [1, 0]},
-      {type: 'unit', factor: 0.125},
-      {type: 'affine', scale: [3, -2], offset: [100_000_000.125, -200_000_000.25]}
-    ]
-  };
-  const graph = new GPUCommandGraph(device);
-  const sourceBuffer = device.createBuffer({
-    data: new Uint32Array(Float64Array.of(0, 0, 1.00001, 2.00002, NaN, 0).buffer),
-    usage: Buffer.STORAGE
+for (const nativeCRS of [false, true]) {
+  it(`chains double-single output through inverse operations and preserves zero validity (native CRS: ${nativeCRS})`, async context => {
+    const device = await getWebGPUTestDevice();
+    if (!device) {
+      return;
+    }
+    skipSoftwareDevice(device, context);
+    let definition: ProjectionProgram = {
+      precision: 'double-single',
+      operations: [
+        {type: 'axis', order: [1, 0]},
+        {type: 'unit', factor: 0.125},
+        {type: 'affine', scale: [3, -2], offset: [100_000_000.125, -200_000_000.25]}
+      ]
+    };
+    if (nativeCRS) {
+      const source = makeTransverseMercatorCRS();
+      const target = {
+        ...source,
+        conversion: {
+          ...source.conversion,
+          parameters: source.conversion.parameters.map(parameter => ({
+            ...parameter,
+            value:
+              parameter.value +
+              (parameter.id.code === 8806
+                ? 100000000.125
+                : parameter.id.code === 8807
+                  ? -200000000.25
+                  : 0)
+          }))
+        },
+        coordinate_system: {
+          ...source.coordinate_system,
+          axis: [
+            {...source.coordinate_system.axis[1], direction: 'south' as const},
+            {...source.coordinate_system.axis[0], direction: 'west' as const}
+          ]
+        }
+      };
+      const result = planCRSProjection({
+        from: source,
+        to: target,
+        enforceAxis: true,
+        allowAdaptive: false
+      });
+      if (result.status !== 'ready') throw new Error(JSON.stringify(result.reasons));
+      expect(result.strategy).toBe('native');
+      definition = result.program;
+    }
+    const graph = new GPUCommandGraph(device);
+    const sourceBuffer = device.createBuffer({
+      data: new Uint32Array(Float64Array.of(0, 0, 1.00001, 2.00002, NaN, 0).buffer),
+      usage: Buffer.STORAGE
+    });
+    const intermediateBuffer = device.createBuffer({
+      byteLength: 48,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const outputBuffer = device.createBuffer({
+      byteLength: 48,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const validityBuffer = device.createBuffer({
+      byteLength: 12,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const outputValidityBuffer = device.createBuffer({
+      byteLength: 12,
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
+    });
+    const intermediate = importView(graph, 'intermediate', intermediateBuffer, 'float32x4', 3);
+    const validity = importView(graph, 'validity', validityBuffer, 'uint32', 3);
+    const forward = new GPUProjectionProgram({
+      id: 'forward',
+      projection: compileProjectionProgram(definition, {inputFormat: 'uint32x4'}),
+      positions: importView(graph, 'source', sourceBuffer, 'uint32x4', 3),
+      output: intermediate,
+      validity
+    });
+    const inverse = new GPUProjectionProgram({
+      id: 'inverse',
+      projection: compileProjectionProgram(invertProjectionProgram(definition), {
+        inputFormat: 'float32x4'
+      }),
+      positions: intermediate,
+      inputValidity: validity,
+      output: importView(graph, 'output', outputBuffer, 'float32x4', 3),
+      validity: importView(graph, 'output-validity', outputValidityBuffer, 'uint32', 3)
+    });
+    forward.addToGraph(graph);
+    inverse.addToGraph(graph);
+    const compiled = graph.compile();
+    execute(device, compiled);
+    if (nativeCRS) {
+      const intermediateResult = new Float32Array((await intermediateBuffer.readAsync()).buffer);
+      expect(
+        Math.abs(intermediateResult[4] + intermediateResult[5] - (200000000.25 - 2.00002))
+      ).toBeLessThan(2e-6);
+      expect(
+        Math.abs(intermediateResult[6] + intermediateResult[7] + 100000000.125 + 1.00001)
+      ).toBeLessThan(2e-6);
+      expect(intermediateResult[5]).not.toBe(0);
+      expect(intermediateResult[7]).not.toBe(0);
+    }
+    const result = new Float32Array((await outputBuffer.readAsync()).buffer);
+    expect(Math.abs(result[4] + result[5] - 1.00001)).toBeLessThan(2e-6);
+    expect(Math.abs(result[6] + result[7] - 2.00002)).toBeLessThan(2e-6);
+    expect(new Uint32Array((await outputValidityBuffer.readAsync()).buffer)).toEqual(
+      Uint32Array.of(1, 1, 0)
+    );
+    expect([...result.slice(0, 4)]).toEqual([0, 0, 0, 0]);
+    compiled.destroy();
+    forward.destroy();
+    inverse.destroy();
+    for (const buffer of [
+      sourceBuffer,
+      intermediateBuffer,
+      outputBuffer,
+      validityBuffer,
+      outputValidityBuffer
+    ]) {
+      buffer.destroy();
+    }
   });
-  const intermediateBuffer = device.createBuffer({byteLength: 48, usage: Buffer.STORAGE});
-  const outputBuffer = device.createBuffer({
-    byteLength: 48,
-    usage: Buffer.STORAGE | Buffer.COPY_SRC
-  });
-  const validityBuffer = device.createBuffer({
-    byteLength: 12,
-    usage: Buffer.STORAGE | Buffer.COPY_SRC
-  });
-  const outputValidityBuffer = device.createBuffer({
-    byteLength: 12,
-    usage: Buffer.STORAGE | Buffer.COPY_SRC
-  });
-  const intermediate = importView(graph, 'intermediate', intermediateBuffer, 'float32x4', 3);
-  const validity = importView(graph, 'validity', validityBuffer, 'uint32', 3);
-  const forward = new GPUProjectionProgram({
-    id: 'forward',
-    projection: compileProjectionProgram(definition, {inputFormat: 'uint32x4'}),
-    positions: importView(graph, 'source', sourceBuffer, 'uint32x4', 3),
-    output: intermediate,
-    validity
-  });
-  const inverse = new GPUProjectionProgram({
-    id: 'inverse',
-    projection: compileProjectionProgram(invertProjectionProgram(definition), {
-      inputFormat: 'float32x4'
-    }),
-    positions: intermediate,
-    inputValidity: validity,
-    output: importView(graph, 'output', outputBuffer, 'float32x4', 3),
-    validity: importView(graph, 'output-validity', outputValidityBuffer, 'uint32', 3)
-  });
-  forward.addToGraph(graph);
-  inverse.addToGraph(graph);
-  const compiled = graph.compile();
-  execute(device, compiled);
-  const result = new Float32Array((await outputBuffer.readAsync()).buffer);
-  expect(Math.abs(result[4] + result[5] - 1.00001)).toBeLessThan(2e-6);
-  expect(Math.abs(result[6] + result[7] - 2.00002)).toBeLessThan(2e-6);
-  expect(new Uint32Array((await outputValidityBuffer.readAsync()).buffer)).toEqual(
-    Uint32Array.of(1, 1, 0)
-  );
-  expect([...result.slice(0, 4)]).toEqual([0, 0, 0, 0]);
-  compiled.destroy();
-  forward.destroy();
-  inverse.destroy();
-  for (const buffer of [
-    sourceBuffer,
-    intermediateBuffer,
-    outputBuffer,
-    validityBuffer,
-    outputValidityBuffer
-  ]) {
-    buffer.destroy();
-  }
-});
+}
 
 it('updates parameters on the existing graph and preserves empty source chunks', async context => {
   const device = await getWebGPUTestDevice();
