@@ -2,36 +2,42 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
-
-const TILE = 16;
+import type {GPUCommandNode} from './gpu-command-node';
+import type {GPUCommandGraph} from './gpu-command-graph';
+import {getViewElementOffset} from './graph-data-view-utils';
+import {
+  type DenseView,
+  type DenseChunk,
+  type DenseDispatch,
+  validateDenseDimensions,
+  validateDenseView,
+  validateDenseOutput,
+  getDenseChunks,
+  getDenseDispatch,
+  getDenseWorkgroupIndex,
+  createDenseNode,
+  createDenseZeroNode
+} from './gpu-dense-utils';
 
 export type GPUMatMulProps = {
   id?: string;
-  /** Row-major MxK matrix. */
-  left: GraphDataView<'float32'>;
-  /** Row-major KxN matrix. */
-  right: GraphDataView<'float32'>;
-  /** Row-major MxN output matrix. */
-  output: GraphDataView<'float32'>;
-  /** Output row count. */
+  /** Packed row-major M by K matrix, with arbitrary physical chunks. */
+  left: DenseView;
+  /** Packed row-major K by N matrix, independently partitioned. */
+  right: DenseView;
+  /** Packed row-major M by N destination; spare capacity is preserved. */
+  output: DenseView;
   m: number;
-  /** Shared inner dimension. */
   k: number;
-  /** Output column count. */
   n: number;
 };
 
-/** Dense tiled row-major float32 matrix multiplication: `output = left * right`. */
+/** Dense tiled row-major float32 multiplication: output = left * right. */
 export class GPUMatMul {
   readonly id: string;
-  readonly left: GraphDataView<'float32'>;
-  readonly right: GraphDataView<'float32'>;
-  readonly output: GraphDataView<'float32'>;
+  readonly left: DenseView;
+  readonly right: DenseView;
+  readonly output: DenseView;
   readonly m: number;
   readonly k: number;
   readonly n: number;
@@ -44,113 +50,129 @@ export class GPUMatMul {
     this.m = props.m;
     this.k = props.k;
     this.n = props.n;
-
-    validatePackedView(this.left, ['float32'], `${this.id} left`);
-    validatePackedView(this.right, ['float32'], `${this.id} right`);
-    validatePackedView(this.output, ['float32'], `${this.id} output`);
-    for (const [name, value] of Object.entries({m: this.m, k: this.k, n: this.n})) {
-      if (!Number.isInteger(value) || value < 0) {
-        throw new Error(`${this.id} ${name} must be a non-negative integer`);
-      }
-    }
-    if (this.left.length !== this.m * this.k)
-      throw new Error(`${this.id} left length must equal m * k`);
-    if (this.right.length !== this.k * this.n)
-      throw new Error(`${this.id} right length must equal k * n`);
-    if (this.output.length !== this.m * this.n)
-      throw new Error(`${this.id} output length must equal m * n`);
-    if (this.output.buffer === this.left.buffer || this.output.buffer === this.right.buffer) {
-      throw new Error(`${this.id} output must use a separate buffer`);
-    }
+    validateDenseDimensions(
+      [this.m, this.k, this.n],
+      [this.m * this.k, this.k * this.n, this.m * this.n]
+    );
+    validateDenseView(this.left, this.m * this.k, this.id);
+    validateDenseView(this.right, this.k * this.n, this.id);
+    validateDenseView(this.output, this.m * this.n, this.id);
+    validateDenseOutput([this.left, this.right], this.output);
   }
 
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
+    const leftChunks = getDenseChunks(graph, this.left, this.m * this.k);
+    const rightChunks = getDenseChunks(graph, this.right, this.k * this.n);
+    const outputs = getDenseChunks(graph, this.output, this.m * this.n);
     const nodes: GPUCommandNode<Parameters>[] = [];
-    for (const view of [this.left, this.right, this.output]) {
-      if (view.buffer.graph !== graph)
-        throw new Error(`${this.id} views must belong to the target graph`);
-    }
-    if (this.m === 0 || this.n === 0) return nodes;
-
-    const source = makeShaderSource(this);
-    const workgroupsX = Math.ceil(this.n / TILE);
-    const workgroupsY = Math.ceil(this.m / TILE);
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUMatMul',
-          commandCount: 1,
-          maximumWorkgroupCount: workgroupsX * workgroupsY,
-          maximumInvocationCount: workgroupsX * workgroupsY * TILE * TILE,
-          readByteLength: (this.left.length + this.right.length) * 4,
-          writeByteLength: this.output.length * 4
-        },
-        resources: [
-          {buffer: this.left, usage: 'storage-read'},
-          {buffer: this.right, usage: 'storage-read'},
-          {buffer: this.output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputValues', type: 'storage', group: 0, location: 2}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                leftValues: getViewBinding(this.left, getBuffer),
-                rightValues: getViewBinding(this.right, getBuffer),
-                outputValues: getViewBinding(this.output, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, workgroupsX, workgroupsY, 1);
-            },
-            destroy: () => computation.destroy()
-          };
+    for (const output of outputs) {
+      if (!this.k) {
+        nodes.push(
+          createDenseZeroNode(graph, `${this.id}-zero-${nodes.length}`, 'GPUMatMul', output.data)
+        );
+        continue;
+      }
+      const firstRow = Math.floor(output.offset / this.n);
+      const rowCount = Math.ceil((output.offset + output.length) / this.n) - firstRow;
+      const tilesPerRow = Math.ceil(this.n / 16);
+      const tileCount = Math.ceil(rowCount / 16) * tilesPerRow;
+      const dispatch = getDenseDispatch(graph, tileCount);
+      let accumulate = false;
+      for (const left of leftChunks) {
+        for (const right of rightChunks) {
+          nodes.push(
+            createDenseNode(graph, {
+              id: `${this.id}-${nodes.length}`,
+              operation: 'GPUMatMul',
+              inputs: {leftValues: left.data, rightValues: right.data},
+              output: output.data,
+              dispatch,
+              accumulate,
+              tiled: true,
+              source: makeShaderSource(
+                this,
+                left,
+                right,
+                output,
+                firstRow,
+                rowCount,
+                tilesPerRow,
+                tileCount,
+                dispatch,
+                accumulate
+              )
+            })
+          );
+          accumulate = true;
         }
-      })
-    );
-
+      }
+    }
     return nodes;
   }
 }
 
-function makeShaderSource(matmul: GPUMatMul): string {
-  return `const M:u32=${matmul.m}u; const K:u32=${matmul.k}u; const N:u32=${matmul.n}u;
-const LEFT_OFFSET:u32=${getViewElementOffset(matmul.left)}u; const RIGHT_OFFSET:u32=${getViewElementOffset(matmul.right)}u; const OUTPUT_OFFSET:u32=${getViewElementOffset(matmul.output)}u;
-@group(0) @binding(0) var<storage,read> leftValues:array<f32>;
-@group(0) @binding(1) var<storage,read> rightValues:array<f32>;
-@group(0) @binding(2) var<storage,read_write> outputValues:array<f32>;
-var<workgroup> tileA:array<array<f32,${TILE}>,${TILE}>;
-var<workgroup> tileB:array<array<f32,${TILE}>,${TILE}>;
-@compute @workgroup_size(${TILE},${TILE},1)
-fn main(@builtin(workgroup_id) wg:vec3u,@builtin(local_invocation_id) local:vec3u){
-  let row=wg.y*${TILE}u+local.y;
-  let col=wg.x*${TILE}u+local.x;
-  var sum=0.0;
-  var tileStart=0u;
-  loop {
-    if(tileStart>=K){break;}
-    let aCol=tileStart+local.x;
-    let bRow=tileStart+local.y;
-    tileA[local.y][local.x]=select(0.0,leftValues[LEFT_OFFSET+row*K+aCol],row<M && aCol<K);
-    tileB[local.y][local.x]=select(0.0,rightValues[RIGHT_OFFSET+bRow*N+col],bRow<K && col<N);
-    workgroupBarrier();
-    var i=0u;
-    loop { if(i>=${TILE}u){break;} sum += tileA[local.y][i]*tileB[i][local.x]; i+=1u; }
-    workgroupBarrier();
-    tileStart+=${TILE}u;
+function makeShaderSource(
+  matrix: GPUMatMul,
+  left: DenseChunk,
+  right: DenseChunk,
+  output: DenseChunk,
+  firstRow: number,
+  rowCount: number,
+  tilesPerRow: number,
+  tileCount: number,
+  dispatch: DenseDispatch,
+  accumulate: boolean
+): string {
+  return `@group(0) @binding(0) var<storage, read> leftValues: array<f32>;
+@group(0) @binding(1) var<storage, read> rightValues: array<f32>;
+@group(0) @binding(2) var<storage, read_write> outputValues: array<f32>;
+var<workgroup> leftTile: array<array<f32, 16>, 16>;
+var<workgroup> rightTile: array<array<f32, 16>, 16>;
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_id) localId: vec3u) {
+  ${getDenseWorkgroupIndex(dispatch)}
+  if (workgroupIndex >= ${tileCount}u) {
+    return;
   }
-  if(row<M && col<N){outputValues[OUTPUT_OFFSET+row*N+col]=sum;}
+  let relativeRow = (workgroupIndex / ${tilesPerRow}u) * 16u + localId.y;
+  let row = ${firstRow}u + relativeRow;
+  let column = (workgroupIndex % ${tilesPerRow}u) * 16u + localId.x;
+  var sum = 0.0;
+  for (var tileStart = 0u; tileStart < ${matrix.k}u; tileStart += 16u) {
+    let leftColumn = tileStart + localId.x;
+    let rightRow = tileStart + localId.y;
+    let leftIndex = row * ${matrix.k}u + leftColumn;
+    let rightIndex = rightRow * ${matrix.n}u + column;
+    leftTile[localId.y][localId.x] = 0.0;
+    rightTile[localId.y][localId.x] = 0.0;
+    if (relativeRow < ${rowCount}u && leftColumn < ${matrix.k}u &&
+        leftIndex >= ${left.offset}u && leftIndex - ${left.offset}u < ${left.length}u) {
+      leftTile[localId.y][localId.x] = leftValues[${getViewElementOffset(left.data)}u + leftIndex - ${left.offset}u];
+    }
+    if (rightRow < ${matrix.k}u && column < ${matrix.n}u &&
+        rightIndex >= ${right.offset}u && rightIndex - ${right.offset}u < ${right.length}u) {
+      rightTile[localId.y][localId.x] = rightValues[${getViewElementOffset(right.data)}u + rightIndex - ${right.offset}u];
+    }
+    workgroupBarrier();
+    for (var inner = 0u; inner < 16u; inner++) {
+      let leftElement = row * ${matrix.k}u + tileStart + inner;
+      let rightElement = (tileStart + inner) * ${matrix.n}u + column;
+      // Missing chunk contributions are absent, not zero times a potentially non-finite value.
+      if (relativeRow < ${rowCount}u && column < ${matrix.n}u && tileStart + inner < ${matrix.k}u &&
+          leftElement >= ${left.offset}u && leftElement - ${left.offset}u < ${left.length}u &&
+          rightElement >= ${right.offset}u && rightElement - ${right.offset}u < ${right.length}u) {
+        sum += leftTile[localId.y][inner] * rightTile[inner][localId.x];
+      }
+    }
+    workgroupBarrier();
+  }
+  let outputIndex = row * ${matrix.n}u + column;
+  if (relativeRow < ${rowCount}u && column < ${matrix.n}u &&
+      outputIndex >= ${output.offset}u && outputIndex - ${output.offset}u < ${output.length}u) {
+    outputValues[${getViewElementOffset(output.data)}u + outputIndex - ${output.offset}u] ${accumulate ? '+=' : '='} sum;
+  }
 }`;
 }

@@ -46,7 +46,7 @@ Matrices often represent linear transformations, physical operators, graph-deriv
 
 ## Row-major storage
 
-The initial API stores the matrix flat in row-major order:
+The API stores the logical matrix in row-major order:
 
 ```text
 matrix = [a00,a01,a02, a10,a11,a12]
@@ -58,6 +58,8 @@ For `rows × columns`, matrix element `(row,column)` is at `row * columns + colu
 ## Contract
 
 ```ts
+import {GPUMatVec} from '@luma.gl/gpgpu/gpu-core';
+
 graph.add(new GPUMatVec({
   matrix,
   vector: x,
@@ -67,7 +69,24 @@ graph.add(new GPUMatVec({
 }));
 ```
 
-The matrix contains `rows * columns` packed `float32` values, `x` contains `columns`, and `y` contains `rows`.
+The matrix contains at least `rows * columns` packed `float32` values, `x` contains at least
+`columns`, and `y` contains at least `rows`. Extra capacity is ignored; output tails are unchanged.
+
+## Physical chunks
+
+Each operand accepts a `GraphDataView<'float32'>` or `GraphVectorView<'float32'>`. Their
+partitions are independent, and a matrix chunk can split a row. Logical column indices address
+the whole vector. Empty chunks and nonzero aligned byte offsets are supported.
+
+Lowering borrows the original buffers and allocates no scratch or concatenated storage.
+Each input-chunk pair contributes to each output chunk. The first pass initializes the output;
+later passes accumulate, so encoding the same graph again replaces the previous result.
+Different partitions can change floating-point summation order.
+
+Output buffers must be separate from both inputs, and output chunks must not overlap.
+Every chunk, including empty chunks, must belong to the target graph. Active bindings must fit
+device limits; the logical matrix can exceed one binding when its individual chunks fit.
+A zero row count emits no work. A zero column count explicitly writes zero to active output rows.
 
 ## Dense vs sparse MatVec
 
@@ -96,7 +115,13 @@ iterative solver
 
 ## Execution strategy
 
-The baseline assigns one 256-thread workgroup to each matrix row. Lanes process columns in parallel and then reduce their partial products to one output value.
+The kernel assigns one 256-thread workgroup to each matrix row for each input-chunk pair.
+Lanes process columns in parallel and then reduce their partial products to one output value.
+Large row ranges use bounded three-dimensional dispatches. Dispatch count grows with the product
+of matrix, vector, and output chunk counts; routing only relevant row ranges remains performance work.
+
+WebGPU and packed scalar `float32` storage are required. Dimensions are non-negative signed
+32-bit integers, with each logical operand containing at most `2^32 - 1` elements.
 
 MatVec is usually memory-bandwidth constrained because the matrix streams through memory while `x` is repeatedly reused. Future strategies may cache vector tiles, use subgroup reductions, or specialize for narrow/wide matrices.
 

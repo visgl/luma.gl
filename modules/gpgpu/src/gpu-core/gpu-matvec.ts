@@ -2,34 +2,41 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
-
-const WORKGROUP_SIZE = 256;
+import type {GPUCommandNode} from './gpu-command-node';
+import type {GPUCommandGraph} from './gpu-command-graph';
+import {getViewElementOffset} from './graph-data-view-utils';
+import {
+  type DenseView,
+  type DenseChunk,
+  type DenseDispatch,
+  validateDenseDimensions,
+  validateDenseView,
+  validateDenseOutput,
+  getDenseChunks,
+  getDenseDispatch,
+  getDenseWorkgroupIndex,
+  createDenseNode,
+  createDenseZeroNode
+} from './gpu-dense-utils';
 
 export type GPUMatVecProps = {
   id?: string;
-  /** Row-major packed float32 matrix containing rows * columns values. */
-  matrix: GraphDataView<'float32'>;
-  /** Packed float32 vector containing columns values. */
-  vector: GraphDataView<'float32'>;
-  /** Packed float32 result containing rows values. */
-  output: GraphDataView<'float32'>;
-  /** Matrix row count. */
+  /** Packed row-major matrix; chunks may split rows. */
+  matrix: DenseView;
+  /** Packed vector with independent physical chunks. */
+  vector: DenseView;
+  /** Packed destination; spare capacity is preserved. */
+  output: DenseView;
   rows: number;
-  /** Matrix column count. */
   columns: number;
 };
 
-/** Dense row-major float32 matrix-vector multiplication: `output = matrix * vector`. */
+/** Dense row-major float32 multiplication: output = matrix * vector. */
 export class GPUMatVec {
   readonly id: string;
-  readonly matrix: GraphDataView<'float32'>;
-  readonly vector: GraphDataView<'float32'>;
-  readonly output: GraphDataView<'float32'>;
+  readonly matrix: DenseView;
+  readonly vector: DenseView;
+  readonly output: DenseView;
   readonly rows: number;
   readonly columns: number;
 
@@ -40,87 +47,88 @@ export class GPUMatVec {
     this.output = props.output;
     this.rows = props.rows;
     this.columns = props.columns;
-
-    validatePackedView(this.matrix, ['float32'], `${this.id} matrix`);
-    validatePackedView(this.vector, ['float32'], `${this.id} vector`);
-    validatePackedView(this.output, ['float32'], `${this.id} output`);
-    if (!Number.isInteger(this.rows) || this.rows < 0)
-      throw new Error(`${this.id} rows must be a non-negative integer`);
-    if (!Number.isInteger(this.columns) || this.columns < 0)
-      throw new Error(`${this.id} columns must be a non-negative integer`);
-    if (this.matrix.length !== this.rows * this.columns)
-      throw new Error(`${this.id} matrix length must equal rows * columns`);
-    if (this.vector.length !== this.columns)
-      throw new Error(`${this.id} vector length must equal columns`);
-    if (this.output.length !== this.rows)
-      throw new Error(`${this.id} output length must equal rows`);
-    if (this.output.buffer === this.matrix.buffer || this.output.buffer === this.vector.buffer)
-      throw new Error(`${this.id} output must use a separate buffer`);
+    validateDenseDimensions([this.rows, this.columns], [this.rows * this.columns]);
+    validateDenseView(this.matrix, this.rows * this.columns, this.id);
+    validateDenseView(this.vector, this.columns, this.id);
+    validateDenseView(this.output, this.rows, this.id);
+    validateDenseOutput([this.matrix, this.vector], this.output);
   }
 
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
+    const matrices = getDenseChunks(graph, this.matrix, this.rows * this.columns);
+    const vectors = getDenseChunks(graph, this.vector, this.columns);
+    const outputs = getDenseChunks(graph, this.output, this.rows);
     const nodes: GPUCommandNode<Parameters>[] = [];
-    for (const view of [this.matrix, this.vector, this.output]) {
-      if (view.buffer.graph !== graph)
-        throw new Error(`${this.id} views must belong to the target graph`);
-    }
-    if (this.rows === 0) return nodes;
-
-    const source = makeShaderSource(this);
-    nodes.push(
-      createGPUComputeCommandNode<Parameters>({
-        id: this.id,
-        workload: {
-          operation: 'GPUMatVec',
-          commandCount: 1,
-          maximumWorkgroupCount: this.rows,
-          maximumInvocationCount: this.rows * WORKGROUP_SIZE,
-          readByteLength: (this.matrix.length + this.vector.length) * 4,
-          writeByteLength: this.output.length * 4
-        },
-        resources: [
-          {buffer: this.matrix, usage: 'storage-read'},
-          {buffer: this.vector, usage: 'storage-read'},
-          {buffer: this.output, usage: 'storage-write'}
-        ],
-        compile: ({device}) => {
-          const computation = new Computation(device, {
-            id: this.id,
-            source,
-            shaderLayout: {
-              bindings: [
-                {name: 'matrixValues', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'vectorValues', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputValues', type: 'storage', group: 0, location: 2}
-              ]
-            }
-          });
-          return {
-            encode: ({computePass, getBuffer}) => {
-              const bindings: Record<string, Binding> = {
-                matrixValues: getViewBinding(this.matrix, getBuffer),
-                vectorValues: getViewBinding(this.vector, getBuffer),
-                outputValues: getViewBinding(this.output, getBuffer)
-              };
-              computation.setBindings(bindings);
-              computation.dispatch(computePass, this.rows, 1, 1);
-            },
-            destroy: () => computation.destroy()
-          };
+    for (const output of outputs) {
+      if (!this.columns) {
+        nodes.push(
+          createDenseZeroNode(graph, `${this.id}-zero-${nodes.length}`, 'GPUMatVec', output.data)
+        );
+        continue;
+      }
+      const dispatch = getDenseDispatch(graph, output.length);
+      let accumulate = false;
+      for (const matrix of matrices) {
+        for (const vector of vectors) {
+          nodes.push(
+            createDenseNode(graph, {
+              id: `${this.id}-${nodes.length}`,
+              operation: 'GPUMatVec',
+              inputs: {matrixValues: matrix.data, vectorValues: vector.data},
+              output: output.data,
+              dispatch,
+              accumulate,
+              source: makeShaderSource(this.columns, matrix, vector, output, dispatch, accumulate)
+            })
+          );
+          accumulate = true;
         }
-      })
-    );
-
+      }
+    }
     return nodes;
   }
 }
 
-function makeShaderSource(matvec: GPUMatVec): string {
-  return `const ROWS:u32=${matvec.rows}u; const COLUMNS:u32=${matvec.columns}u;
-const MATRIX_OFFSET:u32=${getViewElementOffset(matvec.matrix)}u; const VECTOR_OFFSET:u32=${getViewElementOffset(matvec.vector)}u; const OUTPUT_OFFSET:u32=${getViewElementOffset(matvec.output)}u;
-@group(0) @binding(0) var<storage,read> matrixValues:array<f32>; @group(0) @binding(1) var<storage,read> vectorValues:array<f32>; @group(0) @binding(2) var<storage,read_write> outputValues:array<f32>;
-var<workgroup> partials:array<f32,${WORKGROUP_SIZE}>;
-@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(workgroup_id) wg:vec3u,@builtin(local_invocation_index) lane:u32){let row=wg.x;if(row>=ROWS){return;}var sum=0.0;var column=lane;loop{if(column>=COLUMNS){break;}sum += matrixValues[MATRIX_OFFSET+row*COLUMNS+column]*vectorValues[VECTOR_OFFSET+column];column+=${WORKGROUP_SIZE}u;}partials[lane]=sum;workgroupBarrier();var stride=${WORKGROUP_SIZE / 2}u;loop{if(stride==0u){break;}if(lane<stride){partials[lane]+=partials[lane+stride];}workgroupBarrier();stride/=2u;}if(lane==0u){outputValues[OUTPUT_OFFSET+row]=partials[0];}}`;
+function makeShaderSource(
+  columns: number,
+  matrix: DenseChunk,
+  vector: DenseChunk,
+  output: DenseChunk,
+  dispatch: DenseDispatch,
+  accumulate: boolean
+): string {
+  return `@group(0) @binding(0) var<storage, read> matrixValues: array<f32>;
+@group(0) @binding(1) var<storage, read> vectorValues: array<f32>;
+@group(0) @binding(2) var<storage, read_write> outputValues: array<f32>;
+var<workgroup> partials: array<f32, 256>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) lane: u32) {
+  ${getDenseWorkgroupIndex(dispatch)}
+  if (workgroupIndex >= ${output.length}u) {
+    return;
+  }
+  let row = ${output.offset}u + workgroupIndex;
+  var sum = 0.0;
+  for (var column = ${vector.offset}u + lane; column < ${vector.offset + vector.length}u; column += 256u) {
+    let matrixIndex = row * ${columns}u + column;
+    if (matrixIndex >= ${matrix.offset}u && matrixIndex - ${matrix.offset}u < ${matrix.length}u) {
+      sum += matrixValues[${getViewElementOffset(matrix.data)}u + matrixIndex - ${matrix.offset}u] *
+        vectorValues[${getViewElementOffset(vector.data)}u + column - ${vector.offset}u];
+    }
+  }
+  partials[lane] = sum;
+  workgroupBarrier();
+  for (var stride = 128u; stride > 0u; stride /= 2u) {
+    if (lane < stride) {
+      partials[lane] += partials[lane + stride];
+    }
+    workgroupBarrier();
+  }
+  if (lane == 0u) {
+    outputValues[${getViewElementOffset(output.data)}u + workgroupIndex] ${accumulate ? '+=' : '='} partials[0];
+  }
+}`;
 }

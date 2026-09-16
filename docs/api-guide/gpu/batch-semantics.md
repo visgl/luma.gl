@@ -153,6 +153,15 @@ concatenates caller storage. Node tests check limit-aware support, allocation bo
 overlapping output, and ownership of empty chunks. Fragmented routing and dispatch overhead remain
 performance work.
 
+`gpu-dense-batching.*.spec.ts` audits `GPUMatVec` and `GPUMatMul` with independent partitions,
+splits inside rows and tiles, empty chunks, offsets, spare capacity, and updated operands across
+repeated encodings. Both borrow caller buffers without scratch allocation. MatVec retains its
+workgroup reduction and MatMul its shared-memory tiles; chunk pairs accumulate into each output
+chunk. Zero inner dimensions write zero each time. Different partitions can change floating-point
+summation order. Node tests cover bounded dispatch, binding limits, ownership, aliases, and
+overlapping outputs. Both classes and their props are exported from `@luma.gl/gpgpu/gpu-core`.
+Chunk-pair selection and fragmented tile work remain performance debt.
+
 ## Remaining work, grouped for review
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -167,7 +176,7 @@ master, with shared lowering, conformance tests, and documented exceptions in ea
 | Review group | Operations to cover together | Current gap or audit question |
 | --- | --- | --- |
 | Two-dimensional transforms | `GPUFFT2D` | FFT1D and convolution now accept independent graph chunks. FFT2D still has a device-owned raw-buffer encode API; migrate its composition and resource contract together. Spectral convolution also retains bounded contiguous algorithm scratch. |
-| Dense and sparse algebra | `GPUMatVec`, `GPUMatMul`, `GPUProgramSpMV` | Dense implementations use atomic views; CSR lowering requires one chunk. Design global matrix/vector addressing and audit the public export surface together. |
+| Sparse algebra | `GPUProgramSpMV`, `GPUAdaptiveSpMV` | Dense MatVec/MatMul now accept independent chunks and have public exports. CSR lowering still requires one chunk; route row-offset pairs, nonzeros, and global vector indices together while preserving adaptive strategies. |
 | Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
 | Hash indexing and joins | `GPUHashIndex`, `GPUHashIndexQuery`, `GPUBatchHashIndex`, `GPUHashJoin`, `GPUBatchHashJoin` | Reuse batch variants; audit global lookup, duplicate/cardinality rules, independently partitioned columns, and destination capacity. |
 | Indexed movement and hierarchy | `GPUIndexedRangeCompaction`, `GPUPartitionedIndexedRangeCompaction`, `GPUChunkedIndexedScatter`, `GPUTextSelection`, `GPUVirtualGeometrySelection`, `GPUHierarchyLayout`, `GPUGraphTraversal`, `GPUAncestorProjection` | Some APIs already represent partitions/chunks. Audit global indices, cross-chunk ranges, output topology, and shared hierarchy callers as one family. |
