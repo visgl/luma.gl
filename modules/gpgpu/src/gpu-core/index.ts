@@ -627,3 +627,8 @@ export {
 export {GPUProgramDotProduct, GPUProgramVectorMADD} from './gpu-semantic-vector-operation';
 export {GPUProgramCSRMatrix, GPUProgramSpMV} from './gpu-semantic-spmv';
 export {createGPUConjugateGradientProgram} from './gpu-conjugate-gradient-program';
+
+export {GPUCOOToCSR} from './gpu-coo-to-csr';
+export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';
+export {GPURunLengthEncode, GPUUnique} from './gpu-run-length-encode';
+export type {GPURunLengthEncodeProps} from './gpu-run-length-encode';

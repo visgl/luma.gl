@@ -4,7 +4,6 @@
 
 import {type Device} from '@luma.gl/core';
 import type {GPUVectorInput} from '../gpu-data/gpu-vector-like';
-import {getSingleGraphVectorChunk} from './graph-vector-view-utils';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,
@@ -256,27 +255,17 @@ export class GPUProgramCompiler<Parameters = void> {
         m = p.matrix,
         e = new GPUAdaptiveSpMV({
           id: o.id,
-          rowOffsets: getSingleGraphVectorChunk(c.resolveVector(m.rowOffsets)),
-          columnIndices: getSingleGraphVectorChunk(c.resolveVector(m.columnIndices)),
-          values: getSingleGraphVectorChunk(c.resolveVector(m.values)),
-          vector: getSingleGraphVectorChunk(c.resolveVector(p.vector)),
-          output: getSingleGraphVectorChunk(c.resolveVector(p.output)),
+          rowOffsets: c.resolveVector(m.rowOffsets),
+          columnIndices: c.resolveVector(m.columnIndices),
+          values: c.resolveVector(m.values),
+          vector: c.resolveVector(p.vector),
+          output: c.resolveVector(p.output),
           columns: m.columns,
           statistics: m.statistics,
           strategy: p.strategy
         });
       const d = e.getStrategy(c.graph);
-      let dispatches: [number, number, number][];
-      if (m.rows === 0) dispatches = [];
-      else if (d.id === 'scalar-row' || d.id === 'subgroup-row')
-        dispatches = [[Math.ceil(m.rows / d.details.rowsPerWorkgroup), 1, 1]];
-      else if (d.id === 'workgroup-row') dispatches = [[m.rows, 1, 1]];
-      else
-        dispatches = [
-          [m.rows * d.details.workgroupsPerLongRow, 1, 1],
-          [Math.ceil(m.rows / 64), 1, 1]
-        ];
-      this.emitProducer(c.graph, e, dispatches);
+      this.emitProducer(c.graph, e);
       c.recordDecision({
         operationId: o.id,
         operationType: o.type,

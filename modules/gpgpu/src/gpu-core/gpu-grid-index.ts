@@ -7,7 +7,6 @@ import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-c
 import {getGPUGridIndexCommandNodesWithDispatchLimit} from './gpu-grid-index-internals';
 import {
   doGraphDataViewsOverlap,
-  validateMatchingVectorTopology,
   validatePackedUint32View,
   validatePackedView
 } from './graph-data-view-utils';
@@ -47,9 +46,9 @@ export type GPUGridIndexProps = {
   /** Finite inclusive domain matching the position dimension. */
   bounds: GPUGridIndexBounds;
   /** Caller-owned `cellCount + 1` exclusive offsets. */
-  cellOffsets: GraphDataView<'uint32'>;
+  cellOffsets: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned capacity-bounded stable object IDs grouped by cell. */
-  objectIds: GraphDataView<'uint32'>;
+  objectIds: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned row receiving the total number of accepted positions. */
   count: GraphDataView<'uint32'>;
   /** Caller-owned row receiving `1` when `count` exceeds object ID capacity. */
@@ -70,8 +69,8 @@ export class GPUGridIndex {
   readonly firstSourceIndex: number;
   readonly gridSize: GPUGridIndexSize;
   readonly bounds: GPUGridIndexBounds;
-  readonly cellOffsets: GraphDataView<'uint32'>;
-  readonly objectIds: GraphDataView<'uint32'>;
+  readonly cellOffsets: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
+  readonly objectIds: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   readonly count: GraphDataView<'uint32'>;
   readonly overflow: GraphDataView<'uint32'>;
   readonly dimension: 2 | 3;
@@ -103,7 +102,7 @@ export class GPUGridIndex {
       throw new Error(`${this.id} gridSize must contain positive integers`);
     }
     this.cellCount = this.gridSize.reduce((product, size) => product * size, 1);
-    if (!Number.isSafeInteger(this.cellCount) || this.cellCount > MAXIMUM_UINT32) {
+    if (!Number.isSafeInteger(this.cellCount) || this.cellCount >= MAXIMUM_UINT32) {
       throw new Error(`${this.id} cell count must fit in uint32`);
     }
     if (
@@ -115,8 +114,10 @@ export class GPUGridIndex {
       throw new Error(`${this.id} bounds must contain finite ordered minima and maxima`);
     }
 
-    validatePackedUint32View(this.cellOffsets, `${this.id} cellOffsets`);
-    validatePackedUint32View(this.objectIds, `${this.id} objectIds`);
+    for (const chunk of getSourceIdChunks(this.cellOffsets))
+      validatePackedUint32View(chunk, `${this.id} cellOffsets`);
+    for (const chunk of getSourceIdChunks(this.objectIds))
+      validatePackedUint32View(chunk, `${this.id} objectIds`);
     validatePackedUint32View(this.count, `${this.id} count`);
     validatePackedUint32View(this.overflow, `${this.id} overflow`);
     if (this.cellOffsets.length !== this.cellCount + 1) {
@@ -168,14 +169,7 @@ function validateSourceIds(
   for (const chunk of getSourceIdChunks(sourceIds)) {
     validatePackedUint32View(chunk, `${id} sourceIds`);
   }
-  const positionsAreVector = positions instanceof GraphVectorView;
-  const sourceIdsAreVector = sourceIds instanceof GraphVectorView;
-  if (positionsAreVector !== sourceIdsAreVector) {
-    throw new Error(`${id} positions and sourceIds must use the same view kind`);
-  }
-  if (positions instanceof GraphVectorView && sourceIds instanceof GraphVectorView) {
-    validateMatchingVectorTopology(positions, sourceIds, `${id} sourceIds`);
-  } else if (positions.length !== sourceIds.length) {
+  if (positions.length !== sourceIds.length) {
     throw new Error(`${id} sourceIds.length must equal positions.length`);
   }
 }
@@ -184,15 +178,19 @@ function validateDisjointGridInputs(
   id: string,
   positions: GPUGridIndexPositions,
   sourceIds: GPUGridIndexSourceIds | undefined,
-  objectIds: GraphDataView<'uint32'>
+  objectIds: GraphDataView<'uint32'> | GraphVectorView<'uint32'>
 ): void {
   for (const positionChunk of getPositionChunks(positions)) {
-    if (doGraphDataViewsOverlap(positionChunk, objectIds)) {
+    if (
+      getSourceIdChunks(objectIds).some(output => doGraphDataViewsOverlap(positionChunk, output))
+    ) {
       throw new Error(`${id} positions and objectIds must not overlap`);
     }
   }
   for (const sourceIdChunk of getSourceIdChunks(sourceIds)) {
-    if (doGraphDataViewsOverlap(sourceIdChunk, objectIds)) {
+    if (
+      getSourceIdChunks(objectIds).some(output => doGraphDataViewsOverlap(sourceIdChunk, output))
+    ) {
       throw new Error(`${id} sourceIds and objectIds must not overlap`);
     }
   }

@@ -2,372 +2,226 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {type GPUCommandNode} from './gpu-command-node';
+import {type GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {
-  type GPUCommandGraph,
-  type GraphBufferUse,
-  type GraphDataView,
-  GraphVectorView
-} from './gpu-command-graph';
-import {
-  type GPUBoundedDispatchLayout,
   getBoundedDispatchLayout,
-  getBoundedInvocationIndexSource
+  getBoundedInvocationIndexSource,
+  type GPUBoundedDispatchLayout
 } from './gpu-dispatch-utils';
-import type {
-  GPUGridIndex,
-  GPUGridIndexBounds,
-  GPUGridIndexPositions,
-  GPUGridIndexSize,
-  GPUGridIndexSourceIds
-} from './gpu-grid-index';
-import {getGPUScanCommandNodesWithDispatchLimit, GPUScan} from './gpu-scan';
-import {createTransientView, getViewBinding, getViewElementOffset} from './graph-data-view-utils';
+import type {GPUGridIndex} from './gpu-grid-index';
+import {GPUScan, getGPUScanCommandNodesWithDispatchLimit} from './gpu-scan';
+import {GPUScatter, getGPUScatterCommandNodesWithDispatchLimit} from './gpu-scatter';
+import {
+  createTransientView,
+  createTransientVectorView,
+  getViewElementOffset
+} from './graph-data-view-utils';
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {getGraphDataRange, createChunkNode, validateChunkViews} from './gpu-chunk-utils';
 
 const GRID_INDEX_WORKGROUP_SIZE = 256;
-type GPUGridIndexDispatchLayout = GPUBoundedDispatchLayout;
 
-/** Adds an index rebuild using an explicit device dispatch limit. @internal */
+/** Rebuilds counts and global destinations while retaining every source and destination chunk. @internal */
 export function getGPUGridIndexCommandNodesWithDispatchLimit<Parameters>(
   index: GPUGridIndex,
   graph: GPUCommandGraph<Parameters>,
-  maxComputeWorkgroupsPerDimension: number
+  maximum: number
 ): readonly GPUCommandNode<Parameters>[] {
+  validateChunkViews(
+    graph,
+    [index.positions, ...(index.sourceIds ? [index.sourceIds] : [])],
+    [index.cellOffsets, index.objectIds, index.count, index.overflow]
+  );
   const nodes: GPUCommandNode<Parameters>[] = [];
-  const views = [
-    ...getPositionChunks(index.positions),
-    ...getSourceIdChunks(index.sourceIds),
-    index.cellOffsets,
-    index.objectIds,
-    index.count,
-    index.overflow
-  ];
-  if (views.some(view => view.buffer.graph !== graph)) {
-    throw new Error(`${index.id} views must belong to the target graph`);
-  }
-
-  const cellCounts = createTransientView(
-    graph,
-    `${index.id}-cell-counts`,
-    'uint32',
-    index.cellCount
+  const offsets = getGraphDataRange(graph, index.cellOffsets, 0, index.cellCount);
+  const counts = createTransientVectorView(graph, `${index.id}-counts`, offsets);
+  const cursors = createTransientVectorView(graph, `${index.id}-cursors`, offsets);
+  const positions = getGraphVectorData(index.positions);
+  const ranks = positions.map((chunk, chunkIndex) =>
+    createTransientView(graph, `${index.id}-ranks-${chunkIndex}`, 'uint32', chunk.length)
   );
-  const cellCursors = createTransientView(
-    graph,
-    `${index.id}-cell-cursors`,
-    'uint32',
-    index.cellCount
-  );
-  const scannedOffsets = createTransientView(
-    graph,
-    `${index.id}-scanned-offsets`,
-    'uint32',
-    index.cellCount
-  );
-
-  nodes.push(
-    ...addInitializePass(graph, index.id, cellCounts, cellCursors, {
-      dispatchLayout: getGPUGridIndexDispatchLayout(
-        cellCounts.length,
-        maxComputeWorkgroupsPerDimension
-      )
-    })
-  );
-  const positionChunks = getPositionChunks(index.positions);
-  for (let chunkIndex = 0; chunkIndex < positionChunks.length; chunkIndex++) {
-    const positions = positionChunks[chunkIndex];
-    if (positions.length > 0) {
+  const generatedIds = index.sourceIds
+    ? undefined
+    : positions.map((chunk, chunkIndex) =>
+        createTransientView(graph, `${index.id}-ids-${chunkIndex}`, 'uint32', chunk.length)
+      );
+  let positionStart = index.firstSourceIndex;
+  for (const [chunkIndex, chunk] of positions.entries()) {
+    if (chunk.length) {
+      const rank = ranks[chunkIndex];
+      const ids = generatedIds?.[chunkIndex];
+      const dispatch = getGPUGridIndexDispatchLayout(chunk.length, maximum);
       nodes.push(
-        ...addCountPass(graph, {
-          id: `${index.id}-count-${chunkIndex}`,
-          positions,
-          cellCounts,
-          gridSize: index.gridSize,
-          bounds: index.bounds,
-          dimension: index.dimension,
-          dispatchLayout: getGPUGridIndexDispatchLayout(
-            positions.length,
-            maxComputeWorkgroupsPerDimension
-          )
+        createChunkNode(graph, {
+          id: `${index.id}-initialize-ranks-${chunkIndex}`,
+          outputs: {ranks: rank, ...(ids ? {ids} : {})},
+          dispatch,
+          source: `
+@group(0) @binding(0) var<storage, read_write> ranks: array<u32>;
+${ids ? '@group(0) @binding(1) var<storage, read_write> ids: array<u32>;' : ''}
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getGPUGridIndexInvocationIndexSource(dispatch)}
+  if (index >= ${chunk.length}u) { return; }
+  ranks[index] = 0xffffffffu;
+  ${ids ? `ids[index] = ${positionStart}u + index;` : ''}
+}`
         })
       );
     }
+    positionStart += chunk.length;
   }
-  const scan = new GPUScan({
-    id: `${index.id}-scan`,
-    input: cellCounts,
-    output: scannedOffsets
-  });
-  nodes.push(
-    ...getGPUScanCommandNodesWithDispatchLimit(scan, graph, maxComputeWorkgroupsPerDimension)
-  );
-  nodes.push(
-    ...addFinalizePass(graph, {
-      id: `${index.id}-finalize`,
-      cellCounts,
-      scannedOffsets,
-      cellOffsets: index.cellOffsets,
-      count: index.count,
-      overflow: index.overflow,
-      capacity: index.objectIds.length,
-      dispatchLayout: getGPUGridIndexDispatchLayout(
-        cellCounts.length,
-        maxComputeWorkgroupsPerDimension
-      )
-    })
-  );
-
-  const sourceIdChunks = getSourceIdChunks(index.sourceIds);
-  let sourceBase = index.firstSourceIndex;
-  for (let chunkIndex = 0; chunkIndex < positionChunks.length; chunkIndex++) {
-    const positions = positionChunks[chunkIndex];
-    if (positions.length > 0 && index.objectIds.length > 0) {
-      nodes.push(
-        ...addScatterPass(graph, {
-          id: `${index.id}-scatter-${chunkIndex}`,
-          positions,
-          sourceIds: sourceIdChunks[chunkIndex],
-          sourceBase,
-          scannedOffsets,
-          cellCursors,
-          objectIds: index.objectIds,
-          gridSize: index.gridSize,
-          bounds: index.bounds,
-          dimension: index.dimension,
-          dispatchLayout: getGPUGridIndexDispatchLayout(
-            positions.length,
-            maxComputeWorkgroupsPerDimension
-          )
-        })
-      );
-    }
-    sourceBase += positions.length;
-  }
-
-  return nodes;
-}
-
-function addInitializePass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  id: string,
-  cellCounts: GraphDataView<'uint32'>,
-  cellCursors: GraphDataView<'uint32'>,
-  props: {dispatchLayout: GPUGridIndexDispatchLayout}
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const source = /* wgsl */ `
-const CELL_COUNT: u32 = ${cellCounts.length}u;
-const COUNTS_OFFSET: u32 = ${getViewElementOffset(cellCounts)}u;
-const CURSORS_OFFSET: u32 = ${getViewElementOffset(cellCursors)}u;
+  let cellStart = 0;
+  for (const [cellChunkIndex, cellCounts] of counts.data.entries()) {
+    const cellCursors = cursors.data[cellChunkIndex];
+    const dispatch = getGPUGridIndexDispatchLayout(cellCounts.length, maximum);
+    nodes.push(
+      createChunkNode(graph, {
+        id: `${index.id}-initialize-${cellChunkIndex}`,
+        outputs: {cellCounts, cellCursors},
+        dispatch,
+        source: `
 @group(0) @binding(0) var<storage, read_write> cellCounts: array<u32>;
 @group(0) @binding(1) var<storage, read_write> cellCursors: array<u32>;
-@compute @workgroup_size(${GRID_INDEX_WORKGROUP_SIZE}) fn main(
-  @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_index) localInvocationIndex: u32
-) {
-  ${getGPUGridIndexInvocationIndexSource(props.dispatchLayout)}
-  if (index >= CELL_COUNT) { return; }
-  cellCounts[COUNTS_OFFSET + index] = 0u;
-  cellCursors[CURSORS_OFFSET + index] = 0u;
-}`;
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getGPUGridIndexInvocationIndexSource(dispatch)}
+  if (index >= ${cellCounts.length}u) { return; }
+  cellCounts[index] = 0u;
+  cellCursors[index] = 0u;
+}`
+      })
+    );
+    for (const [positionChunkIndex, chunk] of positions.entries()) {
+      if (!chunk.length) continue;
+      const dispatch = getGPUGridIndexDispatchLayout(chunk.length, maximum);
+      nodes.push(
+        createChunkNode(graph, {
+          id: `${index.id}-count-${cellChunkIndex}-${positionChunkIndex}`,
+          inputs: {positions: chunk},
+          outputs: {cellCounts},
+          dispatch,
+          source: makePositionPassSource(
+            index,
+            chunk,
+            dispatch,
+            '@group(0) @binding(1) var<storage, read_write> cellCounts: array<atomic<u32>>;',
+            `
+  if (accepted && cellIndex >= ${cellStart}u && cellIndex - ${cellStart}u < ${cellCounts.length}u) {
+    atomicAdd(&cellCounts[cellIndex - ${cellStart}u], 1u);
+  }`
+          )
+        })
+      );
+    }
+    cellStart += cellCounts.length;
+  }
   nodes.push(
-    ...addComputationPass(graph, {
-      id: `${id}-initialize`,
-      source,
-      resources: [
-        {buffer: cellCounts, usage: 'storage-write'},
-        {buffer: cellCursors, usage: 'storage-write'}
-      ],
-      bindings: {cellCounts, cellCursors},
-      dispatchLayout: props.dispatchLayout
+    ...getGPUScanCommandNodesWithDispatchLimit(
+      new GPUScan({id: `${index.id}-scan`, input: counts, output: offsets}),
+      graph,
+      maximum
+    )
+  );
+  const lastCounts = counts.data[counts.data.length - 1];
+  const lastOffsets = offsets.data[offsets.data.length - 1];
+  const terminal = getGraphDataRange(graph, index.cellOffsets, index.cellCount, 1).data[0];
+  nodes.push(
+    createChunkNode(graph, {
+      id: `${index.id}-finalize`,
+      inputs: {counts: lastCounts, offsets: lastOffsets},
+      outputs: {count: index.count, overflow: index.overflow},
+      dispatch: {x: 1, y: 1, z: 1},
+      workgroupSize: 1,
+      source: `
+@group(0) @binding(0) var<storage, read> counts: array<u32>;
+@group(0) @binding(1) var<storage, read> offsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> count: array<u32>;
+@group(0) @binding(3) var<storage, read_write> overflow: array<u32>;
+@compute @workgroup_size(1)
+fn main() {
+  let total = counts[${lastCounts.length - 1}u] + offsets[${getViewElementOffset(lastOffsets) + lastOffsets.length - 1}u];
+  count[${getViewElementOffset(index.count)}u] = total;
+  overflow[${getViewElementOffset(index.overflow)}u] = select(0u, 1u, total > ${index.objectIds.length}u);
+}`
     })
   );
-
-  return nodes;
-}
-
-function addCountPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
-    cellCounts: GraphDataView<'uint32'>;
-    gridSize: GPUGridIndexSize;
-    bounds: GPUGridIndexBounds;
-    dimension: 2 | 3;
-    dispatchLayout: GPUGridIndexDispatchLayout;
-  }
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const source = makePositionPassSource(
-    props,
-    /* wgsl */ `
-  if (accepted) { atomicAdd(&cellCounts[COUNTS_OFFSET + cellIndex], 1u); }`,
-    false
-  );
   nodes.push(
-    ...addComputationPass(graph, {
-      id: props.id,
-      source,
-      resources: [
-        {buffer: props.positions, usage: 'storage-read'},
-        {buffer: props.cellCounts, usage: 'storage-read-write'}
-      ],
-      bindings: {positions: props.positions, cellCounts: props.cellCounts},
-      dispatchLayout: props.dispatchLayout
+    createChunkNode(graph, {
+      id: `${index.id}-terminal`,
+      inputs: {count: index.count},
+      outputs: {terminal},
+      dispatch: {x: 1, y: 1, z: 1},
+      workgroupSize: 1,
+      source: `
+@group(0) @binding(0) var<storage, read> count: array<u32>;
+@group(0) @binding(1) var<storage, read_write> terminal: array<u32>;
+@compute @workgroup_size(1)
+fn main() {
+  terminal[${getViewElementOffset(terminal)}u] = count[${getViewElementOffset(index.count)}u];
+}`
     })
   );
-
-  return nodes;
-}
-
-function addFinalizePass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    cellCounts: GraphDataView<'uint32'>;
-    scannedOffsets: GraphDataView<'uint32'>;
-    cellOffsets: GraphDataView<'uint32'>;
-    count: GraphDataView<'uint32'>;
-    overflow: GraphDataView<'uint32'>;
-    capacity: number;
-    dispatchLayout: GPUGridIndexDispatchLayout;
+  cellStart = 0;
+  for (const [cellChunkIndex, cellOffsets] of offsets.data.entries()) {
+    const cellCursors = cursors.data[cellChunkIndex];
+    for (const [positionChunkIndex, chunk] of positions.entries()) {
+      if (!chunk.length || !index.objectIds.length) continue;
+      const dispatch = getGPUGridIndexDispatchLayout(chunk.length, maximum);
+      nodes.push(
+        createChunkNode(graph, {
+          id: `${index.id}-rank-${cellChunkIndex}-${positionChunkIndex}`,
+          inputs: {positions: chunk, cellOffsets},
+          outputs: {cellCursors, ranks: ranks[positionChunkIndex]},
+          dispatch,
+          source: makePositionPassSource(
+            index,
+            chunk,
+            dispatch,
+            `
+@group(0) @binding(1) var<storage, read> cellOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> cellCursors: array<atomic<u32>>;
+@group(0) @binding(3) var<storage, read_write> ranks: array<u32>;`,
+            `
+  if (accepted && cellIndex >= ${cellStart}u && cellIndex - ${cellStart}u < ${cellOffsets.length}u) {
+    let cell = cellIndex - ${cellStart}u;
+    ranks[index] = cellOffsets[${getViewElementOffset(cellOffsets)}u + cell] + atomicAdd(&cellCursors[cell], 1u);
+  }`
+          )
+        })
+      );
+    }
+    cellStart += cellOffsets.length;
   }
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const source = /* wgsl */ `
-const CELL_COUNT: u32 = ${props.cellCounts.length}u;
-const CAPACITY: u32 = ${props.capacity}u;
-const COUNTS_OFFSET: u32 = ${getViewElementOffset(props.cellCounts)}u;
-const SCANNED_OFFSET: u32 = ${getViewElementOffset(props.scannedOffsets)}u;
-const OFFSETS_OFFSET: u32 = ${getViewElementOffset(props.cellOffsets)}u;
-const COUNT_OFFSET: u32 = ${getViewElementOffset(props.count)}u;
-const OVERFLOW_OFFSET: u32 = ${getViewElementOffset(props.overflow)}u;
-@group(0) @binding(0) var<storage, read> cellCounts: array<u32>;
-@group(0) @binding(1) var<storage, read> scannedOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read_write> cellOffsets: array<u32>;
-@group(0) @binding(3) var<storage, read_write> outputCount: array<u32>;
-@group(0) @binding(4) var<storage, read_write> outputOverflow: array<u32>;
-@compute @workgroup_size(${GRID_INDEX_WORKGROUP_SIZE}) fn main(
-  @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_index) localInvocationIndex: u32
-) {
-  ${getGPUGridIndexInvocationIndexSource(props.dispatchLayout)}
-  if (index < CELL_COUNT) {
-    cellOffsets[OFFSETS_OFFSET + index] = scannedOffsets[SCANNED_OFFSET + index];
+  let sourceStart = 0;
+  for (const [chunkIndex, chunk] of positions.entries()) {
+    if (chunk.length && index.objectIds.length)
+      nodes.push(
+        ...getGPUScatterCommandNodesWithDispatchLimit(
+          new GPUScatter({
+            id: `${index.id}-scatter-${chunkIndex}`,
+            source: index.sourceIds
+              ? getGraphDataRange(graph, index.sourceIds, sourceStart, chunk.length)
+              : generatedIds![chunkIndex],
+            indices: ranks[chunkIndex],
+            output: index.objectIds
+          }),
+          graph,
+          maximum
+        )
+      );
+    sourceStart += chunk.length;
   }
-  if (index == 0u) {
-    let last = CELL_COUNT - 1u;
-    let total = scannedOffsets[SCANNED_OFFSET + last] + cellCounts[COUNTS_OFFSET + last];
-    cellOffsets[OFFSETS_OFFSET + CELL_COUNT] = total;
-    outputCount[COUNT_OFFSET] = total;
-    outputOverflow[OVERFLOW_OFFSET] = select(0u, 1u, total > CAPACITY);
-  }
-}`;
-  nodes.push(
-    ...addComputationPass(graph, {
-      id: props.id,
-      source,
-      resources: [
-        {buffer: props.cellCounts, usage: 'storage-read'},
-        {buffer: props.scannedOffsets, usage: 'storage-read'},
-        {buffer: props.cellOffsets, usage: 'storage-write'},
-        {buffer: props.count, usage: 'storage-write'},
-        {buffer: props.overflow, usage: 'storage-write'}
-      ],
-      bindings: {
-        cellCounts: props.cellCounts,
-        scannedOffsets: props.scannedOffsets,
-        cellOffsets: props.cellOffsets,
-        outputCount: props.count,
-        outputOverflow: props.overflow
-      },
-      dispatchLayout: props.dispatchLayout
-    })
-  );
-
-  return nodes;
-}
-
-function addScatterPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
-    sourceIds?: GraphDataView<'uint32'>;
-    sourceBase: number;
-    scannedOffsets: GraphDataView<'uint32'>;
-    cellCursors: GraphDataView<'uint32'>;
-    objectIds: GraphDataView<'uint32'>;
-    gridSize: GPUGridIndexSize;
-    bounds: GPUGridIndexBounds;
-    dimension: 2 | 3;
-    dispatchLayout: GPUGridIndexDispatchLayout;
-  }
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const sourceIdBinding = props.sourceIds
-    ? '@group(0) @binding(4) var<storage, read> sourceIds: array<u32>;'
-    : '';
-  const sourceId = props.sourceIds
-    ? 'sourceIds[SOURCE_IDS_OFFSET + index]'
-    : `${props.sourceBase}u + index`;
-  const body = /* wgsl */ `
-  if (accepted) {
-    let cellOffset = scannedOffsets[SCANNED_OFFSET + cellIndex];
-    let cellIndexOffset = atomicAdd(&cellCursors[CURSORS_OFFSET + cellIndex], 1u);
-    let outputIndex = cellOffset + cellIndexOffset;
-    if (outputIndex < CAPACITY) { objectIds[OBJECT_IDS_OFFSET + outputIndex] = ${sourceId}; }
-  }`;
-  const source = makePositionPassSource(props, body, true).replace(
-    '// SOURCE_ID_BINDING',
-    sourceIdBinding
-  );
-  const resources: GraphBufferUse[] = [
-    {buffer: props.positions, usage: 'storage-read'},
-    {buffer: props.scannedOffsets, usage: 'storage-read'},
-    {buffer: props.cellCursors, usage: 'storage-read-write'},
-    {buffer: props.objectIds, usage: 'storage-write'},
-    ...(props.sourceIds
-      ? ([{buffer: props.sourceIds, usage: 'storage-read'}] as GraphBufferUse[])
-      : [])
-  ];
-  nodes.push(
-    ...addComputationPass(graph, {
-      id: props.id,
-      source,
-      resources,
-      bindings: {
-        positions: props.positions,
-        scannedOffsets: props.scannedOffsets,
-        cellCursors: props.cellCursors,
-        objectIds: props.objectIds,
-        ...(props.sourceIds ? {sourceIds: props.sourceIds} : {})
-      },
-      dispatchLayout: props.dispatchLayout
-    })
-  );
-
   return nodes;
 }
 
 function makePositionPassSource(
-  props: {
-    positions: GraphDataView<'float32x2'> | GraphDataView<'float32x3'>;
-    gridSize: GPUGridIndexSize;
-    bounds: GPUGridIndexBounds;
-    dimension: 2 | 3;
-    cellCounts?: GraphDataView<'uint32'>;
-    scannedOffsets?: GraphDataView<'uint32'>;
-    cellCursors?: GraphDataView<'uint32'>;
-    objectIds?: GraphDataView<'uint32'>;
-    sourceIds?: GraphDataView<'uint32'>;
-    dispatchLayout: GPUGridIndexDispatchLayout;
-  },
-  body: string,
-  scatter: boolean
+  props: GPUGridIndex,
+  positions: GraphDataView,
+  dispatch: GPUBoundedDispatchLayout,
+  bindings: string,
+  body: string
 ): string {
   const width = props.gridSize[0];
   const height = props.gridSize[1];
@@ -383,26 +237,12 @@ function makePositionPassSource(
     props.dimension === 3
       ? `let layer = getCoordinate(z, ${getFloatLiteral(props.bounds[2]!)}, ${getFloatLiteral(props.bounds[5]!)}, DEPTH);`
       : 'let layer = 0u;';
-  const extraConstants = scatter
-    ? `const SCANNED_OFFSET: u32 = ${getViewElementOffset(props.scannedOffsets!)}u;
-const CURSORS_OFFSET: u32 = ${getViewElementOffset(props.cellCursors!)}u;
-const OBJECT_IDS_OFFSET: u32 = ${getViewElementOffset(props.objectIds!)}u;
-const CAPACITY: u32 = ${props.objectIds!.length}u;
-${props.sourceIds ? `const SOURCE_IDS_OFFSET: u32 = ${getViewElementOffset(props.sourceIds)}u;` : ''}`
-    : `const COUNTS_OFFSET: u32 = ${getViewElementOffset(props.cellCounts!)}u;`;
-  const bindings = scatter
-    ? `@group(0) @binding(1) var<storage, read> scannedOffsets: array<u32>;
-@group(0) @binding(2) var<storage, read_write> cellCursors: array<atomic<u32>>;
-@group(0) @binding(3) var<storage, read_write> objectIds: array<u32>;
-// SOURCE_ID_BINDING`
-    : '@group(0) @binding(1) var<storage, read_write> cellCounts: array<atomic<u32>>;';
   return /* wgsl */ `
-const ELEMENT_COUNT: u32 = ${props.positions.length}u;
-const POSITIONS_OFFSET: u32 = ${getViewElementOffset(props.positions)}u;
+const ELEMENT_COUNT: u32 = ${positions.length}u;
+const POSITIONS_OFFSET: u32 = ${getViewElementOffset(positions)}u;
 const WIDTH: u32 = ${width}u;
 const HEIGHT: u32 = ${height}u;
 const DEPTH: u32 = ${depth}u;
-${extraConstants}
 @group(0) @binding(0) var<storage, read> positions: array<f32>;
 ${bindings}
 
@@ -422,11 +262,9 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
   return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
 }
 
-@compute @workgroup_size(${GRID_INDEX_WORKGROUP_SIZE}) fn main(
-  @builtin(workgroup_id) workgroupId: vec3<u32>,
-  @builtin(local_invocation_index) localInvocationIndex: u32
-) {
-  ${getGPUGridIndexInvocationIndexSource(props.dispatchLayout)}
+@compute @workgroup_size(256)
+fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_index) localInvocationIndex: u32) {
+  ${getGPUGridIndexInvocationIndexSource(dispatch)}
   var accepted = false;
   var cellIndex = 0u;
   if (index < ELEMENT_COUNT) {
@@ -448,84 +286,17 @@ fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
 }`;
 }
 
-function addComputationPass<Parameters>(
-  graph: GPUCommandGraph<Parameters>,
-  props: {
-    id: string;
-    source: string;
-    resources: GraphBufferUse[];
-    bindings: Record<string, GraphDataView>;
-    dispatchLayout: GPUGridIndexDispatchLayout;
-  }
-): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id: props.id,
-      resources: props.resources,
-      compile: ({device}) => {
-        const computation = new Computation(device, {
-          id: props.id,
-          source: props.source,
-          shaderLayout: {
-            bindings: Object.keys(props.bindings).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
-          }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(props.bindings)) {
-              bindings[name] = getViewBinding(view, getBuffer);
-            }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
-          },
-          destroy: () => computation.destroy()
-        };
-      }
-    })
-  );
-
-  return nodes;
-}
-
-/** Plans a bounded three-dimensional dispatch for one grid-index pass. @internal */
+/** Plans bounded 3D dispatches for index kernels. @internal */
 export function getGPUGridIndexDispatchLayout(
-  elementCount: number,
-  maxComputeWorkgroupsPerDimension: number
-): GPUGridIndexDispatchLayout {
-  return getBoundedDispatchLayout(
-    'GPUGridIndex',
-    elementCount,
-    GRID_INDEX_WORKGROUP_SIZE,
-    maxComputeWorkgroupsPerDimension
-  );
+  count: number,
+  maximum: number
+): GPUBoundedDispatchLayout {
+  return getBoundedDispatchLayout('GPUGridIndex', count, GRID_INDEX_WORKGROUP_SIZE, maximum);
 }
 
-/** Returns WGSL that maps a bounded 3D dispatch to one linear element index. @internal */
-export function getGPUGridIndexInvocationIndexSource(layout: GPUGridIndexDispatchLayout): string {
+/** Maps a bounded dispatch to logical rows. @internal */
+export function getGPUGridIndexInvocationIndexSource(layout: GPUBoundedDispatchLayout): string {
   return getBoundedInvocationIndexSource(layout, GRID_INDEX_WORKGROUP_SIZE);
-}
-
-function getPositionChunks(
-  positions: GPUGridIndexPositions
-): readonly (GraphDataView<'float32x2'> | GraphDataView<'float32x3'>)[] {
-  return positions instanceof GraphVectorView ? positions.data : [positions];
-}
-
-function getSourceIdChunks(sourceIds?: GPUGridIndexSourceIds): readonly GraphDataView<'uint32'>[] {
-  if (!sourceIds) return [];
-  return sourceIds instanceof GraphVectorView ? sourceIds.data : [sourceIds];
 }
 
 function getFloatLiteral(value: number): string {

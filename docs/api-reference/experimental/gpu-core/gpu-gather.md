@@ -128,3 +128,8 @@ This keeps each pass at no more than three storage bindings, within WebGPU CORE 
 concatenation, scratch buffers, or CPU readback. Index traversal and dispatch count grow with the
 number of source chunks; optimizing this routing for very fragmented sources remains follow-up
 work. Atomic input retains a single gather pass when indices and output form one span.
+
+
+## Chunked storage
+
+Source, index, and output chunks may differ. Fixed-width source rows may also have a word-aligned stride larger than the row payload; only payload words are copied. Indices and output remain packed. All indices are global logical source rows, and out-of-range indices produce zero rows.

@@ -5,14 +5,16 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {GPUCommandGraph, GraphDataView} from './gpu-command-graph';
+import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 import {
   getViewBinding,
   getViewElementOffset,
   validatePackedUint32View
 } from './graph-data-view-utils';
-import type {GPUSortDirection} from './gpu-sort';
+import {GPUSort, type GPUSortDirection, getGPUSortCommandNodesWithDispatchLimit} from './gpu-sort';
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {getGraphDataRange, validateChunkViews} from './gpu-chunk-utils';
 import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 
 const MAXIMUM_SEGMENT_LENGTH = 256;
@@ -38,13 +40,13 @@ export type GPUSegmentedSortProps = {
   /** Prefix for the generated width-bucket graph nodes. */
   id?: string;
   /** Parent packed unsigned-key view. */
-  keys: GraphDataView<'uint32'>;
+  keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent packed unsigned-payload view. */
-  values: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent caller-owned sorted-key destination. */
-  outputKeys: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent caller-owned sorted-payload destination. */
-  outputValues: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** CPU-known independent domains; offsets are relative to their corresponding parent views. */
   segments: readonly GPUSortSegment[];
   /** Requested stable order within every nonempty segment. Defaults to ascending. */
@@ -64,13 +66,13 @@ export class GPUSegmentedSort {
   /** Prefix for generated width-bucket graph nodes. */
   readonly id: string;
   /** Parent packed unsigned-key view. */
-  readonly keys: GraphDataView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent packed unsigned-payload view. */
-  readonly values: GraphDataView<'uint32'>;
+  readonly values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent caller-owned sorted-key destination. */
-  readonly outputKeys: GraphDataView<'uint32'>;
+  readonly outputKeys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Parent caller-owned sorted-payload destination. */
-  readonly outputValues: GraphDataView<'uint32'>;
+  readonly outputValues: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Immutable snapshot of the independent source and destination domains. */
   readonly segments: readonly GPUSortSegment[];
   /** Stable order requested within each independent domain. */
@@ -91,17 +93,20 @@ export class GPUSegmentedSort {
       ['outputKeys', this.outputKeys],
       ['outputValues', this.outputValues]
     ] as const) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view))
+        validatePackedUint32View(chunk, `${this.id} ${name}`);
     }
     if (!['ascending', 'descending'].includes(this.direction)) {
       throw new Error(`${this.id} direction must be ascending or descending`);
     }
+    const inputs = [...getGraphVectorData(this.keys), ...getGraphVectorData(this.values)];
     if (
-      this.outputKeys.buffer === this.outputValues.buffer ||
-      this.outputKeys.buffer === this.keys.buffer ||
-      this.outputKeys.buffer === this.values.buffer ||
-      this.outputValues.buffer === this.keys.buffer ||
-      this.outputValues.buffer === this.values.buffer
+      [...getGraphVectorData(this.outputKeys), ...getGraphVectorData(this.outputValues)].some(
+        output => inputs.some(input => input.buffer === output.buffer)
+      ) ||
+      getGraphVectorData(this.outputKeys).some(keys =>
+        getGraphVectorData(this.outputValues).some(values => keys.buffer === values.buffer)
+      )
     ) {
       throw new Error(`${this.id} outputs must use separate buffers from inputs and each other`);
     }
@@ -142,11 +147,41 @@ export function getGPUSegmentedSortCommandNodesWithDispatchLimit<Parameters>(
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
-  for (const view of [sort.keys, sort.values, sort.outputKeys, sort.outputValues]) {
-    if (view.buffer.graph !== graph) {
-      throw new Error(`${sort.id} views must belong to the target graph`);
+  validateChunkViews(graph, [sort.keys, sort.values], [sort.outputKeys, sort.outputValues]);
+  if (
+    [sort.keys, sort.values, sort.outputKeys, sort.outputValues].some(
+      view => view instanceof GraphVectorView
+    )
+  ) {
+    for (const [segmentIndex, segment] of sort.segments.entries()) {
+      if (!segment.length) continue;
+      const local = new GPUSort({
+        id: `${sort.id}-segment-${segmentIndex}`,
+        algorithm: 'bitonic',
+        direction: sort.direction,
+        keys: getGraphDataRange(graph, sort.keys, segment.keysOffset, segment.length),
+        values: getGraphDataRange(graph, sort.values, segment.valuesOffset, segment.length),
+        outputKeys: getGraphDataRange(
+          graph,
+          sort.outputKeys,
+          segment.outputKeysOffset,
+          segment.length
+        ),
+        outputValues: getGraphDataRange(
+          graph,
+          sort.outputValues,
+          segment.outputValuesOffset,
+          segment.length
+        )
+      });
+      nodes.push(
+        ...getGPUSortCommandNodesWithDispatchLimit(local, graph, maxComputeWorkgroupsPerDimension)
+      );
     }
+    return nodes;
   }
+  // The vector case above has been lowered; width buckets bind four atomic views.
+  const atomicSort = sort as AtomicSegmentedSort;
 
   const groups = groupSegmentsByWidth(sort.segments);
   const plans = Array.from(groups, ([width, segments]) => ({
@@ -162,7 +197,7 @@ export function getGPUSegmentedSortCommandNodesWithDispatchLimit<Parameters>(
 
   for (const plan of plans) {
     nodes.push(
-      ...addSegmentBucketPass(graph, sort, plan.width, plan.segments, plan.dispatchLayout)
+      ...addSegmentBucketPass(graph, atomicSort, plan.width, plan.segments, plan.dispatchLayout)
     );
   }
 
@@ -253,7 +288,7 @@ function groupSegmentsByWidth(segments: readonly GPUSortSegment[]): Map<number, 
 /** Records one complete stable sorting network for every equal-width segment workgroup. */
 function addSegmentBucketPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSegmentedSort,
+  sort: AtomicSegmentedSort,
   width: number,
   segments: readonly GPUSortSegment[],
   dispatchLayout: GPUBoundedDispatchLayout
@@ -456,3 +491,13 @@ function getSubgroupSegmentedBitonicShader(width: number): string {
       values[VALUES_OFFSET + segment.valuesOffset + currentIndex];
   }`;
 }
+
+type AtomicSegmentedSort = Omit<
+  GPUSegmentedSort,
+  'keys' | 'values' | 'outputKeys' | 'outputValues'
+> & {
+  keys: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'>;
+};

@@ -22,7 +22,8 @@ test('gather validates every chunk and lowers without allocating or copying buff
     };
     const strided = fixture.column('strided', 'uint32', Array(5).fill(0), [1, 4], {stride: 2});
     for (const Operation of [GPUGather, GPUUint32Gather]) {
-      for (const name of ['source', 'indices', 'output'] as const) {
+      expect(() => new Operation({...props, source: strided})).not.toThrow();
+      for (const name of ['indices', 'output'] as const) {
         expect(() => new Operation({...props, [name]: strided})).toThrow(/packed/);
       }
       expect(

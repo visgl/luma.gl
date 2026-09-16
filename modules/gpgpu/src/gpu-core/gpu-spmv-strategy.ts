@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
+import {getGPUShaderSubgroupStrategy} from './gpu-subgroup-utils';
 import {selectGPUStrategy, type GPUStrategyDecision} from './gpu-strategy';
 
 export type GPUSpMVStrategyId = 'scalar-row' | 'subgroup-row' | 'workgroup-row' | 'long-row';
@@ -32,14 +33,15 @@ export function selectGPUSpMVStrategy(
   workload: GPUSpMVWorkload,
   preferredId?: GPUSpMVStrategyId
 ): GPUStrategyDecision<GPUSpMVStrategyId, GPUSpMVStrategyDetails> {
-  if (!Number.isSafeInteger(workload.rows) || workload.rows < 1)
-    throw new Error('SpMV rows must be positive');
+  if (!Number.isSafeInteger(workload.rows) || workload.rows < 0)
+    throw new Error('SpMV rows must be non-negative');
   if (!Number.isSafeInteger(workload.nonZeros) || workload.nonZeros < 0)
     throw new Error('SpMV nonZeros must be non-negative');
-  const average = workload.nonZeros / workload.rows;
+  const average = workload.nonZeros / Math.max(1, workload.rows);
   const maxRow = workload.statistics?.maxNonZerosPerRow;
   const shortFraction = workload.statistics?.shortRowFraction;
-  const hasSubgroups = device.features?.has?.('subgroups') ?? false;
+  const hasSubgroups =
+    getGPUShaderSubgroupStrategy(device, {requiresSubgroupId: true}) === 'subgroups';
 
   return selectGPUStrategy<GPUSpMVStrategyId, GPUSpMVWorkload, GPUSpMVStrategyDetails>({
     device,
@@ -63,7 +65,7 @@ export function selectGPUSpMVStrategy(
           average <= 64 && (shortFraction === undefined || shortFraction < 0.9) ? 110 : 35,
         reason: () => `subgroups available; medium CSR rows can reduce within a subgroup`,
         createDetails: () => ({
-          rowsPerWorkgroup: 4,
+          rowsPerWorkgroup: 1,
           workgroupSize: 128 as const,
           workgroupsPerLongRow: 1
         })

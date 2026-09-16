@@ -5,7 +5,15 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
+import {
+  GPUCommandGraph,
+  type GraphBufferUse,
+  type GraphDataView,
+  GraphVectorView
+} from './gpu-command-graph';
+import {getGraphVectorData} from './graph-vector-view-utils';
+import {getChunkedSortNodes} from './gpu-sort-chunks';
+import {doGraphDataViewsOverlap} from './graph-data-view-utils';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource,
@@ -39,13 +47,13 @@ export type GPUSortProps = {
   /** Prefix for generated graph node and transient resource IDs. */
   id?: string;
   /** Packed unsigned sort keys. */
-  keys: GraphDataView<'uint32'>;
+  keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Packed payload values paired row-for-row with `keys`. */
-  values: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned sorted key destination. */
-  outputKeys: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned payload destination permuted with the keys. */
-  outputValues: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Requested implementation. Defaults to `'auto'`. */
   algorithm?: GPUSortAlgorithm;
   /** Requested final order. Defaults to `'ascending'`. */
@@ -71,13 +79,13 @@ export class GPUSort {
   /** Prefix for generated graph node and transient resource IDs. */
   readonly id: string;
   /** Packed unsigned sort keys. */
-  readonly keys: GraphDataView<'uint32'>;
+  readonly keys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Packed payload values paired with the keys. */
-  readonly values: GraphDataView<'uint32'>;
+  readonly values: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned sorted key destination. */
-  readonly outputKeys: GraphDataView<'uint32'>;
+  readonly outputKeys: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Caller-owned sorted payload destination. */
-  readonly outputValues: GraphDataView<'uint32'>;
+  readonly outputValues: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
   /** Algorithm requested by the caller. */
   readonly algorithm: GPUSortAlgorithm;
   /** Final key ordering. */
@@ -109,7 +117,8 @@ export class GPUSort {
       ['outputKeys', this.outputKeys],
       ['outputValues', this.outputValues]
     ] as const) {
-      validatePackedUint32View(view, `${this.id} ${name}`);
+      for (const chunk of getGraphVectorData(view))
+        validatePackedUint32View(chunk, `${this.id} ${name}`);
     }
     if (!['auto', 'bitonic', 'radix'].includes(this.algorithm)) {
       throw new Error(`${this.id} algorithm must be auto, bitonic, or radix`);
@@ -168,12 +177,35 @@ export function getGPUSortCommandNodesWithDispatchLimit<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
   for (const view of [sort.keys, sort.values, sort.outputKeys, sort.outputValues]) {
-    if (view.buffer.graph !== graph) {
-      throw new Error(`${sort.id} views must belong to the target graph`);
+    for (const chunk of getGraphVectorData(view)) {
+      if (chunk.buffer.graph !== graph)
+        throw new Error(`${sort.id} views must belong to the target graph`);
     }
   }
+  if (
+    [sort.keys, sort.values, sort.outputKeys, sort.outputValues].some(
+      view => view instanceof GraphVectorView
+    )
+  ) {
+    return getChunkedSortNodes(graph, sort, maxComputeWorkgroupsPerDimension);
+  }
+  return getAtomicSortNodes(sort as AtomicSort, graph, maxComputeWorkgroupsPerDimension);
+}
+
+type AtomicSort = Omit<GPUSort, 'keys' | 'values' | 'outputKeys' | 'outputValues'> & {
+  keys: GraphDataView<'uint32'>;
+  values: GraphDataView<'uint32'>;
+  outputKeys: GraphDataView<'uint32'>;
+  outputValues: GraphDataView<'uint32'>;
+};
+
+function getAtomicSortNodes<Parameters>(
+  sort: AtomicSort,
+  graph: GPUCommandGraph<Parameters>,
+  maxComputeWorkgroupsPerDimension: number
+): readonly GPUCommandNode<Parameters>[] {
+  const nodes: GPUCommandNode<Parameters>[] = [];
 
   if (sort.keys.length === 0) {
     return nodes;
@@ -201,21 +233,25 @@ export function getGPUSortCommandNodesWithDispatchLimit<Parameters>(
 
 /** Enforces out-of-place writes and distinct writable destinations. */
 function validateSeparateWritableBuffers(sort: GPUSort): void {
+  const keys = getGraphVectorData(sort.outputKeys);
+  const values = getGraphVectorData(sort.outputValues);
+  const inputs = [...getGraphVectorData(sort.keys), ...getGraphVectorData(sort.values)];
   if (
-    sort.outputKeys.buffer === sort.outputValues.buffer ||
-    sort.outputKeys.buffer === sort.keys.buffer ||
-    sort.outputKeys.buffer === sort.values.buffer ||
-    sort.outputValues.buffer === sort.keys.buffer ||
-    sort.outputValues.buffer === sort.values.buffer
-  ) {
+    [...keys, ...values].some(output => inputs.some(input => input.buffer === output.buffer)) ||
+    keys.some(key => values.some(value => key.buffer === value.buffer))
+  )
     throw new Error(`${sort.id} outputs must use separate buffers from inputs and each other`);
-  }
+  for (const chunks of [keys, values])
+    for (const [index, chunk] of chunks.entries()) {
+      if (chunks.slice(0, index).some(previous => doGraphDataViewsOverlap(previous, chunk)))
+        throw new Error(`${sort.id} output chunks must not overlap`);
+    }
 }
 
 /** Copies key/value pairs without allocating additional sort scratch. */
 function addCopyPairPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   inputKeys: GraphDataView<'uint32'> = sort.keys,
   inputValues: GraphDataView<'uint32'> = sort.values,
   identifier = 'copy-pair',
@@ -268,7 +304,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 /** Adds padded-index initialization, every bitonic stage, and the final stable gather. */
 function addBitonicSort<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   dispatchLayout: GPUBoundedDispatchLayout,
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
@@ -324,7 +360,7 @@ function addBitonicSort<Parameters>(
 /** Sorts one complete stable bitonic network in workgroup memory with one graph dispatch. */
 function addLocalBitonicSortPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   paddedLength: number
 ): readonly GPUCommandNode<Parameters>[] {
   const nodes: GPUCommandNode<Parameters>[] = [];
@@ -478,7 +514,7 @@ function getSubgroupLocalBitonicShader(): string {
 /** Initializes logical indices and invalid padding for a power-of-two bitonic network. */
 function addBitonicInitializePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   indices: GraphDataView<'uint32'>,
   paddedLength: number,
   dispatchLayout: GPUBoundedDispatchLayout
@@ -516,7 +552,7 @@ const INDICES_OFFSET: u32 = ${getViewElementOffset(indices)}u;
 /** Adds one compare/exchange stage of the stable bitonic sorting network. */
 function addBitonicStagePass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   indicesIn: GraphDataView<'uint32'>,
   indicesOut: GraphDataView<'uint32'>,
   paddedLength: number,
@@ -592,7 +628,7 @@ fn comes_before(leftIndex: u32, rightIndex: u32) -> bool {
 /** Gathers keys and payloads through the final sorted logical-index permutation. */
 function addBitonicGatherPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   indices: GraphDataView<'uint32'>,
   dispatchLayout: GPUBoundedDispatchLayout
 ): readonly GPUCommandNode<Parameters>[] {
@@ -648,7 +684,7 @@ const OUTPUT_VALUES_OFFSET: u32 = ${getViewElementOffset(sort.outputValues)}u;
 /** Adds stable four-bit least-significant-digit histogram, scan, and scatter partitions. */
 function addRadixSort<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   dispatchLayout: GPUBoundedDispatchLayout,
   maxComputeWorkgroupsPerDimension: number
 ): readonly GPUCommandNode<Parameters>[] {
@@ -733,7 +769,7 @@ function addRadixSort<Parameters>(
 /** Counts one radix digit per workgroup into a digit-major histogram suitable for global scan. */
 function addRadixHistogramPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   keys: GraphDataView<'uint32'>,
   histogram: GraphDataView<'uint32'>,
   bitOffset: number,
@@ -801,7 +837,7 @@ var<workgroup> digitCounts: array<atomic<u32>, ${bucketCount}>;
 /** Stably scatters one digit using workgroup ballot masks and digit-major global offsets. */
 function addRadixScatterPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
-  sort: GPUSort,
+  sort: AtomicSort,
   keys: GraphDataView<'uint32'>,
   values: GraphDataView<'uint32'>,
   offsets: GraphDataView<'uint32'>,

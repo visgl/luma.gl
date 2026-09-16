@@ -96,3 +96,8 @@ The implementation uses a boundary-detection pass, `GPUScan` to assign dense run
 ## Performance notes
 
 Boundary detection and scan are parallel. RLE is strongest when keys are already ordered, stable ordering matters, or group structure is reused. For unsorted data used only once, a hash aggregation may be cheaper than sort + RLE.
+
+
+## Chunked storage
+
+Input, values, and lengths accept atomic views or independently partitioned vectors. Adjacent equal values continue the same run across chunk seams, including intervening empty chunks. Boundary flags use the previous nonempty chunk's final value, an inclusive global scan assigns run IDs, and materialization routes values and lengths into caller-owned output chunks. Every encoding resets valid run lengths and publishes the current count. `count` remains one atomic scalar view; only its named prefix of values and lengths is valid.

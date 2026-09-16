@@ -66,3 +66,8 @@ compiled into the WGSL projection bound. The writable output cannot alias either
 Projection preserves canonical source IDs; it does not rewrite dependency records, repack span
 buffers, submit GPU work, or read results back. Render and dependency-visibility shaders can use
 the projected indices directly while retaining original edge identity for picking and inspection.
+
+
+## Chunked storage
+
+Parents, visibility, and output accept independent vector partitions. Parent IDs address global logical rows. The chunked path composes parent jumps in at most 32 levels using chunk-preserving scratch vectors. Visible ancestors become absorbing nodes, preserving the nearest-visible result while honoring the exact depth bound. Visible nodes resolve to themselves; depth exhaustion, invalid IDs, and unresolved cycles retain `invalidValue`. The optional exact visibility value is a scalar. The atomic path retains its single-pass traversal; chunked dispatch cost grows with the logarithm of depth and intersecting chunk pairs.

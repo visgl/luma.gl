@@ -35,7 +35,7 @@ export type GPUGatherFormat = Exclude<
 export type GPUGatherProps<T extends GPUGatherFormat = GPUGatherFormat> = {
   /** Prefix for the generated graph node. */
   id?: string;
-  /** Packed fixed-width source rows; indices address their global logical order. */
+  /** Word-aligned fixed-width source rows, optionally strided; indices address global rows. */
   source: GraphDataView<T> | GraphVectorView<T>;
   /** Packed uint32 source-row indices, independently partitioned from source and output. */
   indices: GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
@@ -66,7 +66,8 @@ export class GPUGather<T extends GPUGatherFormat = GPUGatherFormat> {
       validatePackedUint32View(chunk, `${this.id} indices`);
     }
     for (const view of [this.source, this.output]) {
-      for (const chunk of getGraphVectorData(view)) validateGatherView(chunk, this.id);
+      for (const chunk of getGraphVectorData(view))
+        validateGatherView(chunk, this.id, view === this.output);
     }
 
     if (this.source.format !== this.output.format) {
@@ -211,13 +212,15 @@ export function getGatherCommandNodes<Parameters>(
   return nodes;
 }
 
-function validateGatherView(view: GraphDataView, name: string): void {
+function validateGatherView(view: GraphDataView, name: string, packed: boolean): void {
   if (isVertexListGPUVectorFormat(view.format) || isValueListGPUVectorFormat(view.format)) {
     throw new Error(`${name} must use a fixed-width GPU data format`);
   }
   const formatInfo = getGPUVectorFormatInfo(view.format);
   if (
-    view.byteStride !== formatInfo.byteLength ||
+    (packed
+      ? view.byteStride !== formatInfo.byteLength
+      : view.byteStride < formatInfo.byteLength || view.byteStride % UINT32_BYTE_LENGTH !== 0) ||
     view.rowByteLength !== formatInfo.byteLength ||
     view.byteOffset % UINT32_BYTE_LENGTH !== 0 ||
     view.rowByteLength % UINT32_BYTE_LENGTH !== 0
@@ -266,7 +269,7 @@ ${
     ? `
   let sourceIndex = indices[INDEX_OFFSET + index];
   if (sourceIndex >= SOURCE_ROW_OFFSET && sourceIndex - SOURCE_ROW_OFFSET < SOURCE_LENGTH) {
-    let sourceBase = SOURCE_OFFSET + (sourceIndex - SOURCE_ROW_OFFSET) * WORDS_PER_ROW;
+    let sourceBase = SOURCE_OFFSET + (sourceIndex - SOURCE_ROW_OFFSET) * ${source.byteStride / UINT32_BYTE_LENGTH}u;
     for (var word = 0u; word < WORDS_PER_ROW; word++) {
       outputWords[outputBase + word] = sourceWords[sourceBase + word];
     }
