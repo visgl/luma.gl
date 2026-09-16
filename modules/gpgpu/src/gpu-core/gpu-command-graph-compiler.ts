@@ -426,7 +426,7 @@ function getGPUCommandGraphPreflightReport<Parameters>(
           resource.usage === 'storage-write' ||
           resource.usage === 'storage-read-write')
       ) {
-        maximum = Math.max(maximum, getBufferHandle(resource.buffer).byteLength);
+        maximum = Math.max(maximum, getStorageBindingRange(resource.buffer).size);
       }
     }
     return maximum;

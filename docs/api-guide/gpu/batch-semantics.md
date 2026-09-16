@@ -137,6 +137,22 @@ Elementwise and finite-difference destinations must use separate buffers from th
 output chunks must not overlap. Finite-difference vector offsets must align with the stored WGSL
 array element (8 bytes for `float32x2`, 16 for `float32x4`).
 
+`gpu-transform-batching.*.spec.ts` covers FFT1D and convolution with independent partitions,
+empty chunks, offsets, spare capacity, and changed inputs across repeated encodings. FFT tests
+split transforms across chunks, cross reusable scratch-block boundaries, and exercise portable
+and subgroup-capable devices. Bit reversal borrows source spans into at most two bounded scratch
+buffers; final butterflies write directly to output chunks. Atomic FFT bindings that exceed the
+device limit use the same span routing.
+
+Convolution tests compare direct, FFT, and automatic strategies with CPU results for zero and
+wrap boundaries, including kernels larger than the field. Direct execution uses no scratch;
+spectral packing writes into the existing nine padded complex fields and crops to caller chunks.
+Direct accumulation order can change with partitioning. Each active convolution chunk must fit a
+binding, and spectral scratch still requires one binding per padded field. Neither operation
+concatenates caller storage. Node tests check limit-aware support, allocation bounds, aliases,
+overlapping output, and ownership of empty chunks. Fragmented routing and dispatch overhead remain
+performance work.
+
 ## Remaining work, grouped for review
 
 The reference families above are audited for the stated contract. `GPUSort` remains a
@@ -150,7 +166,7 @@ master, with shared lowering, conformance tests, and documented exceptions in ea
 
 | Review group | Operations to cover together | Current gap or audit question |
 | --- | --- | --- |
-| Transforms and convolution | `GPUFFT1D`, `GPUFFT2D`, `GPUConvolution` | Transform `batchCount` describes independent transforms within packed storage; support for arbitrary physical chunks is a separate requirement. Convolution still takes atomic graph views. |
+| Two-dimensional transforms | `GPUFFT2D` | FFT1D and convolution now accept independent graph chunks. FFT2D still has a device-owned raw-buffer encode API; migrate its composition and resource contract together. Spectral convolution also retains bounded contiguous algorithm scratch. |
 | Dense and sparse algebra | `GPUMatVec`, `GPUMatMul`, `GPUProgramSpMV` | Dense implementations use atomic views; CSR lowering requires one chunk. Design global matrix/vector addressing and audit the public export surface together. |
 | Ordering and search | `GPUSort`, `GPUBatchSort`, `GPUSegmentedSort`, `GPUGallopingSearch` | Reuse existing batch-sort work; establish global order, segment boundaries, and stable row IDs across independently stored chunks. Include Top-K callers where affected. |
 | Hash indexing and joins | `GPUHashIndex`, `GPUHashIndexQuery`, `GPUBatchHashIndex`, `GPUHashJoin`, `GPUBatchHashJoin` | Reuse batch variants; audit global lookup, duplicate/cardinality rules, independently partitioned columns, and destination capacity. |
