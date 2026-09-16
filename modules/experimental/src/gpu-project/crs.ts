@@ -15,7 +15,7 @@ import {
 import {lowerProjectionPipeline, type ProjectionPlanningReason} from './projection-pipeline';
 import {
   canUseCRSProvider,
-  getCRSProviderUnitReason,
+  getCRSProviderReason,
   lowerCRSProjection
 } from './projection-crs-lowering';
 import type {
@@ -149,7 +149,7 @@ export function planCRSProjection(options: PlanCRSProjectionOptions): Projection
     return {status: 'unsupported', reasons};
   }
   for (const definition of [options.from, options.to]) {
-    const reason = getCRSProviderUnitReason(definition);
+    const reason = getCRSProviderReason(definition);
     if (reason) return {status: 'unsupported', reasons: [...reasons, reason]};
   }
   if (!options.bounds) {

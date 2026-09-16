@@ -352,6 +352,9 @@ parameters, unsupported axes, and dynamic frames are declined rather than silent
 The current provider assumes geographic degrees and one shared projected-axis unit; explicit
 non-degree geographic axes, mixed projected-axis units, and non-numeric prime-meridian quantities
 are therefore declined **on the adaptive route**, even when native frame changes support them.
+Supported EPSG methods/parameters with non-canonical names are likewise declined on that route;
+the current provider interprets names rather than those identifiers. Extra parameters on known
+methods are rejected instead of reaching a provider that might ignore them.
 Serialized definitions retain the provider's coordinate conventions and resolution limitations.
 
 `enforceAxis` defaults to `false`, matching math.gl's longitude/easting-first behavior; set it to

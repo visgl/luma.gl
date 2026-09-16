@@ -107,10 +107,33 @@ export function canUseCRSProvider(reason: ProjectionPlanningReason): boolean {
 }
 
 /** The current public provider consumes degrees and one shared projected-coordinate unit. */
-export function getCRSProviderUnitReason(
+export function getCRSProviderReason(
   definition: ReadonlyCRSDefinition
 ): ProjectionPlanningReason | null {
   if (!isHorizontalCRS(definition)) return null;
+  if (definition.type === 'ProjectedCRS') {
+    const conversion = definition.conversion;
+    const method = getEPSGCode(conversion.method);
+    if (
+      ((method === 9807 || method === 1024) &&
+        conversion.method.name !==
+          (method === 9807 ? 'Transverse Mercator' : 'Popular Visualisation Pseudo Mercator')) ||
+      conversion.parameters?.some(parameter => {
+        const code = getEPSGCode(parameter);
+        return (
+          code !== undefined &&
+          [...PARAMETER_NAMES.values()].includes(code) &&
+          PARAMETER_NAMES.get(parameter.name) !== code
+        );
+      })
+    ) {
+      return {
+        code: 'unsupported-conversion',
+        message:
+          'adaptive provider requires canonical names for supported EPSG methods and parameters; native lowering can use their identifiers'
+      };
+    }
+  }
   const projected = definition.type === 'ProjectedCRS';
   const factors = definition.coordinate_system?.axis.map(axis =>
     getUnitFactor(axis.unit, projected ? 'LinearUnit' : 'AngularUnit')
@@ -328,7 +351,7 @@ function normalizeConversion(conversion: ProjectedCRS['conversion']): Conversion
       ![8801, 8802, 8805, 8806, 8807].includes(code) ||
       (method === 1024 && code === 8805)
     ) {
-      return decline('unsupported-conversion', 'conversion includes an unsupported parameter');
+      return decline('unsupported-parameter', 'known conversion includes an unsupported parameter');
     }
     const factor = getUnitFactor(
       parameter.unit,

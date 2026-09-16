@@ -527,4 +527,39 @@ describe('native PROJJSON frame lowering', () => {
       ).toBe('datum-transformation-required');
     }
   });
+
+  it('never falls back by dropping extra parameters on known methods or misreading EPSG labels', () => {
+    const projected = makeTransverseMercatorCRS();
+    const extra = {
+      ...projected,
+      conversion: {
+        ...projected.conversion,
+        parameters: [
+          ...projected.conversion.parameters,
+          {name: 'Unknown distortion', value: 1, unit: 'unity' as const}
+        ]
+      }
+    };
+    expect(
+      planCRSProjection({from: geographicCRS, to: extra, bounds: [-123, 37, -122, 38]})
+    ).toMatchObject({status: 'unsupported', reasons: [{code: 'unsupported-parameter'}]});
+    const renamed = {
+      ...projected,
+      conversion: {
+        ...projected.conversion,
+        parameters: projected.conversion.parameters.map(parameter => ({
+          ...parameter,
+          name: `Localized ${parameter.id.code}`
+        }))
+      }
+    };
+    requireNative(planCRSProjection({from: projected, to: renamed}));
+    const adaptive = planCRSProjection({
+      from: geographicCRS,
+      to: renamed,
+      bounds: [-123, 37, -122, 38]
+    });
+    expect(adaptive.status).toBe('unsupported');
+    expect(adaptive.reasons.at(-1)?.code).toBe('unsupported-conversion');
+  });
 });
