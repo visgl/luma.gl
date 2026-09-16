@@ -279,7 +279,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     ownership: 'Caller-owned matrix and solution surround graph-owned iterative scratch.',
     output: 'A fixed-budget approximate solution with GPU-resident convergence control.',
     work: 'One preconditioner application plus sparse products and reductions per iteration.',
-    chunks: 'Uses explicit packed solver vectors and a single CSR matrix domain.',
+    chunks: 'Independent CSR and vector chunks share one logical system; scratch follows the right-hand side topology.',
     execution: 'Later iterations can be disabled by GPU indirect convergence gates.',
     neighborhood: 'CSR matrix + right-hand side + preconditioner → PCG → solution vector.',
     cost: 'Iteration count times SpMV, preconditioner, vector-update, and reduction costs.',

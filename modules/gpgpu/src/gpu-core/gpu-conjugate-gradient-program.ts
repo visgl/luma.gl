@@ -27,7 +27,8 @@ export function createGPUConjugateGradientProgram(props: {
     throw new Error(`${id} nonZeros must be non-negative`);
   if (!Number.isSafeInteger(props.maxIterations) || props.maxIterations < 1)
     throw new Error(`${id} maxIterations must be positive`);
-  if (!(props.toleranceSquared > 0)) throw new Error(`${id} toleranceSquared must be positive`);
+  if (!Number.isFinite(props.toleranceSquared) || !(props.toleranceSquared > 0))
+    throw new Error(`${id} toleranceSquared must be positive`);
   const n = props.size,
     program = new GPUProgram({id});
   const rowOffsets = program.vector(`${id}-row-offsets`, 'uint32', n + 1, {external: true}),
@@ -58,11 +59,14 @@ export function createGPUConjugateGradientProgram(props: {
     negAlpha = program.scalar(`${id}-neg-alpha`, 'float32'),
     minusOne = program.scalar(`${id}-minus-one`, 'float32'),
     tolerance = program.scalar(`${id}-tolerance-squared`, 'float32'),
-    active = program.scalar(`${id}-active`, 'uint32');
+    active = program.scalar(`${id}-active`, 'uint32'),
+    zero = program.scalar(`${id}-zero`, 'float32'),
+    breakdown = program.scalar(`${id}-breakdown`, 'uint32');
   program.add([
     new GPUProgramScalarLiteral({output: minusOne, value: -1}),
     new GPUProgramScalarLiteral({output: tolerance, value: props.toleranceSquared}),
-    new GPUProgramScalarLiteral({output: active, value: 1}),
+    new GPUProgramScalarLiteral({output: zero, value: 0}),
+    new GPUProgramScalarLiteral({output: breakdown, value: 0}),
     new GPUProgramSpMV({id: `${id}-initial-spmv`, matrix, vector: solution, output: ax}),
     new GPUProgramVectorMADD({
       id: `${id}-initial-residual`,
@@ -78,13 +82,34 @@ export function createGPUConjugateGradientProgram(props: {
       addend: rhs,
       output: search
     }),
-    new GPUProgramDotProduct({id: `${id}-rr0`, left: residual, right: residual, output: rr})
+    new GPUProgramDotProduct({id: `${id}-rr0`, left: residual, right: residual, output: rr}),
+    new GPUProgramScalarOperation({
+      id: `${id}-initial-active`,
+      operation: 'greater-than',
+      left: rr,
+      right: tolerance,
+      output: active
+    })
   ]);
   const body = new GPUCompositeOperation({
     id: `${id}-iteration`,
     operations: [
       new GPUProgramSpMV({id: `${id}-spmv`, matrix, vector: search, output: q}),
       new GPUProgramDotProduct({id: `${id}-pq`, left: search, right: q, output: pq}),
+      new GPUProgramScalarOperation({
+        id: `${id}-breakdown`,
+        operation: 'less-than-or-equal',
+        left: pq,
+        right: zero,
+        output: breakdown
+      }),
+      new GPUProgramScalarOperation({
+        id: `${id}-curvature-active`,
+        operation: 'greater-than',
+        left: pq,
+        right: zero,
+        output: active
+      }),
       new GPUProgramScalarOperation({
         id: `${id}-alpha`,
         operation: 'divide',
@@ -120,13 +145,6 @@ export function createGPUConjugateGradientProgram(props: {
         output: newRR
       }),
       new GPUProgramScalarOperation({
-        id: `${id}-active`,
-        operation: 'greater-than',
-        left: newRR,
-        right: tolerance,
-        output: active
-      }),
-      new GPUProgramScalarOperation({
         id: `${id}-beta`,
         operation: 'divide',
         left: newRR,
@@ -145,6 +163,13 @@ export function createGPUConjugateGradientProgram(props: {
         operation: 'copy',
         left: newRR,
         output: rr
+      }),
+      new GPUProgramScalarOperation({
+        id: `${id}-active`,
+        operation: 'greater-than',
+        left: rr,
+        right: tolerance,
+        output: active
       })
     ]
   });
@@ -159,8 +184,18 @@ export function createGPUConjugateGradientProgram(props: {
         expression: 'residualSquared > toleranceSquared'
       },
       maximumIterations: props.maxIterations,
-      minimumIterations: 1
+      minimumIterations: 0
     })
   );
-  return {program, matrix, rowOffsets, columnIndices, values, rhs, solution};
+  return {
+    program,
+    matrix,
+    rowOffsets,
+    columnIndices,
+    values,
+    rhs,
+    solution,
+    residualSquared: rr,
+    breakdown
+  };
 }

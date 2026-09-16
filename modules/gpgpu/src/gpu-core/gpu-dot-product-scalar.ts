@@ -2,23 +2,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
-import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
-import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
-import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
-import {
-  GPUScalar,
-  getGPUScalarWGSLLoad,
-  getGPUScalarWGSLStore,
-  getGPUValueArenaWGSLBinding
-} from './gpu-scalar';
-import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
+import type {GPUCommandGraph, GraphVectorView, GraphDataView} from './gpu-command-graph';
+import type {GPUCommandNode} from './gpu-command-node';
+import {validatePackedView} from './graph-data-view-utils';
+import type {GPUScalar} from './gpu-scalar';
+import {type GPUScalarDispatchGate, gateGPUCommandNodes} from './gpu-scalar-dispatch-gate';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
-import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {GPUScalarLiteral} from './gpu-scalar-literal';
-const WORKGROUP_SIZE = 256;
-/** Fused float32 dot product whose scalar result is written directly into the graph value arena. */
+import {getGPUScalarReductionNodes} from './gpu-reduction-substrate';
+
+/** Hierarchical float32 dot product over borrowed chunks, writing directly to a GPUScalar. */
 export class GPUDotProductScalar {
   readonly id: string;
   constructor(
@@ -28,155 +21,69 @@ export class GPUDotProductScalar {
       right: GraphDataView<'float32'> | GraphVectorView<'float32'>;
       output: GPUScalar<'float32'>;
       gate?: GPUScalarDispatchGate;
-      /** @internal Adds a chunk partial to an existing scalar result. */
-      accumulate?: boolean;
     }
   ) {
     this.id = props.id ?? 'gpu-dot-product-scalar';
-    for (const chunk of getGraphVectorData(props.left))
-      validatePackedView(chunk, ['float32'], `${this.id} left`);
-    for (const chunk of getGraphVectorData(props.right))
-      validatePackedView(chunk, ['float32'], `${this.id} right`);
-    if (props.left.length !== props.right.length)
-      throw new Error(`${this.id} inputs must have equal length`);
+    for (const view of [props.left, props.right]) {
+      for (const chunk of getGraphVectorData(view)) validatePackedView(chunk, ['float32'], this.id);
+    }
+    if (props.left.length !== props.right.length || props.left.length > 0xffffffff)
+      throw new Error(`${this.id} inputs must have equal uint32-addressable lengths`);
   }
   getCommandNodes<Parameters>(
     graph: GPUCommandGraph<Parameters>
   ): readonly GPUCommandNode<Parameters>[] {
-    const {left, right, output, gate, accumulate} = this.props;
-    if (left instanceof GraphVectorView || right instanceof GraphVectorView) {
-      const spans = alignGraphVectorViews(graph, [left, right]);
-      if (spans.length === 0) {
-        if (accumulate) return [];
-        return new GPUScalarLiteral({id: this.id, output, value: 0})
-          .getCommandNodes(graph)
-          .map(node =>
-            setGPUComputeDispatchWorkgroups(
-              {
-                ...node,
-                condition: gate?.condition,
-                resources: [
-                  ...(node.resources ?? []),
-                  ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
-                ]
-              },
-              [1, 1, 1]
-            )
-          );
-      }
-      return spans.flatMap(([leftChunk, rightChunk], index) =>
-        new GPUDotProductScalar({
-          id: `${this.id}-chunk-${index}`,
-          left: leftChunk,
-          right: rightChunk,
-          output,
-          gate,
-          accumulate: accumulate || index > 0
-        }).getCommandNodes(graph)
-      );
-    }
+    const {left, right, output, gate} = this.props;
     if (
-      left.buffer.graph !== graph ||
-      right.buffer.graph !== graph ||
-      output.arena.graph !== (graph as unknown as GPUCommandGraph<unknown>)
-    )
+      output.arena.graph !== graph ||
+      (gate && gate.active.arena.graph !== graph) ||
+      [left, right].flatMap(getGraphVectorData).some(view => view.buffer.graph !== graph)
+    ) {
       throw new Error(`${this.id} resources must belong to target graph`);
-    const arenaBuffer = output.arena.buffer;
-    const source = `
-const LENGTH: u32 = ${left.length}u;
-const L: u32 = ${getViewElementOffset(left)}u;
-const R: u32 = ${getViewElementOffset(right)}u;
-
-@group(0) @binding(0) var<storage, read> leftValues: array<f32>;
-@group(0) @binding(1) var<storage, read> rightValues: array<f32>;
-${getGPUValueArenaWGSLBinding(0, 2)}
-
-var<workgroup> s: array<f32, ${WORKGROUP_SIZE}>;
-
-@compute @workgroup_size(${WORKGROUP_SIZE})
-fn main(@builtin(local_invocation_index) lane: u32) {
-  var v = 0.0;
-  var i = lane;
-  loop {
-    if (i >= LENGTH) {
-      break;
     }
-    v += leftValues[L + i] * rightValues[R + i];
-    i += ${WORKGROUP_SIZE}u;
-  }
-
-  s[lane] = v;
-  workgroupBarrier();
-
-  var stride = ${WORKGROUP_SIZE / 2}u;
-  loop {
-    if (stride == 0u) {
-      break;
+    const nodes: GPUCommandNode<Parameters>[] = [];
+    let segment = 0;
+    for (const pair of alignGraphVectorViews(graph, [left, right])) {
+      for (let start = 0; start < pair[0].length; ) {
+        const length = Math.min(
+          pair[0].length - start,
+          ...pair.map(view =>
+            Math.floor(
+              (graph.device.limits.maxStorageBufferBindingSize -
+                ((view.byteOffset + start * 4) % 256)) /
+                4
+            )
+          )
+        );
+        if (length < 1) throw new Error('Dot product span must fit a storage binding');
+        const input = graph.createDataView(pair[0].buffer, {
+          format: 'float32',
+          byteOffset: pair[0].byteOffset + start * 4,
+          length
+        });
+        const inputB =
+          pair[1] === pair[0]
+            ? input
+            : graph.createDataView(pair[1].buffer, {
+                format: 'float32',
+                byteOffset: pair[1].byteOffset + start * 4,
+                length
+              });
+        nodes.push(
+          ...getGPUScalarReductionNodes(graph, {
+            id: `${this.id}-chunk-${segment}`,
+            input,
+            inputB,
+            output,
+            accumulate: segment > 0
+          })
+        );
+        segment++;
+        start += length;
+      }
     }
-    if (lane < stride) {
-      s[lane] += s[lane + stride];
-    }
-    workgroupBarrier();
-    stride /= 2u;
-  }
-
-  if (lane == 0u) {
-    ${getGPUScalarWGSLStore(output, accumulate ? `${getGPUScalarWGSLLoad(output)} + s[0]` : 's[0]')}
-  }
-}
-`;
-    return [
-      setGPUComputeDispatchWorkgroups(
-        createGPUComputeCommandNode<Parameters>({
-          id: this.id,
-          condition: gate?.condition,
-          workload: {
-            operation: 'GPUDotProductScalar',
-            commandCount: 1,
-            maximumWorkgroupCount: 1,
-            maximumInvocationCount: WORKGROUP_SIZE,
-            readByteLength: (left.length + right.length) * 4,
-            writeByteLength: 4
-          },
-          resources: [
-            {buffer: left, usage: 'storage-read'},
-            {buffer: right, usage: 'storage-read'},
-            {buffer: arenaBuffer, usage: accumulate ? 'storage-read-write' : 'storage-write'},
-            ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
-          ],
-          compile: ({device}) => {
-            const kernel = new Kernel(device, {
-              id: this.id,
-              source,
-              shaderLayout: {
-                bindings: [
-                  {name: 'leftValues', type: 'read-only-storage', group: 0, location: 0},
-                  {name: 'rightValues', type: 'read-only-storage', group: 0, location: 1},
-                  {name: 'gpuValues', type: 'storage', group: 0, location: 2}
-                ]
-              }
-            });
-            return {
-              encode: ({computePass, getBuffer}) => {
-                const bindings: Record<string, Binding> = {
-                  leftValues: getViewBinding(left, getBuffer),
-                  rightValues: getViewBinding(right, getBuffer),
-                  gpuValues: getBuffer(arenaBuffer)
-                };
-
-                if (gate)
-                  kernel.dispatchIndirect(computePass, {
-                    bindings,
-                    indirectBuffer: getBuffer(gate.dispatchBuffer)
-                  });
-                else kernel.dispatch(computePass, {bindings, x: 1, y: 1, z: 1});
-              },
-              destroy: () => kernel.destroy()
-            };
-          }
-        }),
-        [1, 1, 1]
-      )
-    ];
+    if (!segment)
+      nodes.push(...new GPUScalarLiteral({id: this.id, output, value: 0}).getCommandNodes(graph));
+    return gate ? gateGPUCommandNodes(graph, nodes, gate.active) : nodes;
   }
 }
