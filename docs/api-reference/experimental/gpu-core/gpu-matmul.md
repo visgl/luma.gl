@@ -70,6 +70,8 @@ This is the first major difference between GEMM and simpler elementwise GPU oper
 ## Contract
 
 ```ts
+import {GPUMatMul} from '@luma.gl/gpgpu/gpu-core';
+
 graph.add(new GPUMatMul({
   left: a,
   right: b,
@@ -80,7 +82,30 @@ graph.add(new GPUMatMul({
 }));
 ```
 
-All matrices are initially packed row-major `float32`. Edge tiles are bounds-checked, so dimensions need not be multiples of 16.
+All matrices are packed row-major `float32`. Edge tiles are bounds-checked, so dimensions need
+not be multiples of 16. Each operand must have capacity for its matrix shape; extra input rows
+are ignored and spare output rows are preserved.
+
+## Physical chunks
+
+`left`, `right`, and `output` each accept a `GraphDataView<'float32'>` or
+`GraphVectorView<'float32'>`. Their partitions can differ and can split rows or tiles.
+Empty chunks and nonzero aligned byte offsets are supported.
+
+Each source-chunk pair contributes through the existing 16×16 workgroup tiles, using global
+matrix coordinates and bounds-checked chunk loads. Output passes cover the rows intersecting
+each destination chunk and store only that chunk's elements. Workgroup memory retains tile
+reuse; no scratch buffers or concatenated caller storage are allocated.
+
+The first contribution initializes each output chunk, and later contributions accumulate.
+Repeated encodings replace the previous result. Partitioning can change floating-point
+summation order. Outputs must use separate buffers from inputs, and output chunks must not
+overlap. All chunks must belong to the graph, including unused or empty chunks.
+
+Each active chunk binding must fit device limits; logical matrices can exceed one binding.
+Zero output dimensions emit no work. When `k = 0`, active output elements are explicitly zeroed.
+Dimensions are non-negative signed 32-bit integers, and each logical matrix contains at most
+`2^32 - 1` elements.
 
 ## Relationship to MatVec
 
@@ -111,6 +136,12 @@ matrix shape + device limits
 
 Benchmarks should cover square, tall/skinny, short-K and non-aligned matrices rather than reporting one headline dimension.
 
+Chunked dispatch count grows with the product of left, right, and output chunk counts. Small
+chunks can repeat tile and inner-dimension work. Selective chunk-pair routing and crossover tuning
+remain performance work. Dispatches are bounded across three workgroup dimensions.
+
 ## Scope
 
-The initial API deliberately avoids a tensor framework. Future additions such as transpose flags, batching, `float16`, mixed precision and richer layouts should be driven by demonstrated workloads. Sparse multiplication belongs to the CSR/SpMV substrate rather than complicating dense GEMM.
+The API deliberately avoids a tensor framework. Physical chunking represents one logical matrix.
+Independent tensor batches, transpose flags, `float16`, mixed precision, and richer layouts remain
+future work. Sparse multiplication belongs to the CSR/SpMV substrate.

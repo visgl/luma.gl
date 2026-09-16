@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+export {GPUMatVec} from './gpu-matvec';
+export type {GPUMatVecProps} from './gpu-matvec';
+export {GPUMatMul} from './gpu-matmul';
+export type {GPUMatMulProps} from './gpu-matmul';
+
 export {
   CompiledGPUCommandGraph,
   GPUCommandGraph,
