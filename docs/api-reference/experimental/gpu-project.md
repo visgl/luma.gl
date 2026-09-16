@@ -484,6 +484,9 @@ inverse domains. Conic parameters must be complete, finite, unique, dimensionall
 nondegenerate. Unsupported variants (such as modified/Belgian/Michigan Lambert methods) are not
 silently treated as ordinary 1SP/2SP. A method with neither a resolvable identifier nor an executable
 name cannot be inferred from the parameter values alone.
+Zero standard parallels in Lambert 2SP PROJJSON are declined because the current provider replaces
+them with defaults. Albers preserves a zero parallel by placing it second in the equivalent,
+symmetric pair before calling the provider.
 
 Outside these verified mappings, the provider's existing compatibility restrictions remain.
 Serialized definitions remain available for provider-supported projections without a registered

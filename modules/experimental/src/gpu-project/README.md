@@ -289,6 +289,8 @@ semantics. Normalization uses a copy, validates units and completeness, and reje
 conflicting semantics. These families use the existing double-single adaptive backend, not new
 Float32 formulas. Serialized provider definitions and explicit CPU projection callbacks remain
 available through the existing provider APIs for broader/custom coverage.
+Lambert 2SP PROJJSON with a zero standard parallel is declined to avoid provider defaults;
+Albers zero parallels use an equivalent symmetric ordering that preserves the zero value.
 
 Both planners accept `onUnsupported: 'throw'` to throw `ProjectionPlanningError` with the same
 immutable `reasons` as an unsupported result. The default remains `onUnsupported: 'return'`.

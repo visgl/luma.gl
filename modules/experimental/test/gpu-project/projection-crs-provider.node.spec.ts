@@ -13,7 +13,6 @@ import {
   evaluateProjectionProgram,
   invertProjectionProgram
 } from '@luma.gl/experimental/gpu-project';
-import {normalizeCRSProviderDefinition} from '../../src/gpu-project/projection-crs-provider';
 import {geographicCRS, makeConicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 
 function requireReady(result: ReturnType<typeof planCRSProjection>) {
@@ -347,34 +346,85 @@ describe('verified PROJJSON provider coverage', () => {
     ).toBe('ready');
   });
 
-  it('avoids the provider zero-second-parallel shortcut without changing LCC semantics', () => {
+  it('declines zero LCC parallels before sampling an oracle that would substitute defaults', () => {
     const original = makeConicCRS('lambert-2sp');
-    const target = {
-      ...original,
-      conversion: {
-        ...original.conversion,
-        parameters: original.conversion.parameters.map(parameter =>
-          parameter.id.code === 8824 ? {...parameter, value: 0} : parameter
-        )
+    const project = vi.spyOn(Proj4Projection.prototype, 'project');
+    try {
+      for (const code of [8823, 8824]) {
+        for (const zero of [0, -0]) {
+          const target = {
+            ...original,
+            conversion: {
+              ...original.conversion,
+              parameters: original.conversion.parameters.map(parameter =>
+                parameter.id.code === code ? {...parameter, value: zero} : parameter
+              )
+            }
+          };
+          for (const inverse of [false, true]) {
+            const options = {
+              from: inverse ? target : geographicCRS,
+              to: inverse ? geographicCRS : target,
+              bounds: [-71.6, 41.7, -71.4, 41.9] as const
+            };
+            expect(planCRSProjection(options)).toMatchObject({
+              status: 'unsupported',
+              reasons: expect.arrayContaining([
+                {code: 'unsupported-parameter', message: expect.any(String)}
+              ])
+            });
+            expect(() => planCRSProjection({...options, onUnsupported: 'throw'})).toThrow(
+              ProjectionPlanningError
+            );
+          }
+        }
       }
-    };
-    const normalized = normalizeCRSProviderDefinition(target);
-    expect('definition' in normalized).toBe(true);
-    const result = requireReady(
-      planCRSProjection({
-        from: geographicCRS,
-        to: target,
-        bounds: [-71.6, 41.7, -71.4, 41.9],
-        tolerance: 1e-5
-      })
-    );
-    const expected = new Proj4Projection({
-      from: 'EPSG:4326',
-      to: '+proj=lcc +lat_0=41 +lon_0=-71.5 +lat_1=0 +lat_2=42.6833333333 +x_0=200000 +y_0=750000 +ellps=WGS84'
-    }).project([-71.5, 41.8]);
-    const actual = evaluateProjectionProgram(result.program, [-71.5, 41.8]);
-    expect(
-      Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
-    ).toBeLessThan(1e-5);
+      expect(project).not.toHaveBeenCalled();
+    } finally {
+      project.mockRestore();
+    }
   });
+
+  for (const zeroParallel of [8823, 8824]) {
+    it(`preserves an Albers zero parallel (${zeroParallel}) using the symmetric provider-safe order`, () => {
+      const original = makeConicCRS('albers');
+      const target = {
+        ...original,
+        conversion: {
+          ...original.conversion,
+          parameters: original.conversion.parameters.map(parameter =>
+            [8823, 8824].includes(parameter.id.code)
+              ? {...parameter, value: parameter.id.code === zeroParallel ? 0 : 42}
+              : parameter
+          )
+        }
+      };
+      const snapshot = JSON.stringify(target);
+      // A nonzero first parallel avoids proj4js's shared lat1 default. Albers preserves lat2=0.
+      const oracle = new Proj4Projection({
+        from: 'EPSG:4326',
+        to: '+proj=aea +lat_0=41 +lon_0=-71.5 +lat_1=42 +lat_2=0 +x_0=200000 +y_0=750000 +ellps=WGS84'
+      });
+      const result = requireReady(
+        planCRSProjection({
+          from: geographicCRS,
+          to: target,
+          bounds: [-71.6, 41.7, -71.4, 41.9],
+          tolerance: 1e-5
+        })
+      );
+      for (const coordinate of [
+        [-71.5, 41.8],
+        [-71.55, 41.75]
+      ]) {
+        const expected = oracle.project(coordinate);
+        const actual = evaluateProjectionProgram(result.program, coordinate);
+        expect(actual.valid).toBe(true);
+        expect(
+          Math.hypot(actual.position[0] - expected[0], actual.position[1] - expected[1])
+        ).toBeLessThan(1e-5);
+      }
+      expect(JSON.stringify(target)).toBe(snapshot);
+    });
+  }
 });
