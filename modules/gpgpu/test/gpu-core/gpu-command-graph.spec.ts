@@ -1387,8 +1387,8 @@ it('GPUCompaction preserves GPUVector topology while selecting across chunks', a
   ).toBe(false);
   expect(
     result.logicalTransientBufferCount,
-    'offset storage remains one logical scratch vector despite source partitions'
-  ).toBe(3);
+    'zero-length offset chunks share one transient backing view'
+  ).toBe(5);
 });
 
 it('GPUCompaction aligns independently partitioned inputs and output capacity', async () => {
@@ -1408,6 +1408,69 @@ it('GPUCompaction aligns independently partitioned inputs and output capacity', 
     [10, 12],
     [14, 0xffffffff, 0xffffffff]
   ]);
+});
+
+it('GPUCompaction gives atomic input and chunked output passes unique node IDs', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const values = Uint32Array.from([20, 21, 22, 23]);
+  const flags = Uint32Array.from([1, 0, 1, 1]);
+  const valuesBuffer = device.createBuffer({data: values, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const flagsBuffer = device.createBuffer({data: flags, usage: Buffer.STORAGE | Buffer.COPY_DST});
+  const outputFixture = createUint32VectorFixture(
+    device,
+    'atomic-input-output',
+    [new Uint32Array(2), new Uint32Array(2)],
+    0xffffffff
+  );
+  const countBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.STORAGE | Buffer.COPY_SRC
+  });
+  const graph = new GPUCommandGraph(device, {id: 'atomic-input-output'});
+  const valuesHandle = graph.importBuffer(
+    {id: 'values', byteLength: valuesBuffer.byteLength, usage: valuesBuffer.usage},
+    valuesBuffer
+  );
+  const flagsHandle = graph.importBuffer(
+    {id: 'flags', byteLength: flagsBuffer.byteLength, usage: flagsBuffer.usage},
+    flagsBuffer
+  );
+  const output = graph.importGPUVector('output', outputFixture.vector);
+  const countHandle = graph.importBuffer(
+    {id: 'count', byteLength: countBuffer.byteLength, usage: countBuffer.usage},
+    countBuffer
+  );
+  graph.add(
+    new GPUCompaction({
+      input: graph.createDataView(valuesHandle, {format: 'uint32', length: values.length}),
+      flags: graph.createDataView(flagsHandle, {format: 'uint32', length: flags.length}),
+      output,
+      count: graph.createDataView(countHandle, {format: 'uint32', length: 1})
+    })
+  );
+  const compiled = graph.compile();
+  const commandEncoder = device.createCommandEncoder({id: 'atomic-input-output-encoder'});
+  compiled.encode(commandEncoder, {parameters: undefined});
+  device.submit(commandEncoder.finish());
+  const [outputChunks, countBytes] = await Promise.all([
+    readUint32VectorFixture(outputFixture),
+    countBuffer.readAsync()
+  ]);
+  expect(outputChunks).toEqual([
+    [20, 22],
+    [23, 0xffffffff]
+  ]);
+  expect(new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0]).toBe(3);
+
+  compiled.destroy();
+  valuesBuffer.destroy();
+  flagsBuffer.destroy();
+  destroyUint32VectorFixture(outputFixture);
+  countBuffer.destroy();
 });
 
 it('DrawCommandBuffer replays an indirect draw through a render bundle', async () => {

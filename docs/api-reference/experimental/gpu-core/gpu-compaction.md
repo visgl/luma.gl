@@ -48,11 +48,11 @@ may differ. The output only needs enough logical capacity and may use an indepen
 vector topology. Scan and compaction align source rows by logical position, preserve caller-owned
 buffers and output chunk boundaries, and report one vector-wide total without concatenating data.
 
-The algorithm composes `GPUScan`, allocates one logical offset scratch view as a graph transient,
-scatters selected values, and writes the final count. The count view may point at the
+The algorithm composes `GPUScan`, allocates graph-owned offset scratch with the flags' chunking when
+needed, scatters selected values, and writes the final count. The count view may point at the
 `instanceCount` field of a `DrawCommandBuffer`, enabling compute-to-indirect-render dataflow without
 readback. Alignment borrows subviews from the original buffers; it does not pack source, flag, or
-output chunks.
+output chunks, or require one scratch allocation for a streamed vector.
 
 The initial implementation compacts IDs rather than arbitrary records. Renderers and subsequent
 kernels use those IDs to fetch source data.

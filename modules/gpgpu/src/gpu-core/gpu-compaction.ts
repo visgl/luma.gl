@@ -12,6 +12,7 @@ import {
 } from './gpu-dispatch-utils';
 import {getGPUScanCommandNodesWithDispatchLimit, GPUScan} from './gpu-scan';
 import {
+  createTransientVectorView,
   createTransientView,
   getViewBinding,
   getViewElementOffset,
@@ -129,12 +130,10 @@ export function getGPUCompactionCommandNodesWithDispatchLimit<Parameters>(
     return nodes;
   }
 
-  const offsets = createTransientView(
-    graph,
-    `${compaction.id}-offsets`,
-    'uint32',
-    compaction.flags.length
-  );
+  const offsets =
+    compaction.flags instanceof GraphVectorView
+      ? createTransientVectorView(graph, `${compaction.id}-offsets`, compaction.flags)
+      : createTransientView(graph, `${compaction.id}-offsets`, 'uint32', compaction.flags.length);
   const scan = new GPUScan({
     id: `${compaction.id}-scan`,
     input: compaction.flags,
@@ -220,7 +219,7 @@ function addScatterPasses<Parameters>(
     .filter(chunkIndex => chunkIndex >= 0);
   const countInputChunkIndex = inputChunkIndices[inputChunkIndices.length - 1];
   const countOutputChunkIndex = outputChunkIndices[outputChunkIndices.length - 1];
-  const isVector = sourceSpans.length > 1;
+  const isVector = sourceSpans.length > 1 || output instanceof GraphVectorView;
 
   let outputStart = 0;
   for (let outputChunkIndex = 0; outputChunkIndex < outputChunks.length; outputChunkIndex++) {
