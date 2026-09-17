@@ -158,7 +158,10 @@ export function initializeShaderModule(module: ShaderModule): void {
   }
 
   // Merge validated default props with existing uniforms. Type assertion needed due to complex generics.
-  module.defaultUniforms = {...module.defaultUniforms, ...defaultProps} as typeof module.defaultUniforms;
+  module.defaultUniforms = {
+    ...module.defaultUniforms,
+    ...defaultProps
+  } as typeof module.defaultUniforms;
 }
 
 /** Convert module props to uniforms */
