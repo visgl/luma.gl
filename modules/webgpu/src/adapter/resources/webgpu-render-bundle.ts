@@ -171,7 +171,7 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
     }
 
     this.vertexArray?.bindBeforeRender(this);
-    if (options.indexCount) {
+    if (options.indexCount !== undefined) {
       this.handle.drawIndexed(
         options.indexCount,
         options.instanceCount,

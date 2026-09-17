@@ -322,7 +322,7 @@ export class Model {
 
   constructor(device: Device, props: ModelProps) {
     const defaultShaderAssembler = Model.defaultProps.shaderAssembler;
-    const vertexCountSet = Object.hasOwn(props, 'vertexCount');
+    const vertexCountSet = props.vertexCount !== undefined;
     this.props = {
       ...Model.defaultProps,
       ...props,
