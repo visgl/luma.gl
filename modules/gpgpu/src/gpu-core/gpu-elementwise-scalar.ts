@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {getViewBinding, getViewElementOffset, validatePackedView} from './graph-data-view-utils';
 import {GPUScalar, getGPUScalarWGSLLoad, getGPUValueArenaWGSLBinding} from './gpu-scalar';
-import type {GPUScalarDispatchGate} from './gpu-scalar-dispatch-gate';
+import {type GPUScalarDispatchGate, gateGPUCommandNodes} from './gpu-scalar-dispatch-gate';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 const WORKGROUP_SIZE = 256;
@@ -101,11 +101,10 @@ fn main(
   outputValues[O + index] = ${getGPUScalarWGSLLoad(scale)} * x + y;
 }
 `;
-    return [
+    const nodes = [
       setGPUComputeDispatchWorkgroups(
         createGPUComputeCommandNode<Parameters>({
           id: this.id,
-          condition: gate?.condition,
           workload: {
             operation: 'GPUVectorScalarMADD',
             commandCount: 1,
@@ -121,11 +120,10 @@ fn main(
               buffer: output,
               usage: input === output || addend === output ? 'storage-read-write' : 'storage-write'
             },
-            {buffer: arenaBuffer, usage: 'storage-read'},
-            ...(gate ? [{buffer: gate.dispatchBuffer, usage: 'indirect' as const}] : [])
+            {buffer: arenaBuffer, usage: 'storage-read'}
           ],
           compile: ({device}) => {
-            const computation = new Computation(device, {
+            const kernel = new Kernel(device, {
               id: this.id,
               source,
               shaderLayout: {
@@ -163,16 +161,16 @@ fn main(
                   outputValues: getViewBinding(output, getBuffer),
                   gpuValues: getBuffer(arenaBuffer)
                 };
-                computation.setBindings(bindings);
-                if (gate) computation.dispatchIndirect(computePass, getBuffer(gate.dispatchBuffer));
-                else computation.dispatch(computePass, layout.x, layout.y, layout.z);
+
+                kernel.dispatch(computePass, {bindings, x: layout.x, y: layout.y, z: layout.z});
               },
-              destroy: () => computation.destroy()
+              destroy: () => kernel.destroy()
             };
           }
         }),
         [layout.x, layout.y, layout.z]
       )
     ];
+    return gate ? gateGPUCommandNodes(graph, nodes, gate.active) : nodes;
   }
 }

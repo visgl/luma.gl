@@ -7,6 +7,8 @@ import {Computation} from '@luma.gl/engine';
 import {
   getGPUFFT2DSupport,
   GPUFFT2D,
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph,
   type GPUFFT2DStats,
   makeGPUFFT2DStats
 } from '@luma.gl/gpgpu/gpu-core';
@@ -141,7 +143,7 @@ type SpectralOceanSimulationResources = {
   uniformBuffer: Buffer;
   evolutionComputation: Computation;
   assemblyComputation: Computation;
-  fft: GPUFFT2D;
+  fft: CompiledGPUCommandGraph;
 };
 
 /**
@@ -248,19 +250,25 @@ export class SpectralOceanSimulation {
     evolutionPass.end();
 
     this.resources.fft.encode(commandEncoder, {
-      inputBuffer: this.resources.heightSpectrumBuffer,
-      outputBuffer: this.resources.heightFieldBuffer,
-      direction: 'inverse'
+      parameters: undefined,
+      buffers: {
+        input: this.resources.heightSpectrumBuffer,
+        output: this.resources.heightFieldBuffer
+      }
     });
     this.resources.fft.encode(commandEncoder, {
-      inputBuffer: this.resources.displacementXSpectrumBuffer,
-      outputBuffer: this.resources.displacementXFieldBuffer,
-      direction: 'inverse'
+      parameters: undefined,
+      buffers: {
+        input: this.resources.displacementXSpectrumBuffer,
+        output: this.resources.displacementXFieldBuffer
+      }
     });
     this.resources.fft.encode(commandEncoder, {
-      inputBuffer: this.resources.displacementZSpectrumBuffer,
-      outputBuffer: this.resources.displacementZFieldBuffer,
-      direction: 'inverse'
+      parameters: undefined,
+      buffers: {
+        input: this.resources.displacementZSpectrumBuffer,
+        output: this.resources.displacementZFieldBuffer
+      }
     });
 
     this.resources.assemblyComputation.predraw(commandEncoder);
@@ -508,13 +516,26 @@ function createSpectralOceanSimulationResources(
         }
       })
     );
-    const fft = own(
-      new GPUFFT2D(device, {
+    const graph = new GPUCommandGraph(device, {id: `${props.id}-fft`});
+    const input = graph.importBuffer(
+      {id: 'input', byteLength: heightSpectrumBuffer.byteLength, usage: heightSpectrumBuffer.usage},
+      heightSpectrumBuffer
+    );
+    const output = graph.importBuffer(
+      {id: 'output', byteLength: heightFieldBuffer.byteLength, usage: heightFieldBuffer.usage},
+      heightFieldBuffer
+    );
+    graph.add(
+      new GPUFFT2D({
         id: `${props.id}-fft`,
         width: props.resolution,
-        height: props.resolution
+        height: props.resolution,
+        direction: 'inverse',
+        input: graph.createDataView(input, {format: 'float32x2', length: props.resolution ** 2}),
+        output: graph.createDataView(output, {format: 'float32x2', length: props.resolution ** 2})
       })
     );
+    const fft = own(graph.compile());
 
     return {
       initialSpectrumBuffer,

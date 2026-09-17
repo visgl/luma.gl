@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from './draw-command-buffer';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
@@ -170,7 +170,7 @@ function addEligibilityPass<Parameters>(
     : '';
   const eligibilityBinding = generation.visibility ? 2 : 1;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${generation.id}-eligibility`,
       source: `${makeDispatchConstants(dispatch)}
 const RECORD_COUNT: u32 = ${generation.scene.flags.length}u;
@@ -223,7 +223,7 @@ function addInitializePass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${generation.id}-initialize`,
       source: `${makeDispatchConstants(dispatch)}
 const COMMAND_CAPACITY: u32 = ${generation.commands.capacity}u;
@@ -289,7 +289,7 @@ function addClaimPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${generation.id}-claim`,
       source: `${useSubgroups ? 'enable subgroups;' : ''}
 ${makeDispatchConstants(dispatch)}
@@ -383,7 +383,7 @@ function addPublishPass<Parameters>(
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${generation.id}-publish`,
       source: `${useSubgroups ? 'enable subgroups;' : ''}
 ${makeDispatchConstants(dispatch)}
@@ -482,7 +482,7 @@ ${
   return nodes;
 }
 
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -498,7 +498,7 @@ function addComputationPass<Parameters>(
       id: props.id,
       resources: props.resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -516,10 +516,15 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatch.x,
+              y: props.dispatch.y,
+              z: props.dispatch.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

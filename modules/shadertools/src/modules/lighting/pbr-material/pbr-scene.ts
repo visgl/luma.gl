@@ -38,14 +38,15 @@ export type PBRSceneProps = PBRSceneBindings & PBRSceneUniforms;
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
+// Match integer precision across stages without relying on a preceding lighting module.
 const uniformBlock = /* glsl */ `\
 layout(std140) uniform pbrSceneUniforms {
   float exposure;
-  int toneMapMode;
+  highp int toneMapMode;
   float environmentIntensity;
   float environmentRotation;
   float environmentMipCount;
-  int outputEncoding;
+  highp int outputEncoding;
   vec2 framebufferSize;
   mat4 viewMatrix;
   mat4 projectionMatrix;

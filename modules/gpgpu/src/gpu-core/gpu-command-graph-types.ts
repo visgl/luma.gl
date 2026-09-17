@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUVectorLike} from '../gpu-data/gpu-vector-like';
-import {getGPUVectorChunks} from '../gpu-data/gpu-vector-chunks';
+import {getGPUVectorChunks, type GPUVectorChunk} from '../gpu-data/gpu-vector-chunks';
 
 import type {
   Buffer,
@@ -226,9 +226,7 @@ export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat>
   implements GPUVectorLike<T, GraphDataView<T>>
 {
   /** Canonical logical positions and physical views for every chunk. */
-  get chunks() {
-    return getGPUVectorChunks(this.data);
-  }
+  readonly chunks: readonly GPUVectorChunk<GraphDataView<T>>[];
   /** Identifier supplied to `GPUCommandGraph.importGPUVector`. */
   readonly id: string;
   /** Source vector name. */
@@ -277,6 +275,7 @@ export class GraphVectorView<T extends GPUVectorFormat = GPUVectorFormat>
       );
     }
     this.data = Object.freeze([...props.data]);
+    this.chunks = getGPUVectorChunks(this.data);
   }
 }
 

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   type CompiledGPUCommandGraph,
   GPUCommandGraph,
@@ -240,7 +240,7 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
       {buffer: output, usage: 'storage-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${benchmarkId}-reference`,
         source,
         shaderLayout: {
@@ -256,10 +256,15 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
             inputValues: getViewBinding(input, getBuffer),
             outputValues: getViewBinding(output, getBuffer)
           };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+
+          kernel.dispatch(computePass, {
+            bindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -211,7 +211,7 @@ fn main(
       id: props.id,
       resources,
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source,
           shaderLayout: {
@@ -229,15 +229,15 @@ fn main(
             for (const [name, view] of Object.entries(bindings)) {
               resolvedBindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings: resolvedBindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

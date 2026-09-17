@@ -4,7 +4,7 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUAncestorProjection,
   GPUCommandGraph,
@@ -200,7 +200,7 @@ it('GPUGraphTraversal executes packed initialization, seeds, and expansion in th
   });
   addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
   const compiled = graph.compile();
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
   try {
     submitGraph(device, compiled, 'packed-bounded-traversal-test');
@@ -216,12 +216,12 @@ it('GPUGraphTraversal executes packed initialization, seeds, and expansion in th
 
     for (const passName of ['initialize', 'seed', 'depth-0-clear', 'depth-0-outgoing']) {
       const dispatchIndex = dispatchSpy.mock.instances.findIndex(
-        computation => (computation as Computation).id === `packed-bounded-traversal-${passName}`
+        kernel => (kernel as Kernel).id === `packed-bounded-traversal-${passName}`
       );
       expect(
-        dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
+        dispatchSpy.mock.calls[dispatchIndex]?.[1],
         `${passName} respects the synthetic two-workgroup limit in every dimension`
-      ).toEqual([2, 2, 2]);
+      ).toMatchObject({x: 2, y: 2, z: 2});
     }
   } finally {
     dispatchSpy.mockRestore();
@@ -329,7 +329,7 @@ it('GPUGraphTraversal routes large seed and output partitions through three-dime
   });
   addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
   const compiled = graph.compile();
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
   try {
     submitGraph(device, compiled, 'partitioned-bounded-traversal-test');
@@ -357,13 +357,12 @@ it('GPUGraphTraversal routes large seed and output partitions through three-dime
       'depth-1-outgoing-source-2-target-0'
     ]) {
       const dispatchIndex = dispatchSpy.mock.instances.findIndex(
-        computation =>
-          (computation as Computation).id === `partitioned-bounded-traversal-${passName}`
+        kernel => (kernel as Kernel).id === `partitioned-bounded-traversal-${passName}`
       );
       expect(
-        dispatchSpy.mock.calls[dispatchIndex]?.slice(1),
+        dispatchSpy.mock.calls[dispatchIndex]?.[1],
         `${passName} preserves the bounded three-dimensional dispatch`
-      ).toEqual([2, 2, 2]);
+      ).toMatchObject({x: 2, y: 2, z: 2});
     }
   } finally {
     dispatchSpy.mockRestore();

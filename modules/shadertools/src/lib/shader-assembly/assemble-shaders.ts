@@ -49,6 +49,12 @@ import {
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
 const RESERVED_APPLICATION_GROUP_0_BINDING_LIMIT = 100;
 
+type ShaderAssemblyLog = {
+  deprecated?: (...args: unknown[]) => () => unknown;
+  removed?: (...args: unknown[]) => () => unknown;
+  warn?: (...args: unknown[]) => () => unknown;
+};
+
 /**
  * Precision prologue to inject before functions are injected in shader
  * TODO - extract any existing prologue in the fragment source and move it up...
@@ -99,7 +105,7 @@ export type AssembleShaderOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: any;
+  log?: ShaderAssemblyLog;
 };
 
 type AssembleStageOptions = {
@@ -131,7 +137,7 @@ type AssembleStageOptions = {
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
-  log?: any;
+  log?: ShaderAssemblyLog;
   /** @internal Stable per-assembler WGSL binding assignments. */
   _bindingRegistry?: Map<string, number>;
 };
@@ -292,7 +298,7 @@ export function assembleShaderWGSL(
   appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
 
   for (const key in inject) {
-    const injection =
+    const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
@@ -300,16 +306,16 @@ export function assembleShaderWGSL(
       const name = match[3];
       if (hash) {
         if (name === 'decl') {
-          declInjections[key] = [injection as any];
+          declInjections[key] = [injection];
         } else {
-          mainInjections[key] = [injection as any];
+          mainInjections[key] = [injection];
         }
       } else {
-        hookInjections[key] = [injection as any];
+        hookInjections[key] = [injection];
       }
     } else {
       // Regex injection
-      mainInjections[key] = [injection as any];
+      mainInjections[key] = [injection];
     }
   }
   appendGeneratedVertexInputInjections(
@@ -419,7 +425,7 @@ function assembleShaderGLSL(
     pluginVertexInputs?: Record<string, AttributeShaderType>;
     pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
     prologue?: boolean;
-    log?: any;
+    log?: ShaderAssemblyLog;
   }
 ) {
   const {

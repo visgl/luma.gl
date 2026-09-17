@@ -277,7 +277,6 @@ export {
 } from './gpu-fft2d';
 export type {
   GPUFFT2DDirection,
-  GPUFFT2DEncodeOptions,
   GPUFFT2DProps,
   GPUFFT2DStats,
   GPUFFT2DSupport
@@ -632,3 +631,11 @@ export {GPUCOOToCSR} from './gpu-coo-to-csr';
 export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';
 export {GPURunLengthEncode, GPUUnique} from './gpu-run-length-encode';
 export type {GPURunLengthEncodeProps} from './gpu-run-length-encode';
+
+export {GPUIncrementalExecution} from './gpu-incremental-execution';
+export type {
+  GPUIncrementalBatch,
+  GPUIncrementalContext,
+  GPUIncrementalExecutionProps,
+  GPUIncrementalExecutionStats
+} from './gpu-incremental-execution';

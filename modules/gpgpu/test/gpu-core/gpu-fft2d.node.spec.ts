@@ -22,7 +22,7 @@ it('GPUFFT2D publishes a bounded immutable radix-2 plan', () => {
 
   expect(
     stats,
-    'stats account for two bit reversals, five butterfly stages, and both directions'
+    'stats account for two bit reversals, five butterfly stages, and one direction'
   ).toEqual({
     width: 8,
     height: 4,
@@ -35,8 +35,8 @@ it('GPUFFT2D publishes a bounded immutable radix-2 plan', () => {
     workgroupSize: [8, 8, 1],
     workgroupCount: [1, 1, 1],
     scratchBufferByteLength: 256,
-    parameterBufferCount: 14,
-    parameterBufferByteLength: 448
+    parameterBufferCount: 7,
+    parameterBufferByteLength: 336
   });
   expect(Boolean(Object.isFrozen(stats)), 'stats are immutable').toBe(true);
   expect(Boolean(Object.isFrozen(stats.workgroupSize)), 'workgroup size is immutable').toBe(true);
@@ -113,7 +113,7 @@ it('GPUFFT2D shader exposes one bounded storage-buffer compute pass', () => {
     'shader consumes immutable pass parameters'
   ).toBe(true);
   expect(GPU_FFT2D_WORKGROUP_DIMENSION, 'workgroup dimension is stable').toBe(8);
-  expect(GPU_FFT2D_PARAMETER_BYTE_LENGTH, 'uniform block remains 32 bytes').toBe(32);
+  expect(GPU_FFT2D_PARAMETER_BYTE_LENGTH, 'uniform block includes view offsets').toBe(48);
   expect(GPU_FFT2D_SHADER, 'shader explicitly performs bit reversal').toMatch(/reverseLowBits/);
   expect(GPU_FFT2D_SHADER, 'shader performs complex butterflies').toMatch(/multiplyComplex/);
 });

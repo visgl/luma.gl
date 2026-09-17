@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -633,7 +633,7 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
         ...(segmentFlagOutput ? [{buffer: segmentFlagOutput, usage: 'storage-write'} as const] : [])
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source,
           shaderLayout: {
@@ -680,15 +680,15 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
             if (segmentFlagOutput) {
               bindings['summarySegmentFlags'] = getViewBinding(segmentFlagOutput, getBuffer);
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })
@@ -879,7 +879,7 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
           : [])
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source,
           shaderLayout: {
@@ -917,15 +917,15 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
                 getBuffer
               );
             }
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

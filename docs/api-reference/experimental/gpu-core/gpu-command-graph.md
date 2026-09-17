@@ -26,6 +26,10 @@ Use a command graph for repeated multi-pass GPU work whose capacities and resour
 
 Use direct command encoding for a one-off pass or a sequence that is already simple and local. A command graph does not own submission, presentation, the frame loop, or unbounded allocation. See [Execution and composition](./concepts) for the mental model, terminology, hazard scheduling, conditions, resumable work, budgets, and instrumentation.
 
+For changing batch topology, [GPUIncrementalExecution](./gpu-incremental-execution) caches explicit
+per-batch results and submits changed batches followed by a merge. It provides revision tracking,
+replacement/removal semantics, and work counters around ordinary command graphs.
+
 ## Quick usage
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
@@ -73,7 +77,7 @@ concurrently. It does not submit commands, execute a warm-up decode, or wait for
 synchronous `compile()` only when immediate construction is required or when measuring compatibility
 with an older integration.
 
-Node callbacks that construct `Computation` or `Model` instances need no special handling: the graph
+Node callbacks that construct `Kernel`, `Computation`, or `Model` instances need no special handling: the graph
 collects their asynchronous pipeline work automatically. A custom node that prepares some other
 asynchronous resource can provide `compileAsync(context)` alongside its required synchronous
 `compile(context)` callback. `compileAsync()` prefers that callback for the node; `compile()` always

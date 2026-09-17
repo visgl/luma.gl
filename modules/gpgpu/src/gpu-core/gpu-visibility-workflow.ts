@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {
   getGPUCompactionCommandNodesWithDispatchLimit,
@@ -290,7 +290,7 @@ fn main(
       id: props.id,
       resources: [{buffer: props.output, usage: 'storage-write'}],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source,
           shaderLayout: {
@@ -302,15 +302,15 @@ fn main(
             const bindings: Record<string, Binding> = {
               outputIds: getViewBinding(props.output, getBuffer)
             };
-            computation.setBindings(bindings);
-            computation.dispatch(
-              computePass,
-              props.dispatchLayout.x,
-              props.dispatchLayout.y,
-              props.dispatchLayout.z
-            );
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: props.dispatchLayout.x,
+              y: props.dispatchLayout.y,
+              z: props.dispatchLayout.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

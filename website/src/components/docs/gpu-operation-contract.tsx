@@ -21,6 +21,18 @@ const COMMON = {
 } as const;
 
 export const GPUGRAPH_OPERATION_CONTRACTS = {
+  'gpu-incremental-execution': {
+    problem: 'Update analytical results over changing batches without repeating unchanged source work.',
+    readsWrites: 'Batch graphs read borrowed inputs and write cached partials; the merge writes caller-owned outputs.',
+    ownership: 'The executor owns cached partial buffers and temporary graphs; sources and final outputs remain borrowed.',
+    output: 'GPU-resident analytical results plus computed, reused, removed, command, and cache-byte counters.',
+    work: 'Only new or invalidated batches execute; each changed snapshot merges all live partials.',
+    chunks: 'Preserves source batches and their chunk topology; only explicit derived candidates may be staged.',
+    execution: 'update() owns submission and commits its cache only after successful synchronous submission.',
+    neighborhood: 'versioned batches → batch-local graph operations → cached partials → live merge.',
+    cost: 'Persistent storage scales with live partials; merge cost scales with live partial count.',
+    mistake: 'Bump revisions for buffer writes and shared parameter changes; byte mutations are not inferred.'
+  },
   'gpu-command-graph': {
     problem: 'Compose reusable compute, copy, and render work into one validated execution plan.',
     readsWrites: 'Nodes declare every logical resource range they read or write.',
@@ -279,7 +291,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     ownership: 'Caller-owned matrix and solution surround graph-owned iterative scratch.',
     output: 'A fixed-budget approximate solution with GPU-resident convergence control.',
     work: 'One preconditioner application plus sparse products and reductions per iteration.',
-    chunks: 'Uses explicit packed solver vectors and a single CSR matrix domain.',
+    chunks: 'Independent CSR and vector chunks share one logical system; scratch follows the right-hand side topology.',
     execution: 'Later iterations can be disabled by GPU indirect convergence gates.',
     neighborhood: 'CSR matrix + right-hand side + preconditioner → PCG → solution vector.',
     cost: 'Iteration count times SpMV, preconditioner, vector-update, and reduction costs.',
@@ -639,7 +651,7 @@ export const GPUGRAPH_OPERATION_CONTRACTS = {
     ownership: COMMON.callerOwned,
     output: 'Exact complex transform for the configured power-of-two extent.',
     work: 'Bit reversal plus radix-2 butterfly passes across both dimensions.',
-    chunks: 'Requires one packed 2D domain.',
+    chunks: 'Independent packed float32x2 chunks; bounded single-transform scratch preserves caller storage.',
     execution: COMMON.noSubmission,
     neighborhood: 'complex field → GPUFFT2D → spectral filter, simulation step, or inverse transform.',
     cost: 'O(width × height × (log width + log height)) passes and bandwidth.',

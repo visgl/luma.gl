@@ -6,7 +6,7 @@ import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GraphVectorView,
@@ -323,7 +323,7 @@ fn main(
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${id}-clear`,
       source,
       resources: [{buffer: output, usage: 'storage-write'}],
@@ -409,7 +409,7 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
     {buffer: props.output, usage: 'storage-read-write'}
   ];
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: props.id,
       source,
       resources,
@@ -461,7 +461,7 @@ ${countBinding}
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
       source,
       resources: [
@@ -555,7 +555,7 @@ ${accumulation}
       : [])
   ];
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${props.id}-${props.operation}`,
       source,
       resources,
@@ -627,7 +627,7 @@ ${decodeFunction}
   }
 }`;
   nodes.push(
-    ...addComputationPass(graph, {
+    ...addKernelPass(graph, {
       id: `${id}-finalize`,
       source,
       resources: [
@@ -728,7 +728,7 @@ export function getGPUGroupAggregationDispatchLayout(
 }
 
 /** Wraps generated WGSL in one graph compute node with deferred physical buffer resolution. */
-function addComputationPass<Parameters>(
+function addKernelPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
     id: string;
@@ -754,7 +754,7 @@ function addComputationPass<Parameters>(
         maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
       },
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: props.id,
           source: props.source,
           shaderLayout: {
@@ -772,19 +772,19 @@ function addComputationPass<Parameters>(
             for (const [name, view] of Object.entries(props.bindings)) {
               bindings[name] = getViewBinding(view, getBuffer);
             }
-            computation.setBindings(bindings);
+
             if (props.dispatchSize) {
-              computation.dispatch(
-                computePass,
-                props.dispatchSize.x,
-                props.dispatchSize.y,
-                props.dispatchSize.z
-              );
+              kernel.dispatch(computePass, {
+                bindings,
+                x: props.dispatchSize.x,
+                y: props.dispatchSize.y,
+                z: props.dispatchSize.z
+              });
             } else {
-              computation.dispatch(computePass, props.dispatchCount!);
+              kernel.dispatch(computePass, {bindings, x: props.dispatchCount!});
             }
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

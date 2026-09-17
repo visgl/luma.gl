@@ -5,6 +5,7 @@
 import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer, luma, type Device} from '@luma.gl/core';
+import {mountStreamingPanel} from './streaming-panel';
 import {
   GPUCommandGraph,
   GPUGridAggregation,
@@ -70,6 +71,7 @@ class GPUDataAnalysisExample {
   private benchmarkController: AbortController | null = null;
   private readonly benchmarkHistory: GPUDataFrameBenchmarkResult[] = [];
   private destroyed = false;
+  private destroyStreamingPanel?: () => void;
   private hasRunGPUDataFrameDemo = false;
   private runVersion = 0;
 
@@ -115,6 +117,10 @@ class GPUDataAnalysisExample {
         return;
       }
       this.device = device;
+      this.destroyStreamingPanel = mountStreamingPanel(
+        document.getElementById('gpu-data-analysis-app')!,
+        device
+      );
       await this.run();
       if (!this.destroyed) {
         this.elements.gpuDataFrameBenchmark.disabled = false;
@@ -148,6 +154,7 @@ class GPUDataAnalysisExample {
     ]) {
       element.removeEventListener('change', this.handleRun);
     }
+    this.destroyStreamingPanel?.();
     this.releaseResources();
     this.device?.destroy();
     this.device = null;

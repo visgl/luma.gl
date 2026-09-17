@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
 import {getViewBinding, validatePackedUint32View} from './graph-data-view-utils';
 
@@ -218,7 +218,7 @@ function addDecompressionPass<Parameters>(
         {buffer: decompressor.props.output, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: decompressor.id,
           source,
           shaderLayout: {
@@ -234,10 +234,15 @@ function addDecompressionPass<Parameters>(
               uploadWords: getViewBinding(decompressor.props.upload, getBuffer),
               outputWords: getViewBinding(decompressor.props.output, getBuffer)
             };
-            computation.setBindings(bindings);
-            computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+
+            kernel.dispatch(computePass, {
+              bindings,
+              x: dispatch.x,
+              y: dispatch.y,
+              z: dispatch.z
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     })

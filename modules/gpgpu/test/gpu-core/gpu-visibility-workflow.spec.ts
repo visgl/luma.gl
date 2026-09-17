@@ -4,7 +4,7 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
@@ -206,7 +206,7 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
     getGPUVisibilityWorkflowCommandNodesWithDispatchLimit(workflow, graph, 2)
   );
   const compiled = graph.compile();
-  const dispatchSpy = vi.spyOn(Computation.prototype, 'dispatch');
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
 
   try {
     await encodeAndSubmit(device, compiled, 'bounded-visibility-encoding');
@@ -224,9 +224,9 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
       'padded multidimensional workgroups never inflate the selected count'
     ).toEqual([expectedSourceIds.length]);
 
-    const dispatches = dispatchSpy.mock.instances.map((computation, index) => ({
-      id: (computation as Computation).id,
-      dimensions: dispatchSpy.mock.calls[index].slice(1)
+    const dispatches = dispatchSpy.mock.instances.map((kernel, index) => ({
+      id: (kernel as Kernel).id,
+      dimensions: dispatchSpy.mock.calls[index][1]
     }));
     for (const passId of [
       'bounded-visibility-compose',
@@ -238,7 +238,7 @@ it('GPUVisibilityWorkflow scales mask, identity, scan, and scatter through bound
       expect(
         dispatches.find(dispatch => dispatch.id === passId)?.dimensions,
         `${passId} inherits the same bounded three-dimensional dispatch limit`
-      ).toEqual([2, 2, 2]);
+      ).toMatchObject({x: 2, y: 2, z: 2});
     }
   } finally {
     dispatchSpy.mockRestore();

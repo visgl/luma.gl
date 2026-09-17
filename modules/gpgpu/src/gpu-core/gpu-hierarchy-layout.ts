@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
 import {GPUScan} from './gpu-scan';
 import {
@@ -261,7 +261,7 @@ fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_ind
           {buffer: props.childHeights, usage: 'storage-write'}
         ],
         compile: ({device}) => {
-          const computation = new Computation(device, {
+          const kernel = new Kernel(device, {
             id: props.id,
             source,
             shaderLayout: {
@@ -279,10 +279,15 @@ fn main(@builtin(workgroup_id) workgroupId: vec3u, @builtin(local_invocation_ind
               for (const [name, view] of Object.entries(views)) {
                 resolvedBindings[name] = getViewBinding(view, getBuffer);
               }
-              computation.setBindings(resolvedBindings);
-              computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+
+              kernel.dispatch(computePass, {
+                bindings: resolvedBindings,
+                x: dispatch.x,
+                y: dispatch.y,
+                z: dispatch.z
+              });
             },
-            destroy: () => computation.destroy()
+            destroy: () => kernel.destroy()
           };
         }
       })

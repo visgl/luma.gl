@@ -11,7 +11,13 @@ import {BatchConformanceFixture} from './batch-conformance-utils';
 test('gather validates every chunk and lowers without allocating or copying buffers', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
-  Object.defineProperty(device.limits, 'maxComputeWorkgroupsPerDimension', {value: 65535});
+  Object.defineProperty(device, 'limits', {
+    value: {
+      ...device.limits,
+      maxComputeWorkgroupsPerDimension: 65535,
+      maxStorageBufferBindingSize: 128 * 1024 * 1024
+    }
+  });
   const fixture = new BatchConformanceFixture(device);
   const foreign = new BatchConformanceFixture(device);
   try {
