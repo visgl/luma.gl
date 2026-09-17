@@ -63,7 +63,6 @@ export {
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 
 export {resolveModules as _resolveModules} from './lib/shader-module/shader-module-dependencies';
-export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
 export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';

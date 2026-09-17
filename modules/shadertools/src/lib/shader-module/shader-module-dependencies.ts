@@ -24,54 +24,70 @@ type AbstractModule = {
  * @return - Array of modules
  */
 export function getShaderModuleDependencies<T extends AbstractModule>(modules: T[]): T[] {
-  initializeShaderModules(modules);
-  const moduleMap: Record<string, T> = {};
-  const moduleDepth: Record<string, number> = {};
-  getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
+  // Data structures for topological sort
+  const visited = new Set<T>();              // Fully processed modules (black nodes)
+  const recursionStack = new Set<T>();       // Modules in current DFS path (gray nodes)
+  const result: T[] = [];                    // Post-order traversal result
+  const nameToModule = new Map<string, T>(); // Name collision detection
 
-  // Return a reverse sort so that dependencies come before the modules that use them
-  const dependencies = Object.keys(moduleDepth)
-    .sort((a, b) => moduleDepth[b] - moduleDepth[a])
-    .map(name => moduleMap[name]);
-  initializeShaderModules(dependencies);
-  return dependencies;
-}
-
-/**
- * Recursively checks module dependencies to calculate dependency level of each module.
- *
- * @param options.modules - Array of modules
- * @param options.level - Current level
- * @param options.moduleMap -
- * @param options.moduleDepth - Current level
- * @return - Map of module name to its level
- */
-// Adds another level of dependencies to the result map
-export function getDependencyGraph<T extends AbstractModule>(options: {
-  modules: T[];
-  level: number;
-  moduleMap: Record<string, T>;
-  moduleDepth: Record<string, number>;
-}) {
-  const {modules, level, moduleMap, moduleDepth} = options;
-  if (level >= 5) {
-    throw new Error('Possible loop in shader dependency graph');
-  }
-
-  // Update level on all current modules
-  for (const module of modules) {
-    moduleMap[module.name] = module;
-    if (moduleDepth[module.name] === undefined || moduleDepth[module.name] < level) {
-      moduleDepth[module.name] = level;
+  /**
+   * Check for name collisions between distinct module objects
+   */
+  function checkNameCollision(module: T): void {
+    const existing = nameToModule.get(module.name);
+    if (existing && existing !== module) {
+      throw new Error(
+        `Shader module name collision: Multiple different module objects share the name "${module.name}". ` +
+        `Each module object must have a unique name.`
+      );
     }
+    nameToModule.set(module.name, module);
   }
 
-  // Recurse
-  for (const module of modules) {
+  /**
+   * DFS visit function for topological sort with cycle detection
+   */
+  function visit(module: T, path: string[]): void {
+    // Cycle detection: if module is in recursion stack, we've found a back edge
+    if (recursionStack.has(module)) {
+      const cyclePath = [...path, module.name].join(' -> ');
+      throw new Error(`Shader module dependency cycle detected: ${cyclePath}`);
+    }
+
+    // Already processed: skip if visited
+    if (visited.has(module)) {
+      return;
+    }
+
+    // Check for name collision before processing
+    checkNameCollision(module);
+
+    // Mark as visiting (white -> gray)
+    recursionStack.add(module);
+    const newPath = [...path, module.name];
+
+    // Recursively visit all dependencies
     if (module.dependencies) {
-      getDependencyGraph({modules: module.dependencies, level: level + 1, moduleMap, moduleDepth});
+      for (const dep of module.dependencies) {
+        visit(dep as T, newPath);
+      }
     }
+
+    // Mark as visited (gray -> black)
+    recursionStack.delete(module);
+    visited.add(module);
+
+    // Post-order: add to result after all dependencies processed
+    result.push(module);
   }
+
+  // Start DFS from each root module
+  for (const module of modules) {
+    visit(module, []);
+  }
+
+  initializeShaderModules(result);
+  return result;
 }
 
 /**
@@ -87,17 +103,7 @@ export function getDependencyGraph<T extends AbstractModule>(options: {
  * @return - Array of modules
  */
 export function getShaderDependencies(modules: ShaderModule[]): ShaderModule[] {
-  initializeShaderModules(modules);
-  const moduleMap: Record<string, ShaderModule> = {};
-  const moduleDepth: Record<string, number> = {};
-  getDependencyGraph({modules, level: 0, moduleMap, moduleDepth});
-
-  // Return a reverse sort so that dependencies come before the modules that use them
-  modules = Object.keys(moduleDepth)
-    .sort((a, b) => moduleDepth[b] - moduleDepth[a])
-    .map(name => moduleMap[name]);
-  initializeShaderModules(modules);
-  return modules;
+  return getShaderModuleDependencies(modules);
 }
 
 // DEPRECATED
