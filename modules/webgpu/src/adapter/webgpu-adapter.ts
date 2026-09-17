@@ -189,31 +189,36 @@ export class WebGPUAdapter extends Adapter {
   }
 
   async create(props: DeviceProps): Promise<WebGPUDevice> {
-    return await this._create(props, true);
+    return this._create(props, true);
   }
 
   private async _create(
     props: DeviceProps,
     allowImmediateLossRetry: boolean
   ): Promise<WebGPUDevice> {
-    if (typeof navigator === 'undefined' || !navigator.gpu) {
+    const requestedFeatureLevel = getWebGPUFeatureLevel(props);
+    if (!navigator.gpu) {
       throw new Error('WebGPU is not available');
     }
 
-    const requestedFeatureLevel = getWebGPUFeatureLevel(props);
     const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
     let adapter: GPUAdapter | null;
     try {
       adapter = await this.requestGPUAdapter(requestAdapterOptions);
     } catch (error) {
-      throw new Error('WebGPU adapter request failed', {cause: error});
+      throw makeWebGPUCreationError(error, 'WebGPU adapter request failed');
     }
 
     if (!adapter) {
       throw new Error('Failed to request WebGPU adapter');
     }
 
-    const adapterInfo = await getWebGPUAdapterInfo(adapter);
+    // `info` is diagnostic only. Keep adapter creation independent of optional metadata APIs.
+    const adapterInfo =
+      adapter.info ||
+      // @ts-ignore Legacy Chromium API.
+      (await adapter.requestAdapterInfo?.()) ||
+      ({} as GPUAdapterInfo);
     // log.probe(2, 'Adapter available', adapterInfo)();
 
     const deviceDescriptor: GPUDeviceDescriptor = {};
@@ -235,20 +240,19 @@ export class WebGPUAdapter extends Adapter {
     try {
       gpuDevice = await adapter.requestDevice(deviceDescriptor);
     } catch (error) {
-      throw new Error('WebGPU device request failed', {cause: error});
+      throw makeWebGPUCreationError(error, 'WebGPU device request failed');
     }
 
-    const immediateLoss = await getImmediateDeviceLoss(gpuDevice);
+    const immediateLoss = await Promise.race([gpuDevice.lost, Promise.resolve(null)]);
     if (immediateLoss) {
       gpuDevice.destroy();
       if (allowImmediateLossRetry && immediateLoss.reason !== 'destroyed') {
         log.warn('WebGPU device was returned already lost; retrying with a fresh adapter')();
         return await this._create(props, false);
       }
-      throw new Error(
-        `WebGPU device was returned already lost${immediateLoss.message ? `: ${immediateLoss.message}` : ''}`,
-        {cause: immediateLoss}
-      );
+      throw new Error(immediateLoss.message || 'WebGPU device was returned already lost', {
+        cause: immediateLoss
+      });
     }
 
     // log.probe(1, 'GPUDevice available')();
@@ -259,22 +263,21 @@ export class WebGPUAdapter extends Adapter {
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
-      let device: WebGPUDevice;
+      let device: WebGPUDevice | undefined;
+      let initializationStage = 'wrapper initialization';
       try {
         device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
-      } catch (error) {
-        gpuDevice.destroy();
-        throw new Error('WebGPU wrapper initialization failed', {cause: error});
-      }
-
-      const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
-      if (canvasContextProps) {
-        try {
+        initializationStage = 'canvas initialization';
+        const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+        if (canvasContextProps) {
           device.initializeCanvasContext(canvasContextProps);
-        } catch (error) {
-          device.destroy();
-          throw new Error('WebGPU canvas initialization failed', {cause: error});
         }
+      } catch (error) {
+        device?.destroy();
+        if (!device) {
+          gpuDevice.destroy();
+        }
+        throw makeWebGPUCreationError(error, `WebGPU ${initializationStage} failed`);
       }
       log.probe(
         1,
@@ -299,24 +302,8 @@ export class WebGPUAdapter extends Adapter {
   }
 }
 
+function makeWebGPUCreationError(error: unknown, message: string): Error {
+  return new Error(message, {cause: error});
+}
+
 export const webgpuAdapter = new WebGPUAdapter();
-
-/** Reads adapter metadata without making optional metadata support creation-critical. */
-export async function getWebGPUAdapterInfo(adapter: GPUAdapter): Promise<GPUAdapterInfo> {
-  try {
-    return (
-      adapter.info ||
-      // @ts-ignore Legacy Chromium API.
-      (await adapter.requestAdapterInfo?.()) ||
-      ({} as GPUAdapterInfo)
-    );
-  } catch (error) {
-    log.warn('WebGPU adapter metadata is unavailable', error)();
-    return {} as GPUAdapterInfo;
-  }
-}
-
-/** Detects an already-lost device without delaying normal device creation. */
-async function getImmediateDeviceLoss(device: GPUDevice): Promise<GPUDeviceLostInfo | null> {
-  return await Promise.race([device.lost, Promise.resolve(null)]);
-}
